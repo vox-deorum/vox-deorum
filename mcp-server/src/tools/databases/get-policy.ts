@@ -1,7 +1,7 @@
 import { gameDatabase } from "../../server.js";
 import { DatabaseQueryTool } from "../abstract/database-query.js";
-import { getEraName } from "../../utils/database/enums.js";
-import { formatPolicyHelp } from "../../utils/database/format.js";
+import { getEraName } from "../../database/helpers/enums.js";
+import { formatPolicyHelp } from "../../database/helpers/format.js";
 import * as z from "zod";
 
 /**

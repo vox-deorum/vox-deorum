@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { allowLoopbackCorsOrigin, requireLoopbackRequest } from '../../web/loopback.js';
 import { sendError } from '../../web/http-utils.js';
 import { errorMessage } from '../../utils/errors.js';
-import { NewspaperBrowserUnavailableError } from '../renderer/browser.js';
+import { NewspaperBrowserUnavailableError } from '../export/browser.js';
 
 export const readerDirectory = fileURLToPath(new URL('../../../dist-newspaper/', import.meta.url));
 

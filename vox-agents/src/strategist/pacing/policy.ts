@@ -1,0 +1,103 @@
+/**
+ * @module strategist/pacing/policy
+ *
+ * Turn pacing helpers for strategist players.
+ */
+
+import type { GameState } from "../strategy-parameters.js";
+import type { ModelSize, PacingConfig, PacingInterruption } from "../../types/config.js";
+import { pacingInterruptionRegistry } from "./registry.js";
+
+/**
+ * A fully-resolved pacing config with every field present, produced by
+ * {@link normalizePacing}. Downstream code can read these fields without
+ * guarding for undefined or invalid values.
+ */
+export interface NormalizedPacingConfig {
+  /** Minimum number of turns between scheduled strategist decisions (>= 1). */
+  everyTurns: number;
+  /** Registered interruption strategy name; "none" disables off-cadence decisions. */
+  interruption: PacingInterruption;
+}
+
+/** Defaults applied when a player omits pacing: decide every turn, no interruption. */
+export const DEFAULT_PACING: NormalizedPacingConfig = {
+  everyTurns: 1,
+  interruption: "none",
+};
+
+/**
+ * Fill missing pacing config with defaults. An omitted interruption defaults to
+ * "none"; an explicitly-provided but unregistered interruption name throws so
+ * misconfiguration surfaces at session start rather than degrading silently.
+ *
+ * @throws if `config.interruption` names a strategy not in the registry.
+ */
+export function normalizePacing(config?: PacingConfig): NormalizedPacingConfig {
+  const everyTurns = config?.everyTurns;
+  const interruption = config?.interruption ?? DEFAULT_PACING.interruption;
+
+  if (!pacingInterruptionRegistry.has(interruption)) {
+    throw new Error(
+      `Unknown pacing interruption "${interruption}". Registered: ${pacingInterruptionRegistry.getNames().join(", ")}`
+    );
+  }
+
+  return {
+    everyTurns: Number.isInteger(everyTurns) && everyTurns! > 0
+      ? everyTurns!
+      : DEFAULT_PACING.everyTurns,
+    interruption,
+  };
+}
+
+/**
+ * Decide whether the normal cadence requires a strategist decision this turn.
+ */
+export function isScheduledDecision(
+  currentTurn: number,
+  lastDecisionTurn: number | undefined,
+  pacing: NormalizedPacingConfig
+): boolean {
+  return lastDecisionTurn === undefined || currentTurn - lastDecisionTurn >= pacing.everyTurns;
+}
+
+/**
+ * Delegate off-cadence decision checks to the configured interruption strategy.
+ */
+export function shouldInterruptDecision(
+  state: GameState,
+  playerID: number,
+  pacing: NormalizedPacingConfig
+): boolean {
+  const strategy = pacingInterruptionRegistry.get(pacing.interruption)
+    ?? pacingInterruptionRegistry.get(DEFAULT_PACING.interruption);
+  return strategy?.shouldInterrupt({ state, playerID }) ?? false;
+}
+
+/** What strategist triage says about a turn: skip it, or decide on a model tier. */
+export type TriageVerdict = "skip" | ModelSize;
+
+/** The pacing outcome: skip with a reason, or decide with an optional model tier override. */
+export type PacingVerdict =
+  | { decide: false; reason: "turn" | "evaluator" }
+  | { decide: true; tier?: ModelSize };
+
+/**
+ * Combine the cadence, interruption, and triage into one verdict. Without triage, a scheduled or
+ * interrupted turn keeps the strategist's own tier and any other turn skips. With triage, a scheduled
+ * or interrupted turn still decides and only escalates to `large`, while any other turn follows
+ * the evaluator, which may skip it.
+ */
+export function resolvePacingVerdict({ scheduled, interrupted, triage }: {
+  scheduled: boolean;
+  interrupted: boolean;
+  triage?: TriageVerdict;
+}): PacingVerdict {
+  if (triage === undefined) return scheduled || interrupted
+    ? { decide: true }
+    : { decide: false, reason: "turn" };
+  if (scheduled || interrupted) return { decide: true, tier: triage === "large" ? "large" : "default" };
+  if (triage === "skip") return { decide: false, reason: "evaluator" };
+  return { decide: true, tier: triage };
+}

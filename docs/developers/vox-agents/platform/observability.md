@@ -19,7 +19,7 @@ Other parts of the system are built on that record:
 
 Every console entry point loads `src/instrumentation.ts` before anything else. It wires the standard OpenTelemetry Node tracer to a custom exporter, batching span export so tracing stays off the hot path.
 
-`SQLiteSpanExporter` (`src/utils/telemetry/sqlite-exporter.ts`, on the `VoxSpanExporter` base) writes spans to **one SQLite database per context**. A strategist player's run becomes `telemetry/{folder}/{gameID}-player-{playerID}.db`; a telepathist or oracle run gets its own file under its own folder.
+`SQLiteSpanExporter` (`src/agents/telemetry/sqlite-exporter.ts`, on the `VoxSpanExporter` base) writes spans to **one SQLite database per context**. A strategist player's run becomes `telemetry/{folder}/{gameID}-player-{playerID}.db`; a telepathist or oracle run gets its own file under its own folder.
 
 Each row stores the span's identifiers and hierarchy (trace, span, parent), name, timing, status, and the full attribute payload as JSON. The context ID and game turn are lifted into their own indexed columns, because "everything that happened on turn 42" is the query everyone wants. The exporter also emits an event whenever spans land, which is what the web UI's live span stream rides on.
 
@@ -44,7 +44,7 @@ The hierarchy follows a few conventions worth knowing before writing queries. Th
 
 Modules use named Winston loggers from `src/utils/logger.ts`; `console.log` is banned in production code. Output goes to the console, `logs/error.log`, and `logs/combined.log`. When the web server runs, an SSE stream feeds the dashboard's Debug page, with source and level filters.
 
-Startup version information comes from `version.json`. `src/utils/config/version.ts` adds a Git commit hash only when the project root has `.git` metadata, and skips it silently otherwise, so installed builds need no Git.
+Startup version information comes from `version.json`. `src/agents/config/version.ts` adds a Git commit hash only when the project root has `.git` metadata, and skips it silently otherwise, so installed builds need no Git.
 
 ## Inspecting agent behavior
 
@@ -55,4 +55,4 @@ The usual workflow when an agent does something puzzling:
 3. For a conversational view of the same record, open a [telepathist](../agents/telepathist.md) chat on the database and ask. `get-conversation-log` reconstructs the full exchange per agent.
 4. To test a hypothesis ("would it have attacked with a different briefing?"), feed the turn to the [oracle](../agents/oracle.md) and replay it with the prompt changed.
 
-Use any SQLite client for ad-hoc analysis. The schema is in `src/utils/telemetry/schema.ts`.
+Use any SQLite client for ad-hoc analysis. The schema is in `src/agents/telemetry/schema.ts`.

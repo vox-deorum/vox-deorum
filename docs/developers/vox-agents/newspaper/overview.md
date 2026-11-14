@@ -12,4 +12,6 @@ The newspaper currently has a fixture renderer proof, with in-game visual accept
 
 The [implementation roadmap](../../../plans/newspaper/implementation.md) describes the stages and their dependencies. Detailed requirements remain in each [implementation plan](../../../plans/newspaper/implementation/).
 
-The implemented source lives in `vox-agents/src/newspaper/`: contracts are in `contracts/`, browser-safe presentation in `ui/`, rendering in `renderer/`, bundle caching in `cache/`, and local host code in `host/`. The command entry point is `console.ts`. The plain DOM reader is separate in `vox-agents/newspaper/`.
+The implemented source lives in `vox-agents/src/newspaper/`: `contracts/` defines completed publications and reader interaction, `renderer/` owns browser-safe presentation, `export/` owns Node capture and cache delivery, and `host/` serves the local proof. The command entry point is `console.ts`. The plain DOM reader stays in `vox-agents/newspaper/src/`.
+
+To render an issue, supply a completed `IssueDocument` with publication identity, ordered pages, canonical items, and typed links. The [renderer guide](renderer.md) describes that input, the separate render profile and reader state, and the exported bundle. Editorial selection and replay produce publications in later stages.

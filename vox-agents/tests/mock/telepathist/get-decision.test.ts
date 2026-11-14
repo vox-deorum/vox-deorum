@@ -14,7 +14,7 @@ import type { Kysely } from 'kysely';
 // telepathist-tool → VoxContext → agent-registry → strategist → VoxAgent → VoxContext
 // (same seam as telepathist-tools.test.ts, but resolving simple-strategist so the
 // detailed-mode agent sections render).
-vi.mock('../../../src/infra/agent-registry.js', () => ({
+vi.mock('../../../src/agents/runtime/agent-registry.js', () => ({
   agentRegistry: {
     get: (name: string) => (name === 'simple-strategist' ? { description: 'Test strategist' } : undefined),
     register: () => true,
@@ -26,7 +26,7 @@ vi.mock('../../../src/infra/agent-registry.js', () => ({
 
 import { GetDecisionTool } from '../../../src/telepathist/tools/get-decision.js';
 import type { TelepathistParameters } from '../../../src/telepathist/telepathist-parameters.js';
-import type { TelemetryDatabase } from '../../../src/utils/telemetry/schema.js';
+import type { TelemetryDatabase } from '../../../src/agents/telemetry/schema.js';
 import { createTelemetryDb, type SpanSeed } from '../../helpers/telemetry-db.js';
 
 const TURN = 12;

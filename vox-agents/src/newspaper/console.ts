@@ -6,14 +6,14 @@ import { parseArgs } from 'node:util';
 import { createLogger } from '../utils/logger.js';
 import { processManager } from '../infra/process-manager.js';
 import { errorMessage } from '../utils/errors.js';
-import { launchInstalledBrowser, NewspaperBrowser } from './renderer/browser.js';
-import { hashReaderAssets, NewspaperCache, renderCacheKey } from './cache/cache.js';
+import { launchInstalledBrowser, NewspaperBrowser } from './export/browser.js';
+import { hashReaderAssets, NewspaperCache, renderCacheKey } from './export/cache.js';
 import { startNewspaperHost, readerDirectory } from './host/http.js';
-import { renderIssue } from './renderer/render.js';
-import { defaultRenderProfile } from './ui/layout.js';
-import { parseIssueDocument, parseRenderProfile } from './contracts/validation.js';
-import { writeLuaFixture } from './host/fixture.js';
-import type { DdsFormat } from './renderer/dds.js';
+import { renderIssue } from './export/render.js';
+import { defaultRenderProfile } from './renderer/layout.js';
+import { parseIssueDocument, parseRenderProfile } from './renderer/validation.js';
+import { writeLuaFixture } from './export/lua-fixture.js';
+import type { DdsFormat } from './export/dds.js';
 
 const logger = createLogger('Newspaper');
 

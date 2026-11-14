@@ -2,7 +2,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import request from 'supertest';
 import { startNewspaperHost } from '../../../../src/newspaper/host/http.js';
-import { NewspaperBrowserUnavailableError } from '../../../../src/newspaper/renderer/browser.js';
+import { NewspaperBrowserUnavailableError } from '../../../../src/newspaper/export/browser.js';
 
 describe('newspaper loopback host', () => {
   it('should distinguish browser unavailability from invalid export input', async () => {

@@ -40,12 +40,12 @@ Tips for writing questions:
 
 ## Backends
 
-`getEvaluationModel` in `src/utils/models/evaluation.ts` builds an evaluator from any model config.
+`getEvaluationModel` in `src/agents/models/evaluation/evaluation.ts` builds an evaluator from any model config.
 
 | Backend | When | How it works |
 | --- | --- | --- |
 | Native (TypeSafe's Jev, `typesafe/jev-latest`) | The provider is `typesafe`. Needs `TYPESAFE_AI_API_KEY`. | Answers questions directly. It cannot chat, so chat model pickers hide it. |
-| Chat adapter (`createLanguageModelEvaluator`) | Any other provider | Sends the state and questions in one prompt, asks for a JSON reply with a probability for every option or level, and cleans the reply into valid answers. Helpers are in `src/utils/models/evaluation-questions.ts`. |
+| Chat adapter (`createLanguageModelEvaluator`) | Any other provider | Sends the state and questions in one prompt, asks for a JSON reply with a probability for every option or level, and cleans the reply into valid answers. Helpers are in `src/agents/models/evaluation/evaluation-questions.ts`. |
 
 Anything that works with Jev also works with a chat model, without a TypeSafe key.
 
@@ -61,14 +61,14 @@ Evaluators live in the same `llms` registry as chat models, with the same alias 
 
 Settings has an Evaluator dropdown for the shared alias. See [Setup wizard](configuration.md#the-setup-wizard) for the Judge AI mapping.
 
-**Input limit.** The `maxInputTokens` model option caps the state size in estimated tokens (`inputTokenLimit` in `src/utils/models/models.ts`).
+**Input limit.** The `maxInputTokens` model option caps the state size in estimated tokens (`inputTokenLimit` in `src/agents/models/models.ts`).
 
 - The default is 30,000 for TypeSafe (below Jev's 32k cap) and no limit for other models.
 - A larger state is refused with a context-length error before the provider is called, so callers can trim and retry.
 
 ## The evaluate call
 
-`context.evaluate(model, state, { questions })` runs in `src/infra/vox-evaluate.ts`.
+`context.evaluate(model, state, { questions })` runs in `src/agents/runtime/vox-evaluate.ts`.
 
 - It must run inside an active run, and cancelling the run cancels it.
 - The state can be a string or any JSON-serializable object.
@@ -85,8 +85,8 @@ All under `vox-agents/tests/mock/`:
 
 | Area | Files |
 | --- | --- |
-| Both backends | `utils/evaluation-questions.test.ts`, `utils/evaluation.test.ts` |
+| Both backends | `agents/models/evaluation/evaluation-questions.test.ts`, `agents/models/evaluation/evaluation.test.ts` |
 | The evaluate call | `context/vox-context-evaluate.test.ts` |
-| Answer labeling | `utils/evaluation-record.test.ts` |
+| Answer labeling | `agents/models/evaluation/evaluation-record.test.ts` |
 
 Tests for the evaluator strategist and trimming are listed on their own pages.

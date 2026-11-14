@@ -7,8 +7,8 @@ import { Selectable } from 'kysely';
 import { LuaFunction } from '../../bridge/lua-function.js';
 import { PlayerOptions } from '../schema/timed.js';
 import { knowledgeManager } from '../../server.js';
-import { retrieveEnumName } from '../../utils/knowledge/enum.js';
-import { composeVisibility } from '../../utils/knowledge/visibility.js';
+import { retrieveEnumName } from '../helpers/enum.js';
+import { composeVisibility } from '../helpers/visibility.js';
 
 /**
  * Lua function that extracts player options information from the game

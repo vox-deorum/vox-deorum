@@ -8,7 +8,7 @@ Runs without `files` never compact. They keep the normal handling for context-le
 
 ## The rules
 
-Before each step after the first, `executeAgent` (`src/infra/vox-execute.ts`) estimates the size of the conversation so far with `countRequestTokens` (`src/utils/models/token-counter.ts`). The estimate is local and counts text, tool calls, tool results, retained reasoning, and a small per-message overhead. It is not the provider's exact count.
+Before each step after the first, `executeAgent` (`src/agents/runtime/vox-execute.ts`) estimates the size of the conversation so far with `countRequestTokens` (`src/agents/models/token-counter.ts`). The estimate is local and counts text, tool calls, tool results, retained reasoning, and a small per-message overhead. It is not the provider's exact count.
 
 The estimate is compared with the model's `continuityThreshold` option. The default is 300,000 tokens for Claude Code, Codex, OpenAI, and Anthropic providers, and for model names starting with `claude-`, `anthropic/`, or `openai/` on other providers. Other models default to 100,000.
 
@@ -33,7 +33,7 @@ Every run that ends on a context-length error, with or without files, logs a war
 | `overflow.tokens.initial` | Estimated tokens in the prepared prompt. |
 | `overflow.tokens.history` | Estimated tokens in the step history after it. |
 
-Compacting does two things, both with helpers in `src/utils/prompts/message-history.ts`:
+Compacting does two things, both with helpers in `src/agents/prompts/message-history.ts`:
 
 - `compactWorkspaceTraffic` replaces the output of every `bash` result older than the last step with a one-line note saying the output was dropped and to re-run the command or read the notes. The tool calls stay, so every call still has its result.
 - `dropOlderReasoning` removes reasoning from every assistant message except the most recent one, which Anthropic models need next to pending tool results.
@@ -69,8 +69,8 @@ On Codex and Claude Code, a step that compacted sends the full compacted history
 
 | Piece | File |
 | --- | --- |
-| Threshold default and validation | `continuityThreshold` in `src/utils/models/models.ts` |
-| Request size estimate | `countRequestTokens` in `src/utils/models/token-counter.ts` |
-| Dropping output and reasoning, reminder text | `src/utils/prompts/message-history.ts` |
-| When to remind, compact, and retry | `executeAgent` and `executeAgentStep` in `src/infra/vox-execute.ts` |
-| Tests | `tests/mock/utils/message-history.test.ts`, `tests/mock/context/vox-execute-compaction.test.ts` |
+| Threshold default and validation | `continuityThreshold` in `src/agents/models/models.ts` |
+| Request size estimate | `countRequestTokens` in `src/agents/models/token-counter.ts` |
+| Dropping output and reasoning, reminder text | `src/agents/prompts/message-history.ts` |
+| When to remind, compact, and retry | `executeAgent` and `executeAgentStep` in `src/agents/runtime/vox-execute.ts` |
+| Tests | `tests/mock/agents/prompts/message-history.test.ts`, `tests/mock/context/vox-execute-compaction.test.ts` |

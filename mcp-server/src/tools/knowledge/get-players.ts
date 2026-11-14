@@ -14,15 +14,15 @@ import { getPlayerInformations } from "../../knowledge/getters/player-informatio
 import { PlayerOpinions, PlayerSummary } from "../../knowledge/schema/timed.js";
 import { MaxMajorCivs, MINOR_CIV_LEADER } from "../../knowledge/schema/base.js";
 import { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
-import { stripMutableKnowledgeMetadata } from "../../utils/knowledge/strip-metadata.js";
+import { stripMutableKnowledgeMetadata } from "../../knowledge/helpers/strip-metadata.js";
 import { cleanEventData } from "./get-events.js";
 import { getPlayerOpinions } from "../../knowledge/getters/player-opinions.js";
-import { readPlayerKnowledge, readPublicKnowledgeBatch } from "../../utils/knowledge/cached.js";
-import { getPlayerVisibility } from "../../utils/knowledge/visibility.js";
+import { readPlayerKnowledge, readPublicKnowledgeBatch } from "../../knowledge/helpers/cached.js";
+import { getPlayerVisibility } from "../../knowledge/helpers/visibility.js";
 import { PlayerInformation } from "../../knowledge/schema/public.js";
 import { Selectable } from "kysely";
 import { sortBySchema } from "../../utils/schema.js";
-import { stripTags } from "../../utils/database/localized.js";
+import { stripTags } from "../../database/helpers/localized.js";
 import { annotateSubjects } from "./get-opinions.js";
 
 // Re-export the minor-civ leader sentinel so `get-players` consumers can still find it here; the

@@ -1,5 +1,5 @@
 /**
- * Timeline tests for VoxPlayer (src/strategist/vox-player.ts): reloads, startup notifications,
+ * Timeline tests for VoxPlayer (src/strategist/seats/vox-player.ts): reloads, startup notifications,
  * busy reloads, turn recording, and the seat store's lifecycle.
  *
  * The loop runs for real with instant timers. Each time it goes idle it takes the next scripted
@@ -25,15 +25,15 @@ vi.mock('../../../src/strategist/pacing/triage.js', () => ({
   runStrategistTriage: async () => undefined,
 }));
 
-import { VoxPlayer } from '../../../src/strategist/vox-player.js';
-import { HumanDecisionBus } from '../../../src/strategist/human-decision-bus.js';
-import { VoxSpanExporter } from '../../../src/utils/telemetry/vox-exporter.js';
+import { VoxPlayer } from '../../../src/strategist/seats/vox-player.js';
+import { HumanDecisionBus } from '../../../src/strategist/seats/human-decision-bus.js';
+import { VoxSpanExporter } from '../../../src/agents/telemetry/vox-exporter.js';
 import { spanProcessor, sqliteExporter } from '../../../src/instrumentation.js';
-import { config } from '../../../src/utils/config.js';
-import { WorkspaceStore } from '../../../src/utils/workspace/workspace-store.js';
+import { config } from '../../../src/agents/config/load.js';
+import { WorkspaceStore } from '../../../src/agents/workspace/workspace-store.js';
 import { turnEventWindow, type StrategistParameters } from '../../../src/strategist/strategy-parameters.js';
 import type { PlayerConfig } from '../../../src/types/config.js';
-import type { VoxRunOptions } from '../../../src/infra/vox-run.js';
+import type { VoxRunOptions } from '../../../src/agents/runtime/vox-run.js';
 
 /** What the strategist saw when it ran on a turn. */
 interface Decision {

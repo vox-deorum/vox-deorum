@@ -14,15 +14,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { installMockMcpClient, structuredResult } from '../../../helpers/mock-mcp-client.js';
 import { transcriptRow } from '../../../helpers/diplomacy-fixtures.js';
-import type { TranscriptMessage } from '../../../../src/utils/diplomacy/transcript/transcript-utils.js';
+import type { TranscriptMessage } from '../../../../src/diplomacy/transcript/transcript-utils.js';
 
-vi.mock('../../../../src/utils/models/mcp-client.js', async () => {
+vi.mock('../../../../src/agents/mcp/mcp-client.js', async () => {
   const helper = await import('../../../helpers/mock-mcp-client.js');
   return helper.mockMcpClientModule();
 });
 
-import { agentRegistry } from '../../../../src/infra/agent-registry.js';
-import { contextRegistry } from '../../../../src/infra/context-registry.js';
+import { agentRegistry } from '../../../../src/agents/runtime/agent-registry.js';
+import { contextRegistry } from '../../../../src/agents/runtime/context-registry.js';
 import type {
   ChatConnectedEvent,
   ChatDoneEvent,
@@ -35,10 +35,10 @@ import {
   appendDealReject,
   closeConversation,
   enactAgentDeal,
-} from '../../../../src/utils/diplomacy/deal/deal.js';
-import { reportThreadRow, stageThreadClose } from '../../../../src/utils/diplomacy/turn/active-turn-state.js';
-import { appendTranscriptMessageRow } from '../../../../src/utils/diplomacy/transcript/transcript.js';
-import { sendMessageToolName } from '../../../../src/utils/diplomacy/constants.js';
+} from '../../../../src/diplomacy/deal/deal.js';
+import { reportThreadRow, stageThreadClose } from '../../../../src/diplomacy/turn/active-turn-state.js';
+import { appendTranscriptMessageRow } from '../../../../src/diplomacy/transcript/transcript.js';
+import { sendMessageToolName } from '../../../../src/diplomacy/constants.js';
 import { chatThreadStore } from '../../../../src/web/chat/store.js';
 import { runChatTurn } from '../../../../src/web/chat/turn.js';
 import { createSendMessageTool } from '../../../../src/envoy/tools/send-message-tool.js';

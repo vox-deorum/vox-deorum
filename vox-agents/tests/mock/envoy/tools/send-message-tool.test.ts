@@ -3,14 +3,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { installMockMcpClient, structuredResult } from '../../../helpers/mock-mcp-client.js';
 
-vi.mock('../../../../src/utils/models/mcp-client.js', async () => {
+vi.mock('../../../../src/agents/mcp/mcp-client.js', async () => {
   const helper = await import('../../../helpers/mock-mcp-client.js');
   return helper.mockMcpClientModule();
 });
 
 import { createSendMessageTool } from '../../../../src/envoy/tools/send-message-tool.js';
 import type { EnvoyThread } from '../../../../src/types/index.js';
-import { beginTurnState } from '../../../../src/utils/diplomacy/turn/active-turn-state.js';
+import { beginTurnState } from '../../../../src/diplomacy/turn/active-turn-state.js';
 import { createFakeVoxContext } from '../../../helpers/fake-vox-context.js';
 
 let mcp: ReturnType<typeof installMockMcpClient>;

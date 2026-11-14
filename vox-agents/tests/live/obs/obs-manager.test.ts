@@ -9,7 +9,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import OBSWebSocket from 'obs-websocket-js';
 import { setTimeout } from 'node:timers/promises';
-import config from '../../../src/utils/config.js';
+import config from '../../../src/agents/config/load.js';
 
 // Explicit gate: the live/obs tier only runs under `npm run test:obs`, which sets
 // TEST_TIER. Without it we neither probe nor connect to a real OBS, so a stray run
@@ -37,7 +37,7 @@ if (liveObsEnabled) {
 // Dynamic import so the module isn't loaded when OBS is absent
 // (ObsManager registers a process manager hook on import)
 const obsManagerModule = obsAvailable
-  ? await import('../../../src/infra/obs-manager.js')
+  ? await import('../../../src/game/recording/obs-manager.js')
   : undefined;
 
 const GAME_SCENE = 'Vox Deorum';

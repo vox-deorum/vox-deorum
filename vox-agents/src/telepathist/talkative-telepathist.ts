@@ -9,8 +9,8 @@
 import { Telepathist } from './telepathist.js';
 import { TelepathistParameters } from './telepathist-parameters.js';
 import { EnvoyThread } from '../types/index.js';
-import { VoxContext } from '../infra/vox-context.js';
-import { renderSystemPrompt } from '../utils/prompts/prompt-files.js';
+import { VoxContext } from '../agents/runtime/vox-context.js';
+import { renderSystemPrompt } from '../agents/prompts/prompt-files.js';
 
 /**
  * A talkative telepathist that discusses game history and AI decisions.

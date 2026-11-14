@@ -13,7 +13,7 @@ export interface StreamingEventCallback {
 }
 
 import type { ModelMessage } from "ai";
-import type { DealTranscriptMessage } from "../../../mcp-server/dist/utils/deal-schema.js";
+import type { DealTranscriptMessage } from "../../../mcp-server/dist/diplomacy/deals/deal-schema.js";
 
 /** Identity (civ + leader) of a conversation participant, resolved once when the thread opens. */
 export interface ParticipantIdentity {

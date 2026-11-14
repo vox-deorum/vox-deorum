@@ -1,5 +1,5 @@
 /**
- * Tests for the server-side deal-state reducer (src/utils/diplomacy/deal-reduce.ts), the
+ * Tests for the server-side deal-state reducer (src/diplomacy/deal/deal-reduce.ts), the
  * backend twin of the stage-4 UI reducer. Pure over TranscriptMessage[] — no MCP / game.
  */
 
@@ -9,8 +9,8 @@ import {
   deriveProposalOutcomes,
   activeProposalDeal,
   isAgreed,
-} from '../../../../src/utils/diplomacy/deal/deal-reduce.js';
-import type { TranscriptMessage } from '../../../../src/utils/diplomacy/transcript/transcript-utils.js';
+} from '../../../../src/diplomacy/deal/deal-reduce.js';
+import type { TranscriptMessage } from '../../../../src/diplomacy/transcript/transcript-utils.js';
 import { transcriptRow } from '../../../helpers/diplomacy-fixtures.js';
 
 let nextId = 1;

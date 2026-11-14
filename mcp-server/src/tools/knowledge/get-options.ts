@@ -7,17 +7,17 @@ import { ToolBase } from "../base.js";
 import * as z from "zod";
 import { getPlayerOptions } from "../../knowledge/getters/player-options.js";
 import { MaxMajorCivs } from "../../knowledge/schema/base.js";
-import { stripTimedKnowledgeMetadata } from "../../utils/knowledge/strip-metadata.js";
+import { stripTimedKnowledgeMetadata } from "../../knowledge/helpers/strip-metadata.js";
 import { PlayerOptions } from "../../knowledge/schema/timed.js";
 import { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
-import { readPlayerKnowledge } from "../../utils/knowledge/cached.js";
+import { readPlayerKnowledge } from "../../knowledge/helpers/cached.js";
 import { getPlayerStrategy } from "../../knowledge/getters/player-strategy.js";
 import { getPlayerPersona } from "../../knowledge/getters/player-persona.js";
 import { getPlayerFlavors } from "../../knowledge/getters/player-flavors.js";
 import { getPlayerRelationships } from "../../knowledge/getters/player-relationships.js";
-import { enumMappings } from "../../utils/knowledge/enum.js";
+import { enumMappings } from "../../knowledge/helpers/enum.js";
 import { getTool } from "../index.js";
-import { formatPolicyHelp } from "../../utils/database/format.js";
+import { formatPolicyHelp } from "../../database/helpers/format.js";
 import { loadGrandStrategyDescriptions, loadFlavorDescriptions } from "../../utils/strategies/loader.js";
 
 /**

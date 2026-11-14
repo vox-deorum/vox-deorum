@@ -13,7 +13,7 @@
  * DecisionValue - A decided value as "current → new", or just the value when it did not move.
  */
 import { computed } from 'vue';
-import type { DecisionItem } from '@/api/strategist-turn';
+import type { DecisionItem } from '@/presentation/strategist-turn';
 
 const props = defineProps<{ item: DecisionItem }>();
 

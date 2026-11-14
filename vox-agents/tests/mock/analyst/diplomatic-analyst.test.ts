@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { agentRegistry } from '../../../src/infra/agent-registry.js';
+import { agentRegistry } from '../../../src/agents/runtime/agent-registry.js';
 import { createFakeVoxContext, makeStrategistParameters, makeGameState } from '../../helpers/fake-vox-context.js';
 
 const analyst = agentRegistry.get('diplomatic-analyst') as any;

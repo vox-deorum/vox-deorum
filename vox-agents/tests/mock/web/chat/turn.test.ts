@@ -5,9 +5,9 @@
  */
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { contextRegistry } from '../../../../src/infra/context-registry.js';
+import { contextRegistry } from '../../../../src/agents/runtime/context-registry.js';
 import type { ChatStreamSink, EnvoyThread } from '../../../../src/types/index.js';
-import { beginChatTurn } from '../../../../src/utils/diplomacy/turn/chat-turn-commit.js';
+import { beginChatTurn } from '../../../../src/diplomacy/turn/chat-turn-commit.js';
 import { chatThreadStore } from '../../../../src/web/chat/store.js';
 import { runChatTurn } from '../../../../src/web/chat/turn.js';
 

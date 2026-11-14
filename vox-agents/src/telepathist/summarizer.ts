@@ -8,13 +8,13 @@
  */
 
 import { createHash } from 'node:crypto';
-import { VoxAgent } from '../infra/vox-agent.js';
+import { VoxAgent } from '../agents/runtime/vox-agent.js';
 import { TelepathistParameters } from './telepathist-parameters.js';
-import { VoxContext } from '../infra/vox-context.js';
+import { VoxContext } from '../agents/runtime/vox-context.js';
 import { createLogger } from '../utils/logger.js';
-import { renderSystemPrompt } from '../utils/prompts/prompt-files.js';
+import { renderSystemPrompt } from '../agents/prompts/prompt-files.js';
 import type { Model } from '../types/index.js';
-import { getModelConfig, type ModelSize, selectModelReference } from '../utils/models/models.js';
+import { getModelConfig, type ModelSize, selectModelReference } from '../agents/models/models.js';
 
 /** Historical summaries use the routine model; shared with the lookups outside `Summarizer.getModel`. */
 const summarizerSize: ModelSize = 'small';

@@ -66,25 +66,23 @@ Search order and final ranking use different scores and checks:
 | Candidate generation | Assignment score | Prunes and orders candidate assignments. Rank-only bonuses for trade routes and air search affect this order separately. |
 | Search queue | Generation (search depth), then last-round rank | Favors shallow generations early and deeper ones later. Within a generation, favors the last-round heuristic plus rank-only bonuses. |
 | Completed plans | [Acceptance](overview.md#acceptance-and-replay) checks | Rejects unsafe or non-progressing plans. |
-| Final ranking | Cached total score | Ranks accepted plans, highest first. Ties use fewer assignments, then lower position ID. |
+| Final ranking | Current total score | Ranks accepted plans, highest first. Ties use fewer assignments, then lower position ID. |
 
-### Cached score updates
+### Completed-plan score
 
-`CvBasePosition::UpdateScore` calculates the cached total in this order:
+`CvBasePosition::UpdateScore` accumulates damage and bonuses and replaces the acting unit's stored plot score. `getScoreTotal` then reads those current components:
 
-1. Add the assignment's damage delta and bonus to their cumulative values.
-2. Cache `10 * (cumulative damage delta + cumulative bonuses) + sum of stored unit plot scores`, plus the plan's [trade gain](#how-plans-keep-the-score).
-3. Replace the acting unit's stored plot score, or insert a new nonzero entry.
+`total score = 10 * (cumulative damage delta + cumulative bonuses) + sum of stored unit plot scores + trade gain`
 
-The cache therefore includes the previous plot entry for the acting unit. Completion appends finish assignments and adds unused-unit plot bonuses without refreshing this total.
+The [trade gain](#how-plans-keep-the-score) and any completion-time plot-score changes enter ranking immediately. For example, changing the sole stored plot score from 20 to 30 produces a total of 30 when damage, bonuses, and trade gain are zero.
 
-For example, with one stored plot score of 20 and zero cumulative damage, bonuses, and trade gain, an assignment from plot score 20 to 30 caches a total of 20, then stores 30. A later `UpdateScore` sees the stored 30; completing the plan alone leaves the cached total at 20.
+Leaving a unit unused earns no extra score. Completed plans with equal totals still prefer fewer assignments. The [24-map tuning study](../../../../../../vox-deorum-rl/docs/rollouts/snapshots/unused-unit-bonus-2026-11-14.md) compares unused-unit bonuses from 0 to 240.
 
 ### Last-round heuristic quirk
 
 The queue's last-round heuristic adds unscaled damage and bonus, plus new plot score minus old plot score. It also subtracts the acting unit's previous stored plot score when one exists. When the old score equals that stored entry, the previous value is subtracted twice.
 
-For the same 20-to-30 assignment, with zero damage and bonus, the last-round increment is `30 - 20 - 20 = -10`. This affects which branch the search explores next. Accepted completed plans use the cached total described above.
+For the same 20-to-30 assignment, with zero damage and bonus, the last-round increment is `30 - 20 - 20 = -10`. This affects which branch the search explores next. Accepted completed plans use the current total described above.
 
 ## Trade routes
 

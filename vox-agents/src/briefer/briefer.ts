@@ -5,10 +5,10 @@
  */
 
 import { StepResult, Tool } from "ai";
-import { VoxAgent } from "../infra/vox-agent.js";
-import type { VoxContext } from "../infra/vox-context.js";
+import { VoxAgent } from "../agents/runtime/vox-agent.js";
+import type { VoxContext } from "../agents/runtime/vox-context.js";
 import { StrategistParameters } from "../strategist/strategy-parameters.js";
-import { bashToolName } from "../utils/tools/tool-names.js";
+import { bashToolName } from "../agents/tools/tool-names.js";
 
 /**
  * Base briefer agent that summarizes the game state.

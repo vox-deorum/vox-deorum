@@ -1,9 +1,9 @@
 import { ModelMessage } from "ai";
-import { AgentParameters } from "../infra/vox-agent.js";
-import { VoxContext } from "../infra/vox-context.js";
+import { AgentParameters } from "../agents/runtime/vox-agent.js";
+import { VoxContext } from "../agents/runtime/vox-context.js";
 import { renderSection, type SectionKey } from "../knowledge/sections.js";
 import { splitEntries } from "../knowledge/records.js";
-import { isFailedToolResult } from "../utils/tools/mcp-tools.js";
+import { isFailedToolResult } from "../agents/tools/mcp-tools.js";
 import { isRecord } from "../utils/guards.js";
 import type { CitiesReport } from "../../../mcp-server/dist/tools/knowledge/get-cities.js";
 import type { PlayersReport } from "../../../mcp-server/dist/tools/knowledge/get-players.js";
@@ -13,11 +13,11 @@ import type { OptionsReport } from "../../../mcp-server/dist/tools/knowledge/get
 import type { VictoryProgressReport } from "../../../mcp-server/dist/tools/knowledge/get-victory-progress.js";
 import type { GameMetadata } from "../../../mcp-server/dist/tools/knowledge/get-game-settings.js"
 import { StrategyDecisionType } from "../types/config.js";
-import type { HumanDecisionBus } from "./human-decision-bus.js";
-import { cacheBreakpoint } from "../utils/models/cache-breakpoint.js";
-import { dropLeastImportantEvents, maxEventTrimLevel } from "../utils/prompts/event-importance.js";
-import { filterRelayedReports } from "../utils/prompts/event-filters.js";
-import { workspaceRecordsPath } from "../utils/workspace/player-workspace.js";
+import type { HumanDecisionBus } from "./seats/human-decision-bus.js";
+import { cacheBreakpoint } from "../agents/models/cache-breakpoint.js";
+import { dropLeastImportantEvents, maxEventTrimLevel } from "../knowledge/events/event-importance.js";
+import { filterRelayedReports } from "../knowledge/events/event-filters.js";
+import { workspaceRecordsPath } from "../agents/workspace/player-workspace.js";
 
 /**
  * Parameters for the strategist agent

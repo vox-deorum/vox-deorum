@@ -1,6 +1,6 @@
 /**
  * Tests for StrategistSession's autoplay reconciliation on game switch and
- * crash recovery (src/strategist/strategist-session.ts). Civ V serializes the
+ * crash recovery (src/strategist/session/strategist-session.ts). Civ V serializes the
  * autoplay counter and slot statuses into saves, so handleGameSwitched must
  * align the engine with the session config in both directions: an interactive
  * (autoPlay: false) session loading/taking over an auto-playing game cancels
@@ -23,12 +23,12 @@ const modelMocks = vi.hoisted(() => ({
   selectEvaluatorReference: vi.fn(),
 }));
 
-vi.mock('../../../src/utils/models/mcp-client.js', async () => {
+vi.mock('../../../src/agents/mcp/mcp-client.js', async () => {
   const helper = await import('../../helpers/mock-mcp-client.js');
   return helper.mockMcpClientModule();
 });
 
-vi.mock('../../../src/infra/vox-civilization.js', () => ({
+vi.mock('../../../src/game/vox-civilization.js', () => ({
   voxCivilization: {
     onGameExit: vi.fn(),
     onGameBound: vi.fn(),
@@ -42,7 +42,7 @@ vi.mock('../../../src/infra/vox-civilization.js', () => ({
   },
 }));
 
-vi.mock('../../../src/utils/models/resolution.js', () => ({
+vi.mock('../../../src/agents/models/resolution.js', () => ({
   ensureModelsResolved: modelMocks.ensureModelsResolved,
   selectModelReference: modelMocks.selectModelReference,
   selectEvaluatorReference: modelMocks.selectEvaluatorReference,
@@ -51,21 +51,21 @@ vi.mock('../../../src/utils/models/resolution.js', () => ({
 // Make the session's settle waits instant (post-player-creation and strategic-view delays).
 vi.mock('node:timers/promises', () => ({ setTimeout: () => Promise.resolve() }));
 
-import { StrategistSession } from '../../../src/strategist/strategist-session.js';
-import { agentRegistry } from '../../../src/infra/agent-registry.js';
-import { voxCivilization } from '../../../src/infra/vox-civilization.js';
-import { VoxPlayer } from '../../../src/strategist/vox-player.js';
-import { VoxContext } from '../../../src/infra/vox-context.js';
-import { VoxSpanExporter } from '../../../src/utils/telemetry/vox-exporter.js';
+import { StrategistSession } from '../../../src/strategist/session/strategist-session.js';
+import { agentRegistry } from '../../../src/agents/runtime/agent-registry.js';
+import { voxCivilization } from '../../../src/game/vox-civilization.js';
+import { VoxPlayer } from '../../../src/strategist/seats/vox-player.js';
+import { VoxContext } from '../../../src/agents/runtime/vox-context.js';
+import { VoxSpanExporter } from '../../../src/agents/telemetry/vox-exporter.js';
 import { sqliteExporter } from '../../../src/instrumentation.js';
-import { contextRegistry } from '../../../src/infra/context-registry.js';
-import { WorkspaceStore } from '../../../src/utils/workspace/workspace-store.js';
+import { contextRegistry } from '../../../src/agents/runtime/context-registry.js';
+import { WorkspaceStore } from '../../../src/agents/workspace/workspace-store.js';
 import { hasGameReference, writeGameReference } from '../../../src/knowledge/reference.js';
-import { config as rootConfig } from '../../../src/utils/config.js';
+import { config as rootConfig } from '../../../src/agents/config/load.js';
 import {
   autoPlayTurnLimit,
   buildStrategicViewLua,
-} from '../../../src/utils/game/control-lua.js';
+} from '../../../src/game/control-lua.js';
 
 let mcp: ReturnType<typeof installMockMcpClient>;
 beforeEach(() => {

@@ -1,5 +1,5 @@
 /**
- * Tests for the step budget with files on (src/infra/vox-execute.ts, VoxAgent.stepLimit): the files
+ * Tests for the step budget with files on (src/agents/runtime/vox-execute.ts, VoxAgent.stepLimit): the files
  * quota raises an agent's step limit unless its own maxSteps is higher, bash is declared next to
  * the agent's own tools, and the closing reminder counts down the steps left. Same mocking idiom
  * as vox-execute.test.ts: the mocked model returns empty steps, so the base stopCheck runs every
@@ -8,20 +8,20 @@
 
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('../../../src/utils/models/models.js', async (orig) => {
-  const actual = await orig<typeof import('../../../src/utils/models/models.js')>();
+vi.mock('../../../src/agents/models/models.js', async (orig) => {
+  const actual = await orig<typeof import('../../../src/agents/models/models.js')>();
   return { ...actual, getModel: vi.fn(() => ({} as any)), buildProviderOptions: vi.fn(() => ({})) };
 });
-vi.mock('../../../src/utils/models/concurrency.js', async (orig) => {
-  const actual = await orig<typeof import('../../../src/utils/models/concurrency.js')>();
+vi.mock('../../../src/agents/models/concurrency.js', async (orig) => {
+  const actual = await orig<typeof import('../../../src/agents/models/concurrency.js')>();
   return { ...actual, streamTextWithConcurrency: vi.fn() };
 });
 
-import { VoxContext } from '../../../src/infra/vox-context.js';
-import { VoxAgent } from '../../../src/infra/vox-agent.js';
-import { agentRegistry } from '../../../src/infra/agent-registry.js';
-import { streamTextWithConcurrency } from '../../../src/utils/models/concurrency.js';
-import { bashToolName } from '../../../src/utils/tools/bash-tool.js';
+import { VoxContext } from '../../../src/agents/runtime/vox-context.js';
+import { VoxAgent } from '../../../src/agents/runtime/vox-agent.js';
+import { agentRegistry } from '../../../src/agents/runtime/agent-registry.js';
+import { streamTextWithConcurrency } from '../../../src/agents/models/concurrency.js';
+import { bashToolName } from '../../../src/agents/tools/bash-tool.js';
 import type { StrategistParameters } from '../../../src/strategist/strategy-parameters.js';
 import { makeStrategistParameters } from '../../helpers/fake-vox-context.js';
 import type { Model } from '../../../src/types/index.js';

@@ -11,9 +11,9 @@ import { Tool } from "ai";
 import type { BriefingMode, SpecializedBrieferInput } from "./specialized-briefer.js";
 import type { StrategistParameters, GameState } from "../strategist/strategy-parameters.js";
 import { getGameState, retryWithFewerEvents } from "../strategist/strategy-parameters.js";
-import type { VoxContext } from "../infra/vox-context.js";
+import type { VoxContext } from "../agents/runtime/vox-context.js";
 import type { BriefingKind } from "../knowledge/records.js";
-import { createSimpleTool } from "../utils/tools/simple-tools.js";
+import { createSimpleTool } from "../agents/tools/simple-tools.js";
 
 /**
  * Maps each briefing mode to its report storage key in GameState.reports

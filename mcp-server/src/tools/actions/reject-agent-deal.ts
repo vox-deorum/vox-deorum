@@ -28,7 +28,7 @@ import * as z from "zod";
 import { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { knowledgeManager } from "../../server.js";
 import { orderPlayerPair } from "../../knowledge/getters/diplomatic-messages.js";
-import { transcriptRowSchemaFor } from "../../utils/transcript-schema.js";
+import { transcriptRowSchemaFor } from "../../diplomacy/transcript-schema.js";
 import { assertExpectedGame } from "../../utils/expected-game.js";
 import {
   answeredProposalID,
@@ -38,7 +38,7 @@ import {
   loadProposalConversation,
   projectStoredDealRow,
   RESPONSE_TYPES,
-} from "../../utils/deal-outcome.js";
+} from "../../diplomacy/deals/deal-outcome.js";
 
 /** The observer / no-seat endpoint sentinel (shared with append-message). */
 const OBSERVER_ID = -1;

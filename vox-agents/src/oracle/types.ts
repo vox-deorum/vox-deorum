@@ -7,11 +7,11 @@
  */
 
 import type { ModelMessage, StepResult, Tool } from 'ai';
-import type { AgentParameters } from '../infra/vox-agent.js';
-import type { ExecuteTokenOutput } from '../infra/vox-run.js';
+import type { AgentParameters } from '../agents/runtime/vox-agent.js';
+import type { ExecuteTokenOutput } from '../agents/runtime/vox-run.js';
 import type { Model } from '../types/index.js';
 import type { ResolvedFilesConfig } from '../types/config.js';
-import type { ToolCallFraming } from '../utils/models/tool-rescue/types.js';
+import type { ToolCallFraming } from '../agents/models/tool-rescue/types.js';
 
 /** A single tool call decision from a replay */
 export interface ReplayDecision {

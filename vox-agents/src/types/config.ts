@@ -5,7 +5,7 @@
  * Contains transport, LLM, and main configuration structures.
  */
 
-import type { ToolCallFraming } from '../utils/models/tool-rescue/types.js';
+import type { ToolCallFraming } from '../agents/models/tool-rescue/types.js';
 
 /**
  * Transport types supported by the MCP Client

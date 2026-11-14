@@ -152,10 +152,10 @@ import { errorMessage } from '../utils/errors';
 import ChatMessages from '../components/chat/ChatMessages.vue';
 import DeleteSessionDialog from '../components/chat/DeleteSessionDialog.vue';
 import DealScreen from '../components/deal/DealScreen.vue';
-import { deriveProposalOutcomes } from '@vox/utils/diplomacy/deal/deal-reduce';
+import { deriveProposalOutcomes } from '@vox/diplomacy/deal/deal-reduce';
 // Pure transcript helpers shared with the backend (via @vox) so labels and the close-lock
 // comparison can never drift from the server's `isClosedThisTurn` / role derivation.
-import { roleOf, agentName as agentNameOf, audienceID, isClosedThisTurn } from '@vox/utils/diplomacy/transcript/transcript-utils';
+import { roleOf, agentName as agentNameOf, audienceID, isClosedThisTurn } from '@vox/diplomacy/transcript/transcript-utils';
 import { useThreadMessages } from '../composables/useThreadMessages';
 
 const route = useRoute();

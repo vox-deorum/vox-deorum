@@ -9,8 +9,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { setupStore } from '../helpers.js';
 import { getTool } from '../../../src/tools/index.js';
 import createInspectDealTool, { type NormalizedSideRange } from '../../../src/tools/knowledge/inspect-deal.js';
-import * as inspectDealUtil from '../../../src/utils/lua/inspect-deal.js';
-import type { InspectDealResult, SideRange } from '../../../src/utils/lua/inspect-deal.js';
+import * as inspectDealUtil from '../../../src/diplomacy/deals/inspect-deal.js';
+import type { InspectDealResult, SideRange } from '../../../src/diplomacy/deals/inspect-deal.js';
 import type { KnowledgeStore } from '../../../src/knowledge/store.js';
 import { connectToolClient } from '../tool-client.js';
 

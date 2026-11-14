@@ -21,11 +21,11 @@ const mocks = vi.hoisted(() => ({
   runChatTurn: vi.fn(),
 }));
 
-vi.mock("../../../../src/utils/models/mcp-client.js", () => ({
+vi.mock("../../../../src/agents/mcp/mcp-client.js", () => ({
   mcpClient: { callTool: mocks.callTool },
 }));
 
-vi.mock("../../../../src/utils/diplomacy/transcript/transcript.js", () => ({
+vi.mock("../../../../src/diplomacy/transcript/transcript.js", () => ({
   diplomacyThreadId: (playerAID: number, playerBID: number, gameID: string) => `${gameID}:${playerAID}:${playerBID}`,
   readTranscriptPage: mocks.readPage,
 }));
@@ -35,8 +35,8 @@ vi.mock("../../../../src/web/chat/turn.js", () => ({ runChatTurn: mocks.runChatT
 vi.mock("../../../../src/web/chat/enrichment.js", () => ({
   civIdentity: () => ({ name: "Rome", leader: "Caesar" }),
 }));
-vi.mock("../../../../src/utils/diplomacy/ingame/notify.js", () => ({ notifyDiplomacyOutcome: mocks.notify }));
-vi.mock("../../../../src/utils/diplomacy/deal/deal-actions.js", () => ({
+vi.mock("../../../../src/diplomacy/ingame/notify.js", () => ({ notifyDiplomacyOutcome: mocks.notify }));
+vi.mock("../../../../src/diplomacy/deal/deal-actions.js", () => ({
   acceptDealAction: mocks.accept,
   rejectDealAction: mocks.reject,
   NotDiplomacyThreadError: class NotDiplomacyThreadError extends Error {},
@@ -44,24 +44,24 @@ vi.mock("../../../../src/utils/diplomacy/deal/deal-actions.js", () => ({
 // The bridge only reads this module for its error vocabulary and the open-offer read backing a
 // blind panel propose; the real one pulls the whole transcript I/O layer in behind it, which this
 // transport suite deliberately replaces.
-vi.mock("../../../../src/utils/diplomacy/deal/deal.js", () => ({
+vi.mock("../../../../src/diplomacy/deal/deal.js", () => ({
   IllegalDealError: class IllegalDealError extends Error {},
   ProposalConflictError: class ProposalConflictError extends Error {},
   readActiveProposal: mocks.readActive,
 }));
-vi.mock("../../../../src/utils/diplomacy/turn/chat-turn-commit.js", () => ({
+vi.mock("../../../../src/diplomacy/turn/chat-turn-commit.js", () => ({
   isThreadBusy: () => false,
   ThreadBusyError: class ThreadBusyError extends Error {},
   threadBusyMessage: "A reply is already being generated for this conversation. Please wait for it to finish.",
 }));
-vi.mock("../../../../src/utils/diplomacy/ingame/civ5-markup.js", () => ({ markdownToCiv5: (content: string) => content }));
+vi.mock("../../../../src/diplomacy/ingame/civ5-markup.js", () => ({ markdownToCiv5: (content: string) => content }));
 vi.mock("../../../../src/utils/logger.js", () => ({
   createLogger: () => ({ error: mocks.loggerError, warn: vi.fn(), info: vi.fn(), debug: vi.fn() }),
 }));
 
-import { IngameBridge } from "../../../../src/utils/diplomacy/ingame/ingame-bridge.js";
-import { ProposalConflictError } from "../../../../src/utils/diplomacy/deal/deal.js";
-import { ThreadBusyError, threadBusyMessage } from "../../../../src/utils/diplomacy/turn/chat-turn-commit.js";
+import { IngameBridge } from "../../../../src/diplomacy/ingame/ingame-bridge.js";
+import { ProposalConflictError } from "../../../../src/diplomacy/deal/deal.js";
+import { ThreadBusyError, threadBusyMessage } from "../../../../src/diplomacy/turn/chat-turn-commit.js";
 import { deferred } from "../../../helpers/deferred.js";
 
 /** Build one committed transcript row. */

@@ -35,8 +35,8 @@ import type { ModelMessage } from 'ai';
 import TextMessage from './TextMessage.vue';
 import ReasoningMessage from './ReasoningMessage.vue';
 import ToolCallMessage from './ToolCallMessage.vue';
-import { cleanToolArtifacts } from '@vox/utils/models/text-cleaning';
-import { classifyProviderActivityStatus } from '@vox/utils/models/providers/activity-status';
+import { cleanToolArtifacts } from '@vox/agents/models/text-cleaning';
+import { classifyProviderActivityStatus } from '@vox/agents/models/providers/activity-status';
 
 interface Props {
   message: ModelMessage;

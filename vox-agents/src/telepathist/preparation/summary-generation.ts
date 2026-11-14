@@ -5,7 +5,7 @@
  */
 
 import type { SummarizerInput } from '../summarizer.js';
-import type { VoxContext } from '../../infra/vox-context.js';
+import type { VoxContext } from '../../agents/runtime/vox-context.js';
 import { exponentialRetry } from '../../utils/retry.js';
 import { parseSummaryMarkdown } from './instructions.js';
 import { z } from 'zod';

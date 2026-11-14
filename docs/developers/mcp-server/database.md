@@ -64,7 +64,7 @@ Summaries are cached by database generation and fetched again on the next query 
 
 ### Game tooltips
 
-Full reports for `get-unit`, `get-building`, `get-technology`, and `get-project` carry the game's tooltip in `Help`. `fetchGameTooltips` (`src/utils/database/game-tooltips.ts`) calls the mod's `VoxDeorumReferenceTooltips` through the bridge in batches of 50. On `INVALID_FUNCTION`, it fires `LuaEvents.VoxDeorumReferenceRegister` to request registration, then retries once.
+Full reports for `get-unit`, `get-building`, `get-technology`, and `get-project` carry the game's tooltip in `Help`. `fetchGameTooltips` (`src/database/helpers/game-tooltips.ts`) calls the mod's `VoxDeorumReferenceTooltips` through the bridge in batches of 50. On `INVALID_FUNCTION`, it fires `LuaEvents.VoxDeorumReferenceRegister` to request registration, then retries once.
 
 Before `stripTags` removes game markup, yield and resource icons become localized names from `Yields` and `Resources`, so "+1 Production +1 Gold" retains the meaning of each amount. An icon whose next word already names it is omitted.
 

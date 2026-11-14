@@ -5,7 +5,7 @@
 import { ActionTool, sourceTurnField } from "../abstract/action.js";
 import * as z from "zod";
 import { MaxMajorCivs } from "../../knowledge/schema/base.js";
-import { composeVisibility } from "../../utils/knowledge/visibility.js";
+import { composeVisibility } from "../../knowledge/helpers/visibility.js";
 
 const personaSchema = z.object({
   // Core Competitiveness & Ambition

@@ -7,7 +7,7 @@
  * Everything here is HTTP: resolve the `chatId`, parse the request body, call a transport-neutral
  * action, map its typed errors onto the public status classes. The domain logic — the diplomacy-thread
  * guard, the live-turn and closed-this-turn gate, the per-thread lock, the authoritative backend call,
- * and the live-cache hydration — lives in `utils/diplomacy/deal/deal-actions.ts` so the in-game panel can
+ * and the live-cache hydration — lives in `diplomacy/deal/deal-actions.ts` so the in-game panel can
  * take exactly the same path (stage 7.04 work item 1).
  *
  * The public status classes, unchanged:
@@ -38,26 +38,26 @@ import {
   closeConversation,
   inspectDeal,
   readDealMessages,
-} from '../../utils/diplomacy/deal/deal.js';
+} from '../../diplomacy/deal/deal.js';
 import {
   NotDiplomacyThreadError,
   acceptDealAction,
   rejectDealAction,
-} from '../../utils/diplomacy/deal/deal-actions.js';
+} from '../../diplomacy/deal/deal-actions.js';
 import {
   ThreadBusyError,
   threadBusyMessage,
   withThreadLock,
-} from '../../utils/diplomacy/turn/chat-turn-commit.js';
+} from '../../diplomacy/turn/chat-turn-commit.js';
 import {
   ConversationClosedThisTurnError,
   LiveTurnUnavailableError,
   requireOpenConversationTurn,
-} from '../../utils/diplomacy/turn/live-turn.js';
-import { audienceID, insertDurableRows } from '../../utils/diplomacy/transcript/transcript.js';
+} from '../../diplomacy/turn/live-turn.js';
+import { audienceID, insertDurableRows } from '../../diplomacy/transcript/transcript.js';
 import { createLogger } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errors.js';
-import { DealPayloadSchema } from '../../../../mcp-server/dist/utils/deal-schema.js';
+import { DealPayloadSchema } from '../../../../mcp-server/dist/diplomacy/deals/deal-schema.js';
 import { sendError } from '../http-utils.js';
 import { enrichChat } from './enrichment.js';
 import { chatThreadStore } from './store.js';

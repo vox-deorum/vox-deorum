@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import Database from 'better-sqlite3';
 import { Kysely, SqliteDialect } from 'kysely';
 
-vi.mock('../../../src/infra/agent-registry.js', () => ({
+vi.mock('../../../src/agents/runtime/agent-registry.js', () => ({
   agentRegistry: {
     get: () => undefined,
     register: () => true,

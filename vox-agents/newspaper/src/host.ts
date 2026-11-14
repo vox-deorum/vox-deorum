@@ -9,12 +9,11 @@ import {
   newspaperScreenLabels,
   type IssueDocument,
   type LinkTarget,
-  type ReaderAction,
-  type ReaderState,
-} from "../../src/newspaper/contracts/types.js";
+} from "../../src/newspaper/contracts/issue.js";
+import type { ReaderAction, ReaderState } from "../../src/newspaper/contracts/reader.js";
 import { errorMessage } from "../../src/utils/errors.js";
-import { parseIssueDocument } from "../../src/newspaper/contracts/validation.js";
-import { createReaderState } from "../../src/newspaper/ui/state.js";
+import { parseIssueDocument } from "../../src/newspaper/renderer/validation.js";
+import { createReaderState } from "../../src/newspaper/renderer/state.js";
 import { inlineNodesToText, paragraphsToText } from "./dom.js";
 import { mountReader, type ReaderHandle } from "./mount.js";
 import "./host.css";

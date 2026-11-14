@@ -22,11 +22,11 @@ The screen mounts as a popup at `PopupPriority.LeaderTrade`, the same trick the 
 
 | File | Role |
 | --- | --- |
-| `UI/VoxDeorumDealScreen.lua` | The wrapper: mount, projection, promise controls, footer, and the `VoxDeorumDealUI` driver surface. |
-| `UI/VoxDeorumDealScreen.xml` | The copied native trade context plus the wrapper's own controls. |
-| `UI/VoxDeorumDealTransport.lua` | The live driver: broadcasts the action and resolves it from durable rows. |
-| `UI/VoxDeorumDealScreenMock.lua` | The offline sandbox driver and its scripted scenarios. |
-| `UI/VoxDeorumDealUtils.lua` | Shared payload helpers, described below. |
+| `UI/Deals/VoxDeorumDealScreen.lua` | The wrapper: mount, projection, promise controls, footer, and the `VoxDeorumDealUI` driver surface. |
+| `UI/Deals/VoxDeorumDealScreen.xml` | The copied native trade context plus the wrapper's own controls. |
+| `UI/Deals/VoxDeorumDealTransport.lua` | The live driver: broadcasts the action and resolves it from durable rows. |
+| `UI/Deals/VoxDeorumDealScreenMock.lua` | The offline sandbox driver and its scripted scenarios. |
+| `UI/Shared/VoxDeorumDealUtils.lua` | Shared payload helpers, described below. |
 
 The wrapper leans on hooks added to the EUI compatibility mod's `TradeLogic.lua`, which lives in the `civ5-dll` submodule under `(3a) VP - EUI Compatibility Files/LUA/`. `VoxDeorumOpenDeal` binds the editor to a human-to-human pair, and `VoxDeorumResumeHumanToHumanEditor` re-establishes it after a popup-stack cycle. Four `LuaEvents.VoxDeorumTradeLogic*` events tell the wrapper when the native screen has rebuilt its pockets, its table, or its buttons, so it can restore its own rows. This is one concrete reason the mod declares an EUI dependency.
 
@@ -46,7 +46,7 @@ Like the diplomacy panel, both contexts install a named driver (`real` or `mock`
 
 ## The transport
 
-`UI/VoxDeorumDealTransport.lua` is small because it owns only one direction of the wire.
+`UI/Deals/VoxDeorumDealTransport.lua` is small because it owns only one direction of the wire.
 
 **Outbound**, it broadcasts a single game event, `DiplomacyDealAction`, carrying the seat, counterpart, turn, action, and for a proposal or counter the serialized deal. Retract is a local intent only: the wire vocabulary has no retract, so it maps to `reject`. Every action but propose must name the proposal it answers, or the event is refused at the archive boundary. Before serializing, each human-side endpoint in the deal is rewritten onto the effective seat, while third-party fields such as a cooperative-war target are left alone.
 
@@ -73,7 +73,7 @@ Adding a new **deal term** is a larger job that reaches past the XML: the canoni
 
 ## Shared helpers
 
-`UI/VoxDeorumDealUtils.lua` is the module both screens and both transports depend on. It defines the client side of `DealPayload v1` and keeps every consumer honest about it:
+`UI/Shared/VoxDeorumDealUtils.lua` is the module both screens and both transports depend on. It defines the client side of `DealPayload v1` and keeps every consumer honest about it:
 
 - **Validation.** `ValidatePayload` checks the wire shape of a whole payload before anything reaches a game binding: known item and promise types, integer fields, and both endpoints belonging to the mounted pair.
 - **Normalization.** `NormalizeItems` and `NormalizePromises` keep only canonical fields, stamp the fixed live duration for each type from the game's own constants, add the missing twin for bilateral terms such as a defensive pact or a cooperative war, and sort by every discriminator. Two payloads that mean the same thing normalize identically.
@@ -84,7 +84,7 @@ Adding a new **deal term** is a larger job that reaches past the XML: the canoni
 
 ## The mock driver
 
-`UI/VoxDeorumDealScreenMock.lua` is the offline sandbox, dormant until the mock drivers are selected. It replaces the transport with a delayed result, so an action completes or fails on a timer without any bridge traffic or native enactment.
+`UI/Deals/VoxDeorumDealScreenMock.lua` is the offline sandbox, dormant until the mock drivers are selected. It replaces the transport with a delayed result, so an action completes or fails on a timer without any bridge traffic or native enactment.
 
 Scenarios open through `LuaEvents.VoxDeorumOpenDealScreenMock`, through the diplomacy panel's hidden mock buttons, or directly from FireTuner with `VoxDeorumDealMock.Open`. There are six: `author`, `incoming`, `own`, `error`, `unavailable`, and `coop-war`.
 

@@ -12,12 +12,12 @@
 
 import { z } from "zod";
 import { Tool } from "ai";
-import { VoxContext } from "../../infra/vox-context.js";
+import { VoxContext } from "../../agents/runtime/vox-context.js";
 import { StrategistParameters } from "../../strategist/strategy-parameters.js";
 import {
   createSimpleTool,
   type SimpleToolExecutionOptions,
-} from "../../utils/tools/simple-tools.js";
+} from "../../agents/tools/simple-tools.js";
 import { createLogger } from "../../utils/logger.js";
 import { errorMessage } from "../../utils/errors.js";
 import type { EnvoyThread } from "../../types/index.js";
@@ -30,14 +30,14 @@ import {
   IllegalDealError,
   type InspectDealResult,
   type EnactDealResult,
-} from "../../utils/diplomacy/deal/deal.js";
+} from "../../diplomacy/deal/deal.js";
 import {
   formatDealTermsByDirection,
   formatPromiseLabel,
   itemTypeLabel,
-} from "../../../../mcp-server/dist/utils/deal-format.js";
-import { deriveProposalOutcomes } from "../../utils/diplomacy/deal/deal-reduce.js";
-import { civNameFor } from "../../utils/diplomacy/transcript/transcript-utils.js";
+} from "../../../../mcp-server/dist/diplomacy/deals/deal-format.js";
+import { deriveProposalOutcomes } from "../../diplomacy/deal/deal-reduce.js";
+import { civNameFor } from "../../diplomacy/transcript/transcript-utils.js";
 import {
   resolveLedger,
   formatResolutionErrors,
@@ -47,7 +47,7 @@ import {
   type DealPayload,
   type DealTranscriptMessage,
   type PromiseTerm,
-} from "../../../../mcp-server/dist/utils/deal-schema.js";
+} from "../../../../mcp-server/dist/diplomacy/deals/deal-schema.js";
 import {
   endpoints,
   formatDealLedger,

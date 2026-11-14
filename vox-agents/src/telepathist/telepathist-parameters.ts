@@ -7,11 +7,11 @@
  */
 
 import { Kysely } from 'kysely';
-import { openSqliteKysely, openSqliteKyselyReadonly } from '../utils/telemetry/sqlite-helpers.js';
-import { AgentParameters } from '../infra/vox-agent.js';
+import { openSqliteKysely, openSqliteKyselyReadonly } from '../agents/telemetry/sqlite-helpers.js';
+import { AgentParameters } from '../agents/runtime/vox-agent.js';
 import { createLogger } from '../utils/logger.js';
-import type { TelemetryDatabase } from '../utils/telemetry/schema.js';
-import type { GameIdentifierInfo } from '../utils/telemetry/identifier-parser.js';
+import type { TelemetryDatabase } from '../agents/telemetry/schema.js';
+import type { GameIdentifierInfo } from '../agents/telemetry/identifier-parser.js';
 
 const logger = createLogger('TelepathistParameters');
 

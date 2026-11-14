@@ -5,8 +5,9 @@
  * content is ever assigned through innerHTML, so generated text cannot supply
  * scripts, styles, or arbitrary URLs.
  */
-import { getNewspaperAsset } from "../../src/newspaper/ui/assets.js";
-import { type InlineNode, type ReaderAction } from "../../src/newspaper/contracts/types.js";
+import { getNewspaperAsset } from "../../src/newspaper/renderer/assets.js";
+import type { InlineNode } from "../../src/newspaper/contracts/issue.js";
+import type { ReaderAction } from "../../src/newspaper/contracts/reader.js";
 
 /** Callback used to register an interactive element with the reader. */
 export type ActionBinder = (element: HTMLElement, action: ReaderAction) => void;

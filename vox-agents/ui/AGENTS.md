@@ -195,8 +195,9 @@ onUnmounted(() => {
 
 ```
 src/
-├── api/          # API client, SSE utils
+├── api/          # Typed API client
 ├── components/   # Reusable Vue components
+├── presentation/ # Telemetry, log, and strategist-turn display helpers
 ├── stores/       # Reactive state management
 ├── styles/       # Global CSS, theme overrides
 ├── utils/        # Type definitions, helpers

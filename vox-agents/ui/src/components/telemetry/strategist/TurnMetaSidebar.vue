@@ -40,8 +40,8 @@
  */
 import { computed } from 'vue';
 import MarkdownText from '../../shared/MarkdownText.vue';
-import { formatDuration, formatTimestamp, formatTokenCount, getStatusText } from '@/api/telemetry-utils';
-import type { StrategistTurn } from '@/api/strategist-turn';
+import { formatDuration, formatTimestamp, formatTokenCount, getStatusText } from '@/presentation/telemetry-utils';
+import type { StrategistTurn } from '@/presentation/strategist-turn';
 
 const props = defineProps<{ turn: StrategistTurn; spanCount: number }>();
 

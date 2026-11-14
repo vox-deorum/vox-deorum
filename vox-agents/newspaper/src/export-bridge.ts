@@ -6,24 +6,24 @@
  * page stays scrolled to the document origin so viewport and document
  * coordinates agree.
  */
-import { computeRenderLayout } from "../../src/newspaper/ui/layout.js";
-import { getNewspaperAsset, newspaperVoteIconAssets } from "../../src/newspaper/ui/assets.js";
+import { computeRenderLayout } from "../../src/newspaper/renderer/layout.js";
+import { getNewspaperAsset, newspaperVoteIconAssets } from "../../src/newspaper/renderer/assets.js";
 import {
   newspaperRendererVersion,
   type ExportMountResult,
   type HeaderMeasurement,
-  type IssueDocument,
   type NewspaperExportBridge,
   type PageMeasurement,
   type RenderLayoutMetrics,
   type RenderProfile,
-} from "../../src/newspaper/contracts/types.js";
+} from "../../src/newspaper/renderer/types.js";
+import type { IssueDocument } from "../../src/newspaper/contracts/issue.js";
 import {
   parseIssueDocument,
   parseRenderProfile,
   validateRenderProfileForDesign,
-} from "../../src/newspaper/contracts/validation.js";
-import { createReaderState } from "../../src/newspaper/ui/state.js";
+} from "../../src/newspaper/renderer/validation.js";
+import { createReaderState } from "../../src/newspaper/renderer/state.js";
 import { mountReader, type ReaderHandle } from "./mount.js";
 import {
   collectActionGeometry,

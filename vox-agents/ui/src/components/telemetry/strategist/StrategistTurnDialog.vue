@@ -112,8 +112,8 @@ import {
   stateClass,
   turnFlags,
   type DecisionItem,
-} from '@/api/strategist-turn';
-import { spanDetailEntries } from '@/api/telemetry-utils';
+} from '@/presentation/strategist-turn';
+import { spanDetailEntries } from '@/presentation/telemetry-utils';
 
 const props = defineProps<{
   visible: boolean;

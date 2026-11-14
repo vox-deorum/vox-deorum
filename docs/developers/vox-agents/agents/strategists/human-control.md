@@ -36,7 +36,7 @@ Before auto-play starts, the launch pins the view to the human's civilization wi
 
 1. **Pacing is the same.** The seat goes through the same `isScheduledDecision` and `shouldInterruptDecision` checks as any LLM seat.
 2. **The panel is told a decision is due.** The strategist calls the [`present-decision`](../../../mcp-server/tools.md) tool with `{PlayerID, Turn}`. The tool fetches the Flavor-mode options through `get-options` and pushes them into the in-game [decision panel](../../../civ5-mod/ui.md). These are the same options and text an LLM's prompt is built from.
-3. **The wait uses the existing pause.** `VoxPlayer.execute` already pauses the game during a strategist run. The strategist waits for the person's submission on a decision bus (`src/strategist/human-decision-bus.ts`).
+3. **The wait uses the existing pause.** `VoxPlayer.execute` already pauses the game during a strategist run. The strategist waits for the person's submission on a decision bus (`src/strategist/seats/human-decision-bus.ts`).
    - The bus is owned by the session, keyed by player ID, and passed to the strategist in the non-saved `parameters._humanDecisionBus` field.
    - Only the human strategist uses it, so mixed seats stay separate.
    - There is no timeout, since sessions are supervised. An MCP heartbeat keeps the connection alive during the pause.

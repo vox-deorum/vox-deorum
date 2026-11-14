@@ -2,11 +2,11 @@ import { describe, it, expect } from 'vitest'
 import { defineComponent } from 'vue'
 import { mount } from '@vue/test-utils'
 import StrategistTurnDialog from '@/components/telemetry/strategist/StrategistTurnDialog.vue'
-import { isStrategistTurnSpan } from '@/api/strategist-turn'
-import { parseSpanAttributes } from '@/api/telemetry-utils'
+import { isStrategistTurnSpan } from '@/presentation/strategist-turn'
+import { parseSpanAttributes } from '@/presentation/telemetry-utils'
 import type { Span } from '@/utils/types'
 import { ButtonStub, TagStub } from '../../../helpers/stubs.js'
-import fixtures from '../../api/fixtures/strategist-turns.json'
+import fixtures from '../../presentation/fixtures/strategist-turns.json'
 
 const Dialog = defineComponent({
   template: '<div class="p-dialog"><slot name="header" /><slot /></div>',

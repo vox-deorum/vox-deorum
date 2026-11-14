@@ -1,5 +1,5 @@
 /**
- * Telemetry contract tests for the agent execution loop (src/infra/vox-execute.ts, exercised
+ * Telemetry contract tests for the agent execution loop (src/agents/runtime/vox-execute.ts, exercised
  * through VoxContext.execute()).
  *
  * The agent and step spans must carry exactly the standard context/turn/agent attributes and
@@ -16,25 +16,25 @@ import path from 'node:path';
 import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest';
 
 // Mock only the model factory + streaming call; keep the rest of each module real.
-vi.mock('../../../src/utils/models/models.js', async (orig) => {
-  const actual = await orig<typeof import('../../../src/utils/models/models.js')>();
+vi.mock('../../../src/agents/models/models.js', async (orig) => {
+  const actual = await orig<typeof import('../../../src/agents/models/models.js')>();
   return { ...actual, getModel: vi.fn(() => ({} as any)), buildProviderOptions: vi.fn(() => ({})) };
 });
-vi.mock('../../../src/utils/models/concurrency.js', async (orig) => {
-  const actual = await orig<typeof import('../../../src/utils/models/concurrency.js')>();
+vi.mock('../../../src/agents/models/concurrency.js', async (orig) => {
+  const actual = await orig<typeof import('../../../src/agents/models/concurrency.js')>();
   return { ...actual, streamTextWithConcurrency: vi.fn() };
 });
 
 import { SpanStatusCode } from '@opentelemetry/api';
-import { VoxContext } from '../../../src/infra/vox-context.js';
-import { VoxAgent } from '../../../src/infra/vox-agent.js';
-import { agentRegistry } from '../../../src/infra/agent-registry.js';
-import { streamTextWithConcurrency } from '../../../src/utils/models/concurrency.js';
-import { buildProviderOptions } from '../../../src/utils/models/models.js';
+import { VoxContext } from '../../../src/agents/runtime/vox-context.js';
+import { VoxAgent } from '../../../src/agents/runtime/vox-agent.js';
+import { agentRegistry } from '../../../src/agents/runtime/agent-registry.js';
+import { streamTextWithConcurrency } from '../../../src/agents/models/concurrency.js';
+import { buildProviderOptions } from '../../../src/agents/models/models.js';
 import type { StrategistParameters } from '../../../src/strategist/strategy-parameters.js';
 import { makeStrategistParameters } from '../../helpers/fake-vox-context.js';
 import { recordSpans } from '../../helpers/recording-tracer.js';
-import { WorkspaceStore } from '../../../src/utils/workspace/workspace-store.js';
+import { WorkspaceStore } from '../../../src/agents/workspace/workspace-store.js';
 import type { Model } from '../../../src/types/index.js';
 
 const stc = vi.mocked(streamTextWithConcurrency);

@@ -14,7 +14,7 @@ import { transcriptRow, emptySideRange } from '../../../helpers/diplomacy-fixtur
 import { createFakeVoxContext } from '../../../helpers/fake-vox-context.js';
 import type { EnvoyThread } from '../../../../src/types/index.js';
 
-vi.mock('../../../../src/utils/models/mcp-client.js', async () => {
+vi.mock('../../../../src/agents/mcp/mcp-client.js', async () => {
   const helper = await import('../../../helpers/mock-mcp-client.js');
   return helper.mockMcpClientModule();
 });
@@ -22,19 +22,19 @@ vi.mock('../../../../src/utils/models/mcp-client.js', async () => {
 // Load the full agent graph through the registry (the canonical load entry) BEFORE importing
 // an agent module in isolation — otherwise vox-agent → vox-context → agent-registry → strategist
 // re-enters vox-agent mid-evaluation (the circular-import hazard noted in diplomat-prompts.test).
-import '../../../../src/infra/agent-registry.js';
+import '../../../../src/agents/runtime/agent-registry.js';
 import { Negotiator } from '../../../../src/envoy/agents/negotiator.js';
 import {
   createNegotiatorTerminalTools,
   formatRecentDealHistory,
   type NegotiatorInput,
 } from '../../../../src/envoy/context/negotiator-utils.js';
-import { sessionRegistry } from '../../../../src/infra/session-registry.js';
+import { sessionRegistry } from '../../../../src/agents/runtime/session-registry.js';
 import { buildGameContextMessages } from '../../../../src/strategist/strategy-parameters.js';
 import { recordsDirections } from '../../../../src/knowledge/directions.js';
-import { cacheBreakpoint } from '../../../../src/utils/models/cache-breakpoint.js';
+import { cacheBreakpoint } from '../../../../src/agents/models/cache-breakpoint.js';
 import { enableFileMode, openTempRecords, recordableState, recordParameters, type TempRecords } from '../../knowledge/directions-fixtures.js';
-import { PROMISE_METADATA, AGREEMENT_METADATA } from '../../../../../mcp-server/dist/utils/deal-schema.js';
+import { PROMISE_METADATA, AGREEMENT_METADATA } from '../../../../../mcp-server/dist/diplomacy/deals/deal-schema.js';
 
 /** The canonical label for an agreement item type (from the single-source AGREEMENT_METADATA). */
 const agreementLabel = (itemType: string) => AGREEMENT_METADATA.find((a) => a.itemType === itemType)!.label;

@@ -6,13 +6,13 @@
  * and looks up full configurations from config.llms.
  */
 
-import { config } from '../../utils/config.js';
-import { getModelConfig } from '../../utils/models/models.js';
+import { config } from '../../agents/config/load.js';
+import { getModelConfig } from '../../agents/models/models.js';
 import { createLogger } from '../../utils/logger.js';
 import type { Model } from '../../types/index.js';
-import { parseModelReference } from '../../utils/models/model-reference.js';
-import { synthesizeModelConfig } from '../../utils/models/rules.js';
-import { getRuntimeModel } from '../../utils/models/resolution.js';
+import { parseModelReference } from '../../agents/models/model-reference.js';
+import { synthesizeModelConfig } from '../../agents/models/rules.js';
+import { getRuntimeModel } from '../../agents/models/resolution.js';
 
 const logger = createLogger('OracleModelResolver');
 

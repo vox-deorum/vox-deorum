@@ -13,7 +13,7 @@ import Database from 'better-sqlite3';
 import { Kysely, SqliteDialect } from 'kysely';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { extractPrompt, findTurnByRationale } from '../../../src/oracle/utils/prompt-extractor.js';
-import { spansTableSql, type NewSpan, type TelemetryDatabase } from '../../../src/utils/telemetry/schema.js';
+import { spansTableSql, type NewSpan, type TelemetryDatabase } from '../../../src/agents/telemetry/schema.js';
 
 // ---------------------------------------------------------------------------
 // In-memory telemetry DB helpers

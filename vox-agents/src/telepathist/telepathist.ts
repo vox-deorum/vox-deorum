@@ -16,7 +16,7 @@ import { GetDecisionTool } from './tools/get-decision.js';
 import { GetConversationLogTool } from './tools/get-conversation-log.js';
 import { runPreparation } from './preparation/index.js';
 import { EnvoyThread } from '../types/index.js';
-import { VoxContext } from '../infra/vox-context.js';
+import { VoxContext } from '../agents/runtime/vox-context.js';
 
 /**
  * All available telepathist tool instances

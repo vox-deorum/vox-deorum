@@ -1,5 +1,5 @@
 /**
- * Unit tests for the shared telemetry primitives in src/infra/vox-telemetry.ts, exercised
+ * Unit tests for the shared telemetry primitives in src/agents/runtime/vox-telemetry.ts, exercised
  * directly against a minimal ExecutionHost fake: span opening attributes, error recording,
  * token accrual across the root sink / seat totals / per-execution output, and the in-game
  * model label update (short name, VPAI fallback, and the dedupe against the last sent label).
@@ -14,16 +14,16 @@ import {
   recordSpanError,
   accrueTokens,
   updateModelLabel,
-} from '../../../src/infra/vox-telemetry.js';
-import type { ExecutionHost } from '../../../src/infra/vox-telemetry.js';
-import type { AgentParameters } from '../../../src/infra/vox-agent.js';
-import type { RootRun } from '../../../src/infra/vox-run.js';
+} from '../../../src/agents/runtime/vox-telemetry.js';
+import type { ExecutionHost } from '../../../src/agents/runtime/vox-telemetry.js';
+import type { AgentParameters } from '../../../src/agents/runtime/vox-agent.js';
+import type { RootRun } from '../../../src/agents/runtime/vox-run.js';
 import type { Model } from '../../../src/types/index.js';
 import { createLogger } from '../../../src/utils/logger.js';
 import { makeRecordingTracer } from '../../helpers/recording-tracer.js';
 import { installMockMcpClient, textResult } from '../../helpers/mock-mcp-client.js';
 
-vi.mock('../../../src/utils/models/mcp-client.js', async () => {
+vi.mock('../../../src/agents/mcp/mcp-client.js', async () => {
   const helper = await import('../../helpers/mock-mcp-client.js');
   return helper.mockMcpClientModule();
 });

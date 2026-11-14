@@ -1,7 +1,7 @@
 /**
  * @module tests/mock/diplomacy/notify
  *
- * Coverage for the native-notification helper (src/utils/diplomacy/notify.ts), which owns decision 5
+ * Coverage for the native-notification helper (src/diplomacy/ingame/notify.ts), which owns decision 5
  * of the stage 7.04 wiring plan: a committed action announces itself only when it produced something
  * new for the player to read. Everything asserted here is policy, not plumbing — which durable rows
  * count as an outcome, what the player sees, and the deliberate refusal to let a failed announcement
@@ -10,10 +10,10 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { installMockMcpClient, structuredResult } from "../../../helpers/mock-mcp-client.js";
-import type { TranscriptPushMessage } from "../../../../src/utils/diplomacy/transcript/transcript.js";
+import type { TranscriptPushMessage } from "../../../../src/diplomacy/transcript/transcript.js";
 import { eventPipeDelimiter } from "../../../../../mcp-server/dist/bridge/protocol.js";
 
-vi.mock("../../../../src/utils/models/mcp-client.js", async () => {
+vi.mock("../../../../src/agents/mcp/mcp-client.js", async () => {
   const helper = await import("../../../helpers/mock-mcp-client.js");
   return helper.mockMcpClientModule();
 });
@@ -32,7 +32,7 @@ import {
   messageLimit,
   notifyDiplomacyOutcome,
   summaryLimit,
-} from "../../../../src/utils/diplomacy/ingame/notify.js";
+} from "../../../../src/diplomacy/ingame/notify.js";
 
 let mcp: ReturnType<typeof installMockMcpClient>;
 

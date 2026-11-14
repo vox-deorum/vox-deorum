@@ -6,7 +6,7 @@
 import { Kysely, ParseJSONResultsPlugin, SqliteDialect, Selectable, Updateable, Insertable, Transaction } from 'kysely';
 import Database from 'better-sqlite3';
 import { createLogger } from '../utils/logger.js';
-import { JsonSerializePlugin } from '../utils/json-serialize-plugin.js';
+import { JsonSerializePlugin } from '../database/helpers/json-serialize-plugin.js';
 import { 
   MaxMajorCivs,
   type KnowledgeDatabase,
@@ -17,12 +17,12 @@ import fs from 'fs/promises';
 import path from 'path';
 import { bridgeManager, gameDatabase, knowledgeManager } from '../server.js';
 import { EventName, eventSchemas } from './schema/events/index.js';
-import { applyVisibility } from '../utils/knowledge/visibility.js';
-import { explainEnums } from '../utils/knowledge/enum.js';
-import { detectChanges } from '../utils/knowledge/changes.js';
+import { applyVisibility } from './helpers/visibility.js';
+import { explainEnums } from './helpers/enum.js';
+import { detectChanges } from './helpers/changes.js';
 import { MCPServer } from '../server.js';
 import { getPlayerInformations } from './getters/player-information.js';
-import { archiveGameData } from '../utils/knowledge/archive.js';
+import { archiveGameData } from './helpers/archive.js';
 import { getPlayerStrategy } from './getters/player-strategy.js';
 import { getPlayerPersona } from './getters/player-persona.js';
 import { getPlayerOpinions } from './getters/player-opinions.js';

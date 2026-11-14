@@ -14,7 +14,7 @@
  * changes its input.
  */
 
-import { jsonToMarkdown } from "../utils/tools/json-to-markdown.js";
+import { jsonToMarkdown } from "../agents/tools/json-to-markdown.js";
 
 /** One cleaned reference entry. */
 type Item = Record<string, unknown>;

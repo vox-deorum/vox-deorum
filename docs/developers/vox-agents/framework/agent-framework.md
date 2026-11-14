@@ -1,6 +1,6 @@
 # Agents
 
-Every agent in Vox Agents extends one base class, `VoxAgent` (`src/infra/vox-agent.ts`). An agent is a set of hooks: small methods the framework calls while it runs a conversation with a model. The agent says what the prompt is, which tools it may use, and when it is done. The framework does the rest.
+Every agent in Vox Agents extends one base class, `VoxAgent` (`src/agents/runtime/vox-agent.ts`). An agent is a set of hooks: small methods the framework calls while it runs a conversation with a model. The agent says what the prompt is, which tools it may use, and when it is done. The framework does the rest.
 
 The registry shares agent instances across calls. Keep execution state in the context and its runs, so concurrent calls do not overwrite each other (see [Runs](runs.md)).
 
@@ -51,4 +51,4 @@ Two flags change how an agent runs:
 
 ## Registering an agent
 
-All built-in agents register at startup in `src/infra/agent-registry.ts`. Once registered, an agent can be run by name and is also offered to other agents as a `call-{name}` tool (see [Runs](runs.md#agents-calling-agents)).
+All built-in agents register at startup in `src/agents/runtime/agent-registry.ts`. Once registered, an agent can be run by name and is also offered to other agents as a `call-{name}` tool (see [Runs](runs.md#agents-calling-agents)).

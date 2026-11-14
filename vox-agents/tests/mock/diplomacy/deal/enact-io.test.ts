@@ -1,21 +1,21 @@
 /**
  * Tests for the stage-5 enactment-route wrapper and active-proposal reader in
- * src/utils/diplomacy/deal.ts (enactAgentDeal / readActiveProposal). Uses the shared
+ * src/diplomacy/deal/deal.ts (enactAgentDeal / readActiveProposal). Uses the shared
  * mcpClient fixture — no live MCP server / game.
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { installMockMcpClient, structuredResult } from '../../../helpers/mock-mcp-client.js';
 import { transcriptRow } from '../../../helpers/diplomacy-fixtures.js';
-import type { TranscriptMessage } from '../../../../src/utils/diplomacy/transcript/transcript-utils.js';
+import type { TranscriptMessage } from '../../../../src/diplomacy/transcript/transcript-utils.js';
 
-vi.mock('../../../../src/utils/models/mcp-client.js', async () => {
+vi.mock('../../../../src/agents/mcp/mcp-client.js', async () => {
   const helper = await import('../../../helpers/mock-mcp-client.js');
   return helper.mockMcpClientModule();
 });
 
-import { ProposalConflictError, enactAgentDeal, readActiveProposal } from '../../../../src/utils/diplomacy/deal/deal.js';
-import { beginTurnState } from '../../../../src/utils/diplomacy/turn/active-turn-state.js';
+import { ProposalConflictError, enactAgentDeal, readActiveProposal } from '../../../../src/diplomacy/deal/deal.js';
+import { beginTurnState } from '../../../../src/diplomacy/turn/active-turn-state.js';
 import type { EnvoyThread } from '../../../../src/types/index.js';
 
 let mcp: ReturnType<typeof installMockMcpClient>;

@@ -1,8 +1,8 @@
 /**
  * @module tests/mock/diplomacy/deal-actions
  *
- * Coverage for the transport-neutral deal actions (src/utils/diplomacy/deal-actions.ts) and the shared
- * live-turn guard they run (src/utils/diplomacy/live-turn.ts). These are the paths BOTH the Express
+ * Coverage for the transport-neutral deal actions (src/diplomacy/deal/deal-actions.ts) and the shared
+ * live-turn guard they run (src/diplomacy/turn/live-turn.ts). These are the paths BOTH the Express
  * routes and the in-game bridge take, so everything asserted here is the behaviour both clients get:
  * the typed failures, the exact durable rows, `changed`, and the live-cache hydration — with no
  * transcript reread and no catch-time re-probe.
@@ -12,25 +12,25 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { installMockMcpClient, structuredResult } from '../../../helpers/mock-mcp-client.js';
 import { transcriptRow } from '../../../helpers/diplomacy-fixtures.js';
 import type { EnvoyThread } from '../../../../src/types/index.js';
-import type { TranscriptMessage } from '../../../../src/utils/diplomacy/transcript/transcript-utils.js';
+import type { TranscriptMessage } from '../../../../src/diplomacy/transcript/transcript-utils.js';
 
-vi.mock('../../../../src/utils/models/mcp-client.js', async () => {
+vi.mock('../../../../src/agents/mcp/mcp-client.js', async () => {
   const helper = await import('../../../helpers/mock-mcp-client.js');
   return helper.mockMcpClientModule();
 });
 
-import { contextRegistry } from '../../../../src/infra/context-registry.js';
+import { contextRegistry } from '../../../../src/agents/runtime/context-registry.js';
 import {
   NotDiplomacyThreadError,
   acceptDealAction,
   rejectDealAction,
-} from '../../../../src/utils/diplomacy/deal/deal-actions.js';
+} from '../../../../src/diplomacy/deal/deal-actions.js';
 import {
   ConversationClosedThisTurnError,
   LiveTurnUnavailableError,
-} from '../../../../src/utils/diplomacy/turn/live-turn.js';
-import { ProposalConflictError } from '../../../../src/utils/diplomacy/deal/deal.js';
-import { ThreadBusyError, withThreadLock } from '../../../../src/utils/diplomacy/turn/chat-turn-commit.js';
+} from '../../../../src/diplomacy/turn/live-turn.js';
+import { ProposalConflictError } from '../../../../src/diplomacy/deal/deal.js';
+import { ThreadBusyError, withThreadLock } from '../../../../src/diplomacy/turn/chat-turn-commit.js';
 
 let mcp: ReturnType<typeof installMockMcpClient>;
 let threadSeq = 0;

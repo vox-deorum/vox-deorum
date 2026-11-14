@@ -15,11 +15,11 @@
 
 import { z } from "zod";
 import { Tool } from "ai";
-import type { VoxContext } from "../../infra/vox-context.js";
+import type { VoxContext } from "../../agents/runtime/vox-context.js";
 import type { StrategistParameters } from "../../strategist/strategy-parameters.js";
 import type { EnvoyThread } from "../../types/index.js";
-import { createSimpleTool } from "../../utils/tools/simple-tools.js";
-import { stageThreadClose } from "../../utils/diplomacy/turn/active-turn-state.js";
+import { createSimpleTool } from "../../agents/tools/simple-tools.js";
+import { stageThreadClose } from "../../diplomacy/turn/active-turn-state.js";
 
 /**
  * Creates the diplomat's `close-conversation` tool. Reads the active conversation from

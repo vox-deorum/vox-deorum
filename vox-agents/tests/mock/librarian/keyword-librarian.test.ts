@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { agentRegistry } from '../../../src/infra/agent-registry.js';
+import { agentRegistry } from '../../../src/agents/runtime/agent-registry.js';
 import {
   createFakeVoxContext,
   makeStrategistParameters,

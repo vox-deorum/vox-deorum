@@ -2,7 +2,7 @@
  * @module oracle/batch/schema
  *
  * Kysely database schema for batch request persistence.
- * Follows the pattern from utils/telemetry/schema.ts.
+ * Follows the pattern from agents/telemetry/schema.ts.
  *
  * Two tables:
  * - `requests`: Individual chat completion requests with deduplication hash,

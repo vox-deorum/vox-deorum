@@ -1,0 +1,196 @@
+/**
+ * @module agents/tools/mcp-tools
+ *
+ * MCP tool wrapper utilities for integrating Model Context Protocol tools with Vercel AI SDK.
+ * Provides functions to wrap MCP tools as AI SDK CoreTools,
+ * handling schema filtering, parameter injection, and markdown conversion.
+ */
+
+import { Tool as VercelTool, dynamicTool, ToolSet, jsonSchema } from 'ai';
+import { Tool } from "@modelcontextprotocol/sdk/types.js";
+import { mcpClient } from "../mcp/mcp-client.js";
+import { trace, SpanStatusCode, SpanKind } from '@opentelemetry/api';
+import { camelCase } from "change-case";
+import { createLogger } from "../../utils/logger.js";
+import { isRecord } from "../../utils/guards.js";
+import { recordSpanError } from "../runtime/vox-telemetry.js";
+import { VoxContext } from "../runtime/vox-context.js";
+import { AgentParameters } from "../runtime/vox-agent.js";
+import { HeadingConfig } from './json-to-markdown.js';
+import { filterAutoCompleteSchema } from './mcp-schema.js';
+
+const tracer = trace.getTracer('vox-tools');
+
+/**
+ * Return whether a normalized tool result from `VoxContext.callTool` failed: no result,
+ * an isError envelope passed through as data, or an explicit `Success: false`.
+ */
+export function isFailedToolResult(result: unknown): boolean {
+  return result == null || (isRecord(result) && (result.isError === true || result.Success === false));
+}
+
+/**
+ * Convert MCP CallToolResult wrappers back into the primitive or structured
+ * value callers expect. The MCP server wraps primitive booleans/strings as a
+ * single text content item, while object and array results ride in
+ * structuredContent.
+ *
+ * Deliberately NOT `unwrapMcpResponse` (agents/mcp/mcp-response.ts): results here
+ * are fed back to an LLM, so isError envelopes must pass through as data rather than
+ * throw, and text-only primitives ("true"/"false") must be coerced, not rejected.
+ */
+function unwrapMCPResult(rawResult: unknown): unknown {
+  if (!isRecord(rawResult)) return rawResult;
+  if (rawResult.isError === true) return rawResult;
+
+  if (rawResult.structuredContent !== undefined) {
+    return rawResult.structuredContent;
+  }
+
+  const content = rawResult.content;
+  if (!Array.isArray(content) || content.length !== 1) return rawResult;
+
+  const item = content[0];
+  if (!isRecord(item) || item.type !== "text" || typeof item.text !== "string") {
+    return rawResult;
+  }
+
+  if (item.text === "true") return true;
+  if (item.text === "false") return false;
+  return item.text;
+}
+
+/**
+ * Normalize an MCP tool response all the way to the value returned to
+ * VoxContext.callTool and AI SDK tool callers.
+ */
+export function normalizeMCPToolResult(rawResult: unknown): unknown {
+  const unwrapped = unwrapMCPResult(rawResult);
+  if (isRecord(unwrapped)) {
+    return unwrapped.Result ?? unwrapped;
+  }
+  return unwrapped;
+}
+
+/**
+ * Wrap a MCP tool for Vercel AI SDK.
+ * Handles schema filtering and parameter injection,
+ * and markdown conversion of results.
+ *
+ * @param tool - MCP tool definition
+ * @param context - VoxContext for tracing and parameter injection
+ * @returns Vercel AI SDK CoreTool
+ *
+ * @example
+ * ```typescript
+ * const tools = await mcpClient.getTools();
+ * const wrapped = wrapMCPTool(tools[0], context);
+ * ```
+ */
+export function wrapMCPTool(tool: Tool, context: VoxContext<AgentParameters>): VercelTool {
+  const logger = createLogger(`tool-${tool.name}`);
+
+  const filteredSchema = filterAutoCompleteSchema(
+    tool.inputSchema as Record<string, any>,
+    (tool._meta as any)?.autoComplete as string[] | undefined
+  );
+
+  return dynamicTool({
+    description: tool.description || `MCP tool: ${tool.name}`,
+    inputSchema: jsonSchema(filteredSchema),
+    execute: async (args: any, options) => {
+      context.timeoutRefresh?.();
+      
+      const span = tracer.startSpan(`mcp-tool.${tool.name}`, {
+        kind: SpanKind.CLIENT,
+        attributes: {
+          'tool.name': tool.name,
+          'tool.type': 'mcp',
+          'vox.context.id': context.id,
+          'game.turn': context.currentParameters?.turn ?? -1
+        }
+      });
+
+      try {
+        // Autocomplete support - add the fields back for execution. The
+        // enrichment lands on a copy: `args` is the same object the conversation
+        // stores as the assistant tool-call input, and replayed tool-call
+        // arguments must stay byte-identical to what the model actually sent,
+        // because the Codex proxy compares them against its stored pending call.
+        const callArgs = (tool._meta as any)?.autoComplete ? { ...args } : args;
+        if ((tool._meta as any)?.autoComplete) {
+          ((tool._meta as any)?.autoComplete as string[]).forEach(
+            key => {
+              let camelKey = camelCase(key);
+              if (camelKey.endsWith("Id")) camelKey = camelKey.substring(0, camelKey.length - 2) + "ID";
+              // Only auto-fill when the context actually has a value; never clobber
+              // an explicitly-passed arg (e.g. get-events `Original: true`) with undefined.
+              const value = (options.context as any)?.[camelKey];
+              if (value !== undefined) callArgs[key] = value;
+            }
+          )
+        }
+
+        // Log inputs
+        span.setAttributes({
+          'tool.input': JSON.stringify(callArgs)
+        });
+        logger.info(`Calling tool ${tool.name}...`, callArgs);
+
+        // Call the tool
+        const rawResult = await mcpClient.callTool(tool.name, callArgs);
+        const result = normalizeMCPToolResult(rawResult);
+        logger.debug(`Tool call completed: ${tool.name}`);
+
+        span.setAttributes({
+          'tool.output': JSON.stringify(result)
+        });
+        // Failures returned as data still reach the model, but the span records them as errors
+        if (isFailedToolResult(result)) {
+          logger.warn(`Tool ${tool.name} returned an error result`);
+          span.setStatus({ code: SpanStatusCode.ERROR, message: `MCP tool ${tool.name} returned an error result` });
+        } else {
+          span.setStatus({ code: SpanStatusCode.OK });
+        }
+
+        // Return results
+        if (isRecord(result)) {
+          const config = (tool._meta as Record<string, unknown>)?.markdownConfig;
+          if (Array.isArray(config)) {
+            result._markdownConfig = {
+              configs: config.map(level => {
+                return { format: level } as HeadingConfig;
+              })
+            }
+          }
+        } return result;
+      } catch (error) {
+        logger.error(`Error calling MCP tool ${tool.name}:`, error);
+        recordSpanError(span, error);
+        throw error;
+      } finally {
+        span.end();
+      }
+    }
+  });
+}
+
+/**
+ * Wrap multiple MCP tools for Vercel AI SDK.
+ * Convenience function to batch-wrap an array of MCP tools.
+ *
+ * @param tools - Array of MCP tool definitions
+ * @param context - VoxContext for tracing and parameter injection
+ * @returns ToolSet object mapping tool names to wrapped tools
+ *
+ * @example
+ * ```typescript
+ * const tools = await mcpClient.getTools();
+ * const toolSet = wrapMCPTools(tools, context);
+ * ```
+ */
+export function wrapMCPTools(tools: Tool[], context: VoxContext<AgentParameters>): ToolSet {
+  const results: Record<string, VercelTool> = {};
+  tools.forEach(tool => results[tool.name] = wrapMCPTool(tool, context));
+  return results;
+}

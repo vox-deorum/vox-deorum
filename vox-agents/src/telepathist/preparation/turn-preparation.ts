@@ -7,7 +7,7 @@
 
 import pLimit from 'p-limit';
 import { TelepathistParameters } from '../telepathist-parameters.js';
-import { VoxContext } from '../../infra/vox-context.js';
+import { VoxContext } from '../../agents/runtime/vox-context.js';
 import { GetSituationTool } from '../tools/get-situation.js';
 import { GetDecisionTool } from '../tools/get-decision.js';
 import { SummarizerInput, summarizerModelName } from '../summarizer.js';

@@ -21,7 +21,7 @@ import { computed } from 'vue';
 import MarkdownText from '../../shared/MarkdownText.vue';
 import DecisionValue from './DecisionValue.vue';
 import DecisionConfidence from './DecisionConfidence.vue';
-import { answerTooltip, stateClass, type DecisionItem } from '@/api/strategist-turn';
+import { answerTooltip, stateClass, type DecisionItem } from '@/presentation/strategist-turn';
 
 const props = defineProps<{ item: DecisionItem; rationale?: string }>();
 

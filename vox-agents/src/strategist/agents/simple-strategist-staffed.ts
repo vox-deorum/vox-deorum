@@ -8,10 +8,10 @@
 
 import { ModelMessage } from "ai";
 import { SimpleStrategistBase } from "./simple-strategist-base.js";
-import { VoxContext } from "../../infra/vox-context.js";
+import { VoxContext } from "../../agents/runtime/vox-context.js";
 import { getRecentGameState, StrategistParameters } from "../strategy-parameters.js";
 import { requestBriefing, assembleBriefings, briefingInstructionKeys, buildCombinedInstruction, clearBrieferInstructions } from "../../briefer/briefing-utils.js";
-import { renderSystemPrompt } from "../../utils/prompts/prompt-files.js";
+import { renderSystemPrompt } from "../../agents/prompts/prompt-files.js";
 
 /**
  * A staffed strategist agent that uses specialized briefers for comprehensive analysis.

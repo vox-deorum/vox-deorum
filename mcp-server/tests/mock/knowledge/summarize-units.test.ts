@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LuaFunction } from '../../../src/bridge/lua-function.js';
-import { enumMappings } from '../../../src/utils/knowledge/enum.js';
+import { enumMappings } from '../../../src/knowledge/helpers/enum.js';
 import createSummarizeUnitsTool from '../../../src/tools/knowledge/summarize-units.js';
 import { connectToolClient } from '../tool-client.js';
 

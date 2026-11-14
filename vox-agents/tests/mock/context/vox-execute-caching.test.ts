@@ -1,5 +1,5 @@
 /**
- * Tests for cache-breakpoint placement in the step loop (src/infra/vox-execute.ts) when the seat
+ * Tests for cache-breakpoint placement in the step loop (src/agents/runtime/vox-execute.ts) when the seat
  * `files` setting is on: the initial prompt gets exactly one breakpoint on its last message, the
  * prefix through that breakpoint stays byte-stable across steps, a prompt that is already marked or
  * already carries MAX_CACHE_BREAKPOINTS gains no second marker, runs without files add nothing, and
@@ -11,26 +11,26 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ModelMessage } from 'ai';
 
-vi.mock('../../../src/utils/models/models.js', async (orig) => {
-  const actual = await orig<typeof import('../../../src/utils/models/models.js')>();
+vi.mock('../../../src/agents/models/models.js', async (orig) => {
+  const actual = await orig<typeof import('../../../src/agents/models/models.js')>();
   return { ...actual, getModel: vi.fn(() => ({} as any)), buildProviderOptions: vi.fn(() => ({})) };
 });
-vi.mock('../../../src/utils/models/concurrency.js', async (orig) => {
-  const actual = await orig<typeof import('../../../src/utils/models/concurrency.js')>();
+vi.mock('../../../src/agents/models/concurrency.js', async (orig) => {
+  const actual = await orig<typeof import('../../../src/agents/models/concurrency.js')>();
   return { ...actual, streamTextWithConcurrency: vi.fn() };
 });
 
-import { VoxContext } from '../../../src/infra/vox-context.js';
-import { VoxAgent } from '../../../src/infra/vox-agent.js';
-import { agentRegistry } from '../../../src/infra/agent-registry.js';
-import { streamTextWithConcurrency } from '../../../src/utils/models/concurrency.js';
-import { bashToolName } from '../../../src/utils/tools/tool-names.js';
+import { VoxContext } from '../../../src/agents/runtime/vox-context.js';
+import { VoxAgent } from '../../../src/agents/runtime/vox-agent.js';
+import { agentRegistry } from '../../../src/agents/runtime/agent-registry.js';
+import { streamTextWithConcurrency } from '../../../src/agents/models/concurrency.js';
+import { bashToolName } from '../../../src/agents/tools/tool-names.js';
 import {
   cacheBreakpoint,
   countCacheBreakpoints,
   hasCacheBreakpoint,
   MAX_CACHE_BREAKPOINTS,
-} from '../../../src/utils/models/cache-breakpoint.js';
+} from '../../../src/agents/models/cache-breakpoint.js';
 import type { StrategistParameters } from '../../../src/strategist/strategy-parameters.js';
 import { makeStrategistParameters } from '../../helpers/fake-vox-context.js';
 import type { Model } from '../../../src/types/index.js';

@@ -8,13 +8,13 @@
  */
 
 import { createLogger } from '../../utils/logger.js';
-import type { GameIdentifierInfo } from '../../utils/telemetry/identifier-parser.js';
-import { VoxContext } from '../../infra/vox-context.js';
+import type { GameIdentifierInfo } from '../../agents/telemetry/identifier-parser.js';
+import { VoxContext } from '../../agents/runtime/vox-context.js';
 import { prepareTurnSummaries } from '../../telepathist/preparation/turn-preparation.js';
 import { summarizerModelReference } from '../../telepathist/summarizer.js';
 import { createTelepathistParameters, TelepathistParameters } from '../../telepathist/telepathist-parameters.js';
-import { ensureModelsResolved } from '../../utils/models/resolution.js';
-import { reloadRootPrompts } from '../../utils/prompts/prompt-files.js';
+import { ensureModelsResolved } from '../../agents/models/resolution.js';
+import { reloadRootPrompts } from '../../agents/prompts/prompt-files.js';
 
 const logger = createLogger('TelepathistPrep');
 

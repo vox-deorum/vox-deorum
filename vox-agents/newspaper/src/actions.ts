@@ -5,7 +5,7 @@
  * duplicate data into the page. Export measurement and click handling both read
  * the same binding.
  */
-import type { ReaderAction } from "../../src/newspaper/contracts/types.js";
+import type { ReaderAction } from "../../src/newspaper/contracts/reader.js";
 
 const actionByElement = new WeakMap<Element, ReaderAction>();
 let actionCounter = 0;

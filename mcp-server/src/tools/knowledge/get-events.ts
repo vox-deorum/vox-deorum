@@ -8,7 +8,7 @@ import * as z from "zod";
 import { isAfter, isAtTurn, isBeforeOrAt, isVisible } from "../../knowledge/expressions.js";
 import { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { MaxMajorCivs } from "../../knowledge/schema/base.js";
-import { parseVisibility } from "../../utils/knowledge/visibility.js";
+import { parseVisibility } from "../../knowledge/helpers/visibility.js";
 import { getPlayerSummaries } from "../../knowledge/getters/player-summary.js";
 import { PlayerSummary } from "../../knowledge/schema/timed.js";
 import { Selectable } from "kysely";

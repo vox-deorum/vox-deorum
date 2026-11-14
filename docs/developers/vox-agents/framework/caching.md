@@ -10,13 +10,13 @@ The cache matches from the start of the request. Tools come first, then system t
 
 ## Which providers use it
 
-The marker is `cacheBreakpoint` in `src/utils/models/cache-breakpoint.ts`, added to a message's `providerOptions`. Direct Anthropic, Claude on Vertex, and OpenRouter use it. Other providers ignore it, except Claude Code.
+The marker is `cacheBreakpoint` in `src/agents/models/cache-breakpoint.ts`, added to a message's `providerOptions`. Direct Anthropic, Claude on Vertex, and OpenRouter use it. Other providers ignore it, except Claude Code.
 
 ### Claude Code
 
 One live CLI query spans an agent run, and the session hands each step's tool results back to that query, so the CLI caches within its own query. Reuse across runs needs anchors too, because each run opens a fresh query.
 
-The CLI places two of the four markers itself, so Claude Code honours only the first two anchors on system or user messages. The prompt middleware in `src/utils/models/providers/claude-code-prompt.ts` turns them into Claude Code markers with a one-hour lifetime. The API rejects a longer lifetime after a shorter one, and the CLI would drop its own markers to five minutes outside the subscription's limits, so `buildClaudeCodeModel` pins the CLI to the same lifetime through `CLAUDE_CODE_PROMPT_CACHE_TTL`.
+The CLI places two of the four markers itself, so Claude Code honours only the first two anchors on system or user messages. The prompt middleware in `src/agents/models/providers/claude-code-prompt.ts` turns them into Claude Code markers with a one-hour lifetime. The API rejects a longer lifetime after a shorter one, and the CLI would drop its own markers to five minutes outside the subscription's limits, so `buildClaudeCodeModel` pins the CLI to the same lifetime through `CLAUDE_CODE_PROMPT_CACHE_TTL`.
 
 The Claude Code provider normally joins the whole prompt into one block, which leaves no place for a marker. A patch to that provider (`patches/ai-sdk-provider-claude-code+4.3.2.patch`, applied by `patch-package` on `npm install`) splits the prompt into separate blocks after each marked message and sends the prompt as content blocks. The provider version is pinned so the patch keeps applying. Recreate the patch when upgrading the provider, and rerun `npm run test:claude-code`, which checks that a fresh session reads an anchored opening from the cache.
 
@@ -28,7 +28,7 @@ The Claude Code provider normally joins the whole prompt into one block, which l
 | Strategists | The game-context system message | `src/strategist/agents/simple-strategist.ts` and its briefed and staffed variants |
 | Briefers | Their game-context message | `src/briefer/simple-briefer.ts`, `src/briefer/specialized-briefer.ts` |
 | Live envoys | Three anchors: game context, settled past conversations, and the last ongoing chat row (four with the records directions) | `buildGameContextMessages` in `src/strategist/strategy-parameters.ts`, `getInitialMessages` in `src/envoy/live-envoy.ts`, and the strategy note in `src/envoy/envoy.ts` |
-| Any agent whose seat has files on | The run's last initial message, unless it already has an anchor or the request already has four | `executeAgent` in `src/infra/vox-execute.ts` |
+| Any agent whose seat has files on | The run's last initial message, unless it already has an anchor or the request already has four | `executeAgent` in `src/agents/runtime/vox-execute.ts` |
 
 A request can have at most four anchors (`MAX_CACHE_BREAKPOINTS`). `markBreakpointOnLast` and `countCacheBreakpoints` live in the same file as the marker. Cache entries last five minutes (one hour on Claude Code) and are refreshed on each read.
 

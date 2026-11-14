@@ -4,10 +4,10 @@
 
 import { ActionTool, sourceTurnField } from "../abstract/action.js";
 import * as z from "zod";
-import { retrieveEnumValue, convertStrategyToNames } from "../../utils/knowledge/enum.js";
+import { retrieveEnumValue, convertStrategyToNames } from "../../knowledge/helpers/enum.js";
 import { MaxMajorCivs } from "../../knowledge/schema/base.js";
-import { composeVisibility } from "../../utils/knowledge/visibility.js";
-import { detectChanges } from "../../utils/knowledge/changes.js";
+import { composeVisibility } from "../../knowledge/helpers/visibility.js";
+import { detectChanges } from "../../knowledge/helpers/changes.js";
 
 /**
  * Schema for the result returned by the Lua script

@@ -11,11 +11,11 @@ This page is for a contributor who needs to follow a proposal from an agent to t
 | `mcp-server` | The durable transcript store, the pinned deal contract, `inspect-deal`, and the transactional outcome tools. |
 | `vox-agents` | The diplomat and negotiator agents, the term ledger, and the conversation-turn machinery both clients share. |
 
-There are two clients, and both are thin. The in-game panel and the dashboard's chat and deal views render a conversation that vox-agents runs. `vox-agents/src/utils/diplomacy/deal/deal-actions.ts` exists so that accepting a deal means the same thing whichever screen asked for it.
+There are two clients, and both are thin. The in-game panel and the dashboard's chat and deal views render a conversation that vox-agents runs. `vox-agents/src/diplomacy/deal/deal-actions.ts` exists so that accepting a deal means the same thing whichever screen asked for it.
 
 ## Opening a conversation
 
-`civ5-mod/UI/VoxDeorumConverse.lua` adds a **Converse** button beside Discuss and Trade on the leaderhead screen. Pressing it shows the panel, and the panel's first presentation calls `VoxDeorumDiploTransport.EnsureRegistered()`.
+`civ5-mod/UI/Diplomacy/VoxDeorumConverse.lua` adds a **Converse** button beside Discuss and Trade on the leaderhead screen. Pressing it shows the panel, and the panel's first presentation calls `VoxDeorumDiploTransport.EnsureRegistered()`.
 
 That registration is the inbound half of the transport. It uses the DLL's `Game.RegisterFunction` binding (`civ5-dll/CvGameCoreDLL_Expansion2/Lua/CvLuaGame.cpp`, forwarding to `CvConnectionService`) to publish four Lua functions by name so the AI stack can call them later:
 
@@ -26,7 +26,7 @@ That registration is the inbound half of the transport. It uses the DLL's `Game.
 | `VoxDeorumDiploStatus` | The agent's activity state: composing, reasoning, using a tool, idle, or error. |
 | `VoxDeorumDiploDelta` | The reply text accumulated so far, throttled to about once a second. |
 
-`civ5-mod/UI/VoxDeorumDiploTransport.lua` publishes those four diplomacy callbacks. The deal screen has its own driver and resolves pending actions by watching the rows that arrive through them. The mod's reference tooltips addin registers its own function separately.
+`civ5-mod/UI/Diplomacy/VoxDeorumDiploTransport.lua` publishes those four diplomacy callbacks. The deal screen has its own driver and resolves pending actions by watching the rows that arrive through them. The mod's reference tooltips addin registers its own function separately.
 
 From the dashboard, the same conversation opens through `POST /api/agents/chat` (`vox-agents/src/web/chat/factory.ts`). Threads are keyed by the ordered player pair, so both clients see one conversation.
 
@@ -41,7 +41,7 @@ Everything the game sends outward goes through one binding, `Game.BroadcastEvent
 
 From there each event follows the ordinary event path of [protocol.md](protocol.md): connection service, bridge, MCP server, then an MCP notification. The MCP server validates the wire shape against a schema in `mcp-server/src/knowledge/schema/events/`, stores the event, and forwards it. It does not act on it.
 
-`vox-agents/src/utils/diplomacy/ingame/ingame-bridge.ts` is the listener that does. It deduplicates the pipe and SSE overlap by event id, then puts the work on one of two per-pair queues: an **action** queue for anything that mutates, and a **push** queue for the Lua calls heading back. A model run holds the thread lock for as long as it takes, so keeping the two separate is what stops a streaming callback from deadlocking against the run that produced it.
+`vox-agents/src/diplomacy/ingame/ingame-bridge.ts` is the listener that does. It deduplicates the pipe and SSE overlap by event id, then puts the work on one of two per-pair queues: an **action** queue for anything that mutates, and a **push** queue for the Lua calls heading back. A model run holds the thread lock for as long as it takes, so keeping the two separate is what stops a streaming callback from deadlocking against the run that produced it.
 
 One quirk is worth knowing: while the leaderhead or trade scene is up, the engine stops ticking `CvGame::update`, so nothing drains the DLL's incoming queue. Both Lua screens call `Game.ProcessConnectionMessages()` from their per-frame update to drain it themselves.
 
@@ -70,9 +70,9 @@ The labels the menu renders and the labels the grammar accepts come from the sam
 
 ## Back to the screen
 
-Results travel back as ordinary Lua calls: `ingame-bridge.ts` calls the MCP `call-lua-function` tool with one of the four registered names. On the way out, transcript markdown is converted to Civ 5 markup (`vox-agents/src/utils/diplomacy/ingame/civ5-markup.ts`) and batches are trimmed to a wire budget, because the game cannot render markdown and the pipe has limits.
+Results travel back as ordinary Lua calls: `ingame-bridge.ts` calls the MCP `call-lua-function` tool with one of the four registered names. On the way out, transcript markdown is converted to Civ 5 markup (`vox-agents/src/diplomacy/ingame/civ5-markup.ts`) and batches are trimmed to a wire budget, because the game cannot render markdown and the pipe has limits.
 
-Separately, an outcome the player has not seen becomes a native game notification through `vox-agents/src/utils/diplomacy/ingame/notify.ts` and the `post-notification` tool. That rule is deliberately narrow: a turn that completed cleanly still notifies nothing unless it produced a new durable row.
+Separately, an outcome the player has not seen becomes a native game notification through `vox-agents/src/diplomacy/ingame/notify.ts` and the `post-notification` tool. That rule is deliberately narrow: a turn that completed cleanly still notifies nothing unless it produced a new durable row.
 
 ## Enacting the deal
 
@@ -100,18 +100,18 @@ The **transcript** is an append-only record of a conversation. **Deal state is d
 | **Inspection** | Transient | A fresh read of live tradable terms, legality, and advisory values. |
 | **Ledger term** | Transient | A plain string the negotiator authors and the ledger resolves into structured terms. |
 
-`deal-reduce.ts` in `vox-agents/src/utils/diplomacy/deal/` selects the latest proposal or counter, then follows outcome rows' `Payload.ProposalMessageID` references to derive `open`, `rejected`, `accepted`, or `enacted`; with no proposal, the status is `none`. The in-game panel's Lua reducer must follow the same rules.
+`deal-reduce.ts` in `vox-agents/src/diplomacy/deal/` selects the latest proposal or counter, then follows outcome rows' `Payload.ProposalMessageID` references to derive `open`, `rejected`, `accepted`, or `enacted`; with no proposal, the status is `none`. The in-game panel's Lua reducer must follow the same rules.
 
-Transcript rows live in `DiplomaticMessages` (`mcp-server/src/knowledge/schema/timed.ts`) and are grouped by `Player1ID` and `Player2ID` (min and max, with `-1` reserved for an observer). There is one conversation per player pair. Each row carries `SpeakerID`, `MessageType`, free-text `Content`, JSON `Payload`, and the game `Turn`. The wire projection in `mcp-server/src/utils/transcript-schema.ts` pins seven message types: `text`, `close`, `deal-proposal`, `deal-counter`, `deal-accept`, `deal-reject`, and `deal-enacted`.
+Transcript rows live in `DiplomaticMessages` (`mcp-server/src/knowledge/schema/timed.ts`) and are grouped by `Player1ID` and `Player2ID` (min and max, with `-1` reserved for an observer). There is one conversation per player pair. Each row carries `SpeakerID`, `MessageType`, free-text `Content`, JSON `Payload`, and the game `Turn`. The wire projection in `mcp-server/src/diplomacy/transcript-schema.ts` pins seven message types: `text`, `close`, `deal-proposal`, `deal-counter`, `deal-accept`, `deal-reject`, and `deal-enacted`.
 
-The deal contract lives in `mcp-server/src/utils/deal-schema.ts`; its vocabulary lives in `deal-metadata.ts` so the browser can import those tables without zod.
+The deal contract lives in `mcp-server/src/diplomacy/deals/deal-schema.ts`; its vocabulary lives in `deal-metadata.ts` so the browser can import those tables without zod.
 
 A proposal or counter row's `Payload.Deal` holds two kinds of terms:
 
 - **Trade items** map onto the game's `TradeableItems` enum: gold, gold per turn, resources, cities, techs, maps, embassies, open borders, the pacts and treaties, third-party peace and war, vote commitments, and vassalage. Each item is directed, giving from `fromPlayerID` to `toPlayerID`.
 - **Promises** are a Vox Deorum addition with no enum entry, applied at enactment through `Player:SetPromise`. Only the five the tactical AI actually honors are authorable: military, expansion, border, no digging, and cooperative war.
 
-`appendDealProposal` (`vox-agents/src/utils/diplomacy/deal/deal.ts`) normalizes terms before archival: `symmetrizeDeal` completes a mutual agreement listed on one side onto both, and a fresh inspection supplies durations and display names. The stored deal can then render correctly without a live game. Callers using raw `append-message` must perform that normalization themselves.
+`appendDealProposal` (`vox-agents/src/diplomacy/deal/deal.ts`) normalizes terms before archival: `symmetrizeDeal` completes a mutual agreement listed on one side onto both, and a fresh inspection supplies durations and display names. The stored deal can then render correctly without a live game. Callers using raw `append-message` must perform that normalization themselves.
 
 When the two civs are at war, `appendDealProposal` adds a Peace Treaty on both sides when the author left one out, then re-inspects so the treaty's legality and value are real. While the game's war lock lasts, that inspection reports the treaty illegal with a locked-into-war reason, so the whole proposal is refused before anything is archived.
 
@@ -123,11 +123,11 @@ A proposal's payload can also carry `Value1` and `Value2`: advisory per-item sna
 
 **Adding a trade item type** touches the contract, the game bridge, and every renderer:
 
-1. `mcp-server/src/utils/deal-metadata.ts`: the `TRADE_ITEM_TYPES` entry, plus the duration table, the agreement metadata, and the targeted or symmetric sets where they apply.
+1. `mcp-server/src/diplomacy/deals/deal-metadata.ts`: the `TRADE_ITEM_TYPES` entry, plus the duration table, the agreement metadata, and the targeted or symmetric sets where they apply.
 2. `mcp-server/lua/inspect-deal.lua`: the mapping to `TradeableItems`, the tradable-range probe, and the enact-mode constructor call.
-3. `mcp-server/src/utils/deal-format.ts`: the friendly label agents and prompts read.
+3. `mcp-server/src/diplomacy/deals/deal-format.ts`: the friendly label agents and prompts read.
 4. `vox-agents/src/envoy/ledger/ledger-grammar.ts` and `ledger-resolver.ts`: the authored label and how it resolves to a directed item, plus `give-receive-menu.ts` if it needs its own menu category.
-5. `civ5-mod/UI/VoxDeorumDealScreen.lua` and `VoxDeorumDealUtils.lua`: building and reading the native deal object, and validating the wire payload.
+5. `civ5-mod/UI/Deals/VoxDeorumDealScreen.lua` and `civ5-mod/UI/Shared/VoxDeorumDealUtils.lua`: building and reading the native deal object, and validating the wire payload.
 6. `vox-agents/ui/src/utils/deal/`: the dashboard editor's catalog and renderer.
 
 Drift-guard tests in `vox-agents/tests/mock/envoy/ledger/` assert that the ledger labels still match the canonical metadata tables, so a mismatch between steps 1 and 4 fails the suite rather than surfacing as an unparseable term at runtime.

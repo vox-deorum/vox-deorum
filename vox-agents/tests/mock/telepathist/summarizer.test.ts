@@ -11,7 +11,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 // Import the registry first so the full agent graph initializes before the
 // leaf summarizer module is evaluated, avoiding a circular-import TDZ error.
-import { agentRegistry } from '../../../src/infra/agent-registry.js';
+import { agentRegistry } from '../../../src/agents/runtime/agent-registry.js';
 import { createFakeVoxContext, FakeVoxContext } from '../../helpers/fake-vox-context.js';
 import {
   buildToolSummaryInstruction,

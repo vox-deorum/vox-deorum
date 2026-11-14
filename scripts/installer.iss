@@ -76,7 +76,7 @@ Source: "release\lua51_win32.dll"; DestDir: "{app}\scripts\release"; Flags: igno
 Source: "release\lua51_win32.pdb"; DestDir: "{app}\scripts\release"; Flags: ignoreversion skipifsourcedoesntexist
 
 ; Scripts and configuration (excluding installer files)
-Source: "*"; DestDir: "{app}\scripts"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "installer.iss,utilities\build-installer.cmd,post-install.cmd,\dist\*,\release\*,\debug\*"
+Source: "*"; DestDir: "{app}\scripts"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "installer.iss,packaging\build-installer.cmd,post-install.cmd,\dist\*,\release\*,\debug\*"
 Source: "..\release.txt"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\README.md"; DestDir: "{app}"; Flags: ignoreversion
 

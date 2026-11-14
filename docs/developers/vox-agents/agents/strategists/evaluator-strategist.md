@@ -12,7 +12,7 @@ flowchart TD
   G --> H["strategist.decision on the agent span"]
 ```
 
-The code is in `src/strategist/agents/evaluator-strategist.ts` and `src/strategist/agents/evaluator-questions.ts`.
+The code is in `src/strategist/evaluator/evaluator-strategist.ts` and `src/strategist/evaluator/evaluator-questions.ts`.
 
 ## Using it
 
@@ -77,7 +77,7 @@ Every call carries the same fixed rationale, without probabilities, because `get
 | Agent span, `strategist.decision` | JSON with each question's current value, proposed value, and whether it was sent, plus each call and its status (applied, failed, or dropped) |
 | Agent span, `strategist.trim` | Which trim steps ran. See [Evaluator trimming](evaluator-trimming.md#telemetry). |
 
-The record shapes are in `src/types/evaluation.ts`. `labelEvaluation` in `src/utils/models/evaluation-record.ts` labels raw answers for display, and the dashboard's strategist turn view shows them (see [Web UI](../../platform/ui.md)).
+The record shapes are in `src/types/evaluation.ts`. `labelEvaluation` in `src/agents/models/evaluation/evaluation-record.ts` labels raw answers for display, and the dashboard's strategist turn view shows them (see [Web UI](../../platform/ui.md)).
 
 ## Tests
 

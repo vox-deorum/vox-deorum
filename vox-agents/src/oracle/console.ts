@@ -12,7 +12,7 @@ import { setTimeout } from 'node:timers/promises';
 import { parseArgs } from 'node:util';
 import { pathToFileURL } from 'node:url';
 import { sqliteExporter } from '../instrumentation.js';
-import { processManager } from '../infra/process-manager.js';
+import { processManager } from '../agents/runtime/process-manager.js';
 import { createLogger } from '../utils/logger.js';
 import { startWebServer } from '../web/server.js';
 import { runReplay } from './replayer.js';

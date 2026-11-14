@@ -73,7 +73,7 @@ Opening a `strategist.turn.N` span in Telemetry shows a summary of that turn ins
 - **Repeated calls.** When a tool was called several times, each field shows its latest value and outcome, including MCP errors.
 - **Evaluator strategist.** It shares the same sections. Its rows add a score histogram and confidence, and hovering a row shows the evaluator's original answer.
 
-`api/strategist-turn.ts` builds the view from the trace. The components are in `components/telemetry/strategist/`.
+`ui/src/presentation/strategist-turn.ts` builds the view from the trace. The telemetry and log presentation helpers share that folder; `ui/src/api/client.ts` owns API requests. The components are in `components/telemetry/strategist/`.
 
 ### Debug page
 
@@ -83,7 +83,7 @@ The Debug page gathers logs into one card:
 - **Download all.** Zips the latest logs for bug reports: the newest rotated `combined*.log` and `error*.log` per service, every Civ 5 log (the game rewrites them each launch), and a `setup.txt` manifest with the Vox Deorum version, platform, Civ 5 logging state, installed mod folder names, and which files were included or skipped. A file over 10 MB contributes only its newest 10 MB. Never API keys, `.env`, config JSON, or telemetry databases.
 - **Civ 5 logging switch.** Sets `LoggingEnabled` in the game's `config.ini`. Civ 5 reads it only at startup, so the page asks for a restart after a change.
 
-The routes live under `/api/debug` in `src/web/routes/debug.ts`; log reads accept only filenames from the folder listing. Discovery and zip creation live in `src/utils/debug/log-sources.ts` and `log-bundle.ts`, and ini updates in `src/utils/game/civ5-ini.ts`. `ui/src/views/DebugView.vue` uses the components in `ui/src/components/logging/`.
+The routes live under `/api/debug` in `src/web/routes/debug.ts`; log reads accept only filenames from the folder listing. Discovery and zip creation live in `src/utils/debug/log-sources.ts` and `log-bundle.ts`, and ini updates in `src/game/civ5-ini.ts`. `ui/src/views/DebugView.vue` uses the components in `ui/src/components/logging/`.
 
 ## Development
 

@@ -12,7 +12,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { DuckDBInstance } from '@duckdb/node-api';
-import { spansTableSql } from '../../../src/utils/telemetry/schema.js';
+import { spansTableSql } from '../../../src/agents/telemetry/schema.js';
 import { seedKnowledgePlayers } from '../../helpers/knowledge-db.js';
 import { insertSpans } from '../../helpers/telemetry-db.js';
 

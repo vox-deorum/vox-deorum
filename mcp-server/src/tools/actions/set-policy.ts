@@ -5,7 +5,7 @@
 import { ActionTool, sourceTurnField } from "../abstract/action.js";
 import * as z from "zod";
 import { MaxMajorCivs } from "../../knowledge/schema/base.js";
-import { retrieveEnumValue, retrieveEnumName } from "../../utils/knowledge/enum.js";
+import { retrieveEnumValue, retrieveEnumName } from "../../knowledge/helpers/enum.js";
 
 /**
  * Schema for the result returned by the Lua script

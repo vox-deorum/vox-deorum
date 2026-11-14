@@ -7,8 +7,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { catalogPath, eventCategoryFiles, formatTurnRanges, SeatRecords } from '../../../src/knowledge/records.js';
 import { renderSection } from '../../../src/knowledge/sections.js';
 import type { GameState, StrategistParameters } from '../../../src/strategist/strategy-parameters.js';
-import { filterEventsByCategory } from '../../../src/utils/prompts/event-filters.js';
-import { WorkspaceStore } from '../../../src/utils/workspace/workspace-store.js';
+import { filterEventsByCategory } from '../../../src/knowledge/events/event-filters.js';
+import { WorkspaceStore } from '../../../src/agents/workspace/workspace-store.js';
 
 /** Decode stored bytes as UTF-8 text. */
 function text(bytes: Uint8Array | undefined): string | undefined {

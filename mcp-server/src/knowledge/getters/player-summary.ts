@@ -5,9 +5,9 @@
 import { Selectable } from 'kysely';
 import { LuaFunction } from '../../bridge/lua-function.js';
 import { PlayerSummary, DiplomaticDealDetails } from '../schema/timed.js';
-import { getEraName } from '../../utils/database/enums.js';
+import { getEraName } from '../../database/helpers/enums.js';
 import { knowledgeManager } from '../../server.js';
-import { stripTags } from '../../utils/database/localized.js';
+import { stripTags } from '../../database/helpers/localized.js';
 
 /**
  * Lua function that extracts player summary information from the game

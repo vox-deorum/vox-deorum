@@ -12,7 +12,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { setupStore, seedPlayer } from '../helpers.js';
-import { applyVisibility, composeVisibility } from '../../../src/utils/knowledge/visibility.js';
+import { applyVisibility, composeVisibility } from '../../../src/knowledge/helpers/visibility.js';
 import * as cityInfo from '../../../src/knowledge/getters/city-information.js';
 import createGetDiplomaticEventsTool from '../../../src/tools/knowledge/get-diplomatic-events.js';
 import type { KnowledgeStore } from '../../../src/knowledge/store.js';

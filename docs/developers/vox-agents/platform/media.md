@@ -17,7 +17,7 @@ Helper predicates in `src/types/config.ts` split these into "visual" modes (play
 
 ## ObsManager: driving OBS Studio
 
-`ObsManager` (`src/infra/obs-manager.ts`) is a singleton that controls OBS Studio over its WebSocket protocol, using `obs-websocket-js`.
+`ObsManager` (`src/game/recording/obs-manager.ts`) is a singleton that controls OBS Studio over its WebSocket protocol, using `obs-websocket-js`.
 
 On initialization it makes sure OBS is running (launching it if needed), connects, and builds its scenes programmatically:
 
@@ -38,7 +38,7 @@ Configuration lives under `obs` in `config.json` (executable path, WebSocket por
 
 ## ProductionController: cutting segments
 
-Recording a whole game produces hours of dead time, so the strategist session never calls ObsManager directly. It goes through `ProductionController` (`src/infra/production-controller.ts`), which cuts recordings into **segments** aligned with on-screen action.
+Recording a whole game produces hours of dead time, so the strategist session never calls ObsManager directly. It goes through `ProductionController` (`src/game/recording/production-controller.ts`), which cuts recordings into **segments** aligned with on-screen action.
 
 The game's render events drive a small state machine:
 
@@ -52,7 +52,7 @@ Alongside the video files, the controller writes `segments.jsonl` in the recordi
 
 ### Archiving the DLL recording
 
-The MCP server packages the DLL recording as `archive/<experiment>/<game-id>.zip`, with one game-ID root folder, excluding `tactical-training/` and storing `stream.bin` without compression. `archiveRawCaptureRecording` in `mcp-server/src/utils/knowledge/archive.ts` calls `scripts/utilities/archive-raw.mjs` for packaging.
+The MCP server packages the DLL recording as `archive/<experiment>/<game-id>.zip`, with one game-ID root folder, excluding `tactical-training/` and storing `stream.bin` without compression. `archiveRawCaptureRecording` in `mcp-server/src/knowledge/helpers/archive.ts` calls `scripts/maintenance/archive-raw.mjs` for packaging.
 
 The utility replaces the previous zip only after a temporary archive is complete. A packaging failure preserves the source and any earlier zip. After success, the source is renamed to a hidden `.removing` folder before deletion. Cleanup failures are logged; leftover `.partial` files or `.removing` folders can be removed by hand.
 

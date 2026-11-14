@@ -11,14 +11,14 @@ import { Tool as MCPTool } from '@modelcontextprotocol/sdk/types.js';
 import { z, ZodType } from 'zod';
 import { Kysely } from 'kysely';
 import { TelepathistParameters } from './telepathist-parameters.js';
-import { createSimpleTool } from '../utils/tools/simple-tools.js';
-import { jsonToMarkdown, HeadingConfig } from '../utils/tools/json-to-markdown.js';
-import { VoxContext } from '../infra/vox-context.js';
+import { createSimpleTool } from '../agents/tools/simple-tools.js';
+import { jsonToMarkdown, HeadingConfig } from '../agents/tools/json-to-markdown.js';
+import { VoxContext } from '../agents/runtime/vox-context.js';
 import { buildToolSummaryInstruction, summarizeWithCache } from './summarizer.js';
 import { createLogger } from '../utils/logger.js';
-import type { TelemetryDatabase, Span } from '../utils/telemetry/schema.js';
+import type { TelemetryDatabase, Span } from '../agents/telemetry/schema.js';
 import type { SummarizerInput } from './summarizer.js';
-import { parseSpanAttributes } from '../utils/telemetry/attributes.js';
+import { parseSpanAttributes } from '../agents/telemetry/attributes.js';
 
 const logger = createLogger('TelepathistTool');
 

@@ -7,8 +7,8 @@ import { Selectable } from 'kysely';
 import { LuaFunction } from '../../bridge/lua-function.js';
 import { PlayerOpinions } from '../schema/timed.js';
 import { knowledgeManager } from '../../server.js';
-import { stripTags } from '../../utils/database/localized.js';
-import { composeVisibility } from '../../utils/knowledge/visibility.js';
+import { stripTags } from '../../database/helpers/localized.js';
+import { composeVisibility } from '../helpers/visibility.js';
 
 /**
  * Lua function that retrieves player opinions to all major civs

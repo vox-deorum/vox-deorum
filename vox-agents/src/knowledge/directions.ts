@@ -5,14 +5,14 @@
  * that point such a run to them.
  */
 
-import type { AgentParameters } from "../infra/vox-agent.js";
+import type { AgentParameters } from "../agents/runtime/vox-agent.js";
 import type { ModelMessage } from "ai";
-import type { VoxContext } from "../infra/vox-context.js";
-import { cacheBreakpoint, countCacheBreakpoints, MAX_CACHE_BREAKPOINTS } from "../utils/models/cache-breakpoint.js";
-import { renderSystemPrompt } from "../utils/prompts/prompt-files.js";
-import { bashToolName } from "../utils/tools/tool-names.js";
-import { journalStorePath, journalTail, type JournalTail } from "../utils/workspace/journal.js";
-import { workspaceCwd, workspaceGuide, workspaceGuideFile } from "../utils/workspace/player-workspace.js";
+import type { VoxContext } from "../agents/runtime/vox-context.js";
+import { cacheBreakpoint, countCacheBreakpoints, MAX_CACHE_BREAKPOINTS } from "../agents/models/cache-breakpoint.js";
+import { renderSystemPrompt } from "../agents/prompts/prompt-files.js";
+import { bashToolName } from "../agents/tools/tool-names.js";
+import { journalStorePath, journalTail, type JournalTail } from "../agents/workspace/journal.js";
+import { workspaceCwd, workspaceGuide, workspaceGuideFile } from "../agents/workspace/player-workspace.js";
 import { formatTurnRanges, recordedTurns, sectionFiles } from "./records.js";
 import { fileModeOmittedSections, sections, type SectionKey } from "./sections.js";
 

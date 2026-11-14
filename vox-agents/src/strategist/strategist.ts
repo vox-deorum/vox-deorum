@@ -4,7 +4,7 @@
  * Base strategist agent implementation. All strategists inherit from this class.
  */
 
-import { VoxAgent } from "../infra/vox-agent.js";
+import { VoxAgent } from "../agents/runtime/vox-agent.js";
 import { StrategistParameters } from "./strategy-parameters.js";
 
 /**

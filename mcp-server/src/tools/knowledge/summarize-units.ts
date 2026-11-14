@@ -1,6 +1,6 @@
 import { LuaFunctionTool } from "../abstract/lua-function.js";
 import * as z from "zod";
-import { enumMappings } from "../../utils/knowledge/enum.js";
+import { enumMappings } from "../../knowledge/helpers/enum.js";
 import { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { createLogger } from "../../utils/logger.js";
 

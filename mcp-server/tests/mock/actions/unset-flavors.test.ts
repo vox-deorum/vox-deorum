@@ -7,7 +7,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { setupStore, actionPushes } from '../helpers.js';
 import { LuaFunction } from '../../../src/bridge/lua-function.js';
-import { composeVisibility } from '../../../src/utils/knowledge/visibility.js';
+import { composeVisibility } from '../../../src/knowledge/helpers/visibility.js';
 import createUnsetFlavorsTool from '../../../src/tools/actions/unset-flavors.js';
 import type { KnowledgeStore } from '../../../src/knowledge/store.js';
 import { connectToolClient } from '../tool-client.js';

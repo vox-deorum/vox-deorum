@@ -7,10 +7,10 @@
 
 import { dynamicTool, jsonSchema } from 'ai';
 import type { Tool as MCPTool } from '@modelcontextprotocol/sdk/types.js';
-import type { VoxContext } from '../../infra/vox-context.js';
+import type { VoxContext } from '../../agents/runtime/vox-context.js';
 import type { OracleParameters } from '../types.js';
 import { createLogger } from '../../utils/logger.js';
-import { filterAutoCompleteSchema } from '../../utils/tools/mcp-schema.js';
+import { filterAutoCompleteSchema } from '../../agents/tools/mcp-schema.js';
 
 const logger = createLogger('OracleSchemaTools');
 

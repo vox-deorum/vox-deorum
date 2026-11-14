@@ -30,14 +30,14 @@ import { ToolBase } from "../base.js";
 import * as z from "zod";
 import { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { knowledgeManager } from "../../server.js";
-import { composeVisibility } from "../../utils/knowledge/visibility.js";
-import { readPublicKnowledgeBatch } from "../../utils/knowledge/cached.js";
+import { composeVisibility } from "../../knowledge/helpers/visibility.js";
+import { readPublicKnowledgeBatch } from "../../knowledge/helpers/cached.js";
 import { getPlayerInformations } from "../../knowledge/getters/player-information.js";
 import { orderPlayerPair } from "../../knowledge/getters/diplomatic-messages.js";
-import { MESSAGE_TYPES } from "../../utils/transcript-schema.js";
+import { MESSAGE_TYPES } from "../../diplomacy/transcript-schema.js";
 // The same proposal vocabulary the transactional deal routes answer against: a type that carries
 // Payload.Deal here is exactly a type they can enact or reject, so the set is defined once.
-import { PROPOSAL_TYPES } from "../../utils/deal-outcome.js";
+import { PROPOSAL_TYPES } from "../../diplomacy/deals/deal-outcome.js";
 import { MaxMajorCivs } from "../../knowledge/schema/base.js";
 import { assertExpectedGame } from "../../utils/expected-game.js";
 

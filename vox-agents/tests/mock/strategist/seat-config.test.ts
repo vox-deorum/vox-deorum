@@ -1,4 +1,4 @@
-/** Tests for seat role defaults and per-seat triage, files, and prompts resolution (src/strategist/seat-config.ts). */
+/** Tests for seat role defaults and per-seat triage, files, and prompts resolution (src/strategist/seats/seat-config.ts). */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FilesSetting, PlayerConfig, PromptsSetting, TriageSetting } from '../../../src/types/config.js';
@@ -7,9 +7,9 @@ const mocks = vi.hoisted(() => ({
   config: { triage: undefined as TriageSetting | undefined, files: undefined as FilesSetting | undefined, prompts: undefined as PromptsSetting | undefined },
 }));
 
-vi.mock('../../../src/utils/config.js', () => ({ config: mocks.config }));
+vi.mock('../../../src/agents/config/load.js', () => ({ config: mocks.config }));
 
-import { defaultDiplomat, defaultFilesQuota, resolveSeatFiles, resolveSeatPrompts, resolveSeatTriage, seatAgents } from '../../../src/strategist/seat-config.js';
+import { defaultDiplomat, defaultFilesQuota, resolveSeatFiles, resolveSeatPrompts, resolveSeatTriage, seatAgents } from '../../../src/strategist/seats/seat-config.js';
 
 describe('seatAgents', () => {
   it('should default the diplomat to the built-in agent when the seat names none', () => {

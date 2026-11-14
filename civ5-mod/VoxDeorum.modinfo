@@ -33,27 +33,27 @@
     <File md5="3A42737A457702DFE8A466F6C000BC18" import="1">Mapscripts/Vox_Deorum.lua</File>
     <File md5="3FA079BC0DAF46A51730AF10F05A8892" import="0">Lua/VoxDeorumTest.lua</File>
     <File md5="F0B6A6B9470640315AED43F1256FBA91" import="1">Lua/VoxDeorumReference.lua</File>
-    <File md5="9C7CAAB0E8FB817E9FB26A29AD4555F1" import="1">UI/VoxDeorumHumanPanel.lua</File>
-    <File md5="6452B033FCDA2F344C0E4D046440F5D5" import="0">UI/VoxDeorumHumanPanel.xml</File>
-    <File md5="ACFDDB368B9EA8F33794CED7A289F211" import="1">UI/VoxDeorumHumanTrigger.lua</File>
-    <File md5="2DD227A7584D25F8FB5E2A2744F498A3" import="0">UI/VoxDeorumHumanTrigger.xml</File>
-    <File md5="51019DAD724C64015E52F76203AEF3F6" import="1">UI/VoxDeorumSeat.lua</File>
-    <File md5="D9F1BB1DDE0F0A34A8C2A7F67D359167" import="1">UI/VoxDeorumConverse.lua</File>
+    <File md5="9C7CAAB0E8FB817E9FB26A29AD4555F1" import="1">UI/HumanControl/VoxDeorumHumanPanel.lua</File>
+    <File md5="6452B033FCDA2F344C0E4D046440F5D5" import="0">UI/HumanControl/VoxDeorumHumanPanel.xml</File>
+    <File md5="ACFDDB368B9EA8F33794CED7A289F211" import="1">UI/HumanControl/VoxDeorumHumanTrigger.lua</File>
+    <File md5="2DD227A7584D25F8FB5E2A2744F498A3" import="0">UI/HumanControl/VoxDeorumHumanTrigger.xml</File>
+    <File md5="51019DAD724C64015E52F76203AEF3F6" import="1">UI/Shared/VoxDeorumSeat.lua</File>
+    <File md5="D9F1BB1DDE0F0A34A8C2A7F67D359167" import="1">UI/Diplomacy/VoxDeorumConverse.lua</File>
     <File md5="99DE86B0F50C42F8D31CDED28DE2FBE7" import="1">UI/LeaderHeadRoot.lua</File>
     <File md5="7652FAC9B88599A6D91376F93A79755F" import="1">UI/LeaderHeadRoot.xml</File>
-    <File md5="AA3ABFD6B726DB20BFB049B4517A57CB" import="1">UI/VoxDeorumDiploPanel.lua</File>
-    <File md5="8CCAC2C06A361B4B8B8DBC8481C1C7CB" import="1">UI/VoxDeorumDiploTransport.lua</File>
-    <File md5="BF571FECA7F47FB03AEBE533712B755B" import="1">UI/VoxDeorumDiploPanelMock.lua</File>
-    <File md5="0021CB5006F184E32DAAFBA0107A509B" import="0">UI/VoxDeorumDiploPanel.xml</File>
-    <File md5="5CFF28A06629E728D8B31229E21E63FB" import="1">UI/VoxDeorumNewspaper.lua</File>
+    <File md5="AA3ABFD6B726DB20BFB049B4517A57CB" import="1">UI/Diplomacy/VoxDeorumDiploPanel.lua</File>
+    <File md5="8CCAC2C06A361B4B8B8DBC8481C1C7CB" import="1">UI/Diplomacy/VoxDeorumDiploTransport.lua</File>
+    <File md5="BF571FECA7F47FB03AEBE533712B755B" import="1">UI/Diplomacy/VoxDeorumDiploPanelMock.lua</File>
+    <File md5="0021CB5006F184E32DAAFBA0107A509B" import="0">UI/Diplomacy/VoxDeorumDiploPanel.xml</File>
+    <File md5="6543F7764AD242E0A0FD6B3548AE1072" import="1">UI/VoxDeorumNewspaper.lua</File>
     <File md5="AFCBE954FE70DB38FD9C5CC06FB292F8" import="1">UI/VoxDeorumNewspaper.xml</File>
     <File md5="5BA1794BF9F9BF2D5575BF2BFE26A16F" import="1">UI/VoxDeorumNewspaperMock.lua</File>
     <File md5="BC063118723230458B3E10FA8C1814CD" import="1">UI/VoxDeorumNewspaperData.lua</File>
-    <File md5="D808E04A81C1115BAD4CE6611A929C58" import="1">UI/VoxDeorumDealUtils.lua</File>
-    <File md5="EC48B14766F3D2F6DC0EC6DA97B3808A" import="1">UI/VoxDeorumDealScreen.lua</File>
-    <File md5="8681F1C34A43277397BBB7603232AF64" import="1">UI/VoxDeorumDealTransport.lua</File>
-    <File md5="995979724D9E901B0674C10123FA5C48" import="1">UI/VoxDeorumDealScreenMock.lua</File>
-    <File md5="AF58EE013D739E6E59222F0BEBD0C46E" import="0">UI/VoxDeorumDealScreen.xml</File>
+    <File md5="D808E04A81C1115BAD4CE6611A929C58" import="1">UI/Shared/VoxDeorumDealUtils.lua</File>
+    <File md5="EC48B14766F3D2F6DC0EC6DA97B3808A" import="1">UI/Deals/VoxDeorumDealScreen.lua</File>
+    <File md5="8681F1C34A43277397BBB7603232AF64" import="1">UI/Deals/VoxDeorumDealTransport.lua</File>
+    <File md5="995979724D9E901B0674C10123FA5C48" import="1">UI/Deals/VoxDeorumDealScreenMock.lua</File>
+    <File md5="AF58EE013D739E6E59222F0BEBD0C46E" import="0">UI/Deals/VoxDeorumDealScreen.xml</File>
     <File md5="5642E76127B08EAB4AE9BD246B61C6DB" import="0">XML/VoxDeorum_Notifications.xml</File>
   </Files>
   <Actions>
@@ -77,15 +77,15 @@
       <Name>VoxDeorumReference</Name>
       <Description>Game tooltips for the agents' game reference</Description>
     </EntryPoint>
-    <EntryPoint type="InGameUIAddin" file="UI/VoxDeorumHumanPanel.xml">
+    <EntryPoint type="InGameUIAddin" file="UI/HumanControl/VoxDeorumHumanPanel.xml">
       <Name>VoxDeorumHumanPanel</Name>
       <Description>Human-control decision panel (dormant until a decision is presented)</Description>
     </EntryPoint>
-    <EntryPoint type="InGameUIAddin" file="UI/VoxDeorumHumanTrigger.xml">
+    <EntryPoint type="InGameUIAddin" file="UI/HumanControl/VoxDeorumHumanTrigger.xml">
       <Name>VoxDeorumHumanTrigger</Name>
       <Description>Human-control trigger widget for reopening the decision panel</Description>
     </EntryPoint>
-    <EntryPoint type="InGameUIAddin" file="UI/VoxDeorumDiploPanel.xml">
+    <EntryPoint type="InGameUIAddin" file="UI/Diplomacy/VoxDeorumDiploPanel.xml">
       <Name>VoxDeorumDiploPanel</Name>
       <Description>Mock-driven leader conversation panel</Description>
     </EntryPoint>
@@ -93,7 +93,7 @@
       <Name>VoxDeorumNewspaper</Name>
       <Description>Fixture-driven newspaper reader proof</Description>
     </EntryPoint>
-    <EntryPoint type="InGameUIAddin" file="UI/VoxDeorumDealScreen.xml">
+    <EntryPoint type="InGameUIAddin" file="UI/Deals/VoxDeorumDealScreen.xml">
       <Name>VoxDeorumDealScreen</Name>
       <Description>Native-shaped Vox Deorum deal authoring and review screen</Description>
     </EntryPoint>

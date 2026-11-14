@@ -13,7 +13,7 @@ This page covers sessions, how a session launches the game, the global registrie
 
 ## Sessions
 
-`VoxSession` (`src/infra/vox-session.ts`) is the base class. The dashboard reports these states, defined by `SessionState` in `src/types/api.ts`:
+`VoxSession` (`src/agents/runtime/vox-session.ts`) is the base class. The dashboard reports these states, defined by `SessionState` in `src/types/api.ts`:
 
 | State      | Meaning                                          |
 | ---------- | ------------------------------------------------ |
@@ -30,7 +30,7 @@ Pausing is a separate flag: a paused session stays running, finishes work alread
 
 ## Launching the game
 
-Sessions that start Civilization V do it through `VoxCivilization` (`src/infra/vox-civilization.ts`). It:
+Sessions that start Civilization V do it through `VoxCivilization` (`src/game/vox-civilization.ts`). It:
 
 1. Generates the launch Lua from templates.
 2. Prepares Civ's `config.ini` for a new game with any fixed random seeds and map script, and puts the old values back once the game is in (see [Game session](../agents/strategists/game-session.md#repeating-games)).
@@ -45,13 +45,13 @@ Three registries connect the parts of the process:
 
 | Registry | Holds | Defined in |
 | --- | --- | --- |
-| `agentRegistry` | Every available agent. | `src/infra/agent-registry.ts` |
-| `sessionRegistry` | Active sessions. Allows only one game session at a time. | `src/infra/session-registry.ts` |
-| `contextRegistry` | Live contexts, so web routes can find them. | `src/infra/context-registry.ts` |
+| `agentRegistry` | Every available agent. | `src/agents/runtime/agent-registry.ts` |
+| `sessionRegistry` | Active sessions. Allows only one game session at a time. | `src/agents/runtime/session-registry.ts` |
+| `contextRegistry` | Live contexts, so web routes can find them. | `src/agents/runtime/context-registry.ts` |
 
 ## Shutdown
 
-`processManager` (`src/infra/process-manager.ts`) handles the stop signals (SIGINT, SIGTERM, SIGBREAK, SIGHUP) in one place. Each entry point and long-lived service registers a named shutdown hook, and hooks run in the order they were registered.
+`processManager` (`src/agents/runtime/process-manager.ts`) handles the stop signals (SIGINT, SIGTERM, SIGBREAK, SIGHUP) in one place. Each entry point and long-lived service registers a named shutdown hook, and hooks run in the order they were registered.
 
 The strategist console registers three:
 

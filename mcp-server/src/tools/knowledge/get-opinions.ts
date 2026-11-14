@@ -11,7 +11,7 @@ import { getPlayerSummaries } from "../../knowledge/getters/player-summary.js";
 import { MaxMajorCivs } from "../../knowledge/schema/base.js";
 import { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { PlayerOpinions } from "../../knowledge/schema/timed.js";
-import { stripTags } from "../../utils/database/localized.js";
+import { stripTags } from "../../database/helpers/localized.js";
 import { cleanEventData } from "./get-events.js";
 
 /**

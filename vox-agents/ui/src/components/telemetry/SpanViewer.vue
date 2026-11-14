@@ -160,7 +160,7 @@ import Toolbar from 'primevue/toolbar';
 import DetailDialog, { type DetailEntry } from '../shared/DetailDialog.vue';
 import StrategistTurnDialog from './strategist/StrategistTurnDialog.vue';
 import TurnViewButton from './strategist/TurnViewButton.vue';
-import { isStrategistTurnSpan } from '@/api/strategist-turn';
+import { isStrategistTurnSpan } from '@/presentation/strategist-turn';
 import type { Span } from '@/utils/types';
 import {
   formatDuration,
@@ -174,7 +174,7 @@ import {
   buildSpanTree,
   flattenSpanTree,
   type SpanNode
-} from '@/api/telemetry-utils';
+} from '@/presentation/telemetry-utils';
 
 // Props
 const props = defineProps<{

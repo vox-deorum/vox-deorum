@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { agentRegistry } from '../../../src/infra/agent-registry.js';
+import { agentRegistry } from '../../../src/agents/runtime/agent-registry.js';
 
 const analyst = agentRegistry.get('diplomatic-analyst') as any;
 

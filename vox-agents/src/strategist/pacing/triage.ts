@@ -6,15 +6,15 @@
  */
 
 import type { Experimental_EvaluationQuestion as EvaluationQuestion } from "ai";
-import type { VoxContext } from "../../infra/vox-context.js";
-import { triageEnabled } from "../../infra/triage.js";
-import { getEvaluatorConfig } from "../../utils/models/evaluation.js";
-import { renderSystemPrompt } from "../../utils/prompts/prompt-files.js";
+import type { VoxContext } from "../../agents/runtime/vox-context.js";
+import { triageEnabled } from "../../agents/runtime/triage.js";
+import { getEvaluatorConfig } from "../../agents/models/evaluation/evaluation.js";
+import { renderSystemPrompt } from "../../agents/prompts/prompt-files.js";
 import { isContextLengthError } from "../../utils/retry.js";
 import { errorMessage } from "../../utils/errors.js";
-import { evaluateStrategistState } from "../agents/evaluator-questions.js";
+import { evaluateStrategistState } from "../evaluator/evaluator-questions.js";
 import { withEventWindowFallback, type GameState, type StrategistParameters } from "../strategy-parameters.js";
-import type { TriageVerdict } from "../pacing.js";
+import type { TriageVerdict } from "./policy.js";
 
 /** The single triage question, with one level per verdict in {@link revisionVerdicts}. */
 const triageQuestions = {

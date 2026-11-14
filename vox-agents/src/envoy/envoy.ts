@@ -6,12 +6,12 @@
  */
 
 import { ModelMessage, StepResult, Tool } from "ai";
-import { VoxAgent, AgentParameters } from "../infra/vox-agent.js";
+import { VoxAgent, AgentParameters } from "../agents/runtime/vox-agent.js";
 import { EnvoyThread, MessageWithMetadata, ParticipantIdentity } from "../types/index.js";
-import { VoxContext } from "../infra/vox-context.js";
-import { formatToolResultOutput, stripSpokenEcho } from "../utils/models/text-cleaning.js";
-import { audienceID, boundaryIndex, collectSpokenReply, identityOf, observerName, roleOf, speakerLabel, type DealRowRenderer } from "../utils/diplomacy/transcript/transcript-utils.js";
-import { sendMessageToolName } from "../utils/diplomacy/constants.js";
+import { VoxContext } from "../agents/runtime/vox-context.js";
+import { formatToolResultOutput, stripSpokenEcho } from "../agents/models/text-cleaning.js";
+import { audienceID, boundaryIndex, collectSpokenReply, identityOf, observerName, roleOf, speakerLabel, type DealRowRenderer } from "../diplomacy/transcript/transcript-utils.js";
+import { sendMessageToolName } from "../diplomacy/constants.js";
 
 /**
  * Prompt-cache breakpoint strategy (Anthropic providers only; a no-op elsewhere).
@@ -36,7 +36,7 @@ import { sendMessageToolName } from "../utils/diplomacy/constants.js";
  * Caching between game turns is out of scope (game state churns). A breakpoint only marks a
  * cache-WRITE point; lookup matches by content prefix, not by where breakpoints sat last request.
  * The marker, `markBreakpointOnLast`, and the `MAX_CACHE_BREAKPOINTS` ceiling live in
- * `utils/models/cache-breakpoint.ts`.
+ * `agents/models/cache-breakpoint.ts`.
  */
 
 /**
@@ -61,7 +61,7 @@ function cloneModelMessage(message: ModelMessage): ModelMessage {
  * name keeps the prompt (and the transcript labels built from it) coherent instead of failing the
  * turn or leaking a bare seat number into the audience description.
  */
-export { observerName } from "../utils/diplomacy/transcript/transcript-utils.js";
+export { observerName } from "../diplomacy/transcript/transcript-utils.js";
 
 /**
  * Generic base envoy agent that can chat with the user.

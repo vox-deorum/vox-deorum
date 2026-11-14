@@ -18,23 +18,23 @@ import { sqliteExporter } from "../instrumentation.js";
 import { createLogger } from "../utils/logger.js";
 import { parseArgs } from 'node:util';
 import { setTimeout } from 'node:timers/promises';
-import { VoxContext } from '../infra/vox-context.js';
+import { VoxContext } from '../agents/runtime/vox-context.js';
 import {
   createTelepathistParameters,
   TelepathistParameters
 } from './telepathist-parameters.js';
 import {
   parseDatabaseIdentifier,
-} from '../utils/telemetry/identifier-parser.js';
-import { contextRegistry } from '../infra/context-registry.js';
-import { agentRegistry } from '../infra/agent-registry.js';
+} from '../agents/telemetry/identifier-parser.js';
+import { contextRegistry } from '../agents/runtime/context-registry.js';
+import { agentRegistry } from '../agents/runtime/agent-registry.js';
 import { StreamingEventCallback, EnvoyThread } from '../types/index.js';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'node:path';
-import { VoxSpanExporter } from "../utils/telemetry/vox-exporter.js";
+import { VoxSpanExporter } from "../agents/telemetry/vox-exporter.js";
 import { startWebServer } from "../web/server.js";
-import { processManager } from "../infra/process-manager.js";
-import { ensureModelsResolved, selectModelReference } from '../utils/models/resolution.js';
+import { processManager } from "../agents/runtime/process-manager.js";
+import { ensureModelsResolved, selectModelReference } from '../agents/models/resolution.js';
 
 const logger = createLogger('Telepathist');
 

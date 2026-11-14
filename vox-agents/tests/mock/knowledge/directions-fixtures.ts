@@ -5,8 +5,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { SeatRecords } from '../../../src/knowledge/records.js';
 import type { GameState, StrategistParameters } from '../../../src/strategist/strategy-parameters.js';
-import { WorkspaceStore } from '../../../src/utils/workspace/workspace-store.js';
-import { bashToolName } from '../../../src/utils/tools/tool-names.js';
+import { WorkspaceStore } from '../../../src/agents/workspace/workspace-store.js';
+import { bashToolName } from '../../../src/agents/tools/tool-names.js';
 import type { ResolvedFilesConfig } from '../../../src/types/index.js';
 
 /** A temporary seat store with a records writer, removed by `dispose`. */

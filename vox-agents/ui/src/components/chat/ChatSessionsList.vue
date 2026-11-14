@@ -2,7 +2,7 @@
 import Button from 'primevue/button';
 import SessionListPanel from '../shared/SessionListPanel.vue';
 import type { EnvoyThread } from '@/utils/types';
-import { agentName } from '@vox/utils/diplomacy/transcript/transcript-utils';
+import { agentName } from '@vox/diplomacy/transcript/transcript-utils';
 
 /**
  * Props for the ChatSessionsList component

@@ -4,7 +4,7 @@
 
 import Database from 'better-sqlite3';
 import { Kysely, SqliteDialect } from 'kysely';
-import { spansTableSql, type TelemetryDatabase } from '../../src/utils/telemetry/schema.js';
+import { spansTableSql, type TelemetryDatabase } from '../../src/agents/telemetry/schema.js';
 
 /** One span row to seed. Timing and status columns get fixed defaults. */
 export interface SpanSeed {

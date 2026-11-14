@@ -1,5 +1,5 @@
 /**
- * Tests for the diplomacy transcript I/O wrappers (src/utils/diplomacy/transcript.ts),
+ * Tests for the diplomacy transcript I/O wrappers (src/diplomacy/transcript/transcript.ts),
  * the write-through layer between vox-agents chat threads and the durable mcp-server store.
  * Uses the shared mcpClient fixture — no live MCP server / game.
  */
@@ -9,7 +9,7 @@ import { installMockMcpClient, structuredResult } from '../../../helpers/mock-mc
 import { transcriptRow } from '../../../helpers/diplomacy-fixtures.js';
 import type { EnvoyThread } from '../../../../src/types/index.js';
 
-vi.mock('../../../../src/utils/models/mcp-client.js', async () => {
+vi.mock('../../../../src/agents/mcp/mcp-client.js', async () => {
   const helper = await import('../../../helpers/mock-mcp-client.js');
   return helper.mockMcpClientModule();
 });
@@ -22,8 +22,8 @@ import {
   syncThreadMessages,
   autoCompact,
   maybeAutoCompact,
-} from '../../../../src/utils/diplomacy/transcript/transcript.js';
-import { beginTurnState } from '../../../../src/utils/diplomacy/turn/active-turn-state.js';
+} from '../../../../src/diplomacy/transcript/transcript.js';
+import { beginTurnState } from '../../../../src/diplomacy/turn/active-turn-state.js';
 
 let mcp: ReturnType<typeof installMockMcpClient>;
 beforeEach(() => {

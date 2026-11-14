@@ -1,6 +1,6 @@
 # Player loop
 
-Each AI seat has a `VoxPlayer` (`src/strategist/vox-player.ts`) with its own [context](../../framework/runs.md). When the game says the player finished a turn, the loop refreshes the game state, decides whether this turn deserves a full decision, and runs the strategist if so.
+Each AI seat has a `VoxPlayer` (`src/strategist/seats/vox-player.ts`) with its own [context](../../framework/runs.md). When the game says the player finished a turn, the loop refreshes the game state, decides whether this turn deserves a full decision, and runs the strategist if so.
 
 ```
 PlayerDoneTurn

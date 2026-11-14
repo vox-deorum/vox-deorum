@@ -2,7 +2,7 @@
  * @module tests/helpers/mock-mcp-client
  *
  * A generalized, reusable mock for the vox-agents `mcpClient` singleton
- * (`src/utils/models/mcp-client.ts`) — the single seam between vox-agents and the MCP
+ * (`src/agents/mcp/mcp-client.ts`) — the single seam between vox-agents and the MCP
  * server. Replacing it lets any feature that calls MCP tools be unit-tested without a
  * live game, bridge-service, or MCP server: transcript I/O, metadata wrappers, the
  * `wrapMCPTool` execute path, notification handling, and more.
@@ -16,7 +16,7 @@
  * ```ts
  * import { installMockMcpClient, structuredResult } from '../helpers/mock-mcp-client.js';
  *
- * vi.mock('../../src/utils/models/mcp-client.js', async () => {
+ * vi.mock('../../src/agents/mcp/mcp-client.js', async () => {
  *   const helper = await import('../helpers/mock-mcp-client.js');
  *   return helper.mockMcpClientModule();
  * });

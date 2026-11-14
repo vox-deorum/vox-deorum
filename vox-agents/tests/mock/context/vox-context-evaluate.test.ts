@@ -1,5 +1,5 @@
 /**
- * Tests for the single-call evaluation path (src/infra/vox-evaluate.ts, exercised through
+ * Tests for the single-call evaluation path (src/agents/runtime/vox-evaluate.ts, exercised through
  * VoxContext.evaluate()). The evaluation-model factory is mocked so `experimental_evaluate` runs
  * for real against a stub model with a scripted result (usage plus TypeSafe-style confidence
  * metadata). Covers the active-run requirement, answer/usage flow-back, token accrual to the run
@@ -11,8 +11,8 @@
 import { describe, it, expect, beforeEach, beforeAll, vi } from 'vitest';
 
 // Mock only the evaluation-model factory; keep the real SDK call, coercion, and telemetry.
-vi.mock('../../../src/utils/models/evaluation.js', async (orig) => {
-  const actual = await orig<typeof import('../../../src/utils/models/evaluation.js')>();
+vi.mock('../../../src/agents/models/evaluation/evaluation.js', async (orig) => {
+  const actual = await orig<typeof import('../../../src/agents/models/evaluation/evaluation.js')>();
   return { ...actual, getEvaluationModel: vi.fn() };
 });
 
@@ -22,10 +22,10 @@ import type {
   Experimental_EvaluationModelV4Result as EvaluationModelV4Result,
   Experimental_EvaluationModelV4Question as EvaluationModelV4Question,
 } from '@ai-sdk/provider';
-import { VoxContext } from '../../../src/infra/vox-context.js';
-import { VoxAgent, type AgentParameters } from '../../../src/infra/vox-agent.js';
-import { agentRegistry } from '../../../src/infra/agent-registry.js';
-import { getEvaluationModel } from '../../../src/utils/models/evaluation.js';
+import { VoxContext } from '../../../src/agents/runtime/vox-context.js';
+import { VoxAgent, type AgentParameters } from '../../../src/agents/runtime/vox-agent.js';
+import { agentRegistry } from '../../../src/agents/runtime/agent-registry.js';
+import { getEvaluationModel } from '../../../src/agents/models/evaluation/evaluation.js';
 import { isContextLengthError } from '../../../src/utils/retry.js';
 import type { StrategistParameters } from '../../../src/strategist/strategy-parameters.js';
 import { makeStrategistParameters } from '../../helpers/fake-vox-context.js';

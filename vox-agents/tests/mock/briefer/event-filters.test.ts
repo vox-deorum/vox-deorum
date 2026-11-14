@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { filterEventsByCategory, filterRelayedReports, reportCategories } from '../../../src/utils/prompts/event-filters.js';
-import { eventImportanceTiers } from '../../../src/utils/prompts/event-importance.js';
+import { filterEventsByCategory, filterRelayedReports, reportCategories } from '../../../src/knowledge/events/event-filters.js';
+import { eventImportanceTiers } from '../../../src/knowledge/events/event-importance.js';
 
 describe('filterEventsByCategory', () => {
   it('should route relayed reports to every assessed category without treating all reports as diplomacy', () => {

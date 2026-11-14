@@ -10,7 +10,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { setupStore, actionPushes } from '../helpers.js';
 import { LuaFunction } from '../../../src/bridge/lua-function.js';
-import { enumMappings } from '../../../src/utils/knowledge/enum.js';
+import { enumMappings } from '../../../src/knowledge/helpers/enum.js';
 import createSetFlavorsTool from '../../../src/tools/actions/set-flavors.js';
 import type { KnowledgeStore } from '../../../src/knowledge/store.js';
 import { connectToolClient } from '../tool-client.js';

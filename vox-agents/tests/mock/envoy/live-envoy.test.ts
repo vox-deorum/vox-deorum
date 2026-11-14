@@ -11,14 +11,14 @@
  */
 
 import { afterEach, beforeEach, describe, it, expect } from 'vitest';
-import { agentRegistry } from '../../../src/infra/agent-registry.js';
+import { agentRegistry } from '../../../src/agents/runtime/agent-registry.js';
 import type { EnvoyThread, MessageWithMetadata } from '../../../src/types/index.js';
-import { speakerLabel } from '../../../src/utils/diplomacy/transcript/transcript-utils.js';
+import { speakerLabel } from '../../../src/diplomacy/transcript/transcript-utils.js';
 import { buildGameContextMessages } from '../../../src/strategist/strategy-parameters.js';
 import { recordsDirections } from '../../../src/knowledge/directions.js';
 import { createFakeVoxContext } from '../../helpers/fake-vox-context.js';
-import { cacheBreakpoint, countCacheBreakpoints, MAX_CACHE_BREAKPOINTS } from '../../../src/utils/models/cache-breakpoint.js';
-import { bashToolName } from '../../../src/utils/tools/tool-names.js';
+import { cacheBreakpoint, countCacheBreakpoints, MAX_CACHE_BREAKPOINTS } from '../../../src/agents/models/cache-breakpoint.js';
+import { bashToolName } from '../../../src/agents/tools/tool-names.js';
 import { enableFileMode, openTempRecords, recordableState, recordParameters, type TempRecords } from '../knowledge/directions-fixtures.js';
 
 const spokesperson = agentRegistry.get('spokesperson') as any;

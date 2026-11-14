@@ -1,5 +1,5 @@
 /**
- * @module envoy/utils/diplomacy-context
+ * @module envoy/context/diplomacy-context
  *
  * The game-state background the diplomat and negotiator see by default alongside a conversation:
  * the two civilizations' cities, the deals currently in force between them (from the game, with
@@ -9,24 +9,24 @@
  *
  * All three sub-fetches are perspective-aware so cities and standing deals carry the right
  * visibility. They pass `PlayerID = the voiced seat`, but MCP auto-completion of `PlayerID` (see
- * `wrapMCPTool` in utils/tools/mcp-tools.ts) overwrites it with `parameters.playerID` whenever that
+ * `wrapMCPTool` in agents/tools/mcp-tools.ts) overwrites it with `parameters.playerID` whenever that
  * is defined, so the explicit value only takes effect when the parameters carry no seat. We do NOT reuse the strategist's cached `GameState` (fetched with
  * no perspective, so it strips `DiplomaticDeals` and over-shares cities), nor do we adjust
  * `refreshGameState` (that would ripple into the strategist and its briefers).
  */
 
-import type { VoxContext } from "../../infra/vox-context.js";
+import type { VoxContext } from "../../agents/runtime/vox-context.js";
 import { getRecentGameState, type StrategistParameters } from "../../strategist/strategy-parameters.js";
 import { areTeammates } from "../../strategist/pacing/utils.js";
 import type { EnvoyThread } from "../../types/index.js";
-import { identityOf } from "../../utils/diplomacy/transcript/transcript-utils.js";
+import { identityOf } from "../../diplomacy/transcript/transcript-utils.js";
 import { renderSection } from "../../knowledge/sections.js";
 import { createLogger } from "../../utils/logger.js";
 import { endpoints } from "../ledger/deal-ledger.js";
 import {
   formatStringDeal,
   getDealExpirySuffix,
-} from "../../../../mcp-server/dist/utils/deal-format.js";
+} from "../../../../mcp-server/dist/diplomacy/deals/deal-format.js";
 import type { CitiesReport } from "../../../../mcp-server/dist/tools/knowledge/get-cities.js";
 import type { PlayersReport } from "../../../../mcp-server/dist/tools/knowledge/get-players.js";
 import type { DiplomaticDealDetails } from "../../../../mcp-server/dist/knowledge/schema/timed.js";

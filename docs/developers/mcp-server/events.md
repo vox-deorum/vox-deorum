@@ -2,7 +2,7 @@
 
 Everything the agent knows about a live game starts as an event. As turns play out, the game emits a continuous stream: a city was founded, a unit finished building, war was declared, a player ended their turn. The MCP server consumes that stream, records it, and uses it to keep its knowledge of the game current.
 
-This page traces an event from the wire to the store. The relevant source is `mcp-server/src/knowledge/` together with the event consumption in `mcp-server/src/bridge/`. The per-event schemas themselves are reference data and stay in `mcp-server/docs/events/`.
+This page traces an event from the wire to the store. The relevant source is `mcp-server/src/knowledge/` together with the event consumption in `mcp-server/src/bridge/`. The TypeScript schemas live in domain folders under `mcp-server/src/knowledge/schema/events/`. The generated schema map remains available through that folder's `index.ts`; per-event reference pages stay in `mcp-server/docs/events/`.
 
 ## Where events come from
 
@@ -49,9 +49,13 @@ The store handles this by entering a resyncing state on disconnect and dropping 
 
 Events don't only flow inward. Tools built on `DynamicEventTool` (see [tools.md](tools.md)) can write a synthetic event straight into the store. `relay-message`, which records an analyst's relayed report (a diplomatic message, intelligence, or a rumor) as a game event, is currently the only one.
 
-**Injected events do not get the visibility analysis that real events get.** This is the difference to keep in mind. A real event's flags are computed by `event-visibility.lua` running inside the game, which can actually reason about who witnessed what. An injected event's flags come from `composeVisibility` in `mcp-server/src/utils/knowledge/visibility.ts`, a pure TypeScript function with no view of the game at all: it grants full visibility to the player IDs named in the tool's `VisibleTo` argument, or to its `PlayerID` if `VisibleTo` was omitted, and zero to everyone else.
+**Injected events do not get the visibility analysis that real events get.** This is the difference to keep in mind. A real event's flags are computed by `event-visibility.lua` running inside the game, which can actually reason about who witnessed what. An injected event's flags come from `composeVisibility` in `mcp-server/src/knowledge/helpers/visibility.ts`, a pure TypeScript function with no view of the game at all: it grants full visibility to the player IDs named in the tool's `VisibleTo` argument, or to its `PlayerID` if `VisibleTo` was omitted, and zero to everyone else.
 
 So an injected event is visible to exactly the players the caller listed and nobody else; nothing about the game world widens or narrows that. If you are injecting events, their visibility is entirely your responsibility.
+
+## Generating schema outputs
+
+Run `node mcp-server/scripts/events/generate-index.js` from the repository root to regenerate the event map. Run `node mcp-server/scripts/events/generate-event-hpp.js` to regenerate `CvConnectionSchema.h` and `CvConnectionSchema.cpp` beside the event map. Both scripts discover schemas recursively and sort by event name, so folder grouping does not change map ordering. Their paths are resolved from the scripts, so they also work from another working directory. Native outputs stay in the MCP component until separately deployed.
 
 ## Where the details live
 

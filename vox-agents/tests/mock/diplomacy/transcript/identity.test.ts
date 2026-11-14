@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { agentRegistry } from '../../../../src/infra/agent-registry.js';
+import { agentRegistry } from '../../../../src/agents/runtime/agent-registry.js';
 import type { EnvoyThread } from '../../../../src/types/index.js';
 
 // Resolve through the registry (the canonical load entry) to avoid the circular-import

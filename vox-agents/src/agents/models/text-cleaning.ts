@@ -1,0 +1,202 @@
+/**
+ * @module agents/models/text-cleaning
+ *
+ * Text cleaning and formatting utilities for tool call/result text representations.
+ */
+
+import type { ModelMessage } from 'ai';
+import { jsonToMarkdown } from '../tools/json-to-markdown.js';
+import type { ToolCallFraming } from './tool-rescue/types.js';
+
+/** Minimal interface for tool result parts accepted by formatting functions. */
+interface ToolResultLike {
+  toolName: string;
+  output: { type: string; value?: unknown };
+}
+
+/**
+ * Strips a leading `[Turn N]` marker — and, when the speaker's own label is known, the exact
+ * `{selfLabel}:` echo right after it — from a spoken line. The envoy prefixes its context rows
+ * with `[Turn N] {civ}, the {role}: `, so models sometimes echo that scaffolding back into their
+ * replies. ONLY the exact label is stripped (never a generic `word:` pattern), so legitimate
+ * openings like "Chairman: we accept" — or another civ's label — survive untouched. Called with no
+ * `selfLabel` it strips just the turn marker (superseding the former `stripTurnMarker`).
+ */
+export function stripSpokenEcho(text: string, selfLabel?: string): string {
+  const marker = text.match(/^\[Turn \d+\]\s*/);
+  if (!marker) return text;
+  let rest = text.slice(marker[0].length);
+  if (selfLabel && rest.startsWith(`${selfLabel}:`)) {
+    rest = rest.slice(selfLabel.length + 1).replace(/^[ \t]+/, '');
+  }
+  return rest;
+}
+
+/** Remove one leading ``` or ```json fence and one trailing ``` fence around a JSON answer. */
+export function stripJsonFence(text: string): string {
+  return text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '');
+}
+
+/**
+ * Strips structural artifacts left behind by tool call extraction from LLM text.
+ * Removes empty JSON arrays, empty markdown code blocks, and standalone fence markers.
+ */
+export function cleanToolArtifacts(text: string): string {
+  return text
+    // Remove complete delimiter-based tool calls block: <|tool_calls_section_begin|> ... <|tool_calls_section_end|>
+    .replace(/<\|tool_calls_section_begin\|>[\s\S]*?<\|tool_calls_section_end\|>/g, '')
+    // Truncate incomplete tool calls block (beginning marker arrived but no end marker yet)
+    .replace(/<\|tool_calls_section_begin\|>[\s\S]*$/, '')
+    // Remove complete delimiter-based tool call blocks: <|tool_call_begin|> ... <|tool_call_end|>
+    .replace(/<\|tool_call_begin\|>[\s\S]*?<\|tool_call_end\|>/g, '')
+    // Truncate incomplete tool call blocks (beginning marker arrived but no end marker yet)
+    .replace(/<\|tool_call_begin\|>[\s\S]*$/, '')
+    // Remove complete bracket-based tool call blocks: [TOOL_CALL] ... [/TOOL_CALL]
+    .replace(/\[TOOL_CALL\][\s\S]*?\[\/TOOL_CALL\]/g, '')
+    // Truncate incomplete bracket-based tool call blocks (opening tag arrived but no closing tag yet)
+    .replace(/\[TOOL_CALL\][\s\S]*$/, '')
+    // Remove any leftover individual markers
+    .replace(/<\|tool_call(?:_argument)?_(?:begin|end)\|>/g, '')
+    // Remove standalone section markers: <|tool_calls_section_begin|>, <|tool_calls_section_end|>
+    .replace(/<\|tool_calls_section_(?:begin|end)\|>/g, '')
+    // Remove standalone section markers: <|tool_call_begin|>, <|tool_call_end|>
+    .replace(/<\|tool_call_(?:begin|end)\|>/g, '')
+    // Remove standalone bracket-based markers: [TOOL_CALL], [/TOOL_CALL]
+    .replace(/\[\/?TOOL_CALL\]/g, '')
+    // Remove empty/comma-only JSON arrays: [], [,], [ , , ], etc.
+    .replace(/\[\s*(?:,\s*)*\]/g, '')
+    // Truncate incomplete empty/comma-only JSON arrays (beginning marker arrived but no end marker yet)
+    .replace(/\[\s*(?:,\s*)*$/g, '')
+    // Remove empty markdown code blocks: ```json\n\n```, ```\n```
+    .replace(/```(?:json)?\s*```/g, '')
+    // Remove standalone fence markers on their own line
+    .replace(/^\s*```(?:json)?\s*$/gm, '')
+    // Remove minimax tool_call artifact
+    .replace(/^minimax:tool_call$/gm, '')
+    .trim();
+}
+
+/**
+ * Builds one tool-call object in the framing-keyed wire shape (`{ "<framing>": name, arguments }`),
+ * parsing a JSON-string argument into structured args and leaving anything unparseable as-is.
+ * Shared by the bare-array and wrapper-object emitters so both parse arguments identically.
+ */
+function toToolCallObject(toolName: string, args: unknown, framing: ToolCallFraming) {
+  let parsed = args;
+  if (typeof parsed === 'string') {
+    try { parsed = JSON.parse(parsed); } catch { /* keep as-is */ }
+  }
+  return { [framing]: toolName, arguments: parsed };
+}
+
+/**
+ * Formats a tool call as a markdown JSON code block (prompt-mode representation).
+ * `framing` selects the JSON name field: the framing literal IS the key, so
+ * `'tool'` emits `{ "tool": ... }` and `'action'` emits `{ "action": ... }`,
+ * matching the wire format that `createToolPrompts` instructs the model to use.
+ */
+export function formatToolCallText(toolName: string, args: unknown, framing: ToolCallFraming = 'tool'): string {
+  return '```json\n' + JSON.stringify([toToolCallObject(toolName, args, framing)], null, 2) + '\n```';
+}
+
+/**
+ * Formats a tool result with a markdown heading and content.
+ */
+export function formatToolResultText(toolName: string, resultText: string, framing: ToolCallFraming = 'tool'): string {
+  return `# ${framing === 'action' ? 'Action' : 'Tool'} ${toolName} Result\n${resultText}`;
+}
+
+/**
+ * Serializes a tool result part's output into readable text.
+ */
+export function formatToolResultOutput(part: ToolResultLike, maxLength: number = -1, framing: ToolCallFraming = 'tool'): string | undefined {
+  const output = part.output;
+  const value = output.value;
+  let resultText: string;
+
+  switch (output.type) {
+    case 'text':
+      resultText = String(value);
+      break;
+    case 'json':
+      if (typeof value === "string")
+        resultText = value;
+      else resultText = jsonToMarkdown(value);
+      break;
+    case 'error-text':
+      resultText = `Error: ${value}`;
+      if (maxLength !== -1) resultText = "[Error]";
+      break;
+    case 'error-json':
+      resultText = `Error: ${jsonToMarkdown(value)}`;
+      if (maxLength !== -1) resultText = "[Error]";
+      break;
+    case 'content':
+      return undefined;
+    default:
+      resultText = JSON.stringify(output);
+  }
+
+  let text = formatToolResultText(part.toolName, resultText, framing);
+  if (maxLength !== -1 && text.length > maxLength) {
+    text = text.slice(0, maxLength) + ' [Truncated]';
+  }
+  return text;
+}
+
+/**
+ * Builds a recovery prompt for a step that ended without the expected output.
+ * The prompt varies based on the effective toolChoice to guide the model appropriately:
+ * a forced tool choice may follow a reply that had text, so that branch does not call it empty.
+ * `framing` keeps the terminology ("tool" vs "action") consistent with the injected
+ * prompt-mode instructions. Defaults to `'tool'`.
+ */
+export function buildRescuePrompt(toolChoice: string, framing: ToolCallFraming = 'tool'): string {
+  const noun = framing === 'action' ? 'action' : 'tool';
+  if (toolChoice === "required" || toolChoice === "tool") {
+    return `Your previous response did not include any ${noun} calls. You MUST call one or more of the available ${noun}s in the given format. Please try again.`;
+  }
+  return `Your previous response was empty. Please provide either a text response or PROPERLY call one or more of the available ${noun}s in the given format.`;
+}
+
+/**
+ * Drops the `_markdownConfig` rendering hint from every tool result in a message list, in place.
+ * The MCP tool wrapper attaches it so results can be rendered as markdown for humans; the model
+ * has no use for it, so it is stripped before the messages go on the wire.
+ *
+ * @param messages - The conversation to scrub (mutated)
+ */
+export function stripMarkdownConfig(messages: ModelMessage[]): void {
+  for (const message of messages) {
+    if (!Array.isArray(message.content)) continue;
+    for (const part of message.content) {
+      if (part.type === 'tool-result' && 'value' in part.output && typeof(part.output.value) === "object") {
+        delete (part.output.value as any)._markdownConfig;
+      }
+    }
+  }
+}
+
+/**
+ * Cleans tool-rescue artifacts out of a model's response messages, in place: every text part runs
+ * through {@link cleanToolArtifacts} and is dropped when nothing survives, and a plain string body
+ * is cleaned as-is. Applied to a step's response before it joins the conversation, so the leftover
+ * fences and empty arrays never become part of the next prompt.
+ *
+ * @param messages - The response messages to scrub (mutated)
+ */
+export function stripToolArtifacts(messages: { content: any }[]): void {
+  for (const message of messages) {
+    if (Array.isArray(message.content)) {
+      message.content = message.content.filter((part: any) => {
+        if (part.type === 'text') {
+          part.text = cleanToolArtifacts(part.text);
+          return part.text.length > 0;
+        }
+        return true;
+      });
+    } else if (typeof message.content === 'string') {
+      message.content = cleanToolArtifacts(message.content);
+    }
+  }
+}

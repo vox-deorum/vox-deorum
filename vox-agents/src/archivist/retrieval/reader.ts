@@ -9,7 +9,7 @@
  */
 
 import { DuckDBConnection } from '@duckdb/node-api';
-import { config } from '../../utils/config.js';
+import { config } from '../../agents/config/load.js';
 import { createLogger } from '../../utils/logger.js';
 import { eraMap, horizons, horizonTolerance } from '../types.js';
 import { generateEmbeddings } from '../pipeline/embeddings.js';

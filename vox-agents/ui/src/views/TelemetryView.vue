@@ -10,7 +10,7 @@ import GameSessionsList from '@/components/telemetry/GameSessionsList.vue';
 import { api } from '@/api/client';
 import { activeSessions, databases, loading, fetchTelemetryData, startTelemetryPolling } from '@/stores/telemetry';
 import type { TelemetryMetadata } from '../utils/types';
-import { formatFileSize, formatISODate } from '@/api/telemetry-utils';
+import { formatFileSize, formatISODate } from '@/presentation/telemetry-utils';
 
 const router = useRouter();
 const uploadProgress = ref(false);

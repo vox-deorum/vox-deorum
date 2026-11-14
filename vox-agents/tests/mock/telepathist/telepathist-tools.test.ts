@@ -13,7 +13,7 @@ import { z } from 'zod';
 
 // Mock agent-registry to break circular dependency chain:
 // telepathist-tool → VoxContext → agent-registry → strategist → VoxAgent → VoxContext
-vi.mock('../../../src/infra/agent-registry.js', () => ({
+vi.mock('../../../src/agents/runtime/agent-registry.js', () => ({
   agentRegistry: {
     get: () => undefined,
     register: () => true,
@@ -26,12 +26,12 @@ import {
   createTelepathistParameters,
   type TelepathistParameters
 } from '../../../src/telepathist/telepathist-parameters.js';
-import { parseDatabaseIdentifier } from '../../../src/utils/telemetry/identifier-parser.js';
+import { parseDatabaseIdentifier } from '../../../src/agents/telemetry/identifier-parser.js';
 import { TelepathistTool } from '../../../src/telepathist/telepathist-tool.js';
 import { GetSituationTool } from '../../../src/telepathist/tools/get-situation.js';
 import { GetDecisionTool } from '../../../src/telepathist/tools/get-decision.js';
 import { GetConversationLogTool } from '../../../src/telepathist/tools/get-conversation-log.js';
-import type { TelemetryDatabase } from '../../../src/utils/telemetry/schema.js';
+import type { TelemetryDatabase } from '../../../src/agents/telemetry/schema.js';
 import { createTelemetryDb } from '../../helpers/telemetry-db.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));

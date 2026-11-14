@@ -7,8 +7,8 @@ import { ToolBase } from '../base.js';
 import * as z from 'zod';
 import { Selectable } from 'kysely';
 import { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js';
-import { composeVisibility } from '../../utils/knowledge/visibility.js';
-import { storeDynamicEvent, getPlayerMap, resolvePlayerName } from '../../utils/knowledge/dynamic-event.js';
+import { composeVisibility } from '../../knowledge/helpers/visibility.js';
+import { storeDynamicEvent, getPlayerMap, resolvePlayerName } from '../../knowledge/helpers/dynamic-event.js';
 import { PlayerInformation } from '../../knowledge/schema/public.js';
 
 /** Standard output schema for all dynamic event tools */

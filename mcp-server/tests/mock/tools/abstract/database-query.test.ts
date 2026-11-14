@@ -16,7 +16,7 @@ import { Kysely, SqliteDialect } from 'kysely';
 import type { DB } from '../../../../src/database/database.js';
 import { bridgeManager, gameDatabase } from '../../../../src/server.js';
 import { DatabaseQueryTool } from '../../../../src/tools/abstract/database-query.js';
-import type { TooltipKind } from '../../../../src/utils/database/game-tooltips.js';
+import type { TooltipKind } from '../../../../src/database/helpers/game-tooltips.js';
 import { callToolOnce } from '../../tool-client.js';
 
 

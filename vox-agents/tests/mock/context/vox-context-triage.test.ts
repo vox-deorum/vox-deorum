@@ -2,22 +2,22 @@
 
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('../../../src/utils/models/models.js', async (orig) => {
-  const actual = await orig<typeof import('../../../src/utils/models/models.js')>();
+vi.mock('../../../src/agents/models/models.js', async (orig) => {
+  const actual = await orig<typeof import('../../../src/agents/models/models.js')>();
   return { ...actual, getModel: vi.fn(() => ({} as any)), buildProviderOptions: vi.fn(() => ({})) };
 });
-vi.mock('../../../src/utils/models/concurrency.js', async (orig) => {
-  const actual = await orig<typeof import('../../../src/utils/models/concurrency.js')>();
+vi.mock('../../../src/agents/models/concurrency.js', async (orig) => {
+  const actual = await orig<typeof import('../../../src/agents/models/concurrency.js')>();
   return { ...actual, streamTextWithConcurrency: vi.fn() };
 });
 
-import { VoxContext } from '../../../src/infra/vox-context.js';
-import { VoxAgent, type AgentParameters, type TriageDecision } from '../../../src/infra/vox-agent.js';
-import { agentRegistry } from '../../../src/infra/agent-registry.js';
-import { streamTextWithConcurrency } from '../../../src/utils/models/concurrency.js';
+import { VoxContext } from '../../../src/agents/runtime/vox-context.js';
+import { VoxAgent, type AgentParameters, type TriageDecision } from '../../../src/agents/runtime/vox-agent.js';
+import { agentRegistry } from '../../../src/agents/runtime/agent-registry.js';
+import { streamTextWithConcurrency } from '../../../src/agents/models/concurrency.js';
 import { recordSpans } from '../../helpers/recording-tracer.js';
 import type { Model } from '../../../src/types/index.js';
-import type { ModelSize } from '../../../src/utils/models/models.js';
+import type { ModelSize } from '../../../src/agents/models/models.js';
 
 const stream = vi.mocked(streamTextWithConcurrency);
 const parameters: AgentParameters = { playerID: 1, gameID: 'triage-game', turn: 3 };

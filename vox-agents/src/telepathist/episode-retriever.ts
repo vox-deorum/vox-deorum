@@ -6,10 +6,10 @@
  * episode results. On first load, auto-fetches using the session's initial turn.
  */
 
-import { VoxAgent } from '../infra/vox-agent.js';
+import { VoxAgent } from '../agents/runtime/vox-agent.js';
 import { TelepathistParameters } from './telepathist-parameters.js';
 import { EnvoyThread } from '../types/index.js';
-import { requestEpisodesFromTelemetry, formatEpisodeResults } from '../utils/prompts/episode-utils.js';
+import { requestEpisodesFromTelemetry, formatEpisodeResults } from '../knowledge/episodes/retrieval.js';
 import { createLogger } from '../utils/logger.js';
 import { errorMessage } from '../utils/errors.js';
 

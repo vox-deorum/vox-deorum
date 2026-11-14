@@ -9,7 +9,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { logsDir } from '../logger.js';
-import { getCiv5UserFilePath } from '../game/civ5-user-files.js';
+import { getCiv5UserFilePath } from '../../game/civ5-user-files.js';
 import type { DebugLogFile, DebugLogSource } from '../../types/index.js';
 
 /** Every source, in the order the Debug page and the bundle present them. */

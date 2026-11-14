@@ -1,5 +1,5 @@
 /**
- * Event input path tests for VoxPlayer (src/strategist/vox-player.ts).
+ * Event input path tests for VoxPlayer (src/strategist/seats/vox-player.ts).
  *
  * A strategist that reads events from files runs once per decision, with no event-window retries:
  * an overflow fails the decision and leaves the pending window and last decision in place. A
@@ -14,15 +14,15 @@ vi.mock('node:timers/promises', () => ({ setTimeout: () => Promise.resolve() }))
 // Triage is off in these tests.
 vi.mock('../../../src/strategist/pacing/triage.js', () => ({ runStrategistTriage: async () => undefined }));
 
-import { VoxPlayer } from '../../../src/strategist/vox-player.js';
-import { agentRegistry } from '../../../src/infra/agent-registry.js';
-import { HumanDecisionBus } from '../../../src/strategist/human-decision-bus.js';
-import { VoxSpanExporter } from '../../../src/utils/telemetry/vox-exporter.js';
+import { VoxPlayer } from '../../../src/strategist/seats/vox-player.js';
+import { agentRegistry } from '../../../src/agents/runtime/agent-registry.js';
+import { HumanDecisionBus } from '../../../src/strategist/seats/human-decision-bus.js';
+import { VoxSpanExporter } from '../../../src/agents/telemetry/vox-exporter.js';
 import { spanProcessor, sqliteExporter } from '../../../src/instrumentation.js';
-import { bashToolName } from '../../../src/utils/tools/tool-names.js';
+import { bashToolName } from '../../../src/agents/tools/tool-names.js';
 import type { PlayerConfig } from '../../../src/types/config.js';
 import type { StrategistParameters } from '../../../src/strategist/strategy-parameters.js';
-import type { ResolvedRunTools, VoxRunOptions } from '../../../src/infra/vox-run.js';
+import type { ResolvedRunTools, VoxRunOptions } from '../../../src/agents/runtime/vox-run.js';
 
 const playerConfig: PlayerConfig = { strategist: 'simple-strategist', llms: {} } as PlayerConfig;
 

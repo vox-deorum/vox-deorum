@@ -6,7 +6,7 @@ This page covers the built-in files, custom folders, and the game-state section 
 
 ## The built-in files
 
-`renderSystemPrompt` in `src/utils/prompts/prompt-files.ts` renders the templates.
+`renderSystemPrompt` in `src/agents/prompts/prompt-files.ts` renders the templates.
 
 | File | Use |
 | --- | --- |
@@ -45,7 +45,7 @@ Prose stays in the files. `getSystem` passes only data and flags:
 
 The `prompts` setting names a folder relative to `vox-agents/`. Lookup checks that folder first, then the built-ins. Partials resolve the same way, so a custom `shared/goals.md` reaches every strategist that includes it.
 
-**Where the setting comes from.** `resolveSeatPrompts` in `src/strategist/seat-config.ts` checks the seat, then the session config, then the root `config.json`. `VoxPlayer` stores the result on the seat's context. Work outside a seat uses the root setting.
+**Where the setting comes from.** `resolveSeatPrompts` in `src/strategist/seats/seat-config.ts` checks the seat, then the session config, then the root `config.json`. `VoxPlayer` stores the result on the seat's context. Work outside a seat uses the root setting.
 
 **When folders are loaded.**
 
@@ -65,7 +65,7 @@ Invalid setting values name the config path, such as `llmPlayers.2.prompts`. Tem
 
 **Reloading.** A failed reload keeps the previous sets. A reload leaves other folders alone, so a second session in the same process changes a running session's text only for folders both use. Edits take effect in the next session. Each agent span records the folder in use as `context.prompts`, or `false` for built-ins only.
 
-The root `prompts` field is part of the runtime config and its saved diff (`src/utils/config.ts` and `src/utils/config/diff.ts`).
+The root `prompts` field is part of the runtime config and its saved diff (`src/agents/config/load.ts` and `src/agents/config/diff.ts`).
 
 ## Game-state sections
 

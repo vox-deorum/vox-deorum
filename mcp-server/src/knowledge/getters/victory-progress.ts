@@ -7,7 +7,7 @@ import { Selectable } from 'kysely';
 import { LuaFunction } from '../../bridge/lua-function.js';
 import { VictoryProgress } from '../schema/timed.js';
 import { knowledgeManager } from '../../server.js';
-import { stripTags } from '../../utils/database/localized.js';
+import { stripTags } from '../../database/helpers/localized.js';
 
 /**
  * Lua function that extracts victory progress information from the game

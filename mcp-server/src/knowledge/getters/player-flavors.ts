@@ -5,11 +5,11 @@
 import { LuaFunction } from "../../bridge/lua-function.js";
 import { createLogger } from "../../utils/logger.js";
 import { knowledgeManager } from "../../server.js";
-import { composeVisibility } from "../../utils/knowledge/visibility.js";
+import { composeVisibility } from "../helpers/visibility.js";
 import { FlavorChange } from "../schema/timed.js";
 import { loadFlavorDescriptions } from "../../utils/strategies/loader.js";
 import { pascalCase } from "change-case";
-import { retrieveEnumName } from "../../utils/knowledge/enum.js";
+import { retrieveEnumName } from "../helpers/enum.js";
 
 const logger = createLogger("ReadPlayerFlavors");
 

@@ -7,8 +7,8 @@
 import { ToolBase } from "../base.js";
 import * as z from "zod";
 import { getVictoryProgress } from "../../knowledge/getters/victory-progress.js";
-import { readPublicKnowledgeBatch } from "../../utils/knowledge/cached.js";
-import { stripMutableKnowledgeMetadata } from "../../utils/knowledge/strip-metadata.js";
+import { readPublicKnowledgeBatch } from "../../knowledge/helpers/cached.js";
+import { stripMutableKnowledgeMetadata } from "../../knowledge/helpers/strip-metadata.js";
 import {
   VictoryProgress,
   PlayerSummary,
@@ -21,7 +21,7 @@ import { MaxMajorCivs } from "../../knowledge/schema/base.js";
 import { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { getPlayerSummaries } from "../../knowledge/getters/player-summary.js";
 import { getPlayerInformations } from "../../knowledge/getters/player-information.js";
-import { getPlayerVisibility } from "../../utils/knowledge/visibility.js";
+import { getPlayerVisibility } from "../../knowledge/helpers/visibility.js";
 import { Selectable } from "kysely";
 import { PlayerInformation } from "../../knowledge/schema/public.js";
 import { sortBySchema } from "../../utils/schema.js";

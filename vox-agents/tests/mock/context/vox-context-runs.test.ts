@@ -1,5 +1,5 @@
 /**
- * Run-model tests for VoxContext (src/infra/vox-context.ts).
+ * Run-model tests for VoxContext (src/agents/runtime/vox-context.ts).
  *
  * Exercises the concurrent-root-run machinery directly through withRun()/forkRun() and the run
  * handles — no model layer needed. Covers: per-run isolation of parameters, progress callback,
@@ -11,7 +11,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { VoxContext } from '../../../src/infra/vox-context.js';
+import { VoxContext } from '../../../src/agents/runtime/vox-context.js';
 import type { StrategistParameters } from '../../../src/strategist/strategy-parameters.js';
 import { makeStrategistParameters } from '../../helpers/fake-vox-context.js';
 

@@ -3,12 +3,12 @@ import { mount } from '@vue/test-utils'
 
 // Mock the text cleaner so we can observe that it runs on text parts and that an
 // all-artifact part collapses to nothing. The stub strips a sentinel and trims.
-vi.mock('@vox/utils/models/text-cleaning', () => ({
+vi.mock('@vox/agents/models/text-cleaning', () => ({
   cleanToolArtifacts: vi.fn((text: string) => text.replace(/\[ARTIFACT\]/g, '').trim()),
 }))
 
 import ChatMessage from '@/components/chat/ChatMessage.vue'
-import { cleanToolArtifacts } from '@vox/utils/models/text-cleaning'
+import { cleanToolArtifacts } from '@vox/agents/models/text-cleaning'
 
 const TextMessageStub = {
   name: 'TextMessage',

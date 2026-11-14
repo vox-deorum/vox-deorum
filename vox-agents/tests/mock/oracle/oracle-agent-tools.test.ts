@@ -8,11 +8,11 @@
 import { describe, it, expect } from 'vitest';
 // Load the agent graph through the registry first, avoiding the circular-import hazard of reaching an
 // agent module directly.
-import '../../../src/infra/agent-registry.js';
+import '../../../src/agents/runtime/agent-registry.js';
 import { OracleAgent, removedToolsAtStep } from '../../../src/oracle/oracle-agent.js';
 import type { OracleParameters } from '../../../src/oracle/types.js';
 import type { ModelMessage } from 'ai';
-import { cacheBreakpoint, hasCacheBreakpoint } from '../../../src/utils/models/cache-breakpoint.js';
+import { cacheBreakpoint, hasCacheBreakpoint } from '../../../src/agents/models/cache-breakpoint.js';
 
 /** Build oracle parameters with the given declared tools and recorded per-step lists. */
 function params(activeTools: string[], stepTools: string[][]): OracleParameters {

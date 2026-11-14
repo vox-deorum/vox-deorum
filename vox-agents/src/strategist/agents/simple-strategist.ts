@@ -8,12 +8,12 @@
 
 import { ModelMessage } from "ai";
 import { SimpleStrategistBase } from "./simple-strategist-base.js";
-import { VoxContext } from "../../infra/vox-context.js";
+import { VoxContext } from "../../agents/runtime/vox-context.js";
 import { getRecentGameState, renderStrategistReports, StrategistParameters } from "../strategy-parameters.js";
-import { cacheBreakpoint } from "../../utils/models/cache-breakpoint.js";
+import { cacheBreakpoint } from "../../agents/models/cache-breakpoint.js";
 import { insertRecordsDirections, fileMode } from "../../knowledge/directions.js";
 import { simpleStrategistInlineSections } from "../../knowledge/sections.js";
-import { renderSystemPrompt } from "../../utils/prompts/prompt-files.js";
+import { renderSystemPrompt } from "../../agents/prompts/prompt-files.js";
 
 /**
  * A simple strategist agent that analyzes the game state and sets an appropriate strategy.

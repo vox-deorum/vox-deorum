@@ -7,7 +7,7 @@
  */
 
 import { z } from 'zod';
-import { renderSystemPrompt } from '../../utils/prompts/prompt-files.js';
+import { renderSystemPrompt } from '../../agents/prompts/prompt-files.js';
 
 /** Zod schema for turn summary structured output */
 export const turnSummarySchema = z.object({

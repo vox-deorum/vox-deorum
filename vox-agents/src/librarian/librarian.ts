@@ -6,7 +6,7 @@
  * Subclasses implement specific search strategies (keyword-based, embedding-based, etc.)
  */
 
-import { VoxAgent } from "../infra/vox-agent.js";
+import { VoxAgent } from "../agents/runtime/vox-agent.js";
 import { StrategistParameters } from "../strategist/strategy-parameters.js";
 
 /**

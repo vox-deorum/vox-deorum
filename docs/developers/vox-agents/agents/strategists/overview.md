@@ -22,7 +22,7 @@ StrategistSession (one game)
 
 ## The roster
 
-All strategists extend `Strategist` (`src/strategist/strategist.ts`) and register in `src/infra/agent-registry.ts`.
+All strategists extend `Strategist` (`src/strategist/strategist.ts`) and register in `src/agents/runtime/agent-registry.ts`.
 
 | Strategist | Role |
 | --- | --- |

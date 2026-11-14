@@ -14,7 +14,7 @@ import { getTool } from '../../../src/tools/index.js';
 import * as playerOptions from '../../../src/knowledge/getters/player-options.js';
 import * as playerPersona from '../../../src/knowledge/getters/player-persona.js';
 import * as playerStrategy from '../../../src/knowledge/getters/player-strategy.js';
-import { enumMappings } from '../../../src/utils/knowledge/enum.js';
+import { enumMappings } from '../../../src/knowledge/helpers/enum.js';
 import type { KnowledgeStore } from '../../../src/knowledge/store.js';
 import { connectToolClient } from '../tool-client.js';
 

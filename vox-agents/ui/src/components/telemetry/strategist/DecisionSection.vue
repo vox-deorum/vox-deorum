@@ -16,7 +16,7 @@
  */
 import Tag from 'primevue/tag';
 import MarkdownText from '../../shared/MarkdownText.vue';
-import { countTags, type DecisionItem } from '@/api/strategist-turn';
+import { countTags, type DecisionItem } from '@/presentation/strategist-turn';
 
 defineProps<{ title: string; items?: DecisionItem[]; rationale?: string }>();
 </script>

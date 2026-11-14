@@ -12,9 +12,9 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { VoxContext } from '../../../src/infra/vox-context.js';
-import { agentRegistry } from '../../../src/infra/agent-registry.js';
-import { VoxAgent } from '../../../src/infra/vox-agent.js';
+import { VoxContext } from '../../../src/agents/runtime/vox-context.js';
+import { agentRegistry } from '../../../src/agents/runtime/agent-registry.js';
+import { VoxAgent } from '../../../src/agents/runtime/vox-agent.js';
 import type { StrategistParameters } from '../../../src/strategist/strategy-parameters.js';
 import { makeStrategistParameters } from '../../helpers/fake-vox-context.js';
 import type { Model } from '../../../src/types/index.js';

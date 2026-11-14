@@ -10,7 +10,7 @@ import type { DealTranscriptMessage } from '../../../src/types/index';
 import type {
   DealReduction as DealReductionOf,
   ProposalOutcome as ProposalOutcomeOf,
-} from '@vox/utils/diplomacy/deal/deal-reduce';
+} from '@vox/diplomacy/deal/deal-reduce';
 
 /** UI-specialized reduction for the typed deal transcript. */
 export type DealReduction = DealReductionOf<DealTranscriptMessage>;

@@ -25,15 +25,15 @@ import * as z from "zod";
 import { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { MaxMajorCivs } from "../../knowledge/schema/base.js";
 import { getTool } from "../index.js";
-import { stripTags } from "../../utils/database/localized.js";
+import { stripTags } from "../../database/helpers/localized.js";
 import {
   inspectDeal,
   type InspectedItem,
   type SideRange,
   type ToggleCandidate,
   type PromiseTargetInfo,
-} from "../../utils/lua/inspect-deal.js";
-import { DealPayloadSchema, PROMISE_TYPES, symmetrizeDeal, type PromiseTerm, type TradeItem } from "../../utils/deal-schema.js";
+} from "../../diplomacy/deals/inspect-deal.js";
+import { DealPayloadSchema, PROMISE_TYPES, symmetrizeDeal, type PromiseTerm, type TradeItem } from "../../diplomacy/deals/deal-schema.js";
 
 /** Coerce a value that may arrive as an empty Lua table ({} instead of []). */
 function asArray<T>(value: unknown): T[] {

@@ -12,8 +12,8 @@ import { fuzzy } from 'fast-fuzzy';
 import { createLogger } from '../../utils/logger.js';
 import { isRecord } from '../../utils/guards.js';
 import type { ResolvedFilesConfig } from '../../types/config.js';
-import type { TelemetryDatabase, Span } from '../../utils/telemetry/schema.js';
-import { parseSpanAttributes } from '../../utils/telemetry/attributes.js';
+import type { TelemetryDatabase, Span } from '../../agents/telemetry/schema.js';
+import { parseSpanAttributes } from '../../agents/telemetry/attributes.js';
 import type { ExtractedPrompt } from '../types.js';
 
 const logger = createLogger('OraclePromptExtractor');

@@ -7,12 +7,12 @@ const modelMocks = vi.hoisted(() => ({
   selectModelReference: vi.fn((name: string, size: string) => `resolved:${name}:${size}`),
 }));
 
-vi.mock('../../../../src/utils/models/resolution.js', () => ({
+vi.mock('../../../../src/agents/models/resolution.js', () => ({
   ensureModelsResolved: modelMocks.ensureModelsResolved,
   selectModelReference: modelMocks.selectModelReference,
   getRuntimeModel: vi.fn(() => undefined),
 }));
-import type { VoxContext } from '../../../../src/infra/vox-context.js';
+import type { VoxContext } from '../../../../src/agents/runtime/vox-context.js';
 import type { StrategistParameters } from '../../../../src/strategist/strategy-parameters.js';
 import type {
   ChatThreadFactoryDependencies,

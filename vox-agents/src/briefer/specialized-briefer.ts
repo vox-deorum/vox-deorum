@@ -8,17 +8,17 @@
 import { ModelMessage, Tool } from "ai";
 import { z } from "zod";
 import { Briefer } from "./briefer.js";
-import { VoxContext } from "../infra/vox-context.js";
+import { VoxContext } from "../agents/runtime/vox-context.js";
 import { getRecentGameState, StrategistParameters } from "../strategist/strategy-parameters.js";
 import { renderSection } from "../knowledge/sections.js";
-import { createSimpleTool } from "../utils/tools/simple-tools.js";
-import { getOffsetedTurn } from "../utils/prompts/game-speed.js";
+import { createSimpleTool } from "../agents/tools/simple-tools.js";
+import { getOffsetedTurn } from "../knowledge/game-speed.js";
 import { briefingInstructionKeys, briefingReportKeys, getLastBriefingState } from "./briefing-utils.js";
-import { filterEventsByCategory, EventCategory } from "../utils/prompts/event-filters.js";
-import { pickPlayerFields, omitPlayerFields, pickCityFields, omitCityFields } from "../utils/prompts/report-filters.js";
+import { filterEventsByCategory, EventCategory } from "../knowledge/events/event-filters.js";
+import { pickPlayerFields, omitPlayerFields, pickCityFields, omitCityFields } from "../knowledge/reports/report-filters.js";
 import type { ConsolidatedEventsReport } from '../../../mcp-server/dist/tools/knowledge/get-events.js';
-import { cacheBreakpoint } from "../utils/models/cache-breakpoint.js";
-import { renderSystemPrompt } from "../utils/prompts/prompt-files.js";
+import { cacheBreakpoint } from "../agents/models/cache-breakpoint.js";
+import { renderSystemPrompt } from "../agents/prompts/prompt-files.js";
 
 /**
  * Mode type for specialized briefer

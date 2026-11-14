@@ -4,7 +4,7 @@ import * as z from "zod";
 import { search } from "fast-fuzzy";
 import { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { createLogger } from "../../utils/logger.js";
-import { fetchGameTooltips, type TooltipKind } from "../../utils/database/game-tooltips.js";
+import { fetchGameTooltips, type TooltipKind } from "../../database/helpers/game-tooltips.js";
 
 const logger = createLogger('DatabaseQueryTool');
 

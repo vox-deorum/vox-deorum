@@ -9,17 +9,17 @@
 import { Tool } from "ai";
 import type { Experimental_EvaluationQuestion as EvaluationQuestion, Experimental_EvaluationResult as EvaluationResult } from 'ai';
 import { LiveEnvoy, type LiveEnvoyContext } from "../live-envoy.js";
-import { VoxContext } from "../../infra/vox-context.js";
+import { VoxContext } from "../../agents/runtime/vox-context.js";
 import { StrategistParameters, getRecentGameState } from "../../strategist/strategy-parameters.js";
 import { EnvoyThread } from "../../types/index.js";
-import { renderSystemPrompt } from "../../utils/prompts/prompt-files.js";
+import { renderSystemPrompt } from "../../agents/prompts/prompt-files.js";
 import { createCloseConversationTool } from "../tools/close-conversation-tool.js";
 import { buildDealContextMessage, renderDealRowInline, type DiplomatDealContext } from "../context/diplomat-utils.js";
 import { buildDiplomacyBackgroundMessage, getTeammateCounterpart } from "../context/diplomacy-context.js";
-import { readActiveProposal } from "../../utils/diplomacy/deal/deal.js";
-import { terminalActionTools, type DealRowRenderer } from "../../utils/diplomacy/transcript/transcript-utils.js";
-import { createTriage } from "../../infra/triage.js";
-import type { TriageDecision } from "../../infra/vox-agent.js";
+import { readActiveProposal } from "../../diplomacy/deal/deal.js";
+import { terminalActionTools, type DealRowRenderer } from "../../diplomacy/transcript/transcript-utils.js";
+import { createTriage } from "../../agents/runtime/triage.js";
+import type { TriageDecision } from "../../agents/runtime/vox-agent.js";
 
 /** How many recent spoken rows of the conversation diplomat triage reads. */
 const triageMessageCount = 8;

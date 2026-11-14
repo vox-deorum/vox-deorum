@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, it, beforeEach, vi } from "vitest";
-import { VoxContext } from "../../../src/infra/vox-context.js";
+import { VoxContext } from "../../../src/agents/runtime/vox-context.js";
 import type { StrategistParameters } from "../../../src/strategist/strategy-parameters.js";
 import {
   refreshGameState,

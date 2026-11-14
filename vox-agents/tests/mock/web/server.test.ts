@@ -13,13 +13,13 @@ import path from 'node:path';
 import { EventEmitter } from 'node:events';
 
 // Replace the singleton imported by web route modules with the shared MCP mock.
-vi.mock('../../../src/utils/models/mcp-client.js', async () => {
+vi.mock('../../../src/agents/mcp/mcp-client.js', async () => {
   const helper = await import('../../helpers/mock-mcp-client.js');
   return helper.mockMcpClientModule();
 });
 
 import { app, shutdownWebServer, startWebServer } from '../../../src/web/server.js';
-import config from '../../../src/utils/config.js';
+import config from '../../../src/agents/config/load.js';
 import { installMockMcpClient } from '../../helpers/mock-mcp-client.js';
 
 /** A fake listening server whose address reports the port it was asked to bind. */

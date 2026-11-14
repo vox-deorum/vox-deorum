@@ -11,9 +11,9 @@ import path from 'path';
 import { createLogger } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errors.js';
 import { sendError } from '../http-utils.js';
-import config from '../../utils/config.js';
-import { getCiv5UserFilePath } from '../../utils/game/civ5-user-files.js';
-import { readCivLoggingEnabledContent, updateCivLoggingEnabledContent } from '../../utils/game/civ5-ini.js';
+import config from '../../agents/config/load.js';
+import { getCiv5UserFilePath } from '../../game/civ5-user-files.js';
+import { readCivLoggingEnabledContent, updateCivLoggingEnabledContent } from '../../game/civ5-ini.js';
 import {
   debugLogSources,
   isDebugLogSource,

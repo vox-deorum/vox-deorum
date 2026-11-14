@@ -4,7 +4,7 @@
  */
 
 import { SSE } from 'sse.js';
-import { extractLogParams } from './log-utils';
+import { extractLogParams } from '../presentation/log-utils';
 import { errorMessage } from '../utils/errors';
 import type {
   HealthStatus,

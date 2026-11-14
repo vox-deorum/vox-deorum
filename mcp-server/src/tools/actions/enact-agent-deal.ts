@@ -35,9 +35,9 @@ import { ToolBase } from "../base.js";
 import * as z from "zod";
 import { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { knowledgeManager } from "../../server.js";
-import { DealPayloadSchema } from "../../utils/deal-schema.js";
-import { enactDeal } from "../../utils/lua/inspect-deal.js";
-import { transcriptRowSchemaFor } from "../../utils/transcript-schema.js";
+import { DealPayloadSchema } from "../../diplomacy/deals/deal-schema.js";
+import { enactDeal } from "../../diplomacy/deals/inspect-deal.js";
+import { transcriptRowSchemaFor } from "../../diplomacy/transcript-schema.js";
 import {
   answeredProposalID,
   buildDealOutcomeRow,
@@ -46,7 +46,7 @@ import {
   loadProposalConversation,
   projectStoredDealRow,
   RESPONSE_TYPES,
-} from "../../utils/deal-outcome.js";
+} from "../../diplomacy/deals/deal-outcome.js";
 
 /** Recursively key-sort an object tree so structural comparison ignores key ordering. */
 function canonicalize(value: unknown): unknown {

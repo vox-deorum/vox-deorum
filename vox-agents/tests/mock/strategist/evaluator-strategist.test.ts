@@ -1,5 +1,5 @@
 /**
- * Tests for the evaluator strategist (src/strategist/agents/evaluator-strategist.ts): one
+ * Tests for the evaluator strategist (src/strategist/evaluator/evaluator-strategist.ts): one
  * evaluation call per decision, then the action tools that change something in order. The whole
  * decision is recorded as the `strategist.decision` attribute on the active span, any state
  * trimming as `strategist.trim`, and nothing is returned. The fake context carries a ready cached
@@ -7,9 +7,9 @@
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { trace } from "@opentelemetry/api";
-import { agentRegistry } from "../../../src/infra/agent-registry.js";
-import type { EvaluatorStrategist } from "../../../src/strategist/agents/evaluator-strategist.js";
-import type { StrategistAnswer } from "../../../src/strategist/agents/evaluator-questions.js";
+import { agentRegistry } from "../../../src/agents/runtime/agent-registry.js";
+import type { EvaluatorStrategist } from "../../../src/strategist/evaluator/evaluator-strategist.js";
+import type { StrategistAnswer } from "../../../src/strategist/evaluator/evaluator-questions.js";
 import type { Model, StrategistDecision, StrategistTrim } from "../../../src/types/index.js";
 import {
   createFakeVoxContext,

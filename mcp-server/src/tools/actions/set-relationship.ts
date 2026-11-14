@@ -5,7 +5,7 @@
 
 import { ActionTool, sourceTurnField } from "../abstract/action.js";
 import * as z from "zod";
-import { readPublicKnowledgeBatch } from "../../utils/knowledge/cached.js";
+import { readPublicKnowledgeBatch } from "../../knowledge/helpers/cached.js";
 import { getPlayerInformations } from "../../knowledge/getters/player-information.js";
 
 /**

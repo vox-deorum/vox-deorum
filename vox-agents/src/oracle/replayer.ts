@@ -11,15 +11,15 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
-import { VoxContext } from '../infra/vox-context.js';
-import { agentRegistry } from '../infra/agent-registry.js';
-import { processManager } from '../infra/process-manager.js';
+import { VoxContext } from '../agents/runtime/vox-context.js';
+import { agentRegistry } from '../agents/runtime/agent-registry.js';
+import { processManager } from '../agents/runtime/process-manager.js';
 import { OracleAgent } from './oracle-agent.js';
-import type { ExecuteTokenOutput } from '../infra/vox-run.js';
-import { VoxSpanExporter } from '../utils/telemetry/vox-exporter.js';
-import { mcpClient } from '../utils/models/mcp-client.js';
+import type { ExecuteTokenOutput } from '../agents/runtime/vox-run.js';
+import { VoxSpanExporter } from '../agents/telemetry/vox-exporter.js';
+import { mcpClient } from '../agents/mcp/mcp-client.js';
 import { spanProcessor } from '../instrumentation.js';
-import { config as appConfig } from '../utils/config.js';
+import { config as appConfig } from '../agents/config/load.js';
 import { createLogger } from '../utils/logger.js';
 import { errorMessage } from '../utils/errors.js';
 import { resolveModel } from './utils/model-resolver.js';
@@ -29,9 +29,9 @@ import { getTrailBase, getTrailPaths, readReplayCache, resolvePath, writeCsv, wr
 import { startBatchManager, shutdownBatchManager } from './batch/batch-manager.js';
 import { unrecordedRunContext } from './types.js';
 import { discoverDbPath } from './utils/db-resolver.js';
-import { createBashTool, bashToolName } from '../utils/tools/bash-tool.js';
-import { validatePromptsSetting } from '../utils/prompts/prompt-files.js';
-import { ReplayWorkspace } from '../utils/workspace/replay-workspace.js';
+import { createBashTool, bashToolName } from '../agents/tools/bash-tool.js';
+import { validatePromptsSetting } from '../agents/prompts/prompt-files.js';
+import { ReplayWorkspace } from '../agents/workspace/replay-workspace.js';
 import type { PromptsSetting, ResolvedFilesConfig } from '../types/config.js';
 import type {
   OracleConfig,

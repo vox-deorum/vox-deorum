@@ -3,7 +3,7 @@
  * empty inspect-deal side range. Tests override only the fields their scenario depends on.
  */
 
-import type { TranscriptMessage } from '../../src/utils/diplomacy/transcript/transcript-utils.js';
+import type { TranscriptMessage } from '../../src/diplomacy/transcript/transcript-utils.js';
 import type { NormalizedSideRange } from '../../../mcp-server/dist/tools/knowledge/inspect-deal.js';
 
 /** A stored transcript row for the ordered pair 1↔3 with neutral defaults; override any field. */

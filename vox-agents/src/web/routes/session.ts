@@ -6,14 +6,14 @@
  */
 
 import { Router, Request, Response } from 'express';
-import { sessionRegistry } from '../../infra/session-registry.js';
-import { runStrategistLoop } from '../../strategist/loop.js';
-import { resolveMaxRepetitions } from '../../strategist/repetition.js';
+import { sessionRegistry } from '../../agents/runtime/session-registry.js';
+import { runStrategistLoop } from '../../strategist/session/loop.js';
+import { resolveMaxRepetitions } from '../../strategist/session/repetition.js';
 import { Model, SessionConfig, StrategistSessionConfig } from '../../types/config.js';
 import { createLogger } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errors.js';
 import { sendError } from '../http-utils.js';
-import { config, getConfigsDir } from '../../utils/config.js';
+import { config, getConfigsDir } from '../../agents/config/load.js';
 import fs from 'fs/promises';
 import path from 'path';
 import type {
@@ -32,8 +32,8 @@ import type {
   ErrorResponse,
   PlayersReport
 } from '../../types/api.js';
-import { mcpClient } from '../../utils/models/mcp-client.js';
-import { unwrapMcpResponse } from '../../utils/models/mcp-response.js';
+import { mcpClient } from '../../agents/mcp/mcp-client.js';
+import { unwrapMcpResponse } from '../../agents/mcp/mcp-response.js';
 
 const logger = createLogger('webui:session-routes');
 const warnedLegacyGameModeFiles = new Set<string>();

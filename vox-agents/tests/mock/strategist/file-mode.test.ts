@@ -11,13 +11,13 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ModelMessage } from 'ai';
-import { agentRegistry } from '../../../src/infra/agent-registry.js';
+import { agentRegistry } from '../../../src/agents/runtime/agent-registry.js';
 import { recordsDirections } from '../../../src/knowledge/directions.js';
 import { simpleStrategistInlineSections, strategistInlineSections } from '../../../src/knowledge/sections.js';
 import { sections, type SectionKey } from '../../../src/knowledge/sections.js';
 import { renderStrategistReports } from '../../../src/strategist/strategy-parameters.js';
 import { splitEntries } from '../../../src/knowledge/records.js';
-import { cacheBreakpoint, countCacheBreakpoints, hasCacheBreakpoint } from '../../../src/utils/models/cache-breakpoint.js';
+import { cacheBreakpoint, countCacheBreakpoints, hasCacheBreakpoint } from '../../../src/agents/models/cache-breakpoint.js';
 import type { StrategistParameters } from '../../../src/strategist/strategy-parameters.js';
 import { createFakeVoxContext, type FakeVoxContext } from '../../helpers/fake-vox-context.js';
 import { makeFixtureGameState, makeFixtureParameters } from '../../fixtures/game-state/index.js';
@@ -25,8 +25,8 @@ import { enableFileMode, openTempRecords, recordableState, recordParameters, typ
 
 // Replace episode retrieval with a canned result; formatting stays the real implementation.
 const episodeResults = vi.hoisted(() => ({ current: [] as unknown[] }));
-vi.mock('../../../src/utils/prompts/episode-utils.js', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../../src/utils/prompts/episode-utils.js')>()),
+vi.mock('../../../src/knowledge/episodes/retrieval.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../src/knowledge/episodes/retrieval.js')>()),
   requestEpisodes: vi.fn(async () => episodeResults.current),
 }));
 

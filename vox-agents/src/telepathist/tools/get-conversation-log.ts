@@ -9,10 +9,10 @@
 import { z } from 'zod';
 import { TelepathistTool, inquiryField } from '../telepathist-tool.js';
 import { TelepathistParameters } from '../telepathist-parameters.js';
-import { cleanToolArtifacts, formatToolCallText, formatToolResultText } from '../../utils/models/text-cleaning.js';
-import { jsonToMarkdown } from '../../utils/tools/json-to-markdown.js';
-import type { Span } from '../../utils/telemetry/schema.js';
-import { parseSpanAttributes } from '../../utils/telemetry/attributes.js';
+import { cleanToolArtifacts, formatToolCallText, formatToolResultText } from '../../agents/models/text-cleaning.js';
+import { jsonToMarkdown } from '../../agents/tools/json-to-markdown.js';
+import type { Span } from '../../agents/telemetry/schema.js';
+import { parseSpanAttributes } from '../../agents/telemetry/attributes.js';
 
 const inputSchema = z.object({
   Turn: z.number().describe('The specific turn to retrieve conversation logs for.'),

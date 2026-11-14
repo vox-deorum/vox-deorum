@@ -10,11 +10,11 @@ import type { EnvoyThread, ParticipantIdentity } from './chat.js';
 import type { ModelSize } from './config.js';
 import type { PlayersReport } from '../../../mcp-server/dist/tools/knowledge/get-players.js';
 // Pinned deal contract shared across interactive-diplomacy stages 4–6.
-import type { DealPayload, DealTranscriptMessage } from '../../../mcp-server/dist/utils/deal-schema.js';
+import type { DealPayload, DealTranscriptMessage } from '../../../mcp-server/dist/diplomacy/deals/deal-schema.js';
 
 // Re-export types that are used in API responses
 export type { PlayersReport };
-export type { DealPayload, TradeItem, PromiseTerm, PerItemValueMap, DealMessagePayload, DealTranscriptMessage } from '../../../mcp-server/dist/utils/deal-schema.js';
+export type { DealPayload, TradeItem, PromiseTerm, PerItemValueMap, DealMessagePayload, DealTranscriptMessage } from '../../../mcp-server/dist/diplomacy/deals/deal-schema.js';
 // The enriched `inspect-deal` result shape is owned by the tool (interactive-diplomacy stage 4);
 // re-export it (and its normalized range / candidate / promise-target types) verbatim so the Web
 // deal board consumes the same explicit interfaces the tool returns rather than loose records.

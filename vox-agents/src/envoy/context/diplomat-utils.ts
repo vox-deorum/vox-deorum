@@ -9,15 +9,15 @@
  */
 
 import type { EnvoyThread } from "../../types/index.js";
-import type { DealReduction } from "../../utils/diplomacy/deal/deal-reduce.js";
-import { inspectDeal, type InspectDealResult } from "../../utils/diplomacy/deal/deal.js";
+import type { DealReduction } from "../../diplomacy/deal/deal-reduce.js";
+import { inspectDeal, type InspectDealResult } from "../../diplomacy/deal/deal.js";
 import { createLogger } from "../../utils/logger.js";
-import { civNameFor } from "../../utils/diplomacy/transcript/transcript-utils.js";
+import { civNameFor } from "../../diplomacy/transcript/transcript-utils.js";
 import {
   DealPayloadSchema,
   type DealTranscriptMessage,
-} from "../../../../mcp-server/dist/utils/deal-schema.js";
-import { formatDealTermsByDirection } from "../../../../mcp-server/dist/utils/deal-format.js";
+} from "../../../../mcp-server/dist/diplomacy/deals/deal-schema.js";
+import { formatDealTermsByDirection } from "../../../../mcp-server/dist/diplomacy/deals/deal-format.js";
 import type { PlayersReport } from "../../../../mcp-server/dist/tools/knowledge/get-players.js";
 import {
   formatDealLedger,

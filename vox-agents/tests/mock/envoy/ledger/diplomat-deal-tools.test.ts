@@ -10,24 +10,24 @@ import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { installMockMcpClient, structuredResult } from '../../../helpers/mock-mcp-client.js';
 import { transcriptRow, emptySideRange } from '../../../helpers/diplomacy-fixtures.js';
 
-vi.mock('../../../../src/utils/models/mcp-client.js', async () => {
+vi.mock('../../../../src/agents/mcp/mcp-client.js', async () => {
   const helper = await import('../../../helpers/mock-mcp-client.js');
   return helper.mockMcpClientModule();
 });
 
 // Load the agent graph through the registry first (circular-import hazard, see negotiator.test).
-import '../../../../src/infra/agent-registry.js';
+import '../../../../src/agents/runtime/agent-registry.js';
 import {
   buildDealContextMessage,
   formatDealContext,
   renderDealRowInline,
 } from '../../../../src/envoy/context/diplomat-utils.js';
 import { formatGiveReceiveLedger } from '../../../../src/envoy/ledger/give-receive-menu.js';
-import { deriveActiveProposal } from '../../../../src/utils/diplomacy/deal/deal-reduce.js';
-import type { InspectDealResult } from '../../../../src/utils/diplomacy/deal/deal.js';
-import type { TranscriptMessage } from '../../../../src/utils/diplomacy/transcript/transcript-utils.js';
+import { deriveActiveProposal } from '../../../../src/diplomacy/deal/deal-reduce.js';
+import type { InspectDealResult } from '../../../../src/diplomacy/deal/deal.js';
+import type { TranscriptMessage } from '../../../../src/diplomacy/transcript/transcript-utils.js';
 import type { EnvoyThread } from '../../../../src/types/index.js';
-import type { DealPayload, DealTranscriptMessage } from '../../../../../mcp-server/dist/utils/deal-schema.js';
+import type { DealPayload, DealTranscriptMessage } from '../../../../../mcp-server/dist/diplomacy/deals/deal-schema.js';
 
 let mcp: ReturnType<typeof installMockMcpClient>;
 beforeEach(() => {

@@ -20,10 +20,10 @@
  */
 
 import { Strategist } from "../strategist.js";
-import { VoxContext } from "../../infra/vox-context.js";
+import { VoxContext } from "../../agents/runtime/vox-context.js";
 import { StrategistParameters, ensureGameState } from "../strategy-parameters.js";
-import { HumanDecisionSubmission } from "../human-decision-bus.js";
-import { setMetadata } from "../../utils/game/metadata.js";
+import { HumanDecisionSubmission } from "../seats/human-decision-bus.js";
+import { setMetadata } from "../../game/metadata.js";
 
 /**
  * Human strategist seat. Presents the decision, waits for the human's

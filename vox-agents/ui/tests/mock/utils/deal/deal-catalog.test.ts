@@ -5,7 +5,7 @@ import {
   offerColumnsFor,
   type InventoryCategory,
 } from '@/utils/deal/deal-catalog';
-import { type DealDurations } from '../../../../../../mcp-server/dist/utils/deal-metadata.js';
+import { type DealDurations } from '../../../../../../mcp-server/dist/diplomacy/deals/deal-metadata.js';
 import type { NormalizedSideRange, TradeItem, PromiseTerm, PromiseTargetInfo } from '@/utils/types';
 import { range } from './deal-test-fixtures';
 

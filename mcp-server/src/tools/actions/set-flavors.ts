@@ -5,9 +5,9 @@
 import { ActionTool, sourceTurnField } from "../abstract/action.js";
 import * as z from "zod";
 import { MaxMajorCivs } from "../../knowledge/schema/base.js";
-import { composeVisibility } from "../../utils/knowledge/visibility.js";
+import { composeVisibility } from "../../knowledge/helpers/visibility.js";
 import { pascalCase } from "change-case";
-import { retrieveEnumName, retrieveEnumValue } from "../../utils/knowledge/enum.js";
+import { retrieveEnumName, retrieveEnumValue } from "../../knowledge/helpers/enum.js";
 import { loadFlavorDescriptions } from "../../utils/strategies/loader.js";
 import { FlavorChange } from "../../knowledge/schema/timed.js";
 import { Insertable } from "kysely";

@@ -8,19 +8,19 @@
  * is the public entry; negotiators and diplomats compose it with their role-specific presentation.
  */
 
-import { isSentinel } from "../../../../mcp-server/dist/utils/deal-format.js";
+import { isSentinel } from "../../../../mcp-server/dist/diplomacy/deals/deal-format.js";
 import {
   durationForPromiseType,
   AGREEMENT_METADATA,
   PROMISE_METADATA,
   PROMISE_TYPES,
-} from "../../../../mcp-server/dist/utils/deal-schema.js";
-import type { DealDurations } from "../../../../mcp-server/dist/utils/deal-schema.js";
+} from "../../../../mcp-server/dist/diplomacy/deals/deal-schema.js";
+import type { DealDurations } from "../../../../mcp-server/dist/diplomacy/deals/deal-schema.js";
 import type { NormalizedSideRange } from "../../../../mcp-server/dist/tools/knowledge/inspect-deal.js";
 import type { PlayersReport } from "../../../../mcp-server/dist/tools/knowledge/get-players.js";
-import type { InspectDealResult } from "../../utils/diplomacy/deal/deal.js";
+import type { InspectDealResult } from "../../diplomacy/deal/deal.js";
 import type { EnvoyThread } from "../../types/index.js";
-import { civNameFor } from "../../utils/diplomacy/transcript/transcript-utils.js";
+import { civNameFor } from "../../diplomacy/transcript/transcript-utils.js";
 import {
   detailClause,
   durationPhrase,

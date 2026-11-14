@@ -41,7 +41,7 @@ The packaged installer that [Getting Started](../players/getting-started.md) wal
 
 Run it from the `scripts/` directory so it can find its cleanup commands. It accepts `--line X.Y` and `--debug` for the installer, plus `--clear-cache` for optional AI cache cleanup. For example, `manual-update.cmd --clear-cache --line 5.2` clears the caches before updating and installing VP 5.2.
 
-Stop Vox Agents, any standalone Codex proxies, and Claude Code before using `--clear-cache`. The option runs `scripts/utilities/clear-ai-cache.ps1`, which clears data across all projects:
+Stop Vox Agents, any standalone Codex proxies, and Claude Code before using `--clear-cache`. The option runs `scripts/maintenance/clear-ai-cache.ps1`, which clears data across all projects:
 
 | Tool | What is cleared |
 | --- | --- |
@@ -74,7 +74,7 @@ Deletes every file directly under `bridge-service/logs`, `mcp-server/logs`, and 
 
 Removes the installed Community Patch, Vox Populi, and Vox Deorum mod folders, plus the VPUI and UI_bc1 DLC folders, from your Civilization V install. It searches the common Steam library paths for the two DLC folders, so an install in an unusual location may keep them. Your repository checkout and other mods are not changed. The packaged installer's uninstaller runs this script automatically.
 
-Other scripts in `scripts/` are covered elsewhere: `vox-deorum.cmd` and building the three services in [Setup](setup.md), and `utilities/build-installer.cmd`, `install/download-dll.cmd`, and `utilities/generate-docs.cmd` in [Releasing](releasing.md).
+Other scripts in `scripts/` are covered elsewhere: `vox-deorum.cmd` and building the three services in [Setup](setup.md), and `packaging/build-installer.cmd`, `install/download-dll.cmd`, and `maintenance/generate-docs.cmd` in [Releasing](releasing.md).
 
 ## Logs
 

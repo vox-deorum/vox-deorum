@@ -10,7 +10,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterAll, beforeAll, describe, it, expect } from 'vitest';
-import { agentRegistry } from '../../../../src/infra/agent-registry.js';
+import { agentRegistry } from '../../../../src/agents/runtime/agent-registry.js';
 import type { EnvoyThread } from '../../../../src/types/index.js';
 
 const diplomat = agentRegistry.get('diplomat') as any;

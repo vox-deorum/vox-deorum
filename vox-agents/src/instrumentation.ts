@@ -7,11 +7,11 @@
  */
 
 import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node";
-import { SQLiteSpanExporter } from "./utils/telemetry/sqlite-exporter.js";
-import { VoxSpanExporter } from "./utils/telemetry/vox-exporter.js";
+import { SQLiteSpanExporter } from "./agents/telemetry/sqlite-exporter.js";
+import { VoxSpanExporter } from "./agents/telemetry/vox-exporter.js";
 import { BatchSpanProcessor } from "@opentelemetry/sdk-trace-base";
 import dotenv from 'dotenv';
-import { config } from "./utils/config.js";
+import { config } from "./agents/config/load.js";
 
 dotenv.config();
 

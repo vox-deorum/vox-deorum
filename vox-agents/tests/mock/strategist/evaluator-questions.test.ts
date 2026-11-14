@@ -1,5 +1,5 @@
 /**
- * Tests for the evaluator strategist's pure helpers (src/strategist/agents/evaluator-questions.ts):
+ * Tests for the evaluator strategist's pure helpers (src/strategist/evaluator/evaluator-questions.ts):
  * the question set built from an options report and the MCP tool schemas, the plan of action tool
  * calls and decision record derived from the answers (calls that do not change something versus the
  * game are dropped), and the evaluation state: its text plus the trim ladder record the text was
@@ -13,10 +13,10 @@ import {
   strategistActionsFromAnswers,
   type StrategistAnswer,
   type StrategistPlan,
-} from '../../../src/strategist/agents/evaluator-questions.js';
-import { evaluatorTrimConfig } from '../../../src/strategist/agents/evaluator-trim-config.js';
+} from '../../../src/strategist/evaluator/evaluator-questions.js';
+import { evaluatorTrimConfig } from '../../../src/strategist/evaluator/evaluator-trim-config.js';
 import type { GameState } from '../../../src/strategist/strategy-parameters.js';
-import { countTokens } from '../../../src/utils/models/token-counter.js';
+import { countTokens } from '../../../src/agents/models/token-counter.js';
 import { makeGameState, makeStrategistParameters, makeStrategistToolSchemas } from '../../helpers/fake-vox-context.js';
 
 /** The deciding player; Greece (player 2) is its only met rival. */

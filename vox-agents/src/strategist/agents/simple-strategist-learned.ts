@@ -10,11 +10,11 @@
 import { Tool } from "ai";
 import { z } from "zod";
 import { SimpleStrategistStaffed } from "./simple-strategist-staffed.js";
-import { VoxContext } from "../../infra/vox-context.js";
+import { VoxContext } from "../../agents/runtime/vox-context.js";
 import { getRecentGameState, StrategistParameters } from "../strategy-parameters.js";
-import { requestEpisodes, formatEpisodeResults } from "../../utils/prompts/episode-utils.js";
-import { createSimpleTool } from "../../utils/tools/simple-tools.js";
-import { renderSystemPrompt } from "../../utils/prompts/prompt-files.js";
+import { requestEpisodes, formatEpisodeResults } from "../../knowledge/episodes/retrieval.js";
+import { createSimpleTool } from "../../agents/tools/simple-tools.js";
+import { renderSystemPrompt } from "../../agents/prompts/prompt-files.js";
 
 /** Working memory key for storing a pending episode request between turns */
 const episodeRequestKey = "episode-request";

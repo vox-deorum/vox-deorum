@@ -19,7 +19,7 @@ import createRejectAgentDealTool from '../../../src/tools/actions/reject-agent-d
 import createReadTranscriptTool from '../../../src/tools/knowledge/read-transcript.js';
 import { setupDiplomacyStore, seedPlayer } from '../helpers.js';
 import type { KnowledgeStore } from '../../../src/knowledge/store.js';
-import * as inspectDealUtil from '../../../src/utils/lua/inspect-deal.js';
+import * as inspectDealUtil from '../../../src/diplomacy/deals/inspect-deal.js';
 import { connectToolClient } from '../tool-client.js';
 import { dealHelpers } from './deal-helpers.js';
 

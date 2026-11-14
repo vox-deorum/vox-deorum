@@ -28,7 +28,7 @@ Each episode contains a turn, player ID, source video filename, offset, duration
 4. Count visible game events for each major player's turn. Minor-civilization episodes keep empty event counts and may receive World Congress information from victory progress and resolution events.
 5. Read the winner and player assignments, compute the maximum episode turn, and write the manifest.
 
-Shared database access and metadata helpers live in `src/utils/telemetry/knowledge-db.ts`, relative to `vox-agents/`.
+Shared database access and metadata helpers live in `src/knowledge/database.ts`, relative to `vox-agents/`.
 
 ## Segment parsing
 

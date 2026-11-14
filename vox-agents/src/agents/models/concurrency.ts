@@ -1,0 +1,321 @@
+/**
+ * @module agents/models/concurrency
+ *
+ * Concurrency-limited streamText wrapper with exponential retry.
+ * Provides per-model concurrency limiting to prevent overwhelming API endpoints.
+ *
+ * When the batch manager is active (for Oracle batch mode), requests for
+ * batch-compatible providers are routed through the batch manager instead
+ * of being sent as live streaming HTTP calls.
+ */
+
+import pLimit from 'p-limit';
+import { streamText, TextStreamPart, ToolChoiceViolationError, ToolSet } from 'ai';
+import { executionTimeoutDefault, exponentialRetry } from '../../utils/retry.js';
+import { createLogger } from '../../utils/logger.js';
+import { isHostCapabilityProvider } from './providers/host-tools.js';
+import type { Model } from '../../types/index.js';
+import { hasBatchManager, getBatchManager } from '../../oracle/batch/batch-manager.js';
+import { convertToStepResult, type RefineToolInput } from '../../oracle/batch/format-converter.js';
+import { takePreservedModelError } from './preserved-model-error.js';
+import { getCodexExecutionTimeout } from './providers/codex-proxy.js';
+import { readModelTimeout } from './timeouts.js';
+
+const logger = createLogger('concurrency');
+
+/** Map of model IDs to their p-limit instances */
+const modelLimiters = new Map<string, ReturnType<typeof pLimit>>();
+
+/**
+ * The narrow execution-context surface the concurrency wrapper actually touches: the logger the
+ * retry wrapper reports attempt diagnostics to, and the per-execution timeout-refresh slot it
+ * rebinds on every attempt. The slot is a required member (its value may be undefined outside a
+ * run) because MCP tools call it to keep a long tool call from tripping the execution timeout: a
+ * context that simply lacked the slot would leave that refresh silently dead. VoxContext, whose
+ * accessor pair backs the slot with the active execution frame, satisfies this structurally.
+ */
+export interface ConcurrencyContext {
+  /** Logger passed to the retry wrapper for attempt diagnostics. */
+  logger: ReturnType<typeof createLogger>;
+  /** Per-execution timeout-refresh slot, rebound by the wrapper on every attempt. */
+  timeoutRefresh: (() => void) | undefined;
+}
+
+/** Monotonic counter to ensure unique chunk IDs across streamText calls */
+let streamCallCounter = 0;
+
+/**
+ * Stream parts that count as model output and end the first-token wait. Metadata such as
+ * stream-start or text-start can arrive before the model produces anything.
+ */
+const firstOutputParts = new Set<string>([
+  'text-delta', 'reasoning-delta', 'tool-input-delta', 'tool-call', 'file', 'reasoning-file',
+]);
+
+/** Return the inactivity deadline appropriate for the configured provider. */
+export function getExecutionTimeout(modelConfig: Model | undefined): number {
+  const override = readModelTimeout('LLM_STREAM_TIMEOUT_MS');
+  if (override !== undefined) return override;
+  if (modelConfig?.provider === 'codex') {
+    return getCodexExecutionTimeout();
+  }
+
+  if (modelConfig?.provider === 'openai-compatible') {
+    return 900_000
+  }
+
+  if (process.env.USE_FLEX === 'true' && modelConfig?.provider === 'google') {
+    return 900_000
+  }
+
+  return executionTimeoutDefault;
+}
+
+/**
+ * Get or create a p-limit instance for a specific model.
+ * Each model gets its own isolated concurrency limiter.
+ *
+ * @param model - Model configuration containing provider, name, and optional concurrencyLimit
+ * @returns p-limit instance for the model
+ */
+function getModelLimiter(model: Model): ReturnType<typeof pLimit> {
+  // Create a unique ID for the model
+  const modelId = `${model.provider}/${model.name}`;
+
+  // Check if we already have a limiter for this model
+  let limiter = modelLimiters.get(modelId);
+
+  if (!limiter) {
+    // Create a new limiter with the model's concurrency limit (default 5)
+    const concurrencyLimit = model.options?.concurrencyLimit ?? 5;
+    limiter = pLimit(concurrencyLimit);
+    modelLimiters.set(modelId, limiter);
+  }
+
+  return limiter;
+}
+
+/**
+ * Wrapper for streamText that adds per-model concurrency limiting and exponential retry.
+ * This is a drop-in replacement for streamText that ensures only a limited number of
+ * concurrent requests are made per model. It also properly handles errors that occur
+ * during streaming by awaiting the steps Promise within the retry mechanism.
+ *
+ * @param params - Same parameters as streamText, but model must be a Model object from getModel()
+ * @param context - The narrow execution-context surface (logger + timeout-refresh slot); in production a VoxContext
+ * @param awaitSteps - Whether to await the steps Promise within the retry (default: true)
+ * @returns Promise that resolves to either StreamTextResult or the resolved steps array
+ *
+ * @example
+ * ```typescript
+ * // Get the full result with steps awaited
+ * const stepResults = await streamTextWithConcurrency({
+ *   model: getModel(stepModel),
+ *   messages: messages,
+ *   // ... other streamText parameters
+ * }, context);
+ * ```
+ */
+export async function streamTextWithConcurrency<T extends Parameters<typeof streamText>[0]>(
+  params: T & { model: any }, // model is from getModel() which returns LanguageModel
+  context: ConcurrencyContext
+) {
+  context.timeoutRefresh = () => {};
+  // Extract the model config from params
+  // The model parameter comes from getModel(stepModel) where stepModel is our Model type
+  // We need to get the original Model config to determine concurrency limits
+  // This is a bit of a hack but works since we control the call site
+  const modelConfig = (params as any).__modelConfig as Model | undefined;
+
+  // Batch mode: route through the batch manager if it's active.
+  // This bypasses streaming, per-model concurrency limiting, and retry logic entirely —
+  // the batch API handles all of that server-side.
+  if (hasBatchManager() && modelConfig) {
+    // Local CLI providers (Codex through its ChatGPT proxy, Claude Code through its runtime)
+    // have no batch API, and their forced middleware and host capabilities never run on the
+    // batch path. Sending them through Oracle's live fallback would silently mix the
+    // experiment's execution modes.
+    if (isHostCapabilityProvider(modelConfig.provider)) {
+      throw new Error(
+        `Batch mode cannot replay local CLI model '${modelConfig.provider}/${modelConfig.name}': ` +
+        'its local runtime, middleware, and host capabilities are unavailable to Oracle batch ' +
+        'requests. Run this experiment without batch mode, or override to a batch-capable model.'
+      );
+    }
+
+    // The batch path serializes params.messages/params.tools directly to the provider's
+    // native request; it never invokes the model's tool-rescue middleware. For a prompt-mode
+    // model that means native tools would be sent, system prose would not be reworded, and no
+    // framing telemetry would be recorded — silently wrong results. Reject the combination
+    // rather than replay it incorrectly.
+    if (modelConfig.options?.toolMiddleware === 'prompt') {
+      throw new Error(
+        `Batch mode cannot replay prompt-mode model '${modelConfig.provider}/${modelConfig.name}': ` +
+        `the batch path bypasses tool-rescue middleware, so native tools would be sent, system ` +
+        `prose would not be reworded to the model's framing, and no framing telemetry would be ` +
+        `recorded. Run this experiment without batch mode, or override to a native tool-calling model.`
+      );
+    }
+    const response = await getBatchManager().enqueue(params, modelConfig);
+    // The SDK never runs here, so its tool-input hooks (which reject tools removed for the step)
+    // are applied while converting the response.
+    return convertToStepResult(response, params.experimental_refineToolInput as RefineToolInput | undefined);
+  }
+
+  // If we don't have the config, use a default limiter
+  const limiter = modelConfig
+    ? getModelLimiter(modelConfig)
+    : pLimit(3); // Default fallback
+
+  // Get model name for logging
+  const modelName = modelConfig
+    ? `${modelConfig.provider}/${modelConfig.name}`
+    : 'unknown-model';
+  const executionTimeout = getExecutionTimeout(modelConfig);
+  const firstTokenTimeout = readModelTimeout('LLM_FIRST_TOKEN_TIMEOUT_MS');
+
+  // Wrap the streamText call with both concurrency limiting and exponential retry
+  return limiter(async () => {
+    let maxIteration = 0;
+
+    // Convert system messages after the first non-system message to user messages
+    if (modelConfig?.options?.systemPromptFirst && params.messages) {
+      params = {
+        ...params,
+        messages: params.messages.map((msg, i) => {
+          if (i !== 0 && msg.role === 'system') return { ...msg, role: 'user' as const };
+          return msg;
+        })
+      };
+    }
+
+    // Retry with caveats
+    return exponentialRetry(async (update, iteration, abortSignal) => {
+      let waitingForFirstToken = firstTokenTimeout !== undefined;
+      context.timeoutRefresh = () => {
+        if (!waitingForFirstToken) update();
+      }
+      maxIteration = iteration;
+
+      // Call streamText with all the original parameters
+      // Modify onChunk to call the update function for retry timeout reset
+      // Also discard late returns if a previous aborted attempt gets resurrected
+      const originalOnChunk = params.onChunk;
+      const originalOnStepEnd = params.onStepEnd;
+      const callId = streamCallCounter++;
+      // A provider error that arrives mid-stream ends the step with finishReason "error"
+      // instead of rejecting, so it is kept here and rethrown to reach the retry policy.
+      let streamError: unknown;
+      const modifiedParams = {
+        ...params,
+        abortSignal,
+        allowSystemInMessages: true,
+        onChunk: (args: any) => {
+          if (maxIteration !== iteration) return;
+          // Prefix chunk IDs with call counter to prevent block merging across steps
+          const chunk = args.chunk;
+          if (chunk?.id) {
+            originalOnChunk?.({ chunk: { ...chunk, id: `${callId}-${chunk.id}` } });
+          } else {
+            originalOnChunk?.(args);
+          }
+        },
+        onStepEnd: (results: any) => {
+          if (maxIteration === iteration) originalOnStepEnd?.(results);
+        },
+        // Log stream errors through Winston instead of the AI SDK's console.error default.
+        // A missed required tool call is expected: the step still resolves with its reasoning
+        // and text, and VoxAgent.prepareStep asks the model to try again.
+        onError: ({ error }: { error: unknown }) => {
+          if (maxIteration !== iteration) return;
+          if (ToolChoiceViolationError.isInstance(error)) {
+            logger.debug(`[${modelName}] Response skipped a required tool call`);
+            return;
+          }
+          logger.warn(`[${modelName}] Stream error`, error);
+          streamError ??= error;
+        },
+        experimental_transform: () => {
+          return new TransformStream<TextStreamPart<ToolSet>, TextStreamPart<ToolSet>>({
+            transform(chunk, controller) {
+              if (maxIteration !== iteration) return;
+              controller.enqueue(chunk);
+            }
+          });
+        }
+      };
+      modifiedParams.providerOptions = modifiedParams.providerOptions ?? {};
+      // Drop any error a timed-out earlier attempt preserved onto the shared options late
+      takePreservedModelError(modifiedParams);
+
+      // Consume the raw stream
+      const result = streamText(modifiedParams);
+      const reader = result.stream.getReader();
+      try {
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          if (waitingForFirstToken && firstOutputParts.has(value.type)) waitingForFirstToken = false;
+          if (!waitingForFirstToken) update(false);
+        }
+
+        // And return the found steps
+        const steps = await result.steps;
+        abortSignal.throwIfAborted();
+        if (streamError !== undefined) throw streamError;
+        update(true);
+
+        // Validate flex tier is effective when enabled
+        if (process.env.USE_FLEX === 'true' && modelConfig?.provider === 'google') {
+          const lastStep = steps[steps.length - 1];
+          const providerMeta = lastStep?.providerMetadata as any;
+          const trafficType = providerMeta?.google?.usageMetadata?.trafficType
+            ?? providerMeta?.vertex?.usageMetadata?.trafficType;
+          if (trafficType !== 'ON_DEMAND_FLEX') {
+            logger.warn(`Flex tier not active for ${modelName}: trafficType=${trafficType}`, lastStep?.providerMetadata);
+          }
+        }
+
+        const response = {
+          ...result,
+          steps,
+        };
+        return response;
+      } catch (error) {
+        // Resurface context length errors that the AI SDK swallowed into AI_NoOutputGeneratedError
+        const preserved = takePreservedModelError(modifiedParams);
+        if (preserved.found) {
+          throw preserved.error;
+        }
+        throw error;
+      }
+    }, context.logger, {
+      source: modelName,
+      maxRetries: 100,
+      initialDelay: 5000,
+      maxDelay: 180000,
+      backoffFactor: 1.2,
+      executionTimeout,
+      initialExecutionTimeout: firstTokenTimeout ?? executionTimeout,
+      abortSignal: params.abortSignal,
+    })
+  });
+}
+
+/**
+ * Helper to attach model config to the parameters for concurrency tracking.
+ * Use this when calling streamTextWithConcurrency to ensure proper per-model limiting.
+ *
+ * @param params - streamText parameters
+ * @param modelConfig - The Model configuration object
+ * @returns Parameters with attached model config
+ */
+export function withModelConfig<T extends Parameters<typeof streamText>[0]>(
+  params: T,
+  modelConfig: Model
+): T & { __modelConfig: Model } {
+  return {
+    ...params,
+    __modelConfig: modelConfig
+  } as T & { __modelConfig: Model };
+}

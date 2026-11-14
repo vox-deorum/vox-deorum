@@ -2,7 +2,7 @@
 
 Vox Agents handles provider differences through **middleware**: model wrappers that adjust requests and replies. They adapt tool calling, forced calls, and rate limits so agents can use the same interface.
 
-`getModel` (`src/utils/models/models.ts`) builds the wrapped model. The AI SDK runs the wrappers from the outside in, so the outermost one sees the prompt first:
+`getModel` (`src/agents/models/models.ts`) builds the wrapped model. The AI SDK runs the wrappers from the outside in, so the outermost one sees the prompt first:
 
 ```
 outermost
@@ -24,28 +24,28 @@ This is layer 3 of [Prompts and tool calling](../framework/prompts.md).
 
 | Middleware | File | Effect |
 | --- | --- | --- |
-| Capabilities | `src/utils/models/capability-prompt.ts` | Adds an `# Extra Capabilities` section to the system text. See [Capability reminder](#capability-reminder). |
-| Tool rescue, prompt mode | `src/utils/models/tool-rescue/` | Replaces native tools with text instructions. See [Prompt-mode tool calling](#prompt-mode-tool-calling). |
-| Tool rescue, default | `src/utils/models/tool-rescue/middleware.ts` | Changes no prompt text. It recovers tool calls a model wrote as JSON text instead of a real call. |
+| Capabilities | `src/agents/models/capability-prompt.ts` | Adds an `# Extra Capabilities` section to the system text. See [Capability reminder](#capability-reminder). |
+| Tool rescue, prompt mode | `src/agents/models/tool-rescue/` | Replaces native tools with text instructions. See [Prompt-mode tool calling](#prompt-mode-tool-calling). |
+| Tool rescue, default | `src/agents/models/tool-rescue/middleware.ts` | Changes no prompt text. It recovers tool calls a model wrote as JSON text instead of a real call. |
 | Gemma | `hermesToolMiddleware` from `@ai-sdk-tool/parser` | Hermes-style tool block for Gemma models. |
-| Claude Code session | `src/utils/models/providers/claude-code-session.ts` | Keeps a live CLI query across an agent run's steps and serves its tools through the `vox` MCP server. Requests without function tools bypass it. See [Claude Code native tools](#claude-code-native-tools). |
-| Claude Code prompt | `src/utils/models/providers/claude-code-prompt.ts` | Turns every system message into a user message, because the provider sends the whole prompt as one CLI user turn anyway. Message options are kept, and the first two cache anchors become Claude Code cache markers (see [Claude Code caching](../framework/caching.md#claude-code)). Installed by `buildClaudeCodeModel`. |
-| Required tool choice | `src/utils/models/providers/required-tool-choice.ts` | For providers that refuse a forced tool call, relaxes it to "tools allowed". Always adds a sentence naming the tools that end the turn, unless no offered tool does. |
-| Codex response | `src/utils/models/providers/codex-response.ts` | See [Codex](#codex). |
+| Claude Code session | `src/agents/models/providers/claude-code-session.ts` | Keeps a live CLI query across an agent run's steps and serves its tools through the `vox` MCP server. Requests without function tools bypass it. See [Claude Code native tools](#claude-code-native-tools). |
+| Claude Code prompt | `src/agents/models/providers/claude-code-prompt.ts` | Turns every system message into a user message, because the provider sends the whole prompt as one CLI user turn anyway. Message options are kept, and the first two cache anchors become Claude Code cache markers (see [Claude Code caching](../framework/caching.md#claude-code)). Installed by `buildClaudeCodeModel`. |
+| Required tool choice | `src/agents/models/providers/required-tool-choice.ts` | For providers that refuse a forced tool call, relaxes it to "tools allowed". Always adds a sentence naming the tools that end the turn, unless no offered tool does. |
+| Codex response | `src/agents/models/providers/codex-response.ts` | See [Codex](#codex). |
 
-The two wrappers that add system text use `appendSystemInstruction` (`src/utils/models/providers/system-prompt.ts`), which appends to the first system message or creates one. Both build their text from the run's offered tools and ignore whether the step requires a call, so their text stays the same on every step. The closing reminder at the end of the request says what is actually required.
+The two wrappers that add system text use `appendSystemInstruction` (`src/agents/models/providers/system-prompt.ts`), which appends to the first system message or creates one. Both build their text from the run's offered tools and ignore whether the step requires a call, so their text stays the same on every step. The closing reminder at the end of the request says what is actually required.
 
 ## Other request handling
 
 These wrappers do not change prompt text:
 
-- **Concurrency limits** (`src/utils/models/concurrency.ts`) cap parallel requests per model.
+- **Concurrency limits** (`src/agents/models/concurrency.ts`) cap parallel requests per model.
 - **Claude Code subscription limits** wait until the provider's reset time. If no valid reset time is given, they retry slowly.
 - **Provider-executed calls.** Claude Code and Codex can run their own built-in tools (such as web search). These show in the dashboard and are recorded as built-in tool spans after the fact. Progress updates alone do not count as success: a failed or missing final result is recorded as an error.
 
 ## Capability reminder
 
-A model call that has `bash` or CLI web access gets one system reminder, built by `capabilityInstruction` in `src/utils/models/capability-prompt.ts`.
+A model call that has `bash` or CLI web access gets one system reminder, built by `capabilityInstruction` in `src/agents/models/capability-prompt.ts`.
 
 | Part | Included when |
 | --- | --- |
@@ -79,21 +79,21 @@ inbound                                        outbound
 
 | Piece | File | Notes |
 | --- | --- | --- |
-| Assembly | `src/utils/models/tool-rescue/middleware.ts` | Connects the inbound and outbound halves. |
-| Inbound transform | `src/utils/models/tool-rescue/transform-params.ts` | Places the instructions: before the first user message under action framing, inside the first system message for `systemPromptFirst` models, otherwise as a new first system message. |
-| Instruction text | `createToolPrompts` in `src/utils/models/tool-rescue/prompt.ts` | Lists every offered tool with its JSON schema. Required and optional steps share one wording, since the closing reminder carries the requirement. |
+| Assembly | `src/agents/models/tool-rescue/middleware.ts` | Connects the inbound and outbound halves. |
+| Inbound transform | `src/agents/models/tool-rescue/transform-params.ts` | Places the instructions: before the first user message under action framing, inside the first system message for `systemPromptFirst` models, otherwise as a new first system message. |
+| Instruction text | `createToolPrompts` in `src/agents/models/tool-rescue/prompt.ts` | Lists every offered tool with its JSON schema. Required and optional steps share one wording, since the closing reminder carries the requirement. |
 | History as text | `convertPromptToolMessagesToText` in the same file | Rewrites earlier calls and results in the format the model is taught. |
-| Reading replies | `generate.ts`, `stream.ts`, `extract.ts`, `recovery.ts` in `src/utils/models/tool-rescue/` | Pull tool calls out of the reply text. |
-| Call text format | `formatToolCallText`, `formatToolResultText` in `src/utils/models/text-cleaning.ts` | Shared by the history rewrite and the reply parser. |
-| Framing | `FRAMING_PRESETS` in `prompt.ts`; `resolveToolFraming` in `src/utils/models/models.ts` | Termed "tool" by default. `options.framing` can select "action" instead, mainly for Oracle replay, and `reframeToolWording` rewrites the agent's system text to match. |
+| Reading replies | `generate.ts`, `stream.ts`, `extract.ts`, `recovery.ts` in `src/agents/models/tool-rescue/` | Pull tool calls out of the reply text. |
+| Call text format | `formatToolCallText`, `formatToolResultText` in `src/agents/models/text-cleaning.ts` | Shared by the history rewrite and the reply parser. |
+| Framing | `FRAMING_PRESETS` in `prompt.ts`; `resolveToolFraming` in `src/agents/models/models.ts` | Termed "tool" by default. `options.framing` can select "action" instead, mainly for Oracle replay, and `reframeToolWording` rewrites the agent's system text to match. |
 
 Because the instructions are built from the offered tools, they do not change when a step allows fewer tools.
 
-A text call to a removed tool is still recovered by name and then rejected like a native call (`tests/mock/infra/narrowed-tool-rejection.test.ts`).
+A text call to a removed tool is still recovered by name and then rejected like a native call (`tests/mock/agents/runtime/narrowed-tool-rejection.test.ts`).
 
 ## Claude Code native tools
 
-Claude Code calls an agent run's function tools through an in-process MCP server named `vox`. A **live query** is the CLI conversation that stays open across Vox Deorum steps. `src/utils/models/providers/claude-code-session.ts` manages its lifecycle:
+Claude Code calls an agent run's function tools through an in-process MCP server named `vox`. A **live query** is the CLI conversation that stays open across Vox Deorum steps. `src/agents/models/providers/claude-code-session.ts` manages its lifecycle:
 
 1. Start a query with the full prompt and a fresh `vox` server exposing the run's game tools and `bash`.
 2. When the CLI calls those tools, park their MCP handlers until Vox Deorum supplies results.

@@ -7,11 +7,11 @@
  */
 
 import { Tool, StepResult, ModelMessage } from 'ai';
-import { VoxAgent } from '../infra/vox-agent.js';
-import type { VoxContext } from '../infra/vox-context.js';
+import { VoxAgent } from '../agents/runtime/vox-agent.js';
+import type { VoxContext } from '../agents/runtime/vox-context.js';
 import type { Model } from '../types/index.js';
-import { countCacheBreakpoints, hasCacheBreakpoint, markBreakpointOnLast, MAX_CACHE_BREAKPOINTS } from '../utils/models/cache-breakpoint.js';
-import { formatModelReference } from '../utils/models/model-reference.js';
+import { countCacheBreakpoints, hasCacheBreakpoint, markBreakpointOnLast, MAX_CACHE_BREAKPOINTS } from '../agents/models/cache-breakpoint.js';
+import { formatModelReference } from '../agents/models/model-reference.js';
 import type { OracleConfig, OracleParameters, OracleInput, ReplayResult, ReplayDecision } from './types.js';
 
 /**

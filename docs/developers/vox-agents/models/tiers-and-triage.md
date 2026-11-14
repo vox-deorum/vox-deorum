@@ -35,13 +35,13 @@ Triage is off by default. The `triage` setting turns it on:
 | `true` | On for every agent that has a triage hook, plus the strategist. |
 | A list | On for the listed agent names, or the roles `strategist` and `diplomat`. |
 
-The setting can go on a seat, in the session config, or in the root `config.json`. The highest level that sets it wins. `resolveSeatTriage` in `src/strategist/seat-config.ts` resolves it, and a malformed value fails session preflight before the game launches.
+The setting can go on a seat, in the session config, or in the root `config.json`. The highest level that sets it wins. `resolveSeatTriage` in `src/strategist/seats/seat-config.ts` resolves it, and a malformed value fails session preflight before the game launches.
 
 Triage also needs an evaluator model, set as `<agent>.evaluator` or the shared `evaluator` alias (see [Evaluators](evaluators.md#configuration)). Without one, triage is skipped and a warning appears at session start.
 
 ## Writing a triage hook
 
-Use `createTriage` in `src/infra/triage.ts`. You give it:
+Use `createTriage` in `src/agents/runtime/triage.ts`. You give it:
 
 - **Questions** for the evaluator.
 - **A router** that turns the answers into a tier.
@@ -74,9 +74,9 @@ When the `strategist` role (or the strategist's name) is in `triage` and an eval
 - The question is about what the strategist would change, not how eventful the turns were.
 - A finished research or policy counts as at least a tweak, because the next one needs choosing.
 - The evaluator reads `prompts/strategist-triage.md` plus the same reports as the [evaluator strategist](../agents/strategists/evaluator-strategist.md#what-it-reads), with the events since the last decision.
-- The state goes through the same [trimming](../agents/strategists/evaluator-trimming.md) as the evaluator strategist (both use `evaluateStrategistState` in `src/strategist/agents/evaluator-questions.ts`). If it still overflows, triage retries with fewer events through the same `withEventWindowFallback` the decision uses.
+- The state goes through the same [trimming](../agents/strategists/evaluator-trimming.md) as the evaluator strategist (both use `evaluateStrategistState` in `src/strategist/evaluator/evaluator-questions.ts`). If it still overflows, triage retries with fewer events through the same `withEventWindowFallback` the decision uses.
 
-`resolvePacingVerdict` in `src/strategist/pacing.ts` combines the answer with the normal schedule. A turn the schedule or an interruption already calls for always runs, and triage can only raise its tier:
+`resolvePacingVerdict` in `src/strategist/pacing/policy.ts` combines the answer with the normal schedule. A turn the schedule or an interruption already calls for always runs, and triage can only raise its tier:
 
 | Turn | none | tweaks | revision | overhaul |
 | --- | --- | --- | --- | --- |

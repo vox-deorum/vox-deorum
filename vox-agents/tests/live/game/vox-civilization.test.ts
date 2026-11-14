@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { VoxCivilization } from '../../../src/infra/vox-civilization.js';
+import { VoxCivilization } from '../../../src/game/vox-civilization.js';
 import { exec, execSync } from 'child_process';
 import { promisify } from 'util';
 import { setTimeout } from 'node:timers/promises';

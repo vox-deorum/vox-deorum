@@ -16,7 +16,7 @@ import { unzipSync } from 'fflate';
 
 import telemetryRoutes from '../../../../src/web/routes/telemetry.js';
 import { sqliteExporter } from '../../../../src/instrumentation.js';
-import { WorkspaceStore } from '../../../../src/utils/workspace/workspace-store.js';
+import { WorkspaceStore } from '../../../../src/agents/workspace/workspace-store.js';
 import { createTelemetryDb } from '../../../helpers/telemetry-db.js';
 
 function makeApp() {

@@ -6,7 +6,7 @@
  * Speaking to the counterpart is an explicit action, not raw assistant free text: the model
  * always picks a tool, so its action space is uniform and it stops narrating-instead-of-acting.
  * The `Message` argument is streamed back to the client exactly like free text used to be (see
- * `utils/models/send-message-stream.ts`), so a spoken reply still renders as a normal text bubble
+ * `agents/models/send-message-stream.ts`), so a spoken reply still renders as a normal text bubble
  * rather than a tool-call card. A diplomat conversation archives each validated call here, after
  * its streamed argument is complete; terminal reconciliation later mirrors that durable row into
  * the thread cache.
@@ -14,15 +14,15 @@
 
 import { z } from "zod";
 import { Tool } from "ai";
-import type { VoxContext } from "../../infra/vox-context.js";
+import type { VoxContext } from "../../agents/runtime/vox-context.js";
 import type { StrategistParameters } from "../../strategist/strategy-parameters.js";
 import type { EnvoyThread } from "../../types/index.js";
-import { createSimpleTool } from "../../utils/tools/simple-tools.js";
-import { sendMessageToolName } from "../../utils/diplomacy/constants.js";
-import { appendTranscriptMessageRow } from "../../utils/diplomacy/transcript/transcript.js";
-import { reportSpokenRow } from "../../utils/diplomacy/turn/active-turn-state.js";
-import { speakerLabel } from "../../utils/diplomacy/transcript/transcript-utils.js";
-import { stripSpokenEcho } from "../../utils/models/text-cleaning.js";
+import { createSimpleTool } from "../../agents/tools/simple-tools.js";
+import { sendMessageToolName } from "../../diplomacy/constants.js";
+import { appendTranscriptMessageRow } from "../../diplomacy/transcript/transcript.js";
+import { reportSpokenRow } from "../../diplomacy/turn/active-turn-state.js";
+import { speakerLabel } from "../../diplomacy/transcript/transcript-utils.js";
+import { stripSpokenEcho } from "../../agents/models/text-cleaning.js";
 
 // The canonical name lives in a zero-dependency leaf so the archival reducer and the streamer can
 // share it without pulling in this tool's heavy deps; re-export it here for tool-module importers.

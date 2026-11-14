@@ -2,7 +2,7 @@ import { gameDatabase } from "../../server.js";
 import { DatabaseQueryTool } from "../abstract/database-query.js";
 import * as z from "zod";
 import * as changeCase from "change-case";
-import { getEraName } from "../../utils/database/enums.js";
+import { getEraName } from "../../database/helpers/enums.js";
 
 // =============================================================================
 // Schemas & Types

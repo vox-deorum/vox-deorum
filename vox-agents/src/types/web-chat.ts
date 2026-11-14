@@ -7,8 +7,8 @@
 import type { CreateChatRequest, PlayerAssignment } from './api.js';
 import type { EnvoyThread, ParticipantIdentity } from './chat.js';
 import type { ModelSize } from './config.js';
-import type { TranscriptPushMessage } from '../utils/diplomacy/transcript/transcript-utils.js';
-import type { DealTranscriptMessage } from '../../../mcp-server/dist/utils/deal-schema.js';
+import type { TranscriptPushMessage } from '../diplomacy/transcript/transcript-utils.js';
+import type { DealTranscriptMessage } from '../../../mcp-server/dist/diplomacy/deals/deal-schema.js';
 
 /** Refresh a diplomacy thread from its durable transcript. */
 export type SyncDiplomacyThread = (thread: EnvoyThread) => Promise<void>;

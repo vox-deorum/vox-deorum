@@ -18,8 +18,8 @@
  * `done` or `error`, never both and never neither.
  */
 
-import { agentRegistry } from '../../infra/agent-registry.js';
-import { contextRegistry } from '../../infra/context-registry.js';
+import { agentRegistry } from '../../agents/runtime/agent-registry.js';
+import { contextRegistry } from '../../agents/runtime/context-registry.js';
 import type { StrategistParameters } from '../../strategist/strategy-parameters.js';
 import { ensureGameState, turnEventWindow } from '../../strategist/strategy-parameters.js';
 import type {
@@ -29,34 +29,34 @@ import type {
   EnvoyThread,
   StreamingEventCallback,
 } from '../../types/index.js';
-import { agentName, needsRetryReply, retryMessage } from '../../utils/diplomacy/transcript/transcript.js';
+import { agentName, needsRetryReply, retryMessage } from '../../diplomacy/transcript/transcript.js';
 import {
   insertDurableRows,
   isDealRow,
   type TranscriptPushMessage,
-} from '../../utils/diplomacy/transcript/transcript-utils.js';
+} from '../../diplomacy/transcript/transcript-utils.js';
 import {
   beginChatTurn,
   ThreadBusyError,
   threadBusyMessage,
   type ChatTurn,
   type TurnCommit,
-} from '../../utils/diplomacy/turn/chat-turn-commit.js';
+} from '../../diplomacy/turn/chat-turn-commit.js';
 import {
   ConversationClosedThisTurnError,
   LiveTurnUnavailableError,
   requireOpenConversationTurn,
-} from '../../utils/diplomacy/turn/live-turn.js';
-import { IllegalDealError, ProposalConflictError } from '../../utils/diplomacy/deal/deal.js';
+} from '../../diplomacy/turn/live-turn.js';
+import { IllegalDealError, ProposalConflictError } from '../../diplomacy/deal/deal.js';
 import { createLogger } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errors.js';
 import { isRecord } from '../../utils/guards.js';
 import {
   createSendMessageStreamer,
   type StreamChunk,
-} from '../../utils/models/send-message-stream.js';
-import { DealPayloadSchema } from '../../../../mcp-server/dist/utils/deal-schema.js';
-import type { DealTranscriptMessage } from '../../../../mcp-server/dist/utils/deal-schema.js';
+} from '../../agents/models/send-message-stream.js';
+import { DealPayloadSchema } from '../../../../mcp-server/dist/diplomacy/deals/deal-schema.js';
+import type { DealTranscriptMessage } from '../../../../mcp-server/dist/diplomacy/deals/deal-schema.js';
 import { chatThreadStore } from './store.js';
 import { backfillThreadIdentities } from './enrichment.js';
 

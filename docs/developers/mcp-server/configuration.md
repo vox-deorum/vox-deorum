@@ -87,7 +87,7 @@ Several values a reader might go looking for are fixed in the source. They are l
 
 ## Common configurations
 
-Vox Agents also allows 11 minutes for MCP tool calls and HTTP transport inactivity in `vox-agents/src/utils/models/mcp-client.ts`. This leaves a minute for responses around the DLL's 10-minute message timeout.
+Vox Agents also allows 11 minutes for MCP tool calls and HTTP transport inactivity in `vox-agents/src/agents/mcp/mcp-client.ts`. This leaves a minute for responses around the DLL's 10-minute message timeout.
 
 For normal play the defaults are right: HTTP on port 4000, the bridge on port 5000, SSE rather than the event pipe, and info logging. For development, set `LOG_LEVEL=debug`. To run the server as a child process of an agent framework rather than as a network service, set `MCP_TRANSPORT=stdio`.
 

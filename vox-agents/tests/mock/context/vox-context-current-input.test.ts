@@ -2,7 +2,7 @@
  * Regression test for VoxContext.execute()'s currentInput save/restore.
  *
  * Agent-tools run a sub-agent via `context.execute(...)` on the SAME VoxContext
- * (see utils/tools/agent-tools.ts). execute() sets `this.currentInput = input`; if it did
+ * (see agents/tools/agent-tools.ts). execute() sets `this.currentInput = input`; if it did
  * not restore the parent's input afterwards, a sub-agent call (e.g. the diplomat invoking
  * call-diplomatic-analyst) would leave `currentInput` pointing at the sub-agent's input.
  * A later tool in the parent's loop that reads `context.currentInput` (e.g. the diplomat's
@@ -14,9 +14,9 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { VoxContext } from '../../../src/infra/vox-context.js';
-import { agentRegistry } from '../../../src/infra/agent-registry.js';
-import { VoxAgent, AgentParameters } from '../../../src/infra/vox-agent.js';
+import { VoxContext } from '../../../src/agents/runtime/vox-context.js';
+import { agentRegistry } from '../../../src/agents/runtime/agent-registry.js';
+import { VoxAgent, AgentParameters } from '../../../src/agents/runtime/vox-agent.js';
 import type { Model } from '../../../src/types/index.js';
 
 /** No-op agent: empty system prompt makes execute() return early (no LLM call). */

@@ -1,5 +1,5 @@
 /**
- * Tests for StrategistSession.verifyRandomSeeds (src/strategist/strategist-session.ts) —
+ * Tests for StrategistSession.verifyRandomSeeds (src/strategist/session/strategist-session.ts) —
  * the reproducibility gate that compares the session's configured fixed seeds against
  * Civ's observed pregame `syncRandSeed`/`mapRandSeed` metadata.
  *
@@ -11,12 +11,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { installMockMcpClient, textResult } from '../../helpers/mock-mcp-client.js';
 
-vi.mock('../../../src/utils/models/mcp-client.js', async () => {
+vi.mock('../../../src/agents/mcp/mcp-client.js', async () => {
   const helper = await import('../../helpers/mock-mcp-client.js');
   return helper.mockMcpClientModule();
 });
 
-vi.mock('../../../src/infra/vox-civilization.js', () => ({
+vi.mock('../../../src/game/vox-civilization.js', () => ({
   voxCivilization: {
     onGameExit: vi.fn(),
     onGameBound: vi.fn(),
@@ -25,8 +25,8 @@ vi.mock('../../../src/infra/vox-civilization.js', () => ({
   },
 }));
 
-import { StrategistSession } from '../../../src/strategist/strategist-session.js';
-import { voxCivilization } from '../../../src/infra/vox-civilization.js';
+import { StrategistSession } from '../../../src/strategist/session/strategist-session.js';
+import { voxCivilization } from '../../../src/game/vox-civilization.js';
 
 let mcp: ReturnType<typeof installMockMcpClient>;
 beforeEach(() => {

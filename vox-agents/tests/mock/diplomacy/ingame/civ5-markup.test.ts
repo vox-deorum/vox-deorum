@@ -6,7 +6,7 @@ import {
   civ5ItalicColor,
   markdownToCiv5,
   markdownToPlain,
-} from "../../../../src/utils/diplomacy/ingame/civ5-markup.js";
+} from "../../../../src/diplomacy/ingame/civ5-markup.js";
 
 describe("markdownToCiv5", () => {
   it("should convert headings and all bullet markers", () => {

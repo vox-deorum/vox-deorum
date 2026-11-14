@@ -13,7 +13,7 @@ This page is the map of those surfaces for anyone working on them: what is reuse
 
 - [Diplomacy panel](diplomacy-panel.md): the conversation transcript, its phase indicator, and the proposal cards for the current counterpart.
 - [Deal screen](deal-screen.md): a wrapper around the VP EUI trade editor that adds promise terms, validation feedback, and the propose/counter/accept/reject actions.
-- The human decision panel (`UI/VoxDeorumHumanPanel.lua` and `.xml`) appears only in human-control mode. It renders the choices provided by `present-decision`, submits through `Game.BroadcastEvent("HumanDecision", ...)`, and owns no game logic. Its companion `UI/VoxDeorumHumanTrigger` is the small widget that reopens it. See the [human-control plans](../../plans/human-control/).
+- The human decision panel (`UI/HumanControl/VoxDeorumHumanPanel.lua` and `.xml`) appears only in human-control mode. It renders the choices provided by `present-decision`, submits through `Game.BroadcastEvent("HumanDecision", ...)`, and owns no game logic. Its companion `UI/HumanControl/VoxDeorumHumanTrigger` is the small widget that reopens it. See the [human-control plans](../../plans/human-control/).
 
 For how the diplomacy contexts fit into the wider agent round trip, see [diplomacy.md](../diplomacy.md).
 

@@ -12,4 +12,4 @@ export { runReplay } from './replayer.js';
 
 // The shared 'tool' -> 'action' prose transform, so experiments can apply it manually
 // to `ctx.system` when reproducing the original model's action view.
-export { reframeToolWording } from '../utils/models/tool-rescue/prompt.js';
+export { reframeToolWording } from '../agents/models/tool-rescue/prompt.js';

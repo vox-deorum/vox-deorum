@@ -6,7 +6,7 @@
  */
 
 import { Strategist } from "../strategist.js";
-import { VoxContext } from "../../infra/vox-context.js";
+import { VoxContext } from "../../agents/runtime/vox-context.js";
 import { StrategistParameters } from "../strategy-parameters.js";
 
 /**

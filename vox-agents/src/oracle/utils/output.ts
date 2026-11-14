@@ -7,7 +7,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import Papa from 'papaparse';
-import { jsonToMarkdown } from '../../utils/tools/json-to-markdown.js';
+import { jsonToMarkdown } from '../../agents/tools/json-to-markdown.js';
 import { isRecord } from '../../utils/guards.js';
 import type { OracleRow, ReplayResult } from '../types.js';
 

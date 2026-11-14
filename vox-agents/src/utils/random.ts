@@ -2,7 +2,7 @@
  * @module utils/random
  *
  * Generic seeded-PRNG helpers. Reuses `seedrandom` (already a dependency, see
- * utils/game/seating/cycle.ts) so a string seed key deterministically maps to a
+ * game/seating/cycle.ts) so a string seed key deterministically maps to a
  * value: identical keys always yield the same result, while distinct keys
  * decorrelate. Pure and framework-agnostic — the *source* of a seed key is the
  * caller's concern.

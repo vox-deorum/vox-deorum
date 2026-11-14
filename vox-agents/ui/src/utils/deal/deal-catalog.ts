@@ -26,7 +26,7 @@ import {
   PROMISE_METADATA,
   type DealDurations,
   durationForItemType,
-} from '../../../../../mcp-server/dist/utils/deal-metadata.js';
+} from '../../../../../mcp-server/dist/diplomacy/deals/deal-metadata.js';
 
 /**
  * The fixed, game-set durations bundle and the per-item-type duration lookup come from the canonical,

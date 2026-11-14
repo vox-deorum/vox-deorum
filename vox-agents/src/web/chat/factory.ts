@@ -6,10 +6,10 @@
 
 import fs from 'fs/promises';
 import { v4 as uuidv4 } from 'uuid';
-import { agentRegistry } from '../../infra/agent-registry.js';
-import { contextRegistry } from '../../infra/context-registry.js';
-import { VoxContext } from '../../infra/vox-context.js';
-import { defaultDiplomat } from '../../strategist/seat-config.js';
+import { agentRegistry } from '../../agents/runtime/agent-registry.js';
+import { contextRegistry } from '../../agents/runtime/context-registry.js';
+import { VoxContext } from '../../agents/runtime/vox-context.js';
+import { defaultDiplomat } from '../../strategist/seats/seat-config.js';
 import type { StrategistParameters } from '../../strategist/strategy-parameters.js';
 import {
   createTelepathistParameters,
@@ -24,16 +24,16 @@ import type {
   ParticipantIdentity,
   TelepathistChatContext,
 } from '../../types/index.js';
-import { isThreadBusy } from '../../utils/diplomacy/turn/chat-turn-commit.js';
-import { autoCompact, diplomacyThreadId, identityOf } from '../../utils/diplomacy/transcript/transcript.js';
+import { isThreadBusy } from '../../diplomacy/turn/chat-turn-commit.js';
+import { autoCompact, diplomacyThreadId, identityOf } from '../../diplomacy/transcript/transcript.js';
 import {
   parseContextIdentifier,
   parseDatabaseIdentifier,
-} from '../../utils/telemetry/identifier-parser.js';
-import { VoxSpanExporter } from '../../utils/telemetry/vox-exporter.js';
+} from '../../agents/telemetry/identifier-parser.js';
+import { VoxSpanExporter } from '../../agents/telemetry/vox-exporter.js';
 import { createLogger } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errors.js';
-import { ensureModelsResolved, selectModelReference } from '../../utils/models/resolution.js';
+import { ensureModelsResolved, selectModelReference } from '../../agents/models/resolution.js';
 import {
   civIdentity,
   displayIdentity,

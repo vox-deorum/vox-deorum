@@ -12,7 +12,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-vi.mock('../../../src/utils/prompts/episode-utils.js', () => ({
+vi.mock('../../../src/knowledge/episodes/retrieval.js', () => ({
   requestEpisodesFromTelemetry: vi.fn(),
   formatEpisodeResults: vi.fn(),
 }));
@@ -20,8 +20,8 @@ vi.mock('../../../src/utils/prompts/episode-utils.js', () => ({
 import {
   requestEpisodesFromTelemetry,
   formatEpisodeResults,
-} from '../../../src/utils/prompts/episode-utils.js';
-import { agentRegistry } from '../../../src/infra/agent-registry.js';
+} from '../../../src/knowledge/episodes/retrieval.js';
+import { agentRegistry } from '../../../src/agents/runtime/agent-registry.js';
 import type { TelepathistParameters } from '../../../src/telepathist/telepathist-parameters.js';
 import type { EnvoyThread } from '../../../src/types/index.js';
 

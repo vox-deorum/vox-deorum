@@ -1,6 +1,6 @@
 # Contexts and runs
 
-A **context** (`VoxContext`, `src/infra/vox-context.ts`) belongs to one seat, usually one AI player in one game. It holds what that seat needs for the whole game: the MCP connection, the tool list, and the seat's settings.
+A **context** (`VoxContext`, `src/agents/runtime/vox-context.ts`) belongs to one seat, usually one AI player in one game. It holds what that seat needs for the whole game: the MCP connection, the tool list, and the seat's settings.
 
 A **run** is one piece of work on that seat: a strategist turn, one chat message, an automatic deal response, or a background analysis. Each run has its own cancel button, its own token count, and its own view of which turn it is working on. Several runs can be active on the same seat at once.
 
@@ -17,11 +17,11 @@ Because each run carries its own state, a strategist can finish an older turn wh
 
 | File | Role |
 | --- | --- |
-| `src/infra/vox-context.ts` | The context: seat resources, tool registry, public entry points. |
-| `src/infra/vox-run.ts` | Run types and helpers. |
-| `src/infra/vox-execute.ts` | The step loop that drives an agent. |
-| `src/infra/vox-evaluate.ts` | The single-call evaluation path. |
-| `src/infra/vox-telemetry.ts` | Spans, token counting, and model labels shared by the two paths above. |
+| `src/agents/runtime/vox-context.ts` | The context: seat resources, tool registry, public entry points. |
+| `src/agents/runtime/vox-run.ts` | Run types and helpers. |
+| `src/agents/runtime/vox-execute.ts` | The step loop that drives an agent. |
+| `src/agents/runtime/vox-evaluate.ts` | The single-call evaluation path. |
+| `src/agents/runtime/vox-telemetry.ts` | Spans, token counting, and model labels shared by the two paths above. |
 
 `context.execute()` and `context.evaluate()` are thin wrappers that hand off to `vox-execute.ts` and `vox-evaluate.ts`.
 
@@ -68,7 +68,7 @@ Code can also skip the model and call a tool directly with `callTool()`. It take
 
 ## Agents calling agents
 
-The wrapping is in `src/utils/tools/agent-tools.ts`. Each `call-{name}` tool uses `handoffSchema`, then `inputSchema`, then a generic `Prompt` schema as fallbacks, plus an optional `Tier` (`small`, `default`, or `large`). A tier picks the called agent's model directly, without triage. The wrapper removes `Tier` before passing the input on.
+The wrapping is in `src/agents/tools/agent-tools.ts`. Each `call-{name}` tool uses `handoffSchema`, then `inputSchema`, then a generic `Prompt` schema as fallbacks, plus an optional `Tier` (`small`, `default`, or `large`). A tier picks the called agent's model directly, without triage. The wrapper removes `Tier` before passing the input on.
 
 - If the called agent is fire-and-forget, the tool checks the input, answers "submitted", and the agent continues in a detached run.
 - Otherwise the caller waits for the typed result.

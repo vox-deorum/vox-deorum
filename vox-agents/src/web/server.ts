@@ -12,16 +12,16 @@ import * as fsPromises from 'fs/promises';
 import { createLogger } from '../utils/logger.js';
 import { sseManager } from './sse-manager.js';
 import { sendError } from './http-utils.js';
-import config from '../utils/config.js';
+import config from '../agents/config/load.js';
 import telemetryRoutes from './routes/telemetry.js';
 import configRoutes from './routes/config.js';
 import { createAgentRoutes } from './routes/agent.js';
 import sessionRoutes from './routes/session.js';
 import { createDebugRoutes } from './routes/debug.js';
-import { processManager } from '../infra/process-manager.js';
+import { processManager } from '../agents/runtime/process-manager.js';
 import type { HealthStatus, ErrorResponse } from '../types/index.js';
 import { allowLoopbackCorsOrigin, requireLoopbackRequest } from './loopback.js';
-import { reloadRootPrompts } from '../utils/prompts/prompt-files.js';
+import { reloadRootPrompts } from '../agents/prompts/prompt-files.js';
 
 // Get __dirname in ESM
 const __filename = fileURLToPath(import.meta.url);

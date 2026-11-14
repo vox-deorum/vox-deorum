@@ -106,7 +106,9 @@ There are four abstract bases in `src/tools/abstract/`. Extending `ToolBase` dir
 ### Code Structure
 
 - Source code in `src/` directory
-- Utilities in `src/utils/` subdirectory
+- Shared primitives in `src/utils/`
+- Domain helpers beside their owners in `src/knowledge/helpers/`, `src/database/helpers/`, and `src/diplomacy/`
+- Event schemas grouped by domain in `src/knowledge/schema/events/`; generators live in `scripts/events/`
 - Tools in `src/tools/` subdirectory
 - Tests mirror source structure in `tests/` directory
 - Built output goes to `dist/` directory (gitignored)

@@ -25,12 +25,12 @@ import type {
   NormalizedSideRange,
   PromiseTargetInfo,
 } from "../../../../mcp-server/dist/tools/knowledge/inspect-deal.js";
-import { AGREEMENT_METADATA, TARGETED_PROMISE_TYPES } from "../../../../mcp-server/dist/utils/deal-schema.js";
+import { AGREEMENT_METADATA, TARGETED_PROMISE_TYPES } from "../../../../mcp-server/dist/diplomacy/deals/deal-schema.js";
 import type {
   AuthoredTradeItem,
   PromiseTerm,
   TradeItem,
-} from "../../../../mcp-server/dist/utils/deal-schema.js";
+} from "../../../../mcp-server/dist/diplomacy/deals/deal-schema.js";
 import { closestNames, findByName, namesOf } from "../../utils/text-match.js";
 import { parseEntry, targetExample, type LedgerTermLabel } from "./ledger-grammar.js";
 

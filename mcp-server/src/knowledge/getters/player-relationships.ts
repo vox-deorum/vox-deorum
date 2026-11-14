@@ -4,7 +4,7 @@
 
 import { knowledgeManager } from "../../server.js";
 import { createLogger } from "../../utils/logger.js";
-import { readPublicKnowledgeBatch } from "../../utils/knowledge/cached.js";
+import { readPublicKnowledgeBatch } from "../helpers/cached.js";
 import { getPlayerInformations } from "./player-information.js";
 
 const logger = createLogger("GetPlayerRelationships");

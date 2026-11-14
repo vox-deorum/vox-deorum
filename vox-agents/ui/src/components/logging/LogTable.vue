@@ -33,7 +33,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { VList } from 'virtua/vue';
-import { getLevelEmoji, formatTimestamp, getLogRowClass } from '@/api/log-utils';
+import { getLevelEmoji, formatTimestamp, getLogRowClass } from '@/presentation/log-utils';
 import type { LogEntry } from '@/utils/types';
 import ParamsList from './ParamsList.vue';
 

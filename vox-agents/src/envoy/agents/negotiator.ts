@@ -27,19 +27,19 @@
 
 import { z } from "zod";
 import { ModelMessage, StepResult, Tool } from "ai";
-import { VoxAgent } from "../../infra/vox-agent.js";
-import { VoxContext } from "../../infra/vox-context.js";
+import { VoxAgent } from "../../agents/runtime/vox-agent.js";
+import { VoxContext } from "../../agents/runtime/vox-context.js";
 import { StrategistParameters, buildGameContextMessages, getRecentGameState } from "../../strategist/strategy-parameters.js";
 import { createBriefingTool } from "../../briefer/briefing-utils.js";
 import { createLogger } from "../../utils/logger.js";
 import type { EnvoyThread } from "../../types/index.js";
-import { inspectDeal, readDealMessages, type InspectDealResult } from "../../utils/diplomacy/deal/deal.js";
-import { PROMISE_METADATA } from "../../../../mcp-server/dist/utils/deal-schema.js";
-import { activeProposalDeal, deriveActiveProposal } from "../../utils/diplomacy/deal/deal-reduce.js";
+import { inspectDeal, readDealMessages, type InspectDealResult } from "../../diplomacy/deal/deal.js";
+import { PROMISE_METADATA } from "../../../../mcp-server/dist/diplomacy/deals/deal-schema.js";
+import { activeProposalDeal, deriveActiveProposal } from "../../diplomacy/deal/deal-reduce.js";
 import { resolveNegotiator } from "./resolve-negotiator.js";
 import { getTeammateCounterpart } from "../context/diplomacy-context.js";
 import { insertRecordsDirections } from "../../knowledge/directions.js";
-import { renderSystemPrompt } from "../../utils/prompts/prompt-files.js";
+import { renderSystemPrompt } from "../../agents/prompts/prompt-files.js";
 import {
   NEGOTIATOR_TERMINAL_TOOLS,
   createNegotiatorTerminalTools,

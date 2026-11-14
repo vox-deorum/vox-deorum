@@ -1,5 +1,5 @@
 /**
- * Tests for the diplomat/negotiator background builder (src/envoy/utils/diplomacy-context.ts):
+ * Tests for the diplomat/negotiator background builder (src/envoy/context/diplomacy-context.ts):
  * buildDiplomacyBackgroundMessage assembles three perspective-aware sections (the two civs' cities,
  * the standing in-game deals between them, and their recently-concluded deals), degrading each
  * independently and skipping minor-civ counterparts entirely. Drives it through a stub context whose
@@ -9,7 +9,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { EnvoyThread } from '../../../../src/types/index.js';
 
-vi.mock('../../../../src/utils/models/mcp-client.js', async () => {
+vi.mock('../../../../src/agents/mcp/mcp-client.js', async () => {
   const helper = await import('../../../helpers/mock-mcp-client.js');
   return helper.mockMcpClientModule();
 });
@@ -17,7 +17,7 @@ vi.mock('../../../../src/utils/models/mcp-client.js', async () => {
 // Load the full agent graph through the registry BEFORE importing an envoy module in isolation,
 // otherwise vox-agent -> vox-context -> agent-registry re-enters vox-agent mid-evaluation (the same
 // circular-import hazard guarded in negotiator.test / diplomat-prompts.test).
-import '../../../../src/infra/agent-registry.js';
+import '../../../../src/agents/runtime/agent-registry.js';
 import { buildDiplomacyBackgroundMessage } from '../../../../src/envoy/context/diplomacy-context.js';
 import { MINOR_CIV_LEADER } from '../../../../../mcp-server/dist/knowledge/schema/base.js';
 

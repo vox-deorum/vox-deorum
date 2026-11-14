@@ -22,7 +22,7 @@ With files on, a strategist can look back at earlier turns, keep its own notes b
 | An object | `game` (access to the game folder, or `false` to leave it out), `shared` (named shared folders, each with its access), and `quota` (the step budget, default 20). |
 | `false` | Off. |
 
-Set it on the seat, the session config, or the root `vox-agents/config.json`, checked in that order. The first value wins and replaces lower levels completely, with no merging. Off is the default. `resolveSeatFiles` in `src/strategist/seat-config.ts` resolves it the same way as `triage`.
+Set it on the seat, the session config, or the root `vox-agents/config.json`, checked in that order. The first value wins and replaces lower levels completely, with no merging. Off is the default. `resolveSeatFiles` in `src/strategist/seats/seat-config.ts` resolves it the same way as `triage`.
 
 An invalid value fails session preflight before the game launches, and the error names the config path.
 
@@ -30,7 +30,7 @@ The workspace needs Node 22.17.0 or newer (the repo requires 22.23.3). On older 
 
 ## The folders
 
-`src/utils/workspace/player-workspace.ts` mounts the folders. Records, game notes, and the reference live in the seat's telemetry database. Shared folders and scratch files live under `<telemetryDir>/workspaces`.
+`src/agents/workspace/player-workspace.ts` mounts the folders. Records, game notes, and the reference live in the seat's telemetry database. Shared folders and scratch files live under `<telemetryDir>/workspaces`.
 
 | Folder | Access | Stored in | Lifetime |
 | --- | --- | --- | --- |
@@ -50,7 +50,7 @@ Rules:
 
 ### Guide files
 
-Writable game and shared folders get an **`AGENTS.md` guide** for keeping useful notes. `workspaceGuide` in `src/utils/workspace/player-workspace.ts` supplies the default text.
+Writable game and shared folders get an **`AGENTS.md` guide** for keeping useful notes. `workspaceGuide` in `src/agents/workspace/player-workspace.ts` supplies the default text.
 
 | Lifecycle | Game guide | Shared guide |
 | --- | --- | --- |
@@ -65,7 +65,7 @@ Existing guides keep their text. Rules that may change, such as the journal and 
 
 ### Game journal
 
-`/workspace/game/journal.md` is an ordinary note file with two host behaviors, both in `src/utils/workspace/journal.ts`. Agents may use it or organize notes another way; the capability reminder suggests it as the simplest option.
+`/workspace/game/journal.md` is an ordinary note file with two host behaviors, both in `src/agents/workspace/journal.ts`. Agents may use it or organize notes another way; the capability reminder suggests it as the simplest option.
 
 - **Turn headings.** When a command appends to the journal and its turn is known, `PlayerWorkspace` adds a `### Turn N` heading unless the journal's last entry is already for that turn, and demotes headings of level 1 to 3 in the appended text to level 4. Turn headings inside fenced code blocks do not count. Rewrites, deletions, and appends without a turn are committed as written.
 - **Journal window.** The notes message at the start of each run shows the newest whole entries that fit in 20,000 characters (`journalWindow`), always at least the newest one, followed by the number of older entries. A newest entry that alone is over 20,000 characters is shown alone with its heading and its newest text, marked as cut, so one long entry gets no more room than several short ones. Agents read older entries with `grep` or `sed`.
@@ -74,7 +74,7 @@ Players read the game notes, including the guide, by exporting the store (see [R
 
 ## The bash tool
 
-`src/utils/tools/bash-tool.ts` wraps the shell as a tool. `VoxAgent.getRunTools` adds `bash` to any agent whose `getActiveTools()` list is not empty. Runs that restrict their tools leave it out; for example, a telepathist answering a special message has no tools.
+`src/agents/tools/bash-tool.ts` wraps the shell as a tool. `VoxAgent.getRunTools` adds `bash` to any agent whose `getActiveTools()` list is not empty. Runs that restrict their tools leave it out; for example, a telepathist answering a special message has no tools.
 
 The tool description covers only shell mechanics: where each call starts, which commands exist, how files are written, how to calculate, and what a result contains.
 

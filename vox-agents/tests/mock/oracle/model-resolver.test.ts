@@ -1,6 +1,6 @@
 /**
  * Mock-tier unit tests for src/oracle/utils/model-resolver.ts (resolveModel) together with
- * the formatModelReference formatter from src/utils/models/model-reference.ts as Oracle uses it.
+ * the formatModelReference formatter from src/agents/models/model-reference.ts as Oracle uses it.
  *
  * Scope: rendering a resolved Model back into the telemetry `{provider}/{name}@{effort}`
  * string that Oracle records in trails and the results CSV. resolveModel's config lookup is
@@ -10,9 +10,9 @@
 
 import { describe, expect, it } from 'vitest';
 import { resolveModel } from '../../../src/oracle/utils/model-resolver.js';
-import { formatModelReference } from '../../../src/utils/models/model-reference.js';
+import { formatModelReference } from '../../../src/agents/models/model-reference.js';
 import type { Model } from '../../../src/types/index.js';
-import { config } from '../../../src/utils/config.js';
+import { config } from '../../../src/agents/config/load.js';
 
 function model(overrides: Partial<Model> = {}): Model {
   return { provider: 'google', name: 'gemini-3.5-flash', ...overrides };

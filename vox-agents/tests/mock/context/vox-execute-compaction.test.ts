@@ -1,5 +1,5 @@
 /**
- * Tests for the workspace-traffic compaction in the step loop (src/infra/vox-execute.ts) when the
+ * Tests for the workspace-traffic compaction in the step loop (src/agents/runtime/vox-execute.ts) when the
  * seat `files` setting is on: the once-per-run reminder at 75 percent of the continuity threshold,
  * dropping older bash output at the threshold only after that reminder, never touching the initial
  * prompt, and the single compact-and-retry on the first context-length error within one step. Same mocking idiom as vox-execute-step-budget.test.ts;
@@ -11,23 +11,23 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ModelMessage } from 'ai';
 
-vi.mock('../../../src/utils/models/models.js', async (orig) => {
-  const actual = await orig<typeof import('../../../src/utils/models/models.js')>();
+vi.mock('../../../src/agents/models/models.js', async (orig) => {
+  const actual = await orig<typeof import('../../../src/agents/models/models.js')>();
   return { ...actual, getModel: vi.fn(() => ({} as any)), buildProviderOptions: vi.fn(() => ({})) };
 });
-vi.mock('../../../src/utils/models/concurrency.js', async (orig) => {
-  const actual = await orig<typeof import('../../../src/utils/models/concurrency.js')>();
+vi.mock('../../../src/agents/models/concurrency.js', async (orig) => {
+  const actual = await orig<typeof import('../../../src/agents/models/concurrency.js')>();
   return { ...actual, streamTextWithConcurrency: vi.fn() };
 });
 
-import { VoxContext } from '../../../src/infra/vox-context.js';
-import { VoxAgent } from '../../../src/infra/vox-agent.js';
-import { agentRegistry } from '../../../src/infra/agent-registry.js';
-import { streamTextWithConcurrency } from '../../../src/utils/models/concurrency.js';
-import { countRequestTokens } from '../../../src/utils/models/token-counter.js';
-import { compactionReminder, droppedOutputStub } from '../../../src/utils/prompts/message-history.js';
-import { bashToolName } from '../../../src/utils/tools/tool-names.js';
-import { ClaudeCodeSession } from '../../../src/utils/models/providers/claude-code-session.js';
+import { VoxContext } from '../../../src/agents/runtime/vox-context.js';
+import { VoxAgent } from '../../../src/agents/runtime/vox-agent.js';
+import { agentRegistry } from '../../../src/agents/runtime/agent-registry.js';
+import { streamTextWithConcurrency } from '../../../src/agents/models/concurrency.js';
+import { countRequestTokens } from '../../../src/agents/models/token-counter.js';
+import { compactionReminder, droppedOutputStub } from '../../../src/agents/prompts/message-history.js';
+import { bashToolName } from '../../../src/agents/tools/tool-names.js';
+import { ClaudeCodeSession } from '../../../src/agents/models/providers/claude-code-session.js';
 import type { StrategistParameters } from '../../../src/strategist/strategy-parameters.js';
 import { makeStrategistParameters } from '../../helpers/fake-vox-context.js';
 import type { Model } from '../../../src/types/index.js';

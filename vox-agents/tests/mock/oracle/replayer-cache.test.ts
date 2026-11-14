@@ -41,7 +41,7 @@ const mocks = vi.hoisted(() => {
   };
 });
 
-vi.mock('../../../src/infra/vox-context.js', () => ({
+vi.mock('../../../src/agents/runtime/vox-context.js', () => ({
   // Constructor mocks need a function implementation so `new` works.
   VoxContext: vi.fn(function () {
     return {
@@ -59,14 +59,14 @@ vi.mock('../../../src/oracle/utils/schema-tools.js', () => ({
   replaceToolsWithSchemaOnly: mocks.replaceToolsWithSchemaOnly,
 }));
 
-vi.mock('../../../src/utils/models/mcp-client.js', () => ({
+vi.mock('../../../src/agents/mcp/mcp-client.js', () => ({
   mcpClient: {
     connect: mocks.connect,
     disconnect: mocks.disconnect,
   },
 }));
 
-vi.mock('../../../src/utils/telemetry/vox-exporter.js', () => ({
+vi.mock('../../../src/agents/telemetry/vox-exporter.js', () => ({
   VoxSpanExporter: {
     getInstance: () => ({
       createContext: mocks.createContext,

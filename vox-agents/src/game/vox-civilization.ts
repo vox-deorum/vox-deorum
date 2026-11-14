@@ -1,0 +1,655 @@
+/**
+ * @module game/vox-civilization
+ *
+ * Manages Civilization V game process lifecycle.
+ * Handles game launching, process monitoring, and exit callback management
+ * for the Windows environment. Supports binding to existing processes and
+ * crash recovery scenarios.
+ */
+
+import { spawn, type ChildProcess } from 'child_process';
+import { dirname, join } from 'path';
+import { setTimeout } from 'node:timers/promises'
+import { mkdir, readFile, writeFile } from 'fs/promises';
+import { createLogger } from '../utils/logger.js';
+import type { RandomSeedsConfig } from '../types/config.js';
+import {
+  readCivConfigMapScriptContent,
+  readCivConfigSeedsContent,
+  updateCivConfigLegacyMapScriptContent,
+  updateCivConfigMapScriptContent,
+  updateCivConfigSeedsContent,
+  updateCivUserSettingsSkipAnimationsContent,
+  type CivConfigMapScript
+} from './civ5-ini.js';
+import { getCiv5UserFilePath } from './civ5-user-files.js';
+import {
+  findProcessByImageName,
+  isProcessRunning as isWindowsProcessRunning,
+  killProcess
+} from './windows-process.js';
+import {
+  civ5ExecutableCandidates,
+  resolveCiv5Executable
+} from './civ5-executable.js';
+
+const logger = createLogger('VoxCivilization');
+const launchPollIntervalMs = 1000;
+const launchTimeoutMs = 30000;
+
+// Windows system variables the launch chain still needs on the minimal
+// environment startGame builds: machine plumbing only, nothing user-specific.
+const systemEnvNames = ['COMSPEC', 'PATHEXT', 'PATH', 'SystemDrive', 'SystemRoot', 'TEMP', 'TMP', 'windir'];
+type ExitCallback = (code: number | null) => void;
+type BoundCallback = (imageName: string) => void;
+
+interface LaunchRestoreState {
+  path: string;
+  sync: string;
+  map: string;
+  lastCiv?: string;
+  // Present only when a launch overrode the saved map script selection.
+  mapScript?: CivConfigMapScript;
+}
+
+
+/**
+ * Controls Civilization V game instance.
+ * Manages game process lifecycle including launching, monitoring, and shutdown.
+ *
+ * @class
+ *
+ * @example
+ * ```typescript
+ * import { voxCivilization } from './game/vox-civilization.js';
+ *
+ * voxCivilization.onGameExit((code) => {
+ *   console.log(`Game exited with code: ${code}`);
+ * });
+ *
+ * await voxCivilization.startGame('StartGame.lua');
+ * ```
+ */
+export class VoxCivilization {
+  private exitCallbacks: Set<ExitCallback> = new Set();
+  private boundCallbacks: Set<BoundCallback> = new Set();
+  private monitoring = false;
+  private externalProcessPid: number | null = null;
+  private pollInterval: NodeJS.Timeout | null = null;
+  private aiObserverEnabled = false;
+  private useDX11 = true;
+  // Image name the bound process actually runs under. The launch script can
+  // fall back to the default binary, so this is the only reliable answer once
+  // a game is running.
+  private boundImageName: string | null = null;
+  // Previous config.ini launch values are captured so each launch can restore
+  // the user's normal Civ behavior after the game has read the startup settings.
+  private launchRestoreState?: LaunchRestoreState;
+
+  /**
+   * Looks for a running Civilization V process, preferred build first.
+   *
+   * @private
+   * @returns The process ID and the image name it was found under, or null
+   */
+  private async findGameProcess(): Promise<{ pid: number; imageName: string } | null> {
+    for (const imageName of civ5ExecutableCandidates(this.useDX11)) {
+      const pid = await findProcessByImageName(imageName);
+      if (pid) return { pid, imageName };
+    }
+    return null;
+  }
+
+  /**
+   * Finds and binds to an existing Civilization V process.
+   *
+   * @private
+   * @returns True if found and bound successfully, false otherwise
+   */
+  private async bindToExistingProcess(): Promise<boolean> {
+    const found = await this.findGameProcess();
+    if (found) {
+      this.bindProcess(found.pid, found.imageName);
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  /** Records a discovered Civilization V process and begins monitoring it. */
+  private bindProcess(pid: number, imageName: string = resolveCiv5Executable(this.useDX11)): void {
+    logger.info(`Found existing ${imageName} process (PID: ${pid})`);
+    this.externalProcessPid = pid;
+    this.boundImageName = imageName;
+    this.monitoring = true;
+    this.startProcessMonitoring();
+    this.boundCallbacks.forEach(callback => {
+      try {
+        callback(imageName);
+      } catch (error) {
+        logger.error('Error in bound callback:', error);
+      }
+    });
+  }
+
+  /** Waits for a launched Civilization V process while the launcher remains active. */
+  private async waitForLaunchedProcess(cmdProcess: ChildProcess): Promise<boolean> {
+    let launchError: Error | undefined;
+    const onExit = (code: number | null) => {
+      launchError = new Error(`Launch script exited before Civilization V was found (code ${code ?? 'unknown'})`);
+    };
+    const onError = (error: Error) => { launchError = error; };
+    cmdProcess.once('exit', onExit);
+    cmdProcess.once('error', onError);
+
+    try {
+      for (let elapsed = 0; elapsed < launchTimeoutMs; elapsed += launchPollIntervalMs) {
+        if (launchError) throw launchError;
+        const found = await this.findGameProcess();
+        if (launchError) throw launchError;
+        if (found) {
+          this.bindProcess(found.pid, found.imageName);
+          return true;
+        }
+        await setTimeout(launchPollIntervalMs);
+      }
+      if (launchError) throw launchError;
+      throw new Error(`Civilization V did not start within ${launchTimeoutMs / 1000} seconds`);
+    } finally {
+      cmdProcess.removeListener('exit', onExit);
+      cmdProcess.removeListener('error', onError);
+    }
+  }
+
+  /**
+   * Starts polling to monitor an external process.
+   * Checks every 5 seconds if the process is still running.
+   *
+   * @private
+   */
+  private startProcessMonitoring(): void {
+    if (this.pollInterval) {
+      clearInterval(this.pollInterval);
+    }
+
+    // Poll every 5 seconds to check if process still exists
+    this.pollInterval = setInterval(async () => {
+      if (this.externalProcessPid) {
+        const stillRunning = await isWindowsProcessRunning(this.externalProcessPid);
+        if (!stillRunning) {
+          logger.info(`Process ${this.externalProcessPid} is no longer running`);
+          this.handleGameExit(0);
+          this.stopProcessMonitoring();
+        }
+      }
+    }, 5000);
+  }
+
+  /**
+   * Stops the process monitoring poll
+   */
+  private stopProcessMonitoring(): void {
+    if (this.pollInterval) {
+      clearInterval(this.pollInterval);
+      this.pollInterval = null;
+    }
+  }
+
+  /**
+   * Calculates the appropriate world size based on player count.
+   * Maps player counts to Civ5 world sizes (Duel to Huge).
+   *
+   * @private
+   * @param playerCount - Number of players
+   * @returns World size index (0=Duel, 1=Tiny, 2=Small, 3=Standard, 4=Large, 5=Huge)
+   */
+  private calculateWorldSize(playerCount: number): number {
+    if (playerCount <= 2) return 0; // Duel
+    if (playerCount <= 4) return 1; // Tiny
+    if (playerCount <= 6) return 2; // Small
+    if (playerCount <= 8) return 3; // Standard
+    if (playerCount <= 10) return 4; // Large
+    return 5; // Huge (12+ players)
+  }
+
+  private static readonly AI_OBSERVER_MOD_ID = '970aae10-1004-4c8a-af2d-8d601de5ec02';
+  private static readonly AI_OBSERVER_MOD_NAME = 'AI Observer (JFD)';
+
+  /** Renders a modId -> name record as a Lua table literal. */
+  private static toModsLua(mods: Record<string, string>): string {
+    const entries = Object.entries(mods)
+      .map(([id, name]) => `  ["${id}"] = "${name}"`)
+      .join(',\n');
+    return entries.length > 0 ? `{\n${entries}\n}` : '{}';
+  }
+
+  /**
+   * Builds a Lua table literal string for required mods,
+   * conditionally including AI Observer based on aiObserverEnabled.
+   */
+  private buildRequiredModsLua(): string {
+    const mods: Record<string, string> = {
+      'd1b6328c-ff44-4b0d-aad7-c657f83610cd': 'Community Patch',
+      '8411a7a8-dad3-4622-a18e-fcc18324c799': 'Vox Populi',
+      '24923240-e4fb-4bf6-8f0e-6e5b6cf4d3c2': 'Vox Populi + EUI',
+      '04c67ca5-d408-4b9e-be1b-bbc00e67fd8e': 'Vox Deorum',
+    };
+    if (this.aiObserverEnabled) {
+      mods[VoxCivilization.AI_OBSERVER_MOD_ID] = VoxCivilization.AI_OBSERVER_MOD_NAME;
+    }
+    return VoxCivilization.toModsLua(mods);
+  }
+
+  /**
+   * Builds a Lua table literal string for mods to explicitly disable before
+   * activation. Civ5 persists the enabled-mods set across launches, so a mod
+   * enabled by a previous session stays enabled until something turns it off.
+   * Only the AI Observer is force-disabled when unwanted — players may have
+   * other modmods enabled that we must leave alone.
+   */
+  private buildDisabledModsLua(): string {
+    const mods: Record<string, string> = {};
+    if (!this.aiObserverEnabled) {
+      mods[VoxCivilization.AI_OBSERVER_MOD_ID] = VoxCivilization.AI_OBSERVER_MOD_NAME;
+    }
+    return VoxCivilization.toModsLua(mods);
+  }
+
+  /**
+   * Generates a Lua file from a template by replacing placeholders.
+   *
+   * @private
+   * @param templateName - Template filename in scripts/
+   * @param outputName - Output filename in scripts/
+   * @param replacements - Map of placeholder keys to values (keys without {{ }})
+   */
+  private async generateFromTemplate(
+    templateName: string,
+    outputName: string,
+    replacements: Record<string, string>
+  ): Promise<void> {
+    const templatePath = join('scripts', templateName);
+    const outputPath = join('scripts', outputName);
+
+    try {
+      let content = await readFile(templatePath, 'utf-8');
+      for (const [key, value] of Object.entries(replacements)) {
+        content = content.replace(`{{${key}}}`, () => value);
+      }
+      await writeFile(outputPath, content, 'utf-8');
+      logger.debug(`Generated ${outputPath} from ${templateName}`);
+    } catch (error) {
+      logger.error(`Failed to generate ${outputName} from ${templateName}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Generates a StartGame.lua file from the template with dynamic player count and map size.
+   *
+   * @private
+   * @param playerCount - Number of players to configure
+   */
+  private async generateStartGameLua(playerCount: number): Promise<void> {
+    // Round player count to nearest even number
+    const roundedPlayerCount = Math.ceil(playerCount / 2) * 2;
+
+    // Calculate appropriate world size
+    const worldSize = this.calculateWorldSize(roundedPlayerCount);
+
+    // Generate player slots array (all AI = 2)
+    const playerSlots = Array(roundedPlayerCount).fill(2).join(', ');
+
+    logger.info(`Generating StartGame.lua for ${roundedPlayerCount} players (requested: ${playerCount}) with world size ${worldSize}`);
+
+    await this.generateFromTemplate('StartGame.template.lua', 'StartGame.temp.lua', {
+      WORLD_SIZE: worldSize.toString(),
+      PLAYER_SLOTS: `{ ${playerSlots} }`,
+      REQUIRED_MODS: this.buildRequiredModsLua(),
+      DISABLED_MODS: this.buildDisabledModsLua(),
+    });
+  }
+
+  /**
+   * Updates SinglePlayerQuickCombatEnabled and SinglePlayerQuickMovementEnabled in
+   * the user's Civ5 UserSettings.ini.
+   *
+   * @param skipEnabled - true enables quick-skip (value 1); false disables it (value 0)
+   */
+  async updateSkipAnimations(skipEnabled: boolean): Promise<void> {
+    const value = skipEnabled ? '1' : '0';
+    const settingsPath = await getCiv5UserFilePath('UserSettings.ini');
+    let content: string;
+    try {
+      content = await readFile(settingsPath, 'utf-8');
+    } catch {
+      logger.warn(`UserSettings.ini not found at ${settingsPath}, skipping animation config`);
+      return;
+    }
+
+    const updated = updateCivUserSettingsSkipAnimationsContent(content, skipEnabled);
+
+    await writeFile(settingsPath, updated, 'utf-8');
+    logger.info(`Set SinglePlayerQuickCombat/Movement to ${value} in UserSettings.ini`);
+  }
+
+  /**
+   * Prepare Civ's config.ini new-game settings before launching a game.
+   *
+   * Civ reads `SyncRandSeed` and `MapRandSeed` during pregame initialization.
+   * If the config omits one or both sides, write `0` for those sides so stale
+   * fixed seeds in config.ini do not leak into an unseeded run. The same write
+   * repairs a LastMapScript that still names the legacy "(1b) Vox Deorum"
+   * folder, since an automated start reuses that map script.
+   *
+   * A seeded run also sets `LastCiv` to -1 (random). Otherwise the human slot
+   * keeps the civ last picked in the setup screen, which shifts every later
+   * random civ pick and gives a different lineup for the same seed.
+   *
+   * A map script override replaces `LastMapScript` and turns off
+   * `LastMapScriptRandom`, since the automated start uses the saved selection.
+   *
+   * A player who never started Civ V has no config.ini. A run with neither
+   * seeds nor a map script then leaves it alone; otherwise it creates the file
+   * with just the launch settings.
+   */
+  async applyLaunchSettings(seeds?: RandomSeedsConfig, mapScript?: string): Promise<void> {
+    const configPath = await getCiv5UserFilePath('config.ini');
+    const seeded = seeds?.sync !== undefined || seeds?.map !== undefined;
+    let content: string;
+    try {
+      content = await readFile(configPath, 'utf-8');
+    } catch {
+      if (!seeded && !mapScript) {
+        logger.warn(`config.ini not found at ${configPath}, skipping launch settings`);
+        return;
+      }
+      content = '';
+      await mkdir(dirname(configPath), { recursive: true });
+    }
+
+    // Repair first so a restore never brings back the legacy map script path.
+    content = updateCivConfigLegacyMapScriptContent(content);
+
+    const original = readCivConfigSeedsContent(content);
+    this.launchRestoreState ??= {
+      path: configPath,
+      sync: original.sync ?? '0',
+      map: original.map ?? '0',
+      lastCiv: original.lastCiv
+    };
+
+    let updated = updateCivConfigSeedsContent(content, {
+      sync: seeds?.sync ?? 0,
+      map: seeds?.map ?? 0,
+      lastCiv: seeded ? -1 : undefined
+    });
+    if (mapScript) {
+      this.launchRestoreState.mapScript ??= readCivConfigMapScriptContent(content);
+      updated = updateCivConfigMapScriptContent(updated, { script: mapScript, random: '0' });
+    }
+    await writeFile(configPath, updated, 'utf-8');
+    logger.info(`Set Civ V launch settings in config.ini (sync=${seeds?.sync ?? 0}, map=${seeds?.map ?? 0}${mapScript ? `, mapScript=${mapScript}` : ''})`);
+  }
+
+  /**
+   * Restore config.ini values captured before `applyLaunchSettings`.
+   *
+   * Call this once Civ has read config.ini, so repeated Vox runs can be
+   * reproducible without permanently changing the user's Civ setup.
+   */
+  async restoreLaunchSettings(): Promise<void> {
+    if (!this.launchRestoreState) return;
+
+    const restoreState = this.launchRestoreState;
+    this.launchRestoreState = undefined;
+
+    try {
+      const content = await readFile(restoreState.path, 'utf-8');
+      let restored = updateCivConfigSeedsContent(content, {
+        sync: restoreState.sync,
+        map: restoreState.map,
+        lastCiv: restoreState.lastCiv
+      });
+      if (restoreState.mapScript) {
+        restored = updateCivConfigMapScriptContent(restored, restoreState.mapScript);
+      }
+      await writeFile(restoreState.path, restored, 'utf-8');
+      logger.info('Restored Civ V launch settings in config.ini');
+    } catch (error) {
+      logger.warn('Failed to restore Civ V launch settings in config.ini:', error);
+    }
+  }
+
+  /**
+   * Enables or disables AI Observer mod inclusion in generated automation scripts.
+   *
+   * @param enabled - When true, the AI Observer mod is included in the required mods list
+   */
+  setAiObserver(enabled: boolean): void {
+    this.aiObserverEnabled = enabled;
+    logger.debug(`AI Observer ${enabled ? 'enabled' : 'disabled'}`);
+  }
+
+  /**
+   * Chooses the Civilization V build to launch.
+   *
+   * @param enabled - When true, launch the DirectX 11 binary if the install has one
+   */
+  setUseDX11(enabled: boolean): void {
+    this.useDX11 = enabled;
+    logger.debug(`DirectX 11 build ${enabled ? 'preferred' : 'disabled'}`);
+  }
+
+  /**
+   * Image name of the running game, or of the build the next launch will ask for.
+   * Useful for anything that has to target the game window or process by name.
+   */
+  getGameExecutable(): string {
+    return this.boundImageName ?? resolveCiv5Executable(this.useDX11);
+  }
+
+  /**
+   * Starts a Civilization V game with the specified Lua script.
+   * Waits for the game process to fully initialize before returning.
+   *
+   * @param luaName - Name of the Lua script to run (default: 'LoadMods.lua')
+   * @param playerCount - Optional number of players for StartGame.lua (generates from template)
+   * @param mapScript - Optional map script for a new game
+   * @returns True when a Civilization V process is bound, false when launch fails
+   */
+  async startGame(luaName: string = 'LoadMods.lua', playerCount?: number, visualMode?: boolean, randomSeeds?: RandomSeedsConfig, mapScript?: string): Promise<boolean> {
+    // Check if game is already running
+    if (await this.bindToExistingProcess() || this.isGameRunning()) {
+      logger.info('Game instance already exists, monitoring it...');
+      return true;
+    }
+
+    try {
+      // Only a brand-new game reads pregame seeds and the map script from
+      // config.ini. Wait/load modes bind to an existing setup and should not
+      // rewrite user settings.
+      if (luaName === 'StartGame.lua') {
+        await this.applyLaunchSettings(randomSeeds, mapScript);
+      }
+
+      // Generate temp Lua scripts from templates with required mods
+      let actualLuaName = luaName;
+      if (luaName === 'StartGame.lua' && playerCount !== undefined) {
+        await this.generateStartGameLua(playerCount);
+        actualLuaName = 'StartGame.temp.lua';
+      } else if (luaName === 'LoadGame.lua') {
+        await this.generateFromTemplate('LoadGame.template.lua', 'LoadGame.temp.lua', {
+          REQUIRED_MODS: this.buildRequiredModsLua(),
+          DISABLED_MODS: this.buildDisabledModsLua(),
+        });
+        actualLuaName = 'LoadGame.temp.lua';
+      } else if (luaName === 'LoadMods.lua') {
+        await this.generateFromTemplate('LoadMods.template.lua', 'LoadMods.temp.lua', {
+          REQUIRED_MODS: this.buildRequiredModsLua(),
+          DISABLED_MODS: this.buildDisabledModsLua(),
+        });
+        actualLuaName = 'LoadMods.temp.lua';
+      }
+
+      const scriptPath = join('scripts', 'launch-civ5.cmd');
+
+      const gameExecutable = resolveCiv5Executable(this.useDX11);
+      logger.info(`Launching ${gameExecutable} with script: ${actualLuaName}${visualMode ? " in visual production mode" : ""}`);
+
+      // Launch the script, then bind as soon as its direct Civilization V
+      // child appears. Direct launches keep the script alive for the game's
+      // lifetime, so waiting for its exit would block the session startup.
+      // The launch script reads production mode from the second positional and
+      // the executable from the third, so the mode token is always present.
+      const args = ['/c', scriptPath, actualLuaName, visualMode ? 'production' : 'standard', gameExecutable];
+
+      // Run the launch chain on a minimal environment rather than a copy of
+      // ours, so secrets like API keys never reach the game process. The
+      // carried set is the Windows system baseline (systemEnvNames) plus the
+      // VOX_RL_CAPTURE opt-in the game DLL reads at load, when it is set. The
+      // steam_appid.txt written by the launch script keeps CivilizationV.exe
+      // from re-parenting through Steam, which would drop this environment.
+      const launchEnv: NodeJS.ProcessEnv = {};
+      for (const name of systemEnvNames) {
+        const value = process.env[name];
+        if (value !== undefined) {
+          launchEnv[name] = value;
+        }
+      }
+      if (process.env.VOX_RL_CAPTURE !== undefined) {
+        launchEnv.VOX_RL_CAPTURE = process.env.VOX_RL_CAPTURE;
+      }
+      if (process.env.VOX_RL_CAPTURE_TIMINGS !== undefined) {
+        launchEnv.VOX_RL_CAPTURE_TIMINGS = process.env.VOX_RL_CAPTURE_TIMINGS;
+      }
+
+      const cmdProcess = spawn('cmd', args, {
+        detached: false,
+        stdio: 'inherit',
+        shell: false,
+        env: launchEnv
+      });
+
+      return await this.waitForLaunchedProcess(cmdProcess);
+    } catch (error) {
+      logger.error('Failed to launch game:', error);
+      await this.restoreLaunchSettings();
+      return false;
+    }
+  }
+
+  /**
+   * Registers a callback to be called when the game exits
+   * @param callback Function to call when game exits
+   */
+  onGameExit(callback: ExitCallback): void {
+    this.exitCallbacks.add(callback);
+  }
+
+  /**
+   * Registers a callback for every process bind, launched or attached.
+   * It receives the image name the process actually runs under.
+   * @param callback Function to call when a game process is bound
+   */
+  onGameBound(callback: BoundCallback): void {
+    this.boundCallbacks.add(callback);
+  }
+
+  /**
+   * Removes a previously registered exit callback
+   * @param callback Callback to remove
+   */
+  offGameExit(callback: ExitCallback): void {
+    this.exitCallbacks.delete(callback);
+  }
+
+  /**
+   * Checks if the game is currently running
+   * @returns true if game process exists and hasn't exited
+   */
+  isGameRunning(): boolean {
+    return this.monitoring && this.externalProcessPid !== null;
+  }
+
+  /**
+   * Gets the current game process PID if running
+   * @returns Process ID or null if not running
+   */
+  getProcessId(): number | null {
+    return this.externalProcessPid;
+  }
+
+  private handleGameExit(code: number | null): void {
+    if (!this.monitoring) return;
+    
+    logger.info(`Game exited with code: ${code}`);
+    this.monitoring = false;
+    this.externalProcessPid = null;
+    this.boundImageName = null;
+    this.stopProcessMonitoring();
+
+    // Notify all registered callbacks
+    this.exitCallbacks.forEach(callback => {
+      try {
+        callback(code);
+      } catch (error) {
+        logger.error('Error in exit callback:', error);
+      }
+    });
+  }
+
+  /**
+   * Forcefully kill the game process using Windows taskkill.
+   *
+   * @returns True if kill command succeeded, false otherwise
+   */
+  async killGame(): Promise<boolean> {
+    if (!this.externalProcessPid) {
+      logger.info('No game process to kill');
+      return true;
+    }
+
+    try {
+      logger.info(`Killing game process with PID: ${this.externalProcessPid}`);
+      await killProcess(this.externalProcessPid);
+
+      // Wait a bit for the process to terminate
+      await setTimeout(5000);
+
+      // Update internal state if haven't
+      this.handleGameExit(-1);
+      return true;
+    } catch (error) {
+      logger.error('Failed to kill game process:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Cleanup resources.
+   * Stops monitoring, forgets the tracked process, and clears all callbacks.
+   * The tracked PID must be dropped too: with the poll stopped nothing could
+   * notice the game exiting later, and a stale PID would make the next
+   * startGame() believe a dead game is still running.
+   */
+  destroy(): void {
+    this.stopProcessMonitoring();
+    this.monitoring = false;
+    this.externalProcessPid = null;
+    this.boundImageName = null;
+    this.exitCallbacks.clear();
+    this.boundCallbacks.clear();
+  }
+}
+
+/**
+ * Singleton VoxCivilization instance for managing the game process.
+ *
+ * @example
+ * ```typescript
+ * import { voxCivilization } from './game/vox-civilization.js';
+ * await voxCivilization.startGame('LoadGame.lua');
+ * ```
+ */
+export const voxCivilization = new VoxCivilization();

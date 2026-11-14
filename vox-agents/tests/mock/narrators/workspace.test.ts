@@ -14,11 +14,11 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-vi.mock('../../../src/utils/telemetry/knowledge-db.js', () => ({
+vi.mock('../../../src/knowledge/database.js', () => ({
   openReadonlyGameDb: vi.fn(),
 }));
 
-import { openReadonlyGameDb } from '../../../src/utils/telemetry/knowledge-db.js';
+import { openReadonlyGameDb } from '../../../src/knowledge/database.js';
 import { NarratorWorkspace } from '../../../src/narrators/workspace.js';
 import type { NarratorContext, Episodes } from '../../../src/narrators/types.js';
 

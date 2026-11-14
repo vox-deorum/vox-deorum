@@ -6,16 +6,16 @@
 
 import type { Experimental_EvaluationQuestion as EvaluationQuestion } from "ai";
 import type { Model, EnvoyThread } from "../types/index.js";
-import { audienceID, identityOf } from "../utils/diplomacy/transcript/transcript-utils.js";
-import { reportCategories, type ReportCategory } from "../utils/prompts/event-filters.js";
-import { isFailedToolResult } from "../utils/tools/mcp-tools.js";
-import type { PreparedAgentState } from "../infra/vox-agent.js";
-import type { ExecuteTokenOutput } from "../infra/vox-run.js";
+import { audienceID, identityOf } from "../diplomacy/transcript/transcript-utils.js";
+import { reportCategories, type ReportCategory } from "../knowledge/events/event-filters.js";
+import { isFailedToolResult } from "../agents/tools/mcp-tools.js";
+import type { PreparedAgentState } from "../agents/runtime/vox-agent.js";
+import type { ExecuteTokenOutput } from "../agents/runtime/vox-run.js";
 import { Analyst, AnalystInput, AnalystReport } from "./analyst.js";
-import { VoxContext } from "../infra/vox-context.js";
+import { VoxContext } from "../agents/runtime/vox-context.js";
 import { getGameState, StrategistParameters } from "../strategist/strategy-parameters.js";
 import { areTeammates } from "../strategist/pacing/utils.js";
-import { renderSystemPrompt } from "../utils/prompts/prompt-files.js";
+import { renderSystemPrompt } from "../agents/prompts/prompt-files.js";
 
 /** How many past turns of diplomatic history the analyst reads for each involved player. */
 const historyTurns = 30;

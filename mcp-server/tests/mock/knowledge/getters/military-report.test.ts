@@ -11,7 +11,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { setupStore } from '../../helpers.js';
 import { LuaFunction } from '../../../../src/bridge/lua-function.js';
-import { enumMappings } from '../../../../src/utils/knowledge/enum.js';
+import { enumMappings } from '../../../../src/knowledge/helpers/enum.js';
 import { getMilitaryReport } from '../../../../src/knowledge/getters/military-report.js';
 import { UnitAITypes } from '../../../../src/database/enums/UnitAITypes.js';
 import type { KnowledgeStore } from '../../../../src/knowledge/store.js';

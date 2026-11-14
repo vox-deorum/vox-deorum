@@ -1,7 +1,7 @@
 import { gameDatabase } from "../../server.js";
 import { DatabaseQueryTool } from "../abstract/database-query.js";
 import * as z from "zod";
-import { getEraName } from "../../utils/database/enums.js";
+import { getEraName } from "../../database/helpers/enums.js";
 
 /**
  * Schema for building summary information

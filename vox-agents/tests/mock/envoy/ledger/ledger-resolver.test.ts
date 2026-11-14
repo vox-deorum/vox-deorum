@@ -9,7 +9,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { resolveLedger, formatResolutionErrors, LEDGER_TERMS } from '../../../../src/envoy/ledger/ledger-resolver.js';
-import { PROMISE_TYPES, PROMISE_METADATA, AGREEMENT_METADATA } from '../../../../../mcp-server/dist/utils/deal-schema.js';
+import { PROMISE_TYPES, PROMISE_METADATA, AGREEMENT_METADATA } from '../../../../../mcp-server/dist/diplomacy/deals/deal-schema.js';
 
 const AGENT = 3;
 const COUNTERPART = 1;

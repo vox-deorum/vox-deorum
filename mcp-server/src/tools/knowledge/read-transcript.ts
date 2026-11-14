@@ -13,7 +13,7 @@ import { ToolBase } from "../base.js";
 import * as z from "zod";
 import { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { getDiplomaticMessages } from "../../knowledge/getters/diplomatic-messages.js";
-import { MESSAGE_TYPES, type MessageType, TranscriptMessageSchema } from "../../utils/transcript-schema.js";
+import { MESSAGE_TYPES, type MessageType, TranscriptMessageSchema } from "../../diplomacy/transcript-schema.js";
 
 /** Input schema for the read-transcript tool. */
 const ReadTranscriptInputSchema = z.object({

@@ -9,9 +9,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { Kysely } from 'kysely';
-import { openSqliteKyselyReadonly } from '../../utils/telemetry/sqlite-helpers.js';
+import { openSqliteKyselyReadonly } from '../../agents/telemetry/sqlite-helpers.js';
 import { createLogger } from '../../utils/logger.js';
-import type { TelemetryDatabase } from '../../utils/telemetry/schema.js';
+import type { TelemetryDatabase } from '../../agents/telemetry/schema.js';
 
 const logger = createLogger('OracleDbResolver');
 

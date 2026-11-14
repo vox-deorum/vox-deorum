@@ -1,5 +1,5 @@
 /**
- * Tests for the diplomacy deal I/O wrappers (src/utils/diplomacy/deal.ts): the read-only
+ * Tests for the diplomacy deal I/O wrappers (src/diplomacy/deal/deal.ts): the read-only
  * inspect-deal call, the typed deal-action transcript writes, value-snapshot computation,
  * and deal-message reading. Uses the shared mcpClient fixture — no live MCP server / game.
  */
@@ -8,9 +8,9 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { installMockMcpClient, structuredResult } from '../../../helpers/mock-mcp-client.js';
 import { transcriptRow } from '../../../helpers/diplomacy-fixtures.js';
 import type { EnvoyThread } from '../../../../src/types/index.js';
-import type { TranscriptMessage } from '../../../../src/utils/diplomacy/transcript/transcript-utils.js';
+import type { TranscriptMessage } from '../../../../src/diplomacy/transcript/transcript-utils.js';
 
-vi.mock('../../../../src/utils/models/mcp-client.js', async () => {
+vi.mock('../../../../src/agents/mcp/mcp-client.js', async () => {
   const helper = await import('../../../helpers/mock-mcp-client.js');
   return helper.mockMcpClientModule();
 });
@@ -26,8 +26,8 @@ import {
   IllegalDealError,
   ProposalConflictError,
   type InspectDealResult,
-} from '../../../../src/utils/diplomacy/deal/deal.js';
-import { beginTurnState } from '../../../../src/utils/diplomacy/turn/active-turn-state.js';
+} from '../../../../src/diplomacy/deal/deal.js';
+import { beginTurnState } from '../../../../src/diplomacy/turn/active-turn-state.js';
 
 let mcp: ReturnType<typeof installMockMcpClient>;
 beforeEach(() => {

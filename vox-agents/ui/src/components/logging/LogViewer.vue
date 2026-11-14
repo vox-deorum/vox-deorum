@@ -54,7 +54,7 @@
 <script setup lang="ts">
 import { ref, computed, nextTick, watch } from 'vue';
 import { logs, isConnected, clearLogs } from '@/stores/logs';
-import { filterLogs, levelOptions } from '@/api/log-utils';
+import { filterLogs, levelOptions } from '@/presentation/log-utils';
 import type { LogEntry } from '@/utils/types';
 import Button from 'primevue/button';
 import MultiSelect from 'primevue/multiselect';

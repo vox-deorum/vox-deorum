@@ -4,9 +4,9 @@ import type {
   NewspaperDesignId,
   NewspaperItem,
   NewspaperPage,
-  VoteValue,
-} from "../../src/newspaper/contracts/types.js";
-import { getNewspaperAsset, newspaperVoteIconAssets } from "../../src/newspaper/ui/assets.js";
+} from "../../src/newspaper/contracts/issue.js";
+import type { VoteValue } from "../../src/newspaper/contracts/reader.js";
+import { getNewspaperAsset, newspaperVoteIconAssets } from "../../src/newspaper/renderer/assets.js";
 import { bindReaderAction } from "./actions.js";
 import {
   appendInlineNodes,

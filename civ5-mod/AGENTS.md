@@ -17,7 +17,9 @@ Never hand-edit the `md5` attributes in the modinfo - `update_md5.py` owns them.
 
 - `VoxDeorum.modinfo` - mod manifest: file list with MD5s, database actions, entry points
 - `Lua/` - standalone `InGameUIAddin` scripts (no XML context)
-- `UI/` - UI contexts: paired `.lua` + `.xml` files, plus shared helper modules
+- `UI/Deals/`, `UI/Diplomacy/`, `UI/HumanControl/` - paired `.lua` + `.xml` contexts, transports, and mock drivers for each feature
+- `UI/Shared/` - Lua helper modules shared by the feature contexts
+- `UI/` - native `LeaderHeadRoot` overrides and the newspaper context remain at their existing paths
 - `Mapscripts/` - map script entry points
 - `SQL/`, `XML/` - database updates applied via `OnModActivated`
 - `Text/` - localization (`Language_en_US` rows)
@@ -37,6 +39,8 @@ Then wire the file up:
 - New UI screens need an `<EntryPoint type="InGameUIAddin">` pointing at the **XML** file (the XML pulls in its Lua); standalone Lua addins point at the `.lua` directly
 - Shared Lua modules (e.g. `VoxDeorumSeat.lua`, `VoxDeorumDealUtils.lua`) are `import="1"` with no entry point - they are included by other contexts
 
+Use the full relative path in the manifest. Keep Lua includes as module names, such as `include("VoxDeorumSeat")`: imported modules are resolved through the VFS, so moving them between feature folders does not change their include names. Keep paired context Lua and XML files together with matching basenames.
+
 ## Lua Conventions
 
 - Indent with tabs
@@ -55,7 +59,7 @@ Then wire the file up:
 
 ### Mock Drivers
 
-`UI/VoxDeorum*Mock.lua` files are stage-scoped mock drivers that exercise a screen (via FireTuner scenarios / fake delayed results) before the real backend replaces them. Keep the mock as the final include of its screen so a later stage can swap only that file.
+`VoxDeorum*Mock.lua` files live beside their screen in `UI/` or its feature folder. They are stage-scoped mock drivers that exercise a screen (via FireTuner scenarios / fake delayed results) before the real backend replaces them. Keep the mock as the final include of its screen so a later stage can swap only that file.
 
 ## UI XML Conventions
 

@@ -13,7 +13,7 @@ import type {
 import { buildSideCatalog, type AddTermPayload } from '@/utils/deal/deal-catalog';
 import { addItemWithMirror, removeItemWithMirror } from '@/utils/deal/deal-helpers';
 import { errorMessage } from '@/utils/errors';
-import { deriveActiveProposal } from '@vox/utils/diplomacy/deal/deal-reduce';
+import { deriveActiveProposal } from '@vox/diplomacy/deal/deal-reduce';
 
 /** A normalized deal submission emitted to the chat streaming workflow. */
 export interface DealSubmission {

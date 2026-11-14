@@ -1,5 +1,5 @@
 /**
- * Run-isolation tests for VoxPlayer (src/strategist/vox-player.ts).
+ * Run-isolation tests for VoxPlayer (src/strategist/seats/vox-player.ts).
  *
  * Drives a couple of real strategist turns through VoxPlayer.execute() with the heavy edges stubbed
  * (timers, telemetry exporters, tool calls, and the strategist agent execution itself). Asserts the
@@ -27,13 +27,13 @@ vi.mock('../../../src/strategist/pacing/triage.js', () => ({
   runStrategistTriage: async () => triageMock.verdict,
 }));
 
-import { VoxPlayer } from '../../../src/strategist/vox-player.js';
-import { HumanDecisionBus } from '../../../src/strategist/human-decision-bus.js';
-import { VoxSpanExporter } from '../../../src/utils/telemetry/vox-exporter.js';
+import { VoxPlayer } from '../../../src/strategist/seats/vox-player.js';
+import { HumanDecisionBus } from '../../../src/strategist/seats/human-decision-bus.js';
+import { VoxSpanExporter } from '../../../src/agents/telemetry/vox-exporter.js';
 import { spanProcessor, sqliteExporter } from '../../../src/instrumentation.js';
 import type { PlayerConfig } from '../../../src/types/config.js';
 import type { StrategistParameters } from '../../../src/strategist/strategy-parameters.js';
-import type { VoxRunOptions } from '../../../src/infra/vox-run.js';
+import type { VoxRunOptions } from '../../../src/agents/runtime/vox-run.js';
 
 const playerConfig: PlayerConfig = { strategist: 'simple-strategist', llms: {} } as PlayerConfig;
 

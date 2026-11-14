@@ -32,7 +32,7 @@
  * and the new value, followed by the values and the evaluator's confidence.
  */
 import { computed } from 'vue';
-import { answerHistogram, answerTooltip, stateClass, type DecisionItem } from '@/api/strategist-turn';
+import { answerHistogram, answerTooltip, stateClass, type DecisionItem } from '@/presentation/strategist-turn';
 import DecisionValue from './DecisionValue.vue';
 import DecisionConfidence from './DecisionConfidence.vue';
 

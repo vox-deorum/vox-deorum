@@ -28,7 +28,7 @@ vi.mock('../../../src/utils/config.js', async importOriginal => {
 });
 
 import { DatabaseManager, enumMappingTables } from '../../../src/database/manager.js';
-import { enumMappings } from '../../../src/utils/knowledge/enum.js';
+import { enumMappings } from '../../../src/knowledge/helpers/enum.js';
 
 const enumTables = enumMappingTables.map(([tableName]) => tableName);
 

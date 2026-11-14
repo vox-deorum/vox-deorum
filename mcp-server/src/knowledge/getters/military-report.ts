@@ -5,8 +5,8 @@
 
 import { LuaFunction } from '../../bridge/lua-function.js';
 import { knowledgeManager } from '../../server.js';
-import { enumMappings } from '../../utils/knowledge/enum.js';
-import { composeVisibility } from '../../utils/knowledge/visibility.js';
+import { enumMappings } from '../helpers/enum.js';
+import { composeVisibility } from '../helpers/visibility.js';
 import { createLogger } from '../../utils/logger.js';
 
 const logger = createLogger("getMilitaryReport");

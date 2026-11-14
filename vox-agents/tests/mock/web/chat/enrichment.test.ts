@@ -6,8 +6,8 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { contextRegistry } from '../../../../src/infra/context-registry.js';
-import { sessionRegistry } from '../../../../src/infra/session-registry.js';
+import { contextRegistry } from '../../../../src/agents/runtime/context-registry.js';
+import { sessionRegistry } from '../../../../src/agents/runtime/session-registry.js';
 import type { EnvoyThread, PlayerAssignment } from '../../../../src/types/index.js';
 import {
   backfillThreadIdentities,

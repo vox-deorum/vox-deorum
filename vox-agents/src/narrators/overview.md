@@ -22,7 +22,7 @@ Relative config filenames resolve under `configs/`. The config supplies `gameID`
 
 - `NarratorWorkspace` in `workspace.ts` reads and writes assembly products and opens the knowledge database. Later stages are intended to communicate through workspace files so users can inspect or edit intermediate products.
 - Episodes contain `turn`, `playerID`, `sourceFile`, `offset`, `duration`, and event counts. Timing uses source-file-relative milliseconds. Minor-civilization footage uses `playerID = -1` and may include a `worldCongress` summary.
-- `types.ts` defines the implemented configuration and output contracts. Shared knowledge-database helpers live in `src/utils/telemetry/knowledge-db.ts`, relative to `vox-agents/`.
+- `types.ts` defines the implemented configuration and output contracts. Shared knowledge-database helpers live in `src/knowledge/database.ts`, relative to `vox-agents/`.
 
 ## Source map
 

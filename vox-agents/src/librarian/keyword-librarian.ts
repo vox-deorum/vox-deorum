@@ -8,9 +8,9 @@
 import { ModelMessage } from "ai";
 import { z } from "zod";
 import { Librarian } from "./librarian.js";
-import { VoxContext } from "../infra/vox-context.js";
+import { VoxContext } from "../agents/runtime/vox-context.js";
 import { StrategistParameters } from "../strategist/strategy-parameters.js";
-import { renderSystemPrompt } from "../utils/prompts/prompt-files.js";
+import { renderSystemPrompt } from "../agents/prompts/prompt-files.js";
 
 /**
  * Keyword output schema for LLM JSON generation

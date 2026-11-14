@@ -20,10 +20,10 @@
 import path from 'node:path';
 import readline from 'node:readline';
 import { parseArgs } from 'node:util';
-import { config } from '../utils/config.js';
+import { config } from '../agents/config/load.js';
 import { getEpisodeDbInstance } from './episode-db.js';
 import { createLogger } from '../utils/logger.js';
-import { openReadonlyGameDb, getWinner } from '../utils/telemetry/knowledge-db.js';
+import { openReadonlyGameDb, getWinner } from '../knowledge/database.js';
 import { scanArchive } from './pipeline/scanner.js';
 import { EpisodeWriter } from './pipeline/writer.js';
 import type { ArchiveEntry } from './types.js';
@@ -34,8 +34,8 @@ import { generateEmbeddings } from './pipeline/embeddings.js';
 import { selectLandmarks } from './pipeline/selector.js';
 import { computeTargetTurns, type WorkerStats } from './pipeline/target-turns.js';
 import { startWebServer } from '../web/server.js';
-import { processManager } from '../infra/process-manager.js';
-import { ensureModelsResolved } from '../utils/models/resolution.js';
+import { processManager } from '../agents/runtime/process-manager.js';
+import { ensureModelsResolved } from '../agents/models/resolution.js';
 
 const logger = createLogger('Archivist');
 

@@ -1,5 +1,5 @@
 /**
- * Tests for VoxContext's MCP tool-registry path (src/infra/vox-context.ts):
+ * Tests for VoxContext's MCP tool-registry path (src/agents/runtime/vox-context.ts):
  *   - registerTools(): fetches defs via mcpClient.getTools(), indexes them in
  *     mcpToolMap, wraps them into the executable `tools` set, and persists a
  *     metadata cache to disk.
@@ -16,13 +16,13 @@ import fs from 'node:fs';
 import type { Tool as MCPTool } from '@modelcontextprotocol/sdk/types.js';
 import { installMockMcpClient } from '../../helpers/mock-mcp-client.js';
 
-vi.mock('../../../src/utils/models/mcp-client.js', async () => {
+vi.mock('../../../src/agents/mcp/mcp-client.js', async () => {
   const helper = await import('../../helpers/mock-mcp-client.js');
   return helper.mockMcpClientModule();
 });
 
-import { VoxContext } from '../../../src/infra/vox-context.js';
-import { AgentParameters } from '../../../src/infra/vox-agent.js';
+import { VoxContext } from '../../../src/agents/runtime/vox-context.js';
+import { AgentParameters } from '../../../src/agents/runtime/vox-agent.js';
 
 /** Two minimal MCP tool definitions; get-cities carries _meta to prove it round-trips. */
 const TOOLS: MCPTool[] = [

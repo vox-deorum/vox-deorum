@@ -93,7 +93,7 @@ The loop captures the commit after preparation, including archived briefings. Ev
 
 ### Replay workspaces
 
-Rows recorded with files on replay against a pinned, disposable copy of their seat workspace; rows with files off use the base schema-only context. `ReplayWorkspace` in `src/utils/workspace/replay-workspace.ts` opens the source telemetry database's seat store read-only at the row's recorded `workspace` commit. It locates that database through `discoverDbPath` in `src/oracle/utils/db-resolver.ts` under the experiment's `telemetryDir`, just as retrieval does. The copy mirrors the original mounts:
+Rows recorded with files on replay against a pinned, disposable copy of their seat workspace; rows with files off use the base schema-only context. `ReplayWorkspace` in `src/agents/workspace/replay-workspace.ts` opens the source telemetry database's seat store read-only at the row's recorded `workspace` commit. It locates that database through `discoverDbPath` in `src/oracle/utils/db-resolver.ts` under the experiment's `telemetryDir`, just as retrieval does. The copy mirrors the original mounts:
 
 | Folder | Replay behavior |
 | --- | --- |
@@ -104,7 +104,7 @@ Rows recorded with files on replay against a pinned, disposable copy of their se
 
 Writes persist across commands within one execution but never reach disk or the store, and nothing is committed. Each execution, meaning every model variant and repetition, gets its own workspace, closed when the execution ends. A files row with no recorded commit, no telemetry database, no store, or an unknown commit fails before the model is called.
 
-The bash tool normally runs in the seat's live workspace. A root run can instead carry its own workspace, through the `workspace` option of `withRun` (`src/infra/vox-run.ts`), and the bash tool prefers it; forked runs do not inherit it.
+The bash tool normally runs in the seat's live workspace. A root run can instead carry its own workspace, through the `workspace` option of `withRun` (`src/agents/runtime/vox-run.ts`), and the bash tool prefers it; forked runs do not inherit it.
 
 #### Replay contexts
 

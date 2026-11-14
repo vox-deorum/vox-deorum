@@ -12,6 +12,8 @@ It is published as **"(5) Vox Deorum"** and declares three mod dependencies, all
 
 `VoxDeorum.modinfo` is the manifest and the first file to read. It names every shipped file, the database scripts that run on activation, and the six entry points the game hooks into.
 
+UI sources are grouped by responsibility: `UI/Deals/`, `UI/Diplomacy/`, and `UI/HumanControl/` keep each screen with its XML, transport, and mock driver; `UI/Shared/` holds helpers used across screens. The native `LeaderHeadRoot` overrides remain directly under `UI/`. The manifest uses full paths, while Lua includes keep their VFS module names, such as `VoxDeorumSeat`.
+
 ## What the mod adds
 
 **It turns on the DLL's outside channel.** `SQL/VoxDeorum_Options.sql` flips a set of the gamecore's `CustomModOptions`: `IPC_CHANNEL` (the connection service's named-pipe link to the Bridge Service) and the whole `EVENTS_*` family (the game-event stream the DLL forwards out). The modified DLL ships with these dormant, so **without the mod loaded, the connection service has nothing to do.** The same script registers a `FLAVOR_MOBILIZATION` flavor used by the AI-steering work downstream.
@@ -20,9 +22,9 @@ It is published as **"(5) Vox Deorum"** and declares three mod dependencies, all
 
 **An observer addin.** `Lua/VoxDeorumTest.lua` loads into the running game's UI context. It subscribes to the strategic-decision events the system pushes into the game and forwards render-time UI events back out. The [Lua hooks](lua-hooks.md) page walks through what it listens to and emits.
 
-**The human-control surface.** `UI/VoxDeorumHumanPanel` and `UI/VoxDeorumHumanTrigger` (each a paired `.lua` and `.xml`) let a human play the strategist role: the trigger is a small always-available widget, and the panel renders the choices a decision request carries. See the [human-control plans](../../plans/human-control/).
+**The human-control surface.** `UI/HumanControl/VoxDeorumHumanPanel` and `UI/HumanControl/VoxDeorumHumanTrigger` (each a paired `.lua` and `.xml`) let a human play the strategist role: the trigger is a small always-available widget, and the panel renders the choices a decision request carries. See the [human-control plans](../../plans/human-control/).
 
-**The interactive diplomacy surface.** `UI/VoxDeorumDiploPanel` is the conversation panel and `UI/VoxDeorumDealScreen` is the trade editor, each with its own transport module, mock driver, and XML. `UI/VoxDeorumConverse.lua` and the `UI/LeaderHeadRoot` override add the Converse button that opens the conversation from the leader screen. See [diplomacy-panel.md](diplomacy-panel.md) and [deal-screen.md](deal-screen.md), and [diplomacy.md](../diplomacy.md) for the round trip across the whole stack.
+**The interactive diplomacy surface.** `UI/Diplomacy/VoxDeorumDiploPanel` is the conversation panel and `UI/Deals/VoxDeorumDealScreen` is the trade editor, each with its own transport module, mock driver, and XML. `UI/Diplomacy/VoxDeorumConverse.lua` and the `UI/LeaderHeadRoot` override add the Converse button that opens the conversation from the leader screen. See [diplomacy-panel.md](diplomacy-panel.md) and [deal-screen.md](deal-screen.md), and [diplomacy.md](../diplomacy.md) for the round trip across the whole stack.
 
 **Text and a notification type.** `Text/VoxDeorum_Text.xml` holds the mod's own localized strings, all under the `TXT_KEY_VD_` prefix and dominated by the three interactive surfaces: roughly a hundred `TXT_KEY_VD_HUMAN_*` keys, eighty `TXT_KEY_VD_DEAL_*`, forty `TXT_KEY_VD_DIPLO_*`, plus a few for the Converse launcher. `Text/VoxDeorum_Text.sql` is smaller and different in kind: it overrides four vanilla diplomacy opinion phrases. `XML/VoxDeorum_Notifications.xml` registers one notification type, `NOTIFICATION_VOX_DEORUM_DIPLOMACY`, which the diplomacy panel uses to tell the player an envoy has opened a correspondence.
 

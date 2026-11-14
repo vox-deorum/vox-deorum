@@ -32,6 +32,8 @@ A single `MCPServer` singleton (`mcp-server/src/server.ts`) owns the whole servi
 
 Tools register through a factory pattern with lazy loading. `mcp-server/src/tools/index.ts` holds a map of factory functions, one per tool. The actual tool objects are constructed on first server initialization, then cached and reused. This keeps startup fast and memory low, and it is the pattern any new tool plugs into. The tool framework itself, the `ToolBase` abstract class and its four specialized subclasses, is described in [tools.md](tools.md).
 
+Domain helpers live beside the subsystem that owns them: `knowledge/helpers/` handles visibility, caching, and archiving; `database/helpers/` handles localization, formatting, search, and JSON persistence; `diplomacy/` holds transcript contracts and deal helpers. Shared primitives stay in `utils/`.
+
 ### Transports and server modes
 
 The server supports two MCP transports, chosen by configuration:

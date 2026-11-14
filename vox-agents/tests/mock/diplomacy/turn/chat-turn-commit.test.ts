@@ -13,15 +13,15 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { installMockMcpClient, structuredResult } from '../../../helpers/mock-mcp-client.js';
 import type { EnvoyThread, MessageWithMetadata } from '../../../../src/types/index.js';
 
-vi.mock('../../../../src/utils/models/mcp-client.js', async () => {
+vi.mock('../../../../src/agents/mcp/mcp-client.js', async () => {
   const helper = await import('../../../helpers/mock-mcp-client.js');
   return helper.mockMcpClientModule();
 });
 
-import { beginChatTurn, isThreadBusy } from '../../../../src/utils/diplomacy/turn/chat-turn-commit.js';
-import { insertDurableRows, retryMessage } from '../../../../src/utils/diplomacy/transcript/transcript-utils.js';
-import { reportSpokenRow } from '../../../../src/utils/diplomacy/turn/active-turn-state.js';
-import { sendMessageToolName } from '../../../../src/utils/diplomacy/constants.js';
+import { beginChatTurn, isThreadBusy } from '../../../../src/diplomacy/turn/chat-turn-commit.js';
+import { insertDurableRows, retryMessage } from '../../../../src/diplomacy/transcript/transcript-utils.js';
+import { reportSpokenRow } from '../../../../src/diplomacy/turn/active-turn-state.js';
+import { sendMessageToolName } from '../../../../src/diplomacy/constants.js';
 
 let mcp: ReturnType<typeof installMockMcpClient>;
 beforeEach(() => {

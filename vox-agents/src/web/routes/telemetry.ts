@@ -11,12 +11,12 @@ import path from 'path';
 import multer from 'multer';
 import { createLogger } from '../../utils/logger.js';
 import { sqliteExporter } from '../../instrumentation.js';
-import { parseDatabaseIdentifier, parseContextIdentifier } from '../../utils/telemetry/identifier-parser.js';
+import { parseDatabaseIdentifier, parseContextIdentifier } from '../../agents/telemetry/identifier-parser.js';
 import { sendError } from '../http-utils.js';
 import { errorMessage } from '../../utils/errors.js';
-import { WorkspaceStore } from '../../utils/workspace/workspace-store.js';
-import { materialize } from '../../utils/workspace/materialize.js';
-import { zipSink } from '../../utils/workspace/materialize-zip.js';
+import { WorkspaceStore } from '../../agents/workspace/workspace-store.js';
+import { materialize } from '../../agents/workspace/materialize.js';
+import { zipSink } from '../../agents/workspace/materialize-zip.js';
 import type {
   TelemetryDatabasesResponse,
   TelemetryMetadata,

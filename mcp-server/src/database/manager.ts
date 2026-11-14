@@ -12,9 +12,9 @@ import fs from 'fs/promises';
 import { config, getDocumentsPath } from '../utils/config.js';
 import type { DB as MainDB } from './database.js';
 import type { DB as LocalizationDB } from './localization.js';
-import { enumMappings } from '../utils/knowledge/enum.js';
+import { enumMappings } from '../knowledge/helpers/enum.js';
 import * as changeCase from "change-case";
-import { stripTags } from '../utils/database/localized.js';
+import { stripTags } from './helpers/localized.js';
 
 const logger = createLogger('DatabaseManager');
 

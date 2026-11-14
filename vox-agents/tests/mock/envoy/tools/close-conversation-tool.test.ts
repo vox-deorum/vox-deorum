@@ -7,13 +7,13 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { installMockMcpClient } from '../../../helpers/mock-mcp-client.js';
 import type { EnvoyThread } from '../../../../src/types/index.js';
 
-vi.mock('../../../../src/utils/models/mcp-client.js', async () => {
+vi.mock('../../../../src/agents/mcp/mcp-client.js', async () => {
   const helper = await import('../../../helpers/mock-mcp-client.js');
   return helper.mockMcpClientModule();
 });
 
 import { createCloseConversationTool } from '../../../../src/envoy/tools/close-conversation-tool.js';
-import { beginTurnState } from '../../../../src/utils/diplomacy/turn/active-turn-state.js';
+import { beginTurnState } from '../../../../src/diplomacy/turn/active-turn-state.js';
 
 let mcp: ReturnType<typeof installMockMcpClient>;
 beforeEach(() => {

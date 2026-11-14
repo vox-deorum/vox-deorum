@@ -2,20 +2,20 @@
  * @module tests/mock/diplomacy/active-turn-state
  *
  * Unit coverage for the active chat turn's per-thread coordination state
- * (src/utils/diplomacy/active-turn-state.ts) — the mechanism that lets a turn report exactly the rows
+ * (src/diplomacy/turn/active-turn-state.ts) — the mechanism that lets a turn report exactly the rows
  * it committed without rereading the transcript, and lets its tools name the spoken reply row and
  * stage a close. Pure in-memory: no MCP client, no store.
  */
 
 import { describe, expect, it } from 'vitest';
 import type { EnvoyThread } from '../../../../src/types/index.js';
-import type { TranscriptPushMessage } from '../../../../src/utils/diplomacy/transcript/transcript-utils.js';
+import type { TranscriptPushMessage } from '../../../../src/diplomacy/transcript/transcript-utils.js';
 import {
   beginTurnState,
   reportSpokenRow,
   reportThreadRow,
   reportThreadRows,
-} from '../../../../src/utils/diplomacy/turn/active-turn-state.js';
+} from '../../../../src/diplomacy/turn/active-turn-state.js';
 
 /** Minimal thread identity — the capture keys off `id` and nothing else. */
 function thread(id: string): EnvoyThread {

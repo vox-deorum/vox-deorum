@@ -7,7 +7,7 @@ import * as z from "zod";
 import { getTool } from "../index.js";
 import { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { createLogger } from "../../utils/logger.js";
-import { weightedFuzzySearch, defaultFieldWeights } from "../../utils/search-weights.js";
+import { weightedFuzzySearch, defaultFieldWeights } from "../../database/helpers/search-weights.js";
 
 const logger = createLogger('SearchDatabaseTool');
 

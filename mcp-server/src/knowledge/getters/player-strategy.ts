@@ -3,10 +3,10 @@
  */
 
 import { knowledgeManager } from "../../server.js";
-import { convertStrategyToNames } from "../../utils/knowledge/enum.js";
+import { convertStrategyToNames } from "../helpers/enum.js";
 import { LuaFunction } from "../../bridge/lua-function.js";
 import { createLogger } from "../../utils/logger.js";
-import { composeVisibility } from "../../utils/knowledge/visibility.js";
+import { composeVisibility } from "../helpers/visibility.js";
 
 const logger = createLogger("ReadPlayerStrategies");
 

@@ -4,7 +4,7 @@ Codex models run through `codex-openai-proxy`, a small local server that signs i
 
 The current pin is `codex-openai-proxy@0.1.0-rc.36`, which bundles `@openai/codex@0.163.0`.
 
-This page covers how the proxy runs, the contracts Vox Agents relies on, and how to update the pin. The code is in `src/utils/models/providers/codex-proxy.ts`, `codex.ts`, and `codex-response.ts`.
+This page covers how the proxy runs, the contracts Vox Agents relies on, and how to update the pin. The code is in `src/agents/models/providers/codex-proxy.ts`, `codex.ts`, and `codex-response.ts`.
 
 ## How the proxy runs
 
@@ -88,7 +88,7 @@ npm run update:codex-proxy -- rc.12
 
 The script checks the version with npm, reads the bundled `@openai/codex` version, and updates the source pin, the exact-command test, this page, and the manual start command in [operations.md](../../operations.md). It does not install the proxy or touch the lockfile. If it is interrupted, run it again to fix any remaining references.
 
-If a contract changed, also update `codex.ts`, `codex-response.ts`, and their tests in `vox-agents/tests/mock/utils/providers/`. Search for version-specific text that needs a manual update:
+If a contract changed, also update `codex.ts`, `codex-response.ts`, and their tests in `vox-agents/tests/mock/agents/models/providers/`. Search for version-specific text that needs a manual update:
 
 ```bash
 rg "codex-openai-proxy@|Codex rc\.|Proxy rc\.|proxy.*rc\." vox-agents docs
@@ -101,7 +101,7 @@ Leave version references in implementation plans alone, unless the plan is still
 Run the focused tests from the repository root:
 
 ```bash
-npm run test --workspace=vox-agents -- tests/mock/utils/providers/codex-proxy.test.ts tests/mock/utils/providers/codex.test.ts
+npm run test --workspace=vox-agents -- tests/mock/agents/models/providers/codex-proxy.test.ts tests/mock/agents/models/providers/codex.test.ts
 npm run type-check --workspace=vox-agents
 ```
 

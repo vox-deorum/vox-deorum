@@ -14,13 +14,13 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { errorResult, installMockMcpClient, structuredResult } from '../../helpers/mock-mcp-client.js';
 
-vi.mock('../../../src/utils/models/mcp-client.js', async () => {
+vi.mock('../../../src/agents/mcp/mcp-client.js', async () => {
   const helper = await import('../../helpers/mock-mcp-client.js');
   return helper.mockMcpClientModule();
 });
 
 import { hasGameReference, writeGameReference } from '../../../src/knowledge/reference.js';
-import { WorkspaceStore } from '../../../src/utils/workspace/workspace-store.js';
+import { WorkspaceStore } from '../../../src/agents/workspace/workspace-store.js';
 
 const tools = ['get-technology', 'get-policy', 'get-building', 'get-project', 'get-unit'];
 /** The default listings fill one bucket per listing: one file pair each plus the format marker. */

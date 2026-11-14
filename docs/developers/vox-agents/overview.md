@@ -43,15 +43,17 @@ Suggested reading order:
 
 | Folder | Holds |
 | --- | --- |
-| `src/infra/` | The framework core: agent base class, context, runs, sessions, registries, game launch. |
-| `src/strategist/` | Strategist sessions, players, pacing, and strategist agents. |
+| `src/agents/runtime/` | Shared agent execution: base class, context, runs, sessions, and registries. |
+| `src/agents/` | Model providers and evaluation, MCP connections, tools, workspace, telemetry, configuration, and prompt assembly. |
+| `src/game/` | Civilization V launch, settings, seating, and recording. |
+| `src/strategist/` | Strategist agents, with session orchestration in `session/`, player seats in `seats/`, evaluators in `evaluator/`, and turn pacing in `pacing/`. |
+| `src/diplomacy/` | Conversation transcripts, turn state, deals, and the in-game chat bridge. |
 | `src/envoy/`, `src/briefer/`, `src/analyst/`, `src/librarian/` | The other live agent families. |
 | `src/telepathist/`, `src/oracle/`, `src/archivist/`, `src/narrators/` | Post-game tools. |
-| `src/knowledge/` | Game-state sections, seat records, and the per-game reference. |
-| `src/utils/models/` | Model registry, providers, and middleware. |
-| `src/utils/workspace/` | The per-seat file workspace. |
+| `src/knowledge/` | Game-state sections, records, reference data, knowledge database access, event and report filters, and episode retrieval. |
+| `src/utils/` | Small shared helpers such as logging, guards, errors, and random values. |
 | `src/web/` and `ui/` | The dashboard backend and the Vue app. |
-| `src/newspaper/` and `newspaper/` | Newspaper contracts, local export/cache host, and the shared browser renderer. |
+| `src/newspaper/` and `newspaper/` | Newspaper publication and reader contracts, browser-safe renderer, Node export/cache delivery, local host, and DOM reader. |
 | `prompts/` | System prompt templates. |
 | `configs/` | Session configurations. |
 

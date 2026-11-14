@@ -10,8 +10,8 @@ import {
   toGameContent,
   type GameSinkPort,
   type GameStatusState,
-} from "../../../../src/utils/diplomacy/ingame/ingame-bridge.js";
-import type { TranscriptPushMessage } from "../../../../src/utils/diplomacy/transcript/transcript.js";
+} from "../../../../src/diplomacy/ingame/ingame-bridge.js";
+import type { TranscriptPushMessage } from "../../../../src/diplomacy/transcript/transcript.js";
 
 /** Build one game-bound transcript row with optional content padding. */
 function row(id: number, content: string = `row ${id}`): TranscriptPushMessage {

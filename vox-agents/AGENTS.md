@@ -7,17 +7,17 @@ Backend LLM agent framework. For UI development, see `ui/AGENTS.md`.
 - **ESM**: Always use `.js` extensions in imports, even for `.ts` files (`"type": "module"`)
 - **Winston logger only**: never `console.log/error/warn` in production code (OK in tests)
 - **MCP tools**: Always read `mcp-server/src/tools/index.ts` to know which tools actually exist
-- **Embedding models**: Set `options.embeddingSize` on model config. Use `embedder` alias in `config.llms`. Call `getEmbeddingModel()` from `utils/models/models.ts`
-- **Agent triage**: Use `createTriage()` from `infra/triage.ts` with typed questions and an answer router. It reuses the prepared system prompt and initial messages by default. An optional, possibly async, projector can instead build a compact state for the triage model without mutating the prepared one (the diplomat uses `formatRecentConversation` plus any open deal). A shortcut can handle deterministic cases. Enable it with the `triage` setting (`true`, a list of agent names or the roles `strategist` and `diplomat`, or `false`, the default) on a seat, the session config, or the root `config.json`; the highest level that sets a value wins. Configure `evaluator` or `<agent>.evaluator`. Every `call-*` tool also accepts an optional `Tier` that overrides triage without requiring opt-in. Read the decision through `context.currentTriage`; share durable reads through `context.memoizeForExecution`.
-- **Agent files**: The `files` setting (seat, session config, or root `config.json`, resolved by `resolveSeatFiles` like `triage`) gives every tool-using agent of a seat a `bash` tool over a just-bash workspace (`utils/workspace/player-workspace.ts`), on any provider. Add file features through it, never through CLI host tools: `hostTools` accepts only `Web`. With files on, the run's step limit becomes `quota` unless `maxSteps` is higher, the closing reminder counts down steps left, the initial prompt gets a cache anchor, and old bash output is compacted near `continuityThreshold`. Read `docs/developers/vox-agents/framework/compaction.md` before changing the step loop. The seat's `/workspace/records`, `/workspace/game`, and `/workspace/reference` live in a per-seat SQLite store (`utils/workspace/workspace-store.ts`); `knowledge/reference.ts` builds the reference from detailed database listings with in-game tooltips from the mod's `VoxDeorumReferenceTooltips` function and commits it into each store before the first turn. A run is in file mode when its resolved tools include bash: prompt builders check `fileMode(context)` from `knowledge/directions.ts` (the execution loop resolves run tools before `getSystem`) and insert the directions with `insertRecordsDirections` (a system message ahead of the overview or game context, plus a notes message before the game state that shows the newest `journal.md` entries from `utils/workspace/journal.ts` and names other recent notes) instead of guessing from the seat setting.
+- **Embedding models**: Set `options.embeddingSize` on model config. Use `embedder` alias in `config.llms`. Call `getEmbeddingModel()` from `agents/models/models.ts`
+- **Agent triage**: Use `createTriage()` from `agents/runtime/triage.ts` with typed questions and an answer router. It reuses the prepared system prompt and initial messages by default. An optional, possibly async, projector can instead build a compact state for the triage model without mutating the prepared one (the diplomat uses `formatRecentConversation` plus any open deal). A shortcut can handle deterministic cases. Enable it with the `triage` setting (`true`, a list of agent names or the roles `strategist` and `diplomat`, or `false`, the default) on a seat, the session config, or the root `config.json`; the highest level that sets a value wins. Configure `evaluator` or `<agent>.evaluator`. Every `call-*` tool also accepts an optional `Tier` that overrides triage without requiring opt-in. Read the decision through `context.currentTriage`; share durable reads through `context.memoizeForExecution`.
+- **Agent files**: The `files` setting (seat, session config, or root `config.json`, resolved by `resolveSeatFiles` like `triage`) gives every tool-using agent of a seat a `bash` tool over a just-bash workspace (`agents/workspace/player-workspace.ts`), on any provider. Add file features through it, never through CLI host tools: `hostTools` accepts only `Web`. With files on, the run's step limit becomes `quota` unless `maxSteps` is higher, the closing reminder counts down steps left, the initial prompt gets a cache anchor, and old bash output is compacted near `continuityThreshold`. Read `docs/developers/vox-agents/framework/compaction.md` before changing the step loop. The seat's `/workspace/records`, `/workspace/game`, and `/workspace/reference` live in a per-seat SQLite store (`agents/workspace/workspace-store.ts`); `knowledge/reference.ts` builds the reference from detailed database listings with in-game tooltips from the mod's `VoxDeorumReferenceTooltips` function and commits it into each store before the first turn. A run is in file mode when its resolved tools include bash: prompt builders check `fileMode(context)` from `knowledge/directions.ts` (the execution loop resolves run tools before `getSystem`) and insert the directions with `insertRecordsDirections` (a system message ahead of the overview or game context, plus a notes message before the game state that shows the newest `journal.md` entries from `agents/workspace/journal.ts` and names other recent notes) instead of guessing from the seat setting.
 - **Game-state sections**: Render game-state sections (situation, players, cities, events, briefings, and so on) through `renderSection` in `knowledge/sections.ts`, and add or change a section's title, description, or default Markdown in its registry, not in a builder.
 - **Seat workspace files**: Write them only through the workspace store: `SeatRecords` (`knowledge/records.ts`) for records, `writeGameReference` (`knowledge/reference.ts`) for the reference, and the bash tool for notes. Never write `.db` files or seat folders directly. `VoxPlayer.beginTimeline` rewinds the store on reload.
-- **System prompts**: Prompt prose belongs in Mustache files under `prompts/` (`<agent-name>.md`, variants as `<agent-name>.<variant>.md`, shared fragments under `prompts/shared/`). `getSystem` calls `renderSystemPrompt(context, name, view)` from `utils/prompts/prompt-files.ts` and supplies only data and flags in the view, never prose. Escaping is off. Include fragments as partials on their own line at column 0, and end fragment files with one newline. The `prompts` setting (seat, session config, or root `config.json`, resolved by `resolveSeatPrompts`) layers a custom folder over the built-ins, and session start validates it. A custom template may only use the names its built-in counterpart uses, so adding a variable to a built-in file widens what custom files may use.
+- **System prompts**: Prompt prose belongs in Mustache files under `prompts/` (`<agent-name>.md`, variants as `<agent-name>.<variant>.md`, shared fragments under `prompts/shared/`). `getSystem` calls `renderSystemPrompt(context, name, view)` from `agents/prompts/prompt-files.ts` and supplies only data and flags in the view, never prose. Escaping is off. Include fragments as partials on their own line at column 0, and end fragment files with one newline. The `prompts` setting (seat, session config, or root `config.json`, resolved by `resolveSeatPrompts`) layers a custom folder over the built-ins, and session start validates it. A custom template may only use the names its built-in counterpart uses, so adding a variable to a built-in file widens what custom files may use.
 - **Evaluation agents**: Implement `executeEvaluation()` to evaluate prepared state and process its answers without a chat loop. Use the selected agent model with `context.evaluate()` and forward the token sink; evaluation already accrues usage. Native evaluators and chat adapters share this path.
 - **Provider-agnostic**: Model config supports openrouter, openai, google, compatible services. Apply middleware based on model characteristics (e.g., gemma-3)
-- **Provider modules**: Provider-specific implementations live in `src/utils/models/providers/` and may import shared types or sibling helpers, but never `models.ts`
-- **Config defaults**: `config.json` is gitignored. Effective values come from `src/utils/config/defaults.ts` merged by `src/utils/config/diff.ts`, loaded through `src/utils/config.ts`
-- **Shared helpers**: Use `isRecord`/`asRecord` from `utils/guards.ts`, `errorMessage` from `utils/errors.ts` (the UI has its own in `ui/src/utils/errors.ts`), and `sendError` from `web/http-utils.ts` instead of local copies. Test fixtures (transcript rows, fake loggers, telemetry and knowledge databases, deferred promises) live in `tests/helpers/`; the telemetry fixture reuses `spansTableSql` from `utils/telemetry/schema.ts`
+- **Provider modules**: Provider-specific implementations live in `src/agents/models/providers/` and may import shared types or sibling helpers, but never `models.ts`
+- **Config defaults**: `config.json` is gitignored. Effective values come from `src/agents/config/defaults.ts` merged by `src/agents/config/diff.ts`, loaded through `src/agents/config/load.ts`
+- **Shared helpers**: Use `isRecord`/`asRecord` from `utils/guards.ts`, `errorMessage` from `utils/errors.ts` (the UI has its own in `ui/src/utils/errors.ts`), and `sendError` from `web/http-utils.ts` instead of local copies. Test fixtures (transcript rows, fake loggers, telemetry and knowledge databases, deferred promises) live in `tests/helpers/`; the telemetry fixture reuses `spansTableSql` from `agents/telemetry/schema.ts`
 - **Use Map for registries** (players, handlers, etc.)
 - **Graceful cancellation**: each root run owns its `AbortController`; pass the active root's signal (resolved from `AsyncLocalStorage`) to async operations. `context.abort()` cancels every active root
 
@@ -64,7 +64,7 @@ Backend LLM agent framework. For UI development, see `ui/AGENTS.md`.
 
 ### Newspaper Renderer
 
-`src/newspaper/` groups shared browser-safe presentation modules under `ui/`, publication contracts under `contracts/`, rendering under `renderer/`, bundle caching under `cache/`, and Node host code under `host/`. Keep shared contracts and UI modules free of Node and DOM imports. Contract validation uses the UI asset registry and layout defaults; UI modules import only contract types. `console.ts` remains the top-level command entry point. `newspaper/src/` owns the plain DOM reader and stays separate from the shared presentation code; its assets and developer fixtures stay under `newspaper/`, and it builds independently to `dist-newspaper/`. Tests under `tests/mock/newspaper/` are grouped by the boundary they exercise, with reader state covered alongside contracts. See [the newspaper docs](../docs/developers/vox-agents/newspaper/overview.md).
+`src/newspaper/` groups completed publication types and structural validation in `contracts/issue.ts`, reader actions and persisted state in `contracts/reader.ts`, browser-safe presentation in `renderer/`, Node capture and cache delivery in `export/`, and the local HTTP host in `host/http.ts`. Contracts have no renderer imports. Keep contracts and renderer modules free of Node and DOM imports; renderer validation retains registered asset, asset-kind, alternative-text, and profile checks. `renderer/types.ts` owns render profiles, geometry, the browser bridge, and bundle output. `console.ts` remains the top-level command entry point. `newspaper/src/` owns the plain DOM reader; its assets and developer fixtures stay under `newspaper/`, and it builds independently to `dist-newspaper/`. Tests under `tests/mock/newspaper/` are grouped by the boundary they exercise. See [the newspaper docs](../docs/developers/vox-agents/newspaper/overview.md).
 
 ## Build
 
@@ -75,7 +75,9 @@ Backend LLM agent framework. For UI development, see `ui/AGENTS.md`.
 
 ## Agent Architecture
 
-Classes registered in `agentRegistry` (`src/infra/agent-registry.ts`):
+Shared execution code lives in `src/agents/`, split into `runtime/`, `models/`, `mcp/`, `tools/`, `workspace/`, `telemetry/`, `config/`, and `prompts/`. Keep game launch, settings, seating, and recording in `src/game/`; conversation plumbing in `src/diplomacy/`; and game-state formatting, database access, and episode retrieval in `src/knowledge/`. `src/utils/` holds small shared helpers. Strategist orchestration belongs in `strategist/session/`, player state in `strategist/seats/`, evaluator implementations in `strategist/evaluator/`, and pacing in `strategist/pacing/`. Tests retain their mock and live tiers.
+
+Classes registered in `agentRegistry` (`src/agents/runtime/agent-registry.ts`):
 
 ```
 VoxAgent (Base)
@@ -116,7 +118,7 @@ VoxAgent (Base)
 
 ### Diplomacy & Envoy Layout
 
-`src/envoy/` is everything about envoy _agents_; `src/utils/diplomacy/` is the chat-route and conversation plumbing. Keep new files on the correct side of that line.
+`src/envoy/` owns envoy agents; `src/diplomacy/` owns chat-route and conversation plumbing.
 
 ```
 src/envoy/          envoy.ts, live-envoy.ts (base classes)
@@ -125,14 +127,14 @@ src/envoy/          envoy.ts, live-envoy.ts (base classes)
   ledger/           deal-ledger, give-receive-menu, ledger-grammar, ledger-resolver
   context/          diplomacy-context, diplomat-utils, negotiator-utils
 
-src/utils/diplomacy/  constants.ts (cross-cutting constants)
+src/diplomacy/        constants.ts (cross-cutting constants)
   transcript/       transcript, transcript-utils
   turn/             chat-turn-commit, active-turn-state, live-turn
   deal/             deal, deal-reduce, deal-actions
   ingame/           ingame-bridge, notify, civ5-markup
 ```
 
-Dependency direction is `envoy/` → `utils/diplomacy/`; never the reverse. `tests/mock/{diplomacy,envoy,web}/` mirror these subfolders. No `index.ts` barrels: import the specific module.
+Dependency direction is `envoy/` → `diplomacy/`. `tests/mock/{diplomacy,envoy,web}/` mirror these subfolders. Import the specific module without adding `index.ts` barrels.
 
 ## Dual Mode
 
@@ -141,11 +143,11 @@ Dependency direction is `envoy/` → `utils/diplomacy/`; never the reverse. `tes
 
 ## Infrastructure
 
-### ProcessManager (`src/infra/process-manager.ts`)
+### ProcessManager (`src/agents/runtime/process-manager.ts`)
 
 Singleton signal handler (SIGINT, SIGTERM, SIGBREAK, SIGHUP). `processManager.register(name, hook)`: hooks execute in insertion order during shutdown. All console entry points register here.
 
-### ObsManager (`src/infra/obs-manager.ts`)
+### ObsManager (`src/game/recording/obs-manager.ts`)
 
 Controls OBS Studio for recording/livestreaming via `obs-websocket-js` (WebSocket v5).
 
@@ -154,7 +156,7 @@ Controls OBS Studio for recording/livestreaming via `obs-websocket-js` (WebSocke
 - Health checks every 10 seconds; recovery retries with backoff capped at 60 seconds until recovery or shutdown. Self-registers with ProcessManager
 - See [media.md](../docs/developers/vox-agents/platform/media.md) for OBS capture and the narrators pipeline
 
-### ProductionController (`src/infra/production-controller.ts`)
+### ProductionController (`src/game/recording/production-controller.ts`)
 
 Wraps ObsManager to add segment-based recording driven by game render events.
 
@@ -171,7 +173,7 @@ Wraps ObsManager to add segment-based recording driven by game render events.
 
 ## Advanced Patterns
 
-- **Run model**: `execute()`/`callAgent()` require an active root run. Open one with `withRun()` (or `forkRun()` for detached work). Read seat state through `baseParameters`/`currentParameters` (the active root's composed view); the old `lastParameter` field is gone. Run-model types live in `infra/vox-run.ts`
+- **Run model**: `execute()`/`callAgent()` require an active root run. Open one with `withRun()` (or `forkRun()` for detached work). Read seat state through `baseParameters`/`currentParameters` (the active root's composed view); the old `lastParameter` field is gone. Run-model types live in `agents/runtime/vox-run.ts`
 - **Fire-and-forget agents**: Set `fireAndForget: true`. Detaches via `forkRun()` into its own root run (independent signal and token sink), caller continues immediately
 - **Special messages**: `{{{MessageType}}}` triple-brace tokens trigger behaviors via `getSpecialMessages()` in Envoy subclasses
 - **Tool rescue middleware**: Extracts JSON tool calls from malformed LLM text responses via `toolRescueMiddleware()`

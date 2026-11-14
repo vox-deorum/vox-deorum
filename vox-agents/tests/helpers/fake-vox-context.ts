@@ -38,13 +38,13 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { vi } from 'vitest';
 import { Tool } from 'ai';
-import { composeParameters } from '../../src/infra/vox-run.js';
+import { composeParameters } from '../../src/agents/runtime/vox-run.js';
 import { createFakeLogger } from './fake-logger.js';
 import { Tool as MCPTool } from '@modelcontextprotocol/sdk/types.js';
-import type { VoxContext } from '../../src/infra/vox-context.js';
+import type { VoxContext } from '../../src/agents/runtime/vox-context.js';
 import type { GameState, StrategistParameters } from '../../src/strategist/strategy-parameters.js';
 import type { Model } from '../../src/types/index.js';
-import type { TriageDecision } from '../../src/infra/vox-agent.js';
+import type { TriageDecision } from '../../src/agents/runtime/vox-agent.js';
 
 /** A registered per-tool handler: receives the call args + parameters, returns (or throws) a result. */
 export type FakeToolHandler = (

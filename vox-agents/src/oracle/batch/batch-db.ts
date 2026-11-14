@@ -5,12 +5,12 @@
  * Encapsulates all database operations: schema creation, request lifecycle
  * tracking, batch status updates, and query helpers.
  *
- * Follows the patterns from utils/telemetry/sqlite-exporter.ts and
+ * Follows the patterns from agents/telemetry/sqlite-exporter.ts and
  * mcp-server/src/knowledge/store.ts.
  */
 
 import { Kysely } from 'kysely';
-import { openSqliteKysely } from '../../utils/telemetry/sqlite-helpers.js';
+import { openSqliteKysely } from '../../agents/telemetry/sqlite-helpers.js';
 import { createLogger } from '../../utils/logger.js';
 import type { ChatCompletion } from './types.js';
 import type { BatchDatabase, BatchRequest, Batch, NewBatchRequest, NewBatch } from './schema.js';

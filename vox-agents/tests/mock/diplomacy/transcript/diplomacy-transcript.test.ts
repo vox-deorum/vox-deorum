@@ -19,7 +19,7 @@ import {
   collectTrace,
   tookTerminalAction,
   type TranscriptMessage,
-} from '../../../../src/utils/diplomacy/transcript/transcript-utils.js';
+} from '../../../../src/diplomacy/transcript/transcript-utils.js';
 import type { EnvoyThread, MessageWithMetadata } from '../../../../src/types/index.js';
 import { transcriptRow } from '../../../helpers/diplomacy-fixtures.js';
 

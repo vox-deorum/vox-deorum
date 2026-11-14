@@ -15,24 +15,24 @@
  */
 
 import type { EnvoyThread } from "../../types/index.js";
-import { civNameFor } from "../../utils/diplomacy/transcript/transcript-utils.js";
-import type { InspectDealResult } from "../../utils/diplomacy/deal/deal.js";
+import { civNameFor } from "../../diplomacy/transcript/transcript-utils.js";
+import type { InspectDealResult } from "../../diplomacy/deal/deal.js";
 import {
   formatEstimate,
   formatPromiseLabel,
   itemTypeLabel,
-} from "../../../../mcp-server/dist/utils/deal-format.js";
+} from "../../../../mcp-server/dist/diplomacy/deals/deal-format.js";
 import {
   durationForItemType,
   resolveItemName,
   PROMISE_METADATA,
-} from "../../../../mcp-server/dist/utils/deal-schema.js";
+} from "../../../../mcp-server/dist/diplomacy/deals/deal-schema.js";
 import type {
   DealDurations,
   DealPayload,
   PromiseTerm,
   TradeItem,
-} from "../../../../mcp-server/dist/utils/deal-schema.js";
+} from "../../../../mcp-server/dist/diplomacy/deals/deal-schema.js";
 import type { PlayersReport } from "../../../../mcp-server/dist/tools/knowledge/get-players.js";
 import type { OptionsReport } from "../../../../mcp-server/dist/tools/knowledge/get-options.js";
 

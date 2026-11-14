@@ -17,15 +17,15 @@ import express from 'express';
 import fs from 'fs/promises';
 
 // Never spawn a real strategist loop when POST /api/session/start runs.
-vi.mock('../../../../src/strategist/loop.js', () => ({
+vi.mock('../../../../src/strategist/session/loop.js', () => ({
   runStrategistLoop: vi.fn(async () => {}),
 }));
 
 // Partial-mock the config util so we can drive loadVoxConfig/refreshConfig/getConfigsDir
 // while leaving the default `config` export and everything else intact (many transitive
 // modules depend on it).
-vi.mock('../../../../src/utils/config.js', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../../../src/utils/config.js')>();
+vi.mock('../../../../src/agents/config/load.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../../src/agents/config/load.js')>();
   return {
     ...actual,
     loadVoxConfig: vi.fn(actual.loadVoxConfig),
@@ -45,7 +45,7 @@ vi.mock('../../../../src/utils/logger.js', () => ({
   createLogger: vi.fn(() => routeMocks.logger),
 }));
 
-vi.mock('../../../../src/utils/models/discovery.js', () => {
+vi.mock('../../../../src/agents/models/discovery.js', () => {
   class DiscoveryError extends Error {
     constructor(public readonly kind: string, public readonly status: number, message: string) {
       super(message);
@@ -54,24 +54,24 @@ vi.mock('../../../../src/utils/models/discovery.js', () => {
   return { discoverModels: routeMocks.discoverModels, DiscoveryError };
 });
 
-vi.mock('../../../../src/utils/models/providers/codex-proxy.js', () => ({
+vi.mock('../../../../src/agents/models/providers/codex-proxy.js', () => ({
   codexProxyManager: routeMocks.proxy,
   ensureCodexProxy: routeMocks.ensureCodexProxy,
 }));
 
 // Replace the MCP client singleton with the shared mock (used by players-summary).
-vi.mock('../../../../src/utils/models/mcp-client.js', async () => {
+vi.mock('../../../../src/agents/mcp/mcp-client.js', async () => {
   const helper = await import('../../../helpers/mock-mcp-client.js');
   return helper.mockMcpClientModule();
 });
 
 import configRoutes from '../../../../src/web/routes/config.js';
 import sessionRoutes from '../../../../src/web/routes/session.js';
-import { config, loadVoxConfig, refreshConfig, getConfigsDir } from '../../../../src/utils/config.js';
-import { runStrategistLoop } from '../../../../src/strategist/loop.js';
-import { sessionRegistry } from '../../../../src/infra/session-registry.js';
+import { config, loadVoxConfig, refreshConfig, getConfigsDir } from '../../../../src/agents/config/load.js';
+import { runStrategistLoop } from '../../../../src/strategist/session/loop.js';
+import { sessionRegistry } from '../../../../src/agents/runtime/session-registry.js';
 import { installMockMcpClient, structuredResult } from '../../../helpers/mock-mcp-client.js';
-import { defaultConfig } from '../../../../src/utils/config/defaults.js';
+import { defaultConfig } from '../../../../src/agents/config/defaults.js';
 import { providerCredentials } from '../../../../src/types/constants.js';
 
 function makeApp() {
@@ -274,7 +274,7 @@ describe('config routes', () => {
     });
 
     it('returns classified discovery failures', async () => {
-      const { DiscoveryError } = await import('../../../../src/utils/models/discovery.js');
+      const { DiscoveryError } = await import('../../../../src/agents/models/discovery.js');
       routeMocks.discoverModels.mockRejectedValue(new DiscoveryError('missing-credential', 400, 'OpenAI requires OPENAI_API_KEY.'));
 
       const res = await request(app).post('/api/config/models').send({ provider: 'openai' });

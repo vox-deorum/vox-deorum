@@ -8,7 +8,7 @@ This page is for anyone working on that panel: where it opens from, how it is pu
 
 Two entry points open the panel, both against a met, living, major civilization:
 
-- **The Converse button** on the leader screen. `UI/VoxDeorumConverse.lua` is included by the mod's `UI/LeaderHeadRoot.lua` override, so it runs inside that context and drives the Converse button sitting beside Discuss, Trade, and War.
+- **The Converse button** on the leader screen. `UI/Diplomacy/VoxDeorumConverse.lua` is included by the mod's `UI/LeaderHeadRoot.lua` override, so it runs inside that context and drives the Converse button sitting beside Discuss, Trade, and War.
 - **A diplomacy notification.** Activating a `NOTIFICATION_VOX_DEORUM_DIPLOMACY` notification opens the conversation for that pair and dismisses the pair's other notifications. A notification with no valid counterpart falls back to showing its cached message in a plain popup.
 
 The panel then presents itself in one of three states, tracked in `m_presentation`:
@@ -25,12 +25,12 @@ The panel steps aside politely: it demotes to `static` if a different leader tak
 
 | File | Role |
 | --- | --- |
-| `UI/VoxDeorumDiploPanel.lua` | Presentation, transcript state, and the `VoxDeorumDiploUI` surface every driver talks to. |
-| `UI/VoxDeorumDiploPanel.xml` | Layout: the row instances and the docked band. |
-| `UI/VoxDeorumDiploTransport.lua` | The live driver. Carries real traffic to and from the bridge. |
-| `UI/VoxDeorumDiploPanelMock.lua` | The offline sandbox driver. |
-| `UI/VoxDeorumConverse.lua` | The leader-screen launcher, included by the `LeaderHeadRoot` override. |
-| `UI/VoxDeorumSeat.lua`, `UI/VoxDeorumDealUtils.lua` | Shared helpers, described below and in [deal-screen.md](deal-screen.md). |
+| `UI/Diplomacy/VoxDeorumDiploPanel.lua` | Presentation, transcript state, and the `VoxDeorumDiploUI` surface every driver talks to. |
+| `UI/Diplomacy/VoxDeorumDiploPanel.xml` | Layout: the row instances and the docked band. |
+| `UI/Diplomacy/VoxDeorumDiploTransport.lua` | The live driver. Carries real traffic to and from the bridge. |
+| `UI/Diplomacy/VoxDeorumDiploPanelMock.lua` | The offline sandbox driver. |
+| `UI/Diplomacy/VoxDeorumConverse.lua` | The leader-screen launcher, included by the `LeaderHeadRoot` override. |
+| `UI/Shared/VoxDeorumSeat.lua`, `UI/Shared/VoxDeorumDealUtils.lua` | Shared helpers, described below and in [deal-screen.md](deal-screen.md). |
 
 ## The driver seam
 
@@ -54,7 +54,7 @@ All display text passes through `sanitizeText`, which strips the named-pipe deli
 
 ## The transport
 
-`UI/VoxDeorumDiploTransport.lua` owns both directions of the panel's wire contract.
+`UI/Diplomacy/VoxDeorumDiploTransport.lua` owns both directions of the panel's wire contract.
 
 **Inbound**, it registers four DLL-callable push functions with `Game.RegisterFunction`: `VoxDeorumDiploBegin`, `VoxDeorumDiploMessages`, `VoxDeorumDiploStatus`, and `VoxDeorumDiploDelta`. Registration happens on the first valid presentation, never at context load, because reaching `CvConnectionService` before its `Setup` crashes the game. Each registration becomes a `lua_register` notification on the [connection service](../civ5-dll/connection.md), and the bridge invokes them with `lua_call`. Every push is re-fired as a `LuaEvent` before it is applied, so other contexts (notably the deal transport) can observe the same traffic.
 
@@ -82,6 +82,6 @@ To add a field, touch both files:
 
 ## The mock driver
 
-`UI/VoxDeorumDiploPanelMock.lua` is an offline sandbox retained from the panel's first build stage. It is dormant until `LuaEvents.VoxDeorumUseMockDrivers(true)` selects it, which the leader screen's debug Converse button does. It cycles the panel through every phase on a timer with scripted rows, a word-by-word streamed reply, and a smoke notification, so the presentation can be exercised with no backend at all.
+`UI/Diplomacy/VoxDeorumDiploPanelMock.lua` is an offline sandbox retained from the panel's first build stage. It is dormant until `LuaEvents.VoxDeorumUseMockDrivers(true)` selects it, which the leader screen's debug Converse button does. It cycles the panel through every phase on a timer with scripted rows, a word-by-word streamed reply, and a smoke notification, so the presentation can be exercised with no backend at all.
 
 While the mock owns the panel, six otherwise hidden buttons appear in the action stack: Author, Incoming, Own, Unavailable, Coop War, and Error. Each opens the deal screen's mock scenario of that name for the panel's current counterpart. These controls are mock-only and never appear in a live conversation.

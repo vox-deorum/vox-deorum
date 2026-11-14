@@ -5,7 +5,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { sections, renderSection, type SectionKey } from '../../../src/knowledge/sections.js';
-import { jsonToMarkdown } from '../../../src/utils/tools/json-to-markdown.js';
+import { jsonToMarkdown } from '../../../src/agents/tools/json-to-markdown.js';
 
 const keys: SectionKey[] = [
   'situation', 'civilization', 'options', 'strategies', 'victory',

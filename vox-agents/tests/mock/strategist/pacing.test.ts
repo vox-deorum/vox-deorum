@@ -6,9 +6,9 @@ import {
   shouldInterruptDecision,
   type PacingVerdict,
   type TriageVerdict,
-} from "../../../src/strategist/pacing.js";
+} from "../../../src/strategist/pacing/policy.js";
 import { pacingInterruptionRegistry } from "../../../src/strategist/pacing/registry.js";
-import { eventImportanceTiers } from "../../../src/utils/prompts/event-importance.js";
+import { eventImportanceTiers } from "../../../src/knowledge/events/event-importance.js";
 import {
   getDecisionTurnContext,
   mergeCachedEvents,

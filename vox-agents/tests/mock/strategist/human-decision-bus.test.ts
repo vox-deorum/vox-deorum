@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { HumanDecisionBus, type HumanDecisionSubmission } from "../../../src/strategist/human-decision-bus.js";
+import { HumanDecisionBus, type HumanDecisionSubmission } from "../../../src/strategist/seats/human-decision-bus.js";
 
 describe("HumanDecisionBus", () => {
   it("resolves a pending request with the submission", async () => {

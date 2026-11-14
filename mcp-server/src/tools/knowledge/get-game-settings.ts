@@ -9,7 +9,7 @@ import { knowledgeManager } from "../../server.js";
 import path from "node:path";
 import { CivilizationSummarySchema } from "../databases/get-civilization.js";
 import { getTool } from "../index.js";
-import { readPublicKnowledgeBatch } from "../../utils/knowledge/cached.js";
+import { readPublicKnowledgeBatch } from "../../knowledge/helpers/cached.js";
 import { getPlayerInformations } from "../../knowledge/getters/player-information.js";
 
 /**

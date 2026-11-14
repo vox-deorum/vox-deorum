@@ -1,5 +1,5 @@
 /**
- * @module utils/diplomacy/resolve-negotiator
+ * @module envoy/agents/resolve-negotiator
  *
  * Per-seat negotiator resolution for the diplomat's `call-negotiator` handoff. Each seat may
  * configure its own negotiator agent (`playerConfig.negotiator`); when it does not, the handoff
@@ -9,8 +9,8 @@
  */
 
 import type { EnvoyThread } from "../../types/index.js";
-import { agentRegistry } from "../../infra/agent-registry.js";
-import { sessionRegistry } from "../../infra/session-registry.js";
+import { agentRegistry } from "../../agents/runtime/agent-registry.js";
+import { sessionRegistry } from "../../agents/runtime/session-registry.js";
 import { createLogger } from "../../utils/logger.js";
 
 const logger = createLogger("resolve-negotiator");

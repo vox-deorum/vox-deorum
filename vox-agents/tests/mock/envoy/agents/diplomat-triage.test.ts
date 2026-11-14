@@ -2,8 +2,8 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EnvoyThread, TriageSetting } from '../../../../src/types/index.js';
-import { agentRegistry } from '../../../../src/infra/agent-registry.js';
-import { config } from '../../../../src/utils/config.js';
+import { agentRegistry } from '../../../../src/agents/runtime/agent-registry.js';
+import { config } from '../../../../src/agents/config/load.js';
 
 const diplomat = agentRegistry.get('diplomat')!;
 

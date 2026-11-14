@@ -12,13 +12,13 @@ import express from 'express';
 import fs from 'fs/promises';
 import { installMockMcpClient, structuredResult } from '../../../helpers/mock-mcp-client.js';
 import { transcriptRow } from '../../../helpers/diplomacy-fixtures.js';
-import type { TranscriptMessage } from '../../../../src/utils/diplomacy/transcript/transcript-utils.js';
+import type { TranscriptMessage } from '../../../../src/diplomacy/transcript/transcript-utils.js';
 
 const telepathistMocks = vi.hoisted(() => ({
   createParameters: vi.fn(),
 }));
 
-vi.mock('../../../../src/utils/models/mcp-client.js', async () => {
+vi.mock('../../../../src/agents/mcp/mcp-client.js', async () => {
   const helper = await import('../../../helpers/mock-mcp-client.js');
   return helper.mockMcpClientModule();
 });
@@ -31,21 +31,21 @@ vi.mock('../../../../src/telepathist/telepathist-parameters.js', async () => {
 });
 
 import { createAgentRoutes } from '../../../../src/web/routes/agent.js';
-import { appendDealProposal } from '../../../../src/utils/diplomacy/deal/deal.js';
-import { withThreadLock } from '../../../../src/utils/diplomacy/turn/chat-turn-commit.js';
-import { appendTranscriptMessageRow } from '../../../../src/utils/diplomacy/transcript/transcript.js';
-import { retryMessage } from '../../../../src/utils/diplomacy/transcript/transcript-utils.js';
-import { sendMessageToolName } from '../../../../src/utils/diplomacy/constants.js';
+import { appendDealProposal } from '../../../../src/diplomacy/deal/deal.js';
+import { withThreadLock } from '../../../../src/diplomacy/turn/chat-turn-commit.js';
+import { appendTranscriptMessageRow } from '../../../../src/diplomacy/transcript/transcript.js';
+import { retryMessage } from '../../../../src/diplomacy/transcript/transcript-utils.js';
+import { sendMessageToolName } from '../../../../src/diplomacy/constants.js';
 import { chatThreadStore } from '../../../../src/web/chat/store.js';
-import { agentRegistry } from '../../../../src/infra/agent-registry.js';
-import { contextRegistry } from '../../../../src/infra/context-registry.js';
+import { agentRegistry } from '../../../../src/agents/runtime/agent-registry.js';
+import { contextRegistry } from '../../../../src/agents/runtime/context-registry.js';
 import { pacingInterruptionRegistry } from '../../../../src/strategist/pacing/registry.js';
 import { SimpleStrategist } from '../../../../src/strategist/agents/simple-strategist.js';
 import { SimpleStrategistBriefed } from '../../../../src/strategist/agents/simple-strategist-briefed.js';
 import { SimpleStrategistLearned } from '../../../../src/strategist/agents/simple-strategist-learned.js';
 import { SimpleStrategistStaffed } from '../../../../src/strategist/agents/simple-strategist-staffed.js';
-import { VoxSpanExporter } from '../../../../src/utils/telemetry/vox-exporter.js';
-import { parseContextIdentifier } from '../../../../src/utils/telemetry/identifier-parser.js';
+import { VoxSpanExporter } from '../../../../src/agents/telemetry/vox-exporter.js';
+import { parseContextIdentifier } from '../../../../src/agents/telemetry/identifier-parser.js';
 
 function makeApp() {
   const app = express();

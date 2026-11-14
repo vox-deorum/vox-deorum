@@ -5,7 +5,7 @@
  */
 
 import { Router, type Request, type Response } from 'express';
-import { agentRegistry } from '../../infra/agent-registry.js';
+import { agentRegistry } from '../../agents/runtime/agent-registry.js';
 import { pacingInterruptionRegistry } from '../../strategist/pacing/registry.js';
 import type {
   AgentInfo,

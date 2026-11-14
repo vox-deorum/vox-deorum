@@ -12,7 +12,7 @@ import type { Kysely, Selectable } from 'kysely';
 import type { KnowledgeDatabase } from '../../../../mcp-server/dist/knowledge/schema/index.js';
 import type { PlayerInformation } from '../../../../mcp-server/dist/knowledge/schema/index.js';
 import { MaxMajorCivs } from '../../../../mcp-server/dist/knowledge/schema/index.js';
-import { VoxSession } from '../../infra/vox-session.js';
+import { VoxSession } from '../../agents/runtime/vox-session.js';
 import { createLogger } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errors.js';
 import {
@@ -20,8 +20,8 @@ import {
   resolveKnowledgePath,
   getWinner,
   getPlayerStrategistMetadata,
-} from '../../utils/telemetry/knowledge-db.js';
-import { agentRegistry } from '../../infra/agent-registry.js';
+} from '../../knowledge/database.js';
+import { agentRegistry } from '../../agents/runtime/agent-registry.js';
 import type { Strategist } from '../../strategist/strategist.js';
 import { NarratorWorkspace } from '../workspace.js';
 import { parseAndDecompose } from '../utils/episode-parser.js';

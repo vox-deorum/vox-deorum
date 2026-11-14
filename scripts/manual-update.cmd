@@ -31,7 +31,7 @@ goto :parse_arguments
 
 :arguments_parsed
 if "%CLEAR_CACHE%"=="1" (
-    powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0utilities\clear-ai-cache.ps1"
+    powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0maintenance\clear-ai-cache.ps1"
     if errorlevel 1 exit /b 1
 )
 

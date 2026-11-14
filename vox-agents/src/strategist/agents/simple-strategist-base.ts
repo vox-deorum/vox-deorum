@@ -7,12 +7,12 @@
 
 import { Strategist } from "../strategist.js";
 import { ModelMessage } from "ai";
-import { VoxContext } from "../../infra/vox-context.js";
+import { VoxContext } from "../../agents/runtime/vox-context.js";
 import { getDecisionTurnContext, getRecentGameState, StrategistParameters } from "../strategy-parameters.js";
 import { fileMode, insertRecordsDirections } from "../../knowledge/directions.js";
 import { renderSection, strategistInlineSections } from "../../knowledge/sections.js";
-import { getStrategicPlayersReport } from "../../utils/prompts/report-filters.js";
-import { cacheBreakpoint } from "../../utils/models/cache-breakpoint.js";
+import { getStrategicPlayersReport } from "../../knowledge/reports/report-filters.js";
+import { cacheBreakpoint } from "../../agents/models/cache-breakpoint.js";
 
 /**
  * Base class for simple strategist agents.

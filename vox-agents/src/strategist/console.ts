@@ -10,10 +10,10 @@
 import { sqliteExporter } from "../instrumentation.js";
 import { createLogger } from "../utils/logger.js";
 import { errorMessage } from "../utils/errors.js";
-import { loadConfigFromFile, getConfigsDir } from "../utils/config.js";
-import { StrategistSession } from "./strategist-session.js";
-import { runStrategistLoop } from "./loop.js";
-import { resolveMaxRepetitions } from "./repetition.js";
+import { loadConfigFromFile, getConfigsDir } from "../agents/config/load.js";
+import { StrategistSession } from "./session/strategist-session.js";
+import { runStrategistLoop } from "./session/loop.js";
+import { resolveMaxRepetitions } from "./session/repetition.js";
 import { StrategistSessionConfig } from "../types/config.js";
 import { setTimeout } from 'node:timers/promises';
 import { parseArgs } from 'node:util';
@@ -21,8 +21,8 @@ import * as readline from 'node:readline';
 import * as path from 'node:path';
 import * as fs from 'node:fs';
 import { startWebServer } from "../web/server.js";
-import { processManager } from "../infra/process-manager.js";
-import { mergeRandomSeeds, parseSeedArgument, validateRandomSeeds, validateRandomSeedsList } from "../utils/game/random-seeds.js";
+import { processManager } from "../agents/runtime/process-manager.js";
+import { mergeRandomSeeds, parseSeedArgument, validateRandomSeeds, validateRandomSeedsList } from "../game/random-seeds.js";
 import type { RandomSeedsConfig } from "../types/config.js";
 
 const logger = createLogger('Strategists');

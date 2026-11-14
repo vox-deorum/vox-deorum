@@ -7,7 +7,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import createAppendMessageTool from '../../../src/tools/actions/append-message.js';
 import createReadTranscriptTool from '../../../src/tools/knowledge/read-transcript.js';
 import { getDiplomaticMessages } from '../../../src/knowledge/getters/diplomatic-messages.js';
-import { getVisibility } from '../../../src/utils/knowledge/visibility.js';
+import { getVisibility } from '../../../src/knowledge/helpers/visibility.js';
 import { setupDiplomacyStore, seedPlayer } from '../helpers.js';
 import type { KnowledgeStore } from '../../../src/knowledge/store.js';
 import { knowledgeManager } from '../../../src/server.js';

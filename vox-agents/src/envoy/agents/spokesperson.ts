@@ -6,10 +6,10 @@
  */
 
 import { LiveEnvoy } from "../live-envoy.js";
-import { VoxContext } from "../../infra/vox-context.js";
+import { VoxContext } from "../../agents/runtime/vox-context.js";
 import { StrategistParameters } from "../../strategist/strategy-parameters.js";
 import { EnvoyThread } from "../../types/index.js";
-import { renderSystemPrompt } from "../../utils/prompts/prompt-files.js";
+import { renderSystemPrompt } from "../../agents/prompts/prompt-files.js";
 import { getTeammateCounterpart } from "../context/diplomacy-context.js";
 
 /**

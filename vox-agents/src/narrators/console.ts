@@ -13,12 +13,12 @@
 
 import { sqliteExporter } from "../instrumentation.js";
 import { createLogger } from "../utils/logger.js";
-import { loadConfigFromFile, getConfigsDir } from "../utils/config.js";
+import { loadConfigFromFile, getConfigsDir } from "../agents/config/load.js";
 import { setTimeout } from 'node:timers/promises';
 import { parseArgs } from 'node:util';
 import * as path from 'node:path';
-import { processManager } from "../infra/process-manager.js";
-import { VoxSession } from "../infra/vox-session.js";
+import { processManager } from "../agents/runtime/process-manager.js";
+import { VoxSession } from "../agents/runtime/vox-session.js";
 import { AssembleSession } from "./sessions/assemble-session.js";
 import type { AssembleConfig, NarratorStageConfig } from "./types.js";
 

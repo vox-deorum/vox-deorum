@@ -2,6 +2,34 @@
 
 The newspaper proof renders fixture issues in a browser and exports the same layout as DDS strips with typed interaction rectangles. It supports Victorian and modern designs, section tabs, article links, and reversible votes shared by every appearance of an item. Votes are local to the reader. Replay, story generation, archives, and saved-game persistence belong to later stages.
 
+## Supply a completed issue
+
+`IssueDocument` and its structural schema live in `src/newspaper/contracts/issue.ts`. The input contains ready articles and their publication order. The renderer uses these decisions to build the reading surface; editorial selection and replay remain later stages.
+
+| Field | Content |
+| --- | --- |
+| `schemaVersion`, `issueId`, `campaignId`, `timelineId` | Document version and issue, campaign, and timeline identity |
+| `receiver` | Receiving `playerId`, display `label`, and optional `civilizationId` |
+| `cutoff` | Reporting `turn` and display `label` |
+| `publication` | `title`, `designId`, `designVersion`, and optional `ornamentAssetId` |
+| `pages` | Ordered sections, each with an `id`, `label`, `layout`, and ordered `itemIds` |
+| `items` | Canonical articles, each with an `id`, `tags`, `seriesKeys`, `headline`, `body`, and `record` |
+
+An item can also supply a `deck`, `history`, `assetId`, `assetAlt`, `avatar`, and `evidence` table. Headline, deck, body, record, and history prose use typed inline nodes for text, emphasis, breaks, and links. Link targets identify a city, civilization, trade relationship, supported game screen, or article. Supply those typed targets rather than raw markup.
+
+Multiple pages can reference the same canonical item ID. Every appearance shares its vote. Page IDs and item IDs must be unique, and page item references must resolve. Renderer validation in `src/newspaper/renderer/validation.ts` also checks registered assets and their kinds: item assets must be images with alternative text, and publication ornaments must be ornament assets. The contract schema handles structure and references without importing the renderer.
+
+The four files in `newspaper/fixtures/` are complete input examples: `victorian-ordinary.json`, `victorian-breaking.json`, `victorian-analysis.json`, and `modern-ordinary.json`.
+
+Keep these related values separate:
+
+| Value | Purpose |
+| --- | --- |
+| `IssueDocument` | Completed publication supplied to the reader or exporter |
+| `RenderProfile` | Viewport, text, raster, and texture settings for export, defined in `renderer/types.ts` |
+| `ReaderState` | Active page, scroll positions, and votes persisted by the reader's host, defined in `contracts/reader.ts` |
+| `RenderBundle` | Exported strips and interaction geometry returned by the exporter, defined in `renderer/types.ts` |
+
 ## Run the browser reader
 
 From the repository root, run `npm run newspaper -w vox-agents`. Open the printed loopback URL, normally `http://127.0.0.1:8788/newspaper/`. The fixture selector exercises ordinary, breaking, and analysis layouts. Section tabs wrap to keep every section visible. Each section retains its own scroll position, and the surrounding inspector reflects the reader's current votes and scroll state alongside actions and article evidence.
@@ -20,7 +48,7 @@ The viewer needs the DLL's `Game.IsNewspaperTextureAvailable` binding to use ima
 
 ## Profiles and cache
 
-`--profile` accepts a JSON file matching `RenderProfile` in `src/newspaper/contracts/types.ts`. The initial profile uses a 1280 by 720 browser viewport, a 900 CSS-pixel content box, normal text size, raster scale 1, and a 2048-pixel texture limit. Raster scales 1 and 2 are supported for proofing. Margins and the stable scrollbar gutter count toward texture width. Wider profiles that exceed the texture limit are rejected before capture. Final game-supported dimensions and text settings require visual acceptance.
+`--profile` accepts a JSON file matching `RenderProfile` in `src/newspaper/renderer/types.ts`. The initial profile uses a 1280 by 720 browser viewport, a 900 CSS-pixel content box, normal text size, raster scale 1, and a 2048-pixel texture limit. Raster scales 1 and 2 are supported for proofing. Margins and the stable scrollbar gutter count toward texture width. Wider profiles that exceed the texture limit are rejected before capture. Final game-supported dimensions and text settings require visual acceptance.
 
 The exporter supports `--format BC1_UNORM` and `--format B8G8R8A8_UNORM`. Both use legacy DDS headers and one mip level. BC1 is the initial proof format; the uncompressed option allows comparison of small-text quality. Padding is recorded separately from visible dimensions and must not become extra scrolling space.
 
@@ -32,17 +60,19 @@ The source is divided by runtime and responsibility:
 
 | Location | Responsibility |
 | --- | --- |
-| `src/newspaper/contracts/{types,validation,bundle}.ts` | Publication types and validation for issues and bundles |
-| `src/newspaper/ui/{assets,layout,state}.ts` | Browser-safe assets, layout defaults, and shared reader state |
-| `src/newspaper/renderer/{render,browser,dds}.ts` | Capture orchestration, browser lifecycle, and DDS conversion |
-| `src/newspaper/cache/{cache,bundle-assets}.ts` | Atomic cache publication and bundle file resolution |
-| `src/newspaper/host/{http,fixture}.ts`, `src/newspaper/console.ts` | Local HTTP host, development Lua delivery, and command entry point |
+| `src/newspaper/contracts/issue.ts` | Completed publication types, typed links, and structural issue validation |
+| `src/newspaper/contracts/reader.ts` | Reader actions, persisted state, and their validation |
+| `src/newspaper/renderer/{assets,layout,state}.ts` | Browser-safe assets, layout defaults, and shared reader state helpers |
+| `src/newspaper/renderer/{types,validation,bundle}.ts` | Render profile, geometry, browser bridge, bundle output, and renderer validation |
+| `src/newspaper/export/{browser,render,dds}.ts` | Node capture orchestration, browser lifecycle, and DDS conversion |
+| `src/newspaper/export/{cache,bundle-assets,lua-fixture}.ts` | Atomic cache publication, bundle file resolution, and development Lua delivery |
+| `src/newspaper/host/http.ts`, `src/newspaper/console.ts` | Local HTTP host and command entry point |
 | `newspaper/src/` | Plain DOM reader lifecycle, article construction, layout measurement, and export bridge |
 | `civ5-mod/UI/VoxDeorumNewspaperData.lua` | Pure publication indexing and native text adapters |
 
-Contract validation uses the shared asset registry and layout defaults in `ui/`. Both folders stay browser-safe; UI modules import only types from `contracts/`.
+Contracts have no renderer imports. The renderer depends on contracts and stays free of Node and DOM imports; DOM work belongs to `newspaper/src/`. The Node-only exporter consumes the renderer's profile, geometry, and bundle contracts. Issue parsing at the rendering boundary retains the full asset, kind, and alternative-text checks, and profile validation uses renderer layout defaults.
 
-The standalone newspaper HTTP host shares `web/loopback.ts` request protection with the dashboard without importing dashboard startup. It exposes `/newspaper/` and `/api/newspaper/export`; regular dashboard integration is deferred. Browser assets and fixture JSON stay with the reader. Mock tests under `tests/mock/newspaper/` are grouped by the boundary they exercise; reader state is covered with the contracts. Shared test builders live in `tests/helpers/newspaper-fixtures.ts`.
+The standalone newspaper HTTP host shares `web/loopback.ts` request protection with the dashboard without importing dashboard startup. It exposes `/newspaper/` and `/api/newspaper/export`; regular dashboard integration is deferred. Browser assets and fixture JSON stay with the reader. Mock tests under `tests/mock/newspaper/` are grouped by the boundary they exercise; reader state contracts and helpers are covered at their respective boundaries. Shared test builders live in `tests/helpers/newspaper-fixtures.ts`.
 
 Run focused checks with `npm test -w vox-agents -- tests/mock/newspaper`, then run `npm run build:all` and `npm run test:all` for integration. Browser-driven tests use installed browsers and the built reader. Converter checks require the acquired executable.
 

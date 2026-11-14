@@ -1,5 +1,5 @@
 /**
- * execute()-driven run-model tests for VoxContext (src/infra/vox-context.ts).
+ * execute()-driven run-model tests for VoxContext (src/agents/runtime/vox-context.ts).
  *
  * These drive the real execute() step loop with the model layer (streamTextWithConcurrency) and
  * model factory (getModel/buildProviderOptions) mocked, so no network or provider is touched.
@@ -12,29 +12,29 @@
 import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
 
 // Mock only the model factory + streaming call; keep the rest of each module real.
-vi.mock('../../../src/utils/models/models.js', async (orig) => {
-  const actual = await orig<typeof import('../../../src/utils/models/models.js')>();
+vi.mock('../../../src/agents/models/models.js', async (orig) => {
+  const actual = await orig<typeof import('../../../src/agents/models/models.js')>();
   return { ...actual, getModel: vi.fn(() => ({} as any)), buildProviderOptions: vi.fn(() => ({})) };
 });
-vi.mock('../../../src/utils/models/concurrency.js', async (orig) => {
-  const actual = await orig<typeof import('../../../src/utils/models/concurrency.js')>();
+vi.mock('../../../src/agents/models/concurrency.js', async (orig) => {
+  const actual = await orig<typeof import('../../../src/agents/models/concurrency.js')>();
   return { ...actual, streamTextWithConcurrency: vi.fn() };
 });
 
-import { VoxContext } from '../../../src/infra/vox-context.js';
-import { VoxAgent } from '../../../src/infra/vox-agent.js';
-import { agentRegistry } from '../../../src/infra/agent-registry.js';
-import { streamTextWithConcurrency } from '../../../src/utils/models/concurrency.js';
-import { buildProviderOptions, getModel } from '../../../src/utils/models/models.js';
-import { ClaudeCodeSession } from '../../../src/utils/models/providers/claude-code-session.js';
+import { VoxContext } from '../../../src/agents/runtime/vox-context.js';
+import { VoxAgent } from '../../../src/agents/runtime/vox-agent.js';
+import { agentRegistry } from '../../../src/agents/runtime/agent-registry.js';
+import { streamTextWithConcurrency } from '../../../src/agents/models/concurrency.js';
+import { buildProviderOptions, getModel } from '../../../src/agents/models/models.js';
+import { ClaudeCodeSession } from '../../../src/agents/models/providers/claude-code-session.js';
 import { spanProcessor } from '../../../src/instrumentation.js';
-import { VoxSpanExporter } from '../../../src/utils/telemetry/vox-exporter.js';
+import { VoxSpanExporter } from '../../../src/agents/telemetry/vox-exporter.js';
 import type { StrategistParameters } from '../../../src/strategist/strategy-parameters.js';
 import { makeStrategistParameters } from '../../helpers/fake-vox-context.js';
 import { deferred, type Deferred } from '../../helpers/deferred.js';
 import type { Model } from '../../../src/types/index.js';
-import { buildClosingReminder } from '../../../src/utils/prompts/closing-reminder.js';
-import { buildRescuePrompt } from '../../../src/utils/models/text-cleaning.js';
+import { buildClosingReminder } from '../../../src/agents/prompts/closing-reminder.js';
+import { buildRescuePrompt } from '../../../src/agents/models/text-cleaning.js';
 
 const stc = vi.mocked(streamTextWithConcurrency);
 const bpo = vi.mocked(buildProviderOptions);

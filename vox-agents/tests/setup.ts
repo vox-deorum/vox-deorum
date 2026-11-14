@@ -2,7 +2,7 @@
  * Test setup file for Vox Agents
  * Configures the test environment and sets up global test utilities.
  */
-import "../src/utils/config.js";
+import "../src/agents/config/load.js";
 
 // Set default test environment variables if not already set
 process.env.NODE_ENV = process.env.NODE_ENV || 'test';

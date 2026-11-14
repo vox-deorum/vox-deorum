@@ -16,7 +16,7 @@ import Toolbar from 'primevue/toolbar';
 import AgentSelectDialog from '@/components/chat/launch/AgentSelectDialog.vue';
 import StrategistTurnDialog from '@/components/telemetry/strategist/StrategistTurnDialog.vue';
 import TurnViewButton from '@/components/telemetry/strategist/TurnViewButton.vue';
-import { isStrategistTurnSpan } from '@/api/strategist-turn';
+import { isStrategistTurnSpan } from '@/presentation/strategist-turn';
 import { api } from '@/api/client';
 import type { Span } from '../utils/types';
 import { errorMessage } from '@/utils/errors';
@@ -27,7 +27,7 @@ import {
   getStatusSeverity,
   getStatusText,
   parseSpanAttributes
-} from '@/api/telemetry-utils';
+} from '@/presentation/telemetry-utils';
 
 const route = useRoute();
 const router = useRouter();

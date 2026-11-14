@@ -14,12 +14,12 @@
  * bash workspace showed.
  */
 
-import { mcpClient } from "../utils/models/mcp-client.js";
-import { unwrapMcpResponse } from "../utils/models/mcp-response.js";
+import { mcpClient } from "../agents/mcp/mcp-client.js";
+import { unwrapMcpResponse } from "../agents/mcp/mcp-response.js";
 import { renderReferenceMarkdown } from "./reference-format.js";
 import { isRecord } from "../utils/guards.js";
 import { createLogger } from "../utils/logger.js";
-import { referenceStoreFolder, referenceStorePrefix, type PathChange, type WorkspaceStore } from "../utils/workspace/workspace-store.js";
+import { referenceStoreFolder, referenceStorePrefix, type PathChange, type WorkspaceStore } from "../agents/workspace/workspace-store.js";
 
 const logger = createLogger('GameReference');
 

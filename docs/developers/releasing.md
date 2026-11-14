@@ -18,7 +18,7 @@ The job runs on `windows-latest` and checks out the repository with submodules a
 
 1. **Bumps the version** in `version.json`, then rewrites the same number into `release.txt`, the `MyAppVersion` define in `scripts/installer.iss`, the version line in `README.md`, and the default tag in `scripts/bootstrap.cmd`.
 2. **Commits those five files** locally as `Release v<version>`, without pushing yet.
-3. **Installs Inno Setup 6** and runs `scripts/utilities/build-installer.cmd`, then verifies that `scripts/dist/VoxDeorum-<version>.exe` exists. A missing installer fails the run before anything is published.
+3. **Installs Inno Setup 6** and runs `scripts/packaging/build-installer.cmd`, then verifies that `scripts/dist/VoxDeorum-<version>.exe` exists. A missing installer fails the run before anything is published.
 4. **Pushes the commit to `main`**, creates an annotated tag `v<version>`, and pushes it.
 5. **Publishes the GitHub release** with the installer attached.
 
@@ -62,13 +62,13 @@ Every release, themed or not, goes through the same three steps:
 
 1. **Draft.** Ask a coding agent to draft the release notes. Following the root `AGENTS.md`, it reads the last tag from `release.txt`, surveys `git log` and `git diff --stat` since that tag, and writes short grouped bullets to `.tmp/release-notes.md`. That folder is gitignored, so nothing half-finished lands in the repo.
 2. **Edit.** Revise the file by hand. Leave out a top-level title, since the release is already named after its version.
-3. **Publish.** Run `npm run release -- <patch|minor|major|none>` from the repository root, adding `--dry-run` to test first. The command is `scripts/utilities/release.mjs`. It requires that you are on `main` and that local `main` matches `origin/main`, because the workflow builds from the remote. It warns about uncommitted changes, shows the next version and the notes, asks for confirmation (`--yes` skips this), and dispatches the workflow through GitHub CLI with the file as `release_notes`. Use `--notes <path>` to send a different file. Follow the run with `gh run watch`.
+3. **Publish.** Run `npm run release -- <patch|minor|major|none>` from the repository root, adding `--dry-run` to test first. The command is `scripts/packaging/release.mjs`. It requires that you are on `main` and that local `main` matches `origin/main`, because the workflow builds from the remote. It warns about uncommitted changes, shows the next version and the notes, asks for confirmation (`--yes` skips this), and dispatches the workflow through GitHub CLI with the file as `release_notes`. Use `--notes <path>` to send a different file. Follow the run with `gh run watch`.
 
 For a themed release that deserves a page under `docs/versions/`, commit `docs/versions/<version>.md` and push it first, then pass it with `--notes`.
 
 ## Building the installer locally
 
-`scripts/utilities/build-installer.cmd` is the same script the workflow calls, and you can run it directly to test packaging without publishing anything. It needs **Inno Setup 6** installed. In order, it:
+`scripts/packaging/build-installer.cmd` is the same script the workflow calls, and you can run it directly to test packaging without publishing anything. It needs **Inno Setup 6** installed. In order, it:
 
 1. **Fetches a portable Node.js** (v22.23.3) into `node/` if it is missing or holds a different version, so the installer can ship a self-contained runtime and no player needs system Node.
 2. **Installs all dependencies** from the root via npm workspaces, including dev dependencies needed to compile, plus the `vox-agents/ui` dependencies separately.
@@ -82,7 +82,7 @@ Running this by hand does not bump any version, so a local build reuses whatever
 
 ## Generated API docs
 
-Separate from release packaging, each TypeScript service publishes a generated TypeDoc API reference: `npm run docs` per service, or `scripts/utilities/generate-docs.cmd` for all three at once. `.github/workflows/generate-docs.yml` regenerates and commits them whenever service source changes land on `main`. They are reference material in the components' own `docs/api/` folders, not part of the prose documentation and not bundled into the installer.
+Separate from release packaging, each TypeScript service publishes a generated TypeDoc API reference: `npm run docs` per service, or `scripts/maintenance/generate-docs.cmd` for all three at once. `.github/workflows/generate-docs.yml` regenerates and commits them whenever service source changes land on `main`. They are reference material in the components' own `docs/api/` folders, not part of the prose documentation and not bundled into the installer.
 
 ## Checklist for a release
 

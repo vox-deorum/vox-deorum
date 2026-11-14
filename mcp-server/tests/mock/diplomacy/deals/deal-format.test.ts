@@ -1,0 +1,236 @@
+/**
+ * Tests for the deal renderer (src/diplomacy/deals/deal-format.ts). Two families live here since they share one
+ * module:
+ *   1. The string-form helpers for the game's own already-localized deals — the active standing deals
+ *      (get-players → DiplomaticDeals) and the DealMade events (get-diplomatic-events).
+ *   2. The structured, value-aware renderer the diplomat/negotiator agents read (friendly item/promise
+ *      labels, the advisory "no usable estimate" sentinel, the direction-grouped terms block).
+ * Pure — no mcp-client or game state.
+ */
+import { describe, it, expect } from 'vitest';
+import {
+  formatDealSide,
+  getDealExpirySuffix,
+  formatStringDeal,
+  isSentinel,
+  formatEstimate,
+  formatSideValue,
+  formatItemLabel,
+  formatPromiseLabel,
+  formatDealTermsByDirection,
+  itemTypeLabel,
+  SENTINEL_LABEL,
+} from '../../../../src/diplomacy/deals/deal-format.js';
+import type { DealPayload, TradeItem } from '../../../../src/diplomacy/deals/deal-schema.js';
+import { PROMISE_METADATA, resolveItemName } from '../../../../src/diplomacy/deals/deal-schema.js';
+
+const INT_MAX = 2147483647;
+
+describe('formatDealSide', () => {
+  it('joins a non-empty string array', () => {
+    expect(formatDealSide(['Gold: 100', 'Open Borders'])).toBe('Gold: 100, Open Borders');
+  });
+
+  it('renders an empty array as "nothing"', () => {
+    expect(formatDealSide([])).toBe('nothing');
+  });
+
+  it('renders a non-array (empty Lua table {}) as "nothing" without throwing', () => {
+    expect(formatDealSide({})).toBe('nothing');
+    expect(formatDealSide(undefined)).toBe('nothing');
+  });
+});
+
+describe('getDealExpirySuffix', () => {
+  it('reports a future expiry turn', () => {
+    expect(getDealExpirySuffix({ StartTurn: 10, TurnsRemaining: 30 }, 20)).toContain('40');
+  });
+
+  it('reports an already-expired turn', () => {
+    expect(getDealExpirySuffix({ StartTurn: 10, TurnsRemaining: 5 }, 20)).toContain('15');
+  });
+
+  it('returns "" for a permanent/termless deal or a missing start turn', () => {
+    expect(getDealExpirySuffix({ StartTurn: 10, TurnsRemaining: 0 }, 20)).toBe('');
+    expect(getDealExpirySuffix({ StartTurn: 10, TurnsRemaining: -75 }, 20)).toBe('');
+    expect(getDealExpirySuffix({ TurnsRemaining: 30 }, 20)).toBe('');
+  });
+});
+
+describe('formatStringDeal', () => {
+  it('renders the canonical "gives [..] ↔ gives [..]" line with caller-supplied framing', () => {
+    const rendered = formatStringDeal({
+        leftLabel: 'Rome',
+        rightLabel: 'Egypt',
+        leftGive: ['Gold: 100'],
+        rightGive: ['Open Borders'],
+        framing: ' (12 turns remaining)',
+      });
+    expect(rendered).toContain('Rome');
+    expect(rendered).toContain('Egypt');
+    expect(rendered).toContain('Gold: 100');
+    expect(rendered).toContain('Open Borders');
+    expect(rendered).toContain('12 turns remaining');
+  });
+
+  it('renders empty/absent sides as "nothing" and an empty framing cleanly', () => {
+    const rendered = formatStringDeal({ leftLabel: 'Rome', rightLabel: 'Egypt', leftGive: [], rightGive: {}, framing: '' });
+    expect(rendered).toContain('Rome');
+    expect(rendered).toContain('Egypt');
+    expect(rendered.toLowerCase()).toContain('nothing');
+  });
+});
+
+describe('isSentinel / formatEstimate', () => {
+  it('flags INT_MAX-scale values and renders them as "no usable estimate"', () => {
+    expect(isSentinel(INT_MAX)).toBe(true);
+    expect(isSentinel(-INT_MAX)).toBe(true);
+    expect(isSentinel(42)).toBe(false);
+    expect(formatEstimate(INT_MAX)).toBe(SENTINEL_LABEL);
+    expect(formatEstimate(42.6)).toBe('43');
+  });
+});
+
+describe('formatSideValue', () => {
+  it('frames a real estimate by civ and role', () => {
+    expect(formatSideValue(50, 'Rome', 'receive')).toContain('50');
+    expect(formatSideValue(50, 'Rome', 'receive')).toContain('Rome');
+    expect(formatSideValue(50, 'Rome', 'receive').toLowerCase()).toContain('receiv');
+    expect(formatSideValue(30, 'Germany', 'give')).toContain('30');
+    expect(formatSideValue(30, 'Germany', 'give')).toContain('Germany');
+    expect(formatSideValue(30, 'Germany', 'give').toLowerCase()).toContain('giv');
+  });
+  it('renders a sentinel as a no-usable-estimate phrase, and drops an absent value', () => {
+    expect(formatSideValue(INT_MAX, 'Rome', 'give').toLowerCase()).toContain('estimate');
+    expect(formatSideValue(INT_MAX, 'Rome', 'give')).toContain('Rome');
+    expect(formatSideValue(INT_MAX, 'Rome', 'receive').toLowerCase()).toContain('estimate');
+    expect(formatSideValue(INT_MAX, 'Rome', 'receive')).toContain('Rome');
+    expect(formatSideValue(undefined, 'Rome', 'give')).toBe('');
+  });
+});
+
+describe('formatItemLabel / itemTypeLabel / formatPromiseLabel', () => {
+  it('labels item types with their data, falling back to IDs without a range', () => {
+    expect(formatItemLabel({ fromPlayerID: 0, toPlayerID: 1, itemType: 'ALLOW_EMBASSY' } as TradeItem)).toBe('Allow Embassy');
+    expect(formatItemLabel({ fromPlayerID: 0, toPlayerID: 1, itemType: 'GOLD', amount: 50 } as TradeItem)).toBe('Gold: 50');
+    expect(
+      formatItemLabel({ fromPlayerID: 0, toPlayerID: 1, itemType: 'RESOURCES', resourceID: 7, quantity: 2, duration: 30 } as TradeItem)
+    ).toBe('Resource #7 ×2 (30t)');
+    expect(formatItemLabel({ fromPlayerID: 0, toPlayerID: 1, itemType: 'CITIES', cityID: 4 } as TradeItem)).toBe('City #4');
+    expect(itemTypeLabel('OPEN_BORDERS')).toBe('Open Borders');
+  });
+  it('prefers the server-stamped `name` for every data-bearing type (no live range on this path)', () => {
+    expect(
+      formatItemLabel({ fromPlayerID: 0, toPlayerID: 1, itemType: 'RESOURCES', resourceID: 7, quantity: 2, duration: 30, name: 'Iron' } as TradeItem)
+    ).toBe('Iron ×2 (30t)');
+    expect(formatItemLabel({ fromPlayerID: 0, toPlayerID: 1, itemType: 'CITIES', cityID: 4, name: 'Antium' } as TradeItem)).toBe('Antium');
+    expect(formatItemLabel({ fromPlayerID: 0, toPlayerID: 1, itemType: 'TECHS', techID: 2, name: 'Bronze Working' } as TradeItem)).toBe('Bronze Working');
+    expect(
+      formatItemLabel({ fromPlayerID: 0, toPlayerID: 1, itemType: 'THIRD_PARTY_WAR', thirdPartyTeamID: 3, name: 'Greece' } as TradeItem)
+    ).toBe('War with Greece');
+    expect(
+      formatItemLabel({ fromPlayerID: 0, toPlayerID: 1, itemType: 'VOTE_COMMITMENT', resolutionID: 9, numVotes: 2, name: 'Ban Luxury: Silk' } as TradeItem)
+    ).toBe('Vote: Ban Luxury: Silk (2 votes)');
+  });
+  it('labels promises in the promiser voice and resolves a third-party target name', () => {
+    // Labels come from the canonical PROMISE_METADATA (single source of truth).
+    expect(formatPromiseLabel({ promiserID: 0, recipientID: 1, promiseType: 'NO_DIGGING' })).toBe(PROMISE_METADATA.NO_DIGGING.label);
+    expect(
+      formatPromiseLabel({ promiserID: 0, recipientID: 1, promiseType: 'COOP_WAR', targetPlayerID: 5 }, { 5: 'Greece' })
+    ).toBe(`${PROMISE_METADATA.COOP_WAR.label} (target: Greece)`);
+  });
+});
+
+describe('formatDealTermsByDirection', () => {
+  const civ = (id: number) => (id === 0 ? 'Rome' : 'Germany');
+  const deal: DealPayload = {
+    version: 1,
+    items: [
+      { fromPlayerID: 0, toPlayerID: 1, itemType: 'ALLOW_EMBASSY' },
+      { fromPlayerID: 1, toPlayerID: 0, itemType: 'ALLOW_EMBASSY' },
+    ],
+    promises: [],
+  };
+  // Value1 → player1ID (0 = Rome): #0 giving maxed out, #1 receiving = 50.
+  // Value2 → player2ID (1 = Germany): #0 receiving = 50, #1 giving = 50.
+  const value1 = { '0': INT_MAX, '1': 50 };
+  const value2 = { '0': 50, '1': 50 };
+
+  it('groups by direction with civ names, viewer-first ordering, and the advisory sentinel', () => {
+    const out = formatDealTermsByDirection(deal, value1, value2, 0, 1, civ, /* viewer */ 1);
+
+    // Viewer (Germany) gives section comes first.
+    expect(out).toContain('# Germany gives Rome');
+    expect(out).toContain('- Allow Embassy: worth 50 to Rome (receiving); worth 50 to Germany (giving)');
+    // Counterpart section; Rome's giver estimate maxed out → no usable estimate.
+    expect(out).toContain('# Rome gives Germany');
+    expect(out).toContain('- Allow Embassy: worth 50 to Germany (receiving); no usable estimate for Rome (giving)');
+    // Advisory nature is stated exactly once, not repeated per line.
+    expect(out).toContain('advisory');
+    expect(out).not.toContain('2147483647');
+    expect(out.split('Per-item values').length - 1).toBe(1);
+  });
+
+  it('omits value clauses (and the advisory note) when no snapshots are given', () => {
+    const out = formatDealTermsByDirection(deal, undefined, undefined, 0, 1, civ, 1);
+    expect(out).toContain('# Germany gives Rome');
+    expect(out).toContain('- Allow Embassy');
+    expect(out).not.toContain('worth');
+    expect(out).not.toContain('advisory');
+  });
+
+  it('falls back to "Player <id>" when no civ name resolver value is available', () => {
+    const out = formatDealTermsByDirection(deal, value1, value2, 0, 1, (id) => `Player ${id}`, 1);
+    expect(out).toContain('# Player 1 gives Player 0');
+  });
+
+  it('renders promise-only direction blocks without an advisory note', () => {
+    const promiseDeal: DealPayload = {
+      version: 1,
+      items: [],
+      promises: [
+        { promiserID: 1, recipientID: 0, promiseType: 'NO_DIGGING' },
+        { promiserID: 0, recipientID: 1, promiseType: 'COOP_WAR', targetPlayerID: 5 },
+      ],
+    };
+
+    const out = formatDealTermsByDirection(promiseDeal, value1, value2, 0, 1, civ, 1);
+    expect(out).toContain('# Germany promises Rome');
+    expect(out).toContain(`- ${PROMISE_METADATA.NO_DIGGING.label}`);
+    expect(out).toContain('# Rome promises Germany');
+    expect(out).toContain(`- ${PROMISE_METADATA.COOP_WAR.label} (target: player 5)`);
+    expect(out).not.toContain('Per-item values');
+  });
+});
+
+describe('resolveItemName', () => {
+  // A minimal side range (structurally a NormalizedSideRange) — one candidate per data-bearing type.
+  const range = {
+    resources: [{ resourceID: 7, name: 'Iron' }],
+    cities: [{ cityID: 4, name: 'Antium' }],
+    techs: [{ techID: 2, name: 'Bronze Working' }],
+    thirdPartyPeace: [{ teamID: 5, name: 'Greece' }],
+    thirdPartyWar: [{ teamID: 3, name: 'Persia' }],
+    voteCommitments: [{ resolutionID: 9, voteChoice: 1, repeal: false, name: 'Ban Luxury: Silk' }],
+  };
+
+  it('resolves each data-bearing type from the giver range', () => {
+    expect(resolveItemName({ itemType: 'RESOURCES', resourceID: 7 }, range)).toBe('Iron');
+    expect(resolveItemName({ itemType: 'CITIES', cityID: 4 }, range)).toBe('Antium');
+    expect(resolveItemName({ itemType: 'TECHS', techID: 2 }, range)).toBe('Bronze Working');
+    expect(resolveItemName({ itemType: 'THIRD_PARTY_PEACE', thirdPartyTeamID: 5 }, range)).toBe('Greece');
+    expect(resolveItemName({ itemType: 'THIRD_PARTY_WAR', thirdPartyTeamID: 3 }, range)).toBe('Persia');
+    expect(
+      resolveItemName({ itemType: 'VOTE_COMMITMENT', resolutionID: 9, voteChoice: 1, repeal: false }, range)
+    ).toBe('Ban Luxury: Silk');
+  });
+
+  it('returns undefined for name-less types, a missing candidate, a vote mismatch, or no range', () => {
+    expect(resolveItemName({ itemType: 'GOLD' }, range)).toBeUndefined();
+    expect(resolveItemName({ itemType: 'DEFENSIVE_PACT' }, range)).toBeUndefined();
+    expect(resolveItemName({ itemType: 'RESOURCES', resourceID: 999 }, range)).toBeUndefined();
+    // Same resolution but the wrong choice / repeal flag is a different candidate → no match.
+    expect(resolveItemName({ itemType: 'VOTE_COMMITMENT', resolutionID: 9, voteChoice: 2, repeal: false }, range)).toBeUndefined();
+    expect(resolveItemName({ itemType: 'RESOURCES', resourceID: 7 }, undefined)).toBeUndefined();
+  });
+});

@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { getLastBriefingState, requestBriefing } from "../../../src/briefer/briefing-utils.js";
 import { SeatRecords } from "../../../src/knowledge/records.js";
 import { type GameState, type StrategistParameters } from "../../../src/strategist/strategy-parameters.js";
-import { WorkspaceStore } from "../../../src/utils/workspace/workspace-store.js";
+import { WorkspaceStore } from "../../../src/agents/workspace/workspace-store.js";
 
 /** Build a minimal GameState for a turn with the given reports. */
 function makeState(turn: number, reports: Record<string, string> = {}): GameState {

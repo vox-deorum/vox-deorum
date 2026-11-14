@@ -1,14 +1,14 @@
 /**
- * Tests for the evaluator strategist's trim walk (src/strategist/agents/evaluator-trimming.ts and
+ * Tests for the evaluator strategist's trim walk (src/strategist/evaluator/evaluator-trimming.ts and
  * evaluator-trim-config.ts): the config contract on the real ladder, `trimToFit` walking hand-built
  * ladders over small reports (cumulative steps, first fit wins, no-op steps skipped, input never
  * mutated), the real ladder run to exhaustion over realistic report fixtures, and `compressOpinions`
  * shortening weighted opinion lists and leaving unweighted ones alone.
  */
 import { describe, expect, it } from 'vitest';
-import { evaluatorTrimConfig, type TrimStep } from '../../../src/strategist/agents/evaluator-trim-config.js';
-import { compressOpinions, trimToFit, type TrimmableReports } from '../../../src/strategist/agents/evaluator-trimming.js';
-import { eventImportanceTiers } from '../../../src/utils/prompts/event-importance.js';
+import { evaluatorTrimConfig, type TrimStep } from '../../../src/strategist/evaluator/evaluator-trim-config.js';
+import { compressOpinions, trimToFit, type TrimmableReports } from '../../../src/strategist/evaluator/evaluator-trimming.js';
+import { eventImportanceTiers } from '../../../src/knowledge/events/event-importance.js';
 
 /** The six action keys a ladder step may carry. */
 const actionKeys = [

@@ -15,9 +15,9 @@
 
 import { afterAll, describe, expect, it, vi } from 'vitest';
 import { dynamicTool, jsonSchema, streamText, type ModelMessage } from 'ai';
-import { getModel } from '../../../src/utils/models/models.js';
-import { ClaudeCodeSession } from '../../../src/utils/models/providers/claude-code-session.js';
-import { cacheBreakpoint } from '../../../src/utils/models/cache-breakpoint.js';
+import { getModel } from '../../../src/agents/models/models.js';
+import { ClaudeCodeSession } from '../../../src/agents/models/providers/claude-code-session.js';
+import { cacheBreakpoint } from '../../../src/agents/models/cache-breakpoint.js';
 import type { Model } from '../../../src/types/index.js';
 
 // Explicit gate: this tier only runs under `npm run test:claude-code`, which sets TEST_TIER, so a

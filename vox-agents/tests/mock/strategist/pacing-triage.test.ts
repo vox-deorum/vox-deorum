@@ -7,14 +7,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { trace } from "@opentelemetry/api";
 
 // Read only the seat overrides, so a local config.json evaluator cannot leak into these tests.
-vi.mock("../../../src/utils/models/evaluation.js", () => ({
+vi.mock("../../../src/agents/models/evaluation/evaluation.js", () => ({
   getEvaluatorConfig: (_name: string, overrides?: Record<string, unknown>) => overrides?.evaluator,
 }));
 
 import { runStrategistTriage } from "../../../src/strategist/pacing/triage.js";
 import type { TriageSetting } from "../../../src/types/config.js";
 import type { Model, StrategistTrim } from "../../../src/types/index.js";
-import { countTokens } from "../../../src/utils/models/token-counter.js";
+import { countTokens } from "../../../src/agents/models/token-counter.js";
 import { createFakeVoxContext, makeGameState, makeStrategistParameters } from "../../helpers/fake-vox-context.js";
 
 const strategist = "simple-strategist";

@@ -5,7 +5,7 @@
 
 import { startWebServer } from './web/server.js';
 import { createLogger, logStartup } from './utils/logger.js';
-import config from './utils/config.js';
+import config from './agents/config/load.js';
 
 // Create logger for main entry point
 const voxLogger = createLogger('VoxAgents');

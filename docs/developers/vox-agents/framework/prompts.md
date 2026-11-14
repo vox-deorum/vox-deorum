@@ -4,9 +4,9 @@ An agent request is built in three layers. Use this map to choose where a prompt
 
 | Layer | Responsibility | Source |
 | --- | --- | --- |
-| Agent hooks | Instructions, opening context, and run tools | `getSystem`, `getInitialMessages`, and `getRunTools` in `src/infra/vox-agent.ts` and each agent family |
-| Step loop | Conversation history, tool permissions, reminders, and stopping | `src/infra/vox-execute.ts` |
-| Model middleware | Provider capabilities, tool framing, and request adaptation | `src/utils/models/`; see [Model middleware](../models/middleware.md) |
+| Agent hooks | Instructions, opening context, and run tools | `getSystem`, `getInitialMessages`, and `getRunTools` in `src/agents/runtime/vox-agent.ts` and each agent family |
+| Step loop | Conversation history, tool permissions, reminders, and stopping | `src/agents/runtime/vox-execute.ts` |
+| Model middleware | Provider capabilities, tool framing, and request adaptation | `src/agents/models/`; see [Model middleware](../models/middleware.md) |
 
 Agent prose lives in [prompt files](prompt-files.md). Keep the start of a request stable across steps for [caching](caching.md); changing a reminder should usually affect only the end.
 
@@ -77,19 +77,19 @@ Directions and notes are built once per run. Built-in directions depend on file 
 | Offered, called declared in code | `getRunTools()`, resolved once | Sent on every step. The default uses `getActiveTools()` and adds bash for a tool-using agent when available. `undefined` offers all registered tools; `[]` offers none. |
 | Allowed, called executable in code | `prepareStep().activeTools`, or the offered list | Controls what may execute this step. Names outside the offered list are ignored. |
 
-Narrowing permissions keeps the offered schemas stable for caching. `buildRemovedToolRejections` in `src/utils/tools/tool-availability.ts` rejects each removed call through the AI SDK without blocking other calls in that reply. The error joins the conversation as that call's result. Required tool choice follows the allowed list, so a step with no executable tools is never forced to call one.
+Narrowing permissions keeps the offered schemas stable for caching. `buildRemovedToolRejections` in `src/agents/tools/tool-availability.ts` rejects each removed call through the AI SDK without blocking other calls in that reply. The error joins the conversation as that call's result. Required tool choice follows the allowed list, so a step with no executable tools is never forced to call one.
 
 Restrict tools before the first step through `getRunTools` when possible. For example, a telepathist special message offers no tools, including bash. Mid-run narrowing belongs after an earlier step; telemetry and Oracle use the first step's list as the run declaration.
 
 ## Reminders
 
-`appendReminder` in `src/utils/prompts/reminders.ts` adds a user message unless identical text is already last.
+`appendReminder` in `src/agents/prompts/reminders.ts` adds a user message unless identical text is already last.
 
 | Reminder | Trigger | Builder |
 | --- | --- | --- |
-| Empty-reply rescue | No call when required, or an empty reply | `buildRescuePrompt` in `src/utils/models/text-cleaning.ts`, called by `VoxAgent.prepareStep` |
-| Closing reminder | Applicable tool rules or completion instructions | `buildClosingReminder` in `src/utils/prompts/closing-reminder.ts`, called through `continuationNudge` |
-| Compaction reminder | First crossing of 75 percent of the continuity threshold with files enabled | `compactionReminder` in `src/utils/prompts/message-history.ts` |
+| Empty-reply rescue | No call when required, or an empty reply | `buildRescuePrompt` in `src/agents/models/text-cleaning.ts`, called by `VoxAgent.prepareStep` |
+| Closing reminder | Applicable tool rules or completion instructions | `buildClosingReminder` in `src/agents/prompts/closing-reminder.ts`, called through `continuationNudge` |
+| Compaction reminder | First crossing of 75 percent of the continuity threshold with files enabled | `compactionReminder` in `src/agents/prompts/message-history.ts` |
 
 The closing reminder names narrowed permissions, states required tool use, counts remaining steps when files are enabled, and names allowed completion tools from step 2 onward. Irrelevant parts are omitted. Agents may override `continuationNudge` to change or suppress it.
 
@@ -104,12 +104,12 @@ The closing reminder names narrowed permissions, states required tool use, count
 | Envoy identity hint or add-on | `getHint` in `src/envoy/live-envoy.ts` and `getDefaultAddon` in `src/envoy/envoy.ts`, plus subclass overrides |
 | Telepathist special messages | `getSpecialMessages` in `src/telepathist/talkative-telepathist.ts` |
 | Run tools, step permissions, completion | Agent's `getRunTools`, `prepareStep`, and `completionTools` |
-| Closing or rescue wording | `src/utils/prompts/closing-reminder.ts` and `src/utils/models/text-cleaning.ts` |
-| Capability and workspace text | `src/utils/models/capability-prompt.ts` and `prompts/workspace.md` |
-| Provider completion instructions | `src/utils/models/providers/required-tool-choice.ts` |
-| Prompt-mode protocol and model selection | `src/utils/models/tool-rescue/prompt.ts`, model `options.toolMiddleware`, and `src/utils/models/rules.ts` |
+| Closing or rescue wording | `src/agents/prompts/closing-reminder.ts` and `src/agents/models/text-cleaning.ts` |
+| Capability and workspace text | `src/agents/models/capability-prompt.ts` and `prompts/workspace.md` |
+| Provider completion instructions | `src/agents/models/providers/required-tool-choice.ts` |
+| Prompt-mode protocol and model selection | `src/agents/models/tool-rescue/prompt.ts`, model `options.toolMiddleware`, and `src/agents/models/rules.ts` |
 
-Tool-name lists share `formatToolChoiceList` in `src/utils/tools/tool-names.ts`. Keep prompt-mode instructions consistent with the tool-call schema and formatter.
+Tool-name lists share `formatToolChoiceList` in `src/agents/tools/tool-names.ts`. Keep prompt-mode instructions consistent with the tool-call schema and formatter.
 
 ## Telemetry and replay
 
@@ -126,4 +126,4 @@ Tool-name lists share `formatToolChoiceList` in `src/utils/tools/tool-names.ts`.
 
 ## Tests
 
-The relevant suites under `tests/mock/` cover request construction (`context/`), reminders and tool rejection (`infra/`), file-mode directions (`knowledge/` and `strategist/`), provider framing (`utils/`), and replay restrictions (`oracle/`). Test behavior and data flow so prompt wording can change without rewriting assertions.
+The relevant suites under `tests/mock/` cover request construction (`context/`), reminders and tool rejection (`agents/runtime/`), file-mode directions (`knowledge/` and `strategist/`), provider framing (`agents/models/`), and replay restrictions (`oracle/`). Test behavior and data flow so prompt wording can change without rewriting assertions.

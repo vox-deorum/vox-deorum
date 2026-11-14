@@ -6,7 +6,7 @@ import { knowledgeManager } from "../../server.js";
 import { LuaFunction } from "../../bridge/lua-function.js";
 import { createLogger } from "../../utils/logger.js";
 import { PersonaChange } from "../schema/timed.js";
-import { composeVisibility } from "../../utils/knowledge/visibility.js";
+import { composeVisibility } from "../helpers/visibility.js";
 
 const logger = createLogger("ReadPlayerPersona");
 

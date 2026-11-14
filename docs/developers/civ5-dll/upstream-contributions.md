@@ -84,4 +84,4 @@ npm.cmd run vp-pr -- finish <slug> --title "Short upstream title"
 
 Publish only when explicitly requested, using `git -C civ5-dll push -u origin pr/<slug>`. The script prints an optional compare URL; it never pushes or opens a pull request. Backport only requested fixes to maintained lines missing the change, using `scripts/vp-lines.txt`. Existing VD extractions need no backport. After preserved work and review are safely complete, use `npm.cmd run vp-pr -- restore`.
 
-See the [upstream-pr skill](../../../.agents/skills/upstream-pr/SKILL.md) for the detailed workflow and the [vp-pr.mjs](../../../scripts/utilities/vp-pr.mjs) and [vp-diff.mjs](../../../scripts/utilities/vp-diff.mjs) implementations.
+See the [upstream-pr skill](../../../.agents/skills/upstream-pr/SKILL.md) for the detailed workflow and the [vp-pr.mjs](../../../scripts/upstream/vp-pr.mjs) and [vp-diff.mjs](../../../scripts/upstream/vp-diff.mjs) implementations.

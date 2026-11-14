@@ -1,6 +1,6 @@
 # Newspaper reader assets
 
-The registry in `vox-agents/src/newspaper/ui/assets.ts` names the assets used by the Victorian and modern designs. Vite copies this directory into the compiled reader.
+The registry in `vox-agents/src/newspaper/renderer/assets.ts` names the assets used by the Victorian and modern designs. Vite copies this directory into the compiled reader.
 
 The thirteen font faces come from the prototype assets. Bodoni Moda, Libre Caslon Text, Inter, and UnifrakturMaguntia retain their SIL Open Font License texts in `licenses/`.
 

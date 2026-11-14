@@ -4,9 +4,9 @@
  * Resolves live session details and stable participant identities for Web chat responses.
  */
 
-import { contextRegistry } from '../../infra/context-registry.js';
-import { sessionRegistry } from '../../infra/session-registry.js';
-import type { VoxContext } from '../../infra/vox-context.js';
+import { contextRegistry } from '../../agents/runtime/context-registry.js';
+import { sessionRegistry } from '../../agents/runtime/session-registry.js';
+import type { VoxContext } from '../../agents/runtime/vox-context.js';
 import {
   getRecentGameState,
   type StrategistParameters,
@@ -17,11 +17,11 @@ import type {
   ParticipantIdentity,
   PlayerAssignment,
 } from '../../types/index.js';
-import { currentTurnOf } from '../../utils/diplomacy/turn/live-turn.js';
-import { audienceID, identityOf } from '../../utils/diplomacy/transcript/transcript.js';
+import { currentTurnOf } from '../../diplomacy/turn/live-turn.js';
+import { audienceID, identityOf } from '../../diplomacy/transcript/transcript.js';
 
 // The live-turn resolver now lives beside the shared conversation guard that consumes it
-// (`utils/diplomacy/turn/live-turn.ts`), so the chat turn runner and the deal actions cannot drift from
+// (`diplomacy/turn/live-turn.ts`), so the chat turn runner and the deal actions cannot drift from
 // the Web enrichment view of "what turn is it?". Re-exported here for the Web's existing importers.
 export { currentTurnOf };
 

@@ -9,7 +9,7 @@
 
 import { z } from "zod";
 import { ModelMessage } from "ai";
-import { VoxAgent } from "../infra/vox-agent.js";
+import { VoxAgent } from "../agents/runtime/vox-agent.js";
 import { StrategistParameters, buildGameContextMessages } from "../strategist/strategy-parameters.js";
 
 /** Report fields the calling agent writes when handing a report to an analyst. */

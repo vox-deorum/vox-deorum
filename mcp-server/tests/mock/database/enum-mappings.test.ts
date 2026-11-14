@@ -2,7 +2,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setupStore } from '../helpers.js';
-import { enumMappings } from '../../../src/utils/knowledge/enum.js';
+import { enumMappings } from '../../../src/knowledge/helpers/enum.js';
 import createGetEventsTool from '../../../src/tools/knowledge/get-events.js';
 import { connectToolClient } from '../tool-client.js';
 import type { KnowledgeStore } from '../../../src/knowledge/store.js';

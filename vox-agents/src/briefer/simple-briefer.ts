@@ -7,13 +7,13 @@
 
 import { ModelMessage } from "ai";
 import { Briefer } from "./briefer.js";
-import { VoxContext } from "../infra/vox-context.js";
+import { VoxContext } from "../agents/runtime/vox-context.js";
 import { getRecentGameState, StrategistParameters } from "../strategist/strategy-parameters.js";
 import { renderSection } from "../knowledge/sections.js";
-import { getOffsetedTurn } from "../utils/prompts/game-speed.js";
+import { getOffsetedTurn } from "../knowledge/game-speed.js";
 import { getLastBriefingState } from "./briefing-utils.js";
-import { cacheBreakpoint } from "../utils/models/cache-breakpoint.js";
-import { renderSystemPrompt } from "../utils/prompts/prompt-files.js";
+import { cacheBreakpoint } from "../agents/models/cache-breakpoint.js";
+import { renderSystemPrompt } from "../agents/prompts/prompt-files.js";
 
 /**
  * A simple briefer agent that analyzes the game state and produces a concise briefing.

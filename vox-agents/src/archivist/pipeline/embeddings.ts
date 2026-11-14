@@ -7,8 +7,8 @@
 
 import { embedMany } from 'ai';
 import { createLogger } from '../../utils/logger.js';
-import { getModelConfig } from '../../utils/models/models.js';
-import { getEmbeddingModel } from '../../utils/models/models.js';
+import { getModelConfig } from '../../agents/models/models.js';
+import { getEmbeddingModel } from '../../agents/models/models.js';
 
 const logger = createLogger('Archivist:Embeddings');
 

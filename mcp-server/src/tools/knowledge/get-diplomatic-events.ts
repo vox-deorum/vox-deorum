@@ -9,14 +9,14 @@ import * as z from "zod";
 import { isVisible } from "../../knowledge/expressions.js";
 import { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { MaxMajorCivs } from "../../knowledge/schema/base.js";
-import { readPublicKnowledgeBatch } from "../../utils/knowledge/cached.js";
+import { readPublicKnowledgeBatch } from "../../knowledge/helpers/cached.js";
 import { getPlayerInformations } from "../../knowledge/getters/player-information.js";
 import { getCityInformations } from "../../knowledge/getters/city-information.js";
-import { retrieveEnumName } from "../../utils/knowledge/enum.js";
+import { retrieveEnumName } from "../../knowledge/helpers/enum.js";
 import { cleanEventData, hideDealMadeTradeItems } from "./get-events.js";
 import { Selectable } from "kysely";
 import { PlayerInformation } from "../../knowledge/schema/public.js";
-import { formatStringDeal, getDealExpirySuffix } from "../../utils/deal-format.js";
+import { formatStringDeal, getDealExpirySuffix } from "../../diplomacy/deals/deal-format.js";
 
 // ─── Formatting Helpers ───────────────────────────────────────────────
 

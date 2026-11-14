@@ -8,9 +8,9 @@
 
 import type { ConsolidatedEventsReport } from "../../../mcp-server/dist/tools/knowledge/get-events.js";
 import type { GameState, StrategistParameters } from "../strategist/strategy-parameters.js";
-import { filterEventsByCategory, type EventCategory } from "../utils/prompts/event-filters.js";
-import { jsonToMarkdown, type JsonToMarkdownConfig } from "../utils/tools/json-to-markdown.js";
-import type { CommitID, Manifest, PathChange, WorkspaceStore } from "../utils/workspace/workspace-store.js";
+import { filterEventsByCategory, type EventCategory } from "./events/event-filters.js";
+import { jsonToMarkdown, type JsonToMarkdownConfig } from "../agents/tools/json-to-markdown.js";
+import type { CommitID, Manifest, PathChange, WorkspaceStore } from "../agents/workspace/workspace-store.js";
 import { isRecord } from "../utils/guards.js";
 import { renderSection, sections, type SectionDefinition, type SectionKey, type SectionSplit } from "./sections.js";
 

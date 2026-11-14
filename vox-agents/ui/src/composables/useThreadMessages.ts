@@ -11,8 +11,8 @@ import { api, type SendCommitState } from '@/api/client';
 import type { ModelMessage } from 'ai';
 // Pure transcript helper (shared with the backend via @vox) — hydrate the server's committed deal row
 // (arriving on the `connected` SSE event) into a cache item exactly as a full re-hydrate would.
-import { hydrateDealRow } from '@vox/utils/diplomacy/transcript/transcript-utils';
-import { classifyProviderActivityStatus } from '@vox/utils/models/providers/activity-status';
+import { hydrateDealRow } from '@vox/diplomacy/transcript/transcript-utils';
+import { classifyProviderActivityStatus } from '@vox/agents/models/providers/activity-status';
 
 export interface UseThreadMessagesOptions {
   thread: Ref<EnvoyThread | null>;

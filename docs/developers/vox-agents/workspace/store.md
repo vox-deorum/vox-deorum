@@ -1,8 +1,8 @@
 ﻿# Workspace store
 
-A seat with [files](files.md) enabled keeps records, notes, and the game reference in a versioned SQLite store. `WorkspaceStore` in `src/utils/workspace/workspace-store.ts` stores contents by hash and links each commit to its parent. Reloading an older save changes the visible history while retaining discarded commits.
+A seat with [files](files.md) enabled keeps records, notes, and the game reference in a versioned SQLite store. `WorkspaceStore` in `src/agents/workspace/workspace-store.ts` stores contents by hash and links each commit to its parent. Reloading an older save changes the visible history while retaining discarded commits.
 
-The store's tables sit inside the seat's telemetry database, `<telemetryDir>/<strategist>/<gameID>-player-<playerID>.db`, next to the `spans` table. One file holds a seat's whole game, so archiving or copying the telemetry file carries the notes and records with it. Telemetry files sit one folder per strategist, so a seat played under one strategist and resumed under another writes to another file. `openSeatStore` in `src/strategist/vox-player.ts` brings the file up to the same-named file with the newest commit in another strategist folder (`WorkspaceStore.findSeed` in `src/utils/workspace/workspace-store.ts`, which skips the `workspaces` folder):
+The store's tables sit inside the seat's telemetry database, `<telemetryDir>/<strategist>/<gameID>-player-<playerID>.db`, next to the `spans` table. One file holds a seat's whole game, so archiving or copying the telemetry file carries the notes and records with it. Telemetry files sit one folder per strategist, so a seat played under one strategist and resumed under another writes to another file. `openSeatStore` in `src/strategist/seats/vox-player.ts` brings the file up to the same-named file with the newest commit in another strategist folder (`WorkspaceStore.findSeed` in `src/agents/workspace/workspace-store.ts`, which skips the `workspaces` folder):
 
 | The opened file | What happens |
 | --- | --- |
@@ -20,7 +20,7 @@ Notes, records, and reload history follow the seat, and each telemetry file stay
 | Bash tool | `game/` | Notes access follows the files setting |
 | `writeGameReference` | `reference/` | Read-only at `/workspace/reference` |
 
-Write through these interfaces. Each bash command reads a view of the current head through `src/utils/workspace/store-fs.ts`. `PlayerWorkspace.exec` commits note changes afterward; a cancelled command commits nothing.
+Write through these interfaces. Each bash command reads a view of the current head through `src/agents/workspace/store-fs.ts`. `PlayerWorkspace.exec` commits note changes afterward; a cancelled command commits nothing.
 
 ## Records
 
@@ -68,7 +68,7 @@ The reference is part of each recorded commit. Shared folders and `/tmp` remain 
 
 ## Timeline and reloads
 
-`VoxPlayer.beginTimeline` in `src/strategist/vox-player.ts` starts the timeline when a player is created and when a real turn notification arrives at or below the last processed turn. It cancels active runs, clears cached states and working memory, resets decision and event cursors, and rewinds the store. Records and notes from the reload turn onward leave the visible history.
+`VoxPlayer.beginTimeline` in `src/strategist/seats/vox-player.ts` starts the timeline when a player is created and when a real turn notification arrives at or below the last processed turn. It cancels active runs, clears cached states and working memory, resets decision and event cursors, and rewinds the store. Records and notes from the reload turn onward leave the visible history.
 
 The rewind retains discarded commits and carries the current reference into a new reload commit, including its current deletions. Reloads therefore preserve reference updates made after the restored save.
 
@@ -83,8 +83,8 @@ Export through the CLI or dashboard:
 | `npm run workspace -- materialize <telemetryDb> <outDir> [commit]`, from `vox-agents/` | Export the head or a specified commit of a seat telemetry database into a new or empty folder. |
 | Files in the telemetry page's past-games table | Export a zip through `GET /api/telemetry/db/<path relative to the telemetry folder>/workspace`, with an optional `commit` query. The button shows for databases that hold a store (`hasWorkspace` is read from the file itself), and the zip is named `<gameID>-player-<playerID>-<commit>.zip`. |
 
-Both use `src/utils/workspace/materialize.ts` to read a complete commit through a separate read-only connection in one transaction. Exports work during a session and include `records/`, `game/`, and `reference/`. Editing an export does not change the store.
+Both use `src/agents/workspace/materialize.ts` to read a complete commit through a separate read-only connection in one transaction. Exports work during a session and include `records/`, `game/`, and `reference/`. Editing an export does not change the store.
 
-For a batch export of agent notes, run `node --import tsx scripts/utilities/extract-agent-notes.ts <input-folder> <output-folder>` from the repository root. The output folder must be new or empty. The script searches for `.db` files recursively and exports each store's current `game/` folder, including its guide and journal, under a folder named after the source database. Source subfolders are preserved. It reads databases without changing them and follows the current head, including reloads and deletions. Older note versions, records, reference files, and shared folders are outside this export.
+For a batch export of agent notes, run `node --import tsx scripts/maintenance/extract-agent-notes.ts <input-folder> <output-folder>` from the repository root. The output folder must be new or empty. The script searches for `.db` files recursively and exports each store's current `game/` folder, including its guide and journal, under a folder named after the source database. Source subfolders are preserved. It reads databases without changing them and follows the current head, including reloads and deletions. Older note versions, records, reference files, and shared folders are outside this export.
 
 The output's `index.json` lists each database, exported commit and file paths, skipped databases without a readable workspace store, and export errors. An export error is recorded while the remaining databases continue; any recorded error makes the command exit with a nonzero status.

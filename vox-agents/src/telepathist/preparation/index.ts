@@ -7,7 +7,7 @@
  */
 
 import { TelepathistParameters } from '../telepathist-parameters.js';
-import { VoxContext } from '../../infra/vox-context.js';
+import { VoxContext } from '../../agents/runtime/vox-context.js';
 import { prepareTurnSummaries } from './turn-preparation.js';
 import { preparePhaseSummaries } from './phase-preparation.js';
 

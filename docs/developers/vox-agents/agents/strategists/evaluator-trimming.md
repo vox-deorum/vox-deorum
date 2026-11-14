@@ -1,10 +1,10 @@
 ﻿# Evaluator trimming
 
-Evaluator models can receive more game state than their input limit allows, even after low-value events are removed. The trim ladder cuts event tiers and report details in order until the state fits. It is shared by the [evaluator strategist](evaluator-strategist.md) and [strategist triage](../../models/tiers-and-triage.md#strategist-triage) through `evaluateStrategistState` in `src/strategist/agents/evaluator-questions.ts`.
+Evaluator models can receive more game state than their input limit allows, even after low-value events are removed. The trim ladder cuts event tiers and report details in order until the state fits. It is shared by the [evaluator strategist](evaluator-strategist.md) and [strategist triage](../../models/tiers-and-triage.md#strategist-triage) through `evaluateStrategistState` in `src/strategist/evaluator/evaluator-questions.ts`.
 
 ## The budget
 
-`evaluatorTrimConfig.budgetShare` in `src/strategist/agents/evaluator-trim-config.ts` sets the fraction of the model's input limit available to state. This leaves headroom for differences between the local token estimate and provider counting. Models without a configured input limit receive untrimmed state.
+`evaluatorTrimConfig.budgetShare` in `src/strategist/evaluator/evaluator-trim-config.ts` sets the fraction of the model's input limit available to state. This leaves headroom for differences between the local token estimate and provider counting. Models without a configured input limit receive untrimmed state.
 
 ## How the ladder walks
 
@@ -19,13 +19,13 @@ flowchart TD
   D -->|yes| E[Apply and record the step] --> A
 ```
 
-`trimToFit` in `src/strategist/agents/evaluator-trimming.ts` works on copies of events, players, cities, and military reports. Cuts are cumulative, no-op steps are skipped without another size check, and the walk stops at the first fit. Each check renders the whole state, including sections the ladder cannot trim.
+`trimToFit` in `src/strategist/evaluator/evaluator-trimming.ts` works on copies of events, players, cities, and military reports. Cuts are cumulative, no-op steps are skipped without another size check, and the walk stops at the first fit. Each check renders the whole state, including sections the ladder cannot trim.
 
 If every step is exhausted, the most trimmed state is sent anyway. A provider overflow then reaches the caller's [event-window fallback](player-loop.md#event-windows), which can retry with fewer events.
 
 ## The ladder
 
-`evaluatorTrimConfig.ladder` defines the order and contents. Early cuts remove IDs, coordinates, tactical detail, and information summarized elsewhere. Later cuts affect inputs closer to war, diplomacy, and victory decisions. Event cuts follow the shared importance order defined in `src/utils/prompts/event-importance.ts`.
+`evaluatorTrimConfig.ladder` defines the order and contents. Early cuts remove IDs, coordinates, tactical detail, and information summarized elsewhere. Later cuts affect inputs closer to war, diplomacy, and victory decisions. Event cuts follow the shared importance order defined in `src/knowledge/events/event-importance.ts`.
 
 ## Never trimmed
 
@@ -70,4 +70,4 @@ When any step runs, `buildStrategistEvaluationState` appends a note describing t
 
 ## Tests
 
-`tests/mock/strategist/evaluator-trimming.test.ts` covers the ladder, no-op steps, retained reports, and opinion compression. `evaluator-questions.test.ts` covers state building and telemetry. The event-importance and logger-sanitize suites under `tests/mock/utils/` cover shared event tiers and redaction.
+`tests/mock/strategist/evaluator-trimming.test.ts` covers the ladder, no-op steps, retained reports, and opinion compression. `evaluator-questions.test.ts` covers state building and telemetry. Shared event tiers are covered by `tests/mock/knowledge/events/event-importance.test.ts`; redaction is covered by `tests/mock/utils/logger-sanitize.test.ts`.

@@ -70,7 +70,7 @@ const mocks = vi.hoisted(() => {
   };
 });
 
-vi.mock('../../../src/infra/vox-context.js', () => ({
+vi.mock('../../../src/agents/runtime/vox-context.js', () => ({
   // Constructor mocks need a function implementation so `new` works.
   VoxContext: vi.fn(function (_overrides: unknown, id?: string) {
     const context = {
@@ -87,7 +87,7 @@ vi.mock('../../../src/infra/vox-context.js', () => ({
   }),
 }));
 
-vi.mock('../../../src/infra/process-manager.js', () => ({
+vi.mock('../../../src/agents/runtime/process-manager.js', () => ({
   processManager: {
     get isShuttingDown() { return mocks.shuttingDown.value; },
     register: vi.fn(),
@@ -98,14 +98,14 @@ vi.mock('../../../src/oracle/utils/schema-tools.js', () => ({
   replaceToolsWithSchemaOnly: mocks.replaceToolsWithSchemaOnly,
 }));
 
-vi.mock('../../../src/utils/models/mcp-client.js', () => ({
+vi.mock('../../../src/agents/mcp/mcp-client.js', () => ({
   mcpClient: {
     connect: mocks.connect,
     disconnect: mocks.disconnect,
   },
 }));
 
-vi.mock('../../../src/utils/telemetry/vox-exporter.js', () => ({
+vi.mock('../../../src/agents/telemetry/vox-exporter.js', () => ({
   VoxSpanExporter: {
     getInstance: () => ({
       createContext: mocks.createContext,
@@ -124,7 +124,7 @@ vi.mock('../../../src/oracle/batch/batch-manager.js', () => ({
   startBatchManager: mocks.startBatchManager,
 }));
 
-vi.mock('../../../src/utils/workspace/replay-workspace.js', () => ({
+vi.mock('../../../src/agents/workspace/replay-workspace.js', () => ({
   ReplayWorkspace: { open: mocks.openReplayWorkspace },
 }));
 
@@ -132,17 +132,17 @@ vi.mock('../../../src/oracle/utils/db-resolver.js', () => ({
   discoverDbPath: mocks.discoverDbPath,
 }));
 
-vi.mock('../../../src/utils/tools/bash-tool.js', () => ({
+vi.mock('../../../src/agents/tools/bash-tool.js', () => ({
   bashToolName: 'bash',
   createBashTool: mocks.createBashTool,
 }));
 
-vi.mock('../../../src/utils/prompts/prompt-files.js', () => ({
+vi.mock('../../../src/agents/prompts/prompt-files.js', () => ({
   validatePromptsSetting: mocks.validatePromptsSetting,
 }));
 
 import { loadRetrievedRows, runReplay } from '../../../src/oracle/replayer.js';
-import { agentRegistry } from '../../../src/infra/agent-registry.js';
+import { agentRegistry } from '../../../src/agents/runtime/agent-registry.js';
 import type { OracleAgent } from '../../../src/oracle/oracle-agent.js';
 
 const tempDirs: string[] = [];

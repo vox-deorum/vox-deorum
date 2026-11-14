@@ -10,7 +10,7 @@
  */
 
 import { isRecord } from "../utils/guards.js";
-import { jsonToMarkdown, type JsonToMarkdownConfig } from "../utils/tools/json-to-markdown.js";
+import { jsonToMarkdown, type JsonToMarkdownConfig } from "../agents/tools/json-to-markdown.js";
 
 /** Keys of the registered sections. */
 export type SectionKey =

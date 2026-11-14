@@ -5,12 +5,9 @@
  * bridge. It builds the publication from structured data, keeps one vote map
  * for all pages, and returns a readiness promise plus a disposal method.
  */
-import type {
-  IssueDocument,
-  ReaderAction,
-  ReaderState,
-  RenderProfile,
-} from "../../src/newspaper/contracts/types.js";
+import type { IssueDocument } from "../../src/newspaper/contracts/issue.js";
+import type { ReaderAction, ReaderState } from "../../src/newspaper/contracts/reader.js";
+import type { RenderProfile } from "../../src/newspaper/renderer/types.js";
 import {
   computeRenderLayout,
   defaultMaxTextureEdge,
@@ -18,22 +15,22 @@ import {
   defaultReaderViewport,
   defaultTextScale,
   newspaperDesignDefaults,
-} from "../../src/newspaper/ui/layout.js";
-import { getNewspaperAsset } from "../../src/newspaper/ui/assets.js";
+} from "../../src/newspaper/renderer/layout.js";
+import { getNewspaperAsset } from "../../src/newspaper/renderer/assets.js";
 import { renderStory, applyVoteState } from "./story.js";
 import {
   parseIssueDocument,
-  parseReaderState,
   parseRenderProfile,
   validateRenderProfileForDesign,
-} from "../../src/newspaper/contracts/validation.js";
+} from "../../src/newspaper/renderer/validation.js";
+import { parseReaderState } from "../../src/newspaper/contracts/reader.js";
 import {
   getVote,
   normalizeReaderState,
   setActivePage,
   setPageScroll,
   toggleVote,
-} from "../../src/newspaper/ui/state.js";
+} from "../../src/newspaper/renderer/state.js";
 import { bindReaderAction, getReaderAction } from "./actions.js";
 import { createElement, resolveAssetUrl } from "./dom.js";
 import { waitForMedia } from "./measure.js";

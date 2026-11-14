@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { agentRegistry } from '../../../../src/infra/agent-registry.js';
+import { agentRegistry } from '../../../../src/agents/runtime/agent-registry.js';
 import type { EnvoyThread } from '../../../../src/types/index.js';
 import { createFakeVoxContext } from '../../../helpers/fake-vox-context.js';
 
