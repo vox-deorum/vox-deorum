@@ -6,7 +6,7 @@ Part three of [the newspaper research](research.md), based on [the feature speci
 
 The MCP store keeps a shared version of true game state plus per-player visibility. Its live tools then remove selected fields. That is a useful starting point, but it does not fully implement the newspaper's three reporting channels: direct access, trade routes, and spies or diplomats with increasing strength.
 
-The spec deliberately allows the newspaper to teach the player something new. Its rules can grant more information than an existing screen. They still need to say which source grants which fields, where, and when, including any historical period it may cover. Existing visibility flags alone do not express that policy.
+The spec deliberately allows the newspaper to teach the player something new. Its rules can grant more information than an existing screen. They need to define which source grants which fields and locations, what period it covers, and when the evidence becomes available. Existing visibility flags alone do not express that policy.
 
 ## What current access levels mean
 
@@ -111,7 +111,7 @@ A proposed observation contract should preserve:
 | Subject IDs, with display labels | Follow places and civilizations despite renaming; link city objects across capture. |
 | Field, value, and units/definition | Make comparisons compatible and interpretations checkable. |
 | Observed turn and known-by turn where they differ | Date the underlying state and when the receiver obtained it. Existing recordings do not always distinguish them. |
-| Access source, granted field set, and granted historical period | Explain direct sight, public/met knowledge, trade reports, or espionage, and whether the source may supply earlier dates. Existing 0/1/2 flags do not retain these reasons. |
+| Access source, granted field set, and granted historical period | Explain direct sight, public/met knowledge, trade reports, or espionage, and whether the source may supply earlier dates. Existing 0/1/2 flags do not distinguish all these reasons. |
 | Source row/event reference | Trace a published fact back to the recording. |
 
 For example, if a spy reported city output on turn 220 and departed on turn 221, a turn-225 issue can cite the turn-220 report. It must not update that output from a turn-225 true-state row merely because the old spy report was detailed. The last permitted observation may differ by field.

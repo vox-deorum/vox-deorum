@@ -89,6 +89,6 @@ Use `VoxDeorumSeat.EffectiveSeat()` for the publication's civilization. A pure o
 
 Provide controls for publication frequency and LLM use, and restore those preferences for the receiving civilization when loading a campaign.
 
-Tech milestones can change layout and weights using packaged assets. Preserve each published issue's visual design, selected layout variants, and page order so reopening it restores the original presentation without rerunning editorial choices. [The data research](research-data.md) records the checked-in identifiers and historical-unlock gaps.
+Tech milestones can change layout and weights using packaged assets. Preserve each published issue's visual design, selected layout variants, and page order so reopening it restores the original presentation without rerunning the editor. [The data research](research-data.md) records the checked-in identifiers and historical-unlock gaps.
 
 Later checks should cover text wrapping, scrolling, old installments, archive filters for date, civilization, city, and tag, editable votes, seat switches while a request is pending, service loss, and archive restoration. These require an implemented prototype; this documentation task requires no mod deployment.
