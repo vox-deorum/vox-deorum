@@ -4,7 +4,7 @@ Research supporting [the feature specification](spec.md), checked against the re
 
 | Part | Main finding |
 | --- | --- |
-| [UI and runtime images](research-ui.md) | The existing Lua/XML UI can support articles, archives, votes, and simple charts. Changing an existing texture during play is supported. Loading a newly generated image file during play remains unverified. |
+| [UI and runtime images](research-ui.md) | The existing Lua/XML UI can support articles, archives, votes, and simple charts. A live DX11 experiment confirmed loading newly generated DDS files by absolute path, including files outside the mod folder. |
 | [MCP stored data and recorded games](research-data.md) | Local stores already contain long histories suitable for offline evaluation. They hold change records and some live-query snapshots, with gaps in lifecycle, observation timing, and structured identifiers. |
 | [Visibility and foreign reporting](research-visibility.md) | Stored visibility and live tool filtering provide useful precedents. The spec's trade and graded espionage reporting require an explicit newspaper policy and additional provenance. |
 
@@ -12,4 +12,4 @@ The strongest starting material is domestic city comparisons, the receiving civi
 
 The next design should settle the reporting cutoff and permitted evidence before choosing triggers. Offline replay needs to preserve articles, series, votes, preferences, and each issue's chosen presentation. The [offline evaluation checklist](research-data.md) identifies the remaining demonstrations, including a series returning after fading, a merged installment, continuity across editor modes, and generation failure. Live scheduling, save restoration, and the in-game reader follow that evaluation, as specified in the feature document.
 
-This research changes documentation only. It does not implement the newspaper or claim that runtime image loading, save restoration, or foreign reporting has been tested in the game.
+The [runtime texture experiment](../../developers/civ5-mod/runtime-texture-experiment.md) verifies local DDS loading during play. The newspaper, save restoration, and foreign reporting still require implementation and in-game validation.

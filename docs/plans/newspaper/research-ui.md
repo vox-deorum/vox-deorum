@@ -23,39 +23,32 @@ Columns, page breaks, expansion, archive pagination, and small-screen behavior s
 
 ## Can we dynamically render a new image inside the game?
 
-**We can change an image control to another available texture during play. Whether an external service can create a brand-new file and display it immediately is still unverified.** The repository provides no demonstrated end-to-end path for the latter.
+**Yes. In the tested VP + EUI DX11 session, a DDS generated after startup loaded by absolute path, including from outside the mod folder.** The file needed no manifest entry or restart. The [runtime texture findings](../../developers/civ5-mod/runtime-texture-experiment.md) record the observed behavior, implementation implications, and untested cases.
 
 `civ5-mod/UI/LeaderHeadRoot.lua` sets its background with `Controls.BackupTexture:SetTexture()` or `SetTextureAndResize()`, and calls `UnloadTexture()` when leaving the screen. `VoxDeorumHumanPanel.lua` calls `SetTexture()` and sets texture offsets. EUI's `EUI_core_library.lua` uses these operations for atlases.
 
-Those examples establish image selection, resizing, atlas regions, and releasing a control's texture. Their filenames refer to resources already available to the engine. They do not demonstrate URLs, base64 data, in-memory pixel buffers, or files introduced after mod activation.
-
-DDS is the established packaged-artwork workflow. The modder's [DDS Converter documentation](https://www.picknmixmods.com/utilities/ddsconverter/util.html) describes PNG/JPEG conversion, sizing, and compression. The author's [texture troubleshooting guidance](https://forums.civfanatics.com/threads/exporting-to-dds.486808/) requires texture files to be imported into the VFS, matching the repository's asset declarations. These sources establish preparation and registration, without proving that live additions or replacements work.
+The experiment used a temporary Lua/XML panel driven through Lua events from the bridge. An external process wrote 256 by 256 opaque DXT1 DDS files during play. The user identified changed pixels by distinct checks and stripe patterns beside an unchanged reference. The probe and its assets have been removed; the findings remain as the implementation reference.
 
 | Delivery approach | Research result |
 | --- | --- |
 | Choose among textures shipped with the mod | Supported by existing Lua. Suitable for era backgrounds, section art, and reusable illustrations. |
 | Draw with text, boxes, and line controls | Supported by existing UI examples. Suitable for small comparisons and trends. |
-| Generate a DDS before activation and register it as an asset | Uses the established packaged-asset route. Live generation remains a separate question. |
-| Overwrite a registered placeholder DDS during play, then unload and set it again | A plausible experiment. VFS behavior and file/texture caches are unverified. |
-| Create a new DDS filename after activation and pass it to `SetTexture()` | Unverified. File discovery and VFS registration are separate from assigning a texture name. |
-| Pass an absolute filename, URL, or encoded image | No working precedent found in the inspected code. Do not make this an implementation assumption. |
-| Add support through the DLL | Requires a demonstrated engine-facing texture or resource-loading interface. `CvConnectionService` transports Lua calls and events; this alone provides no texture uploader. |
+| Generate a DDS before activation and register it as an asset | Worked as the experiment's reference and initial candidate. |
+| Overwrite a registered DDS during play, then call `SetTexture()` alone | Retained the old pixels for the previously displayed texture. |
+| Unload that control's texture, then set the registered name again | Displayed the replacement pixels. A separate registered file replaced before first use also displayed its new pixels. |
+| Create a new file after activation and pass its bare filename | Produced a Texture Load Error dialog. The file existed but was absent from the manifest. |
+| Pass a new file's absolute path | Displayed the new pixels, both inside the installed mod folder and outside it. The external file worked on its first request. These calls used unload followed by set. |
+| Pass a mod-relative path, URL, encoded image, or pixel buffer | Not tested. The demonstrated route uses an absolute filesystem path. |
 
-The gameplay wrappers in `civ5-dll/CvGameCoreDLL_Expansion2/Lua/` do not implement the engine's image controls. Their absence there cannot prove that a feature is impossible. Equally, `UnloadTexture()` does not establish global cache invalidation or VFS rescanning.
+The demonstrated route needs no new DLL texture API. The external process creates a DDS file and sends its absolute path to the UI; the image control loads it. `UnloadTexture()` refreshed the tested control, but the experiment does not establish global cache invalidation or VFS rescanning. The unresolved basename also opened a modal error dialog that blocked the bridge call until dismissed.
 
-### Experiment needed
+### Implications and remaining checks
 
-Use two unmistakably different DDS files with matching dimensions and known-good encoding. Keep a packaged illustration as a working control.
+Generated illustrations have a demonstrated delivery path. A prototype can retain a distinct DDS per illustration and resolve its absolute path on the local machine. Keep the file available when revisiting an issue, and check file availability before requesting a texture so a missing image can use a packaged fallback.
 
-1. Register a placeholder before activation and confirm that `SetTexture()` renders it.
-2. Replace the file from the external process after startup. Test before its first use, then after displaying and unloading it. Record whether the old or new pixels appear.
-3. Create a second file under a new filename after activation. Separately test its resource name, a mod-relative path, and an absolute path. A silent Lua call does not demonstrate successful rendering.
-4. Repeat after reopening the panel, loading a save, and restarting. Check supported graphics modes before treating a result as a feature guarantee.
-5. Open several issues, revisit older ones, and check missing-file fallback. Reusing a placeholder can show the wrong historical artwork after its contents change.
+Before treating this as a supported newspaper feature, test reopening old illustrations, save reloads, game restarts, missing-file fallback, image volume and memory use, other dimensions and encodings, and other supported renderers. Save portability needs a way to retain or restore image files on another machine. The exact VP build was not recorded for this DX11 experiment.
 
-Success means a file created after startup becomes visibly distinguishable in the running game and old issues still resolve the correct artwork. No such experiment was run for this research. If only registered replacements work, bounded texture slots could be investigated, including slot reuse and archive retention.
-
-The initial reader can proceed with native text and packaged art. Native charts are a feasible later extension; the spec defers graph rendering. Live-generated illustrations also remain a later capability investigation.
+The initial reader can proceed with native text and packaged art. Native charts remain a feasible later extension, and generated illustrations can build on this file-loading route when required by the feature scope.
 
 ## Communication with the background service
 
