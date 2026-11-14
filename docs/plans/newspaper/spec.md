@@ -187,6 +187,8 @@ Start with a small shared vocabulary: domestic, international, cities, economy, 
 
 Tags serve three purposes: organizing the reader's view, keeping an issue varied, and applying player preferences. A story appearing in several sections still occupies one place in the issue and receives one vote.
 
+Present sections as named tabs, such as Military, Economics, and Foreign, with names adapted to the publication's voice. These tabs replace numbered-page navigation. Omit article tags, metadata rows, and a standalone archive control from the reading surface; keep sources, observation periods, and editorial details in the supporting record. Earlier reports remain reachable through story links. Dates and attribution can remain in the narrative when they explain the story. The design principles define the visual treatment, including distinct typography and composition for each civilization and era.
+
 ### 3.8 The editor: LLM or heuristics
 
 The editor assembles each issue. It chooses which candidate items to publish, which template angles to merge, how to balance installments with short pieces, and how to present them across pages. Both editorial modes receive the same observed triggers, series history, player feedback, and eligible visual designs. Template eligibility also depends on writing mode and available evidence.
