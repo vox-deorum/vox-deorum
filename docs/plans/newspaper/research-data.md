@@ -93,7 +93,7 @@ City rows also lack a numeric owner ID. Majors use civilization display names; a
 
 On resync, `dropEventsAfterId()` deletes `GameEvents` with IDs **greater than or equal to** the first resumed event ID. That cleanup does not rewind mutable histories, options, transcripts, or every other table. The manager's normal turn update only advances its turn value. A database must therefore be checked for rewind and branch contamination before using it as a recording. The sampled French summaries had no backwards turn step in insertion order, but that check cannot prove the absence of same-turn branches.
 
-The offline publication should keep its own issue, series, vote, and editorial-decision history with the replay output. The live design later needs a save-restored publication checkpoint and reconciliation of MCP's copy with that loaded timeline. See [UI persistence primitives](research-ui.md).
+The offline publication should keep its issue, series, vote, preference, and editorial-decision history with the replay output, including each issue's chosen design, layout variants, and page order. The live design later needs a save-restored publication checkpoint and reconciliation of MCP's copy with that loaded timeline. See [UI persistence primitives](research-ui.md).
 
 ## Field quality and useful story limits
 
@@ -139,4 +139,15 @@ Radio requires Electricity and Corporations; Computers requires Refrigeration an
 
 Domestic contrasts, own trade concentration, known foreign culture/tourism trends, visible religious changes, and selected diplomatic developments have enough backing to investigate now. Detailed needs, graded espionage reports, complete infrastructure explanations, and reliable cross-capture city series need additional collection or reconciliation.
 
-Before generating a sequence, verify the selected perspective, table/field coverage, historical contact, city lifecycle, compatible measures, and timeline. Record the chosen within-turn convention and retain source row/event references with every trigger. Then compare heuristic and LLM editions from the same permitted evidence and separate publication histories, including series continuation, fading, merging, and edited votes.
+Before generating a sequence, verify the selected perspective, table/field coverage, historical contact, city lifecycle, compatible measures, and timeline. Record the chosen within-turn convention and retain source row/event references with every trigger. Compare heuristic and LLM editions from the same permitted evidence and separate publication histories. A local reader should let us inspect issues, change or clear votes, and resume with the saved history and preferences.
+
+The candidate segments establish useful observations. The following editorial demonstrations still need to be selected or exercised:
+
+| Demonstration | Candidate and remaining work |
+| --- | --- |
+| Series starts, continues, fades, and returns | France's changing trade concentration is a candidate for a continuing series. Find a quiet interval followed by a meaningful new development under the same series key. The five sampled cutoffs do not establish a fade-and-return sequence. |
+| Merged-template installment | Look for an observed diplomatic change involving a trade partner during a relevant trade-concentration period. Verify compatible subjects and dates, then identify the supporting records and an authored composite variant for the heuristic editor. No particular pairing has been verified yet. |
+| Continuity across editor modes | Within one replay history, switch from LLM to heuristic editing and back. Check that an authored template can continue an LLM-originated series through the same key and that existing articles and votes survive. |
+| LLM disabled or generation fails | Replay the same segment with LLM use disabled and with a controlled generation failure. Check that LLM-only templates are skipped when unavailable, unfinished items are omitted, and available scripted content still produces a useful issue. This requires an editor prototype. |
+
+Record the selected cutoffs and evidence for each demonstration, and label any synthetic scenario separately from recorded-game results. Assess short-piece variety and useful hints alongside continuity; a successful data query alone does not establish the reading experience.

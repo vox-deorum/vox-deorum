@@ -24,7 +24,7 @@ Each civilization has its own publication, with a consistent identity and an arc
 
 A typical front page contains a lead story, updates from selected series, and a few short standalone pieces, around 200 to 400 words altogether. Early or quiet editions can be much shorter. The front page gives a quick overview of the most important news; opening an item reveals supporting facts, earlier installments, and links to relevant game screens.
 
-Every item shows its subject, reporting period, and tags. The reader can browse the archive by date, civilization, city, or tag. Tags can also support sections such as **International News**, **Cultural News**, and **Commerce**.
+The narrative identifies each item's subject. Its supporting record provides the reporting period and tags. The reader can browse the archive by date, civilization, city, or tag. Tags can also support sections such as **International News**, **Cultural News**, and **Commerce**.
 
 An issue can span multiple pages. Page count adapts to the amount of worthwhile news and the space its stories need. A quiet issue may fit on one page; a busy late-game issue can add pages for international roundups, local reports, and longer analysis. Group related developments, keep the most important items on the front page, and provide clear navigation to the rest. Extra pages should earn their place through useful coverage. Each visual design expresses pages in its own medium, such as tablets, broadsheet pages, or digital sections.
 

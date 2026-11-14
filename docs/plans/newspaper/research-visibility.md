@@ -6,7 +6,7 @@ Part three of [the newspaper research](research.md), based on [the feature speci
 
 The MCP store keeps a shared version of true game state plus per-player visibility. Its live tools then remove selected fields. That is a useful starting point, but it does not fully implement the newspaper's three reporting channels: direct access, trade routes, and spies or diplomats with increasing strength.
 
-The spec deliberately allows the newspaper to teach the player something new. Its rules can grant more information than an existing screen. They still need to say which source grants which fields, where, and when. Existing visibility flags alone do not express that policy.
+The spec deliberately allows the newspaper to teach the player something new. Its rules can grant more information than an existing screen. They still need to say which source grants which fields, where, and when, including any historical period it may cover. Existing visibility flags alone do not express that policy.
 
 ## What current access levels mean
 
@@ -82,7 +82,7 @@ Important boundaries:
 - A route to one city does not establish access to every city in the partner civilization or its national private records.
 - Domestic routes support domestic stories without creating foreign permissions.
 - The reader's routes do not expose trade between two other civilizations.
-- A route recorded at turn 250 does not justify reporting destination changes from turn 200 unless access then is independently supported.
+- A route starting at turn 250 may bring dated accounts of turn 200 if its reporting rule grants those facts and that period. Cite recorded evidence and date its acquisition at turn 250, so earlier replay cutoffs cannot use it.
 - Ending a route can stop new reports while leaving dated prior intelligence in the archive.
 
 The current snapshot keys are formatted names, with no structured route ID or endpoint IDs. A selected recording can support a carefully checked simulation by matching its own route labels to stored cities at each cutoff. Label that as a simulated newspaper trade policy, because current city flags do not record that grant. New collection should retain endpoint IDs, coordinates, reporting period, and access source.
@@ -101,7 +101,7 @@ A live collector can preserve these structured facts from existing bindings, der
 
 ## Historical evidence contract
 
-Historical visibility must be evaluated before trigger generation, template matching, merging, and LLM input. Restricting the final prose cannot undo an editorial choice influenced by future or private facts.
+The proposed newspaper policy evaluates historical access before trigger generation, template matching, merging, and LLM input. Restricting the final prose cannot undo an editorial choice influenced by future or private facts.
 
 A proposed observation contract should preserve:
 
@@ -111,14 +111,16 @@ A proposed observation contract should preserve:
 | Subject IDs, with display labels | Follow places and civilizations despite renaming; link city objects across capture. |
 | Field, value, and units/definition | Make comparisons compatible and interpretations checkable. |
 | Observed turn and known-by turn where they differ | Date the underlying state and when the receiver obtained it. Existing recordings do not always distinguish them. |
-| Access source and granted field set | Explain direct sight, public/met knowledge, trade reports, or espionage. Existing 0/1/2 flags do not retain all these reasons. |
+| Access source, granted field set, and granted historical period | Explain direct sight, public/met knowledge, trade reports, or espionage, and whether the source may supply earlier dates. Existing 0/1/2 flags do not retain these reasons. |
 | Source row/event reference | Trace a published fact back to the recording. |
 
-For example, if a spy reported city output on turn 220 and departed on turn 221, a turn-225 issue can cite the turn-220 report. It must not update that output from a turn-225 true-state row merely because the old spy report was detailed. The last permitted observation may differ by field. Gaining a source later also does not automatically grant the reader an earlier detailed history.
+For example, if a spy reported city output on turn 220 and departed on turn 221, a turn-225 issue can cite the turn-220 report. It must not update that output from a turn-225 true-state row merely because the old spy report was detailed. The last permitted observation may differ by field.
 
-For events, bound the event turn/ID and evaluate nested fields using the receiver's knowledge then. `get-events` accepts an exact `Turn` or event-ID bounds `After` and `Before`; it has no implicit replay cutoff. Its resource postprocessing reads the latest stored summary, with a possible live fallback. An offline historical query must supply historical resource knowledge explicitly to avoid using later discoveries.
+Newly acquired historical evidence is allowed when an explicit reporting source or rule grants the relevant fields and historical period, and recorded facts support the claim. Both the state or event date and the acquisition date must fall at or before the replay cutoff. Existing visibility flags alone do not establish retrospective access. Published articles keep their original text when later permissions change.
 
-For snapshots, select only rows at or before the cutoff from a reconciled timeline, then apply field-specific permissions and freshness. Never join old city values to today's contacts, routes, spies, or public identities and treat the result as historical knowledge. Static `PlayerInformations` can resolve identity internally, but must not reveal an unmet civilization's name in output.
+For events, bound the event turn/ID and evaluate nested fields using the receiver's knowledge as of the replay cutoff, applying the same acquisition rule. `get-events` accepts an exact `Turn` or event-ID bounds `After` and `Before`; it has no implicit replay cutoff. Its resource postprocessing reads the latest stored summary, with a possible live fallback. An offline historical query must supply historical resource knowledge explicitly to avoid using later discoveries.
+
+For snapshots, select only rows at or before the cutoff from a reconciled timeline, then apply field-specific permissions and freshness. Using later contacts, routes, or spies to grant access to older values requires an explicit rule covering those fields and dates, with acquisition still bounded by the cutoff. Static `PlayerInformations` can resolve identity internally, but must not reveal an unmet civilization's name in output.
 
 Reader perspectives currently cover major slots 0 through 21. City-states and barbarians can be subjects; observers use separate UI seat handling rather than a `PlayerN` permission column. [The UI research](research-ui.md) covers that distinction.
 
