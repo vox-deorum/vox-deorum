@@ -2,14 +2,6 @@
 
 Proposed reading experience for designers and developers, based on [the feature specification](spec.md).
 
-## Make the paper worth opening
-
-Make the newspaper fun to open, useful to skim, and easy to act on. Explain what changed, why it matters, and where to look next. Help newcomers connect a development to a mechanic or decision, such as reviewing routes when one foreign market supplies most trade income.
-
-Keep facts traceable to game observations and distinguish interpretation through the writing. Additional information can be a reward from a concrete reporting mechanic, such as merchants bringing news from a trading partner.
-
-Write about named places and people. Give each story one clear development and a reason to care. Favor a short paragraph for the lead and a sentence or two for smaller stories. Include numbers where they explain a claim.
-
 ## Set a clear hierarchy and plan the pages
 
 Anchor the issue with a lead story and shorter pieces from varied places and subjects. Use type size, spacing, and editorial rules to show importance. Let the publication occupy most of the reading surface, with little surrounding interface.
@@ -22,16 +14,7 @@ Keep the front page short enough to skim. A quiet issue can fit on one page; a b
 
 Match composition, lettering, illustration, ornament, materials, and voice to a specific civilization and era. A civilization's style changes across ages, while neighbors can share a medium and retain distinct identities.
 
-| Proposed example | Visual direction |
-| --- | --- |
-| Ancient Babylonian | Carved relief and cylinder seals: low horizontal bands, strong silhouettes, clay tones, seal-like marks, formal lettering. |
-| Renaissance Venetian | Letterpress gazette and woodcut: humanist type, printer's ornaments, ruled columns, laid paper, merchant-report tone. |
-| Industrial British | Engraving and mass printing: dense columns, engraved vignettes, heavy masthead, statistical sidebars, machine-made paper. |
-| Contemporary Japanese | Editorial illustration: expressive drawing, fine rules, playful cropping, bright accents, clean screen layout. |
-
-Choose art references for each civilization and era as its design is developed. Build character into the masthead, rules, borders, seals, paper edges, and restrained textures without letting them compete with the text.
-
-Use illustration when it adds meaning. A shared image can set the atmosphere while typography and decoration carry the rest. Preserve contrast and keep archived editions in their published style.
+Choose art references for each civilization and era as its design is developed. Build character into the masthead, rules, borders, seals, paper edges, and restrained textures.
 
 ## Match the layout to the moment
 
