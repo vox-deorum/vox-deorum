@@ -55,7 +55,7 @@ Use two unmistakably different DDS files with matching dimensions and known-good
 
 Success means a file created after startup becomes visibly distinguishable in the running game and old issues still resolve the correct artwork. No such experiment was run for this research. If only registered replacements work, bounded texture slots could be investigated, including slot reuse and archive retention.
 
-The initial reader can proceed with native text, packaged art, and native charts. Live-generated illustrations remain a later capability investigation, consistent with the spec's development order.
+The initial reader can proceed with native text and packaged art. Native charts are a feasible later extension; the spec defers graph rendering. Live-generated illustrations also remain a later capability investigation.
 
 ## Communication with the background service
 
