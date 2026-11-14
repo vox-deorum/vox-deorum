@@ -19,7 +19,7 @@ Success means both editors produce useful, evidence-backed issues with continuin
 | Game reader | A Lua/XML viewer displays bounded image strips and places controls at the exported rectangles. Scrolling, section switching, link activation, and vote indicators respond locally. |
 | Text interaction | Browser text remains selectable and accessible. The game reader uses rasterized text; browser text selection and accessibility parity are outside its requirements. |
 | Durable content | Store structured articles, links, editorial memory, and presentation choices. Images and interaction maps are derived cache entries. Retain a basic native text view for missing caches while rendering is unavailable. |
-| Runtime ownership | Newspaper editing and rendering live in Vox Agents. MCP owns live observation collection, the shared evidence projection, and its queryable live publication copy. Offline replay uses a separate local publication database. The game save owns the live publication history. |
+| Runtime ownership | Newspaper editing and rendering live in Vox Agents. MCP owns game-data collection, historical queries, and its queryable live publication copy. Standalone evaluation reads MCP's database directly and keeps publication output in a separate local database. The game save owns the live publication history. |
 
 The [Playwright browser documentation](https://playwright.dev/docs/browsers#google-chrome--microsoft-edge) supports using installed Edge and Chrome. Its [screenshot](https://playwright.dev/docs/screenshots) and [page evaluation](https://playwright.dev/docs/evaluating) APIs provide the two export outputs. [DirectXTex's converter](https://github.com/microsoft/DirectXTex/wiki/Texconv) supports DDS output and legacy headers. VD's added footprint includes the browser library, fonts, art, the converter, and other runtime dependencies.
 
@@ -51,7 +51,7 @@ The [texture experiment](../../developers/civ5-mod/runtime-texture-experiment.md
 | Plan | Deliverable | Completion gate |
 | --- | --- | --- |
 | [1. Shared renderer and game proof](implementation/01-renderer.md) | A fixture issue works in the browser and through the DDS viewer, with matching links, scrolling, tabs, and votes. | Readable text and correct interaction at representative sizes, safe missing-file behavior, and measured installation/runtime cost. |
-| [2. Replay and evidence](implementation/02-replay.md) | A read-only recording adapter produces inspectable, perspective-specific evidence at successive cutoffs. | Future or unpermitted facts cannot affect inputs; selected recording segments have documented limitations. |
+| [2. Historical queries](implementation/02-replay.md) | Queries against MCP's dated records supply newspaper inputs; standalone evaluation reads the database directly. | Cutoff and field filtering work in both access paths, with inspectable source references. |
 | [3. Heuristic newspaper](implementation/03-heuristic-editor.md) | Configured triggers and authored templates produce stored issues, series, pages, and feedback-sensitive selections. | A complete read, vote, continue, and resume workflow produces useful coverage without an LLM. |
 | [4. Offline evaluation and LLM editor](implementation/04-offline-evaluation.md) | Complete the offline archive and design coverage; compare both editors on the same recordings. | Demonstrate continuity, merging, useful short pieces, fallback, and design evolution; review the reading experience. |
 | [5. Live publication and persistence](implementation/05-live-integration.md) | Human-only collection, background publication, save restoration, and the finished game reader. | Old saves restore the correct history and preferences; delayed work cannot cross timelines; reading survives service loss. |
@@ -66,7 +66,7 @@ Run the save-capacity proof from Plan 5's first step alongside Plans 1 and 2, on
 | --- | --- | --- |
 | `IssueDocument`, typed article links, design references, `ReaderAction` | Plan 1 | Both editors, both readers, archive storage. |
 | `RenderProfile`, `RenderBundle`, asset IDs and action rectangles | Plan 1 | Browser exporter and Lua viewer. |
-| `EvidenceWindow`, observations, subject identities and source references | Plan 2 | Triggers and both editors; later the live collector. |
+| Historical query inputs/results, existing subject IDs and source references | Plan 2 | Triggers and both editors through MCP or direct database access. |
 | Editorial configuration, `PublicationState`, publication check outcome | Plan 3 | Replay, both editors, save-backed persistence. |
 | Validated LLM proposals and comparison-run records | Plan 4 | Evaluation and live LLM editing. |
 | Save checkpoint, live collection boundary, and render bundle requests | Plan 5 | Scheduler, game archive, game viewer, and MCP reconciliation. |
@@ -78,9 +78,9 @@ These names are proposed implementation contracts. The individual plans specify 
 - Full-size DDS quality and the game viewer's coordinate transform determine the supported render profiles. Start with the demonstrated DX11 environment and record the exact VP build.
 - The initial size target is **at most 30 MiB of added installed production files**, including dependencies and bundled assets. This is a proposed engineering budget. Measure it before expanding the design catalogue; report any overrun with its cause.
 - Installed browsers can be absent, blocked by local policy, or updated independently. Detect capability when rendering is requested and preserve reading when export cannot run.
-- Historical records cannot recover every visibility source, city lifecycle, or same-turn save branch. Plan 2 must identify unsupported claims explicitly.
+- Historical records may be incomplete. Initial evaluation uses a suitable recording and skips comparisons whose required data is unreliable.
 - Save volume and texture-cache retention need measurement, starting with the early save-capacity proof. A portable save must retain readable text even when local images are missing. Persistence preserves the saved design and layout choices; regenerated images may differ slightly from the originals.
-- The live trade and espionage field policy needs a concrete field/strength matrix before new collection is implemented. Plan 2 supplies a conservative recorded-data policy; Plan 5 adds explicit new reporting grants.
+- The live trade and espionage field policy needs a concrete field/strength matrix before new collection is implemented. Plan 2 uses existing recorded access; Plan 5 adds explicit new reporting grants.
 
 ## Verification and scope
 

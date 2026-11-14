@@ -58,7 +58,7 @@ Source: "..\mcp-server\*"; DestDir: "{app}\mcp-server"; Flags: ignoreversion rec
 Source: "..\mcp-server\docs\strategies\*"; DestDir: "{app}\mcp-server\docs\strategies"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; The compiled reader (dist-newspaper) and vendored converter (vendor) stay at runtime.
 ; Reader source, its separate TypeScript config, and fixture-only assets are development files.
-Source: "..\vox-agents\*"; DestDir: "{app}\vox-agents"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: ".git,\src\*,\ui\*,node_modules\*,\data\*,\tests\*,logs\*,docs\*,\telemetry\*,.env,newspaper-reader\*,tsconfig.newspaper.json,dist-newspaper\fixtures\*"
+Source: "..\vox-agents\*"; DestDir: "{app}\vox-agents"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: ".git,\src\*,\ui\*,node_modules\*,\data\*,\tests\*,logs\*,docs\*,\telemetry\*,.env,newspaper\*,tsconfig.newspaper.json,dist-newspaper\fixtures\*"
 
 ; Civ5 mod files
 ; The newspaper fixture Lua file is generated for local proofing and is never packaged.

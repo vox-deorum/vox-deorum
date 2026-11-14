@@ -23,7 +23,7 @@ Use a Victorian layout and a modern feed to exercise different compositions. Tes
 
 ## Approach
 
-Place the plain browser implementation in the proposed `vox-agents/newspaper-reader/` directory. Build it to `vox-agents/dist-newspaper/`. Keep data contracts and backend rendering code in `vox-agents/src/newspaper/`; shared types must have neither Node runtime imports nor DOM types.
+Place the plain browser implementation in the proposed `vox-agents/newspaper/` directory. Build it to `vox-agents/dist-newspaper/`. Keep data contracts and backend rendering code in `vox-agents/src/newspaper/`; shared types must have neither Node runtime imports nor DOM types.
 
 Use installed Edge through `playwright-core`, with installed Chrome as a fallback. An explicit executable override can support nonstandard installations. Start one isolated browser worker for a render batch and close it after a short idle period or process shutdown. Browser absence disables new texture export with a clear status. Installation and ordinary startup must never download a browser.
 
@@ -102,7 +102,7 @@ With the renderer disconnected, reopen a cached fixture. Delete a closed fixture
 
 ### 6. Measure and package the result
 
-Update installer inclusion/exclusion rules and the converter acquisition step. Pin its version and checksum; retain the license; acquire it during the developer build rather than during issue generation. The source-run workflow must provide the same converter path. Verify the pruned install can resolve `playwright-core`, the converter, and `dist-newspaper`, and contains neither reader source fixtures nor a downloaded browser. Exclude `newspaper-reader` source explicitly from the current recursive installer rule.
+Update installer inclusion/exclusion rules and the converter acquisition step. Pin its version and checksum; retain the license; acquire it during the developer build rather than during issue generation. The source-run workflow must provide the same converter path. Verify the pruned install can resolve `playwright-core`, the converter, and `dist-newspaper`, and contains neither reader source fixtures nor a downloaded browser. Exclude `newspaper` source explicitly from the current recursive installer rule.
 
 Measure incremental installed bytes, compressed installer delta, render latency for cold/warm batches, the browser process tree's peak memory, DDS bytes per issue, and texture/cache growth. The proposed added-install target is 30 MiB. Compare 1280-by-720, 1920-by-1080, and 2560-by-1440 screens with readable text settings. Select supported profile and strip limits from those measurements and document the exact VP build and renderer.
 

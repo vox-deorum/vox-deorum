@@ -12,7 +12,7 @@ From the repository root, run `npm run newspaper -w vox-agents`. Open the printe
 
 Run `npm run acquire:texconv -w vox-agents` once before exporting. The developer acquisition script verifies the pinned DirectXTex executable and retains its license. Export uses an installed Microsoft Edge browser, then Chrome; `--browser` can select another executable. Neither startup nor export downloads a browser.
 
-Start the newspaper command with `--issue newspaper-reader/fixtures/victorian-ordinary.json --export --once`. Arguments are relative to the Vox Agents workspace when invoked through npm. Omit `--once` to keep the browser host running. After a full build, `npm run newspaper:dist -w vox-agents -- ...` uses compiled backend code.
+Start the newspaper command with `--issue newspaper/fixtures/victorian-ordinary.json --export --once`. Arguments are relative to the Vox Agents workspace when invoked through npm. Omit `--once` to keep the browser host running. After a full build, `npm run newspaper:dist -w vox-agents -- ...` uses compiled backend code.
 
 The command writes a complete cache bundle and `civ5-mod/UI/VoxDeorumNewspaperFixture.lua`. Run `civ5-mod/deploy.bat` after exporting. Deployment adds the generated file to the deployed manifest only; the source manifest and production installer omit fixture data. Reload the mod to import a new fixture. `LuaEvents.VoxDeorumNewspaperOpen()` opens the proof viewer.
 
@@ -37,7 +37,7 @@ The source is divided by runtime and responsibility:
 | `src/newspaper/renderer/{render,browser,dds}.ts` | Capture orchestration, browser lifecycle, and DDS conversion |
 | `src/newspaper/cache/{cache,bundle-assets}.ts` | Atomic cache publication and bundle file resolution |
 | `src/newspaper/host/{http,fixture}.ts`, `src/newspaper/console.ts` | Local HTTP host, development Lua delivery, and command entry point |
-| `newspaper-reader/src/` | Plain DOM reader lifecycle, article construction, layout measurement, and export bridge |
+| `newspaper/src/` | Plain DOM reader lifecycle, article construction, layout measurement, and export bridge |
 | `civ5-mod/UI/VoxDeorumNewspaperData.lua` | Pure publication indexing and native text adapters |
 
 Contract validation uses the shared asset registry and layout defaults in `ui/`. Both folders stay browser-safe; UI modules import only types from `contracts/`.

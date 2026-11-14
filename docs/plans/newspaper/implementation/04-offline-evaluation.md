@@ -16,7 +16,7 @@ The [design principles](../design-principles.md) and local prototypes cover five
 
 Add an LLM editor behind the same editorial input/output boundary as the heuristic editor. The model proposes selection, merges, prose, and ad hoc angles; deterministic validation enforces issue contracts, permitted subjects, evidence references, and series rules before publication. Retain authored fallback at item level and whole-editor failure boundaries.
 
-Use the existing provider selection, cancellation, token accounting, and prompt-file conventions. A newspaper evaluation context should have only its explicit input and constrained completion/output mechanism. It must work on a recording without starting a live MCP connection. Verify the chosen invocation path supports this before wiring it into the replay runner.
+Use the existing provider selection, cancellation, token accounting, and prompt-file conventions. A newspaper evaluation context should have only its explicit input and constrained completion/output mechanism. Obtain that input through MCP during VD use or Plan 2's direct database queries for standalone evaluation. Verify the chosen invocation path supports standalone use before wiring it into the evaluation runner.
 
 ## Ordered implementation
 

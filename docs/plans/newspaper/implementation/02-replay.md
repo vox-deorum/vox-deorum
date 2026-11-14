@@ -1,70 +1,45 @@
-# Plan 2: replay and evidence foundation
+﻿# Plan 2: historical queries for newspaper evaluation
 
-**Status: draft.** For developers preparing recorded games for the [newspaper](../implementation.md). Depends on Plan 1's issue identity conventions; the renderer remains usable with fixtures while this adapter is built.
+**Status: draft.** For developers connecting MCP's recorded game data to the [newspaper](../implementation.md). Depends on Plan 1's issue identity conventions; the renderer remains usable with fixtures during this work.
 
 ## Goal and success criteria
 
-Produce a stable, inspectable **evidence window** for one receiving civilization at each reporting cutoff. It contains only facts that the civilization may know by that cutoff, with dates, units, subject identities, and source references. It runs without a game, bridge, or live MCP connection and never modifies the source recording.
+Query the existing dated records for a receiving civilization at a selected turn and supply the facts needed by Plan 3's story detectors. VD already runs MCP. Standalone evaluation reads MCP's SQLite database directly, using the same query and field-selection logic.
 
 ## Current state
 
-`mcp-server/src/knowledge/store.ts` opens writable databases, initializes schema, and enables WAL. `manager.ts` manages live context and initialization. Their normal startup paths are unsuitable for read-only replay. `schema/base.ts`, `timed.ts`, `public.ts`, and `setup.ts` describe the tables, but older recordings must be inspected for their actual columns.
+`mcp-server/src/knowledge/store.ts` already stores dated player summaries, cities, and events. `getMutableKnowledgeHistory()` returns versions with optional player visibility filtering; `getMutableKnowledge()` selects the latest version. Historical queries need a cutoff and bounded comparison history.
 
-The archivist already reads recordings offline. `vox-agents/src/archivist/pipeline/extractor.ts` opens game databases read-only with `better-sqlite3`, and archivist modules import MCP schema types through relative paths into `mcp-server/dist/`. The replay adapter follows both conventions.
+`vox-agents/src/archivist/pipeline/extractor.ts` demonstrates read-only access through `better-sqlite3`. The [data research](../research/research-data.md) identifies France in `f07b2f21-2d81-4eee-a3f5-d6d850081a25.db`, turns 125 to 175 and 200 to 300, as an initial evaluation candidate. The [visibility research](../research/research-visibility.md) describes the field restrictions associated with stored access levels.
 
-The [data research](../research/research-data.md) identifies France in `f07b2f21-2d81-4eee-a3f5-d6d850081a25.db`, turns 125 to 175 and 200 to 300, as an initial candidate. It also documents change-only histories, capture changing city IDs, stale city rows, mutable metadata, and incomplete rewind cleanup. The [visibility research](../research/research-visibility.md) shows that a positive visibility flag does not authorize every stored field.
+## Approach
 
-## Approach and contracts
+Add newspaper query functions under `mcp-server/src/newspaper/` that operate on an existing database connection without starting the live server. MCP calls them against its open database. Standalone evaluation imports the compiled functions and opens the selected database read-only with the existing SQLite dependency. Choose a connection interface compatible with both callers during implementation.
 
-Implement a dedicated read-only adapter under proposed `vox-agents/src/newspaper/replay/`, using existing `better-sqlite3`. Put evidence DTOs and the pure field/source projection in `mcp-server/src/newspaper/`. Vox Agents imports their compiled modules from `mcp-server/dist/newspaper/`, so these modules must not import live-server code. The replay adapter calls that projection on recorded rows; Plan 5's MCP evidence tool calls it on live observations. Keep editorial comparisons in Vox Agents and avoid importing the live knowledge manager into replay.
+A query takes the receiver, previous check, cutoff, and the comparison range needed by a detector. For each subject, select the latest applicable version at or before the cutoff, breaking same-turn ties by that table's insertion ID; include earlier versions when a comparison needs them. Select events within the requested turn range. Apply the receiver's recorded access and the selected fields before returning data to the editor.
 
-| Proposed record | Contents |
-| --- | --- |
-| `RecordingSelection` | Source fingerprint, explicit recording branch/segment, receiving player, cutoff range and resolved interval, game speed and its source, observed schema, replay conventions, and known limitations. |
-| `Observation` | Subject key, measure, value and units, observed turn, known-by turn, reporting source and granted fields/period, source table/key/version or event ID, and reconstruction confidence. |
-| `EvidenceWindow` | Campaign/recording/timeline identity, receiver, previous check and cutoff, newly relevant facts, permitted comparison history, historical condition context, and omitted-field reasons. |
-| Subject identity | Civilization ID; city-object ID plus a reconciled place/founding episode when established; trade relationship identified by the two civilizations and direction. Labels remain dated display data. |
-
-A cutoff means the end of a numbered turn in the selected recording convention. Pick each table's latest row with `Turn <= cutoff`, breaking same-turn ties by that table's insertion ID. Never compare insertion IDs across tables or treat the result as a proven simultaneous game snapshot.
+Keep the result small: selected summary/city fields, relevant events, their existing IDs and turns, and the available condition values. These records are the editor's evidence. Source references point directly to database rows or events. Add result fields when a detector or the inspector needs them.
 
 ## Ordered implementation
 
-1. **Open and inspect recordings.** Add `replay/recording.ts` with a read-only connection and a consistent read transaction. Open a closed recording directly. For a database that MCP may still be writing, first take a consistent snapshot copy that includes committed WAL content, because read-only access to a WAL database can still need its side files. Record actual table/column coverage and a content fingerprint. Scan insertion order for backward turns and contradictory lifecycle records; require an explicit segment choice when branches are ambiguous. Absence of a detected rewind does not prove a clean timeline.
+1. **Add historical queries.** Extend the existing knowledge query code with cutoff and range reads for the summaries, cities, and events used by Plan 3. Share those reads with the newspaper query functions. Preserve missing values and original record dates. Use the existing schema types.
 
-2. **Reconstruct dated facts.** Add `replay/history.ts`. Implement as-of reads and bounded event windows, retaining preceding history for comparisons. Preserve missing fields as unknown. A change-only row's old turn does not establish a recent collection; record what is actually known about observation timing. Validate denominator definitions, route-yield sentinels, and national versus city measures before calculating changes.
+2. **Select reportable fields.** Reuse or extract field selection from the existing knowledge tools where suitable. Include own domestic and trade measures, permitted basic foreign-city facts, met civilizations' national culture/tourism, and supported public events, including war declarations involving the receiver. Filter nested event subjects and private terms as needed. Stored visibility levels determine access; new trade and espionage reporting rules belong to Plan 5.
 
-3. **Resolve subjects.** Add `subjects.ts`. Link a city through capture only when event and coordinate evidence support continuity. Distinguish a new founding after razing, and stop active-city coverage when removal is established. If ownership or continued existence is uncertain, omit roster-dependent comparisons. Match old route labels only when their endpoints resolve uniquely at the cutoff; otherwise exclude that route from claims needing endpoint identity and report incomplete coverage.
+3. **Connect standalone evaluation.** Extend Plan 1's console and browser controls with database path, receiver, turn range, and publication interval. Open the database read-only and advance the cutoff for each check. Show the returned records and source references in the developer inspector. Save the run settings and cursor with the separate publication output introduced in Plan 3.
 
-4. **Project historical access before deriving triggers.** Add `mcp-server/src/newspaper/evidence.ts`, pure types, and a versioned field policy. Vox Agents imports only these pure modules from MCP. The initial policy below uses recorded permissions and explicit field lists. It must operate on each observation, not pass complete database rows downstream. Keep true-state data private to the adapter; the editor receives only projected records and derived comparisons.
-
-5. **Reconstruct condition context.** Obtain era, technologies, policies, religion, and game-speed evidence at the cutoff. Use recorded acquisition events and justified initial state; today's mutable metadata cannot establish historical unlocks. Track unknown conditions explicitly so Plan 3 can retain a broadly eligible design/template without inventing unlocks. Prefer a recorded campaign speed, then an explicit replay override. If neither exists, use Standard and mark it as assumed in `RecordingSelection` and the inspector. Resolve the interval through the configured speed factors and persist the resulting turn count.
-
-6. **Expose the replay workflow.** Extend Plan 1's `src/newspaper/console.ts` command and browser host with recording selection, cutoff advance, and a developer evidence inspector outside the publication. Save run configuration, evidence references, omissions, and the cursor to a separate output directory. Plan 3 adds generated issues and publication state to this output.
-
-## Initial recorded-data policy
-
-| Source | Initial handling |
-| --- | --- |
-| Own civilization and confirmed own cities | Whitelist the recorded measures needed for domestic comparisons and own trade income. Verify ownership at the cutoff. |
-| Met major civilization | Use an explicit subset of the live level-1 national projection, including culture/tourism and public identity. Never include unmet names through a static identity lookup. |
-| Level-1 foreign city | Treat the selected basic fields as recorded public-city reports under the existing ever-revealed convention. Do not describe the record as current visual sight. |
-| Level-2 foreign city | Whitelist civilian fields; label the source as recorded detailed access unless its specific cause is established. Do not infer spy strength or access to other cities. |
-| Own trade records | Support the receiver's route-income and partner stories. Extra foreign-city access needs a proven route endpoint and an explicitly labelled policy simulation; it is excluded from the baseline run. |
-| Events | Whitelist supported event types and payload fields, including nested subjects, using historical contact/access. Include war declarations involving the receiver for Plan 3's urgent coverage. Keep private deal terms and internal AI records out of the baseline. |
-| Missing permission or source history | Unknown. Preserve an older permitted observation with its original date where justified; do not refresh it from later true state. |
-
-Newly learned history requires both an observed turn and a justified acquisition turn at or before the cutoff. The baseline adapter must not invent retrospective grants. Trade and graded espionage extensions receive their live field matrix in Plan 5; simulations must remain distinguishable in evaluation outputs.
+4. **Supply conditions and comparisons as needed.** Query dated era, technology/policy events, and religion for the chosen templates. Leave unavailable conditions unknown so Plan 3 can use a broadly eligible design. Use recorded game speed, then an explicit override, otherwise a labelled Standard assumption. Keep calculations in the story detectors: normalize route-yield sentinels, define denominators, and resolve route partners or city continuity only for stories that require them. Use existing city IDs by default; link a capture only when supporting records establish continuity.
 
 ## Verification
 
-Use small synthetic SQLite recordings to check cutoff boundaries, same-turn ordering, missing columns, changing access, captured/razed/refounded cities, ambiguous route labels, and source immutability. Add a future row or private field and verify the earlier evidence window is unchanged. Check that an unknown population or yield does not become zero.
+Use small SQLite fixtures to check cutoff selection, same-turn ordering, event ranges, field permissions, and missing values. Adding a future row or an unpermitted field must leave earlier editorial input unchanged. Verify the standalone reader leaves source data unchanged and returns the same selected facts as the MCP query path.
 
-Run focused Vitest tests for the MCP projection and Vox Agents replay adapter. Build/type-check `mcp-server` before `vox-agents` so its compiled projection modules are available, and run the newspaper reader type check if its inspector changes. Run the candidate French segments and manually trace domestic, trade, and foreign-culture examples to source records. Report measured coverage and unresolved gaps without claiming that the candidate already demonstrates every required story lifecycle.
+Run focused Vitest tests and the affected workspace type checks, building MCP before Vox Agents when compiled imports require it. Query the candidate French turns and trace domestic, trade, and foreign-culture examples to their source records. Record unsupported examples beside the evaluation output.
 
 ## Risks and open questions
 
-The chosen recordings may not contain a trustworthy merged-story or fade-and-return example. Find another segment or use a labelled synthetic fixture for the contract test, while leaving recorded-game evaluation incomplete until a suitable segment is found. Missing exact historical unlocks may limit design transitions. Same-turn branches can remain indistinguishable and must be recorded as a limitation.
+Older databases can have missing columns, stale city rows, or mixed save histories. Use a suitable recording for the initial evaluation and skip comparisons whose required data is unreliable. Missing historical unlocks may limit design transitions. The candidate still needs a verified merged-story and fade-and-return example for Plan 4.
 
 ## Out of scope
 
-Writing to source databases, changing existing live tool visibility, collecting new live fields, trigger tuning, and article generation.
+A separate replay subsystem, copied observation storage, recording fingerprinting or branch reconstruction, new live collection, trigger tuning, and article generation.

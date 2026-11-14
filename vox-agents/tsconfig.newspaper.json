@@ -25,7 +25,7 @@
     "noFallthroughCasesInSwitch": true
   },
   "include": [
-    "newspaper-reader/src/**/*",
-    "newspaper-reader/vite.config.ts"
+    "newspaper/src/**/*",
+    "newspaper/vite.config.ts"
   ]
 }

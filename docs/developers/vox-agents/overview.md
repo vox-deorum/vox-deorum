@@ -51,7 +51,7 @@ Suggested reading order:
 | `src/utils/models/` | Model registry, providers, and middleware. |
 | `src/utils/workspace/` | The per-seat file workspace. |
 | `src/web/` and `ui/` | The dashboard backend and the Vue app. |
-| `src/newspaper/` and `newspaper-reader/` | Newspaper contracts, local export/cache host, and the shared browser renderer. |
+| `src/newspaper/` and `newspaper/` | Newspaper contracts, local export/cache host, and the shared browser renderer. |
 | `prompts/` | System prompt templates. |
 | `configs/` | Session configurations. |
 

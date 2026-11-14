@@ -13,7 +13,7 @@ import { defaultRenderProfile } from '../../../../src/newspaper/ui/layout.js';
 import { texconvExecutablePath, validateDds } from '../../../../src/newspaper/renderer/dds.js';
 import { parseIssueDocument } from '../../../../src/newspaper/contracts/validation.js';
 
-const fixtures = fileURLToPath(new URL('../../../../newspaper-reader/fixtures/', import.meta.url));
+const fixtures = fileURLToPath(new URL('../../../../newspaper/fixtures/', import.meta.url));
 
 describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('newspaper browser integration', () => {
   let browser: Browser | undefined;

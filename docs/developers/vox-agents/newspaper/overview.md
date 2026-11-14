@@ -12,4 +12,4 @@ The newspaper currently has a fixture renderer proof, with in-game visual accept
 
 The [implementation roadmap](../../../plans/newspaper/implementation.md) describes the stages and their dependencies. Detailed requirements remain in each [implementation plan](../../../plans/newspaper/implementation/).
 
-The implemented source lives in `vox-agents/src/newspaper/`: contracts are in `contracts/`, browser-safe presentation in `ui/`, rendering in `renderer/`, bundle caching in `cache/`, and local host code in `host/`. The command entry point is `console.ts`. The plain DOM reader is separate in `vox-agents/newspaper-reader/`.
+The implemented source lives in `vox-agents/src/newspaper/`: contracts are in `contracts/`, browser-safe presentation in `ui/`, rendering in `renderer/`, bundle caching in `cache/`, and local host code in `host/`. The command entry point is `console.ts`. The plain DOM reader is separate in `vox-agents/newspaper/`.

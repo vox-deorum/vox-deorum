@@ -8,7 +8,7 @@ Generate useful issues without an LLM, with authored prose, continuing series, m
 
 ## Current state
 
-The [specification](../spec.md) defines editorial behavior and the initial subject families. The renderer and evidence adapter are outputs of Plans 1 and 2. Existing `seedrandom`, Zod, and SQLite dependencies cover deterministic choices, configuration validation, and a local publication store. There is no existing newspaper editor to extend.
+The [specification](../spec.md) defines editorial behavior and the initial subject families. The renderer and historical queries are outputs of Plans 1 and 2. Existing `seedrandom`, Zod, and SQLite dependencies cover deterministic choices, configuration validation, and a local publication store. There is no existing newspaper editor to extend.
 
 ## Approach and contracts
 
@@ -17,12 +17,12 @@ Keep the editorial pipeline in proposed `vox-agents/src/newspaper/`, separate fr
 | Proposed contract | Contents |
 | --- | --- |
 | Editorial configuration | Version, publication interval/speed scaling, detectors, conditions, thresholds, templates and authored/composite variants, tags, pages, design/layout definitions, decay, vote effects, and selection limits. |
-| Candidate | Supporting observation/trigger IDs, subject and series keys, contributing templates, importance, tags, eligible writing variants, novelty, and priority. |
+| Candidate | Supporting source-record/trigger IDs, subject and series keys, contributing templates, importance, tags, eligible writing variants, novelty, and priority. |
 | `PublicationState` | Last completed check, committed issues, series importance and evaluation turn, current votes, preferences, prior design choice, and stored decision records. |
 | Check result | Either a published immutable `IssueDocument` plus state changes, or a skipped check with its reason and updated cursor/decay state. |
 | Decision record | Configuration snapshot/hash, seed, selected variants/design/layouts, candidate scores, merge decisions, evidence references, and the feedback revision/corpus/coefficients used. |
 
-Use canonical keys such as `civilization/{id}/culture`, `trade/{originId}/{partnerId}`, and `place/{foundingEpisode}/growth`, scoped by campaign and receiver. Templates name the series family and bind its IDs from evidence. A capture only preserves a place key when Plan 2 established continuity.
+Use canonical keys such as `civilization/{id}/culture`, `trade/{originId}/{partnerId}`, and `city/{id}/growth`, scoped by campaign and receiver. Templates name the series family and bind its IDs from queried records. A detector that follows a city across capture must establish continuity from supporting records before reusing the earlier series key.
 
 ## Ordered implementation
 

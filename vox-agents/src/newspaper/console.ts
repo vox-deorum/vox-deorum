@@ -40,7 +40,7 @@ async function main(): Promise<void> {
   const worker = new NewspaperBrowser(() => launchInstalledBrowser(values.browser));
   const cache = new NewspaperCache(path.resolve(values.cache ?? fileURLToPath(new URL('../../data/newspaper-cache/', import.meta.url))), maxBytes);
   const assetsHash = await hashReaderAssets(readerDirectory);
-  const fixtureDirectory = fileURLToPath(new URL('../../newspaper-reader/fixtures/', import.meta.url));
+  const fixtureDirectory = fileURLToPath(new URL('../../newspaper/fixtures/', import.meta.url));
   const destination = path.resolve(values.lua ?? fileURLToPath(new URL('../../../civ5-mod/UI/VoxDeorumNewspaperFixture.lua', import.meta.url)));
   let pendingExport: Promise<unknown> = Promise.resolve();
   const host = await startNewspaperHost({ port, fixtureDirectory,
