@@ -129,7 +129,7 @@ Flavors are on the search's hot path, so the neutral case stays close to free:
 
 ## The operational loop
 
-Under `VOX_TACTICAL_OPERATIONAL_LOOP`, engagements resolve flavors differently: mapped VP flavors blended by the zones a search covers, plus a row for the kind of engagement, with aggression taken from RISK. See the [operational loop](../tactics/operational-loop.md#flavors-and-aggression).
+Under `VOX_TACTICAL_OPERATIONAL_LOOP`, engagements resolve flavors differently: mapped VP flavors blended by the zones a search covers, plus a row for the kind of engagement, with aggression taken from RISK. See the [operational loop](../commands/execution.md#flavors-and-aggression).
 
 ## The simulator
 

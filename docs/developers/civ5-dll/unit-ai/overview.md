@@ -70,6 +70,7 @@ Tactical and Homeland AI rebuild separate `m_CurrentTurnUnits` lists. Army membe
 | --- | --- |
 | Multi-turn targets and stage transitions | [Campaign](operations/campaign.md), [stages](operations/stages.md) |
 | Local targets, posture, or army movement | [Targets and postures](tactics/targets-and-postures.md), [movement](tactics/movement.md), [engagements](tactics/engagements.md) |
+| Battlefield command scheduling, recruitment and priorities | [Commands](commands/overview.md), [value](commands/value.md), [reinforcement](commands/reinforcement.md) |
 | Coordinated combat plans and ranking | [Simulation](simulation/overview.md), [scoring](simulation/scoring.md) |
 | Aircraft control and coordinated air attacks | [Conventional air operations](tactics/air.md), [air search](simulation/air.md) |
 | Tactical flavor resolution and score effects | [Flavors](flavors/overview.md), [flavor scoring](flavors/scoring.md) |
