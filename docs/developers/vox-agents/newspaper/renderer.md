@@ -4,20 +4,20 @@ The newspaper proof renders fixture issues in a browser and exports the same lay
 
 ## Supply a completed issue
 
-`IssueDocument` and its structural schema live in `src/newspaper/contracts/issue.ts`. The input contains ready articles and their publication order. The renderer uses these decisions to build the reading surface; editorial selection and replay remain later stages.
+The Zod schemas in `src/newspaper/contracts/issue.ts` are the source of the issue contract, and the TypeScript types are inferred from them. An `IssueDocument` holds ready articles in their publication order. The renderer builds the reading surface from it; editorial selection and replay remain later stages.
 
 | Field | Content |
 | --- | --- |
 | `schemaVersion`, `issueId`, `campaignId`, `timelineId` | Document version and issue, campaign, and timeline identity |
-| `receiver` | Receiving `playerId`, display `label`, and optional `civilizationId` |
-| `cutoff` | Reporting `turn` and display `label` |
-| `publication` | `title`, `designId`, `designVersion`, and optional `ornamentAssetId` |
-| `pages` | Ordered sections, each with an `id`, `label`, `layout`, and ordered `itemIds` |
-| `items` | Canonical articles, each with an `id`, `tags`, `seriesKeys`, `headline`, `body`, and `record` |
+| `receiver` | `IssueReceiver` with the player `playerId`, display `label`, and optional `civilizationId` |
+| `cutoff` | `IssueCutoff` with the reporting `turn` and display `label` |
+| `publication` | `IssuePublication` with `title`, `designId`, `designVersion`, and optional `ornamentAssetId` |
+| `pages` | Ordered `IssuePage` sections, each with an `id`, `label`, `layout`, and ordered `itemIds` |
+| `items` | Canonical `IssueItem` articles, each with an `id`, `tags`, `seriesKeys`, `headline`, `body`, and `sourceNote` |
 
-An item can also supply a `deck`, `history`, `assetId`, `assetAlt`, `avatar`, and `evidence` table. Headline, deck, body, record, and history prose use typed inline nodes for text, emphasis, breaks, and links. Link targets identify a city, civilization, trade relationship, supported game screen, or article. Supply those typed targets rather than raw markup.
+An item can also supply a `subheadline`, an `earlierReport`, an `image`, an `avatar`, and an `evidenceTable`. Headline, subheadline, body, sourceNote, and earlier report prose use typed inline nodes for text, emphasis, breaks, and links. An `EarlierReportLink` holds its `label`, an article `target`, and the earlier article's `summary`. An `ItemImage` holds an `assetId` and a required `altText`. A `FeedAvatar` holds `initials` and a `tone`. An `EvidenceTable` holds a `title`, `description`, `columns`, `rows`, and an optional `footnote`; each `EvidenceRow` holds a `label`, `values`, and an optional `hasMissingValues` flag. Link targets identify a city, civilization, trade relationship, supported game screen, or article. Supply those typed targets rather than raw markup.
 
-Multiple pages can reference the same canonical item ID. Every appearance shares its vote. Page IDs and item IDs must be unique, and page item references must resolve. Renderer validation in `src/newspaper/renderer/validation.ts` also checks registered assets and their kinds: item assets must be images with alternative text, and publication ornaments must be ornament assets. The contract schema handles structure and references without importing the renderer.
+Multiple pages can reference the same canonical item ID. Every appearance shares its vote. Page IDs and item IDs must be unique, and page item references must resolve. Renderer validation in `src/newspaper/renderer/validation.ts` also checks registered assets and their kinds, covering item images and publication ornaments. The contract schemas handle structure and references without importing the renderer.
 
 The four files in `newspaper/fixtures/` are complete input examples: `victorian-ordinary.json`, `victorian-breaking.json`, `victorian-analysis.json`, and `modern-ordinary.json`.
 
@@ -60,7 +60,7 @@ The source is divided by runtime and responsibility:
 
 | Location | Responsibility |
 | --- | --- |
-| `src/newspaper/contracts/issue.ts` | Completed publication types, typed links, and structural issue validation |
+| `src/newspaper/contracts/issue.ts` | Issue schemas, inferred types, typed links, and structural validation |
 | `src/newspaper/contracts/reader.ts` | Reader actions, persisted state, and their validation |
 | `src/newspaper/renderer/{assets,layout,state}.ts` | Browser-safe assets, layout defaults, and shared reader state helpers |
 | `src/newspaper/renderer/{types,validation,bundle}.ts` | Render profile, geometry, browser bridge, bundle output, and renderer validation |
@@ -70,7 +70,7 @@ The source is divided by runtime and responsibility:
 | `newspaper/src/` | Plain DOM reader lifecycle, article construction, layout measurement, and export bridge |
 | `civ5-mod/UI/VoxDeorumNewspaperData.lua` | Pure publication indexing and native text adapters |
 
-Contracts have no renderer imports. The renderer depends on contracts and stays free of Node and DOM imports; DOM work belongs to `newspaper/src/`. The Node-only exporter consumes the renderer's profile, geometry, and bundle contracts. Issue parsing at the rendering boundary retains the full asset, kind, and alternative-text checks, and profile validation uses renderer layout defaults.
+Contracts have no renderer imports. The renderer depends on contracts and stays free of Node and DOM imports; DOM work belongs to `newspaper/src/`. The Node-only exporter consumes the renderer's profile, geometry, and bundle contracts. Issue parsing at the rendering boundary retains the full asset and kind checks, and profile validation uses renderer layout defaults.
 
 The standalone newspaper HTTP host shares `web/loopback.ts` request protection with the dashboard without importing dashboard startup. It exposes `/newspaper/` and `/api/newspaper/export`; regular dashboard integration is deferred. Browser assets and fixture JSON stay with the reader. Mock tests under `tests/mock/newspaper/` are grouped by the boundary they exercise; reader state contracts and helpers are covered at their respective boundaries. Shared test builders live in `tests/helpers/newspaper-fixtures.ts`.
 

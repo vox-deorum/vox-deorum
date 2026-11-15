@@ -1,6 +1,6 @@
 /** Reader interaction and persisted state contracts, independent of rendering. */
 import { z } from "zod";
-import { linkTargetSchema, type IssueDocument, type LinkTarget } from "./issue.js";
+import { linkTargetSchema, type IssueDocument } from "./issue.js";
 
 /** Vote values kept in reader state. */
 export const newspaperVoteValues = ["up", "down", "none"] as const;
@@ -8,57 +8,72 @@ export const newspaperVoteValues = ["up", "down", "none"] as const;
 /** Reader action kinds. */
 export const newspaperActionTypes = ["select-page", "vote", "follow-link"] as const;
 
+/** Schema for a reversible coverage preference. */
+export const voteValueSchema = z.enum(newspaperVoteValues);
 /** A reversible coverage preference. */
-export type VoteValue = (typeof newspaperVoteValues)[number];
-
-/** Actions emitted by the shared browser reader. */
-export type ReaderAction =
-  | { type: "select-page"; pageId: string; previousPageId: string | null }
-  | { type: "vote"; itemId: string; value: VoteValue; previousValue: VoteValue }
-  | { type: "follow-link"; itemId: string; target: LinkTarget };
-
-/** Reading state owned by the reader and persisted by its host. */
-export interface ReaderState {
-  activePageId: string;
-  scrollByPage: Record<string, number>;
-  votes: Record<string, VoteValue>;
-}
+export type VoteValue = z.infer<typeof voteValueSchema>;
 
 /** Schema for one selection action. */
 export const selectPageActionSchema = z.object({
+  /** Identifies a page selection action. */
   type: z.literal("select-page"),
+  /** Page selected by the reader. */
   pageId: z.string().min(1),
+  /** Previously selected page, or null before any selection. */
   previousPageId: z.string().min(1).nullable(),
 });
+/** A page selection emitted by the reader. */
+export type SelectPageAction = z.infer<typeof selectPageActionSchema>;
 
 /** Schema for one vote action. */
 export const voteActionSchema = z.object({
+  /** Identifies a coverage preference action. */
   type: z.literal("vote"),
+  /** Item whose coverage preference changed. */
   itemId: z.string().min(1),
-  value: z.enum(newspaperVoteValues),
-  previousValue: z.enum(newspaperVoteValues),
+  /** New coverage preference. */
+  value: voteValueSchema,
+  /** Coverage preference before the action. */
+  previousValue: voteValueSchema,
 });
+/** A coverage preference emitted by the reader. */
+export type VoteAction = z.infer<typeof voteActionSchema>;
 
 /** Schema for one link action. */
 export const followLinkActionSchema = z.object({
+  /** Identifies a link navigation action. */
   type: z.literal("follow-link"),
+  /** Item containing the link. */
   itemId: z.string().min(1),
+  /** Destination requested by the reader. */
   target: linkTargetSchema,
 });
+/** A link navigation emitted by the reader. */
+export type FollowLinkAction = z.infer<typeof followLinkActionSchema>;
 
 /** Schema for every reader action. */
 export const readerActionSchema = z.discriminatedUnion("type", [
+  /** Select a page. */
   selectPageActionSchema,
+  /** Change an item's coverage preference. */
   voteActionSchema,
+  /** Follow a typed link. */
   followLinkActionSchema,
 ]);
+/** Actions emitted by the shared browser reader. */
+export type ReaderAction = z.infer<typeof readerActionSchema>;
 
 /** Schema for persisted reader state. */
 export const readerStateSchema = z.object({
+  /** Page currently selected by the reader. */
   activePageId: z.string().min(1),
+  /** Saved scroll offset for each visited page. */
   scrollByPage: z.record(z.string(), z.number().finite().nonnegative()),
-  votes: z.record(z.string(), z.enum(newspaperVoteValues)),
+  /** Saved coverage preference for each item. */
+  votes: z.record(z.string(), voteValueSchema),
 });
+/** Reading state owned by the reader and persisted by its host. */
+export type ReaderState = z.infer<typeof readerStateSchema>;
 
 /** Parse a reader action or throw a validation error. */
 export function parseReaderAction(input: unknown): ReaderAction {

@@ -29,10 +29,69 @@ describe("newspaper issue contracts", () => {
 
   it("should preserve asset identifiers without requiring renderer registration", () => {
     const issue = createNewspaperIssue();
-    issue.items[0].assetId = "editor-image-awaiting-registration";
+    issue.items[0].image = {
+      assetId: "editor-image-awaiting-registration",
+      altText: "Ships at a port",
+    };
     issue.publication.ornamentAssetId = "editor-ornament-awaiting-registration";
     const parsed = issueDocumentSchema.parse(issue);
-    expect(parsed.items[0].assetId).toBe(issue.items[0].assetId);
+    expect(parsed.items[0].image).toEqual(issue.items[0].image);
     expect(parsed.publication.ornamentAssetId).toBe(issue.publication.ornamentAssetId);
+  });
+
+  it.each([
+    { type: "city", cityId: "city-1" },
+    { type: "civilization", civilizationId: "civilization-1" },
+    { type: "trade-relationship", partnerCivilizationId: "civilization-1", direction: "both" },
+    { type: "screen", screen: "map" },
+    { type: "article", issueId: "issue-0" },
+  ])("should reject an earlier report without a complete article destination: %j", (target) => {
+    const issue = createNewspaperIssue();
+    const input = {
+      ...issue,
+      items: [{
+        ...issue.items[0],
+        earlierReport: {
+          label: "Earlier coverage",
+          target,
+          summary: [[{ type: "text", text: "Earlier observations" }]],
+        },
+      }],
+    };
+    expect(issueDocumentSchema.safeParse(input).success).toBe(false);
+  });
+
+  it.each([
+    {},
+    { assetId: "modern-port" },
+    { altText: "Ships at a port" },
+    { assetId: "modern-port", altText: "" },
+    { assetId: "", altText: "Ships at a port" },
+    { assetId: 42, altText: "Ships at a port" },
+    { assetId: "modern-port", altText: 42 },
+  ])("should reject an image without a non-empty asset identifier and alternative text: %j", (image) => {
+    const issue = createNewspaperIssue();
+    const input = { ...issue, items: [{ ...issue.items[0], image }] };
+    expect(issueDocumentSchema.safeParse(input).success).toBe(false);
+  });
+
+  it("should require one evidence value per data column", () => {
+    const issue = createNewspaperIssue();
+    issue.items[0].evidenceTable = {
+      title: "Trade observations",
+      description: "Shares by turn",
+      columns: ["Turn", "Share", "Change"],
+      rows: [{ label: "Turn 12", values: ["54%", "16%"], hasMissingValues: false }],
+      footnote: "Compared with the previous observation.",
+    };
+    expect(issueDocumentSchema.parse(issue).items[0].evidenceTable).toEqual(issue.items[0].evidenceTable);
+    issue.items[0].evidenceTable.rows[0].values.pop();
+    const result = issueDocumentSchema.safeParse(issue);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues).toEqual(expect.arrayContaining([
+        expect.objectContaining({ path: ["items", 0, "evidenceTable", "rows", 0, "values"] }),
+      ]));
+    }
   });
 });

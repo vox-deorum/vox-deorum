@@ -9,10 +9,13 @@ describe("newspaper renderer issue validation", () => {
   it.each(["unregistered-image", "victorian-ornament", "font-inter-400"])(
     "should reject an unknown or non-image article asset: %s", (assetId) => {
       const issue = createNewspaperIssue();
-      issue.items[0].assetId = assetId;
-      issue.items[0].assetAlt = "A report illustration";
-      expect(issueDocumentSchema.parse(issue).items[0].assetId).toBe(assetId);
-      expect(() => parseIssueDocument(issue)).toThrow();
+      issue.items[0].image = { assetId, altText: "A report illustration" };
+      expect(issueDocumentSchema.parse(issue).items[0].image?.assetId).toBe(assetId);
+      expect(() => parseIssueDocument(issue)).toThrowError(expect.objectContaining({
+        issues: expect.arrayContaining([
+          expect.objectContaining({ path: ["items", 0, "image", "assetId"] }),
+        ]),
+      }));
     },
   );
 
@@ -25,13 +28,10 @@ describe("newspaper renderer issue validation", () => {
     },
   );
 
-  it("should require alternative text for registered article images", () => {
+  it("should accept a registered article image with alternative text", () => {
     const issue = createNewspaperIssue();
-    issue.items[0].assetId = "modern-port";
-    expect(issueDocumentSchema.parse(issue).items[0].assetId).toBe("modern-port");
-    expect(() => parseIssueDocument(issue)).toThrow();
-    issue.items[0].assetAlt = "Ships at a port";
-    expect(parseIssueDocument(issue).items[0].assetAlt).toBe(issue.items[0].assetAlt);
+    issue.items[0].image = { assetId: "modern-port", altText: "Ships at a port" };
+    expect(parseIssueDocument(issue).items[0].image).toEqual(issue.items[0].image);
   });
 
   it.each(["victorian-ordinary", "victorian-breaking", "victorian-analysis", "modern-ordinary"])(

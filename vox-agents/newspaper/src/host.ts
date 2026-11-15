@@ -131,7 +131,7 @@ function describeTarget(target: LinkTarget): string {
   return `Earlier report in issue ${target.issueId}, item ${target.itemId}`;
 }
 
-/** Show the destination of a link and any history text carried by the issue. */
+/** Show the destination of a link and any earlier report summary carried by the issue. */
 function renderLinkDetail(action: Extract<ReaderAction, { type: "follow-link" }>): void {
   detailView.replaceChildren();
   const heading = document.createElement("h2");
@@ -142,14 +142,14 @@ function renderLinkDetail(action: Extract<ReaderAction, { type: "follow-link" }>
 
   if (!currentIssue) return;
   const item = currentIssue.items.find((entry) => entry.id === action.itemId);
-  if (!item?.history || item.history.target.type !== "article") return;
+  if (!item?.earlierReport) return;
   if (action.target.type !== "article") return;
-  if (action.target.itemId !== item.history.target.itemId) return;
+  if (action.target.itemId !== item.earlierReport.target.itemId) return;
 
   const earlierHeading = document.createElement("h3");
-  earlierHeading.textContent = item.history.label;
+  earlierHeading.textContent = item.earlierReport.label;
   const earlierBody = document.createElement("p");
-  earlierBody.textContent = paragraphsToText(item.history.body);
+  earlierBody.textContent = paragraphsToText(item.earlierReport.summary);
   detailView.append(earlierHeading, earlierBody);
 }
 
@@ -205,9 +205,9 @@ function renderPageItems(): void {
     tags.textContent = `Tags: ${item.tags.join(", ") || "none"}`;
     const series = document.createElement("p");
     series.textContent = `Series: ${item.seriesKeys.join(", ") || "none"}`;
-    const record = document.createElement("p");
-    record.textContent = `Record: ${inlineNodesToText(item.record)}`;
-    details.append(summary, tags, series, record);
+    const sourceNote = document.createElement("p");
+    sourceNote.textContent = `Source note: ${inlineNodesToText(item.sourceNote)}`;
+    details.append(summary, tags, series, sourceNote);
     pageItems.append(details);
   }
 }

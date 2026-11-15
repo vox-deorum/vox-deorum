@@ -433,10 +433,10 @@ local function openArticle(target)
 	if type(target) ~= "table" then unavailableTarget(); return end
 	local item = nil
 	for _, source in ipairs(m_issue.items or {}) do
-		local history = source.history
-		if type(history) == "table" and type(history.target) == "table"
-			and history.target.issueId == target.issueId and history.target.itemId == target.itemId then
-			item = { headline = { { type = "text", text = history.label } }, body = history.body }
+		local earlierReport = source.earlierReport
+		if type(earlierReport) == "table" and type(earlierReport.target) == "table"
+			and earlierReport.target.issueId == target.issueId and earlierReport.target.itemId == target.itemId then
+			item = { headline = { { type = "text", text = earlierReport.label } }, body = earlierReport.summary }
 			break
 		end
 	end
@@ -449,7 +449,7 @@ local function openArticle(target)
 	for _, block in ipairs(item.body or {}) do
 		y = addTextBlock("TextInstance", Controls.DetailContent, 10, y, m_contentWidth - 50, inlineToText(block)) + 4
 	end
-	y = addTextBlock("TextInstance", Controls.DetailContent, 10, y, m_contentWidth - 50, inlineToText(item.record))
+	y = addTextBlock("TextInstance", Controls.DetailContent, 10, y, m_contentWidth - 50, inlineToText(item.sourceNote))
 	y = addLinkRow(Controls.DetailContent, 10, y + 4, m_contentWidth - 50, collectItemLinks(item))
 	Controls.DetailContent:SetSizeVal(m_contentWidth - 30, math.max(1, y + 10))
 	Controls.DetailScroll:CalculateInternalSize()
@@ -757,32 +757,34 @@ local function addTextVote(parent, x, y, itemId, value)
 	return y + 30
 end
 
--- Render the lead analysis evidence in the same order as the browser table.
-local function renderTextEvidence(evidence, x, y, width)
-	y = addTextBlock("DeckInstance", Controls.PageContent, x, y, width, evidence.title)
-	y = addTextBlock("TextInstance", Controls.PageContent, x, y, width, evidence.description)
-	y = addTextBlock("TextInstance", Controls.PageContent, x, y, width, table.concat(evidence.columns or {}, " | "))
-	for _, row in ipairs(evidence.rows or {}) do
+-- Render the lead analysis evidence table in the same order as the browser table.
+local function renderTextEvidence(evidenceTable, x, y, width)
+	y = addTextBlock("DeckInstance", Controls.PageContent, x, y, width, evidenceTable.title)
+	y = addTextBlock("TextInstance", Controls.PageContent, x, y, width, evidenceTable.description)
+	y = addTextBlock("TextInstance", Controls.PageContent, x, y, width, table.concat(evidenceTable.columns or {}, " | "))
+	for _, row in ipairs(evidenceTable.rows or {}) do
 		local cells = { row.label }
 		for _, value in ipairs(row.values or {}) do cells[#cells + 1] = value end
 		y = addTextBlock("TextInstance", Controls.PageContent, x, y, width, table.concat(cells, " | "))
 	end
-	return addTextBlock("TextInstance", Controls.PageContent, x, y, width, evidence.note)
+	return addTextBlock("TextInstance", Controls.PageContent, x, y, width, evidenceTable.footnote)
 end
 
 -- Draw the browser's visible story fields and return the next cursor.
 local function renderTextItem(item, page, lead, x, y, width)
 	local headline = inlineToText(item.headline)
 	y = addTextBlock("HeadlineInstance", Controls.PageContent, x, y, width, headline)
-	y = addTextBlock("DeckInstance", Controls.PageContent, x, y, width, inlineToText(item.deck))
+	y = addTextBlock("DeckInstance", Controls.PageContent, x, y, width, inlineToText(item.subheadline))
 	for _, block in ipairs(item.body or {}) do
 		y = addTextBlock("TextInstance", Controls.PageContent, x, y, width, inlineToText(block)) + 4
 	end
-	if lead and page.layout == "analysis" and type(item.evidence) == "table" then
-		y = renderTextEvidence(item.evidence, x, y, width)
+	if lead and page.layout == "analysis" and type(item.evidenceTable) == "table" then
+		y = renderTextEvidence(item.evidenceTable, x, y, width)
 	end
-	local visible = { headline = item.headline, deck = item.deck, body = item.body }
-	if type(item.history) == "table" then visible.history = { label = item.history.label, target = item.history.target } end
+	local visible = { headline = item.headline, subheadline = item.subheadline, body = item.body }
+	if type(item.earlierReport) == "table" then
+		visible.earlierReport = { label = item.earlierReport.label, target = item.earlierReport.target }
+	end
 	y = addLinkRow(Controls.PageContent, x, y + 2, width, collectItemLinks(visible))
 	y = addTextVote(Controls.PageContent, x, y, item.id, "up")
 	y = addTextVote(Controls.PageContent, x + 110, y - 30, item.id, "down")

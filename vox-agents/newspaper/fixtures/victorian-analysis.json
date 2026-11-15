@@ -40,7 +40,7 @@
       "headline": [
         { "type": "text", "text": "How Bristol came to depend on one partner" }
       ],
-      "deck": [
+      "subheadline": [
         { "type": "text", "text": "A larger share of trade can conceal a narrower choice." }
       ],
       "body": [
@@ -69,24 +69,26 @@
           { "type": "text", "text": " before adding another convoy. A second partner could spread the risk if the present relationship becomes strained." }
         ]
       ],
-      "record": [
+      "sourceNote": [
         {
           "type": "text",
           "text": "Trade returns record a 38% share on turn 211 and 54% on turn 225. No observation survives for turn 218, so the path between the two returns is unknown."
         }
       ],
-      "assetId": "victorian-harbour",
-      "assetAlt": "Wood engraving of a steamship and workers unloading barrels at Bristol harbour.",
-      "evidence": {
+      "image": {
+        "assetId": "victorian-harbour",
+        "altText": "Wood engraving of a steamship and workers unloading barrels at Bristol harbour."
+      },
+      "evidenceTable": {
         "title": "The harbour returns",
         "description": "Largest partner's share of foreign trade income (%)",
         "columns": ["Observation", "Share"],
         "rows": [
           { "label": "Turn 211", "values": ["38%"] },
-          { "label": "Turn 218", "values": ["No record"], "missing": true },
+          { "label": "Turn 218", "values": ["No record"], "hasMissingValues": true },
           { "label": "Turn 225", "values": ["54%"] }
         ],
-        "note": "No observation exists for turn 218."
+        "footnote": "No observation exists for turn 218."
       }
     },
     {
@@ -106,7 +108,7 @@
           { "type": "text", "text": "'s workshops have reopened and its population is growing. Food supplies remain tight. Inspect the city's needs before assigning more workers." }
         ]
       ],
-      "record": [
+      "sourceNote": [
         {
           "type": "text",
           "text": "The latest city observation shows reopened workshops and population growth. The food surplus remains small; no further improvement is assumed."

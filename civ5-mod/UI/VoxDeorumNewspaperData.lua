@@ -37,7 +37,7 @@ function VoxDeorumNewspaperData.InlineToText(nodes)
 	return table.concat(parts)
 end
 
--- Collect typed links from one item's headline, deck, body, record, and history.
+-- Collect typed links from one item's headline, subheadline, body, sourceNote, and earlierReport.
 function VoxDeorumNewspaperData.CollectItemLinks(item)
 	local links = {}
 	-- Collect the links from one inline block.
@@ -50,14 +50,14 @@ function VoxDeorumNewspaperData.CollectItemLinks(item)
 		end
 	end
 	scan(item.headline)
-	scan(item.deck)
+	scan(item.subheadline)
 	for _, block in ipairs(item.body or {}) do scan(block) end
-	scan(item.record)
-	if type(item.history) == "table" then
-		if type(item.history.target) == "table" then
-			links[#links + 1] = { text = tostring(item.history.label or ""), target = item.history.target }
+	scan(item.sourceNote)
+	if type(item.earlierReport) == "table" then
+		if type(item.earlierReport.target) == "table" then
+			links[#links + 1] = { text = tostring(item.earlierReport.label or ""), target = item.earlierReport.target }
 		end
-		for _, block in ipairs(item.history.body or {}) do scan(block) end
+		for _, block in ipairs(item.earlierReport.summary or {}) do scan(block) end
 	end
 	return links
 end

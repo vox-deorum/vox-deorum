@@ -51,7 +51,7 @@ export function createNewspaperIssue(): IssueDocument {
         seriesKeys: [],
         headline: [{ type: "text", text: "Shared report" }],
         body: [[{ type: "text", text: "Body" }]],
-        record: [{ type: "text", text: "Record" }],
+        sourceNote: [{ type: "text", text: "Source observation" }],
       },
     ],
   };

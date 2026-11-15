@@ -40,7 +40,7 @@
       "headline": [
         { "type": "text", "text": "France declares war" }
       ],
-      "deck": [
+      "subheadline": [
         { "type": "text", "text": "The Channel ports prepare for an uncertain week." }
       ],
       "body": [
@@ -78,22 +78,24 @@
           { "type": "text", "text": " also deserve attention: the partner supplying most overseas income has entered the war." }
         ]
       ],
-      "record": [
+      "sourceNote": [
         {
           "type": "text",
           "text": "A declaration of war from France was recorded on turn 230. The latest harbour observation contains no attack report. Earlier trade returns identify France as the largest partner."
         }
       ],
-      "assetId": "victorian-harbour",
-      "assetAlt": "Wood engraving of a steamship and workers unloading barrels at Bristol harbour.",
-      "history": {
+      "image": {
+        "assetId": "victorian-harbour",
+        "altText": "Wood engraving of a steamship and workers unloading barrels at Bristol harbour."
+      },
+      "earlierReport": {
         "label": "Earlier report on Atlantic trade",
         "target": {
           "type": "article",
           "issueId": "victorian-breaking-211",
           "itemId": "trade"
         },
-        "body": [
+        "summary": [
           [
             {
               "type": "text",
@@ -120,7 +122,7 @@
           { "type": "text", "text": "'s workshops remain open. No new disruption is recorded there." }
         ]
       ],
-      "record": [
+      "sourceNote": [
         {
           "type": "text",
           "text": "The latest observation of York shows its workshops open. No new disruption is recorded."

@@ -2,8 +2,8 @@
 import { z } from "zod";
 import {
   issueDocumentSchema,
-  newspaperItemSchema,
-  publicationIdentitySchema,
+  issueItemSchema,
+  issuePublicationSchema,
   type IssueDocument,
   type NewspaperDesignId,
 } from "../contracts/issue.js";
@@ -11,36 +11,30 @@ import type { RenderProfile } from "./types.js";
 import { getNewspaperAsset, isNewspaperAssetId } from "./assets.js";
 import { computeRegionWidth, newspaperDesignDefaults } from "./layout.js";
 
-/** Require a registered image and alternative text for an illustrated item. */
-const renderableNewspaperItemSchema = newspaperItemSchema.superRefine((item, ctx) => {
-  if (!item.assetId) return;
-  if (!isNewspaperAssetId(item.assetId)) {
+/** Require a registered image asset for an illustrated item. */
+const renderableIssueItemSchema = issueItemSchema.superRefine((item, ctx) => {
+  if (!item.image) return;
+  const { assetId } = item.image;
+  if (!isNewspaperAssetId(assetId)) {
     ctx.addIssue({
       code: "custom",
-      path: ["assetId"],
-      message: `Unknown asset "${item.assetId}".`,
+      path: ["image", "assetId"],
+      message: `Unknown asset "${assetId}".`,
     });
     return;
   }
-  const asset = getNewspaperAsset(item.assetId);
+  const asset = getNewspaperAsset(assetId);
   if (asset?.kind !== "image") {
     ctx.addIssue({
       code: "custom",
-      path: ["assetId"],
-      message: `Asset "${item.assetId}" is not an image.`,
-    });
-  }
-  if (!item.assetAlt) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["assetAlt"],
-      message: "An item image needs alternative text.",
+      path: ["image", "assetId"],
+      message: `Asset "${assetId}" is not an image.`,
     });
   }
 });
 
 /** Require publication ornaments to name registered ornament assets. */
-const renderablePublicationIdentitySchema = publicationIdentitySchema.superRefine((publication, ctx) => {
+const renderableIssuePublicationSchema = issuePublicationSchema.superRefine((publication, ctx) => {
   const ornamentAssetId = publication.ornamentAssetId;
   if (!ornamentAssetId) return;
   if (!isNewspaperAssetId(ornamentAssetId)) {
@@ -62,8 +56,8 @@ const renderablePublicationIdentitySchema = publicationIdentitySchema.superRefin
 
 /** Apply renderer asset rules while retaining structural issue reference checks. */
 const renderableIssueDocumentSchema = issueDocumentSchema.safeExtend({
-  publication: renderablePublicationIdentitySchema,
-  items: z.array(renderableNewspaperItemSchema).min(1),
+  publication: renderableIssuePublicationSchema,
+  items: z.array(renderableIssueItemSchema).min(1),
 });
 
 /** Schema for a fixed export profile. */

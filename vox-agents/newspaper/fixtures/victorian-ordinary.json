@@ -60,22 +60,24 @@
           { "type": "text", "text": " show where another partner might reduce this dependence." }
         ]
       ],
-      "record": [
+      "sourceNote": [
         {
           "type": "text",
           "text": "The largest partner supplied 38% of foreign trade income on turn 211 and 54% on turn 225. No observation survives for turn 218. The higher final share does not establish a steady rise."
         }
       ],
-      "assetId": "victorian-harbour",
-      "assetAlt": "Wood engraving of a steamship and workers unloading barrels at Bristol harbour.",
-      "history": {
+      "image": {
+        "assetId": "victorian-harbour",
+        "altText": "Wood engraving of a steamship and workers unloading barrels at Bristol harbour."
+      },
+      "earlierReport": {
         "label": "Earlier report on Atlantic trade",
         "target": {
           "type": "article",
           "issueId": "victorian-ordinary-211",
           "itemId": "trade"
         },
-        "body": [
+        "summary": [
           [
             {
               "type": "text",
@@ -101,7 +103,7 @@
           { "type": "text", "text": " shows the wider balance." }
         ]
       ],
-      "record": [
+      "sourceNote": [
         {
           "type": "text",
           "text": "Reports from returning visitors and comparable cultural observations show greater influence over five turns. The reports do not establish which venue caused the change."
@@ -121,7 +123,7 @@
           { "type": "text", "text": "'s workshops have reopened and its population is growing. Food supplies remain tight. Inspect the city's needs before assigning more workers." }
         ]
       ],
-      "record": [
+      "sourceNote": [
         {
           "type": "text",
           "text": "The latest city observation shows reopened workshops and population growth. The food surplus remains small; no further improvement is assumed."

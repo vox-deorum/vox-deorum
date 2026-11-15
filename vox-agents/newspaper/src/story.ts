@@ -2,8 +2,8 @@
 import type {
   EvidenceTable,
   NewspaperDesignId,
-  NewspaperItem,
-  NewspaperPage,
+  IssueItem,
+  IssuePage,
 } from "../../src/newspaper/contracts/issue.js";
 import type { VoteValue } from "../../src/newspaper/contracts/reader.js";
 import { getNewspaperAsset, newspaperVoteIconAssets } from "../../src/newspaper/renderer/assets.js";
@@ -26,8 +26,8 @@ export interface StoryRenderContext {
 
 /** Build one story with the layout chosen by its page. */
 export function renderStory(
-  item: NewspaperItem,
-  page: NewspaperPage,
+  item: IssueItem,
+  page: IssuePage,
   lead: boolean,
   context: StoryRenderContext,
 ): HTMLElement {
@@ -48,10 +48,10 @@ export function renderStory(
   appendInlineNodes(heading, item.headline, item.id, bindReaderAction);
   content.append(heading);
 
-  if (item.deck) {
-    const deck = createElement("p", "vd-deck");
-    appendInlineNodes(deck, item.deck, item.id, bindReaderAction);
-    content.append(deck);
+  if (item.subheadline) {
+    const subheadline = createElement("p", "vd-deck");
+    appendInlineNodes(subheadline, item.subheadline, item.id, bindReaderAction);
+    content.append(subheadline);
   }
 
   const prose = createElement("div", "vd-prose");
@@ -65,11 +65,11 @@ export function renderStory(
     main.append(prose, footer);
     columns.append(main, figure);
     content.append(columns);
-  } else if (lead && page.layout === "analysis" && item.evidence) {
+  } else if (lead && page.layout === "analysis" && item.evidenceTable) {
     const columns = createElement("div", "vd-analysis-columns");
     const main = createElement("div", "vd-column-main");
     main.append(prose, footer);
-    columns.append(main, renderEvidence(item.evidence, figure));
+    columns.append(main, renderEvidence(item.evidenceTable, figure));
     content.append(columns);
   } else {
     content.append(prose);
@@ -82,24 +82,24 @@ export function renderStory(
 }
 
 /** Build the modern feed avatar, using the headline initial when needed. */
-function renderAvatar(item: NewspaperItem): HTMLElement {
+function renderAvatar(item: IssueItem): HTMLElement {
   const avatar = createElement("div", `vd-avatar vd-avatar--${item.avatar?.tone ?? "slate"}`);
   avatar.setAttribute("aria-hidden", "true");
   avatar.textContent =
-    item.avatar?.letter ?? inlineNodesToText(item.headline).trim().slice(0, 1).toUpperCase();
+    item.avatar?.initials ?? inlineNodesToText(item.headline).trim().slice(0, 1).toUpperCase();
   return avatar;
 }
 
 /** Build the figure for an item image, or null when no image is registered. */
-function renderStoryImage(item: NewspaperItem, assetBaseUrl: string): HTMLElement | null {
-  if (!item.assetId) return null;
-  const url = resolveAssetUrl(assetBaseUrl, item.assetId);
+function renderStoryImage(item: IssueItem, assetBaseUrl: string): HTMLElement | null {
+  if (!item.image) return null;
+  const url = resolveAssetUrl(assetBaseUrl, item.image.assetId);
   if (!url) return null;
-  const asset = getNewspaperAsset(item.assetId);
+  const asset = getNewspaperAsset(item.image.assetId);
   const figure = createElement("figure", "vd-story-art");
   const image = createElement("img");
   image.src = url;
-  image.alt = item.assetAlt ?? "";
+  image.alt = item.image.altText;
   if (asset?.width) image.width = asset.width;
   if (asset?.height) image.height = asset.height;
   figure.append(image);
@@ -108,7 +108,7 @@ function renderStoryImage(item: NewspaperItem, assetBaseUrl: string): HTMLElemen
 
 /** Build a story footer with an earlier-report link and reversible votes. */
 function renderStoryFooter(
-  item: NewspaperItem,
+  item: IssueItem,
   vote: VoteValue,
   designId: NewspaperDesignId,
   assetBaseUrl: string,
@@ -116,15 +116,15 @@ function renderStoryFooter(
   const footer = createElement("footer", "vd-story-footer");
   const links = createElement("div", "vd-story-links");
 
-  if (item.history) {
-    const historyLink = createElement("a", "vd-text-link", item.history.label);
-    historyLink.href = "#";
-    bindReaderAction(historyLink, {
+  if (item.earlierReport) {
+    const earlierReportLink = createElement("a", "vd-text-link", item.earlierReport.label);
+    earlierReportLink.href = "#";
+    bindReaderAction(earlierReportLink, {
       type: "follow-link",
       itemId: item.id,
-      target: item.history.target,
+      target: item.earlierReport.target,
     });
-    links.append(historyLink);
+    links.append(earlierReportLink);
   }
 
   const votes = createElement("div", "vd-votes");
@@ -178,7 +178,7 @@ function renderEvidence(evidence: EvidenceTable, figure: HTMLElement | null): HT
   const body = createElement("tbody");
   for (const row of evidence.rows) {
     const tableRow = createElement("tr");
-    if (row.missing) tableRow.className = "vd-missing";
+    if (row.hasMissingValues) tableRow.className = "vd-missing";
     const label = createElement("th");
     label.scope = "row";
     label.textContent = row.label;
@@ -193,8 +193,8 @@ function renderEvidence(evidence: EvidenceTable, figure: HTMLElement | null): HT
   table.append(body);
   aside.append(table);
 
-  if (evidence.note) {
-    aside.append(createElement("p", "vd-evidence-note", evidence.note));
+  if (evidence.footnote) {
+    aside.append(createElement("p", "vd-evidence-note", evidence.footnote));
   }
   if (figure) aside.append(figure);
   return aside;
