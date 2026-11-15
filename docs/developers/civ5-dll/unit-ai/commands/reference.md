@@ -46,15 +46,15 @@ The own-city kind row adds no offset. Posture rows follow native values except t
 
 | Setting | Default | Scaling or use |
 | --- | --- | --- |
-| `weight.attrition` | 1 | Increases with ATTRITION (damaging enemy forces); scales target and garrison prizes. |
+| `weight.attrition` | 1 | Increases with ATTRITION (damaging enemy forces); scales target and garrison destroyed value. |
 | `weight.occupation` | 1 | Increases with OCCUPATION (capturing cities); scales the city allowance at an enemy city. |
-| `weight.holdCity` | 1 | Increases with HOLD_CITY (defending cities); scales the city allowance at our city. |
+| `weight.holdCity` | 1 | Increases with HOLD_CITY (defending cities); scales the city allowance at our city and city relief in unit fights. |
 | `weight.holdGround` | 1 | Increases with HOLD_GROUND (controlling territory); scales unit-target ground. |
 | `weight.risk` | 1 | Decreases with RISK (willingness to accept danger); scales exposure. |
 | `slope.RISK`, `slope.OCCUPATION`, `slope.ATTRITION`, `slope.HOLD_CITY`, `slope.HOLD_GROUND` | 1 each | Exponent slope for each flavor's weight. |
-| `floor.theater` | 0.2 | Theater in a zone without a city. |
-| `city.units` | 3 | Size of a city fight in typical units; sets `C` (city allowance). |
-| `floor.prize` | 0.6 | Share of unit worth in a target's prize at full health. |
+| `floor.theater` | 0.2 | Theater in a zone without a contested city; the rest up to 1 is what a contested city can add. |
+| `theater.steepness` | 2 | Exponent on both strengths in theater pressure. |
+| `city.units` | 3 | Size of a city fight in typical units; this is `C` (city allowance). |
 | `readiness.maxFailures` | 3 | Truncated to an integer and floored at 1 for the failure limit. |
 | `reinforce.strengthRatio` | 1 | `r` (desired strength ratio): with `T` (enemy strength) and `L` (local friendly strength), need is `max(0, rT − L)`. Gain caps at `r / (1 + r)`, and odds are `min(1, arrival ratio / r)`, where arrival ratio is combined local and incoming strength divided by enemy strength. |
 
@@ -66,11 +66,9 @@ The value parameters are separate constants in `CvTacticalOperationalValue.h`:
 
 | Parameter | Default |
 | --- | --- |
-| `unitKillShare` (share of unit worth retained until death) | 0.6 |
+| `unitKillShare` (`q`, share of unit worth retained until death) | 0.6 |
 | `gradeSeniorityPerLevel` (worth premium per level above the first) | 0.1 |
 | `gradeUpgradeDiscount` (share of a ready upgrade's worth gain) | 0.5 |
-| `gradeUnitScaleFloorUnits` (army-scale floor in typical units) | 3 |
-| `gradeCityScaleFloorCities` (city-scale floor in typical cities) | 3 |
 | `groundUnitWeight` (ground-base contribution per military unit) | 1 |
 | `groundResourceWeight` (strategic or luxury resource weight) | 1 |
 | `groundOceanWeight` (ocean weight adjustment) | −0.25 |
@@ -82,7 +80,7 @@ The value parameters are separate constants in `CvTacticalOperationalValue.h`:
 | `groundCreditShare` (share of excess weight credited for hostile land) | 0.5 |
 | `groundCreditFloor` (weight threshold for crediting hostile land) | 1 |
 
-These parameters affect both the shared value functions and the simulator's grade. `floor.prize` (minimum prize share for an enemy unit) belongs to priority settings and can change independently of the living-unit value floor.
+These parameters affect both the shared value functions and the simulator's grade. `unitKillShare` sets both the living value of our units and the destroyed value of enemy units, so damage to either side is valued the same way.
 
 ## Records
 
@@ -117,7 +115,7 @@ Supporting structures hold the values used during execution:
 
 | Structure | Content |
 | --- | --- |
-| `SOperationalStake` (fight score components) | Weighted and scaled prize, ground, exposure, city-progress and garrison terms, plus their sum, and the fall share and garrison damage share behind the city terms. |
+| `SOperationalStake` (fight score components) | Weighted and scaled destruction, ground, city relief, exposure, city-progress and garrison terms, plus their sum, and the damage share, relief share and fall share behind them. |
 | `SOperationalReinforce` (reinforcement selection and score) | Strength tallies, selected units, help, gain, arrival ratio, odds, base and projected shares at an enemy city, counted enemies, rejections and check flag. |
 | Own-city battlefield | Last `L` (local friendly strength), `T` (enemy strength) and whether an endangered recruit was present. |
 | `SOperationalTurn` (working turn state) | Mapped preferences, resolved weights, fixed scales, threat maps, endangered units, approach lists and battlefields. |

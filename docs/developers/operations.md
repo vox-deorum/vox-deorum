@@ -37,7 +37,7 @@ The packaged installer that [Getting Started](../players/getting-started.md) wal
 
 #### `scripts/manual-update.cmd`
 
-**Warning:** this script deletes recorded data, traces, and logs, and it runs `git checkout main --force` before updating. That discards uncommitted local changes and switches to `main`, whatever branch you were on. Use it only to reset to a clean `main`, for example to reproduce an issue against upstream.
+**Warning:** this script deletes raw DLL captures and service logs, and it runs `git checkout main --force` before updating. That discards uncommitted local changes and switches to `main`, whatever branch you were on. Use it only to reset to a clean `main`, for example to reproduce an issue against upstream.
 
 Run it from the `scripts/` directory so it can find its cleanup commands. It accepts `--line X.Y` and `--debug` for the installer, plus `--clear-cache` for optional AI cache cleanup. For example, `manual-update.cmd --clear-cache --line 5.2` clears the caches before updating and installing VP 5.2.
 
@@ -52,7 +52,7 @@ Credentials, configuration, and memory are kept. Proxy state or Codex homes stor
 
 After optional cache cleanup, it runs these steps in order:
 
-1. `cleanup-data` deletes recorded game data, telemetry, and workspace notes.
+1. `cleanup-data` deletes raw DLL captures from the Civilization V user folder in Documents.
 2. `cleanup-logs` deletes the service logs.
 3. `git checkout main --force` resets the checkout onto `main`.
 4. `git pull` updates `main`.
@@ -64,7 +64,9 @@ For routine updates, run `git pull` and `npm install` on your current branch.
 
 #### `scripts/cleanup-data.cmd`
 
-Deletes every direct file in `mcp-server/data` and clears `vox-agents/telemetry` recursively, including the notes and records stored inside telemetry databases. When the external `recycle` command-line tool is on your `PATH`, the files go to the Recycle Bin. That tool is not bundled with the repository, so when it is missing the script says so and deletes permanently instead.
+Recursively clears raw DLL capture files in `Documents\My Games\Sid Meier's Civilization 5\VoxDeorumRL`. MCP data and telemetry caches are preserved. The Documents path follows Windows folder redirection, including OneDrive. If Documents cannot be located, the script reports that capture cleanup was skipped.
+
+When the external `recycle` command-line tool is on your `PATH`, the files go to the Recycle Bin. That tool is not bundled with the repository, so when it is missing the script says so and deletes permanently instead.
 
 #### `scripts/cleanup-logs.cmd`
 

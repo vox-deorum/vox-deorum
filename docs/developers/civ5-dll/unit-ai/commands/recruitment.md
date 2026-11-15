@@ -28,7 +28,7 @@ Two filters read the local set:
 | Filter | Keeps | Feeds |
 | --- | --- | --- |
 | **Strength filter** | Land and sea units, including spent units and army members. Aircraft are left out. | `L` (local friendly strength) in the [own-city](value.md#own-city-stake) and [Reinforce](#strength-tallies) tallies. |
-| **Damage filter** | Units on the tactical roster that can still attack, including aircraft, and that pass the recruitment filters of `FindUnitsWithinStrikingDistance` needing no pathfinding: usable by the tactical AI now, not covering a civilian and not a fighter kept for interception. At a city, `CanStrikeCity` also drops units barred from capturing and ranged units whose expected damage misses native's minimum. Readiness can therefore recruit every unit the estimate counts. | [Local damage](value.md#city-allowance-and-fall-share) at an enemy city, and its local capturer test. |
+| **Damage filter** | Units on the tactical roster that can still attack, including aircraft, and that pass the recruitment filters of `FindUnitsWithinStrikingDistance` needing no pathfinding: usable by the tactical AI now, not covering a civilian and not a fighter kept for interception. At a city, `CanStrikeCity` also drops units barred from capturing and ranged units whose expected damage misses native's minimum. Readiness can therefore recruit every unit the estimate counts. | [Local damage](value.md#city-allowance-and-fall-share) at an enemy city and its local capturer test, and [local damage on a unit](value.md#destroyed-value) target. |
 
 A land or sea unit in those domains beyond its strike reach can qualify as incoming under the [candidate filters](#candidates-and-selection). The local and incoming sets do not overlap. Units failing eligibility or distance filters can belong to neither. [City defense](execution.md#city-defense) recruits its defenders by the same strike reach.
 
@@ -58,7 +58,7 @@ The native city-path cache routes around impassable plots and may embark, but ig
 
 ## City defense recruits
 
-`GatherCityEndangered` reads the turn's [endangered-unit list](value.md#prize-and-exposure); `GatherCityDefenders` adds other eligible defenders. The full [city-defense recruitment table](execution.md#city-defense) defines both groups, including garrisons, aircraft and carriers. Endangered recruits contribute [defensive exposure](value.md#own-city-stake) even when the city itself faces no damage.
+`GatherCityEndangered` reads the turn's [endangered-unit list](value.md#exposure); `GatherCityDefenders` adds other eligible defenders. The full [city-defense recruitment table](execution.md#city-defense) defines both groups, including garrisons, aircraft and carriers. Endangered recruits contribute [defensive exposure](value.md#own-city-stake) even when the city itself faces no damage.
 
 ## Candidates and selection
 

@@ -49,7 +49,7 @@ The loop separates facts fixed for the turn from values refreshed after commands
 | Fixed for the turn | Refreshed after each command |
 | --- | --- |
 | Weights and reference scales | Fight stakes and open-offer priorities |
-| Each battlefield's theater multiplier and ground term | Threat maps and reinforcement selections |
+| Each battlefield's theater importance and ground term | Theater contest, threat maps and reinforcement selections |
 | Original enemy battlefields and their zone and near-city flags | Surviving unit targets' plots and newly captured own-city battlefields |
 | Readiness failure limit | Reinforcement check flags are cleared so reach can be checked again |
 
@@ -93,11 +93,11 @@ The battlefield stores its build-order ID, center type, target owner and unit or
 
 | Fact | Rule |
 | --- | --- |
-| `θ` (theater multiplier) | `floor.theater` (minimum theater multiplier) plus city value divided by `Z_C` (city scale). Enemy fights use their target zone's city, which can be ours or an enemy's; a zone without a city gets the floor alone. An own-city fight uses its own city. |
+| Theater importance | City value divided by `Z_C` (city scale), capped at 1. Enemy fights use their target zone's city, which can be ours or an enemy's; a zone without a city has none. An own-city fight uses its own city. The [theater multiplier](value.md#theater-multiplier) `θ` combines it with the city's contest, which is refreshed after every command. |
 | `ΔG(t)` (normalized ground recovered by removing target unit t) | Local ground score with the target present minus the score with it removed, divided by `B` (ground normalization base). |
 | Near our city | Native `GetCityDistanceInPlots` is below 4 at build time. For major civilizations this means within 3 plots of our nearest city. Minors use half the plot distance to their capital, rounded down, so their exemption reaches 7 plots. |
 
-The turn's enemy battlefields stay fixed. A newly revealed enemy can enter danger calculations, city strength and search geometry immediately; it receives an independent battlefield in the next turn's snapshot. Re-estimation follows a surviving target unit's current plot, while its original zone, theater, ground term and near-city flag stay fixed. A dead unit or a city lost by its recorded owner drops both open offers of that battlefield.
+The turn's enemy battlefields stay fixed. A newly revealed enemy can enter danger calculations, city strength and search geometry immediately; it receives an independent battlefield in the next turn's snapshot. Re-estimation follows a surviving target unit's current plot, while its original zone, theater importance, ground term and near-city flag stay fixed. A dead unit or a city lost by its recorded owner drops both open offers of that battlefield.
 
 A city we capture during the turn becomes an own-city battlefield when the command that took it ends. It uses the city's current value and zone; the turn's weights, scales and other battlefields stay as they were. The captured city's enemy-city offer drops under the rule above.
 
@@ -117,11 +117,11 @@ The loop rebuilds threats after execution and before retirement, so a unit moved
 
 Retiring an offer leaves its battlefield's other offer intact. Reinforcement commands retire only reinforcement offers, and fights retire only fights.
 
-The examples below use the [value guide's running inputs](value.md#running-example-inputs): town value 15, city scale `Z_C = 90`, army scale `Z_U = 4000`, 100 maximum unit HP and neutral weights. [Prize](value.md#prize-and-exposure) is 60% of full-health worth at full health and rises toward 100% near death.
+The examples below use the [value guide's running inputs](value.md#running-example-inputs): town value 15, city scale `Z_C = 40`, typical unit worth `Z_T = 400`, 100 maximum unit HP and neutral weights. Killing a unit earns its [destroyed value](value.md#destroyed-value): its whole living value, 60% of full-health worth plus 40% scaled by remaining HP.
 
-**Near-city example.** In our town's zone, use theater multiplier `0.2 + 15 / 90` and `Z_U` (army scale) = 4000. A scout worth 100 and catapult worth 500 each have 20 HP, making their prize share 0.92. With no ground or exposure term, their priorities are 0.008433 and 0.042167. The catapult competes first. If its search runs, a surviving scout 2 plots from our town still keeps its own fight, even when within 2 plots of the catapult.
+**Near-city example.** Our town is at full health and the enemy matches our local strength, so its theater is `0.2 + 0.8 × (15 / 40) × 0.5 = 0.35`. A scout worth 100 and a catapult worth 500 each have 20 HP, and local units can kill both. Their living values are 68 and 340, and with no ground, relief or exposure term their priorities are `0.35 × 68 / 400 = 0.0595` and `0.35 × 340 / 400 = 0.2975`. The catapult competes first. If its search runs, a surviving scout 2 plots from our town still keeps its own fight, even when within 2 plots of the catapult.
 
-**Waiting-offer example.** In a cityless zone, a catapult at full health, worth 500, has priority 0.015 and a spearman at full health, worth 400, has priority 0.012. They stand 1 plot apart, far from our cities, and threaten none of our units. If the catapult fight fails readiness and the spearman fight then runs a search, the catapult fight is retired for the turn. A waiting offer can lose its later try when another search covers it.
+**Waiting-offer example.** In a cityless zone, local units can kill a catapult at full health, worth 500, for priority `0.2 × 500 / 400 = 0.25`, and a spearman at full health, worth 400, for priority 0.2. They stand 1 plot apart, far from our cities, and threaten none of our units. If the catapult fight fails readiness and the spearman fight then runs a search, the catapult fight is retired for the turn. A waiting offer can lose its later try when another search covers it.
 
 ## Wake rule
 
