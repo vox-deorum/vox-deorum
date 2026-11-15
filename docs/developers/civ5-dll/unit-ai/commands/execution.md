@@ -30,7 +30,7 @@ Native recruitment reads the current tactical roster and its eligibility rules. 
 
 City fights use this damage check regardless of zone posture, native zone dominance or the native 13-turn siege-viability check. Their search aggression uses the separate posture-based risk blend. The capture-role test applies to the offensive recruits before endangered additions.
 
-**City-strike-only command.** A spearman stands within bombard range of our city and no unit can join. Readiness passes because the city can strike. The command fires, then ends when recruitment fails or expected damage is 0. A city-fire kill also ends the command. Both consume one command slot and retire no overlapping offers.
+**City-strike-only command.** A spearman stands within bombard range of our city and no unit can join. The city's shot counts as [local damage](value.md#destroyed-value), so the fight has a positive priority even with no exposure. Readiness passes because the city can strike. The command fires, then ends when recruitment fails or expected damage is 0. A city-fire kill also ends the command. Both consume one command slot and retire no overlapping offers.
 
 **Capture-role wait.** An ungarrisoned city at 1 HP has ranged recruits with positive simulated city damage and no recruit able to capture. Its city-progress term is 0. If exposure keeps the fight's estimate positive, readiness records `no capturer` and the fight waits. A later command that moves an available melee capturer into recruitment distance can wake it. It must pass recruitment, positive damage and the capture-role check on its next try. A garrisoned city whose recruits can damage the garrison passes without a capturer.
 
