@@ -6,13 +6,15 @@ The implementation is in `civ5-dll/CvGameCoreDLL_Expansion2/CvTacticalOperationa
 
 ## Battlefield estimate
 
-`EstimateBattlefield` scores a battlefield's fight and its Reinforce in one pass, so both offers read the same units, health and damage:
+`EstimateBattlefield` gathers the local set and tallies local and enemy strength once per battlefield, computes the theater and stake, and emits both offers from the same values:
 
-1. **Scan.** Gather the battlefield's local set once.
-2. **Fight.** `EstimateFight` computes the stake and the fight priority. At an enemy city it simulates the local attackers; at our city it reads native danger.
-3. **Reinforce.** `EstimateReinforce` selects from the units beyond the local set and scores what they add to the numbers from step 2.
+1. **Scan.** Gather the battlefield's local set and both strength tallies.
+2. **Fight.** `EstimateFight` computes the stake and the fight priority. At an enemy city it simulates the local attackers; at our city it uses the loop's copy of native city danger (`GetCityDangerByThreat`) at the [enemy roll](value.md#damage-rolls).
+3. **Reinforce.** `EstimateReinforce` selects from the units beyond the local set and scores the share of the fight priority their help swings.
 
 Step 2 still runs after the fight has executed, because an open Reinforce needs its baseline. Step 3 is skipped when the Reinforce offer is executed or retired, and it skips the roster when a [reinforcement gate](reinforcement.md#reinforce-priority) closes the offer.
+
+Each estimate pass handles city battlefields first, then unit battlefields. A city battlefield whose fight and Reinforce offers are both closed still refreshes its theater, because unit fights in its zone read it; there is no stake to compute.
 
 The **local set** holds our units near enough to count in estimates at the center. Its strength filter includes units that have already acted; its damage filter keeps available attackers. It uses plain plot distance and needs no pathfinding:
 
@@ -28,7 +30,7 @@ Two filters read the local set:
 | Filter | Keeps | Feeds |
 | --- | --- | --- |
 | **Strength filter** | Land and sea units in the battlefield's domains, including spent units and army members. Aircraft and ranged units of the other domain are left out. | `L` (local friendly strength) in the [own-city](value.md#own-city-stake) and [Reinforce](#strength-tallies) tallies. |
-| **Damage filter** | Units on the tactical roster that can still attack, including aircraft and ranged units of either domain, and that pass the recruitment filters of `FindUnitsWithinStrikingDistance` needing no pathfinding: usable by the tactical AI now, not covering a civilian and not a fighter kept for interception. At a city, `CanStrikeCity` also drops units barred from capturing and ranged units whose expected damage misses native's minimum. Readiness can therefore recruit every unit the estimate counts. | [Local damage](value.md#city-allowance-and-fall-share) at an enemy city and its local capturer test, and [local damage on a unit](value.md#destroyed-value) target. |
+| **Damage filter** | Units on the tactical roster that can still attack, including aircraft and ranged units of either domain, and that pass the recruitment filters of `FindUnitsWithinStrikingDistance` needing no pathfinding: usable by the tactical AI now, not covering a civilian and not a fighter kept for interception. Embarked units are left out. At a city, `CanStrikeCity` also drops units barred from capturing and ranged units whose expected damage misses native's minimum. Readiness can therefore recruit every unit the estimate counts. | [Local damage](value.md#city-allowance-and-fall-share) at an enemy city and its local capturer test, and [local damage on a unit](value.md#destroyed-value) target. |
 
 A land or sea unit in those domains beyond its strike reach can qualify as incoming under the [candidate filters](#candidates-and-selection). The local and incoming sets do not overlap. Units failing eligibility or distance filters can belong to neither. [City defense](execution.md#city-defense) recruits its defenders by the same strike reach.
 
@@ -69,6 +71,7 @@ A **held garrison** (a garrison left unprocessed by the high-priority pass) qual
 The remaining candidate filters follow native behavior:
 
 - Exclude carriers.
+- At an enemy city, keep only units that pass `CanStrikeCity`: it excludes units barred from capturing and requires a ranged unit to meet native's minimum expected damage against the city. Our own cities have no such filter.
 - Exclude siege units entering an enemy-dominated zone at an enemy center. Our own cities have no dominance gate.
 - Exclude units that should heal given the destination's territory.
 - Preserve donor-zone safety, which keeps units in zones that need them.
@@ -85,13 +88,6 @@ Travel time is a distance estimate used to discount incoming help:
 
 `SelectReinforcement` computes the additional strength needed: `need = max(0, r × T − L)`. Here `r` is the desired friendly/enemy strength ratio, default 1; `T` is enemy strength and `L` is local friendly strength. It sorts candidates by join turns, then travel turns, then unit ID, and selects until their **full strength** meets need. The score uses **discounted help** instead. There is no two-unit minimum.
 
-At an enemy center, selection takes up to two more steps after the strength need is met:
-
-1. **Role unit** (enemy city only). If neither a local nor a selected unit can capture, the nearest remaining capturer joins as the role unit (the extra unit needed for capture). Its discounted strength counts in help like any other selected unit. If no capturer is available, the selection records a missing capture role.
-2. **Damage extension.** Strength alone can pick units that add nothing to the fight, such as melee units that fail the suicide test. When the fight is not already a kill or capture and the selection so far does not raise the [projected stake](reinforcement.md#projected-damage) above the current one, `EstimateReinforce` walks the remaining candidates in the same order and adds each one whose simulated attack damages the target (at a city, the city or its garrison, after passing `CanStrikeCity`). It stops as soon as the projected stake rises. If the candidates run out first, the added units are dropped and stay free.
-
-Units added by the extension are selected units in every later tally: help, the parity gate, readiness and marching. The extension also runs when the need is 0 and nothing was selected.
-
-**Extension example.** A city heals 20 per turn and our local units deal 15. Local strength is 100 and enemy strength 150 at the default ratio, so need is 50. The nearest swordsman has strength 100 and covers that need, but its attack would kill the swordsman and fails the suicide test. It adds no damage, so the projected fall share stays 0. The next candidate is a catapult 2 join turns away that simulates 30 city damage. It adds `30 / 2 = 15`, the total of 30 outpaces the heal, and the catapult joins the selection. Assume the city has more than 30 HP remaining and no garrison; the extra damage changes its fall share from 0 to a positive value.
+At an enemy city, selection then adds the **role unit**: if neither a local nor a selected unit can capture, the nearest remaining capturer joins as the extra unit needed for capture. Its discounted strength counts in help like any other selected unit. If no capturer is available, the selection records a missing capture role.
 
 Compared with native `CvTacticalAI::PlotReinforcementMoves`, selection is per battlefield, combining land and sea units at a coastal city. The capture role replaces native's melee-only mode. Units covering civilians are excluded without native's skip and processing side effect. Other differences follow the selection and readiness rules above.

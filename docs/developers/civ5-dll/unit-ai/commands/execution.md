@@ -56,7 +56,7 @@ Offensive recruitment can include a [held garrison](recruitment.md#candidates-an
 
 | Recruit | Rule |
 | --- | --- |
-| Endangered | A non-air unit within 4 plots of the city that is on the turn's endangered list, or stands in a friendly city with positive native danger. |
+| Endangered | A non-air unit within 4 plots of the city that is on the turn's endangered list, or stands in a friendly city with positive city danger from the loop's city-danger copy at the [enemy roll](value.md#damage-rolls). |
 | Defender | A land combat unit, or a sea one at a coastal city, within its [strike reach](recruitment.md#battlefield-estimate) by plain distance, including the held garrison on the city plot. This is the boundary where Reinforce candidates begin. Units covering a friendly civilian are left out, as native recruitment leaves them out. |
 | Aircraft | Under air search, an aircraft whose range reaches the city from its base or from a plot its carrier can reach this turn, plus that carrier when it is available. Defenders need no ability to attack the city. |
 

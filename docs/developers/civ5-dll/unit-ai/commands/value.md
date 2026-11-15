@@ -29,7 +29,7 @@ flowchart TD
 
 | Fixed for the turn | Fixed when the battlefield is built | Refreshed after each command |
 | --- | --- | --- |
-| Reference scales, weights, theater importance | Ground `ΔG(t)` | Health, local damage, garrisons, threats, theater contest, open-offer priorities |
+| Reference scales, weights, city theater importance | Ground `ΔG(t)` | Health, local damage, garrisons, threats, theater contest, open-offer priorities |
 
 ## Shared values and scales
 
@@ -109,7 +109,7 @@ A **theater** is the zone around one city. Every fight in the zone shares its mu
 | --- | --- |
 | `floor.theater` (0.2) | What every fight keeps, city or no city. |
 | `1 − floor.theater` (0.8) | Room above the floor, so `θ` tops out at 1. |
-| `i` (**importance**) | `min(1, city value / Z_C)`: 1 for a city as valuable as our best, 0 with no city. Relative to our best city, so independent of empire size. Enemy fights use their target zone's city (ours or an enemy's); an own-city fight uses its own city. Fixed for the turn. |
+| `i` (**importance**) | `min(1, city value / Z_C)`: 1 for a city as valuable as our best, 0 with no city. Relative to our best city, so independent of empire size. A fight at an enemy target uses its target zone's city, which can be ours or an enemy's; an own-city fight uses its own city. City battlefields fix it for the turn; a unit fight reads its remembered zone city's current theater. |
 | `c` (**contest**) | `1 − (1 − p) × (1 − δ)`: 0 for an unpressured, undamaged city; near 1 for an outnumbered, battered one. Refreshed after every command. |
 | Not included | Operation-target and focus-area bonuses. |
 
@@ -122,7 +122,7 @@ A **theater** is the zone around one city. Every fight in the zone shares its mu
 | City | Attackers `A` | Defenders `D` | `θ` measures |
 | --- | --- | --- | --- |
 | Ours | Enemy strength `T` | Our local strength `L`, city included | Value we may lose |
-| Enemy | Our local strength `L` | Enemy strength `T`, city included | Value we may gain |
+| Enemy | Our local strength `L` | Enemy strength `T`, city included; a revealed city counts even when fogged | Value we may gain |
 
 `A` and `D` are the **theater inputs**: the tallies computed with the zone's city as the center, the same ones its city fight reads. Every fight in the zone shares them, including unit fights. A unit battlefield's own `L` and `T` are centered on the target and feed only its Reinforce; reading those instead would give fights in one zone different multipliers.
 
@@ -220,7 +220,7 @@ The city allowance `C` (stored as `fCityUnit`, 3 typical units) is the largest u
 | `D_c` | Local damage on the city, after garrison absorption. | HP |
 | `H` (**expected heal**) | City heal on its owner's next turn, per native `CvCity::doTurn`: 0 if blockaded by land and water; else base heal + building defense bonus + population (Vox Populi) + defense process bonus. The undisturbed tripling is left out, since we damaged the city. Attack share only. | HP |
 | **Available capturer** | A damage-filter unit passing `CanCapture`: melee, moves and an attack left, no capture prohibition. Same distance approximation as local damage; search confirms capture. Without one, useful damage stops at `R − 1`, since bombardment leaves 1 HP. | Yes or no |
-| City danger | Native `GetPlotDanger` from visible enemies before our next turn, at the [enemy roll](#damage-rolls). Defense share only. | HP |
+| City danger | The loop's copy of native city danger (`GetCityDangerByThreat`), from visible enemies before our next turn, at the [enemy roll](#damage-rolls). Defense share only. | HP |
 
 | Case | Fall share | Reads as |
 | --- | --- | --- |
@@ -232,7 +232,7 @@ The city allowance `C` (stored as `fCityUnit`, 3 typical units) is the largest u
 
 - **Position:** each unit attacks from its current plot; ranged units and aircraft use ranged damage.
 - **Order:** ascending unit ID, each starting from the city and garrison damage of earlier attackers (`ComputeTotalExpectedDamage`).
-- **Suicide test:** the [readiness check's](execution.md#readiness-checks) test, with the [enemy roll](#damage-rolls) for the damage our attacker takes. An attack is dropped when the attacker takes more than it deals to city and garrison combined (looser above half health). A dropped attack leaves the simulated garrison untouched, though native lets it still wound or kill the garrison.
+- **Suicide test (city targets):** the [readiness check's](execution.md#readiness-checks) test, with the [enemy roll](#damage-rolls) for the damage our attacker takes. An attack is dropped when the attacker takes more than it deals to city and garrison combined (looser above half health). A dropped attack leaves the simulated garrison untouched, though native lets it still wound or kill the garrison. Unit targets instead use native's unit-case test from the readiness check, with the [enemy roll](#damage-rolls) for the attacker's self damage.
 - **Totals:** city damage, already net of absorption, sums into `D_c`; `iGarrisonDamage` sums into `D_g`.
 - **Replacement:** once the garrison is predicted to die, later hits use its replacement, if any, which absorbs nothing; a defender predicted to die never returns. `D_g` belongs to the starting garrison. Re-estimation reads the current garrison again.
 
@@ -260,7 +260,7 @@ The city allowance `C` (stored as `fCityUnit`, 3 typical units) is the largest u
 | --- | --- |
 | `F` | Target's full-health worth, no ready-upgrade premium. |
 | `M`, `R_t` | Target's maximum and remaining HP. |
-| `D_t` (**local damage on a unit**) | Available city fire plus what the [damage filter](recruitment.md#battlefield-estimate) of the local set deals to the target. Cities fire first, as in [execution](execution.md#fight-execution): each of our cities that `FindCitiesWithinStrikingDistance` finds able to strike the target adds its `rangeCombatDamage`, and a city that has already fired this turn adds nothing. Damage-filter units follow in native quick attack simulations, with the [city rules](#city-allowance-and-fall-share): current plot, ascending unit ID with accumulated damage, suicide test. City fire and hits both take [our roll](#damage-rolls). |
+| `D_t` (**local damage on a unit**) | Available city fire plus what the [damage filter](recruitment.md#battlefield-estimate) of the local set deals to the target. Cities that can strike fire first, as in [execution](execution.md#fight-execution): each of our cities that `FindCitiesWithinStrikingDistance` finds able to strike the target adds its `rangeCombatDamage`, and a city that has already fired this turn adds nothing. Damage-filter units follow in ascending unit ID, each simulated on its own from the target's current state with no damage carried from earlier attackers, as native's unit case does; at most three melee units join, and native's unit worth test from the [readiness check](execution.md#readiness-checks) decides the suicide check. City fire and hits both take [our roll](#damage-rolls). |
 
 **One target at each damage level.** Worth 700, `M = 100`, cityless zone, no other terms.
 
@@ -294,7 +294,7 @@ The city allowance `C` (stored as `fCityUnit`, 3 typical units) is the largest u
 | Symbol | Meaning |
 | --- | --- |
 | `F_u`, `M`, `R_u` | Our unit's worth (with any ready-upgrade premium), maximum HP, remaining HP. |
-| `d`, `d_t` | Native total incoming danger to the unit, and the part attributed to one threat (`GetDangerByThreat`), in HP, at the [enemy roll](#damage-rolls). |
+| `d`, `d_t` | The loop's copy of native per-threat danger to the unit (`GetDangerByThreat`), in HP, at the [enemy roll](#damage-rolls). `d` sums the threats, and `d_t` is one threat's part. |
 | `E_t` | A threat's kept allocations, summed. |
 | `E_c` | Same for a city: bombardment counts as one attack, plus the garrison's kept allocations. |
 | Scanned units | `BuildThreats`: our living, non-air combat units outside friendly cities and armies, spent and processed units included. |
@@ -334,7 +334,7 @@ The city allowance `C` (stored as `fCityUnit`, 3 typical units) is the largest u
 | `k_t` | Damage share: a kill removes the unit's whole part; wounding earns part credit. |
 | `w_C` | Hold-city weight. |
 
-**Siege example.** Our capital (40) has 200 of 250 HP, faces 80 native danger from two enemies, and the enemy matches our local strength.
+**Siege example.** Our capital (40) has 200 of 250 HP, faces 80 city danger from two enemies, using the loop's copy of native city danger (`GetCityDangerByThreat`) at the [enemy roll](#damage-rolls), and the enemy matches our local strength.
 
 | Quantity | Calculation | Value |
 | --- | --- | --- |

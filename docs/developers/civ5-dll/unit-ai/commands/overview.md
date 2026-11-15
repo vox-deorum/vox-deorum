@@ -36,7 +36,7 @@ Battlefield reinforcement replaces the regular zone reinforcement pass. The loop
 `RunCommandLoop` owns the turn's action queue. It builds the initial estimates, executes one ready offer at a time, and uses each command's result to update the remaining work:
 
 1. **Build.** Resolve settings, mapped flavors (player preferences converted to the loop's military scales), weights (relative importance of benefits) and reference scales (normalization values). Build battlefields and threat maps (damage attributed to enemy units and cities).
-2. **Estimate.** Score both offers at every battlefield in one [battlefield estimate](recruitment.md#battlefield-estimate). Positive estimates become ready; nonpositive estimates become inactive. Invalid targets drop both offers.
+2. **Estimate.** Score both offers at every battlefield with one [battlefield estimate](recruitment.md#battlefield-estimate). `EstimateBattlefield` tallies local and enemy strength once, computes the theater and stake, and emits the fight priority and the Reinforce priority from those values. Positive estimates become ready; nonpositive estimates become inactive. Invalid targets drop both offers.
 3. **Select.** Choose the highest ready estimate. Ties favor own-city fights, enemy-city fights, enemy-unit fights, then reinforcement offers. Further ties favor the lower plot index, then build order. End if no offer is ready, or record a stop if the command cap has been reached.
 4. **Check.** Check only the selected offer. A failed fight check adds one failure and makes the fight waiting, or skipped at the failure limit. A failed reinforcement check makes the offer inactive or returns it to the queue at a reduced estimate. After a failed check, resume selection. A pass executes one command at its current estimate.
 5. **Record and retire.** Mark the offer executed even if it ended before search or found no action. Rebuild threats and retire overlapping offers using the [overlap rules](#overlapping-offers).
@@ -49,7 +49,7 @@ The loop separates facts fixed for the turn from values refreshed after commands
 | Fixed for the turn | Refreshed after each command |
 | --- | --- |
 | Weights and reference scales | Fight stakes and open-offer priorities |
-| Each battlefield's theater importance and ground term | Theater contest, threat maps and reinforcement selections |
+| City battlefields' theater importance and every battlefield's ground term | Theater contest, threat maps and reinforcement selections |
 | Original enemy battlefields and their zone and near-city flags | Surviving unit targets' plots and newly captured own-city battlefields |
 | Readiness failure limit | Reinforcement check flags are cleared so reach can be checked again |
 
@@ -89,15 +89,15 @@ A waiting fight keeps its refreshed estimate and cumulative failure count. Wakin
 
 Fight and reinforcement offers keep separate states. Executing either offer refreshes the other's estimate along with the rest of the queue.
 
-The battlefield stores its build-order ID, center type, target owner and unit or city ID, plot index and zone ID. It also fixes these facts for the turn:
+The battlefield stores its build-order ID, center type, target owner and unit or city ID, plot index and zone ID. It also records these facts for the turn:
 
 | Fact | Rule |
 | --- | --- |
-| Theater importance | City value divided by `Z_C` (city scale), capped at 1. Enemy fights use their target zone's city, which can be ours or an enemy's; a zone without a city has none. An own-city fight uses its own city. The [theater multiplier](value.md#theater-multiplier) `θ` combines it with the city's contest, which is refreshed after every command. |
+| Theater importance | A city battlefield fixes its own importance: city value divided by `Z_C` (city scale), capped at 1. A fight at an enemy target uses its target zone's city, which can be ours or an enemy's; an own-city fight uses its own city. A unit battlefield stores no importance: it remembers its zone city's plot for the turn and reads that city's current theater, so the link survives a capture during the turn, and a cityless zone uses the theater floor. The [theater multiplier](value.md#theater-multiplier) `θ` combines importance with contest, which is refreshed after every command. |
 | `ΔG(t)` (ground recovered by removing target unit t) | Local ground score with the target present minus the score with it removed, in plot weight. |
 | Near our city | Native `GetCityDistanceInPlots` is below 4 at build time. For major civilizations this means within 3 plots of our nearest city. Minors use half the plot distance to their capital, rounded down, so their exemption reaches 7 plots. |
 
-The turn's enemy battlefields stay fixed. A newly revealed enemy can enter danger calculations, city strength and search geometry immediately; it receives an independent battlefield in the next turn's snapshot. Re-estimation follows a surviving target unit's current plot, while its original zone, theater importance, ground term and near-city flag stay fixed. A dead unit or a city lost by its recorded owner drops both open offers of that battlefield.
+The turn's enemy battlefields stay fixed. A newly revealed enemy can enter danger calculations, city strength and search geometry immediately; it receives an independent battlefield in the next turn's snapshot. Re-estimation follows a surviving target unit's current plot, while its original zone, ground term and near-city flag stay fixed; its theater comes from the remembered zone city. A dead unit or a city lost by its recorded owner drops both open offers of that battlefield. Each estimate pass handles city battlefields first, then unit battlefields. A city battlefield whose fight and Reinforce offers are both closed still refreshes its theater each pass, with no stake, because unit fights in its zone read it.
 
 A city we capture during the turn becomes an own-city battlefield when the command that took it ends. It uses the city's current value and zone; the turn's weights, scales and other battlefields stay as they were. The captured city's enemy-city offer drops under the rule above.
 

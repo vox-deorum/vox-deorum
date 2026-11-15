@@ -15,7 +15,7 @@ flowchart TD
 | Stage | What it supplies | Reference |
 | --- | --- | --- |
 | Recruit | Local and enemy strength, the selected incoming units and their join turns. | [Recruitment](recruitment.md#candidates-and-selection) |
-| Score | Swing and priority. Rescored after every command, together with the fight's stake and theater. | `ScoreReinforcement` and `EstimateReinforce` in `civ5-dll/CvGameCoreDLL_Expansion2/CvTacticalOperationalLoop.cpp`. |
+| Score | Swing and priority. Rescored after every command, together with the fight's stake and theater. | `EstimateBattlefield` in `civ5-dll/CvGameCoreDLL_Expansion2/CvTacticalOperationalLoop.cpp`. |
 | Check and execute | Actual paths, available recruits and march orders. | [Reinforce readiness](execution.md#reinforce-readiness) |
 
 | Part | Fight | Reinforce |

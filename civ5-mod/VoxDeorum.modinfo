@@ -45,7 +45,7 @@
     <File md5="8CCAC2C06A361B4B8B8DBC8481C1C7CB" import="1">UI/Diplomacy/VoxDeorumDiploTransport.lua</File>
     <File md5="BF571FECA7F47FB03AEBE533712B755B" import="1">UI/Diplomacy/VoxDeorumDiploPanelMock.lua</File>
     <File md5="0021CB5006F184E32DAAFBA0107A509B" import="0">UI/Diplomacy/VoxDeorumDiploPanel.xml</File>
-    <File md5="9394794373A93884AF5874A5FA1B0345" import="1">UI/Newspaper/VoxDeorumNewspaper.lua</File>
+    <File md5="2E0D2C4E8D306D933080CDA9147AE7D9" import="1">UI/Newspaper/VoxDeorumNewspaper.lua</File>
     <File md5="AFCBE954FE70DB38FD9C5CC06FB292F8" import="1">UI/Newspaper/VoxDeorumNewspaper.xml</File>
     <File md5="802CC4A1E93DB6D676E4D4D9AACCC78F" import="1">UI/Newspaper/VoxDeorumNewspaperMock.lua</File>
     <File md5="2C2ED6F0DCF5D886133D41D3AFC527FD" import="1">UI/Newspaper/VoxDeorumNewspaperData.lua</File>
