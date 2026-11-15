@@ -77,11 +77,13 @@ The RISK [military tactical flavor](../flavors/scoring.md#risk-thresholds) can a
 A position completes when all starting enemies are dead or all units have exhausted their options. It then has to pass two checks:
 
 1. **Safety:** final positions permit limited casualties, with one allowance per enemy killed and a bias toward protecting experienced units.
-2. **Progress:** without a kill, restart, or great-person power use, the plan must improve more units' distance to their preferred line than it worsens. With enemies present, ties also accept movement toward the target, attacks in place, pillage that restores HP, or ordinary healing by multiple units or all available units. Pillage healing cannot outweigh a net loss in formation progress. Without enemies, movement toward the target or ordinary healing counts as progress.
+2. **Progress:** without a kill, restart, or great-person power use, the plan must improve more units' distance to their preferred line than it worsens. With enemies present, ties also accept movement toward the target, attacks in place, pillage that restores HP, or ordinary healing by even one unit. Pillage healing cannot outweigh a net loss in formation progress. Without enemies, movement toward the target or ordinary healing counts as progress.
 
 Final safety does not become more permissive from Low through High. Every level checks adjacent-enemy death traps and the edge of known visibility. The visibility-edge check skips cities, allowing a lone siege unit to capture a city there. Braveheart bypasses the remaining extreme-danger block. Frontline land cities and friendly citadels also have specific exemptions, but a city projected to fall even with its garrison loses its frontline bonus and related exemptions.
 
-After [support placement](#support-placement), `ExecuteUnitAssignments` replays the selected plan. Mission-bearing assignments follow this loop:
+Among the explored complete plans, a plan rejected only for lack of progress sets a minimum score for selection. The best accepted plan must score at least 80% of the highest progress-rejected score, and equality passes. When no plan was rejected for lack of progress, no floor applies. A negative floor moves the threshold toward zero, so a rejection at -100 requires -80 or better. If no accepted plan reaches the threshold, the search returns no assignments and leaves its participants available. The comparison happens before [support placement](#support-placement). Army gathering, reinforcement, and camp clearing can then use their usual approach fallback after an empty search.
+
+`ExecuteUnitAssignments` replays the selected plan after support placement. Mission-bearing assignments follow this loop:
 
 ```mermaid
 flowchart LR

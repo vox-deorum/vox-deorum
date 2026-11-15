@@ -110,7 +110,7 @@ The **swing** is the rise in our strength share when help joins.
 
 ## Selection
 
-Selection is described in full under [recruitment](recruitment.md#candidates-and-selection).
+Native selection is described in full under [recruitment](recruitment.md#candidates-and-selection). After its reach check, it becomes the native admission proposal. An optional provider can retain it or admit a candidate subset before spotting or marching. Added candidates pass the same reach checks; failures stay excluded. The admitted group determines help, swing and any missing capture role without changing the chosen command's checked priority. See [participant admission](execution.md#participant-admission).
 
 | Step | Rule |
 | --- | --- |

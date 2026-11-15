@@ -34,6 +34,14 @@ City fights use this damage check regardless of zone posture, native zone domina
 
 **Capture-role wait.** An ungarrisoned city at 1 HP has ranged recruits with positive simulated city damage and no recruit able to capture. Its city-progress term is 0. If exposure keeps the fight's estimate positive, readiness records `no capturer` and the fight waits. A later command that moves an available melee capturer into recruitment distance can wake it. It must pass recruitment, positive damage and the capture-role check on its next try. A garrisoned city whose recruits can damage the garrison passes without a capturer.
 
+## Participant admission
+
+After readiness, the command retains its native recruits before any recruit acts. Admission is optional. The DLL keeps native admission; the simulator can omit the capability, explicitly keep native admission, or request a candidate subset. Only a host with admission capability expands the candidates and builds preliminary search geometry for the callback. Native unit IDs, checked Reinforce values and effective admission remain available for records without repeating those queries. The callback runs once for the command.
+
+An explicit empty subset refuses the offer for the rest of the turn, consumes its command slot and retires no other offer. Empty eligibility and invalid membership are distinct results; invalid membership keeps native admission. Enemy-unit city fire still runs at command start, before admission, and its effects stand independently. An explicit subset restricts spotting, greedy air, search, landing and marching to admitted recruits. Native admission, an absent capability and invalid replies preserve the gathered air-sweep units that native spotting can use for last-resort recon.
+
+Reinforce admission precedes its single spotter pass and path moves. Additional candidates must pass the same flood, alternative-target, safe embark and first-stop danger checks as the checked proposal. Failed additions are excluded. Admitted strength, discounted help, swing and missing capture role are recomputed without reranking the chosen offer. Native, requested and effective selections remain available for later records.
+
 ## Fight execution
 
 `ExecuteFight` follows the native attack path, adding endangered recruits and the loop's search flavors (preferences used to score tactical plans). It first sets a **move label** (the action category recorded in tactical move and kill statistics). The zone's posture chooses the same label as its native routine, such as `AI_TACTICAL_STEAMROLL` in a Steamroll zone.
@@ -129,6 +137,8 @@ With default rows and no modifiers, single-zone unit fights resolve to Low for A
 | 40 to 59 | Medium |
 | 60 to 89 | High |
 | 90 and above | Braveheart |
+
+Final search geometry is rebuilt after spotting and greedy air from the units still able to act. The search-flavor callback receives that geometry and the native geographic blend with the command-kind row already included. Its reply replaces the five search preferences directly. Aggression keeps the separate neutral-RISK calculation, including tactical modifiers, posture and kind offsets once each. No posture offset is reapplied to the reply.
 
 ## Search dispositions
 

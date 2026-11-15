@@ -20,6 +20,12 @@ Start with the command loop below, then follow the part you need to audit:
 
 The implementation is primarily in `civ5-dll/CvGameCoreDLL_Expansion2/CvTacticalOperationalLoop.h` and `.cpp`, with shared scoring in `CvTacticalOperationalValue` and weight settings in `CvTacticalOperationalWeights`.
 
+## Shared callbacks
+
+The loop asks for command choice over current ready offers, optional participant admission after readiness, and final search flavors after spotting and greedy air. The DLL always uses native decoders: the highest-priority offer with the existing tie breaks, all local recruits or the checked Reinforce selection, and the geographic flavor blend plus the command-kind row. A failed readiness check returns to command choice.
+
+The callback timing and execution stay in `CvTacticalOperationalLoop`; host seams allow the simulator to supply an independent operational provider. Requests carry decision identities and state revisions. An optional admission reply can retain native selection or name a subset. Empty admission refuses that offer for the turn and retires nothing else. See [execution](execution.md#participant-admission) for preparation and refusal semantics.
+
 ## Turn integration
 
 The loop's copy of `ProcessDominanceZones` keeps the surrounding native passes in order:
