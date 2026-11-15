@@ -1,27 +1,32 @@
 # Unit AI: Reinforcement Priorities
 
-Each [battlefield](overview.md#battlefields) has a **Reinforce offer** to bring distant units toward its center. Its **priority** is what those units would change in our favor on arrival, in the same units as [fight priority](value.md#fight-priority), so marches and fights share one queue.
+Each [battlefield](overview.md#battlefields) has a **Reinforce offer** to bring distant units toward its center. Its **priority** is the battlefield's [fight priority](value.md#fight-priority) times the share of the outcome the arriving units swing, so marches and fights compete in one queue on one base.
 
 ```mermaid
 flowchart TD
-    R["Reinforce priority<br/>pressure moved + stake added"] --> P["Pressure term<br/>city allowance × theater shift"]
-    R --> D["Damage term<br/>θ × added stake"]
-    R --> G["Enemy-center gates<br/>border, posture, arrival parity"]
-    P --> H["Help<br/>incoming strength / join turns"]
-    D --> J["Projected damage<br/>incoming hits / join turns"]
+    P["Priority = θ × stake × swing"]
+    P --> T["Theater θ<br/>the fight's own multiplier"]
+    P --> B["Stake<br/>the fight's current stake"]
+    P --> W["Swing<br/>rise in our strength share"]
+    W --> H["Help<br/>selected strength / join turns"]
     H --> S["Selection<br/>nearest units until full strength covers need"]
-    J --> S
 ```
 
 | Stage | What it supplies | Reference |
 | --- | --- | --- |
 | Recruit | Local and enemy strength, the selected incoming units and their join turns. | [Recruitment](recruitment.md#candidates-and-selection) |
-| Score | Help, projected damage and the two terms. Rescored after every command, together with the theater. | `ScoreReinforcement`, `EstimateReinforce` and `ProjectCityShares` in `civ5-dll/CvGameCoreDLL_Expansion2/CvTacticalOperationalLoop.cpp`. |
+| Score | Swing and priority. Rescored after every command, together with the fight's stake and theater. | `ScoreReinforcement` and `EstimateReinforce` in `civ5-dll/CvGameCoreDLL_Expansion2/CvTacticalOperationalLoop.cpp`. |
 | Check and execute | Actual paths, available recruits and march orders. | [Reinforce readiness](execution.md#reinforce-readiness) |
+
+| Part | Fight | Reinforce |
+| --- | --- | --- |
+| `θ` | The zone's current theater. | The same value. |
+| Stake | What local units can change this turn. | The same value. |
+| Share | Already inside the stake, from damage. | **Swing**, from strength: 0 to 1. |
 
 ## Shared values and scales
 
-Strength uses the [strength tallies](recruitment.md#strength-tallies); value, weights and the theater use the [fight-priority scales](value.md#shared-values-and-scales).
+Strength uses the [strength tallies](recruitment.md#strength-tallies); stake, weights and the theater come from the [value page](value.md#fight-priority).
 
 | Symbol | Meaning | Scale or range |
 | --- | --- | --- |
@@ -29,15 +34,12 @@ Strength uses the [strength tallies](recruitment.md#strength-tallies); value, we
 | `T` (**enemy strength**) | Hostile units and cities near the center. At an enemy city it includes the city. | Same scale as `L`. |
 | `r` (**desired ratio**) | Setting `reinforce.strengthRatio` (1): the friendly/enemy strength ratio selection aims for. | Positive; 1 means parity. |
 | `need` | `max(0, r × T − L)`: full strength selection tries to add. | Strength, at least 0. |
-| `S` | Selected units' full strength, including any capture-role and extension units. | Strength. |
+| `S` | Selected units' full strength, including any role unit. | Strength. |
 | `j` (**join turns**) | `max(1, travel turns − 1)`, from the [distance estimate](recruitment.md#candidates-and-selection). | Whole turns, at least 1. |
 | `help` | Sum over selected units of strength / `j`: strength discounted by how long it takes to join. | 0 to `S`. |
-| `h` (**incoming hit**) | Damage one selected unit's simulated attack deals to the target, from its current plot. Divided by its `j` before it counts. | HP. |
-| `θ`, `θ⁺` | Current [theater multiplier](value.md#theater-multiplier), and the **arrival theater**: the same formula with `help` added to our side. Defined in [pressure term](#pressure-term). | Theater floor (0.2) to 1. |
-| `V`, `V⁺` | The fight's current [stake](value.md#fight-priority), and the **projected stake** with the selected units' discounted damage added. | Typical units. |
-| `C` | City allowance, setting `city.units` (3). | Typical units. |
-| `Z_T`, `Z_C` | Typical unit worth, and city scale (our most valuable city's value). | Worth; city value. |
-| `w_C`, `w_O`, `w_A`, `w_G` | Hold-city, occupation, attrition and hold-ground weights. | 1 at neutral preferences. |
+| `s`, `s⁺` (**strength share**) | Our share of fighting power at the center, now and with `help` added to `L`. Defined in [swing](#swing). | 0 to 1; 0.5 at parity. |
+| `θ` | Current [theater multiplier](value.md#theater-multiplier) of the destination's zone. | Theater floor (0.2) to 1. |
+| Stake | The battlefield fight's current [stake](value.md#fight-priority), exposure included. | Typical units. |
 
 ## Running example inputs
 
@@ -48,190 +50,122 @@ Examples use these inputs unless they state their own. Results are rounded only 
 | Desired ratio `r` | 1 | Setting `reinforce.strengthRatio`. |
 | Local strength `L`; enemy strength `T` | 100; 150 | Supplied. |
 | Need | `1 (r) × 150 (T) − 100 (L) = 50` | Derived. |
-| City allowance `C` | 3 | Setting `city.units`. |
-| Typical worth `Z_T`; city scale `Z_C` | 400; 40 | [Value guide's running inputs](value.md#running-example-inputs). |
-| Theater floor; room above it | 0.2; `1 − 0.2 = 0.8` | Setting `floor.theater`. |
-| Pressure exponent | 2 | Setting `theater.steepness`. |
-| Retained share; health share | 0.6; 0.4 | Setting `unitKillShare`; [living unit value](value.md#shared-values-and-scales). |
-| Preference weights | All 1 | Neutral preferences. |
-| Maximum HP (hit points) | Units 100; cities 250 | Value guide's running inputs. |
-| Expected city heal `H` | 20 HP | Value guide's running inputs. |
-| Ground, exposure and city relief | 0 | Supplied. |
-| Border and posture gates | Open | Supplied. |
+| Selection | One spearman of strength 100, `j = 1` | Supplied; its full strength covers need 50. |
+| Help | `100 (strength) / 1 (j) = 100` | Derived. |
+| Strength share `s` | `100² (L) / (100² + 150² (T)) = 0.307692` | Derived. |
+| Swing | `0.64 (s⁺) − 0.307692 (s) = 0.332308` | Derived in [swing](#swing). |
+| City allowance `C`; city scale `Z_C` | 3; 40 | [Value page's running inputs](value.md#running-example-inputs). |
+| Theater floor; room above it | 0.2; 0.8 | Setting `floor.theater`. |
+| Strength exponent | 2 | Setting `theater.steepness`. |
+| Stakes and fight priorities | As computed on the value page | Named in each example. |
+| Gates | Open | Supplied. |
 
 ## Reinforce priority
 
-**Rule: the theater pressure the march moves, plus the stake its damage adds.**
+**Rule: the fight's priority, times the share of the outcome the march swings.**
 
-`priority = w × C × |θ⁺ − θ| + θ × (V⁺ − V)`
+`priority = θ × stake × swing`
 
 | Part | Reads as |
 | --- | --- |
-| **Pressure term** | How far help shifts the zone city's theater (`θ⁺` against `θ`), valued at the full city allowance `C` × the city weight `w` (`w_C` at our city, `w_O` at an enemy city). |
-| **Damage term** | Stake the incoming damage adds to the fight (`V⁺ − V`) × the current theater, as a fight priority would count it. |
+| `θ × stake` | The battlefield's fight priority, unchanged. Help goes where a fight is already worth something, in proportion to it. |
+| [`swing`](#swing) | How far the selected units move our strength share, 0 to 1. |
 
-Each term applies only where the fight depends on it:
-
-| Destination | Pressure term | Damage term |
-| --- | --- | --- |
-| Our city | `w_C × C × (θ − θ⁺)`: help lowers the contest of value we may lose. | None: our city's stake comes from native danger, which our damage does not change. |
-| Enemy city | `w_O × C × (θ⁺ − θ)`: help raises the contest of value we may gain. | Added city progress and garrison destruction. |
-| Enemy unit | None: pressure belongs to the zone city's own fight and Reinforce. | Added destruction, ground and city relief. |
+| Property | Why it holds |
+| --- | --- |
+| A march never outranks the fight it joins. | Priority is fight priority × swing, and swing is at most 1. |
+| A fight local units already win needs no rule. | Its fight has the higher priority, runs first and removes the target, which drops both offers. |
+| More danger to a city never lowers the pull. | Danger raises both `θ` and the stake. |
 
 | Gate | Our city | Enemy unit or city |
 | --- | --- | --- |
 | Border | None. | Destination zone must be ours or adjacent to ours, by the turn's initial zone data. |
 | Posture | None. | Withdraw gives priority 0. |
-| **Arrival parity** | None: defending is never optional. | **Arrival ratio** `(L + S) / T` below 1 gives priority 0, even when `r < 1`. Uses full strength, since the whole stack must survive once it arrives. |
+| **Short selection** | None: defending is never optional, so partial help still counts. | Candidates run out before full strength covers need, so `(L + S) / T < r`: priority 0. The stack must hold once it arrives. |
 | No selection | Priority 0. | Priority 0. |
 
 These gates apply only to Reinforce; the battlefield's fight keeps its own priority.
 
-## Pressure term
+## Swing
 
-Help enters the zone city's [theater multiplier](value.md#theater-multiplier) through its pressure, so each added unit is worth less once our side already dominates, with no separate cap.
+The **swing** is the rise in our strength share when help joins.
 
-`θ = 0.2 (floor) + 0.8 (room above floor) × i × c`, with `c = 1 − (1 − p) × (1 − δ)` and `p = A² / (A² + D²)`
+`swing = s⁺ − s`, with `s = L² / (L² + T²)` and `s⁺ = (L + help)² / ((L + help)² + T²)`
 
 | Part | Reads as |
 | --- | --- |
-| `i` (**importance**) | `min(1, city value / Z_C)`: how much the zone city matters against our best city. Unchanged by the march. |
-| `δ` (**damage level**) | `lost HP / maximum HP` of the zone city. Unchanged by the march. |
-| `A`, `D` (**attackers**, **defenders**) | At our city, `A = T` and `D = L`. At an enemy city, `A = L` and `D = T`. |
-| `p` (**pressure**) | `A² / (A² + D²)`: attacker share of fighting power; the exponent 2 is `theater.steepness`. 0 with no attackers, 0.5 at parity. |
-| `c` (**contest**) | `1 − (1 − p) × (1 − δ)`: how likely the city changes hands. |
-| `p⁺`, `θ⁺` | Pressure and theater with `help` added to our side: to `D` at our city, to `A` at an enemy city. |
+| `s` (**strength share**) | Our share of fighting power, squared per Lanchester's square law with the theater's exponent (`theater.steepness`, 2). It is the theater's [pressure](value.md#theater-multiplier) at an enemy city and `1 − pressure` at ours. 1 with no enemy strength. |
+| `L`, `T` | The battlefield's own tallies. At a city they are the theater inputs; at a unit they are centered on the target. |
+| `s⁺ − s` | Each added unit is worth less once our side dominates, so no separate cap is needed. As help grows without limit the swing approaches `1 − s`. |
 
-Only `p` changes, so the shift reduces to:
+**Swing curve** at the running strengths, `s = 0.307692`.
 
-| Destination | Theater shift | Bound as help grows without limit |
-| --- | --- | --- |
-| Our city | `θ − θ⁺ = 0.8 (room) × i × (1 − δ) × (p − p⁺)` | `p⁺` falls to 0: `0.8 × i × (1 − δ) × p` |
-| Enemy city | `θ⁺ − θ = 0.8 (room) × i × (1 − δ) × (p⁺ − p)` | `p⁺` rises to 1: `0.8 × i × (1 − δ) × (1 − p)` |
+| Selection | Help | `s⁺ = (100 (L) + help)² / ((100 + help)² + 150² (T))` | Swing `s⁺ − 0.307692 (s)` |
+| --- | --- | --- | --- |
+| None | 0 | 0.307692, unchanged | 0 |
+| A knight of strength 100, `j = 2` | `100 (strength) / 2 (j) = 50` | `150² / (150² + 150²) = 0.5` | 0.192308 |
+| The spearman, `j = 1` | 100 | `200² / (200² + 150²) = 0.64` | 0.332308 |
+| Supplied large group | 400 | `500² / (500² + 150²) = 0.917431` | 0.609739 |
+| Unlimited | | 1 | `1 − 0.307692 (s) = 0.692308`, the bound |
 
-The `(1 − δ)` factor means a battered city gains less from pressure: its damage keeps it contested.
+## Selection
 
-**Pressure examples.** Each city receives help 100.
-
-| City | `i`; `δ` | `p` now | `p⁺` with help 100 | `θ` | `θ⁺` | Pressure term `3 (C) × shift` |
-| --- | --- | --- | --- | --- | --- | --- |
-| Our town (15), full health, running strengths | `15 / 40 (Z_C) = 0.375`; 0 | `150² (A = T) / (150² + 100² (D = L)) = 0.692308` | `150² / (150² + (100 + 100 (help))²) = 0.36` | `0.2 + 0.8 × 0.375 × 0.692308 (c) = 0.407692` | `0.2 + 0.8 × 0.375 × 0.36 (c⁺) = 0.308` | `3 × (0.407692 − 0.308) = 0.299077` |
-| Our capital (40) at 125 of 250 HP, running strengths | `40 / 40 = 1`; `125 / 250 = 0.5` | 0.692308 | 0.36 | `c = 1 − 0.307692 (1 − p) × 0.5 (1 − δ) = 0.846154`; `θ = 0.876923` | `c⁺ = 1 − 0.64 (1 − p⁺) × 0.5 = 0.68`; `θ⁺ = 0.744` | `3 × (0.876923 − 0.744) = 0.398769`: higher importance, halved by damage |
-| Enemy city (20) at 125 of 250 HP, our `L = 0`, its `T = 100` | `20 / 40 = 0.5`; 0.5 | 0: no attackers (`A = L = 0`) | `100² (A⁺ = 0 + 100) / (100² + 100² (D = T)) = 0.5` | `c = 1 − 1 × 0.5 = 0.5`; `θ = 0.4` | `c⁺ = 1 − 0.5 × 0.5 = 0.75`; `θ⁺ = 0.5` | `3 × (0.5 − 0.4) = 0.3`, before any damage |
-
-## Our city
-
-An own-city Reinforce scores only the pressure term.
-
-**Selection example.** Our town worth 15 at full health, with need 50 from the running inputs. These candidates pass recruitment; the spearman has the lower unit ID in its tie with the horseman.
-
-| Candidate | Strength | Travel turns | `j` | Help | Selected |
-| --- | --- | --- | --- | --- | --- |
-| Spearman | 100 | 2 | `max(1, 2 − 1) = 1` | `100 (strength) / 1 (j) = 100` | Yes; full strength 100 covers need 50. |
-| Horseman | 50 | 2 | 1 | 50 | No; tie broken by unit ID, then selection stops. |
-| Knight | 100 | 3 | `max(1, 3 − 1) = 2` | `100 / 2 = 50` | No; need already covered. |
-
-The selection's help is 100, so the priority is the town's row in the [pressure examples](#pressure-term): `1 (w_C) × 3 (C) × (0.407692 (θ) − 0.308 (θ⁺)) = 0.299077`.
-
-**Help curve** at the same town: `θ = 0.407692` throughout, and `θ⁺ = 0.2 + 0.8 × 0.375 (i) × p⁺` at full health.
-
-| Selection | Help | `p⁺ = 150² / (150² + (100 + help)²)` | `θ⁺` | Priority `3 × (0.407692 − θ⁺)` |
-| --- | --- | --- | --- | --- |
-| None | 0 | 0.692308, unchanged | 0.407692 | 0 |
-| Knight alone | `100 / 2 (j) = 50` | 0.5 | 0.35 | 0.173077 |
-| Spearman | 100 | 0.36 | 0.308 | 0.299077 |
-| Supplied large group | 400 | 0.082569 | 0.224771 | 0.548765 |
-| Unlimited | | 0 | 0.2 (floor) | `3 × 0.8 × 0.375 × 0.692308 (p) = 0.623077`, the bound |
-
-## Projected damage
-
-Both enemy centers continue the fight's local damage simulation to find what the selected units add.
+Selection is described in full under [recruitment](recruitment.md#candidates-and-selection).
 
 | Step | Rule |
 | --- | --- |
-| 1. Simulate | Each selected unit attacks in selection order, including the role unit, from its current plot, under the fight's [local damage rules](value.md#city-allowance-and-fall-share): native quick attack simulation, accumulated damage, suicide test. The result is its hit `h`. At a city, a unit failing `CanStrikeCity` has `h = 0` but still counts toward strength. |
-| 2. Discount | Add `h / j` to the local damage, splitting city and garrison parts as the simulation did. |
-| 3. Value | Apply the fight's stake rules to the projected damage with the same remaining HP, expected heal and starting garrison. The result is `V⁺`. Exposure is unchanged, so it cancels in `V⁺ − V`. |
-| 4. Extend if needed | If the fight is not already a kill or capture and `V⁺` does not rise above `V`, try the [damage extension](recruitment.md#candidates-and-selection). An extension that finds no benefit leaves its added candidates free. |
+| 1. Filter | Candidates beyond strike reach and within recruitment range. At an enemy city a candidate must also pass `CanStrikeCity`, so strength that cannot hurt the city is never counted. |
+| 2. Cover need | Sort by join turns, travel turns, then unit ID, and select until full strength `S` meets `need`. |
+| 3. Role unit | Enemy city only: if no local or selected unit can capture, the nearest remaining capturer joins, even when need is 0. Its strength counts in help. |
 
-## Enemy unit
+**Selection example.** Need 50 from the running inputs. The spearman has the lower unit ID in its tie with the horseman.
 
-An enemy-unit Reinforce scores the destroyed value its damage adds, plus the matching rise in ground and city relief.
+| Candidate | Strength | Travel turns | `j` | Help | Selected |
+| --- | --- | --- | --- | --- | --- |
+| Spearman | 100 | 2 | `max(1, 2 (travel) − 1) = 1` | `100 (strength) / 1 (j) = 100` | Yes; full strength 100 covers need 50. |
+| Horseman | 50 | 2 | 1 | 50 | No; tie broken by unit ID, then selection stops. |
+| Knight | 100 | 3 | `max(1, 3 (travel) − 1) = 2` | `100 / 2 (j) = 50` | No; need already covered. |
 
-`V⁺ − V = w_A × (K_t⁺ − K_t) / Z_T + (k_t⁺ − k_t) × (w_G × ΔG(t) + w_C × C × f_def × a_t)`
+## Worked priorities
 
-| Part | Reads as |
-| --- | --- |
-| `K_t`, `K_t⁺` | [Destroyed value](value.md#destroyed-value) of the target from local damage, and from local plus discounted incoming damage. Jumps to the target's whole living value once damage reaches its remaining HP. |
-| `k_t`, `k_t⁺` | **Damage share** `min(1, damage / remaining HP)`, before and after the incoming damage. |
-| `ΔG(t)` | [Ground](value.md#ground-value) recovered by removing the target. |
-| `C × f_def × a_t` | The target's part of our city's danger, its [city relief](value.md#city-relief). 0 away from our cities. |
+Every row uses the running strengths and the spearman, so the swing is 0.332308, unless the row states its own.
 
-**Knight example.** A full-health enemy knight worth 700 (`F`), 100 HP, in a cityless zone, so `θ = 0.2` (floor, `i = 0`). Local units deal it 30. One swordsman of strength 100 is selected; arrival ratio `(100 (L) + 100 (S)) / 150 (T) = 1.33` passes parity. Baseline `V = 700 (F) × 0.4 (health share) × 30/100 (damage / maximum HP) / 400 (Z_T) = 0.21`. Each row varies the swordsman's hit `h` and join turns `j`.
+| Destination | `θ` | Stake | Priority `θ × stake × swing` |
+| --- | --- | --- | --- |
+| Our capital at 25 of 250 HP, danger above 25 | `0.2 + 0.8 × 0.969231 (c) = 0.975385` | `3 (C) × 1 (f_def) = 3` | `0.975385 (θ) × 3 (stake) × 0.332308 (swing) = 0.972` |
+| Our capital at 200 of 250 HP, danger 80 | `0.2 + 0.8 × 0.753846 (c) = 0.803077` | `3 (C) × 0.4 (f_def) = 1.2` | `0.803077 (θ) × 1.2 (stake) × 0.332308 (swing) = 0.320` |
+| Our capital at full health, the enemy still two turns out, no danger this turn | `0.2 + 0.8 × 0.692308 (c = p) = 0.753846` | 0 | 0: no danger yet, so no fight to join |
+| Our capital, no enemy strength | 0.2 | 0 | 0: need is 0, nothing is selected |
+| Large enemy city (45) at 125 of 250 HP, 50 local damage | `0.2 + 0.8 × 0.653846 (c) = 0.723077` | `3 (C) × 0.24 (f_att) = 0.72` | `0.723077 (θ) × 0.72 (stake) × 0.332308 (swing) = 0.173` |
+| Same city at full health | `0.2 + 0.8 × 0.307692 (c = p) = 0.446154` | `3 (C) × 0.12 (f_att) = 0.36` | `0.446154 (θ) × 0.36 (stake) × 0.332308 (swing) = 0.053` |
+| Enemy city (20) at half HP, `L = 0`, `T = 100`, one unit of strength 100 at `j = 1` | 0.4 | 0: no local units | 0: a new battlefield, left to armies |
+| Knight worth 700 threatening our archer, 45 local damage, cityless zone | 0.2 (theater floor) | 1.075, from [destruction and exposure together](value.md#exposure) | `0.2 (θ) × 1.075 (stake) × 0.332308 (swing) = 0.071` |
+| That knight alone, 30 local damage | 0.2 | 0.21 | `0.2 (θ) × 0.21 (stake) × 0.332308 (swing) = 0.014` |
+| That knight, no local damage | 0.2 | 0 | 0: no local units can hurt it |
+| That knight, only a unit of strength 25 in range | 0.2 | 0.21 | 0: `(100 (L) + 25 (S)) / 150 (T) = 0.83` is below `r = 1`, a short selection |
 
-| Swordsman `h`; `j` | Projected damage `30 + h / j` | `V⁺` | `V⁺ − V` | Priority `0.2 (θ) × (V⁺ − V)` |
-| --- | --- | --- | --- | --- |
-| 0 (its attack fails the suicide test); 1 | 30 | 0.21 | 0 | 0, unless the extension finds an attacker |
-| 45; 2 | `30 + 45 / 2 = 52.5` | Nonlethal: `700 × 0.4 × 52.5/100 / 400 = 0.3675` | `0.3675 − 0.21 = 0.1575` | 0.0315 |
-| 45; 1 | `30 + 45 / 1 = 75` | `700 × 0.4 × 75/100 / 400 = 0.525` | 0.315 | 0.063 |
-| 70; 1 | `30 + 70 = 100`, reaching its 100 remaining HP | Lethal: `700 × (0.6 (retained share) + 0.4 × 100/100 (remaining / maximum HP)) / 400 = 1.75` | 1.54 | 0.308 |
+**Help curve** at our capital with 200 HP: fight priority `0.803077 (θ) × 1.2 (stake) = 0.963692`.
 
-| Boundary | Priority |
-| --- | --- |
-| Local units already deal 100, so `V = 1.75` | 0 for any `h`: nothing is left to add. |
-| Selection of strength 25 only | 0: arrival `(100 (L) + 25 (S)) / 150 (T) = 0.83` fails parity. |
-
-## Enemy city
-
-An enemy-city Reinforce adds both terms: pressure on the city, and the city progress and garrison destruction its damage adds.
-
-`V⁺ − V = w_O × C × (f_att⁺ − f_att) + w_A × (K_g⁺ − K_g) / Z_T`
-
-| Part | Reads as |
-| --- | --- |
-| `f_att`, `f_att⁺` | [Attack fall share](value.md#city-allowance-and-fall-share) from local damage, and from local plus discounted incoming damage: `max(0, min(damage, R − 1) − H) / R`, or 1 when damage reaches remaining HP `R` and a capturer is available. |
-| `K_g`, `K_g⁺` | [Garrison destroyed value](value.md#garrison-destroyed-value) of the starting garrison, before and after. |
-
-| Capture case | Treatment and reason |
-| --- | --- |
-| Baseline | Counts an available local `CanCapture` attacker or a local strength-filter unit passing `IsCapturer`, which needs no current-turn availability. Counting a capturer that is spent, off the tactical roster or covering a civilian keeps the march from earning capture credit the zone already has for a later turn. |
-| Incoming capturer | Satisfies the projected capture requirement; bringing one can earn capture credit without adding damage. |
-
-**City examples.** The full-health enemy city worth 45 from the [worked priorities](value.md#worked-priorities), 250 HP, no garrison, with 50 local damage. Two units are selected, and each row varies how hard each one hits (`h`, the same for both) and how soon they join (`j`, the same for both).
-
-| Input | Value | Source |
+| Selection | Swing | Priority `0.963692 (fight priority) × swing` |
 | --- | --- | --- |
-| `L`; `T` | 100; 100 | Supplied. |
-| Desired ratio `r` | 2 | Supplied override, so both units are needed. |
-| Selection | Two units of strength 50 each, one a capturer | Supplied. |
-| Need | `2 (r) × 100 (T) − 100 (L) = 100` | Derived. |
-| Arrival ratio | `(100 (L) + 100 (S)) / 100 (T) = 2`, parity passes | Derived. |
-| `i`; `δ` | `min(1, 45 / 40 (Z_C)) = 1`; 0 (full health) | Derived. |
-| `p` | `100² (A = L) / (100² + 100² (D = T)) = 0.5` | Derived. |
-| `θ` | `0.2 (floor) + 0.8 (room) × 1 (i) × 0.5 (c = p at full health) = 0.6` | Derived. |
-| Baseline `f_att` | `(50 (local damage) − 20 (H)) / 250 (R) = 0.12` | Derived. |
+| None | 0 | 0 |
+| Knight alone (help 50) | 0.192308 | 0.185 |
+| Spearman (help 100) | 0.332308 | 0.320 |
+| Supplied large group (help 400) | 0.609739 | 0.588 |
+| Unlimited | 0.692308 | 0.667, the bound |
 
-**Pressure term**, which depends only on `j`:
+## Marches against fights
 
-| `j` | Help | `p⁺` | `θ⁺` | Pressure term `3 (C) × (θ⁺ − 0.6 (θ))` |
-| --- | --- | --- | --- | --- |
-| 1 | `50 / 1 + 50 / 1 = 100` | `200² (A⁺ = 100 (L) + 100 (help)) / (200² + 100² (D)) = 0.8` | `0.2 + 0.8 × 0.8 = 0.84` | 0.72 |
-| 2 | `50 / 2 + 50 / 2 = 50` | `150² / (150² + 100²) = 0.692308` | `0.2 + 0.8 × 0.692308 = 0.753846` | 0.461538 |
-
-**Damage term and priority:**
-
-| `h` per unit; `j` | Projected city damage `50 + 2 (units) × h / j` | `f_att⁺ = (damage − 20 (H)) / 250 (R)` | Damage term `0.6 (θ) × 3 (C) × (f_att⁺ − 0.12)` | Priority: pressure + damage |
-| --- | --- | --- | --- | --- |
-| 0 (no candidate for the extension); 1 | 50 | 0.12, unchanged | 0 | `0.72 + 0 = 0.72`: the march still adds pressure |
-| 10; 1 | 70 | 0.2 | 0.144 | 0.864 |
-| 40; 2 | 90 | 0.28 | 0.288 | `0.461538 + 0.288 = 0.749538` |
-| 40; 1 | 130 | 0.44 | 0.576 | 1.296 |
-| 100; 1 | 250, reaching `R` | 1: capture, with the incoming capturer | 1.584 | 2.304 |
-
-**March against fight**, taking the row where each unit hits for 40 and joins next turn (`h = 40`, `j = 1`):
+The offers above, ranked together as the queue sees them.
 
 | Offer | Priority | Reads as |
 | --- | --- | --- |
-| The city's fight now | `0.6 (θ) × 3 (C) × 0.12 (f_att) = 0.216` | What local units can do this turn. |
-| The march | `0.72 (pressure term) + 0.576 (damage term) = 1.296` | What the two units add once they arrive. |
-| The fight after they arrive | `0.84 (θ⁺) × 3 (C) × 0.44 (f_att⁺) = 1.109` | The fight priority with their strength and damage counted. The march can exceed it because pressure is credited at the full city allowance, while the fight only counts this turn's progress. |
+| Fight: our capital at 25 HP | `0.975385 (θ) × 3 (stake) = 2.926` | The defense itself comes first. |
+| March to that capital | 0.972 | The strongest march: a third of its fight. |
+| Fight: our capital at 200 HP | `0.803077 (θ) × 1.2 (stake) = 0.964` | |
+| Fight: large enemy city at half HP | `0.723077 (θ) × 0.72 (stake) = 0.521` | |
+| Fight: kill a full-health knight worth 700 | `0.2 (θ) × 1.75 (stake) = 0.350` | A sure kill outranks every march except a capital about to fall. |
+| March to our capital at 200 HP | 0.320 | |
+| March to the large enemy city at half HP | 0.173 | A top-up of a siege under way. |
+| Fight: the knight with 30 local damage | `0.2 (θ) × 0.21 (stake) = 0.042` | |
+| March toward that knight | 0.014 | |
