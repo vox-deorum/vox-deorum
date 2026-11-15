@@ -2,6 +2,149 @@
 
 VoxDeorumNewspaperData = VoxDeorumNewspaperData or {}
 
+-- Return whether a value is a finite number, optionally greater than zero.
+local function finiteNumber(value, positive)
+	return type(value) == "number" and value == value and value > -math.huge and value < math.huge
+		and (not positive or value > 0)
+end
+
+-- Return whether an optional array contains only values accepted by its validator.
+local function validArray(values, validate, required)
+	if values == nil then return not required end
+	if type(values) ~= "table" or (required and #values == 0) then return false end
+	for _, value in ipairs(values) do
+		if not validate(value) then return false end
+	end
+	return true
+end
+
+-- Return whether a value is nonempty text.
+local function nonemptyText(value)
+	return type(value) == "string" and value ~= ""
+end
+
+-- Return whether a value is a text table cell, including intentionally empty cells.
+local function tableCell(value)
+	return type(value) == "string"
+end
+
+-- Return whether an inline run can be rendered by the native text fallback.
+local function validInline(nodes)
+	-- Check the text and optional destination of one inline node.
+	local function validNode(node)
+		return type(node) == "table" and (node.type == "break" or type(node.text) == "string")
+			and (node.target == nil or type(node.target) == "table")
+	end
+	return validArray(nodes, validNode, false)
+end
+
+-- Return whether an optional analysis table can be rendered without coercing its cells.
+local function validEvidence(evidence)
+	if evidence == nil then return true end
+	if type(evidence) ~= "table" then return false end
+	-- Check the cell types consumed by table.concat in the fallback renderer.
+	local function validRow(row)
+		return type(row) == "table" and type(row.label) == "string"
+			and validArray(row.values, tableCell, false)
+	end
+	return validArray(evidence.columns, nonemptyText, false) and validArray(evidence.rows, validRow, false)
+end
+
+-- Return whether a rectangle has finite coordinates and positive dimensions.
+local function validRect(rect)
+	return type(rect) == "table" and finiteNumber(rect.x) and finiteNumber(rect.y)
+		and finiteNumber(rect.width, true) and finiteNumber(rect.height, true)
+end
+
+-- Return whether a bundle region contains safe geometry and optional interaction arrays.
+local function validRegion(region)
+	if type(region) ~= "table" or not finiteNumber(region.width, true) or not finiteNumber(region.height, true) then return false end
+	-- Check the strip fields consumed by texture safety and cropping.
+	local function validStrip(strip)
+		return type(strip) == "table" and nonemptyText(strip.fileName) and validRect(strip.clip)
+			and finiteNumber(strip.pixelWidth, true) and finiteNumber(strip.pixelHeight, true)
+	end
+	-- Check each typed action's native hit rectangles.
+	local function validAction(geometry)
+		return type(geometry) == "table" and type(geometry.action) == "table"
+			and validArray(geometry.rects, validRect, false)
+	end
+	-- Check each dynamic vote icon and its native hit rectangle.
+	local function validVote(slot)
+		return type(slot) == "table" and nonemptyText(slot.itemId) and validRect(slot.rect)
+			and nonemptyText(slot.neutralAssetId) and nonemptyText(slot.selectedAssetId)
+			and (slot.value == "up" or slot.value == "down")
+	end
+	-- Check each header tab before the renderer reads its page and rectangle.
+	local function validTab(tab)
+		return type(tab) == "table" and nonemptyText(tab.pageId) and validRect(tab.rect)
+	end
+	return validArray(region.strips, validStrip, false) and validArray(region.actions, validAction, false)
+		and validArray(region.voteSlots, validVote, false) and validArray(region.tabs, validTab, false)
+end
+
+-- Validate and index a delivery before any valid reader data or controls are replaced.
+function VoxDeorumNewspaperData.ValidateFixture(fixture)
+	if type(fixture) ~= "table" or type(fixture.issue) ~= "table" or type(fixture.bundle) ~= "table" then
+		return nil, "Newspaper delivery needs an issue and render bundle."
+	end
+	local issue, bundle = fixture.issue, fixture.bundle
+	if not nonemptyText(issue.issueId) or not nonemptyText(issue.campaignId) or not nonemptyText(issue.timelineId)
+		or bundle.issueId ~= issue.issueId or bundle.campaignId ~= issue.campaignId or bundle.timelineId ~= issue.timelineId then
+		return nil, "Newspaper issue and bundle identities do not match."
+	end
+	if type(issue.receiver) ~= "table" or not finiteNumber(issue.receiver.playerId)
+		or issue.receiver.playerId < 0 or issue.receiver.playerId % 1 ~= 0 then
+		return nil, "Newspaper delivery has no valid receiving player."
+	end
+	local itemIds, pageIds = {}, {}
+	-- Validate every story field that the native fallback or article overlay traverses.
+	local function validItem(item)
+		if type(item) ~= "table" or not nonemptyText(item.id) or itemIds[item.id] then return false end
+		itemIds[item.id] = true
+		local earlier = item.earlierReport
+		if earlier ~= nil and (type(earlier) ~= "table" or type(earlier.target) ~= "table"
+			or not validArray(earlier.summary, validInline, false)) then return false end
+		return type(item.headline) == "table" and #item.headline > 0 and validInline(item.headline)
+			and validInline(item.subheadline) and validInline(item.sourceNote)
+			and validArray(item.body, validInline, true) and validEvidence(item.evidenceTable)
+	end
+	-- Reject duplicate pages and item references that would display an empty or ambiguous issue.
+	local function validPage(page)
+		if type(page) ~= "table" or not nonemptyText(page.id) or pageIds[page.id]
+			or (page.label ~= nil and type(page.label) ~= "string") then return false end
+		pageIds[page.id] = true
+		local selected = {}
+		-- Require each page item to exist exactly once on this page.
+		local function validItemId(itemId)
+			if not nonemptyText(itemId) or not itemIds[itemId] or selected[itemId] then return false end
+			selected[itemId] = true
+			return true
+		end
+		return validArray(page.itemIds, validItemId, true)
+	end
+	if not validArray(issue.items, validItem, true) or not validArray(issue.pages, validPage, true) then
+		return nil, "Newspaper delivery contains invalid stories or page references."
+	end
+	-- Keep render geometry aligned with the indexed publication pages.
+	local function validRenderPage(page)
+		return validRegion(page) and pageIds[page.pageId] == true
+	end
+	if type(bundle.profile) ~= "table" or not finiteNumber(bundle.profile.rasterScale, true)
+		or not validRegion(bundle.header) or not validArray(bundle.pages, validRenderPage, true) then
+		return nil, "Newspaper delivery contains invalid render geometry."
+	end
+	if fixture.assets ~= nil and type(fixture.assets) ~= "table" then return nil, "Invalid newspaper assets." end
+	if fixture.cacheRoot ~= nil and type(fixture.cacheRoot) ~= "string" then return nil, "Invalid newspaper cache root." end
+	if fixture.state ~= nil then
+		if type(fixture.state) ~= "table" or (fixture.state.votes ~= nil and type(fixture.state.votes) ~= "table")
+			or (fixture.state.scrollByPage ~= nil and type(fixture.state.scrollByPage) ~= "table") then
+			return nil, "Invalid newspaper reader state."
+		end
+	end
+	return VoxDeorumNewspaperData.IndexIssue(issue, bundle)
+end
+
 -- Index issue content and rendered pages by their publication identifiers.
 function VoxDeorumNewspaperData.IndexIssue(issue, bundle)
 	local result = { itemsById = {}, pages = {}, pageById = {}, pageIndexById = {}, renderPages = {} }

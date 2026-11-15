@@ -1,10 +1,70 @@
-/** Verify that the standalone reader host protects its assets and export API. */
-import { describe, it, expect, vi } from 'vitest';
+/** Verify fixture availability, asset boundaries, and export routes through the renderer test host. */
+import { afterEach, describe, it, expect, vi } from 'vitest';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import request from 'supertest';
 import { startNewspaperHost } from '../../../../src/newspaper/export/http.js';
 import { NewspaperBrowserUnavailableError } from '../../../../src/newspaper/export/browser.js';
 
+let fixtureRoot: string | undefined;
+afterEach(async () => {
+  if (fixtureRoot) await rm(fixtureRoot, { recursive: true, force: true });
+  fixtureRoot = undefined;
+});
+
+/** Create separate source and installed roots so precedence and traversal can be observed. */
+async function createFixtureDirectories() {
+  fixtureRoot = await mkdtemp(path.join(tmpdir(), 'vd-newspaper-host-'));
+  const directory = path.join(fixtureRoot, 'reader');
+  const fixtureDirectory = path.join(fixtureRoot, 'fixtures');
+  await mkdir(directory);
+  await mkdir(fixtureDirectory);
+  await writeFile(path.join(directory, 'sample.json'), JSON.stringify({ issueId: 'packaged-sample' }));
+  return { directory, fixtureDirectory };
+}
+
 describe('newspaper loopback host', () => {
+  it('should prefer checkout fixture files over the packaged default sample', async () => {
+    const directories = await createFixtureDirectories();
+    await writeFile(path.join(directories.fixtureDirectory, 'victorian-ordinary.json'), JSON.stringify({ issueId: 'source-sample' }));
+    await writeFile(path.join(directories.fixtureDirectory, 'modern-ordinary.json'), JSON.stringify({ issueId: 'source-modern' }));
+    const host = await startNewspaperHost(directories);
+    try {
+      await request(host.app).get('/newspaper/fixtures/victorian-ordinary.json').expect(200, { issueId: 'source-sample' });
+      await request(host.app).get('/newspaper/fixtures/modern-ordinary.json').expect(200, { issueId: 'source-modern' });
+      await request(host.app).get('/newspaper/fixtures/modern-ordinary.json').set('Host', 'attacker.test').expect(403);
+      await request(host.app).get('/newspaper/fixtures/modern-ordinary.json').set('Origin', 'https://attacker.test').expect(403);
+    } finally {
+      await host.close();
+    }
+  });
+
+  it('should fall through a missing source fixture directory to the single packaged sample', async () => {
+    const directories = await createFixtureDirectories();
+    const host = await startNewspaperHost({ ...directories, fixtureDirectory: path.join(fixtureRoot!, 'missing-source') });
+    try {
+      await request(host.app).get('/newspaper/fixtures/victorian-ordinary.json').expect(200, { issueId: 'packaged-sample' });
+      await request(host.app).get('/newspaper/fixtures/modern-ordinary.json').expect(404);
+    } finally {
+      await host.close();
+    }
+  });
+
+  it('should keep fixture and reader files contained inside their configured directories', async () => {
+    const directories = await createFixtureDirectories();
+    await writeFile(path.join(fixtureRoot!, 'private.json'), JSON.stringify({ secret: 'outside-static-roots' }));
+    const host = await startNewspaperHost(directories);
+    try {
+      const response = await request(host.app).get('/newspaper/fixtures/%2e%2e%2fprivate.json');
+      expect(response.status).toBe(404);
+      expect(response.text).not.toContain('outside-static-roots');
+      await request(host.app).get('/newspaper/%2e%2e%2fprivate.json').expect(404);
+    } finally {
+      await host.close();
+    }
+  });
+
   it('should protect injected routes outside the newspaper prefixes before handling requests', async () => {
     const handle = vi.fn((_req, res) => res.json({ turn: 12 }));
     const host = await startNewspaperHost({

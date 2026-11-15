@@ -27,6 +27,8 @@ const activeTab = ref<string>('live');
 const status = ref<DebugStatusResponse>();
 const civLogging = ref(false);
 const savingLogging = ref(false);
+/** True while the game is being asked to display a newspaper. */
+const showingNewspaper = ref(false);
 /** Logging state Civ 5 is running with, as far as this page knows. */
 const loggingAtLoad = ref<boolean>();
 
@@ -60,6 +62,20 @@ async function setCivLogging(enabled: boolean) {
     toast.add({ severity: 'error', summary: 'Could not change Civ 5 logging', detail: errorMessage(error), life: 5000 });
   } finally {
     savingLogging.value = false;
+  }
+}
+
+/** Ask the running game to display the newspaper sample. */
+async function showNewspaper() {
+  if (showingNewspaper.value) return;
+  showingNewspaper.value = true;
+  try {
+    const { issueId } = await api.showNewspaper();
+    toast.add({ severity: 'success', summary: 'Newspaper opened', detail: `Issue ${issueId} is open in Civ 5.`, life: 5000 });
+  } catch (error) {
+    toast.add({ severity: 'error', summary: 'Could not show newspaper', detail: errorMessage(error), life: 5000 });
+  } finally {
+    showingNewspaper.value = false;
   }
 }
 
@@ -105,6 +121,17 @@ onMounted(loadStatus);
           severity="secondary"
           outlined
           v-tooltip.bottom="'Latest logs plus a setup summary, as one zip for bug reports'"
+        />
+        <Button
+          icon="pi pi-file"
+          label="Show newspaper"
+          size="small"
+          severity="secondary"
+          outlined
+          :loading="showingNewspaper"
+          :disabled="showingNewspaper"
+          v-tooltip.bottom="'Open the newspaper sample in Civ 5'"
+          @click="showNewspaper"
         />
       </div>
       <TabPanels class="tab-panels">

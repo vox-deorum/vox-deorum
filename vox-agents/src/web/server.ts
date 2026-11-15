@@ -22,6 +22,9 @@ import { processManager } from '../agents/runtime/process-manager.js';
 import type { HealthStatus, ErrorResponse } from '../types/index.js';
 import { allowLoopbackCorsOrigin, requireLoopbackRequest } from './loopback.js';
 import { reloadRootPrompts } from '../agents/prompts/prompt-files.js';
+import { NewspaperApplication } from '../newspaper/application.js';
+import { mountNewspaperRoutes } from '../newspaper/export/http.js';
+import { createNewspaperDebugRoutes } from './routes/newspaper.js';
 
 // Get __dirname in ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -38,6 +41,14 @@ const webLogger = createLogger('WebUI', 'webui');    // Web UI logger with sourc
 let activeServer: ReturnType<typeof app.listen> | null = null;
 let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
 let activePort: number | null = null;
+let shutdownPromise: Promise<void> | undefined;
+let newspaper = new NewspaperApplication({ url: getWebServerUrl });
+
+/** Return the actual bound address while accepted browser exports are still draining. */
+export function getWebServerUrl(): string {
+  if (activePort === null) throw new Error('The web server is not listening for newspaper exports.');
+  return `http://127.0.0.1:${activePort}`;
+}
 
 /** Returns a loopback hostname suitable for the local shutdown URL. */
 function getShutdownHost(host: string): string {
@@ -57,7 +68,16 @@ async function writeShutdownDiscoveryFile(value: string): Promise<string | null>
   return shutdownUrlFile;
 }
 
-export async function shutdownWebServer(): Promise<void> {
+/** Drain newspaper delivery while its browser can still reach the bound web server. */
+export function shutdownWebServer(): Promise<void> {
+  if (shutdownPromise) return shutdownPromise;
+  if (!activeServer) return Promise.resolve();
+  shutdownPromise = closeWebServer();
+  return shutdownPromise;
+}
+
+/** Close background work before closing HTTP connections and clearing the live address. */
+async function closeWebServer(): Promise<void> {
   if (heartbeatInterval) {
     clearInterval(heartbeatInterval);
     heartbeatInterval = null;
@@ -68,32 +88,43 @@ export async function shutdownWebServer(): Promise<void> {
   }
 
   const server = activeServer;
-  activeServer = null;
-  activePort = null;
-
-  sseManager.closeAll();
-
-  await new Promise<void>((resolve, reject) => {
-    server.close((error?: Error) => {
-      if (error) {
-        reject(error);
-        return;
-      }
-
-      webLogger.info('Web UI server closed');
-      resolve();
-    });
-    server.closeAllConnections();
-  });
+  try {
+    await newspaper.close();
+  } finally {
+    sseManager.closeAll();
+    try {
+      await new Promise<void>((resolve, reject) => {
+        server.close((error?: Error) => {
+          if (error) {
+            reject(error);
+            return;
+          }
+          webLogger.info('Web UI server closed');
+          resolve();
+        });
+        server.closeAllConnections();
+      });
+    } finally {
+      activeServer = null;
+      activePort = null;
+    }
+  }
 }
 
 // Middleware setup
 app.use(cors({ origin: allowLoopbackCorsOrigin }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
 // Protect every API and shutdown route from cross-origin and DNS-rebinding requests.
 app.use(['/api', '/shutdown'], requireLoopbackRequest);
+mountNewspaperRoutes(app, {
+  /** Keep arbitrary exports separate from game activation and expose only the public bundle. */
+  exportIssue: async input => {
+    const { key, bundle } = await newspaper.exportIssue(input);
+    return { key, bundle };
+  },
+});
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Serve static files from dist-ui directory (production build)
 const staticPath = path.join(__dirname, '../../dist-ui');
@@ -132,6 +163,7 @@ app.use('/api/session', sessionRoutes);
 
 // Mount debug page routes (log files, Civ 5 logging switch, log bundle)
 app.use('/api/debug', createDebugRoutes());
+app.use('/api/debug', createNewspaperDebugRoutes(() => newspaper.showSample()));
 
 // Health check endpoint - minimal API foundation
 app.get('/api/health', (_req: Request, res: Response<HealthStatus>) => {
@@ -222,6 +254,9 @@ function tryListen(port: number): Promise<number | null> {
 
 // Start server function. It tries the configured port, then falls back to port + 1.
 export async function startWebServer(): Promise<number | null> {
+  if (activeServer) return activePort;
+  shutdownPromise = undefined;
+  newspaper = new NewspaperApplication({ url: getWebServerUrl });
   // The web UI runs agents outside a session, such as telepathist chats, so an invalid root
   // prompt folder fails here instead of in the middle of a chat.
   reloadRootPrompts();

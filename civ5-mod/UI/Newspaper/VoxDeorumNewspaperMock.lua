@@ -1,9 +1,9 @@
--- Vox Deorum newspaper stage-scoped fixture driver.
+-- Vox Deorum newspaper optional legacy fixture adapter for developer compatibility.
 --
--- The newspaper command writes VoxDeorumNewspaperFixture.lua beside this file.
--- That generated file is development-only and is not part of an ordinary mod
--- install, so a missing include is expected and must not stop the reader from
--- loading. The reader opens from LuaEvents.VoxDeorumNewspaperOpen, for example
--- from FireTuner, after this fixture is available.
+-- Developers may supply VoxDeorumNewspaperFixture.lua for manual UI checks.
+-- This optional legacy file is absent from ordinary installs. FireTuner can call
+-- LuaEvents.VoxDeorumNewspaperOpen to reopen the last successful live delivery,
+-- or use the legacy fixture when no delivery has been displayed. Live delivery
+-- passes structured data through the bridge callback without including files.
 
 pcall(include, "VoxDeorumNewspaperFixture")

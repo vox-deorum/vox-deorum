@@ -1,12 +1,12 @@
 /** Check serialized delivery, error recovery, and draining shutdown without launching a browser. */
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { NewspaperExportService } from '../../../../src/newspaper/export/service.js';
-import { NewspaperCache, type CachedBundle } from '../../../../src/newspaper/export/cache.js';
+import { NewspaperCache } from '../../../../src/newspaper/export/cache.js';
 import { NewspaperBrowser } from '../../../../src/newspaper/export/browser.js';
 import { createNewspaperBundle, createNewspaperIssue, newspaperTestProfile } from '../../../helpers/newspaper-fixtures.js';
 
 /** Configure cache hits so orchestration can be checked independently of capture and disk I/O. */
-function createService(deliver?: (issue: ReturnType<typeof createNewspaperIssue>, cached: CachedBundle) => Promise<void>) {
+function createService() {
   const cache = new NewspaperCache('unused-test-cache');
   const cached = { key: 'a'.repeat(64), directory: 'unused-test-cache/bundle', bundle: createNewspaperBundle() };
   const lookup = vi.spyOn(cache, 'getOrCreate').mockImplementation(async key => {
@@ -17,7 +17,7 @@ function createService(deliver?: (issue: ReturnType<typeof createNewspaperIssue>
   const close = vi.spyOn(NewspaperBrowser.prototype, 'close').mockResolvedValue();
   const service = new NewspaperExportService({
     url: () => 'http://127.0.0.1:8788', profile: newspaperTestProfile, format: 'BC1_UNORM',
-    cache, assetsHash: 'test-assets', deliver,
+    cache, assetsHash: 'test-assets',
   });
   return { service, lookup, pin, close, cached };
 }
@@ -29,10 +29,10 @@ describe('newspaper export service', () => {
     let finishDelivery!: () => void;
     const delivered = new Promise<void>(resolve => { finishDelivery = resolve; });
     const deliver = vi.fn().mockReturnValueOnce(delivered).mockResolvedValue(undefined);
-    const { service, lookup, pin, close, cached } = createService(deliver);
-    const first = service.exportIssue(createNewspaperIssue());
+    const { service, lookup, pin, close, cached } = createService();
+    const first = service.exportIssue(createNewspaperIssue(), deliver);
     await vi.waitFor(() => expect(deliver).toHaveBeenCalledTimes(1));
-    const second = service.exportIssue(createNewspaperIssue());
+    const second = service.exportIssue(createNewspaperIssue(), deliver);
     const shutdown = service.close();
     expect(service.close()).toBe(shutdown);
     await expect(service.exportIssue(createNewspaperIssue())).rejects.toThrow();
@@ -50,10 +50,10 @@ describe('newspaper export service', () => {
 
   it('should recover after a failed delivery without replacing the retained fixture', async () => {
     const deliver = vi.fn().mockRejectedValueOnce(new Error('Delivery failed')).mockResolvedValue(undefined);
-    const { service, pin, cached } = createService(deliver);
-    await expect(service.exportIssue(createNewspaperIssue())).rejects.toThrow('Delivery failed');
+    const { service, pin, cached } = createService();
+    await expect(service.exportIssue(createNewspaperIssue(), deliver)).rejects.toThrow('Delivery failed');
     expect(pin).not.toHaveBeenCalled();
-    expect(await service.exportIssue(createNewspaperIssue())).toBe(cached);
+    expect(await service.exportIssue(createNewspaperIssue(), deliver)).toBe(cached);
     expect(pin).toHaveBeenCalledExactlyOnceWith(cached.key);
     await service.close();
   });
@@ -64,6 +64,16 @@ describe('newspaper export service', () => {
     expect(lookup).not.toHaveBeenCalled();
     await service.exportIssue(createNewspaperIssue());
     expect(lookup).toHaveBeenCalledTimes(1);
+    await service.close();
+  });
+
+  it('should export without pinning or reusing an earlier requests delivery callback', async () => {
+    const deliver = vi.fn().mockResolvedValue(undefined);
+    const { service, pin } = createService();
+    await service.exportIssue(createNewspaperIssue(), deliver);
+    await service.exportIssue(createNewspaperIssue());
+    expect(deliver).toHaveBeenCalledTimes(1);
+    expect(pin).toHaveBeenCalledTimes(1);
     await service.close();
   });
 });

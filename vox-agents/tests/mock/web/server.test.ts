@@ -18,9 +18,12 @@ vi.mock('../../../src/agents/mcp/mcp-client.js', async () => {
   return helper.mockMcpClientModule();
 });
 
-import { app, shutdownWebServer, startWebServer } from '../../../src/web/server.js';
+import { app, getWebServerUrl, shutdownWebServer, startWebServer } from '../../../src/web/server.js';
 import config from '../../../src/agents/config/load.js';
 import { installMockMcpClient } from '../../helpers/mock-mcp-client.js';
+import { NewspaperApplication } from '../../../src/newspaper/application.js';
+import { createNewspaperBundle } from '../../helpers/newspaper-fixtures.js';
+import { deferred } from '../../helpers/deferred.js';
 
 /** A fake listening server whose address reports the port it was asked to bind. */
 function fakeServer(port: number) {
@@ -81,6 +84,41 @@ describe('web server', () => {
     expect(response.status).toBe(403);
   });
 
+  it('should handle newspaper exports before the smaller dashboard JSON parser and reject oversized input', async () => {
+    const cached = { key: 'a'.repeat(64), directory: 'private-cache-path', bundle: createNewspaperBundle() };
+    const exportIssue = vi.spyOn(NewspaperApplication.prototype, 'exportIssue').mockResolvedValue(cached);
+    const input = { article: 'a'.repeat(150 * 1024) };
+    const response = await request(app).post('/api/newspaper/export').send(input);
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ key: cached.key, bundle: cached.bundle });
+    expect(exportIssue).toHaveBeenCalledExactlyOnceWith(input);
+    await request(app).post('/api/newspaper/export').send({ article: 'a'.repeat(2 * 1024 * 1024) }).expect(413);
+    expect(exportIssue).toHaveBeenCalledOnce();
+  });
+
+  it('should guard newspaper assets and exports before parsing and keep missing assets out of the dashboard fallback', async () => {
+    const exportIssue = vi.spyOn(NewspaperApplication.prototype, 'exportIssue');
+    await request(app).post('/api/newspaper/export').set('Host', 'attacker.test')
+      .set('Content-Type', 'application/json').send('{invalid-json').expect(403);
+    await request(app).get('/newspaper/export.html').set('Origin', 'https://attacker.test').expect(403);
+    const missing = await request(app).get('/newspaper/missing-reader-asset.js');
+    expect(missing.status).toBe(404);
+    expect(missing.type).toBe('application/json');
+    expect(exportIssue).not.toHaveBeenCalled();
+  });
+
+  it('should return debug success only after show completes and report game failures', async () => {
+    const result = { success: true as const, issueId: 'sample-issue', key: 'a'.repeat(64) };
+    const show = vi.spyOn(NewspaperApplication.prototype, 'showSample').mockResolvedValueOnce(result)
+      .mockRejectedValueOnce(new Error('Reader rejected the active seat'));
+    await request(app).post('/api/debug/newspaper/show').expect(200, result);
+    const rejected = await request(app).post('/api/debug/newspaper/show');
+    expect(rejected.status).toBe(503);
+    expect(rejected.body.error).toContain('Reader rejected the active seat');
+    await request(app).post('/api/debug/newspaper/show').set('Host', 'attacker.test').expect(403);
+    expect(show).toHaveBeenCalledTimes(2);
+  });
+
   it('uses the SPA fallback when the UI has not been built', async () => {
     vi.spyOn(fs, 'existsSync').mockReturnValue(false);
 
@@ -103,6 +141,28 @@ describe('web server', () => {
     await expect(startWebServer()).resolves.toBe(7654);
     expect(listen).toHaveBeenCalledWith(config.webui.port, '127.0.0.1', expect.any(Function));
     await expect(shutdownWebServer()).resolves.toBeUndefined();
+  });
+
+  it('should keep the actual bound address and HTTP connection alive until newspaper work drains', async () => {
+    const server = fakeServer(7655);
+    const close = vi.spyOn(server, 'close');
+    vi.spyOn(app, 'listen').mockImplementation(((_port: number, _host: string, callback: () => void) => {
+      queueMicrotask(callback);
+      return server;
+    }) as never);
+    const draining = deferred();
+    const drain = vi.spyOn(NewspaperApplication.prototype, 'close').mockReturnValue(draining.promise);
+    await startWebServer();
+    expect(getWebServerUrl()).toBe('http://127.0.0.1:7655');
+    const shutdown = shutdownWebServer();
+    expect(shutdownWebServer()).toBe(shutdown);
+    expect(drain).toHaveBeenCalledOnce();
+    expect(close).not.toHaveBeenCalled();
+    expect(getWebServerUrl()).toBe('http://127.0.0.1:7655');
+    draining.resolve();
+    await shutdown;
+    expect(close).toHaveBeenCalledOnce();
+    expect(() => getWebServerUrl()).toThrow();
   });
 
   it('should publish the shutdown URL for the fallback port it binds', async () => {

@@ -1,6 +1,6 @@
 # Newspaper implementation roadmap
 
-**Status: Plan 1 implementation is complete; game acceptance remains. Plans 2 to 5 are planned.** This roadmap is for developers implementing the [newspaper specification](spec.md). It establishes the shared rendering architecture and divides implementation into five plans. Each plan has its own deliverable and verification gate.
+**Status: Plan 1's default proof is implemented; developer acceptance controls and game proofs remain. Plans 2 to 5 are planned.** This roadmap is for developers implementing the [newspaper specification](spec.md). It establishes the shared rendering architecture and divides implementation into five plans. Each plan has its own deliverable and verification gate.
 
 ## Goal and success criteria
 
@@ -42,7 +42,7 @@ The renderer consumes a completed issue. It never selects stories, changes serie
 
 The [research index](research/research.md) covers the recorded data, historical visibility limitations, and existing UI primitives. The fixture renderer now lives in `vox-agents/newspaper/`, with tracked assets, a separate DOM-aware type check, and a Vite build to `dist-newspaper`. The local prototypes remain design references and are gitignored.
 
-`vox-agents/src/newspaper/` contains issue, reader and render contracts, browser bridge types, rendering helpers, a reusable export service and HTTP host under `export/`, and a fixture console. Browser publication code lives under `newspaper/src/reader/`, the application shell under `newspaper/src/app/`, and the Lua/XML viewer under `civ5-mod/UI/Newspaper/`. Its remaining game proofs determine the supported profiles. `scripts/packaging/build-installer.cmd` prunes development dependencies before `scripts/installer.iss` packages the application.
+`vox-agents/src/newspaper/` contains issue, reader and render contracts, browser bridge types, rendering helpers, and a reusable export service and HTTP routes under `export/`. The normal VD server hosts the reader and export service, and the Debug page can open the sample issue in the loaded game. Browser publication code lives under `newspaper/src/reader/`, the application shell under `newspaper/src/app/`, and the Lua/XML viewer under `civ5-mod/UI/Newspaper/`. Its remaining game proofs determine the supported profiles. `scripts/packaging/build-installer.cmd` prunes development dependencies before `scripts/installer.iss` packages the application.
 
 The [texture experiment](../../developers/civ5-mod/runtime-texture-experiment.md) established loading newly created 256-by-256 DXT1 DDS files in a DX11 session. The fixture viewer now checks cache confinement and DDS validity through `Game.IsNewspaperTextureAvailable`, and uses native text when textures are unavailable. Newspaper-sized text, image strips, control alignment, cache loss, and reopening still need visual acceptance. The [renderer guide](../../developers/vox-agents/newspaper/renderer.md) records the implemented behavior and local measurements.
 
@@ -91,11 +91,11 @@ Each folder groups a sustained responsibility. Move existing files and all consu
 | --- | --- |
 | `vox-agents/src/newspaper/contracts/` | Serialized content and boundary schemas across readers, editors and adapters. Plans 1 to 5 add the contracts listed above. |
 | `vox-agents/src/newspaper/renderer/` | Layout, assets, reader state, bridge interfaces and renderer capability checks. Serialized render data belongs to `contracts/render.ts`. |
-| `vox-agents/src/newspaper/export/` | Browser worker, capture, DDS conversion, cache, HTTP host and export service. Plan 5 extends the service with viewer pins and releases. |
+| `vox-agents/src/newspaper/export/` | Browser worker, capture, DDS conversion, cache, server-mounted HTTP routes and export queue. Plan 5 extends the service with viewer pins and releases. |
 | `vox-agents/src/newspaper/editorial/` | Pure configuration, detection, selection, series, feedback, presentation and validation. Plan 3 establishes `check.ts` as dispatch/fallback owner; Plan 4 adds the constrained LLM adapter. |
 | `vox-agents/src/newspaper/replay/` | Read-only recording connection, replay session and routes in Plan 2; separate output storage in Plan 3; comparison evaluation in Plan 4. |
 | `vox-agents/src/newspaper/live/` | Lifecycle, scheduler and MCP-backed state adapter in Plan 5. The game owns committed state. |
-| `vox-agents/src/newspaper/console.ts` | CLI parsing, mode wiring, fixture delivery and shutdown. Export jobs belong to `export/service.ts`. |
+| `vox-agents/src/newspaper/{application,game-delivery}.ts` | Lazy shared renderer, sample orchestration and acknowledged MCP delivery. The VD server owns startup and shutdown. |
 | `vox-agents/newspaper/src/reader/` and `src/app/` | Reader DOM/layout and the browser application respectively. Plan 2 adds replay and inspection; Plan 4 completes archive navigation. The export entry stays at `src/export-bridge.ts`. |
 | `vox-agents/newspaper/catalogue/` | Plan 3 adds flat `defaults.json`, `triggers.json`, `templates.json`, `pages.json` and `designs.json`. Package these runtime inputs explicitly alongside the compiled reader. |
 | `mcp-server/src/newspaper/` | Evidence contracts, queries and field projection in Plan 2; archive protocol types in Plan 3; live mirror and transport in Plan 5. `projection.ts` remains the single reporting-policy owner. |

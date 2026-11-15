@@ -4,7 +4,7 @@
 
 ## Goal and success criteria
 
-Human civilizations receive background publications without requiring an LLM strategist. Saving and loading restores their issue archive, current votes, preferences, series memory, and publication cursor. The game reader uses Plan 1's texture viewer and remains readable while MCP or the renderer is unavailable.
+Human civilizations receive background publications without requiring an LLM strategist. A dedicated Newspaper page in the VD UI lets the player enable or disable background scheduling, inspect status and errors, browse historical issues for the current campaign and receiver from the reconciled MCP mirror, open the shared browser reader, and open an issue in the game. Saving and loading restores their issue archive, current votes, preferences, series memory, and publication cursor. The game reader uses Plan 1's texture viewer and remains readable while MCP or the renderer is unavailable.
 
 ## Current state
 
@@ -14,6 +14,7 @@ Human civilizations receive background publications without requiring an LLM str
 | `mcp-server/src/knowledge/getters/player-summary.ts`, `city-information.ts`, `victory-progress.ts` | Collection is tied to existing getter use. Newspaper snapshots need explicit collection for human play. |
 | `mcp-server/lua/get-player-summary.lua`, `get-city-information.lua`, `game-identity.lua` | Existing values, visibility, and campaign UUID. Structured reporting provenance and branch identity are incomplete. |
 | `vox-agents/src/strategist/session/strategist-session.ts`, `strategist/seats/vox-player.ts` | Existing notification and timeline-reset precedents. The newspaper lifecycle must also run without a strategist session. |
+| `vox-agents/src/newspaper/export/{service,http}.ts`, `vox-agents/ui/src/views/DebugView.vue` | The normal VD server hosts the reader and export service, and Debug can display a proof issue in the game. Scheduling, the Newspaper page, and the live archive are not implemented. |
 | `civ5-mod/UI/Diplomacy/VoxDeorumDiploTransport.lua`, `civ5-mod/UI/Shared/VoxDeorumSeat.lua` | Asynchronous UI transport and effective-seat identity. A pure observer has no receiving publication by default. |
 | `civ5-dll/CvGameCoreDLL_Expansion2/Lua/CvLuaPlayer.cpp`, `CvPlayer.cpp` | Player script data has Lua access and participates in player save serialization. Archive volume and coexistence need a proof. |
 
@@ -22,6 +23,8 @@ The [UI research](../research/research-ui.md) distinguishes save-backed reading 
 ## Approach and durable state
 
 Reuse the evidence, editor, publication store, renderer, and action contracts. Add live adapters around them. Keep game transport in MCP through its `BridgeManager`; keep editorial orchestration in Vox Agents. The shared renderer continues to render locally through installed Edge or Chrome.
+
+Add one Newspaper page to the existing VD UI and router. It reads scheduler state and the reconciled archive through VD server routes and reuses `export/service.ts` and `export/http.ts`. The page starts no second server or browser host. Its schedule toggle changes a backend setting; votes and preferences remain save-owned and appear read-only in the browser reader.
 
 The **publication checkpoint** includes schema version, campaign and receiver, checkpoint/commit identity, saved revision, last completed check, issues and their presentation choices, series state, current votes, preferences, unread position, and compact decision records. Decision records retain random seeds, recorded choices, evidence summaries/references, configuration version/hash, and the feedback inputs/coefficients required to inspect the decision. Full LLM requests and responses can remain in backend diagnostics. Preferences and their precedence follow Plan 3. Loading establishes a new in-memory generation epoch; all outstanding work carries that epoch and is discarded if it no longer matches. Turn numbers alone cannot distinguish two branches from the same save.
 
@@ -42,6 +45,7 @@ These are implementation targets in the existing workspaces, extending the contr
 | MCP `knowledge/newspaper-collection.ts`, `knowledge/schema/newspaper.ts` | Human-play collection and publication table schemas/setup, with explicit upgrades for existing databases. |
 | MCP `newspaper/projection.ts` | Single owner of visibility, field selection, and reporting grants from Stage 2; extend it without a separate reporting policy module. |
 | Agents `newspaper/export/{service,http}.ts` | Stage 1 export service owns bundle queues, pins, and releases; HTTP composition accepts injected routes. Live adapters translate transport rather than duplicate this lifecycle. |
+| VD UI `ui/src/views/NewspaperView.vue`, `ui/src/router/index.ts` | Dedicated Newspaper page for the scheduling toggle and status, current campaign and receiver archive list, shared browser reader, and open-in-game action. The toggle controls backend scheduling only. |
 | Browser `vox-agents/newspaper/src/app/archive.ts` | Shared full archive UI; injected live read-only handlers use `live/mcp-store.ts` and shared archive contracts. Offline mutations remain in `replay/http.ts`. |
 | Mod `UI/Newspaper/VoxDeorumNewspaperStore.lua`, `UI/Newspaper/VoxDeorumNewspaperTransport.lua` | Live save store and transport beside Stage 1 reader files, replacing its mock; Lua validates commits before acknowledgement. |
 
@@ -73,7 +77,9 @@ For espionage, inspect the actual Lua bindings and distinguish rank, network poi
 
 ### 4. Add lifecycle and background scheduling
 
-Add `live/lifecycle.ts` and `live/scheduler.ts` under `vox-agents/src/newspaper/`, and expose their start/stop/status through the existing application lifecycle. Use existing MCP notification/client patterns, but make startup independent of strategist player assignment. Refresh required observations even in a game whose civilizations all use ordinary game AI except for the human reader.
+Add `live/lifecycle.ts` and `live/scheduler.ts` under `vox-agents/src/newspaper/`, and expose their start/stop/status through the existing application lifecycle and VD server routes. Use existing MCP notification/client patterns, but make startup independent of strategist player assignment. Refresh required observations even in a game whose civilizations all use ordinary game AI except for the human reader.
+
+The Newspaper page enables or disables background scheduling for the current receiver. The toggle changes backend scheduling only; votes and preferences remain game-owned. Show running, disabled, and error states with the last completed check, and keep a failed check from stopping later checks.
 
 Schedule every configured number of completed turns, scaled by game speed. Persist skipped checks as well as published ones. Capture an immutable evidence window and publication revision before generation. Serialize checks per receiving civilization, cancel obsolete jobs on load/game switch, and reject stale results before publication. Never let image generation block the game turn. If rendering fails, a valid issue may publish with the basic text presentation and acquire textures later.
 
@@ -87,13 +93,17 @@ Treat unacknowledged backend output as pending. On reconnection or an uncertain 
 
 Define MCP publication read/sync operations for the live adapter: read a reconciled checkpoint or bounded issue list, and synchronize an acknowledged checkpoint obtained from the game transport. The sync operation updates the checkpoint row and issue mirror in one transaction, removes issues absent from the restored save, and refuses stale epochs. It indexes the serialized documents without importing Vox Agents' renderer/editor runtime. Live mode must not also write an independent authoritative copy through the offline SQLite store.
 
+The Newspaper page reads historical issues for the current campaign and receiver from this reconciled mirror. Switching the loaded campaign or receiver changes the list, and rows from a discarded branch never appear.
+
 On load, cancel old jobs, restore game state, and replace MCP's publication mirror from the saved checkpoint. Reconcile the observation timeline too: exclude all discarded-future rows, including same-turn branch data. Resume from a fresh confirmed snapshot when historical lineage is insufficient. Keep unrelated knowledge/history outside this adapter's ownership intact.
 
-### 6. Finish the player interface and shipping path
+### 6. Add the Newspaper page and finish the player interface
 
-Add the discreet unread entry, archive filters, earlier-report navigation, publication-frequency and LLM settings, and link resolution against current game identity. Use `VoxDeorumSeat.EffectiveSeat()` for publication ownership. Verify that delayed replies after seat changes cannot populate another reader. Keep the archive in a standard surrounding interface and open each issue with its saved design and page order.
+Add a dedicated Newspaper page to the VD UI router. It enables or disables background scheduling for the current receiver, shows scheduler status and errors, and lists historical issues for the current campaign and receiver from the reconciled MCP mirror. Each issue opens in the shared browser reader or in the game. The browser reader stays read-only for votes and preferences; those remain game-owned and change in the game reader. Reuse the existing VD server, `export/service.ts`, and `export/http.ts`.
 
-Use Stage 1's `export/service.ts` for bundle queuing, pins, and releases; live transport translates game requests into that service. Inject live read-only archive handlers into `export/http.ts`, backed by `live/mcp-store.ts` and shared archive contracts; reuse `app/archive.ts` without live mutation endpoints. Deliver render bundles to the game through the same transport. Render bundles are cache data and stay out of the save, so the viewer requests them:
+Add the discreet in-game unread entry, archive filters, earlier-report navigation, publication-frequency and LLM settings, and link resolution against current game identity. Use `VoxDeorumSeat.EffectiveSeat()` for publication ownership. Verify that delayed replies after seat changes cannot populate another reader. Keep the archive in a standard surrounding interface and open each issue with its saved design and page order.
+
+Use the existing `export/service.ts` for bundle queuing, pins, and releases; live transport translates game requests into that service. Inject live read-only archive handlers into `export/http.ts`, backed by `live/mcp-store.ts` and shared archive contracts; reuse `app/archive.ts` without live mutation endpoints. Deliver render bundles to the game through the same transport. Render bundles are cache data and stay out of the save, so the viewer requests them:
 
 1. When the viewer opens, and whenever the game window or UI scale changes, it reports its viewport size and UI scale. The service selects the matching supported `RenderProfile`.
 2. To open an issue, the viewer requests its bundle by issue ID and profile. If the local cache has a valid bundle, the service returns it at once. Otherwise it queues a render and answers with a pending status, and the viewer shows the basic text view until the bundle arrives.
@@ -106,7 +116,7 @@ When implementing this stage, update affected component `AGENTS.md` guidance and
 
 ## Verification
 
-Place Agents coverage under `tests/mock/newspaper/{live,contracts,export}` and MCP coverage under `tests/newspaper/`. Include shared checkpoint fixtures for Lua/TypeScript schema migration compatibility. Use Vitest for completed-turn boundaries, queued checks, skipped periods, duplicate deliveries, partial batches, lost acknowledgements, stale epochs, mirror replacement, source-policy projection, and render bundle requests with pending, partial, and stale manifest batches. Test a save load while an LLM call and a texture export are pending. Run focused tests in both `vox-agents` and `mcp-server`, their type checks, then root `npm run build:all` and `npm run test:all`.
+Place Agents coverage under `tests/mock/newspaper/{live,contracts,export}`, UI coverage under `vox-agents/ui/tests/mock/`, and MCP coverage under `tests/newspaper/`. Include shared checkpoint fixtures for Lua/TypeScript schema migration compatibility. Use Vitest for completed-turn boundaries, queued checks, skipped periods, duplicate deliveries, partial batches, lost acknowledgements, stale epochs, mirror replacement, source-policy projection, the page's scheduling controls and read-only archive, and render bundle requests with pending, partial, and stale manifest batches. Test a save load while an LLM call and a texture export are pending. Run focused tests in both `vox-agents` and `mcp-server`, their type checks, then root `npm run build:all` and `npm run test:all`.
 
 Deploy the mod using its documented script. Build/deploy the DLL only if the chosen persistence or file-check adapter changes it. Exercise a human-only live game, save/reload, same-turn branches, campaign switches, observer/effective-seat behavior, disconnected MCP, missing browser, deleted cache, and a save copied to another machine. Check that offline votes survive loading and synchronize correctly afterward.
 

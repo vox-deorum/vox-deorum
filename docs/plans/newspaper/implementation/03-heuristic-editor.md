@@ -8,11 +8,11 @@ Generate useful issues without an LLM, with authored prose, continuing series, m
 
 ## Current state
 
-The [specification](../spec.md) defines editorial behavior and the initial subject families. Plan 1 provides issue/reader/render contracts, renderer modules, the reusable export service and HTTP host under `export/`, and `console.ts` under `vox-agents/src/newspaper/`. The [renderer guide](../../../developers/vox-agents/newspaper/renderer.md) describes their ownership and behavior. The issue contract currently fixes the `victorian` and `modern` design IDs. Historical queries are an output of Plan 2. Existing `seedrandom`, Zod, and SQLite dependencies cover deterministic choices, configuration validation, and a local publication store. There is no existing newspaper editor to extend.
+The [specification](../spec.md) defines editorial behavior and the initial subject families. Plan 1 provides issue/reader/render contracts, renderer modules, the reusable export service and HTTP routes under `export/`, served by the normal VD server. The [renderer guide](../../../developers/vox-agents/newspaper/renderer.md) describes their ownership and behavior. The issue contract currently fixes the `victorian` and `modern` design IDs. Historical queries are an output of Plan 2. Existing `seedrandom`, Zod, and SQLite dependencies cover deterministic choices, configuration validation, and a local publication store. There is no existing newspaper editor to extend.
 
 ## Approach and contracts
 
-Use the existing MCP and Vox Agents workspaces, without a shared package. All additions and reorganizations below are proposed. Plan 2 supplies `replay/database.ts`, `replay/session.ts`, and `replay/http.ts`; this stage extends them. Newspaper roots under `vox-agents/src/newspaper/` are `contracts/`, `renderer/`, `export/`, `editorial/`, `replay/`, later `live/`, and `console.ts`.
+Use the existing MCP and Vox Agents workspaces, without a shared package. All additions and reorganizations below are proposed. Plan 2 supplies `replay/database.ts`, `replay/session.ts`, and `replay/http.ts`; this stage extends them. Newspaper roots under `vox-agents/src/newspaper/` are `contracts/`, `renderer/`, `export/`, `editorial/`, `replay/`, and later `live/`; the VD server mounts their routes.
 
 | Owner and proposed path | Responsibility |
 | --- | --- |
@@ -25,7 +25,7 @@ Use the existing MCP and Vox Agents workspaces, without a shared package. All ad
 | Agents `editorial/` | Pure computations returning accepted outputs and state changes. |
 | Agents `replay/store.ts` | Offline output database schema, migrations, transactions, archive, and votes. |
 | Agents `replay/session.ts`, `http.ts`, and `database.ts` | Session orchestration/persistence, replay routes, and source recording access respectively. |
-| Agents `console.ts` and `export/` | Existing CLI entry point, HTTP host in `export/http.ts`, and reusable export queue in `export/service.ts`. |
+| Agents `export/` and VD server routes | Existing HTTP routes in `export/http.ts`, reusable export queue in `export/service.ts`, and server startup. |
 | Browser `reader/` and `app/` | Publication display and application shell; Plan 2's `app/api.ts`, `app/replay.ts`, and `app/inspector.ts` support controls and evidence inspection. |
 
 Shared structural schemas infer TypeScript types and have no Node, DOM, or runtime-service dependencies. Private types stay beside their implementation; avoid a giant types file, barrels, shims, or a repository abstraction. Sessions own persistence. Renderer code owns supported layout families and assets.

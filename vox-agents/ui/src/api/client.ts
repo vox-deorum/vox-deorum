@@ -61,7 +61,8 @@ import type {
   DebugLogSource,
   DebugStatusResponse,
   SetCivLoggingRequest,
-  SetCivLoggingResponse
+  SetCivLoggingResponse,
+  ShowNewspaperResponse
 } from '../utils/types';
 import type { TextStreamPart, ToolSet } from 'ai';
 
@@ -741,6 +742,13 @@ class ApiClient {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(request)
+    });
+  }
+
+  /** Ask the running game to display the newspaper sample, resolving after it opens. */
+  async showNewspaper(): Promise<ShowNewspaperResponse> {
+    return this.fetchJson<ShowNewspaperResponse>(`${this.baseUrl}/api/debug/newspaper/show`, {
+      method: 'POST'
     });
   }
 

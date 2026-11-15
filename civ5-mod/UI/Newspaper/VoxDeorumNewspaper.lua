@@ -1,12 +1,12 @@
--- Vox Deorum newspaper reader -- stage 1 fixture proof viewer.
+-- Vox Deorum newspaper reader for structured bridge deliveries and development fixtures.
 --
--- Auto-binds to VoxDeorumNewspaper.xml and stays hidden until
--- LuaEvents.VoxDeorumNewspaperOpen fires. The context is shown directly with
+-- Auto-binds to VoxDeorumNewspaper.xml and stays hidden until a bridge delivery
+-- or LuaEvents.VoxDeorumNewspaperOpen requests it. The context is shown directly with
 -- ContextPtr:SetHide(false), matching the HumanPanel pattern, so it does not sit
 -- in UIManager's popup queue and cannot leave native popups hidden behind it.
 --
--- The generated VoxDeorumNewspaperFixture.lua assigns one global:
---   VoxDeorumNewspaperFixture = { issue, bundle, assets, state, cacheRoot }
+-- Bridge delivery provides { issue, bundle, assets, state, cacheRoot }.
+-- An optional hand-supplied legacy fixture can assign VoxDeorumNewspaperFixture.
 -- Field shapes are owned by vox-agents/src/newspaper/contracts/{issue,reader}.ts
 -- and contracts/render.ts. This viewer reads
 -- issue.pages, issue.items, bundle.profile, bundle.header, bundle.pages,
@@ -33,7 +33,7 @@ local STATUS_SECONDS = 4
 local TAB_HEIGHT = 26
 local LINE_GAP = 6
 
--- Fixture data. Issue and bundle are replaced when a new issue id loads.
+-- Publication data, committed only after a candidate delivery validates.
 local m_issue = nil
 local m_bundle = nil
 local m_assets = {}
@@ -53,6 +53,9 @@ local m_scrollByPage = {}
 local m_votes = {}
 local m_readerOpen = false
 local m_detailOpen = false
+local m_lastDisplayedFixture = nil
+local m_pendingRequestId = nil
+local m_pendingReceiver = nil
 
 -- Dynamic control ownership. Images are unloaded before their parents are
 -- cleared, and the highlight lists drive shared vote state on the current page.
@@ -70,6 +73,7 @@ local followLink
 local dispatchAction
 local selectPage
 local closeReader
+local deliveryReceiver
 
 -- Page layout starts hidden. Nothing opens until a fixture event arrives.
 ContextPtr:SetHide(true)
@@ -183,40 +187,26 @@ end
 
 -- ============================================================ fixture adapter
 
--- Install publication indices while keeping issue data separate from render geometry.
-local function indexIssue(issue)
-	local indexed = VoxDeorumNewspaperData.IndexIssue(issue, m_bundle)
-	m_itemsById = indexed.itemsById
-	m_pages = indexed.pages
-	m_pageById = indexed.pageById
-	m_pageIndexById = indexed.pageIndexById
-	m_renderPages = indexed.renderPages
-end
-
 -- Return whether a page id exists in the loaded issue.
 local function hasPage(pageId)
 	return type(pageId) == "string" and m_pageById[pageId] ~= nil
 end
 
--- Load the generated fixture global and reset state only for a new issue.
-local function loadFixture()
-	local fixture = nil
-	local ok, value = pcall(function() return VoxDeorumNewspaperFixture end)
-	if ok then fixture = value end
-	if type(fixture) ~= "table" then return false end
-	if type(fixture.issue) ~= "table" or type(fixture.bundle) ~= "table" then return false end
-	if type(fixture.issue.pages) ~= "table" or #fixture.issue.pages == 0 then return false end
-	if type(fixture.issue.items) ~= "table" then return false end
-
+-- Install a validated candidate, preserving local reader state for the same publication and receiver.
+local function loadFixture(fixture, indexed)
 	local issue = fixture.issue
-	local newIssue = m_issue == nil or m_issue.issueId ~= issue.issueId
+	local newIssue = m_issue == nil or m_issue.issueId ~= issue.issueId or m_issue.campaignId ~= issue.campaignId
+		or m_issue.timelineId ~= issue.timelineId or m_issue.receiver.playerId ~= issue.receiver.playerId
 	m_issue = issue
 	m_bundle = fixture.bundle
 	m_assets = type(fixture.assets) == "table" and fixture.assets or {}
 	m_cacheRoot = type(fixture.cacheRoot) == "string" and fixture.cacheRoot or nil
 	m_textureChecks = {}
-	indexIssue(issue)
-	if #m_pages == 0 then return false end
+	m_itemsById = indexed.itemsById
+	m_pages = indexed.pages
+	m_pageById = indexed.pageById
+	m_pageIndexById = indexed.pageIndexById
+	m_renderPages = indexed.renderPages
 
 	if newIssue then
 		local initial = type(fixture.state) == "table" and fixture.state or {}
@@ -229,13 +219,14 @@ local function loadFixture()
 		m_scrollByPage = {}
 		for pageId, offset in pairs(initial.scrollByPage or {}) do
 			local number = tonumber(offset)
-			if hasPage(pageId) and number ~= nil then m_scrollByPage[pageId] = math.max(0, number) end
+			if hasPage(pageId) and number ~= nil and number == number and number < math.huge then
+				m_scrollByPage[pageId] = math.max(0, number)
+			end
 		end
 		m_activePageId = hasPage(initial.activePageId) and initial.activePageId or m_pages[1].id
 	end
 
 	if not hasPage(m_activePageId) then m_activePageId = m_pages[1].id end
-	return true
 end
 
 -- Return the active page record.
@@ -938,26 +929,8 @@ dispatchAction = function(action)
 	end
 end
 
--- Open the fixture reader and rebuild it from the active page.
-local function openReader()
-	if m_readerOpen then return end
-	if not loadFixture() then return end
-	m_readerOpen = true
-	m_detailOpen = false
-	m_statusSeconds = 0
-	Controls.StatusLabel:SetText("")
-	Controls.DialogDim:SetHide(false)
-	Controls.NewspaperGrid:SetHide(false)
-	ContextPtr:SetHide(false)
-	ContextPtr:SetUpdate(onUpdate)
-	renderReader()
-	restoreScroll(m_activePageId)
-end
-
--- Hide the reader and release every displayed texture.
-closeReader = function()
-	if not m_readerOpen then return end
-	saveScroll()
+-- Release displayed controls and hide the context without changing saved state or emitting events.
+local function hideReaderControls()
 	m_readerOpen = false
 	m_detailOpen = false
 	Controls.DetailOverlay:SetHide(true)
@@ -971,18 +944,82 @@ closeReader = function()
 	m_voteHighlights = {}
 	m_tabUnderlines = {}
 	m_statusSeconds = 0
+	m_scrollRestoreFrames = 0
 	Controls.StatusLabel:SetText("")
 	Controls.DialogDim:SetHide(true)
 	Controls.NewspaperGrid:SetHide(true)
 	ContextPtr:SetHide(true)
 	ContextPtr:ClearUpdate()
+end
+
+-- Render and show a validated candidate, restoring the earlier publication if native UI work fails.
+local function openReader(fixture)
+	fixture = fixture or m_lastDisplayedFixture or VoxDeorumNewspaperFixture
+	local checked, indexed, validationError = pcall(VoxDeorumNewspaperData.ValidateFixture, fixture)
+	if not checked then return false, "Newspaper delivery validation failed: " .. tostring(indexed) end
+	if indexed == nil then return false, validationError end
+	if deliveryReceiver() ~= fixture.issue.receiver.playerId then
+		return false, "The newspaper belongs to another receiver."
+	end
+	if m_readerOpen then saveScroll() end
+	local previous = {
+		issue = m_issue, bundle = m_bundle, assets = m_assets, cacheRoot = m_cacheRoot,
+		indexed = { itemsById = m_itemsById, pages = m_pages, pageById = m_pageById,
+			pageIndexById = m_pageIndexById, renderPages = m_renderPages },
+		activePageId = m_activePageId, scrollByPage = m_scrollByPage, votes = m_votes, open = m_readerOpen,
+	}
+	loadFixture(fixture, indexed)
+	-- Finish native drawing before acknowledging that the delivered newspaper is visible.
+	local function showReader()
+		Controls.DetailOverlay:SetHide(true)
+		clearContainer(Controls.DetailContent, {})
+		renderReader()
+		restoreScroll(m_activePageId)
+		Controls.StatusLabel:SetText("")
+		Controls.DialogDim:SetHide(false)
+		Controls.NewspaperGrid:SetHide(false)
+		ContextPtr:SetHide(false)
+		ContextPtr:SetUpdate(onUpdate)
+		m_readerOpen = true
+		m_detailOpen = false
+		m_statusSeconds = 0
+	end
+	local rendered, renderError = pcall(showReader)
+	if rendered then
+		m_lastDisplayedFixture = fixture
+		return true
+	end
+	m_issue, m_bundle, m_assets, m_cacheRoot = previous.issue, previous.bundle, previous.assets, previous.cacheRoot
+	m_itemsById, m_pages, m_pageById = previous.indexed.itemsById, previous.indexed.pages, previous.indexed.pageById
+	m_pageIndexById, m_renderPages = previous.indexed.pageIndexById, previous.indexed.renderPages
+	m_activePageId, m_scrollByPage, m_votes = previous.activePageId, previous.scrollByPage, previous.votes
+	m_textureChecks = {}
+	if previous.open then
+		local restored = pcall(showReader)
+		if not restored then closeReader() end
+	else
+		-- Release partially drawn content without overwriting the restored publication's saved scroll.
+		pcall(hideReaderControls)
+	end
+	return false, "Newspaper could not be displayed: " .. tostring(renderError)
+end
+
+-- Hide the reader and release every displayed texture.
+closeReader = function()
+	if not m_readerOpen then return end
+	saveScroll()
+	hideReaderControls()
 	if LuaEvents ~= nil and LuaEvents.VoxDeorumNewspaperClosed ~= nil then
 		LuaEvents.VoxDeorumNewspaperClosed()
 	end
 end
 
--- Retire the status message and reapply scroll after late panel layout.
+-- Hide another seat's publication, retire status messages, and restore scroll after late layout.
 onUpdate = function(fDTime)
+	if m_readerOpen and deliveryReceiver() ~= m_issue.receiver.playerId then
+		closeReader()
+		return
+	end
 	if m_statusSeconds > 0 then
 		m_statusSeconds = m_statusSeconds - (fDTime or 0)
 		if m_statusSeconds <= 0 then Controls.StatusLabel:SetText("") end
@@ -1010,6 +1047,70 @@ local function inputHandler(uiMsg, wParam)
 end
 ContextPtr:SetInputHandler(inputHandler)
 
+-- ============================================================ bridge delivery
+
+-- Forget requests prepared in an earlier game, UI seat, or reader context.
+local function clearPendingDelivery()
+	m_pendingRequestId = nil
+	m_pendingReceiver = nil
+end
+
+-- Return the current effective receiver, failing closed when the shared seat helper is unavailable.
+deliveryReceiver = function()
+	if VoxDeorumSeat == nil or type(VoxDeorumSeat.EffectiveSeat) ~= "function" then return nil end
+	if type(VoxDeorumSeat.IsPureObserver) ~= "function" then return nil end
+	local observerOk, pureObserver = pcall(VoxDeorumSeat.IsPureObserver)
+	if not observerOk or pureObserver then return nil end
+	local ok, receiver = pcall(VoxDeorumSeat.EffectiveSeat)
+	if ok and type(receiver) == "number" and receiver >= 0 and receiver < math.huge and receiver % 1 == 0 then
+		return receiver
+	end
+	return nil
+end
+
+-- Capture the current effective seat and supersede any earlier prepared request.
+local function prepareDelivery(requestId)
+	clearPendingDelivery()
+	if type(requestId) ~= "string" or requestId == "" then return { success = false, error = "Missing newspaper request id." } end
+	local receiver = deliveryReceiver()
+	if receiver == nil then return { success = false, error = "The current newspaper receiver is unavailable." } end
+	m_pendingRequestId, m_pendingReceiver = requestId, receiver
+	return { success = true, requestId = requestId, receiver = receiver }
+end
+
+-- Display only the latest prepared payload for the seat that requested it.
+local function deliverNewspaper(requestId, payload)
+	if m_pendingRequestId == nil or requestId ~= m_pendingRequestId then
+		return { success = false, error = "This newspaper request is no longer current." }
+	end
+	local receiver = m_pendingReceiver
+	clearPendingDelivery()
+	if deliveryReceiver() ~= receiver then return { success = false, error = "The newspaper receiver has changed." } end
+	if type(payload) ~= "table" or type(payload.issue) ~= "table" or type(payload.issue.receiver) ~= "table"
+		or payload.issue.receiver.playerId ~= receiver then
+		return { success = false, error = "The newspaper belongs to another receiver." }
+	end
+	local ok, displayed, displayError = pcall(openReader, payload)
+	if not ok then return { success = false, error = "Newspaper display failed: " .. tostring(displayed) } end
+	if not displayed then return { success = false, error = displayError } end
+	return { success = true }
+end
+
+-- Register bridge callbacks only after the running DLL explicitly requests them.
+local function registerDelivery()
+	if Game == nil or type(Game.RegisterFunction) ~= "function" then return end
+	-- Registration at context load reaches the DLL before its connection service starts.
+	pcall(Game.RegisterFunction, "VoxDeorumNewspaperPrepare", prepareDelivery)
+	pcall(Game.RegisterFunction, "VoxDeorumNewspaperDeliver", deliverNewspaper)
+end
+
+-- Invalidate pending work and hide the old publication when the effective receiver changes.
+local function onActivePlayerChanged()
+	local receiver = deliveryReceiver()
+	if m_pendingReceiver ~= nil and receiver ~= m_pendingReceiver then clearPendingDelivery() end
+	if m_readerOpen and receiver ~= m_issue.receiver.playerId then closeReader() end
+end
+
 -- ============================================================ wiring
 
 Controls.CloseButton:RegisterCallback(Mouse.eLClick, closeReader)
@@ -1024,7 +1125,14 @@ Controls.NextLabel:SetText(localizedOr("TXT_KEY_VD_NEWSPAPER_NEXT", "Next"))
 if LuaEvents ~= nil and LuaEvents.VoxDeorumNewspaperOpen ~= nil then
 	LuaEvents.VoxDeorumNewspaperOpen.Add(openReader)
 end
+if LuaEvents ~= nil and LuaEvents.VoxDeorumNewspaperRegister ~= nil then
+	LuaEvents.VoxDeorumNewspaperRegister.Add(registerDelivery)
+end
+if Events ~= nil then
+	if Events.SequenceGameInitComplete ~= nil then Events.SequenceGameInitComplete.Add(clearPendingDelivery) end
+	if Events.LoadScreenClose ~= nil then Events.LoadScreenClose.Add(clearPendingDelivery) end
+	if Events.GameplaySetActivePlayer ~= nil then Events.GameplaySetActivePlayer.Add(onActivePlayerChanged) end
+end
 
--- Fixture delivery is stage-scoped. The mock is the final include so a later
--- stage can replace only the fixture include with the live transport.
+-- Keep the optional development fixture driver as the final include.
 include("VoxDeorumNewspaperMock")

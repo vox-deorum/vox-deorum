@@ -124,6 +124,18 @@ describe('ApiClient REST methods', () => {
     expect(url).toContain('offset=10')
   })
 
+  it('POSTs the newspaper display request and returns the game acknowledgement', async () => {
+    const fetchFn = mockFetch(() => jsonResponse({ success: true, issueId: 'issue-17', key: 'cached-key' }))
+    await expect(api.showNewspaper()).resolves.toEqual({
+      success: true,
+      issueId: 'issue-17',
+      key: 'cached-key',
+    })
+    const [url, options] = fetchFn.mock.calls[0]! as [string, RequestInit]
+    expect(url).toBe('http://localhost:5555/api/debug/newspaper/show')
+    expect(options.method).toBe('POST')
+  })
+
   it('maps a JSON error body to its error message', async () => {
     mockFetch(() => jsonResponse({ error: 'boom from server' }, false, 'Bad Request'))
     await expect(api.getHealth()).rejects.toThrow('boom from server')

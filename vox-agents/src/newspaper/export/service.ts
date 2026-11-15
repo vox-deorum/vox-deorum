@@ -14,8 +14,9 @@ export interface NewspaperExportOptions {
   cache: NewspaperCache;
   assetsHash: string;
   browserExecutable?: string;
-  deliver?: (issue: IssueDocument, cached: CachedBundle) => Promise<void>;
 }
+
+export type NewspaperDelivery = (issue: IssueDocument, cached: CachedBundle) => Promise<void>;
 
 /** Keep delivery in the export queue so the next job cannot evict a pending handoff. */
 export class NewspaperExportService {
@@ -31,9 +32,9 @@ export class NewspaperExportService {
   }
 
   /** Accept one issue and serialize capture, delivery, and retention with earlier requests. */
-  exportIssue(input: unknown): Promise<CachedBundle> {
+  exportIssue(input: unknown, deliver?: NewspaperDelivery): Promise<CachedBundle> {
     if (this.closing) return Promise.reject(new Error('Newspaper export service is closed.'));
-    const result = this.pending.then(() => this.exportDocument(input));
+    const result = this.pending.then(() => this.exportDocument(input, deliver));
     this.pending = result.catch(() => undefined);
     return result;
   }
@@ -45,9 +46,9 @@ export class NewspaperExportService {
   }
 
   /** Reuse a validated cache entry or render it before handing it to the owning application. */
-  private async exportDocument(input: unknown): Promise<CachedBundle> {
+  private async exportDocument(input: unknown, deliver?: NewspaperDelivery): Promise<CachedBundle> {
     const issue = parseIssueDocument(input);
-    const { cache, assetsHash, format, url, deliver } = this.options;
+    const { cache, assetsHash, format, url } = this.options;
     const key = renderCacheKey(issue, this.profile, assetsHash, format);
     const cached = await cache.getOrCreate(key,
       directory => renderIssue(this.worker, url(), issue, this.profile, directory, format), {
@@ -55,8 +56,10 @@ export class NewspaperExportService {
         designId: issue.publication.designId, designVersion: issue.publication.designVersion,
         profile: this.profile,
       });
-    await deliver?.(issue, cached);
-    await cache.pin(key);
+    if (deliver) {
+      await deliver(issue, cached);
+      await cache.pin(key);
+    }
     return cached;
   }
 }

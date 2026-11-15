@@ -1,6 +1,6 @@
 # Newspaper renderer proof
 
-The newspaper proof renders fixture issues in a browser and exports the same layout as DDS strips with typed interaction rectangles. It supports Victorian and modern designs, section tabs, article links, and reversible votes shared by every appearance of an item. Votes are local to the reader. Replay, story generation, archives, and saved-game persistence belong to later stages.
+The newspaper proof renders fixture issues in a browser and exports the same layout as DDS strips with typed interaction rectangles. It supports Victorian and modern designs, section tabs, article links, and reversible votes shared by every appearance of an item. Votes are local to the reader. The normal VD server hosts the reader and export service, and the Debug page can open a sample issue in the loaded game. Replay, story generation, archives, and saved-game persistence belong to later stages.
 
 ## Supply a completed issue
 
@@ -30,27 +30,27 @@ Keep these related values separate:
 | `ReaderState` | Active page, scroll positions, and votes persisted by the reader's host, defined in `contracts/reader.ts` |
 | `RenderBundle` | Exported strips and interaction geometry returned by the exporter, defined in `contracts/render.ts` |
 
-## Run the browser reader
+## Open the browser reader
 
-From the repository root, run `npm run newspaper -w vox-agents`. Open the printed loopback URL, normally `http://127.0.0.1:8788/newspaper/`. The fixture selector exercises ordinary, breaking, and analysis layouts. Section tabs wrap to keep every section visible. Each section retains its own scroll position, and the surrounding inspector reflects the reader's current votes and scroll state alongside actions and article evidence.
+The normal VD server hosts the reader and the export service. Start VD as usual and open the newspaper reader at the server's `/newspaper/` path. The reader opens the packaged Victorian ordinary sample. A source checkout also serves the other three developer fixtures; installed builds include only the default sample. Section tabs wrap to keep every section visible. Each section retains its own scroll position, and the surrounding inspector reflects the reader's current votes and scroll state alongside actions and article evidence.
 
 `npm run type-check:newspaper -w vox-agents` checks browser code separately from the Node backend. `npm run build:newspaper -w vox-agents` rebuilds `vox-agents/dist-newspaper`. The normal workspace build includes this step.
 
-## Export a game fixture
+## Show an issue in the game
 
-Run `npm run acquire:texconv -w vox-agents` once before exporting. The developer acquisition script verifies the pinned DirectXTex executable and retains its license. Export uses an installed Microsoft Edge browser, then Chrome; `--browser` can select another executable. Neither startup nor export downloads a browser.
+Run `npm run acquire:texconv -w vox-agents` once before exporting. The developer acquisition script verifies the pinned DirectXTex executable and retains its license. Export uses an installed Microsoft Edge browser, then Chrome. Neither startup nor export downloads a browser.
 
-Start the newspaper command with `--issue newspaper/fixtures/victorian-ordinary.json --export --once`. Arguments are relative to the Vox Agents workspace when invoked through npm. Omit `--once` to keep the browser host running. After a full build, `npm run newspaper:dist -w vox-agents -- ...` uses compiled backend code.
+The Debug page has a Show newspaper action beside the log download. It exports the packaged sample for the active receiver and reports success after the game displays it. Load a game with the updated mod before the first use. Later clicks need no FireTuner command or mod reload. A pure observer without a civilization-seat override has no receiving publication.
 
-The command writes a complete cache bundle and `civ5-mod/UI/Newspaper/VoxDeorumNewspaperFixture.lua`. Run `civ5-mod/deploy.bat` after exporting. The viewer, XML, data helpers and final mock include live together under `UI/Newspaper/`; VFS includes use their module basenames. Deployment adds the generated file to the deployed manifest only; the source manifest and production installer omit fixture data. Reload the mod to import a new fixture. `LuaEvents.VoxDeorumNewspaperOpen()` opens the proof viewer.
+The viewer, XML, data helpers and mock include live together under `UI/Newspaper/`; VFS includes use their module basenames. The server registers the loaded reader through a fixed Lua event, prepares its current seat and request, and sends structured data after rendering. The reader rejects superseded requests and receiver changes. Reopening the same issue preserves its page, scroll positions and votes. The source manifest and installer omit legacy Lua fixture files. For compatibility, deployment registers a hand-supplied `VoxDeorumNewspaperFixture.lua` when present; normal VD delivery does not use that file.
 
 The viewer needs the DLL's `Game.IsNewspaperTextureAvailable` binding to use images. It checks that each file is readable, stays inside the fixture's cache root, and has a supported DDS header, dimensions, and payload length. With an older DLL, a missing file, or an invalid texture, the viewer uses native article text and controls. Closing the viewer releases its image controls. It does not need the renderer to remain connected.
 
 ## Profiles and cache
 
-`--profile` accepts a JSON file matching `RenderProfile` in `src/newspaper/contracts/render.ts`. The initial profile uses a 1280 by 720 browser viewport, a 900 CSS-pixel content box, normal text size, raster scale 1, and a 2048-pixel texture limit. Raster scales 1 and 2 are supported for proofing. Margins and the stable scrollbar gutter count toward texture width. Wider profiles that exceed the texture limit are rejected before capture. Final game-supported dimensions and text settings require visual acceptance.
+Render profiles match `RenderProfile` in `src/newspaper/contracts/render.ts`. The Debug button uses a 1280 by 720 browser viewport, a 900 CSS-pixel content box, normal text size, raster scale 1, and a 2048-pixel texture limit. The capture library and automated tests also support raster scale 2. Margins and the stable scrollbar gutter count toward texture width. Wider profiles that exceed the texture limit are rejected before capture. Developer selection of other profiles for in-game delivery remains pending in Plan 1, alongside final visual acceptance.
 
-The exporter supports `--format BC1_UNORM` and `--format B8G8R8A8_UNORM`. Both use legacy DDS headers and one mip level. BC1 is the initial proof format; the uncompressed option allows comparison of small-text quality. Padding is recorded separately from visible dimensions and must not become extra scrolling space.
+The capture library supports `BC1_UNORM` and `B8G8R8A8_UNORM`. Both use legacy DDS headers and one mip level. The Debug button uses BC1; selecting the uncompressed format for in-game comparison remains part of the pending developer delivery controls. Padding is recorded separately from visible dimensions and must not become extra scrolling space.
 
 Both modes use `mountReader`, which returns layout readiness and a disposal method. Export waits for fonts, images and settled layout before measuring. The publication has the same explicit content width and stable scrollbar gutter in both modes. Sections own their scroll positions; export expands the active section while keeping the browser viewport fixed and disabling transitions. Article content is constructed from typed nodes, so prose cannot inject scripts, styles or arbitrary URLs.
 
@@ -58,7 +58,7 @@ The exporter captures the masthead and tabs separately from bounded vertical pag
 
 The game scales image controls and action rectangles from CSS coordinates. Raster scale affects texture resolution only. Page actions belong to the page coordinate space independently of strip seams, and the scroll container clips the whole content tree. Closing releases the displayed textures; reopening checks their availability before assigning paths. Browser absence disables new capture while cached reading and native text remain available. The browser worker reuses an installed browser for a batch and closes it after 15 seconds idle or during shutdown.
 
-Cache keys include issue content, design assets, compiled renderer bytes, schema version, profile, and texture format. A browser version is recorded in each bundle. Files are published together after validation, and a cache hit can be used without a browser. `--cache` selects the directory and `--cache-mib` sets its size target, defaulting to 256 MiB. The most recently delivered fixture is retained across restarts even when it exceeds that target. Other bundles are evicted by least recent use.
+Cache keys include issue content, design assets, compiled renderer bytes, schema version, profile, and texture format. A browser version is recorded in each bundle. Files are published together after validation, and a cache hit can be used without a browser. The default cache directory is `vox-agents/data/newspaper-cache/`, with a 256 MiB size target. The most recently delivered proof bundle is retained across restarts even when it exceeds that target. Other bundles are evicted by least recent use.
 
 ## Ownership and validation
 
@@ -72,9 +72,9 @@ The source is divided by runtime and responsibility:
 | `src/newspaper/renderer/{assets,layout,state}.ts` | Browser-safe assets, layout defaults, and shared reader state helpers |
 | `src/newspaper/renderer/{bridge,validation,bundle}.ts` | Browser bridge interfaces, asset and profile capability checks, and bundle consistency checks |
 | `src/newspaper/export/{browser,render,dds}.ts` | Node capture orchestration, browser lifecycle, and DDS conversion |
-| `src/newspaper/export/{cache,bundle-assets,lua-fixture}.ts` | Atomic cache publication, bundle file resolution, and development Lua delivery |
-| `src/newspaper/export/{http,service}.ts` | Loopback HTTP host and reusable export queue, cache delivery, and shutdown |
-| `src/newspaper/console.ts` | CLI options, service wiring, fixture delivery, and process-manager registration |
+| `src/newspaper/export/{cache,bundle-assets,lua-fixture}.ts` | Atomic cache publication, bundle file resolution, and structured game delivery payloads |
+| `src/newspaper/export/{http,service}.ts` | Server-mounted HTTP routes, reusable export queue, cache delivery, and shutdown |
+| `src/newspaper/{application,game-delivery}.ts` | Lazy renderer lifecycle, sample orchestration, and acknowledged MCP delivery to the active game reader |
 | `newspaper/src/reader/` | Plain DOM reader lifecycle, article construction, styling, actions, and layout measurement |
 | `newspaper/src/app/` | Fixture application shell, state inspection, and browser navigation |
 | `newspaper/src/export-bridge.ts` | Browser entry point consumed by the Node worker |
@@ -82,17 +82,21 @@ The source is divided by runtime and responsibility:
 
 Contracts have no renderer imports. The renderer depends on contracts and stays free of Node and DOM imports; DOM work belongs to `newspaper/src/`. The Node-only exporter consumes serialized render contracts and the browser bridge interfaces. Structural schemas live in contracts; issue parsing at the rendering boundary adds registered asset and kind checks, while profile and bundle consistency checks use renderer layout defaults.
 
-The standalone newspaper HTTP host shares `web/loopback.ts` request protection with the dashboard without importing dashboard startup. It exposes `/newspaper/` and `/api/newspaper/export`. Its optional application-route hook runs after loopback protection and before static and API fallbacks, allowing later replay routes to use the same host. Regular dashboard integration is deferred.
+`mountNewspaperRoutes` shares `web/loopback.ts` request protection with the dashboard. It exposes `/newspaper/`, `/api/newspaper/export`, and any mode-specific application routes before static and API fallbacks. The VD server mounts these routes during normal startup, so the reader and export service share its port. The Debug page's Show newspaper action uses the same export service and asks the game to display the result.
 
-`NewspaperExportService` validates issues, serializes cache lookup and capture, and awaits the owning application's delivery callback before pinning the delivered bundle. A failed request does not block later requests. Shutdown rejects new exports, drains accepted jobs and delivery, then closes the browser. The CLI supplies Lua fixture delivery and closes the HTTP host after the service drains. It imports `agents/runtime/process-manager.ts` directly.
+`NewspaperExportService` validates issues, serializes cache lookup and capture, and awaits each request's delivery callback before pinning the delivered bundle. Generic exports do not open the game or replace its pin. A failed request does not block later requests. Shutdown rejects new exports, drains accepted jobs and delivery, then closes the browser before the VD server closes HTTP. Rendering uses the server's actual bound port, including a fallback port. The initial MCP connection wait is limited to eight seconds. Once dispatched, a game call retains the existing 660-second timeout so a paused game can resume and acknowledge delivery. Shutdown waits for that acknowledgement or failure; a second Ctrl+C forces process exit.
 
-Browser assets and developer fixture JSON stay with the reader source. Vite cleans `dist-newspaper` on every build. Production packaging retains the compiled reader, runtime `playwright-core`, and `vendor/texconv` with its license; it excludes `newspaper/` source, copied fixture JSON, and generated Lua fixture data. Converter acquisition runs during developer setup or the installer build. No browser is bundled or downloaded. Mock tests under `tests/mock/newspaper/` mirror the implementation boundaries, including HTTP and service lifecycle checks under `export/`. Shared test builders live in `tests/helpers/newspaper-fixtures.ts`.
+Vite cleans `dist-newspaper` on every build, then `scripts/utilities/package-newspaper-sample.mjs` copies the existing Victorian ordinary fixture to `sample.json`. Production packaging retains that sample, the compiled backend in `dist/newspaper`, the compiled reader, runtime `playwright-core`, and `vendor/texconv` with its license. The installer anchors its source-folder exclusion to the component root so it preserves the compiled backend. It excludes reader source, the remaining developer fixtures, and legacy Lua fixture data. Converter acquisition runs during developer setup or the installer build. No browser is bundled or downloaded. Mock tests under `tests/mock/newspaper/` mirror the implementation boundaries, including HTTP and service lifecycle checks under `export/`. Shared test builders live in `tests/helpers/newspaper-fixtures.ts`.
 
 Run focused checks with `npm test -w vox-agents -- tests/mock/newspaper`, then run `npm run build:all` and `npm run test:all` for integration. Browser-driven tests use installed browsers and the built reader. Converter checks require the acquired executable.
 
 Game acceptance must record the VP build and renderer separately from automated results. Check text at 1280 by 720, 1920 by 1080, and 2560 by 1440; raster scales 1 and 2; scrolling over links and votes; seam-crossing links; tab and vote updates; target return; Escape; native popups; cached reopening with the host stopped; and reopening after deleting a closed fixture's cache. A successful transport call does not establish visual correctness.
 
 ## Local measurements
+
+An export through the integrated VD server completed in 3.34 seconds on an ephemeral bound port. Its structured sample delivery arguments used 14,135 bytes of the DLL's 262,144-byte ArduinoJson pool, measured with the repository's parser in a 32-bit executable. The real exported payload also passed the Lua 5.1 reader harness. These checks use mocked game controls and do not establish in-game appearance.
+
+A controlled Inno Setup compiler probe confirmed that the installer retains the compiled newspaper backend and packaged sample while excluding reader source. A fresh compiled runtime using production-pruned dependencies then started the VD server, served the UI and default sample, and exported both sample pages. Dependency resolution was restricted to the staged runtime and pruned dependency tree. The remaining developer fixtures were absent. This verifies file selection and runtime dependencies; the full installer size comparison remains pending.
 
 On Windows with Chrome 157.0.8103.51 and renderer 0.1.0, the Victorian ordinary fixture exported in 3.20 seconds with browser startup, 1.68 seconds warm, and 8 ms from cache. The sampled browser working-set peak during the batch was 576 MiB. These are local observations, with the test suite running concurrently.
 

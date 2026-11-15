@@ -18,7 +18,7 @@ export async function launchInstalledBrowser(executablePath?: string): Promise<B
       failures.push(errorMessage(error));
     }
   }
-  throw new NewspaperBrowserUnavailableError(`Newspaper texture export needs installed Edge or Chrome, or --browser with an executable path. Cached issues remain readable. ${failures.join('\n')}`);
+  throw new NewspaperBrowserUnavailableError(`Newspaper texture export needs installed Edge or Chrome. ${failures.join('\n')}`);
 }
 
 /** Reuse one browser through a batch, then close it after inactivity or shutdown. */

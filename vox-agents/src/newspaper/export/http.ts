@@ -1,4 +1,4 @@
-/** Independent loopback host for the publication reader and export worker. */
+/** Mount newspaper routes in VD and provide isolated hosts for renderer tests. */
 import express, { type Express } from 'express';
 import cors from 'cors';
 import { fileURLToPath } from 'node:url';
@@ -8,6 +8,7 @@ import { errorMessage } from '../../utils/errors.js';
 import { NewspaperBrowserUnavailableError } from './browser.js';
 
 export const readerDirectory = fileURLToPath(new URL('../../../dist-newspaper/', import.meta.url));
+const sourceFixtureDirectory = fileURLToPath(new URL('../../../newspaper/fixtures/', import.meta.url));
 
 export interface NewspaperHostOptions {
   directory?: string;
@@ -20,9 +21,12 @@ export interface NewspaperHostOptions {
 export function mountNewspaperRoutes(app: Express, options: NewspaperHostOptions = {}): void {
   app.use(['/newspaper', '/api/newspaper'], requireLoopbackRequest);
   options.mountApplicationRoutes?.(app);
-  if (options.fixtureDirectory) {
-    app.use('/newspaper/fixtures', express.static(options.fixtureDirectory));
-  }
+  app.use('/newspaper/fixtures', express.static(options.fixtureDirectory ?? sourceFixtureDirectory));
+  app.get('/newspaper/fixtures/victorian-ordinary.json', (_req, res) => {
+    res.sendFile('sample.json', { root: options.directory ?? readerDirectory }, error => {
+      if (error && !res.headersSent) sendError(res, 404, 'The default newspaper sample is not built.');
+    });
+  });
   app.use('/newspaper', express.static(options.directory ?? readerDirectory, { etag: false, maxAge: 0 }));
   app.post('/api/newspaper/export', express.json({ limit: '2mb' }), async (req, res) => {
     if (!options.exportIssue) {
@@ -39,7 +43,7 @@ export function mountNewspaperRoutes(app: Express, options: NewspaperHostOptions
   app.use('/newspaper', (_req, res) => { sendError(res, 404, 'Reader is not built or the asset is unavailable.'); });
 }
 
-/** Start an isolated host without importing dashboard, MCP, or strategist startup. */
+/** Start an isolated renderer test host without importing dashboard or MCP startup. */
 export async function startNewspaperHost(options: NewspaperHostOptions & { port?: number } = {}) {
   const app = express();
   app.use(requireLoopbackRequest);

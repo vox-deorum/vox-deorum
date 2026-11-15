@@ -12,6 +12,13 @@ import type { PlayersReport } from '../../../mcp-server/dist/tools/knowledge/get
 // Pinned deal contract shared across interactive-diplomacy stages 4–6.
 import type { DealPayload, DealTranscriptMessage } from '../../../mcp-server/dist/diplomacy/deals/deal-schema.js';
 
+/** Result returned after the game opens the debug newspaper sample. */
+export interface ShowNewspaperResponse {
+  success: true;
+  issueId: string;
+  key: string;
+}
+
 // Re-export types that are used in API responses
 export type { PlayersReport };
 export type { DealPayload, TradeItem, PromiseTerm, PerItemValueMap, DealMessagePayload, DealTranscriptMessage } from '../../../mcp-server/dist/diplomacy/deals/deal-schema.js';

@@ -24,6 +24,11 @@ const connectTimeoutMs = 3_600_000;
 const toolTimeoutMs = 660_000;
 const readinessPollIntervalMs = 200;
 
+/** Control retries for callers whose game-side effects must only be dispatched once. */
+export interface MCPToolCallOptions {
+  retry?: boolean;
+}
+
 /**
  * Schema for Vox Deorum game event notifications
  */
@@ -419,14 +424,15 @@ export class MCPClient extends EventEmitter {
 
   /**
    * Call a tool on the MCP server.
-   * Implements retry logic (up to 3 attempts) for transient failures.
+   * Retries transient failures up to three times unless the caller disables retries.
    *
    * @param name - Tool name to execute
    * @param args - Arguments to pass to the tool
+   * @param options - Optional retry policy; disabling retries also skips reconnect waits
    * @returns Tool execution result
    * @throws Error if the tool call fails after retries or if arguments are invalid
    */
-  async callTool(name: string, args: Record<string, unknown> = {}): Promise<unknown> {
+  async callTool(name: string, args: Record<string, unknown> = {}, options: MCPToolCallOptions = {}): Promise<unknown> {
     if (!this.isConnected) {
       throw new Error('Not connected to MCP server');
     }
@@ -442,7 +448,7 @@ export class MCPClient extends EventEmitter {
       } catch (error) {
         if (error instanceof Error && error.message?.indexOf("Invalid arguments") !== -1) {
           throw error;
-        } else if (I === 3) {
+        } else if (options.retry === false || I === 3) {
           this.emit('toolError', { toolName: name, error });
           throw error;
         } else logger.error(`Failed to call tool ${name}. Retrying ${I}...`, error);
