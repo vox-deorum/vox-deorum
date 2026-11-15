@@ -1,339 +1,473 @@
 # Unit AI: Command Value and Priorities
 
-The [command loop](overview.md) ranks fight offers by **priority**, a dimensionless score. Fight priority is **theater × stake**. Higher priority gets the next readiness check. The code calls this score an offer's **estimate** and stores a fight's priority in `fEstimate`. To audit a score, follow these stages:
+The [command loop](overview.md) gives every fight offer a **priority** (the code's **estimate**, stored in `fEstimate`). The highest ready priority gets the next readiness check, so priority decides which fights get shared units first.
 
-| Stage | Meaning | Example: a full-health enemy worth 700 |
+```mermaid
+flowchart TD
+    P["Priority = θ × stake"]
+    P --> T["Theater θ<br/>how much the zone's city matters now"]
+    P --> S["Stake<br/>what local units can change this turn"]
+    T --> I["Importance i<br/>city value / our best city<br/>fixed for the turn"]
+    T --> C["Contest c<br/>how likely the city changes hands<br/>refreshed after each command"]
+    C --> PR["Pressure p<br/>attacker share of strength²"]
+    C --> DM["Damage level δ<br/>share of city HP lost"]
+    S --> DE["Destroy<br/>enemy value local units can remove"]
+    S --> PT["Protect<br/>our value local units can save"]
+    DE --> K["Destroyed value<br/>of a unit or garrison"]
+    DE --> CP["City progress<br/>toward capture"]
+    PT --> EX["Exposure<br/>of our units"]
+    PT --> CR["City danger and city relief"]
+    PT --> GR["Ground recovered"]
+```
+
+| Stage | Meaning | Example: an enemy worth 700 at 30 of 100 HP that local units can kill |
 | --- | --- | --- |
-| Raw value | Worth, prize and exposure use power × production cost as their underlying unit. | Prize is `700 × 0.6 = 420`. |
-| Normalized quantity | Divide unit values by army scale `Z_U`; divide recovered ground by ground base `B`. | With `Z_U = 4000`, prize contributes `420 / 4000 = 0.105`. |
-| Weighted term | Multiply each quantity by the player's preference weight. Add the terms to get **stake**. | At neutral preferences, the prize weight is 1. With no other terms, stake is 0.105. |
-| Queue priority | Multiply stake by **theater** `θ`, which reflects the zone city's value. | In a cityless zone, `θ = 0.2`, so priority is `0.2 × 0.105 = 0.021`. |
+| Raw value | Worth: unit power × production cost. | `700 (worth) × (0.6 (retained share) + 0.4 (health share) × 30/100 (remaining HP)) = 504` |
+| Normalized quantity | Unit value / typical unit worth `Z_T`, so every unit and city quantity is in **typical units**. | `504 / 400 (typical worth) = 1.26` typical units |
+| Weighted term | Quantity × preference weight; the terms sum to the stake. | `1.26 × 1 (neutral attrition weight) = 1.26` |
+| Queue priority | Stake × theater `θ`. A ranking score: uncapped and not a probability. | `0.2 (cityless theater) × 1.26 = 0.252` |
 
-A normalized prize of 0.105 means 10.5% of the army reference value. A final priority of 0.021 is a ranking score. Priorities and stakes have no overall cap of 1, and neither is a probability. Ground contributes a separately normalized measure of territorial control.
-
-Every fight in the same zone shares its theater multiplier. City value enters that multiplier; the city-progress term instead uses a fixed allowance of typical unit worth. This lets the loop compare capturing a city, damaging a garrison, pursuing a unit and protecting our units on common scoring scales.
-
-Reference scales and weights stay fixed for the turn. Each battlefield's theater multiplier and ground term `ΔG(t)` stay fixed from the moment it is built. Health, damage, garrisons, threats and open-offer priorities refresh after each command. The examples below use supplied inputs, not measured gameplay averages. HP means hit points.
+| Fixed for the turn | Fixed when the battlefield is built | Refreshed after each command |
+| --- | --- | --- |
+| Reference scales, weights, theater importance | Ground `ΔG(t)` | Health, local damage, garrisons, threats, theater contest, open-offer priorities |
 
 ## Shared values and scales
 
-`CvTacticalOperationalValue.h` and `.cpp` define the values shared by loop priorities and the simulator's outcome grade (its assessment of the result). Pure functions calculate values from numbers; adapters read native units, cities and plots.
+`CvTacticalOperationalValue.h` and `.cpp` define these values for both loop priorities and the simulator's outcome grade. Pure functions work on numbers; adapters read native units, cities and plots.
 
 | Value | Rule |
 | --- | --- |
-| Base unit worth | Native unit-type power × production cost, with each input floored at 0. |
-| `F` (unit worth) | Base worth × `1 + 0.1 × max(0, level − 1)`. Our units also receive the ready-upgrade premium below. Enemy prizes use base worth and level. |
-| Living unit value | `F × (0.6 + 0.4 × health share)`, with health share clamped to 0 to 1. Full health gives `F`; half health gives `0.8F`; near death approaches `0.6F`. Death removes the unit and its retained value. |
-| `E(u, d)` (value unit u loses to incoming damage d) | The unit's entire current value if the damage reaches its remaining health; otherwise `F` (unit worth) × `0.4 × d / maximum hit points`. Nonpositive incoming damage gives 0. |
-| City value | `getEconomicValue` as seen by the acting player, or population when economic value is not positive. |
-| Ready-upgrade premium | `0.5 × max(0, upgrade base worth − current base worth)` when `CanUpgradeRightNow(true)` passes: the unit is ready to upgrade and the upgrade's technology and project prerequisites are met. Gold, territory, embarkation and unit class limits are not checked. Add this to worth before applying the health share. |
-| `Z_U` (army scale) | The greater of our living units' total current value and 3 times typical unit worth (the mean base worth of the reference types described below). The total includes all our units. |
-| `Z_C` (city scale) | The greater of our cities' total value and 3 times their mean value. With no city of our own, use the mean city value of living, non-barbarian players at war with us for the floor. Only the theater multiplier uses it. |
-| `C` (city allowance) | `city.units` × typical unit worth / `Z_U` (army scale): the size of a city fight in army currency. |
-| `B` (ground normalization base) | One per living military unit of ours, plus the ground weights of all plots we own. |
+| Base unit worth | Native unit-type power × production cost, each floored at 0. |
+| `F` (unit worth) | Base worth × `1 + 0.1 (per level) × max(0, level − 1)`, plus the ready-upgrade premium for our units only. Read by `OurUnitWorth`. |
+| Ready-upgrade premium | `0.5 × max(0, upgrade base worth − current base worth)` when `CanUpgradeRightNow(true)` passes (technology and project prerequisites met; gold, territory, embarkation and class limits not checked). Added before the health share. |
+| `q` (**retained share**) | Setting `unitKillShare` (0.6): the share of worth kept at any health and lost only by dying. The rest, `1 − q` (0.4), is the **health share**. |
+| **Living unit value** | `F × (q + (1 − q) × remaining HP / maximum HP)`: `F` at full health, `0.8F` at half, toward `0.6F` near death. |
+| `E(u, d)` (value unit `u` loses to incoming damage `d`) | Whole living value if `d` reaches remaining HP; otherwise `F × (1 − q) × d / maximum HP`; 0 for `d ≤ 0`. |
+| City value | `getEconomicValue` as seen by us, or population when that is not positive. |
+| `Z_T` (**typical unit worth**) | Mean base worth of the **reference types** (`ReferenceUnitScales`): per unit class, our civilization's own type with combat strength, known prerequisite technology, unknown obsolete technology and a production cost. City-state gifts and policy-unlocked types are excluded; supply, gold, cities and resources do not matter. 0 with no reference type. |
+| `Z_C` (**city scale**) | Our most valuable city's value; with no city of ours, the most valuable city of living, non-barbarian players at war with us; else 0. Used only by theater. |
+| `C` (**city allowance**) | Setting `city.units` (3): a city fight's size in typical units. |
+| Nonpositive scale | Any term divided by a scale ≤ 0 contributes 0. |
 
-**Reference types** are the military unit types used to calculate typical unit worth. For each unit class, our civilization's own type qualifies if it has combat strength, its prerequisite technology is known, its obsolete technology is unknown, and it has a production cost. City-state gifts and policy-unlocked types are excluded. Supply, gold, cities and resources do not affect the list, so the army-scale floor still applies at the supply limit.
+`BuildTurn` assembles the turn's scales and logs them as "Operational loop scales".
 
-`OurUnitWorth` reads our units' worth, `ReferenceUnitScales` calculates typical unit worth, and `BuildTurn` assembles the turn's normalization scales. The log message "Operational loop scales" reports army scale and typical unit worth. With no reference type, typical unit worth is 0; with no own or qualifying enemy city, typical city value is 0. A stake term divided by a nonpositive scale contributes 0.
-
-**Separate upgrade and scale example.** This example has its own inputs. Use a level-3 unit with base worth 400, a ready upgrade to base worth 600, and half health:
+**Upgrade and scale example** (own inputs): a level-3 unit, base worth 400, ready upgrade to base worth 600, half health.
 
 | Value | Calculation | Result |
 | --- | --- | --- |
-| Worth with level premium | `400 × (1 + 0.1 × (3 − 1))` | 480 |
-| Ready-upgrade premium | `0.5 × (600 − 400)` | 100 |
-| Full-health worth | `480 + 100` | 580 |
-| Current living value | `580 × (0.6 + 0.4 × 0.5)` | 464 |
-| Army scale, if this is our only unit and typical worth is 250 | `max(464, 3 × 250)` | `Z_U = 750` |
-| City scale for two cities worth 40 and 20 | `max(40 + 20, 3 × ((40 + 20) / 2))` | `Z_C = 90` |
+| Worth with level premium | `400 (base) × (1 + 0.1 × (3 (level) − 1))` | 480 |
+| Ready-upgrade premium | `0.5 × (600 (upgrade base) − 400 (base))` | 100 |
+| Full-health worth `F` | `480 + 100` | 580 |
+| Living value | `580 × (0.6 (retained share) + 0.4 (health share) × 0.5 (HP fraction))` | 464 |
+| In typical units, typical worth 250 | `464 / 250 (Z_T)` | 1.856 |
+| City scale, cities worth 40 and 20 | The more valuable city | `Z_C = 40` |
+
+### Damage rolls
+
+Every damage estimate on this page sets its random roll by the turn's mapped RISK flavor `ρ` (willingness to accept danger, 0 to 100), the same preference behind `w_R`. A cautious player plans for the rolls that are worst for us; a bold one plans for the average, which is what native projections (`DoDamageMath` with the random roll off) use.
+
+`damage roll = default damage + s × random range`, before native's strength ratio and modifiers.
+
+| Roll share `s` | RISK 0 | RISK 50 | RISK 100 | Used for |
+| --- | --- | --- | --- | --- |
+| **Our roll** `s_us = 0.5 × ρ / 100` | 0 (worst) | 0.25 | 0.5 (average) | Local damage on a unit `D_t` (city fire included), on a city `D_c`, and on its garrison `D_g`. A low roll counts a kill or capture only when damage overflows the threshold, so overflow reads as more certain. |
+| **Enemy roll** `s_enemy = 1 − 0.5 × ρ / 100` | 1 (best) | 0.75 | 0.5 (average) | Danger to our units (`d`, `d_t`), city danger behind `f_def` and `a_t`, and the damage our attacker takes in the suicide test. |
+
+**Roll example** (own inputs): equal strength, default damage 20, random range 10, so a roll deals `20 + s × 10`. Units are worth 400 with `M = 100`; `Z_T = 400`. Each cell gives the damage, then the term.
+
+| Case | RISK 0 | RISK 50 | RISK 100 (native's expected roll) |
+| --- | --- | --- | --- |
+| Our one hit on an enemy at 22 HP | 20, nonlethal: `400 (F) × 0.4 (health share) × 20/100 (D_t / M) / 400 (Z_T) = 0.08` | 22.5, lethal: `400 × (0.6 (retained share) + 0.4 × 22/100 (R_t / M)) / 400 = 0.688` | 25, lethal: 0.688 |
+| Our two hits on that enemy | 40, lethal: 0.688 | 45, lethal: 0.688 | 50, lethal: 0.688 |
+| An enemy hit on our archer at 28 HP | 30, lethal: `400 × (0.6 + 0.4 × 28/100) / 400 = 0.712` | 27.5, nonlethal: `400 × 0.4 × 27.5/100 / 400 = 0.11` | 25, nonlethal: `400 × 0.4 × 25/100 / 400 = 0.10` |
 
 ## Running example inputs
 
-Unless a section supplies its own inputs, the numerical examples use these settings. Ground and exposure are 0 unless listed. Calculations retain full precision until the displayed result.
+All examples use these supplied inputs unless they state their own. Unlisted ground and exposure are 0; results are rounded only for display.
 
-| Input | Value |
-| --- | --- |
-| Army scale `Z_U` | 4000 |
-| Typical unit worth | 400 |
-| City allowance `C` | `3 × 400 / 4000 = 0.3` |
-| Our cities | Values 40, 15 and 35: total 90, mean 30. |
-| City scale `Z_C` | `max(90, 3 × 30) = 90` |
-| Preference weights | All 1: neutral mapped flavors, default bases and slopes. |
-| Maximum HP | Units 100; cities 250. |
-| Expected city heal `H` | 20 HP. |
-
-## Fight priority
-
-A **term** is a normalized quantity multiplied by a preference weight. A **stake** is the sum of those terms. These are the inputs to the three fight formulas:
-
-| Symbol | Stage | Meaning | Scale or range |
-| --- | --- | --- | --- |
-| `P`, `P_g` | Raw value | [Prize](#prize-and-exposure) of the target unit or current garrison. | Raw worth units; default `0.6F` to `F` for worth `F`. |
-| `Z_U` | Reference scale | [Army scale](#shared-values-and-scales), fixed for the turn. | Raw worth units; at least 3 typical units' worth by default. |
-| `ΔG(t)` | Normalized quantity | [Ground recovered](#ground-value) by removing target `t`, divided by `B`. | Dimensionless territorial benefit; no explicit cap at 1. |
-| `E_t`, `E_c`, `E_def` | Raw value | [Exposure](#prize-and-exposure) attributed to the target unit, city plus garrison, or [our city's endangered recruits](#own-city-stake). | Raw worth units, nonnegative. Divide by `Z_U` before weighting. |
-| `C` | Normalized quantity | [City allowance](#city-allowance-and-fall-share): `city.units × typical unit worth / Z_U`. | Dimensionless; 0 to 1 with default settings. The running example uses 0.3. |
-| `f_att`, `f_def` | Share | Attack or defense [fall share](#city-allowance-and-fall-share). | 0 to 1; scales city progress or urgency. |
-| `f_g` | Share | [Garrison damage share](#garrison-damage-share). | 0 to 1; scales garrison prize. |
-| `w_A`, `w_G`, `w_R`, `w_O`, `w_C` | Weight | Attrition, hold-ground, risk, occupation and hold-city weights. | Default 1 at preference 50; 0.5 to 2 over preferences 0 to 100 with default bases and slopes. Risk runs in reverse. |
-| `θ` | Multiplier | [Theater](#theater-multiplier): `floor.theater + zone city value / Z_C`. | Default minimum 0.2; no universal upper cap. |
-
-| Fight      | Stake before theater                                        |
-| ---------- | ----------------------------------------------------------- |
-| Enemy unit | `w_A × P / Z_U + w_G × ΔG(t) + w_R × E_t / Z_U`             |
-| Enemy city | `w_O × C × f_att + w_A × P_g / Z_U × f_g + w_R × E_c / Z_U` |
-| Our city   | `w_C × C × f_def + w_R × E_def / Z_U`                       |
-
-Multiply the chosen row by `θ` to get queue priority. A term divided by a nonpositive scale contributes 0. `ResolveOperationalWeights` supplies the same weights to every battlefield through the [flavor weight curve](reference.md#weights-file). For each weight, the [curve](reference.md#weights-file) is `base × 2^(slope × (flavor − 50) / 50)`, reversing the flavor offset to `50 − flavor` for risk. Search preferences are resolved separately for each engagement.
-
-The enemy-city formula keeps city progress, garrison damage and exposure separate. Native combat splits hits between city and garrison. Healing reduces city progress; absorbed damage earns garrison prize. Capture earns the whole city term and kills the garrison. Threats to our units can sustain a fight even when neither damage term is positive.
-
-## City allowance and fall share
-
-The **city allowance** `C` sets the maximum unweighted city-progress term: `C = city.units × typical unit worth / Z_U`. The code stores it as `fCityUnit`. It defaults to 3 typical units' worth. For typical worth 400 and `Z_U = 4000`, `C = 3 × 400 / 4000 = 0.3`. The army-scale floor keeps `C ≤ 1` at default settings. City economic value enters theater separately.
-
-The **fall share** scales that allowance from 0 to 1. Attack share measures useful progress after healing, with full credit for a possible capture. Defense share measures incoming damage relative to the city's remaining health. Neither share is a probability of capture.
-
-| Input | Meaning | Unit or range |
+| Input | Value | Source |
 | --- | --- | --- |
-| `R` | City HP remaining, floored at 1. | HP, at least 1. |
-| `D_c` | Local attackers' total simulated city damage, after garrison absorption. | HP, nonnegative. |
-| `H` | Expected heal on the city's next turn. | HP, nonnegative. Used only for attack share. |
-| Available capturer | A local attacker in the damage filter that passes `CanCapture`. | Yes or no; readiness and search still check whether the attack can run. |
-| City danger | Native `GetPlotDanger` damage visible enemies can deal before our next turn. | HP, nonnegative. Used only for defense share. |
-
-| Case | Fall share | Interpretation |
-| --- | --- | --- |
-| Attack: `D_c ≥ R` and an available capturer | `f_att = 1` | Capture is possible; healing no longer reduces the benefit. |
-| Attack: all other cases | `f_att = max(0, min(D_c, R − 1) − H) / R` | Cap damage at leaving 1 HP, subtract healing, then divide by remaining HP. Damage at or below healing earns 0. |
-| Defense | `f_def = min(1, city danger / R)` | 1 means danger reaches the city's remaining HP. |
-
-The defense fall share subtracts no heal and asks for no capturer. Native danger is a worst case that does not separate capturing attackers, and the defender plans for that worst case.
-
-**Local damage** is what the [damage filter](recruitment.md#battlefield-estimate) of the local set can deal to the city this turn. It comes from native quick attack simulations (`GetSimulatedDamageFromAttackOnCity`), following these rules:
-
-- **Position.** Each unit attacks from its current plot, so the estimate assumes every counted unit reaches a firing position. Ranged units and aircraft count their ranged damage.
-- **Order.** Units are simulated in ascending unit ID. Each simulation starts from the city and garrison damage accumulated by the earlier attackers, following `ComputeTotalExpectedDamage`.
-- **Suicide test.** An attack is left out when it fails the test in `ComputeTotalExpectedDamage`: the attacker would take more damage than it deals to the city and garrison combined, with a looser limit for an attacker that stays above half health. The estimate and the [readiness check](execution.md#readiness-checks) then count the same attacks. A rejected attack leaves the simulated garrison untouched; native lets it still wound or kill the garrison.
-- **Totals.** Sum the returned city damage into `D_c` and the separate `iGarrisonDamage` output into `D_g`. The helper has already deducted absorption from its returned city damage, so `D_c` enters the attack fall share directly.
-
-Once a garrison is predicted to die, later hits use its replacement, if any, so it stops absorbing damage. A defender already predicted to die never returns as a replacement. `D_g` and the garrison prize refer to the garrison present at the start of the estimate; replacement defenders affect only the later city damage. Re-estimation after a real command reads the city's current garrison again.
-
-The full attack fall share also requires a unit in the damage filter that passes `CanCapture`: a melee combat unit with moves and an attack left, and no capture prohibition. This uses the same distance approximation as local damage; search determines whether capture can actually be executed. Without such an attacker, useful city damage is capped at `R − 1`, because bombardment leaves the city at 1 HP and it can still heal.
-
-**Expected heal** `H` is what the city would recover on its owner's next turn if our damage lands, following the heal in native `CvCity::doTurn`:
-
-- 0 when the city is blockaded by both land and water.
-- Otherwise the base city heal, plus its building defense bonus, plus its population under Vox Populi rules, plus the defense process bonus when the city runs one.
-- The native tripling for an undisturbed city is left out, because a city we damaged this turn does not receive it.
-
-Subtracting the heal makes the fall share the city-progress gate. Damage that cannot outpace the city's healing gives no city-progress term, but damaging its garrison can still make the fight worthwhile. A siege that can take the city this turn counts in full regardless of healing. The attack fall share also falls as our local units spend their attacks and rises as the city loses health, so city progress keeps its priority only while useful damage remains to deliver.
-
-**Attack-share examples.** All rows use expected heal `H = 20` and city allowance `C = 0.3`, with neutral occupation weight. Damage is after garrison absorption.
-
-| Remaining city HP `R` | Local damage `D_c` | Available capturer | `f_att` calculation | City-progress term `C × f_att` |
-| --- | --- | --- | --- | --- |
-| 250 | 50 | Either | `(50 − 20) / 250 = 0.12` | 0.036 |
-| 125 | 50 | Either | `(50 − 20) / 125 = 0.24` | 0.072 |
-| 40 | 50 | Yes | 1, capture possible | 0.300 |
-| 40 | 50 | No | `(39 − 20) / 40 = 0.475` | 0.1425 |
-| 10 | 15 | No | `max(0, 9 − 20) / 10 = 0` | 0 |
-| 250 | 15 | Either | `max(0, 15 − 20) / 250 = 0` | 0 |
-
-## Garrison damage share
-
-With absorption enabled, a hit's damage after flat city damage reduction is split using maximum health: garrison damage is `hit damage × (2 × garrison maximum HP) / (city maximum HP + 2 × garrison maximum HP)`, with native integer rounding. The city takes the remainder. `GetSimulatedDamageFromAttackOnCity` supplies both parts and respects the absorption setting.
-
-The garrison term is `w_A × P_g / Z_U × f_g`:
-
-| Input | Meaning | Unit or range |
-| --- | --- | --- |
-| `P_g` | Current garrison's prize, using the [unit prize formula](#prize-and-exposure). | Raw worth units. |
-| `G` | Current garrison's remaining health. | HP; no living garrison gives share 0. |
-| `D_g` | Simulated damage absorbed by that garrison. | HP, nonnegative. Replacement defenders do not add to this total. |
-| `f_g` | `min(1, D_g / G)` for a living garrison; 1 if the city can be captured. | 0 to 1. At 1 the term earns the full normalized garrison prize. |
-
-City healing reduces only city progress. It does not reduce credit for damaging or killing the garrison.
-
-**Absorption example.** A city with 250 maximum HP and a garrison with 100 maximum HP splits a 45-damage hit into `D_c = 25` city damage and `D_g = 20` garrison damage. At full city health with an expected heal of 20, `f_att = (25 − 20) / 250 = 0.02`. If the garrison has 15 HP left, `f_g = 1`: it dies and earns its full prize even while the city remains healthy. With an expected city heal of 25 and no capture, the city-progress term is 0 while the garrison term remains positive.
-
-## Prize and exposure
-
-**Prize** `P` is the raw value assigned to pursuing an enemy unit. It rises as the target loses health, encouraging the loop to finish damaged enemies:
-
-`P = F × (p + (1 − p) × s)`
-
-| Part | Meaning | Default or range |
-| --- | --- | --- |
-| `F` | Target's full-health worth: native unit-type power × production cost × level multiplier. Enemy worth includes no ready-upgrade premium. | Nonnegative, with no fixed upper bound. The example assumes 700; it is not a database value for all knights. |
-| `p` | `floor.prize`, the minimum share of worth credited as prize. | Default 0.6. The ranges below assume that default. |
-| `s` | Damage already taken / maximum HP, clamped to 0 to 1. | 0 at full health; 0.7 at 30/100 HP. |
-| `p + (1 − p) × s` | Share of worth credited as prize. | 0.6 at full health, 0.8 at half health, approaching 1 near death. |
-| `P` | Raw prize before normalization or preference weighting. | Formula bounds: `0.6F ≤ P ≤ F`. A living target with positive HP stays below `F`; a dead target's offers are dropped. |
-| `w_A × P / Z_U` | Prize term added to stake. | With neutral weight and `F / Z_U = 0.1`, about 0.06 to 0.10. |
-
-**Expected scale relative to our army.** Raw prize has no universal nominal range because power, cost and level vary. With positive typical unit worth, express our army scale as `n = Z_U / typical unit worth` and the target's worth as `k = F / typical unit worth`. Then `F / Z_U = k / n`, and the default prize term at neutral weight runs from `0.6 × k / n` at full health toward `k / n` near death.
-
-| Army reference size `n` | Full-health prize term for a typical-worth target (`k = 1`) | Near-death limit |
-| --- | --- | --- |
-| 3 typical units, the default floor | 0.200 | 0.333333 |
-| 10 typical units | 0.060 | 0.100 |
-| 30 typical units | 0.020 | 0.033333 |
-
-These are scale examples, not a measured distribution of gameplay scores. Stronger targets multiply the terms by `k`; preference weight and theater multiply them afterward. In the running example, `Z_U = 4000` and typical worth 400 mean `n = 10`. The illustrative knight worth 700 is `k = 1.75`, so its prize term runs from 0.105 toward 0.175.
-
-**One target through all scoring stages.** Use `F = 700`, maximum HP 100, `Z_U = 4000`, `w_A = 1` and cityless theater `θ = 0.2`. Ground and exposure are 0.
-
-| Target HP | Damage share `s` | Prize share | Raw prize `P` | Prize term `P / Z_U` | Priority `θ × P / Z_U` |
-| --- | --- | --- | --- | --- | --- |
-| 100 | 0 | 0.600 | 420 | 0.1050 | 0.02100 |
-| 50 | 0.5 | 0.800 | 560 | 0.1400 | 0.02800 |
-| 30 | 0.7 | 0.880 | 616 | 0.1540 | 0.03080 |
-| 1 | 0.99 | 0.996 | 697.2 | 0.1743 | 0.03486 |
-
-Our own units' [living value](#shared-values-and-scales) falls with damage: a unit worth 700 at 30/100 HP retains `700 × (0.6 + 0.4 × 0.3) = 504`. Prize and living value use opposite health trends. Their two 0.6 defaults are separate settings.
-
-**Exposure** measures the value our units could lose to incoming danger. For one friendly unit, first compute its value at risk, then assign that value among the threats:
-
-| Part | Meaning | Rule or range |
-| --- | --- | --- |
-| `F_u`, `M`, `R_u` | Our unit's worth, maximum HP and remaining HP. | Worth includes any ready-upgrade premium; `M` and `R_u` are HP. |
-| `d` | Native total incoming danger to that unit. | Damage in HP. |
-| `E(u, d)` | Value lost if that danger lands. | 0 for nonpositive damage; `F_u × 0.4 × d / M` if nonlethal; the whole current living value if `d ≥ R_u`. |
-| `d_t` | Positive damage attributed to one enemy threat. | HP. Fog, terrain and improvements have no enemy entry. |
-| `D` | Denominator used to allocate exposure. | `max(d, sum of positive attributed damage)`. |
-| Threat's allocation | Exposure credited to this threat from this unit. | `E(u, d) × d_t / D`, between 0 and `E(u, d)`. |
-| `E_t` or `E_c` | Allocations summed over our exposed units. | A city combines its bombardment and its garrison's allocations. Divide by `Z_U` and multiply by `w_R` for its stake term. |
-
-For a single unit, an enemy's normalized exposure allocation cannot exceed `F_u / Z_U` at neutral weight. One threat can receive allocations from several units.
-
-Lethal damage loses the retained 60% as well as the health-dependent value, so exposure jumps at the kill threshold. Extra damage beyond a kill earns no extra exposure. The allocation denominator preserves unattributed danger and prevents the threats from receiving more than the unit's value at risk.
-
-`BuildThreats` scans our living, non-air combat units outside friendly cities and armies, including spent and processed units. `GetDangerByThreat` supplies the native total danger and attributed damage.
-
-Positive threat entries identify these units as **endangered units** and exempt the attacker's fight from overlap retirement. Units that have already acted still count. Execution filters endangered recruits for availability.
-
-**Exposure examples.** Each archer is worth 400 with 100 maximum HP. Use `Z_U = 4000` and neutral risk weight.
-
-| Situation | Raw value exposed | Allocation and normalized exposure term |
-| --- | --- | --- |
-| Full-health archer faces 30 damage from a swordsman. | `400 × 0.4 × 30 / 100 = 48` | Swordsman receives 48; term `48 / 4000 = 0.012`. |
-| Three such archers each face 30 damage from that swordsman. | `3 × 48 = 144` | Swordsman's term is `144 / 4000 = 0.036`. |
-| Each of the three faces 25 damage from the swordsman and 5 from a scout. | Still 144 total. | Swordsman receives 120, term 0.030; scout receives 24, term 0.006. |
-| One full-health archer faces 10 enemy damage plus 30 unattributed damage. | `400 × 0.4 × 40 / 100 = 64` | Enemy receives `64 × 10 / 40 = 16`, term 0.004. |
-| An archer at 40 HP faces at least 40 damage from one enemy. | Its whole living value: `400 × (0.6 + 0.4 × 0.4) = 304`. | Enemy receives 304, term 0.076. |
-
-**Combined prize and exposure.** A full-health knight worth 700 can kill our archer worth 400 at 40 HP and deal 30 damage to our full-health spearman worth 400. Nothing else threatens them. Use neutral weights and `Z_U = 4000`:
-
-| Stake component               | Calculation                      | Term   |
-| ----------------------------- | -------------------------------- | ------ |
-| Knight's prize                | `700 × 0.6 / 4000`               | 0.105  |
-| Archer's lethal exposure      | `400 × (0.6 + 0.4 × 0.4) / 4000` | 0.076  |
-| Spearman's nonlethal exposure | `400 × 0.4 × 30 / 100 / 4000`    | 0.012  |
-| Total stake                   | `0.105 + 0.076 + 0.012`          | 0.193  |
-| Cityless priority             | `0.2 × 0.193`                    | 0.0386 |
-
-The search can attack the knight, retreat the archer or hold the spearman according to its own scoring.
-
-## Ground value
-
-`GroundWeight` measures a plot's value for occupation and blockade. It starts at 1 and adds these contributions:
-
-| Contribution | Weight |
-| --- | --- |
-| Plot defense | Defense divided by 100. City plots have defense 100; other plots use terrain and feature defense plus the nonnegative defense of an unpillaged improvement. |
-| Revealed strategic or luxury resource | +1 |
-| Ocean | −0.25 |
-| Coast or lake | −0.2 |
-| Improvement on a workable plot | +0.1, or +0.25 for a great person improvement, even when pillaged |
-| Revealed bonus resource on a workable plot | +0.15 |
-
-A **workable plot** is a city plot or a plot within its effective owning city's work range. `GroundWeight` applies no overall minimum; the terrain and feature defense contribution can be negative.
-
-At default settings, `B` grows by 1 per military unit and by each owned plot's weight, about 1 for ordinary land. Recovering one such plot contributes roughly `1 / B`; ending its blockade contributes roughly `0.5 / B`, before preference weighting.
-
-`GroundStake` sets the maximum contribution of each plot to the ground score. It uses the full weight for our plots and hostile cities; half the weight above 1, floored at 0, for other hostile land; and 0 for everything else. Plain hostile land and hostile water therefore have no stake. `AddGroundPlot` applies that stake to occupation and blockade:
-
-| Plot | Ground score |
-| --- | --- |
-| Our plot or city occupied by a hostile holder | Its stake is lost. |
-| Our plot blockaded by a hostile neighbor, with no friendly or neutral holder on the plot | Half its stake is lost. |
-| Hostile land or city held by our side | Credit its stake. |
-| Hostile land blockaded by our side, with no hostile or neutral holder on it | Credit half its stake. |
-
-A city occupies its own plot, so a hostile city earns credit only after our side takes it. `GroundAround` reads live owners, so it never sees that case; the simulator's grade freezes owners when watching starts and credits a captured city its full weight.
-
-`GroundSide` treats teammates, master/vassal teams and their allied minors as our side, with hostility taking precedence. `PlotPresence` counts cities and living military holders. Aircraft and embarked units supply no presence. A military unit blockades from a neighboring plot only on the same landmass, in its native domain and outside a city. Cities and garrisons supply no blockade.
-
-`TargetGround` computes `ΔG(t) = (ground score with target − ground score without target) / B`:
-
-| Part | Meaning | Scale |
-| --- | --- | --- |
-| Ground score | `GroundAround`: lost weight minus credited weight over owned plots at the target and its same-landmass neighbors. | Raw plot-weight units. |
-| Difference | How much removing this target reduces loss or increases credit. All other units remain present. | Raw plot-weight units; can be 0 when another hostile unit maintains occupation or blockade. |
-| `B` | Our living military-unit count plus the ground weights of all our owned plots, at default settings. | Positive normalization base; a nonpositive base gives ground term 0. |
-| `ΔG(t)` | Local recovery divided by the turn's ground base. | Dimensionless; no explicit cap at 1. A recovery of 4 against `B = 400` contributes 0.01 before weighting. |
-
-**Ground example.** A full-health enemy spearman worth 400 occupies our iron mine on a workable hill. It alone also blockades three empty plots of ours, two open and one hill. Use neutral weights, `B = 400` and `Z_U = 4000`.
-
-| Step | Calculation | Result |
-| --- | --- | --- |
-| Recover the mine | Base 1 + hill defense 0.25 + iron 1 + improvement 0.1 | 2.35 |
-| End the three blockades | `0.5 × (1 + 1 + 1.25)` | 1.625 |
-| Normalize total recovery | `(2.35 + 1.625) / 400` | `ΔG(t) = 0.0099375` |
-| Add prize | `400 × 0.6 / 4000 + 0.0099375` | Stake 0.0699375 |
-
-An equal spearman on plain hostile land with no other ground effect has only its 0.060 prize term.
+| Typical unit worth `Z_T` | 400 | Supplied. |
+| City allowance `C` | 3 | Setting `city.units`. |
+| Our cities | Values 40, 15 and 35 | Supplied. |
+| City scale `Z_C` | 40 | Our most valuable city. |
+| Retained share `q` | 0.6 | Setting `unitKillShare`. |
+| Health share `1 − q` | 0.4 | Lost in proportion to HP lost. |
+| Theater floor | 0.2 | Setting `floor.theater`; the room above it is `1 − 0.2 = 0.8`. |
+| Preference weights | All 1, except hold-ground `w_G` 0.05 | Neutral mapped flavors, default bases (`weight.holdGround` 0.05) and slopes. |
+| Roll shares | Our roll 0.25; enemy roll 0.75 | Neutral RISK (50). Examples supply damage and danger directly. |
+| Maximum HP (hit points) `M` | Units 100; cities 250 | Supplied. |
+| Expected city heal `H` | 20 HP | Supplied. |
 
 ## Theater multiplier
 
-Theater scales the whole stake: `θ = floor.theater + zone city value / Z_C`.
+A **theater** is the zone around one city. Every fight in the zone shares its multiplier, which grows with the **city value that may change hands**.
 
-| Part | Meaning | Default or range |
+`θ = floor.theater + (1 − floor.theater) × i × c`
+
+| Part | Reads as |
+| --- | --- |
+| `floor.theater` (0.2) | What every fight keeps, city or no city. |
+| `1 − floor.theater` (0.8) | Room above the floor, so `θ` tops out at 1. |
+| `i` (**importance**) | `min(1, city value / Z_C)`: 1 for a city as valuable as our best, 0 with no city. Relative to our best city, so independent of empire size. Enemy fights use their target zone's city (ours or an enemy's); an own-city fight uses its own city. Fixed for the turn. |
+| `c` (**contest**) | `1 − (1 − p) × (1 − δ)`: 0 for an unpressured, undamaged city; near 1 for an outnumbered, battered one. Refreshed after every command. |
+| Not included | Operation-target and focus-area bonuses. |
+
+| Contest input | Formula | Reads as |
 | --- | --- | --- |
-| `floor.theater` | Priority multiplier retained even without a city. | 0.2. |
-| Zone city value | Economic value of the zone's city as seen by us, falling back to population. Enemy fights can be in our city's zone or an enemy city's zone. | Nonnegative raw city-value units. An own-city battlefield uses its own city. |
-| `Z_C` | [City scale](#shared-values-and-scales), fixed for the turn. | Same units as city value. If nonpositive, the city contribution is 0. |
-| `θ` | Floor plus the city's normalized value; no city gives just the floor. | Default minimum 0.2, with no universal upper cap. A city worth one third of `Z_C` gives about 0.533333. |
+| `p` (**pressure**) | `A² / (A² + D²)` | Attacker share of fighting power, from the city-centered [strength tallies](recruitment.md#strength-tallies) described below. Squared per Lanchester's square law; the exponent is setting `theater.steepness` (2). 0 with no attackers, 0.5 at parity. |
+| `δ` (**damage level**) | `lost HP / maximum HP` | 0 at full health, near 1 about to fall. |
+| `(1 − p) × (1 − δ)` | | Safety: a city is safe only if both unpressured and undamaged. |
 
-An original own city cannot exceed our total city value at turn build, so its initial theater is at most 1.2 with default settings. Enemy cities and newly captured cities can exceed that bound because `Z_C` stays fixed. Operation-target and focus-area bonuses add no priority factor.
+| City | Attackers `A` | Defenders `D` | `θ` measures |
+| --- | --- | --- | --- |
+| Ours | Enemy strength `T` | Our local strength `L`, city included | Value we may lose |
+| Enemy | Our local strength `L` | Enemy strength `T`, city included | Value we may gain |
+
+`A` and `D` are the **theater inputs**: the tallies computed with the zone's city as the center, the same ones its city fight reads. Every fight in the zone shares them, including unit fights. A unit battlefield's own `L` and `T` are centered on the target and feed only its Reinforce; reading those instead would give fights in one zone different multipliers.
+
+**Pressure curve.**
+
+| Attackers / defenders | `p` at exponent 2 | Calculation | `p` at exponent 3 |
+| --- | --- | --- | --- |
+| One third | 0.10 | `1² / (1² + 3²)` | 0.04 |
+| Half | 0.20 | `1² / (1² + 2²)` | 0.11 |
+| Equal | 0.50 | `1² / (1² + 1²)` | 0.50 |
+| Double | 0.80 | `2² / (2² + 1²)` | 0.89 |
+| Triple | 0.90 | `3² / (3² + 1²)` | 0.96 |
+
+**Theater examples.** `Z_C = 40`.
+
+| Theater | `i = value / 40` | `p` | `δ` | `c = 1 − (1 − p)(1 − δ)` | `θ = 0.2 + 0.8 × i × c` |
+| --- | --- | --- | --- | --- | --- |
+| Cityless zone | 0 | | | | 0.2 |
+| Our best city (40), no enemies, full health | 1 | 0 | 0 | 0 | 0.2 |
+| Our best city, full health, enemy at half our strength | 1 | 0.2 | 0 | `1 − 0.8 × 1 = 0.2` | 0.36 |
+| Our town (15) at half HP, enemy at 1.5 times our strength | 0.375 | `1.5² / (1.5² + 1²) = 0.69` | 0.5 | `1 − 0.31 × 0.5 = 0.85` | 0.45 |
+| Our best city, full health, enemy at triple our strength | 1 | 0.9 | 0 | `1 − 0.1 × 1 = 0.9` | 0.92 |
+| Enemy city (20), full health, we have two thirds of its strength | 0.5 | `2² / (2² + 3²) = 0.31` | 0 | 0.31 | 0.32 |
+| Enemy city (20) at half HP, none of our units nearby | 0.5 | 0 | 0.5 | `δ = 0.5`, still pulls Reinforce | 0.40 |
+| Enemy capital (45) at 20% HP, we have double its strength | 1 (capped) | 0.8 | 0.8 | `1 − 0.2 × 0.2 = 0.96` | 0.97 |
+
+## Fight priority
+
+**Rule: enemy value local units can destroy this turn, plus our value they can protect this turn.** A **term** is a normalized quantity × a preference weight; a **stake** sums a fight's terms. All terms are in typical units, so destroying 500 of enemy worth and protecting 500 of ours count the same at neutral weights. A stake of 0 makes the fight inactive.
+
+```mermaid
+flowchart LR
+    U["Enemy unit fight"] --> U1["Destruction K_t"]
+    U --> U2["Exposure E_t"]
+    U --> U3["k_t × ground ΔG(t)"]
+    U --> U4["k_t × city relief"]
+    EC["Enemy city fight"] --> E1["City progress C × f_att"]
+    EC --> E2["Garrison destruction K_g"]
+    EC --> E3["Exposure E_c"]
+    OC["Our city fight"] --> O1["City danger C × f_def"]
+    OC --> O2["Exposure E_def"]
+```
+
+**Enemy unit fight**, target `t`:
+
+`stake = w_A × K_t / Z_T + w_R × E_t / Z_T + k_t × (w_G × ΔG(t) + w_C × C × f_def × a_t)`
+
+| Term | Formula | Reads as |
+| --- | --- | --- |
+| **Destruction** | `w_A × K_t / Z_T` | Enemy value local units and city fire can remove from the target ([destroyed value](#destroyed-value) `K_t`) × attrition weight. |
+| **Exposure** | `w_R × E_t / Z_T` | Value of our units the target can hurt before our next turn ([exposure](#exposure) `E_t`) × risk weight. Counted in full: the search can also protect by moving our units away. |
+| **Ground** | `k_t × w_G × ΔG(t)` | Territory recovered if the target is removed ([ground](#ground-value) `ΔG(t)`) × hold-ground weight × damage share, since it pays off only on removal. |
+| **City relief** | `k_t × w_C × C × f_def × a_t` | Target's part `a_t` ([relief share](#city-relief)) of our city's danger `C × f_def` × hold-city weight × damage share. 0 away from our cities. |
+
+**Enemy city fight**, current garrison `g`:
+
+`stake = w_O × C × f_att + w_A × K_g / Z_T + w_R × E_c / Z_T`
+
+| Term | Formula | Reads as |
+| --- | --- | --- |
+| **City progress** | `w_O × C × f_att` | City allowance × progress toward capture this turn ([attack fall share](#city-allowance-and-fall-share) `f_att`) × occupation weight. Healing reduces only this term; capture earns it in full. |
+| **Garrison destruction** | `w_A × K_g / Z_T` | [Garrison value](#garrison-destroyed-value) our hits destroy × attrition weight. Kept separate because native combat splits hits between city and garrison. |
+| **Exposure** | `w_R × E_c / Z_T` | Value of our units the city and garrison can hurt × risk weight. Keeps the fight active when both damage terms are 0. |
+
+**Our city fight:**
+
+`stake = w_C × C × f_def + w_R × E_def / Z_T`
+
+| Term | Formula | Reads as |
+| --- | --- | --- |
+| **City danger** | `w_C × C × f_def` | City allowance × closeness to falling before our next turn ([defense fall share](#city-allowance-and-fall-share) `f_def`) × hold-city weight. |
+| **Exposure** | `w_R × E_def / Z_T` | Value at risk of the city's endangered recruits × risk weight. See [own-city stake](#own-city-stake). |
+
+**Symbols.**
+
+| Symbol | Meaning | Scale or range |
+| --- | --- | --- |
+| `K_t`, `K_g` | Destroyed value of the target unit or current garrison. | Worth, 0 to the unit's living value. |
+| `k_t` (**damage share**) | `min(1, local damage on the target / its remaining HP)`. | 0 to 1; 1 means a kill is possible. |
+| `E_t`, `E_c`, `E_def` | Exposure attributed to the target, to the city plus garrison, or to our city's endangered recruits. | Worth, nonnegative. |
+| `ΔG(t)` | Ground recovered by removing `t`. | Plot weight, about 1 per ordinary plot. |
+| `a_t` | Relief share. | 0 to 1. |
+| `C` | City allowance, setting `city.units`. | 3 typical units. |
+| `f_att`, `f_def` | Attack or defense fall share. | 0 to 1. |
+| `w_A`, `w_G`, `w_R`, `w_O`, `w_C` | Attrition, hold-ground, risk, occupation and hold-city weights, from `ResolveOperationalWeights` via the [flavor curve](reference.md#weights-file) `base × 2^(slope × (flavor − 50) / 50)` (`50 − flavor` for risk). Search preferences resolve separately per engagement. | 1 at neutral, 0.5 to 2 across preferences; `w_G` 0.05 at neutral, 0.025 to 0.1. |
+| `Z_T` | Typical unit worth. | Worth, fixed for the turn. |
+
+## City allowance and fall share
+
+The city allowance `C` (stored as `fCityUnit`, 3 typical units) is the largest unweighted city term. The **fall share**, 0 to 1 and not a probability, scales it.
+
+| Input | Meaning | Unit or range |
+| --- | --- | --- |
+| `R` | City HP remaining, floored at 1. | HP |
+| `D_c` | Local damage on the city, after garrison absorption. | HP |
+| `H` (**expected heal**) | City heal on its owner's next turn, per native `CvCity::doTurn`: 0 if blockaded by land and water; else base heal + building defense bonus + population (Vox Populi) + defense process bonus. The undisturbed tripling is left out, since we damaged the city. Attack share only. | HP |
+| **Available capturer** | A damage-filter unit passing `CanCapture`: melee, moves and an attack left, no capture prohibition. Same distance approximation as local damage; search confirms capture. Without one, useful damage stops at `R − 1`, since bombardment leaves 1 HP. | Yes or no |
+| City danger | Native `GetPlotDanger` from visible enemies before our next turn, at the [enemy roll](#damage-rolls). Defense share only. | HP |
+
+| Case | Fall share | Reads as |
+| --- | --- | --- |
+| Attack: `D_c ≥ R` and an available capturer | `f_att = 1` | Capture possible; healing no longer matters. |
+| Attack: otherwise | `f_att = max(0, min(D_c, R − 1) − H) / R` | Damage capped at leaving 1 HP, minus healing, over remaining HP. Damage at or below `H` earns 0, though the garrison term can still pay. |
+| Defense | `f_def = min(1, city danger / R)` | No heal and no capturer: the defender plans for the [enemy roll](#damage-rolls). |
+
+**Local damage on a city** is what the [damage filter](recruitment.md#battlefield-estimate) of the local set deals in native quick attack simulations (`GetSimulatedDamageFromAttackOnCity`) at [our roll](#damage-rolls):
+
+- **Position:** each unit attacks from its current plot; ranged units and aircraft use ranged damage.
+- **Order:** ascending unit ID, each starting from the city and garrison damage of earlier attackers (`ComputeTotalExpectedDamage`).
+- **Suicide test:** the [readiness check's](execution.md#readiness-checks) test, with the [enemy roll](#damage-rolls) for the damage our attacker takes. An attack is dropped when the attacker takes more than it deals to city and garrison combined (looser above half health). A dropped attack leaves the simulated garrison untouched, though native lets it still wound or kill the garrison.
+- **Totals:** city damage, already net of absorption, sums into `D_c`; `iGarrisonDamage` sums into `D_g`.
+- **Replacement:** once the garrison is predicted to die, later hits use its replacement, if any, which absorbs nothing; a defender predicted to die never returns. `D_g` belongs to the starting garrison. Re-estimation reads the current garrison again.
+
+**Attack-share examples.** `H = 20`, `C = 3`, neutral occupation weight.
+
+| `R` | `D_c` | Capturer | `f_att` | Term `3 (C) × f_att` |
+| --- | --- | --- | --- | --- |
+| 250 | 50 | Either | `(50 − 20 (H)) / 250 = 0.12` | 0.36 |
+| 125 | 50 | Either | `(50 − 20) / 125 = 0.24` | 0.72 |
+| 40 | 50 | Yes | 1 (capture possible) | 3.00 |
+| 40 | 50 | No | `(39 (R − 1) − 20) / 40 = 0.475` | 1.425 |
+| 10 | 15 | No | `max(0, 9 (R − 1) − 20) / 10 = 0` | 0 |
+| 250 | 15 | Either | `max(0, 15 − 20) / 250 = 0` | 0 |
+
+## Destroyed value
+
+**Destroyed value** `K_t` is the enemy unit value our local units and available city fire can remove this turn, valued exactly as we value damage to our own units. City fire alone can therefore keep a unit fight active.
+
+| Case | Formula | Reads as |
+| --- | --- | --- |
+| Nonlethal, `D_t < R_t` | `K_t = F × (1 − q) × D_t / M` | Worth × health share (0.4) × share of maximum HP removed. |
+| Lethal, `D_t ≥ R_t` | `K_t = F × (q + (1 − q) × R_t / M)` | Whole living value: retained share (0.6) plus the health share left. The jump at the kill threshold is the incentive to finish targets. |
+
+| Symbol | Meaning |
+| --- | --- |
+| `F` | Target's full-health worth, no ready-upgrade premium. |
+| `M`, `R_t` | Target's maximum and remaining HP. |
+| `D_t` (**local damage on a unit**) | Available city fire plus what the [damage filter](recruitment.md#battlefield-estimate) of the local set deals to the target. Cities fire first, as in [execution](execution.md#fight-execution): each of our cities that `FindCitiesWithinStrikingDistance` finds able to strike the target adds its `rangeCombatDamage`, and a city that has already fired this turn adds nothing. Damage-filter units follow in native quick attack simulations, with the [city rules](#city-allowance-and-fall-share): current plot, ascending unit ID with accumulated damage, suicide test. City fire and hits both take [our roll](#damage-rolls). |
+
+**One target at each damage level.** Worth 700, `M = 100`, cityless zone, no other terms.
+
+| `R_t` | `D_t` | `k_t` | `K_t` | Term `K_t / Z_T` | Priority `θ × term` |
+| --- | --- | --- | --- | --- | --- |
+| 100 | 0 | 0 | 0 | 0 | 0, inactive |
+| 100 | 30 | `30 / 100 (R_t) = 0.3` | Nonlethal: `700 (F) × 0.4 (health share) × 30/100 (D_t / M) = 84` | `84 / 400 (Z_T) = 0.21` | `0.2 (cityless θ) × 0.21 = 0.042` |
+| 100 | 60 | 0.6 | `700 × 0.4 × 60/100 = 168` | 0.42 | 0.084 |
+| 30 | 20 | `20 / 30 = 0.67` | `700 × 0.4 × 20/100 = 56` | 0.14 | 0.028 |
+| 30 | 40 | 1 | Lethal: `700 × (0.6 (retained share) + 0.4 × 30/100 (R_t / M)) = 504` | 1.26 | 0.252 |
+| 100 | 100 | 1 | Lethal: `700 × (0.6 + 0.4 × 100/100) = 700` | 1.75 | 0.350 |
+
+**Scale in typical units**, independent of army size. Full-health target, neutral weight.
+
+| Target worth / `Z_T` = `r` | Kill term `r` | 30-damage term `r × 0.4 (health share) × 30/100` |
+| --- | --- | --- |
+| 0.5 | 0.50 | 0.06 |
+| 1 | 1.00 | 0.12 |
+| 1.75 (the knight) | 1.75 | 0.21 |
+
+## Exposure
+
+**Exposure** is the value our units could lose to incoming danger before our next turn.
+
+| Step | Formula | Reads as |
+| --- | --- | --- |
+| 1. Value at risk of our unit `u` | `E(u, d)`: `F_u × (1 − q) × d / M` if nonlethal; whole living value if `d ≥ R_u` | Same two cases as destroyed value. |
+| 2. Allocation to each threat | `E(u, d) × d_t / max(d, sum of attributed damage)` | Split by each enemy's damage `d_t`. Fog, terrain and improvement danger has no enemy, so its part goes to no one. |
+| 3. **Attack cap** | Keep the threat's largest allocations, as many as its attacks per turn | One attack can hurt one unit, so a one-attack enemy keeps only its most valuable victim. |
+
+| Symbol | Meaning |
+| --- | --- |
+| `F_u`, `M`, `R_u` | Our unit's worth (with any ready-upgrade premium), maximum HP, remaining HP. |
+| `d`, `d_t` | Native total incoming danger to the unit, and the part attributed to one threat (`GetDangerByThreat`), in HP, at the [enemy roll](#damage-rolls). |
+| `E_t` | A threat's kept allocations, summed. |
+| `E_c` | Same for a city: bombardment counts as one attack, plus the garrison's kept allocations. |
+| Scanned units | `BuildThreats`: our living, non-air combat units outside friendly cities and armies, spent and processed units included. |
+| **Endangered units** | Scanned units with a positive threat entry. They exempt the attacker's fight from overlap retirement, stay endangered when the attack cap drops their allocation, and are filtered for availability at execution. |
+
+**Exposure examples.** Archers worth 400, `M = 100`.
+
+| Situation | Step 1: value at risk | Steps 2 and 3: kept by the threat | Term `/ 400 (Z_T)` |
+| --- | --- | --- | --- |
+| A full-health archer faces 30 from a swordsman | `400 (F_u) × 0.4 (health share) × 30/100 (d / M) = 48` | 48 | 0.12 |
+| Three such archers, swordsman has 1 attack | 48 each | 48 (1 attack keeps 1) | 0.12 |
+| Same, swordsman has 2 attacks | 48 each | `2 (attacks) × 48 = 96` | 0.24 |
+| Each archer faces 25 from the swordsman and 5 from a scout | 48 each (`d` = 30) | Swordsman `48 × 25/30 = 40`; scout `48 × 5/30 = 8` | 0.10; 0.02 |
+| One archer faces 10 enemy plus 30 unattributed damage | `400 × 0.4 × 40/100 (d / M) = 64` | `64 × 10/40 (d_t / d) = 16` | 0.04 |
+| An archer at 40 HP faces 40 or more from one enemy | Lethal: `400 × (0.6 (retained share) + 0.4 × 40/100 (R_u / M)) = 304` | 304 | 0.76 |
+| A 1-attack knight can kill that archer or deal 30 to a full-health spearman worth 400 | 304 and 48 | 304 (keeps the larger) | 0.76 |
+
+**Destruction and exposure together.** That knight is worth 700 at full health and local units can deal it 45.
+
+| Stake term | Calculation | Value |
+| --- | --- | --- |
+| Destruction | `700 (F) × 0.4 (health share) × 45/100 (D_t / M) / 400 (Z_T)` | 0.315 |
+| Exposure | `304 (archer kept by the attack cap) / 400` | 0.760 |
+| Stake | `0.315 + 0.760` | 1.075 |
+| Priority | `0.2 (cityless θ) × 1.075`; the search then chooses to attack the knight, retreat the archer or hold the spearman | 0.215 |
+
+## City relief
+
+**City relief** credits an enemy unit with its share of our city's danger, ranking the enemies around a threatened city by how much each contributes to its fall.
+
+`relief term = k_t × w_C × C × f_def × a_t`
+
+| Part | Reads as |
+| --- | --- |
+| `C × f_def` | Our city's danger, the same quantity as in the [own-city stake](#own-city-stake). |
+| `a_t` (**relief share**) | `d_t / max(city danger, sum of attributed danger)`, `d_t` being the city danger attributed to this unit. Shares sum to at most 1. Only units in one of our cities' zones with positive attributed danger have one. |
+| `k_t` | Damage share: a kill removes the unit's whole part; wounding earns part credit. |
+| `w_C` | Hold-city weight. |
+
+**Siege example.** Our capital (40) has 200 of 250 HP, faces 80 native danger from two enemies, and the enemy matches our local strength.
+
+| Quantity | Calculation | Value |
+| --- | --- | --- |
+| `f_def` | `80 (danger) / 200 (R)` | 0.4 |
+| City danger `C × f_def` | `3 (C) × 0.4` | 1.2 |
+| `p` | Equal strength | 0.5 |
+| `δ` | `50 (lost HP) / 250 (maximum HP)` | 0.2 |
+| `c` | `1 − 0.5 (1 − p) × 0.8 (1 − δ)` | 0.6 |
+| `θ` | `0.2 + 0.8 × 1 (i) × 0.6 (c)` | 0.68 |
+
+| Fight | Destruction `K_t / 400 (Z_T)` | Relief `k_t × 1.2 × a_t` | Stake | Priority `0.68 (θ) × stake` |
+| --- | --- | --- | --- | --- |
+| Catapult worth 300, full health, causes 50 of the 80, local units can kill it | `300 (living value) / 400 = 0.75` | `1 (k_t) × 1.2 × 50/80 (a_t) = 0.75` | 1.50 | 1.020 |
+| Our capital's own fight | | 1.2 (whole city danger) | 1.20 | 0.816 |
+| Swordsman worth 600, full health, causes 30 of the 80, local damage 40 | `600 × 0.4 (health share) × 40/100 / 400 = 0.24` | `0.4 (k_t = 40/100) × 1.2 × 30/80 (a_t) = 0.18` | 0.42 | 0.286 |
+| Scout worth 150, full health, causes no danger, local units can kill it | `150 / 400 = 0.375` | 0 (`a_t` = 0) | 0.375 | 0.255 |
+
+## Garrison destroyed value
+
+With absorption on, damage left after flat city damage reduction splits as garrison damage `= hit × (2 × garrison maximum HP) / (city maximum HP + 2 × garrison maximum HP)` (native integer rounding), the city taking the rest. `GetSimulatedDamageFromAttackOnCity` supplies both parts.
+
+The garrison term is `w_A × K_g / Z_T`:
+
+| Case | `K_g` | Reads as |
+| --- | --- | --- |
+| City can be captured | Garrison's whole living value | Capture kills it. |
+| `D_g` below the garrison's remaining HP | `F × (1 − q) × D_g / M` | Health share of its worth, by HP removed. |
+| `D_g` reaches its remaining HP | Garrison's whole living value | The hits kill it. |
+
+`D_g` is the simulated damage absorbed by the starting garrison: replacements add nothing, no living garrison gives 0, and city healing never reduces this term.
+
+**Absorption example.** City maximum HP 250; garrison worth 400, maximum HP 100. A 45-damage hit splits into `D_c = 25` and `D_g = 20`.
+
+| Quantity | Calculation | Value |
+| --- | --- | --- |
+| `K_g`, garrison at 100 HP | `400 (F) × 0.4 (health share) × 20/100 (D_g / M)` | 32 |
+| Garrison term | `32 / 400 (Z_T)` | 0.08 |
+| `K_g`, garrison at 15 HP | Lethal (`D_g` 20 ≥ 15): `400 × (0.6 (retained share) + 0.4 × 15/100 (remaining / M))` | 264 |
+| Garrison term | `264 / 400` | 0.66 |
+| City progress, full health, heal 20 | `3 (C) × (25 (D_c) − 20 (H)) / 250 (R)` | 0.06 |
+| Stake with the dying garrison | `0.06 + 0.66` | 0.72 |
+| City progress with heal 25 | `3 × max(0, 25 − 25) / 250`; the garrison term is unchanged | 0 |
+
+## Ground value
+
+`GroundWeight` gives each plot a weight for occupation and blockade, starting at 1:
+
+| Contribution | Weight |
+| --- | --- |
+| Plot defense | Defense / 100. City plots use 100; others use terrain and feature defense plus an unpillaged improvement's nonnegative defense. Can be negative; no overall minimum. |
+| Revealed strategic or luxury resource | +1 |
+| Ocean | −0.25 |
+| Coast or lake | −0.2 |
+| Improvement on a **workable plot** (a city plot or within its owning city's work range) | +0.1, or +0.25 for a great person improvement, even when pillaged |
+| Revealed bonus resource on a workable plot | +0.15 |
+
+`GroundStake` caps each plot's contribution and `AddGroundPlot` applies it:
+
+| Plot | Stake | Ground score |
+| --- | --- | --- |
+| Ours, or our city | Full weight | Lost when a hostile holder occupies it; half lost when a hostile neighbor blockades it and no friendly or neutral unit holds it. |
+| Hostile city | Full weight | Credited once our side holds it. `GroundAround` reads live owners and never sees this; the simulator's grade freezes owners and credits the full weight. |
+| Other hostile land | Half the weight above 1, floored at 0 | Credited when our side holds it; half when we blockade it and no hostile or neutral unit holds it. |
+| Everything else, including hostile water | 0 | None. |
+
+| Concept | Rule |
+| --- | --- |
+| Our side (`GroundSide`) | Teammates, master/vassal teams and their allied minors; hostility takes precedence. |
+| Presence (`PlotPresence`) | Cities and living military holders; aircraft and embarked units add none. |
+| Blockade | A military unit on a neighboring plot, same landmass, native domain, outside a city. Cities and garrisons do not blockade. |
+
+`TargetGround` computes `ΔG(t) = ground score with target − ground score without it`:
+
+| Part | Meaning | Scale |
+| --- | --- | --- |
+| Ground score | `GroundAround`: lost minus credited weight over owned plots at the target and its same-landmass neighbors. | Plot weight |
+| `ΔG(t)` | What removing only this target recovers, no cap. 0 when another hostile unit keeps the occupation or blockade. Freeing one ordinary plot gives 1 and ending its blockade 0.5, however much land we own, so empire size does not dilute it. | Plot weight |
+| `w_G` | Hold-ground weight, setting `weight.holdGround` (0.05) at neutral. It turns plot weight into typical units: freeing one ordinary plot counts as a twentieth of killing a typical unit, so ground breaks ties between fights without outweighing unit loss. | Typical units per plot weight |
+
+**Ground example.** A full-health enemy spearman worth 400 occupies our iron mine on a workable hill and alone blockades three empty plots of ours (two open, one hill). Local units can kill it.
+
+| Step | Calculation | Result |
+| --- | --- | --- |
+| Recover the mine | `1 (base) + 0.25 (hill defense) + 1 (iron) + 0.1 (improvement)` | 2.35 |
+| End three blockades | `0.5 (blockade share) × (1 + 1 + 1.25 (hill))` | 1.625 |
+| `ΔG(t)` | `2.35 + 1.625` | 3.975 |
+| Ground term | `1 (k_t) × 0.05 (w_G) × 3.975` | 0.19875 |
+| Stake | `400 (living value) / 400 (Z_T) + 0.19875`; on plain hostile land it would be 1.00 | 1.19875 |
+| Same spearman, local damage 30 only | Ground `0.3 (k_t = 30/100) × 0.05 × 3.975 = 0.0596` + destruction `400 × 0.4 (health share) × 30/100 / 400 = 0.12` | 0.1796 |
+| A killable spearman that only blockades one open plot | Ground term `1 (k_t) × 0.05 × 0.5 (blockade share) × 1 (open plot)` | 0.025 |
 
 ## Own-city stake
 
-An own-city fight weighs how close the city is to falling and what our nearby units stand to lose. The [defense fall share](#city-allowance-and-fall-share) covers the city; defensive exposure covers nearby units at risk.
+`stake = w_C × C × f_def + w_R × E_def / Z_T`
 
-The defensive exposure term `E_def` sums [value at risk](#prize-and-exposure) over the city's [endangered recruits](recruitment.md#city-defense-recruits), each once. A garrison whose city can fall counts at its whole living value. Recruitment also records [local and enemy strength](recruitment.md#strength-tallies) for Reinforce; those tallies look up to two turns ahead, while the defense fall share uses damage before our next turn.
+- `f_def = min(1, city danger / R)`: the [defense fall share](#city-allowance-and-fall-share), from damage due before our next turn.
+- `E_def`: value at risk (step 1 of [exposure](#exposure)) of the city's [endangered recruits](recruitment.md#city-defense-recruits), each once with no attack cap, since the fight protects all of them. A garrison whose city can fall counts at its whole living value. Counts even when city danger is 0.
+- Theater pressure uses the [strength tallies](recruitment.md#strength-tallies), which look up to two turns ahead; these are also recorded for Reinforce.
 
-**Own-city example.** Our capital is worth 40, with `Z_C = 90`, so theater is `0.2 + 40 / 90 ≈ 0.644444`. Use `C = 0.3`, neutral weights and no exposed recruits.
+**Own-city example.** Our capital: `i = 40/40 = 1`; 200 of 250 HP, so `δ = 0.2`; no exposed recruits.
 
-| City HP remaining | Native danger | Defense fall share `f_def` | City term `C × f_def` | Priority `θ × stake` |
-| --- | --- | --- | --- | --- |
-| 200 | 0 | 0 | 0 | 0, inactive |
-| 200 | 80 | `80 / 200 = 0.4` | 0.12 | 0.077333 |
-| 200 | 200 or more | 1 | 0.30 | 0.193333 |
-
-Endangered recruits add their normalized exposure to stake, even when city danger is 0.
+| Enemy vs our strength | `p` | `c = 1 − (1 − p) × 0.8 (1 − δ)` | `θ = 0.2 + 0.8 × c` | Danger | `f_def = danger / 200 (R)` | Stake `3 (C) × f_def` | Priority |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| None | 0 | 0.2 | 0.36 | 0 | 0 | 0 | 0, inactive |
+| Equal | 0.5 | 0.6 | 0.68 | 80 | 0.4 | 1.2 | 0.816 |
+| Triple | 0.9 | 0.92 | 0.936 | 200 or more | 1 (capped) | 3.0 | 2.808 |
 
 ## Worked priorities
 
-| Zone city         | City value | Theater                    |
-| ----------------- | ---------- | -------------------------- |
-| Our capital       | 40         | `0.2 + 40 / 90 ≈ 0.644444` |
-| Our town          | 15         | `0.2 + 15 / 90 ≈ 0.366667` |
-| Enemy border city | 20         | `0.2 + 20 / 90 ≈ 0.422222` |
-| Large enemy city  | 45         | `0.2 + 45 / 90 = 0.7`      |
-| No city           | None       | 0.2                        |
+Running example inputs throughout; `θ = 0.2 + 0.8 × i × c` with `c = 1 − (1 − p)(1 − δ)`.
 
-| Offer | Stake calculation | Theater `θ` | Priority `θ × stake` |
-| --- | --- | --- | --- |
-| Border city worth 20 at 5 HP, no garrison, at least 5 local damage and an available capturer | `0.3 × 1 = 0.300` | 0.422222 | 0.126667 |
-| Large city worth 45 at full health, no garrison, 50 local damage | `0.3 × (50 − 20) / 250 = 0.036` | 0.7 | 0.025200 |
-| Full-health spearman worth 400 in our capital's zone | `400 × 0.6 / 4000 = 0.060` | 0.644444 | 0.038667 |
-| Knight worth 700 at 30 HP in a cityless zone | `616 / 4000 = 0.154` | 0.2 | 0.030800 |
-| Full-health swordsman worth 600, threatening the three archers in a cityless zone | `600 × 0.6 / 4000 + 144 / 4000 = 0.126` | 0.2 | 0.025200 |
+| Offer | Theater | `θ` | Stake | Priority |
+| --- | --- | --- | --- | --- |
+| Border city (20) at 5 of 250 HP, no garrison, capturer present, we have double its strength | `i = 0.5`; `p = 0.8`; `δ = 245/250 = 0.98`; `c = 1 − 0.2 × 0.02 = 0.996` | 0.598 | `3 (C) × 1 (capture) = 3.00` | 1.795 |
+| Large city (45), full health, no garrison, 50 local damage, equal strength | `i = 1` (capped); `p = 0.5`; `δ = 0`; `c = 0.5` | 0.600 | `3 × (50 (D_c) − 20 (H)) / 250 (R) = 0.36` | 0.216 |
+| Same city at half health | `i = 1`; `p = 0.5`; `δ = 0.5`; `c = 0.75` | 0.800 | `3 × (50 − 20) / 125 (R) = 0.72` | 0.576 |
+| Full-health spearman worth 400 near our full-health capital, enemy at a third of our strength, local units can kill it | `i = 1`; `p = 0.1`; `δ = 0`; `c = 0.1` | 0.280 | `400 (living value) / 400 (Z_T) = 1.00` | 0.280 |
+| Same spearman, local damage 30 | Same | 0.280 | `400 × 0.4 (health share) × 30/100 / 400 = 0.12` | 0.034 |
+| Knight worth 700 at 30 HP, cityless, local units can kill it | No city | 0.200 | `700 × (0.6 + 0.4 × 30/100) / 400 = 1.26` | 0.252 |
+| Full-health 1-attack swordsman worth 600 beside three full-health archers worth 400, cityless; 50 local damage on it, 30 danger to each archer | No city | 0.200 | Destruction `600 × 0.4 × 50/100 / 400 = 0.30` + exposure `400 × 0.4 × 30/100 / 400 = 0.12` (1 archer, attack cap) = 0.42 | 0.084 |
 
-The same spearman at half health has stake 0.080 and priority 0.051556 at the capital. The large city at half health with the same 50 local damage has stake `0.3 × 30 / 125 = 0.072` and priority 0.0504. Now give that half-health city a garrison at full health with 100 HP, worth 400, and suppose the simulations give 50 city damage after absorption and 40 garrison damage. The garrison share is 0.4, adding `0.060 × 0.4 = 0.024` to stake, or 0.0168 to priority, for a combined priority of `0.0504 + 0.0168 = 0.0672`. Exposure adds a further term when the city or garrison threatens our units.
+**Preferences.**
 
-Raising mapped ATTRITION (preference for damaging enemy forces) to 80 gives weight `2^0.6 ≈ 1.515717`. The capital spearman at full health rises to priority 0.058608; the swordsman rises to 0.034483 because only its prize term uses attrition. Raising OCCUPATION (preference for capturing cities) to 70 instead gives weight `2^0.4 ≈ 1.319508` and border-city priority 0.167138.
+| Change | Weight | Effect |
+| --- | --- | --- |
+| Mapped ATTRITION (damaging enemy forces) to 80 | `w_A = 2^((80 − 50) / 50) ≈ 1.5157` | Knight: `0.2 (θ) × 1.26 × 1.5157 = 0.382` |
+| Mapped OCCUPATION (capturing cities) to 70 | `w_O = 2^((70 − 50) / 50) ≈ 1.3195` | Border city: `0.598 (θ) × 3 × 1.3195 = 2.369` |
 
-**City or units first.** In the large city's zone, a swordsman at full health, worth 600, has priority `0.7 × 0.09 = 0.063`. The ungarrisoned city at full health with 50 local damage has priority 0.0252, so the swordsman fight runs first. With 150 local damage the city's stake is `0.3 × 130 / 250 = 0.156` and its priority 0.1092, so the siege runs first and its search can still attack either target. With 20 local damage or less this ungarrisoned city has no city-progress term and its fight stays inactive unless it threatens our units. Changing only `Z_U` leaves this ordering unchanged: city allowance, unit prize and exposure all scale by `1 / Z_U`. Ground uses its separate base `B`.
+**City or units first** at the large city, full health, `θ = 0.6`. The search of whichever runs can still attack either target.
+
+| Fight | Stake | Priority |
+| --- | --- | --- |
+| Swordsman worth 600 at 50 HP, local units can kill it | `600 × (0.6 + 0.4 × 50/100) / 400 = 1.20` | 0.720 |
+| The city with 50 local damage | `3 × (50 − 20 (H)) / 250 = 0.36` | 0.216 |
+| The city with 150 local damage | `3 × (150 − 20) / 250 = 1.56` | 0.936, the siege runs first |
+| The city with 20 local damage or less | 0, inactive unless it threatens our units | 0 |

@@ -10,7 +10,7 @@ Every flavor is neutral at 50. A search with all five at 50 and RISK unset keeps
 
 | Flavor | Question it answers | Higher value means |
 | --- | --- | --- |
-| **RISK** | How much danger and loss will we accept? | More risk-taking: fewer HP needed to hold the line, one loss allowed in large groups, less weight on danger, and a more tolerant turn-end HP-versus-danger check |
+| **RISK** | How much danger and loss will we accept? | More risk-taking: fewer HP needed to hold the line, one loss allowed in large groups, less weight on danger, and a more tolerant turn-end HP-versus-danger check. [Command priorities](../commands/value.md#damage-rolls) also estimate damage with average rolls instead of rolls that favor the enemy |
 | **OCCUPATION** | How much do cities matter as targets? | City damage and captures count more |
 | **ATTRITION** | How much does damaging enemy units matter? | Unit damage and kills count more |
 | **HOLD_CITY** | How much should units guard our threatened cities? | Units hold friendly frontline cities and focus attacks on enemies threatening friendly cities in the search area |

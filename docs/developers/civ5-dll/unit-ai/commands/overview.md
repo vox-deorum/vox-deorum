@@ -94,7 +94,7 @@ The battlefield stores its build-order ID, center type, target owner and unit or
 | Fact | Rule |
 | --- | --- |
 | Theater importance | City value divided by `Z_C` (city scale), capped at 1. Enemy fights use their target zone's city, which can be ours or an enemy's; a zone without a city has none. An own-city fight uses its own city. The [theater multiplier](value.md#theater-multiplier) `θ` combines it with the city's contest, which is refreshed after every command. |
-| `ΔG(t)` (normalized ground recovered by removing target unit t) | Local ground score with the target present minus the score with it removed, divided by `B` (ground normalization base). |
+| `ΔG(t)` (ground recovered by removing target unit t) | Local ground score with the target present minus the score with it removed, in plot weight. |
 | Near our city | Native `GetCityDistanceInPlots` is below 4 at build time. For major civilizations this means within 3 plots of our nearest city. Minors use half the plot distance to their capital, rounded down, so their exemption reaches 7 plots. |
 
 The turn's enemy battlefields stay fixed. A newly revealed enemy can enter danger calculations, city strength and search geometry immediately; it receives an independent battlefield in the next turn's snapshot. Re-estimation follows a surviving target unit's current plot, while its original zone, theater importance, ground term and near-city flag stay fixed. A dead unit or a city lost by its recorded owner drops both open offers of that battlefield.

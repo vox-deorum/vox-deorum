@@ -49,14 +49,14 @@ The own-city kind row adds no offset. Posture rows follow native values except t
 | `weight.attrition` | 1 | Increases with ATTRITION (damaging enemy forces); scales target and garrison destroyed value. |
 | `weight.occupation` | 1 | Increases with OCCUPATION (capturing cities); scales the city allowance at an enemy city. |
 | `weight.holdCity` | 1 | Increases with HOLD_CITY (defending cities); scales the city allowance at our city and city relief in unit fights. |
-| `weight.holdGround` | 1 | Increases with HOLD_GROUND (controlling territory); scales unit-target ground. |
+| `weight.holdGround` | 0.05 | Increases with HOLD_GROUND (controlling territory); scales unit-target ground and turns its plot weight into typical units. |
 | `weight.risk` | 1 | Decreases with RISK (willingness to accept danger); scales exposure. |
 | `slope.RISK`, `slope.OCCUPATION`, `slope.ATTRITION`, `slope.HOLD_CITY`, `slope.HOLD_GROUND` | 1 each | Exponent slope for each flavor's weight. |
 | `floor.theater` | 0.2 | Theater in a zone without a contested city; the rest up to 1 is what a contested city can add. |
 | `theater.steepness` | 2 | Exponent on both strengths in theater pressure. |
 | `city.units` | 3 | Size of a city fight in typical units; this is `C` (city allowance). |
 | `readiness.maxFailures` | 3 | Truncated to an integer and floored at 1 for the failure limit. |
-| `reinforce.strengthRatio` | 1 | `r` (desired strength ratio): with `T` (enemy strength) and `L` (local friendly strength), need is `max(0, rT − L)`. Gain caps at `r / (1 + r)`, and odds are `min(1, arrival ratio / r)`, where arrival ratio is combined local and incoming strength divided by enemy strength. |
+| `reinforce.strengthRatio` | 1 | `r` (desired strength ratio): with `T` (enemy strength) and `L` (local friendly strength), need is `max(0, rT − L)`, and selection stops once full strength covers it. The score itself does not read `r`; the enemy-center parity gate uses a fixed ratio of 1. |
 
 Enemy-fight stakes use attrition, occupation, hold-ground and risk weights; own-city stakes use hold-city and risk. Reinforcement uses the strength ratio, and the simulator's settings template rejects values of 0 or below. Simulator overrides must use the supported table names.
 
@@ -69,7 +69,6 @@ The value parameters are separate constants in `CvTacticalOperationalValue.h`:
 | `unitKillShare` (`q`, share of unit worth retained until death) | 0.6 |
 | `gradeSeniorityPerLevel` (worth premium per level above the first) | 0.1 |
 | `gradeUpgradeDiscount` (share of a ready upgrade's worth gain) | 0.5 |
-| `groundUnitWeight` (ground-base contribution per military unit) | 1 |
 | `groundResourceWeight` (strategic or luxury resource weight) | 1 |
 | `groundOceanWeight` (ocean weight adjustment) | −0.25 |
 | `groundShallowWaterWeight` (coast and lake weight adjustment) | −0.2 |
