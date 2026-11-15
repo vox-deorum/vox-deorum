@@ -10,22 +10,17 @@ import { computeRegionWidth } from "./layout.js";
 import { newspaperVoteIconAssets } from "./assets.js";
 import { z } from "zod";
 
-import { newspaperDesignIds, newspaperLayoutVariants } from "../contracts/issue.js";
 import {
-  newspaperRenderBundleSchemaVersion,
-  newspaperRendererVersion,
+  renderBundleSchema as renderBundleStructureSchema,
   type ActionGeometry,
   type Rect,
   type RenderBundle,
-  type RenderHeaderBundle,
-  type RenderPageBundle,
   type RenderRegion,
   type RenderStrip,
   type TabGeometry,
   type VoteSlotGeometry,
-} from "./types.js";
-import { readerActionSchema } from "../contracts/reader.js";
-import { renderProfileSchema, validateRenderProfileForDesign } from "./validation.js";
+} from "../contracts/render.js";
+import { validateRenderProfileForDesign } from "./validation.js";
 
 /** Largest difference allowed between scaled CSS height and exported texture pixels. */
 const maxStripPadding = 3;
@@ -35,95 +30,6 @@ const cssTolerance = 0.001;
 
 /** A Zod issue path inside a bundle document. */
 type BundlePath = (string | number)[];
-
-/** Schema for a rectangle in CSS pixels relative to its region. */
-const rectSchema: z.ZodType<Rect> = z.object({
-  x: z.number().finite().nonnegative(),
-  y: z.number().finite().nonnegative(),
-  width: z.number().finite().positive(),
-  height: z.number().finite().positive(),
-});
-
-/** Schema for a header or page region reference. */
-const renderRegionSchema: z.ZodType<RenderRegion> = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("header") }),
-  z.object({ kind: z.literal("page"), pageId: z.string().min(1) }),
-]);
-
-/** Schema for one saved image strip. */
-const renderStripSchema: z.ZodType<RenderStrip> = z.object({
-  index: z.number().int().nonnegative(),
-  fileName: z.string().min(1),
-  clip: rectSchema,
-  visibleHeight: z.number().finite().positive(),
-  pixelWidth: z.number().int().positive(),
-  pixelHeight: z.number().int().positive(),
-});
-
-/** Schema for one interactive element in a saved bundle. */
-const actionGeometrySchema: z.ZodType<ActionGeometry> = z.object({
-  actionId: z.string().min(1),
-  region: renderRegionSchema,
-  action: readerActionSchema,
-  rects: z.array(rectSchema),
-});
-
-/** Schema for one header tab in a saved bundle. */
-const tabGeometrySchema: z.ZodType<TabGeometry> = z.object({
-  pageId: z.string().min(1),
-  label: z.string(),
-  rect: rectSchema,
-});
-
-/** Schema for one dynamic vote slot in a saved bundle. */
-const voteSlotGeometrySchema: z.ZodType<VoteSlotGeometry> = z.object({
-  itemId: z.string().min(1),
-  value: z.enum(["up", "down"]),
-  region: renderRegionSchema,
-  rect: rectSchema,
-  neutralAssetId: z.string().min(1),
-  selectedAssetId: z.string().min(1),
-});
-
-/** Schema for the masthead and tab portion of a bundle. */
-const headerBundleSchema: z.ZodType<RenderHeaderBundle> = z.object({
-  width: z.number().finite().positive(),
-  height: z.number().finite().positive(),
-  strips: z.array(renderStripSchema).min(1),
-  actions: z.array(actionGeometrySchema),
-  tabs: z.array(tabGeometrySchema),
-});
-
-/** Schema for one expanded page section in a bundle. */
-const pageBundleSchema: z.ZodType<RenderPageBundle> = z.object({
-  pageId: z.string().min(1),
-  layout: z.enum(newspaperLayoutVariants),
-  width: z.number().finite().positive(),
-  height: z.number().finite().positive(),
-  contentHeight: z.number().finite().positive(),
-  contentWidth: z.number().finite().positive(),
-  scrollbarGutter: z.number().finite().nonnegative(),
-  strips: z.array(renderStripSchema).min(1),
-  actions: z.array(actionGeometrySchema),
-  voteSlots: z.array(voteSlotGeometrySchema),
-});
-
-/** Schema for the complete serialized render bundle. */
-const renderBundleSchema: z.ZodType<RenderBundle> = z
-  .object({
-    schemaVersion: z.literal(newspaperRenderBundleSchemaVersion),
-    rendererVersion: z.literal(newspaperRendererVersion),
-    browserVersion: z.string().min(1),
-    issueId: z.string().min(1),
-    campaignId: z.string().min(1),
-    timelineId: z.string().min(1),
-    designId: z.enum(newspaperDesignIds),
-    designVersion: z.string().min(1),
-    profile: renderProfileSchema,
-    header: headerBundleSchema,
-    pages: z.array(pageBundleSchema).min(1),
-  })
-  .superRefine(refineRenderBundle);
 
 /** Report one bundle consistency problem at a Zod path. */
 function addIssue(ctx: z.RefinementCtx, path: BundlePath, message: string): void {
@@ -350,9 +256,12 @@ function refineRenderBundle(bundle: RenderBundle, ctx: z.RefinementCtx): void {
   });
 }
 
+/** Structural bundle shape with the consistency checks that need renderer capabilities. */
+const validatedRenderBundleSchema = renderBundleStructureSchema.superRefine(refineRenderBundle);
+
 /** Parse and validate a saved render bundle before cache publication or reuse. */
 export function validateRenderBundle(input: unknown): RenderBundle {
-  const bundle = renderBundleSchema.parse(input);
+  const bundle = validatedRenderBundleSchema.parse(input);
   validateRenderProfileForDesign(bundle.profile, bundle.designId);
   return bundle;
 }

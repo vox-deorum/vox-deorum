@@ -4,14 +4,13 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { createLogger } from '../utils/logger.js';
-import { processManager } from '../infra/process-manager.js';
+import { processManager } from '../agents/runtime/process-manager.js';
 import { errorMessage } from '../utils/errors.js';
-import { launchInstalledBrowser, NewspaperBrowser } from './export/browser.js';
-import { hashReaderAssets, NewspaperCache, renderCacheKey } from './export/cache.js';
-import { startNewspaperHost, readerDirectory } from './host/http.js';
-import { renderIssue } from './export/render.js';
+import { hashReaderAssets, NewspaperCache } from './export/cache.js';
+import { startNewspaperHost, readerDirectory } from './export/http.js';
+import { NewspaperExportService } from './export/service.js';
 import { defaultRenderProfile } from './renderer/layout.js';
-import { parseIssueDocument, parseRenderProfile } from './renderer/validation.js';
+import { parseRenderProfile } from './renderer/validation.js';
 import { writeLuaFixture } from './export/lua-fixture.js';
 import type { DdsFormat } from './export/dds.js';
 
@@ -37,42 +36,35 @@ async function main(): Promise<void> {
   if (values.export && !values.issue) throw new Error('--export requires --issue with a fixture JSON path.');
   const format = values.format as DdsFormat;
   const profile = values.profile ? parseRenderProfile(JSON.parse(await readFile(values.profile, 'utf8'))) : defaultRenderProfile;
-  const worker = new NewspaperBrowser(() => launchInstalledBrowser(values.browser));
   const cache = new NewspaperCache(path.resolve(values.cache ?? fileURLToPath(new URL('../../data/newspaper-cache/', import.meta.url))), maxBytes);
   const assetsHash = await hashReaderAssets(readerDirectory);
   const fixtureDirectory = fileURLToPath(new URL('../../newspaper/fixtures/', import.meta.url));
-  const destination = path.resolve(values.lua ?? fileURLToPath(new URL('../../../civ5-mod/UI/VoxDeorumNewspaperFixture.lua', import.meta.url)));
-  let pendingExport: Promise<unknown> = Promise.resolve();
+  const destination = path.resolve(values.lua ?? fileURLToPath(new URL('../../../civ5-mod/UI/Newspaper/VoxDeorumNewspaperFixture.lua', import.meta.url)));
+  const service = new NewspaperExportService({
+    url: () => host.url, profile, format, cache, assetsHash, browserExecutable: values.browser,
+    /** Deliver development data without coupling the reusable service to Lua fixtures. */
+    deliver: (issue, cached) => writeLuaFixture(destination, issue, cached, cache.root),
+  });
   const host = await startNewspaperHost({ port, fixtureDirectory,
     /** Validate API content and reuse the same export path as the CLI. */
-    exportIssue: queueExport,
+    exportIssue: exportDocument,
   });
   /** Close worker before host so accepted browser requests can finish. */
-  async function close(): Promise<void> { await pendingExport; await worker.close(); await host.close(); }
-  processManager.register('newspaper', close);
-  /** Serialize fixture delivery so another export cannot evict textures before they are pinned. */
-  function queueExport(input: unknown) {
-    const result = pendingExport.then(() => exportDocument(input));
-    pendingExport = result.catch(() => undefined);
-    return result;
+  async function close(): Promise<void> {
+    try { await service.close(); }
+    finally { await host.close(); }
   }
+  processManager.register('newspaper', close);
   /** Export a fixture atomically, deliver Lua data, and retain the displayed bundle. */
   async function exportDocument(input: unknown) {
-    const issue = parseIssueDocument(input);
-    const key = renderCacheKey(issue, profile, assetsHash, format);
     const start = performance.now();
-    const cached = await cache.getOrCreate(key, directory => renderIssue(worker, host.url, issue, profile, directory, format), {
-      issueId: issue.issueId, campaignId: issue.campaignId, timelineId: issue.timelineId,
-      designId: issue.publication.designId, designVersion: issue.publication.designVersion, profile,
-    });
-    await cache.pin(key);
-    await writeLuaFixture(destination, issue, cached, cache.root);
-    logger.info('Newspaper fixture exported', { key, milliseconds: Math.round(performance.now() - start), directory: cached.directory, lua: destination });
-    return { key, bundle: cached.bundle };
+    const cached = await service.exportIssue(input);
+    logger.info('Newspaper fixture exported', { key: cached.key, milliseconds: Math.round(performance.now() - start), directory: cached.directory, lua: destination });
+    return { key: cached.key, bundle: cached.bundle };
   }
   logger.info(`Newspaper reader: ${host.url}/newspaper/`);
   try {
-    if (values.export) await queueExport(JSON.parse(await readFile(values.issue!, 'utf8')));
+    if (values.export) await exportDocument(JSON.parse(await readFile(values.issue!, 'utf8')));
     if (values.once) await close();
   } catch (error) {
     await close();

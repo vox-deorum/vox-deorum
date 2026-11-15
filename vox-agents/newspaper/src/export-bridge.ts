@@ -10,13 +10,15 @@ import { computeRenderLayout } from "../../src/newspaper/renderer/layout.js";
 import { getNewspaperAsset, newspaperVoteIconAssets } from "../../src/newspaper/renderer/assets.js";
 import {
   newspaperRendererVersion,
-  type ExportMountResult,
-  type HeaderMeasurement,
-  type NewspaperExportBridge,
-  type PageMeasurement,
   type RenderLayoutMetrics,
   type RenderProfile,
-} from "../../src/newspaper/renderer/types.js";
+} from "../../src/newspaper/contracts/render.js";
+import type {
+  ExportMountResult,
+  HeaderMeasurement,
+  NewspaperExportBridge,
+  PageMeasurement,
+} from "../../src/newspaper/renderer/bridge.js";
 import type { IssueDocument } from "../../src/newspaper/contracts/issue.js";
 import {
   parseIssueDocument,
@@ -24,7 +26,7 @@ import {
   validateRenderProfileForDesign,
 } from "../../src/newspaper/renderer/validation.js";
 import { createReaderState } from "../../src/newspaper/renderer/state.js";
-import { mountReader, type ReaderHandle } from "./mount.js";
+import { mountReader, type ReaderHandle } from "./reader/mount.js";
 import {
   collectActionGeometry,
   collectTabGeometry,
@@ -32,7 +34,7 @@ import {
   measureRegion,
   nextLayoutFrame,
   waitForMedia,
-} from "./measure.js";
+} from "./reader/measure.js";
 
 let handle: ReaderHandle | null = null;
 let issue: IssueDocument | null = null;

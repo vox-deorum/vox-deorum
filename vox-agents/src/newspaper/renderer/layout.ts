@@ -1,6 +1,6 @@
 /** Shared layout defaults and measurements for the reader and exporter. */
 import type { NewspaperDesignId } from "../contracts/issue.js";
-import type { RenderProfile, RenderLayoutMetrics } from "./types.js";
+import type { RenderProfile, RenderLayoutMetrics } from "../contracts/render.js";
 
 /** Layout defaults for one visual design. */
 export interface NewspaperDesignLayoutDefaults {

@@ -1,6 +1,6 @@
 # Newspaper implementation roadmap
 
-**Status: draft for review.** This roadmap is for developers implementing the [newspaper specification](spec.md). It establishes the shared rendering architecture and divides implementation into five plans. Each plan has its own deliverable and verification gate.
+**Status: Plan 1 implementation is complete; game acceptance remains. Plans 2 to 5 are planned.** This roadmap is for developers implementing the [newspaper specification](spec.md). It establishes the shared rendering architecture and divides implementation into five plans. Each plan has its own deliverable and verification gate.
 
 ## Goal and success criteria
 
@@ -42,9 +42,13 @@ The renderer consumes a completed issue. It never selects stories, changes serie
 
 The [research index](research/research.md) covers the recorded data, historical visibility limitations, and existing UI primitives. The fixture renderer now lives in `vox-agents/newspaper/`, with tracked assets, a separate DOM-aware type check, and a Vite build to `dist-newspaper`. The local prototypes remain design references and are gitignored.
 
-`vox-agents/src/newspaper/` already contains issue and reader contracts, rendering helpers, export/cache code, a fixture console, and a one-file `host/` directory. Plan 1 consolidates the host into `export/` and separates serialized render contracts from browser bridge types. Its remaining game and installation proofs still determine the supported profiles. `scripts/packaging/build-installer.cmd` prunes development dependencies before `scripts/installer.iss` packages the application.
+`vox-agents/src/newspaper/` contains issue, reader and render contracts, browser bridge types, rendering helpers, a reusable export service and HTTP host under `export/`, and a fixture console. Browser publication code lives under `newspaper/src/reader/`, the application shell under `newspaper/src/app/`, and the Lua/XML viewer under `civ5-mod/UI/Newspaper/`. Its remaining game proofs determine the supported profiles. `scripts/packaging/build-installer.cmd` prunes development dependencies before `scripts/installer.iss` packages the application.
 
-The [texture experiment](../../developers/civ5-mod/runtime-texture-experiment.md) established loading newly created 256-by-256 DXT1 DDS files in a DX11 session. Newspaper-sized text, image strips, control alignment, cache loss, and reopening need their own proof. Existing Lua code does not establish a safe external-file existence check.
+The [texture experiment](../../developers/civ5-mod/runtime-texture-experiment.md) established loading newly created 256-by-256 DXT1 DDS files in a DX11 session. The fixture viewer now checks cache confinement and DDS validity through `Game.IsNewspaperTextureAvailable`, and uses native text when textures are unavailable. Newspaper-sized text, image strips, control alignment, cache loss, and reopening still need visual acceptance. The [renderer guide](../../developers/vox-agents/newspaper/renderer.md) records the implemented behavior and local measurements.
+
+## Keeping plans current
+
+After implementing a work unit, fold its verified behavior, ownership, commands, and measured constraints into the relevant developer or player documentation. Rewrite the affected sections as a coherent reference, then remove executed instructions from the stage plan and link to that reference. Keep the main roadmap's current state, contracts, and folder ownership accurate in the same change. Stage plans should contain only remaining work and acceptance gates. Keep unverified manual checks explicitly pending, and distinguish implementation completion from acceptance. Do not retain an execution log or revision history unless requested.
 
 ## Implementation order
 
@@ -67,8 +71,8 @@ Keep contracts in the existing workspaces: MCP owns evidence and transport envel
 | Contract | Owner | Established in |
 | --- | --- | --- |
 | `IssueDocument`, typed article links; `ReaderAction` and `ReaderState` | Vox Agents `contracts/issue.ts` and `contracts/reader.ts` | Plan 1, retaining existing schemas. |
-| `RenderProfile`, `RenderBundle`, geometry and format versions | Vox Agents `contracts/render.ts` | Plan 1, extracted from `renderer/types.ts`; structural schemas move with the types. |
-| Browser export bridge, measurements and capture interfaces | Vox Agents `renderer/bridge.ts` | Plan 1, separate from persisted render data. |
+| `RenderProfile`, `RenderBundle`, geometry and format versions | Vox Agents `contracts/render.ts` | Plan 1; structural schemas live with their inferred types. |
+| Browser export bridge, measurements and capture interfaces | Vox Agents `renderer/bridge.ts` | Plan 1; separate from persisted render data. |
 | Evidence requests, results and source references | MCP `newspaper/evidence.ts` | Plan 2; both query access paths use these schemas. |
 | Replay settings and HTTP responses | Vox Agents `contracts/replay.ts` | Plan 2, reusing MCP evidence contracts. |
 | Configuration, candidates and editor/check interfaces | Vox Agents `editorial/config.ts`, `triggers.ts` and `check.ts` respectively | Plan 3, beside the code that uses them. |
@@ -86,17 +90,17 @@ Each folder groups a sustained responsibility. Move existing files and all consu
 | Location | Responsibility and stage |
 | --- | --- |
 | `vox-agents/src/newspaper/contracts/` | Serialized content and boundary schemas across readers, editors and adapters. Plans 1 to 5 add the contracts listed above. |
-| `vox-agents/src/newspaper/renderer/` | Layout, assets, reader state, bridge interfaces and renderer capability checks. Plan 1 removes its mixed `types.ts`. |
-| `vox-agents/src/newspaper/export/` | Browser worker, capture, DDS conversion, cache and HTTP host. Plan 1 moves `host/http.ts` here and extracts orchestration into `service.ts`; Plan 5 extends that service with viewer pins and releases. |
+| `vox-agents/src/newspaper/renderer/` | Layout, assets, reader state, bridge interfaces and renderer capability checks. Serialized render data belongs to `contracts/render.ts`. |
+| `vox-agents/src/newspaper/export/` | Browser worker, capture, DDS conversion, cache, HTTP host and export service. Plan 5 extends the service with viewer pins and releases. |
 | `vox-agents/src/newspaper/editorial/` | Pure configuration, detection, selection, series, feedback, presentation and validation. Plan 3 establishes `check.ts` as dispatch/fallback owner; Plan 4 adds the constrained LLM adapter. |
 | `vox-agents/src/newspaper/replay/` | Read-only recording connection, replay session and routes in Plan 2; separate output storage in Plan 3; comparison evaluation in Plan 4. |
 | `vox-agents/src/newspaper/live/` | Lifecycle, scheduler and MCP-backed state adapter in Plan 5. The game owns committed state. |
 | `vox-agents/src/newspaper/console.ts` | CLI parsing, mode wiring, fixture delivery and shutdown. Export jobs belong to `export/service.ts`. |
-| `vox-agents/newspaper/src/reader/` and `src/app/` | Plan 1 groups reader DOM/layout separately from the browser application. Plan 2 adds replay and inspection; Plan 4 completes archive navigation. The export entry stays at `src/export-bridge.ts`. |
+| `vox-agents/newspaper/src/reader/` and `src/app/` | Reader DOM/layout and the browser application respectively. Plan 2 adds replay and inspection; Plan 4 completes archive navigation. The export entry stays at `src/export-bridge.ts`. |
 | `vox-agents/newspaper/catalogue/` | Plan 3 adds flat `defaults.json`, `triggers.json`, `templates.json`, `pages.json` and `designs.json`. Package these runtime inputs explicitly alongside the compiled reader. |
 | `mcp-server/src/newspaper/` | Evidence contracts, queries and field projection in Plan 2; archive protocol types in Plan 3; live mirror and transport in Plan 5. `projection.ts` remains the single reporting-policy owner. |
 | `mcp-server/src/knowledge/` | Shared pure history reads in `history.ts`; Plan 5 collection in `newspaper-collection.ts` and database definitions in `schema/newspaper.ts`. |
-| `civ5-mod/UI/Newspaper/` | Plan 1 groups the existing viewer, XML, data helpers and mock. Plan 5 adds the game checkpoint store and transport here. |
+| `civ5-mod/UI/Newspaper/` | Viewer, XML, data helpers and mock. Plan 5 adds the game checkpoint store and transport here. |
 
 Replay and live sessions supply evidence and state to the same editorial check and persist its accepted result through their own adapters. `export/http.ts` accepts mode-specific routes before its fallback: replay owns offline mutations, while live browser archive handlers expose reads. The Lua reader owns live votes and preferences. The design catalogue selects supported renderer families; Plan 3 separates configurable design IDs from those fixed families and versions any stored-format change.
 
@@ -113,6 +117,6 @@ Replay and live sessions supply evidence and state to the same editorial check a
 
 Use Vitest for behavior and contract checks, including browser-driven checks launched from Vitest where needed. Each plan names its focused commands and manual acceptance cases. Run root `npm run build:all` and `npm run test:all` at integration gates. Game checks require the appropriate mod deployment and, only when DLL code changes, the documented DLL build/deployment command.
 
-Keep Vox Agents tests under `tests/mock/newspaper/`, grouped by the same responsibilities as the implementation, and MCP newspaper tests under `tests/newspaper/`. When implementing moves, update imports, HTML entry points, mod registration, generated fixture destinations and packaging together. Update the affected component's `AGENTS.md` and the corresponding [newspaper developer guide](../../developers/vox-agents/newspaper/overview.md) in that code change. These plans describe the target structure until those changes land.
+Keep Vox Agents tests under `tests/mock/newspaper/`, grouped by the same responsibilities as the implementation, and MCP newspaper tests under `tests/newspaper/`. When implementing moves, update imports, HTML entry points, mod registration, generated fixture destinations and packaging together. Update the affected component's `AGENTS.md` and the corresponding [newspaper developer guide](../../developers/vox-agents/newspaper/overview.md) in that code change. Future stages describe target structure until their changes land.
 
 Deferred work includes graphs, generated illustrations, audio/video, immediate special editions, strategist publications, propaganda mechanics, and a new embedded browser inside Civ V. Richer art and additional designs should fit the same renderer after the initial footprint has been measured.

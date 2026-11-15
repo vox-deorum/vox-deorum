@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { createNewspaperBundle, newspaperTestProfile as profile, newspaperTestRegionWidth as regionWidth } from "../../../helpers/newspaper-fixtures.js";
 import { validateRenderBundle } from "../../../../src/newspaper/renderer/bundle.js";
-import { newspaperRendererVersion, type RenderBundle, type RenderStrip } from "../../../../src/newspaper/renderer/types.js";
+import { newspaperRendererVersion, type RenderBundle, type RenderStrip } from "../../../../src/newspaper/contracts/render.js";
 
 /** Build one full-width strip whose pixels match the supplied CSS size. */
 function createStrip(

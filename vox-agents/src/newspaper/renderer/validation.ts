@@ -7,7 +7,7 @@ import {
   type IssueDocument,
   type NewspaperDesignId,
 } from "../contracts/issue.js";
-import type { RenderProfile } from "./types.js";
+import { renderProfileSchema, type RenderProfile } from "../contracts/render.js";
 import { getNewspaperAsset, isNewspaperAssetId } from "./assets.js";
 import { computeRegionWidth, newspaperDesignDefaults } from "./layout.js";
 
@@ -58,18 +58,6 @@ const renderableIssuePublicationSchema = issuePublicationSchema.superRefine((pub
 const renderableIssueDocumentSchema = issueDocumentSchema.safeExtend({
   publication: renderableIssuePublicationSchema,
   items: z.array(renderableIssueItemSchema).min(1),
-});
-
-/** Schema for a fixed export profile. */
-export const renderProfileSchema = z.object({
-  viewportWidth: z.number().finite().positive(),
-  viewportHeight: z.number().finite().positive(),
-  contentWidth: z.number().finite().positive(),
-  textScale: z.number().finite().positive().max(3),
-  rasterScale: z.number().finite().positive().max(4),
-  maxTextureWidth: z.number().int().positive(),
-  maxTextureHeight: z.number().int().positive(),
-  scrollbarGutter: z.number().finite().nonnegative().max(64),
 });
 
 /** Parse an issue document and enforce the renderer's asset rules. */

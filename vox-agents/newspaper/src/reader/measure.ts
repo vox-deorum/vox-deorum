@@ -5,18 +5,17 @@
  * for interaction maps, while each capture plan records the document origin of
  * its region so the Node worker can take screenshots without guessing offsets.
  */
-import { newspaperVoteIconAssets } from "../../src/newspaper/renderer/assets.js";
+import { newspaperVoteIconAssets } from "../../../src/newspaper/renderer/assets.js";
+import type { CapturePlan, CaptureStrip } from "../../../src/newspaper/renderer/bridge.js";
 import type {
   ActionGeometry,
-  CapturePlan,
-  CaptureStrip,
   Rect,
   RenderProfile,
   RenderRegion,
   TabGeometry,
   VoteSlotGeometry,
-} from "../../src/newspaper/renderer/types.js";
-import type { NewspaperDesignId } from "../../src/newspaper/contracts/issue.js";
+} from "../../../src/newspaper/contracts/render.js";
+import type { NewspaperDesignId } from "../../../src/newspaper/contracts/issue.js";
 import { getReaderAction } from "./actions.js";
 
 /** Wait for the browser to complete two layout passes. */

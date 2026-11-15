@@ -7,7 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Browser } from 'playwright-core';
 import { launchInstalledBrowser, NewspaperBrowser } from '../../../../src/newspaper/export/browser.js';
-import { startNewspaperHost, readerDirectory } from '../../../../src/newspaper/host/http.js';
+import { startNewspaperHost, readerDirectory } from '../../../../src/newspaper/export/http.js';
 import { renderIssue } from '../../../../src/newspaper/export/render.js';
 import { defaultRenderProfile } from '../../../../src/newspaper/renderer/layout.js';
 import { texconvExecutablePath, validateDds } from '../../../../src/newspaper/export/dds.js';

@@ -1,7 +1,7 @@
 /** Shared controlled newspaper bundles for validation and cache tests. */
 import type { IssueDocument } from "../../src/newspaper/contracts/issue.js";
 import { computeRegionWidth } from "../../src/newspaper/renderer/layout.js";
-import { newspaperRenderBundleSchemaVersion, newspaperRendererVersion, type RenderBundle, type RenderProfile, type RenderStrip } from "../../src/newspaper/renderer/types.js";
+import { newspaperRenderBundleSchemaVersion, newspaperRendererVersion, type RenderBundle, type RenderProfile, type RenderStrip } from "../../src/newspaper/contracts/render.js";
 
 export const newspaperTestProfile: RenderProfile = {
   viewportWidth: 1024,

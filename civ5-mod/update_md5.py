@@ -24,11 +24,11 @@ def main() -> None:
     text = modinfo.read_text(encoding="utf-8")
     original = text
     if args.newspaper_fixture:
-        fixture = args.mod_root / "UI" / "VoxDeorumNewspaperFixture.lua"
+        fixture = args.mod_root / "UI" / "Newspaper" / "VoxDeorumNewspaperFixture.lua"
         if not fixture.is_file():
             raise FileNotFoundError(fixture)
-        if "UI/VoxDeorumNewspaperFixture.lua</File>" not in text:
-            text = text.replace("</Files>", '  <File md5="" import="1">UI/VoxDeorumNewspaperFixture.lua</File>\n  </Files>')
+        if "UI/Newspaper/VoxDeorumNewspaperFixture.lua</File>" not in text:
+            text = text.replace("</Files>", '  <File md5="" import="1">UI/Newspaper/VoxDeorumNewspaperFixture.lua</File>\n  </Files>')
     updated = 0
 
     def replace_match(m: re.Match) -> str:

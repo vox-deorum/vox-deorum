@@ -13,12 +13,11 @@ import { validateRenderBundle } from '../renderer/bundle.js';
 import {
   newspaperRendererVersion,
   newspaperRenderBundleSchemaVersion,
-  type CapturePlan,
-  type NewspaperExportBridge,
   type RenderBundle,
   type RenderProfile,
   type RenderStrip,
-} from '../renderer/types.js';
+} from '../contracts/render.js';
+import type { CapturePlan, NewspaperExportBridge } from '../renderer/bridge.js';
 import type { IssueDocument } from '../contracts/issue.js';
 
 /** Type the fixed browser bridge without introducing DOM globals to the backend compiler. */

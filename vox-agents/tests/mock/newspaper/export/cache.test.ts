@@ -21,7 +21,7 @@ import {
 import {
   newspaperRenderBundleSchemaVersion,
   type RenderBundle,
-} from "../../../../src/newspaper/renderer/types.js";
+} from "../../../../src/newspaper/contracts/render.js";
 
 let root: string;
 

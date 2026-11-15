@@ -9,14 +9,14 @@ import {
   newspaperScreenLabels,
   type IssueDocument,
   type LinkTarget,
-} from "../../src/newspaper/contracts/issue.js";
-import type { ReaderAction, ReaderState } from "../../src/newspaper/contracts/reader.js";
-import { errorMessage } from "../../src/utils/errors.js";
-import { parseIssueDocument } from "../../src/newspaper/renderer/validation.js";
-import { createReaderState } from "../../src/newspaper/renderer/state.js";
-import { inlineNodesToText, paragraphsToText } from "./dom.js";
-import { mountReader, type ReaderHandle } from "./mount.js";
-import "./host.css";
+} from "../../../src/newspaper/contracts/issue.js";
+import type { ReaderAction, ReaderState } from "../../../src/newspaper/contracts/reader.js";
+import { errorMessage } from "../../../src/utils/errors.js";
+import { parseIssueDocument } from "../../../src/newspaper/renderer/validation.js";
+import { createReaderState } from "../../../src/newspaper/renderer/state.js";
+import { inlineNodesToText, paragraphsToText } from "../reader/dom.js";
+import { mountReader, type ReaderHandle } from "../reader/mount.js";
+import "./styles.css";
 
 interface FixtureEntry {
   id: string;

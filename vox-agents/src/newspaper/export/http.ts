@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { allowLoopbackCorsOrigin, requireLoopbackRequest } from '../../web/loopback.js';
 import { sendError } from '../../web/http-utils.js';
 import { errorMessage } from '../../utils/errors.js';
-import { NewspaperBrowserUnavailableError } from '../export/browser.js';
+import { NewspaperBrowserUnavailableError } from './browser.js';
 
 export const readerDirectory = fileURLToPath(new URL('../../../dist-newspaper/', import.meta.url));
 
@@ -13,11 +13,13 @@ export interface NewspaperHostOptions {
   directory?: string;
   fixtureDirectory?: string;
   exportIssue?: (body: unknown) => Promise<unknown>;
+  mountApplicationRoutes?: (app: Express) => void;
 }
 
 /** Mount reader routes before a containing application's SPA fallback. */
 export function mountNewspaperRoutes(app: Express, options: NewspaperHostOptions = {}): void {
   app.use(['/newspaper', '/api/newspaper'], requireLoopbackRequest);
+  options.mountApplicationRoutes?.(app);
   if (options.fixtureDirectory) {
     app.use('/newspaper/fixtures', express.static(options.fixtureDirectory));
   }
@@ -40,6 +42,7 @@ export function mountNewspaperRoutes(app: Express, options: NewspaperHostOptions
 /** Start an isolated host without importing dashboard, MCP, or strategist startup. */
 export async function startNewspaperHost(options: NewspaperHostOptions & { port?: number } = {}) {
   const app = express();
+  app.use(requireLoopbackRequest);
   app.use(cors({ origin: allowLoopbackCorsOrigin }));
   mountNewspaperRoutes(app, options);
   const server = app.listen(options.port ?? 0, '127.0.0.1');

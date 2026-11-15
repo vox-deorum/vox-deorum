@@ -2,7 +2,7 @@
  * Browser host around the shared newspaper reader.
  *
  * The host supplies fixture controls and an inspector. Publication styles live
- * in reader.css and never depend on these host rules.
+ * in ../reader/reader.css and never depend on these host rules.
  */
 
 body {

@@ -1,6 +1,6 @@
 /** Resolve the texture files shared by disk caches and Lua fixtures. */
 import path from "node:path";
-import type { RenderBundle } from "../renderer/types.js";
+import type { RenderBundle } from "../contracts/render.js";
 
 /** Enumerate generated textures and the dimensions required by their consumers. */
 export function bundleTextures(bundle: RenderBundle): Map<string, { width: number; height: number }> {

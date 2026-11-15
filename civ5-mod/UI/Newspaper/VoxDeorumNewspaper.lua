@@ -8,7 +8,7 @@
 -- The generated VoxDeorumNewspaperFixture.lua assigns one global:
 --   VoxDeorumNewspaperFixture = { issue, bundle, assets, state, cacheRoot }
 -- Field shapes are owned by vox-agents/src/newspaper/contracts/{issue,reader}.ts
--- and renderer/types.ts. This viewer reads
+-- and contracts/render.ts. This viewer reads
 -- issue.pages, issue.items, bundle.profile, bundle.header, bundle.pages,
 -- bundle.pages[].strips, bundle.pages[].actions, bundle.pages[].voteSlots,
 -- bundle.header.tabs, and state.{activePageId,scrollByPage,votes}. The assets

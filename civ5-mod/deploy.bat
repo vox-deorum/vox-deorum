@@ -69,7 +69,7 @@ for %%F in ("%SOURCE_DIR%\*.*") do (
 
 echo.
 echo ========================================
-if exist "%SOURCE_DIR%\UI\VoxDeorumNewspaperFixture.lua" (
+if exist "%SOURCE_DIR%\UI\Newspaper\VoxDeorumNewspaperFixture.lua" (
     python "%SOURCE_DIR%\update_md5.py" --mod-root "%DEST_DIR%" --newspaper-fixture
     if !ERRORLEVEL! neq 0 exit /b 1
 )

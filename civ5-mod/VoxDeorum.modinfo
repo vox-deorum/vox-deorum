@@ -45,10 +45,10 @@
     <File md5="8CCAC2C06A361B4B8B8DBC8481C1C7CB" import="1">UI/Diplomacy/VoxDeorumDiploTransport.lua</File>
     <File md5="BF571FECA7F47FB03AEBE533712B755B" import="1">UI/Diplomacy/VoxDeorumDiploPanelMock.lua</File>
     <File md5="0021CB5006F184E32DAAFBA0107A509B" import="0">UI/Diplomacy/VoxDeorumDiploPanel.xml</File>
-    <File md5="6543F7764AD242E0A0FD6B3548AE1072" import="1">UI/VoxDeorumNewspaper.lua</File>
-    <File md5="AFCBE954FE70DB38FD9C5CC06FB292F8" import="1">UI/VoxDeorumNewspaper.xml</File>
-    <File md5="5BA1794BF9F9BF2D5575BF2BFE26A16F" import="1">UI/VoxDeorumNewspaperMock.lua</File>
-    <File md5="BC063118723230458B3E10FA8C1814CD" import="1">UI/VoxDeorumNewspaperData.lua</File>
+    <File md5="4640315457DF98CAE7E011765EEF1B59" import="1">UI/Newspaper/VoxDeorumNewspaper.lua</File>
+    <File md5="AFCBE954FE70DB38FD9C5CC06FB292F8" import="1">UI/Newspaper/VoxDeorumNewspaper.xml</File>
+    <File md5="5BA1794BF9F9BF2D5575BF2BFE26A16F" import="1">UI/Newspaper/VoxDeorumNewspaperMock.lua</File>
+    <File md5="D3E92DEAA2BA6379E4D34AE107759075" import="1">UI/Newspaper/VoxDeorumNewspaperData.lua</File>
     <File md5="D808E04A81C1115BAD4CE6611A929C58" import="1">UI/Shared/VoxDeorumDealUtils.lua</File>
     <File md5="EC48B14766F3D2F6DC0EC6DA97B3808A" import="1">UI/Deals/VoxDeorumDealScreen.lua</File>
     <File md5="8681F1C34A43277397BBB7603232AF64" import="1">UI/Deals/VoxDeorumDealTransport.lua</File>
@@ -89,7 +89,7 @@
       <Name>VoxDeorumDiploPanel</Name>
       <Description>Mock-driven leader conversation panel</Description>
     </EntryPoint>
-    <EntryPoint type="InGameUIAddin" file="UI/VoxDeorumNewspaper.xml">
+    <EntryPoint type="InGameUIAddin" file="UI/Newspaper/VoxDeorumNewspaper.xml">
       <Name>VoxDeorumNewspaper</Name>
       <Description>Fixture-driven newspaper reader proof</Description>
     </EntryPoint>
