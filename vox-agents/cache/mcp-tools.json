@@ -830,12 +830,6 @@
     "inputSchema": {
       "type": "object",
       "properties": {
-        "PlayerID": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 21,
-          "description": "Receiving major civilization player ID"
-        },
         "previousCheckTurn": {
           "type": "integer",
           "minimum": -1,
@@ -869,12 +863,18 @@
             "fromTurn",
             "toTurn"
           ]
+        },
+        "PlayerID": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 21,
+          "description": "Receiving major civilization player ID"
         }
       },
       "required": [
-        "PlayerID",
         "previousCheckTurn",
-        "cutoffTurn"
+        "cutoffTurn",
+        "PlayerID"
       ],
       "$schema": "http://json-schema.org/draft-07/schema#"
     },

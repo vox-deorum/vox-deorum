@@ -7,13 +7,11 @@
   enter UIManager's popup queue, so ordinary Civ and VP popups keep working while
   the reader is closed and are not left behind a hidden modal context.
 
-  The reader owns one native window: a separate masthead/tab header, a clipped
-  native ScrollPanel for the page content, page navigation in the footer, and a
-  text detail overlay for linked articles. Render bundle images live in the
-  scroll panel; transparent hit controls are added once per action rectangle in
-  page coordinates, independent of the image strip that contains the pixels.
-  The Lua also builds a native text fallback in the same content grid when the
-  narrow texture availability check is missing or an asset cannot be verified.
+  The reader has one close button and a native ScrollPanel containing the
+  masthead, section tabs, and articles. Image strips and transparent action
+  controls share that scrolling coordinate space. A local detail overlay uses
+  the same close button to return to the newspaper. Missing textures use native
+  text and controls in the same scrolling publication.
 
   All dynamic sizes, image placement, tab underlines, and action rectangles come
   from the Lua. XML values are design baselines that the runtime overrides.
@@ -24,7 +22,7 @@
 	<!-- Lua sizes the control in CSS units and crops the texture region in raster
 	     pixels, keeping DDS block padding outside the visible strip. -->
 	<Instance Name="ImageInstance">
-		<Image ID="Image" Anchor="L,T" Offset="0,0" Size="100,100"/>
+		<Image ID="Image" Anchor="L,T" Offset="0,0" Size="100,100" Sampler="Linear" Color="255,255,255,255"/>
 	</Instance>
 
 	<!-- ===== One transparent page action hit region ===== -->
@@ -114,57 +112,41 @@
 	<Box ID="DialogDim" Hidden="1" Style="BGBlock_ClearTopBar"/>
 
 	<!-- ===== Reader window ===== -->
-	<Grid Hidden="1" Size="1000,720" ID="NewspaperGrid" Anchor="C,C" Offset="0,0" Padding="0,0" Style="Grid9DetailFive140" ConsumeMouse="1">
-		<Box Style="MenuLeftSideTreatment"/>
-		<Box Style="MenuRightSideTreatment"/>
-		<Label Style="MenuTitleCaption" TruncateWidth="700" String="" ID="TitleLabel"/>
-		<GridButton ID="CloseButton" Anchor="R,T" Offset="20,16" Size="92,28" Style="SmallButton" StateOffsetIncrement="0,0">
-			<Label Anchor="C,C" Offset="0,0" String="" Font="TwCenMT14" ColorSet="Beige_Black_Alpha" FontStyle="Shadow" ID="CloseLabel"/>
-		</GridButton>
-
-		<!-- Masthead and section tabs. The image is captured in the render bundle;
-		     the native title and tab buttons replace it in the text fallback. -->
-		<Grid ID="HeaderImage" Anchor="L,T" Offset="30,52" Size="900,96" Color="255,255,255,0" Hidden="1"/>
-		<Label ID="HeaderTitle" Anchor="L,T" Offset="30,58" WrapWidth="900" Font="TwCenMT24" ColorSet="Beige_Black_Alpha" FontStyle="Shadow" Hidden="1"/>
-		<Stack ID="HeaderTabs" Anchor="L,T" Offset="30,120" StackGrowth="Right" Padding="4" Hidden="1"/>
-		<Grid ID="HeaderOverlay" Anchor="L,T" Offset="30,52" Size="900,96" Color="255,255,255,0"/>
-
-		<!-- Page content. The Grid is the page coordinate space: image strips and
-		     action hit controls are positioned independently inside it. The extra
-		     width in the ScrollPanel holds the native scrollbar beside the page. -->
-		<ScrollPanel ID="PageScroll" Anchor="L,T" Offset="30,148" Size="930,500" Vertical="1" AutoScrollBar="1">
-			<Grid ID="PageContent" Anchor="L,T" Offset="0,0" Size="900,0"/>
-			<ScrollBar ID="PageBar" Anchor="R,C" AnchorSide="O,I" Offset="2,0" Style="VertSlider" Length="430"/>
+	<!-- Top anchoring reserves the EUI top bar and a small gap above Close. -->
+	<Grid Hidden="1" Size="1224,720" ID="NewspaperGrid" Anchor="C,T" Offset="0,40" Padding="0,0" ConsumeMouse="1">
+		<!-- Masthead, tabs, page strips, and hit controls scroll together. PageContent
+		     keeps page-local coordinates and starts immediately below the header. -->
+		<ScrollPanel ID="PageScroll" Anchor="L,T" Offset="0,32" Size="1200,688" Vertical="1" AutoScrollBar="1">
+			<Grid ID="ScrollContent" Anchor="L,T" Offset="0,0" Size="1200,0">
+				<!-- Native beige text needs an opaque backing even when only one
+				     region falls back. Rendered paper strips cover this backing. -->
+				<Box ID="PublicationBackground" Anchor="L,T" Offset="0,0" Size="1200,0" Color="30,27,22,255"/>
+				<Grid ID="HeaderImage" Anchor="L,T" Offset="0,0" Size="1200,96" Color="255,255,255,0" Hidden="1"/>
+				<Label ID="HeaderTitle" Anchor="L,T" Offset="0,2" WrapWidth="1200" Font="TwCenMT24" ColorSet="Beige_Black_Alpha" FontStyle="Shadow" Hidden="1"/>
+				<Grid ID="HeaderTabs" Anchor="L,T" Offset="0,40" Size="1200,26" Hidden="1"/>
+				<Grid ID="HeaderOverlay" Anchor="L,T" Offset="0,0" Size="1200,96" Color="255,255,255,0"/>
+				<Grid ID="PageContent" Anchor="L,T" Offset="0,96" Size="1200,0"/>
+			</Grid>
+			<ScrollBar ID="PageBar" Anchor="R,C" AnchorSide="O,I" Offset="2,0" Style="VertSlider" Length="646"/>
 			<UpButton Anchor="R,T" AnchorSide="O,I" Offset="2,0" Style="ScrollBarUp"/>
 			<DownButton Anchor="R,B" AnchorSide="O,I" Offset="2,0" Style="ScrollBarDown"/>
 		</ScrollPanel>
 
-		<!-- Status, page navigation, and the selected page title. -->
-		<Box ID="Footer" Anchor="L,B" Offset="0,0" Size="1000,64" Color="255,255,255,0">
-			<Box Anchor="L,T" Offset="30,0" Size="940,1" Color="204,170,90,150"/>
-			<Label ID="StatusLabel" Anchor="L,T" Offset="30,8" WrapWidth="600" LeadingOffset="-4" Font="TwCenMT14" ColorSet="Beige_Black_Alpha"/>
-			<GridButton ID="PrevButton" Anchor="L,B" Offset="30,8" Size="100,24" Style="SmallButton" StateOffsetIncrement="0,0">
-				<Label Anchor="C,C" Offset="0,0" String="" Font="TwCenMT14" ColorSet="Beige_Black_Alpha" FontStyle="Shadow" ID="PrevLabel"/>
-			</GridButton>
-			<Label ID="PageLabel" Anchor="C,B" Offset="0,12" Font="TwCenMT14" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
-			<GridButton ID="NextButton" Anchor="R,B" Offset="30,8" Size="100,24" Style="SmallButton" StateOffsetIncrement="0,0">
-				<Label Anchor="C,C" Offset="0,0" String="" Font="TwCenMT14" ColorSet="Beige_Black_Alpha" FontStyle="Shadow" ID="NextLabel"/>
-			</GridButton>
-		</Box>
-
-		<!-- Linked article detail. This is a local overlay, not a queued popup, so
-		     closing it returns to the same page and scroll position. -->
-		<Box ID="DetailOverlay" Hidden="1" Anchor="C,C" Offset="0,0" Size="1000,720" Color="0,0,0,230" ConsumeMouse="1">
+		<!-- Linked article detail keeps the publication's page and scroll position. -->
+		<Box ID="DetailOverlay" Hidden="1" Anchor="L,T" Offset="0,32" Size="1224,688" Color="0,0,0,230" ConsumeMouse="1">
 			<Label ID="DetailTitle" Anchor="L,T" Offset="40,24" WrapWidth="800" Font="TwCenMT20" ColorSet="Beige_Black_Alpha" FontStyle="Shadow"/>
-			<GridButton ID="DetailCloseButton" Anchor="R,T" Offset="30,20" Size="92,28" Style="SmallButton" StateOffsetIncrement="0,0">
-				<Label Anchor="C,C" Offset="0,0" String="" Font="TwCenMT14" ColorSet="Beige_Black_Alpha" FontStyle="Shadow" ID="DetailCloseLabel"/>
-			</GridButton>
-			<ScrollPanel ID="DetailScroll" Anchor="L,T" Offset="40,64" Size="920,600" Vertical="1" AutoScrollBar="1">
-				<Grid ID="DetailContent" Anchor="L,T" Offset="0,0" Size="890,0"/>
-				<ScrollBar ID="DetailBar" Anchor="R,C" AnchorSide="O,I" Offset="2,0" Style="VertSlider" Length="520"/>
+			<ScrollPanel ID="DetailScroll" Anchor="L,T" Offset="40,64" Size="1144,584" Vertical="1" AutoScrollBar="1">
+				<Grid ID="DetailContent" Anchor="L,T" Offset="0,0" Size="1114,0"/>
+				<ScrollBar ID="DetailBar" Anchor="R,C" AnchorSide="O,I" Offset="2,0" Style="VertSlider" Length="542"/>
 				<UpButton Anchor="R,T" AnchorSide="O,I" Offset="2,0" Style="ScrollBarUp"/>
 				<DownButton Anchor="R,B" AnchorSide="O,I" Offset="2,0" Style="ScrollBarDown"/>
 			</ScrollPanel>
 		</Box>
+
+		<!-- Only Close occupies permanent space outside the newspaper. -->
+		<Label ID="StatusLabel" Anchor="L,T" Offset="0,4" WrapWidth="1090" LeadingOffset="-4" Font="TwCenMT14" ColorSet="Beige_Black_Alpha"/>
+		<GridButton ID="CloseButton" Anchor="R,T" Offset="0,0" Size="92,26" Style="SmallButton" StateOffsetIncrement="0,0">
+			<Label Anchor="C,C" Offset="0,0" String="" Font="TwCenMT14" ColorSet="Beige_Black_Alpha" FontStyle="Shadow" ID="CloseLabel"/>
+		</GridButton>
 	</Grid>
 </Context>

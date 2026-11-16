@@ -181,7 +181,7 @@ end
 
 -- Index issue content and rendered pages by their publication identifiers.
 function VoxDeorumNewspaperData.IndexIssue(issue, bundle)
-	local result = { itemsById = {}, pages = {}, pageById = {}, pageIndexById = {}, renderPages = {} }
+	local result = { itemsById = {}, pages = {}, pageById = {}, renderPages = {} }
 	for _, page in ipairs(bundle.pages or {}) do
 		if type(page) == "table" and type(page.pageId) == "string" then result.renderPages[page.pageId] = page end
 	end
@@ -192,7 +192,6 @@ function VoxDeorumNewspaperData.IndexIssue(issue, bundle)
 		if type(page) == "table" and type(page.id) == "string" then
 			result.pages[#result.pages + 1] = page
 			result.pageById[page.id] = page
-			result.pageIndexById[page.id] = #result.pages
 		end
 	end
 	return result

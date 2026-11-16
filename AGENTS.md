@@ -4,15 +4,27 @@ NEVER STAGE YOUR CHANGES UNLESS EXPLICITLY ASKED! However, if a change gets exte
 
 When asking questions, come with a clear, plain description with an example. Do not assume the owner knows every detail in your context. DO NOT ASK asynchronous questions.
 
-## Use Subagents When Appropriate
+## Delegation
 
-Delegate less critical/lower-level BATCH work to subagents with less capabilities for exploring/batch editing. Always designate a model for subagents and report which model (or tool) you used in response text. Such work may involve exploring repo structure, finding references, summarizing information, or conducting less sophisticated edits in batches.
+Delegate bounded batch reading, mechanical edits and focused test runs when that helps. Give the delegate explicit scope, paths and acceptance criteria. Keep complex diagnosis and architectural decisions with a capable model that has the needed context.
 
-Use OpenCode delegation if such a skill exists, with clear, bounded instructions. If OpenCode does not work, switch back to native subagents.
+Choose the delegate's model explicitly and report the tool and model used in the response. Follow the delegation skill's instructions. OpenCode does not need to report model name.
 
-DO NOT use weak models for complex diagnosis. For independent review, use OpenCode. For exploration and simple implementation task:
-- Claude Code: always delegate to OpenCode. Use Haiku for bounded and small context work.
-- Codex: always delegate to OpenCode or GPT-6-Luna. Never use Sol.
+Delegates follow this file and the documentation guide. Give writing delegates separate files or otherwise keep one writer per file at a time.
+
+### Codex Delegation
+- Use OpenCode or GPT-6-Luna for exploration.
+- Use OpenCode for bounded work and quick checks.
+- Use GPT-6.1-Sol for complex implementation when your task needs staged execution.
+- Use Opus (Claude) for front-end design.
+- Use Opus (Claude) for independent reviews (do not give context!)
+
+### Claude Code
+- Use OpenCode or GPT-6-Luna (Codex) for exploration.
+- Use OpenCode for bounded work and quick checks.
+- Use GPT-6.1-Sol for complex implementation when your task needs staged execution.
+- Use Opus subagents for front-end design.
+- Use GPT-6.1-Sol (Codex) for independent reviews (do not give context!)
 
 ## Project Overview
 

@@ -25,16 +25,15 @@ include("VoxDeorumNewspaperData")
 
 -- Page geometry in game control units. The render bundle is in CSS pixels, so
 -- one scale factor converts every measured rectangle and image strip.
-local CONTENT_X = 30
-local HEADER_TOP = 52
+local HEADER_TOP = 32
 local PAGE_TEXT_LEFT = 16
-local PAGE_MIN_HEIGHT = 180
 local STATUS_SECONDS = 4
 local TAB_HEIGHT = 26
 local LINE_GAP = 6
 local WINDOW_MARGIN = 40
-local WINDOW_CHROME_WIDTH = 100
-local FOOTER_SPACE = 70
+local WINDOW_TOP = 40
+local WINDOW_BOTTOM = 20
+local WINDOW_CHROME_WIDTH = 24
 -- Internal reader setting. Changing zoom requires a fresh export for the new view.
 local READER_ZOOM = 1
 
@@ -46,12 +45,12 @@ local m_cacheRoot = nil
 local m_itemsById = {}
 local m_pages = {}
 local m_pageById = {}
-local m_pageIndexById = {}
 local m_renderPages = {}
 local m_activePageId = nil
 local m_windowWidth = 1000
 local m_windowHeight = 720
 local m_contentWidth = 900
+local m_headerHeight = 0
 
 -- Reader state that survives closing and reopening this context.
 local m_scrollByPage = {}
@@ -96,7 +95,7 @@ local function currentView()
 	end
 	return {
 		width = math.max(1, math.floor(screenWidth - WINDOW_MARGIN - WINDOW_CHROME_WIDTH)),
-		height = math.max(1, math.floor(screenHeight - WINDOW_MARGIN - HEADER_TOP - FOOTER_SPACE)),
+		height = math.max(1, math.floor(screenHeight - WINDOW_TOP - WINDOW_BOTTOM - HEADER_TOP)),
 		zoom = math.max(0.5, math.min(2, READER_ZOOM)),
 	}
 end
@@ -125,13 +124,6 @@ local function localizedOr(key, fallback)
 	local ok, text = pcall(Locale.ConvertTextKey, key)
 	if ok and type(text) == "string" and text ~= "" and text ~= key then return text end
 	return fallback
-end
-
--- Return a formatted localization string, or an English fallback.
-local function localizedFormat(key, fallback, ...)
-	local ok, text = pcall(Locale.ConvertTextKey, key, ...)
-	if ok and type(text) == "string" and text ~= "" and text ~= key then return text end
-	return string.format(fallback, ...)
 end
 
 -- Return the publication title, or a neutral reader label.
@@ -242,7 +234,6 @@ local function loadFixture(fixture, indexed)
 	m_itemsById = indexed.itemsById
 	m_pages = indexed.pages
 	m_pageById = indexed.pageById
-	m_pageIndexById = indexed.pageIndexById
 	m_renderPages = indexed.renderPages
 
 	if newIssue then
@@ -301,7 +292,7 @@ end
 
 -- ============================================================ status and scroll
 
--- Show one short explanation in the footer until the timer expires.
+-- Show a temporary explanation beside the close button.
 local function showStatus(text)
 	Controls.StatusLabel:SetText(text or "")
 	m_statusSeconds = STATUS_SECONDS
@@ -310,24 +301,37 @@ end
 
 -- Return the pixel distance the active page can scroll.
 local function scrollRange()
-	local contentHeight = Controls.PageContent:GetSizeY()
+	local contentHeight = Controls.ScrollContent:GetSizeY()
 	local viewportHeight = Controls.PageScroll:GetSizeY()
 	return math.max(0, contentHeight - viewportHeight)
 end
 
--- Save each display mode separately: capture offsets use CSS pixels and native offsets use control units.
+-- Save each page mode's distance and masthead size so header changes preserve the reading point.
 local function saveScroll()
 	if m_activePageId == nil then return end
 	local range = scrollRange()
 	local offsets = m_pageRendered and m_scrollByPage or m_nativeScrollByPage
-	offsets[m_activePageId] = (Controls.PageScroll:GetScrollValue() * range) / m_pageScale
+	offsets[m_activePageId] = {
+		distance = (Controls.PageScroll:GetScrollValue() * range) / m_pageScale,
+		headerHeight = m_headerHeight / m_pageScale,
+	}
 end
 
 -- Restore one page's scroll offset after its content has been rebuilt.
 local function restoreScroll(pageId)
 	if pageId == nil then return end
 	local offsets = m_pageRendered and m_scrollByPage or m_nativeScrollByPage
-	local offset = (offsets[pageId] or 0) * m_pageScale
+	local saved = offsets[pageId]
+	-- Delivered positive numeric state uses page-local CSS offsets. Local snapshots
+	-- preserve progress through the masthead or distance into the articles.
+	local offset = type(saved) == "number" and saved > 0 and m_headerHeight + saved * m_pageScale or 0
+	if type(saved) == "table" and saved.distance > 0 then
+		if saved.distance < saved.headerHeight then
+			offset = saved.distance / saved.headerHeight * m_headerHeight
+		else
+			offset = m_headerHeight + (saved.distance - saved.headerHeight) * m_pageScale
+		end
+	end
 	local range = scrollRange()
 	if range <= 0 then
 		Controls.PageScroll:SetScrollValue(0)
@@ -476,13 +480,20 @@ local function openArticle(target)
 
 	clearContainer(Controls.DetailContent, {})
 	Controls.DetailTitle:SetText(inlineToText(item.headline))
+	local contentWidth = math.max(1, m_windowWidth - 80)
+	local detailTop = math.max(64, 24 + Controls.DetailTitle:GetSizeY() + 8)
+	local detailHeight = math.max(1, Controls.DetailOverlay:GetSizeY() - detailTop - 40)
+	Controls.DetailScroll:SetOffsetVal(40, detailTop)
+	Controls.DetailScroll:SetSizeVal(contentWidth, detailHeight)
+	Controls.DetailBar:SetSizeY(math.max(1, detailHeight - 42))
+	local textWidth = math.max(1, contentWidth - 20)
 	local y = 4
 	for _, block in ipairs(item.body or {}) do
-		y = addTextBlock("TextInstance", Controls.DetailContent, 10, y, m_contentWidth - 50, inlineToText(block)) + 4
+		y = addTextBlock("TextInstance", Controls.DetailContent, 10, y, textWidth, inlineToText(block)) + 4
 	end
-	y = addTextBlock("TextInstance", Controls.DetailContent, 10, y, m_contentWidth - 50, inlineToText(item.sourceNote))
-	y = addLinkRow(Controls.DetailContent, 10, y + 4, m_contentWidth - 50, collectItemLinks(item))
-	Controls.DetailContent:SetSizeVal(m_contentWidth - 30, math.max(1, y + 10))
+	y = addTextBlock("TextInstance", Controls.DetailContent, 10, y, textWidth, inlineToText(item.sourceNote))
+	y = addLinkRow(Controls.DetailContent, 10, y + 4, textWidth, collectItemLinks(item))
+	Controls.DetailContent:SetSizeVal(contentWidth, math.max(1, y + 10))
 	Controls.DetailScroll:CalculateInternalSize()
 	Controls.DetailScroll:SetScrollValue(0)
 	Controls.DetailOverlay:SetHide(false)
@@ -581,7 +592,7 @@ end
 -- ============================================================ header rendering
 
 -- Add one already verified texture at a scaled rectangle.
-local function addImage(parent, images, path, x, y, width, height)
+local function addImage(parent, images, path, x, y, width, height, textureWidth, textureHeight)
 	if type(path) ~= "string" or width <= 0 or height <= 0 then return nil end
 	local instance = {}
 	ContextPtr:BuildInstanceForControl("ImageInstance", instance, parent)
@@ -589,6 +600,9 @@ local function addImage(parent, images, path, x, y, width, height)
 	instance.Image:SetSizeVal(width, height)
 	instance.Image:SetTexture(path)
 	images[#images + 1] = instance.Image
+	instance.Image:SetTextureOffsetVal(0, 0)
+	instance.Image:SetTextureSizeVal(textureWidth, textureHeight)
+	instance.Image:NormalizeTexture()
 	return instance.Image
 end
 
@@ -596,13 +610,9 @@ end
 local function addStrip(parent, images, strip)
 	local clip = strip.clip or {}
 	local x, y, width, height = scaledRect(clip)
-	local image = addImage(parent, images, m_assets[strip.fileName], x, y, width, height)
-	if image ~= nil then
-		-- Native CultureOverview crops partial icons with these texture-region APIs.
-		image:SetTextureOffsetVal(0, 0)
-		image:SetTextureSizeVal(clip.width * m_bundle.profile.rasterScale, clip.height * m_bundle.profile.rasterScale)
-		image:NormalizeTexture()
-	end
+	-- Native CultureOverview uses this source rectangle to crop texture padding.
+	addImage(parent, images, m_assets[strip.fileName], x, y, width, height,
+		clip.width * m_bundle.profile.rasterScale, clip.height * m_bundle.profile.rasterScale)
 end
 
 -- Add one transparent button over a scaled bundle rectangle.
@@ -648,35 +658,40 @@ end
 
 -- Build the native tabs used when the masthead image cannot be verified.
 local function renderTextHeader()
+	local headerWidth = math.max(1, m_contentWidth - PAGE_TEXT_LEFT * 2)
 	Controls.HeaderImage:SetHide(true)
 	Controls.HeaderOverlay:SetHide(true)
-	Controls.HeaderTitle:SetOffsetVal(CONTENT_X, HEADER_TOP + 2)
-	Controls.HeaderTitle:SetWrapWidth(m_contentWidth)
+	Controls.HeaderTitle:SetOffsetVal(PAGE_TEXT_LEFT, 2)
+	Controls.HeaderTitle:SetWrapWidth(headerWidth)
 	Controls.HeaderTitle:SetText(publicationTitle())
 	Controls.HeaderTitle:SetHide(false)
-	Controls.HeaderTabs:SetOffsetVal(CONTENT_X, HEADER_TOP + 40)
+	local tabsTop = math.max(40, Controls.HeaderTitle:GetSizeY() + 8)
+	Controls.HeaderTabs:SetOffsetVal(PAGE_TEXT_LEFT, tabsTop)
 	Controls.HeaderTabs:SetHide(false)
 	Controls.HeaderTabs:DestroyAllChildren()
 	m_tabUnderlines = {}
+	local x, y = 0, 0
 
 	for _, page in ipairs(m_pages) do
 		local capturedPage = page
 		local instance = {}
 		ContextPtr:BuildInstanceForControl("TabButtonInstance", instance, Controls.HeaderTabs)
 		local label = tostring(capturedPage.label or capturedPage.id or "")
-		local width = math.max(96, math.min(190, #label * 8 + 28))
+		local width = math.min(headerWidth, math.max(96, math.min(190, #label * 8 + 28)))
+		if x > 0 and x + width > headerWidth then x, y = 0, y + TAB_HEIGHT + 4 end
+		instance.Button:SetOffsetVal(x, y)
 		instance.Button:SetSizeVal(width, TAB_HEIGHT)
 		instance.Label:SetText(label)
 		instance.Label:SetTruncateWidth(width - 12)
 		instance.Underline:SetSizeVal(width, 2)
 		instance.Button:RegisterCallback(Mouse.eLClick, function() selectPage(capturedPage.id) end)
 		m_tabUnderlines[capturedPage.id] = instance.Underline
+		x = x + width + 4
 	end
 
-	Controls.HeaderTabs:CalculateSize()
-	Controls.HeaderTabs:ReprocessAnchoring()
+	Controls.HeaderTabs:SetSizeVal(headerWidth, y + TAB_HEIGHT)
 	updateTabSelection()
-	return 46 + Controls.HeaderTabs:GetSizeY() + 8
+	return tabsTop + Controls.HeaderTabs:GetSizeY() + 8
 end
 
 -- Build the masthead image, tabs, and header actions, or the native fallback.
@@ -692,17 +707,23 @@ local function renderHeader()
 	if not m_useRenderedLayout or type(header) ~= "table" or not stripsAvailable(header.strips) then
 		return renderTextHeader()
 	end
+	-- Every section needs a reachable tab in the scrolling masthead.
+	local tabPages = {}
+	for _, tab in ipairs(header.tabs or {}) do tabPages[tab.pageId] = true end
+	for _, page in ipairs(m_pages) do
+		if not tabPages[page.id] then return renderTextHeader() end
+	end
 
 	local width = scaledEdge(header.width)
 	local height = scaledEdge(header.height)
-	Controls.HeaderImage:SetOffsetVal(CONTENT_X, HEADER_TOP)
+	Controls.HeaderImage:SetOffsetVal(0, 0)
 	Controls.HeaderImage:SetSizeVal(width, height)
 	Controls.HeaderImage:SetHide(false)
 	for _, strip in ipairs(header.strips) do addStrip(Controls.HeaderImage, m_headerImages, strip) end
 
 	Controls.HeaderTitle:SetHide(true)
 	Controls.HeaderTabs:SetHide(true)
-	Controls.HeaderOverlay:SetOffsetVal(CONTENT_X, HEADER_TOP)
+	Controls.HeaderOverlay:SetOffsetVal(0, 0)
 	Controls.HeaderOverlay:SetSizeVal(width, height)
 	Controls.HeaderOverlay:SetHide(false)
 
@@ -737,8 +758,8 @@ local function addVoteIcon(slot)
 	local iconSize = scaledEdge(20)
 	local iconX = scaledEdge(rect.x + (rect.width - 20) / 2)
 	local iconY = scaledEdge(rect.y + (rect.height - 20) / 2)
-	local neutral = addImage(Controls.PageContent, m_pageImages, neutralPath, iconX, iconY, iconSize, iconSize)
-	local selected = addImage(Controls.PageContent, m_pageImages, selectedPath, iconX, iconY, iconSize, iconSize)
+	local neutral = addImage(Controls.PageContent, m_pageImages, neutralPath, iconX, iconY, iconSize, iconSize, pixelSize, pixelSize)
+	local selected = addImage(Controls.PageContent, m_pageImages, selectedPath, iconX, iconY, iconSize, iconSize, pixelSize, pixelSize)
 	if neutral == nil or selected == nil then return end
 	local voted = getVote(itemId) == value
 	neutral:SetHide(voted)
@@ -869,27 +890,19 @@ local function renderPage()
 		m_pageRendered = false
 		renderTextPage(page)
 	end
+	Controls.PageContent:SetOffsetVal(0, m_headerHeight)
+	local contentHeight = m_headerHeight + Controls.PageContent:GetSizeY()
+	Controls.PublicationBackground:SetSizeVal(m_contentWidth, contentHeight)
+	Controls.ScrollContent:SetSizeVal(m_contentWidth, contentHeight)
 	Controls.PageScroll:CalculateInternalSize()
 	m_scrollRestoreFrames = 2
 end
 
--- Update footer page buttons and the page caption.
-local function updateFooter()
-	local index = m_pageIndexById[m_activePageId] or 1
-	local page = activePage()
-	local label = page ~= nil and (page.label or page.id) or ""
-	Controls.PrevButton:SetHide(index <= 1)
-	Controls.NextButton:SetHide(index >= #m_pages)
-	Controls.PageLabel:SetText(localizedFormat("TXT_KEY_VD_NEWSPAPER_PAGE_OF", "Page %d of %d: %s", index, #m_pages, label))
-end
-
--- Position and size the scroll viewport below the rendered header.
-local function layoutPageScroll(headerHeight)
-	local pageTop = HEADER_TOP + headerHeight
-	local pageBottom = m_windowHeight - FOOTER_SPACE
-	local viewportHeight = math.max(1, pageBottom - pageTop)
-	Controls.PageScroll:SetOffsetVal(CONTENT_X, pageTop)
-	Controls.PageScroll:SetSizeVal(m_contentWidth + 30, viewportHeight)
+-- Give the complete publication the space below the close button.
+local function layoutPageScroll()
+	local viewportHeight = m_layoutView.height
+	Controls.PageScroll:SetOffsetVal(0, HEADER_TOP)
+	Controls.PageScroll:SetSizeVal(m_contentWidth, viewportHeight)
 	Controls.PageBar:SetSizeY(math.max(60, viewportHeight - 42))
 end
 
@@ -900,28 +913,28 @@ local function fitWindow()
 	local profile = m_bundle.profile
 	m_useRenderedLayout = VoxDeorumNewspaperData.ProfileMatchesView(profile, m_bundleView)
 		and VoxDeorumNewspaperData.ProfileMatchesView(profile, view)
-		and math.floor(m_bundle.header.height * profile.displayScale + 0.5) + PAGE_MIN_HEIGHT <= view.height
 	m_scale = m_useRenderedLayout and profile.displayScale or 1
 	-- Text fallback uses its own native geometry and never rescales a stale capture.
 	m_contentWidth = m_useRenderedLayout and scaledEdge(profile.paperWidth) or math.floor(math.min(view.width, 1200))
 	m_windowWidth = m_contentWidth + WINDOW_CHROME_WIDTH
-	m_windowHeight = view.height + HEADER_TOP + FOOTER_SPACE
+	m_windowHeight = view.height + HEADER_TOP
 	Controls.NewspaperGrid:SetSizeVal(m_windowWidth, m_windowHeight)
-	Controls.Footer:SetSizeX(m_windowWidth)
-	Controls.DetailOverlay:SetSizeVal(m_windowWidth, m_windowHeight)
-	Controls.DetailScroll:SetSizeVal(m_windowWidth - 80, math.max(1, m_windowHeight - 104))
-	Controls.DetailBar:SetSizeY(math.max(1, m_windowHeight - 146))
+	Controls.NewspaperGrid:SetOffsetVal(0, WINDOW_TOP)
+	Controls.StatusLabel:SetWrapWidth(math.max(1, m_contentWidth - 110))
+	Controls.DetailOverlay:SetOffsetVal(0, HEADER_TOP)
+	Controls.DetailOverlay:SetSizeVal(m_windowWidth, view.height)
+	Controls.DetailTitle:SetWrapWidth(math.max(1, m_windowWidth - 80))
+	Controls.DetailScroll:SetSizeVal(m_windowWidth - 80, math.max(1, view.height - 104))
+	Controls.DetailBar:SetSizeY(math.max(1, view.height - 146))
 end
 
--- Rebuild the header, page, footer, and pending scroll from the fixture.
+-- Rebuild the complete scrolling publication from the fixture.
 local function renderReader()
 	fitWindow()
-	local headerHeight = renderHeader()
-	layoutPageScroll(headerHeight)
+	m_headerHeight = renderHeader()
+	layoutPageScroll()
 	renderPage()
-	updateFooter()
 	updateTabSelection()
-	Controls.TitleLabel:SetText(publicationTitle())
 end
 
 -- ============================================================ page navigation
@@ -933,21 +946,8 @@ selectPage = function(pageId)
 	saveScroll()
 	m_activePageId = pageId
 	renderPage()
-	updateFooter()
 	updateTabSelection()
 	restoreScroll(pageId)
-end
-
--- Move to the previous page when one exists.
-local function previousPage()
-	local index = m_pageIndexById[m_activePageId] or 1
-	if index > 1 then selectPage(m_pages[index - 1].id) end
-end
-
--- Move to the next page when one exists.
-local function nextPage()
-	local index = m_pageIndexById[m_activePageId] or 1
-	if index < #m_pages then selectPage(m_pages[index + 1].id) end
 end
 
 -- ============================================================ show, hide, update
@@ -1004,7 +1004,7 @@ local function openReader(fixture, bundleView)
 		issue = m_issue, bundle = m_bundle, assets = m_assets, cacheRoot = m_cacheRoot,
 		bundleView = m_bundleView,
 		indexed = { itemsById = m_itemsById, pages = m_pages, pageById = m_pageById,
-			pageIndexById = m_pageIndexById, renderPages = m_renderPages },
+			renderPages = m_renderPages },
 		activePageId = m_activePageId, scrollByPage = m_scrollByPage, votes = m_votes, open = m_readerOpen,
 		nativeScrollByPage = m_nativeScrollByPage,
 	}
@@ -1034,7 +1034,7 @@ local function openReader(fixture, bundleView)
 	m_issue, m_bundle, m_assets, m_cacheRoot = previous.issue, previous.bundle, previous.assets, previous.cacheRoot
 	m_bundleView = previous.bundleView
 	m_itemsById, m_pages, m_pageById = previous.indexed.itemsById, previous.indexed.pages, previous.indexed.pageById
-	m_pageIndexById, m_renderPages = previous.indexed.pageIndexById, previous.indexed.renderPages
+	m_renderPages = previous.indexed.renderPages
 	m_activePageId, m_scrollByPage, m_votes = previous.activePageId, previous.scrollByPage, previous.votes
 	m_nativeScrollByPage = previous.nativeScrollByPage
 	m_textureChecks = {}
@@ -1068,6 +1068,7 @@ onUpdate = function(fDTime)
 		saveScroll()
 		-- Native layout failures must close the partial controls while preserving the cached publication.
 		local rendered = pcall(function()
+			if m_detailOpen then closeArticle() end
 			renderReader()
 			restoreScroll(m_activePageId)
 		end)
@@ -1181,14 +1182,11 @@ end
 
 -- ============================================================ wiring
 
-Controls.CloseButton:RegisterCallback(Mouse.eLClick, closeReader)
-Controls.DetailCloseButton:RegisterCallback(Mouse.eLClick, closeArticle)
-Controls.PrevButton:RegisterCallback(Mouse.eLClick, previousPage)
-Controls.NextButton:RegisterCallback(Mouse.eLClick, nextPage)
+-- The single close button returns from article detail before closing the newspaper.
+Controls.CloseButton:RegisterCallback(Mouse.eLClick, function()
+	if m_detailOpen then closeArticle() else closeReader() end
+end)
 Controls.CloseLabel:SetText(localizedOr("TXT_KEY_VD_NEWSPAPER_CLOSE", "Close"))
-Controls.DetailCloseLabel:SetText(localizedOr("TXT_KEY_VD_NEWSPAPER_CLOSE", "Close"))
-Controls.PrevLabel:SetText(localizedOr("TXT_KEY_VD_NEWSPAPER_PREVIOUS", "Previous"))
-Controls.NextLabel:SetText(localizedOr("TXT_KEY_VD_NEWSPAPER_NEXT", "Next"))
 
 if LuaEvents ~= nil and LuaEvents.VoxDeorumNewspaperOpen ~= nil then
 	LuaEvents.VoxDeorumNewspaperOpen.Add(openReader)
