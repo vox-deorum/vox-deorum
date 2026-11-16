@@ -8,7 +8,7 @@ Modules under `vox-agents/src/newspaper/editorial/` separate configuration, dete
 
 MCP owns evidence schemas and reporting policy. Detectors use the projected observations and their original source references. Recorded identity metadata resolves city owners and team IDs; it must not supply hidden measurements or reveal unmet civilizations. A player ID is not assumed to equal its team ID.
 
-`contracts/publication.ts` defines the versioned checkpoint for series state, preferences, published-item evidence records, and current votes. The session scopes it to a campaign, branch, and receiver. Decisions use a separate schema and are stored beside completed checks and immutable issues. Loading an original checkpoint upgrades its memory and discards duplicate inline decision copies; the separately stored audit records remain available. These offline contracts do not establish the live save representation; the save-capacity proof remains pending in [Plan 5](../../../plans/newspaper/implementation/05-live-integration.md).
+`contracts/publication.ts` defines the versioned checkpoint for series state, preferences, published-item evidence records, and current votes. The session scopes it to a campaign, branch, and receiver. Decisions use a separate schema and are stored beside completed checks and immutable issues. A checkpoint must use schema 2; an older checkpoint fails validation, so regenerate that local run. These offline contracts do not establish the live save representation; the save-capacity proof remains pending in [Plan 5](../../../plans/newspaper/implementation/05-live-integration.md).
 
 ## Catalogue and eligibility
 

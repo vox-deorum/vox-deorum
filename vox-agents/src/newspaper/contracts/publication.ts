@@ -1,7 +1,6 @@
 /** Versioned offline editorial memory and audit records, free of runtime imports. */
 import { z } from 'zod';
 import { newspaperSourceReferenceSchema } from '../../../../mcp-server/dist/newspaper/evidence.js';
-import { isRecord } from '../../utils/guards.js';
 
 /** Receiver choices, resolved over catalogue defaults when the run is created. */
 export const publicationPreferencesSchema = z.object({
@@ -49,22 +48,13 @@ export const seriesStateSchema = z.object({
 });
 export type SeriesState = z.infer<typeof seriesStateSchema>;
 /** Current offline memory excludes decisions, which are stored with each completed check. */
-const currentPublicationStateSchema = z.object({
+export const publicationStateSchema = z.object({
   schemaVersion: z.literal(2), lastCheckTurn: z.number().int().nullable(),
   issues: z.array(publishedIssueRecordSchema), series: z.record(z.string(), seriesStateSchema),
   votes: z.record(z.string(), z.union([z.literal(-1), z.literal(0), z.literal(1)])),
   preferences: publicationPreferencesSchema, previousDesignId: z.string().nullable(),
 });
 
-/** Upgrade legacy checkpoints by dropping their duplicate accumulated decision history. */
-function migratePublicationState(input: unknown): unknown {
-  if (!isRecord(input) || input.schemaVersion !== 1) return input;
-  const { decisions: _discardedDecisions, ...state } = input;
-  return { ...state, schemaVersion: 2 };
-}
-
-/** Parse current memory or explicitly migrate the original offline checkpoint format. */
-export const publicationStateSchema = z.preprocess(migratePublicationState, currentPublicationStateSchema);
 export type PublicationState = z.infer<typeof publicationStateSchema>;
 
 /** Create an empty receiver checkpoint with resolved publication preferences. */

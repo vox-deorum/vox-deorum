@@ -26,7 +26,6 @@ import {
   validateRenderProfileForDesign,
 } from "../../src/newspaper/renderer/validation.js";
 import { createReaderState } from "../../src/newspaper/renderer/state.js";
-import { getPublicationRendererFamily } from "../../src/newspaper/renderer/presentation.js";
 import { mountReader, type ReaderHandle } from "./reader/mount.js";
 import {
   collectActionGeometry,
@@ -72,7 +71,7 @@ function mountedState(): {
 async function mount(issueInput: unknown, profileInput: unknown): Promise<ExportMountResult> {
   const nextIssue = parseIssueDocument(issueInput);
   const nextProfile = parseRenderProfile(profileInput);
-  validateRenderProfileForDesign(nextProfile, getPublicationRendererFamily(nextIssue.publication));
+  validateRenderProfileForDesign(nextProfile, nextIssue.publication.presentation.rendererFamily);
 
   dispose();
 
@@ -92,7 +91,7 @@ async function mount(issueInput: unknown, profileInput: unknown): Promise<Export
 
   issue = nextIssue;
   profile = nextProfile;
-  layout = computeRenderLayout(getPublicationRendererFamily(nextIssue.publication), nextProfile);
+  layout = computeRenderLayout(nextIssue.publication.presentation.rendererFamily, nextProfile);
   handle = nextHandle;
   document.documentElement.dataset.newspaperExport = "ready";
 
@@ -101,7 +100,7 @@ async function mount(issueInput: unknown, profileInput: unknown): Promise<Export
     issueId: nextIssue.issueId,
     campaignId: nextIssue.campaignId,
     timelineId: nextIssue.timelineId,
-    designId: getPublicationRendererFamily(nextIssue.publication),
+    designId: nextIssue.publication.presentation.rendererFamily,
     designVersion: nextIssue.publication.designVersion,
     pageIds: nextIssue.pages.map((page) => page.id),
     layout,
@@ -172,14 +171,14 @@ async function measurePage(): Promise<PageMeasurement> {
     capture: measureRegion(pageElement, current.renderProfile),
     contentHeight,
     actions: collectActionGeometry(pageElement, region),
-    voteSlots: collectVoteSlots(pageElement, region, getPublicationRendererFamily(current.issueDocument.publication)),
+    voteSlots: collectVoteSlots(pageElement, region, current.issueDocument.publication.presentation.rendererFamily),
   };
 }
 
 /** Capture one registered vote icon against the mounted design's paper color. */
 async function mountVoteIcon(assetId: string): Promise<void> {
   const current = mountedState();
-  const design = getPublicationRendererFamily(current.issueDocument.publication);
+  const design = current.issueDocument.publication.presentation.rendererFamily;
   const icons = newspaperVoteIconAssets[design];
   const asset = getNewspaperAsset(assetId);
   if (

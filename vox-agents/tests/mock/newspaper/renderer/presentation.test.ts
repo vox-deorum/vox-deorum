@@ -23,7 +23,6 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('stored newspaper
   it('should apply saved presentation colors, fonts and ornaments through a configured design identity', async context => {
     if (!browser) { context.skip(unavailable); return; }
     const issue = createNewspaperIssue();
-    issue.schemaVersion = 2;
     issue.publication.designId = 'early-account';
     issue.publication.presentation = {
       schemaVersion: 1, rendererFamily: 'victorian',
@@ -75,10 +74,9 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('stored newspaper
     }
   }, 60_000);
 
-  it('should preserve the family masthead when an older snapshot only selects a display font', async context => {
+  it('should preserve the family masthead when the snapshot only selects a display font', async context => {
     if (!browser) { context.skip(unavailable); return; }
     const issue = createNewspaperIssue();
-    issue.schemaVersion = 2;
     issue.publication.presentation = { schemaVersion: 1, rendererFamily: 'victorian', tokens: { headingFontAssetId: 'font-bodoni-moda-700' } };
     const page = await browser.newPage();
     try {
@@ -97,7 +95,6 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('stored newspaper
   it('should keep a readable fallback and release instance faces when registered font files cannot load', async context => {
     if (!browser) { context.skip(unavailable); return; }
     const issue = createNewspaperIssue();
-    issue.schemaVersion = 2;
     issue.publication.presentation = { schemaVersion: 1, rendererFamily: 'modern', tokens: { bodyFontAssetId: 'font-inter-400', headingFontAssetId: 'font-inter-800' } };
     const page = await browser.newPage();
     const errors: string[] = [];

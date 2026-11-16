@@ -9,7 +9,7 @@ import { ReplaySession } from '../../../../src/newspaper/replay/session.js';
 import { replayEvidenceResponseSchema, replayStateSchema } from '../../../../src/newspaper/contracts/replay.js';
 import { createReplayRecording, replaySettings as sourceSettings } from '../../../helpers/newspaper-replay.js';
 
-/** Keep legacy evidence-only lifecycle checks independent of the publication output store. */
+/** Keep evidence-only lifecycle checks independent of the publication output store. */
 function replaySettings(databasePath: string) { return { ...sourceSettings(databasePath), publicationEnabled: false }; }
 
 describe('replay HTTP routes', () => {

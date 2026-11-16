@@ -1,9 +1,7 @@
 /** Browser-safe render profiles, geometry, bundle contracts, and their structural schemas. */
 import { z } from "zod";
-import {
-  newspaperDesignIds,
-  newspaperLayoutVariants,
-} from "./issue.js";
+import { newspaperLayoutVariants } from "./issue.js";
+import { rendererFamilySchema } from "./design.js";
 import { readerActionSchema } from "./reader.js";
 
 /** Version of the exported render bundle shape. */
@@ -170,7 +168,7 @@ export const renderBundleSchema = z.object({
   issueId: z.string().min(1),
   campaignId: z.string().min(1),
   timelineId: z.string().min(1),
-  designId: z.enum(newspaperDesignIds),
+  designId: rendererFamilySchema,
   designVersion: z.string().min(1),
   profile: renderProfileSchema,
   header: headerBundleSchema,

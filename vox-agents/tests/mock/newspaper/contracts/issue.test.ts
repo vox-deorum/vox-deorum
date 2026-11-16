@@ -4,15 +4,14 @@ import { createNewspaperIssue } from "../../../helpers/newspaper-fixtures.js";
 import { issueDocumentSchema } from "../../../../src/newspaper/contracts/issue.js";
 
 describe("newspaper issue contracts", () => {
-  it("should preserve legacy fixtures and require a presentation snapshot for new configured designs", () => {
-    const legacy = createNewspaperIssue();
-    expect(issueDocumentSchema.parse(legacy)).toEqual(legacy);
-    const configured = { ...legacy, schemaVersion: 2, publication: { ...legacy.publication, designId: "early-account" } };
-    expect(issueDocumentSchema.safeParse(configured).success).toBe(false);
-    const presentation = { schemaVersion: 1, rendererFamily: "victorian", tokens: { paperColor: "#f0e0c0" } };
-    expect(issueDocumentSchema.parse({ ...configured, publication: { ...configured.publication, presentation } }).publication.presentation).toEqual(presentation);
-    expect(issueDocumentSchema.safeParse({ ...configured, schemaVersion: 1 }).success).toBe(false);
-    expect(issueDocumentSchema.safeParse({ ...legacy, publication: { ...legacy.publication, presentation } }).success).toBe(false);
+  it("should require the current issue format and a stored presentation for every design", () => {
+    const issue = createNewspaperIssue();
+    issue.publication.designId = "early-account";
+    expect(issueDocumentSchema.parse(issue)).toEqual(issue);
+    const { presentation: _presentation, ...publication } = issue.publication;
+    expect(issueDocumentSchema.safeParse({ ...issue, publication }).success).toBe(false);
+    expect(issueDocumentSchema.safeParse({ ...issue, schemaVersion: 1 }).success).toBe(false);
+    expect(issueDocumentSchema.safeParse({ ...issue, schemaVersion: 99 }).success).toBe(false);
   });
 
   it("should allow sharing an item across pages but reject repeats within a page", () => {
@@ -44,10 +43,10 @@ describe("newspaper issue contracts", () => {
       assetId: "editor-image-awaiting-registration",
       altText: "Ships at a port",
     };
-    issue.publication.ornamentAssetId = "editor-ornament-awaiting-registration";
+    issue.publication.presentation.assets = { ornamentAssetId: "editor-ornament-awaiting-registration" };
     const parsed = issueDocumentSchema.parse(issue);
     expect(parsed.items[0].image).toEqual(issue.items[0].image);
-    expect(parsed.publication.ornamentAssetId).toBe(issue.publication.ornamentAssetId);
+    expect(parsed.publication.presentation.assets).toEqual(issue.publication.presentation.assets);
   });
 
   it.each([

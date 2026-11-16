@@ -7,8 +7,6 @@ dist
 /logs
 /.cache/
 .tmp/
-civ5-mod/UI/VoxDeorumNewspaperFixture.lua
-civ5-mod/UI/Newspaper/VoxDeorumNewspaperFixture.lua
 .env
 nul
 

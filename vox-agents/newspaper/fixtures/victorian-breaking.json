@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "issueId": "victorian-breaking-230",
   "campaignId": "fixture-campaign",
   "timelineId": "fixture-timeline-main",
@@ -16,7 +16,11 @@
     "title": "The Empire Chronicle",
     "designId": "victorian",
     "designVersion": "1.0.0",
-    "ornamentAssetId": "victorian-ornament"
+    "presentation": {
+      "schemaVersion": 1,
+      "rendererFamily": "victorian",
+      "assets": { "ornamentAssetId": "victorian-ornament" }
+    }
   },
   "pages": [
     {

@@ -1,5 +1,5 @@
 /** Browser export bridge, measurement, and capture types. */
-import type { NewspaperDesignId } from "../contracts/issue.js";
+import type { RendererFamily } from "../contracts/design.js";
 import type {
   ActionGeometry,
   Point,
@@ -51,7 +51,7 @@ export interface ExportMountResult {
   issueId: string;
   campaignId: string;
   timelineId: string;
-  designId: NewspaperDesignId;
+  designId: RendererFamily;
   designVersion: string;
   pageIds: string[];
   layout: RenderLayoutMetrics;

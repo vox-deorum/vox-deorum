@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "issueId": "modern-ordinary-225",
   "campaignId": "fixture-campaign",
   "timelineId": "fixture-timeline-main",
@@ -15,7 +15,11 @@
   "publication": {
     "title": "Your world.",
     "designId": "modern",
-    "designVersion": "1.0.0"
+    "designVersion": "1.0.0",
+    "presentation": {
+      "schemaVersion": 1,
+      "rendererFamily": "modern"
+    }
   },
   "pages": [
     {

@@ -20,7 +20,6 @@ import {
 import type { CapturePlan, NewspaperExportBridge } from '../renderer/bridge.js';
 import type { IssueDocument } from '../contracts/issue.js';
 import { computeRenderLayout } from '../renderer/layout.js';
-import { getPublicationRendererFamily } from '../renderer/presentation.js';
 
 /** Type the fixed browser bridge without introducing DOM globals to the backend compiler. */
 type ExportGlobal = typeof globalThis & { voxDeorumNewspaperExport: NewspaperExportBridge };
@@ -53,7 +52,7 @@ export async function renderIssue(worker: NewspaperBrowser, hostUrl: string, iss
   profileInput: RenderProfile, directory: string, format: DdsFormat = 'B8G8R8A8_UNORM'): Promise<RenderBundle> {
   const issue = parseIssueDocument(issueInput);
   const profile = parseRenderProfile(profileInput);
-  const rendererFamily = getPublicationRendererFamily(issue.publication);
+  const rendererFamily = issue.publication.presentation.rendererFamily;
   validateRenderProfileForDesign(profile, rendererFamily);
   const layout = computeRenderLayout(rendererFamily, profile);
   if (![1, 2].includes(profile.rasterScale) || profile.maxTextureWidth > 4096 || profile.maxTextureHeight > 4096

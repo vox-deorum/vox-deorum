@@ -277,8 +277,8 @@ export function mountReplayControls(
     const resumeNote = form.querySelector<HTMLElement>('[data-replay-resume]');
     if (resumeNote) resumeNote.hidden = !resuming;
     const evidenceOnly = purpose.value === 'false';
-    const legacyInterval = form.querySelector<HTMLElement>('[data-evidence-interval]');
-    if (legacyInterval) legacyInterval.hidden = !evidenceOnly;
+    const evidenceInterval = form.querySelector<HTMLElement>('[data-evidence-interval]');
+    if (evidenceInterval) evidenceInterval.hidden = !evidenceOnly;
   }
 
   /** Apply one accepted session to the form, status, and host callbacks. */

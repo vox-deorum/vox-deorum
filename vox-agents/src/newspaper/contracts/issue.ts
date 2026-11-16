@@ -5,9 +5,6 @@ import { presentationSchema } from "./design.js";
 /** Version of the stored issue document shape. */
 export const newspaperIssueSchemaVersion = 2;
 
-/** Fixed visual families supported by the shared renderer and legacy fixtures. */
-export const newspaperDesignIds = ["victorian", "modern"] as const;
-
 /** Layout variants available for a page. */
 export const newspaperLayoutVariants = ["ordinary", "breaking", "analysis"] as const;
 
@@ -35,11 +32,6 @@ export const newspaperScreenLabels: Record<NewspaperScreen, string> = {
   /** Label for the map destination. */
   map: "Map",
 };
-
-/** Schema for a fixed renderer family used by legacy fixtures. */
-export const newspaperDesignIdSchema = z.enum(newspaperDesignIds);
-/** A fixed renderer family used by legacy fixtures. */
-export type NewspaperDesignId = z.infer<typeof newspaperDesignIdSchema>;
 
 /** Schema for a page layout identifier. */
 export const newspaperLayoutVariantSchema = z.enum(newspaperLayoutVariants);
@@ -308,10 +300,8 @@ export const issuePublicationSchema = z.object({
   designId: z.string().min(1),
   /** Version of the selected visual design. */
   designVersion: z.string().min(1),
-  /** Optional decorative asset for the publication heading. */
-  ornamentAssetId: z.string().min(1).optional(),
-  /** Immutable presentation snapshot for version two publications. */
-  presentation: presentationSchema.optional(),
+  /** Immutable presentation snapshot saved with the publication. */
+  presentation: presentationSchema,
 });
 /** Publication identity and selected design. */
 export type IssuePublication = z.infer<typeof issuePublicationSchema>;
@@ -320,7 +310,7 @@ export type IssuePublication = z.infer<typeof issuePublicationSchema>;
 export const issueDocumentSchema = z
   .object({
     /** Version of the stored issue document shape. */
-    schemaVersion: z.union([z.literal(1), z.literal(newspaperIssueSchemaVersion)]),
+    schemaVersion: z.literal(newspaperIssueSchemaVersion),
     /** Identifier of this issue. */
     issueId: z.string().min(1),
     /** Campaign that produced the issue. */
@@ -340,12 +330,6 @@ export const issueDocumentSchema = z
   })
   // Require unique identifiers and valid page references.
   .superRefine((issue, ctx) => {
-    if (issue.schemaVersion === 1 && (!newspaperDesignIdSchema.safeParse(issue.publication.designId).success || issue.publication.presentation)) {
-      ctx.addIssue({ code: "custom", path: ["publication"], message: "Version one issues require an original renderer design without a presentation snapshot." });
-    }
-    if (issue.schemaVersion === 2 && !issue.publication.presentation) {
-      ctx.addIssue({ code: "custom", path: ["publication", "presentation"], message: "Version two issues require a stored presentation snapshot." });
-    }
     const itemIds = new Set<string>();
     // Collect item identifiers and reject duplicates.
     issue.items.forEach((item, index) => {

@@ -1,4 +1,4 @@
--- Vox Deorum newspaper reader for structured bridge deliveries and development fixtures.
+-- Vox Deorum newspaper reader for structured bridge deliveries.
 --
 -- Auto-binds to VoxDeorumNewspaper.xml and stays hidden until a bridge delivery
 -- or LuaEvents.VoxDeorumNewspaperOpen requests it. The context is shown directly with
@@ -6,7 +6,6 @@
 -- in UIManager's popup queue and cannot leave native popups hidden behind it.
 --
 -- Bridge delivery provides { issue, bundle, assets, state, cacheRoot }.
--- An optional hand-supplied legacy fixture can assign VoxDeorumNewspaperFixture.
 -- Field shapes are owned by vox-agents/src/newspaper/contracts/{issue,reader}.ts
 -- and contracts/render.ts. This viewer reads
 -- issue.pages, issue.items, bundle.profile, bundle.header, bundle.pages,
@@ -989,7 +988,7 @@ end
 
 -- Render and show a validated candidate, restoring the earlier publication if native UI work fails.
 local function openReader(fixture, bundleView)
-	fixture = fixture or m_lastDisplayedFixture or VoxDeorumNewspaperFixture
+	fixture = fixture or m_lastDisplayedFixture
 	if bundleView == nil then
 		bundleView = fixture == m_lastDisplayedFixture and m_lastDisplayedView or currentView()
 	end
@@ -1199,6 +1198,3 @@ if Events ~= nil then
 	if Events.LoadScreenClose ~= nil then Events.LoadScreenClose.Add(clearPendingDelivery) end
 	if Events.GameplaySetActivePlayer ~= nil then Events.GameplaySetActivePlayer.Add(onActivePlayerChanged) end
 end
-
--- Keep the optional development fixture driver as the final include.
-include("VoxDeorumNewspaperMock")

@@ -146,23 +146,34 @@ describe('offline replay output store', () => {
     } finally { competitor.close(); }
   });
 
-  it('should migrate version one checkpoints and capture their initial optimistic revision', async () => {
+  it('should retain the current schema and optimistic revision across reopening', async () => {
     const { checkpoint } = await checkFixture(false);
     store.create('source', checkpoint);
     store.close();
-    const sqlite = new Database(filename);
-    sqlite.exec('ALTER TABLE OfflineReplayRuns DROP COLUMN Revision');
-    sqlite.pragma('user_version = 1');
-    sqlite.close();
     store = new ReplayStore(filename);
     const restored = store.load('run-a', 0, 'source');
     expect(restored).toEqual(checkpoint);
     restored.publication.preferences.llmEnabled = true;
     store.save(restored);
-    const migrated = new Database(filename, { readonly: true });
-    expect(migrated.pragma('user_version', { simple: true })).toBe(2);
-    expect(migrated.prepare('SELECT Revision FROM OfflineReplayRuns').get()).toEqual({ Revision: 1 });
-    migrated.close();
+    const saved = new Database(filename, { readonly: true });
+    expect(saved.pragma('user_version', { simple: true })).toBe(2);
+    expect(saved.prepare('SELECT Revision FROM OfflineReplayRuns').get()).toEqual({ Revision: 1 });
+    saved.close();
+  });
+
+  it('should reject version one output without modifying it', async () => {
+    const { checkpoint } = await checkFixture(false);
+    const originalPath = path.join(path.dirname(recording.filename), 'version-one.sqlite');
+    const original = new ReplayStore(originalPath);
+    original.create('source', checkpoint);
+    original.close();
+    const sqlite = new Database(originalPath);
+    sqlite.exec('ALTER TABLE OfflineReplayRuns DROP COLUMN Revision');
+    sqlite.pragma('user_version = 1');
+    sqlite.close();
+    const bytes = await readFile(originalPath);
+    expect(() => new ReplayStore(originalPath)).toThrow();
+    expect(await readFile(originalPath)).toEqual(bytes);
   });
 
   it('should reject a stale duplicate commit while accepting a duplicate from the current writer', async () => {

@@ -15,7 +15,7 @@ import type {
   TabGeometry,
   VoteSlotGeometry,
 } from "../../../src/newspaper/contracts/render.js";
-import type { NewspaperDesignId } from "../../../src/newspaper/contracts/issue.js";
+import type { RendererFamily } from "../../../src/newspaper/contracts/design.js";
 import { getReaderAction } from "./actions.js";
 
 /** Wait for the browser to complete two layout passes. */
@@ -146,7 +146,7 @@ export function collectTabGeometry(headerElement: HTMLElement): TabGeometry[] {
 export function collectVoteSlots(
   pageElement: HTMLElement,
   region: RenderRegion,
-  designId: NewspaperDesignId,
+  designId: RendererFamily,
 ): VoteSlotGeometry[] {
   const regionRect = pageElement.getBoundingClientRect();
   const slots: VoteSlotGeometry[] = [];

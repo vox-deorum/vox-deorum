@@ -21,7 +21,7 @@ export const newspaperTestContentWidth = computeRenderLayout("modern", newspaper
 /** Build a small issue whose two pages share one item. */
 export function createNewspaperIssue(): IssueDocument {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     issueId: "issue-1",
     campaignId: "campaign-1",
     timelineId: "timeline-1",
@@ -31,6 +31,7 @@ export function createNewspaperIssue(): IssueDocument {
       title: "The Daily Deorum",
       designId: "modern",
       designVersion: "1",
+      presentation: { schemaVersion: 1, rendererFamily: "modern" },
     },
     pages: [
       {

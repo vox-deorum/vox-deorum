@@ -5,7 +5,7 @@ import { resolveAssetUrl } from "./dom.js";
 
 /** Apply a saved presentation and return its media readiness and cleanup. */
 export function applyPublicationPresentation(root: HTMLElement, publication: IssuePublication, assetBaseUrl: string, instancePrefix: string): { ready: Promise<void>; dispose(): void } {
-  const tokens = publication.presentation?.tokens;
+  const tokens = publication.presentation.tokens;
   const properties: string[] = [];
   const fonts: FontFace[] = [];
   /** Save each applied property for removal when the reader is disposed. */

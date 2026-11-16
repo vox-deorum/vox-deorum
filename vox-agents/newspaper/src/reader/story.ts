@@ -1,10 +1,10 @@
 /** Story DOM construction and vote presentation shared by reader and export modes. */
 import type {
   EvidenceTable,
-  NewspaperDesignId,
   IssueItem,
   IssuePage,
 } from "../../../src/newspaper/contracts/issue.js";
+import type { RendererFamily } from "../../../src/newspaper/contracts/design.js";
 import type { VoteValue } from "../../../src/newspaper/contracts/reader.js";
 import { getNewspaperAsset, newspaperVoteIconAssets } from "../../../src/newspaper/renderer/assets.js";
 import { bindReaderAction } from "./actions.js";
@@ -19,7 +19,7 @@ import {
 /** Values needed to render a story without owning reader state or lifecycle. */
 export interface StoryRenderContext {
   instancePrefix: string;
-  designId: NewspaperDesignId;
+  designId: RendererFamily;
   assetBaseUrl: string;
   vote: VoteValue;
 }
@@ -110,7 +110,7 @@ function renderStoryImage(item: IssueItem, assetBaseUrl: string): HTMLElement | 
 function renderStoryFooter(
   item: IssueItem,
   vote: VoteValue,
-  designId: NewspaperDesignId,
+  designId: RendererFamily,
   assetBaseUrl: string,
 ): HTMLElement {
   const footer = createElement("footer", "vd-story-footer");
@@ -205,7 +205,7 @@ export function applyVoteState(
   container: HTMLElement,
   itemId: string,
   value: VoteValue,
-  designId: NewspaperDesignId,
+  designId: RendererFamily,
   assetBaseUrl: string,
 ): void {
   for (const button of Array.from(

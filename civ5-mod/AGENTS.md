@@ -19,7 +19,7 @@ Never hand-edit the `md5` attributes in the modinfo - `update_md5.py` owns them.
 - `Lua/` - standalone `InGameUIAddin` scripts (no XML context)
 - `UI/Deals/`, `UI/Diplomacy/`, `UI/HumanControl/` - paired `.lua` + `.xml` contexts, transports, and mock drivers for each feature
 - `UI/Shared/` - Lua helper modules shared by the feature contexts
-- `UI/` - native `LeaderHeadRoot` overrides; `UI/Newspaper/` - newspaper context, data, and mock driver
+- `UI/` - native `LeaderHeadRoot` overrides; `UI/Newspaper/` - newspaper context and delivery data helpers
 - `Mapscripts/` - map script entry points
 - `SQL/`, `XML/` - database updates applied via `OnModActivated`
 - `Text/` - localization (`Language_en_US` rows)

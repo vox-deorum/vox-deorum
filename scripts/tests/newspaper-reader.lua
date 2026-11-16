@@ -14,7 +14,6 @@ local function runAtZoom(zoom)
 	local failLayout = false
 	local failTextWrites = {}
 	local measuredHeights = {}
-	local includes = {}
 	local screenWidth, screenHeight = 1100, 800
 	local textureSupport = false
 	local xmlFile = assert(io.open("civ5-mod/UI/Newspaper/VoxDeorumNewspaper.xml", "r"))
@@ -111,9 +110,8 @@ local function runAtZoom(zoom)
 	LuaEvents.VoxDeorumNewspaperClosed.Add(function() closedCount = closedCount + 1 end)
 	Events = { SequenceGameInitComplete = event(), LoadScreenClose = event(), GameplaySetActivePlayer = event() }
 
-	-- Include actual data adapters while retaining the supplied seat and absent optional fixture.
+	-- Include the actual data adapter while retaining the supplied seat.
 	function include(name)
-		includes[#includes + 1] = name
 		if name == "VoxDeorumNewspaperData" then dofile("civ5-mod/UI/Newspaper/VoxDeorumNewspaperData.lua") end
 	end
 
@@ -188,7 +186,6 @@ local function runAtZoom(zoom)
 	assert(loadstring(readerSource, "VoxDeorumNewspaper.lua"))()
 	assert(registrationCount == 0, "context load must never register with uninitialized DLL")
 	assert(ContextPtr.hidden, "reader starts hidden")
-	assert(includes[#includes] == "VoxDeorumNewspaperMock", "mock remains final include")
 	LuaEvents.VoxDeorumNewspaperRegister()
 	assert(registrationCount == 2, "explicit DLL registration exposes both callbacks")
 	local prepare, deliver = callbacks.VoxDeorumNewspaperPrepare, callbacks.VoxDeorumNewspaperDeliver

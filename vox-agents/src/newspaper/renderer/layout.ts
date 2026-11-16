@@ -1,5 +1,5 @@
 /** Shared layout defaults and measurements for the reader and exporter. */
-import type { NewspaperDesignId } from "../contracts/issue.js";
+import type { RendererFamily } from "../contracts/design.js";
 import { newspaperViewSchema, type NewspaperView, type RenderProfile, type RenderLayoutMetrics } from "../contracts/render.js";
 
 /** Layout defaults for one visual design. */
@@ -30,7 +30,7 @@ export const newspaperDesignDefaults = {
     paperPadding: 32,
     scrollbarGutter: 16,
   },
-} as const satisfies Record<NewspaperDesignId, NewspaperDesignLayoutDefaults>;
+} as const satisfies Record<RendererFamily, NewspaperDesignLayoutDefaults>;
 
 /** Default browser capture profile for a newspaper export. */
 export const defaultRenderProfile: RenderProfile = {
@@ -54,7 +54,7 @@ export function computeRenderProfileForView(viewInput: NewspaperView): RenderPro
 
 /** Turn a render profile and design into the metrics used by CSS and export. */
 export function computeRenderLayout(
-  designId: NewspaperDesignId,
+  designId: RendererFamily,
   profile: RenderProfile,
 ): RenderLayoutMetrics {
   const defaults = newspaperDesignDefaults[designId];

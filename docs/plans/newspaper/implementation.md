@@ -74,7 +74,7 @@ Keep contracts in the existing workspaces: MCP owns evidence and browser-safe ar
 
 | Contract | Owner | Established in |
 | --- | --- | --- |
-| `IssueDocument`, typed article links; `ReaderAction` and `ReaderState` | Vox Agents `contracts/issue.ts` and `contracts/reader.ts` | Plan 1; Plan 3 adds issue schema 2 with a saved presentation while retaining schema 1 fixtures. |
+| `IssueDocument`, typed article links; `ReaderAction` and `ReaderState` | Vox Agents `contracts/issue.ts` and `contracts/reader.ts` | Plan 3; issue schema 2 stores the presentation for generated issues and renderer fixtures. |
 | `RenderProfile`, `RenderBundle`, geometry and format versions | Vox Agents `contracts/render.ts` | Plan 1; structural schemas live with their inferred types. |
 | Browser export bridge, measurements and capture interfaces | Vox Agents `renderer/bridge.ts` | Plan 1; separate from persisted render data. |
 | Evidence requests, results and source references | MCP `newspaper/evidence.ts` | Plan 2; both query access paths use these schemas. |

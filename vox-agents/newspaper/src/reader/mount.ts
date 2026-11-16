@@ -14,7 +14,6 @@ import {
   newspaperDesignDefaults,
 } from "../../../src/newspaper/renderer/layout.js";
 import { getNewspaperAsset } from "../../../src/newspaper/renderer/assets.js";
-import { getPublicationOrnament, getPublicationRendererFamily } from "../../../src/newspaper/renderer/presentation.js";
 import { applyPublicationPresentation } from "./presentation.js";
 import { renderStory, applyVoteState } from "./story.js";
 import {
@@ -82,7 +81,7 @@ export function mountReader(
   options: ReaderMountOptions = {},
 ): ReaderHandle {
   const issue = parseIssueDocument(issueInput);
-  const designId = getPublicationRendererFamily(issue.publication);
+  const designId = issue.publication.presentation.rendererFamily;
   const mode = options.mode ?? "reader";
   root.classList.add("vd-newspaper");
   const profile = options.profile ? parseRenderProfile(options.profile) : defaultProfile(root, designId);
@@ -106,7 +105,7 @@ export function mountReader(
   const title = createElement("h1", "vd-title", issue.publication.title);
   masthead.append(title);
 
-  if (getPublicationOrnament(issue.publication)) {
+  if (issue.publication.presentation.assets?.ornamentAssetId) {
     const ornament = createOrnamentImage(issue, assetBaseUrl);
     if (ornament) masthead.append(ornament);
   }
@@ -355,7 +354,7 @@ export function mountReader(
 
 /** Create the publication ornament, hidden from assistive technology. */
 function createOrnamentImage(issue: IssueDocument, assetBaseUrl: string): HTMLElement | null {
-  const assetId = getPublicationOrnament(issue.publication);
+  const assetId = issue.publication.presentation.assets?.ornamentAssetId;
   if (!assetId) return null;
   const url = resolveAssetUrl(assetBaseUrl, assetId);
   if (!url) return null;

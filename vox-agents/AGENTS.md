@@ -60,6 +60,7 @@ Backend LLM agent framework. For UI development, see `ui/AGENTS.md`.
 - `npm run telepathist`: Telepathist console (telepathist/console.ts)
 - `npm run oracle -- -c <experiment.js>`: Oracle prompt replay (oracle/console.ts)
 - `npm run archivist -- -a <archive-path> -o <output.duckdb> [-n <limit>] [-m <model>]`: Archivist batch pipeline (archivist/console.ts)
+- `npm run newspaper -- --help`: Offline newspaper examples from a saved MCP recording, with catalogue overrides, audit JSON, and optional PNG previews. See `docs/developers/vox-agents/newspaper/replay.md` from the repository root.
 - Each workflow has a dedicated entry point with shared instrumentation (loaded via `--import`)
 
 ### Newspaper Renderer

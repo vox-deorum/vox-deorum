@@ -5,8 +5,8 @@ import {
   issueItemSchema,
   issuePublicationSchema,
   type IssueDocument,
-  type NewspaperDesignId,
 } from "../contracts/issue.js";
+import type { RendererFamily } from "../contracts/design.js";
 import { renderProfileSchema, type RenderProfile } from "../contracts/render.js";
 import { getNewspaperAsset, isNewspaperAssetId } from "./assets.js";
 import { computeRenderLayout } from "./layout.js";
@@ -36,32 +36,15 @@ const renderableIssueItemSchema = issueItemSchema.superRefine((item, ctx) => {
 /** Require publication ornaments to name registered ornament assets. */
 const renderableIssuePublicationSchema = issuePublicationSchema.superRefine((publication, ctx) => {
   const presentation = publication.presentation;
-  for (const [name, assetId] of Object.entries(presentation?.tokens ?? {})) {
+  for (const [name, assetId] of Object.entries(presentation.tokens ?? {})) {
     if (!name.endsWith("FontAssetId") || !assetId) continue;
     if (getNewspaperAsset(assetId)?.kind !== "font") {
       ctx.addIssue({ code: "custom", path: ["presentation", "tokens", name], message: `Asset "${assetId}" is not a registered font.` });
     }
   }
-  const storedOrnament = presentation?.assets?.ornamentAssetId;
+  const storedOrnament = presentation.assets?.ornamentAssetId;
   if (storedOrnament && getNewspaperAsset(storedOrnament)?.kind !== "ornament") {
     ctx.addIssue({ code: "custom", path: ["presentation", "assets", "ornamentAssetId"], message: `Asset "${storedOrnament}" is not a registered ornament.` });
-  }
-  const ornamentAssetId = publication.ornamentAssetId;
-  if (!ornamentAssetId) return;
-  if (!isNewspaperAssetId(ornamentAssetId)) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["ornamentAssetId"],
-      message: `Unknown ornament asset "${ornamentAssetId}".`,
-    });
-    return;
-  }
-  if (getNewspaperAsset(ornamentAssetId)?.kind !== "ornament") {
-    ctx.addIssue({
-      code: "custom",
-      path: ["ornamentAssetId"],
-      message: `Asset "${ornamentAssetId}" is not an ornament.`,
-    });
   }
 });
 
@@ -84,7 +67,7 @@ export function parseRenderProfile(input: unknown): RenderProfile {
 /** Reject a profile whose derived content, capture viewport, or aligned texture width cannot fit. */
 export function validateRenderProfileForDesign(
   profile: RenderProfile,
-  designId: NewspaperDesignId,
+  designId: RendererFamily,
   requireCaptureViewport = true,
 ): void {
   const { regionWidth } = computeRenderLayout(designId, profile);

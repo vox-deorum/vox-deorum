@@ -9,6 +9,7 @@
     "type-check:newspaper": "tsc --noEmit -p tsconfig.newspaper.json",
     "build:newspaper": "npm run type-check:newspaper && vite build --config newspaper/vite.config.ts && node ../scripts/utilities/package-newspaper-sample.mjs",
     "acquire:texconv": "node ../scripts/utilities/acquire-texconv.mjs",
+    "newspaper": "tsx src/newspaper/console.ts",
     "dev": "tsx watch --import ./src/instrumentation.ts src/index.ts",
     "start": "npm run build && npm run start:dist --",
     "start:dist": "node --inspect=0 --import ./dist/instrumentation.js --experimental-loader=@opentelemetry/instrumentation/hook.mjs dist/index.js",

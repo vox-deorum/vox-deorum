@@ -29,7 +29,6 @@ describe('newspaper export service', () => {
   it('should export a configurable design using its stored renderer family and content cache key', async () => {
     const { service, lookup } = createService();
     const issue = createNewspaperIssue();
-    issue.schemaVersion = 2;
     issue.publication.designId = 'early-account';
     issue.publication.presentation = { schemaVersion: 1, rendererFamily: 'modern', tokens: { paperColor: '#ffffff' } };
     await service.exportIssue(issue);

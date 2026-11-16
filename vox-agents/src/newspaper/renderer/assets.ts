@@ -1,5 +1,5 @@
 /** Browser-safe newspaper asset registry and lookups. */
-import type { NewspaperDesignId } from "../contracts/issue.js";
+import type { RendererFamily } from "../contracts/design.js";
 
 /** Kinds of asset that a registered newspaper asset can represent. */
 export type NewspaperAssetKind = "font" | "image" | "ornament" | "vote-icon";
@@ -288,7 +288,7 @@ export const newspaperVoteIconAssets = {
     },
   },
 } as const satisfies Record<
-  NewspaperDesignId,
+  RendererFamily,
   Record<"up" | "down", { neutral: NewspaperAssetId; selected: NewspaperAssetId }>
 >;
 

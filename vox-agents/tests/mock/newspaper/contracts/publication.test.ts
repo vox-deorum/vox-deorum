@@ -1,4 +1,4 @@
-/** Check the compact offline checkpoint and its explicit original-format migration. */
+/** Check the compact offline checkpoint and its supported format. */
 import { describe, expect, it } from 'vitest';
 import { createInitialPublicationState, publicationStateSchema } from '../../../../src/newspaper/contracts/publication.js';
 
@@ -10,17 +10,16 @@ describe('publication memory', () => {
     expect(publicationStateSchema.parse(state)).toEqual(state);
   });
 
-  it('should migrate original memory while retaining the cursor, votes, preferences and series', () => {
+  it('should retain current memory with the cursor, votes, preferences and series', () => {
     const state = createInitialPublicationState({ frequencyStandardTurns: 3, llmEnabled: true });
     state.lastCheckTurn = 25;
     state.previousDesignId = 'modern';
     state.votes['published-item'] = 1;
     state.series['city/3/growth'] = { importance: 20, evaluatedTurn: 25, lastPublishedTurn: 20, lastIssueId: 'old-issue', lastItemId: 'published-item' };
-    const legacy = { ...state, schemaVersion: 1, decisions: [{ configurationSnapshot: { duplicated: true } }] };
-    const migrated = publicationStateSchema.parse(legacy);
-    expect(migrated).toEqual(state);
-    expect(migrated).not.toHaveProperty('decisions');
-    expect(legacy).toHaveProperty('decisions');
-    expect(publicationStateSchema.safeParse({ ...legacy, schemaVersion: 99 }).success).toBe(false);
+    expect(publicationStateSchema.parse(state)).toEqual(state);
+  });
+
+  it.each([1, 99])('should reject unsupported memory version %s', schemaVersion => {
+    expect(publicationStateSchema.safeParse({ ...createInitialPublicationState(), schemaVersion }).success).toBe(false);
   });
 });

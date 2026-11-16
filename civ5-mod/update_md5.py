@@ -15,20 +15,13 @@ def md5_of(path: Path) -> str:
 
 
 def main() -> None:
-    """Refresh hashes and optionally register a generated fixture in a deployed mod."""
+    """Refresh manifest hashes for the selected mod directory."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--mod-root", type=Path, default=MODINFO.parent)
-    parser.add_argument("--newspaper-fixture", action="store_true")
     args = parser.parse_args()
     modinfo = args.mod_root / "VoxDeorum.modinfo"
     text = modinfo.read_text(encoding="utf-8")
     original = text
-    if args.newspaper_fixture:
-        fixture = args.mod_root / "UI" / "Newspaper" / "VoxDeorumNewspaperFixture.lua"
-        if not fixture.is_file():
-            raise FileNotFoundError(fixture)
-        if "UI/Newspaper/VoxDeorumNewspaperFixture.lua</File>" not in text:
-            text = text.replace("</Files>", '  <File md5="" import="1">UI/Newspaper/VoxDeorumNewspaperFixture.lua</File>\n  </Files>')
     updated = 0
 
     def replace_match(m: re.Match) -> str:

@@ -8,7 +8,7 @@ import { ReplaySession, ReplaySessionError } from '../../../../src/newspaper/rep
 import { createReplayRecording, replaySettings as sourceSettings } from '../../../helpers/newspaper-replay.js';
 import { deferred } from '../../../helpers/deferred.js';
 
-/** Keep legacy evidence-only lifecycle checks independent of the publication output store. */
+/** Keep evidence-only lifecycle checks independent of the publication output store. */
 function replaySettings(databasePath: string) { return { ...sourceSettings(databasePath), publicationEnabled: false }; }
 
 describe('replay session', () => {
