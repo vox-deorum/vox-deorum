@@ -55,7 +55,9 @@ Read a component's `AGENTS.md` when working in that directory. Load other docume
 
 ## Writing Style
 
-Use plain, natural language in documentation, comments, commit messages, release notes, and responses. Use lists, tables, or diagrams to improve clarity. Do not use em-dashes. Do not do defensive writing (this is X, not Y). These rules also apply to delegates. Rewrite documentation and plans for a coherent final result. Include revision history only when requested, and comparisons only when they help the reader make a decision.
+Use plain, natural language in documentation, comments, commit messages, release notes, and responses. Use correct terminology instead of invented short-hands. Use lists, tables, or diagrams to improve clarity. Do not use em-dashes. Do not do defensive writing (this is X, not Y). These rules also apply to delegates.  Keep a page easy to read whenever you change it. Shorten or restructure a page that revisions have bloated. Include revision history only when requested, and comparisons only when they help the reader make a decision.
+
+When reporting to the owner, explain plainly, give a concrete example and supply the context the report relies on. Do not assume he remembers every detail of the project.
 
 ## Code Rules
 
