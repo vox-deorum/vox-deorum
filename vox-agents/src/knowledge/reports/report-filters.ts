@@ -3,6 +3,7 @@
  * Provides elegant cherry-pick and discard operations on game data structures.
  */
 
+import { pickFields, omitFields } from '../../../../mcp-server/dist/utils/fields.js';
 import type { PlayersReport } from '../../../../mcp-server/dist/tools/knowledge/get-players.js';
 import type { CitiesReport } from '../../../../mcp-server/dist/tools/knowledge/get-cities.js';
 
@@ -17,36 +18,6 @@ type PlayerData = Exclude<PlayersReport[string], string>;
  * CitiesReport is Record<string, Record<string, CityData>>
  */
 type CityData = CitiesReport[string][string];
-
-/**
- * Generic utility to pick specific fields from an object
- */
-function pickFields<T extends Record<string, any>, K extends keyof T>(
-  obj: T,
-  fields: K[]
-): Pick<T, K> {
-  return fields.reduce((result, field) => {
-    if (field in obj) {
-      result[field] = obj[field as keyof T] as any;
-    }
-    return result;
-  }, {} as Pick<T, K>);
-}
-
-/**
- * Generic utility to omit specific fields from an object
- */
-function omitFields<T extends Record<string, any>, K extends keyof T>(
-  obj: T,
-  fields: K[]
-): Omit<T, K> {
-  return Object.entries(obj).reduce((result, [key, value]) => {
-    if (!fields.includes(key as K)) {
-      (result as any)[key] = value;
-    }
-    return result;
-  }, {} as Omit<T, K>);
-}
 
 /**
  * Preserves the _markdownConfig property from source to target

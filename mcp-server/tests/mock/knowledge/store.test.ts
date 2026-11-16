@@ -50,6 +50,32 @@ describe('public knowledge', () => {
 });
 
 describe('mutable knowledge versioning', () => {
+  it('refreshes one failed read through its callback and then retries with the same visibility', async () => {
+    const refresh = vi.fn(async () => {
+      const flags = Array(22).fill(0);
+      flags[5] = 1;
+      await store.storeMutableKnowledge('StrategyChanges', 9, { GrandStrategy: 'Culture', Rationale: 'fixture' } as any, flags);
+    });
+    expect(await store.getMutableKnowledge('StrategyChanges', 9, 5, refresh)).toMatchObject({ GrandStrategy: 'Culture' });
+    expect(refresh).toHaveBeenCalledTimes(1);
+    await store.getMutableKnowledge('StrategyChanges', 9, 5, refresh);
+    expect(refresh).toHaveBeenCalledTimes(1);
+    const unsuccessful = vi.fn(async () => {});
+    expect(await store.getMutableKnowledge('StrategyChanges', 9, 4, unsuccessful)).toBeUndefined();
+    expect(unsuccessful).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps history ordered by Version and current reads controlled by IsLatest', async () => {
+    const db = store.getDatabase();
+    await db.insertInto('StrategyChanges').values([
+      { Key: 9, Turn: 30, Version: 1, IsLatest: 1, Player0: 1, Payload: {}, Changes: [], GrandStrategy: 'first' },
+      { Key: 9, Turn: 10, Version: 7, IsLatest: 0, Player0: 1, Payload: {}, Changes: [], GrandStrategy: 'second' },
+      { Key: 9, Turn: 40, Version: 8, IsLatest: 0, Player0: 0, Payload: {}, Changes: [], GrandStrategy: 'hidden' }
+    ] as any).execute();
+    expect((await store.getMutableKnowledgeHistory('StrategyChanges', 9, 0)).map(row => row.Version)).toEqual([7, 1]);
+    expect(await store.getMutableKnowledge('StrategyChanges', 9, 0)).toMatchObject({ Version: 1, Turn: 30 });
+  });
+
   it('creates version 1 with IsLatest=1 and all fields recorded as initial changes', async () => {
     await store.storeMutableKnowledge('StrategyChanges', 1, {
       GrandStrategy: 'Conquest', Rationale: 'first',

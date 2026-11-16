@@ -10,6 +10,7 @@ import createGetEconomicStrategyTool from "./databases/get-economic-strategy.js"
 import createGetMilitaryStrategyTool from "./databases/get-military-strategy.js";
 import createGetEventsTool from "./knowledge/get-events.js";
 import createGetPlayersTool from "./knowledge/get-players.js";
+import createGetNewspaperEvidenceTool from "./knowledge/get-newspaper-evidence.js";
 import createGetOpinionsTool from "./knowledge/get-opinions.js";
 import createGetCitiesTool from "./knowledge/get-cities.js";
 import createGetGameSettingsTool from "./knowledge/get-game-settings.js";
@@ -66,6 +67,7 @@ const toolFactories = {
     readTranscript: createReadTranscriptTool,
     inspectDeal: createInspectDealTool,
     getPlayers: createGetPlayersTool,
+    getNewspaperEvidence: createGetNewspaperEvidenceTool,
     getOpinions: createGetOpinionsTool,
     getCities: createGetCitiesTool,
     summarizeUnits: createSummarizeUnitsTool,

@@ -7,6 +7,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { readFile } from 'node:fs/promises';
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { SpanStatusCode } from '@opentelemetry/api';
 import { installMockMcpClient, structuredResult, errorResult } from '../../../helpers/mock-mcp-client.js';
@@ -104,6 +105,17 @@ function exec(tool: Tool, args: Record<string, unknown>, toolContext: Record<str
 }
 
 describe('wrapMCPTool execute', () => {
+  it('should bind cached newspaper evidence requests to the acting player', async () => {
+    const catalog: Tool[] = JSON.parse(await readFile(new URL('../../../../cache/mcp-tools.json', import.meta.url), 'utf8'));
+    const tool = catalog.find(tool => tool.name === 'get-newspaper-evidence')!;
+    const wrapped = wrapMCPTool(tool, context) as any;
+    expect(wrapped.inputSchema.jsonSchema.properties).not.toHaveProperty('PlayerID');
+    expect(wrapped.inputSchema.jsonSchema.properties).not.toHaveProperty('receiverPlayerID');
+    mcp.respondWith(tool.name, structuredResult({ events: [] }));
+    await exec(tool, { PlayerID: 99, previousCheckTurn: 5, cutoffTurn: 10 }, { playerID: 3 });
+    expect(mcp.calls(tool.name)[0].args).toEqual({ PlayerID: 3, previousCheckTurn: 5, cutoffTurn: 10 });
+  });
+
   it('filters autoComplete fields from the exposed schema without mutating the MCP definition', () => {
     const tool = mcpTool({ autoComplete: ['PlayerID'] });
     const originalSchema = structuredClone(tool.inputSchema);

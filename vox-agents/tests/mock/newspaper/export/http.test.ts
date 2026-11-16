@@ -6,6 +6,7 @@ import path from 'node:path';
 import request from 'supertest';
 import { startNewspaperHost } from '../../../../src/newspaper/export/http.js';
 import { NewspaperBrowserUnavailableError } from '../../../../src/newspaper/export/browser.js';
+import { mountReplayRoutes } from '../../../../src/newspaper/replay/http.js';
 
 let fixtureRoot: string | undefined;
 afterEach(async () => {
@@ -25,6 +26,21 @@ async function createFixtureDirectories() {
 }
 
 describe('newspaper loopback host', () => {
+  it('should deliver parsed replay settings to injected handlers before the API fallback', async () => {
+    const handlers = {
+      configure: vi.fn(async (body: unknown) => body),
+      getState: vi.fn(), evidence: vi.fn(), advance: vi.fn(),
+    };
+    const host = await startNewspaperHost({
+      /** Replay owns its body parser because the host mounts it before the general parser. */
+      mountApplicationRoutes: app => mountReplayRoutes(app, () => handlers),
+    });
+    try {
+      const settings = { databasePath: 'recording.db', receiverPlayerID: 0, fromTurn: 5, toTurn: 10, publicationInterval: 2 };
+      await request(host.app).put('/api/newspaper/replay').send(settings).expect(200, settings);
+      expect(handlers.configure).toHaveBeenCalledExactlyOnceWith(settings);
+    } finally { await host.close(); }
+  });
   it('should prefer checkout fixture files over the packaged default sample', async () => {
     const directories = await createFixtureDirectories();
     await writeFile(path.join(directories.fixtureDirectory, 'victorian-ordinary.json'), JSON.stringify({ issueId: 'source-sample' }));

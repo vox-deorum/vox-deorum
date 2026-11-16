@@ -24,6 +24,8 @@ import { installMockMcpClient } from '../../helpers/mock-mcp-client.js';
 import { NewspaperApplication } from '../../../src/newspaper/application.js';
 import { createNewspaperBundle } from '../../helpers/newspaper-fixtures.js';
 import { deferred } from '../../helpers/deferred.js';
+import { ReplaySession } from '../../../src/newspaper/replay/session.js';
+import { createReplayRecording, replaySettings } from '../../helpers/newspaper-replay.js';
 
 /** A fake listening server whose address reports the port it was asked to bind. */
 function fakeServer(port: number) {
@@ -141,6 +143,38 @@ describe('web server', () => {
     await expect(startWebServer()).resolves.toBe(7654);
     expect(listen).toHaveBeenCalledWith(config.webui.port, '127.0.0.1', expect.any(Function));
     await expect(shutdownWebServer()).resolves.toBeUndefined();
+  });
+
+  it('should mount parsed replay requests on the current server session and drain replay before closing HTTP', async () => {
+    const recording = await createReplayRecording();
+    const server = fakeServer(7656);
+    const close = vi.spyOn(server, 'close');
+    const release = deferred();
+    const originalClose = ReplaySession.prototype.close;
+    vi.spyOn(ReplaySession.prototype, 'close').mockImplementation(function (this: ReplaySession) {
+      return originalClose.call(this).then(() => release.promise);
+    });
+    vi.spyOn(app, 'listen').mockImplementation(((_port: number, _host: string, callback: () => void) => {
+      queueMicrotask(callback);
+      return server;
+    }) as never);
+    let closing: Promise<void> | undefined;
+    try {
+      await startWebServer();
+      await request(app).put('/api/newspaper/replay').send(replaySettings(recording.filename)).expect(200);
+      const evidence = await request(app).post('/api/newspaper/replay/advance').expect(200);
+      expect(evidence.body.evidence.players[0].values.Gold).toBe(20);
+      closing = shutdownWebServer();
+      await request(app).post('/api/newspaper/replay/evidence').expect(503);
+      expect(close).not.toHaveBeenCalled();
+      release.resolve();
+      await closing;
+      expect(close).toHaveBeenCalledOnce();
+    } finally {
+      release.resolve();
+      await closing;
+      await recording.cleanup();
+    }
   });
 
   it('should keep the actual bound address and HTTP connection alive until newspaper work drains', async () => {

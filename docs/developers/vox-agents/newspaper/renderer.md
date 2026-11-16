@@ -1,10 +1,10 @@
 # Newspaper renderer proof
 
-The newspaper proof renders fixture issues in a browser and exports the same layout as DDS strips with typed interaction rectangles. It supports Victorian and modern designs, section tabs, article links, and reversible votes shared by every appearance of an item. Votes are local to the reader. The normal VD server hosts the reader and export service, and the Debug page can open a sample issue in the loaded game. Replay, story generation, archives, and saved-game persistence belong to later stages.
+The newspaper proof renders fixture issues in a browser and exports the same layout as DDS strips with typed interaction rectangles. It supports Victorian and modern designs, section tabs, article links, and reversible votes shared by every appearance of an item. Votes are local to the reader. The normal VD server hosts the reader, export service, and [recording replay](replay.md), and the Debug page can open a sample issue in the loaded game. Story generation, archives, and saved-game persistence belong to later stages.
 
 ## Supply a completed issue
 
-The Zod schemas in `src/newspaper/contracts/issue.ts` are the source of the issue contract, and the TypeScript types are inferred from them. An `IssueDocument` holds ready articles in their publication order. The renderer builds the reading surface from it; editorial selection and replay remain later stages.
+The Zod schemas in `src/newspaper/contracts/issue.ts` are the source of the issue contract, and the TypeScript types are inferred from them. An `IssueDocument` holds ready articles in their publication order. The renderer builds the reading surface from it; editorial selection will later turn replay evidence into publications.
 
 | Field | Content |
 | --- | --- |

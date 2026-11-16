@@ -155,6 +155,16 @@ describe('get-diplomatic-events: visibility', () => {
 });
 
 describe('get-diplomatic-events: DealMade formatting', () => {
+  it('keeps readable and duration terms without reading a live summary or adding resource redaction', async () => {
+    const readSummary = vi.spyOn(store, 'getMutableKnowledge');
+    await seedEvent('DealMade', 5, { FromPlayerID: 0, ToPlayerID: 1, FromGives: ['Gold: 5'],
+      ToGives: ['Open Borders'], TurnsRemaining: 7, TradedItems: [{ Data1: 5 }], ResourceType: 'Uranium' }, [0]);
+    const result = await client.call({ PlayerID: 0 });
+    expect(result['5'][0]).toMatchObject({ FromGives: ['Gold: 5'], ToGives: ['Open Borders'], TurnsRemaining: 7, ResourceType: 'Uranium' });
+    expect(result['5'][0]).not.toHaveProperty('TradedItems');
+    expect(readSummary).not.toHaveBeenCalled();
+  });
+
   /** Pull the single formatted markdown line out of a one-event result. */
   const onlyLine = (result: Record<string, any[]>) => Object.values(result).flat()[0] as string;
 

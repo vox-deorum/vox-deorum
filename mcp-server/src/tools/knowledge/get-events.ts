@@ -5,13 +5,12 @@
 import { knowledgeManager } from "../../server.js";
 import { ToolBase } from "../base.js";
 import * as z from "zod";
-import { isAfter, isAtTurn, isBeforeOrAt, isVisible } from "../../knowledge/expressions.js";
+import { readEvents } from "../../knowledge/history.js";
+import { redactEventResources } from "../../knowledge/helpers/event-redaction.js";
 import { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { MaxMajorCivs } from "../../knowledge/schema/base.js";
 import { parseVisibility } from "../../knowledge/helpers/visibility.js";
 import { getPlayerSummaries } from "../../knowledge/getters/player-summary.js";
-import { PlayerSummary } from "../../knowledge/schema/timed.js";
-import { Selectable } from "kysely";
 import pluralize from 'pluralize-esm'
 
 /**
@@ -106,30 +105,7 @@ class GetEventsTool extends ToolBase {
   async execute(args: z.infer<typeof this.inputSchema>): Promise<z.infer<typeof this.outputSchema>> {
     const db = knowledgeManager.getStore().getDatabase();
     
-    // Build the query
-    let query = db.selectFrom("GameEvents")
-      .selectAll();
-    // Apply turn filter
-    if (args.Turn !== undefined)
-      query = query.where(isAtTurn(args.Turn));
-    // Apply after filter
-    if (args.After !== undefined)
-      query = query.where(isAfter(args.After));
-    // Apply before filter
-    if (args.Before !== undefined)
-      query = query.where(isBeforeOrAt(args.Before));
-    // Apply after filter
-    if (args.Type !== undefined)
-      query = query.where('Type', '=', args.Type);
-    // Apply player visibility filter if provided
-    if (args.PlayerID !== undefined)
-      query = query.where(isVisible(args.PlayerID));
-    
-    // Order by ID
-    query = query.orderBy("ID");
-    
-    // Execute the query
-    const events = await query.execute();
+    const events = await readEvents(db, args);
 
     // Get the player
     const player = args.PlayerID === undefined ? null :
@@ -137,7 +113,7 @@ class GetEventsTool extends ToolBase {
     
     // Format the output
     const formattedEvents = events.map((event) => {
-      const processedPayload = postprocessPayload({ ...(event.Payload as Record<string, unknown>) }, player);
+      const processedPayload = redactEventResources(event.Payload, player);
       const toolPayload = event.Type === "DealMade"
         ? hideDealMadeTradeItems(processedPayload)
         : processedPayload;
@@ -540,28 +516,4 @@ export function cleanEventData<T>(obj: T, embedID: boolean = true): T {
   
   // Return other values as-is
   return obj;
-}
-
-/**
- * Postprocess event payload to redact unknown resources
- * @param payload - The event payload to process
- * @param player - The player context for resource visibility
- * @returns Processed payload with redacted resources
- */
-function postprocessPayload(value: Record<string, unknown>, player: Selectable<PlayerSummary> | null): Record<string, unknown> {
-  if (!player) return value;
-
-  for (const key of Object.keys(value)) {
-    const val = value[key];
-    if (!val) continue;
-    if (key === "ResourceType" || key === "Resource") {
-      if (player.Resources && Object.keys(player.Resources).indexOf(val as string) === -1) {
-        value[key] = "None";
-      }
-    } else if (typeof(val) === "object") {
-      value[key] = postprocessPayload(val as Record<string, unknown>, player);
-    }
-  }
-  
-  return value;
 }

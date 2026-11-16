@@ -83,6 +83,52 @@ body {
   min-height: 0;
 }
 
+.host-replay {
+  padding: 12px 24px;
+  background: #fff;
+  border-bottom: 1px solid #cdd7df;
+}
+
+.host-replay fieldset {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+  border: 0;
+  padding: 0;
+}
+
+.host-replay label {
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+}
+
+.host-replay input[type="number"] {
+  width: 100px;
+}
+
+.host-replay input[name="databasePath"] {
+  width: min(320px, 70vw);
+}
+
+.host-replay input, .host-replay select, .host-replay button, #evidence-view button {
+  padding: 6px;
+  font: inherit;
+}
+
+.host-replay output {
+  display: block;
+  margin-top: 8px;
+}
+
+#evidence-view button {
+  display: block;
+  margin-bottom: 6px;
+  text-align: left;
+  cursor: pointer;
+}
+
 #reader-root {
   flex: 1 1 auto;
   min-width: 0;

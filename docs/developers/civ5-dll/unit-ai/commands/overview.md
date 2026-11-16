@@ -45,6 +45,8 @@ The simulator can supply an **operational provider** through host callbacks; `Cv
 | Participant admission | After readiness, before recruits act | Gathered fight recruits or the checked Reinforce selection. A provider can retain this selection or request a candidate subset. See [admission and refusal](execution.md#participant-admission). |
 | Search flavors | After spotting and greedy air, using the final geometry | Geographic flavor blend plus command-kind row. See [search preferences](execution.md#geographic-blend). |
 
+The simulator's supplied adapter builds a separate menu from the acting player's permitted knowledge. It maps selected objectives to live battlefields and walks ranked replies through these readiness checks, stopping at the first pass. Missing mappings and failed checks are execution feedback. Native decoding keeps the queue above, including when the supplied reply delegates to native. The [simulator provider guide](../../../../../../vox-deorum-rl/docs/operations/providers.md) owns the observation boundary and recovery limits.
+
 ## Turn integration
 
 The loop's copy of `ProcessDominanceZones` keeps the surrounding native passes in order:

@@ -17,6 +17,23 @@ describe('get-events filtered original results', () => {
     await store?.close();
   });
 
+  it('redacts nested unknown resources while keeping readable deal terms and stored payloads unchanged', async () => {
+    store = await setupStore(9);
+    await store.storeMutableKnowledge('PlayerSummaries', 0, {
+      Cities: 1, Population: 1, Gold: 0, GoldPerTurn: 0, Technologies: 0, Resources: { Iron: '1 / 1' }
+    } as any);
+    const payload = { FromPlayerID: 0, ToPlayerID: 1, FromGives: ['Gold: 5'], ToGives: ['Open Borders'],
+      TurnsRemaining: 7, TradedItems: [{ ItemType: 'Gold', Data1: 5 }], Plot: { ResourceType: 'Uranium' },
+      Items: [{ Resource: 'Iron' }] };
+    await store.getDatabase().insertInto('GameEvents').values({ ID: 1, Turn: 9, Type: 'DealMade', Player0: 1, Payload: payload } as any).execute();
+    client = await connectToolClient(createGetEventsTool());
+    const result = await client.call({ PlayerID: 0, Original: true });
+    expect(result.events[0]).toMatchObject({ FromGives: ['Gold: 5'], ToGives: ['Open Borders'], TurnsRemaining: 7,
+      Plot: { ResourceType: 'None' }, Items: [{ Resource: 'Iron' }] });
+    expect(result.events[0]).not.toHaveProperty('TradedItems');
+    expect((await store.getDatabase().selectFrom('GameEvents').selectAll().executeTakeFirstOrThrow()).Payload).toEqual(payload);
+  });
+
   it('combines turn, type, ID range, and player visibility filters', async () => {
     store = await setupStore(9);
     vi.spyOn(knowledgeManager, 'getTurn').mockImplementation(() => turn);

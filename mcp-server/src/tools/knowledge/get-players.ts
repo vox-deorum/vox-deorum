@@ -18,6 +18,7 @@ import { stripMutableKnowledgeMetadata } from "../../knowledge/helpers/strip-met
 import { cleanEventData } from "./get-events.js";
 import { getPlayerOpinions } from "../../knowledge/getters/player-opinions.js";
 import { readPlayerKnowledge, readPublicKnowledgeBatch } from "../../knowledge/helpers/cached.js";
+import { projectPlayerReportFields } from "../../knowledge/helpers/report-projection.js";
 import { getPlayerVisibility } from "../../knowledge/helpers/visibility.js";
 import { PlayerInformation } from "../../knowledge/schema/public.js";
 import { Selectable } from "kysely";
@@ -199,7 +200,7 @@ class GetPlayersTool extends ToolBase {
       // Strip metadata and rename Key to PlayerID
       const cleanSummary = stripMutableKnowledgeMetadata<PlayerSummary>(summary!);
       
-      const playerData: z.infer<typeof PlayerDataSchema> = {
+      let playerData: z.infer<typeof PlayerDataSchema> = {
         // Static information
         TeamID: info.TeamID,
         Civilization: info.Civilization,
@@ -248,7 +249,7 @@ class GetPlayersTool extends ToolBase {
       const diplomatPoints = diplomatPointsRecord?.[`Player${playerID}`];
 
       // Postprocess to remove things you shouldn't see
-      if (visibility !== 2) postProcessData(playerData, playerInfos, playerSummaries, args.PlayerID, diplomatPoints);
+      if (visibility !== 2) playerData = postProcessData(playerData, playerInfos, playerSummaries, args.PlayerID, diplomatPoints);
 
       playersDict[playerID.toString()] = sortBySchema(cleanEventData(playerData, false)!, PlayerDataSchema);
     }
@@ -275,41 +276,7 @@ function postProcessData(
   // Hard-coded this impact for now
   diplomatPoints: number = 0
 ): z.infer<typeof PlayerDataSchema> {
-  // For met players (visibility 1): only show policy branch counts, not details
-  if (summary.PolicyBranches && diplomatPoints < 200) {
-    const branches = summary.PolicyBranches as Record<string, string[]>;
-    const counts: Record<string, number> = {};
-    for (const [branch, policies] of Object.entries(branches)) {
-      counts[branch] = Array.isArray(policies) ? policies.length : policies as number;
-    }
-    summary.PolicyBranches = counts as Record<string, number>;
-  }
-
-  // Hide settlement location
-  delete summary.BestSettlementLocation;
-
-  // Hide current research from non-team members
-  delete summary.CurrentResearch;
-  delete summary.NextPolicyTurns;
-
-  // Hide FaithPerTurn and SciencePerTurn from non-team members (visibility 2 only)
-  delete summary.FaithPerTurn;
-  delete summary.SciencePerTurn;
-
-  // Hide trade, spy, and diplomatic deal information
-  delete summary.OutgoingTradeRoutes;
-  delete summary.IncomingTradeRoutes;
-  delete summary.Spies;
-  if (diplomatPoints < 800) delete summary.DiplomaticDeals;
-  delete summary.DiplomatPoints;
-
-  // Hide military supply
-  delete summary.MilitarySupply;
-  if (diplomatPoints < 500) delete summary.MilitaryUnits;
-
-  // Hide golden age if not in one
-  if (summary.GoldenAge && !summary.GoldenAge.endsWith("turns remaining"))
-    delete summary.GoldenAge;
+  summary = projectPlayerReportFields(summary, 1, diplomatPoints, summary.IsMajor);
 
   // Hide war weariness from relationships
   if (summary.Relationships && summary.IsMajor)
@@ -364,18 +331,6 @@ function postProcessData(
 
   // Remove info from minor civs
   if (!summary.IsMajor) {
-    delete summary.TeamID;
-    delete summary.Era;
-    delete summary.Cities;
-    delete summary.Technologies;
-    delete summary.Gold;
-    delete summary.GoldPerTurn;
-    delete summary.Score;
-    delete summary.CulturePerTurn;
-    delete summary.FaithPerTurn;
-    delete summary.SciencePerTurn;
-    delete summary.TourismPerTurn;
-    delete summary.HappinessPercentage;
     if (viewingPlayerID !== -1 && summary.Quests)
       summary.Quests = ((summary.Quests as unknown as Record<string, string[]>)[`Player${viewingPlayerID}`]).map((Quest: string) => Quest.trim());
     else delete summary.Quests;
@@ -385,6 +340,7 @@ function postProcessData(
   return summary;
 }
 
+/** Read the available count from a stored resource display value. */
 function getAvailableResourceCount(value: string | number): number {
   if (typeof value === 'number') return value;
   const available = Number.parseInt(value.split('/')[0].trim(), 10);

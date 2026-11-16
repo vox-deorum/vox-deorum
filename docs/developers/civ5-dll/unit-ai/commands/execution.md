@@ -59,7 +59,7 @@ City fights use this damage check regardless of zone posture, native zone domina
 
 ## Participant admission
 
-**Participant admission** chooses which recruits may act, once per command after readiness. Enemy-unit city fire runs first, and its effects stand even if admission later refuses the offer.
+**Participant admission** chooses which recruits may act, once per command after readiness. Enemy-unit city fire runs first, and its effects stand even if admission later refuses the offer. The host queries admission capability once for that command. The supplied simulator adapter rebuilds candidate inputs from our units and permitted geometry; native execution validates the admitted subset and records excluded recruits. If a native target, recruitment, damage or post-air gate skips admission or flavors, the command result reports that skip as confirmed feedback.
 
 | Host or reply | Effective recruits | Effect |
 | --- | --- | --- |

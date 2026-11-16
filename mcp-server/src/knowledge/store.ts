@@ -13,6 +13,7 @@ import {
   type MutableKnowledge,
 } from './schema/base.js';
 import { setupKnowledgeDatabase } from './schema/setup.js';
+import { readMutableKnowledge, readMutableKnowledgeHistory } from "./history.js";
 import fs from 'fs/promises';
 import path from 'path';
 import { bridgeManager, gameDatabase, knowledgeManager } from '../server.js';
@@ -664,21 +665,7 @@ export class KnowledgeStore {
     playerId?: number,
     failedCallback?: () => Promise<any>,
   ): Promise<Selectable<KnowledgeDatabase[TTable]> | null> {
-    const db = this.getDatabase();
-    
-    let query = (db
-      .selectFrom(tableName)
-      .selectAll() as any)
-      .where('Key', '=', key)
-      .where('IsLatest', '=', 1);
-    
-    // Apply visibility filter if player ID provided
-    if (playerId !== undefined) {
-      const playerColumn = `Player${playerId}` as any;
-      query = query.where(playerColumn, '>', 0);
-    }
-    
-    const result = await query.executeTakeFirst();
+    const result = await readMutableKnowledge(this.getDatabase(), tableName, key, playerId);
     if (!result && failedCallback) {
       await failedCallback();
       return this.getMutableKnowledge(tableName, key, playerId);
@@ -700,22 +687,7 @@ export class KnowledgeStore {
     key: number,
     playerId?: number
   ): Promise<Selectable<KnowledgeDatabase[TTable]>[]> {
-    const db = this.getDatabase();
-    
-    let query = (db
-      .selectFrom(tableName)
-      .selectAll() as any)
-      .where('Key', '=', key)
-      .orderBy('Version', 'desc');
-    
-    // Apply visibility filter if player ID provided
-    if (playerId !== undefined) {
-      const playerColumn = `Player${playerId}` as any;
-      query = query.where(playerColumn, '>', 0);
-    }
-    
-    const results = await query.execute();
-    return results as Selectable<KnowledgeDatabase[TTable]>[];
+    return readMutableKnowledgeHistory(this.getDatabase(), tableName, key, playerId);
   }
 
   /**

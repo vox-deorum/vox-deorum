@@ -1,6 +1,6 @@
 # MCP Server Tool Reference
 
-Concise reference for all 43 tools exposed by the MCP Server. Tools are organized by category and registered in `src/tools/index.ts`.
+Concise reference for all 44 tools exposed by the MCP Server. Tools are organized by category and registered in `src/tools/index.ts`.
 
 ## Architecture
 
@@ -33,12 +33,13 @@ All extend `DatabaseQueryTool`. Common input: `Search?`: string (fuzzy match), `
 | `get-military-strategies` | AI military strategy info with production/overall flavors |
 | `get-flavors` | Flavor descriptions for AI preference tuning |
 
-## Knowledge Query Tools (13)
+## Knowledge Query Tools (14)
 
 | Tool | Description | Key Input |
 | --- | --- | --- |
 | `get-events` | Recent game events, consolidated by turn with smart grouping | `Turn?`, `Type?`, `After?`, `Before?`, `PlayerID?`, `Original?` |
 | `get-diplomatic-events` | Diplomatic events grouped by turn, including relayed reports. `OtherPlayerID` matches report sources, recipients, and subjects; formatted reports include subject names | `PlayerID`, `OtherPlayerID?`, `FromTurn?`, `ToTurn?`, `Formatted?` |
+| `get-newspaper-evidence` | Recorded national and city snapshots, optional comparison versions, and supported events with historical visibility and source references; cutoff must precede the current game turn; no live refresh | `PlayerID` (0-21), `previousCheckTurn`, `cutoffTurn`, `comparisonRange?`: `fromTurn`, `toTurn` |
 | `read-transcript` | Read the durable, append-ID-ordered conversation between two endpoints, optionally filtered by message type or speaker role, with optional older-page cursors | `PlayerAID`, `PlayerBID`, `MessageType?`, `Role?`, `BeforeID?`, `Limit?` |
 | `inspect-deal` | Inspect a draft deal against live game state: per-item and per-promise legality with reasons, advisory values, advisory promise agreeability factors, each side's tradable range, and the pair's war status (`atWar`, `warLockTurns`) | `PlayerAID`, `PlayerBID`, `ProposedDeal?` |
 | `get-players` | Player summary with scores, era, resources, military, and diplomatic opinions | `PlayerID?` (0-21) |

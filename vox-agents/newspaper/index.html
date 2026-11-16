@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light" />
-    <title>Newspaper reader fixtures | Vox Deorum</title>
+    <title>Newspaper replay and fixtures | Vox Deorum</title>
     <link rel="icon" href="data:," />
     <link rel="stylesheet" href="/assets/fonts.css" />
   </head>
@@ -13,7 +13,7 @@
       <header class="host-toolbar">
         <div class="host-brand">
           <h1>Newspaper reader</h1>
-          <p>Fixture issues for the shared Victorian and modern renderer.</p>
+          <p>Recorded evidence and fixture issues for the shared reader.</p>
         </div>
         <div class="host-controls">
           <label for="fixture-select">Fixture</label>
@@ -22,9 +22,34 @@
           <button id="reset-button" type="button">Reset reading state</button>
         </div>
       </header>
+      <form id="replay-form" class="host-replay">
+        <fieldset>
+          <legend>Recording replay</legend>
+          <label>Database path <input name="databasePath" required placeholder="F:\recordings\game.db" /></label>
+          <label>Receiver <input name="receiverPlayerID" type="number" min="0" max="21" value="0" required /></label>
+          <label>First turn <input name="fromTurn" type="number" min="0" value="125" required /></label>
+          <label>Last turn <input name="toTurn" type="number" min="0" value="175" required /></label>
+          <label>Publication interval <input name="publicationInterval" type="number" min="1" value="5" required /></label>
+          <label>Comparison duration <input name="comparisonTurns" type="number" min="0" value="10" required /></label>
+          <label>Duration units <select name="durationUnit"><option value="recordedTurns">Recorded turns</option><option value="standardTurns">Standard pace turns</option></select></label>
+          <label>Speed multiplier override <input name="speedMultiplierOverride" type="number" min="0.01" step="any" placeholder="Optional" /></label>
+          <button type="submit">Open recording</button>
+          <button type="button" data-replay="inspect" disabled>Inspect cutoff</button>
+          <button type="button" data-replay="advance" disabled>Next check</button>
+        </fieldset>
+        <output aria-live="polite">Choose a recording to begin replay.</output>
+      </form>
       <main class="host-main">
         <div id="reader-root"></div>
         <aside class="host-inspector" aria-label="Reader inspector">
+          <section>
+            <h2>Evidence</h2>
+            <div id="evidence-view"></div>
+          </section>
+          <section>
+            <h2>Source reference</h2>
+            <pre id="source-view">Select an evidence row to inspect its source and permitted values.</pre>
+          </section>
           <section>
             <h2>Last action</h2>
             <pre id="action-log">No actions yet.</pre>

@@ -25,6 +25,8 @@ import { reloadRootPrompts } from '../agents/prompts/prompt-files.js';
 import { NewspaperApplication } from '../newspaper/application.js';
 import { mountNewspaperRoutes } from '../newspaper/export/http.js';
 import { createNewspaperDebugRoutes } from './routes/newspaper.js';
+import { ReplaySession } from '../newspaper/replay/session.js';
+import { mountReplayRoutes } from '../newspaper/replay/http.js';
 
 // Get __dirname in ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -43,6 +45,7 @@ let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
 let activePort: number | null = null;
 let shutdownPromise: Promise<void> | undefined;
 let newspaper = new NewspaperApplication({ url: getWebServerUrl });
+let replay = new ReplaySession();
 
 /** Return the actual bound address while accepted browser exports are still draining. */
 export function getWebServerUrl(): string {
@@ -89,7 +92,9 @@ async function closeWebServer(): Promise<void> {
 
   const server = activeServer;
   try {
-    await newspaper.close();
+    const drained = await Promise.allSettled([replay.close(), newspaper.close()]);
+    const failure = drained.find(result => result.status === 'rejected');
+    if (failure?.status === 'rejected') throw failure.reason;
   } finally {
     sseManager.closeAll();
     try {
@@ -117,6 +122,8 @@ app.use(cors({ origin: allowLoopbackCorsOrigin }));
 // Protect every API and shutdown route from cross-origin and DNS-rebinding requests.
 app.use(['/api', '/shutdown'], requireLoopbackRequest);
 mountNewspaperRoutes(app, {
+  /** Mount replay parsing and domain handlers ahead of the newspaper API fallback. */
+  mountApplicationRoutes: app => mountReplayRoutes(app, () => replay),
   /** Keep arbitrary exports separate from game activation and expose only the public bundle. */
   exportIssue: async input => {
     const { key, bundle } = await newspaper.exportIssue(input);
@@ -257,6 +264,7 @@ export async function startWebServer(): Promise<number | null> {
   if (activeServer) return activePort;
   shutdownPromise = undefined;
   newspaper = new NewspaperApplication({ url: getWebServerUrl });
+  replay = new ReplaySession();
   // The web UI runs agents outside a session, such as telepathist chats, so an invalid root
   // prompt folder fails here instead of in the middle of a chat.
   reloadRootPrompts();

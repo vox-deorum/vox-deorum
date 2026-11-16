@@ -114,20 +114,20 @@ These parameters affect both the shared value functions and the simulator's grad
 
 ## Records
 
-`RunCommandLoop` fills the shared `SOperationalTurnRecord` when its caller supplies one. Records copy computed values without repeating danger, strength or path queries. Only the simulator's evaluated actor builds a trace; other active actors retain performance counters.
+`RunCommandLoop` fills the shared `SOperationalTurnRecord` when its caller supplies one. Records copy computed values without repeating danger, strength or path queries. Only the simulator's evaluated actor builds a trace; other active actors retain total-only timing.
 
 | Record | Contents |
 | --- | --- |
 | `offers` | Battlefield, kind, target, owner and zone, once per offer in the pass. |
 | `steps` | Opening estimate at step 0, then one step per post-command estimate. A command ends its step; the final end reason is `noReadyOffer`, `commandCap` or `stopped`. A host failure, game over or exception closes the last step as `stopped`, including post-command threat or estimate failures. |
 | Snapshot | Ready rank, state, estimate, theater multiplier, importance, pressure, contest, damage level, swing and nonzero stake terms. Each term retains value and weighted contribution. Resolved weights appear once per pass. Missing terms mean zero value and contribution. |
-| Event | Ordered check, failure-limit skip, provider refusal or terminating command, with before/after state and estimate and estimate. A refusal is one READY-to-REFUSED transition identifying the terminating command. Reduced Reinforce checks return to the current queue. |
+| Event | Ordered check, provider refusal or terminating command, with before/after state and estimate. A refusal retains its terminating command with a READY-to-REFUSED transition and adds a separate refusal event. Count commands once, including refusals, and count skips from checks ending at the failure limit. Reduced Reinforce checks return to the current queue. |
 | Closed state | Target gone, city lost, retired, failure limit, provider refusal or execution. Its scalar estimate remains the last computed value. |
 | `commands` | Step and command identity, execution priority `fEstimate`, prior failures, admission and final flavor decisions, geometry, attempts, selected units, movement, existing endangered-unit dispositions and retired offers. City-fire-only commands remain present. |
 | `checks`, `vSkipped`, `bCommandCap` | Readiness and count inputs, preserving the loop's failure accounting. |
 | Settings and turn inputs | Complete settings compared with the same build's defaults, mapped flavors, resolved weights and fixed scales. The simulator writes settings once per start, and inputs once per evaluated-player pass. |
 
-Snapshot version 2 writes every offer in the opening step, then complete replacement rows only when recorded scalars change. Reconstruct a step by replacing rows keyed by battlefield and Reinforce flag in the preceding estimate snapshot. An empty snapshot keeps that table. Events describe queue transitions within a step and do not alter this baseline. New offers add rows and closed offers remain present. `full_snapshots` in `learning/evaluation/operational_records.py` implements this rule.
+Trace version 1 writes every offer in the opening step, then complete replacement rows only when recorded scalars change. Reconstruct a step by replacing rows keyed by battlefield and Reinforce flag in the preceding estimate snapshot. An empty snapshot keeps that table. Events describe queue transitions within a step and do not alter this baseline. New offers add rows and closed offers remain present. `full_snapshots` in `learning/evaluation/operational_records.py` implements this rule.
 
 Snapshots carry no unit lists; command and check structures hold detailed diagnostics. The shared record does not define the capture schema or search-order export. See the [simulator guide](../../../../../../vox-deorum-rl/docs/operations/simulator.md#records) for rollout writing and host integration.
 
@@ -147,7 +147,7 @@ The loop's `ClockNs` host seam reads the performance counter used by `cvStopWatc
 
 DLL `attempts` counts each native search iteration, including empty results, and `searchNs` times `FindBestUnitAssignments`. Simulator `attempts` counts provider decisions, and `searchNs` sums provider decision time, matching rollout `counts.searchNs`. Compare search costs within the same host.
 
-With no record and logging off, the DLL skips all timers, including danger-read timers. Simulator active actors retain counters even when only the evaluated actor builds a trace. Rollout `operationalAllActorTotalNs` covers active slots, excluding background slots.
+With no record and logging off, the DLL skips all timers, including danger-read timers. The simulator times only the whole call for other active actors; the evaluated actor also retains stage timers and its trace. Rollout `operationalAllActorTotalNs` covers active slots, excluding background slots.
 
 ## Search purposes
 

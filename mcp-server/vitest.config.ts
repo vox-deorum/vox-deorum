@@ -11,7 +11,7 @@ const useMock = process.env.USE_MOCK !== 'false'
 export default defineConfig({
   test: {
     environment: 'node',
-    include: [`tests/${useMock ? 'mock' : 'real'}/**/*.test.ts`],
+    include: useMock ? ['tests/mock/**/*.test.ts', 'tests/newspaper/**/*.test.ts'] : ['tests/real/**/*.test.ts'],
     // The shared server/client setup and the bridge-spawning global setup are real-tier only.
     setupFiles: useMock ? [] : ['./tests/setup.ts'],
     globalSetup: useMock ? [] : ['./tests/real.setup.ts'],

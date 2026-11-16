@@ -48,6 +48,18 @@ function city(key: number, name: string, owner: string, visibility: [number, num
 }
 
 describe('get-cities', () => {
+  it('preserves health strings, basic wonders, display conversions and the unpopulated capital field', async () => {
+    vi.mocked(cityInformation.getCityInformations).mockResolvedValue([
+      { ...city(12, 'Rome', 'LeaderA', [1, 2, 0]), HitPoints: 45, IsCapital: 1, Wonders: ['Beacon'] }
+    ] as any);
+    const basic = (await client.call({ PlayerID: 0 })).LeaderA.Rome;
+    expect(basic).toMatchObject({ Health: '45%', Wonders: ['Beacon'], IsCoastal: true });
+    for (const key of ['IsCapital', 'IsPuppet', 'IsOccupied', 'RazingTurns', 'ResistanceTurns', 'FoodStored']) expect(basic).not.toHaveProperty(key);
+    const full = (await client.call({ PlayerID: 1 })).LeaderA.Rome;
+    expect(full).toHaveProperty('FoodStored', 20);
+    expect(full).not.toHaveProperty('IsCapital');
+  });
+
   beforeEach(async () => {
     vi.spyOn(cityInformation, 'getCityInformations').mockResolvedValue([
       city(12, 'Rome', 'LeaderA', [0, 1, 2]),

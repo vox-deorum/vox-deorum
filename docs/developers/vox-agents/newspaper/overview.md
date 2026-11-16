@@ -1,17 +1,21 @@
 # Newspaper
 
-The newspaper currently has a fixture renderer proof, with in-game visual acceptance still pending. The renderer guide describes the browser reader and DDS export. Replay, editorial decisions, evaluation, and live integration have short scope pages marked as planned; these will become implementation references as each stage is built.
+The newspaper has a fixture renderer and read-only recording replay with evidence inspection. In-game renderer visual acceptance remains pending. The renderer and replay guides describe the implemented boundaries; editorial decisions, evaluation, and live integration remain planned.
 
 | Page | Status | Scope |
 | --- | --- | --- |
 | [Renderer](renderer.md) | Implemented proof | Fixture reading, browser rendering, DDS export, and game viewer |
-| [Replay](replay.md) | Planned | Recorded-game evidence and replay |
+| [Replay](replay.md) | Implemented | Recorded-game evidence, cutoff controls, and source inspection |
 | [Editorial](editorial.md) | Planned | Heuristic publication decisions and later LLM editing |
 | [Evaluation](evaluation.md) | Planned | Offline experiments comparing editorial approaches |
 | [Live integration](live-integration.md) | Planned | Scheduling, persistence, archives, and player integration |
 
 The [implementation roadmap](../../../plans/newspaper/implementation.md) describes the stages and their dependencies. Detailed requirements remain in each [implementation plan](../../../plans/newspaper/implementation/).
 
-The implemented source lives in `vox-agents/src/newspaper/`: `contracts/` defines completed publications, reader interaction and serialized render data; `renderer/` owns browser-safe presentation and bridge interfaces; `export/` owns Node capture, cache delivery, the reusable export service and HTTP routes. The normal VD server hosts the reader and export service. The plain DOM publication renderer lives in `vox-agents/newspaper/src/reader/`, its fixture application in `src/app/`, and its export entry point in `src/export-bridge.ts`. The game viewer and data helpers live in `civ5-mod/UI/Newspaper/`.
+MCP owns the browser-safe evidence schemas and source references in `mcp-server/src/newspaper/evidence.ts`, historical reads in `queries.ts`, and reportable-field policy in `projection.ts`. The `get-newspaper-evidence` tool calls the same query used by standalone replay, with no live refresh. MCP does not import Vox Agents.
 
-To render an issue, supply a completed `IssueDocument` with publication identity, ordered pages, canonical items, and typed links. The [renderer guide](renderer.md) describes that input, the separate render profile and reader state, and the exported bundle. Editorial selection and replay produce publications in later stages.
+Vox Agents owns replay orchestration, publications, and presentation under `vox-agents/src/newspaper/`. `contracts/` defines publications, reader interaction, serialized render data, and replay settings/responses. `replay/` owns the read-only connection and serialized session, using MCP's compiled queries. `renderer/` owns browser-safe presentation and bridge interfaces; `export/` owns capture, cache delivery, the reusable export service, and host routes. The normal VD server injects replay handlers before the newspaper fallbacks and drains replay and export work during shutdown.
+
+The plain DOM reader lives in `vox-agents/newspaper/src/reader/`. Its application shell in `src/app/` coordinates fixtures, replay controls, and evidence/source inspection without requiring generated issues. The export entry point remains `src/export-bridge.ts`. The game viewer and data helpers live in `civ5-mod/UI/Newspaper/`.
+
+To render an issue, supply a completed `IssueDocument` with publication identity, ordered pages, canonical items, and typed links. The [renderer guide](renderer.md) describes that input, the separate render profile and reader state, and the exported bundle. Replay currently supplies evidence; later editorial work will turn it into publications and persist separate output.

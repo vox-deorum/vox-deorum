@@ -12,6 +12,9 @@ import { renderIssue } from '../../../../src/newspaper/export/render.js';
 import { defaultRenderProfile } from '../../../../src/newspaper/renderer/layout.js';
 import { texconvExecutablePath, validateDds } from '../../../../src/newspaper/export/dds.js';
 import { parseIssueDocument } from '../../../../src/newspaper/renderer/validation.js';
+import { ReplaySession } from '../../../../src/newspaper/replay/session.js';
+import { mountReplayRoutes } from '../../../../src/newspaper/replay/http.js';
+import { createReplayRecording } from '../../../helpers/newspaper-replay.js';
 
 const fixtures = fileURLToPath(new URL('../../../../newspaper/fixtures/', import.meta.url));
 
@@ -33,6 +36,57 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('newspape
     await host?.close();
     if (directory) await rm(directory, { recursive: true, force: true });
   });
+
+  it('should inspect recording evidence and source references when fixture loading fails and no issue exists', async context => {
+    if (!browser) { context.skip(unavailable); return; }
+    const recording = await createReplayRecording();
+    const session = new ReplaySession();
+    const replayHost = await startNewspaperHost({
+      /** Host the real replay parser and session alongside the compiled application shell. */
+      mountApplicationRoutes: app => mountReplayRoutes(app, () => session),
+    });
+    const page = await browser.newPage();
+    try {
+      await page.route('**/newspaper/fixtures/*.json', route => route.fulfill({ status: 404, body: '{}' }));
+      /** Show lifecycle flags returned by the evidence API alongside the recorded rows. */
+      await page.route('**/api/newspaper/replay/evidence', async route => {
+        const response = await route.fetch();
+        const result = await response.json();
+        result.evidence.limitations = ['cityLifecycleUnresolved', 'cityLifecycleOrderUnknown'];
+        await route.fulfill({ response, json: result });
+      });
+      await page.goto(`${replayHost.url}/newspaper/`);
+      await page.locator('#reader-root [role=alert]').waitFor();
+      await page.waitForFunction(() => !document.querySelector<HTMLFieldSetElement>('#replay-form fieldset')!.disabled);
+      await page.locator('[name=databasePath]').fill(recording.filename);
+      await page.locator('[name=fromTurn]').fill('10');
+      await page.locator('[name=toTurn]').fill('18');
+      await page.getByRole('button', { name: 'Open recording', exact: true }).click();
+      await page.locator('[data-replay=inspect]:enabled').waitFor();
+      await page.locator('[data-replay=inspect]').click();
+      const source = page.locator('#evidence-view button').first();
+      await source.click();
+      const inspected = JSON.parse((await page.locator('#source-view').textContent())!);
+      expect(await page.locator('[data-evidence-limitations] li').allTextContents()).toEqual([
+        'cityLifecycleUnresolved', 'cityLifecycleOrderUnknown'
+      ]);
+      expect(inspected.source).toEqual({ table: 'PlayerSummaries', id: 3, turn: 10, createdAt: 1010 });
+      expect(inspected.values.OutgoingTradeRoutes).toEqual({ 'Home => Port (Civ1)': { FromGold: 0, ToFood: -1 } });
+      expect((await session.getState()).cursor.cutoffTurn).toBeNull();
+      await page.locator('[data-replay=advance]').click();
+      await page.waitForFunction(() => !document.querySelector<HTMLFieldSetElement>('#replay-form fieldset')!.disabled);
+      expect((await session.getState()).cursor.cutoffTurn).toBe(10);
+      await page.locator('[data-replay=advance]').click();
+      await page.waitForFunction(() => !document.querySelector<HTMLFieldSetElement>('#replay-form fieldset')!.disabled);
+      expect((await session.getState()).cursor.cutoffTurn).toBe(15);
+      expect(await readFile(recording.filename)).toEqual(recording.originalBytes);
+    } finally {
+      await page.close();
+      await session.close();
+      await replayHost.close();
+      await recording.cleanup();
+    }
+  }, 60_000);
 
   it('should keep line geometry stable between interactive and export modes and retain local votes and scroll', async context => {
     if (!browser) { context.skip(unavailable); return; }

@@ -39,6 +39,32 @@ afterEach(async () => {
 });
 
 describe('get-players', () => {
+  it('preserves diplomat thresholds, resource display counts, relationships and minor-civ stripping', async () => {
+    await seedPlayer(store, 22, { civilization: 'Minor', isMajor: 0 });
+    const foreign = {
+      Key: 1, Player0: 1, CulturePerTurn: 5, SciencePerTurn: 9, CurrentResearch: 'Writing',
+      MilitaryUnits: 3, MilitarySupply: 8, PolicyBranches: { Tradition: ['A', 'B'] },
+      DiplomaticDeals: { Rome: [{ WeGive: ['Gold'], TheyGive: [] }] },
+      Resources: { Iron: '2 / 7', Horses: '0 / 3' },
+      Relationships: { Rome: ['War; War Weariness: 10%'], Greece: ['Friendship'] }
+    };
+    for (const points of [199, 200, 499, 500, 799, 800]) {
+      vi.mocked(playerSummary.getPlayerSummaries).mockResolvedValue([
+        { Key: 0, Player0: 2, DiplomatPoints: { Player1: points } }, foreign,
+        { Key: 2, Player0: 0 },
+        { Key: 22, Player0: 1, Gold: 100, CulturePerTurn: 7, Era: 'Classical', Quests: { Player0: [' Quest '] } }
+      ] as any);
+      const result = await client.call({ PlayerID: 0 });
+      expect(result['1']).toMatchObject({ ResourcesAvailable: { Iron: 2 }, PolicyBranches: { Tradition: points < 200 ? 2 : ['A', 'B'] }, Relationships: { Rome: ['War'] } });
+      for (const key of ['Resources', 'SciencePerTurn', 'CurrentResearch', 'MilitarySupply']) expect(result['1']).not.toHaveProperty(key);
+      expect(result['1'].Relationships).not.toHaveProperty('Greece');
+      expect('MilitaryUnits' in result['1']).toBe(points >= 500);
+      expect('DiplomaticDeals' in result['1']).toBe(points >= 800);
+      for (const key of ['Gold', 'CulturePerTurn', 'Era', 'TeamID']) expect(result['22']).not.toHaveProperty(key);
+      expect(result['22'].Quests).toEqual(['Quest']);
+    }
+  });
+
   it('returns civilization names and documented summary fields for each player', async () => {
     const result = await client.call({ PlayerID: 0 });
 

@@ -6,6 +6,7 @@
 import { knowledgeManager } from "../../server.js";
 import { ToolBase } from "../base.js";
 import * as z from "zod";
+import { diplomaticEventSubjects, matchesEventSubject, type DiplomaticEventType } from "../../knowledge/helpers/event-subjects.js";
 import { isVisible } from "../../knowledge/expressions.js";
 import { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { MaxMajorCivs } from "../../knowledge/schema/base.js";
@@ -48,12 +49,6 @@ function getCityName(payload: Record<string, any>, ctx: FormatContext): string {
 
 /** Configuration for a single diplomatic event type */
 interface DiploEventConfig {
-  /** Payload fields containing player IDs for relevance filtering */
-  playerIdFields: string[];
-  /** Payload fields containing lists of player IDs (such as report subjects) for relevance filtering */
-  playerIdListFields?: string[];
-  /** Payload fields containing team IDs for relevance filtering */
-  teamIdFields?: string[];
   /** Convert event payload to a formatted summary (string for most events, object for structured ones), or null to skip */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- event payloads have diverse dynamic fields
   toMarkdown: (payload: Record<string, any>, ctx: FormatContext) => string | Record<string, unknown> | null;
@@ -62,28 +57,23 @@ interface DiploEventConfig {
 /**
  * Diplomatic event configuration object.
  * Keys are event type names used as the database filter list.
- * Values define player/team fields for relevance filtering and markdown formatters.
+ * Values define markdown formatters; shared subject metadata controls relevance filtering.
  */
-const diplomaticEvents: Record<string, DiploEventConfig> = {
+const diplomaticEvents: Record<DiplomaticEventType, DiploEventConfig> = {
 
   // ── Major Civ Diplomacy ──
 
   DeclareWar: {
-    playerIdFields: ["OriginatingPlayerID"],
-    teamIdFields: ["TargetTeamID"],
     toMarkdown: (e, ctx) => {
       const aggressor = e.IsAggressor ? " (aggressor)" : "";
       return `**${ctx.player(e.OriginatingPlayerID)}**  declared war on **${ctx.team(e.TargetTeamID)}**${aggressor}`;
     }
   },
   MakePeace: {
-    playerIdFields: ["OriginatingPlayerID"],
-    teamIdFields: ["TargetTeamID"],
     toMarkdown: (e, ctx) =>
       `**${ctx.player(e.OriginatingPlayerID)}** made peace with **${ctx.team(e.TargetTeamID)}**`
   },
   DealMade: {
-    playerIdFields: ["FromPlayerID", "ToPlayerID"],
     toMarkdown: (e, ctx) =>
       formatStringDeal({
         leftLabel: ctx.player(e.FromPlayerID),
@@ -94,8 +84,6 @@ const diplomaticEvents: Record<string, DiploEventConfig> = {
       })
   },
   TeamMeet: {
-    playerIdFields: [],
-    teamIdFields: ["CurrentTeamID", "OtherTeamID"],
     toMarkdown: (e, ctx) =>
       `**${ctx.team(e.CurrentTeamID)}** met **${ctx.team(e.OtherTeamID)}** for the first time`
   },
@@ -103,19 +91,16 @@ const diplomaticEvents: Record<string, DiploEventConfig> = {
   // ── City Ownership ──
 
   CityCaptureComplete: {
-    playerIdFields: ["OldOwnerID", "NewOwnerID"],
     toMarkdown: (e, ctx) => {
       const method = e.IsConquest ? "conquered" : "acquired";
       return `**${ctx.player(e.NewOwnerID)}** ${method} **${getCityName(e, ctx)}** from **${ctx.player(e.OldOwnerID)}** (pop ${e.Population})`;
     }
   },
   CityFlipped: {
-    playerIdFields: ["OldOwnerID", "NewOwnerID"],
     toMarkdown: (e, ctx) =>
       `**${getCityName(e, ctx)}** flipped from **${ctx.player(e.OldOwnerID)}** to **${ctx.player(e.NewOwnerID)}**`
   },
   PlayerLiberated: {
-    playerIdFields: ["LiberatingPlayerID", "LiberatedPlayerID"],
     toMarkdown: (e, ctx) =>
       `**${ctx.player(e.LiberatingPlayerID)}** liberated **${getCityName(e, ctx)}**, restoring the rule of **${ctx.player(e.LiberatedPlayerID)}**`
   },
@@ -123,21 +108,18 @@ const diplomaticEvents: Record<string, DiploEventConfig> = {
   // ── City-State Relations ──
 
   MinorAlliesChanged: {
-    playerIdFields: ["MinorPlayerID", "MajorPlayerID"],
     toMarkdown: (e, ctx) => {
       const status = e.IsNowAlly ? "became ally of" : "lost alliance with";
       return `**${ctx.player(e.MajorPlayerID)}** ${status} **${ctx.player(e.MinorPlayerID)}** (at ${e.NewFriendship} influence)`;
     }
   },
   MinorFriendsChanged: {
-    playerIdFields: ["MinorPlayerID", "MajorPlayerID"],
     toMarkdown: (e, ctx) => {
       const status = e.IsNowFriend ? "became friend of" : "lost friendship with";
       return `**${ctx.player(e.MajorPlayerID)}** ${status} **${ctx.player(e.MinorPlayerID)}** (at ${e.NewFriendship} influence)`;
     }
   },
   SetAlly: {
-    playerIdFields: ["MinorPlayerID", "OldAllyPlayerID", "NewAllyPlayerID"],
     toMarkdown: (e, ctx) => {
       const oldAlly = e.OldAllyPlayerID >= 0 ? ctx.player(e.OldAllyPlayerID) : "none";
       const newAlly = e.NewAllyPlayerID >= 0 ? ctx.player(e.NewAllyPlayerID) : "none";
@@ -145,36 +127,30 @@ const diplomaticEvents: Record<string, DiploEventConfig> = {
     }
   },
   MinorGiftUnit: {
-    playerIdFields: ["MinorPlayerID", "MajorPlayerID"],
     toMarkdown: (e, ctx) =>
       `**${ctx.player(e.MinorPlayerID)}** gifted a military unit to **${ctx.player(e.MajorPlayerID)}**`
   },
   PlayerGifted: {
-    playerIdFields: ["GivingPlayerID", "ReceivingPlayerID"],
     toMarkdown: (e, ctx) => {
       const detail = e.GoldAmount > 0 ? ` ${e.GoldAmount} gold` : "";
       return `**${ctx.player(e.GivingPlayerID)}** gifted${detail} to **${ctx.player(e.ReceivingPlayerID)}**`;
     }
   },
   PlayerBullied: {
-    playerIdFields: ["BullyingPlayerID", "MinorPlayerID"],
     toMarkdown: (e, ctx) => {
       const tribute = e.Amount > 0 ? ` (${e.Amount})` : "";
       return `**${ctx.player(e.BullyingPlayerID)}** bullied **${ctx.player(e.MinorPlayerID)}** for tribute${tribute}`;
     }
   },
   PlayerBoughtOut: {
-    playerIdFields: ["BuyingPlayerID", "MinorPlayerID"],
     toMarkdown: (e, ctx) =>
       `**${ctx.player(e.BuyingPlayerID)}** bought out **${ctx.player(e.MinorPlayerID)}**`
   },
   PlayerProtected: {
-    playerIdFields: ["MajorPlayerID", "MinorPlayerID"],
     toMarkdown: (e, ctx) =>
       `**${ctx.player(e.MajorPlayerID)}** pledged to protect **${ctx.player(e.MinorPlayerID)}**`
   },
   PlayerRevoked: {
-    playerIdFields: ["MajorPlayerID", "MinorPlayerID"],
     toMarkdown: (e, ctx) =>
       `**${ctx.player(e.MajorPlayerID)}** revoked protection of **${ctx.player(e.MinorPlayerID)}**`
   },
@@ -182,17 +158,14 @@ const diplomaticEvents: Record<string, DiploEventConfig> = {
   // ── Espionage ──
 
   EspionageNotificationData: {
-    playerIdFields: ["SourcePlayerID", "TargetPlayerID"],
     toMarkdown: (e, ctx) =>
       `Espionage: **${ctx.player(e.SourcePlayerID)}** conducted operation against **${ctx.player(e.TargetPlayerID)}** (result: ${e.SpyResult})`
   },
   ElectionResultSuccess: {
-    playerIdFields: ["PlayerID"],
     toMarkdown: (e, ctx) =>
       `**${ctx.player(e.PlayerID)}** successfully rigged election of ${getCityName(e, ctx)} (+${e.Value} influence)`
   },
   ElectionResultFailure: {
-    playerIdFields: ["PlayerID"],
     toMarkdown: (e, ctx) => {
       if (e.DiminishAmount === 0) return null;
       return `**${ctx.player(e.PlayerID)}** failed to rig election of ${getCityName(e, ctx)} (-${e.DiminishAmount} influence)`;
@@ -202,7 +175,6 @@ const diplomaticEvents: Record<string, DiploEventConfig> = {
   // ── Trade ──
 
   PlayerPlunderedTradeRoute: {
-    playerIdFields: ["PlunderingPlayerID", "OriginOwnerID", "DestinationOwnerID"],
     toMarkdown: (e, ctx) =>
       `**${ctx.player(e.PlunderingPlayerID)}** plundered trade route between **${ctx.player(e.OriginOwnerID)}** and **${ctx.player(e.DestinationOwnerID)}** (+${e.PlunderGoldValue} gold)`
   },
@@ -210,7 +182,6 @@ const diplomaticEvents: Record<string, DiploEventConfig> = {
   // ── Territory ──
 
   StealPlot: {
-    playerIdFields: ["FromPlayerID", "ToPlayerID"],
     toMarkdown: (e, ctx) =>
       `**${ctx.player(e.ToPlayerID)}** stole territory from **${ctx.player(e.FromPlayerID)}** at (${e.PlotX},${e.PlotY})`
   },
@@ -218,7 +189,6 @@ const diplomaticEvents: Record<string, DiploEventConfig> = {
   // ── World Congress ──
 
   ResolutionResult: {
-    playerIdFields: ["ProposerPlayerID"],
     toMarkdown: (e, ctx) => {
       const action = e.IsEnact ? "Enact" : "Repeal";
       const result = e.Passed ? "passed" : "failed";
@@ -230,17 +200,14 @@ const diplomaticEvents: Record<string, DiploEventConfig> = {
   // ── Multi-Civ Events (synced from event-categories.json) ──
 
   UnitConverted: {
-    playerIdFields: ["OldOwnerID", "NewOwnerID"],
     toMarkdown: (e, ctx) =>
       `**${ctx.player(e.NewOwnerID)}** converted a unit from **${ctx.player(e.OldOwnerID)}**`
   },
   PlayerTradeRouteCompleted: {
-    playerIdFields: ["OriginPlayerID", "DestinationPlayerID"],
     toMarkdown: (e, ctx) =>
       `Trade route completed: **${ctx.player(e.OriginPlayerID)}** → **${ctx.player(e.DestinationPlayerID)}**`
   },
   NuclearDetonation: {
-    playerIdFields: ["PlayerID"],
     toMarkdown: (e, ctx) => {
       const bystander = e.HurtBystander ? " (and hurt bystanders)" : "";
       return `**${ctx.player(e.PlayerID)}** detonated a nuclear weapon${bystander}`;
@@ -250,8 +217,6 @@ const diplomaticEvents: Record<string, DiploEventConfig> = {
   // ── Dynamic Events ──
 
   RelayedMessage: {
-    playerIdFields: ["ToPlayerID", "FromPlayerID"],
-    playerIdListFields: ["AboutPlayerIDs"],
     toMarkdown: (e, ctx) => ({
       Title: `${ctx.player(e.FromPlayerID)} → ${ctx.player(e.ToPlayerID)}`,
       Type: e.Message === "Diplomatic" ? "Diplomatic message" : e.Message,
@@ -266,7 +231,7 @@ const diplomaticEvents: Record<string, DiploEventConfig> = {
 };
 
 /** All diplomatic event type names, derived from the config keys */
-const diplomaticEventTypes = Object.keys(diplomaticEvents);
+const diplomaticEventTypes = Object.keys(diplomaticEventSubjects);
 
 // ─── Tool Definition ──────────────────────────────────────────────────
 
@@ -377,24 +342,14 @@ class GetDiplomaticEventsTool extends ToolBase {
     const result: Record<string, any[]> = {};
 
     for (const event of events) {
-      const config = diplomaticEvents[event.Type];
+      const config = diplomaticEvents[event.Type as DiplomaticEventType];
       if (!config) continue;
 
       const payload = event.Payload as Record<string, any>;
 
       // Apply OtherPlayerID relevance filter
       if (args.OtherPlayerID !== undefined) {
-        const playerMatch = config.playerIdFields.some(
-          field => payload[field] === args.OtherPlayerID
-        );
-        const teamMatch = config.teamIdFields?.some(
-          field => otherTeamId !== undefined && payload[field] === otherTeamId
-        ) ?? false;
-        const listMatch = config.playerIdListFields?.some(
-          field => Array.isArray(payload[field]) && payload[field].includes(args.OtherPlayerID)
-        ) ?? false;
-
-        if (!playerMatch && !listMatch && !teamMatch) continue;
+        if (!matchesEventSubject(event.Type, payload, args.OtherPlayerID, otherTeamId)) continue;
       }
 
       if (args.Formatted) {

@@ -54,6 +54,12 @@ export async function setupKnowledgeDatabase(
     .execute();
   // Create indexes for GameEvents table
   await createTimedKnowledgeIndexes(db, 'GameEvents', 'Type');
+  await db.schema
+    .createIndex('idx_gameevents_turn')
+    .ifNotExists()
+    .on('GameEvents')
+    .column('Turn')
+    .execute();
 
   // Create StrategyChanges table (MutableKnowledge implementation)
   await createMutableKnowledgeTable(db, 'StrategyChanges')

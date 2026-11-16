@@ -10,6 +10,8 @@ import { MaxMajorCivs } from "../../knowledge/schema/base.js";
 import { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { cleanEventData } from "./get-events.js";
 import { CityInformation } from "../../knowledge/schema/timed.js";
+import { cityDetailFields, projectCityReportFields } from "../../knowledge/helpers/report-projection.js";
+import { pickFields } from "../../utils/fields.js";
 import { sortBySchema } from "../../utils/schema.js";
 
 /**
@@ -117,15 +119,17 @@ class GetCitiesTool extends ToolBase {
     // Group cities by owner
     const citiesByOwner: Record<string, Record<string, z.infer<typeof CityDataSchema>>> = {};
 
-    for (const city of cities) {
+    for (const rawCity of cities) {
       // Apply owner filter if specified
-      if (Owner !== undefined && city.Owner !== Owner) {
+      if (Owner !== undefined && rawCity.Owner !== Owner) {
         continue;
       }
 
       // Check visibility level based on ownership and team
       const visibility = 
-        args.PlayerID !== undefined ? city[`Player${PlayerID}` as keyof CityInformation] : 2;
+        args.PlayerID !== undefined ? rawCity[`Player${PlayerID}` as keyof CityInformation] : 2;
+
+      const city = projectCityReportFields(rawCity, visibility as number) as typeof rawCity;
 
       // Build city data object
       let cityData: any;
@@ -154,21 +158,7 @@ class GetCitiesTool extends ToolBase {
         // Full visibility - include all fields
         cityData = {
           ...cityData,
-          FoodStored: city.FoodStored,
-          FoodPerTurn: city.FoodPerTurn,
-          ProductionStored: city.ProductionStored,
-          ProductionPerTurn: city.ProductionPerTurn,
-          CurrentProduction: city.CurrentProduction,
-          ProductionTurnsLeft: city.ProductionTurnsLeft,
-          GoldPerTurn: city.GoldPerTurn,
-          SciencePerTurn: city.SciencePerTurn,
-          CulturePerTurn: city.CulturePerTurn,
-          FaithPerTurn: city.FaithPerTurn,
-          TourismPerTurn: city.TourismPerTurn,
-          HappinessDelta: city.HappinessDelta,
-          BuildingCount: city.BuildingCount,
-          ImportantBuildings: city.ImportantBuildings,
-          GreatWorkCount: city.GreatWorkCount,
+          ...pickFields(city, cityDetailFields),
         };
       }
 

@@ -5,16 +5,13 @@
  * a small editorial metadata panel. It intentionally stays outside the
  * publication so the reader can also run in the game export page.
  */
-import {
-  newspaperScreenLabels,
-  type IssueDocument,
-  type LinkTarget,
-} from "../../../src/newspaper/contracts/issue.js";
+import type { IssueDocument } from "../../../src/newspaper/contracts/issue.js";
 import type { ReaderAction, ReaderState } from "../../../src/newspaper/contracts/reader.js";
 import { errorMessage } from "../../../src/utils/errors.js";
 import { parseIssueDocument } from "../../../src/newspaper/renderer/validation.js";
 import { createReaderState } from "../../../src/newspaper/renderer/state.js";
-import { inlineNodesToText, paragraphsToText } from "../reader/dom.js";
+import { renderFixtureInspector, renderLinkDetail, renderDetailPlaceholder, renderReaderState, renderEvidence } from "./inspector.js";
+import { mountReplayControls } from "./replay.js";
 import { mountReader, type ReaderHandle } from "../reader/mount.js";
 import "./styles.css";
 
@@ -64,11 +61,6 @@ const fixtureSelect = requireElement<HTMLSelectElement>("#fixture-select");
 const archiveButton = requireElement<HTMLButtonElement>("#archive-button");
 const resetButton = requireElement<HTMLButtonElement>("#reset-button");
 const readerRoot = requireElement<HTMLElement>("#reader-root");
-const actionLog = requireElement<HTMLElement>("#action-log");
-const stateView = requireElement<HTMLElement>("#state-view");
-const issueView = requireElement<HTMLElement>("#issue-view");
-const pageItems = requireElement<HTMLElement>("#page-items");
-const detailView = requireElement<HTMLElement>("#detail-view");
 const archiveDialog = requireElement<HTMLDialogElement>("#archive-dialog");
 const archiveList = requireElement<HTMLElement>("#archive-list");
 const archiveClose = requireElement<HTMLButtonElement>("#archive-close");
@@ -115,101 +107,14 @@ async function mountFixture(entry: FixtureEntry, initialState?: ReaderState): Pr
 function handleAction(action: ReaderAction): void {
   lastAction = action;
   if (action.type === "follow-link") {
-    renderLinkDetail(action);
+    renderLinkDetail(currentIssue, action);
   }
   renderInspector();
 }
 
-/** Describe a typed link destination in plain language. */
-function describeTarget(target: LinkTarget): string {
-  if (target.type === "city") return `City: ${target.cityId}`;
-  if (target.type === "civilization") return `Civilization: ${target.civilizationId}`;
-  if (target.type === "trade-relationship") {
-    return `Trade relationship with ${target.partnerCivilizationId} (${target.direction})`;
-  }
-  if (target.type === "screen") return newspaperScreenLabels[target.screen];
-  return `Earlier report in issue ${target.issueId}, item ${target.itemId}`;
-}
-
-/** Show the destination of a link and any earlier report summary carried by the issue. */
-function renderLinkDetail(action: Extract<ReaderAction, { type: "follow-link" }>): void {
-  detailView.replaceChildren();
-  const heading = document.createElement("h2");
-  heading.textContent = "Link destination";
-  const destination = document.createElement("p");
-  destination.textContent = describeTarget(action.target);
-  detailView.append(heading, destination);
-
-  if (!currentIssue) return;
-  const item = currentIssue.items.find((entry) => entry.id === action.itemId);
-  if (!item?.earlierReport) return;
-  if (action.target.type !== "article") return;
-  if (action.target.itemId !== item.earlierReport.target.itemId) return;
-
-  const earlierHeading = document.createElement("h3");
-  earlierHeading.textContent = item.earlierReport.label;
-  const earlierBody = document.createElement("p");
-  earlierBody.textContent = paragraphsToText(item.earlierReport.summary);
-  detailView.append(earlierHeading, earlierBody);
-}
-
-/** Reset the detail panel to its empty state. */
-function renderDetailPlaceholder(): void {
-  detailView.replaceChildren();
-  const note = document.createElement("p");
-  note.textContent = "Follow a link or an earlier report to inspect its destination here.";
-  detailView.append(note);
-}
-
-/** Refresh the action log, reader state, issue metadata, and page items. */
+/** Refresh fixture inspection from the currently mounted reader. */
 function renderInspector(): void {
-  const currentState = reader?.getState();
-  actionLog.textContent = lastAction ? JSON.stringify(lastAction, null, 2) : "No actions yet.";
-  stateView.textContent = currentState ? JSON.stringify(currentState, null, 2) : "No state.";
-
-  if (!currentIssue) {
-    issueView.textContent = "No issue mounted.";
-    pageItems.replaceChildren();
-    return;
-  }
-
-  issueView.textContent = [
-    `Issue: ${currentIssue.issueId}`,
-    `Publication: ${currentIssue.publication.title}`,
-    `Design: ${currentIssue.publication.designId} ${currentIssue.publication.designVersion}`,
-    `Cutoff: ${currentIssue.cutoff.label}`,
-    `Receiver: ${currentIssue.receiver.label} (player ${currentIssue.receiver.playerId})`,
-    `Pages: ${currentIssue.pages.map((page) => page.label).join(", ")}`,
-    `Items: ${currentIssue.items.length}`,
-  ].join("\n");
-
-  renderPageItems();
-}
-
-/** Show the editorial fields kept out of the reading surface. */
-function renderPageItems(): void {
-  pageItems.replaceChildren();
-  const currentState = reader?.getState();
-  if (!currentIssue || !currentState) return;
-  const activePageId = currentState.activePageId;
-  const page = currentIssue.pages.find((entry) => entry.id === activePageId);
-  if (!page) return;
-
-  for (const itemId of page.itemIds) {
-    const item = currentIssue.items.find((entry) => entry.id === itemId);
-    if (!item) continue;
-    const details = document.createElement("details");
-    const summary = document.createElement("summary");
-    summary.textContent = inlineNodesToText(item.headline);
-    const tags = document.createElement("p");
-    tags.textContent = `Tags: ${item.tags.join(", ") || "none"}`;
-    const series = document.createElement("p");
-    series.textContent = `Series: ${item.seriesKeys.join(", ") || "none"}`;
-    const sourceNote = document.createElement("p");
-    sourceNote.textContent = `Source note: ${inlineNodesToText(item.sourceNote)}`;
-    details.append(summary, tags, series, sourceNote);
-    pageItems.append(details);
-  }
+  renderFixtureInspector(currentIssue, reader?.getState(), lastAction);
 }
 
 /** Build the fixture selector and archive stub entries. */
@@ -263,7 +168,7 @@ fixtureSelect.addEventListener("change", () => {
 /** Show scroll changes from the reader without rebuilding the metadata controls. */
 readerRoot.addEventListener("scroll", () => {
   requestAnimationFrame(() => {
-    if (reader) stateView.textContent = JSON.stringify(reader.getState(), null, 2);
+    if (reader) renderReaderState(reader.getState());
   });
 }, true);
 
@@ -296,6 +201,7 @@ window.addEventListener("pagehide", () => {
 /** Start the host from the requested fixture or the first fixture. */
 function start(): void {
   buildFixtureControls();
+  mountReplayControls(requireElement<HTMLFormElement>("#replay-form"), renderEvidence);
   const requested = new URLSearchParams(window.location.search).get("fixture");
   const fixture = fixtures.find((entry) => entry.id === requested) ?? fixtures[0];
   fixtureSelect.value = fixture.id;
