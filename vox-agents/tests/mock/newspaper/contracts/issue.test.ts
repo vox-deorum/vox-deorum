@@ -4,6 +4,17 @@ import { createNewspaperIssue } from "../../../helpers/newspaper-fixtures.js";
 import { issueDocumentSchema } from "../../../../src/newspaper/contracts/issue.js";
 
 describe("newspaper issue contracts", () => {
+  it("should preserve legacy fixtures and require a presentation snapshot for new configured designs", () => {
+    const legacy = createNewspaperIssue();
+    expect(issueDocumentSchema.parse(legacy)).toEqual(legacy);
+    const configured = { ...legacy, schemaVersion: 2, publication: { ...legacy.publication, designId: "early-account" } };
+    expect(issueDocumentSchema.safeParse(configured).success).toBe(false);
+    const presentation = { schemaVersion: 1, rendererFamily: "victorian", tokens: { paperColor: "#f0e0c0" } };
+    expect(issueDocumentSchema.parse({ ...configured, publication: { ...configured.publication, presentation } }).publication.presentation).toEqual(presentation);
+    expect(issueDocumentSchema.safeParse({ ...configured, schemaVersion: 1 }).success).toBe(false);
+    expect(issueDocumentSchema.safeParse({ ...legacy, publication: { ...legacy.publication, presentation } }).success).toBe(false);
+  });
+
   it("should allow sharing an item across pages but reject repeats within a page", () => {
     const issue = createNewspaperIssue();
     expect(issueDocumentSchema.parse(issue).pages).toHaveLength(2);

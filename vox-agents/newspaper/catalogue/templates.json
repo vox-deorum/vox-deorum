@@ -1,0 +1,88 @@
+[
+  {
+    "id": "provincial-contrast", "triggerIds": ["city-contrast"], "tags": ["domestic", "cities"], "weight": { "base": 1 },
+    "variants": [
+      { "id": "settlement-account", "weight": { "base": 10 }, "headline": "Two settlements, different fortunes",
+        "body": ["Between turns {{fromTurn}} and {{toTurn}}, population in {{cityLink}} changed by {{growth}}, while {{otherCityLink}} changed by {{otherGrowth}}.", "Compare food and current production in the city screen to understand the difference and decide whether either settlement needs attention."],
+        "links": [ { "placeholder": "cityLink", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }, { "placeholder": "otherCityLink", "label": "{{otherCity}}", "target": { "type": "city", "cityId": "{{otherCityId}}" } } ] },
+      { "id": "provincial-notes", "weight": { "base": 6 }, "headline": "{{city}} and {{otherCity}} take different paths",
+        "body": ["Our settlements do not move at one pace. Recorded population in {{cityLink}} changed by {{growth}}; in {{otherCity}}, by {{otherGrowth}}, over the comparison ending at turn {{toTurn}}.", "A city that grows more slowly may be serving another purpose. Review its food balance and current work before drawing a conclusion."],
+        "links": [ { "placeholder": "cityLink", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } } ] }
+    ]
+  },
+  {
+    "id": "trade-balance", "triggerIds": ["trade-concentration"], "tags": ["economy", "trade"], "weight": { "base": 1 },
+    "variants": [
+      { "id": "merchant-account", "weight": { "base": 10 }, "headline": "The {{partner}} route balance",
+        "body": ["At turn {{tradeToTurn}}, routes to {{partnerLink}} brought {{gold}} gold per turn, or {{share}}% of positive gold from our outgoing foreign routes. The earlier share was {{previousShare}}% at turn {{tradeFromTurn}}.", "The trade screen shows the connections behind these figures. Review the route mix when weighing the benefits of another connection with this partner."],
+        "links": [ { "placeholder": "partnerLink", "label": "{{partner}}", "target": { "type": "trade-relationship", "partnerCivilizationId": "{{partnerId}}", "direction": "export" } } ] },
+      { "id": "route-notes", "weight": { "base": 6 }, "headline": "Merchant routes redraw the balance",
+        "body": ["{{partnerLink}} accounted for {{share}}% of our positive outgoing foreign-route gold at turn {{tradeToTurn}}, compared with {{previousShare}}% at turn {{tradeFromTurn}}.", "The routes supplied {{gold}} gold per turn in the later observation. Review the route mix when considering future connections."],
+        "links": [ { "placeholder": "partnerLink", "label": "{{partner}}", "target": { "type": "trade-relationship", "partnerCivilizationId": "{{partnerId}}", "direction": "export" } } ] }
+    ]
+  },
+  {
+    "id": "cultural-development", "triggerIds": ["foreign-culture"], "tags": ["international", "culture"], "weight": { "base": 1 },
+    "variants": [
+      { "id": "foreign-letter", "weight": { "base": 10 }, "headline": "{{partner}}'s cultural pace changes",
+        "body": ["Reports from {{partnerLink}} show culture per turn changing from {{previousCulture}} at turn {{cultureFromTurn}} to {{culture}} at turn {{cultureToTurn}}.", "Cultural output is one way to follow a neighbor's development. Keep this change in view alongside later diplomatic and cultural reports."],
+        "links": [ { "placeholder": "partnerLink", "label": "{{partner}}", "target": { "type": "civilization", "civilizationId": "{{partnerId}}" } } ] },
+      { "id": "culture-brief", "weight": { "base": 6 }, "headline": "A cultural dispatch from {{partner}}",
+        "body": ["Recorded culture per turn in {{partnerLink}} is {{culture}}, compared with {{previousCulture}} in the earlier observation. Those observations date to turns {{cultureFromTurn}} and {{cultureToTurn}}."],
+        "links": [ { "placeholder": "partnerLink", "label": "{{partner}}", "target": { "type": "civilization", "civilizationId": "{{partnerId}}" } } ] }
+    ]
+  },
+  {
+    "id": "war-warning", "triggerIds": ["incoming-war"], "tags": ["war", "diplomacy"], "weight": { "base": 1 },
+    "variants": [
+      { "id": "urgent-dispatch", "weight": { "base": 10 }, "headline": "War reaches our civilization",
+        "body": ["A declaration of war involving {{partnerLink}} targeted our team at turn {{eventTurn}}.", "Review exposed cities, trade routes, and military positions. The military screen can help you decide where the declaration demands an immediate response."],
+        "links": [ { "placeholder": "partnerLink", "label": "{{partner}}", "target": { "type": "civilization", "civilizationId": "{{partnerId}}" } } ] },
+      { "id": "breaking-account", "weight": { "base": 5 }, "headline": "A declaration of war against our team",
+        "body": ["At turn {{eventTurn}}, the recorded war declaration involving {{partnerLink}} named our team as its target. Consider the immediate safety of cities and routes while reviewing the military screen."],
+        "links": [ { "placeholder": "partnerLink", "label": "{{partner}}", "target": { "type": "civilization", "civilizationId": "{{partnerId}}" } } ] }
+    ]
+  },
+  {
+    "id": "diplomatic-exchange", "triggerIds": ["deal"], "tags": ["diplomacy"], "short": true, "weight": { "base": 1 },
+    "variants": [ { "id": "exchange-brief", "weight": { "base": 10 }, "headline": "An exchange with {{partner}}",
+      "body": ["Our civilization and {{partnerLink}} concluded a deal at turn {{eventTurn}}. Review the exchange in the diplomatic overview as you consider the next step in this relationship."],
+      "links": [ { "placeholder": "partnerLink", "label": "{{partner}}", "target": { "type": "civilization", "civilizationId": "{{partnerId}}" } } ] } ]
+  },
+  {
+    "id": "peace-brief", "triggerIds": ["peace"], "tags": ["diplomacy", "recovery"], "short": true, "weight": { "base": 1 },
+    "variants": [ { "id": "peace-account", "weight": { "base": 10 }, "headline": "Peace with {{partner}}",
+      "body": ["A peace event involving our team and {{partnerLink}} was recorded at turn {{eventTurn}}. Peace creates room to review damaged routes and city priorities; recovery will need later observations."],
+      "links": [ { "placeholder": "partnerLink", "label": "{{partner}}", "target": { "type": "civilization", "civilizationId": "{{partnerId}}" } } ] } ]
+  },
+  {
+    "id": "settlement-recovery", "triggerIds": ["city-recovery"], "tags": ["cities", "recovery"], "short": true, "weight": { "base": 2 },
+    "variants": [ { "id": "recovery-note", "weight": { "base": 10 }, "headline": "{{city}} regains population",
+      "body": ["Following an earlier decline, population in {{cityLink}} rose by {{growth}} between turns {{fromTurn}} and {{toTurn}}, reaching {{population}}. Compare its food balance and current production to see how the growing settlement can serve the nation."],
+      "links": [ { "placeholder": "cityLink", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } } ] } ]
+  },
+  {
+    "id": "trade-and-exchange", "triggerIds": ["trade-concentration", "deal"], "compositeOf": ["trade-balance", "diplomatic-exchange"], "tags": ["trade", "diplomacy"], "weight": { "base": 5 },
+    "variants": [ { "id": "merchant-and-envoy", "weight": { "base": 10 }, "headline": "Merchants and envoys look toward {{partner}}",
+      "body": ["Routes to {{partnerLink}} accounted for {{share}}% of positive outgoing foreign-route gold at turn {{tradeToTurn}}, compared with {{previousShare}}% at turn {{tradeFromTurn}}. A deal with the same partner was recorded at turn {{eventTurn}}.", "Merchants and envoys both have business with this partner. Consider the route balance alongside the exchange when reviewing the relationship."],
+      "links": [ { "placeholder": "partnerLink", "label": "{{partner}}", "target": { "type": "trade-relationship", "partnerCivilizationId": "{{partnerId}}", "direction": "export" } } ] } ]
+  },
+  {
+    "id": "provincial-recovery", "triggerIds": ["city-contrast", "city-recovery"], "compositeOf": ["provincial-contrast", "settlement-recovery"], "tags": ["cities", "society", "recovery"], "weight": { "base": 5 },
+    "variants": [ { "id": "returning-settlement", "weight": { "base": 10 }, "headline": "{{city}} rebounds as settlement fortunes diverge",
+      "body": ["After an earlier population decline, {{cityLink}} gained {{recoveryGrowth}} population between turns {{recoveryFromTurn}} and {{recoveryToTurn}}, reaching {{population}}. Across the comparison at turns {{contrastFromTurn}} and {{contrastToTurn}}, {{otherCity}} changed by {{otherGrowth}}.", "The rebound gives this settlement a fresh place in the provincial account. Compare food and current production in both cities when reviewing their next priorities."],
+      "links": [ { "placeholder": "cityLink", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } } ] } ]
+  },
+  {
+    "id": "war-and-routes", "triggerIds": ["incoming-war", "trade-concentration"], "compositeOf": ["war-warning", "trade-balance"], "tags": ["war", "trade", "economy"], "weight": { "base": 6 },
+    "variants": [ { "id": "threat-and-trade", "weight": { "base": 10 }, "headline": "War and the {{partner}} route account",
+      "body": ["A declaration of war involving {{partnerLink}} targeted our team at turn {{eventTurn}}. The route observation at turn {{tradeToTurn}} placed {{share}}% of positive outgoing foreign-route gold with this partner, compared with {{previousShare}}% at turn {{tradeFromTurn}}.", "Review exposed trade connections alongside cities and military positions. The route figures describe the dated observation and provide context for the decisions ahead."],
+      "links": [ { "placeholder": "partnerLink", "label": "{{partner}}", "target": { "type": "trade-relationship", "partnerCivilizationId": "{{partnerId}}", "direction": "export" } } ] } ]
+  },
+  {
+    "id": "trade-and-culture", "triggerIds": ["trade-concentration", "foreign-culture"], "compositeOf": ["trade-balance", "cultural-development"], "tags": ["trade", "culture"], "weight": { "base": 4 },
+    "variants": [ { "id": "connected-dispatch", "weight": { "base": 10 }, "headline": "Two views of {{partner}}",
+      "body": ["Routes to {{partnerLink}} supplied {{share}}% of positive outgoing foreign-route gold at turn {{tradeToTurn}}. Cultural output there changed from {{previousCulture}} per turn at turn {{cultureFromTurn}} to {{culture}} at turn {{cultureToTurn}}.", "The routes keep this neighbor in the merchant account; its changing cultural output gives the wider world another reason to pay attention. Follow both measures in later dispatches."],
+      "links": [ { "placeholder": "partnerLink", "label": "{{partner}}", "target": { "type": "civilization", "civilizationId": "{{partnerId}}" } } ] } ]
+  }
+]

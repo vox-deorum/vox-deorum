@@ -13,7 +13,7 @@
       <header class="host-toolbar">
         <div class="host-brand">
           <h1>Newspaper reader</h1>
-          <p>Recorded evidence and fixture issues for the shared reader.</p>
+          <p>Read generated editions, vote on coverage, and inspect recorded evidence.</p>
         </div>
         <div class="host-controls">
           <label for="fixture-select">Fixture</label>
@@ -27,17 +27,31 @@
           <legend>Recording replay</legend>
           <label>Database path <input name="databasePath" required placeholder="F:\recordings\game.db" /></label>
           <label>Receiver <input name="receiverPlayerID" type="number" min="0" max="21" value="0" required /></label>
-          <label>First turn <input name="fromTurn" type="number" min="0" value="125" required /></label>
-          <label>Last turn <input name="toTurn" type="number" min="0" value="175" required /></label>
-          <label>Publication interval <input name="publicationInterval" type="number" min="1" value="5" required /></label>
-          <label>Comparison duration <input name="comparisonTurns" type="number" min="0" value="10" required /></label>
-          <label>Duration units <select name="durationUnit"><option value="recordedTurns">Recorded turns</option><option value="standardTurns">Standard pace turns</option></select></label>
-          <label>Speed multiplier override <input name="speedMultiplierOverride" type="number" min="0.01" step="any" placeholder="Optional" /></label>
+          <label>First turn <input name="fromTurn" type="number" min="0" value="125" data-saved-setting required /></label>
+          <label>Last turn <input name="toTurn" type="number" min="0" value="175" data-saved-setting required /></label>
+          <label>Replay purpose <select name="publicationEnabled" data-saved-setting><option value="true">Generate publications</option><option value="false">Inspect evidence only</option></select></label>
+          <label data-evidence-interval hidden>Evidence check interval <input name="publicationInterval" type="number" min="1" value="5" data-saved-setting required /></label>
+          <label>Comparison duration <input name="comparisonTurns" type="number" min="0" value="10" data-saved-setting required /></label>
+          <label>Comparison and evidence interval units <select name="durationUnit" data-saved-setting><option value="recordedTurns">Recorded turns</option><option value="standardTurns">Standard pace turns</option></select></label>
+          <label>Speed multiplier override <input name="speedMultiplierOverride" type="number" min="0.01" step="any" placeholder="Optional" data-saved-setting /></label>
+          <label>Mode <select name="mode"><option value="new">New run</option><option value="resume">Resume run</option><option value="branch">Branch run</option></select></label>
+          <label>Run ID <input name="runId" placeholder="Required to resume" /></label>
+          <label>Branch from run ID <input name="branchFromRunId" placeholder="Required to branch" disabled /></label>
+          <label>Output path <input name="outputPath" placeholder="Optional publication store" /></label>
+          <label>Editorial config directory <input name="editorialConfigDirectory" placeholder="Optional configuration folder" data-saved-setting /></label>
           <button type="submit">Open recording</button>
           <button type="button" data-replay="inspect" disabled>Inspect cutoff</button>
           <button type="button" data-replay="advance" disabled>Next check</button>
         </fieldset>
+        <p data-replay-resume hidden>Resume restores saved settings. Use Save preferences to change publication preferences.</p>
+        <fieldset>
+          <legend>Publication preferences</legend>
+          <label>Publication frequency (Standard turns) <input name="frequencyStandardTurns" type="number" min="1" placeholder="Catalogue default" /></label>
+          <label>Allow LLM when available <select name="llmEnabled"><option value="">Use catalogue default</option><option value="false">No</option><option value="true">Yes</option></select></label>
+          <button type="button" data-replay="save-preferences" disabled>Save preferences</button>
+        </fieldset>
         <output aria-live="polite">Choose a recording to begin replay.</output>
+        <p class="host-replay-error" data-replay-error role="alert" hidden></p>
       </form>
       <main class="host-main">
         <div id="reader-root"></div>
@@ -45,6 +59,14 @@
           <section>
             <h2>Evidence</h2>
             <div id="evidence-view"></div>
+          </section>
+          <section>
+            <h2>Replay check</h2>
+            <div id="check-view"><p>No check yet.</p></div>
+          </section>
+          <section>
+            <h2>Editorial decision</h2>
+            <pre id="decision-view">No decision recorded.</pre>
           </section>
           <section>
             <h2>Source reference</h2>
@@ -78,7 +100,8 @@
         <h2 id="archive-title">Archive</h2>
         <button id="archive-close" type="button">Close</button>
       </div>
-      <p>The archive is a fixture stub. Choose an edition to open it in the reader.</p>
+      <p>Fixtures are always available. Generated issues open from the current replay run without running another check.</p>
+      <p id="archive-status">Open a replay run to list generated issues.</p>
       <div id="archive-list"></div>
     </dialog>
     <noscript>This fixture host needs JavaScript enabled.</noscript>

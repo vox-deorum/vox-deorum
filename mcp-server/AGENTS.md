@@ -110,6 +110,7 @@ There are four abstract bases in `src/tools/abstract/`. Extending `ToolBase` dir
 - Domain helpers beside their owners in `src/knowledge/helpers/`, `src/database/helpers/`, and `src/diplomacy/`
 - `src/knowledge/history.ts` owns pure current, history, cutoff, and range reads with an explicit database connection. The store retains connection ownership and refresh callbacks.
 - `src/newspaper/evidence.ts` owns browser-safe evidence contracts; `queries.ts` owns dated reads and `projection.ts` owns newspaper reporting policy. These modules and shared knowledge helpers never import the live store, server, getters, or tools.
+- `src/newspaper/protocol.ts` owns browser-safe archive scope, index and query schemas; publication documents and offline output storage belong to Vox Agents, and MCP must never import Vox Agents.
 - Shared report access, event resource redaction, and subject metadata live in `src/knowledge/helpers/`; generic field selection lives in `src/utils/fields.ts`.
 - Event schemas grouped by domain in `src/knowledge/schema/events/`; generators live in `scripts/events/`
 - Tools in `src/tools/` subdirectory

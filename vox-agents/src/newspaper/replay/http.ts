@@ -4,12 +4,12 @@ import { sendError } from '../../web/http-utils.js';
 import { errorMessage } from '../../utils/errors.js';
 import { ReplaySessionError, type ReplaySession } from './session.js';
 
-type ReplayHandlers = Pick<ReplaySession, 'configure' | 'getState' | 'evidence' | 'advance'>;
+type ReplayHandlers = Pick<ReplaySession, 'configure' | 'getState' | 'evidence' | 'advance' | 'listIssues' | 'getIssue' | 'setVote' | 'setPreferences'>;
 
 /** Adapt a session operation to the common JSON error boundary. */
-function reply(operation: (body: unknown) => Promise<unknown>): RequestHandler {
+function reply(operation: (body: unknown, req: express.Request) => Promise<unknown>): RequestHandler {
   return async (req, res) => {
-    try { res.json(await operation(req.body)); }
+    try { res.json(await operation(req.body, req)); }
     catch (error) {
       sendError(res, error instanceof ReplaySessionError ? error.status : error instanceof ZodError ? 400 : 500, errorMessage(error));
     }
@@ -22,12 +22,25 @@ export function mountReplayRoutes(app: Express, session: () => ReplayHandlers): 
   router.use(express.json({ limit: '64kb' }));
   router.get('/', reply(() => session().getState()));
   router.put('/', reply(body => session().configure(body)));
-  router.post('/evidence', reply(() => session().evidence()));
-  router.post('/advance', reply(() => session().advance()));
+  router.post('/evidence', reply(body => session().evidence(body)));
+  router.post('/advance', reply(body => session().advance(body, true)));
+  router.get('/issues', reply((_body, req) => session().listIssues(queryScope(req))));
+  router.get('/issues/:issueId', reply((_body, req) => session().getIssue(String(req.params.issueId), queryScope(req))));
+  router.put('/votes', reply(body => session().setVote(body)));
+  router.put('/preferences', reply(body => session().setPreferences(body)));
   /** Return parser failures through the same JSON envelope as session failures. */
   const parserError: ErrorRequestHandler = (error, _req, res, _next) => {
     sendError(res, error.type === 'entity.too.large' ? 413 : 400, errorMessage(error));
   };
   router.use(parserError);
   app.use('/api/newspaper/replay', router);
+}
+
+/** Convert only a well-formed integer receiver, leaving invalid query values for schema rejection. */
+function queryScope(req: express.Request): unknown {
+  const receiver = req.query.receiverPlayerID;
+  return {
+    ...(req.query.runId === undefined ? {} : { runId: req.query.runId }),
+    ...(receiver === undefined ? {} : { receiverPlayerID: typeof receiver === 'string' && /^\d+$/.test(receiver) ? Number(receiver) : receiver }),
+  };
 }

@@ -17,8 +17,6 @@ import {
   type RenderBundle,
   type RenderRegion,
   type RenderStrip,
-  type TabGeometry,
-  type VoteSlotGeometry,
 } from "../contracts/render.js";
 import { validateRenderProfileForDesign } from "./validation.js";
 

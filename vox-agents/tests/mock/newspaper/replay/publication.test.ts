@@ -1,0 +1,198 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+import Database from 'better-sqlite3';
+import { ReplaySession } from '../../../../src/newspaper/replay/session.js';
+import { runEditorialCheck } from '../../../../src/newspaper/editorial/check.js';
+import { ReplayStore } from '../../../../src/newspaper/replay/store.js';
+import { replaySourceIdentity } from '../../../../src/newspaper/replay/database.js';
+import { createReplayRecording, replaySettings } from '../../../helpers/newspaper-replay.js';
+
+describe('durable replay publication', () => {
+  let recording: Awaited<ReturnType<typeof createReplayRecording>>;
+  let session: ReplaySession;
+  let outputPath: string;
+  beforeEach(async () => {
+    recording = await createReplayRecording();
+    outputPath = path.join(path.dirname(recording.filename), 'newspaper.sqlite');
+    session = new ReplaySession();
+  });
+  afterEach(async () => { await session.close(); await recording.cleanup(); });
+
+  /** Start a window containing a recorded threat against the receiving team. */
+  function settings() {
+    return { ...replaySettings(recording.filename), fromTurn: 6, toTurn: 40, outputPath, runId: 'main' };
+  }
+
+  it('should replace votes, reject stale scopes, reschedule frequency and resume immutable history', async () => {
+    const state = await session.configure(settings());
+    expect(state).toMatchObject({ runId: 'main', preferences: { frequencyStandardTurns: 5, llmEnabled: false }, publicationIntervalTurns: 8 });
+    const first = await session.advance();
+    expect(first.check?.status).toBe('published');
+    const issueId = first.check!.issue!.issueId;
+    const itemId = first.check!.issue!.items[0].id;
+    const scope = { runId: 'main', receiverPlayerID: 0 };
+    const original = await session.getIssue(issueId, scope);
+    await session.setVote({ ...scope, itemId, value: 1 });
+    await session.setVote({ ...scope, itemId, value: 1 });
+    expect((await session.getIssue(issueId)).votes[itemId]).toBe(1);
+    await session.setVote({ ...scope, itemId, value: -1 });
+    expect((await session.getIssue(issueId)).votes[itemId]).toBe(-1);
+    await session.setVote({ ...scope, itemId, value: 0 });
+    expect((await session.getIssue(issueId)).votes[itemId]).toBe(0);
+    await expect(session.setVote({ ...scope, runId: 'other', itemId, value: 1 })).rejects.toMatchObject({ status: 409 });
+    await expect(session.setVote({ ...scope, receiverPlayerID: 1, itemId, value: 1 })).rejects.toMatchObject({ status: 409 });
+    await expect(session.advance({ ...scope, runId: 'other' })).rejects.toMatchObject({ status: 409 });
+    await expect(session.getIssue(issueId, { receiverPlayerID: 1 })).rejects.toMatchObject({ status: 409 });
+    await session.setVote({ ...scope, itemId, value: 1 });
+    await session.setVote({ ...scope, itemId, value: 1 });
+    await session.setPreferences({ ...scope, frequencyStandardTurns: 2, llmEnabled: true });
+    const next = await session.advance(scope);
+    expect(next.evidence.request).toMatchObject({ previousCheckTurn: 6, cutoffTurn: 9 });
+    expect(next.check!.decision.feedback.votes[itemId]).toBe(1);
+    expect(next.check!.decision.feedback.windowItemIds.filter(id => id === itemId)).toHaveLength(1);
+    expect(Object.values(next.check!.decision.feedback.seriesAdjustments).some(value => value > 0)).toBe(true);
+    expect((await session.getIssue(issueId)).articles.find(item => item.id === itemId)).toMatchObject({
+      templateIds: expect.any(Array), sources: expect.any(Array), evidenceSummary: expect.any(String),
+    });
+    expect((await session.getIssue(issueId)).issue).toEqual(original.issue);
+    expect((await session.getIssue(issueId)).decision).toEqual(original.decision);
+    const before = await session.getState();
+    await session.close();
+    session = new ReplaySession();
+    const resumed = await session.configure({ ...settings(), mode: 'resume', frequencyStandardTurns: 99, llmEnabled: false });
+    expect(resumed).toEqual(before);
+    expect((await session.getIssue(issueId)).issue).toEqual(original.issue);
+    const continued = await session.advance();
+    expect(continued.evidence.request).toMatchObject({ previousCheckTurn: 9, cutoffTurn: 12 });
+    const sqlite = new Database(outputPath, { readonly: true });
+    expect(sqlite.prepare('SELECT COUNT(*) AS count FROM OfflineReplayChecks WHERE Cutoff = 6').get()).toEqual({ count: 1 });
+    sqlite.close();
+    expect(await readFile(recording.filename)).toEqual(recording.originalBytes);
+  });
+
+  it('should restore the saved catalogue when the configured files change or disappear', async () => {
+    const directory = path.join(path.dirname(recording.filename), 'catalogue');
+    await mkdir(directory);
+    await writeFile(path.join(directory, 'defaults.json'), JSON.stringify({ frequencyStandardTurns: 3 }));
+    await session.configure({ ...settings(), editorialConfigDirectory: directory });
+    const first = await session.advance();
+    await session.close();
+    await rm(directory, { recursive: true });
+    const check = vi.fn(runEditorialCheck);
+    session = new ReplaySession({ check });
+    await session.configure({ ...settings(), mode: 'resume' });
+    const continued = await session.advance();
+    expect(check.mock.calls[0][0].config.defaults.frequencyStandardTurns).toBe(3);
+    expect(continued.check!.decision.configurationId).toBe(first.check!.decision.configurationId);
+  });
+
+  it.each([
+    { file: 'pages', entries: [{ id: 'front', condition: { op: 'technology', id: 'TECH_WRITING' } }] },
+    { file: 'designs', entries: [{ id: 'oral-accounts', layouts: [{ id: 'account', weight: { base: 10, adjustments: [{ condition: { op: 'always' }, add: -10 }] } }] }] },
+    { file: 'designs', entries: [{ id: 'oral-accounts', layouts: [{ id: 'urgent-account', condition: { op: 'technology', id: 'TECH_WRITING' } }] }] },
+  ])('should reject an overlay with an unavailable publication foundation before creating a run: %j', async ({ file, entries }) => {
+    const directory = path.join(path.dirname(recording.filename), 'invalid-catalogue');
+    await mkdir(directory);
+    await writeFile(path.join(directory, `${file}.json`), JSON.stringify(entries));
+    await expect(session.configure({ ...settings(), editorialConfigDirectory: directory })).rejects.toMatchObject({ status: 400 });
+    const sqlite = new Database(outputPath, { readonly: true });
+    try { expect(sqlite.prepare('SELECT COUNT(*) AS count FROM OfflineReplayRuns').get()).toEqual({ count: 0 }); }
+    finally { sqlite.close(); }
+  });
+
+  it('should create fresh explicit comparison branches and keep parent votes isolated', async () => {
+    await session.configure(settings());
+    const first = await session.advance();
+    const itemId = first.check!.issue!.items[0].id;
+    await session.setVote({ runId: 'main', receiverPlayerID: 0, itemId, value: 1 });
+    await session.configure({ ...settings(), mode: 'branch', branchFromRunId: 'main', runId: 'comparison', llmEnabled: true });
+    expect((await session.listIssues()).issues).toEqual([]);
+    await expect(session.setVote({ runId: 'comparison', receiverPlayerID: 0, itemId, value: 1 })).rejects.toMatchObject({ status: 404 });
+    const comparison = await session.advance();
+    expect(comparison.check!.issue!.issueId).not.toBe(first.check!.issue!.issueId);
+    await session.configure({ ...settings(), mode: 'resume' });
+    expect((await session.getIssue(first.check!.issue!.issueId)).votes[itemId]).toBe(1);
+  });
+
+  it('should reject competing sessions until they resume without rolling back advances or losing votes', async () => {
+    const scope = { runId: 'main', receiverPlayerID: 0 };
+    await session.configure(settings());
+    const first = await session.advance();
+    const issueId = first.check!.issue!.issueId;
+    const itemId = first.check!.issue!.items[0].id;
+    const competitor = new ReplaySession();
+    try {
+      await competitor.configure({ ...settings(), mode: 'resume' });
+      await session.advance();
+      await expect(competitor.setVote({ ...scope, itemId, value: -1 })).rejects.toMatchObject({ status: 409 });
+      await competitor.configure({ ...settings(), mode: 'resume' });
+      expect((await competitor.getState()).cursor.cutoffTurn).toBe(14);
+      await session.setVote({ ...scope, itemId, value: 1 });
+      await expect(competitor.setVote({ ...scope, itemId, value: -1 })).rejects.toMatchObject({ status: 409 });
+      await expect(competitor.advance()).rejects.toMatchObject({ status: 409 });
+      await competitor.configure({ ...settings(), mode: 'resume' });
+      expect((await competitor.getIssue(issueId)).votes[itemId]).toBe(1);
+      const advanced = await competitor.advance();
+      expect(advanced.evidence.request.cutoffTurn).toBe(22);
+      await session.configure({ ...settings(), mode: 'resume' });
+      expect((await session.getState()).cursor.cutoffTurn).toBe(22);
+      expect((await session.getIssue(issueId)).votes[itemId]).toBe(1);
+      const sqlite = new Database(outputPath, { readonly: true });
+      expect(sqlite.prepare('SELECT COUNT(*) AS count FROM OfflineReplayChecks WHERE Cutoff = 22').get()).toEqual({ count: 1 });
+      sqlite.close();
+    } finally { await competitor.close(); }
+  });
+
+  it('should report an existing run as a conflict and preserve the active session', async () => {
+    await session.configure(settings());
+    await session.advance();
+    await expect(session.configure(settings())).rejects.toMatchObject({ status: 409 });
+    expect((await session.getState()).cursor.cutoffTurn).toBe(6);
+    await session.configure({ ...settings(), mode: 'resume' });
+    expect((await session.getState()).cursor.cutoffTurn).toBe(6);
+  });
+
+  it('should ignore a stale branch parent when starting an ordinary new run', async () => {
+    await session.configure({ ...settings(), mode: 'new', branchFromRunId: 'unrelated-or-missing' });
+    const sqlite = new Database(outputPath, { readonly: true });
+    expect(sqlite.prepare('SELECT ParentRunID FROM OfflineReplayRuns WHERE RunID = ?').get('main')).toEqual({ ParentRunID: null });
+    sqlite.close();
+    expect((await session.getState()).cursor.cutoffTurn).toBeNull();
+    expect((await session.listIssues()).issues).toEqual([]);
+  });
+
+  it('should preserve its in-memory checkpoint when another store commits the same cutoff during editing', async () => {
+    await session.configure(settings());
+    await session.advance();
+    await session.close();
+    const competitor = new ReplayStore(outputPath);
+    try {
+      const saved = competitor.load('main', 0, await replaySourceIdentity(recording.filename));
+      session = new ReplaySession({ check: input => {
+        const result = runEditorialCheck(input);
+        const winning = structuredClone(result);
+        winning.state.preferences.llmEnabled = true;
+        const competitorSession = structuredClone(saved.session);
+        competitorSession.preferences = winning.state.preferences;
+        competitorSession.cursor = {
+          cutoffTurn: input.evidence.request.cutoffTurn,
+          previousCheckTurn: input.evidence.request.previousCheckTurn,
+          finished: false,
+        };
+        competitor.commit({ session: competitorSession, publication: winning.state, configuration: input.config }, winning);
+        return result;
+      } });
+      await session.configure({ ...settings(), mode: 'resume' });
+      const before = await session.getState();
+      await expect(session.advance()).rejects.toMatchObject({ status: 409 });
+      expect(await session.getState()).toEqual(before);
+      const committed = competitor.load('main', 0, await replaySourceIdentity(recording.filename));
+      expect(committed.session.cursor.cutoffTurn).toBe(14);
+      expect(committed.publication.preferences.llmEnabled).toBe(true);
+      await session.configure({ ...settings(), mode: 'resume' });
+      expect((await session.getState()).cursor.cutoffTurn).toBe(14);
+      expect((await session.getState()).preferences?.llmEnabled).toBe(true);
+    } finally { competitor.close(); }
+  });
+});

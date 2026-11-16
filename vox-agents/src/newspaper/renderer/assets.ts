@@ -15,6 +15,7 @@ export interface NewspaperAsset {
   license: string;
   licensePath?: string;
   attribution: string;
+  font?: { family: string; weight: number; style: "normal" | "italic"; fallback: string };
 }
 
 /** Registered asset paths and their licenses. */
@@ -22,6 +23,7 @@ export const newspaperAssets = {
   "font-unifrakturmaguntia-400": {
     id: "font-unifrakturmaguntia-400",
     kind: "font",
+    font: { family: "UnifrakturMaguntia", weight: 400, style: "normal", fallback: '"Bodoni Moda", Georgia, serif' },
     path: "assets/fonts/unifrakturmaguntia-normal-400.ttf",
     mediaType: "font/ttf",
     license: "OFL-1.1",
@@ -31,6 +33,7 @@ export const newspaperAssets = {
   "font-bodoni-moda-400": {
     id: "font-bodoni-moda-400",
     kind: "font",
+    font: { family: "Bodoni Moda", weight: 400, style: "normal", fallback: "Georgia, serif" },
     path: "assets/fonts/bodoni-moda-normal-400.ttf",
     mediaType: "font/ttf",
     license: "OFL-1.1",
@@ -40,6 +43,7 @@ export const newspaperAssets = {
   "font-bodoni-moda-700": {
     id: "font-bodoni-moda-700",
     kind: "font",
+    font: { family: "Bodoni Moda", weight: 700, style: "normal", fallback: "Georgia, serif" },
     path: "assets/fonts/bodoni-moda-normal-700.ttf",
     mediaType: "font/ttf",
     license: "OFL-1.1",
@@ -49,6 +53,7 @@ export const newspaperAssets = {
   "font-bodoni-moda-900": {
     id: "font-bodoni-moda-900",
     kind: "font",
+    font: { family: "Bodoni Moda", weight: 900, style: "normal", fallback: "Georgia, serif" },
     path: "assets/fonts/bodoni-moda-normal-900.ttf",
     mediaType: "font/ttf",
     license: "OFL-1.1",
@@ -58,6 +63,7 @@ export const newspaperAssets = {
   "font-bodoni-moda-italic-400": {
     id: "font-bodoni-moda-italic-400",
     kind: "font",
+    font: { family: "Bodoni Moda", weight: 400, style: "italic", fallback: "Georgia, serif" },
     path: "assets/fonts/bodoni-moda-italic-400.ttf",
     mediaType: "font/ttf",
     license: "OFL-1.1",
@@ -67,6 +73,7 @@ export const newspaperAssets = {
   "font-libre-caslon-400": {
     id: "font-libre-caslon-400",
     kind: "font",
+    font: { family: "Libre Caslon Text", weight: 400, style: "normal", fallback: "Georgia, serif" },
     path: "assets/fonts/libre-caslon-text-normal-400.ttf",
     mediaType: "font/ttf",
     license: "OFL-1.1",
@@ -76,6 +83,7 @@ export const newspaperAssets = {
   "font-libre-caslon-700": {
     id: "font-libre-caslon-700",
     kind: "font",
+    font: { family: "Libre Caslon Text", weight: 700, style: "normal", fallback: "Georgia, serif" },
     path: "assets/fonts/libre-caslon-text-normal-700.ttf",
     mediaType: "font/ttf",
     license: "OFL-1.1",
@@ -85,6 +93,7 @@ export const newspaperAssets = {
   "font-libre-caslon-italic-400": {
     id: "font-libre-caslon-italic-400",
     kind: "font",
+    font: { family: "Libre Caslon Text", weight: 400, style: "italic", fallback: "Georgia, serif" },
     path: "assets/fonts/libre-caslon-text-italic-400.ttf",
     mediaType: "font/ttf",
     license: "OFL-1.1",
@@ -94,6 +103,7 @@ export const newspaperAssets = {
   "font-inter-400": {
     id: "font-inter-400",
     kind: "font",
+    font: { family: "Inter", weight: 400, style: "normal", fallback: "Arial, sans-serif" },
     path: "assets/fonts/inter-normal-400.ttf",
     mediaType: "font/ttf",
     license: "OFL-1.1",
@@ -103,6 +113,7 @@ export const newspaperAssets = {
   "font-inter-500": {
     id: "font-inter-500",
     kind: "font",
+    font: { family: "Inter", weight: 500, style: "normal", fallback: "Arial, sans-serif" },
     path: "assets/fonts/inter-normal-500.ttf",
     mediaType: "font/ttf",
     license: "OFL-1.1",
@@ -112,6 +123,7 @@ export const newspaperAssets = {
   "font-inter-600": {
     id: "font-inter-600",
     kind: "font",
+    font: { family: "Inter", weight: 600, style: "normal", fallback: "Arial, sans-serif" },
     path: "assets/fonts/inter-normal-600.ttf",
     mediaType: "font/ttf",
     license: "OFL-1.1",
@@ -121,6 +133,7 @@ export const newspaperAssets = {
   "font-inter-700": {
     id: "font-inter-700",
     kind: "font",
+    font: { family: "Inter", weight: 700, style: "normal", fallback: "Arial, sans-serif" },
     path: "assets/fonts/inter-normal-700.ttf",
     mediaType: "font/ttf",
     license: "OFL-1.1",
@@ -130,6 +143,7 @@ export const newspaperAssets = {
   "font-inter-800": {
     id: "font-inter-800",
     kind: "font",
+    font: { family: "Inter", weight: 800, style: "normal", fallback: "Arial, sans-serif" },
     path: "assets/fonts/inter-normal-800.ttf",
     mediaType: "font/ttf",
     license: "OFL-1.1",
@@ -281,6 +295,12 @@ export const newspaperVoteIconAssets = {
 /** Return a registered asset, or undefined for an unknown id. */
 export function getNewspaperAsset(id: string): NewspaperAsset | undefined {
   return isNewspaperAssetId(id) ? newspaperAssets[id] : undefined;
+}
+
+/** Resolve every bundled weight and style belonging to the selected font's family. */
+export function getNewspaperFontFaces(id: string): NewspaperAsset[] {
+  const family = getNewspaperAsset(id)?.font?.family;
+  return family ? Object.values(newspaperAssets).filter((asset: NewspaperAsset) => asset.font?.family === family) : [];
 }
 
 /** Tell whether a string names a registered asset. */

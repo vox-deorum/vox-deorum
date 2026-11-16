@@ -95,7 +95,12 @@ body {
   align-items: end;
   gap: 12px;
   border: 0;
+  margin: 0;
   padding: 0;
+}
+
+.host-replay fieldset + fieldset {
+  margin-top: 10px;
 }
 
 .host-replay label {
@@ -104,15 +109,26 @@ body {
   font-size: 12px;
 }
 
+.host-replay [hidden] {
+  display: none;
+}
+
 .host-replay input[type="number"] {
   width: 100px;
 }
 
-.host-replay input[name="databasePath"] {
+.host-replay input[name="databasePath"],
+.host-replay input[name="outputPath"],
+.host-replay input[name="editorialConfigDirectory"] {
   width: min(320px, 70vw);
 }
 
-.host-replay input, .host-replay select, .host-replay button, #evidence-view button {
+.host-replay input[name="runId"],
+.host-replay input[name="branchFromRunId"] {
+  width: min(220px, 60vw);
+}
+
+.host-replay input, .host-replay select, .host-replay button, #evidence-view button, #check-view button {
   padding: 6px;
   font: inherit;
 }
@@ -120,13 +136,26 @@ body {
 .host-replay output {
   display: block;
   margin-top: 8px;
+  white-space: pre-wrap;
 }
 
+.host-replay-error {
+  margin: 8px 0 0;
+  color: #8d1f1f;
+  font-weight: 500;
+}
+
+#check-view button,
 #evidence-view button {
   display: block;
   margin-bottom: 6px;
   text-align: left;
   cursor: pointer;
+}
+
+#check-view p {
+  margin: 0 0 6px;
+  color: #41515e;
 }
 
 #reader-root {
@@ -242,6 +271,21 @@ body {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+#archive-list h3 {
+  margin: 10px 0 0;
+  color: #41515e;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+#archive-status {
+  margin: 0 0 12px;
+  color: #5c6b78;
+  font-size: 12px;
 }
 
 .host-archive-entry {

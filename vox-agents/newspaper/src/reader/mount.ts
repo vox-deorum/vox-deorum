@@ -14,6 +14,8 @@ import {
   newspaperDesignDefaults,
 } from "../../../src/newspaper/renderer/layout.js";
 import { getNewspaperAsset } from "../../../src/newspaper/renderer/assets.js";
+import { getPublicationOrnament, getPublicationRendererFamily } from "../../../src/newspaper/renderer/presentation.js";
+import { applyPublicationPresentation } from "./presentation.js";
 import { renderStory, applyVoteState } from "./story.js";
 import {
   parseIssueDocument,
@@ -80,7 +82,7 @@ export function mountReader(
   options: ReaderMountOptions = {},
 ): ReaderHandle {
   const issue = parseIssueDocument(issueInput);
-  const designId = issue.publication.designId;
+  const designId = getPublicationRendererFamily(issue.publication);
   const mode = options.mode ?? "reader";
   root.classList.add("vd-newspaper");
   const profile = options.profile ? parseRenderProfile(options.profile) : defaultProfile(root, designId);
@@ -104,7 +106,7 @@ export function mountReader(
   const title = createElement("h1", "vd-title", issue.publication.title);
   masthead.append(title);
 
-  if (issue.publication.ornamentAssetId) {
+  if (getPublicationOrnament(issue.publication)) {
     const ornament = createOrnamentImage(issue, assetBaseUrl);
     if (ornament) masthead.append(ornament);
   }
@@ -182,6 +184,7 @@ export function mountReader(
   root.dataset.design = designId;
   root.dataset.mode = mode;
   root.dataset.issueId = issue.issueId;
+  const presentation = applyPublicationPresentation(root, issue.publication, assetBaseUrl, instancePrefix);
   applyLayout();
 
   /** Apply the shared layout metrics without rebuilding reader state or stories. */
@@ -301,7 +304,7 @@ export function mountReader(
   root.addEventListener("click", handleClick);
   tabs.addEventListener("keydown", handleTabKeydown);
 
-  const ready = waitForMedia(publication).then(() => {
+  const ready = presentation.ready.then(() => waitForMedia(publication)).then(() => {
     if (disposed) return;
     const active = pageElements.get(state.activePageId);
     if (active) active.scrollTop = state.scrollByPage[state.activePageId] ?? 0;
@@ -317,6 +320,7 @@ export function mountReader(
       root.removeEventListener("click", handleClick);
       tabs.removeEventListener("keydown", handleTabKeydown);
       if (publication.parentElement !== root) return;
+      presentation.dispose();
       root.replaceChildren();
       root.classList.remove("vd-newspaper");
       delete root.dataset.design;
@@ -351,7 +355,7 @@ export function mountReader(
 
 /** Create the publication ornament, hidden from assistive technology. */
 function createOrnamentImage(issue: IssueDocument, assetBaseUrl: string): HTMLElement | null {
-  const assetId = issue.publication.ornamentAssetId;
+  const assetId = getPublicationOrnament(issue.publication);
   if (!assetId) return null;
   const url = resolveAssetUrl(assetBaseUrl, assetId);
   if (!url) return null;

@@ -5,8 +5,11 @@ import { queryNewspaperEvidence } from '../../../../../mcp-server/dist/newspaper
 import { openReadonlyGameDb } from '../../../../src/knowledge/database.js';
 import { openReplayDatabase } from '../../../../src/newspaper/replay/database.js';
 import { ReplaySession, ReplaySessionError } from '../../../../src/newspaper/replay/session.js';
-import { createReplayRecording, replaySettings } from '../../../helpers/newspaper-replay.js';
+import { createReplayRecording, replaySettings as sourceSettings } from '../../../helpers/newspaper-replay.js';
 import { deferred } from '../../../helpers/deferred.js';
+
+/** Keep legacy evidence-only lifecycle checks independent of the publication output store. */
+function replaySettings(databasePath: string) { return { ...sourceSettings(databasePath), publicationEnabled: false }; }
 
 describe('replay session', () => {
   let recording: Awaited<ReturnType<typeof createReplayRecording>>;

@@ -1,27 +1,37 @@
 # Newspaper renderer proof
 
-The newspaper renderer displays fixture issues in a browser and exports the same layout as DDS strips with typed interaction rectangles. Manual testing confirmed the demo's links, scrolling, and general UI in Civilization V. The exact test environment was not recorded. Broader testing awaits generated issues from real evidence.
+The newspaper renderer displays completed issues in a browser and exports the same layout as DDS strips with typed interaction rectangles. This guide covers its input, browser reader, export service, and game delivery. Manual testing confirmed the demo's links, scrolling, and general UI in Civilization V. The exact test environment was not recorded.
 
-The renderer supports Victorian and modern designs, section tabs, article links, and reversible votes shared by every appearance of an item. Votes are local to the reader. The normal VD server hosts the reader, export service, and [recording replay](replay.md), and the Debug page can open a sample issue in the loaded game. Story generation, archives, and saved-game persistence belong to later stages.
+Configurable designs use Victorian and modern renderer families, section tabs, article links, and reversible votes shared by every appearance of an item. The host owns vote persistence. The normal VD server hosts the reader, export service, and [recording replay](replay.md), and the Debug page can open a sample issue in the loaded game.
 
 ## Supply a completed issue
 
-The Zod schemas in `src/newspaper/contracts/issue.ts` are the source of the issue contract, and the TypeScript types are inferred from them. An `IssueDocument` holds ready articles in their publication order. The renderer builds the reading surface from it; editorial selection will later turn replay evidence into publications.
+The Zod schemas in `src/newspaper/contracts/issue.ts` are the source of the issue contract, and the TypeScript types are inferred from them. An `IssueDocument` holds ready articles in their publication order. The renderer builds the reading surface from the stored content and presentation.
 
 | Field | Content |
 | --- | --- |
 | `schemaVersion`, `issueId`, `campaignId`, `timelineId` | Document version and issue, campaign, and timeline identity |
 | `receiver` | `IssueReceiver` with the player `playerId`, display `label`, and optional `civilizationId` |
 | `cutoff` | `IssueCutoff` with the reporting `turn` and display `label` |
-| `publication` | `IssuePublication` with `title`, `designId`, `designVersion`, and optional `ornamentAssetId` |
+| `publication` | `IssuePublication` with `title`, configurable `designId`, `designVersion`, and the presentation snapshot described below |
 | `pages` | Ordered `IssuePage` sections, each with an `id`, `label`, `layout`, and ordered `itemIds` |
 | `items` | Canonical `IssueItem` articles, each with an `id`, `tags`, `seriesKeys`, `headline`, `body`, and `sourceNote` |
 
 An item can also supply a `subheadline`, an `earlierReport`, an `image`, an `avatar`, and an `evidenceTable`. Headline, subheadline, body, sourceNote, and earlier report prose use typed inline nodes for text, emphasis, breaks, and links. An `EarlierReportLink` holds its `label`, an article `target`, and the earlier article's `summary`. An `ItemImage` holds an `assetId` and a required `altText`. A `FeedAvatar` holds `initials` and a `tone`. An `EvidenceTable` holds a `title`, `description`, `columns`, `rows`, and an optional `footnote`; each `EvidenceRow` holds a `label`, `values`, and an optional `hasMissingValues` flag. Link targets identify a city, civilization, trade relationship, supported game screen, or article. Supply those typed targets rather than raw markup.
 
-Multiple pages can reference the same canonical item ID. Every appearance shares its vote. Page IDs and item IDs must be unique, and page item references must resolve. Renderer validation in `src/newspaper/renderer/validation.ts` also checks registered assets and their kinds, covering item images and publication ornaments. The contract schemas handle structure and references without importing the renderer.
+Multiple pages can reference the same canonical item ID. Every appearance shares its vote. Page IDs and item IDs must be unique, and page item references must resolve. Renderer validation in `src/newspaper/renderer/validation.ts` checks registered assets and their kinds, including illustrations, ornaments, and presentation fonts. The contract schemas handle structure and references without importing the renderer.
 
 The four files in `newspaper/fixtures/` are complete input examples: `victorian-ordinary.json`, `victorian-breaking.json`, `victorian-analysis.json`, and `modern-ordinary.json`.
+
+### Store the presentation with the issue
+
+Issue schema 2 requires `publication.presentation`, defined in `contracts/design.ts`. Its own schema version is 1. The snapshot stores the chosen `rendererFamily` (`victorian` or `modern`), optional paper, ink and accent colors, optional body, heading and masthead font asset IDs, and an optional ornament asset ID. Omitted tokens use the selected family's defaults. Headings and the masthead have separate font roles, so the Victorian design reserves blackletter for its publication title.
+
+Font assets resolve to their registered family with all bundled weights and styles. Bold and italic text retain their corresponding faces, and missing files use the family's fallback stack while the reader becomes ready. Disposing the reader removes its font faces. The same saved colors, fonts and ornament apply in browser reading and export.
+
+A configured identity such as `early-account` can therefore use the Victorian renderer with its own colors and typography. Reopening the issue uses its saved snapshot without consulting today's catalogue. Export bundles keep the fixed renderer family in `designId`; cache keys include the entire issue and its presentation snapshot.
+
+Schema 1 fixtures remain accepted with their original `victorian` or `modern` identity and optional top-level publication `ornamentAssetId`. Schema 2 uses the ornament in its presentation snapshot. The installed catalogue is packaged from `newspaper/catalogue/*.json` separately from the excluded reader sources and developer fixtures.
 
 Keep these related values separate:
 
@@ -73,9 +83,10 @@ The source is divided by runtime and responsibility:
 | Location | Responsibility |
 | --- | --- |
 | `src/newspaper/contracts/issue.ts` | Issue schemas, inferred types, typed links, and structural validation |
+| `src/newspaper/contracts/design.ts` | Versioned presentation snapshots and supported renderer families |
 | `src/newspaper/contracts/reader.ts` | Reader actions, persisted state, and their validation |
 | `src/newspaper/contracts/render.ts` | Serialized profiles, geometry and bundles, with structural schemas |
-| `src/newspaper/renderer/{assets,layout,state}.ts` | Browser-safe assets, layout defaults, and shared reader state helpers |
+| `src/newspaper/renderer/{assets,layout,presentation,state}.ts` | Browser-safe assets, layout defaults, stored presentation resolution, and shared reader state helpers |
 | `src/newspaper/renderer/{bridge,validation,bundle}.ts` | Browser bridge interfaces, asset and profile capability checks, and bundle consistency checks |
 | `src/newspaper/export/{browser,render,dds}.ts` | Node capture orchestration, browser lifecycle, and DDS conversion |
 | `src/newspaper/export/{cache,bundle-assets,lua-fixture}.ts` | Atomic cache publication, bundle file resolution, and structured game delivery payloads |
@@ -92,7 +103,7 @@ Contracts have no renderer imports. The renderer depends on contracts and stays 
 
 `NewspaperExportService` validates issues, serializes cache lookup and capture, and awaits each request's delivery callback before pinning the delivered bundle. Generic exports do not open the game or replace its pin. A failed request does not block later requests. Shutdown rejects new exports, drains accepted jobs and delivery, then closes the browser before the VD server closes HTTP. Rendering uses the server's actual bound port, including a fallback port. The initial MCP connection wait is limited to eight seconds. Once dispatched, a game call retains the existing 660-second timeout so a paused game can resume and acknowledge delivery. Shutdown waits for that acknowledgement or failure; a second Ctrl+C forces process exit.
 
-Vite cleans `dist-newspaper` on every build, then `scripts/utilities/package-newspaper-sample.mjs` copies the existing Victorian ordinary fixture to `sample.json`. Production packaging retains that sample, the compiled backend in `dist/newspaper`, the compiled reader, runtime `playwright-core`, and `vendor/texconv` with its license. The installer anchors its source-folder exclusion to the component root so it preserves the compiled backend. It excludes reader source, the remaining developer fixtures, and legacy Lua fixture data. Converter acquisition runs during developer setup or the installer build. No browser is bundled or downloaded. Mock tests under `tests/mock/newspaper/` mirror the implementation boundaries, including HTTP and service lifecycle checks under `export/`. Shared test builders live in `tests/helpers/newspaper-fixtures.ts`.
+Vite cleans `dist-newspaper` on every build, then `scripts/utilities/package-newspaper-sample.mjs` copies the existing Victorian ordinary fixture to `sample.json`. Production packaging retains that sample, the runtime JSON catalogue, the compiled backend in `dist/newspaper`, the compiled reader, runtime `playwright-core`, and `vendor/texconv` with its license. The installer anchors its source-folder exclusion to the component root so it preserves the compiled backend, and explicitly includes the catalogue. It excludes reader source, the remaining developer fixtures, and legacy Lua fixture data. Converter acquisition runs during developer setup or the installer build. No browser is bundled or downloaded. Mock tests under `tests/mock/newspaper/` mirror the implementation boundaries, including HTTP and service lifecycle checks under `export/`. Shared test builders live in `tests/helpers/newspaper-fixtures.ts`.
 
 Run focused checks with `npm test -w vox-agents -- tests/mock/newspaper`, then run `npm run build:all` and `npm run test:all` for integration. Browser-driven tests use installed browsers and the built reader. Converter checks require the acquired executable.
 

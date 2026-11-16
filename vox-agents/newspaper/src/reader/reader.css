@@ -77,7 +77,7 @@
 .vd-title {
   margin: 0;
   color: var(--vd-ink);
-  font-family: var(--vd-font-display);
+  font-family: var(--vd-font-masthead, var(--vd-font-display));
   font-size: calc(76px * var(--vd-text-scale));
   font-weight: 400;
   line-height: 1.1;
@@ -86,7 +86,7 @@
 }
 
 .vd-newspaper[data-design="victorian"] .vd-title {
-  font-family: "UnifrakturMaguntia", "Bodoni Moda", Georgia, serif;
+  font-family: var(--vd-font-masthead, "UnifrakturMaguntia"), "Bodoni Moda", Georgia, serif;
 }
 
 .vd-ornament {

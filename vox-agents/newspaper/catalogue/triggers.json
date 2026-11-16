@@ -1,0 +1,9 @@
+[
+  { "id": "city-contrast", "detector": "cityContrast", "threshold": 1, "scale": 5, "tags": ["domestic", "cities", "society"] },
+  { "id": "trade-concentration", "detector": "tradeConcentration", "threshold": 5, "scale": 35, "tags": ["international", "economy", "trade"] },
+  { "id": "foreign-culture", "detector": "foreignCulture", "threshold": 5, "scale": 100, "tags": ["international", "culture"] },
+  { "id": "incoming-war", "detector": "incomingWar", "threshold": 1, "scale": 1, "tags": ["international", "war", "diplomacy"] },
+  { "id": "deal", "detector": "deal", "threshold": 1, "scale": 4, "tags": ["international", "diplomacy"] },
+  { "id": "peace", "detector": "peace", "threshold": 1, "scale": 1, "tags": ["international", "diplomacy", "recovery"] },
+  { "id": "city-recovery", "detector": "cityRecovery", "threshold": 1, "scale": 4, "tags": ["domestic", "cities", "recovery"] }
+]

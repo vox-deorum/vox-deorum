@@ -35,6 +35,17 @@ const renderableIssueItemSchema = issueItemSchema.superRefine((item, ctx) => {
 
 /** Require publication ornaments to name registered ornament assets. */
 const renderableIssuePublicationSchema = issuePublicationSchema.superRefine((publication, ctx) => {
+  const presentation = publication.presentation;
+  for (const [name, assetId] of Object.entries(presentation?.tokens ?? {})) {
+    if (!name.endsWith("FontAssetId") || !assetId) continue;
+    if (getNewspaperAsset(assetId)?.kind !== "font") {
+      ctx.addIssue({ code: "custom", path: ["presentation", "tokens", name], message: `Asset "${assetId}" is not a registered font.` });
+    }
+  }
+  const storedOrnament = presentation?.assets?.ornamentAssetId;
+  if (storedOrnament && getNewspaperAsset(storedOrnament)?.kind !== "ornament") {
+    ctx.addIssue({ code: "custom", path: ["presentation", "assets", "ornamentAssetId"], message: `Asset "${storedOrnament}" is not a registered ornament.` });
+  }
   const ornamentAssetId = publication.ornamentAssetId;
   if (!ornamentAssetId) return;
   if (!isNewspaperAssetId(ornamentAssetId)) {

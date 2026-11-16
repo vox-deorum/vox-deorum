@@ -6,6 +6,7 @@ import type { DdsFormat } from './dds.js';
 import type { RenderProfile } from '../contracts/render.js';
 import { parseIssueDocument, parseRenderProfile, validateRenderProfileForDesign } from '../renderer/validation.js';
 import type { IssueDocument } from '../contracts/issue.js';
+import { getPublicationRendererFamily } from '../renderer/presentation.js';
 
 export interface NewspaperExportOptions {
   url: () => string;
@@ -39,7 +40,7 @@ export class NewspaperExportService {
     try {
       profile = parseRenderProfile(profileOverride ?? this.profile);
       issue = parseIssueDocument(input);
-      validateRenderProfileForDesign(profile, issue.publication.designId);
+      validateRenderProfileForDesign(profile, getPublicationRendererFamily(issue.publication));
     } catch (error) {
       return Promise.reject(error);
     }
@@ -61,7 +62,7 @@ export class NewspaperExportService {
     const cached = await cache.getOrCreate(key,
       directory => renderIssue(this.worker, url(), issue, profile, directory, format), {
         issueId: issue.issueId, campaignId: issue.campaignId, timelineId: issue.timelineId,
-        designId: issue.publication.designId, designVersion: issue.publication.designVersion,
+        designId: getPublicationRendererFamily(issue.publication), designVersion: issue.publication.designVersion,
         profile,
       });
     if (deliver) {

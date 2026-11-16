@@ -20,6 +20,7 @@ import {
 import type { CapturePlan, NewspaperExportBridge } from '../renderer/bridge.js';
 import type { IssueDocument } from '../contracts/issue.js';
 import { computeRenderLayout } from '../renderer/layout.js';
+import { getPublicationRendererFamily } from '../renderer/presentation.js';
 
 /** Type the fixed browser bridge without introducing DOM globals to the backend compiler. */
 type ExportGlobal = typeof globalThis & { voxDeorumNewspaperExport: NewspaperExportBridge };
@@ -52,8 +53,9 @@ export async function renderIssue(worker: NewspaperBrowser, hostUrl: string, iss
   profileInput: RenderProfile, directory: string, format: DdsFormat = 'B8G8R8A8_UNORM'): Promise<RenderBundle> {
   const issue = parseIssueDocument(issueInput);
   const profile = parseRenderProfile(profileInput);
-  validateRenderProfileForDesign(profile, issue.publication.designId);
-  const layout = computeRenderLayout(issue.publication.designId, profile);
+  const rendererFamily = getPublicationRendererFamily(issue.publication);
+  validateRenderProfileForDesign(profile, rendererFamily);
+  const layout = computeRenderLayout(rendererFamily, profile);
   if (![1, 2].includes(profile.rasterScale) || profile.maxTextureWidth > 4096 || profile.maxTextureHeight > 4096
     || profile.maxTextureHeight % 4 !== 0) throw new Error('Use raster scale 1 or 2 and texture limits up to 4096, with height divisible by four.');
   return worker.run(async browser => {
@@ -98,7 +100,7 @@ export async function renderIssue(worker: NewspaperBrowser, hostUrl: string, iss
       return validateRenderBundle({
         schemaVersion: newspaperRenderBundleSchemaVersion, rendererVersion: newspaperRendererVersion,
         browserVersion: browser.version(), issueId: issue.issueId, campaignId: issue.campaignId, timelineId: issue.timelineId,
-        designId: issue.publication.designId, designVersion: issue.publication.designVersion, profile,
+        designId: rendererFamily, designVersion: issue.publication.designVersion, profile,
         header: { width: header.capture.size.width, height: header.capture.size.height, strips: headerStrips, actions: header.actions, tabs: header.tabs }, pages,
       });
     } finally {

@@ -1,10 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
+import path from 'node:path';
+import { queryNewspaperEvidence } from '../../../../../mcp-server/dist/newspaper/queries.js';
+import { deferred } from '../../../helpers/deferred.js';
 import { startNewspaperHost } from '../../../../src/newspaper/export/http.js';
 import { mountReplayRoutes } from '../../../../src/newspaper/replay/http.js';
 import { ReplaySession } from '../../../../src/newspaper/replay/session.js';
 import { replayEvidenceResponseSchema, replayStateSchema } from '../../../../src/newspaper/contracts/replay.js';
-import { createReplayRecording, replaySettings } from '../../../helpers/newspaper-replay.js';
+import { createReplayRecording, replaySettings as sourceSettings } from '../../../helpers/newspaper-replay.js';
+
+/** Keep legacy evidence-only lifecycle checks independent of the publication output store. */
+function replaySettings(databasePath: string) { return { ...sourceSettings(databasePath), publicationEnabled: false }; }
 
 describe('replay HTTP routes', () => {
   let recording: Awaited<ReturnType<typeof createReplayRecording>>;
@@ -70,5 +76,76 @@ describe('replay HTTP routes', () => {
     session = new ReplaySession();
     await request(host.app).put('/api/newspaper/replay').send(replaySettings(recording.filename)).expect(200);
     await request(host.app).post('/api/newspaper/replay/advance').expect(200);
+  });
+
+  it('should publish, reopen and vote within the configured archive scope', async () => {
+    const scope = { runId: 'http-run', receiverPlayerID: 0 };
+    await request(host.app).put('/api/newspaper/replay').send({
+      ...sourceSettings(recording.filename), fromTurn: 6, toTurn: 30, ...scope,
+      outputPath: path.join(path.dirname(recording.filename), 'http-output.sqlite'),
+    }).expect(200);
+    await request(host.app).post('/api/newspaper/replay/advance').send({}).expect(400);
+    const advanced = await request(host.app).post('/api/newspaper/replay/advance').send(scope).expect(200);
+    expect(advanced.body.check.status).toBe('published');
+    const issueId = advanced.body.check.issue.issueId;
+    const itemId = advanced.body.check.issue.items[0].id;
+    const list = await request(host.app).get('/api/newspaper/replay/issues').query(scope).expect(200);
+    expect(list.body.issues.map((issue: { issueId: string }) => issue.issueId)).toEqual([issueId]);
+    await request(host.app).put('/api/newspaper/replay/votes').send({ ...scope, itemId, value: 1 }).expect(200);
+    const reopened = await request(host.app).get(`/api/newspaper/replay/issues/${encodeURIComponent(issueId)}`).query(scope).expect(200);
+    expect(reopened.body.votes[itemId]).toBe(1);
+    await request(host.app).get('/api/newspaper/replay/issues').query({ ...scope, receiverPlayerID: 'bad' }).expect(400);
+    await request(host.app).post('/api/newspaper/replay/advance').send({ ...scope, runId: 'stale' }).expect(409);
+    await request(host.app).put('/api/newspaper/replay/preferences').send({ ...scope, frequencyStandardTurns: 2, llmEnabled: true }).expect(200);
+    await request(host.app).put('/api/newspaper/replay/votes').send({ itemId, value: 1 }).expect(400);
+  });
+
+  it('should validate required advance scope inside the queue after a publication configuration', async () => {
+    await session.close();
+    const entered = deferred();
+    const release = deferred();
+    session = new ReplaySession({ query: async (db, input) => {
+      entered.resolve();
+      await release.promise;
+      return queryNewspaperEvidence(db, input);
+    } });
+    await session.configure(replaySettings(recording.filename));
+    const reading = session.evidence();
+    await entered.promise;
+    const configuring = session.configure({
+      ...sourceSettings(recording.filename), fromTurn: 6, runId: 'queued-publication',
+      outputPath: path.join(path.dirname(recording.filename), 'queued.sqlite'),
+    });
+    const advance = session.advance.bind(session);
+    const getState = vi.spyOn(session, 'getState');
+    const accepted = deferred();
+    vi.spyOn(session, 'advance').mockImplementation((scope, requireScope) => {
+      const result = advance(scope, requireScope);
+      accepted.resolve();
+      return result;
+    });
+    const unscoped = request(host.app).post('/api/newspaper/replay/advance').send({}).then(response => response);
+    await accepted.promise;
+    release.resolve();
+    await reading;
+    await configuring;
+    expect((await unscoped).status).toBe(400);
+    expect(getState).not.toHaveBeenCalled();
+    expect((await session.getState()).cursor.cutoffTurn).toBeNull();
+    await request(host.app).post('/api/newspaper/replay/advance').send({ runId: 'old-run', receiverPlayerID: 0 }).expect(409);
+    await request(host.app).post('/api/newspaper/replay/advance').send({ runId: 'queued-publication', receiverPlayerID: 0 }).expect(200);
+  });
+
+  it('should return a conflict and preserve the active run when its ID is reused', async () => {
+    const settings = {
+      ...sourceSettings(recording.filename), runId: 'existing-http',
+      outputPath: path.join(path.dirname(recording.filename), 'existing.sqlite'),
+    };
+    const configured = await request(host.app).put('/api/newspaper/replay').send(settings).expect(200);
+    await request(host.app).put('/api/newspaper/replay').send(settings).expect(409);
+    const current = await request(host.app).get('/api/newspaper/replay').expect(200);
+    expect(current.body).toEqual(configured.body);
+    const resumed = await request(host.app).put('/api/newspaper/replay').send({ ...settings, mode: 'resume' }).expect(200);
+    expect(resumed.body).toEqual(configured.body);
   });
 });

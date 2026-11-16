@@ -1,0 +1,14 @@
+{
+  "frequencyStandardTurns": 5,
+  "llmEnabled": false,
+  "publicationTitle": "The Civic Record",
+  "maxItems": 6,
+  "frontPageItems": 4,
+  "importanceMax": 100,
+  "decayPerTurn": 0.94,
+  "seriesWeight": 0.15,
+  "noveltyBonus": 6,
+  "varietyBonus": 8,
+  "designStickiness": 0.6,
+  "feedback": { "window": 50, "series": 10, "tag": 3, "bound": 25 }
+}

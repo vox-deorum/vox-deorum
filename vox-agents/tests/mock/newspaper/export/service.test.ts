@@ -26,6 +26,21 @@ function createService() {
 afterEach(() => vi.restoreAllMocks());
 
 describe('newspaper export service', () => {
+  it('should export a configurable design using its stored renderer family and content cache key', async () => {
+    const { service, lookup } = createService();
+    const issue = createNewspaperIssue();
+    issue.schemaVersion = 2;
+    issue.publication.designId = 'early-account';
+    issue.publication.presentation = { schemaVersion: 1, rendererFamily: 'modern', tokens: { paperColor: '#ffffff' } };
+    await service.exportIssue(issue);
+    expect(lookup.mock.calls[0][2]).toMatchObject({ designId: 'modern' });
+    const firstKey = lookup.mock.calls[0][0];
+    issue.publication.presentation.tokens!.paperColor = '#ffeed0';
+    await service.exportIssue(issue);
+    expect(lookup.mock.calls[1][0]).not.toBe(firstKey);
+    await service.close();
+  });
+
   it('should keep delivery and pinning ahead of subsequent exports and drain them before closing', async () => {
     let finishDelivery!: () => void;
     const delivered = new Promise<void>(resolve => { finishDelivery = resolve; });

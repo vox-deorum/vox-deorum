@@ -62,6 +62,7 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('newspape
       await page.locator('[name=databasePath]').fill(recording.filename);
       await page.locator('[name=fromTurn]').fill('10');
       await page.locator('[name=toTurn]').fill('18');
+      await page.locator('[name=publicationEnabled]').selectOption('false');
       await page.getByRole('button', { name: 'Open recording', exact: true }).click();
       await page.locator('[data-replay=inspect]:enabled').waitFor();
       await page.locator('[data-replay=inspect]').click();

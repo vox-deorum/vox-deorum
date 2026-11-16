@@ -59,6 +59,8 @@ Source: "..\mcp-server\docs\strategies\*"; DestDir: "{app}\mcp-server\docs\strat
 ; The compiled reader and its default sample (dist-newspaper), and converter (vendor) stay at runtime.
 ; Reader source, its separate TypeScript config, and fixture-only assets are development files.
 Source: "..\vox-agents\*"; DestDir: "{app}\vox-agents"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: ".git,\src\*,\ui\*,node_modules\*,\data\*,\tests\*,logs\*,docs\*,\telemetry\*,.env,\newspaper\*,tsconfig.newspaper.json,dist-newspaper\fixtures\*"
+; Runtime editorial configuration is packaged separately from reader sources and fixtures.
+Source: "..\vox-agents\newspaper\catalogue\*.json"; DestDir: "{app}\vox-agents\newspaper\catalogue"; Flags: ignoreversion
 
 ; Civ5 mod files
 ; Optional legacy newspaper fixtures for developers are excluded from packaging.

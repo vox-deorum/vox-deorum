@@ -161,7 +161,7 @@ describe('web server', () => {
     let closing: Promise<void> | undefined;
     try {
       await startWebServer();
-      await request(app).put('/api/newspaper/replay').send(replaySettings(recording.filename)).expect(200);
+      await request(app).put('/api/newspaper/replay').send({ ...replaySettings(recording.filename), publicationEnabled: false }).expect(200);
       const evidence = await request(app).post('/api/newspaper/replay/advance').expect(200);
       expect(evidence.body.evidence.players[0].values.Gold).toBe(20);
       closing = shutdownWebServer();
