@@ -5,6 +5,9 @@ import { connectToolClient } from '../tool-client.js';
 import { gameDatabase, knowledgeManager } from '../../../src/server.js';
 import createGetEventsTool from '../../../src/tools/knowledge/get-events.js';
 import type { KnowledgeStore } from '../../../src/knowledge/store.js';
+import { enumMappings } from '../../../src/knowledge/helpers/enum.js';
+import Database from 'better-sqlite3';
+import { Kysely, SqliteDialect } from 'kysely';
 
 describe('get-events filtered original results', () => {
   let store: KnowledgeStore;
@@ -32,6 +35,30 @@ describe('get-events filtered original results', () => {
       Plot: { ResourceType: 'None' }, Items: [{ Resource: 'Iron' }] });
     expect(result.events[0]).not.toHaveProperty('TradedItems');
     expect((await store.getDatabase().selectFrom('GameEvents').selectAll().executeTakeFirstOrThrow()).Payload).toEqual(payload);
+  });
+
+  it('hides only unrevealed strategic and luxury resources, keeping bonus resources readable', async () => {
+    store = await setupStore(9);
+    const rules = new Database(':memory:');
+    rules.exec(`CREATE TABLE Resources (ID INTEGER, ResourceClassType TEXT);
+      INSERT INTO Resources VALUES (0, 'RESOURCECLASS_RUSH'), (1, 'RESOURCECLASS_MODERN'), (2, 'RESOURCECLASS_LUXURY'), (3, 'RESOURCECLASS_BONUS');`);
+    vi.spyOn(gameDatabase, 'getDatabase').mockReturnValue(new Kysely<any>({ dialect: new SqliteDialect({ database: rules }) }));
+    enumMappings['ResourceType'] = { [-1]: 'None', 0: 'Iron', 1: 'Uranium', 2: 'Silk', 3: 'Wheat' };
+    try {
+      await store.storeMutableKnowledge('PlayerSummaries', 0, {
+        Cities: 1, Population: 1, Gold: 0, GoldPerTurn: 0, Technologies: 0, Resources: { Iron: '0 / 2', Silk: 0 }
+      } as any);
+      const plots = ['Iron', 'Uranium', 'Silk', 'Wheat', 'None', 4];
+      for (const [index, resource] of plots.entries()) {
+        await store.getDatabase().insertInto('GameEvents')
+          .values({ ID: index + 1, Turn: 9, Type: 'TileRevealed', Player0: 1, Payload: { Plot: { ResourceType: resource } } } as any).execute();
+      }
+      client = await connectToolClient(createGetEventsTool());
+      const result = await client.call({ PlayerID: 0, Original: true });
+      expect(result.events.map((event: any) => event.Plot.ResourceType)).toEqual(['Iron', 'None', 'Silk', 'Wheat', 'None', 'None']);
+    } finally {
+      delete enumMappings['ResourceType'];
+    }
   });
 
   it('combines turn, type, ID range, and player visibility filters', async () => {

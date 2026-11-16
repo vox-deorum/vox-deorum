@@ -2,7 +2,8 @@
  * Tool for retrieving game events from the knowledge database
  */
 
-import { knowledgeManager } from "../../server.js";
+import { gameDatabase, knowledgeManager } from "../../server.js";
+import { enumMappings } from "../../knowledge/helpers/enum.js";
 import { ToolBase } from "../base.js";
 import * as z from "zod";
 import { readEvents } from "../../knowledge/history.js";
@@ -60,6 +61,29 @@ const GetEventsOutputSchema = z.union([
 export type EventsReport = z.infer<typeof GetEventsOutputSchema>;
 export type ConsolidatedEventsReport = Record<string, z.infer<typeof ConsolidatedEventSchema>[]>;
 
+// Resource classes the player summary inventory lists once revealed
+const trackedResourceClasses = ['RESOURCECLASS_RUSH', 'RESOURCECLASS_MODERN', 'RESOURCECLASS_LUXURY'];
+// Localized names of tracked resources, rebuilt when the verified enum mappings change
+let trackedResourceCache: { mapping: Record<number, string>; names: ReadonlySet<string> } | undefined;
+
+/**
+ * Load the localized names of resources the inventory tracks, using the same mapping that named the stored events.
+ * Returns undefined before the mappings are verified, so redaction falls back to hiding anything not in the inventory.
+ */
+async function getTrackedResourceNames(): Promise<ReadonlySet<string> | undefined> {
+  const mapping = enumMappings['ResourceType'];
+  if (!mapping) return undefined;
+  if (trackedResourceCache?.mapping !== mapping) {
+    const rows = await gameDatabase.getDatabase()
+      .selectFrom('Resources')
+      .select('ID')
+      .where('ResourceClassType', 'in', trackedResourceClasses)
+      .execute();
+    trackedResourceCache = { mapping, names: new Set(rows.flatMap(row => row.ID !== null && mapping[row.ID] ? [mapping[row.ID]] : [])) };
+  }
+  return trackedResourceCache.names;
+}
+
 /**
  * Tool for retrieving game events with optional filtering
  */
@@ -112,8 +136,9 @@ class GetEventsTool extends ToolBase {
       await knowledgeManager.getStore().getMutableKnowledge("PlayerSummaries", args.PlayerID, undefined, async () => await getPlayerSummaries());
     
     // Format the output
+    const trackedResources = player?.Resources ? await getTrackedResourceNames() : undefined;
     const formattedEvents = events.map((event) => {
-      const processedPayload = redactEventResources(event.Payload, player);
+      const processedPayload = redactEventResources(event.Payload, player, trackedResources);
       const toolPayload = event.Type === "DealMade"
         ? hideDealMadeTradeItems(processedPayload)
         : processedPayload;
