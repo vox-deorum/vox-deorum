@@ -55,6 +55,8 @@ Examples use these inputs unless they state their own. Results are rounded only 
 | Strength share `s` | `100² (L) / (100² + 150² (T)) = 0.307692` | Derived. |
 | Swing | `0.64 (s⁺) − 0.307692 (s) = 0.332308` | Derived in [swing](#swing). |
 | City allowance `C`; city scale `Z_C` | 3; 40 | [Value page's running inputs](value.md#running-example-inputs). |
+| City maximum HP; expected heal `H` | 250 HP; 20 HP | Value page's running inputs; healing reduces non-capturing city progress. |
+| Unlisted exposure, ground and garrison terms | 0 | Supplied, so each example isolates its named stake. |
 | Theater floor; room above it | 0.2; 0.8 | Setting `floor.theater`. |
 | Strength exponent | 2 | Setting `theater.steepness`. |
 | Stakes and fight priorities | As computed on the value page | Named in each example. |

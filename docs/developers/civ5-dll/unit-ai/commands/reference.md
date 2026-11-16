@@ -2,6 +2,16 @@
 
 Use this reference to tune or inspect the [command loop](overview.md). It lists recorded fields, configuration defaults and the source files that own them. [Value and priorities](value.md) explains how the numbers combine; [execution](execution.md#flavors-and-aggression) explains the search preference blend. HP means hit points.
 
+```mermaid
+flowchart TD
+    S["Settings<br/>defines and constant tables"] --> W["Turn inputs<br/>mapped flavors, weights and scales"]
+    W --> P["Priorities<br/>fight and Reinforce"]
+    W --> F["Search preferences<br/>geography, posture and kind"]
+    P --> R["Turn record<br/>offers, snapshots and decisions"]
+    F --> R
+    R --> C["Command details<br/>admission, attempts and movement"]
+```
+
 ## Settings
 
 `GetOperationalSettings` fills a settings struct for the player from game defines and constant tables. The DLL runs those defaults. The simulator can replace settings per player. Table changes require editing their source and rebuilding; the row tables have compile-time size checks.
@@ -58,9 +68,30 @@ The own-city kind row adds no offset. Posture rows follow native values except t
 | `readiness.maxFailures` | 3 | Truncated to an integer and floored at 1 for the failure limit. |
 | `reinforce.strengthRatio` | 1 | `r` (desired strength ratio): with `T` (enemy strength) and `L` (local friendly strength), need is `max(0, rT − L)`, and selection stops once full strength covers it. Selection and the enemy-center parity gate use `r`; the score reads the resulting selection. |
 
-Enemy-fight stakes use attrition, occupation, hold-ground and risk weights; own-city stakes use hold-city and risk. Reinforcement uses the strength ratio, and the simulator's settings template rejects values of 0 or below. Simulator overrides must use the supported table names.
+Enemy-unit stakes use attrition, risk, hold-ground and hold-city (city relief); enemy-city stakes use occupation, attrition and risk. Own-city stakes use hold-city and risk. The simulator's settings template requires a positive reinforcement strength ratio; overrides use the supported table names.
 
-The weight curve uses base (the configured weight at neutral preference), slope (sensitivity to preference) and flavor (the mapped preference from 0 to 100): `base × 2^(slope × (flavor − 50) / 50)`. For RISK (willingness to accept danger), replace `flavor − 50` with `50 − flavor`. A preference of 50 returns the base exactly. With the default slope, a 50-point increase doubles an ordinary weight and halves the risk weight. Multiplying all stake weights by the same positive factor preserves ordering.
+### Weight curve
+
+`weight = base × 2^(slope × deviation / 50)`
+
+| Part | Reads as | Scale or range |
+| --- | --- | --- |
+| `base` | Configured weight at neutral preference, from the table above. | Weight; hold-ground converts plot weight to typical units. |
+| `slope` | Sensitivity to preference, setting `slope.<flavor>` (1). | Exponent multiplier. |
+| `deviation` | `flavor − 50` for ordinary weights; `50 − flavor` for RISK, so accepting danger reduces exposure's weight. | −50 to +50 for a **mapped flavor** (player preference on the military scale) from 0 to 100. |
+| `50` | Distance from neutral preference to either end of the scale. | Flavor points. |
+
+**Weight examples.** Use base 1 and slope 1 from the default attrition and risk settings. Flavor is the supplied input.
+
+| Flavor | Ordinary weight | Risk weight |
+| --- | --- | --- |
+| 0 (minimum) | `1 (base) × 2^(1 (slope) × (0 − 50)/50) = 0.5` | `1 × 2^((50 − 0)/50) = 2` |
+| 50 (neutral) | `1 × 2^0 = 1` | 1 |
+| 100 (maximum) | `1 × 2^((100 − 50)/50) = 2` | `1 × 2^((50 − 100)/50) = 0.5` |
+
+Multiplying all stake weights by the same positive factor preserves ordering.
+
+### Shared value constants
 
 The value parameters are separate constants in `CvTacticalOperationalValue.h`:
 
@@ -83,30 +114,53 @@ These parameters affect both the shared value functions and the simulator's grad
 
 ## Records
 
-`RunCommandLoop` fills the shared `SOperationalTurnRecord` when its caller supplies one. Records copy computed values without repeating danger, strength or path queries. Trace rows are built only for a supplied record.
+`RunCommandLoop` fills the shared `SOperationalTurnRecord` when its caller supplies one. Records copy computed values without repeating danger, strength or path queries. Only the simulator's evaluated actor builds a trace; other active actors retain performance counters.
 
 | Record | Contents |
 | --- | --- |
 | `offers` | Battlefield, kind, target, owner and zone, once per offer in the pass. |
-| `steps` | Opening estimate pass at step 0, then one new step per post-command estimate. A command ends its step; the final step names no ready offer, command cap, game over or interruption. |
-| Snapshot | Scalars for every offer: ready rank, state, estimate, theater multiplier, importance, pressure, contest, damage level, swing and stake terms. Terms retain value, weight and weighted contribution. |
-| Event | Ordered check, failure-limit skip, provider refusal or terminating command, with the offer's estimate and state before and after. Reduced Reinforce checks return to the current queue. |
-| Closed state | A reason: target gone, city lost, retired by earlier work, failure limit, provider refusal or execution. Its scalar estimate remains the last computed value. |
+| `steps` | Opening estimate at step 0, then one step per post-command estimate. A command ends its step; the final end reason is `noReadyOffer`, `commandCap` or `stopped`. A host failure, game over or exception closes the last step as `stopped`, including post-command threat or estimate failures. |
+| Snapshot | Ready rank, state, estimate, theater multiplier, importance, pressure, contest, damage level, swing and nonzero stake terms. Each term retains value and weighted contribution. Resolved weights appear once per pass. Missing terms mean zero value and contribution. |
+| Event | Ordered check, failure-limit skip, provider refusal or terminating command, with before/after state and estimate and estimate. A refusal is one READY-to-REFUSED transition identifying the terminating command. Reduced Reinforce checks return to the current queue. |
+| Closed state | Target gone, city lost, retired, failure limit, provider refusal or execution. Its scalar estimate remains the last computed value. |
 | `commands` | Step and command identity, execution priority `fEstimate`, prior failures, admission and final flavor decisions, geometry, attempts, selected units, movement, existing endangered-unit dispositions and retired offers. City-fire-only commands remain present. |
-| `checks`, `vSkipped`, `bCommandCap` | Existing readiness and count inputs, preserving the loop's failure accounting. |
+| `checks`, `vSkipped`, `bCommandCap` | Readiness and count inputs, preserving the loop's failure accounting. |
 | Settings and turn inputs | Complete settings compared with the same build's defaults, mapped flavors, resolved weights and fixed scales. The simulator writes settings once per start, and inputs once per evaluated-player pass. |
 
-Snapshots carry no unit lists. Existing command and check structures remain the extension points for detailed diagnostics. Capture/schema and search-order export of the trace remain separate work. The [simulator guide](../../../../../../vox-deorum-rl/docs/operations/simulator.md#records) defines rollout writing and host integration.
+Snapshot version 2 writes every offer in the opening step, then complete replacement rows only when recorded scalars change. Reconstruct a step by replacing rows keyed by battlefield and Reinforce flag in the preceding estimate snapshot. An empty snapshot keeps that table. Events describe queue transitions within a step and do not alter this baseline. New offers add rows and closed offers remain present. `full_snapshots` in `learning/evaluation/operational_records.py` implements this rule.
+
+Snapshots carry no unit lists; command and check structures hold detailed diagnostics. The shared record does not define the capture schema or search-order export. See the [simulator guide](../../../../../../vox-deorum-rl/docs/operations/simulator.md#records) for rollout writing and host integration.
 
 ### Performance counters
 
-The loop's `ClockNs` seam reads the performance counter used by `cvStopWatch`; the simulator supplies a steady clock. Timing never changes a decision. The exclusive stages `setupNs`, `estimateNs`, `selectNs`, `readinessNs`, `executeNs`, `retireNs`, `recordNs` and `otherNs` add up to `totalNs` for the whole call. Each step also records estimate, readiness and execution time.
+The loop's `ClockNs` host seam reads the performance counter used by `cvStopWatch`; the simulator supplies a steady clock. Timing never changes a decision. The DLL caches the performance-counter frequency.
 
-Estimates retain force-tally and danger-read counts and time. Readiness retains Reinforce reach checks. Execution retains commands, provider admission/flavor time, city fire, spotting, greedy air, marching and provider search time. An engagement counts once, with retries counted separately as attempts. `searchNs` measures search decisions, excluding action execution.
+| Scope | Counters and meaning |
+| --- | --- |
+| Whole call | Exclusive stages `setupNs`, `estimateNs`, `selectNs`, `readinessNs`, `executeNs`, `retireNs`, `recordNs` and `otherNs` sum to `totalNs`. The remainder is computed signed and clamped at zero, with a debug assertion against stage overlap. Times are nanoseconds. |
+| Step | Estimate, readiness and execution time, including partial stages when an exception stops the pass. |
+| Estimates | Force-tally and danger-read counts and time. `dangerReads` and `dangerReadNs` count actual unit danger evaluations and city cache misses; city cache hits do not count. |
+| Readiness | Reinforce reach checks. |
+| Execution | Commands, provider admission/flavor time, city fire, spotting, greedy air, marching and search time. Nested subtotals belong to their parent stage. |
+| Engagement | Counted once even with retries. Host-specific attempts and search time are described below. |
+| Tactical log | With game and AI logging enabled and no supplied record: step-indexed messages and a final pass summary of time, commands, checks, estimates and searches. |
 
-With game logging and AI logging enabled and no record supplied, tactical messages include the step index. One final line summarizes the pass in the tactsim style: "command loop finished in 9 ms: 4 commands, 7 checks, 112 estimates (3 ms), 4 searches (5 ms)". These figures illustrate the format. Commands that stop the pass still close their timing and trace.
+DLL `attempts` counts each native search iteration, including empty results, and `searchNs` times `FindBestUnitAssignments`. Simulator `attempts` counts provider decisions, and `searchNs` sums provider decision time, matching rollout `counts.searchNs`. Compare search costs within the same host.
 
-Search requests retain their territory-specific purposes: `CityAttack`, `CityDefense`, `Reinforce`, `BattleFriendly`, `BattleNeutral` or `BattleEnemy`. Retries retain that purpose. Search preferences still come from the geographic blend and command-kind offset.
+With no record and logging off, the DLL skips all timers, including danger-read timers. Simulator active actors retain counters even when only the evaluated actor builds a trace. Rollout `operationalAllActorTotalNs` covers active slots, excluding background slots.
+
+## Search purposes
+
+A search request's **purpose** labels its command and territory; retries keep the same label. Search preferences come from the [geographic blend](execution.md#geographic-blend) and command-kind offset.
+
+| Purpose | Command or territory |
+| --- | --- |
+| `CityAttack` | Enemy-city fight. |
+| `CityDefense` | Own-city fight. |
+| `Reinforce` | Reinforcement. |
+| `BattleFriendly` | Enemy-unit fight in our team's zone. |
+| `BattleNeutral` | Enemy-unit fight in unowned territory, or another team's zone whose owner is not at war with us. |
+| `BattleEnemy` | Enemy-unit fight in enemy territory. |
 
 ## Code
 
@@ -119,13 +173,38 @@ The source is in `civ5-dll/CvGameCoreDLL_Expansion2`.
 | `CvTacticalOperationalValue.h` and `.cpp` | Shared unit, city, exposure and ground values, reference scales, upgrade premium and flavor weight curve. |
 | `CvTacticalSearchShared.h` | Declarations exposing the native search globals used by the copies. |
 
-`EstimateBattlefield` calls `GatherLocalSet`, which applies `StrikeReach` and `CanStrikeCity` and fills an `SOperationalLocalSet` with both filters, then calls `EstimateFight` and `EstimateReinforce` for one battlefield. At an enemy city, `StartCityDamage` and `SimulateCityAttack` run the local damage simulation in an `SOperationalCityDamage`, `ExpectedCityHeal` supplies the heal, and `AttackFallShare` turns the totals into the fall share. `LocalStrength` and `LocalCityStrength` read the strength filter. The command loop's select step ranks ready offers through the pure functions `OfferRank` and `OfferOutranks`.
+### Estimation and selection
 
-The Reinforce code sits in the same loop files. `EstimateReinforce` scores an offer from the shared strength share, `GatherReinforceCandidates` applies the filters, `SelectReinforcement` fills the selection, `CheckReinforce` runs the reach checks, `ExecuteReinforce` marches the group and `RetiresReinforce` applies the overlap rule. `TravelTurns`, `EnemyCenterStrength`, `IsCapturer`, `CanMarch` and `MarchFlags` are helpers. `SOperationalCandidate` and `SOperationalReinforce` hold a candidate and a battlefield's Reinforce.
+| Task | Functions and data |
+| --- | --- |
+| Shared battlefield scan | `EstimateBattlefield` calls `GatherLocalSet`, applying `StrikeReach` and `CanStrikeCity` to fill both filters in `SOperationalLocalSet`, then calls `EstimateFight` and `EstimateReinforce`. |
+| Enemy-city damage | `StartCityDamage` and `SimulateCityAttack` fill `SOperationalCityDamage`; `ExpectedCityHeal` supplies healing and `AttackFallShare` resolves progress. |
+| Strength | `LocalStrength` and `LocalCityStrength` read the strength filter; `EnemyCenterStrength` counts opposition. |
+| Incoming selection | `GatherReinforceCandidates`, `TravelTurns`, `IsCapturer` and `SelectReinforcement` fill `SOperationalCandidate` and `SOperationalReinforce`. |
+| Reinforce lifecycle | `CheckReinforce` checks reach, `ExecuteReinforce` marches through `CanMarch` and `MarchFlags`, and `RetiresReinforce` applies overlap retirement. |
+| Queue ranking | `OperationalOfferBefore` shares the estimate, kind, plot and stable build-order comparison between native selection and sorted snapshot ranks. |
 
-Native integration consists of the branch at the top of `CvTacticalAI::ProcessDominanceZones`, the target snapshot in `FindTacticalTargets` and its cleanup, the optional executed-row counter in `TacticalAIHelpers::ExecuteUnitAssignments`, the optional garrison-damage output of `CvTacticalAI::ComputeTotalExpectedDamage` (the garrison damage of every counted attack, kept across a garrison's death), friend access in `CvTacticalAI.h` and `CvDangerPlots.h`, and the non-const `CvPlayer::GetDangerPlots` accessor.
+### Native integration
 
-The tactical simulator extracts the loop, weights and value source from the DLL. Host-specific members have DLL definitions here and separate simulator definitions: `GroundPlotWeight`, `BeginCommand`, `EndCommand`, `ClockNs`, `IsGameOver` and the provider routing seams. The simulator also defines its own `SearchAndExecute`, which routes the engagement to its provider with the given flavors, aggression and target distance flag. The DLL reads revealed resource types for `GroundPlotWeight`. The command boundary members are empty in the DLL; the header defines them as the simulator's per-command work boundaries in the battlefield's zone.
+| Integration point | Purpose |
+| --- | --- |
+| `CvTacticalAI::ProcessDominanceZones` | Option branch at entry. |
+| `FindTacticalTargets` and cleanup | Preserve and clear the pre-suppression target snapshot. |
+| `TacticalAIHelpers::ExecuteUnitAssignments` | Optional counter of action rows counted as run. |
+| `CvTacticalAI::ComputeTotalExpectedDamage` | Optional garrison-damage output for every counted attack, retained across a garrison's death. |
+| `CvTacticalAI.h`, `CvDangerPlots.h`, `CvPlayer::GetDangerPlots` | Friend access and a non-const danger accessor. |
+
+### Simulator host seams
+
+The simulator extracts the loop, weights and value source from the DLL and supplies its own definitions for host-specific members.
+
+| Member | Host responsibility |
+| --- | --- |
+| `GroundPlotWeight` | DLL reads revealed resource types; simulator supplies its plot data. |
+| `BeginCommand`, `EndCommand` | Empty in the DLL; simulator work boundaries for each command in its battlefield's zone. |
+| `ClockNs`, `IsHostStopped` | Monotonic host clock and retained stop status: game over in the DLL, any execution failure in the simulator. |
+| Provider routing callbacks | Command choice, optional admission and final search flavors. See [shared callbacks](overview.md#shared-callbacks). |
+| `SearchAndExecute` | DLL native search or simulator provider, with resolved flavors, aggression and target-distance flag. |
 
 ## Copies of native functions
 
@@ -142,7 +221,7 @@ Each copy's source comment names its native original so a Vox Populi update can 
 | `SimulateCityAttack` | City case of `CvTacticalAI::ComputeTotalExpectedDamage`, for one attacker | Use the quick estimate, keep the counted totals in the loop's simulation, count hits on a replacement garrison as city damage only, and skip native's expected-damage bookkeeping on the move list. A suicidal attack changes no garrison state, and a defender predicted to die is not met again. |
 | `SimulateUnitAttack` | Unit case of `CvTacticalAI::ComputeTotalExpectedDamage`, for one attacker | Keep native's worth test and melee attacker cap. The differences are the [damage rolls](value.md#damage-rolls), with ours for damage to the target and the enemy's for the attacker's self damage, and quick estimates. |
 | `LocalUnitDamage` | `FindCitiesWithinStrikingDistance` | Cities that can strike the target fire first, at [our roll](value.md#damage-rolls), without changing the native move list. `SimulateUnitAttack` then runs over the local damage set in ascending unit ID. |
-| `DoDamageMath` | `CvUnitCombat::DoDamageMath` | Scale the random range by a scoped expected-roll share (`operationalExpectedRollShare`, default 0.5, which reproduces native's expected roll). The loop sets the share only around its own estimates, never across calls that fill native caches. |
+| `DoDamageMath` | `CvUnitCombat::DoDamageMath` | Scale the random range by a scoped expected roll (`operationalExpectedRollPer200`, default 100 out of 200, or 0.5, which reproduces native's expected roll). The loop sets it only around its own estimates, never across calls that fill native caches. |
 | `GetDangerByThreat` | Unit overload of `CvDangerPlotContents::GetDanger` | List each enemy unit's and city's damage contribution. It differs from native in three intended ways: the [enemy roll](value.md#damage-rolls) for the attacker's damage, with our unit's retaliation at our roll for the suicide check; city danger from the loop's own city-danger copy; and the garrison exposure threshold at the actual city-fall point instead of native's 50 HP margin. |
 | `GetCityDangerByThreat` | City overload of `CvDangerPlotContents::GetDanger` | Supply own-city danger for defense and relief. It copies the city overload, adds the per-threat damage list, and runs at the [enemy roll](value.md#damage-rolls), with our interceptor's hit at our roll. |
 | `GatherReinforceCandidates` | Candidate filters in `CvTacticalAI::PlotReinforcementMoves` | The [candidate and selection rules](recruitment.md#candidates-and-selection), with the [enemy-center gates](reinforcement.md#reinforce-priority). |

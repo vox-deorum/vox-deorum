@@ -428,11 +428,18 @@ The garrison term is `w_A × K_g / Z_T`:
 
 ## Own-city stake
 
+An own-city fight values the city and nearby endangered recruits it can protect.
+
 `stake = w_C × C × f_def + w_R × E_def / Z_T`
 
-- `f_def = min(1, city danger / R)`: the [defense fall share](#city-allowance-and-fall-share), from damage due before our next turn.
-- `E_def`: value at risk (step 1 of [exposure](#exposure)) of the city's [endangered recruits](recruitment.md#city-defense-recruits), each once with no attack cap, since the fight protects all of them. A garrison whose city can fall counts at its whole living value. Counts even when city danger is 0.
-- Theater pressure uses the [strength tallies](recruitment.md#strength-tallies), which look up to two turns ahead; these are also recorded for Reinforce.
+| Part | Reads as | Scale or range |
+| --- | --- | --- |
+| `f_def = min(1, city danger / R)` | [Defense fall share](#city-allowance-and-fall-share): damage due before our next turn divided by the city's remaining HP `R`. | 0 to 1. |
+| `E_def` | Value at risk (step 1 of [exposure](#exposure)) of the city's [endangered recruits](recruitment.md#city-defense-recruits), each once with no attack cap, since the fight protects all of them. A garrison whose city can fall counts at its whole living value. Counts even with no city danger. | Unit value, divided by typical unit worth `Z_T` in the stake. |
+| `w_C`, `w_R` | Hold-city and risk weights. | Preference multipliers. |
+| `C` | City allowance, setting `city.units` (3). | Typical units. |
+
+Theater pressure uses the [strength tallies](recruitment.md#strength-tallies), which look up to two turns ahead; Reinforce records the same tallies.
 
 **Own-city example.** Our capital: `i = 40/40 = 1`; 200 of 250 HP, so `δ = 0.2`; no exposed recruits.
 

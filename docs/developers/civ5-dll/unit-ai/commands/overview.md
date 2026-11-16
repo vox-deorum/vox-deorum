@@ -1,12 +1,27 @@
 # Unit AI: Commands
 
-The **operational loop** coordinates combat and reinforcement across the map during a player's turn. It replaces the zone-by-zone combat pass of [military tactics](../tactics/overview.md): estimate the available actions, check the highest-priority action, execute it, then update priorities from the resulting board. This developer guide describes the DLL (dynamic-link library) implementation. The `VOX_TACTICAL_OPERATIONAL_LOOP` mod option enables it for non-barbarian players and is off by default.
+The **operational loop** coordinates combat and reinforcement across the map during a player's turn. It replaces the zone-by-zone combat pass of [military tactics](../tactics/overview.md), giving higher-priority work access to shared units first. This developer guide describes the DLL (dynamic-link library) implementation, enabled for non-barbarian players by `VOX_TACTICAL_OPERATIONAL_LOOP` (0, off by default).
 
-The loop organizes work around **battlefields** (enemy units, enemy cities and our own cities). Each battlefield has two **offers** (proposed actions with a priority and queue state): a fight and **Reinforce** (bringing distant units toward the center). A fight attacks an enemy or defends one of our cities. Both offer types compete in one queue, so the higher-priority action gets access to shared units first.
+```mermaid
+flowchart TD
+    B["Build battlefields<br/>enemy targets and our cities"] --> E["Estimate<br/>fight and Reinforce offers"]
+    E --> S["Select highest ready priority"]
+    S --> C{"Readiness passes?"}
+    C -->|No| S
+    C -->|Yes| X["Execute one command"]
+    X --> R["Retire overlap<br/>refresh threats and estimates"]
+    R --> S
+    S -->|No ready offer or command cap| F["Finish"]
+```
 
-A ready offer must pass a **readiness check** (whether suitable units or city fire are available) before it executes as a **command** (one action in the turn's sequence). A fight can end after city fire or run an **engagement** (a tactical search and its execution, including retries). Reinforcement commands march the selected units toward the battlefield. Each offer executes at most once per turn, even when search finds no action.
-
-An offer's **estimate** is its queue priority. In these guides, “our” means the acting player, “native” means existing Vox Populi behavior, and HP means hit points.
+| Term | Meaning |
+| --- | --- |
+| **Battlefield** | One enemy unit, enemy city or city of ours, with separate fight and reinforcement offers. |
+| **Offer** | A proposed action with a queue state and an **estimate**, its queue priority. A fight attacks an enemy or defends our city; **Reinforce** brings distant units toward the center. |
+| **Readiness check** | Confirms suitable recruits, damage or reach before issuing orders. |
+| **Command** | One passing offer's execution. Each offer runs at most once per turn, even when it finds no action. |
+| **Engagement** | Tactical search and execution, including retries. A fight can end after city fire; a reinforcement command can also march units along paths. |
+| Our, native, HP | The acting player; existing Vox Populi behavior; hit points. |
 
 Start with the command loop below, then follow the part you need to audit:
 
@@ -22,9 +37,13 @@ The implementation is primarily in `civ5-dll/CvGameCoreDLL_Expansion2/CvTactical
 
 ## Shared callbacks
 
-The loop asks for command choice over current ready offers, optional participant admission after readiness, and final search flavors after spotting and greedy air. The DLL always uses native decoders: the highest-priority offer with the existing tie breaks, all local recruits or the checked Reinforce selection, and the geographic flavor blend plus the command-kind row. A failed readiness check returns to command choice.
+The simulator can supply an **operational provider** through host callbacks; `CvTacticalOperationalLoop` owns their timing and execution. Requests carry decision identities and state revisions.
 
-The callback timing and execution stay in `CvTacticalOperationalLoop`; host seams allow the simulator to supply an independent operational provider. Requests carry decision identities and state revisions. An optional admission reply can retain native selection or name a subset. Empty admission refuses that offer for the turn and retires nothing else. See [execution](execution.md#participant-admission) for preparation and refusal semantics.
+| Decision | When | DLL's native choice |
+| --- | --- | --- |
+| Command choice | Before each readiness check, including after a failed check | Highest ready priority, with the [queue tie breaks](#command-loop). |
+| Participant admission | After readiness, before recruits act | Gathered fight recruits or the checked Reinforce selection. A provider can retain this selection or request a candidate subset. See [admission and refusal](execution.md#participant-admission). |
+| Search flavors | After spotting and greedy air, using the final geometry | Geographic flavor blend plus command-kind row. See [search preferences](execution.md#geographic-blend). |
 
 ## Turn integration
 
@@ -41,14 +60,16 @@ Battlefield reinforcement replaces the regular zone reinforcement pass. The loop
 
 `RunCommandLoop` owns the turn's action queue. It builds the initial estimates, executes one ready offer at a time, and uses each command's result to update the remaining work:
 
-1. **Build.** Resolve settings, mapped flavors (player preferences converted to the loop's military scales), weights (relative importance of benefits) and reference scales (normalization values). Build battlefields and threat maps (damage attributed to enemy units and cities).
-2. **Estimate.** Score both offers at every battlefield with one [battlefield estimate](recruitment.md#battlefield-estimate). `EstimateBattlefield` tallies local and enemy strength once, computes the theater and stake, and emits the fight priority and the Reinforce priority from those values. Positive estimates become ready; nonpositive estimates become inactive. Invalid targets drop both offers.
-3. **Select.** Choose the highest ready estimate. Ties favor own-city fights, enemy-city fights, enemy-unit fights, then reinforcement offers. Further ties favor the lower plot index, then build order. End if no offer is ready, or record a stop if the command cap has been reached.
-4. **Check.** Check only the selected offer. A failed fight check adds one failure and makes the fight waiting, or skipped at the failure limit. A failed reinforcement check makes the offer inactive or returns it to the queue at a reduced estimate. After a failed check, resume selection. A pass executes one command at its current estimate.
-5. **Record and retire.** Mark the offer executed even if it ended before search or found no action. Rebuild threats and retire overlapping offers using the [overlap rules](#overlapping-offers).
-6. **Refresh.** Compare the board before and after the command. Add a battlefield for each newly captured city. Re-estimate open offers, apply the [wake rule](#wake-rule) to waiting fights, then resume selection.
+| Stage | Rule |
+| --- | --- |
+| Build | Resolve settings, **mapped flavors** (player preferences on military scales), **weights** (relative importance of benefits) and **reference scales** (normalization values). Build battlefields and threat maps, which attribute damage to enemy units and cities. |
+| Estimate | A [battlefield estimate](recruitment.md#battlefield-estimate) shares the local scan, theater and **stake** (combined fight benefits) needed by open offers. Closed cities still refresh theater. Positive estimates become ready, nonpositive estimates inactive; waiting fights also need a helpful change. Invalid targets drop both open offers. |
+| Select | Highest ready estimate first. Ties favor own-city fights, enemy-city fights, enemy-unit fights, then Reinforce; further ties favor lower plot index, then build order. Stop with no ready offer or at the command cap. |
+| Check | Check only the selected offer. A failed fight check adds one failure and makes it waiting or skipped at the failure limit. A failed Reinforce check makes it inactive or returns it at a reduced estimate. Resume selection after a failure; a pass executes at its checked estimate. |
+| Record and retire | Close the offer even if it ended before search or found no action. Explicit refusal consumes the slot without retiring other offers. Rebuild threats, then apply the [overlap rules](#overlapping-offers). |
+| Refresh | Compare the board before and after the command, add newly captured own-city battlefields, re-estimate open offers and apply the [wake rule](#wake-rule). Resume selection. |
 
-The command cap defaults to 64 executed commands. Failed readiness checks consume no command slots, and search retries belong to the same command. Every open offer is re-estimated after every command, including distant offers. These estimates run no native recruitment, path or readiness checks. An executed fight still refreshes its stake (the combined benefits of fighting there) for use by its reinforcement offer.
+The command cap, `iMaxCommands` (64), includes refused commands. Failed readiness checks consume no slots, and search retries belong to the same command. Every open offer is re-estimated after every command, including distant offers, without native recruitment, path or readiness checks. A closed fight still refreshes its stake while its Reinforce remains open.
 
 The loop separates facts fixed for the turn from values refreshed after commands:
 
@@ -70,17 +91,19 @@ A fight offer uses these states:
 | Waiting | A readiness check fails below the failure limit | A helpful command change wakes it and its new estimate is positive, or re-estimation drops its target. |
 | Skipped | It reaches `readiness.maxFailures` failures, default 3 | The turn ends. |
 | Retired | An executed unit fight covers it under the overlap rule | The turn ends. |
-| Executed | It runs as a command | The turn ends. |
+| Executed | It runs as a command without provider refusal | The turn ends. |
+| Refused | A provider chooses an empty subset from nonempty eligibility | The turn ends; the command slot is consumed and no other offer is retired. |
 | Dropped | Re-estimation finds the target unit gone, or its city lost by its recorded owner or no longer ours | The turn ends. |
 
 A Reinforce offer uses these states:
 
 | State | Enters when | Leaves when |
 | --- | --- | --- |
-| Ready | An opening, later or reduced check estimate is positive | It reaches the top and is checked, then executes or turns inactive. |
+| Ready | An opening, later or reduced check estimate is positive | It reaches the top and is checked: executes, is refused, turns inactive, or returns ready at a reduced estimate. |
 | Inactive | Its estimate is nonpositive, or its check leaves no selected unit or reduces the estimate to 0 | A later estimate is positive. |
 | Retired | Another battlefield's executed Reinforce moved a unit, and its enemy-strength tally `T` counted this battlefield's target | The turn ends. |
-| Executed | It runs as a command | The turn ends. |
+| Executed | It runs as a command without provider refusal | The turn ends. |
+| Refused | A provider chooses an empty subset from nonempty eligibility | The turn ends; the command slot is consumed and no other offer is retired. |
 | Dropped | Re-estimation finds the target unit gone, or its city lost by its recorded owner or no longer ours | The turn ends. |
 
 A waiting fight keeps its refreshed estimate and cumulative failure count. Waking it preserves the count and applies no priority discount. Readiness determines whether the fight can execute; the current estimate determines its priority. A reinforcement offer never waits or counts failures, so it is never skipped. When `EstimateFight` finds a target gone, both open offers at that battlefield drop together.
@@ -91,7 +114,7 @@ A waiting fight keeps its refreshed estimate and cumulative failure count. Wakin
 
 `BuildBattlefields` reads the snapshot after the high-priority pass and emergency purchases. Each surviving hostile combat unit or enemy city supplies one battlefield. Unit targets use the plot's best defender, following native selection. Duplicate owner/unit IDs and duplicate city plots are removed. A city captured earlier in the turn gets no enemy battlefield. `GroundSide` determines hostility, including barbarians and players at war with us.
 
-`AddOwnCityBattlefield` adds one battlefield per city of ours, including safe cities whose offers start inactive. It uses the city plot's land zone. If that zone is unknown, it uses the city's water zone, identified by the negative city ID. Zone data is read without refreshing because the zone map cannot be rebuilt mid-turn.
+`AddOwnCityBattlefield` adds one battlefield per city of ours, including safe cities whose offers can become inactive at the first estimate. It uses the city plot's land zone. If that zone is unknown, it uses the city's water zone, identified by the negative city ID. Zone data is read without refreshing because the zone map cannot be rebuilt mid-turn.
 
 Fight and reinforcement offers keep separate states. Executing either offer refreshes the other's estimate along with the rest of the queue.
 
@@ -117,7 +140,7 @@ These offers are exempt:
 - A fight marked near our city at build time, using the [native city-distance rule](#battlefields).
 - Every enemy-city and own-city fight. These commands also retire no unit fights.
 
-The loop rebuilds threats after execution and before retirement, so a unit moved into danger by the command can protect its attacker's offer. Ready, inactive and waiting offers can be retired; executed, retired, skipped and dropped offers are left alone. Retirement requires the search to have been called with a nonempty group, regardless of whether search found or completed a plan. Commands ending after city fire, visibility failure or greedy air retire nothing.
+The loop rebuilds threats after execution and before retirement, so a unit moved into danger by the command can protect its attacker's offer. Ready, inactive and waiting offers can be retired; executed, refused, retired, skipped and dropped offers are closed. Retirement requires search with a nonempty group, regardless of whether it found or completed a plan. Commands ending after city fire, visibility failure or greedy air retire nothing.
 
 **Reinforce retirement** uses the enemies counted in the executed offer's last estimate. If at least one selected unit changed plot or died, retire the open reinforcement offer of every other enemy battlefield whose target contributed to `T` (enemy strength). Ready and inactive offers can be retired. Our cities' reinforcement offers are exempt; a command with no such unit change retires nothing.
 
@@ -125,9 +148,19 @@ Retiring an offer leaves its battlefield's other offer intact. Reinforcement com
 
 The examples below use the [value guide's running inputs](value.md#running-example-inputs): town value 15, city scale `Z_C = 40`, typical unit worth `Z_T = 400`, 100 maximum unit HP and neutral weights. Killing a unit earns its [destroyed value](value.md#destroyed-value): its whole living value, 60% of full-health worth plus 40% scaled by remaining HP.
 
-**Near-city example.** Our town is at full health and the enemy matches our local strength, so its theater is `0.2 + 0.8 × (15 / 40) × 0.5 = 0.35`. A scout worth 100 and a catapult worth 500 each have 20 HP, and local units can kill both. Their living values are 68 and 340, and with no ground, relief or exposure term their priorities are `0.35 × 68 / 400 = 0.0595` and `0.35 × 340 / 400 = 0.2975`. The catapult competes first. If its search runs, a surviving scout 2 plots from our town still keeps its own fight, even when within 2 plots of the catapult.
+**Near-city example.** Supplied: a full-health town, equal enemy and local strength, killable targets at 20 HP, and no ground, relief or exposure. Theater is `0.2 (floor) + 0.8 (room) × 15/40 (city importance) × 0.5 (contest at parity) = 0.35`.
 
-**Waiting-offer example.** In a cityless zone, local units can kill a catapult at full health, worth 500, for priority `0.2 × 500 / 400 = 0.25`, and a spearman at full health, worth 400, for priority 0.2. They stand 1 plot apart, far from our cities, and threaten none of our units. If the catapult fight fails readiness and the spearman fight then runs a search, the catapult fight is retired for the turn. A waiting offer can lose its later try when another search covers it.
+| Target | Living value destroyed | Priority `θ × value / Z_T` | After the catapult search |
+| --- | --- | --- | --- |
+| Scout, worth 100 | `100 (worth) × (0.6 (retained share) + 0.4 (health share) × 20/100 (HP)) = 68` | `0.35 (θ) × 68 / 400 (Z_T) = 0.0595` | If it survives 2 plots from our town, its fight stays open even within 2 plots of the catapult. |
+| Catapult, worth 500 | `500 × (0.6 + 0.4 × 20/100) = 340` | `0.35 × 340 / 400 = 0.2975` | Checked first. |
+
+**Waiting-offer example.** Supplied: a cityless zone, full-health killable targets 1 plot apart, far from our cities, with no threat damage or other stake terms.
+
+| Offer | Priority | Sequence and result |
+| --- | --- | --- |
+| Catapult, worth 500 | `0.2 (cityless θ) × 500 (living value) / 400 (Z_T) = 0.25` | Fails readiness first and waits. |
+| Spearman, worth 400 | `0.2 × 400 / 400 = 0.2` | Its search runs next and retires the nearby waiting catapult fight. |
 
 ## Wake rule
 
@@ -144,4 +177,11 @@ Native striking distance uses `baseMoves(false) × 4`. The turn's scan takes the
 
 Damage to an enemy or city still standing, and our units merely spent, damaged or lost, do not wake fights. Enemy disappearance from visibility also counts as a snapshot change. A helpful change leaves the offer waiting if its refreshed estimate is nonpositive. Other commands add no failures while a fight waits.
 
-**Blocker example.** In a cityless zone on neutral land, a full-health catapult worth 500 and a full-health spearman worth 400 each face 100 estimated local damage, enough to kill. With no exposure, their priorities are `0.2 × 500 / 400 = 0.25` and `0.2 × 400 / 400 = 0.2`, so the catapult is checked first. The spearman blocks the only approach to the catapult, and the two stand 3 plots apart, beyond overlap retirement. The catapult fails recruitment once and waits. Commands that only spend or damage our units leave it waiting. When the spearman fight kills the blocker within the scan, the catapult wakes and can pass if the newly open path permits recruitment. If it instead fails after helpful wakeups, its third failed check skips it for the turn.
+**Blocker example.** Use the waiting-offer example's worths and priorities, but put the targets 3 plots apart (outside the 2-plot retirement radius) on neutral land. Supplied local damage is 100 HP for each full-health target, enough to kill; the spearman blocks the only approach to the catapult.
+
+| Event | Catapult fight's result |
+| --- | --- |
+| Priority 0.25 beats the spearman's 0.2, but recruitment fails | Waiting, with 1 failure. |
+| Another command only spends or damages our units | Still waiting; no new failure. |
+| Spearman command kills the blocker within the wake scan | Ready if its refreshed estimate is positive; recruitment can now use the open path. |
+| Later checks fail after helpful wakeups | Skipped on failure 3, from `readiness.maxFailures` (3). |
