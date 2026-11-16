@@ -85,6 +85,8 @@ async function mount(issueInput: unknown, profileInput: unknown): Promise<Export
   });
   await nextHandle.ready;
   await nextLayoutFrame();
+  const header = root.querySelector<HTMLElement>('[data-vd-region="header"]');
+  if (header) alignRegionHeight(header, nextProfile);
   window.scrollTo(0, 0);
 
   issue = nextIssue;
@@ -103,6 +105,13 @@ async function mount(issueInput: unknown, profileInput: unknown): Promise<Export
     pageIds: nextIssue.pages.map((page) => page.id),
     layout,
   };
+}
+
+/** Keep adjacent region edges on the same raster boundary before planning strips. */
+function alignRegionHeight(region: HTMLElement, renderProfile: RenderProfile): void {
+  region.style.height = "auto";
+  const height = region.getBoundingClientRect().height;
+  region.style.height = `${Math.ceil(height * renderProfile.rasterScale) / renderProfile.rasterScale}px`;
 }
 
 /** Measure the masthead and tab region in its neutral export state. */
@@ -143,6 +152,7 @@ async function measurePage(): Promise<PageMeasurement> {
   if (!pageElement) throw new Error(`The active page "${activePageId}" is missing.`);
 
   await waitForMedia(pageElement);
+  alignRegionHeight(pageElement, current.renderProfile);
   const content = pageElement.querySelector<HTMLElement>(".vd-page-content");
   if (!content) throw new Error("The active page content is missing.");
   const contentRect = content.getBoundingClientRect();

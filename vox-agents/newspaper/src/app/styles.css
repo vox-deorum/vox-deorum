@@ -269,3 +269,38 @@ body {
     border-left: 0;
   }
 }
+
+@media (max-width: 600px) {
+  .host-toolbar {
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 14px 16px;
+  }
+
+  .host-controls,
+  .host-brand,
+  .host-replay label {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .host-controls select,
+  .host-replay input,
+  .host-replay select {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .host-replay {
+    padding-inline: 16px;
+  }
+
+  .host-replay fieldset {
+    min-width: 0;
+    margin-inline: 0;
+  }
+
+  .host-inspector {
+    min-width: 0;
+  }
+}

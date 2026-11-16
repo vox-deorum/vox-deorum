@@ -7,13 +7,23 @@ import {
 import { readerActionSchema } from "./reader.js";
 
 /** Version of the exported render bundle shape. */
-export const newspaperRenderBundleSchemaVersion = 1;
+export const newspaperRenderBundleSchemaVersion = 2;
 
 /** Version reported by the shared renderer. */
-export const newspaperRendererVersion = "0.1.0";
+export const newspaperRendererVersion = "0.2.0";
 
-/** Fixed browser profile used for one export batch. */
+/** Immutable browser capture and display settings for one export request. */
 export type RenderProfile = z.infer<typeof renderProfileSchema>;
+
+/** Physical publication space negotiated with the game after its reader chrome. */
+export type NewspaperView = z.infer<typeof newspaperViewSchema>;
+
+/** Validate the current publication viewport and the reader's requested zoom. */
+export const newspaperViewSchema = z.object({
+  width: z.number().finite().positive(),
+  height: z.number().finite().positive(),
+  zoom: z.number().finite().min(0.5).max(2),
+});
 
 /** A point in CSS pixels. */
 export interface Point {
@@ -43,6 +53,7 @@ export interface RenderLayoutMetrics {
   viewportHeight: number;
   rasterScale: number;
   textScale: number;
+  displayScale: number;
 }
 
 /** One interactive element and its CSS rectangles relative to its region. */
@@ -115,11 +126,12 @@ export const voteSlotGeometrySchema = z.object({
   selectedAssetId: z.string().min(1),
 });
 
-/** Schema for a fixed export profile. */
+/** Schema for a publication's capture and display profile. */
 export const renderProfileSchema = z.object({
-  viewportWidth: z.number().finite().positive(),
-  viewportHeight: z.number().finite().positive(),
-  contentWidth: z.number().finite().positive(),
+  viewportWidth: z.number().int().positive(),
+  viewportHeight: z.number().int().positive(),
+  paperWidth: z.number().finite().positive(),
+  displayScale: z.number().finite().min(0.5).max(2),
   textScale: z.number().finite().positive().max(3),
   rasterScale: z.number().finite().positive().max(4),
   maxTextureWidth: z.number().int().positive(),

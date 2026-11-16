@@ -1,12 +1,13 @@
 /** Shared controlled newspaper bundles for validation and cache tests. */
 import type { IssueDocument } from "../../src/newspaper/contracts/issue.js";
-import { computeRegionWidth } from "../../src/newspaper/renderer/layout.js";
+import { computeRenderLayout } from "../../src/newspaper/renderer/layout.js";
 import { newspaperRenderBundleSchemaVersion, newspaperRendererVersion, type RenderBundle, type RenderProfile, type RenderStrip } from "../../src/newspaper/contracts/render.js";
 
 export const newspaperTestProfile: RenderProfile = {
   viewportWidth: 1024,
   viewportHeight: 768,
-  contentWidth: 64,
+  paperWidth: 144,
+  displayScale: 1,
   textScale: 1,
   rasterScale: 1,
   maxTextureWidth: 512,
@@ -14,7 +15,8 @@ export const newspaperTestProfile: RenderProfile = {
   scrollbarGutter: 16,
 };
 
-export const newspaperTestRegionWidth = computeRegionWidth("modern", newspaperTestProfile.contentWidth, newspaperTestProfile.scrollbarGutter);
+export const newspaperTestRegionWidth = newspaperTestProfile.paperWidth;
+export const newspaperTestContentWidth = computeRenderLayout("modern", newspaperTestProfile).contentWidth;
 
 /** Build a small issue whose two pages share one item. */
 export function createNewspaperIssue(): IssueDocument {
@@ -95,7 +97,7 @@ export function createNewspaperBundle(): RenderBundle {
         width: newspaperTestRegionWidth,
         height: 40,
         contentHeight: 40,
-        contentWidth: newspaperTestProfile.contentWidth,
+        contentWidth: newspaperTestContentWidth,
         scrollbarGutter: newspaperTestProfile.scrollbarGutter,
         strips: [createStrip(0, "page-0.dds")],
         actions: [],

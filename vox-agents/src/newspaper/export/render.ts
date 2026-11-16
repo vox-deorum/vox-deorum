@@ -19,6 +19,7 @@ import {
 } from '../contracts/render.js';
 import type { CapturePlan, NewspaperExportBridge } from '../renderer/bridge.js';
 import type { IssueDocument } from '../contracts/issue.js';
+import { computeRenderLayout } from '../renderer/layout.js';
 
 /** Type the fixed browser bridge without introducing DOM globals to the backend compiler. */
 type ExportGlobal = typeof globalThis & { voxDeorumNewspaperExport: NewspaperExportBridge };
@@ -48,10 +49,11 @@ async function captureRegion(page: Page, capture: CapturePlan, prefix: string, d
 
 /** Render a validated issue using only local reader assets and an installed browser. */
 export async function renderIssue(worker: NewspaperBrowser, hostUrl: string, issueInput: IssueDocument,
-  profileInput: RenderProfile, directory: string, format: DdsFormat = 'BC1_UNORM'): Promise<RenderBundle> {
+  profileInput: RenderProfile, directory: string, format: DdsFormat = 'B8G8R8A8_UNORM'): Promise<RenderBundle> {
   const issue = parseIssueDocument(issueInput);
   const profile = parseRenderProfile(profileInput);
   validateRenderProfileForDesign(profile, issue.publication.designId);
+  const layout = computeRenderLayout(issue.publication.designId, profile);
   if (![1, 2].includes(profile.rasterScale) || profile.maxTextureWidth > 4096 || profile.maxTextureHeight > 4096
     || profile.maxTextureHeight % 4 !== 0) throw new Error('Use raster scale 1 or 2 and texture limits up to 4096, with height divisible by four.');
   return worker.run(async browser => {
@@ -75,7 +77,7 @@ export async function renderIssue(worker: NewspaperBrowser, hostUrl: string, iss
       for (const [index, section] of issue.pages.entries()) {
         await page.evaluate(pageId => (globalThis as ExportGlobal).voxDeorumNewspaperExport.selectPage(pageId), section.id);
         const measured = await page.evaluate(() => (globalThis as ExportGlobal).voxDeorumNewspaperExport.measurePage());
-        if (Math.abs(measured.layout.contentWidth - profile.contentWidth) > 0.1) throw new Error('Publication content width changed during export.');
+        if (Math.abs(measured.layout.contentWidth - layout.contentWidth) > 0.1) throw new Error('Publication content width changed during export.');
         pages.push({
           pageId: section.id, layout: section.layout, width: measured.capture.size.width, height: measured.capture.size.height,
           contentHeight: measured.contentHeight, contentWidth: measured.layout.contentWidth,

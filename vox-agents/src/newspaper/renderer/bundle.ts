@@ -6,7 +6,7 @@
  * plans, and geometry that cannot belong to the declared profile out of the
  * cache.
  */
-import { computeRegionWidth } from "./layout.js";
+import { computeRenderLayout } from "./layout.js";
 import { newspaperVoteIconAssets } from "./assets.js";
 import { z } from "zod";
 
@@ -154,11 +154,14 @@ function validateAction(
 
 /** Check bundle consistency that individual object schemas cannot express. */
 function refineRenderBundle(bundle: RenderBundle, ctx: z.RefinementCtx): void {
-  const regionWidth = computeRegionWidth(
-    bundle.designId,
-    bundle.profile.contentWidth,
-    bundle.profile.scrollbarGutter,
-  );
+  let layout;
+  try {
+    layout = computeRenderLayout(bundle.designId, bundle.profile);
+  } catch (error) {
+    addIssue(ctx, ["profile", "paperWidth"], (error as Error).message);
+    return;
+  }
+  const { regionWidth } = layout;
   if (!nearlyEqual(bundle.header.width, regionWidth)) {
     addIssue(ctx, ["header", "width"], "The header width must match the profile region width.");
   }
@@ -207,7 +210,7 @@ function refineRenderBundle(bundle: RenderBundle, ctx: z.RefinementCtx): void {
     if (!nearlyEqual(page.width, regionWidth)) {
       addIssue(ctx, [...pagePath, "width"], "A page width must match the profile region width.");
     }
-    if (!nearlyEqual(page.contentWidth, bundle.profile.contentWidth)) {
+    if (!nearlyEqual(page.contentWidth, layout.contentWidth)) {
       addIssue(ctx, [...pagePath, "contentWidth"], "A page content width must match the profile.");
     }
     if (!nearlyEqual(page.scrollbarGutter, bundle.profile.scrollbarGutter)) {

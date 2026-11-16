@@ -20,7 +20,7 @@ function fixture() {
       if (name === 'lua-executor') return envelope({ Success: true, Result: true });
       const values = args.Args as unknown[];
       return envelope({ success: true, result: args.Name === 'VoxDeorumNewspaperPrepare'
-        ? { success: true, requestId: values[0], receiver: 4 } : { success: true } });
+        ? { success: true, requestId: values[0], receiver: 4, view: { width: 1140, height: 558, zoom: 1 } } : { success: true } });
     }),
   };
   const game = new NewspaperGameDelivery(client);
@@ -35,6 +35,7 @@ describe('newspaper game delivery', () => {
     const { game, client, payload } = fixture();
     const prepared = await game.prepare();
     expect(prepared.receiver).toBe(4);
+    expect(prepared.view).toEqual({ width: 1140, height: 558, zoom: 1 });
     expect(client.connect).toHaveBeenCalledOnce();
     expect(client.callTool).toHaveBeenNthCalledWith(1, 'lua-executor', expect.objectContaining({
       Script: 'LuaEvents.VoxDeorumNewspaperRegister(); return true',
@@ -107,5 +108,20 @@ describe('newspaper game delivery', () => {
     await expect(game.deliver(prepared, payload)).rejects.toThrow('Stale request');
     client.callTool.mockRejectedValueOnce(new Error('DLL timeout'));
     await expect(game.deliver(prepared, payload)).rejects.toThrow('DLL timeout');
+  });
+
+  it.each([
+    undefined,
+    { width: 0, height: 558, zoom: 1 },
+    { width: 1140, height: Infinity, zoom: 1 },
+    { width: 1140, height: 558, zoom: 0.49 },
+    { width: 1140, height: 558, zoom: 2.01 },
+    { width: 1140, height: 558 },
+  ])('should explain how to update a reader returning an invalid publication view %#', async view => {
+    const { game, client } = fixture();
+    client.callTool.mockImplementation(async (name: string, args: Record<string, unknown>) => name === 'lua-executor'
+      ? envelope({ Success: true, Result: true })
+      : envelope({ success: true, result: { success: true, requestId: (args.Args as unknown[])[0], receiver: 4, view } }));
+    await expect(game.prepare()).rejects.toThrow(/update.*mod.*reload/i);
   });
 });

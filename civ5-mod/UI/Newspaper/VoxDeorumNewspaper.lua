@@ -32,6 +32,11 @@ local PAGE_MIN_HEIGHT = 180
 local STATUS_SECONDS = 4
 local TAB_HEIGHT = 26
 local LINE_GAP = 6
+local WINDOW_MARGIN = 40
+local WINDOW_CHROME_WIDTH = 100
+local FOOTER_SPACE = 70
+-- Internal reader setting. Changing zoom requires a fresh export for the new view.
+local READER_ZOOM = 1
 
 -- Publication data, committed only after a candidate delivery validates.
 local m_issue = nil
@@ -50,12 +55,18 @@ local m_contentWidth = 900
 
 -- Reader state that survives closing and reopening this context.
 local m_scrollByPage = {}
+local m_nativeScrollByPage = {}
 local m_votes = {}
 local m_readerOpen = false
 local m_detailOpen = false
 local m_lastDisplayedFixture = nil
 local m_pendingRequestId = nil
 local m_pendingReceiver = nil
+local m_pendingView = nil
+local m_bundleView = nil
+local m_layoutView = nil
+local m_lastDisplayedView = nil
+local m_useRenderedLayout = false
 
 -- Dynamic control ownership. Images are unloaded before their parents are
 -- cleared, and the highlight lists drive shared vote state on the current page.
@@ -65,6 +76,8 @@ local m_voteHighlights = {}
 local m_tabUnderlines = {}
 local m_textureChecks = {}
 local m_scale = 1
+local m_pageScale = 1
+local m_pageRendered = false
 local m_statusSeconds = 0
 local m_scrollRestoreFrames = 0
 
@@ -74,6 +87,30 @@ local dispatchAction
 local selectPage
 local closeReader
 local deliveryReceiver
+
+-- Read the physical publication space remaining inside the current game window.
+local function currentView()
+	local ok, screenWidth, screenHeight = pcall(UIManager.GetScreenSizeVal, UIManager)
+	if not ok or type(screenWidth) ~= "number" or type(screenHeight) ~= "number" then
+		screenWidth, screenHeight = 1040, 760
+	end
+	return {
+		width = math.max(1, math.floor(screenWidth - WINDOW_MARGIN - WINDOW_CHROME_WIDTH)),
+		height = math.max(1, math.floor(screenHeight - WINDOW_MARGIN - HEADER_TOP - FOOTER_SPACE)),
+		zoom = math.max(0.5, math.min(2, READER_ZOOM)),
+	}
+end
+
+-- Round an absolute CSS edge once, so neighboring controls share the same boundary.
+local function scaledEdge(value)
+	return math.floor(value * m_scale + 0.5)
+end
+
+-- Convert a CSS rectangle using its shared edges instead of rounding its size independently.
+local function scaledRect(rect)
+	local x, y = scaledEdge(rect.x), scaledEdge(rect.y)
+	return x, y, scaledEdge(rect.x + rect.width) - x, scaledEdge(rect.y + rect.height) - y
+end
 
 -- Page layout starts hidden. Nothing opens until a fixture event arrives.
 ContextPtr:SetHide(true)
@@ -217,6 +254,7 @@ local function loadFixture(fixture, indexed)
 			end
 		end
 		m_scrollByPage = {}
+		m_nativeScrollByPage = {}
 		for pageId, offset in pairs(initial.scrollByPage or {}) do
 			local number = tonumber(offset)
 			if hasPage(pageId) and number ~= nil and number == number and number < math.huge then
@@ -277,17 +315,19 @@ local function scrollRange()
 	return math.max(0, contentHeight - viewportHeight)
 end
 
--- Save the active page's scroll offset in CSS pixels, matching fixture state.
+-- Save each display mode separately: capture offsets use CSS pixels and native offsets use control units.
 local function saveScroll()
 	if m_activePageId == nil then return end
 	local range = scrollRange()
-	m_scrollByPage[m_activePageId] = (Controls.PageScroll:GetScrollValue() * range) / m_scale
+	local offsets = m_pageRendered and m_scrollByPage or m_nativeScrollByPage
+	offsets[m_activePageId] = (Controls.PageScroll:GetScrollValue() * range) / m_pageScale
 end
 
 -- Restore one page's scroll offset after its content has been rebuilt.
 local function restoreScroll(pageId)
 	if pageId == nil then return end
-	local offset = (m_scrollByPage[pageId] or 0) * m_scale
+	local offsets = m_pageRendered and m_scrollByPage or m_nativeScrollByPage
+	local offset = (offsets[pageId] or 0) * m_pageScale
 	local range = scrollRange()
 	if range <= 0 then
 		Controls.PageScroll:SetScrollValue(0)
@@ -555,10 +595,7 @@ end
 -- Add one verified image strip at a scaled CSS rectangle.
 local function addStrip(parent, images, strip)
 	local clip = strip.clip or {}
-	local x = (tonumber(clip.x) or 0) * m_scale
-	local y = (tonumber(clip.y) or 0) * m_scale
-	local width = (tonumber(clip.width) or 0) * m_scale
-	local height = (tonumber(clip.height) or 0) * m_scale
+	local x, y, width, height = scaledRect(clip)
 	local image = addImage(parent, images, m_assets[strip.fileName], x, y, width, height)
 	if image ~= nil then
 		-- Native CultureOverview crops partial icons with these texture-region APIs.
@@ -571,10 +608,7 @@ end
 -- Add one transparent button over a scaled bundle rectangle.
 local function addHitRect(instanceName, parent, rect, callback)
 	if type(rect) ~= "table" then return end
-	local x = (tonumber(rect.x) or 0) * m_scale
-	local y = (tonumber(rect.y) or 0) * m_scale
-	local width = math.max(8, (tonumber(rect.width) or 0) * m_scale)
-	local height = math.max(8, (tonumber(rect.height) or 0) * m_scale)
+	local x, y, width, height = scaledRect(rect)
 	local instance = {}
 	ContextPtr:BuildInstanceForControl(instanceName, instance, parent)
 	instance.Box:SetOffsetVal(x, y)
@@ -591,9 +625,8 @@ end
 local function addTabUnderline(rect)
 	local instance = {}
 	ContextPtr:BuildInstanceForControl("RuleInstance", instance, Controls.HeaderOverlay)
-	local x = (tonumber(rect.x) or 0) * m_scale
-	local y = ((tonumber(rect.y) or 0) + (tonumber(rect.height) or 0)) * m_scale - 3
-	local width = (tonumber(rect.width) or 0) * m_scale
+	local x, _, width = scaledRect(rect)
+	local y = scaledEdge(rect.y + rect.height) - 3
 	instance.Box:SetOffsetVal(x, y)
 	instance.Box:SetSizeVal(math.max(1, width), 3)
 	return instance.Box
@@ -656,12 +689,12 @@ local function renderHeader()
 	m_textureChecks = {}
 
 	local header = m_bundle.header
-	if type(header) ~= "table" or not stripsAvailable(header.strips) then
+	if not m_useRenderedLayout or type(header) ~= "table" or not stripsAvailable(header.strips) then
 		return renderTextHeader()
 	end
 
-	local width = (tonumber(header.width) or m_contentWidth) * m_scale
-	local height = (tonumber(header.height) or 96) * m_scale
+	local width = scaledEdge(header.width)
+	local height = scaledEdge(header.height)
 	Controls.HeaderImage:SetOffsetVal(CONTENT_X, HEADER_TOP)
 	Controls.HeaderImage:SetSizeVal(width, height)
 	Controls.HeaderImage:SetHide(false)
@@ -694,10 +727,6 @@ end
 local function addVoteIcon(slot)
 	local itemId, value, rect = slot.itemId, slot.value, slot.rect
 	if type(itemId) ~= "string" or (value ~= "up" and value ~= "down") or type(rect) ~= "table" then return end
-	local x = (tonumber(rect.x) or 0) * m_scale
-	local y = (tonumber(rect.y) or 0) * m_scale
-	local width = math.max(8, (tonumber(rect.width) or 0) * m_scale)
-	local height = math.max(8, (tonumber(rect.height) or 0) * m_scale)
 
 	local pixelSize = voteIconPixelSize()
 	local neutralPath = m_assets[slot.neutralAssetId]
@@ -705,8 +734,9 @@ local function addVoteIcon(slot)
 	if not textureAvailable(neutralPath, pixelSize, pixelSize) then return end
 	if not textureAvailable(selectedPath, pixelSize, pixelSize) then return end
 
-	local iconSize = 20 * m_scale
-	local iconX, iconY = x + (width - iconSize) / 2, y + (height - iconSize) / 2
+	local iconSize = scaledEdge(20)
+	local iconX = scaledEdge(rect.x + (rect.width - 20) / 2)
+	local iconY = scaledEdge(rect.y + (rect.height - 20) / 2)
 	local neutral = addImage(Controls.PageContent, m_pageImages, neutralPath, iconX, iconY, iconSize, iconSize)
 	local selected = addImage(Controls.PageContent, m_pageImages, selectedPath, iconX, iconY, iconSize, iconSize)
 	if neutral == nil or selected == nil then return end
@@ -797,8 +827,8 @@ end
 
 -- Draw the active page from verified image strips and typed action rectangles.
 local function renderTexturePage(page)
-	local width = (tonumber(page.width) or m_contentWidth) * m_scale
-	local height = math.max(1, (tonumber(page.height) or 0) * m_scale)
+	local width = scaledEdge(page.width)
+	local height = math.max(1, scaledEdge(page.height))
 	Controls.PageContent:SetSizeVal(width, height)
 
 	for _, strip in ipairs(page.strips or {}) do addStrip(Controls.PageContent, m_pageImages, strip) end
@@ -830,9 +860,13 @@ local function renderPage()
 	local page = activePage()
 	if page == nil then return end
 	local rendered = m_renderPages[m_activePageId]
-	if rendered ~= nil and stripsAvailable(rendered.strips) and voteIconsAvailable(rendered) then
+	if m_useRenderedLayout and rendered ~= nil and stripsAvailable(rendered.strips) and voteIconsAvailable(rendered) then
+		m_pageScale = m_scale
+		m_pageRendered = true
 		renderTexturePage(rendered)
 	else
+		m_pageScale = 1
+		m_pageRendered = false
 		renderTextPage(page)
 	end
 	Controls.PageScroll:CalculateInternalSize()
@@ -851,31 +885,32 @@ end
 
 -- Position and size the scroll viewport below the rendered header.
 local function layoutPageScroll(headerHeight)
-	local pageTop = HEADER_TOP + math.max(40, headerHeight) + 10
-	local pageBottom = m_windowHeight - 64 - 6
+	local pageTop = HEADER_TOP + headerHeight
+	local pageBottom = m_windowHeight - FOOTER_SPACE
 	local viewportHeight = math.max(1, pageBottom - pageTop)
 	Controls.PageScroll:SetOffsetVal(CONTENT_X, pageTop)
 	Controls.PageScroll:SetSizeVal(m_contentWidth + 30, viewportHeight)
 	Controls.PageBar:SetSizeY(math.max(60, viewportHeight - 42))
 end
 
--- Fit the window and capture scale to the current game screen before rendering.
+-- Fit the negotiated paper at its requested zoom, falling back when the view cannot display it.
 local function fitWindow()
-	local ok, screenWidth, screenHeight = pcall(UIManager.GetScreenSizeVal, UIManager)
-	if not ok then screenWidth, screenHeight = 1040, 760 end
-	m_windowWidth = math.min(1000, math.max(1, screenWidth - 40))
-	m_windowHeight = math.max(1, screenHeight - 40)
-	m_contentWidth = math.max(1, m_windowWidth - 100)
+	local view = currentView()
+	m_layoutView = view
+	local profile = m_bundle.profile
+	m_useRenderedLayout = VoxDeorumNewspaperData.ProfileMatchesView(profile, m_bundleView)
+		and VoxDeorumNewspaperData.ProfileMatchesView(profile, view)
+		and math.floor(m_bundle.header.height * profile.displayScale + 0.5) + PAGE_MIN_HEIGHT <= view.height
+	m_scale = m_useRenderedLayout and profile.displayScale or 1
+	-- Text fallback uses its own native geometry and never rescales a stale capture.
+	m_contentWidth = m_useRenderedLayout and scaledEdge(profile.paperWidth) or math.floor(math.min(view.width, 1200))
+	m_windowWidth = m_contentWidth + WINDOW_CHROME_WIDTH
+	m_windowHeight = view.height + HEADER_TOP + FOOTER_SPACE
 	Controls.NewspaperGrid:SetSizeVal(m_windowWidth, m_windowHeight)
 	Controls.Footer:SetSizeX(m_windowWidth)
 	Controls.DetailOverlay:SetSizeVal(m_windowWidth, m_windowHeight)
 	Controls.DetailScroll:SetSizeVal(m_windowWidth - 80, math.max(1, m_windowHeight - 104))
 	Controls.DetailBar:SetSizeY(math.max(1, m_windowHeight - 146))
-	local header = m_bundle.header or {}
-	local regionWidth = tonumber(header.width) or m_contentWidth
-	local headerHeight = tonumber(header.height) or 96
-	local headerSpace = math.max(1, m_windowHeight - HEADER_TOP - 64 - PAGE_MIN_HEIGHT - 16)
-	m_scale = math.min(1, m_contentWidth / regionWidth, headerSpace / headerHeight)
 end
 
 -- Rebuild the header, page, footer, and pending scroll from the fixture.
@@ -953,8 +988,11 @@ local function hideReaderControls()
 end
 
 -- Render and show a validated candidate, restoring the earlier publication if native UI work fails.
-local function openReader(fixture)
+local function openReader(fixture, bundleView)
 	fixture = fixture or m_lastDisplayedFixture or VoxDeorumNewspaperFixture
+	if bundleView == nil then
+		bundleView = fixture == m_lastDisplayedFixture and m_lastDisplayedView or currentView()
+	end
 	local checked, indexed, validationError = pcall(VoxDeorumNewspaperData.ValidateFixture, fixture)
 	if not checked then return false, "Newspaper delivery validation failed: " .. tostring(indexed) end
 	if indexed == nil then return false, validationError end
@@ -964,11 +1002,14 @@ local function openReader(fixture)
 	if m_readerOpen then saveScroll() end
 	local previous = {
 		issue = m_issue, bundle = m_bundle, assets = m_assets, cacheRoot = m_cacheRoot,
+		bundleView = m_bundleView,
 		indexed = { itemsById = m_itemsById, pages = m_pages, pageById = m_pageById,
 			pageIndexById = m_pageIndexById, renderPages = m_renderPages },
 		activePageId = m_activePageId, scrollByPage = m_scrollByPage, votes = m_votes, open = m_readerOpen,
+		nativeScrollByPage = m_nativeScrollByPage,
 	}
 	loadFixture(fixture, indexed)
+	m_bundleView = bundleView
 	-- Finish native drawing before acknowledging that the delivered newspaper is visible.
 	local function showReader()
 		Controls.DetailOverlay:SetHide(true)
@@ -987,16 +1028,19 @@ local function openReader(fixture)
 	local rendered, renderError = pcall(showReader)
 	if rendered then
 		m_lastDisplayedFixture = fixture
+		m_lastDisplayedView = bundleView
 		return true
 	end
 	m_issue, m_bundle, m_assets, m_cacheRoot = previous.issue, previous.bundle, previous.assets, previous.cacheRoot
+	m_bundleView = previous.bundleView
 	m_itemsById, m_pages, m_pageById = previous.indexed.itemsById, previous.indexed.pages, previous.indexed.pageById
 	m_pageIndexById, m_renderPages = previous.indexed.pageIndexById, previous.indexed.renderPages
 	m_activePageId, m_scrollByPage, m_votes = previous.activePageId, previous.scrollByPage, previous.votes
+	m_nativeScrollByPage = previous.nativeScrollByPage
 	m_textureChecks = {}
 	if previous.open then
 		local restored = pcall(showReader)
-		if not restored then closeReader() end
+		if not restored then closeReader(true) end
 	else
 		-- Release partially drawn content without overwriting the restored publication's saved scroll.
 		pcall(hideReaderControls)
@@ -1004,10 +1048,10 @@ local function openReader(fixture)
 	return false, "Newspaper could not be displayed: " .. tostring(renderError)
 end
 
--- Hide the reader and release every displayed texture.
-closeReader = function()
+-- Hide the reader and release textures, keeping the last saved offset when a partial relayout failed.
+closeReader = function(skipScroll)
 	if not m_readerOpen then return end
-	saveScroll()
+	if skipScroll ~= true then saveScroll() end
 	hideReaderControls()
 	if LuaEvents ~= nil and LuaEvents.VoxDeorumNewspaperClosed ~= nil then
 		LuaEvents.VoxDeorumNewspaperClosed()
@@ -1019,6 +1063,18 @@ onUpdate = function(fDTime)
 	if m_readerOpen and deliveryReceiver() ~= m_issue.receiver.playerId then
 		closeReader()
 		return
+	end
+	if m_readerOpen and not VoxDeorumNewspaperData.SameView(currentView(), m_layoutView) then
+		saveScroll()
+		-- Native layout failures must close the partial controls while preserving the cached publication.
+		local rendered = pcall(function()
+			renderReader()
+			restoreScroll(m_activePageId)
+		end)
+		if not rendered then
+			closeReader(true)
+			return
+		end
 	end
 	if m_statusSeconds > 0 then
 		m_statusSeconds = m_statusSeconds - (fDTime or 0)
@@ -1053,6 +1109,7 @@ ContextPtr:SetInputHandler(inputHandler)
 local function clearPendingDelivery()
 	m_pendingRequestId = nil
 	m_pendingReceiver = nil
+	m_pendingView = nil
 end
 
 -- Return the current effective receiver, failing closed when the shared seat helper is unavailable.
@@ -1075,7 +1132,10 @@ local function prepareDelivery(requestId)
 	local receiver = deliveryReceiver()
 	if receiver == nil then return { success = false, error = "The current newspaper receiver is unavailable." } end
 	m_pendingRequestId, m_pendingReceiver = requestId, receiver
-	return { success = true, requestId = requestId, receiver = receiver }
+	m_pendingView = currentView()
+	-- Return a separate table so native bridge serialization cannot alter the pending request.
+	local view = { width = m_pendingView.width, height = m_pendingView.height, zoom = m_pendingView.zoom }
+	return { success = true, requestId = requestId, receiver = receiver, view = view }
 end
 
 -- Display only the latest prepared payload for the seat that requested it.
@@ -1084,13 +1144,21 @@ local function deliverNewspaper(requestId, payload)
 		return { success = false, error = "This newspaper request is no longer current." }
 	end
 	local receiver = m_pendingReceiver
+	local preparedView = m_pendingView
 	clearPendingDelivery()
 	if deliveryReceiver() ~= receiver then return { success = false, error = "The newspaper receiver has changed." } end
+	local view = currentView()
+	if view.zoom ~= preparedView.zoom or VoxDeorumNewspaperData.PaperWidth(view) ~= VoxDeorumNewspaperData.PaperWidth(preparedView) then
+		return { success = false, error = "The newspaper view has changed. Export it again for the current window." }
+	end
 	if type(payload) ~= "table" or type(payload.issue) ~= "table" or type(payload.issue.receiver) ~= "table"
 		or payload.issue.receiver.playerId ~= receiver then
 		return { success = false, error = "The newspaper belongs to another receiver." }
 	end
-	local ok, displayed, displayError = pcall(openReader, payload)
+	if type(payload.bundle) ~= "table" or not VoxDeorumNewspaperData.ProfileMatchesView(payload.bundle.profile, preparedView) then
+		return { success = false, error = "The newspaper render profile does not match the requested view." }
+	end
+	local ok, displayed, displayError = pcall(openReader, payload, preparedView)
 	if not ok then return { success = false, error = "Newspaper display failed: " .. tostring(displayed) } end
 	if not displayed then return { success = false, error = displayError } end
 	return { success = true }

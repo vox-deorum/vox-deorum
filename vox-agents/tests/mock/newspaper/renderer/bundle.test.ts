@@ -1,6 +1,6 @@
 /** Verify bounded render bundle validation and safe asset references. */
 import { describe, expect, it } from "vitest";
-import { createNewspaperBundle, newspaperTestProfile as profile, newspaperTestRegionWidth as regionWidth } from "../../../helpers/newspaper-fixtures.js";
+import { createNewspaperBundle, newspaperTestContentWidth, newspaperTestProfile as profile, newspaperTestRegionWidth as regionWidth } from "../../../helpers/newspaper-fixtures.js";
 import { validateRenderBundle } from "../../../../src/newspaper/renderer/bundle.js";
 import { newspaperRendererVersion, type RenderBundle, type RenderStrip } from "../../../../src/newspaper/contracts/render.js";
 
@@ -57,7 +57,7 @@ function createBundle(): RenderBundle {
         width: regionWidth,
         height: 40,
         contentHeight: 40,
-        contentWidth: profile.contentWidth,
+        contentWidth: newspaperTestContentWidth,
         scrollbarGutter: profile.scrollbarGutter,
         strips: [createStrip(0, "page-0.dds", regionWidth, 0, 40)],
         actions: [
@@ -110,7 +110,7 @@ describe("newspaper render bundle validation", () => {
   });
 
   it("should reject unsupported schema, renderer, design, and identity values", () => {
-    expect(() => validateRenderBundle({ ...createBundle(), schemaVersion: 2 })).toThrow();
+    expect(() => validateRenderBundle({ ...createBundle(), schemaVersion: 1 })).toThrow();
     expect(() => validateRenderBundle({ ...createBundle(), rendererVersion: "9.9.9" })).toThrow();
     expect(() => validateRenderBundle({ ...createBundle(), designId: "tabloid" })).toThrow();
     expect(() => validateRenderBundle({ ...createBundle(), issueId: "" })).toThrow();

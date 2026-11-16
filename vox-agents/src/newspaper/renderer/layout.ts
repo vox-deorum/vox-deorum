@@ -1,10 +1,9 @@
 /** Shared layout defaults and measurements for the reader and exporter. */
 import type { NewspaperDesignId } from "../contracts/issue.js";
-import type { RenderProfile, RenderLayoutMetrics } from "../contracts/render.js";
+import { newspaperViewSchema, type NewspaperView, type RenderProfile, type RenderLayoutMetrics } from "../contracts/render.js";
 
 /** Layout defaults for one visual design. */
 export interface NewspaperDesignLayoutDefaults {
-  contentWidth: number;
   paperPadding: number;
   scrollbarGutter: number;
 }
@@ -24,12 +23,10 @@ export const defaultMaxTextureEdge = 2048;
 /** Design-specific layout defaults used by the browser reader and exporter. */
 export const newspaperDesignDefaults = {
   victorian: {
-    contentWidth: 900,
     paperPadding: 48,
     scrollbarGutter: 16,
   },
   modern: {
-    contentWidth: 900,
     paperPadding: 32,
     scrollbarGutter: 16,
   },
@@ -37,18 +34,22 @@ export const newspaperDesignDefaults = {
 
 /** Default browser capture profile for a newspaper export. */
 export const defaultRenderProfile: RenderProfile = {
-  viewportWidth: 1280, viewportHeight: 720, contentWidth: 900, textScale: 1,
-  rasterScale: 1, maxTextureWidth: 2048, maxTextureHeight: 2048, scrollbarGutter: 16,
+  viewportWidth: 1280, viewportHeight: 720, paperWidth: 1200, displayScale: 1, textScale: 1,
+  rasterScale: 2, maxTextureWidth: 4096, maxTextureHeight: 2048, scrollbarGutter: 16,
 };
 
-/** Compute the fixed outer width of a publication region. */
-export function computeRegionWidth(
-  designId: NewspaperDesignId,
-  contentWidth: number,
-  scrollbarGutter: number,
-): number {
-  const defaults = newspaperDesignDefaults[designId];
-  return contentWidth + defaults.paperPadding * 2 + scrollbarGutter;
+/** Fit a canonical CSS paper to the game's physical viewport at its requested zoom. */
+export function computeRenderProfileForView(viewInput: NewspaperView): RenderProfile {
+  const view = newspaperViewSchema.parse(viewInput);
+  // Keep this width calculation aligned with VoxDeorumNewspaperData.PaperWidth in the Lua reader.
+  const displayWidth = Math.min(view.width, defaultRenderProfile.paperWidth * view.zoom);
+  const paperWidth = Math.floor(displayWidth / view.zoom * 64) / 64;
+  return {
+    ...defaultRenderProfile,
+    paperWidth,
+    displayScale: view.zoom,
+    viewportWidth: Math.ceil(Math.ceil(paperWidth * defaultRenderProfile.rasterScale / 4) * 4 / defaultRenderProfile.rasterScale),
+  };
 }
 
 /** Turn a render profile and design into the metrics used by CSS and export. */
@@ -57,14 +58,20 @@ export function computeRenderLayout(
   profile: RenderProfile,
 ): RenderLayoutMetrics {
   const defaults = newspaperDesignDefaults[designId];
+  const paperPadding = profile.paperWidth <= 480 ? 16 : profile.paperWidth <= 760 ? 24 : defaults.paperPadding;
+  const contentWidth = profile.paperWidth - paperPadding * 2 - profile.scrollbarGutter;
+  if (!Number.isFinite(contentWidth) || contentWidth <= 0) {
+    throw new Error("Publication width leaves no room for content after its margins and scrollbar gutter.");
+  }
   return {
-    contentWidth: profile.contentWidth,
-    paperPadding: defaults.paperPadding,
+    contentWidth,
+    paperPadding,
     scrollbarGutter: profile.scrollbarGutter,
-    regionWidth: computeRegionWidth(designId, profile.contentWidth, profile.scrollbarGutter),
+    regionWidth: profile.paperWidth,
     viewportWidth: profile.viewportWidth,
     viewportHeight: profile.viewportHeight,
     rasterScale: profile.rasterScale,
     textScale: profile.textScale,
+    displayScale: profile.displayScale,
   };
 }

@@ -4,6 +4,7 @@ import { NewspaperExportService } from '../../../../src/newspaper/export/service
 import { NewspaperCache } from '../../../../src/newspaper/export/cache.js';
 import { NewspaperBrowser } from '../../../../src/newspaper/export/browser.js';
 import { createNewspaperBundle, createNewspaperIssue, newspaperTestProfile } from '../../../helpers/newspaper-fixtures.js';
+import { renderCacheKey } from '../../../../src/newspaper/export/cache.js';
 
 /** Configure cache hits so orchestration can be checked independently of capture and disk I/O. */
 function createService() {
@@ -74,6 +75,42 @@ describe('newspaper export service', () => {
     await service.exportIssue(createNewspaperIssue());
     expect(deliver).toHaveBeenCalledTimes(1);
     expect(pin).toHaveBeenCalledTimes(1);
+    await service.close();
+  });
+
+  it('should snapshot each queued profile override and restore the constructor profile for generic exports', async () => {
+    const { service, lookup } = createService();
+    let release!: () => void;
+    const blocked = new Promise<void>(resolve => { release = resolve; });
+    const deliver = vi.fn().mockReturnValueOnce(blocked);
+    const issue = createNewspaperIssue();
+    const first = service.exportIssue(issue, deliver);
+    await vi.waitFor(() => expect(deliver).toHaveBeenCalledOnce());
+    const override = { ...newspaperTestProfile, paperWidth: 200.015625, displayScale: 1.5 };
+    const expectedProfile = { ...override };
+    const second = service.exportIssue(issue, undefined, override);
+    override.paperWidth = 320;
+    override.displayScale = 2;
+    const third = service.exportIssue(issue);
+    expect(lookup).toHaveBeenCalledTimes(1);
+    release();
+    await Promise.all([first, second, third]);
+    expect(lookup.mock.calls.map(([key]) => key)).toEqual([
+      renderCacheKey(issue, newspaperTestProfile, 'test-assets', 'BC1_UNORM'),
+      renderCacheKey(issue, expectedProfile, 'test-assets', 'BC1_UNORM'),
+      renderCacheKey(issue, newspaperTestProfile, 'test-assets', 'BC1_UNORM'),
+    ]);
+    expect(lookup.mock.calls[1][2]?.profile).toEqual(expectedProfile);
+    expect(lookup.mock.calls[2][2]?.profile).toEqual(newspaperTestProfile);
+    await service.close();
+  });
+
+  it('should reject invalid per-call profiles before entering the queue or cache', async () => {
+    const { service, lookup } = createService();
+    await expect(service.exportIssue(createNewspaperIssue(), undefined, { ...newspaperTestProfile, paperWidth: 40 })).rejects.toThrow();
+    expect(lookup).not.toHaveBeenCalled();
+    await service.exportIssue(createNewspaperIssue());
+    expect(lookup).toHaveBeenCalledOnce();
     await service.close();
   });
 });

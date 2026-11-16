@@ -4,13 +4,25 @@ Replay reads a recorded MCP SQLite database for a receiving civilization at a se
 
 ## Open a recording
 
-Build MCP before checking or running Vox Agents because replay imports its compiled queries. Build the newspaper browser assets with `npm run build:newspaper --workspace=vox-agents`, start VD as usual, and open `/newspaper/` on the address reported by the VD server. A source checkout can start the server with `npm run dev --workspace=vox-agents`. The standalone Vite preview serves the shell but does not supply replay routes.
+From the repository root:
+
+1. Run `npm run build --workspace=mcp-server`. Replay imports MCP's compiled queries.
+2. Run `npm run build:newspaper --workspace=vox-agents` to build the browser assets.
+3. Start VD with `npm run dev --workspace=vox-agents` and open `/newspaper/` on the address reported by the server. The standalone Vite preview serves the shell but does not supply replay routes.
 
 Enter the database path as seen by the server, receiving player ID, inclusive first and last turns, and publication interval. Durations default to recorded turns. Choosing Standard pace turns converts the publication interval and comparison duration once when opening the recording. Conversion rounds to recorded turns and keeps the interval at least one turn. A zero comparison duration omits comparison history.
 
 Pace uses a recognized recorded `gameSpeed` name first: Quick, Standard, Epic, or Marathon. Otherwise an explicit positive multiplier override applies. Missing or unrecognized names, including localized names, use a labelled Standard assumption when no override is supplied. The response retains the original name, multiplier, source, and label even when durations already use recorded turns.
 
-Inspect cutoff queries without advancing. Before the first check it previews the first configured turn. Next check queries that first turn, then advances by the resolved interval, clamping the last check to the configured end. Events run after the previous check through the cutoff. Comparison snapshots can reach before the configured first turn, bounded at turn zero. Failed reads leave the cursor unchanged; concurrent changes run in arrival order. Opening another recording resets the cursor after its source and metadata have been read successfully. Invalid settings or failure to open the replacement keeps the previous session usable. If closing the previous source fails, replay clears the session and requires configuration again.
+| Control | Effect |
+| --- | --- |
+| Open recording | Reads the source and pace metadata, then resets the cursor. |
+| Inspect cutoff | Queries the current window without advancing. Before the first check, previews the configured first turn. |
+| Next check | Queries the first turn, then advances by the resolved interval. The last check clamps to the configured end and disables this control. |
+
+Events run after the previous check through the cutoff. Comparison snapshots can reach before the configured first turn, bounded at turn zero. Reloading the page restores settings and the cursor; use Inspect cutoff to reload evidence.
+
+Failed reads leave the cursor unchanged; concurrent changes run in arrival order. Invalid settings or failure to open a replacement keeps the previous session usable. If closing the previous source fails, replay clears the session and requires configuration again.
 
 ## Inspect evidence
 
@@ -22,7 +34,7 @@ Fixture selection, the fixture archive, reader state, votes, and link destinatio
 
 ## Source and HTTP ownership
 
-`replay/database.ts` wraps `knowledge/database.ts`'s read-only opener and JSON decoder. It initializes the lazy connection without SQL so shutdown can release an unused source. Replay performs no schema setup, migrations, writes, or live refresh. `replay/session.ts` owns the connection, settings, cursor, and serialized work queue. Shutdown rejects new work, drains accepted operations, and closes the source. The export application retains its separate queue and shutdown.
+`replay/database.ts` wraps the read-only opener in `knowledge/database.ts`, inheriting its JSON decoding. It initializes the lazy connection without SQL so shutdown can release an unused source. Replay performs no schema setup, migrations, writes, or live refresh. `replay/session.ts` owns the connection, settings, cursor, and serialized work queue. Shutdown rejects new work, drains accepted operations, and closes the source. The export application retains its separate queue and shutdown.
 
 `replay/http.ts` mounts through the existing newspaper host hook with its own JSON parser before API fallbacks and the server's general parser. Routes are loopback-only. Paths below are relative to `/api/newspaper/replay`.
 
@@ -54,4 +66,45 @@ Recorded player names and civilizations are kept only for met subjects, matched 
 
 Event contact uses the final summary available for the event's turn. Normal collection refreshes summaries at the end of the round, after its events, and live tools can refresh them earlier. An incomplete recording or failed final refresh can leave an earlier summary that lacks a same-turn meeting. Those events remain omitted; later-turn contact cannot grant access retroactively. Replay contracts and browser code import only browser-safe evidence contracts from MCP; query implementations stay on the server.
 
-Small SQLite fixtures verify query equivalence, source preservation, cursor ordering, and cleanup. Browser integration exercises evidence inspection with fixture loading unavailable and retains fixture reader checks. Historical completeness and the candidate French recording's story examples still require recording-specific acceptance; replay cannot reconstruct missing observations or distinguish mixed save histories. Recordings do not persist the live alive-player list or elimination dates. A civilization's final summary can therefore remain in cutoff snapshots after elimination; its source turn identifies when it was observed.
+## Verified self-play recording
+
+On November 16, 2026, replay was exercised through the normal VD web server against `mcp-server/archive/self-play/0d749c4f-69a7-4682-81b3-8fa70f38c012_1794782175768.db`. Use the full knowledge database; the accompanying `-player-7.db` contains agent telemetry. The recording reports VP 5.2.7, DLL build `build-5.2.7-20261108-042403-54caaa5`, and Standard pace.
+
+To repeat the run, enter the database's absolute path and these settings:
+
+| Setting                   | Value                                          |
+| ------------------------- | ---------------------------------------------- |
+| Receiver                  | `7`, the Netherlands                           |
+| First / last turn         | `0` / `440`                                    |
+| Publication interval      | `5`                                            |
+| Comparison duration       | `10`                                           |
+| Duration units            | Recorded turns                                 |
+| Speed multiplier override | Leave empty; recorded Standard resolves to `1` |
+
+All 89 checks succeeded, returning 4,048 distinct events. Source checks matched 68,039 returned references, including repeated comparison observations, to 30,805 original SQLite rows. IDs, turns, timestamps, recorded visibility, and sampled raw values matched; events stayed within their windows without duplication. At cutoff 250, HTTP evidence exactly matched a direct call to MCP's shared query. The source database's SHA-256 was identical before and after replay.
+
+Selected results below count all permitted subjects, including city-states. Events cover the five turns after the preceding check; comparison rows fall within the inclusive ten-turn lookback.
+
+| Cutoff | National snapshots | City snapshots | Comparison national / city rows | Events |
+| --- | --- | --- | --- | --- |
+| 125 | 9 | 24 | 99 / 262 | 6 |
+| 200 | 14 | 31 | 116 / 305 | 60 |
+| 300 | 25 | 75 | 264 / 815 | 57 |
+| 440 | 25 | 74 | 141 / 750 | 113 |
+
+The source inspector exposes concrete inputs for later story detectors:
+
+| Example | Source | Recorded evidence |
+| --- | --- | --- |
+| Domestic city | `CityInformations` row `9162`, turn 200 | Amsterdam has population 17, science per turn 92, and University production with one turn left. |
+| Trade | `PlayerSummaries` row `6486`, turn 200 | Amsterdam to Istanbul yields `FromGold: 38.03`; Amsterdam to Groningen carries `ToProduction: 11.25`. Unavailable yields retain their `-1` sentinels. |
+| Foreign culture | `PlayerSummaries` row `6484`, turn 200 | The Ottomans have culture per turn 279 and tourism per turn 56.5. Basic access exposes policy branch counts. |
+| City capture | `GameEvents` row `247000938`, turn 247, inspected at cutoff 250 | The Netherlands captures Stuttgart from barbarians at coordinates `(6, 14)`. The evidence retains the original event date. |
+
+For the separate browser pass, set first turn to 125 and last turn to 138, keeping the other settings above. Headless browser checks verified source selection at turn 125 without advancing, checks at 125, 130, 135, and the clamped endpoint 138, and restoration of the finished session after reload. The HTTP pass also confirmed that preview succeeds after exhaustion and a missing replacement path returns 400 while preserving the existing cursor.
+
+Local acceptance artifacts are in `.tmp/newspaper-replay-20261116/`: the runner, `report.json`, selected cutoff responses, and a browser screenshot. Repeat the local scripted checks from the repository root with `node --import tsx .tmp/newspaper-replay-20261116/acceptance.ts`.
+
+Small SQLite fixtures separately cover query equivalence, cleanup, failure ordering, and visibility boundaries. Browser integration also covers evidence inspection when fixture loading fails.
+
+This recording returned no city-lifecycle limitation flags. Historical completeness remains limited by missing observations and mixed save histories. Recordings omit the live alive-player list and elimination dates, so final summaries can persist after elimination. At cutoff 440, India's retained summary is from turn 266 and Assyria's is from turn 327. Read each source turn as the observation date. Publication generation and editorial story acceptance remain pending.

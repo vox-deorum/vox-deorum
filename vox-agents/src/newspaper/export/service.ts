@@ -4,7 +4,7 @@ import { NewspaperCache, renderCacheKey, type CachedBundle } from './cache.js';
 import { renderIssue } from './render.js';
 import type { DdsFormat } from './dds.js';
 import type { RenderProfile } from '../contracts/render.js';
-import { parseIssueDocument, parseRenderProfile } from '../renderer/validation.js';
+import { parseIssueDocument, parseRenderProfile, validateRenderProfileForDesign } from '../renderer/validation.js';
 import type { IssueDocument } from '../contracts/issue.js';
 
 export interface NewspaperExportOptions {
@@ -32,9 +32,18 @@ export class NewspaperExportService {
   }
 
   /** Accept one issue and serialize capture, delivery, and retention with earlier requests. */
-  exportIssue(input: unknown, deliver?: NewspaperDelivery): Promise<CachedBundle> {
+  exportIssue(input: unknown, deliver?: NewspaperDelivery, profileOverride?: RenderProfile): Promise<CachedBundle> {
     if (this.closing) return Promise.reject(new Error('Newspaper export service is closed.'));
-    const result = this.pending.then(() => this.exportDocument(input, deliver));
+    let profile: RenderProfile;
+    let issue: IssueDocument;
+    try {
+      profile = parseRenderProfile(profileOverride ?? this.profile);
+      issue = parseIssueDocument(input);
+      validateRenderProfileForDesign(profile, issue.publication.designId);
+    } catch (error) {
+      return Promise.reject(error);
+    }
+    const result = this.pending.then(() => this.exportDocument(issue, profile, deliver));
     this.pending = result.catch(() => undefined);
     return result;
   }
@@ -46,15 +55,14 @@ export class NewspaperExportService {
   }
 
   /** Reuse a validated cache entry or render it before handing it to the owning application. */
-  private async exportDocument(input: unknown, deliver?: NewspaperDelivery): Promise<CachedBundle> {
-    const issue = parseIssueDocument(input);
+  private async exportDocument(issue: IssueDocument, profile: RenderProfile, deliver?: NewspaperDelivery): Promise<CachedBundle> {
     const { cache, assetsHash, format, url } = this.options;
-    const key = renderCacheKey(issue, this.profile, assetsHash, format);
+    const key = renderCacheKey(issue, profile, assetsHash, format);
     const cached = await cache.getOrCreate(key,
-      directory => renderIssue(this.worker, url(), issue, this.profile, directory, format), {
+      directory => renderIssue(this.worker, url(), issue, profile, directory, format), {
         issueId: issue.issueId, campaignId: issue.campaignId, timelineId: issue.timelineId,
         designId: issue.publication.designId, designVersion: issue.publication.designVersion,
-        profile: this.profile,
+        profile,
       });
     if (deliver) {
       await deliver(issue, cached);

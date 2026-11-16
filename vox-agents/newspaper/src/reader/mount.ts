@@ -10,10 +10,7 @@ import type { ReaderAction, ReaderState } from "../../../src/newspaper/contracts
 import type { RenderProfile } from "../../../src/newspaper/contracts/render.js";
 import {
   computeRenderLayout,
-  defaultMaxTextureEdge,
-  defaultRasterScale,
-  defaultReaderViewport,
-  defaultTextScale,
+  defaultRenderProfile,
   newspaperDesignDefaults,
 } from "../../../src/newspaper/renderer/layout.js";
 import { getNewspaperAsset } from "../../../src/newspaper/renderer/assets.js";
@@ -60,18 +57,17 @@ function nextInstancePrefix(): string {
   return `vd-reader-${instanceCounter}`;
 }
 
-/** Build a reader profile from design defaults when a host has no export profile. */
-function defaultProfile(designId: keyof typeof newspaperDesignDefaults): RenderProfile {
-  const defaults = newspaperDesignDefaults[designId];
+/** Build a reader profile from the space available inside its host. */
+function defaultProfile(root: HTMLElement, designId: keyof typeof newspaperDesignDefaults): RenderProfile {
+  const style = getComputedStyle(root);
+  const availableWidth = root.getBoundingClientRect().width - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)
+    - parseFloat(style.borderLeftWidth) - parseFloat(style.borderRightWidth);
   return {
-    viewportWidth: window.innerWidth || defaultReaderViewport.width,
-    viewportHeight: window.innerHeight || defaultReaderViewport.height,
-    contentWidth: defaults.contentWidth,
-    textScale: defaultTextScale,
-    rasterScale: defaultRasterScale,
-    maxTextureWidth: defaultMaxTextureEdge,
-    maxTextureHeight: defaultMaxTextureEdge,
-    scrollbarGutter: defaults.scrollbarGutter,
+    ...defaultRenderProfile,
+    viewportWidth: window.innerWidth,
+    viewportHeight: window.innerHeight,
+    paperWidth: Math.min(defaultRenderProfile.paperWidth, availableWidth > 0 ? availableWidth : window.innerWidth),
+    scrollbarGutter: newspaperDesignDefaults[designId].scrollbarGutter,
   };
 }
 
@@ -86,10 +82,11 @@ export function mountReader(
   const issue = parseIssueDocument(issueInput);
   const designId = issue.publication.designId;
   const mode = options.mode ?? "reader";
-  const profile = options.profile ? parseRenderProfile(options.profile) : defaultProfile(designId);
-  validateRenderProfileForDesign(profile, designId);
+  root.classList.add("vd-newspaper");
+  const profile = options.profile ? parseRenderProfile(options.profile) : defaultProfile(root, designId);
+  validateRenderProfileForDesign(profile, designId, mode === "export");
 
-  const layout = computeRenderLayout(designId, profile);
+  let layout = computeRenderLayout(designId, profile);
   const assetBaseUrl = options.assetBaseUrl ?? document.baseURI;
   const instancePrefix = nextInstancePrefix();
   const itemById = new Map(issue.items.map((item) => [item.id, item]));
@@ -185,12 +182,28 @@ export function mountReader(
   root.dataset.design = designId;
   root.dataset.mode = mode;
   root.dataset.issueId = issue.issueId;
-  root.style.setProperty("--vd-content-width", `${layout.contentWidth}px`);
-  root.style.setProperty("--vd-paper-padding", `${layout.paperPadding}px`);
-  root.style.setProperty("--vd-scrollbar-gutter", `${layout.scrollbarGutter}px`);
-  root.style.setProperty("--vd-region-width", `${layout.regionWidth}px`);
-  root.style.setProperty("--vd-viewport-height", `${layout.viewportHeight}px`);
-  root.style.setProperty("--vd-text-scale", String(layout.textScale));
+  applyLayout();
+
+  /** Apply the shared layout metrics without rebuilding reader state or stories. */
+  function applyLayout(): void {
+    root.style.setProperty("--vd-content-width", `${layout.contentWidth}px`);
+    root.style.setProperty("--vd-paper-padding", `${layout.paperPadding}px`);
+    root.style.setProperty("--vd-scrollbar-gutter", `${layout.scrollbarGutter}px`);
+    root.style.setProperty("--vd-region-width", `${layout.regionWidth}px`);
+    root.style.setProperty("--vd-viewport-height", `${layout.viewportHeight}px`);
+    root.style.setProperty("--vd-text-scale", String(layout.textScale));
+  }
+
+  /** Reflow an automatically sized reader when its container or viewport changes. */
+  function resizeReader(): void {
+    if (disposed || options.profile || mode === "export") return;
+    layout = computeRenderLayout(designId, defaultProfile(root, designId));
+    applyLayout();
+  }
+
+  const observer = !options.profile && mode === "reader" ? new ResizeObserver(resizeReader) : null;
+  observer?.observe(root);
+  if (observer) window.addEventListener("resize", resizeReader);
 
   updatePageVisibility();
 
@@ -299,6 +312,8 @@ export function mountReader(
     dispose(): void {
       if (disposed) return;
       disposed = true;
+      observer?.disconnect();
+      window.removeEventListener("resize", resizeReader);
       root.removeEventListener("click", handleClick);
       tabs.removeEventListener("keydown", handleTabKeydown);
       if (publication.parentElement !== root) return;

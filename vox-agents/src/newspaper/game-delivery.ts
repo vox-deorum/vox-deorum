@@ -5,8 +5,9 @@ import { unwrapMcpResponse } from '../agents/mcp/mcp-response.js';
 import { asRecord } from '../utils/guards.js';
 import { errorMessage } from '../utils/errors.js';
 import type { buildLuaFixturePayload } from './export/lua-fixture.js';
+import { newspaperViewSchema, type NewspaperView } from './contracts/render.js';
 
-export interface PreparedNewspaper { requestId: string; receiver: number }
+export interface PreparedNewspaper { requestId: string; receiver: number; view: NewspaperView }
 export type NewspaperGamePayload = ReturnType<typeof buildLuaFixturePayload>;
 type NewspaperClient = Pick<typeof mcpClient, 'connect' | 'callTool'>;
 const connectionWaitMs = 8_000;
@@ -24,7 +25,7 @@ export class NewspaperGameDelivery {
   /** Reuse the process-wide connection and preserve established timeouts for game-bound calls. */
   constructor(private readonly client: NewspaperClient = mcpClient) {}
 
-  /** Capture the game reader's current seat and request token before rendering begins. */
+  /** Capture the game reader's current seat, request token, and publication view before rendering. */
   async prepare(): Promise<PreparedNewspaper> {
     const requestId = randomUUID();
     await this.connect();
@@ -39,7 +40,11 @@ export class NewspaperGameDelivery {
     if (result.requestId !== requestId || !Number.isInteger(result.receiver) || (result.receiver as number) < 0) {
       throw new Error('The newspaper reader did not return a valid active seat and request.');
     }
-    return { requestId, receiver: result.receiver as number };
+    const view = newspaperViewSchema.safeParse(result.view);
+    if (!view.success) {
+      throw new Error('The newspaper reader did not return a valid publication view. Update the Vox Deorum mod and reload the game before trying again.');
+    }
+    return { requestId, receiver: result.receiver as number, view: view.data };
   }
 
   /** Send plain data as structured arguments and wait for an explicit opened-reader acknowledgement. */

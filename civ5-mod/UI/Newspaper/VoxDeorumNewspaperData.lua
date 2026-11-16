@@ -53,16 +53,43 @@ end
 -- Return whether a rectangle has finite coordinates and positive dimensions.
 local function validRect(rect)
 	return type(rect) == "table" and finiteNumber(rect.x) and finiteNumber(rect.y)
+		and rect.x >= 0 and rect.y >= 0
 		and finiteNumber(rect.width, true) and finiteNumber(rect.height, true)
 end
 
+-- Return the browser paper width negotiated from physical space and reader zoom.
+-- Keep this formula aligned with computeRenderProfileForView in vox-agents/src/newspaper/renderer/layout.ts.
+function VoxDeorumNewspaperData.PaperWidth(view)
+	return math.floor(math.min(view.width, 1200 * view.zoom) / view.zoom * 64) / 64
+end
+
+-- Return whether two requests describe the same physical publication space and zoom.
+function VoxDeorumNewspaperData.SameView(first, second)
+	return type(first) == "table" and type(second) == "table" and first.width == second.width
+		and first.height == second.height and first.zoom == second.zoom
+end
+
+-- Return whether the bundle was rendered at the width and zoom requested by the game.
+function VoxDeorumNewspaperData.ProfileMatchesView(profile, view)
+	return type(profile) == "table" and type(view) == "table"
+		and profile.paperWidth == VoxDeorumNewspaperData.PaperWidth(view)
+		-- The DLL's JSON parser can shift decimal zoom by a tiny binary fraction.
+		and finiteNumber(profile.displayScale, true) and math.abs(profile.displayScale - view.zoom) <= 1e-9
+end
+
 -- Return whether a bundle region contains safe geometry and optional interaction arrays.
-local function validRegion(region)
+local function validRegion(region, profile)
 	if type(region) ~= "table" or not finiteNumber(region.width, true) or not finiteNumber(region.height, true) then return false end
+	if region.width ~= profile.paperWidth then return false end
 	-- Check the strip fields consumed by texture safety and cropping.
 	local function validStrip(strip)
 		return type(strip) == "table" and nonemptyText(strip.fileName) and validRect(strip.clip)
 			and finiteNumber(strip.pixelWidth, true) and finiteNumber(strip.pixelHeight, true)
+			and strip.pixelWidth % 4 == 0 and strip.pixelHeight % 4 == 0
+			and strip.pixelWidth <= profile.maxTextureWidth and strip.pixelHeight <= profile.maxTextureHeight
+			and strip.clip.x + strip.clip.width <= region.width and strip.clip.y + strip.clip.height <= region.height
+			and strip.clip.width * profile.rasterScale <= strip.pixelWidth
+			and strip.clip.height * profile.rasterScale <= strip.pixelHeight
 	end
 	-- Check each typed action's native hit rectangles.
 	local function validAction(geometry)
@@ -128,10 +155,17 @@ function VoxDeorumNewspaperData.ValidateFixture(fixture)
 	end
 	-- Keep render geometry aligned with the indexed publication pages.
 	local function validRenderPage(page)
-		return validRegion(page) and pageIds[page.pageId] == true
+		return validRegion(page, bundle.profile) and pageIds[page.pageId] == true
 	end
-	if type(bundle.profile) ~= "table" or not finiteNumber(bundle.profile.rasterScale, true)
-		or not validRegion(bundle.header) or not validArray(bundle.pages, validRenderPage, true) then
+	local profile = bundle.profile
+	if bundle.schemaVersion ~= 2 or bundle.rendererVersion ~= "0.2.0" or type(profile) ~= "table"
+		or not finiteNumber(profile.paperWidth, true) or profile.paperWidth > 1200
+		or not finiteNumber(profile.displayScale, true) or profile.displayScale < 0.5 or profile.displayScale > 2
+		or not finiteNumber(profile.textScale, true) or profile.textScale > 3
+		or (profile.rasterScale ~= 1 and profile.rasterScale ~= 2)
+		or not finiteNumber(profile.maxTextureWidth, true) or profile.maxTextureWidth % 1 ~= 0 or profile.maxTextureWidth > 4096
+		or not finiteNumber(profile.maxTextureHeight, true) or profile.maxTextureHeight % 1 ~= 0 or profile.maxTextureHeight > 4096
+		or not validRegion(bundle.header, profile) or not validArray(bundle.pages, validRenderPage, true) then
 		return nil, "Newspaper delivery contains invalid render geometry."
 	end
 	if fixture.assets ~= nil and type(fixture.assets) ~= "table" then return nil, "Invalid newspaper assets." end

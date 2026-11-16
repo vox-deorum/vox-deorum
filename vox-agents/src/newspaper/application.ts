@@ -6,7 +6,7 @@ import { hashReaderAssets, NewspaperCache } from './export/cache.js';
 import { readerDirectory } from './export/http.js';
 import { NewspaperExportService, type NewspaperDelivery } from './export/service.js';
 import { buildLuaFixturePayload } from './export/lua-fixture.js';
-import { defaultRenderProfile } from './renderer/layout.js';
+import { computeRenderProfileForView, defaultRenderProfile } from './renderer/layout.js';
 import { parseIssueDocument } from './renderer/validation.js';
 import { NewspaperGameDelivery } from './game-delivery.js';
 import type { ShowNewspaperResponse } from '../types/index.js';
@@ -39,7 +39,7 @@ async function createRuntimeRenderer(url: () => string): Promise<NewspaperRender
   }
   const cache = new NewspaperCache(fileURLToPath(new URL('../../data/newspaper-cache/', import.meta.url)));
   return {
-    service: new NewspaperExportService({ url, profile: defaultRenderProfile, format: 'BC1_UNORM', cache, assetsHash }),
+    service: new NewspaperExportService({ url, profile: defaultRenderProfile, format: 'B8G8R8A8_UNORM', cache, assetsHash }),
     cacheRoot: cache.root,
   };
 }
@@ -68,10 +68,11 @@ export class NewspaperApplication {
       const prepared = await this.game.prepare();
       const sample = parseIssueDocument(await (this.options.readSample ?? readRuntimeSample)());
       sample.receiver.playerId = prepared.receiver;
+      const profile = computeRenderProfileForView(prepared.view);
       const { service, cacheRoot } = await this.getRenderer();
       const cached = await service.exportIssue(sample, async (issue, bundle) => {
         await this.game.deliver(prepared, buildLuaFixturePayload(issue, bundle, cacheRoot));
-      });
+      }, profile);
       return { success: true, issueId: sample.issueId, key: cached.key };
     });
   }

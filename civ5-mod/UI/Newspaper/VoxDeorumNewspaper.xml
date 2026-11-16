@@ -132,7 +132,7 @@
 		<!-- Page content. The Grid is the page coordinate space: image strips and
 		     action hit controls are positioned independently inside it. The extra
 		     width in the ScrollPanel holds the native scrollbar beside the page. -->
-		<ScrollPanel ID="PageScroll" Anchor="L,T" Offset="30,156" Size="930,500" Vertical="1" AutoScrollBar="1">
+		<ScrollPanel ID="PageScroll" Anchor="L,T" Offset="30,148" Size="930,500" Vertical="1" AutoScrollBar="1">
 			<Grid ID="PageContent" Anchor="L,T" Offset="0,0" Size="900,0"/>
 			<ScrollBar ID="PageBar" Anchor="R,C" AnchorSide="O,I" Offset="2,0" Style="VertSlider" Length="430"/>
 			<UpButton Anchor="R,T" AnchorSide="O,I" Offset="2,0" Style="ScrollBarUp"/>

@@ -22,7 +22,7 @@
   display: flex;
   justify-content: center;
   padding: 24px;
-  overflow-x: auto;
+  min-width: 0;
   color: var(--vd-ink);
   background: var(--vd-page-background);
   font: 400 16px/1.5 var(--vd-font-body);
@@ -54,6 +54,8 @@
   flex-direction: column;
   width: var(--vd-region-width);
   min-height: calc(100vh - 48px);
+  container-type: inline-size;
+  container-name: newspaper;
   background: var(--vd-paper);
   box-shadow: 0 12px 50px rgb(48 41 25 / 9%);
 }
@@ -61,7 +63,7 @@
 /* Header */
 
 .vd-header {
-  padding: 24px calc(var(--vd-paper-padding) + var(--vd-scrollbar-gutter)) 30px
+  padding: 24px calc(var(--vd-paper-padding) + var(--vd-scrollbar-gutter)) 0
     var(--vd-paper-padding);
   background: var(--vd-paper);
 }
@@ -80,6 +82,7 @@
   font-weight: 400;
   line-height: 1.1;
   text-wrap: balance;
+  overflow-wrap: anywhere;
 }
 
 .vd-newspaper[data-design="victorian"] .vd-title {
@@ -230,6 +233,7 @@
 }
 
 .vd-prose {
+  overflow-wrap: anywhere;
   font-size: calc(18px * var(--vd-text-scale));
   line-height: 1.65;
 }
@@ -255,6 +259,7 @@
 
 .vd-story-footer {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
@@ -263,12 +268,16 @@
 
 .vd-story-links {
   display: flex;
+  min-width: 0;
+  max-width: 100%;
   flex-wrap: wrap;
   align-items: baseline;
   gap: 6px 18px;
 }
 
 .vd-text-link {
+  max-width: 100%;
+  overflow-wrap: anywhere;
   padding: 8px 0;
   color: var(--vd-accent);
   font: italic calc(14px * var(--vd-text-scale)) / 1.5 var(--vd-font-body);
@@ -403,7 +412,7 @@
 
 .vd-breaking-columns {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 28px;
 }
 
@@ -449,8 +458,13 @@
 
 .vd-analysis-columns {
   display: grid;
-  grid-template-columns: 1.15fr 1fr;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
   gap: 36px;
+}
+
+.vd-column-main,
+.vd-evidence {
+  min-width: 0;
 }
 
 .vd-evidence {
@@ -461,6 +475,8 @@
 .vd-evidence table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
+  overflow-wrap: anywhere;
 }
 
 .vd-evidence caption {
@@ -763,4 +779,53 @@
   border-color: transparent;
   background: none;
   color: inherit;
+}
+
+/* Reflow follows the paper width in both the interactive reader and export. */
+@container newspaper (max-width: 760px) {
+  .vd-storylist[data-layout="ordinary"] {
+    display: block;
+  }
+
+  .vd-storylist[data-layout="ordinary"] .vd-story--lead {
+    padding-right: 0;
+    border-right: 0;
+  }
+
+  .vd-storylist[data-layout="ordinary"] .vd-story--brief {
+    margin-top: 25px;
+    padding-top: 25px;
+    border-top: 1px solid var(--vd-rule);
+  }
+
+  .vd-breaking-columns,
+  .vd-analysis-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .vd-evidence {
+    padding-left: 0;
+    border-left: 0;
+  }
+}
+
+@container newspaper (max-width: 560px) {
+  .vd-newspaper[data-design="victorian"] .vd-title {
+    font-size: calc(48px * var(--vd-text-scale));
+  }
+
+  .vd-newspaper[data-design="victorian"] .vd-storylist[data-layout="ordinary"] .vd-story--lead .vd-headline,
+  .vd-newspaper[data-design="victorian"] .vd-storylist[data-layout="analysis"] .vd-story--lead .vd-headline {
+    font-size: calc(36px * var(--vd-text-scale));
+  }
+
+  .vd-newspaper[data-design="victorian"] .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-headline {
+    font-size: calc(48px * var(--vd-text-scale));
+  }
+}
+
+@media (max-width: 600px) {
+  .vd-newspaper[data-mode="reader"] {
+    padding: 0;
+  }
 }

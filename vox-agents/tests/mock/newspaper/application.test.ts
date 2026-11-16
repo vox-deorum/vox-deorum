@@ -4,6 +4,10 @@ import { NewspaperApplication, type NewspaperRenderer } from '../../../src/newsp
 import type { NewspaperDelivery, NewspaperExportService } from '../../../src/newspaper/export/service.js';
 import { createNewspaperBundle, createNewspaperIssue } from '../../helpers/newspaper-fixtures.js';
 import { deferred } from '../../helpers/deferred.js';
+import type { PreparedNewspaper } from '../../../src/newspaper/game-delivery.js';
+import { computeRenderProfileForView } from '../../../src/newspaper/renderer/layout.js';
+
+const view = { width: 1140, height: 558, zoom: 1 };
 
 /** Provide a renderer double that executes the request's delivery callback against known data. */
 function fixture() {
@@ -17,7 +21,7 @@ function fixture() {
   const renderer = { service: { exportIssue, close } as unknown as NewspaperExportService, cacheRoot: 'cache' };
   const createRenderer = vi.fn().mockResolvedValue(renderer);
   const game = {
-    prepare: vi.fn().mockResolvedValue({ requestId: 'request', receiver: 3 }),
+    prepare: vi.fn().mockResolvedValue({ requestId: 'request', receiver: 3, view }),
     deliver: vi.fn().mockResolvedValue(undefined),
   };
   const app = new NewspaperApplication({ url: () => 'http://127.0.0.1:7865', createRenderer,
@@ -47,8 +51,8 @@ describe('newspaper application', () => {
     const result = await app.showSample();
     expect(result).toEqual({ success: true, issueId: sample.issueId, key: cached.key });
     expect(game.prepare.mock.invocationCallOrder[0]).toBeLessThan(createRenderer.mock.invocationCallOrder[0]);
-    expect(exportIssue).toHaveBeenCalledWith(expect.objectContaining({ receiver: expect.objectContaining({ playerId: 3 }) }), expect.any(Function));
-    expect(game.deliver).toHaveBeenCalledWith({ requestId: 'request', receiver: 3 }, expect.objectContaining({
+    expect(exportIssue).toHaveBeenCalledWith(expect.objectContaining({ receiver: expect.objectContaining({ playerId: 3 }) }), expect.any(Function), computeRenderProfileForView(view));
+    expect(game.deliver).toHaveBeenCalledWith({ requestId: 'request', receiver: 3, view }, expect.objectContaining({
       issue: expect.objectContaining({ receiver: expect.objectContaining({ playerId: 3 }) }),
       bundle: cached.bundle, assets: expect.any(Object), state: expect.any(Object),
     }));
@@ -77,7 +81,7 @@ describe('newspaper application', () => {
 
   it('should drain requests already preparing before closing and reject later requests', async () => {
     const { app, game, close } = fixture();
-    const preparation = deferred<{ requestId: string; receiver: number }>();
+    const preparation = deferred<PreparedNewspaper>();
     game.prepare.mockReturnValueOnce(preparation.promise);
     const show = app.showSample();
     await vi.waitFor(() => expect(game.prepare).toHaveBeenCalled());
@@ -85,7 +89,7 @@ describe('newspaper application', () => {
     expect(app.close()).toBe(shutdown);
     await expect(app.showSample()).rejects.toThrow();
     expect(close).not.toHaveBeenCalled();
-    preparation.resolve({ requestId: 'accepted', receiver: 2 });
+    preparation.resolve({ requestId: 'accepted', receiver: 2, view });
     await show;
     await shutdown;
     expect(game.deliver.mock.invocationCallOrder[0]).toBeLessThan(close.mock.invocationCallOrder[0]);

@@ -9,7 +9,7 @@ import {
 } from "../contracts/issue.js";
 import { renderProfileSchema, type RenderProfile } from "../contracts/render.js";
 import { getNewspaperAsset, isNewspaperAssetId } from "./assets.js";
-import { computeRegionWidth, newspaperDesignDefaults } from "./layout.js";
+import { computeRenderLayout } from "./layout.js";
 
 /** Require a registered image asset for an illustrated item. */
 const renderableIssueItemSchema = issueItemSchema.superRefine((item, ctx) => {
@@ -70,20 +70,20 @@ export function parseRenderProfile(input: unknown): RenderProfile {
   return renderProfileSchema.parse(input);
 }
 
-/** Reject a profile that cannot fit the fixed publication width in a texture. */
+/** Reject a profile whose derived content, capture viewport, or aligned texture width cannot fit. */
 export function validateRenderProfileForDesign(
   profile: RenderProfile,
   designId: NewspaperDesignId,
+  requireCaptureViewport = true,
 ): void {
-  const regionWidth = computeRegionWidth(designId, profile.contentWidth, profile.scrollbarGutter);
-  const pixelWidth = Math.ceil(regionWidth * profile.rasterScale);
+  const { regionWidth } = computeRenderLayout(designId, profile);
+  const pixelWidth = Math.ceil(regionWidth * profile.rasterScale / 4) * 4;
   if (pixelWidth > profile.maxTextureWidth) {
     throw new Error(
       `Publication width ${pixelWidth}px exceeds the ${profile.maxTextureWidth}px texture limit.`,
     );
   }
-  const defaults = newspaperDesignDefaults[designId];
-  if (profile.contentWidth < defaults.paperPadding) {
-    throw new Error("Content width leaves no room for the publication margins.");
+  if (requireCaptureViewport && profile.viewportWidth < Math.ceil(pixelWidth / profile.rasterScale)) {
+    throw new Error("Capture viewport width must include the paper and its texture alignment padding.");
   }
 }

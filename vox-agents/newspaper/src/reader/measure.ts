@@ -76,7 +76,9 @@ function collectElementRects(element: Element, regionRect: DOMRect): Rect[] {
 export function measureRegion(region: HTMLElement, profile: RenderProfile): CapturePlan {
   const regionRect = region.getBoundingClientRect();
   const size = { width: regionRect.width, height: regionRect.height };
-  const maxStripHeight = Math.max(1, Math.floor(profile.maxTextureHeight / profile.rasterScale));
+  const maxStripPixels = Math.floor(profile.maxTextureHeight / 4) * 4;
+  if (maxStripPixels < 4) throw new Error("Texture height must allow at least four raster pixels.");
+  const maxStripHeight = maxStripPixels / profile.rasterScale;
   const strips: CaptureStrip[] = [];
 
   for (let y = 0; y < size.height; y += maxStripHeight) {
@@ -85,7 +87,7 @@ export function measureRegion(region: HTMLElement, profile: RenderProfile): Capt
       index: strips.length,
       clip: { x: 0, y, width: size.width, height: visibleHeight },
       visibleHeight,
-      pixelWidth: Math.round(size.width * profile.rasterScale),
+      pixelWidth: Math.ceil(size.width * profile.rasterScale),
       pixelHeight: Math.round(visibleHeight * profile.rasterScale),
     });
   }
