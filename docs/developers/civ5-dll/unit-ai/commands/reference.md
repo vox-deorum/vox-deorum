@@ -83,43 +83,30 @@ These parameters affect both the shared value functions and the simulator's grad
 
 ## Records
 
-`RunCommandLoop` can fill an `SOperationalTurnRecord` (the turn's ordered commands and readiness checks). When no record is supplied and both game logging and AI logging are enabled, it writes tactical messages for checks, executed commands and a command-cap stop. Check messages name the result. Command messages identify the command, battlefield and plot, whether search ran, and separate counts of retired fight and reinforcement offers.
+`RunCommandLoop` fills the shared `SOperationalTurnRecord` when its caller supplies one. Records copy computed values without repeating danger, strength or path queries. Trace rows are built only for a supplied record.
 
-Captured search requests carry a **purpose** (a label describing the command and territory). City requests use `CityAttack` (enemy-city fight), `CityDefense` (own-city fight) or `Reinforce` (reinforcement). Unit battles use `BattleFriendly` (our team's zone), `BattleNeutral` (unowned territory or a zone outside our team whose owner is not at war with us) or `BattleEnemy` (enemy territory). Retries retain the purpose. Search preferences still come from the geographic blend and command-kind offset.
-
-| Turn field | Content |
+| Record | Contents |
 | --- | --- |
-| `commands` | Executed command records, in order. |
-| `checks` | Every readiness check: `iBattlefield`, `eResult` and `bReinforce`, which marks a Reinforce check, including passed checks and the first failed condition. |
-| `vSkipped` | Battlefield IDs skipped at the readiness failure limit. |
-| `bCommandCap` | True when the cap stops selection while a ready offer remains. |
+| `offers` | Battlefield, kind, target, owner and zone, once per offer in the pass. |
+| `steps` | Opening estimate pass at step 0, then one new step per post-command estimate. A command ends its step; the final step names no ready offer, command cap, game over or interruption. |
+| Snapshot | Scalars for every offer: ready rank, state, estimate, theater multiplier, importance, pressure, contest, damage level, swing and stake terms. Terms retain value, weight and weighted contribution. |
+| Event | Ordered check, failure-limit skip, provider refusal or terminating command, with the offer's estimate and state before and after. Reduced Reinforce checks return to the current queue. |
+| Closed state | A reason: target gone, city lost, retired by earlier work, failure limit, provider refusal or execution. Its scalar estimate remains the last computed value. |
+| `commands` | Step and command identity, execution priority `fEstimate`, prior failures, admission and final flavor decisions, geometry, attempts, selected units, movement, existing endangered-unit dispositions and retired offers. City-fire-only commands remain present. |
+| `checks`, `vSkipped`, `bCommandCap` | Existing readiness and count inputs, preserving the loop's failure accounting. |
+| Settings and turn inputs | Complete settings compared with the same build's defaults, mapped flavors, resolved weights and fixed scales. The simulator writes settings once per start, and inputs once per evaluated-player pass. |
 
-Each `SOperationalCommandRecord` contains:
+Snapshots carry no unit lists. Existing command and check structures remain the extension points for detailed diagnostics. Capture/schema and search-order export of the trace remain separate work. The [simulator guide](../../../../../../vox-deorum-rl/docs/operations/simulator.md#records) defines rollout writing and host integration.
 
-| Field | Content |
-| --- | --- |
-| `iCommand` | Zero-based command position in this turn. |
-| `iBattlefield`, `iPlotIndex` | Battlefield ID and target plot at execution. |
-| `eKind`, `eOwner` | Unit-fight, city-fight, Reinforce or own-city-fight kind, and the target's owner, which is us for our city. |
-| `fEstimate` | The command's single priority field: the estimate it ran at, after any reach checks. Readiness supplies a pass/fail result. |
-| `iFailuresBefore` | Cumulative readiness failures before execution. A Reinforce keeps 0 here because it never counts failures. |
-| `bSearchRan` | Execution called the engagement search with a nonempty group. |
-| `vRetired` | IDs of fights this command retired. |
-| `vEndangered` | Endangered recruit IDs paired with a boolean: true for placed, false for free. |
-| `vSelected` | Reinforce: the checked selection by unit ID. |
-| `bMoved` | Reinforce: a selected unit changed plot or died. |
-| `vRetiredReinforce` | Battlefield IDs whose Reinforce this command retired. |
+### Performance counters
 
-Supporting structures hold the values used during execution:
+The loop's `ClockNs` seam reads the performance counter used by `cvStopWatch`; the simulator supplies a steady clock. Timing never changes a decision. The exclusive stages `setupNs`, `estimateNs`, `selectNs`, `readinessNs`, `executeNs`, `retireNs`, `recordNs` and `otherNs` add up to `totalNs` for the whole call. Each step also records estimate, readiness and execution time.
 
-| Structure | Content |
-| --- | --- |
-| `SOperationalStake` (fight score components) | Weighted and scaled destruction, ground, city relief, exposure, city-progress and garrison terms, plus their sum, and the damage share, relief share and fall share behind them. |
-| `SOperationalReinforce` (reinforcement selection and score) | Strength tallies, selected units, help, the current and reinforced strength shares, the swing, role unit, counted enemies, rejections and check flag. |
-| Every battlefield | Its Reinforce holds the last estimate's `L` (local friendly strength) and `T` (enemy strength); an own-city battlefield also records whether an endangered recruit was present. |
-| `SOperationalTurn` (working turn state) | Mapped preferences, resolved weights, fixed scales, per-pass city theaters and city danger, both keyed by city plot and rebuilt each pass, threat maps, endangered units, approach lists and battlefields. |
-| `SOperationalEngagementReport` (search execution report) | Zone plot counts, representative zone (the zone contributing the most search plots), final preferences, aggression RISK (the score choosing search aggression), resolved aggression level and overall success. |
-| Search attempt | Planned action rows, rows counted as run and completion status. `ExecuteFight` derives dispositions (whether endangered recruits were placed or left free) from these reports. |
+Estimates retain force-tally and danger-read counts and time. Readiness retains Reinforce reach checks. Execution retains commands, provider admission/flavor time, city fire, spotting, greedy air, marching and provider search time. An engagement counts once, with retries counted separately as attempts. `searchNs` measures search decisions, excluding action execution.
+
+With game logging and AI logging enabled and no record supplied, tactical messages include the step index. One final line summarizes the pass in the tactsim style: "command loop finished in 9 ms: 4 commands, 7 checks, 112 estimates (3 ms), 4 searches (5 ms)". These figures illustrate the format. Commands that stop the pass still close their timing and trace.
+
+Search requests retain their territory-specific purposes: `CityAttack`, `CityDefense`, `Reinforce`, `BattleFriendly`, `BattleNeutral` or `BattleEnemy`. Retries retain that purpose. Search preferences still come from the geographic blend and command-kind offset.
 
 ## Code
 
@@ -138,7 +125,7 @@ The Reinforce code sits in the same loop files. `EstimateReinforce` scores an of
 
 Native integration consists of the branch at the top of `CvTacticalAI::ProcessDominanceZones`, the target snapshot in `FindTacticalTargets` and its cleanup, the optional executed-row counter in `TacticalAIHelpers::ExecuteUnitAssignments`, the optional garrison-damage output of `CvTacticalAI::ComputeTotalExpectedDamage` (the garrison damage of every counted attack, kept across a garrison's death), friend access in `CvTacticalAI.h` and `CvDangerPlots.h`, and the non-const `CvPlayer::GetDangerPlots` accessor.
 
-The tactical simulator extracts the loop, weights and value source from the DLL. Three host-specific members have DLL definitions here and separate simulator definitions: `GroundPlotWeight`, `BeginCommand` and `EndCommand`. The simulator also defines its own `SearchAndExecute`, which routes the engagement to its provider with the given flavors, aggression and target distance flag. The DLL reads revealed resource types for `GroundPlotWeight`. The command boundary members are empty in the DLL; the header defines them as the simulator's per-command work boundaries in the battlefield's zone.
+The tactical simulator extracts the loop, weights and value source from the DLL. Host-specific members have DLL definitions here and separate simulator definitions: `GroundPlotWeight`, `BeginCommand`, `EndCommand`, `ClockNs`, `IsGameOver` and the provider routing seams. The simulator also defines its own `SearchAndExecute`, which routes the engagement to its provider with the given flavors, aggression and target distance flag. The DLL reads revealed resource types for `GroundPlotWeight`. The command boundary members are empty in the DLL; the header defines them as the simulator's per-command work boundaries in the battlefield's zone.
 
 ## Copies of native functions
 
