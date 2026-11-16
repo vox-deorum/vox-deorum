@@ -159,6 +159,11 @@ describe('historical evidence queries', () => {
     const before = await queryNewspaperEvidence(db, request);
     expect(before.events.map(row => row.source.id)).not.toContain(107);
     expect(before.events.find(row => row.source.id === 108)?.values).toEqual({ OriginatingPlayerID: 3, TargetTeamID: 0, IsAggressor: true });
+    await event(db, 109, 10, 'MakePeace', { OriginatingPlayerID: 3, TargetTeamID: 0, OriginatingPlayer: { Name: 'Leader3', Civilization: 'Civ3' } });
+    await event(db, 112, 10, 'MakePeace', { OriginatingPlayerID: 3, TargetTeamID: 5 });
+    const peace = await queryNewspaperEvidence(db, request);
+    expect(peace.events.find(row => row.source.id === 109)?.values).toEqual({ OriginatingPlayerID: 3, TargetTeamID: 0 });
+    expect(peace.events.map(row => row.source.id)).not.toContain(112);
     await summary(db, 8, 3, 11, 1, { CulturePerTurn: 12 });
     const later = await queryNewspaperEvidence(db, { ...request, cutoffTurn: 11 });
     expect(later.events.map(row => row.source.id)).not.toContain(107);

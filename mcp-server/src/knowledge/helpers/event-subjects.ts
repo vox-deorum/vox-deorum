@@ -98,7 +98,11 @@ export const diplomaticEventSubjects: Record<string, EventSubjects> = subjectsBy
 /** Match the existing diplomatic tool's flat player, list, and team subjects. */
 export function matchesEventSubject(type: string, payload: Record<string, any>, playerID: number, teamID?: number): boolean {
   const subjects = diplomaticEventSubjects[type];
-  if (!subjects) return false;
+  return subjects ? matchesSubjects(subjects, payload, playerID, teamID) : false;
+}
+
+/** Check whether a player, directly, through a subject list, or through its team, is one of the given subjects. */
+export function matchesSubjects(subjects: EventSubjects, payload: Record<string, any>, playerID: number, teamID?: number): boolean {
   return subjects.playerIdFields.some(field => payload[field] === playerID)
     || (subjects.playerIdListFields?.some(field => Array.isArray(payload[field]) && payload[field].includes(playerID)) ?? false)
     || (subjects.teamIdFields?.some(field => teamID !== undefined && payload[field] === teamID) ?? false);

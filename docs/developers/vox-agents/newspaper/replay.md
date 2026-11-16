@@ -39,7 +39,18 @@ MCP's `newspaper/queries.ts` takes an explicit connection and recorded-turn requ
 
 The live-database `get-newspaper-evidence` MCP tool accepts `PlayerID`, previous-check turn, cutoff, and optional comparison range. Agent autocomplete supplies `PlayerID` from the acting civilization and the adapter maps it to the shared request's `receiverPlayerID`. The live adapter rejects cutoffs at or after the current game turn so the selected round can finish collecting events and contact. Offline replay retains the caller's cutoff semantics.
 
-Recorded player enrichments use their flat sibling IDs for contact checks. Barbarians count as known subjects, while events still require recorded visibility. City labels require an event-specific flat owner field; pantheon cities use `PlayerID`. Liberation events retain their city ID without inferring the city's owner. Deal terms require known subjects and either the receiver's involvement or sufficient recorded diplomat strength for both foreign parties. A third-party war or peace item uses `Data1` as its team ID. If that team is unknown, all readable and structured terms are withheld together.
+Event policy lives in one config table, `newspaperEventConfigs` in `projection.ts`. An event type without a config is never reported. Each event needs recorded visibility, and its config sets the remaining rules:
+
+| Config setting | Effect | Used by |
+| --- | --- | --- |
+| Fields | Payload fields copied into evidence. Other fields never reach the editor. | Every event |
+| Subjects | Player and team ID fields the receiver must have met. A team counts as met only when every member has been met. Barbarians always count as met. | Every event |
+| Report when involved | Report the event when the receiver or its team is a subject, even if another subject is unmet. | War declarations and peace, which share one policy |
+| Insight | Full recorded access to the subject player, or enough recorded diplomat points (200). | Policy adoption |
+| Cities | Nested city labels, each kept only when the owner field the config names is a met player. Liberation keeps its city ID but no label, because the city's owner at that point is not recorded. | Captures, flips, trade routes, plunder, pantheons, holy cities, conversions |
+| Deal terms | Readable and structured terms are copied together, or not at all. They need every party and every named team met, plus the receiver as a party or enough diplomat points (800) with both foreign parties. A third-party war or peace item names its team in `Data1`. | Deals |
+
+Recorded player names and civilizations are kept only for met subjects, matched through their flat sibling ID fields.
 
 Event contact uses the final summary available for the event's turn. Normal collection refreshes summaries at the end of the round, after its events, and live tools can refresh them earlier. An incomplete recording or failed final refresh can leave an earlier summary that lacks a same-turn meeting. Those events remain omitted; later-turn contact cannot grant access retroactively. Replay contracts and browser code import only browser-safe evidence contracts from MCP; query implementations stay on the server.
 
