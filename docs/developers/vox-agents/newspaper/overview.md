@@ -1,11 +1,11 @@
 # Newspaper
 
-The newspaper has a fixture renderer and read-only recording replay with evidence inspection. In-game renderer visual acceptance remains pending. The renderer and replay guides describe the implemented boundaries; editorial decisions, evaluation, and live integration remain planned.
+The newspaper has a working in-game demo and read-only recording replay with evidence inspection. The demo's links, scrolling, and general UI are accepted in Civilization V; replay is verified against a self-play recording. Broader renderer testing needs generated issues from real evidence. Editorial generation, evaluation, and live integration remain planned.
 
 | Page | Status | Scope |
 | --- | --- | --- |
-| [Renderer](renderer.md) | Implemented proof | Fixture reading, browser rendering, DDS export, and game viewer |
-| [Replay](replay.md) | Implemented | Recorded-game evidence, cutoff controls, and source inspection |
+| [Renderer](renderer.md) | Demo accepted in game | Fixture reading, browser rendering, DDS export, and game viewer; broader checks await real issues |
+| [Replay](replay.md) | Implemented and verified | Recorded-game evidence, cutoff controls, and source inspection |
 | [Editorial](editorial.md) | Planned | Heuristic publication decisions and later LLM editing |
 | [Evaluation](evaluation.md) | Planned | Offline experiments comparing editorial approaches |
 | [Live integration](live-integration.md) | Planned | Scheduling, persistence, archives, and player integration |

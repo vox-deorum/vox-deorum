@@ -56,6 +56,8 @@ The human review uses the spec's evaluation checklist: usefulness, factual suppo
 
 ## Risks and open questions
 
+Verify that the chosen recording supports merged-story and fade-and-return examples. Those examples remain unverified for the French candidate identified in the data research; replay acceptance on the Netherlands recording establishes evidence access, while these editorial demonstrations remain open.
+
 An LLM can attach a valid evidence ID to an unsupported interpretation. Keep factual comparison computation outside the model, preserve inputs for inspection, and distinguish interpretation in prose. Browser-dependent pixel differences do not establish editorial differences. Full design coverage must fit the asset budget agreed after Plan 1's measurements.
 
 ## Out of scope

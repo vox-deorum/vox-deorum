@@ -55,7 +55,7 @@ MCP validates transport envelopes and queryable index fields while treating seri
 
 ### 1. Prove save restoration before wiring generation
 
-The [roadmap](../implementation.md) runs this proof early, alongside Plans 1 and 2. Feed its measured limits back into the `IssueDocument` and decision-record formats before Plan 3 fixes them.
+The [roadmap](../implementation.md) keeps this proof open before Plan 3 fixes durable formats. Use the existing fixture issue contract and feed the measured limits back into `IssueDocument` and decision records.
 
 Define the durable version and migrations in `contracts/checkpoint.ts` and implement the candidate Lua store in `civ5-mod/UI/Newspaper/VoxDeorumNewspaperStore.lua` for this proof. Build a fixture archive with many issues, long text, changed votes, preferences, and different designs. Save it, mutate it, then reload the earlier save and check that every field returns to the saved revision. Include two saves at the same game turn and different campaign files. Measure serialization time, save growth, and load time at a late-campaign archive size.
 

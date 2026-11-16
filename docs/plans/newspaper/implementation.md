@@ -1,6 +1,6 @@
 # Newspaper implementation roadmap
 
-**Status: Plan 1's default proof is implemented; developer acceptance controls and game proofs remain. Plans 2 to 5 are planned.** This roadmap is for developers implementing the [newspaper specification](spec.md). It establishes the shared rendering architecture and divides implementation into five plans. Each plan has its own deliverable and verification gate.
+**Status: Plan 1's demo is accepted in game and Plan 2 is complete. Next are Plan 3 and the early save-capacity proof.** Broader renderer acceptance needs issues generated from real evidence. Plans 3 to 5 remain planned. This roadmap is for developers implementing the [newspaper specification](spec.md); each plan has its own deliverable and verification gate.
 
 ## Goal and success criteria
 
@@ -42,9 +42,11 @@ The renderer consumes a completed issue. It never selects stories, changes serie
 
 The [research index](research/research.md) covers the recorded data, historical visibility limitations, and existing UI primitives. The fixture renderer now lives in `vox-agents/newspaper/`, with tracked assets, a separate DOM-aware type check, and a Vite build to `dist-newspaper`. The local prototypes remain design references and are gitignored.
 
-`vox-agents/src/newspaper/` contains issue, reader and render contracts, browser bridge types, rendering helpers, and a reusable export service and HTTP routes under `export/`. The normal VD server hosts the reader and export service, and the Debug page can open the sample issue in the loaded game. Browser publication code lives under `newspaper/src/reader/`, the application shell under `newspaper/src/app/`, and the Lua/XML viewer under `civ5-mod/UI/Newspaper/`. Its remaining game proofs determine the supported profiles. `scripts/packaging/build-installer.cmd` prunes development dependencies before `scripts/installer.iss` packages the application.
+`vox-agents/src/newspaper/` contains issue, reader, render and replay contracts, browser bridge types, rendering helpers, the export service under `export/`, and read-only replay under `replay/`. The normal VD server hosts the reader, export service, and replay routes; the Debug page can open the sample issue in the loaded game. Browser publication code lives under `newspaper/src/reader/`, the application shell under `newspaper/src/app/`, and the Lua/XML viewer under `civ5-mod/UI/Newspaper/`. `scripts/packaging/build-installer.cmd` prunes development dependencies before `scripts/installer.iss` packages the application.
 
-The [texture experiment](../../developers/civ5-mod/runtime-texture-experiment.md) established loading newly created 256-by-256 DXT1 DDS files in a DX11 session. The fixture viewer now checks cache confinement and DDS validity through `Game.IsNewspaperTextureAvailable`, and uses native text when textures are unavailable. Newspaper-sized text, image strips, control alignment, cache loss, and reopening still need visual acceptance. The [renderer guide](../../developers/vox-agents/newspaper/renderer.md) records the implemented behavior and local measurements.
+Manual testing confirmed the demo's links, scrolling, and general newspaper UI in Civilization V. The viewer checks cache confinement and DDS validity through `Game.IsNewspaperTextureAvailable`, and uses native text when textures are unavailable. [Plan 1](implementation/01-renderer.md) retains delivery controls and broader layout, interaction, cache-loss, and installation checks. The [renderer guide](../../developers/vox-agents/newspaper/renderer.md) records the implemented behavior, demo acceptance, and local measurements.
+
+MCP owns historical evidence queries and recorded-access filtering under `mcp-server/src/newspaper/`, with shared history reads under `src/knowledge/`. Vox Agents reuses those queries for cutoff controls and source inspection. The [replay guide](../../developers/vox-agents/newspaper/replay.md) records acceptance against the Netherlands self-play recording: 89 checks through turn 440 with source preservation. Plan 3 will turn that evidence into issues for further browser and game testing.
 
 ## Keeping plans current
 
@@ -60,13 +62,13 @@ After implementing a work unit, fold its verified behavior, ownership, commands,
 | [4. Offline evaluation and LLM editor](implementation/04-offline-evaluation.md) | Complete the offline archive and design coverage; compare both editors on the same recordings. | Demonstrate continuity, merging, useful short pieces, fallback, and design evolution; review the reading experience. |
 | [5. Live publication and persistence](implementation/05-live-integration.md) | Human-only collection, background publication, save restoration, and the finished game reader. | Old saves restore the correct history and preferences; delayed work cannot cross timelines; reading survives service loss. |
 
-The early game proof uses fixtures. Live generation and save integration remain after the offline editorial evaluation. Evidence research can proceed once Plan 1's issue and action contracts are stable, but the renderer proof should finish before investing in a large design catalogue.
+The accepted game demo uses fixtures. Plan 3 supplies generated issues for broader renderer acceptance before expanding the design catalogue. Live generation and save integration follow offline editorial evaluation.
 
-Run the save-capacity proof from Plan 5's first step alongside Plans 1 and 2, once `IssueDocument` has a draft shape. It needs only fixture archives, and its measured limits constrain the issue and decision-record formats that Plans 1 and 3 fix. The rest of Plan 5 still waits for the offline evaluation.
+The save-capacity proof in Plan 5's first step remains open. Run it before Plan 3 fixes durable issue and decision-record formats. It can use fixture archives with the existing `IssueDocument`; feed its measured limits into those formats. The rest of Plan 5 still waits for offline evaluation.
 
 ## Shared contracts and boundaries
 
-Keep contracts in the existing workspaces: MCP owns evidence and transport envelopes; Vox Agents owns articles, editorial state, and rendering. The paths below are the target structure. Each stage names the existing files to move and the new modules to add.
+Keep contracts in the existing workspaces: MCP owns evidence and transport envelopes; Vox Agents owns articles, editorial state, and rendering. The table includes the implemented contracts from Plans 1 and 2 and the proposed additions for Plans 3 to 5.
 
 | Contract | Owner | Established in |
 | --- | --- | --- |
@@ -96,7 +98,7 @@ Each folder groups a sustained responsibility. Move existing files and all consu
 | `vox-agents/src/newspaper/replay/` | Read-only recording connection, replay session and routes in Plan 2; separate output storage in Plan 3; comparison evaluation in Plan 4. |
 | `vox-agents/src/newspaper/live/` | Lifecycle, scheduler and MCP-backed state adapter in Plan 5. The game owns committed state. |
 | `vox-agents/src/newspaper/{application,game-delivery}.ts` | Lazy shared renderer, sample orchestration and acknowledged MCP delivery. The VD server owns startup and shutdown. |
-| `vox-agents/newspaper/src/reader/` and `src/app/` | Reader DOM/layout and the browser application respectively. Plan 2 adds replay and inspection; Plan 4 completes archive navigation. The export entry stays at `src/export-bridge.ts`. |
+| `vox-agents/newspaper/src/reader/` and `src/app/` | Reader DOM/layout and the browser application respectively, including replay controls and source inspection. Plan 4 completes archive navigation. The export entry stays at `src/export-bridge.ts`. |
 | `vox-agents/newspaper/catalogue/` | Plan 3 adds flat `defaults.json`, `triggers.json`, `templates.json`, `pages.json` and `designs.json`. Package these runtime inputs explicitly alongside the compiled reader. |
 | `mcp-server/src/newspaper/` | Evidence contracts, queries and field projection in Plan 2; archive protocol types in Plan 3; live mirror and transport in Plan 5. `projection.ts` remains the single reporting-policy owner. |
 | `mcp-server/src/knowledge/` | Shared pure history reads in `history.ts`; Plan 5 collection in `newspaper-collection.ts` and database definitions in `schema/newspaper.ts`. |
@@ -106,7 +108,7 @@ Replay and live sessions supply evidence and state to the same editorial check a
 
 ## Risks and decisions still requiring evidence
 
-- Full-size DDS quality and the game viewer's coordinate transform determine the supported render profiles. Start with the demonstrated DX11 environment and record the exact VP build.
+- Broader DDS quality and interaction checks need generated issues at representative paper widths and zoom levels. The demo's exact test environment was not recorded. Retain the demonstrated DX11 texture support as the baseline, and record the VP build and display settings for further game checks.
 - The initial size target is **at most 30 MiB of added installed production files**, including dependencies and bundled assets. This is a proposed engineering budget. Measure it before expanding the design catalogue; report any overrun with its cause.
 - Installed browsers can be absent, blocked by local policy, or updated independently. Detect capability when rendering is requested and preserve reading when export cannot run.
 - Historical records may be incomplete. Initial evaluation uses a suitable recording and skips comparisons whose required data is unreliable.

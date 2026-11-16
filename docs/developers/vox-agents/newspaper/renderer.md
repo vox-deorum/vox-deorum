@@ -1,6 +1,8 @@
 # Newspaper renderer proof
 
-The newspaper proof renders fixture issues in a browser and exports the same layout as DDS strips with typed interaction rectangles. It supports Victorian and modern designs, section tabs, article links, and reversible votes shared by every appearance of an item. Votes are local to the reader. The normal VD server hosts the reader, export service, and [recording replay](replay.md), and the Debug page can open a sample issue in the loaded game. Story generation, archives, and saved-game persistence belong to later stages.
+The newspaper renderer displays fixture issues in a browser and exports the same layout as DDS strips with typed interaction rectangles. Manual testing confirmed the demo's links, scrolling, and general UI in Civilization V. The exact test environment was not recorded. Broader testing awaits generated issues from real evidence.
+
+The renderer supports Victorian and modern designs, section tabs, article links, and reversible votes shared by every appearance of an item. Votes are local to the reader. The normal VD server hosts the reader, export service, and [recording replay](replay.md), and the Debug page can open a sample issue in the loaded game. Story generation, archives, and saved-game persistence belong to later stages.
 
 ## Supply a completed issue
 
@@ -52,7 +54,7 @@ The viewer needs the DLL's `Game.IsNewspaperTextureAvailable` binding to use ima
 
 Render profiles match `RenderProfile` in `src/newspaper/contracts/render.ts`. `paperWidth` is the outer publication width in CSS pixels, including margins and the stable scrollbar gutter. The Debug button fits that width to the prepared game view, capped at 1200 CSS pixels. Its physical display width is the smaller of the available width and 1200 times zoom. Dividing by zoom and rounding down to a 1/64 CSS-pixel step gives the paper width. Zoom ranges from 0.5 to 2 and defaults to 1 in the mod; text size stays at 1. The capture viewport includes the full paper and texture alignment padding. Profiles with no content space or widths beyond capture and texture limits are rejected before capture.
 
-The default export profile uses a 1200 CSS-pixel paper, raster scale 2, and texture limits of 4096 by 2048 pixels. The Debug button uses the same raster and texture settings with its negotiated paper width. Capture viewport height stays at 720 CSS pixels because export expands each section; changing only the game view's height can reuse the same cached pixels. Tall mastheads scroll out of view and do not reduce the article viewport. The capture library supports raster scales 1 and 2, plus `BC1_UNORM` and `B8G8R8A8_UNORM`. Runtime delivery defaults to uncompressed BGRA. Native image controls use linear filtering and a white tint to preserve the captured colors when scaling. Vote icons map their full raster texture into the displayed slot. Both formats use legacy DDS headers and one mip level. Padding is recorded separately from visible dimensions and must not become extra scrolling space. Final in-game text quality and format comparison remain part of visual acceptance.
+The default export profile uses a 1200 CSS-pixel paper, raster scale 2, and texture limits of 4096 by 2048 pixels. The Debug button uses the same raster and texture settings with its negotiated paper width. Capture viewport height stays at 720 CSS pixels because export expands each section; changing only the game view's height can reuse the same cached pixels. Tall mastheads scroll out of view and do not reduce the article viewport. The capture library supports raster scales 1 and 2, plus `BC1_UNORM` and `B8G8R8A8_UNORM`. Runtime delivery defaults to uncompressed BGRA. Native image controls use linear filtering and a white tint to preserve the captured colors when scaling. Vote icons map their full raster texture into the displayed slot. Both formats use legacy DDS headers and one mip level. Padding is recorded separately from visible dimensions and must not become extra scrolling space. Broader text-quality and format comparisons await issues generated from recorded data.
 
 Both browser reading and export use `mountReader`, which returns layout readiness and a disposal method. Export waits for fonts, images and settled layout before measuring. Shared layout calculations derive content width from the outer paper. Margins are 16 pixels through a paper width of 480, 24 pixels through 760, then 48 pixels for Victorian and 32 for modern. The gutter remains stable as columns reflow. Sections own their scroll positions; export expands the active section while keeping the browser viewport fixed and disabling transitions. Article content is constructed from typed nodes, so prose cannot inject scripts, styles or arbitrary URLs.
 
@@ -94,7 +96,7 @@ Vite cleans `dist-newspaper` on every build, then `scripts/utilities/package-new
 
 Run focused checks with `npm test -w vox-agents -- tests/mock/newspaper`, then run `npm run build:all` and `npm run test:all` for integration. Browser-driven tests use installed browsers and the built reader. Converter checks require the acquired executable.
 
-Game acceptance must record the VP build and renderer separately from automated results. Check text at 1280 by 720, 1920 by 1080, and 2560 by 1440; raster scales 1 and 2; scrolling over links and votes; seam-crossing links; tab and vote updates; target return; Escape; native popups; cached reopening with the host stopped; and reopening after deleting a closed fixture's cache. A successful transport call does not establish visual correctness.
+Broader game acceptance needs generated issues with actual stories, variable article lengths, and real link targets. [Plan 1](../../../plans/newspaper/implementation/01-renderer.md) retains the remaining checks for layout quality, votes, reader state, game UI interactions, and cache loss. Record the VP build, DLL revision, DX renderer, resolution, UI scaling, render profile, and DDS format when performing those checks, keeping observed appearance and interaction separate from delivery acknowledgements.
 
 ## Local measurements
 
@@ -106,14 +108,14 @@ A controlled Inno Setup compiler probe confirmed that the installer retains the 
 
 On Windows with Chrome 157.0.8103.51 and renderer 0.1.0, the Victorian ordinary fixture exported in 3.20 seconds with browser startup, 1.68 seconds warm, and 8 ms from cache. The sampled browser working-set peak during the batch was 576 MiB. These are local observations, with the test suite running concurrently.
 
-| Export | DDS bytes | Warm time |
-| --- | ---: | ---: |
-| Victorian, BC1, raster 1 | 953,328 | 1.68 s |
-| Victorian, BC1, raster 2, text 1.25 | 4,632,368 | 2.31 s |
-| Modern, BC1, raster 1 | 840,928 | 1.70 s |
-| Modern, BC1, raster 2, text 1.25 | 3,705,984 | 1.89 s |
-| Victorian, uncompressed BGRA, raster 1 | 7,620,352 | 1.43 s |
+| Export                                 | DDS bytes | Warm time |
+| -------------------------------------- | --------: | --------: |
+| Victorian, BC1, raster 1               |   953,328 |    1.68 s |
+| Victorian, BC1, raster 2, text 1.25    | 4,632,368 |    2.31 s |
+| Modern, BC1, raster 1                  |   840,928 |    1.70 s |
+| Modern, BC1, raster 2, text 1.25       | 3,705,984 |    1.89 s |
+| Victorian, uncompressed BGRA, raster 1 | 7,620,352 |    1.43 s |
 
 The added production payload measured about 23.5 MiB after dependency pruning. An isolated Inno Setup compression probe added about 8.4 MiB; this is an estimate, not a full installer size comparison. The reader and converter survived production pruning without downloading a browser.
 
-The texture-check DLL built against VP checkout `a092e06b4` with local changes. Final in-game text quality, cropping, and hit alignment remain unverified. A running game locks the installed DLL, so close Civilization V before running the DLL build-and-copy workflow, then reload the mod for acceptance.
+The texture-check DLL built against VP checkout `a092e06b4` with local changes. When DLL changes are needed, close Civilization V before running the DLL build-and-copy workflow, then reload the mod.
