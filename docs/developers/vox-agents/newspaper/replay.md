@@ -4,13 +4,13 @@ Replay reads a recorded MCP SQLite database and produces authored newspaper issu
 
 ## Generate examples from the command line
 
-Use the newspaper command to develop templates without starting VD or Civilization V. Run these commands from the repository root. Build MCP's queries once, and build the reader when requesting PNG previews:
+Use the newspaper command to develop templates without starting VD or Civilization V. Run it from the repository root. Each run builds MCP's queries before loading replay, and PNG previews also build the reader. Help and argument errors skip builds:
 
 ```sh
-npm run build -w mcp-server
-npm run build:newspaper -w vox-agents
 npm run newspaper -w vox-agents -- --help
 ```
+
+Preview builds replace the shared `dist-newspaper` assets. Generate previews while VD is stopped, and rerun the command if a build is interrupted before restarting VD.
 
 These local recordings provide examples of city recovery, trade, diplomacy, breaking news, and changing visual designs:
 
@@ -30,11 +30,13 @@ Recordings are local development data. Substitute another recorded MCP database 
 | `--every` | Publication frequency in Standard-equivalent turns; defaults to five. |
 | `--comparison` | Comparison history in recorded turns; defaults to ten. |
 | `--config` | Directory containing catalogue overrides, such as `templates.json` or `triggers.json`. |
-| `--render-turns` | Comma-separated publication cutoffs to render as PNGs. Requires installed Edge or Chrome and the built reader. |
+| `--render-turns` | Comma-separated publication cutoffs to render as PNGs. Requires installed Edge or Chrome; the command builds the reader. |
 
-Open the output's `index.html` directly in a browser to read the articles and inspect selected page previews. `issue-<turn>.json` contains the publication, and `audit-<turn>.json` records the editorial decision and article evidence. `run.json` indexes the run; `replay.sqlite` retains its checks and history. A requested preview turn can be skipped or fall outside the publication schedule; the report identifies it rather than inventing an issue. Omit `--render-turns` for a faster text-and-JSON pass without a browser.
+Open the output's `index.html` directly in a browser. The report opens with the selected rendered pages, grouped under their issue headings. A disclosure under each issue holds its page contents, article prose, evidence tables, and each article's editorial identity. Below the issues, one disclosure holds the run source, settings, and every editorial check with its status and audit link; issues without page images are collapsed in a separate disclosure. Issue and article links use address fragments, so opening a link expands the disclosures containing its target, including on a repeated click of the current link.
 
-The command checks the reader build and installed browser before starting a requested preview run. Once replay starts, failures and Ctrl+C return a nonzero exit code and retain a failed manifest and report, including completed previews. A forced termination or disk-write failure can leave partial files; `replay.sqlite` is the authority for committed checks. To continue that history in VD, choose Resume with the same recording and player, the output's `replay.sqlite`, and run ID `examples`. The CLI creates new runs; use a new output directory to rerun after fixing templates or rendering. Its entry point is `src/newspaper/console.ts`; `cli/` owns options, artifacts, and previews.
+A requested preview turn that was skipped or falls outside the publication schedule appears in a note after the rendered issues instead of becoming an issue. `issue-<turn>.json` contains the publication, `audit-<turn>.json` records the editorial decision and article evidence, `run.json` indexes the run, and `replay.sqlite` retains its checks and history. Omit `--render-turns` for a faster text-and-JSON pass without a browser; every issue is then collapsed in the unrendered list.
+
+Before a requested preview run, the command builds dependencies and checks the installed browser. A failed build stops the command before replay creates output. Ctrl+C cancels the active build or replay and returns a nonzero exit code. Once replay starts, failures retain a failed manifest and report, including completed previews. A forced termination or disk-write failure can leave partial files; `replay.sqlite` is the authority for committed checks. To continue that history in VD, choose Resume with the same recording and player, the output's `replay.sqlite`, and run ID `examples`. The CLI creates new runs; use a new output directory to rerun after fixing templates or rendering. Its entry point is `src/newspaper/console.ts`; `cli/` owns options, artifacts, and previews.
 
 ### Iterate on a template
 

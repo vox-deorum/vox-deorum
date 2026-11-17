@@ -2,15 +2,55 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { existsSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import Database from 'better-sqlite3';
 import { createReplayRecording } from '../../../helpers/newspaper-replay.js';
 import { parseNewspaperOptions, type NewspaperCliOptions } from '../../../../src/newspaper/cli/options.js';
 import { newspaperReportHtml, runNewspaperReplay, type NewspaperRunManifest } from '../../../../src/newspaper/cli/replay.js';
+import type { ArchiveIssue } from '../../../../src/newspaper/contracts/archive.js';
 import { issueDocumentSchema } from '../../../../src/newspaper/contracts/issue.js';
 import { ReplaySession } from '../../../../src/newspaper/replay/session.js';
 import { launchInstalledBrowser } from '../../../../src/newspaper/export/browser.js';
 import { readerDirectory } from '../../../../src/newspaper/export/http.js';
 import * as renderer from '../../../../src/newspaper/cli/render.js';
+
+/** A valid one-pixel PNG so the saved report can display a real image. */
+const onePixelPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', 'base64');
+
+/** Read the published archives saved by a completed replay run. */
+async function savedArchives(manifest: NewspaperRunManifest): Promise<ArchiveIssue[]> {
+  const session = new ReplaySession();
+  try {
+    await session.configure({ ...manifest.session!.settings, mode: 'resume' });
+    const archives: ArchiveIssue[] = [];
+    for (const check of manifest.checks) if (check.issueId) archives.push(await session.getIssue(check.issueId));
+    return archives;
+  } finally { await session.close(); }
+}
+
+/** Copy a saved issue to a later turn whose first article links back to the first article of the original. */
+function laterIssueLinkingTo(earlier: ArchiveIssue): ArchiveIssue {
+  const later = structuredClone(earlier);
+  const turn = earlier.issue.cutoff.turn + 100;
+  const rename = (id: string) => `${id}/later`;
+  later.issue.issueId = rename(earlier.issue.issueId);
+  later.issue.cutoff = { turn, label: `Turn ${turn}` };
+  later.issue.items = later.issue.items.map(item => ({ ...item, id: rename(item.id) }));
+  later.issue.pages = later.issue.pages.map(page => ({ ...page, itemIds: page.itemIds.map(rename) }));
+  later.articles = later.articles.map(article => ({ ...article, id: rename(article.id) }));
+  later.issue.items[0].earlierReport = {
+    label: 'Earlier report',
+    target: { type: 'article', issueId: earlier.issue.issueId, itemId: earlier.issue.items[0].id },
+    summary: [[{ type: 'text', text: 'Earlier summary' }]],
+  };
+  return later;
+}
+
+/** Count the disclosures still open at a position in the report markup. */
+function enclosingDisclosures(html: string, index: number): number {
+  const before = html.slice(0, index);
+  return before.split('<details').length - before.split('</details>').length;
+}
 
 describe('newspaper replay command artifacts', () => {
   let recording: Awaited<ReturnType<typeof createReplayRecording>>;
@@ -51,7 +91,7 @@ describe('newspaper replay command artifacts', () => {
           archive.issue.items[0].body = [[{ type: 'text', text: '<script>alert("unsafe")</script>' }]];
           const escaped = newspaperReportHtml(manifest, [archive]);
           expect(escaped).toContain('&lt;script&gt;');
-          expect(escaped).not.toContain('<script>');
+          expect(escaped).not.toContain('<script>alert');
         }
       }
     } finally { await session.close(); }
@@ -60,6 +100,67 @@ describe('newspaper replay command artifacts', () => {
     try { expect(db.prepare('SELECT COUNT(*) AS count FROM OfflineReplayChecks').get()).toEqual({ count: manifest.counts.checks }); }
     finally { db.close(); }
   });
+
+  it('should show rendered pages before any disclosure and keep diagnostics and issue text collapsed', async () => {
+    const manifest = await runNewspaperReplay({ ...options, renderTurns: [] });
+    const [earlier] = await savedArchives(manifest);
+    const later = laterIssueLinkingTo(earlier);
+    const image = { turn: later.issue.cutoff.turn, pageId: later.issue.pages[0].id, file: 'later-page-1.png' };
+    const html = newspaperReportHtml({ ...manifest, images: [image] }, [earlier, later]);
+    const imageAt = html.indexOf(`src="${image.file}"`);
+    expect(imageAt).toBeGreaterThan(-1);
+    expect(imageAt).toBeLessThan(html.indexOf('<details'));
+    expect(enclosingDisclosures(html, imageAt)).toBe(0);
+    expect(html.indexOf(`id="turn-${later.issue.cutoff.turn}"`)).toBeLessThan(html.indexOf(`id="turn-${earlier.issue.cutoff.turn}"`));
+    for (const check of manifest.checks) expect(enclosingDisclosures(html, html.indexOf(`href="${check.audit}"`))).toBeGreaterThan(0);
+    for (const item of [...earlier.issue.items, ...later.issue.items]) {
+      const parts = html.split(`id="article-${encodeURIComponent(item.id)}"`);
+      expect(parts).toHaveLength(2);
+      expect(enclosingDisclosures(html, parts[0].length)).toBeGreaterThan(0);
+    }
+    for (const archive of [earlier, later]) expect(html).toContain(`href="issue-${archive.issue.cutoff.turn}.json"`);
+    expect(enclosingDisclosures(html, html.indexOf('href="run.json"'))).toBe(0);
+    expect(html).toContain(`href="#article-${encodeURIComponent(earlier.issue.items[0].id)}"`);
+    expect(html).not.toMatch(/<details[^>]*\sopen/);
+  });
+
+  it('should open collapsed sections when a reader follows issue and earlier report links', async context => {
+    let browser: Awaited<ReturnType<typeof launchInstalledBrowser>>;
+    try { browser = await launchInstalledBrowser(); }
+    catch (error) { context.skip(String(error)); return; }
+    try {
+      const manifest = await runNewspaperReplay({ ...options, renderTurns: [] });
+      const [earlier] = await savedArchives(manifest);
+      const later = laterIssueLinkingTo(earlier);
+      const image = { turn: later.issue.cutoff.turn, pageId: later.issue.pages[0].id, file: 'later-page-1.png' };
+      await writeFile(path.join(options.output, image.file), onePixelPng);
+      await writeFile(path.join(options.output, 'index.html'), newspaperReportHtml({ ...manifest, images: [image] }, [earlier, later]));
+      const url = pathToFileURL(path.join(options.output, 'index.html')).href;
+      const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+      const earlierArticle = page.locator(`[id="article-${encodeURIComponent(earlier.issue.items[0].id)}"]`);
+      const laterText = page.locator(`[id="turn-${later.issue.cutoff.turn}"] > details > summary`);
+      const earlierLink = page.locator(`[id="turn-${later.issue.cutoff.turn}"] a[href="#article-${encodeURIComponent(earlier.issue.items[0].id)}"]`);
+      await page.goto(url);
+      expect(await page.locator('details[open]').count()).toBe(0);
+      expect(await page.locator(`img[src="${image.file}"]`).evaluate(element => element.getBoundingClientRect().top < innerHeight)).toBe(true);
+      expect(await earlierArticle.isVisible()).toBe(false);
+
+      await laterText.click();
+      await earlierLink.click();
+      await earlierArticle.waitFor({ state: 'visible', timeout: 5_000 });
+      expect(await earlierArticle.evaluate(element => element.getBoundingClientRect().top < innerHeight)).toBe(true);
+
+      await page.evaluate(() => { for (const details of document.querySelectorAll('details')) details.open = false; });
+      await laterText.click();
+      await earlierLink.click();
+      await earlierArticle.waitFor({ state: 'visible', timeout: 5_000 });
+
+      const direct = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+      await direct.goto(`${url}#turn-${earlier.issue.cutoff.turn}`);
+      await direct.locator(`[id="turn-${earlier.issue.cutoff.turn}"] a[href="issue-${earlier.issue.cutoff.turn}.json"]`).waitFor({ state: 'visible', timeout: 5_000 });
+    } finally { await browser.close(); }
+    expect(await readFile(recording.filename)).toEqual(recording.originalBytes);
+  }, 60_000);
 
   it('should reject a reused output directory and leave its saved artifacts unchanged', async () => {
     await runNewspaperReplay({ ...options, renderTurns: [] });

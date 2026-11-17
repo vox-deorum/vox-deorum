@@ -1,4 +1,5 @@
 import { newspaperCliHelp, parseNewspaperOptions } from './cli/options.js';
+import { buildNewspaperDependencies } from './cli/build.js';
 
 /** Run the offline command without requiring replay dependencies for help and argument errors. */
 async function main(): Promise<void> {
@@ -7,10 +8,6 @@ async function main(): Promise<void> {
     process.stdout.write(newspaperCliHelp);
     return;
   }
-  const [{ runNewspaperReplay }, { createLogger }] = await Promise.all([
-    import('./cli/replay.js'), import('../utils/logger.js'),
-  ]);
-  const logger = createLogger('Newspaper');
   const controller = new AbortController();
   const signals: [NodeJS.Signals, number][] = [['SIGINT', 130], ['SIGTERM', 143], ['SIGBREAK', 149], ['SIGHUP', 129]];
   const listeners = signals.map(([signal, exitCode]) => {
@@ -23,6 +20,12 @@ async function main(): Promise<void> {
     return { signal, listener };
   });
   try {
+    await buildNewspaperDependencies(options.renderTurns.length > 0, controller.signal);
+    const [{ runNewspaperReplay }, { createLogger }] = await Promise.all([
+      import('./cli/replay.js'), import('../utils/logger.js'),
+    ]);
+    const logger = createLogger('Newspaper');
+    controller.signal.throwIfAborted();
     if (options.renderTurns.length) {
       const { requireBuiltReader } = await import('./cli/render.js');
       const { launchInstalledBrowser } = await import('./export/browser.js');

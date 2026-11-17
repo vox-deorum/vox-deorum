@@ -29,7 +29,8 @@ Usage: npm run newspaper -w vox-agents -- --database <recording.sqlite> --output
   --help                 Show this help
 
 Replay checks run sequentially from --from through --to, preserving editorial history.
-PNG capture requires installed Edge or Chrome and npm run build:newspaper -w vox-agents.
+The command builds MCP queries and, for PNG capture, reader assets automatically.
+PNG capture requires installed Edge or Chrome.
 Relative paths resolve from the directory where npm was invoked.
 `;
 

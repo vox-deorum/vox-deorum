@@ -351,24 +351,59 @@
   user-select: none;
 }
 
-/* Ordinary layouts */
+/*
+ * Ordinary layouts
+ *
+ * Narrow papers stack every story in publication order. Wide papers run the
+ * lead across the page, then fill rows of two briefs in reading order, so no
+ * story waits for an unrelated story in another column to end. A brief left
+ * alone in the last row takes the full width. Full-width stories set their
+ * prose in two text columns that share the brief rows' centre rule.
+ */
 
-.vd-storylist[data-layout="ordinary"] {
-  display: grid;
-  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
-  gap: 0 34px;
-}
+@container newspaper (width > 760px) {
+  .vd-newspaper:not([data-design="modern"]) .vd-storylist[data-layout="ordinary"] {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
 
-.vd-storylist[data-layout="ordinary"] .vd-story--lead {
-  grid-row: span 2;
-  padding-right: 34px;
-  border-right: 1px solid var(--vd-rule);
-}
+  .vd-newspaper:not([data-design="modern"]) .vd-storylist[data-layout="ordinary"] > .vd-story--lead {
+    grid-column: 1 / -1;
+  }
 
-.vd-storylist[data-layout="ordinary"] .vd-story--brief + .vd-story--brief {
-  margin-top: 25px;
-  padding-top: 25px;
-  border-top: 1px solid var(--vd-rule);
+  .vd-newspaper:not([data-design="modern"]) .vd-storylist[data-layout="ordinary"] > .vd-story--brief {
+    margin-top: 25px;
+    padding-top: 25px;
+    border-top: 1px solid var(--vd-rule);
+  }
+
+  /* The lead is the first child, so even children open a row and odd children close it. */
+  .vd-newspaper:not([data-design="modern"]) .vd-storylist[data-layout="ordinary"] > .vd-story--brief:nth-child(even) {
+    padding-right: 25px;
+  }
+
+  .vd-newspaper:not([data-design="modern"]) .vd-storylist[data-layout="ordinary"] > .vd-story--brief:nth-child(odd) {
+    padding-left: 25px;
+    border-left: 1px solid var(--vd-rule);
+  }
+
+  .vd-newspaper:not([data-design="modern"]) .vd-storylist[data-layout="ordinary"] > .vd-story--brief:nth-child(even):last-child {
+    grid-column: 1 / -1;
+    padding-right: 0;
+  }
+
+  .vd-newspaper:not([data-design="modern"]) .vd-storylist[data-layout="ordinary"] > .vd-story--lead .vd-prose,
+  .vd-newspaper:not([data-design="modern"]) .vd-storylist[data-layout="ordinary"] > .vd-story--brief:nth-child(even):last-child .vd-prose {
+    columns: 20em 2;
+    column-gap: 50px;
+    column-rule: 1px solid var(--vd-rule);
+  }
+
+  .vd-newspaper[data-design="victorian"] .vd-storylist[data-layout="ordinary"] > .vd-story--lead .vd-story-art img,
+  .vd-newspaper[data-design="victorian"] .vd-storylist[data-layout="ordinary"] > .vd-story--brief:nth-child(even):last-child .vd-story-art img {
+    height: auto;
+    aspect-ratio: 2 / 1;
+  }
 }
 
 .vd-storylist[data-layout="ordinary"] .vd-story--lead .vd-headline {
@@ -377,10 +412,12 @@
   letter-spacing: -0.035em;
 }
 
-.vd-storylist[data-layout="ordinary"] .vd-story--lead .vd-prose p:first-child::first-letter {
-  float: left;
-  margin: 6px 7px 0 0;
-  font: 700 calc(66px * var(--vd-text-scale)) / 0.9 var(--vd-font-display);
+.vd-newspaper[data-design="victorian"] .vd-storylist[data-layout="ordinary"] .vd-story--lead .vd-prose p:first-child::first-letter {
+  /* Keep the initial with its opening lines when the paragraph spans columns. */
+  initial-letter: 2;
+  margin-right: 7px;
+  font-weight: 700;
+  font-family: var(--vd-font-display);
 }
 
 /* Breaking layout */
@@ -632,12 +669,6 @@
   letter-spacing: -0.045em;
 }
 
-.vd-newspaper[data-design="modern"] .vd-storylist[data-layout="ordinary"] .vd-story--lead .vd-prose p:first-child::first-letter {
-  float: none;
-  margin: 0;
-  font: inherit;
-}
-
 .vd-newspaper[data-design="modern"] .vd-deck {
   margin: 0 0 14px;
   padding-bottom: 12px;
@@ -783,16 +814,7 @@
 
 /* Reflow follows the paper width in both the interactive reader and export. */
 @container newspaper (max-width: 760px) {
-  .vd-storylist[data-layout="ordinary"] {
-    display: block;
-  }
-
-  .vd-storylist[data-layout="ordinary"] .vd-story--lead {
-    padding-right: 0;
-    border-right: 0;
-  }
-
-  .vd-storylist[data-layout="ordinary"] .vd-story--brief {
+  .vd-newspaper:not([data-design="modern"]) .vd-storylist[data-layout="ordinary"] .vd-story--brief {
     margin-top: 25px;
     padding-top: 25px;
     border-top: 1px solid var(--vd-rule);

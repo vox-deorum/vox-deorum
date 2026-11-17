@@ -92,8 +92,15 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('newspape
 
   it('should keep line geometry stable between interactive and export modes and retain local votes and scroll', async context => {
     if (!browser) { context.skip(unavailable); return; }
+    const issue = parseIssueDocument(JSON.parse(await readFile(path.join(fixtures, 'victorian-ordinary.json'), 'utf8')));
+    issue.items[0].body.push([{
+      type: 'link',
+      text: 'Inspect the overseas harbour returns and the merchants trading between our cities. '.repeat(8),
+      target: { type: 'screen', screen: 'trade' },
+    }]);
     const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
     try {
+      await page.route('**/newspaper/fixtures/victorian-ordinary.json', route => route.fulfill({ json: issue }));
       await page.goto(`${host.url}/newspaper/?fixture=victorian-ordinary`);
       await page.waitForFunction(() => document.querySelector('#state-view')?.textContent?.includes('activePageId'));
       const firstTab = page.locator('[role=tab]').first();
@@ -120,7 +127,6 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('newspape
       expect(await page.locator('[data-vd-region=page]:not([hidden])').evaluate(element => element.scrollTop)).toBe(saved);
       const interactive = await page.locator('[data-vd-region=page]:not([hidden]) .vd-inline-link').evaluateAll(elements => elements.map(element => Array.from(element.getClientRects(), rect => ({ width: rect.width, height: rect.height }))));
       expect(interactive.some(rects => rects.length > 1)).toBe(true);
-      const issue = parseIssueDocument(JSON.parse(await readFile(path.join(fixtures, 'victorian-ordinary.json'), 'utf8')));
       await page.goto(`${host.url}/newspaper/export.html`);
       await page.evaluate(async ({ issue, profile }) => {
         await (window as any).voxDeorumNewspaperExport.mount(issue, profile);

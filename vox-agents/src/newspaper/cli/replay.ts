@@ -1,7 +1,7 @@
 import { mkdir, readdir, realpath, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { ArchiveIssue } from '../contracts/archive.js';
-import type { InlineText, IssueItem } from '../contracts/issue.js';
+import type { InlineText, IssueDocument, IssueItem } from '../contracts/issue.js';
 import type { ReplayState } from '../contracts/replay.js';
 import { replaySourceIdentity } from '../replay/database.js';
 import { ReplaySession } from '../replay/session.js';
@@ -70,28 +70,125 @@ ${item.earlierReport ? `<p><a href="#article-${encodeURIComponent(item.earlierRe
 ${record ? `<details><summary>Article evidence and editorial identity</summary><p>${escapeHtml(record.evidenceSummary)}</p><pre>${escapeHtml(JSON.stringify({ tags: record.tags, templateIds: record.templateIds, triggerIds: record.triggerIds, sources: record.sources }, null, 2))}</pre></details>` : ''}</article>`;
 }
 
-/** Build a script-free report that can be opened directly from the output directory. */
-export function newspaperReportHtml(manifest: NewspaperRunManifest, issues: ArchiveIssue[]): string {
-  const sections = issues.map(archive => {
-    const issue = archive.issue;
-    const turn = issue.cutoff.turn;
-    const images = manifest.images.filter(image => image.turn === turn);
-    return `<section id="turn-${turn}"><h2>Turn ${turn}: ${escapeHtml(issue.publication.title)}</h2>
-<p>${escapeHtml(issue.receiver.label)} | ${escapeHtml(issue.publication.designId)} | <a href="issue-${turn}.json">Issue JSON</a> | <a href="audit-${turn}.json">Editorial audit and article sources</a></p>
-${images.map(image => `<p><a href="${image.file}">PNG: ${escapeHtml(image.pageId)}</a></p><img src="${image.file}" alt="Turn ${turn}, ${escapeHtml(image.pageId)}">`).join('\n')}
-<nav>${issue.pages.map(page => `<h3>${escapeHtml(page.label)} (${escapeHtml(page.layout)})</h3><ul>${page.itemIds.map(id => issue.items.find(item => item.id === id)).filter((item): item is IssueItem => item !== undefined).map(item => `<li><a href="#article-${encodeURIComponent(item.id)}">${escapeHtml(item.headline.map(node => node.type === 'break' ? ' ' : node.text).join(''))}</a></li>`).join('')}</ul>`).join('\n')}</nav>
-${issue.items.map(item => articleHtml(item, archive)).join('\n')}</section>`;
+/** Join inline nodes into plain text for headings and labels. */
+function inlineText(nodes: InlineText): string {
+  return nodes.map(node => node.type === 'break' ? ' ' : node.text).join('');
+}
+
+/** Show an issue's receiver, size and saved JSON files on one line. */
+function issueMetaHtml(issue: IssueDocument): string {
+  const turn = issue.cutoff.turn;
+  return `<p class="meta"><span>${escapeHtml(issue.receiver.label)}</span><span>${escapeHtml(issue.publication.designId)}</span><span>${issue.items.length} articles</span><a href="issue-${turn}.json">Issue JSON</a><a href="audit-${turn}.json">Editorial audit and article sources</a></p>`;
+}
+
+/** Present the issue's page contents followed by every article with its evidence. */
+function issueTextHtml(archive: ArchiveIssue): string {
+  const issue = archive.issue;
+  const contents = issue.pages.map(page => {
+    const items = page.itemIds.map(id => issue.items.find(item => item.id === id)).filter((item): item is IssueItem => item !== undefined);
+    return `<h3>${escapeHtml(page.label)} (${escapeHtml(page.layout)})</h3><ul>${items.map(item => `<li><a href="#article-${encodeURIComponent(item.id)}">${escapeHtml(inlineText(item.headline))}</a></li>`).join('')}</ul>`;
   }).join('\n');
-  return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Vox Deorum newspaper replay</title>
-<style>body{max-width:1100px;margin:2rem auto;padding:0 1rem;font:17px/1.6 Georgia,serif;color:#242424;background:#faf9f5}section{border-top:2px solid #777;margin-top:2rem}article{border-bottom:1px solid #ccc;padding-bottom:1rem}img{max-width:100%;height:auto}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px}table{border-collapse:collapse}td,th{border:1px solid #bbb;padding:.4rem}a{color:#235789}</style>
-<body><h1>Vox Deorum newspaper replay</h1><p>Status: ${manifest.status}. ${manifest.counts.published} issues, ${manifest.counts.skipped} skipped checks, ${manifest.counts.articles} articles.</p>
-<p>Source: ${escapeHtml(manifest.source.path)}<br>Player ${manifest.options.player}; turns ${manifest.options.from} to ${manifest.options.to}; frequency ${manifest.options.every} Standard turns; comparison ${manifest.options.comparison} recorded turns.</p>
-${manifest.session ? `<p>Resolved frequency: ${manifest.session.publicationIntervalTurns} recorded turns. Pace: ${escapeHtml(manifest.session.speed.label)}.</p>` : ''}
-<p><a href="run.json">Run manifest</a> | <a href="replay.sqlite">Persistent replay database</a></p>
-${manifest.error ? `<p>${escapeHtml(manifest.error)}</p>` : ''}
-${manifest.missingRenderTurns.length ? `<h2>Requested turns without images</h2><ul>${manifest.missingRenderTurns.map(entry => `<li>Turn ${entry.turn}: ${escapeHtml(entry.reason)}</li>`).join('')}</ul>` : ''}
-<h2>Checks</h2><ul>${manifest.checks.map(check => `<li>Turn ${check.turn}: ${check.issue ? `<a href="#turn-${check.turn}">${check.status}</a>` : check.status}${check.reason ? ` (${escapeHtml(check.reason)})` : ''} | <a href="${check.audit}">audit</a></li>`).join('')}</ul>
-${sections}</body></html>\n`;
+  return `<div class="text"><nav>${contents}</nav>
+${issue.items.map(item => articleHtml(item, archive)).join('\n')}</div>`;
+}
+
+/** Show a rendered issue's pages first and keep its text and evidence behind a disclosure. */
+function renderedIssueHtml(archive: ArchiveIssue, images: NewspaperPng[]): string {
+  const issue = archive.issue;
+  const turn = issue.cutoff.turn;
+  const pages = images.map(image => {
+    const label = escapeHtml(issue.pages.find(page => page.id === image.pageId)?.label ?? image.pageId);
+    const file = escapeHtml(image.file);
+    return `<figure><a href="${file}"><img src="${file}" alt="Turn ${turn}, ${label}" decoding="async"></a><figcaption>${label}</figcaption></figure>`;
+  }).join('\n');
+  return `<section class="issue" id="turn-${turn}"><h2>Turn ${turn}: ${escapeHtml(issue.publication.title)}</h2>
+${issueMetaHtml(issue)}
+<div class="pages">${pages}</div>
+<details><summary>Issue text and editorial evidence</summary>${issueTextHtml(archive)}</details></section>`;
+}
+
+/** Collapse an issue without page images into one line that expands to its text and evidence. */
+function unrenderedIssueHtml(archive: ArchiveIssue): string {
+  const issue = archive.issue;
+  const turn = issue.cutoff.turn;
+  return `<details class="issue" id="turn-${turn}"><summary>Turn ${turn}: ${escapeHtml(issue.publication.title)} (${issue.items.length} articles)</summary>
+${issueMetaHtml(issue)}${issueTextHtml(archive)}</details>`;
+}
+
+/** Collapse the run source, settings and every editorial check into one disclosure. */
+function diagnosticsHtml(manifest: NewspaperRunManifest): string {
+  const { options, session } = manifest;
+  return `<details class="section"><summary>Run settings and editorial checks (${manifest.counts.checks} checks, ${manifest.counts.skipped} skipped)</summary><div class="text">
+<p>Source: ${escapeHtml(manifest.source.path)}<br>SHA-256: ${escapeHtml(manifest.source.sha256)}</p>
+<p>Player ${options.player}; turns ${options.from} to ${options.to}; frequency ${options.every} Standard turns; comparison ${options.comparison} recorded turns.</p>
+${session ? `<p>Resolved frequency: ${session.publicationIntervalTurns} recorded turns. Pace: ${escapeHtml(session.speed.label)}.</p>` : ''}
+${manifest.configuration.ids.length ? `<p>Editorial configurations: ${manifest.configuration.ids.map(escapeHtml).join(', ')}</p>` : ''}
+<ul>${manifest.checks.map(check => `<li>Turn ${check.turn}: ${check.issue ? `<a href="#turn-${check.turn}">${check.status}</a>` : check.status}${check.reason ? ` (${escapeHtml(check.reason)})` : ''} | <a href="${escapeHtml(check.audit)}">audit</a></li>`).join('')}</ul></div></details>`;
+}
+
+/** Open every collapsed section around a linked issue or article, including repeat clicks on the current link. */
+const revealLinkedScript = `<script>
+/* Decode a typed address fragment, keeping it unchanged when it is not valid percent encoding. */
+function decodeFragment(id) {
+  try { return decodeURIComponent(id); } catch (error) { return id; }
+}
+/* Open the disclosures that contain the element named by the address fragment, then show it. */
+function revealLinked() {
+  var id = location.hash.slice(1);
+  var target = id && (document.getElementById(id) || document.getElementById(decodeFragment(id)));
+  if (!target) return;
+  for (var node = target; node; node = node.parentElement) if (node.tagName === 'DETAILS') node.open = true;
+  target.scrollIntoView();
+}
+addEventListener('hashchange', revealLinked);
+/* A link to the fragment already in the address bar fires no hashchange, so reveal it directly. */
+document.addEventListener('click', function (event) {
+  var link = event.target instanceof Element && event.target.closest('a[href^="#"]');
+  if (link && link.hash === location.hash) revealLinked();
+});
+revealLinked();
+</script>`;
+
+/** Build the report: rendered pages first, then collapsed run diagnostics and unrendered issue text. */
+export function newspaperReportHtml(manifest: NewspaperRunManifest, issues: ArchiveIssue[]): string {
+  const imagesFor = (archive: ArchiveIssue) => manifest.images.filter(image => image.turn === archive.issue.cutoff.turn);
+  const rendered = issues.filter(archive => imagesFor(archive).length > 0);
+  const unrendered = issues.filter(archive => imagesFor(archive).length === 0);
+  const { options, counts } = manifest;
+  const missing = manifest.missingRenderTurns.length
+    ? `<p class="meta">Requested turns without pages: ${manifest.missingRenderTurns.map(entry => `turn ${entry.turn} (${escapeHtml(entry.reason)})`).join('; ')}</p>` : '';
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Vox Deorum newspaper replay</title>
+<style>
+body{margin:0;padding:1.5rem clamp(1rem,3vw,2.5rem) 3rem;font:17px/1.6 Georgia,serif;color:#242424;background:#ebe9e3}
+header,main{max-width:2060px;margin:0 auto}
+h1{margin:0;font-size:1.5rem}
+h2{margin:0;font-size:1.2rem}
+.meta{display:flex;flex-wrap:wrap;gap:.2rem 1.1rem;margin:.3rem 0 0;font:14px/1.5 system-ui,sans-serif;color:#555}
+.error{color:#8a1c1c;font:600 15px/1.5 system-ui,sans-serif}
+.issue{margin-top:2.5rem}
+.pages{display:flex;flex-wrap:wrap;align-items:flex-start;gap:1.5rem;margin-top:1rem}
+.pages figure{flex:1 1 760px;max-width:1000px;margin:0}
+.pages img{display:block;width:100%;height:auto;background:#fff;box-shadow:0 2px 10px rgb(0 0 0 / 18%)}
+figcaption{margin-top:.4rem;font:13px/1.4 system-ui,sans-serif;color:#555}
+details{margin-top:1rem}
+.section{margin-top:3rem;padding-top:1rem;border-top:1px solid #bbb}
+summary{cursor:pointer;color:#235789;font:15px/1.5 system-ui,sans-serif}
+details.issue{margin-top:.5rem}
+.text{max-width:48rem}
+article{margin-top:1.25rem;padding-top:.75rem;border-top:1px solid #ccc}
+article:target{outline:2px solid #d9a93f;outline-offset:6px}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px}
+table{border-collapse:collapse}td,th{border:1px solid #bbb;padding:.4rem}
+a{color:#235789}
+</style></head>
+<body><header><h1>Vox Deorum newspaper replay</h1>
+<p class="meta"><span>Player ${options.player}</span><span>Turns ${options.from} to ${options.to}</span><span>Status: ${manifest.status}</span><span>${counts.published} issues, ${counts.articles} articles</span><a href="run.json">Run manifest</a><a href="replay.sqlite">Persistent replay database</a></p>
+${manifest.error ? `<p class="error" role="alert">${escapeHtml(manifest.error)}</p>` : ''}</header>
+<main>${rendered.length ? rendered.map(archive => renderedIssueHtml(archive, imagesFor(archive))).join('\n') : '<p class="meta">No pages were rendered in this run.</p>'}
+${missing}
+${diagnosticsHtml(manifest)}
+${unrendered.length ? `<details class="section"><summary>Issues without rendered pages (${unrendered.length})</summary>${unrendered.map(unrenderedIssueHtml).join('\n')}</details>` : ''}</main>
+${revealLinkedScript}</body></html>\n`;
 }
 
 /** Write readable JSON without permitting artifact collisions on first creation. */

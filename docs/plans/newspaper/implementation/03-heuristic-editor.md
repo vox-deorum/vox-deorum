@@ -4,7 +4,7 @@
 
 ## Reading acceptance
 
-Review generated issues with the owner before treating this stage's editorial quality as accepted. The [replay command](../../../developers/vox-agents/newspaper/replay.md) produces readable reports, audit records and selected PNG previews from saved recordings. Use early, ordinary, merged, quiet-return, and incoming-war examples. Check that coverage is useful, prose reads naturally, short pieces add value, and page composition keeps a useful mix of subjects. Inspect evidence and decision records when a choice is surprising.
+Review generated issues with the owner before treating this stage's editorial quality as accepted. The [replay command](../../../developers/vox-agents/newspaper/replay.md) produces readable reports, audit records and selected PNG previews from saved recordings. The report leads with the selected page images, keeps each issue's prose and evidence in a disclosure beneath it, and collapses run diagnostics and non-rendered issues below. Use early, ordinary, merged, quiet-return, and incoming-war examples. Check that coverage is useful, prose reads naturally, short pieces add value, and page composition keeps a useful mix of subjects. Open a disclosure when a choice or source is surprising.
 
 Exercise generated issues in the browser and game at representative paper widths and zoom levels. Record readability, links, scrolling, section tabs, shared-item votes, and missing-texture behavior. The fixture game demo and automated browser checks do not complete these broader game checks; retain their detailed gates in [Plan 1](01-renderer.md).
 
