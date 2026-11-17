@@ -20,7 +20,7 @@ import { executionTimeoutDefault } from '../../../utils/retry.js';
 import { processManager } from '../../runtime/process-manager.js';
 
 /** The published proxy contract accepted by this integration. */
-export const codexProxyVersion = '0.1.0-rc.36';
+export const codexProxyVersion = '0.1.0-rc.37';
 
 /** The proxy request deadline, aligned with the shared model execution budget. */
 export const codexProxyRequestTimeoutDefault = executionTimeoutDefault;

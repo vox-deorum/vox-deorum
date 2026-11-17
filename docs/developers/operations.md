@@ -99,7 +99,7 @@ Vox Agents also streams logs to its web dashboard over SSE. For tracing and the 
 When Codex login or startup misbehaves, run the managed proxy by hand in a terminal so you can watch its structured stderr directly.
 
 ```text
-npx --yes codex-openai-proxy@0.1.0-rc.36 serve --root C:\absolute\temporary\codex-root --port 8787 --log-level info --login device-code --request-timeout 300000ms --shutdown-timeout 10000ms
+npx --yes codex-openai-proxy@0.1.0-rc.37 serve --root C:\absolute\temporary\codex-root --port 8787 --log-level info --login device-code --request-timeout 300000ms --shutdown-timeout 10000ms
 ```
 
 This mirrors the invocation Vox Agents builds. `--login device-code` forces device-code sign-in. For redacted app-server diagnostics and readiness-probe request logs, change the command's flag to `--log-level debug`. When Vox Agents manages the proxy, it selects this flag from `LOG_LEVEL`. The adapter supplies a `local` placeholder as the API key; authentication uses the ChatGPT sign-in. `npm run update:codex-proxy` updates the version pin. See [vox-agents/models/codex.md](vox-agents/models/codex.md) for the pin-update workflow.
