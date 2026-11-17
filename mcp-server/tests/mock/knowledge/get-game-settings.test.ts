@@ -1,15 +1,17 @@
 /**
- * Tests for the get-game-settings YouAre block. PlayerInformations rows come from a real
- * in-memory KnowledgeStore; the Lua call and the civilization summary lookup are stubbed.
+ * Settings and metadata tests with a real in-memory KnowledgeStore and stubbed Lua calls.
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import * as z from 'zod';
 
 import { LuaFunction } from '../../../src/bridge/lua-function.js';
 import { getPlayerInformations } from '../../../src/knowledge/getters/player-information.js';
+import { MCPServer } from '../../../src/server.js';
 import { getTool } from '../../../src/tools/index.js';
 import { setupStore, seedPlayer } from '../helpers.js';
 import createGetGameSettingsTool from '../../../src/tools/knowledge/get-game-settings.js';
+import createGetMetadataTool from '../../../src/tools/knowledge/get-metadata.js';
 import type { KnowledgeStore } from '../../../src/knowledge/store.js';
 import { connectToolClient } from '../tool-client.js';
 
@@ -32,18 +34,44 @@ function createTool() {
 beforeEach(async () => {
   vi.spyOn(getTool('getCivilization')!, 'getSummaries').mockResolvedValue(['Rome', 'Greece', 'Egypt', 'Venice'].map(Name => ({ Name, Type: `CIV_${Name}`, Leader: `${Name} Leader`, Uniques: [`${Name} Unique`] })));
   store = await setupStore(10);
+  vi.spyOn(MCPServer.getInstance().getBridgeManager(), 'executeLuaScript').mockResolvedValue({ success: false });
   await seedPlayer(store, 0, { civilization: 'Rome', leader: 'Augustus Caesar', teamID: 0 });
   await seedPlayer(store, 1, { civilization: 'Greece', leader: 'Alexander', teamID: 0 });
   await seedPlayer(store, 2, { civilization: 'Egypt', leader: 'Ramesses II', teamID: 2 });
   await seedPlayer(store, 3, { civilization: 'Venice', leader: 'Enrico Dandolo', teamID: 0, isMajor: 0 });
   tool = createTool();
-  client = await connectToolClient(tool);
+  client = await connectToolClient(tool, createGetMetadataTool());
 });
 
 afterEach(async () => {
   await client.close();
   vi.restoreAllMocks();
   await store.close();
+});
+
+it('records geometry for internal use and leaves only public map settings in the tools', async () => {
+  const executeLuaScript = vi.mocked(MCPServer.getInstance().getBridgeManager().executeLuaScript);
+  executeLuaScript.mockResolvedValue({ success: true, result: {
+    mapWidth: 80, mapHeight: 52, mapWrapX: true, mapWrapY: false
+  } });
+  const luaResponse = await (tool as any).call(-1);
+  Object.assign(luaResponse.Result, { MapWidth: 80, MapHeight: 52, MapWrapX: true, MapWrapY: false });
+  vi.mocked((tool as any).call).mockResolvedValue(luaResponse);
+
+  const { Result } = await client.call({});
+  const publicSchema = z.toJSONSchema(tool.outputSchema);
+  expect(Result).toMatchObject({ MapType: 'Continents', MapSize: 'Small' });
+  for (const field of ['MapWidth', 'MapHeight', 'MapWrapX', 'MapWrapY']) {
+    expect(Result).not.toHaveProperty(field);
+    expect(JSON.stringify(publicSchema)).not.toContain(field);
+  }
+  for (const [key, value] of Object.entries({ mapWidth: '80', mapHeight: '52', mapWrapX: 'true', mapWrapY: 'false' })) {
+    expect(await store.getMetadata(key)).toBe(value);
+    expect(await client.call({ Key: key }, 'get-metadata')).toBe('');
+  }
+  expect(await client.call({ Key: 'mapSize' }, 'get-metadata')).toBe('Small');
+  await client.call({});
+  expect(executeLuaScript).toHaveBeenCalledTimes(1);
 });
 
 describe('get-game-settings YouAre', () => {

@@ -22,7 +22,7 @@ Distance is measured in hex tiles between two map positions, using the stored `x
 | `event.distance.own` | From an event's plot to the receiver's nearest city |
 | `distance(a, b)` | Between any two cities, plots or events |
 
-The recordings do not store map width, so distances do not wrap around the map edge. Two cities on opposite edges of a wrapping map read as far apart. Recording the width in `GameMetadata` would remove this limit.
+The new settings collection records the map dimensions and wrap flags privately, so the proposed fact model can measure wrap-aware distance. An older recording without that geometry uses unwrapped distance, so two cities on opposite edges of a wrapping map read as far apart.
 
 | Constant | Default, in tiles | Meaning | Example on the map |
 | --- | --- | --- | --- |

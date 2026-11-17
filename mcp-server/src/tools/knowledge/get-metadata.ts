@@ -6,6 +6,7 @@ import { ToolBase } from "../base.js";
 import { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import * as z from "zod";
 import { knowledgeManager } from "../../server.js";
+import { mapGeometryMetadataSchema } from "./get-game-settings.js";
 
 /**
  * Tool that reads a metadata value by key from the GameMetadata table
@@ -45,6 +46,7 @@ class GetMetadataTool extends ToolBase {
    * Execute the tool to retrieve a metadata value
    */
   async execute(args: z.infer<typeof this.inputSchema>) {
+    if (Object.hasOwn(mapGeometryMetadataSchema.shape, args.Key)) return "";
     const store = knowledgeManager.getStore();
     const value = await store.getMetadata(args.Key);
     return value ?? "";

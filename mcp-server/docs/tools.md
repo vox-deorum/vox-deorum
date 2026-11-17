@@ -58,6 +58,8 @@ For paged `read-transcript` calls, `hasMore` and `NextBeforeID` describe the raw
 
 The optional numeric `GameSpeedMultiplier` is the current game speed's `TrainPercent` divided by 100. Agents use it to scale past-briefing lookback and retain it in recordings for replay. Older metadata without a valid positive multiplier uses the English speed-name lookup, then `1.0`.
 
+Map grid dimensions and wrapping are stored internally for distance calculations. Neither `get-game-settings` nor `get-metadata` exposes them; `MapSize` remains public.
+
 ## Action Tools (15)
 
 Lua-backed steering tools and `post-notification` return `Success`, optional `Result`, and optional `Error` (`Code`, `Message`, optional `Details`). The eight steering tools share `Turn?`, defaulting to `-1` for the current turn. `set-metadata` and `present-decision` return plain booleans.

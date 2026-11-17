@@ -240,6 +240,7 @@ MCP's `newspaper/projection.ts` decides what the newspaper may read. These addit
 | --- | --- |
 | `IsCapital` in the city projection | `city.isCapital`, `player.capital`, `distance.capital` |
 | City owner resolved to a player ID | `city.owner` for city-states that hold several cities |
+| Event city identifier joined to a visible dated `CityInformations` row for position | `event.plot` and distance facts for events that name a city but carry no location; an event without a usable city identifier stays unknown |
 | `CityTrained` with `WithGold` and `WithFaith`, and the unit name taken from the matching `UnitCreated` event | `city.trained` |
 | `MilitaryStrength` in the player projection, for the receiver and for players it has insight into | Army comparisons |
 | `CityConstructed` with the building name | `city.built` |
@@ -249,7 +250,7 @@ MCP's `newspaper/projection.ts` decides what the newspaper may read. These addit
 | `SetPopulation` with old and new population | The turn of a population change through `city.events`, for the changes the game reports this way. Snapshots cover the rest. |
 | `CapitalChanged` | Capital moves |
 | `CombatResult` with plot, and `UnitKilledInCombat` (which has no plot) | Battles near the receiver's cities, unit losses by player |
-| `PlayerGoldenAge` with `Starting`. The DLL sends this field as `Status`, so the event schema needs to accept that name. | Golden age rules |
+| `PlayerGoldenAge` with its recorded starting or ending status | Golden age rules. A recording that does not carry the status leaves the fact hidden. |
 | `GreatPersonExpended`, `MinorFriendsChanged` | National and city-state rules |
 | Snapshots and events reaching back to the longest `window` of any enabled trigger, or `long` when that is further, plus each subject's last row before that point | `before`, `at`, `history`, `events`, `city.trained` and similar facts |
 

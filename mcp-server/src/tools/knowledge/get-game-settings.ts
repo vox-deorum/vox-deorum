@@ -5,13 +5,14 @@
 import { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { LuaFunctionTool } from "../abstract/lua-function.js";
 import * as z from "zod";
-import { knowledgeManager } from "../../server.js";
+import { bridgeManager, knowledgeManager } from "../../server.js";
 import path from "node:path";
 import { createLogger } from "../../utils/logger.js";
 import { CivilizationSummarySchema } from "../databases/get-civilization.js";
 import { getTool } from "../index.js";
 import { readPublicKnowledgeBatch } from "../../knowledge/helpers/cached.js";
 import { getPlayerInformations } from "../../knowledge/getters/player-information.js";
+import type { KnowledgeStore } from "../../knowledge/store.js";
 
 const logger = createLogger("GetGameSettings");
 
@@ -37,6 +38,49 @@ const MetadataSchema = z.object({
  * Export type for reuse
  */
 export type GameMetadata = z.infer<typeof MetadataSchema>;
+
+/** Recording fields used internally for wrap-aware map distances. */
+export const mapGeometryMetadataSchema = z.object({
+  mapWidth: z.number().int().positive(),
+  mapHeight: z.number().int().positive(),
+  mapWrapX: z.boolean(),
+  mapWrapY: z.boolean()
+});
+
+const mapGeometryRecordings = new WeakMap<KnowledgeStore, Promise<void>>();
+
+/** Share geometry collection across all settings requests for this store. */
+function ensureMapGeometry(store: KnowledgeStore): Promise<void> {
+  let recording = mapGeometryRecordings.get(store);
+  if (!recording) {
+    recording = saveMapGeometry(store).then(saved => {
+      if (!saved) mapGeometryRecordings.delete(store);
+    });
+    mapGeometryRecordings.set(store, recording);
+  }
+  return recording;
+}
+
+/** Collect map geometry without putting it in a registered Lua function's response. */
+async function saveMapGeometry(store: KnowledgeStore): Promise<boolean> {
+  try {
+    const keys = Object.keys(mapGeometryMetadataSchema.shape);
+    const saved = await Promise.all(keys.map(key => store.getMetadata(key)));
+    if (saved.every(value => value !== undefined)) return true;
+    const response = await bridgeManager.executeLuaScript(`
+      local width, height = Map.GetGridSize()
+      return { mapWidth = width, mapHeight = height, mapWrapX = Map.IsWrapX(), mapWrapY = Map.IsWrapY() }
+    `);
+    if (!response.success) return false;
+    const geometry = mapGeometryMetadataSchema.safeParse(response.result);
+    if (!geometry.success || knowledgeManager.getStore() !== store) return false;
+    await Promise.all(Object.entries(geometry.data).map(([key, value]) => store.setMetadata(key, String(value))));
+    return true;
+  } catch (error) {
+    logger.warn('Could not record map geometry', { error: error instanceof Error ? error.message : String(error) });
+    return false;
+  }
+}
 
 /**
  * Tool for retrieving static game settings
@@ -111,7 +155,8 @@ class GetGameSettingsTool extends LuaFunctionTool<GameMetadata> {
       store.setMetadata('difficulty', metadata.Difficulty),
       store.setMetadata('startEra', metadata.StartEra),
       store.setMetadata('maxTurns', metadata.MaxTurns.toString()),
-      store.setMetadata('victoryTypes', metadata.VictoryTypes.join(', '))
+      store.setMetadata('victoryTypes', metadata.VictoryTypes.join(', ')),
+      ensureMapGeometry(store)
     ]);
 
     if (metadata.YouAre) {
@@ -138,7 +183,7 @@ class GetGameSettingsTool extends LuaFunctionTool<GameMetadata> {
       }
     }
 
-    return result;
+    return { ...result, Result: this.resultSchema.parse(metadata) };
   }
 }
 
