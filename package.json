@@ -15,6 +15,7 @@
     "lint:all": "npm run lint -ws",
     "format:docs": "prettier --write --prose-wrap never \"**/*.md\"",
     "archive:raw": "node scripts/maintenance/archive-raw.mjs",
+    "models:codex": "tsx --env-file-if-exists=vox-agents/.env scripts/dependencies/list-codex-models.ts",
     "update:codex-proxy": "node scripts/dependencies/update-codex-proxy.mjs",
     "vp-pr": "node scripts/upstream/vp-pr.mjs",
     "vp-diff": "node scripts/upstream/vp-diff.mjs",

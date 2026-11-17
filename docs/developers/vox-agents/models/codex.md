@@ -14,6 +14,8 @@ This page covers how the proxy runs, the contracts Vox Agents relies on, and how
 
 **Restarting.** The manager restarts the proxy after five failures in a row, counting connection failures and HTTP 5xx responses. Any other response, including validation and rate-limit errors, resets the count, and so does starting a new proxy. Warnings the proxy prints on stderr are logged but do not count as failures.
 
+Run `npm run models:codex` from the repository root to print the IDs advertised by the managed proxy. The command uses the same model discovery as Settings and stops its proxy when it finishes. A model may appear in the list even if the signed-in account cannot run it.
+
 ## Contracts Vox Agents relies on
 
 These are the proxy behaviors the adapter code depends on. A release that changes any of them needs adapter code and test fixtures updated in the same change.
