@@ -1,6 +1,6 @@
 # Plan 6: trigger rules
 
-**Handoff: steps 1 and 2 supply the expression runner and the recorded evidence it will use. Step 3, building the fact model, waits for owner confirmation.** The [facts reference](../../../developers/vox-agents/newspaper/triggers/facts.md) describes the target facts. Published issues still use the existing detectors and templates. See the [trigger overview](../../../developers/vox-agents/newspaper/triggers/overview.md) for the runner contract and the [roadmap](../implementation.md) for the other newspaper plans.
+**Handoff: the expression runner, recorded evidence and city, player and event facts are in place. Step 4, constants and shortcuts, waits for owner confirmation.** Published issues still use the existing detectors and templates. See the [facts reference](../../../developers/vox-agents/newspaper/triggers/facts.md), [trigger overview](../../../developers/vox-agents/newspaper/triggers/overview.md) and [roadmap](../implementation.md).
 
 ## Goal
 
@@ -22,7 +22,6 @@ Use one numbered step per handoff. GPT-6.2-Sol implements the step, OpenCode han
 
 | Step | Work | Done when |
 | --- | --- | --- |
-| 3. Fact model (paused) | Builders under `editorial/facts/` for `city`, `player`, `event` and the globals, with hex distance, snapshots (`before`, `previous`, `at`, `history`), hidden-fact handling and source references. | Tests cover each inferred fact with a present value, a hidden value and a first observation. |
 | 4. Constants and shortcuts | `vox-agents/newspaper/constants.json`, its schema, overlay merging, game-speed scaling of spans, and `is.<name>` shortcuts. | A constant overridden in an overlay changes the outcome of a rule that uses it. |
 | 5. Trigger evaluation | The new trigger schema, subject listing, ordered `when` evaluation, `values`, `importance`, `urgent`, `repeat` state, `group`, and the audit record. Remove `developments/` detectors and the detector dispatch. | The two owner examples, `neighbor-puppet-annexed` and `settler-departure`, fire on controlled evidence and stay silent when one `when` entry is false. |
 | 6. War and peace facts | Reshape `diplomacy/` output into `incident` and `pair` facts and delete its trigger creation. The existing `resumed`, `observed` and `partial` stages become the flags of the same names, and the pair keeps its last wartime score as `lastWarScore`. | The documented incident and pair rules fire on the existing diplomacy test recordings. |
@@ -34,17 +33,22 @@ Use one numbered step per handoff. GPT-6.2-Sol implements the step, OpenCode han
 
 | Question | How to settle it |
 | --- | --- |
-| How will rules read inferred and hidden facts? | Step 1 passes JSON data into a fresh sandbox per check. Step 3 must build the guest-side accessors for history, hidden facts and source tracking. Step 5 must use those accessors for ordered rule evaluation and audits. |
-| How is map geometry kept for wrap-aware distance? | The settings tool records `mapWidth`, `mapHeight`, `mapWrapX` and `mapWrapY` as internal metadata for the active knowledge store, and hides them from tool responses and `get-metadata`. A future distance builder can read this geometry internally. Validate a stored value before using it, otherwise use unwrapped distance. |
+| How will rules read inferred and hidden facts? | Use the step 3 accessors and per-expression sources in step 5 for ordered rule evaluation and audits. |
 | Which unit and building names go into the type lists? | Take them from the Netherlands recording's `UnitCreated` and `CityConstructed` events in step 4. |
 
-## Inputs for step 3
+## Inputs for step 4
 
-Use the same read-only newspaper query for replay and MCP. Pass `historyFromTurn` as the cutoff minus the larger of the longest enabled trigger window and `long`, in recorded turns, clamped at -1. The query extends history to the previous check if that was earlier. For example, with a cutoff of 21, a previous check of 20 and a history start of 10, the ordinary event list covers turn 21. History covers turns 11 through 21 and has a separate baseline at or before 10. A start of -1 includes events on turn zero.
+Keep fact builders, time accessors and the QuickJS view under `vox-agents/src/newspaper/editorial/facts/`, with matching tests under `tests/mock/newspaper/editorial/facts/`. Catalogue validation, overlays and scaling belong under `editorial/config/`. Keep the built-in authoring file at `vox-agents/newspaper/constants.json`; keep the subject-side `is` accessors beside the other fact accessors. Do not put constants or shortcuts into individual city, player or event builders.
 
-Build snapshots from the baseline and dated rows. Stop carrying a value at a visibility gap or known city removal. Read joined values and their `relatedSources` from the evidence; a missing position, unit name or owner is unknown. Preserve both recorded founding event names. `UnitCityFounded` is the founding event present in the Netherlands recording. A positive Golden Age award can extend an existing age. See the [evidence reference](../../../developers/vox-agents/newspaper/triggers/facts.md#evidence-the-facts-rely-on) for field access. Snapshot history uses the original subject key; when an archive reuses a city ID, confirm the plot and owner before assuming continuity. Player identities, diplomacy and settings have separate sources; only expose fields the receiver can see. Read wrap geometry internally for distance and keep it out of tool results and prompts.
+`readReplayFacts` in `replay/facts.ts` reads one check from an existing database. Pass it the scaled `longTurns` and the longest enabled window, in recorded turns. It requests the larger span; MCP extends the baseline to the previous check when needed. `buildNewspaperFacts` also accepts already projected evidence. Compiled expressions share a fact model across groups; each group's optional `windowFromTurn` is exclusive and defaults to the previous check. The reporting period selects event subjects, while the group's window selects the `events` global and windowed city/player lists. Step 5 will connect this path to publication.
+
+Keep city positions and ownership tied to permitted database rows. Map dimensions and wrap flags stay private in replay and never go into rules, tool responses or LLM prompts. The DLL, event payloads and collection stay unchanged. The [facts reference](../../../developers/vox-agents/newspaper/triggers/facts.md#evidence-the-facts-rely-on) describes the limitations of older recordings.
 
 ## Verification
+
+Step 3 is verified. GPT-6.2-Sol implemented the facts, OpenCode checked the layout and helped with projection and docs, and Claude Code Opus (`claude-opus-5-5`) independently reviewed the changes. The final review found no material issues in the revisions. All 98 MCP newspaper and private settings tests passed, including HTTP and stdio. The 411 Vox Agents newspaper tests passed across the full run and focused reruns: one layout test failed to load the export bridge during the full run and two browser suites timed out closing. The layout test and both teardown paths passed when rerun after the build. The MCP and Vox Agents builds and focused lint checks passed.
+
+The read-only replay check used the Netherlands archive named below. At cutoff 21, previous check 20, the Dutch receiver saw the Warrior trained at Amsterdam; Germany did not. The Shrine appeared in the longer city building list, outside that reporting period. At turn 350 the Dutch receiver had 71 visible cities; at turn 439 it had 75. Both checks evaluated historical facts within the existing 64 MB QuickJS limit. The transport shares repeated citations and decodes records as needed. The fixture in `vox-agents/tests/mock/newspaper/replay/facts.test.ts` covers private wrap geometry and event windows through the same replay entry point.
 
 Step 1 is verified. GPT-6.2-Sol implemented the runner, OpenCode checked the documentation, and the final Claude Code Opus review (`claude-opus-5-5`) found no material correctness defects. All 369 newspaper mock tests passed across 37 files, and the MCP build, Vox Agents type check, and newspaper build passed. For step 5, derive `TriggerExpressionFields` from the new trigger schema and connect `prepareTriggerExpressions` when the catalogue loads or is restored.
 

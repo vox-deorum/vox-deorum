@@ -1,6 +1,6 @@
 # Newspaper trigger facts
 
-**Status: target design for the fact model and rules.** The recorded evidence they read is implemented and described under [Evidence the facts rely on](#evidence-the-facts-rely-on). [Plan 6](../../../../plans/newspaper/implementation/06-trigger-rules.md) lists the build order.
+City, player and event facts, globals and time accessors are implemented in `editorial/facts/`. The current newspaper still uses fixed detectors. Shortcuts, pair facts, incident facts and the rule catalogue come in later [stages](../../../../plans/newspaper/implementation/06-trigger-rules.md).
 
 The **fact model** is the set of objects a [trigger rule](overview.md) can read: cities, players, events, pairs and incidents. This page is the reference for developers writing rules. It lists every fact, says where each one comes from, and explains how to read the past.
 
@@ -78,9 +78,9 @@ The **reporting period** runs from the previous newspaper check to the cutoff tu
 | `distance.own` | Hex distance to the nearest city of the receiver; 0 for the receiver's own cities | City coordinates |
 | `distance.capital` | Hex distance to the receiver's capital | City coordinates and `self.capital` |
 | `nearestOwn` | The receiver's `city` closest to this one | City coordinates |
-| `founded` | Turn the city was founded | A `PlayerCityFounded` or `UnitCityFounded` event at its plot; otherwise the turn it was first observed, when that falls after the recording began |
+| `founded` | Recorded founding turn, or an estimate from first sighting | A `PlayerCityFounded` or `UnitCityFounded` event at its plot; otherwise the first observation after the recording began, when the city's history is continuous |
 | `captured` | The latest capture: `turn`, `from` (player), `by` (player), `conquest` (true or false) | `CityCaptureComplete` and `CityFlipped` events at its plot |
-| `formerOwner` | The `player` who owned it before the current owner | `captured.from`; otherwise the owner in the oldest snapshot when it differs |
+| `formerOwner` | The `player` who owned it before the current owner | `captured.from`; otherwise the most recent different owner in the same city's continuous observations |
 | `trained` | Units completed inside the window, each with `turn`, `unit` (the unit name), `withGold`, `withFaith` | `CityTrained` events. Each is matched by unit ID to the `UnitCreated` event of the same turn, which carries the unit type, and the type is resolved to its name. |
 | `built` | Buildings and wonders completed inside the window, each with `turn` and `building` | `CityConstructed` events and additions to `wonders` |
 | `conversions` | Religion changes inside the window, each with `turn` and `religion` | `CityConvertsReligion` events at its plot and changes to `majorityReligion` |
@@ -106,7 +106,7 @@ Annexation has no recorded event. A rule reads it from the stored flags: `city.b
 | Religion | `foundedReligion`, `majorityReligion` |
 | Diplomacy | `majorAlly`, `relationships`, `diplomaticDeals` |
 
-The stored column `Cities` is exposed as `cityCount`, because `player.cities` is the list of that player's visible cities. City-states record only identity, `majorAlly`, `cityCount`, `population`, `gold`, `goldPerTurn`, `technologies`, `resources` and `relationships`.
+The stored column `Cities` is exposed as `cityCount`, because `player.cities` is the list of that player's visible cities. The table lists possible fields. A receiver with full access to its own national summary can read its votes, resources, unit count, supply and deals. Foreign summaries use a smaller field list. City-states may have identity, ally, city count, population, gold, income, technologies, resources and relationships, subject to the same projection. A dated national observation establishes which identities are visible, including a known city-state with no readable national values.
 
 ### Inferred player facts
 
@@ -123,7 +123,7 @@ The stored column `Cities` is exposed as `cityCount`, because `player.cities` is
 | `ally` | Defensive pact with the receiver, or a city-state allied to the receiver | `relationships`, `majorAlly` |
 | `vassal`, `master` | The receiver's vassal, or the receiver's master | `relationships` |
 | `relation(other)` | The relationship with any other player: `war`, `friend`, `pact`, `vassalOf`, `masterOf`, `warScore` | `relationships`, through the helpers in `mcp-server/src/diplomacy/relationships.ts` |
-| `rank(field)` | Position among known major civilizations for a numeric fact, 1 being the highest. Equal values share a position, so two leaders both rank 1. Players whose value is hidden are left out. On a snapshot, every player is compared at that snapshot's turn. | The named fact across `players` |
+| `rank(field)` | Position among known majors with a visible number on that date. Equal numbers share a position. If only our score is visible, our score ranks 1 in a comparison of one. For a world-leader story, check how many rivals have readable scores. | The named fact across `players` |
 | `events` | Every permitted event inside the window that names this player or its team | Event player and team IDs |
 | `is.<name>` | A [shortcut](constants.md#shortcuts), such as `player.is.rival` | The catalogue |
 
@@ -141,7 +141,7 @@ The stored column `Cities` is exposed as `cityCount`, because `player.cities` is
 | `plot` | `x` and `y`, when the event has a location |
 | `distance.own` | Hex distance from `plot` to the nearest city of the receiver |
 
-A player ID of -1 means "nobody", and the matching player fact is then missing. The examples rely on these payload names:
+A player ID of -1 means "nobody", and the matching player fact is then missing. Some events reach the receiver because it was involved, even when another party was unknown. On those events, a rule sees a foreign player's ID only if the receiver knew that player at the time. A known member can establish a team ID without revealing its other members. The examples rely on these payload names:
 
 | Event | Names offered |
 | --- | --- |
@@ -206,7 +206,7 @@ A snapshot offers the stored facts, plus `owner` for a city, `rank(field)` and `
 
 | Helper | Meaning | Example |
 | --- | --- | --- |
-| `held(subject, test, span)` | The test was true on every turn of the span, reading each turn from the latest row at or before it. A turn with no observation of the subject makes it false. | `held(city, s => s.foodPerTurn < 0, short)` |
+| `held(subject, test, span)` | The test was true on every turn of the span. An observed gap makes it false. If the span starts before the loaded snapshot history, the result is hidden. | `held(city, s => s.foodPerTurn < 0, short)` |
 | `crossed(now, before, boundary)` | The value rose from below the boundary to it or above | `crossed(city.population, city.before.population, metropolis)` |
 | `dropped(now, before, boundary)` | The value fell from the boundary or above to below it | `dropped(player.happinessPercentage, player.before.happinessPercentage, 50)` |
 | `pct(now, before)` | Relative change, where 0.25 is a 25% rise | `pct(player.sciencePerTurn, player.before.sciencePerTurn) >= 0.25` |
@@ -214,7 +214,7 @@ A snapshot offers the stored facts, plus `owner` for a city, `rank(field)` and `
 
 Spans passed to `at` and `held` are in recorded turns. A [named span](constants.md#spans) is already converted for the game speed; a bare number such as `2` means 2 recorded turns at any speed.
 
-Standard JavaScript is available on lists: `some`, `every`, `filter`, `map`, `includes`, `length` and sorting.
+Standard JavaScript is available on lists: `some`, `every`, `filter`, `map`, `includes` and `length`. Sort a copy, such as `[...cities].sort((a, b) => b.population - a.population)`. A zero baseline makes `pct` unknown.
 
 ## Hidden and missing facts
 
@@ -225,12 +225,13 @@ Reading a fact the receiver could not see, or a snapshot that does not exist, en
 | A detailed fact on a city seen only from outside | The rule stops for that city | `city.foodPerTurn` on a foreign city without full insight |
 | No snapshot at the start of the window | The rule stops | `city.before` for a city first seen two turns ago |
 | A player the receiver has not met | The player is absent from `players` | An unmet civilization never appears as a subject |
-| A relationship with no recorded entry | `relation(other)` reports nothing as true | A missing entry does not count as peace or war |
+| Two known players with no recorded relationship entry | `relation(other)` reports nothing as true | A missing entry does not count as peace or war. If the other player was not known at the requested turn, the relation is hidden. |
+| An unreadable or conflicting war report | The war flag and score are hidden | A newspaper can still report another war it can establish |
 | An inferred fact with nothing to infer from | The fact is hidden | `city.formerOwner` for a city with one known owner |
 
-Use `subject.knows(field)` to branch on availability without stopping the rule: `city.knows('foodPerTurn') ? city.foodPerTurn > 0 : true`. Use `city.founded` or `city.captured` to tell a new city from one newly observed.
+Use `subject.knows(field)` to branch on availability without stopping the rule: `city.knows('foodPerTurn') ? city.foodPerTurn > 0 : true`. To write a story about a witnessed founding, use a founding event. A receiver that first saw a rival city on turn 8 may get a `founded` estimate of 8 even if the rival founded it earlier.
 
-A first observation therefore establishes a baseline. A city seen for the first time cannot report growth until a later check has an earlier snapshot to compare.
+A first observation therefore establishes a baseline. A city seen for the first time cannot report growth until a later check has an earlier snapshot to compare. The first-observation estimate for `founded` needs a history that reaches the start of the receiver's recorded observations. With a shorter history, look for a dated founding event.
 
 ## Evidence the facts rely on
 
@@ -244,7 +245,7 @@ Optional `historyFromTurn` sets the baseline to the earlier of that turn and `pr
 | Event position | A unique earlier readable city row matching the event's city ID and owner, with no intervening change that invalidates it. Trade routes keep separate endpoints; `CapitalChanged` uses the new capital for `CityX` and `CityY`. |
 | Trained unit | One visible same-turn `UnitCreated` with matching player and unit IDs and a recorded text unit name. |
 
-Each item cites its recorded source; `relatedSources` cites the readable rows used in joins. Hidden records can block a join. Map dimensions and wrapping stay private.
+Each item cites its recorded source; `relatedSources` cites the readable rows used in joins. The expression result collects the rows behind the facts it reads. For example, a trained unit name can cite the training event, the unit creation and the city observation that locates it. A player's static name is tied to the dated national observation that made the player visible. Public game settings have no dated observation. Hidden records can block a join. Map dimensions and wrapping stay private.
 
 The allowlist covers founding, capture (including `IsCapital`), other city changes, production, combat, diplomacy and national events. Both founding hooks can support city ownership. `CombatResult` carries a plot; `UnitKilledInCombat` has none. With a recognized status flag, `PlayerGoldenAge` projects a positive award or extension as `Starting: true`, a start flag without a numeric change as true, and an end flag with zero change as false. Otherwise `Starting` is absent.
 
@@ -254,4 +255,4 @@ The allowlist covers founding, capture (including `IsCapital`), other city chang
 2. Add the fact to the builder for its subject under `vox-agents/src/newspaper/editorial/facts/`. Keep the original source rows attached, so the audit and the reader's source inspection still work.
 3. Decide what "hidden" means for it and return hidden when the inputs are missing.
 4. Add a row to the table on this page with its meaning and what it is inferred from.
-5. Add a focused test under `vox-agents/tests/mock/newspaper/` with a present value, a hidden value and a first observation.
+5. Add a focused test under `vox-agents/tests/mock/newspaper/editorial/facts/` with a present value, a hidden value and a first observation.

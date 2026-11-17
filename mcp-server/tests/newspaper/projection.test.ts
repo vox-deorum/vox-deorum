@@ -249,6 +249,38 @@ describe('newspaper field projection', () => {
     expect(projectNewspaperPlayer({ ...row, Player0: 0 }, context())).toBeUndefined();
   });
 
+  it('includes own full-visibility national facts, preserving zero, null and missing values', () => {
+    const row = { ID: 7, Key: 0, Turn: 9, CreatedAt: 1009, Player0: 2,
+      Votes: 0, Resources: null, MilitaryUnits: 0, MilitarySupply: 0, DiplomaticDeals: null,
+      Relationships: { Civ1: ['At War'] }, MajorAlly: 'Civ1' } as any;
+    const values = projectNewspaperPlayer(row, context())!.values;
+    expect(values).toEqual({ Votes: 0, Resources: null, MilitaryUnits: 0, MilitarySupply: 0, DiplomaticDeals: null });
+    expect(projectNewspaperPlayer({ ...row, Player0: 1 }, context())?.values).toEqual({});
+  });
+
+  it('keeps foreign national restrictions at full visibility', () => {
+    const row = { ID: 7, Key: 1, Turn: 9, CreatedAt: 1009, Player0: 2, Era: 'Classical Era',
+      Votes: 3, Resources: { Iron: 2 }, MilitaryUnits: 4, MilitarySupply: 5, DiplomaticDeals: { Civ2: [] },
+      Relationships: { Civ2: ['At War'] }, MajorAlly: 'Civ2' } as any;
+    const values = projectNewspaperPlayer(row, context())!.values;
+    expect(values).toEqual({ Era: 'Classical Era' });
+    expect(values).not.toHaveProperty('Relationships');
+    expect(values).not.toHaveProperty('MajorAlly');
+  });
+
+  it('keeps a visible known city-state with no selected values and omits unknown or hidden rows', () => {
+    const cityState = { ID: 8, Key: 4, Turn: 9, CreatedAt: 1009, Player0: 1,
+      Relationships: { Civ0: 'Friendly' }, MajorAlly: null } as any;
+    const ctx = context();
+    ctx.players = [...ctx.players, { Key: 4, TeamID: 4, IsMajor: 0, Civilization: 'Civ4' } as any];
+    const projected = projectNewspaperPlayer(cityState, ctx);
+    expect(projected?.values).toEqual({});
+    expect(projected?.values).not.toHaveProperty('Relationships');
+    expect(projected?.values).not.toHaveProperty('MajorAlly');
+    expect(projectNewspaperPlayer({ ...cityState, Key: 5 }, ctx)).toBeUndefined();
+    expect(projectNewspaperPlayer({ ...cityState, Player0: 0 }, ctx)).toBeUndefined();
+  });
+
   it.each([
     ['CityConstructed', { OwnerID: 1, CityID: 8, BuildingType: 'Granary', IsGoldPurchase: false }, { Building: 'Granary', IsGoldPurchase: false }],
     ['CityPuppeted', { PlayerID: 1, CityID: 8 }, { PlayerID: 1, CityID: 8 }],

@@ -1,6 +1,6 @@
 # Newspaper trigger overview
 
-**Status: the expression runner is implemented.** The trigger entries, facts and evaluation described here remain the target design. Published issues still use fixed detectors and the existing templates. [Plan 6](../../../../plans/newspaper/implementation/06-trigger-rules.md) tracks the remaining stages.
+**Status: the expression runner and the stage 3 fact model are implemented.** `editorial/facts/` builds city, player, event and global facts. Constants and shortcuts, the rule catalogue and incident and pair facts are still planned, so the trigger entries and evaluation described here remain the target design. Existing editions still use fixed detectors and the existing templates. [Plan 6](../../../../plans/newspaper/implementation/06-trigger-rules.md) tracks the remaining stages.
 
 A **trigger** is a rule that spots one kind of development in the recorded game, such as "a neighboring foreign city changed from puppet to occupied". This page is for developers who add or tune newspaper coverage. It explains what a trigger entry contains, how a check evaluates it, and how to add one.
 

@@ -3,6 +3,10 @@ import { readFile } from 'node:fs/promises';
 import { parse } from 'acorn';
 import { Intrinsics, QuickJS, type QuickJSOptions } from 'quickjs-wasi';
 import { errorMessage } from '../../../utils/errors.js';
+import type { NewspaperSourceReference } from '../../../../../mcp-server/dist/newspaper/evidence.js';
+import { factGuestSource } from '../facts/guest.js';
+import { factModelWrap, type NewspaperFactModel } from '../facts/index.js';
+import { packNewspaperFacts, unpackFactSource } from '../facts/transport.js';
 
 type FactValue = null | boolean | number | string | readonly FactValue[] | ExpressionBindings;
 /** Only JSON data crosses from the fact builders into the sandbox. */
@@ -18,7 +22,11 @@ export interface EditorialExpression {
 
 export interface ExpressionBatch {
   globals?: ExpressionBindings;
+  /** One permission-filtered fact model, shared across trigger windows in this check. */
+  facts?: NewspaperFactModel;
   groups: readonly {
+    /** Exclusive lower bound of this group, defaulting to the previous check. */
+    windowFromTurn?: number;
     /** Zero-based indices in the list supplied at compile time. */
     expressions: readonly number[];
     /** Local bindings, which can override check globals. */
@@ -28,7 +36,8 @@ export interface ExpressionBatch {
 
 type ExpressionValue = undefined | null | boolean | number | string;
 export type ExpressionResult =
-  { value: ExpressionValue } | { error: EditorialExpression & { message: string; skipped?: true } };
+  ({ value: ExpressionValue } | { error: EditorialExpression & { message: string; skipped?: true; hidden?: string } }) &
+  { sources?: NewspaperSourceReference[] };
 
 export interface ExpressionRunner {
   /** Evaluate results in group, subject and expression order. */
@@ -40,7 +49,7 @@ const memoryLimit = 64 * 1024 * 1024;
 const stackLimit = 256 * 1024;
 const interruptLimit = 2_000;
 const interruptionRecoveryLimit = 8;
-type RawResult = { value?: ExpressionValue; error?: string; skipped?: true };
+type RawResult = { value?: ExpressionValue; error?: string; skipped?: true; hidden?: string; sources?: NewspaperSourceReference[] };
 type SandboxWasm = NonNullable<QuickJSOptions['wasm']>;
 // Node provides WebAssembly, but this package's TypeScript config excludes browser types.
 declare const WebAssembly: { compile(bytes: Uint8Array): Promise<SandboxWasm> };
@@ -152,9 +161,15 @@ const startBatch = `
   freeze(function* () {});
   freeze(async function () {});
   freeze(async function* () {});
-  freeze(input);
+  // Raw fact rows and wrapping stay within the dispatcher and need no recursive traversal.
+  freeze(input.globals);
+  freeze(input.groups);
 
-  // Copy only scalar results so they can be retrieved safely if the VM interrupts.
+${unpackFactSource}
+${factGuestSource}
+  const facts = input.facts && factRuntime(unpackFacts(input.facts), input.wrap ?? { x: 0, y: 0 });
+
+  // Authored expressions return scalars so results can be retrieved safely if the VM interrupts.
   function evaluate(slot, bindings) {
     try {
       const value = expressions[slot](bindings);
@@ -172,20 +187,24 @@ const startBatch = `
     }
   }
 
-  for (const { expressions: slots, subjects } of input.groups) {
+  for (const { expressions: slots, subjects, windowFromTurn } of input.groups) {
     const size = slots.length * subjects.length;
     if (skip >= size) {
       skip -= size;
       continue;
     }
+    const view = facts?.view(windowFromTurn ?? input.facts.previous);
     for (let index = Math.floor(skip / slots.length); index < subjects.length; index++) {
-      const bindings = Object.freeze(Object.assign(Object.create(null), input.globals, subjects[index]));
+      const bindings = view
+        ? view.bindings(input.globals, subjects[index])
+        : Object.freeze(Object.assign(Object.create(null), input.globals, subjects[index]));
       for (let offset = skip % slots.length; offset < slots.length; offset++) {
         const slot = slots[offset];
         begin();
+        facts?.reset();
         results.push(disabled.has(slot)
           ? { error: 'Expression exceeded its allowance earlier in this check.', skipped: true }
-          : evaluate(slot, bindings));
+          : facts ? facts.result(evaluate(slot, bindings)) : evaluate(slot, bindings));
       }
       skip = 0;
     }
@@ -289,11 +308,20 @@ async function evaluateBatch(
   let size = 0;
   for (const group of batch.groups) {
     size += group.expressions.length * group.subjects.length;
+    const from = group.windowFromTurn;
+    if (from !== undefined && (!batch.facts || !Number.isSafeInteger(from) || from < -1 || from > batch.facts.turn))
+      throw new RangeError('Invalid editorial fact window start.');
+    if (from !== undefined && batch.facts && from < batch.facts.earliestWindowTurn)
+      throw new RangeError('Editorial fact window starts before the loaded evidence.');
     for (const index of group.expressions)
       if (!Number.isInteger(index) || index < 0 || index >= expressions.length)
         throw new RangeError(`Unknown editorial expression index ${index}.`);
   }
-  const input = JSON.stringify(batch, (key, value) => {
+  const input = JSON.stringify({
+    ...batch,
+    facts: batch.facts && packNewspaperFacts(batch.facts),
+    wrap: batch.facts && factModelWrap(batch.facts),
+  }, (key, value) => {
     if (typeof value === 'number' && !Number.isFinite(value))
       throw new TypeError(`Nonfinite number in editorial expression input at "${key}".`);
     return value;
@@ -314,14 +342,17 @@ async function evaluateBatch(
           error: 'Expression skipped because the check reached its interruption limit.',
           skipped: true,
         };
+        const sources = result.sources?.length ? { sources: result.sources } : {};
         return result.error === undefined
-          ? { value: result.value }
+          ? { value: result.value, ...sources }
           : {
               error: {
                 ...expressions[slot],
                 message: result.error,
                 ...(result.skipped ? { skipped: true } : {}),
+                ...(result.hidden === undefined ? {} : { hidden: result.hidden }),
               },
+              ...sources,
             };
       })
     )

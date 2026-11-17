@@ -12,7 +12,7 @@
 
 ## Distance
 
-Distance is measured in hex tiles between two map positions, using the stored `x` and `y` of cities and event plots. Adjacent tiles are 1 apart. The game stores positions in offset rows, so the builder converts them to hex coordinates before counting steps, the same way the game's own plot distance does.
+Distance is measured in hex tiles between two map positions, using the stored `x` and `y` of cities and event plots. Adjacent tiles are 1 apart. Positions are stored in offset rows, so the builder converts them to hex coordinates before counting steps. When the recording has valid map dimensions and wrap flags, the count follows the shortest permitted wrapping route across each map edge. The recorded geometry stays private and never becomes a fact.
 
 | Reading | Meaning |
 | --- | --- |
@@ -22,7 +22,7 @@ Distance is measured in hex tiles between two map positions, using the stored `x
 | `event.distance.own` | From an event's plot to the receiver's nearest city |
 | `distance(a, b)` | Between any two cities, plots or events |
 
-The new settings collection records the map dimensions and wrap flags privately, so the proposed fact model can measure wrap-aware distance. An older recording without that geometry uses unwrapped distance, so two cities on opposite edges of a wrapping map read as far apart.
+Recordings without valid geometry, including older ones that predate it, use unwrapped distance. Two cities on opposite edges of a wrapping map then read as far apart.
 
 | Constant | Default, in tiles | Meaning | Example on the map |
 | --- | --- | --- | --- |

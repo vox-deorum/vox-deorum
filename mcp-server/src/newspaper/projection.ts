@@ -48,7 +48,7 @@ function diplomatPoints(target: number, context: NewspaperProjectionContext): nu
   return receiver?.DiplomatPoints?.[`Player${target}`] ?? 0;
 }
 
-/** Select small national facts and condition values under the row's recorded access. */
+/** Select national facts under recorded access, keeping a known visible identity with empty values. */
 export function projectNewspaperPlayer(row: Selectable<PlayerSummary>, context: NewspaperProjectionContext): NewspaperSnapshot | undefined {
   const reference = source('PlayerSummaries', row);
   const level = visibility(row, context.receiverPlayerID);
@@ -58,8 +58,9 @@ export function projectNewspaperPlayer(row: Selectable<PlayerSummary>, context: 
   const points = diplomatPoints(row.Key, context);
   const selected = pickFields(row, own ? ownPlayerFields : foreignPlayerFields);
   const values: Record<string, unknown> = projectPlayerReportFields(selected, level, points, info?.IsMajor === 1);
+  if (own && level === 2) Object.assign(values, pickFields(row, ['Votes', 'Resources', 'MilitaryUnits', 'MilitarySupply', 'DiplomaticDeals']));
   if ((own || level === 2) && 'MilitaryStrength' in row) values.MilitaryStrength = row.MilitaryStrength;
-  if (!Object.keys(values).length) return undefined;
+  if (!info && !Object.keys(values).length) return undefined;
   return { source: reference, subjectID: row.Key, values };
 }
 

@@ -22,7 +22,7 @@ flowchart TD
 
 | Stage | Meaning | Example: an enemy worth 700 at 30 of 100 HP that local units can kill |
 | --- | --- | --- |
-| Raw value | Worth: unit power × production cost. | `700 (worth) × (0.6 (retained share) + 0.4 (health share) × 30/100 (remaining HP)) = 504` |
+| Raw value | Unit worth adjusted for remaining health. | `700 (worth) × (0.6 (retained share) + 0.4 (health share) × 30/100 (remaining HP)) = 504` |
 | Normalized quantity | Unit value / typical unit worth `Z_T`, so every unit and city quantity is in **typical units**. | `504 / 400 (typical worth) = 1.26` typical units |
 | Weighted term | Quantity × preference weight; the terms sum to the stake. | `1.26 × 1 (neutral attrition weight) = 1.26` |
 | Queue priority | Stake × theater `θ`. A ranking score: uncapped and not a probability. | `0.2 (cityless theater) × 1.26 = 0.252` |
@@ -37,7 +37,7 @@ flowchart TD
 
 | Value | Rule |
 | --- | --- |
-| Base unit worth | Native unit-type power × production cost, each floored at 0. |
+| Base unit worth | Geometric mean of unit power and production cost, each floored at 0. The DLL uses native unit power. The simulator and its grade use an effective power of 3,000 for the Atomic Bomb. |
 | `F` (unit worth) | Base worth × `1 + 0.1 (per level) × max(0, level − 1)`, plus the ready-upgrade premium for our units only. Read by `OurUnitWorth`. |
 | Ready-upgrade premium | `0.5 × max(0, upgrade base worth − current base worth)` when `CanUpgradeRightNow(true)` passes (technology and project prerequisites met; gold, territory, embarkation and class limits not checked). Added before the health share. |
 | `q` (**retained share**) | Setting `unitKillShare` (0.6): the share of worth kept at any health and lost only by dying. The rest, `1 − q` (0.4), is the **health share**. |
