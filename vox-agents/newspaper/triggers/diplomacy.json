@@ -1,0 +1,23 @@
+[
+  {
+    "id": "deal",
+    "detector": "deal",
+    "threshold": 1,
+    "scale": 4,
+    "tags": [
+      "international",
+      "diplomacy"
+    ]
+  },
+  {
+    "id": "peace",
+    "detector": "peace",
+    "threshold": 1,
+    "scale": 1,
+    "tags": [
+      "international",
+      "diplomacy",
+      "recovery"
+    ]
+  }
+]

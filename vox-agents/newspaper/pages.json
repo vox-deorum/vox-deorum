@@ -1,0 +1,42 @@
+[
+  {
+    "id": "front",
+    "label": "The Record",
+    "tags": [],
+    "minimum": 1,
+    "order": 0,
+    "front": true
+  },
+  {
+    "id": "home",
+    "label": "At Home",
+    "tags": [
+      "domestic",
+      "cities",
+      "society"
+    ],
+    "minimum": 2,
+    "order": 1
+  },
+  {
+    "id": "economy",
+    "label": "Trade and Livelihood",
+    "tags": [
+      "economy",
+      "trade"
+    ],
+    "minimum": 1,
+    "order": 2
+  },
+  {
+    "id": "abroad",
+    "label": "Beyond Our Borders",
+    "tags": [
+      "international",
+      "diplomacy",
+      "culture"
+    ],
+    "minimum": 2,
+    "order": 3
+  }
+]

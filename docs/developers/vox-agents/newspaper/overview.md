@@ -24,7 +24,7 @@ Vox Agents owns editing, replay orchestration, publications, and presentation un
 | `renderer/` | Browser-safe assets, layout, stored presentation resolution, shared reader state, and bridge interfaces |
 | `export/` | Browser capture, cache delivery, export queue, and host routes |
 
-The normal VD server injects replay handlers before the newspaper fallbacks and drains replay and export work during shutdown. The JSON catalogue under `vox-agents/newspaper/catalogue/` supplies runtime editorial settings and authored choices, and is included explicitly in installation.
+The normal VD server injects replay handlers before the newspaper fallbacks and drains replay and export work during shutdown. The JSON catalogue under `vox-agents/newspaper/` supplies runtime editorial settings and authored choices. Installation explicitly includes `defaults.json`, `pages.json`, and the `designs/`, `templates/`, and `triggers/` JSON files.
 
 The plain DOM reader lives in `vox-agents/newspaper/src/reader/`. Its application shell in `src/app/` coordinates fixtures, replay controls, stored issues, votes, and evidence/source inspection. Evidence inspection also works without a generated issue. The export entry point remains `src/export-bridge.ts`. The game viewer and data helpers live in `civ5-mod/UI/Newspaper/`.
 

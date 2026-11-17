@@ -12,15 +12,17 @@ MCP owns evidence schemas and reporting policy. Detectors use the projected obse
 
 ## Catalogue and eligibility
 
-The built-in catalogue consists of flat JSON files under `vox-agents/newspaper/catalogue/`. An optional configured directory overlays these files. Defaults are merged as objects; entries with IDs are merged by ID. Ordinary arrays, such as authored paragraphs and tags, are replaced. Effective configuration is validated before the run starts and saved for resume.
+The built-in catalogue lives under `vox-agents/newspaper/`. Templates and triggers are grouped into files by a topic tag, such as `trade` or `diplomacy`; each entry belongs to one file and retains all its tags. Designs have one file per identity. Each section file contains an array, with all JSON fully expanded using two-space indentation for editing.
 
 | File | Controls |
 | --- | --- |
 | `defaults.json` | Frequency, selection limits, decay, novelty, variety, stickiness, and feedback coefficients |
-| `triggers.json` | Supported detector selection, measured thresholds, importance scales, and tags |
-| `templates.json` | Authored variants, typed links, short pieces, and explicit composites |
+| `triggers/*.json` | Supported detector selection, measured thresholds, importance scales, and tags |
+| `templates/*.json` | Authored variants, typed links, short pieces, and explicit composites |
 | `pages.json` | Front page, section membership, and section minimums |
-| `designs.json` | Design identities, fixed renderer families, saved tokens/assets, layouts, and eligibility |
+| `designs/*.json` | Design identities, fixed renderer families, saved tokens/assets, layouts, and eligibility |
+
+An optional configured directory mirrors this structure and can supply only the files being changed. Section files load in filename order. Defaults merge as objects; entries and authored variants merge by ID across files. Arrays without IDs, such as paragraphs and tags, replace the existing arrays. Flat `templates.json`, `triggers.json`, and `designs.json` overrides remain supported, with grouped overrides applied after them. Effective configuration is validated before the run starts and saved for resume.
 
 Conditions support a finite vocabulary and all/any/not composition. Unknown values remain unknown through negation. For example, missing technology history satisfies neither “Writing researched” nor “Writing not researched.” A choice needs a true condition and a positive final weight. Missing authored placeholders, unavailable variants, and LLM-only templates exclude a candidate before heuristic selection. New detector behavior requires code; prose and tuning belong in the catalogue.
 

@@ -1,0 +1,99 @@
+[
+  {
+    "id": "modern",
+    "version": "1",
+    "title": "The Civic Wire",
+    "condition": {
+      "op": "any",
+      "conditions": [
+        {
+          "op": "technology",
+          "id": "TECH_RADIO"
+        },
+        {
+          "op": "eq",
+          "field": "Era",
+          "value": "Modern"
+        },
+        {
+          "op": "eq",
+          "field": "Era",
+          "value": "Atomic"
+        },
+        {
+          "op": "eq",
+          "field": "Era",
+          "value": "Information"
+        },
+        {
+          "op": "eq",
+          "field": "Era",
+          "value": "Future"
+        },
+        {
+          "op": "eq",
+          "field": "Era",
+          "value": "Modern Era"
+        },
+        {
+          "op": "eq",
+          "field": "Era",
+          "value": "Atomic Era"
+        },
+        {
+          "op": "eq",
+          "field": "Era",
+          "value": "Information Era"
+        },
+        {
+          "op": "eq",
+          "field": "Era",
+          "value": "Future Era"
+        }
+      ]
+    },
+    "weight": {
+      "base": 60
+    },
+    "presentation": {
+      "schemaVersion": 1,
+      "rendererFamily": "modern",
+      "tokens": {
+        "paperColor": "#f4f4f0",
+        "inkColor": "#232b30",
+        "accentColor": "#37697c",
+        "bodyFontAssetId": "font-inter-400",
+        "headingFontAssetId": "font-inter-800"
+      }
+    },
+    "layouts": [
+      {
+        "id": "feed",
+        "variant": "ordinary",
+        "weight": {
+          "base": 10
+        }
+      },
+      {
+        "id": "breaking-wire",
+        "variant": "breaking",
+        "weight": {
+          "base": 10
+        }
+      },
+      {
+        "id": "data-desk",
+        "variant": "analysis",
+        "weight": {
+          "base": 3
+        }
+      }
+    ],
+    "pageLabels": {
+      "front": "Headlines",
+      "home": "Local",
+      "economy": "Economy",
+      "abroad": "World"
+    }
+  }
+]

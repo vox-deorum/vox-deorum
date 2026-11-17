@@ -29,7 +29,7 @@ Recordings are local development data. Substitute another recorded MCP database 
 | `--from`, `--to` | Inclusive recorded-turn range. Start at zero to preserve the full series history. |
 | `--every` | Publication frequency in Standard-equivalent turns; defaults to five. |
 | `--comparison` | Comparison history in recorded turns; defaults to ten. |
-| `--config` | Directory containing catalogue overrides, such as `templates.json` or `triggers.json`. |
+| `--config` | Directory containing catalogue overrides, such as `templates/trade.json` or `triggers/war.json`. |
 | `--render-turns` | Comma-separated publication cutoffs to render as PNGs. Requires installed Edge or Chrome; the command builds the reader. |
 
 Open the output's `index.html` directly in a browser. The report opens with the selected rendered pages, grouped under their issue headings. A disclosure under each issue holds its page contents, article prose, evidence tables, and each article's editorial identity. Below the issues, one disclosure holds the run source, settings, and every editorial check with its status and audit link; issues without page images are collapsed in a separate disclosure. Issue and article links use address fragments, so opening a link expands the disclosures containing its target, including on a repeated click of the current link.
@@ -40,7 +40,7 @@ Before a requested preview run, the command builds dependencies and checks the i
 
 ### Iterate on a template
 
-Create an override directory and copy `vox-agents/newspaper/catalogue/templates.json` into it. Edit a template's authored variants, then rerun the same recording and turn range with `--config` and a new output directory:
+Create an override directory with a `templates/` subfolder and copy the topic file you want to edit, such as `vox-agents/newspaper/templates/trade.json`, into that subfolder. Edit a template's authored variants, then rerun the same recording and turn range with `--config` and a new output directory:
 
 ```sh
 npm run newspaper -w vox-agents -- --database mcp-server/archive/self-play/0d749c4f-69a7-4682-81b3-8fa70f38c012_1794782175768.db --player 7 --from 0 --to 125 --config .tmp/newspaper-templates --output .tmp/newspaper-examples/netherlands-revised --render-turns 120,125

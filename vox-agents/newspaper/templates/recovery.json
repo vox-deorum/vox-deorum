@@ -1,0 +1,80 @@
+[
+  {
+    "id": "settlement-recovery",
+    "triggerIds": [
+      "city-recovery"
+    ],
+    "tags": [
+      "cities",
+      "recovery"
+    ],
+    "short": true,
+    "weight": {
+      "base": 2
+    },
+    "variants": [
+      {
+        "id": "recovery-note",
+        "weight": {
+          "base": 10
+        },
+        "headline": "{{city}} regains population",
+        "body": [
+          "Following an earlier decline, population in {{cityLink}} rose by {{growth}} between turns {{fromTurn}} and {{toTurn}}, reaching {{population}}. Compare its food balance and current production to see how the growing settlement can serve the nation."
+        ],
+        "links": [
+          {
+            "placeholder": "cityLink",
+            "label": "{{city}}",
+            "target": {
+              "type": "city",
+              "cityId": "{{cityId}}"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "provincial-recovery",
+    "triggerIds": [
+      "city-contrast",
+      "city-recovery"
+    ],
+    "compositeOf": [
+      "provincial-contrast",
+      "settlement-recovery"
+    ],
+    "tags": [
+      "cities",
+      "society",
+      "recovery"
+    ],
+    "weight": {
+      "base": 5
+    },
+    "variants": [
+      {
+        "id": "returning-settlement",
+        "weight": {
+          "base": 10
+        },
+        "headline": "{{city}} rebounds as settlement fortunes diverge",
+        "body": [
+          "After an earlier population decline, {{cityLink}} gained {{recoveryGrowth}} population between turns {{recoveryFromTurn}} and {{recoveryToTurn}}, reaching {{population}}. Across the comparison at turns {{contrastFromTurn}} and {{contrastToTurn}}, {{otherCity}} changed by {{otherGrowth}}.",
+          "The rebound gives this settlement a fresh place in the provincial account. Compare food and current production in both cities when reviewing their next priorities."
+        ],
+        "links": [
+          {
+            "placeholder": "cityLink",
+            "label": "{{city}}",
+            "target": {
+              "type": "city",
+              "cityId": "{{cityId}}"
+            }
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -1,0 +1,58 @@
+[
+  {
+    "id": "cultural-development",
+    "triggerIds": [
+      "foreign-culture"
+    ],
+    "tags": [
+      "international",
+      "culture"
+    ],
+    "weight": {
+      "base": 1
+    },
+    "variants": [
+      {
+        "id": "foreign-letter",
+        "weight": {
+          "base": 10
+        },
+        "headline": "{{partner}}'s cultural pace changes",
+        "body": [
+          "Reports from {{partnerLink}} show culture per turn changing from {{previousCulture}} at turn {{cultureFromTurn}} to {{culture}} at turn {{cultureToTurn}}.",
+          "Cultural output is one way to follow a neighbor's development. Keep this change in view alongside later diplomatic and cultural reports."
+        ],
+        "links": [
+          {
+            "placeholder": "partnerLink",
+            "label": "{{partner}}",
+            "target": {
+              "type": "civilization",
+              "civilizationId": "{{partnerId}}"
+            }
+          }
+        ]
+      },
+      {
+        "id": "culture-brief",
+        "weight": {
+          "base": 6
+        },
+        "headline": "A cultural dispatch from {{partner}}",
+        "body": [
+          "Recorded culture per turn in {{partnerLink}} is {{culture}}, compared with {{previousCulture}} in the earlier observation. Those observations date to turns {{cultureFromTurn}} and {{cultureToTurn}}."
+        ],
+        "links": [
+          {
+            "placeholder": "partnerLink",
+            "label": "{{partner}}",
+            "target": {
+              "type": "civilization",
+              "civilizationId": "{{partnerId}}"
+            }
+          }
+        ]
+      }
+    ]
+  }
+]

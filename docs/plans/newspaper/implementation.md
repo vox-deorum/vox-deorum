@@ -101,7 +101,7 @@ Each folder groups a sustained responsibility. Move existing files and all consu
 | `vox-agents/src/newspaper/live/` | Lifecycle, scheduler and MCP-backed state adapter in Plan 5. The game owns committed state. |
 | `vox-agents/src/newspaper/{application,game-delivery}.ts` | Lazy shared renderer, sample orchestration and acknowledged MCP delivery. The VD server owns startup and shutdown. |
 | `vox-agents/newspaper/src/reader/` and `src/app/` | Reader DOM/layout and the browser application respectively, including replay controls and source inspection. Plan 4 completes archive navigation. The export entry stays at `src/export-bridge.ts`. |
-| `vox-agents/newspaper/catalogue/` | Flat `defaults.json`, `triggers.json`, `templates.json`, `pages.json` and `designs.json` supply runtime editorial choices; the installer includes them explicitly. |
+| `vox-agents/newspaper/` | `defaults.json`, `pages.json`, per-design files in `designs/`, and topic-tag files in `templates/` and `triggers/` supply runtime editorial choices; the installer includes them explicitly. |
 | `mcp-server/src/newspaper/` | Evidence contracts, queries and field projection in Plan 2; archive protocol types in Plan 3; live mirror and transport in Plan 5. `projection.ts` remains the single reporting-policy owner. |
 | `mcp-server/src/knowledge/` | Shared pure history reads in `history.ts`; Plan 5 collection in `newspaper-collection.ts` and database definitions in `schema/newspaper.ts`. |
 | `civ5-mod/UI/Newspaper/` | Viewer, XML, data helpers and mock. Plan 5 adds the game checkpoint store and transport here. |

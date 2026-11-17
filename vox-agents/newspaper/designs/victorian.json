@@ -1,0 +1,148 @@
+[
+  {
+    "id": "victorian",
+    "version": "1",
+    "title": "The Civic Chronicle",
+    "condition": {
+      "op": "any",
+      "conditions": [
+        {
+          "op": "technology",
+          "id": "TECH_WRITING"
+        },
+        {
+          "op": "eq",
+          "field": "Era",
+          "value": "Classical"
+        },
+        {
+          "op": "eq",
+          "field": "Era",
+          "value": "Medieval"
+        },
+        {
+          "op": "eq",
+          "field": "Era",
+          "value": "Renaissance"
+        },
+        {
+          "op": "eq",
+          "field": "Era",
+          "value": "Industrial"
+        },
+        {
+          "op": "eq",
+          "field": "Era",
+          "value": "Modern"
+        },
+        {
+          "op": "eq",
+          "field": "Era",
+          "value": "Atomic"
+        },
+        {
+          "op": "eq",
+          "field": "Era",
+          "value": "Information"
+        },
+        {
+          "op": "eq",
+          "field": "Era",
+          "value": "Future"
+        },
+        {
+          "op": "eq",
+          "field": "Era",
+          "value": "Classical Era"
+        },
+        {
+          "op": "eq",
+          "field": "Era",
+          "value": "Medieval Era"
+        },
+        {
+          "op": "eq",
+          "field": "Era",
+          "value": "Renaissance Era"
+        },
+        {
+          "op": "eq",
+          "field": "Era",
+          "value": "Industrial Era"
+        },
+        {
+          "op": "eq",
+          "field": "Era",
+          "value": "Modern Era"
+        },
+        {
+          "op": "eq",
+          "field": "Era",
+          "value": "Atomic Era"
+        },
+        {
+          "op": "eq",
+          "field": "Era",
+          "value": "Information Era"
+        },
+        {
+          "op": "eq",
+          "field": "Era",
+          "value": "Future Era"
+        }
+      ]
+    },
+    "weight": {
+      "base": 25
+    },
+    "presentation": {
+      "schemaVersion": 1,
+      "rendererFamily": "victorian",
+      "tokens": {
+        "paperColor": "#f2ead7",
+        "inkColor": "#241d18",
+        "accentColor": "#74513a",
+        "bodyFontAssetId": "font-libre-caslon-400",
+        "headingFontAssetId": "font-bodoni-moda-700",
+        "mastheadFontAssetId": "font-unifrakturmaguntia-400"
+      },
+      "assets": {
+        "ornamentAssetId": "victorian-ornament"
+      }
+    },
+    "layouts": [
+      {
+        "id": "broadsheet",
+        "variant": "ordinary",
+        "weight": {
+          "base": 10
+        }
+      },
+      {
+        "id": "war-edition",
+        "variant": "breaking",
+        "weight": {
+          "base": 10
+        }
+      },
+      {
+        "id": "dispatch",
+        "variant": "breaking",
+        "weight": {
+          "base": 4
+        }
+      },
+      {
+        "id": "review",
+        "variant": "analysis",
+        "weight": {
+          "base": 3
+        }
+      }
+    ],
+    "pageLabels": {
+      "front": "Front Page",
+      "abroad": "Foreign Correspondence"
+    }
+  }
+]

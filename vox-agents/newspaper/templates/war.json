@@ -1,0 +1,101 @@
+[
+  {
+    "id": "war-warning",
+    "triggerIds": [
+      "incoming-war"
+    ],
+    "tags": [
+      "war",
+      "diplomacy"
+    ],
+    "weight": {
+      "base": 1
+    },
+    "variants": [
+      {
+        "id": "urgent-dispatch",
+        "weight": {
+          "base": 10
+        },
+        "headline": "War reaches our civilization",
+        "body": [
+          "A declaration of war involving {{partnerLink}} targeted our team at turn {{eventTurn}}.",
+          "Review exposed cities, trade routes, and military positions. The military screen can help you decide where the declaration demands an immediate response."
+        ],
+        "links": [
+          {
+            "placeholder": "partnerLink",
+            "label": "{{partner}}",
+            "target": {
+              "type": "civilization",
+              "civilizationId": "{{partnerId}}"
+            }
+          }
+        ]
+      },
+      {
+        "id": "breaking-account",
+        "weight": {
+          "base": 5
+        },
+        "headline": "A declaration of war against our team",
+        "body": [
+          "At turn {{eventTurn}}, the recorded war declaration involving {{partnerLink}} named our team as its target. Consider the immediate safety of cities and routes while reviewing the military screen."
+        ],
+        "links": [
+          {
+            "placeholder": "partnerLink",
+            "label": "{{partner}}",
+            "target": {
+              "type": "civilization",
+              "civilizationId": "{{partnerId}}"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "war-and-routes",
+    "triggerIds": [
+      "incoming-war",
+      "trade-concentration"
+    ],
+    "compositeOf": [
+      "war-warning",
+      "trade-balance"
+    ],
+    "tags": [
+      "war",
+      "trade",
+      "economy"
+    ],
+    "weight": {
+      "base": 6
+    },
+    "variants": [
+      {
+        "id": "threat-and-trade",
+        "weight": {
+          "base": 10
+        },
+        "headline": "War and the {{partner}} route account",
+        "body": [
+          "A declaration of war involving {{partnerLink}} targeted our team at turn {{eventTurn}}. The route observation at turn {{tradeToTurn}} placed {{share}}% of positive outgoing foreign-route gold with this partner, compared with {{previousShare}}% at turn {{tradeFromTurn}}.",
+          "Review exposed trade connections alongside cities and military positions. The route figures describe the dated observation and provide context for the decisions ahead."
+        ],
+        "links": [
+          {
+            "placeholder": "partnerLink",
+            "label": "{{partner}}",
+            "target": {
+              "type": "trade-relationship",
+              "partnerCivilizationId": "{{partnerId}}",
+              "direction": "export"
+            }
+          }
+        ]
+      }
+    ]
+  }
+]

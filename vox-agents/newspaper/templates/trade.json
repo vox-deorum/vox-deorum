@@ -1,0 +1,144 @@
+[
+  {
+    "id": "trade-balance",
+    "triggerIds": [
+      "trade-concentration"
+    ],
+    "tags": [
+      "economy",
+      "trade"
+    ],
+    "weight": {
+      "base": 1
+    },
+    "variants": [
+      {
+        "id": "merchant-account",
+        "weight": {
+          "base": 10
+        },
+        "headline": "The {{partner}} route balance",
+        "body": [
+          "At turn {{tradeToTurn}}, routes to {{partnerLink}} brought {{gold}} gold per turn, or {{share}}% of positive gold from our outgoing foreign routes. The earlier share was {{previousShare}}% at turn {{tradeFromTurn}}.",
+          "The trade screen shows the connections behind these figures. Review the route mix when weighing the benefits of another connection with this partner."
+        ],
+        "links": [
+          {
+            "placeholder": "partnerLink",
+            "label": "{{partner}}",
+            "target": {
+              "type": "trade-relationship",
+              "partnerCivilizationId": "{{partnerId}}",
+              "direction": "export"
+            }
+          }
+        ]
+      },
+      {
+        "id": "route-notes",
+        "weight": {
+          "base": 6
+        },
+        "headline": "Merchant routes redraw the balance",
+        "body": [
+          "{{partnerLink}} accounted for {{share}}% of our positive outgoing foreign-route gold at turn {{tradeToTurn}}, compared with {{previousShare}}% at turn {{tradeFromTurn}}.",
+          "The routes supplied {{gold}} gold per turn in the later observation. Review the route mix when considering future connections."
+        ],
+        "links": [
+          {
+            "placeholder": "partnerLink",
+            "label": "{{partner}}",
+            "target": {
+              "type": "trade-relationship",
+              "partnerCivilizationId": "{{partnerId}}",
+              "direction": "export"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "trade-and-exchange",
+    "triggerIds": [
+      "trade-concentration",
+      "deal"
+    ],
+    "compositeOf": [
+      "trade-balance",
+      "diplomatic-exchange"
+    ],
+    "tags": [
+      "trade",
+      "diplomacy"
+    ],
+    "weight": {
+      "base": 5
+    },
+    "variants": [
+      {
+        "id": "merchant-and-envoy",
+        "weight": {
+          "base": 10
+        },
+        "headline": "Merchants and envoys look toward {{partner}}",
+        "body": [
+          "Routes to {{partnerLink}} accounted for {{share}}% of positive outgoing foreign-route gold at turn {{tradeToTurn}}, compared with {{previousShare}}% at turn {{tradeFromTurn}}. A deal with the same partner was recorded at turn {{eventTurn}}.",
+          "Merchants and envoys both have business with this partner. Consider the route balance alongside the exchange when reviewing the relationship."
+        ],
+        "links": [
+          {
+            "placeholder": "partnerLink",
+            "label": "{{partner}}",
+            "target": {
+              "type": "trade-relationship",
+              "partnerCivilizationId": "{{partnerId}}",
+              "direction": "export"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "trade-and-culture",
+    "triggerIds": [
+      "trade-concentration",
+      "foreign-culture"
+    ],
+    "compositeOf": [
+      "trade-balance",
+      "cultural-development"
+    ],
+    "tags": [
+      "trade",
+      "culture"
+    ],
+    "weight": {
+      "base": 4
+    },
+    "variants": [
+      {
+        "id": "connected-dispatch",
+        "weight": {
+          "base": 10
+        },
+        "headline": "Two views of {{partner}}",
+        "body": [
+          "Routes to {{partnerLink}} supplied {{share}}% of positive outgoing foreign-route gold at turn {{tradeToTurn}}. Cultural output there changed from {{previousCulture}} per turn at turn {{cultureFromTurn}} to {{culture}} at turn {{cultureToTurn}}.",
+          "The routes keep this neighbor in the merchant account; its changing cultural output gives the wider world another reason to pay attention. Follow both measures in later dispatches."
+        ],
+        "links": [
+          {
+            "placeholder": "partnerLink",
+            "label": "{{partner}}",
+            "target": {
+              "type": "civilization",
+              "civilizationId": "{{partnerId}}"
+            }
+          }
+        ]
+      }
+    ]
+  }
+]

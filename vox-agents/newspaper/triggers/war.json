@@ -1,0 +1,13 @@
+[
+  {
+    "id": "incoming-war",
+    "detector": "incomingWar",
+    "threshold": 1,
+    "scale": 1,
+    "tags": [
+      "international",
+      "war",
+      "diplomacy"
+    ]
+  }
+]

@@ -1,0 +1,13 @@
+[
+  {
+    "id": "trade-concentration",
+    "detector": "tradeConcentration",
+    "threshold": 5,
+    "scale": 35,
+    "tags": [
+      "international",
+      "economy",
+      "trade"
+    ]
+  }
+]

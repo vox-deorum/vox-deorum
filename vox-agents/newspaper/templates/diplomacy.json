@@ -1,0 +1,73 @@
+[
+  {
+    "id": "diplomatic-exchange",
+    "triggerIds": [
+      "deal"
+    ],
+    "tags": [
+      "diplomacy"
+    ],
+    "short": true,
+    "weight": {
+      "base": 1
+    },
+    "variants": [
+      {
+        "id": "exchange-brief",
+        "weight": {
+          "base": 10
+        },
+        "headline": "An exchange with {{partner}}",
+        "body": [
+          "Our civilization and {{partnerLink}} concluded a deal at turn {{eventTurn}}. Review the exchange in the diplomatic overview as you consider the next step in this relationship."
+        ],
+        "links": [
+          {
+            "placeholder": "partnerLink",
+            "label": "{{partner}}",
+            "target": {
+              "type": "civilization",
+              "civilizationId": "{{partnerId}}"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "peace-brief",
+    "triggerIds": [
+      "peace"
+    ],
+    "tags": [
+      "diplomacy",
+      "recovery"
+    ],
+    "short": true,
+    "weight": {
+      "base": 1
+    },
+    "variants": [
+      {
+        "id": "peace-account",
+        "weight": {
+          "base": 10
+        },
+        "headline": "Peace with {{partner}}",
+        "body": [
+          "A peace event involving our team and {{partnerLink}} was recorded at turn {{eventTurn}}. Peace creates room to review damaged routes and city priorities; recovery will need later observations."
+        ],
+        "links": [
+          {
+            "placeholder": "partnerLink",
+            "label": "{{partner}}",
+            "target": {
+              "type": "civilization",
+              "civilizationId": "{{partnerId}}"
+            }
+          }
+        ]
+      }
+    ]
+  }
+]

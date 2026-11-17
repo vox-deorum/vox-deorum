@@ -1,0 +1,67 @@
+[
+  {
+    "id": "provincial-contrast",
+    "triggerIds": [
+      "city-contrast"
+    ],
+    "tags": [
+      "domestic",
+      "cities"
+    ],
+    "weight": {
+      "base": 1
+    },
+    "variants": [
+      {
+        "id": "settlement-account",
+        "weight": {
+          "base": 10
+        },
+        "headline": "Two settlements, different fortunes",
+        "body": [
+          "Between turns {{fromTurn}} and {{toTurn}}, population in {{cityLink}} changed by {{growth}}, while {{otherCityLink}} changed by {{otherGrowth}}.",
+          "Compare food and current production in the city screen to understand the difference and decide whether either settlement needs attention."
+        ],
+        "links": [
+          {
+            "placeholder": "cityLink",
+            "label": "{{city}}",
+            "target": {
+              "type": "city",
+              "cityId": "{{cityId}}"
+            }
+          },
+          {
+            "placeholder": "otherCityLink",
+            "label": "{{otherCity}}",
+            "target": {
+              "type": "city",
+              "cityId": "{{otherCityId}}"
+            }
+          }
+        ]
+      },
+      {
+        "id": "provincial-notes",
+        "weight": {
+          "base": 6
+        },
+        "headline": "{{city}} and {{otherCity}} take different paths",
+        "body": [
+          "Our settlements do not move at one pace. Recorded population in {{cityLink}} changed by {{growth}}; in {{otherCity}}, by {{otherGrowth}}, over the comparison ending at turn {{toTurn}}.",
+          "A city that grows more slowly may be serving another purpose. Review its food balance and current work before drawing a conclusion."
+        ],
+        "links": [
+          {
+            "placeholder": "cityLink",
+            "label": "{{city}}",
+            "target": {
+              "type": "city",
+              "cityId": "{{cityId}}"
+            }
+          }
+        ]
+      }
+    ]
+  }
+]

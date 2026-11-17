@@ -1,22 +1,13 @@
 /** Check configurable presentation decisions with controlled authored inputs. */
-import path from 'node:path';
-import { readFile } from 'node:fs/promises';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { createInitialPublicationState } from '../../../../src/newspaper/contracts/publication.js';
-import { builtInCatalogueDirectory, editorialConfigSchema, loadEditorialConfig, type EditorialConfig } from '../../../../src/newspaper/editorial/config.js';
+import { editorialConfigSchema, type EditorialConfig } from '../../../../src/newspaper/editorial/config.js';
 import { evaluateCondition, type ConditionContext } from '../../../../src/newspaper/editorial/conditions.js';
 import { computeFeedback } from '../../../../src/newspaper/editorial/feedback.js';
 import { selectHeuristic } from '../../../../src/newspaper/editorial/heuristic.js';
 import { chooseDesign, createEditorialStreams, presentIssue } from '../../../../src/newspaper/editorial/presentation.js';
 import { eligibleVariants, type EditorialCandidate } from '../../../../src/newspaper/editorial/templates.js';
 import { validateEditorialIssue } from '../../../../src/newspaper/editorial/validation.js';
-
-vi.mock('node:fs/promises', async (importOriginal) => ({
-  ...await importOriginal<typeof import('node:fs/promises')>(),
-  readFile: vi.fn(),
-}));
-
-afterEach(() => vi.resetAllMocks());
 
 /** Build a complete small catalogue whose choices can be varied independently. */
 function createConfig(): EditorialConfig {
@@ -74,42 +65,6 @@ function render(config: EditorialConfig, candidates: EditorialCandidate[], seed 
     proseRandom: streams.prose, presentationRandom: streams.presentation,
   })!;
 }
-
-describe('editorial configuration overlays', () => {
-  it('should replace primitive arrays while merging catalogue entries and authored variants by identity', async () => {
-    const base = createConfig();
-    const overlayDirectory = path.resolve('controlled-editorial-overlay');
-    const documents = new Map<string, unknown>();
-    for (const section of ['defaults', 'triggers', 'templates', 'pages', 'designs'] as const) {
-      documents.set(path.resolve(builtInCatalogueDirectory(), `${section}.json`), base[section]);
-    }
-    documents.set(path.join(overlayDirectory, 'defaults.json'), { feedback: { tag: 0.25 } });
-    documents.set(path.join(overlayDirectory, 'triggers.json'), [{ id: 'war', tags: [] }]);
-    documents.set(path.join(overlayDirectory, 'templates.json'), [{
-      id: 'coverage', triggerIds: ['peace'], tags: ['replacement'],
-      variants: [{ id: 'first', body: ['Replacement {{name}}'] }],
-    }]);
-    documents.set(path.join(overlayDirectory, 'pages.json'), [{
-      id: 'economy', label: 'Economy', tags: ['economy'], minimum: 1, order: 2,
-    }]);
-    vi.mocked(readFile).mockImplementation(async (filename) => {
-      const value = documents.get(path.resolve(String(filename)));
-      if (value === undefined) throw Object.assign(new Error('Absent overlay'), { code: 'ENOENT' });
-      return JSON.stringify(value);
-    });
-
-    const loaded = await loadEditorialConfig(overlayDirectory);
-    expect(loaded.defaults.feedback).toEqual({ ...base.defaults.feedback, tag: 0.25 });
-    expect(loaded.triggers[0]).toEqual({ ...base.triggers[0], tags: [] });
-    expect(loaded.triggers[1]).toEqual(base.triggers[1]);
-    expect(loaded.templates[0]).toMatchObject({ triggerIds: ['peace'], tags: ['replacement'], weight: base.templates[0].weight });
-    expect(loaded.templates[0].variants).toEqual([
-      { ...base.templates[0].variants[0], body: ['Replacement {{name}}'] }, base.templates[0].variants[1],
-    ]);
-    expect(loaded.pages.map(page => page.id)).toEqual(['front', 'military', 'economy']);
-    expect(loaded.designs).toEqual(base.designs);
-  });
-});
 
 describe('editorial eligibility', () => {
   it('should preserve unknown technology history through negation and composition', () => {

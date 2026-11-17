@@ -1,0 +1,13 @@
+[
+  {
+    "id": "city-contrast",
+    "detector": "cityContrast",
+    "threshold": 1,
+    "scale": 5,
+    "tags": [
+      "domestic",
+      "cities",
+      "society"
+    ]
+  }
+]

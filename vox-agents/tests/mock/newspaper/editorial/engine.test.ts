@@ -270,9 +270,11 @@ describe('editorial engine', () => {
 
     it('should propagate invalid effective layouts and preserve the original checkpoint for retry', () => {
       const first = check(fixture());
+      expect(first.status).toBe('published');
       const preserved = structuredClone(first.state);
       const invalid = structuredClone(config);
-      invalid.designs[0].layouts.find(layout => layout.variant === 'breaking')!.weight.adjustments = [
+      const activeDesign = invalid.designs.find(design => design.id === first.decision.designId)!;
+      activeDesign.layouts.find(layout => layout.variant === 'breaking')!.weight.adjustments = [
         { condition: { op: 'eq', field: 'Era', value: 'Ancient Era' }, add: -10 },
       ];
       expect(editorialConfigSchema.safeParse(invalid).success).toBe(false);
