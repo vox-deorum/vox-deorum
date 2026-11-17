@@ -1,156 +1,201 @@
 # Newspaper trigger overview
 
-Triggers turn permitted recording evidence into measured developments and inferred accounts that authored templates can report. This page is for developers tuning coverage or adding a story family. It defines shared controls, units, evidence and repeat rules, overlays, and the workflow for adding coverage. Each [trigger category](#trigger-categories) has its own page and catalogue file. Read [editorial decisions](../editorial.md) for selection, votes, and presentation, [war and peace coverage](war-and-peace.md) for conflict inference and progress, and [replay](../replay.md) for generating and inspecting issues.
+**Status: target design, documented ahead of the code.** [Plan 6](../../../../plans/newspaper/implementation/06-trigger-rules.md) lists the build order. Until it lands, the code still uses the fixed detector catalogue that this design replaces.
+
+A **trigger** is a rule that spots one kind of development in the recorded game, such as "a neighboring foreign city changed from puppet to occupied". This page is for developers who add or tune newspaper coverage. It explains what a trigger entry contains, how a check evaluates it, and how to add one.
+
+A rule is a JavaScript expression over a **fact model**: cities, players, events and relationships built from the MCP server databases. Code supplies the facts, including inferred ones such as distance or a city's former owner. The catalogue supplies the rules. A new kind of story therefore needs a new catalogue entry and no new code, as long as the facts exist.
+
+```mermaid
+flowchart LR
+    Evidence[Permitted evidence<br/>from MCP] --> Facts[Fact model<br/>cities, players, events, pairs, incidents]
+    Constants[Constants and shortcuts<br/>neighboring, recent, city.is.starving] --> Rules
+    Facts --> Rules[Trigger rules<br/>one JavaScript expression each]
+    Rules --> Developments[Developments<br/>subject, values, importance]
+    Developments --> Templates[Authored templates]
+    Templates --> Selection[Editorial selection]
+```
+
+| Page | Covers |
+| --- | --- |
+| This page | Trigger entries, evaluation, importance, repeats, grouping, authoring workflow |
+| [Facts](facts.md) | Every subject, its stored and inferred facts, time access, hidden facts, helpers |
+| [Constants and shortcuts](constants.md) | Distance measurement, named distances, spans, sizes, type lists, shortcuts |
+| [Examples](examples.md) | Worked triggers with a matching template sketch |
+| [War and peace](war-and-peace.md) | How declarations and settlements become `incident` and `pair` facts |
+
+[Editorial decisions](../editorial.md) covers what happens after a development exists: templates, selection, votes and presentation. [Replay](../replay.md) covers generating and inspecting issues.
+
+## A first example
+
+The trigger `settler-departure` reports a city that shrank because it sent out settlers, while its food supply stayed healthy.
+
+| Field | Value | Reads as |
+| --- | --- | --- |
+| `id` | `settler-departure` | The name templates use |
+| `subject` | `city` | Run the rule once for every city the receiver can see |
+| `window` | `recent` | Compare with the city 5 Standard turns ago |
+| `when` | `city.own` | One of the receiver's cities |
+| | `city.population < city.before.population` | Smaller than at the start of the window |
+| | `city.trained.some(t => settlers.includes(t.unit))` | Trained a settler inside the window |
+| | `city.foodPerTurn > 0` | Food is still positive |
+| `values` | `lost`: `city.before.population - city.population` | A placeholder for the template |
+| `importance` | `30 + 10 * lost` | 40 for one lost population, 50 for two |
+
+`recent` and `settlers` are [constants](constants.md). `city.before` and `city.trained` are [facts](facts.md#city).
+
+## Trigger entries
+
+Entries live in JSON files under `vox-agents/newspaper/triggers/`. Files group entries by topic for editing convenience; the file name has no effect on behavior.
+
+| Field | Required | Meaning | Example |
+| --- | --- | --- | --- |
+| `id` | Yes | Stable identity that templates name. Keep it when tuning. | `settler-departure` |
+| `subject` | Yes | What the rule runs once for: `city`, `player`, `pair`, `event`, `incident` or `world`. See [subjects](#subjects). | `city` |
+| `event` | For `subject: event` | The event type, or list of types, the rule runs on. | `CityCaptureComplete` |
+| `window` | No | How far back the rule looks: `before`, `history`, the `events` global and facts such as `city.trained`. A named span or a number of Standard turns. When omitted, the window is the **reporting period**, which starts at the previous newspaper check. | `recent` |
+| `when` | Yes | The rule. One expression, or a list of expressions that must all be true. | The four entries in the [first example](#a-first-example) |
+| `values` | No | Named expressions that become template placeholders. | `lost: city.before.population - city.population` |
+| `importance` | No | A number or expression, kept within 0 to 100. Defaults to 50. | `30 + 10 * lost` |
+| `urgent` | No | Expression. When true, the development may lead a breaking front page. | `city.distance.own <= adjacent` |
+| `group` | No | Merges several matches into one development. See [grouping](#grouping). | `by: city.owner.id`, `min: 2` |
+| `repeat` | No | When the same subject may fire again: `rearm` (default), `once`, or a span. See [repeats](#repeats). | `medium` |
+| `tags` | No | Topic and scope labels shared with templates, pages, variety and feedback. | `cities`, `international` |
+| `enabled` | No | Set to `false` to switch the trigger off. | `false` |
+
+Expressions in `values`, `importance` and `urgent` can read earlier `values` by name, as `importance` reads `lost` in the first example. A trigger with `group` is the exception: its `importance` and `urgent` read the [group's names](#grouping).
+
+### Subjects
+
+| `subject` | The rule runs once for | Main name in the expression |
+| --- | --- | --- |
+| `city` | Each city the receiver can see at the cutoff turn | `city` |
+| `player` | Each known major civilization and city-state, including the receiver | `player` |
+| `pair` | Each pair of known players with a recorded relationship | `pair` |
+| `event` | Each permitted event of the listed types inside the reporting period, whatever the `window` | `event` |
+| `incident` | Each inferred war or peace incident inside the reporting period, whatever the `window` | `incident` |
+| `world` | Once per check, for rules that compare many subjects | The globals only |
+
+Every expression can also read the globals `self` (the receiver), `players`, `cities`, `events`, `turn` and `game`. A `city` rule can therefore compare its city against `self.capital`, and a `world` rule can scan `players` for a new leader.
+
+## How a check evaluates triggers
+
+```mermaid
+flowchart TD
+    Build[Build the fact model once] --> Each[For each enabled trigger,<br/>list its subjects]
+    Each --> When[Evaluate the when list in order]
+    When -->|an entry is false| Stop[No development]
+    When -->|a fact is hidden or missing| Stop
+    When -->|all true| Repeat{Allowed by repeat?}
+    Repeat -->|no| Stop
+    Repeat -->|yes| Values[Evaluate values]
+    Values --> Group[Apply grouping]
+    Group --> Rate[Evaluate importance and urgent]
+    Rate --> Dev[Development]
+```
+
+| Step | What happens | Recorded in the audit |
+| --- | --- | --- |
+| Build facts | `vox-agents/src/newspaper/editorial/` turns the evidence window into the fact model, once per check. | The evidence request and cutoff |
+| List subjects | Each trigger receives the subjects of its kind. | Subject count |
+| Evaluate `when` | Entries run in order and stop at the first that is false. Put cheap, selective entries such as `city.foreign` first. | The index of the failing entry |
+| Hidden or missing facts | Reading a fact the receiver cannot see, or a snapshot that does not exist, ends the rule for that subject. See [hidden facts](facts.md#hidden-and-missing-facts). | `hidden` and the fact name |
+| Check `repeat` | A subject that already fired may be held back. | The repeat state |
+| Evaluate `values` | Once per matching subject. | Every value |
+| Apply grouping | A trigger with `group` merges its matches. See [grouping](#grouping). | The key and the matches |
+| Evaluate `importance` and `urgent` | Once per development, after grouping, so they can read `count`. | Both results |
+| Create the development | It carries the trigger ID, subject, values, importance, tags, period and the source rows behind each fact that the rule read. | Source references |
+
+A `when` entry passes when JavaScript treats its result as true, so `city.majorityReligion` passes for a city that has a majority religion. A rule that throws an error is reported with its trigger ID and expression and produces no development. `runEditorialCheck` validates every expression for syntax when the catalogue loads.
+
+Rules run in the QuickJS engine that `just-bash` provides, which the player workspace also uses. The newspaper starts it with no folders mounted and no network or clock, so a rule can read only facts, constants and helpers. The same recording, catalogue and check schedule therefore always produce the same developments.
+
+## Importance
+
+`importance` places a development on a scale from 0 to 100. Selection later combines it with series memory, novelty, variety, template weight and votes, so a high importance raises the chance of publication without guaranteeing it.
+
+| Pattern | Expression | Result |
+| --- | --- | --- |
+| Fixed | `60` | Always 60 |
+| Grows with size | `30 + 10 * lost` | 40 at `lost` 1, 70 at `lost` 4, capped at 100 from `lost` 7 |
+| Closer matters more | `80 - 4 * city.distance.own` | 64 at distance 4, 52 at distance 7, 20 at distance 15 |
+| Boost for our own affairs | `city.own ? 70 : 40` | 70 for the receiver's city, 40 otherwise |
+
+Results below 0 become 0 and results above 100 become 100.
+
+## Repeats
+
+`repeat` decides when a subject that already produced a development for this trigger may produce another.
+
+| `repeat` | Fires again | Use for |
+| --- | --- | --- |
+| `rearm` (default) | After a check where the rule was false for that subject | States that come and go, such as a starving city |
+| `once` | Never, for that subject in this game | Milestones, such as a city's first wonder |
+| A span, such as `medium` | At the first check after that many Standard turns where the rule is true, even when it stayed true throughout | Long-running situations worth a follow-up |
+
+Each event is its own subject, so an `event` rule fires once per event without any `repeat` setting. Published fingerprints still prevent an identical development from being selected twice, and series keys still connect later stories about the same city, civilization or pair. The publication state saved by replay keeps the repeat state, so resuming a run preserves it.
+
+## Grouping
+
+`group` merges matches that share a key into one development, so three converted cities become one story.
+
+| `group` field | Meaning | Example |
+| --- | --- | --- |
+| `by` | Expression evaluated per match. Matches with equal results merge. | `city.majorityReligion` |
+| `min` | Smallest number of matches that creates the grouped development. Fewer matches produce nothing. Defaults to 2. | `3` |
+
+A grouped development offers `count`, `key` and `matches`, the list of matched subjects with their own `values`. The trigger's `importance` and `urgent` run once for the group and read these three names and the globals, as in `40 + 10 * count`. Templates receive the same names as placeholders.
+
+## One language for every condition
+
+Templates, variants, weights, pages and designs use the same expressions and the same facts as triggers.
+
+| Place | Reads | Example |
+| --- | --- | --- |
+| Trigger `when` | Its subject and the globals | `city.is.neighbor && city.isPuppet` |
+| Template or variant `when` | The development's subject and `values`, and the globals | `lost >= 2` |
+| Weight adjustment `when` | Same as the variant | `self.era == 'Ancient Era'` |
+| Page or design `when` | The globals | `self.atWar` |
+
+A template names one trigger, or several triggers that must fire for the same subject in the same check. Since one rule can state a conjunction directly, a combined story is usually a single trigger. [Editorial decisions](../editorial.md#catalogue-and-eligibility) describes template matching.
 
 ## Where to work
 
 | Location | Responsibility |
 | --- | --- |
-| `vox-agents/newspaper/triggers/` | Trigger IDs, detector choice, conditions, thresholds, scales, tags, and detector tuning |
-| `vox-agents/newspaper/templates/` | Authored headlines, paragraphs, placeholders, typed links, weights, and composites |
-| `vox-agents/src/newspaper/editorial/check.ts` | Check orchestration and the publication or skip decision |
-| `vox-agents/src/newspaper/editorial/triggers.ts` | Detector dispatch and bounded importance |
-| `vox-agents/src/newspaper/editorial/config/` | Configuration schema, types, and validation in `schema.ts`; catalogue file loading and overlays in `load.ts` |
-| `vox-agents/src/newspaper/editorial/developments/` | Non-war dispatch in `detect.ts`; city, national, and event measurements in `cities.ts`, `national.ts`, and `events.ts`; shared facts in `development-facts.ts` |
-| `vox-agents/src/newspaper/editorial/diplomacy/` | War and peace in `war-peace.ts`, score progress in `war-progress.ts`, relationship facts in `diplomacy-facts.ts`, and incident inference in `diplomacy-incidents.ts` |
-| `vox-agents/src/newspaper/editorial/selection/` | Authored templates, heuristic selection, feedback, and series memory |
-| `vox-agents/src/newspaper/editorial/presentation/` | Issue assembly in `issue.ts` and issue validation in `validation.ts` |
-| `vox-agents/src/newspaper/editorial/shared/` | Conditions, weights, editorial context, source deduplication, and deterministic serialization |
-| `mcp-server/src/newspaper/projection.ts` | Permitted historical fields and events |
-| `mcp-server/src/newspaper/queries.ts` | Recorded snapshots, comparison history, event windows, and city retirement |
-| `mcp-server/src/diplomacy/relationships.ts` | Shared relationship parsing and checks for war, friendship, alliances, and defensive pacts |
+| `vox-agents/newspaper/triggers/` | Trigger entries |
+| `vox-agents/newspaper/constants.json` | Named constants, type lists and shortcuts |
+| `vox-agents/newspaper/templates/` | Authored headlines, paragraphs, placeholders, typed links and weights |
+| `vox-agents/src/newspaper/editorial/config/` | Catalogue schema and validation in `schema.ts`; file loading and overlays in `load.ts` |
+| `vox-agents/src/newspaper/editorial/facts/` | Builds the fact model, including distance and inferred facts |
+| `vox-agents/src/newspaper/editorial/diplomacy/` | War and peace inference that feeds `incident` and `pair` facts |
+| `vox-agents/src/newspaper/editorial/triggers.ts` | Rule evaluation, repeats, grouping and the audit |
+| `vox-agents/src/newspaper/editorial/shared/` | The expression runner shared by triggers, templates, pages and designs |
+| `mcp-server/src/newspaper/projection.ts` | Which historical fields and events the newspaper may read |
+| `mcp-server/src/newspaper/queries.ts` | Recorded snapshots, comparison history and event windows |
 
-```mermaid
-flowchart LR
-    Evidence[Permitted evidence] --> Detector[Measured development]
-    Trigger[Trigger configuration] --> Detector
-    Detector --> Template[Eligible authored template]
-    Template --> Selection[Editorial selection]
-    Selection --> Saved[Saved issue and decision]
-```
+## Add a trigger
 
-## Trigger categories
+1. Write the story in one sentence, then pick the subject it is about. "A nearby city-state ally flipped to a rival" is about an event; "our capital is no longer our largest city" is about the world.
+2. Find the facts in [facts.md](facts.md) and the thresholds in [constants.md](constants.md). Prefer a named constant or shortcut over a bare number, so later tuning happens in one place.
+3. Add the entry to a file under `triggers/`. Order `when` from the most selective entry to the least.
+4. Add a template that names the trigger ID and uses its `values` as placeholders. [Examples](examples.md) pairs each trigger with a template sketch.
+5. Generate a fresh replay and read the article beside its audit. The audit shows, for each subject, which `when` entry stopped the rule.
+6. When a needed fact is absent, add it to the fact model. When the evidence behind it is absent, extend MCP's projection first. Both are code changes; see [adding a fact](facts.md#add-a-fact).
 
-The topic files under `triggers/` contain the shipped defaults. Each category page explains its conditions and units; templates in the matching topic files show the placeholders used in prose.
+Facts are inferred from what the databases hold, and useful coverage matters more than certainty. A rule may rely on an inferred fact such as `city.formerOwner` without proving it; wording in the template can carry any doubt worth mentioning.
 
-| Category | Catalogue file | Focus |
-| --- | --- | --- |
-| [Cities](cities.md) | `triggers/cities.json` | Population, food, recovery, and city status |
-| [Domestic economy](economy.md) | `triggers/economy.json` | Budget transitions, income, and happiness |
-| [Trade](trade.md) | `triggers/trade.json` | Partners, contraction, concentration, and plunder |
-| [Diplomacy](diplomacy.md) | `triggers/diplomacy.json` | First contact and structured deals |
-| [Science](science.md) | `triggers/science.json` | Eras, technologies, output, and technology leadership |
-| [Culture and politics](culture.md) | `triggers/culture.json` | Policies, ideology, culture, tourism, wonders, great works, and golden ages |
-| [Religion](religion.md) | `triggers/religion.json` | Milestones, city conversions, and national majority |
-| [Recovery](recovery.md) | `triggers/recovery.json` | Cross-category recovery coverage; the shipped file is empty |
-| [War](war.md) | `triggers/war.json` | Declarations, obligations, city-state war, and score progress |
-| [Peace](peace.md) | `triggers/peace.json` | Settlements, concessions, and enduring peace |
+## Tune with an overlay
 
-The [war and peace guide](war-and-peace.md) covers incident grouping, obligations, progress tuning, placeholders, and inference limits across the war and peace catalogues.
+Use an overlay directory to compare alternatives without editing the built-in catalogue. Its structure mirrors `vox-agents/newspaper/`; supply only the files and entries being changed. Pass it with CLI `--config` or the browser setting `editorialConfigDirectory`.
 
-Shipped triggers have `threshold: 1`, except `trade-concentration`, whose zero threshold preserves small crossings of its concentration boundary. War and peace detectors require `threshold: 1`; tune their stages with `enabled` and supported `tuning` fields. Each category page gives the `scale` and the magnitude compared with that threshold. History controls use the shared fallbacks below unless a category page supplies a different value. Configuration validation rejects unknown trigger fields, unsupported stage names, and tuning fields that do not apply to that detector and stage.
-
-## Shared controls
-
-A **trigger definition** is an editable catalogue entry with a stable `id`. Its `detector` names supported TypeScript behavior. Several entries may reuse one detector with different tuning.
-
-| Control | Meaning |
+| To change | Overlay content |
 | --- | --- |
-| `id` | Identity referenced by template `triggerIds`; preserve it when tuning existing coverage. |
-| `enabled` | Set to `false` to disable this trigger. Omission enables it. |
-| `detector` | Supported evidence interpretation. Adding a new detector requires source changes. |
-| `stage` | Selects a detector's branch, such as population `milestone`, `boom`, or `decline`. Use only the stages that detector handles. |
-| `condition` | Optional eligibility condition; a missing or unknown fact cannot satisfy it. |
-| `threshold` | Minimum measured magnitude that creates a development. Units depend on the detector. |
-| `scale` | Magnitude that reaches maximum importance; increasing it reduces the importance of the same development. |
-| `tags` | Topic and scope labels shared with templates, page membership, variety, and feedback. |
-| `tuning` | Detector-specific controls described in the category page for its catalogue file. |
+| A named constant | `constants.json` with only that name, for example `neighboring: 9` |
+| One trigger | An entry with the same `id` and only the changed fields |
+| Switch a trigger off | An entry with the same `id` and `enabled: false` |
 
-Importance is `min(importanceMax, importanceMax × magnitude / scale)`. Built-in `importanceMax` is 100. Selection also considers series memory, novelty, variety, template weight, and votes, so passing a trigger threshold does not guarantee publication.
-
-Conditions support `always`, `eq`, `gte`, `lte`, `contains`, `technology`, and `all`/`any`/`not` composition. Trigger conditions read the receiver's projected national facts and context. Variant conditions can also read that development's placeholders. Missing technology history remains unknown under negation.
-
-| Tuning control | Units and fallback when omitted |
-| --- | --- |
-| `window` | History lookback, 15 Standard turns. Increasing it does not fetch more history. CLI `--comparison` uses recorded turns: on Marathon, the default five-Standard-turn publication interval spans 15 recorded turns, so the default `--comparison 10` can miss the baseline. Use `--comparison 45` to supply a 15-Standard-turn detector window at Marathon's three recorded turns per Standard turn. |
-| `maxGap` | Maximum gap for persistence and freshness checks, 5 Standard turns. It does not constrain every ordinary two-snapshot comparison. |
-| `persistence` | Span of qualifying observations for food and budget transitions, 2 Standard turns; at least two qualifying observations are required. |
-| `absolute`, `relative` | Absolute change and proportional change, checked together for ordinary output changes; `relative: 0.25` means 25%. Other detector meanings appear on the category pages. |
-| `reserve` | Detector-specific reserve duration or secondary amount threshold; units appear on the category pages. |
-| `share` | Partner's positive foreign-route gold share as a fraction; the concentration boundary defaults to 0.5, or 50%. |
-| `milestones`, `identities` | Explicit replacement lists of numeric boundaries or recorded identity names. |
-
-Standard-turn durations multiply by the recorded game-speed multiplier. Food reserve duration is measured directly as `FoodStored / -FoodPerTurn` in recorded turns. Treasury reserve duration uses the same ratio for gold, but its configured boundary is in Standard turns. With no pace context, detectors assume Standard speed.
-
-## Evidence and continuity
-
-Each development carries the original `PlayerSummaries`, `CityInformations`, or `GameEvents` references, a dated period, placeholders, a stable fingerprint, and series keys. Inspect these in the replay reader or an article's audit before changing its threshold or prose.
-
-| Rule | Effect on coverage |
-| --- | --- |
-| Historical visibility | MCP projects every observation using recorded access. Later contact or insight cannot reveal an earlier hidden measurement. |
-| Known identity | Recorded civilization and team metadata identifies permitted subjects. It supplies no hidden metrics, and player IDs need not equal team IDs. |
-| Missing observation | Missing fields remain unknown. Gold, gold per turn, food per turn, and happiness values permit signed measurements; other numeric detector fields reject negatives. |
-| Snapshot comparison | A new measurement needs a dated comparable baseline. Seeing a city or civilization for the first time establishes an observation, rather than proving a recent change. |
-| City continuity | Owner and coordinates must remain comparable. Visible capture and raze records retire stale city rows; unresolved lifecycle information can suppress city comparisons. |
-| Event period | Events belong to the interval after the previous completed check through the cutoff. Skipped checks advance this boundary too. |
-| Reporting limits | Reports describe observed changes. See [science](science.md#evidence-and-repeats), [culture](culture.md#evidence-and-repeats), and the [war and peace limits](war-and-peace.md#interpret-uncertainty-proportionately) for claims those recordings cannot establish. |
-
-Recorded enum fields can contain localized names: for example, `TechID`, `ReligionID`, or `PolicyID` may be text after recording enrichment. Curated lists and authored labels must match the recording's values; detectors do not query the live game to translate them.
-
-Reports that cover both scopes derive their `domestic` or `international` tag from the subject, including religion milestones, eras, tourism, and wonders.
-
-## Shared placeholders
-
-Developments from `editorial/developments/detect.ts` have `fromTurn` and `toTurn`, derived from their sources. National and event reports usually supply `partnerId` and `partner`, even when the partner is the receiver; city reports supply `cityId` and `city`. Use those IDs in typed links. The source detector remains the full contract for each branch. Each category page lists its family-specific placeholders.
-
-Output changes supply `output`, `previousOutput`, `change`, and `direction`. Culture metrics add more fields; see [culture](culture.md#placeholders).
-
-## Repeats and persistence
-
-Published fingerprints prevent the same development from being selected again. Series keys connect later developments about the same subject and reserve each series for at most one selected item in an issue. Series history affects scoring; it does not create new evidence. A composite must explicitly name its component templates, share a subject, and have overlapping evidence periods.
-
-Budget and food transitions use observed history, with an earlier opposite state and qualifying observations spanning `persistence` without excessive gaps. The first qualifying observation must become old enough during the current reporting interval. [Economy](economy.md#evidence-and-repeats) and [cities](cities.md#evidence-and-repeats) give the sequences that qualify for their transitions.
-
-Event groups combine duplicate representations of one researched technology, repeated first-contact records for one team, policies adopted in one check, and confirmed city-majority changes by owner. Technology, era, contact, and religion milestone fingerprints use the development's identity so later representations cannot republish an already published milestone; an era's identity is its team and recorded new-era value. Other events stay within their reporting interval; confirmed majority reversals can supply later developments.
-
-Completed checks atomically save their reporting boundary and publication state in the separate replay output. A skipped check saves its boundary and decay without retaining a queue of discarded candidates. Resume restores the saved configuration snapshot, preferences, series, and article history. Start a fresh run to compare catalogue edits. The offline checkpoint does not implement live game-save persistence.
-
-## Tune existing coverage
-
-Use an overlay directory instead of editing the built-ins when comparing alternatives. Its structure mirrors `vox-agents/newspaper/`; supply only the topic files and entries being changed. Pass it with CLI `--config`, or browser setting `editorialConfigDirectory`.
-
-Defaults merge as objects. Entries and authored variants merge by `id` across files; an empty keyed array keeps the inherited entries. Arrays without IDs, including tags, body paragraphs, and curated values, replace the inherited array. Flat `triggers.json`, `templates.json`, and `designs.json` overlays remain supported; grouped topic files apply after them. Removing an entry from an overlay leaves the inherited entry present.
-
-Disable a trigger by overriding its ID with `enabled: false`. To suppress an authored template or variant instead, give it `weight.base: 0` and replace `weight.adjustments` with an empty array; otherwise inherited positive adjustments could re-enable it. Disabling one template leaves other templates and explicit composites available when their own inputs remain eligible.
-
-For example, make population-boom coverage less frequent by adding a `city-population-boom` entry to `.tmp/newspaper-tuning/triggers/cities.json`, changing only these controls:
-
-| Control           | Built-in     | Example override |
-| ----------------- | ------------ | ---------------- |
-| `tuning.absolute` | 2 population | 3 population     |
-| `tuning.relative` | 0.2, or 20%  | 0.25, or 25%     |
-
-With this override, population 10 to 12 fails the absolute requirement; 10 to 13 passes both requirements because the gain is 3, or 30% of the baseline. Leave `scale` unchanged to preserve the importance of qualifying gains. Run the same recording with `--config .tmp/newspaper-tuning` and a new `--output` directory, then compare audits and prose.
-
-### Existing overlays and saved runs
-
-`trade-concentration`, `foreign-culture`, and `deal` retain their trigger IDs. Their familiar trade and culture placeholders remain available, including those used by `trade-and-exchange` and `trade-and-culture`. The new materiality and continuity rules still apply: `deal` now requires consequential structured terms, for example.
-
-Recovery compatibility, including the retained recovery IDs and the removed city-contrast coverage, is described on [recovery](recovery.md#saved-runs-and-removed-coverage).
-
-There is no compatibility mapping for the former `incomingWar` or `peace` detector IDs. Update overlays to the current detector and trigger IDs. Publication checkpoints also require state schema 3; older checkpoints fail validation and must be regenerated. Resume restores a valid run's saved catalogue, while a fresh run uses current built-ins and any supplied overlay.
-
-Saved issues keep their authored content and decisions. Resume restores its original configuration snapshot, while future checks run the installed detector code. A fresh run uses the current built-ins plus the supplied overlay. Check older overrides against `editorial/config/schema.ts` when upgrading, especially removed IDs, changed variant IDs, and unsupported tuning fields.
-
-## Add coverage
-
-1. Decide whether an existing detector already measures the development. If so, add a trigger entry to the category file with a unique ID, its detector's tuning, threshold, scale, and tags. A new ID permits a separate angle without changing templates that use the original ID.
-2. Add a template referencing that ID in `triggerIds`. Give it positive template and variant weights, a headline, body paragraphs, and only placeholders that detector supplies. Mark a brief with `short: true` when appropriate.
-3. Add typed links using supported destinations and the detector's IDs. Link placeholder names also need corresponding `links` entries. A missing factual placeholder makes the variant ineligible.
-4. Reuse page tags or update `pages.json` when the story needs different placement. For a combined story, use explicit `compositeOf` references and compatible subjects and periods.
-5. When evidence interpretation is new, extend the detector schema and implementation. If a required fact is absent from projected evidence, update MCP's historical projection and its visibility tests first. Retain original source references and test missing observations, continuity, first observations, repeat behavior, and the intended boundary.
-6. Generate a fresh replay and read the resulting article beside its source evidence. Confirm the condition, magnitude, chosen template, and competing candidates in the audit.
+Entries merge by `id` across files. A list such as `when` or `tags` replaces the inherited list. Resuming a saved run restores its saved catalogue, so start a fresh run with a new `--output` directory to see the effect of an overlay.
 
 ## Verify changes
 
@@ -163,4 +208,4 @@ npm run type-check -w vox-agents
 npm run build:newspaper -w vox-agents
 ```
 
-For projection changes, also run `npm run test:mock -w mcp-server -- tests/newspaper`. Use the [replay CLI workflow](../replay.md#generate-examples-from-the-command-line) with the same source, receiver, turn range, frequency, and comparison window for each catalogue variant, and a new output directory each time. Omit `--render-turns` for a quick prose-and-audit pass. Automated checks establish contracts and boundaries; human reading establishes whether the coverage is useful and well paced.
+For projection changes, also run `npm run test:mock -w mcp-server -- tests/newspaper`. Use the [replay CLI workflow](../replay.md#generate-examples-from-the-command-line) with the same source, receiver and turn range for each catalogue variant. Automated checks establish that rules evaluate; human reading establishes whether the coverage is useful and well paced.

@@ -147,22 +147,24 @@ Series follow the observed game; play determines their pace and direction. Their
 
 ### 3.3 News triggers
 
-A trigger identifies a development from an in-game event, a comparison with past data, or a comparison between places or civilizations.
+A trigger is a rule that identifies a development from an in-game event, a comparison with past data, or a comparison between places or civilizations. The rule is an expression over **facts**: what the reader's civilization can see about cities, players, events and relationships, including facts inferred from the record such as distance or a city's former owner. Adding a story is a catalogue edit as long as its facts exist.
 
-- **Carries:** observation, affected subjects, time period, supporting facts, and tags.
-- **Fires when:** its conditions hold and the development is observed.
-- **Recurrence:** an ongoing development can become relevant again after a meaningful change or a useful interval.
+- **Runs for:** each city, player, pair of players, event, or war and peace incident, or once for the whole known world.
+- **Carries:** the subject, named values for the template, importance, time period, supporting sources, and tags.
+- **Fires when:** every part of its rule is true for the subject. A fact the reader's civilization could not see stops the rule for that subject.
+- **Recurrence:** by default a subject fires again only after its rule stopped holding. A trigger can instead fire once per game, or again after a set interval.
+- **Grouping:** several matches that share a key, such as cities converting to one religion, can merge into one development.
 
-| Example trigger | What it detects | Possible tags |
+| Example trigger | Rule in words | Possible tags |
 | --- | --- | --- |
-| Happiness improves | National happiness rises meaningfully over a reporting period. | domestic, society |
-| Local happiness falls | One or more cities' local happiness declines over a reporting period. | domestic, society, cities |
-| Trade concentrates | One partner supplies an increasing share of route income. | economy, trade, international |
-| Neighbor gains cultural weight | Comparable visible measures show growing cultural influence. | international, culture |
-| Diplomatic relationships shift | Known alliances or relationships change. | international, diplomacy |
-| A city recovers | Population or output recovers after disruption. | cities, recovery, economy |
+| A neighbor annexes its puppet | A foreign city within neighboring distance was a puppet and is now occupied under the same owner. | international, cities |
+| Settlers depart | One of our cities lost population, trained a settler, and still has positive food. | domestic, cities |
+| A rival settles on our doorstep | A major civilization that is no friend founded a city adjacent to ours. | international, expansion |
+| Trade concentrates | One partner supplies more than half of route income and did not before. | economy, trade, international |
+| Neighboring cities convert | Three or more neighboring cities changed to the same majority religion. | international, religion |
+| A war stalls | We led a war, and the score has barely moved for ten turns. | war, international |
 
-Thresholds and comparison periods are configuration, tuned during replay. Triggers should detect changes significant enough to help explain the game.
+Named constants keep rules readable and tunable in one place: distances such as neighboring (7 tiles) and nearby (15 tiles), spans such as recent (5 Standard turns), and lists such as the settler units. Useful coverage matters more than certainty, so facts are inferred freely from the record and wording carries any doubt worth showing. The [trigger overview](../../developers/vox-agents/newspaper/triggers/overview.md) is the reference.
 
 ### 3.4 News templates
 
@@ -171,13 +173,13 @@ A template defines what the reader should learn and how one or more triggers sup
 | Field | Defines |
 | --- | --- |
 | Story angle | What the reader should learn. |
-| Required triggers | Needed developments and the relationships between their subjects and reporting periods. |
-| Conditions | Requirements for the template to apply. |
+| Required triggers | One trigger, or several that must fire for the same subject in the same check. |
+| Conditions | Requirements for the template to apply, written in the same expression language and over the same facts as trigger rules. |
 | Writing mode | Authored or LLM-only. |
 | Tags | Topics of the resulting story. |
 | Variants | Alternative headlines and article text, each with conditions and weight. |
 | Series keys | Subjects derived from the triggers. |
-| Importance | How much the item matters, scaled by the size of the change. |
+| Importance | How much the item matters, taken from its triggers. |
 | Future graph support | Optional measures, subjects, periods, and supporting observations. |
 
 **Choosing a variant** uses two parts:
@@ -187,7 +189,7 @@ A template defines what the reader should learn and how one or more triggers sup
 | Conditions | Decide eligibility. | Requires Printing Press; only for Venice and Portugal. |
 | Weight | A base value plus conditional adjustments determines relative likelihood. | Base 10; add 90 before Writing; add 50 for civilizations following Tradition. |
 
-- Adjustments use shared conditions and can respond to evidence, the change's size or direction, and earlier coverage.
+- Adjustments use the same expressions and can respond to evidence, the change's size or direction, and earlier coverage.
 - Choose eligible variants in proportion to their weights, letting styles overlap during transitions and keeping prose varied.
 - The same story angle can sound different across eras and civilizations.
 - Authored variants are prepared ahead of time, often with LLM help. LLM help during authoring alone keeps a template authored.
@@ -198,12 +200,12 @@ A template defines what the reader should learn and how one or more triggers sup
 
 | Step or medium | Treatment |
 | --- | --- |
-| Trigger combination | Improving national happiness + worsening local conditions during the same period. |
+| Trigger rule | National happiness improved while at least one of our cities' local happiness worsened during the same period. One rule states both parts. |
 | Oral variant | A short account of the affected towns. |
 | Printed variant | A provincial report. |
 | Digital variant | A concise article with a comparison of cities over time. |
 
-Other combinations can explain a peace dividend through peace and city recovery, or a developing dependency through trade concentration and a partner's changing relationships.
+Other rules can explain a peace dividend through peace and city recovery, or a developing dependency through trade concentration and a partner's changing relationships.
 
 **Graphs are a later extension.** The initial catalogue should work without them.
 

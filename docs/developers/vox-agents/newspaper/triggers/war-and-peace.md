@@ -1,169 +1,140 @@
 # War and peace coverage
 
-This guide is for developers tuning newspaper coverage of conflicts and settlements. It uses the existing recorded `DeclareWar` and `MakePeace` events plus MCP-projected relationship snapshots; it adds no DLL events. War and peace have separate trigger and template files, and their catalogue entries and stages are listed on the [war](war.md#trigger-ids-and-stages) and [peace](peace.md#trigger-ids-and-stages) pages. Battle reports and city captures belong to later military coverage. See the [trigger overview](overview.md) for catalogue overlays and [editorial decisions](../editorial.md) for selection and persistence.
+**Status: target design, documented ahead of the code.** [Plan 6](../../../../plans/newspaper/implementation/06-trigger-rules.md) lists the build order. The inference described here exists today; its output becomes facts for ordinary rules.
 
-## From observations to one account
+Wars and settlements reach the newspaper as two kinds of [facts](facts.md): an **incident**, one declaration or settlement with everyone it drew in, and a **pair**, the standing between two players over time. This page is for developers writing war and peace rules or extending the inference. Code infers the facts; the stories themselves are ordinary [trigger rules](overview.md) with `subject: incident` or `subject: pair`.
 
-A declaration can produce many event records as defensive pacts, vassals, and city-state allies join. The editor uses same-turn event order and observed relationships to infer an **incident**, then offers one main account of it.
+The inference uses the recorded `DeclareWar` and `MakePeace` events plus MCP-projected relationship snapshots. Battle reports and city captures are separate rules over `event` and `city` subjects.
 
 ```mermaid
 flowchart LR
-    Recording[Existing events and summaries] --> Projection[Visible identities and relationships]
-    Projection --> Incident[Likely root and related responses]
-    Projection --> Pair[Observed war and peace by pair]
-    Incident --> Candidate[War or peace account]
-    Pair --> Progress[Score changes and enduring peace]
-    Candidate --> Selection[One selected account per incident]
-    Progress --> Selection
+    Recording[Recorded events<br/>and summaries] --> Projection[Visible identities<br/>and relationships]
+    Projection --> Incident[incident facts<br/>likely root and responses]
+    Projection --> Pair[pair facts<br/>war, peace and score history]
+    Incident --> Rules[Trigger rules]
+    Pair --> Rules
+    Rules --> Selection[One selected account<br/>per incident]
 ```
 
-The incident and the pair history serve different purposes. An incident explains a likely common cause. Pair history tracks the observed war or peace state between two visible players; score progress requires two major powers. Recursive event payloads sometimes repeat the original initiator while naming a different target, or even appear to name the initiator's own team. Those records can support grouping without establishing another opponent pair.
+| Fact | Answers | Typical story |
+| --- | --- | --- |
+| `incident` | Who started it, who was pulled in and why, what part the receiver plays | "We are dragged into war by our defensive pact" |
+| `pair` | Are these two at war, for how long, and how is it going | "The war with Rome grinds to a standstill" |
 
-The first unmatched call with a distinct, resolvable origin and target supplies a likely root; the recording cannot prove that it was the original player action. Fresh master, vassal, pact, and city-state alliance relationships help connect subsequent responses. Same-turn observations can corroborate a connection; older observations provide background. Sharing a turn, initiator, or enemy alone does not combine independent wars.
+## From observations to one incident
 
-One recording has 60 declarations in a turn, beginning with Shaka against Brazil and then India. Brazil and India have a defensive pact, and the Iroquois are Shaka's capitulated vassal, which supports a likely cascade. The event payload has no acting-team or cause field, so this relationship evidence cannot prove which declaration initiated it. City-state participation can be summarized; a separate attack on a city-state can receive its own account.
+A single declaration can produce many event records as defensive pacts, vassals and city-state allies join. The inference groups them into one incident.
+
+| Step | Rule | Example |
+| --- | --- | --- |
+| Find a likely root | The first unmatched call in a turn with a distinct, resolvable origin and target | Shaka declares on Brazil |
+| Attach responses | Later same-turn calls join when a fresh master, vassal, pact or city-state alliance connects them to the root | India joins through its defensive pact with Brazil; the Iroquois join as Shaka's capitulated vassal |
+| Keep independent wars apart | Sharing a turn, an initiator or an enemy alone does not combine calls | Two unrelated declarations in one turn stay two incidents |
+| Summarize city-states | City-state participation is collected in `incident.cityStates` | A separate attack on a city-state is its own incident |
+
+In one recording, the declaration in the table above produced 60 declaration records in a single turn. The grouping turns them into one incident with Shaka, Brazil and India as major participants and a list of city-states.
+
+Recursive event payloads sometimes repeat the original initiator while naming a different target, or name the initiator's own team. Those records support grouping without establishing another opponent pair.
+
+## Incident facts in rules
+
+The [incident fact table](facts.md#incident) lists every field. These rules show the angles the facts support.
+
+| Story | `when` |
+| --- | --- |
+| We declared war | `incident.kind == 'war' && incident.role == 'initiator'` |
+| War was declared on us | `incident.kind == 'war' && incident.role == 'target'` |
+| We were pulled in by a pact | `incident.kind == 'war' && incident.role == 'joined' && incident.reason == 'pact'` |
+| We followed our master | `incident.kind == 'war' && incident.role == 'joined' && incident.reason == 'vassal'` |
+| A foreign war begins nearby | `incident.kind == 'war' && incident.role == 'none' && incident.initiator.is.nearby` |
+| An old war flares up again | `incident.kind == 'war' && incident.resumed` |
+| A war we did not see begin | `incident.kind == 'war' && incident.observed` |
+| We made peace | `incident.kind == 'peace' && incident.role != 'none'` |
+| Peace on one front only | `incident.kind == 'peace' && incident.partial` |
+| Peace with visible concessions | `incident.kind == 'peace' && incident.concessions.length > 0` |
+| A capitulation | `incident.kind == 'peace' && incident.capitulation` |
+
+Every development from one incident shares a conflict key, so selection publishes at most one account of it per issue. Set `urgent` to `incident.kind == 'war' && incident.role == 'target'` to let an attack on the receiver lead a breaking front page.
+
+| Useful `values` | Expression |
+| --- | --- |
+| `initiator`, `target` | `incident.initiator.name`, `incident.target.name` |
+| `participants` | `incident.participants.map(p => p.player.name).join(', ')` |
+| `cityStates` | `incident.cityStates.slice(0, 3).map(p => p.name).join(', ')` |
+| `concessions` | `incident.concessions.join(', ')` |
+
+## Pair facts in rules
+
+A pair tracks the observed war or peace state between two visible players. **War score** is the recorded balance of damage between two major civilizations, from -100 to 100. `pair.warScore` is given from the receiver's perspective when the receiver is one of the two. It is separate from national score, and allied scores are not added together.
+
+| Story | `window` | `when` |
+| --- | --- | --- |
+| We gain an advantage | `short` | `pair.involvesSelf`, `crossed(pair.warScore, pair.before.warScore, 25)`, `held(pair, s => s.warScore >= 25, 2)` |
+| A commanding position | `short` | `crossed(pair.warScore, pair.before.warScore, 60)`, `held(pair, s => s.warScore >= 60, 2)` |
+| A swing | `short` | `Math.abs(pair.warScore - pair.before.warScore) >= 25` |
+| A reversal | `15` | `pair.before.warScore <= -25 && pair.warScore >= 25` |
+| A return to balance | `medium` | `pair.history.some(s => Math.abs(s.warScore) >= 25)`, `held(pair, s => Math.abs(s.warScore) <= 10, recent)` |
+| A stalemate | `medium` | `held(pair, s => Math.abs(s.warScore - pair.warScore) <= 5, medium)` |
+| Enduring peace | | `!pair.atWar && pair.peaceTurns >= medium`, with `repeat: once` |
+
+Checks of the advantage rule at a cutoff of turn 100 on Standard speed, with a boundary of 25 points and a confirmation span of 2 recorded turns (turns 98 to 100):
+
+| Score at turn 90 (`before`) | Score at turn 98 | Score at turn 99 | Score at turn 100 (now) | Result |
+| --- | --- | --- | --- | --- |
+| 10 | 27 | 27 | 30 | Fires: crossed 25 and held |
+| 10 | 18 | 18 | 30 | Waits: crossed, but the score was below 25 at turns 98 and 99 |
+| 40 | 42 | 42 | 45 | Silent: already above 25 at the start of the window |
+| Hidden | 27 | 27 | 30 | Stops: no baseline to compare |
+
+Peace and renewed war reset `warTurns`, `peaceTurns` and the score history, so a new war never inherits an old war's trend. The final score of the war that ended stays readable as `pair.lastWarScore`. An initially peaceful relationship has no known settlement, so `peaceTurns` is hidden for it and it cannot produce a peace anniversary.
 
 ## Reuse relationship helpers
 
-`mcp-server/src/diplomacy/relationships.ts` owns the pure relationship parser and checks for war, friendship, alliances, and defensive pacts. These helpers are available to other features and have no database or live-service dependency. Use them instead of searching relationship strings independently in each detector.
+`mcp-server/src/diplomacy/relationships.ts` owns the relationship parser and the checks for war, friendship, alliances and defensive pacts. `player.relation(other)`, the player flags such as `enemy` and `friend`, and every `pair` fact are built on it. Use these helpers when adding a relationship fact, so every rule reads relationships the same way.
 
-Major summaries record arrays of relationship labels; city-state summaries record a relationship string with additional measurements. The parser extracts relationship meaning and war score. Newspaper projection resolves names to unique, dated, visible player identities and drops private measurements such as war weariness and city-state influence.
+Major summaries record lists of relationship labels; city-state summaries record a relationship string with additional measurements. Newspaper projection resolves names to unique, dated, visible player identities and drops private measurements such as war weariness and city-state influence.
 
-| Observation | Interpretation |
+| Observation | Becomes |
 | --- | --- |
-| Explicit war label | War; retain a recorded war score when present. |
-| Friendship or city-state ally label | A known relationship usable by other detectors. |
-| Master or vassal label | Direction and voluntary or capitulated status. |
-| Missing or empty relationship entry | Unknown; it does not establish peace. |
-| Ambiguous name | Leave the identity unresolved. |
-| Unmet player named in a city-state row | Omit that relationship from the reader's evidence. |
+| Explicit war label | `atWar` true, with `warScore` when recorded |
+| Friendship or city-state ally label | `friend`, `ally` |
+| Master or vassal label | `vassal`, `master`, and whether it is voluntary or capitulated |
+| Missing or empty relationship entry | Nothing is set; the pair's state is hidden |
+| Ambiguous name | The identity stays unresolved and the entry is dropped |
+| Unmet player named in a city-state row | Omitted from the receiver's facts |
 
-Derived diplomacy evidence lives beside raw snapshot values. It includes a baseline before the requested window, observations within the window, and its own interpretation gaps. Each observation retains its original source reference. Diplomacy gaps do not suppress unrelated city comparisons.
+## How sure the facts are
 
-## War and peace angles
+The recordings leave some questions open. Facts give the most useful reading, and template wording carries any doubt worth showing the reader.
 
-Every incident separates the likely original initiator from the reader's reason for participating. A reader can be drawn into a war through a defensive pact even when the initiating declaration names someone else. The same distinctions apply to foreign powers.
-
-| Category | Angles |
+| Limit in the recordings | Effect on facts |
 | --- | --- |
-| War declarations | Initiated by us, imposed on us, foreign declarations, or a broader opening account when direction is unclear. |
-| Obligations | Following a master, vassals joining, defensive-pact participation, and wars inherited with a new voluntary vassal. |
-| City-state wars | Direct attacks, participation in a wider war, and a later alliance change when the city-state's new ally is already at war with an opponent and the city-state's own relationship changes from peace to war. |
-| War continuity | Resumed hostilities or newly observed fighting whose opening was not recorded. |
-| Peace agreements | Our settlements, foreign settlements, master-led peace, and included vassals. |
-| City-state peace | A direct settlement or participation in a wider settlement. |
-| Peace outcomes | Partial peace, visible concessions, capitulation, quiet on known fronts, and enduring peace. |
+| An attack on a vassal redirects to its master before the declaration is recorded. | `incident.target` is the master; the intended vassal target is unknown. |
+| Declarations record the originating player, target team and an aggressor flag. Peace records origin, target and a pacifier flag that the newspaper does not read. Neither records the acting team or the cause. | `initiator`, `target` and each participant's `reason` are inferred from order and relationships. |
+| The aggressor flag does not prove who chose the war, and peace has no proposer. | No fact names a winner or a proposer. Use `incident.pair.lastWarScore` to describe how a war stood when it ended. |
+| The edges of a cascade are not marked. | Responses without relationship support stay separate incidents. |
+| Deal terms can be absent or hidden by visibility. | `incident.concessions` lists only visible kinds of terms. |
+| City-state war lists are incomplete, and nothing links two wars as one conflict. | `incident.partial` means a settling player has another recent known war open. That war may be unrelated. |
 
-An incident presents unique participants and at most three named city-state examples. Minor-versus-minor responses do not produce separate headlines. A shared incident conflict key prevents participant angles from occupying several slots in the same issue; pair series retain longer-term continuity.
+A same-turn deal after the peace calls, with matching parties and visible terms, supplies `concessions`. A new capitulated relationship within `recent` turns sets `capitulation`.
 
-If the city-state alliance-change angle is disabled or its condition does not match, eligible war continuity can still fall back to a generic observed or resumed account.
-
-Peace terms are available only under the existing deal visibility rules. A same-turn deal after the peace calls, with matching parties and visible terms, can explain concessions. A new capitulated relationship within five Standard turns can support a capitulation account. MCP's `MakePeace` projection contains only the originating player and target team; it omits the acting team, cause, and pacifier flag, so the event alone cannot identify a proposer or winner. A new voluntary-vassal relationship followed by evidence that its master is already at war can support an inherited-war account.
-
-The [war](war.md#trigger-ids-and-stages) and [peace](peace.md#trigger-ids-and-stages) pages list each detector's trigger IDs and stages. The detector selects the behavior, and `stage` selects the angle. Scope and participation placeholders distinguish our involvement from foreign reporting without duplicating the entire catalogue.
-
-## Score-based progress
-
-War score measures the recorded balance of damage between two major powers, from a fixed player's perspective. Its range is -100 to 100. It is separate from national score, and allied scores are not added together.
-
-All durations below use Standard-equivalent turns and scale with recorded game speed. A first observation establishes a baseline. Repeated appearances of the same source row count once.
-
-| Development | Default condition |
-| --- | --- |
-| Advantage | Cross into the +25 or -25 band from an earlier retained observation outside that signed band, then confirm with at least two observations spanning 2 Standard turns. |
-| Commanding position | Cross into the +60 or -60 band from an earlier retained observation outside that signed band, then confirm with at least two observations spanning 2 Standard turns. |
-| Swing | Change by at least 25 points within 10 turns. |
-| Reversal | Move between the opposing +25 and -25 bands within 15 turns. |
-| Return to balance | After an advantage, remain within -10 to +10 for 5 turns. |
-| Stagnation | The newest contiguous stable score tail has at least 4 observations spanning 20 turns, with a range of at most 10 points. Older volatile scores do not delay a new stable period. |
-
-Keep 30 turns of score history, allow gaps of at most 10 turns, and require a latest observation no older than 5 turns. Missing observations break continuity where a claim needs sustained evidence.
-
-At most one progress angle is offered per pair per check, in this order: reversal, commanding position, advantage, swing, balance, stagnation. Normal progress publication has a 10-turn cooldown. A new reversal or commanding position can bypass it. Advantage rearms after the score magnitude falls below 15; a commanding position rearms below 50. Balance can rearm after the score leaves its band. Stagnation starts a new episode after a new war or meaningful score movement beyond its configured range from the last published score; quiet drift keeps the same episode and does not publish it again. A renewed episode must accumulate a full persistence interval and cannot reuse observations from before its start. Peace and renewed war reset score continuity.
-
-Enduring peace is offered once after 25 Standard turns following a known settlement or a change from observed war to peace, with a recent relationship observation. A gap longer than `enduringPeace.maxGap` (10 Standard turns by default) restarts the observed duration. Once reported, the same peace does not publish again. An initially peaceful relationship supplies a baseline, so it cannot produce a settlement anniversary. Foreign enduring-peace coverage is disabled by default.
-
-### Tuning names and scope
-
-Set these fields in a trigger's `tuning` object. War-progress thresholds and durations are stage-specific except where noted. Disabling a stage suppresses its article, but its numeric tuning can still affect shared calculations. For example, `advantage.absolute` also sets the prior-advantage threshold used by balance.
-
-| Field | Scope and meaning |
-| --- | --- |
-| `absolute` | Stage-specific score boundary, swing size, balance band, or stagnation range. |
-| `persistence` | Stage-specific confirmation span or duration. Enduring peace uses its own observed peace duration. |
-| `window` | `advantage.window` retains score samples for every progress stage (30 Standard turns by default). `swing.window` and `reversal.window` set those stages' lookbacks. |
-| `maxGap`, `freshness` | Progress sample continuity and freshness come from `war-progress-advantage` for every progress stage, even when that stage is disabled. Incident relationships use `war-declaration.freshness` (5 Standard turns by default), also effective when its trigger is disabled. Enduring peace has its own freshness and `maxGap`. |
-| `cooldown` | Available to advantage, swing, balance, and stagnation. Reversal and commanding always bypass cooldown and reject a `cooldown` setting. |
-| `rearm` | Advantage and commanding stages separately set the score magnitude below which that stage can qualify again. |
-| `minimumSamples` | Distinct score observations required for stagnation. |
-| `foreign` | Stage-specific eligibility for foreign pairs. Progress triggers default to `true`; enduring peace defaults to `false`. If a stage is disabled, fails its condition, or excludes a foreign pair, the detector continues to lower-priority eligible progress stages. |
-
-For example, raise `war-progress-advantage`'s `absolute` from 25 to 35 to require a larger lead, and its `persistence` from 2 to 4 to require longer confirmation. Keep `rearm` below the new boundary so a small fluctuation around that boundary does not create repeated stories. Only the tuning fields listed for a stage are accepted; configuration validation rejects unused stage settings. The catalogue's `threshold` is fixed at 1 for diplomacy triggers. Enabled progress stages cannot request a lookback or persistence span beyond retained history.
-
-| Trigger stage | Accepted tuning fields |
-| --- | --- |
-| `war-declaration` | `freshness` for shared incident relationship lookups; no other war or peace stage accepts this field. |
-| `advantage` | `absolute`, `persistence`, `rearm`, `cooldown`, `foreign`, and shared history `window`, `maxGap`, `freshness`. |
-| `commanding` | `absolute`, `persistence`, `rearm`, `foreign`. |
-| `reversal` | `absolute`, `persistence`, `window`, `foreign`. |
-| `swing` | `absolute`, `window`, `cooldown`, `foreign`. |
-| `balance` | `absolute`, `persistence`, `cooldown`, `foreign`. |
-| `stagnation` | `absolute`, `persistence`, `minimumSamples`, `cooldown`, `foreign`. |
-| `enduringPeace` | `persistence`, `freshness`, `maxGap`, `foreign`. |
-
-## Interpret uncertainty proportionately
-
-| Limit in existing recordings | Reporting approach |
-| --- | --- |
-| An attack on a vassal redirects to its master before the declaration hook. | Describe the recorded conflict and likely obligations; the original intended vassal target cannot be recovered. |
-| MCP exposes `OriginatingPlayerID`, `TargetTeamID`, and `IsAggressor` for declarations; peace exposes only origin and target. Neither projection records the acting team or cause. | Treat root and participant assignments as inferences. Recursive records may repeat an origin, name its own team as target, or omit the vassal that acted. |
-| `IsAggressor` is not proof of the original decision, and `MakePeace` does not expose its pacifier flag. | Avoid assigning intent, proposer, or winner without other evidence. |
-| Cascade boundaries are not explicit. | Use event order and relationship support to group likely responses, preserving separate unsupported roots. |
-| Deal terms can be absent or redacted by recording visibility. | Report only visible terms; do not invent concessions or a winner. |
-| City-state war rosters are incomplete. | Describe peace on known fronts; do not claim the entire world is at peace. |
-
-These limits narrow particular claims while leaving room for useful stories. Recorded quantities stay unchanged. Inferred causes use natural qualifications where useful, and technical explanations belong in the inspector.
-
-## Tune and extend coverage
+## Where to work
 
 | Source | Responsibility |
 | --- | --- |
-| `mcp-server/src/diplomacy/relationships.ts` | Shared public relationship parsing and predicates, also used by Archivist features. |
-| `mcp-server/src/newspaper/projection.ts` | Visibility, identity resolution, and permitted relationship fields. |
-| `editorial/diplomacy/diplomacy-facts.ts` | Dated relationship lookup, pair identity, and game-speed conversion. |
-| `editorial/diplomacy/diplomacy-incidents.ts` | Likely roots, obligations, cascade grouping, and settlement context. |
-| `editorial/diplomacy/war-progress.ts` | Score developments, precedence, and repeat controls. |
-| `editorial/diplomacy/war-peace.ts` | Pair observations, incident angles, and configured trigger creation. |
-| `contracts/diplomacy.ts` | Pair memory and inference audit contracts. |
+| `mcp-server/src/diplomacy/relationships.ts` | Shared relationship parsing and checks, also used by Archivist features |
+| `mcp-server/src/newspaper/projection.ts` | Visibility, identity resolution and permitted relationship fields |
+| `editorial/diplomacy/diplomacy-facts.ts` | Dated relationship lookup, pair identity and game-speed conversion |
+| `editorial/diplomacy/diplomacy-incidents.ts` | Likely roots, obligations, cascade grouping and settlement context |
+| `editorial/diplomacy/war-peace.ts` | Pair history and the `incident` and `pair` facts handed to rules |
+| `contracts/diplomacy.ts` | Pair memory and inference audit contracts |
 
 The relative `editorial/` and `contracts/` paths are under `vox-agents/src/newspaper/`.
 
-### Authored placeholders
+To extend coverage:
 
-The JSON variants hold ordinary declaration and settlement wording. Named participant clauses and city-state lists are assembled from the incident's variable membership in `diplomacy/war-peace.ts`.
+1. For a new angle on existing facts, add a trigger under `vox-agents/newspaper/triggers/` and a template. No code changes.
+2. For a new fact, such as a new participation reason, add it to the inference and to the [incident](facts.md#incident) or [pair](facts.md#pair) table. Put relationship interpretation in the shared helpers when it is useful beyond the newspaper.
+3. Test the inference with independent wars, recursive responses, missing observations and a skipped check, then read the resulting prose in replay.
 
-| Placeholder | Contents |
-| --- | --- |
-| `firstParty`, `secondParty` | Parties in the inferred root pair, ordered from recorded origin to target. |
-| `rootInitiator`, `rootTarget` | Recorded origin and target of the likely root call; unavailable initiation remains unknown. |
-| `direction` | `initiated`, `imposed`, `foreign`, or `unknown`; declaration variants use this as a condition. |
-| `scope`, `stage` | Domestic or international relevance and the configured angle. |
-| `participants`, `participantCount` | Reported major participant names and incident membership count. |
-| `participantDetails` | Optional prose explaining supported master, vassal, pact, or settlement participation. |
-| `cityStates` | Optional formatted city-state sentence, capped at three named examples. |
-| `cityStateNames` | Plain list of the named city-state participants, capped at three; available to authored variants that need their own wording. |
-| `cityState`, `newAlly` | Names used by the later alliance-change angle. |
-| `concessionTypes` | Types of visible concessions, without invented amounts or hidden terms. |
-| `partner`, `eventTurn` | Counterpart label and, for incident templates, the recorded incident turn. |
-| `perspective`, `score`, `previousScore`, `scoreChange`, `advantageSide`, `peaceTurns` | War-progress and enduring-peace templates' named parties, current and comparison score, score change, leading side where applicable, and observed peace duration. |
-
-Optional lists use empty text when there is nothing to name. Keep optional sentences in their own paragraph so an empty list does not leave a fragment. Stage-specific progress and enduring-peace templates show their score and duration placeholders directly.
-
-1. Start with `triggers/war.json` or `triggers/peace.json`. Reuse the detector and stage for an existing angle, and preserve its ID when adjusting its thresholds or enabling it.
-2. Edit the matching template file for wording, links, and weights. Use only placeholders supplied by that stage.
-3. Add new relationship interpretation to the shared helpers when it will be useful beyond the newspaper. Keep visibility decisions in MCP projection and narrative grouping in the editor.
-4. Test a new angle with independent wars, recursive responses, missing observations, and a skipped check before reading the resulting prose in replay.
-
-Disable an inherited trigger explicitly with `enabled: false`. Resuming a current run preserves its saved configuration; start a fresh run to compare catalogue edits. Older detector IDs have no compatibility mapping; update overlays to current IDs.
-
-The publication-state checkpoint uses schema 3 for pair history, score samples, and repeat controls. This is separate from IssueDocument schema 2 and offline replay SQLite `user_version` 2. Checkpoints without the required state schema fail validation and must be regenerated. Skipped checks still advance observations, while publication cooldowns reflect published stories. Inference audit details are saved with each editorial decision and remain outside the article's prose.
+Skipped checks still advance pair history, so a later rule sees the scores from the skipped period. A pair that went unobserved for several turns has a gap there, and `held` is false across it. The inference audit is saved with each editorial decision and stays out of the article's prose.
