@@ -12,6 +12,6 @@ Thresholds, decay, novelty, tag-window length, vote strength, and content minimu
 
 ## Live persistence boundary
 
-The versioned SQLite store and publication contracts serve offline runs. The early save-capacity and coexistence proof in [Plan 5](05-live-integration.md) remains pending and must precede commitment to the live checkpoint representation. Measure real generated archives as well as fixtures, including immutable text, presentation snapshots, evidence summaries, and compact decisions. Offline database size does not prove that the same representation fits a Civilization V save.
+The versioned SQLite store and publication contracts serve offline runs. [Plan 5](05-live-integration.md) will store live issues and editorial state in MCP's per-game database, referenced by a fixed-size checkpoint ID in the Civ V save. Use generated archives and fixtures to measure MCP storage and lookup costs.
 
-Runtime LLM writing, live generation, game-owned storage, and richer media remain in later stages.
+Runtime LLM writing, live generation and storage, and richer media remain in later stages.

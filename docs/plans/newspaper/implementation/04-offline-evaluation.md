@@ -62,4 +62,4 @@ An LLM can attach a valid evidence ID to an unsupported interpretation. Keep fac
 
 ## Out of scope
 
-Live game scheduling, save-backed archives, new foreign-reporting collection, graphs, generated art, audio, and special editions.
+Live game scheduling, MCP storage for live archives, new foreign-reporting collection, graphs, generated art, audio, and special editions.

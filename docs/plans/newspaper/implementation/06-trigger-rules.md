@@ -11,12 +11,14 @@ Replace the 32 fixed detectors with rules. A trigger becomes a JavaScript expres
 | Area | Decision |
 | --- | --- |
 | Expression language | JavaScript, run in QuickJS, for every condition: triggers, templates, variants, weights, pages and designs |
-| Engine | The QuickJS sandbox in `just-bash` (`js-exec`), already a dependency of `vox-agents` for the player workspace. The player workspace mounts folders that `js-exec` can read and write; the newspaper runner mounts none. Step 1 confirms it is fast enough; the fallback is a direct `quickjs-emscripten` dependency. |
-| Existing catalogue | All current triggers and templates are dropped. The documented examples are re-added as the starting set. |
+| Engine | Use QuickJS directly for newspaper expressions. The player workspace's `just-bash` runner provides shell services and starts a new script on each call. Newspaper rules need a reusable compiled catalogue and only the facts supplied by the editor. |
+| Existing catalogue | Delete all legacy triggers and story templates in step 5. In step 8, write fresh headlines and bodies for the 14 documented examples. Tell the reader what happened in their world; keep rule outcomes and evidence diagnostics in the audit. |
 | War and peace | The inference code stays and produces `incident` and `pair` facts. Its triggers become ordinary rules. |
 | Compatibility | None for old trigger IDs, the `op`/`field`/`value` conditions, `compositeOf`, or saved publication checkpoints. Start fresh runs. |
 
 ## Build order
+
+Use one numbered step per handoff. GPT-6.2-Sol implements the step, and Claude Code Opus reviews its diff in a fresh session. Return material findings to Sol and repeat verification and review. Record the verified result and next step here, leave changes unstaged, and wait for the owner's confirmation before starting that step.
 
 | Step | Work | Done when |
 | --- | --- | --- |
