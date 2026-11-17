@@ -14,6 +14,11 @@ export interface ExpressionBindings {
   readonly [name: string]: FactValue;
 }
 
+export const editorialShortcutSubjects = ['city', 'player', 'event', 'pair', 'incident'] as const;
+export type EditorialShortcutDefinitions = Readonly<Partial<Record<
+  typeof editorialShortcutSubjects[number], Readonly<Record<string, string>>
+>>>;
+
 export interface EditorialExpression {
   rule: string;
   field: string;
@@ -22,6 +27,8 @@ export interface EditorialExpression {
 
 export interface ExpressionBatch {
   globals?: ExpressionBindings;
+  /** Scaled catalogue bindings shared by rules and shortcuts. */
+  constants?: ExpressionBindings;
   /** One permission-filtered fact model, shared across trigger windows in this check. */
   facts?: NewspaperFactModel;
   groups: readonly {
@@ -119,7 +126,7 @@ function validateExpression(expression: EditorialExpression): void {
 // Kept as guest source so host compilation cannot rewrite the sandbox program.
 const startBatch = `
 // Evaluate the supplied expressions for each subject, group by group and in catalogue order.
-(function run(expressions, batch) {
+(function run(expressions, shortcuts, batch) {
   'use strict';
   delete globalThis.editorialBatch;
   delete globalThis.queueMicrotask;
@@ -163,11 +170,14 @@ const startBatch = `
   freeze(async function* () {});
   // Raw fact rows and wrapping stay within the dispatcher and need no recursive traversal.
   freeze(input.globals);
+  freeze(input.constants);
   freeze(input.groups);
 
 ${unpackFactSource}
 ${factGuestSource}
-  const facts = input.facts && factRuntime(unpackFacts(input.facts), input.wrap ?? { x: 0, y: 0 });
+  const facts = input.facts && factRuntime(
+    unpackFacts(input.facts), input.wrap ?? { x: 0, y: 0 }, input.constants, shortcuts
+  );
 
   // Authored expressions return scalars so results can be retrieved safely if the VM interrupts.
   function evaluate(slot, bindings) {
@@ -197,7 +207,7 @@ ${factGuestSource}
     for (let index = Math.floor(skip / slots.length); index < subjects.length; index++) {
       const bindings = view
         ? view.bindings(input.globals, subjects[index])
-        : Object.freeze(Object.assign(Object.create(null), input.globals, subjects[index]));
+        : Object.freeze(Object.assign(Object.create(null), input.globals, subjects[index], input.constants));
       for (let offset = skip % slots.length; offset < slots.length; offset++) {
         const slot = slots[offset];
         begin();
@@ -227,20 +237,30 @@ ${source}
 }
 
 /** Compile the whole program, locating a QuickJS parser failure by its expression. */
-function compileBatch(vm: QuickJS, expressions: readonly EditorialExpression[]): Uint8Array {
-  const functions = expressions.map((expression) => {
-    validateExpression(expression);
-    return expressionFunction(expression.source);
-  });
+function compileBatch(
+  vm: QuickJS,
+  expressions: readonly EditorialExpression[],
+  definitions: EditorialShortcutDefinitions | undefined
+): Uint8Array {
+  const shortcuts = editorialShortcutSubjects.flatMap(kind => Object.entries(definitions?.[kind] ?? {}).map(
+    ([name, source]) => ({ kind, name, expression: { rule: 'constants', field: `shortcuts.${kind}.${name}`, source } })
+  ));
+  const sources = [...expressions, ...shortcuts.map(({ expression }) => expression)];
+  for (const expression of sources) validateExpression(expression);
+  const functions = sources.map(({ source }) => expressionFunction(source));
+  const rules = functions.slice(0, expressions.length);
+  const getters = shortcuts.map(({ kind, name }, index) =>
+    `[${JSON.stringify(kind)}, ${JSON.stringify(name)}, ${functions[expressions.length + index]}]`
+  );
   try {
-    return vm.compile(startBatch + functions.join(',\n') + endBatch, filename);
+    return vm.compile(startBatch + rules.join(',\n') + '], [\n' + getters.join(',\n') + endBatch, filename);
   } catch (error) {
     // QuickJS may reject syntax newer than its engine supports. Report the individual expression.
     for (let index = 0; index < functions.length; index++) {
       try {
         vm.compile(`(${functions[index]})`, filename);
       } catch (syntaxError) {
-        throw expressionError(expressions[index], syntaxError);
+        throw expressionError(sources[index], syntaxError);
       }
     }
     throw error;
@@ -361,10 +381,11 @@ async function evaluateBatch(
 
 /** Prepare one catalogue's expressions, retaining only bytecode and source locations between checks. */
 export async function compileEditorialExpressions(
-  definitions: readonly EditorialExpression[]
+  definitions: readonly EditorialExpression[],
+  options: { shortcuts?: EditorialShortcutDefinitions } = {}
 ): Promise<ExpressionRunner> {
   const expressions = definitions.map((definition) => ({ ...definition }));
   using vm = await createSandbox('compile');
-  const bytecode = compileBatch(vm, expressions);
+  const bytecode = compileBatch(vm, expressions, options.shortcuts);
   return { evaluate: (batch) => evaluateBatch(batch, expressions, bytecode) };
 }

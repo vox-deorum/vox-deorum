@@ -20,6 +20,7 @@ function createConfig(): EditorialConfig {
       seriesWeight: 1, noveltyBonus: 1, varietyBonus: 1, designStickiness: 0.8,
       feedback: { window: 50, series: 3, tag: 1, bound: 10 },
     },
+    constants: { distances: {}, spans: { long: 40 }, sizes: {}, shares: {}, types: {}, shortcuts: {} },
     triggers: [
       { id: 'war', detector: 'warTransition', stage: 'declaration', threshold: 1, scale: 1, tags: ['military', 'foreign'] },
       { id: 'peace', detector: 'peaceTransition', stage: 'agreement', threshold: 1, scale: 1, tags: ['diplomacy'] },

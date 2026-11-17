@@ -3,6 +3,8 @@ import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
+import { isRecord } from '../../../utils/guards.js';
+import { prepareTriggerExpressions } from './expressions.js';
 import { editorialConfigSchema, type EditorialConfig } from './schema.js';
 
 /** Resolve built-in files from both source and installed dist directory layouts. */
@@ -64,24 +66,20 @@ function overlay(base: unknown, custom: unknown): unknown {
     for (const entry of custom) entries.set(entry.id, overlay(entries.get(entry.id), entry));
     return [...entries.values()];
   }
-  if (
-    base &&
-    custom &&
-    typeof base === 'object' &&
-    typeof custom === 'object' &&
-    !Array.isArray(custom)
-  ) {
-    const result = { ...base } as Record<string, unknown>;
-    for (const [key, value] of Object.entries(custom)) result[key] = overlay(result[key], value);
-    return result;
-  }
+  if (isRecord(base) && isRecord(custom))
+    return {
+      ...base,
+      ...Object.fromEntries(Object.entries(custom).map(([key, value]) => [
+        key, overlay(Object.hasOwn(base, key) ? base[key] : undefined, value),
+      ])),
+    };
   return custom;
 }
 
 /** Load grouped built-ins and optional flat or grouped overrides, then validate together. */
 export async function loadEditorialConfig(directory?: string): Promise<EditorialConfig> {
   const result: Record<string, unknown> = { version: 1 };
-  for (const name of ['defaults', 'triggers', 'templates', 'pages', 'designs']) {
+  for (const name of ['defaults', 'constants', 'triggers', 'templates', 'pages', 'designs']) {
     const grouped = name === 'triggers' || name === 'templates' || name === 'designs';
     const base = grouped
       ? await readCatalogueSection(builtInCatalogueDirectory(), name)
@@ -91,5 +89,12 @@ export async function loadEditorialConfig(directory?: string): Promise<Editorial
       custom = overlay(custom, await readCatalogueSection(directory, name, true));
     result[name] = overlay(base, custom);
   }
-  return editorialConfigSchema.parse(result);
+  return parseEditorialConfig(result);
+}
+
+/** Apply the same validation to merged files and serialized replay configurations. */
+export async function parseEditorialConfig(input: unknown): Promise<EditorialConfig> {
+  const config = editorialConfigSchema.parse(input);
+  await prepareTriggerExpressions([], config.constants);
+  return config;
 }

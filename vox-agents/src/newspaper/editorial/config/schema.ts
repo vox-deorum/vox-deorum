@@ -4,6 +4,7 @@ import { newspaperLayoutVariantSchema, linkTargetSchema } from '../../contracts/
 import { getNewspaperAsset } from '../../renderer/assets.js';
 import { conditionSchema } from '../shared/conditions.js';
 import { weightSchema } from '../shared/weights.js';
+import { editorialConstantsSchema } from './constants.js';
 
 const eligibleSchema = z.object({ condition: conditionSchema.optional(), weight: weightSchema });
 /** Authored prose uses named placeholders and explicit typed link destinations. */
@@ -237,6 +238,7 @@ export type EditorialDesign = z.infer<typeof designSchema>;
 export const editorialConfigSchema = z
   .object({
     version: z.literal(1),
+    constants: editorialConstantsSchema,
     defaults: z.object({
       frequencyStandardTurns: z.number().int().positive(),
       llmEnabled: z.boolean(),

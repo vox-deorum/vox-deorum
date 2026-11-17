@@ -1,6 +1,6 @@
 # Newspaper trigger facts
 
-City, player and event facts, globals and time accessors are implemented in `editorial/facts/`. The current newspaper still uses fixed detectors. Shortcuts, pair facts, incident facts and the rule catalogue come in later [stages](../../../../plans/newspaper/implementation/06-trigger-rules.md).
+City, player and event facts live in `editorial/facts/`. Rules can read current and historical values and use [shortcuts](constants.md#shortcuts) on those subjects. Published newspapers still use fixed detectors. The rule catalogue, pair facts and incident facts come in later [stages](../../../../plans/newspaper/implementation/06-trigger-rules.md).
 
 The **fact model** is the set of objects a [trigger rule](overview.md) can read: cities, players, events, pairs and incidents. This page is the reference for developers writing rules. It lists every fact, says where each one comes from, and explains how to read the past.
 

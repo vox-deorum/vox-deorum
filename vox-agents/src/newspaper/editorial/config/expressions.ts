@@ -4,6 +4,7 @@ import {
   type EditorialExpression,
   type ExpressionRunner,
 } from '../shared/expressions.js';
+import type { EditorialConstants } from './constants.js';
 
 export interface TriggerExpressionFields {
   id: string;
@@ -31,18 +32,19 @@ export interface CompiledTriggerExpressions {
 
 /** Compile the expression fields of each rule and keep its catalogue location for diagnostics. */
 export async function prepareTriggerExpressions(
-  rules: readonly TriggerExpressionFields[]
+  rules: readonly TriggerExpressionFields[],
+  constants?: EditorialConstants,
 ): Promise<CompiledTriggerExpressions> {
   const expressions: EditorialExpression[] = [];
   const slots = new Map<string, TriggerExpressionSlots>();
   for (const rule of rules) {
     if (slots.has(rule.id)) throw new Error(`Duplicate trigger rule ID "${rule.id}".`);
     /** Register a field and its index in the shared evaluator. */
-    function add(field: string, source: string): number {
+    const add = (field: string, source: string): number => {
       const slot = expressions.length;
       expressions.push({ rule: rule.id, field, source });
       return slot;
-    }
+    };
     slots.set(rule.id, {
       when:
         typeof rule.when === 'string'
@@ -60,5 +62,5 @@ export async function prepareTriggerExpressions(
       groupBy: rule.group && add('group.by', rule.group.by),
     });
   }
-  return { runner: await compileEditorialExpressions(expressions), slots };
+  return { runner: await compileEditorialExpressions(expressions, { shortcuts: constants?.shortcuts }), slots };
 }

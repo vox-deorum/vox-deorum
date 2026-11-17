@@ -74,9 +74,31 @@ describe('newspaper expressions', () => {
         [[{ value: 50 }, { value: true }]],
       ]);
     });
+
+    it('should compile shortcuts for future fact subjects and report the name and source of invalid syntax', async () => {
+      await expect(compileEditorialExpressions([], {
+        shortcuts: { pair: { foreignWar: 'pair.atWar &&' } },
+      })).rejects.toThrow(/shortcuts\.pair\.foreignWar.*pair\.atWar &&/);
+    });
   });
 
   describe('batched evaluation', () => {
+    it('should expose the scaled constants as readonly bindings even without a fact model', async () => {
+      const runner = await compileEditorialExpressions([
+        { rule: 'departure', field: 'when', source: 'recent = 99' },
+        { rule: 'departure', field: 'when', source: 'settlers.push("Warrior")' },
+        { rule: 'departure', field: 'when', source: 'recent === 5 && settlers.includes(unit)' },
+      ]);
+      const [[[assignment, mutation, match]]] = await runner.evaluate({
+        constants: { recent: 5, settlers: ['Pioneer'] },
+        globals: { recent: 15 },
+        groups: [{ expressions: [0, 1, 2], subjects: [{ unit: 'Pioneer', settlers: [] }] }],
+      });
+      expect(assignment).toHaveProperty('error.source');
+      expect(mutation).toHaveProperty('error.source');
+      expect(match).toEqual({ value: true });
+    });
+
     it.each([NaN, Infinity, -Infinity])(
       'should reject the nonfinite fact %s without treating it as null',
       async (value) => {

@@ -1,0 +1,52 @@
+{
+  "distances": {
+    "adjacent": 4,
+    "neighboring": 7,
+    "nearby": 15,
+    "regional": 25
+  },
+  "spans": {
+    "recent": 5,
+    "short": 10,
+    "medium": 20,
+    "long": 40
+  },
+  "sizes": {
+    "town": 5,
+    "largeCity": 15,
+    "metropolis": 25
+  },
+  "shares": {
+    "minority": 0.25,
+    "majority": 0.5,
+    "dominant": 0.75
+  },
+  "types": {
+    "settlers": ["Settler", "Pioneer", "Colonist"],
+    "workers": ["Worker", "Work Boat"],
+    "missionaries": ["Missionary", "Inquisitor", "Great Prophet"],
+    "greatPeople": [
+      "Great Admiral", "Great Artist", "Great Diplomat", "Great Engineer", "Great General",
+      "Great Merchant", "Great Musician", "Great Prophet", "Great Scientist", "Great Writer"
+    ],
+    "defenses": ["Walls", "Castle", "Arsenal", "Military Base", "Walls of Babylon", "Qila", "Bastion Fort"]
+  },
+  "shortcuts": {
+    "city": {
+      "neighbor": "city.foreign && city.distance.own <= neighboring",
+      "nearby": "city.foreign && city.distance.own <= nearby",
+      "frontier": "city.own && cities.some(c => c.foreign && distance(c, city) <= neighboring)",
+      "starving": "city.foodPerTurn < 0 && city.foodStored < -city.foodPerTurn * recent",
+      "besieged": "city.owner.atWar && city.hitPoints < city.maxHitPoints",
+      "conquered": "city.isOccupied || city.isPuppet"
+    },
+    "player": {
+      "neighbor": "!player.self && player.distance <= neighboring",
+      "nearby": "!player.self && player.distance <= nearby",
+      "rival": "player.major && !player.self && !player.friend && !player.ally"
+    },
+    "pair": {
+      "foreignWar": "pair.atWar && !pair.involvesSelf && pair.majors"
+    }
+  }
+}

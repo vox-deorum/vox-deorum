@@ -60,6 +60,7 @@ Source: "..\mcp-server\docs\strategies\*"; DestDir: "{app}\mcp-server\docs\strat
 ; Reader source, its separate TypeScript config, and developer fixtures are excluded.
 Source: "..\vox-agents\*"; DestDir: "{app}\vox-agents"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: ".git,\src\*,\ui\*,node_modules\*,\data\*,\tests\*,logs\*,docs\*,\telemetry\*,.env,\newspaper\*,tsconfig.newspaper.json"
 ; Runtime editorial configuration is packaged separately from reader sources and fixtures.
+Source: "..\vox-agents\newspaper\constants.json"; DestDir: "{app}\vox-agents\newspaper"; Flags: ignoreversion
 Source: "..\vox-agents\newspaper\defaults.json"; DestDir: "{app}\vox-agents\newspaper"; Flags: ignoreversion
 Source: "..\vox-agents\newspaper\pages.json"; DestDir: "{app}\vox-agents\newspaper"; Flags: ignoreversion
 Source: "..\vox-agents\newspaper\designs\*.json"; DestDir: "{app}\vox-agents\newspaper\designs"; Flags: ignoreversion

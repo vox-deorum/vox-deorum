@@ -37,11 +37,11 @@ All values are in assignment score points, after the 10× weight where it applie
 | **Trade guard** | **10**, scaled by gold flavor and health | Yes |
 | Staying near our cities | Up to 10 | Yes |
 | Movement left | 1 per move | Yes |
-| Turn-end danger | Danger as a percent of current HP, compressed above 225 and doubled with no friend beside | No: starting scores and the safety check |
-| Staying beside a friend | 8 to 13 | No: starting scores and the safety check |
-| Defensive terrain | 1 per 5% defense | No: starting scores and the safety check |
+| Turn-end danger | Danger as a percent of current HP, compressed above 225 and doubled with no friend beside | For idle finishes |
+| Staying beside a friend | 8 to 13 | For idle finishes |
+| Defensive terrain | 1 per 5% defense | For idle finishes |
 
-The last three come from `ScoreCombatUnitTurnEnd`. That function only sets each unit's starting plot score and checks the final plan. Plans are ranked by move-time scores, so it never ranks completed plans.
+`ScoreCombatUnitTurnEnd` supplies the last three values when setting starting scores and checking the final plan. If a combat unit's only assignment is to finish on its starting tile, the valid final plot score replaces its provisional score. For example, if that tile falls from +79 to −121, the completed plan loses 200 points. Units that move, attack, or heal retain their assignment scores. Units allowed to finish despite an unsafe tile keep their provisional score.
 
 ## Positioning and danger
 

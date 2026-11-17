@@ -7,15 +7,21 @@ const hexDistance = (${hexDistance.toString()});
 const plot = (${plot.toString()});
 
 // Keep data, source rows and wrapping in this closure. Rules receive only public views.
-function factRuntime(model, wrap) {
+function factRuntime(model, wrap, constants, shortcuts) {
   const views = new Map();
   const eventsById = new Map(model.events.map(event => [event.id, event]));
   const playerIds = Object.keys(model.players);
   const currentIds = { city: new Set(model.subjects.city), player: new Set(model.subjects.player) };
   const subjectInfo = new WeakMap();
   const expressionSubjects = new Map();
+  const shortcutsByKind = new Map();
+  const constantNames = new Set(Object.keys(constants ?? {}));
+  for (const [kind, name, test] of shortcuts) {
+    if (!shortcutsByKind.has(kind)) shortcutsByKind.set(kind, new Map());
+    shortcutsByKind.get(kind).set(name, test);
+  }
   let hidden;
-  const sources = new Map();
+  let sources = new Map();
 
   // Record a readable fact's permitted supporting rows once in order of first use.
   function cite(rows) {
@@ -26,6 +32,25 @@ function factRuntime(model, wrap) {
   function missing(path) {
     hidden ??= path;
     throw new Error('Hidden or missing fact: ' + path);
+  }
+
+  // Probe a shortcut without poisoning the enclosing expression if its inputs are hidden.
+  function canReadShortcut(read) {
+    const previousHidden = hidden, previousSources = sources;
+    hidden = undefined;
+    sources = new Map();
+    try {
+      read();
+      if (hidden) return false;
+      for (const [key, row] of sources) previousSources.set(key, row);
+      return true;
+    } catch (error) {
+      if (hidden) return false;
+      throw error;
+    } finally {
+      hidden = previousHidden;
+      sources = previousSources;
+    }
   }
 
   // Find the latest observation or gap at the requested date.
@@ -151,6 +176,10 @@ function factRuntime(model, wrap) {
       if (cache.has(key)) return cache.get(key);
       const methods = Object.create(null);
       const segment = entry?.segment;
+      const subjectShortcuts = shortcutsByKind.get(kind);
+      let shortcutsView;
+      if (subjectShortcuts)
+        method('is', undefined, () => shortcutsView ??= shortcutView(kind, date, result, subjectShortcuts));
       if (kind === 'player') {
         method('rank', Object.freeze(field => rank(id, date, fields, current, field)));
         method('relation', Object.freeze(other => relation(id, date, fields, other)));
@@ -198,6 +227,27 @@ function factRuntime(model, wrap) {
         cite(prior.sources);
         return subjectView(kind, id, date, prior.fields, false, prior);
       }
+    }
+
+    // Rebind the shortcut to the actual dated subject, with this group's globals and constants.
+    function shortcutView(kind, date, subject, definitions) {
+      const path = kind + '.is';
+      const bindings = Object.freeze(Object.assign(Object.create(globals), { [kind]: subject }));
+      const methods = Object.create(null);
+      const active = new Set();
+      for (const [name, test] of definitions) {
+        const get = () => {
+          if (active.has(name)) throw new Error('Circular shortcut: ' + path + '.' + name);
+          active.add(name);
+          try {
+            return !!test(bindings);
+          } finally {
+            active.delete(name);
+          }
+        };
+        methods[name] = { get, known: track => !track || canReadShortcut(get) };
+      }
+      return record(Object.create(null), path, date, methods);
     }
 
     // A reference follows the queried snapshot's turn unless it specifies a date.
@@ -322,6 +372,7 @@ function factRuntime(model, wrap) {
       pct: { value: Object.freeze((now, before) => before === 0 ? missing('pct') : (now - before) / before) },
       changed: { value: Object.freeze((subject, field) => !same(subject[field], subject.before[field])) },
     });
+    Object.freeze(Object.assign(globals, constants));
 
     // Cite membership in the dated visible set even when a rule reads only the count.
     function currentSubjects(kind) {
@@ -334,13 +385,14 @@ function factRuntime(model, wrap) {
 
     // Only materialize top-level fact references when the expression reads their binding.
     function bindings(globalsInput, local) {
-      const descriptors = Object.assign(Object.create(null), Object.getOwnPropertyDescriptors(globals));
+      const descriptors = Object.create(null);
       for (const values of [globalsInput, local]) if (values) for (const key of Object.keys(values)) {
+        if (constantNames.has(key)) continue;
         const value = values[key];
         descriptors[key] = value?.$kind === 'reference' && has(model.subjects, value.kind) ?
           { get: Object.freeze(() => resolve(value, key, model.turn)) } : { value };
       }
-      return Object.freeze(Object.defineProperties(Object.create(null), descriptors));
+      return Object.freeze(Object.defineProperties(Object.create(globals), descriptors));
     }
     const result = { bindings };
     views.set(from, result);

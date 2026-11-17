@@ -10,13 +10,13 @@ The newspaper turns recorded game evidence into authored heuristic issues, displ
 | [Evaluation](evaluation.md) | Planned | Offline experiments comparing editorial approaches |
 | [Live integration](live-integration.md) | Planned | Live scheduling, MCP archive, save checkpoint IDs, and player integration |
 
-The new trigger design uses JavaScript expressions over facts from the MCP databases. The shared expression runner is implemented; published issues still use the fixed detectors and existing templates. [Plan 6](../../../plans/newspaper/implementation/06-trigger-rules.md) tracks the remaining work.
+The new trigger design uses JavaScript expressions over facts from the MCP databases. The shared runner can read city, player and event facts, constants and shortcuts. Published issues still use the fixed detectors and existing templates. [Plan 6](../../../plans/newspaper/implementation/06-trigger-rules.md) tracks the remaining work.
 
 | Trigger page | Status | Scope |
 | --- | --- | --- |
 | [Trigger overview](triggers/overview.md) | Runner implemented; trigger rules planned | Trigger entries, evaluation, importance, repeats, grouping, and the workflow for adding coverage |
-| [Facts](triggers/facts.md) | Target design | Cities, players, events, pairs and incidents; reading the past; hidden facts |
-| [Constants and shortcuts](triggers/constants.md) | Target design | Distance measurement, named distances, spans, sizes, type lists and shortcuts |
+| [Facts](triggers/facts.md) | City, player and event facts implemented; pairs and incidents planned | Cities, players, events, pairs and incidents; reading the past; hidden facts |
+| [Constants and shortcuts](triggers/constants.md) | Implemented | Distance measurement, named distances, spans, sizes, type lists and shortcuts |
 | [Examples](triggers/examples.md) | Target design | Worked triggers, each with a template sketch |
 | [War and peace](triggers/war-and-peace.md) | Inference implemented; rules are target design | Declaration cascades, obligations, city-state involvement, score progress and settlements as facts |
 
@@ -36,7 +36,7 @@ Vox Agents owns editing, replay orchestration, publications, and presentation un
 | `renderer/` | Browser-safe assets, layout, stored presentation resolution, shared reader state, and bridge interfaces |
 | `export/` | Browser capture, cache delivery, export queue, and host routes |
 
-The normal VD server injects replay handlers before the newspaper fallbacks and drains replay and export work during shutdown. The JSON catalogue under `vox-agents/newspaper/` supplies runtime editorial settings and authored choices. Installation explicitly includes `defaults.json`, `pages.json`, and the `designs/`, `templates/`, and `triggers/` JSON files.
+The normal VD server injects replay handlers before the newspaper fallbacks and drains replay and export work during shutdown. The JSON catalogue under `vox-agents/newspaper/` supplies runtime editorial settings and authored choices. Installation includes `constants.json`, `defaults.json`, `pages.json`, and the JSON files in `designs/`, `templates/`, and `triggers/`.
 
 The plain DOM reader lives in `vox-agents/newspaper/src/reader/`. Its application shell in `vox-agents/newspaper/src/app/` coordinates fixtures, replay controls, stored issues, votes, and evidence/source inspection. Evidence inspection also works without a generated issue. The export entry point remains `src/export-bridge.ts`. The game viewer and data helpers live in `civ5-mod/UI/Newspaper/`.
 

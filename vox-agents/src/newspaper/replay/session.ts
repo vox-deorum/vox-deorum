@@ -8,8 +8,8 @@ import { errorMessage } from '../../utils/errors.js';
 import { replaySettingsSchema, replayStateSchema, replayPreferencesRequestSchema, type ReplayEvidenceResponse, type ReplaySpeed, type ReplayState } from '../contracts/replay.js';
 import { archiveVoteRequestSchema, type ArchiveIssue, type ArchiveList } from '../contracts/archive.js';
 import { createInitialPublicationState, publicationStateSchema, type PublicationState } from '../contracts/publication.js';
-import { loadEditorialConfig } from '../editorial/config/load.js';
-import { editorialConfigSchema, type EditorialConfig } from '../editorial/config/schema.js';
+import { loadEditorialConfig, parseEditorialConfig } from '../editorial/config/load.js';
+import type { EditorialConfig } from '../editorial/config/schema.js';
 import { runEditorialCheck } from '../editorial/check.js';
 import { openReplayDatabase, replaySourceIdentity, readReplayIdentities } from './database.js';
 import { ReplayStore, ReplayStoreConflictError, resolveReplayOutput } from './store.js';
@@ -85,7 +85,7 @@ export class ReplaySession {
             nextState.settings.outputPath = outputPath;
             nextState.outputPath = outputPath;
             nextPublication = saved.publication;
-            nextConfig = editorialConfigSchema.parse(saved.configuration);
+            nextConfig = await parseEditorialConfig(saved.configuration);
           } else {
             if (settings.mode === 'branch') nextStore.load(settings.branchFromRunId!, settings.receiverPlayerID, nextIdentity);
             nextConfig = await loadEditorialConfig(settings.editorialConfigDirectory);

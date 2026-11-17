@@ -65,7 +65,7 @@ After implementing a work unit, fold its verified behavior, ownership, commands,
 | [5. Live publication and MCP storage](implementation/05-live-integration.md) | Human-only collection, background publication, checkpoint restoration from MCP, and the finished game reader. | With the matching database, old saves select the right revisions, delayed work cannot cross timelines, and missing textures fall back to text. |
 | [6. Trigger rules](implementation/06-trigger-rules.md) | Triggers become rules: JavaScript expressions over a fact model with distance, named constants and shortcuts. The fixed detectors and the existing templates are removed and a small example set is re-added. | The documented example triggers produce developments from a recording, and each one's audit shows which part of its rule passed or stopped. |
 
-Plan 6 reworks Plan 3's triggers independently of Plans 4 and 5. The [trigger guide](../../developers/vox-agents/newspaper/triggers/overview.md) distinguishes the shared runner from the rule catalogue and fact model still to come.
+Plan 6 reworks Plan 3's triggers independently of Plans 4 and 5. The [trigger guide](../../developers/vox-agents/newspaper/triggers/overview.md) describes the working expression runner, facts and shortcuts, and the rule catalogue that will replace the fixed detectors.
 
 The accepted game demo uses fixtures. Use Plan 3's generated issues for broader browser and game renderer acceptance before expanding the design catalogue. Live integration follows offline editorial evaluation.
 

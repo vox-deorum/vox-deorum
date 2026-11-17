@@ -1,6 +1,6 @@
 # Newspaper trigger overview
 
-**Status: the expression runner and the stage 3 fact model are implemented.** `editorial/facts/` builds city, player, event and global facts. Constants and shortcuts, the rule catalogue and incident and pair facts are still planned, so the trigger entries and evaluation described here remain the target design. Existing editions still use fixed detectors and the existing templates. [Plan 6](../../../../plans/newspaper/implementation/06-trigger-rules.md) tracks the remaining stages.
+**Status: the expression runner, the stage 3 fact model, and stage 4 constants and shortcuts are implemented.** `editorial/facts/` builds city, player, event and global facts. `vox-agents/newspaper/constants.json` supplies named constants, type lists and shortcuts, with overlays and game-speed scaling of spans. Trigger evaluation comes in stage 5 and pair facts in stage 6, so the trigger entries and evaluation described here remain the target design. Published editions still use fixed detectors and the existing templates. [Plan 6](../../../../plans/newspaper/implementation/06-trigger-rules.md) tracks the remaining stages.
 
 A **trigger** is a rule that spots one kind of development in the recorded game, such as "a neighboring foreign city changed from puppet to occupied". This page is for developers who add or tune newspaper coverage. It explains what a trigger entry contains, how a check evaluates it, and how to add one.
 
@@ -108,9 +108,9 @@ flowchart TD
 
 A `when` entry passes when JavaScript treats its result as true, so `city.majorityReligion` passes for a city that has a majority religion. The trigger evaluator will use the runner's error details to skip a failed match and record why.
 
-The shared runner uses QuickJS directly through `quickjs-wasi`. `prepareTriggerExpressions` in `editorial/config/expressions.ts` validates the expression fields of a merged rule catalogue before any facts are needed. Syntax errors name the rule, field and original expression. Keep the returned runner and field indices in memory; replay snapshots store the catalogue data.
+The shared runner uses QuickJS directly through `quickjs-wasi`. `prepareTriggerExpressions` in `editorial/config/expressions.ts` validates the expression fields of a merged rule catalogue and the shortcut sources from `constants.json` before any facts are needed. Syntax errors name the rule, field and original expression. Keep the returned runner and field indices in memory; replay snapshots store the catalogue data.
 
-For each check, `editorial/shared/expressions.ts` evaluates the batch in a fresh sandbox. The caller supplies JSON globals and subject bindings and receives results in the same order. Rules have no filesystem, network, clock or random source. If an expression exceeds its execution allowance, the runner keeps completed results and skips that expression for the rest of the check. Other expressions can still run. After eight distinct expressions overrun, the runner skips the remainder of the batch. The trigger evaluator will connect this runner to published issues in step 5.
+For each check, `editorial/shared/expressions.ts` evaluates the batch in a fresh sandbox. The caller supplies JSON globals, subject bindings and scaled constants and receives results in the same order. Rules have no filesystem, network, clock or random source. If an expression exceeds its execution allowance, the runner keeps completed results and skips that expression for the rest of the check. Other expressions can still run. After eight distinct expressions overrun, the runner skips the remainder of the batch. The trigger evaluator will connect this runner to published issues in step 5.
 
 ## Importance
 
@@ -168,7 +168,7 @@ A template names one trigger, or several triggers that must fire for the same su
 | `vox-agents/newspaper/triggers/` | Trigger entries |
 | `vox-agents/newspaper/constants.json` | Named constants, type lists and shortcuts |
 | `vox-agents/newspaper/templates/` | Authored headlines, paragraphs, placeholders, typed links and weights |
-| `vox-agents/src/newspaper/editorial/config/` | Catalogue schema and validation in `schema.ts`; file loading and overlays in `load.ts` |
+| `vox-agents/src/newspaper/editorial/config/` | Catalogue schema and validation in `schema.ts`, constant validation and span scaling in `constants.ts`; file loading and overlays in `load.ts` |
 | `vox-agents/src/newspaper/editorial/facts/` | Builds the fact model, including distance and inferred facts |
 | `vox-agents/src/newspaper/editorial/diplomacy/` | War and peace inference that feeds `incident` and `pair` facts |
 | `vox-agents/src/newspaper/editorial/triggers.ts` | Rule evaluation, repeats, grouping and the audit |
@@ -193,11 +193,13 @@ Use an overlay directory to compare alternatives without editing the built-in ca
 
 | To change | Overlay content |
 | --- | --- |
-| A named constant | `constants.json` with only that name, for example `neighboring: 9` |
+| A named constant | `constants.json` with the same group and name, for example `{"distances":{"neighboring":9}}` |
+| A type list | `{"types":{"settlers":["Settler","Pioneer"]}}`. The overlay list replaces the built-in list of that name. |
+| A shortcut source | `{"shortcuts":{"city":{"neighbor":"city.foreign && city.distance.own <= adjacent"}}}`. Only that source changes. |
 | One trigger | An entry with the same `id` and only the changed fields |
 | Switch a trigger off | An entry with the same `id` and `enabled: false` |
 
-Entries merge by `id` across files. A list such as `when` or `tags` replaces the inherited list. Resuming a saved run restores its saved catalogue, so start a fresh run with a new `--output` directory to see the effect of an overlay.
+Constants in an overlay merge group by group and name by name. A type list is one value, so the overlay list replaces the built-in list instead of adding names to it. Shortcut sources merge by subject and name. Trigger entries merge by `id` across files. In a trigger entry, a list such as `when` or `tags` replaces the inherited list. Resuming a saved run restores its saved catalogue, so start a fresh run with a new `--output` directory to see the effect of an overlay.
 
 ## Verify changes
 

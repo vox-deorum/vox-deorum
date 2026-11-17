@@ -4,7 +4,9 @@ import type {
 } from '../../../../../../mcp-server/dist/newspaper/evidence.js';
 import { buildNewspaperFacts } from '../../../../../src/newspaper/editorial/facts/index.js';
 import { reference } from '../../../../../src/newspaper/editorial/facts/model.js';
-import { compileEditorialExpressions } from '../../../../../src/newspaper/editorial/shared/expressions.js';
+import {
+  compileEditorialExpressions, type EditorialShortcutDefinitions,
+} from '../../../../../src/newspaper/editorial/shared/expressions.js';
 
 /** Make one readable final city observation for its turn. */
 function city(id: number, turn: number, sourceID: number, fields: NewspaperSnapshot['values'] = {}): NewspaperSnapshot {
@@ -58,13 +60,111 @@ function evidence(cities: NewspaperSnapshot[], events: NewspaperEvent[] = []): N
 }
 
 /** Compile controlled rules in order, retaining the production QuickJS boundary. */
-function compile(sources: string[]) {
+function compile(sources: string[], shortcuts?: EditorialShortcutDefinitions) {
   return compileEditorialExpressions(sources.map((source, index) => ({
     rule: 'fact-runtime', field: `when[${index}]`, source,
-  })));
+  })), { shortcuts });
 }
 
 describe('newspaper fact runtime', () => {
+  describe('shortcuts', () => {
+    it('should bind each shortcut to its city, owner or list entry and cite the facts read', async () => {
+      const home = city(1, 20, 11, { IsCapital: true });
+      const away = city(2, 20, 12, { OwnerID: 1, X: 8 });
+      const runner = await compile([
+        'city.is.neighbor && city.owner.is.rival',
+        'cities.some(c => c.is.neighbor) && self.capital.is.frontier',
+        'city.is.neighbor = false',
+      ], {
+        city: {
+          inRange: 'city.distance.own <= neighboring',
+          neighbor: 'city.foreign && city.is.inRange',
+          frontier: 'city.own && cities.some(c => c.is.neighbor && distance(city, c) <= neighboring)',
+        },
+        player: { rival: '!player.self' },
+      });
+      const facts = buildNewspaperFacts(evidence([home, away]), identity);
+      const groups = [{ expressions: [0, 1, 2], subjects: [{ city: reference('city', 2), neighboring: 1 }] }];
+      const [[[neighbor, frontier, mutation]]] = await runner.evaluate({ facts, constants: { neighboring: 8 }, groups });
+      expect(neighbor).toEqual({ value: true, sources: [away.source, home.source, foreign.source] });
+      expect(frontier).toEqual({ value: true, sources: [home.source, away.source] });
+      expect(mutation).toHaveProperty('error.source');
+      const [[[outside, noFrontier]]] = await runner.evaluate({ facts, constants: { neighboring: 7 }, groups });
+      expect(outside).toEqual({ value: false, sources: [away.source, home.source] });
+      expect(noFrontier).toHaveProperty('value', false);
+    });
+
+    it('should read the correct historical view and keep a shortcut hidden when its input is hidden', async () => {
+      const previous = city(1, 18, 11, { FoodStored: 8 });
+      const current = city(1, 20, 12, { FoodStored: 11 });
+      const input = evidence([current]);
+      input.history.snapshots.cities.push(previous, current);
+      const runner = await compile([
+        '!city.is.starving && city.previous.is.starving && city.history.some(c => c.is.starving)',
+        '(() => { try { return city.is.unreadable; } catch { return true; } })()',
+        '!city.is.knows("unreadable") && !city.is.knows("undefinedShortcut")',
+        'city.previous.is.knows("starving")',
+        'city.is.undefinedShortcut',
+      ], {
+        city: {
+          starving: 'city.foodPerTurn < 0 && city.foodStored < -city.foodPerTurn * recent',
+          unreadable: 'city.id > 0 && city.currentProduction',
+        },
+      });
+      const [[[history, hidden, guarded, known, undeclared]]] = await runner.evaluate({
+        facts: buildNewspaperFacts(input),
+        constants: { recent: 5 },
+        groups: [{ windowFromTurn: 17, expressions: [0, 1, 2, 3, 4], subjects: [{ city: reference('city', 1) }] }],
+      });
+      expect(history).toEqual({ value: true, sources: [current.source, previous.source] });
+      expect(hidden).toMatchObject({ error: { hidden: 'city.currentProduction' }, sources: [current.source] });
+      expect(guarded).toEqual({ value: true });
+      expect(known).toEqual({ value: true, sources: [previous.source] });
+      expect(undeclared).toHaveProperty('error.hidden', 'city.is.undefinedShortcut');
+    });
+
+    it('should respect the group window when a shortcut reads dated event lists', async () => {
+      const current = city(1, 20, 11);
+      const trained: NewspaperEvent = {
+        ...event(22, 17),
+        type: 'CityTrained',
+        values: { PlayerID: 0, CityID: 1, CityX: 0, CityY: 0, Unit: 'Pioneer' },
+      };
+      const input = evidence([current], [trained]);
+      input.history.baseline.cities.push(city(1, 10, 10));
+      const runner = await compile([
+        'city.is.sentSettler && events.some(e => e.is.settlerTrained)',
+        'city.events.some(e => e.is.settlerTrained)',
+      ], {
+        city: { sentSettler: 'city.trained.some(t => settlers.includes(t.unit))' },
+        event: { settlerTrained: 'event.type === "CityTrained" && settlers.includes(event.unit)' },
+      });
+      const group = { expressions: [0, 1], subjects: [{ city: reference('city', 1) }] };
+      const [[wide], [narrow]] = await runner.evaluate({
+        facts: buildNewspaperFacts(input),
+        constants: { settlers: ['Pioneer'] },
+        groups: [{ ...group, windowFromTurn: 15 }, group],
+      });
+      expect(wide).toEqual(Array.from({ length: 2 }, () => ({
+        value: true, sources: [current.source, trained.source],
+      })));
+      expect(narrow).toEqual(Array.from({ length: 2 }, () => ({ value: false, sources: [current.source] })));
+    });
+
+    it('should reject recursive shortcuts without stopping other expressions', async () => {
+      const current = city(1, 20, 11);
+      const runner = await compile(['city.is.first', 'city.is.healthy'], {
+        city: { first: 'city.is.second', second: 'city.is.first', healthy: 'city.population > 1' },
+      });
+      const [[[recursion, healthy]]] = await runner.evaluate({
+        facts: buildNewspaperFacts(evidence([current])),
+        groups: [{ expressions: [0, 1], subjects: [{ city: reference('city', 1) }] }],
+      });
+      expect(recursion).toHaveProperty('error.message', expect.stringContaining('city.is.first'));
+      expect(healthy).toEqual({ value: true, sources: [current.source] });
+    });
+  });
+
   describe('dated observations', () => {
     it('should distinguish trigger windows from the previous check and cite the values and memberships read', async () => {
       const baseline = city(1, 8, 18, { Population: 4, MajorityReligion: 'Buddhism', Wonders: ['Petra'] });
