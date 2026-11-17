@@ -1,6 +1,6 @@
 # Newspaper trigger facts
 
-**Status: target design, documented ahead of the code.** [Plan 6](../../../../plans/newspaper/implementation/06-trigger-rules.md) lists the build order.
+**Status: target design for the fact model and rules.** The recorded evidence they read is implemented and described under [Evidence the facts rely on](#evidence-the-facts-rely-on). [Plan 6](../../../../plans/newspaper/implementation/06-trigger-rules.md) lists the build order.
 
 The **fact model** is the set of objects a [trigger rule](overview.md) can read: cities, players, events, pairs and incidents. This page is the reference for developers writing rules. It lists every fact, says where each one comes from, and explains how to read the past.
 
@@ -78,7 +78,7 @@ The **reporting period** runs from the previous newspaper check to the cutoff tu
 | `distance.own` | Hex distance to the nearest city of the receiver; 0 for the receiver's own cities | City coordinates |
 | `distance.capital` | Hex distance to the receiver's capital | City coordinates and `self.capital` |
 | `nearestOwn` | The receiver's `city` closest to this one | City coordinates |
-| `founded` | Turn the city was founded | A `PlayerCityFounded` event at its plot; otherwise the turn it was first observed, when that falls after the recording began |
+| `founded` | Turn the city was founded | A `PlayerCityFounded` or `UnitCityFounded` event at its plot; otherwise the turn it was first observed, when that falls after the recording began |
 | `captured` | The latest capture: `turn`, `from` (player), `by` (player), `conquest` (true or false) | `CityCaptureComplete` and `CityFlipped` events at its plot |
 | `formerOwner` | The `player` who owned it before the current owner | `captured.from`; otherwise the owner in the oldest snapshot when it differs |
 | `trained` | Units completed inside the window, each with `turn`, `unit` (the unit name), `withGold`, `withFaith` | `CityTrained` events. Each is matched by unit ID to the `UnitCreated` event of the same turn, which carries the unit type, and the type is resolved to its name. |
@@ -151,7 +151,7 @@ A player ID of -1 means "nobody", and the matching player fact is then missing. 
 | `PlayerGoldenAge` | `player`, `starting` |
 | `GreatPersonExpended` | `player`, `unit` (from `GreatPersonType`), `plot` |
 
-The event types a rule may name are the ones in `newspaperEventConfigs` in `mcp-server/src/newspaper/projection.ts`. [Evidence the facts rely on](#evidence-the-facts-rely-on) lists the additions this design needs.
+The event types a rule may name are the ones in `newspaperEventConfigs` in `mcp-server/src/newspaper/projection.ts`. [Evidence the facts rely on](#evidence-the-facts-rely-on) describes how those rows are projected.
 
 ## Pair
 
@@ -234,27 +234,19 @@ A first observation therefore establishes a baseline. A city seen for the first 
 
 ## Evidence the facts rely on
 
-MCP's `newspaper/projection.ts` decides what the newspaper may read. These additions are required before the matching facts work.
+`get-newspaper-evidence` reads recorded rows for one receiver. It returns cutoff snapshots, optional comparison snapshots, derived diplomacy and events after `previousCheckTurn` through the cutoff. Projection applies recorded visibility and each event's contact and insight rules. City snapshots include the recorded `IsCapital`. A readable player row includes recorded `MilitaryStrength` for the receiver or at access level 2.
 
-| Addition | Needed by |
+Optional `historyFromTurn` sets the baseline to the earlier of that turn and `previousCheckTurn`. Use `-1` to include turn 0. History contains readable baseline rows, visible final observations per subject and turn after the baseline, and permitted events through the cutoff, including the reporting period. Gaps mark when an established observation becomes unavailable. A capture or razing the receiver witnessed ends a city observation when its plot and date establish removal. The gap can be visible even when the identity of a party is hidden. Missing coordinates or tied timestamps can leave a stale snapshot and are reported as lifecycle limitations.
+
+| Join | Required evidence |
 | --- | --- |
-| `IsCapital` in the city projection | `city.isCapital`, `player.capital`, `distance.capital` |
-| City owner resolved to a player ID | `city.owner` for city-states that hold several cities |
-| Event city identifier joined to a visible dated `CityInformations` row for position | `event.plot` and distance facts for events that name a city but carry no location; an event without a usable city identifier stays unknown |
-| `CityTrained` with `WithGold` and `WithFaith`, and the unit name taken from the matching `UnitCreated` event | `city.trained` |
-| `MilitaryStrength` in the player projection, for the receiver and for players it has insight into | Army comparisons |
-| `CityConstructed` with the building name | `city.built` |
-| `PlayerCityFounded` | `city.founded`, forward-settle rules |
-| `IsCapital` on `CityCaptureComplete` | Rules about a captured capital, since the city may stop being a capital once it falls |
-| `CityPuppeted`, `CityRazed` | City status rules on the turn they happen |
-| `SetPopulation` with old and new population | The turn of a population change through `city.events`, for the changes the game reports this way. Snapshots cover the rest. |
-| `CapitalChanged` | Capital moves |
-| `CombatResult` with plot, and `UnitKilledInCombat` (which has no plot) | Battles near the receiver's cities, unit losses by player |
-| `PlayerGoldenAge` with its recorded starting or ending status | Golden age rules. A recording that does not carry the status leaves the fact hidden. |
-| `GreatPersonExpended`, `MinorFriendsChanged` | National and city-state rules |
-| Snapshots and events reaching back to the longest `window` of any enabled trigger, or `long` when that is further, plus each subject's last row before that point | `before`, `at`, `history`, `events`, `city.trained` and similar facts |
+| City owner | A unique recorded civilization match, the barbarian slot, or for city-states a readable founding or capture at the plot or a unique city-state name match. Conflicting or ambiguous ownership remains unknown. |
+| Event position | A unique earlier readable city row matching the event's city ID and owner, with no intervening change that invalidates it. Trade routes keep separate endpoints; `CapitalChanged` uses the new capital for `CityX` and `CityY`. |
+| Trained unit | One visible same-turn `UnitCreated` with matching player and unit IDs and a recorded text unit name. |
 
-Every addition passes through the same visibility filter as existing evidence: an event or field the receiver could not see on that turn stays hidden.
+Each item cites its recorded source; `relatedSources` cites the readable rows used in joins. Hidden records can block a join. Map dimensions and wrapping stay private.
+
+The allowlist covers founding, capture (including `IsCapital`), other city changes, production, combat, diplomacy and national events. Both founding hooks can support city ownership. `CombatResult` carries a plot; `UnitKilledInCombat` has none. With a recognized status flag, `PlayerGoldenAge` projects a positive award or extension as `Starting: true`, a start flag without a numeric change as true, and an end flag with zero change as false. Otherwise `Starting` is absent.
 
 ## Add a fact
 

@@ -150,9 +150,8 @@ describe('historical evidence queries', () => {
     expect(result.players[1].values).toMatchObject({ CulturePerTurn: 9, TourismPerTurn: 0, PolicyBranches: { Tradition: ['A', 'B'] } });
     expect(result.players[1].values).not.toHaveProperty('Gold');
     expect(result.comparisons.players.find(row => row.subjectID === 1)?.values.PolicyBranches).toEqual({ Tradition: 2 });
-    expect(result.cities[0]).toMatchObject({ subjectID: 42, source: { id: 21 }, values: { Population: 0, HitPoints: 0, MajorityReligion: null, IsPuppet: 0, Wonders: ['Beacon'] } });
+    expect(result.cities[0]).toMatchObject({ subjectID: 42, source: { id: 21 }, values: { Population: 0, HitPoints: 0, MajorityReligion: null, IsPuppet: 0, IsCapital: 1, Wonders: ['Beacon'] } });
     expect(result.cities[0].values).not.toHaveProperty('FoodPerTurn');
-    expect(result.cities[0].values).not.toHaveProperty('IsCapital');
   });
 
   it('should omit unknown historical access and avoid retrospective contact grants', async () => {

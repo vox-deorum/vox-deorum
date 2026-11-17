@@ -85,6 +85,8 @@ A major civilization that is no friend of ours founded a city right beside one o
 | `urgent` | `distance <= 2`, a city founded within 2 tiles of one of ours |
 | Template sketch | "{{founder}} plants a city within sight of {{ours}}" |
 
+The same founding may produce both `PlayerCityFounded` and `UnitCityFounded`. They are separate recorded events about one founding, so rules listening for both could publish two stories about it. This rule listens only for `PlayerCityFounded`.
+
 ## A nearby capital falls to a third party
 
 A capital in our region was captured, and we were neither side.
@@ -168,7 +170,7 @@ A major civilization next door now has a stronger military than ours, and it did
 | `importance` | `40 + 40 * (ratio - 1)`, so 50 at a ratio of 1.25 and 60 at 1.5 |
 | Template sketch | "{{player}} now fields a stronger army than ours" |
 
-Military strength is hidden for civilizations the receiver has little insight into. The rule stops for those players, so the story appears only where the comparison is known. The newspaper does not read military strength yet; it is one of the [evidence additions](facts.md#evidence-the-facts-rely-on).
+A readable row includes recorded military strength for the receiver or for another player at full recorded access. It is hidden for other civilizations with only basic access, and the rule stops for those players, so the story appears only where the comparison is known. [Evidence the facts rely on](facts.md#evidence-the-facts-rely-on) describes the player projection.
 
 ## Neighboring cities convert together
 

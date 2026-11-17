@@ -5,6 +5,8 @@ export const newspaperEvidenceRequestSchema = z.object({
   receiverPlayerID: z.number().int().min(0).max(21).describe('Receiving major civilization player ID'),
   previousCheckTurn: z.number().int().min(-1).describe('Exclusive lower event turn bound'),
   cutoffTurn: z.number().int().min(0).describe('Inclusive cutoff in recorded game turns'),
+  historyFromTurn: z.number().int().min(-1).optional()
+    .describe('Start turn for trigger history, or -1 to include turn zero; history also covers the previous check'),
   comparisonRange: z.object({
     fromTurn: z.number().int().min(0).describe('Inclusive first comparison turn'),
     toTurn: z.number().int().min(0).describe('Inclusive last comparison turn')
@@ -13,7 +15,9 @@ export const newspaperEvidenceRequestSchema = z.object({
   message: 'Previous check must be at or before cutoff', path: ['previousCheckTurn']
 }).refine(request => !request.comparisonRange || (
   request.comparisonRange.fromTurn <= request.comparisonRange.toTurn && request.comparisonRange.toTurn <= request.cutoffTurn
-), { message: 'Comparison range must be ordered and at or before cutoff', path: ['comparisonRange'] });
+), { message: 'Comparison range must be ordered and at or before cutoff', path: ['comparisonRange'] })
+  .refine(request => request.historyFromTurn === undefined || request.historyFromTurn <= request.cutoffTurn,
+    { message: 'History must start at or before cutoff', path: ['historyFromTurn'] });
 
 /** Direct reference to a recorded row, captured before field projection. */
 export const newspaperSourceReferenceSchema = z.object({
@@ -26,6 +30,7 @@ export const newspaperSourceReferenceSchema = z.object({
 /** Permitted raw snapshot values; absent fields remain unknown. */
 export const newspaperSnapshotSchema = z.object({
   source: newspaperSourceReferenceSchema,
+  relatedSources: z.array(newspaperSourceReferenceSchema).optional().describe('Permitted supporting rows used for joined values'),
   subjectID: z.number().int().describe('Original subject Key, including the existing city ID'),
   values: z.record(z.string(), z.unknown()).describe('Selected raw fields without display conversions')
 });
@@ -33,6 +38,7 @@ export const newspaperSnapshotSchema = z.object({
 /** Permitted event payload with its original identity and date. */
 export const newspaperEventSchema = z.object({
   source: newspaperSourceReferenceSchema,
+  relatedSources: z.array(newspaperSourceReferenceSchema).optional().describe('Permitted supporting rows used for joined values'),
   type: z.string().describe('Recorded event type'),
   values: z.record(z.string(), z.unknown()).describe('Selected raw event payload')
 });
@@ -66,6 +72,24 @@ export const newspaperDiplomacyGapSchema = z.object({
     .describe('Reason the recorded identity or relationship could not be established')
 });
 
+const newspaperSnapshotSetSchema = z.object({
+  players: z.array(newspaperSnapshotSchema),
+  cities: z.array(newspaperSnapshotSchema)
+});
+
+/** Bounded trigger inputs kept separate from the reporting period and comparison reads. */
+export const newspaperHistorySchema = z.object({
+  fromTurn: z.number().int().min(-1).describe('Baseline turn and exclusive lower bound for dated history'),
+  baseline: newspaperSnapshotSetSchema.describe('Final observation per subject at or before the baseline turn, omitted if hidden'),
+  snapshots: newspaperSnapshotSetSchema.describe('Permitted final observations per subject and turn, oldest first'),
+  gaps: z.array(z.object({
+    table: z.enum(['PlayerSummaries', 'CityInformations']),
+    subjectID: z.number().int(),
+    turn: z.number().int().nonnegative()
+  })).describe('First turn an established observation became unavailable, including a known city removal'),
+  events: z.array(newspaperEventSchema).describe('Permitted events after the baseline through cutoff, oldest first')
+});
+
 /** Small evidence envelope reused by both database access paths. */
 export const newspaperEvidenceSchema = z.object({
   request: newspaperEvidenceRequestSchema,
@@ -73,11 +97,9 @@ export const newspaperEvidenceSchema = z.object({
     .describe('City lifecycle records with missing coordinates or ambiguous same-turn timestamp ordering; city snapshots may be stale'),
   players: z.array(newspaperSnapshotSchema).describe('Latest permitted national snapshots at cutoff'),
   cities: z.array(newspaperSnapshotSchema).describe('Latest permitted city snapshots at cutoff'),
-  comparisons: z.object({
-    players: z.array(newspaperSnapshotSchema),
-    cities: z.array(newspaperSnapshotSchema)
-  }).describe('Final insertion per subject and turn within the requested comparison range'),
+  comparisons: newspaperSnapshotSetSchema.describe('Final insertion per subject and turn within the requested comparison range'),
   events: z.array(newspaperEventSchema).describe('Permitted events after previous check through cutoff'),
+  history: newspaperHistorySchema.optional().describe('Trigger history when a start turn is requested'),
   diplomacy: z.object({
     fromTurn: z.number().int().describe('Inclusive first observation turn'),
     baseline: z.array(newspaperDiplomacySnapshotSchema).describe('Latest observations before the evidence window, with original source dates'),
@@ -90,6 +112,7 @@ export type NewspaperEvidenceRequest = z.infer<typeof newspaperEvidenceRequestSc
 export type NewspaperSourceReference = z.infer<typeof newspaperSourceReferenceSchema>;
 export type NewspaperSnapshot = z.infer<typeof newspaperSnapshotSchema>;
 export type NewspaperEvent = z.infer<typeof newspaperEventSchema>;
+export type NewspaperHistory = z.infer<typeof newspaperHistorySchema>;
 export type NewspaperEvidence = z.infer<typeof newspaperEvidenceSchema>;
 export type NewspaperDiplomacySnapshot = z.infer<typeof newspaperDiplomacySnapshotSchema>;
 export type NewspaperDiplomacyGap = z.infer<typeof newspaperDiplomacyGapSchema>;

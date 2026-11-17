@@ -68,11 +68,11 @@ describe('newspaper field projection', () => {
       Wonders: ['Beacon'], ImportantBuildings: ['Library'], FoodPerTurn: -1 };
     const original = structuredClone(row);
     const basic = projectNewspaperCity(row as any, context())!;
-    expect(basic.values).toMatchObject({ HitPoints: 50, Population: 0, IsOccupied: false, RazingTurns: 0, Wonders: ['Beacon'] });
+    expect(basic.values).toMatchObject({ HitPoints: 50, Population: 0, IsOccupied: false, IsCapital: 1, RazingTurns: 0, Wonders: ['Beacon'] });
     expect(basic.values).not.toHaveProperty('FoodPerTurn');
-    expect(basic.values).not.toHaveProperty('IsCapital');
     const full = projectCityReportFields(row, 2);
     expect(full.FoodPerTurn).toBe(-1);
+    expect(full).not.toHaveProperty('IsCapital');
     full.Wonders!.push('Changed');
     expect(row).toEqual(original);
     expect(projectNewspaperCity({ ...row, Player0: undefined } as any, context())).toBeUndefined();
@@ -158,7 +158,7 @@ describe('newspaper field projection', () => {
       OldOwner: { Name: 'Leader1', Civilization: 'Civ1' }, NewOwner: { Name: 'Leader2', Civilization: 'Civ2' },
       City: { Owner: 'Civ2', City: 'Harbor', CityID: 99, Population: 0, ResourceType: 'Uranium' }
     } };
-    expect(projectNewspaperEvent(row as any, context())?.values.City).toEqual({ City: 'Harbor' });
+    expect(projectNewspaperEvent(row as any, context())?.values).toMatchObject({ City: { City: 'Harbor' }, IsCapital: false });
     const unknown = context();
     unknown.summaries = unknown.summaries.filter(summary => summary.Key !== 2);
     expect(projectNewspaperEvent(row as any, unknown)).toBeUndefined();
@@ -239,5 +239,48 @@ describe('newspaper field projection', () => {
     const policy = { ...deal(), Type: 'PlayerAdoptPolicy', Payload: { PlayerID: 1, PolicyID: 7 } };
     expect(projectNewspaperEvent(policy as any, context(199))).toBeUndefined();
     expect(projectNewspaperEvent(policy as any, context(200))?.values.PolicyID).toBe(7);
+  });
+
+  it('exposes recorded military strength only for self and full national access', () => {
+    const row = { ID: 7, Key: 1, Turn: 9, CreatedAt: 1009, Player0: 1, Era: 'Classical Era', MilitaryStrength: 42 } as any;
+    expect(projectNewspaperPlayer(row, context(800))?.values).not.toHaveProperty('MilitaryStrength');
+    expect(projectNewspaperPlayer({ ...row, Player0: 2 }, context())?.values).toHaveProperty('MilitaryStrength', 42);
+    expect(projectNewspaperPlayer({ ...row, Key: 0, MilitaryStrength: 0, Player0: 2 }, context())?.values).toHaveProperty('MilitaryStrength', 0);
+    expect(projectNewspaperPlayer({ ...row, Player0: 0 }, context())).toBeUndefined();
+  });
+
+  it.each([
+    ['CityConstructed', { OwnerID: 1, CityID: 8, BuildingType: 'Granary', IsGoldPurchase: false }, { Building: 'Granary', IsGoldPurchase: false }],
+    ['CityPuppeted', { PlayerID: 1, CityID: 8 }, { PlayerID: 1, CityID: 8 }],
+    ['CityRazed', { PlayerID: 1, CityX: 0, CityY: 4 }, { CityX: 0, CityY: 4 }],
+    ['SetPopulation', { CityX: 0, CityY: 4, OldPopulation: 3, NewPopulation: 2 }, { OldPopulation: 3, NewPopulation: 2 }],
+    ['CapitalChanged', { PlayerID: 1, NewCapitalCityID: 8, OldCapitalCityID: -1 }, { NewCapitalCityID: 8, OldCapitalCityID: -1 }],
+    ['CombatResult', { AttackingPlayerID: -1, DefendingPlayerID: 2, InterceptingPlayerID: -1, PlotX: 0, PlotY: 4 }, { DefendingPlayerID: 2, PlotX: 0, PlotY: 4 }],
+    ['UnitKilledInCombat', { KillerPlayerID: 1, KilledPlayerID: 2, KilledUnitType: 'Galleass', PlotX: 8 }, { Unit: 'Galleass' }],
+    ['PlayerCityFounded', { PlayerID: 1, PlotX: 0, PlotY: 4 }, { PlayerID: 1, PlotX: 0, PlotY: 4 }],
+    ['UnitCityFounded', { PlayerID: 1, UnitID: 8, UnitType: 'Settler', PlotX: 0, PlotY: 4 }, { Unit: 'Settler', PlotX: 0, PlotY: 4 }],
+    ['GreatPersonExpended', { PlayerID: 1, GreatPersonType: 'Great Scientist', CityX: 0, CityY: 4 }, { Unit: 'Great Scientist', CityX: 0, CityY: 4 }],
+    ['MinorFriendsChanged', { MinorPlayerID: 1, MajorPlayerID: 0, IsNowFriend: false, NewFriendship: 0 }, { IsNowFriend: false, NewFriendship: 0 }]
+  ])('projects the permitted recorded payload for %s', (Type, Payload, expected) => {
+    const row = { ID: 91, Turn: 10, CreatedAt: 3010, Type, Payload: { ...Payload, OtherPrivateData: 999 }, Player0: 1 } as any;
+    const projected = projectNewspaperEvent(row, context());
+    expect(projected).toMatchObject({ type: Type, values: expected });
+    expect(projected?.values).not.toHaveProperty('OtherPrivateData');
+    if (Type === 'UnitKilledInCombat') expect(projected?.values).not.toHaveProperty('PlotX');
+    expect(projectNewspaperEvent({ ...row, Player0: 0 }, context())).toBeUndefined();
+  });
+
+  it.each([
+    [{ Starting: false, TurnChange: 10 }, true],
+    [{ Starting: false, TurnChange: 0 }, false],
+    [{ Starting: false }, undefined],
+    [{ Starting: true, TurnChange: 0 }, undefined],
+    [{ Starting: true, TurnChange: 8 }, true],
+    [{ TurnChange: 0 }, undefined]
+  ])('reports only supported Golden Age directions from %j', (payload, expected) => {
+    const row = { ID: 91, Turn: 10, CreatedAt: 3010, Type: 'PlayerGoldenAge', Payload: { PlayerID: 1, ...payload }, Player0: 1 } as any;
+    const projected = projectNewspaperEvent(row, context())!;
+    if (expected === undefined) expect(projected.values).not.toHaveProperty('Starting');
+    else expect(projected.values.Starting).toBe(expected);
   });
 });

@@ -6,12 +6,30 @@ import { diplomaticEventSubjects, matchesSubjects, type EventSubjects } from '..
 import { pickFields } from '../utils/fields.js';
 import { parseRelationship } from '../diplomacy/relationships.js';
 import type { NewspaperDiplomacyGap, NewspaperDiplomacySnapshot, NewspaperEvent, NewspaperSnapshot, NewspaperSourceReference } from './evidence.js';
+import { cityAtEvent, cityOwner, knowsPlayer, source, visibility, type NewspaperCityObservation } from './recorded-city.js';
+export type { NewspaperCityObservation } from './recorded-city.js';
+
+type PlayerContact = Pick<Selectable<PlayerSummary>, 'Key'> &
+  Partial<Pick<Selectable<PlayerSummary>, keyof PlayerSummary & `Player${number}`>>;
+
+/** City projection needs dated contact, without reading national facts or diplomat strength. */
+export interface NewspaperCityProjectionContext {
+  receiverPlayerID: number;
+  summaries: readonly PlayerContact[];
+  players: Selectable<PlayerInformation>[];
+  /** Snapshots for dated city joins, including nonvisible rows that prevent reuse of stale evidence. */
+  cityHistory?: readonly NewspaperCityObservation[];
+  /** Recorded founding, capture, flip and razing events that the receiver may read. */
+  cityLifecycle?: readonly Selectable<GameEvent>[];
+  /** Dated contact for ownership anchors from earlier turns. */
+  knowsLifecyclePlayer?: (event: Selectable<GameEvent>, playerID: number) => boolean;
+}
 
 /** Historical access context supplied by the query, never by live getters. */
-export interface NewspaperProjectionContext {
-  receiverPlayerID: number;
+export interface NewspaperProjectionContext extends NewspaperCityProjectionContext {
   summaries: Selectable<PlayerSummary>[];
-  players: Selectable<PlayerInformation>[];
+  /** Recorded events of the same turn that the receiver may read. */
+  turnEvents?: readonly Selectable<GameEvent>[];
 }
 
 const ownPlayerFields = [
@@ -22,22 +40,6 @@ const ownPlayerFields = [
 ] as const;
 const foreignPlayerFields = ['Era', 'Cities', 'Population', 'CulturePerTurn', 'TourismPerTurn',
   'Technologies', 'PolicyBranches', 'FoundedReligion', 'MajorityReligion'] as const;
-
-/** Capture original row identity and dates before metadata is discarded. */
-function source(table: NewspaperSourceReference['table'], row: { ID: number; Turn: number; CreatedAt: number }): NewspaperSourceReference {
-  return { table, id: row.ID, turn: row.Turn, createdAt: row.CreatedAt };
-}
-
-/** Read recorded access without the live visibility helper's missing-summary fallback. */
-function visibility(row: Record<string, unknown> | undefined, receiver: number): number | undefined {
-  const level = row?.[`Player${receiver}`];
-  return typeof level === 'number' ? level : undefined;
-}
-
-/** Check dated contact, treating the barbarian slot as known without a national summary. */
-function knowsPlayer(id: unknown, context: NewspaperProjectionContext): boolean {
-  return id === 63 || (typeof id === 'number' && (visibility(context.summaries.find(row => row.Key === id), context.receiverPlayerID) ?? 0) > 0);
-}
 
 /** Get recorded diplomat strength only from a fully accessible receiver snapshot. */
 function diplomatPoints(target: number, context: NewspaperProjectionContext): number {
@@ -56,6 +58,7 @@ export function projectNewspaperPlayer(row: Selectable<PlayerSummary>, context: 
   const points = diplomatPoints(row.Key, context);
   const selected = pickFields(row, own ? ownPlayerFields : foreignPlayerFields);
   const values: Record<string, unknown> = projectPlayerReportFields(selected, level, points, info?.IsMajor === 1);
+  if ((own || level === 2) && 'MilitaryStrength' in row) values.MilitaryStrength = row.MilitaryStrength;
   if (!Object.keys(values).length) return undefined;
   return { source: reference, subjectID: row.Key, values };
 }
@@ -118,12 +121,16 @@ export function projectNewspaperDiplomacy(
 }
 
 /** Select raw city facts under recorded basic or full access, preserving sentinel and boolean values. */
-export function projectNewspaperCity(row: Selectable<CityInformation>, context: NewspaperProjectionContext): NewspaperSnapshot | undefined {
+export function projectNewspaperCity(row: Selectable<CityInformation>, context: NewspaperCityProjectionContext): NewspaperSnapshot | undefined {
   const reference = source('CityInformations', row);
   const level = visibility(row, context.receiverPlayerID);
   if (level !== 1 && level !== 2) return undefined;
-  const { Key: _key, ...values } = projectCityReportFields(row, level);
-  return { source: reference, subjectID: row.Key, values };
+  const { Key: _key, ...fields } = projectCityReportFields(row, level);
+  const values: Record<string, unknown> = { ...fields, ...pickFields(row, ['IsCapital']) };
+  const owner = cityOwner(row, context);
+  if (owner) values.OwnerID = owner.id;
+  return { source: reference, subjectID: row.Key, values,
+    ...(owner?.event ? { relatedSources: [source('GameEvents', owner.event)] } : {}) };
 }
 
 /** Private deal terms, reported to a party or when the receiver has strong insight into every party. */
@@ -153,12 +160,18 @@ export interface NewspaperEventConfig {
   fields: string[];
   /** Player and team ID fields naming the event's subjects, which the receiver must have met. */
   subjects: EventSubjects;
+  /** Subject fields whose -1 sentinel means no player took this role. */
+  optionalPlayers?: string[];
   /** Report the event when the receiver or its team is a subject, even if another subject is unmet. */
   reportWhenInvolved?: boolean;
   /** Extra gate: full receiver access to this subject player, or at least this many diplomat points with them. */
   insight?: { playerField: string; diplomatPoints: number };
   /** Nested city labels, keyed by payload object, with the payload field naming that city's owner. */
   cities?: Record<string, string>;
+  /** City ID fields paired with their owner fields. */
+  cityIDs?: Record<string, string>;
+  /** Which city supplies the main plot when there is more than one. */
+  mainCityID?: string;
   /** Private terms, copied only when the deal policy allows. */
   dealTerms?: DealTermsConfig;
 }
@@ -205,16 +218,54 @@ export const newspaperEventConfigs: Record<string, NewspaperEventConfig> = {
   MinorAlliesChanged: {
     fields: ['MinorPlayerID', 'MajorPlayerID', 'IsNowAlly'], subjects: diplomaticEventSubjects.MinorAlliesChanged
   },
+  MinorFriendsChanged: {
+    fields: ['MinorPlayerID', 'MajorPlayerID', 'IsNowFriend', 'OldFriendship', 'NewFriendship'],
+    subjects: diplomaticEventSubjects.MinorFriendsChanged
+  },
   CityCaptureComplete: {
-    fields: ['OldOwnerID', 'NewOwnerID', 'CityID', 'CityX', 'CityY', 'Population', 'IsConquest'],
+    fields: ['OldOwnerID', 'NewOwnerID', 'CityID', 'CityX', 'CityY', 'Population', 'IsConquest', 'IsCapital'],
     subjects: diplomaticEventSubjects.CityCaptureComplete,
     cities: { City: 'NewOwnerID' }
   },
   CityFlipped: {
     fields: ['OldOwnerID', 'NewOwnerID', 'CityID'],
     subjects: diplomaticEventSubjects.CityFlipped,
-    cities: { City: 'NewOwnerID' }
+    cities: { City: 'NewOwnerID' },
+    cityIDs: { CityID: 'OldOwnerID' }
   },
+  CityTrained: {
+    fields: ['PlayerID', 'CityID', 'UnitID', 'WithGold', 'WithFaith'], subjects: playerSubject,
+    cityIDs: { CityID: 'PlayerID' }
+  },
+  CityConstructed: {
+    fields: ['OwnerID', 'CityID', 'BuildingType', 'IsGoldPurchase', 'IsFaithPurchase'],
+    subjects: { playerIdFields: ['OwnerID'] }, cityIDs: { CityID: 'OwnerID' }
+  },
+  PlayerCityFounded: { fields: ['PlayerID', 'PlotX', 'PlotY'], subjects: playerSubject },
+  UnitCityFounded: { fields: ['PlayerID', 'UnitID', 'UnitType', 'PlotX', 'PlotY'], subjects: playerSubject },
+  CityPuppeted: { fields: ['PlayerID', 'CityID'], subjects: playerSubject, cityIDs: { CityID: 'PlayerID' } },
+  CityRazed: { fields: ['PlayerID', 'CityX', 'CityY'], subjects: playerSubject },
+  SetPopulation: { fields: ['CityX', 'CityY', 'OldPopulation', 'NewPopulation'], subjects: { playerIdFields: [] } },
+  CapitalChanged: {
+    fields: ['PlayerID', 'NewCapitalCityID', 'OldCapitalCityID'], subjects: playerSubject,
+    cityIDs: { NewCapitalCityID: 'PlayerID', OldCapitalCityID: 'PlayerID' }, mainCityID: 'NewCapitalCityID'
+  },
+  CombatResult: {
+    fields: ['AttackingPlayerID', 'AttackingUnitID', 'AttackerRemainingHP', 'AttackerDamage', 'AttackerMaxHp',
+      'DefendingPlayerID', 'DefendingUnitID', 'DefenderRemainingHP', 'DefenderDamage', 'DefenderMaxHp',
+      'InterceptingPlayerID', 'InterceptingUnitID', 'InterceptorDamage', 'PlotX', 'PlotY'],
+    subjects: { playerIdFields: ['AttackingPlayerID', 'DefendingPlayerID', 'InterceptingPlayerID'] },
+    optionalPlayers: ['AttackingPlayerID', 'DefendingPlayerID', 'InterceptingPlayerID']
+  },
+  UnitKilledInCombat: {
+    fields: ['KillerPlayerID', 'KilledPlayerID', 'KilledUnitType', 'KillingUnitID'],
+    subjects: { playerIdFields: ['KillerPlayerID', 'KilledPlayerID'] }
+  },
+  UnitCreated: { fields: ['PlayerID', 'UnitID', 'UnitType', 'PlotX', 'PlotY'], subjects: playerSubject },
+  GreatPersonExpended: {
+    fields: ['PlayerID', 'UnitID', 'GreatPersonType', 'CityX', 'CityY'], subjects: playerSubject
+  },
+  PlayerGoldenAge: { fields: ['PlayerID', 'TurnChange'], subjects: playerSubject },
   // The liberated city's recorded owner at event time is unknown, so its label is not kept.
   PlayerLiberated: {
     fields: ['LiberatingPlayerID', 'LiberatedPlayerID', 'CityID'],
@@ -223,7 +274,8 @@ export const newspaperEventConfigs: Record<string, NewspaperEventConfig> = {
   PlayerTradeRouteCompleted: {
     fields: ['OriginPlayerID', 'DestinationPlayerID', 'OriginCityID', 'DestinationCityID', 'Domain', 'ConnectionType'],
     subjects: diplomaticEventSubjects.PlayerTradeRouteCompleted,
-    cities: { OriginCity: 'OriginPlayerID', DestinationCity: 'DestinationPlayerID' }
+    cities: { OriginCity: 'OriginPlayerID', DestinationCity: 'DestinationPlayerID' },
+    cityIDs: { OriginCityID: 'OriginPlayerID', DestinationCityID: 'DestinationPlayerID' }
   },
   PlayerPlunderedTradeRoute: {
     fields: ['PlunderingPlayerID', 'OriginOwnerID', 'DestinationOwnerID', 'PlunderGoldValue'],
@@ -243,12 +295,14 @@ export const newspaperEventConfigs: Record<string, NewspaperEventConfig> = {
   PantheonFounded: {
     fields: ['PlayerID', 'CityID', 'ReligionType', 'BeliefType'],
     subjects: playerSubject,
-    cities: { City: 'PlayerID' }
+    cities: { City: 'PlayerID' },
+    cityIDs: { CityID: 'PlayerID' }
   },
   ReligionFounded: {
     fields: ['PlayerID', 'HolyCityID', 'ReligionID'],
     subjects: playerSubject,
-    cities: { HolyCity: 'PlayerID' }
+    cities: { HolyCity: 'PlayerID' },
+    cityIDs: { HolyCityID: 'PlayerID' }
   },
   ReligionEnhanced: { fields: ['PlayerID', 'ReligionID', 'FirstEnhancerBelief', 'SecondEnhancerBelief'], subjects: playerSubject },
   ReligionReformed: { fields: ['PlayerID', 'ReligionID', 'ReformationBelief'], subjects: playerSubject },
@@ -274,9 +328,11 @@ function playerIdentity(value: unknown, id: unknown, context: NewspaperProjectio
 }
 
 /** Check that the receiver has met every player and team the event names. */
-function knowsSubjects(subjects: EventSubjects, payload: Record<string, unknown>, context: NewspaperProjectionContext): boolean {
+function knowsSubjects(subjects: EventSubjects, payload: Record<string, unknown>, context: NewspaperProjectionContext,
+  optionalPlayers: string[] = []): boolean {
   return subjects.playerIdFields.every(field => !(field in payload) ||
-    ((field === 'OldAllyPlayerID' || field === 'NewAllyPlayerID') && payload[field] === -1) || knowsPlayer(payload[field], context)) &&
+    ((field === 'OldAllyPlayerID' || field === 'NewAllyPlayerID' || optionalPlayers.includes(field)) && payload[field] === -1) ||
+    knowsPlayer(payload[field], context)) &&
     (subjects.teamIdFields ?? []).every(field => !(field in payload) || knowsTeam(payload[field], context));
 }
 
@@ -332,6 +388,52 @@ function copyDealTerms(terms: DealTermsConfig, payload: Record<string, unknown>,
   }
 }
 
+/** Keep names already resolved by the recorder. Numeric IDs have no recorded name. */
+function recordedName(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() ? value : undefined;
+}
+
+/** Disambiguate historic false statuses using the hook's positive award or zero-turn ending. */
+function goldenAgeStarting(payload: Record<string, unknown>): boolean | undefined {
+  const { Starting, TurnChange } = payload;
+  const explicitStart = Starting === true || Starting === 1;
+  if (!explicitStart && Starting !== false && Starting !== 0) return undefined;
+  if (typeof TurnChange !== 'number') return explicitStart ? true : undefined;
+  if (!Number.isInteger(TurnChange) || TurnChange < 0) return undefined;
+  if (TurnChange > 0) return true;
+  return explicitStart ? undefined : false;
+}
+
+/** Join a training event to one visible creation of the same owner's unit during the same turn. */
+function trainedUnit(row: Selectable<GameEvent>, context: NewspaperProjectionContext): Selectable<GameEvent> | undefined {
+  const { PlayerID, UnitID } = row.Payload;
+  if (!knowsPlayer(PlayerID, context) || typeof UnitID !== 'number' || !Number.isInteger(UnitID) || UnitID < 0) return undefined;
+  const matches = context.turnEvents?.filter(event => event.Type === 'UnitCreated' && event.Turn === row.Turn &&
+    event.Payload.PlayerID === PlayerID && event.Payload.UnitID === UnitID && (visibility(event, context.receiverPlayerID) ?? 0) > 0);
+  return matches?.length === 1 ? matches[0] : undefined;
+}
+
+/** Add only positions backed by a unique dated city row and record what each join used. */
+function copyCityPositions(config: NewspaperEventConfig, row: Selectable<GameEvent>,
+  values: Record<string, unknown>, context: NewspaperProjectionContext, related: NewspaperSourceReference[]): void {
+  const fields = Object.entries(config.cityIDs ?? {});
+  for (const [idField, ownerField] of fields) {
+    const position = cityAtEvent(row, row.Payload[idField], row.Payload[ownerField], context);
+    if (!position) continue;
+    if (fields.length === 1 || idField === config.mainCityID) {
+      values.CityX = position.row.X;
+      values.CityY = position.row.Y;
+    }
+    if (fields.length > 1) {
+      const prefix = idField.slice(0, -2);
+      values[`${prefix}X`] = position.row.X;
+      values[`${prefix}Y`] = position.row.Y;
+    }
+    related.push(source('CityInformations', position.row));
+    if (position.ownerEvent) related.push(source('GameEvents', position.ownerEvent));
+  }
+}
+
 /** Project a supported event under its configured policy, using dated contact and recorded access. */
 export function projectNewspaperEvent(row: Selectable<GameEvent>, context: NewspaperProjectionContext): NewspaperEvent | undefined {
   const config = newspaperEventConfigs[row.Type];
@@ -339,12 +441,30 @@ export function projectNewspaperEvent(row: Selectable<GameEvent>, context: Newsp
   const payload = row.Payload;
   const receiverTeam = context.players.find(player => player.Key === context.receiverPlayerID)?.TeamID;
   const involved = config.reportWhenInvolved === true && matchesSubjects(config.subjects, payload, context.receiverPlayerID, receiverTeam);
-  if (!involved && !knowsSubjects(config.subjects, payload, context)) return undefined;
+  if (!involved && !knowsSubjects(config.subjects, payload, context, config.optionalPlayers)) return undefined;
   if (config.insight && !hasInsight(config.insight, payload, context)) return undefined;
 
   const values: Record<string, unknown> = pickFields(payload, config.fields);
   if (row.Type === 'MinorAlliesChanged' && (typeof values.IsNowAlly === 'boolean' || typeof values.IsNowAlly === 'number')) {
     values.IsNowAlly = values.IsNowAlly !== false && values.IsNowAlly !== 0;
+  }
+  const related: NewspaperSourceReference[] = [];
+  if (config.cityIDs) copyCityPositions(config, row, values, context, related);
+  if (row.Type === 'CityTrained') {
+    const created = trainedUnit(row, context);
+    const unit = recordedName(created?.Payload.UnitType);
+    if (created && unit) {
+      values.Unit = unit;
+      related.push(source('GameEvents', created));
+    }
+  }
+  for (const [field, name] of [['UnitType', 'Unit'], ['KilledUnitType', 'Unit'], ['GreatPersonType', 'Unit'], ['BuildingType', 'Building']]) {
+    const text = recordedName(values[field]);
+    if (text) values[name] = text;
+  }
+  if (row.Type === 'PlayerGoldenAge') {
+    const starting = goldenAgeStarting(payload);
+    if (starting !== undefined) values.Starting = starting;
   }
   // Enriched subjects are optional. Unknown identities never accompany a public event.
   for (const field of config.subjects.playerIdFields) {
@@ -358,5 +478,6 @@ export function projectNewspaperEvent(row: Selectable<GameEvent>, context: Newsp
     if (city && typeof city === 'object' && knowsPlayer(payload[ownerField], context)) values[key] = pickFields(city, ['Name', 'City']);
   }
   if (config.dealTerms) copyDealTerms(config.dealTerms, payload, values, context);
-  return { source: source('GameEvents', row), type: row.Type, values };
+  return { source: source('GameEvents', row), type: row.Type, values,
+    ...(related.length ? { relatedSources: [...new Map(related.map(ref => [`${ref.table}/${ref.id}`, ref])).values()] } : {}) };
 }

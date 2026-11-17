@@ -35,7 +35,7 @@ describe('newspaper MCP transports', () => {
     await writer.destroy();
     const originalBytes = await readFile(filename);
     const db = openEvidenceRecording(filename);
-    const request = { receiverPlayerID: 0, previousCheckTurn: 5, cutoffTurn: 10, comparisonRange: { fromTurn: 5, toTurn: 10 } };
+    const request = { receiverPlayerID: 0, previousCheckTurn: 5, cutoffTurn: 10, historyFromTurn: 4, comparisonRange: { fromTurn: 5, toTurn: 10 } };
     const expected = await queryNewspaperEvidence(db, request);
     const restoreManagers = await isolateExternalManagers();
     vi.spyOn(knowledgeManager, 'getStore').mockReturnValue({ getDatabase: () => db } as KnowledgeStore);
@@ -71,6 +71,8 @@ describe('newspaper MCP transports', () => {
         expect(readToolValue(result)).toEqual(expected);
         const invalid = await client.callTool({ name: 'get-newspaper-evidence', arguments: { ...args, cutoffTurn: 4 } });
         expect(invalid.isError).toBe(true);
+        const futureHistory = await client.callTool({ name: 'get-newspaper-evidence', arguments: { ...args, historyFromTurn: 11 } });
+        expect(futureHistory.isError).toBe(true);
         for (const cutoffTurn of [11, 12]) {
           const incomplete = await client.callTool({ name: 'get-newspaper-evidence', arguments: { ...args, cutoffTurn } });
           expect(incomplete.isError).toBe(true);
