@@ -243,6 +243,8 @@ export class ReplaySession {
           ...this.context,
           playerNames: Object.fromEntries(Object.entries(this.context.playerNames).filter(([id]) => visiblePlayers.has(id))),
           playerTeamIds: Object.fromEntries(Object.entries(this.context.playerTeamIds).filter(([id]) => visiblePlayers.has(id))),
+          majorPlayerIds: this.context.majorPlayerIds.filter(id => visiblePlayers.has(String(id))),
+          standardTurnsPerGameTurn: 1 / state.speed.multiplier,
         } : undefined;
         const result = (this.dependencies.check ?? runEditorialCheck)({
           campaignId: this.campaignId!, timelineId: state.runId!,

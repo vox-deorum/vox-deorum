@@ -35,7 +35,7 @@ function fixture(turn = 10, previousCheckTurn = 5): NewspaperEvidence {
     } }), snapshot(1, 5, { CulturePerTurn: 20 }), snapshot(2, 5, { CulturePerTurn: 20 })],
     cities: [snapshot(3, 5, { Owner: 'France', Name: 'Paris', Population: 10 }, true),
       snapshot(4, 5, { Owner: 'France', Name: 'Lyon', Population: 8 }, true)] },
-    events: [{ type: 'DealMade', values: { FromPlayerID: 0, ToPlayerID: 1, StartTurn: turn },
+    events: [{ type: 'DealMade', values: { FromPlayerID: 0, ToPlayerID: 1, StartTurn: turn, TradedItems: [{ ItemType: 'OpenBorders', FromPlayerID: 0 }] },
       source: { table: 'GameEvents', id: turn, turn, createdAt: turn * 1000 } }],
   };
 }
@@ -61,8 +61,8 @@ describe('editorial engine', () => {
       const trade = triggers.find(trigger => trigger.definitionId === 'trade-concentration' && trigger.subject === 'civilization/1')!;
       expect(trade.values).toMatchObject({ share: 80, previousShare: 20, gold: 40, tradeFromTurn: 5, tradeToTurn: 10 });
       expect(trade.importance).toBe(config.defaults.importanceMax);
-      const cities = triggers.find(trigger => trigger.definitionId === 'city-contrast')!;
-      expect(cities.values).toMatchObject({ growth: 2, otherGrowth: 0 });
+      const cities = triggers.find(trigger => trigger.definitionId === 'city-population-boom')!;
+      expect(cities.values).toMatchObject({ growth: 2, population: 12 });
       expect(cities.importance).toBeLessThan(trade.importance);
       expect(trade.sources.map(source => source.turn)).toEqual([5, 10]);
     });
@@ -72,7 +72,7 @@ describe('editorial engine', () => {
       evidence.comparisons.players[0].values = {};
       expect(detectTriggers(evidence, config, context).some(trigger => trigger.definitionId === 'trade-concentration')).toBe(false);
       evidence.comparisons.players[0].values = { OutgoingTradeRoutes: {} };
-      expect(detectTriggers(evidence, config, context).some(trigger => trigger.definitionId === 'trade-concentration')).toBe(true);
+      expect(detectTriggers(evidence, config, context).some(trigger => trigger.definitionId === 'trade-partner')).toBe(true);
       expect(detectTriggers(fixture(), config, { ...context, playerNames: { '0': 'France' } }).some(trigger => trigger.definitionId === 'trade-concentration')).toBe(false);
     });
 
@@ -89,10 +89,10 @@ describe('editorial engine', () => {
       const evidence = fixture();
       evidence.events.push({ type: 'CityCaptureComplete', values: { CityID: 3, CityX: 1, CityY: 1 },
         source: { table: 'GameEvents', id: 100, turn: 7, createdAt: 7000 } });
-      expect(detectTriggers(evidence, config, context).some(trigger => trigger.definitionId === 'city-contrast')).toBe(false);
+      expect(detectTriggers(evidence, config, context).some(trigger => trigger.definitionId === 'city-population-boom')).toBe(false);
       evidence.events = [];
       evidence.comparisons.cities[0].values.Owner = 'Morocco';
-      expect(detectTriggers(evidence, config, context).some(trigger => trigger.definitionId === 'city-contrast')).toBe(false);
+      expect(detectTriggers(evidence, config, context).some(trigger => trigger.definitionId === 'city-population-boom')).toBe(false);
     });
 
     it('should require the receiving team for incoming war without inferring team from player id', () => {
@@ -125,10 +125,10 @@ describe('editorial engine', () => {
       expect(detectTriggers(evidence, config, context).some(trigger => trigger.definitionId === 'city-recovery')).toBe(false);
     });
 
-    it('should compare city changes only across matching observed periods', () => {
+    it('should bound city growth comparisons to the configured history window', () => {
       const evidence = fixture();
-      evidence.comparisons.cities[1].source.turn = 3;
-      expect(detectTriggers(evidence, config, context).some(trigger => trigger.definitionId === 'city-contrast')).toBe(false);
+      evidence.comparisons.cities[0].source.turn = -100;
+      expect(detectTriggers(evidence, config, context).some(trigger => trigger.definitionId === 'city-population-boom')).toBe(false);
     });
   });
 
@@ -177,11 +177,11 @@ describe('editorial engine', () => {
       evidence.events.push({ type: 'DeclareWar', values: { OriginatingPlayerID: 2, TargetTeamID: 7 },
         source: { table: 'GameEvents', id: 99, turn: 9, createdAt: 9000 } });
       const candidates = matchTemplates(detectTriggers(evidence, config, context), config, evidenceConditionContext(evidence, context));
-      const domestic = candidates.find(candidate => candidate.templateIds.includes('provincial-recovery'))!;
+      const domestic = candidates.find(candidate => candidate.templateIds.includes('settlement-recovery'))!;
       const urgent = candidates.find(candidate => candidate.templateIds.includes('war-and-routes'))!;
-      expect(domestic).toMatchObject({ subject: 'city/3', values: { contrastGrowth: 2, recoveryGrowth: 2, otherGrowth: 0 } });
+      expect(domestic).toMatchObject({ subject: 'city/3', values: { recoveryGrowth: 2, population: 12 } });
       expect(urgent).toMatchObject({ urgent: true, subject: 'civilization/2', values: { eventTurn: 9, tradeFromTurn: 5, tradeToTurn: 10 } });
-      for (const merged of [domestic, urgent]) {
+      for (const merged of [urgent]) {
         const parts = candidates.filter(candidate => merged.contributingIds.includes(candidate.id));
         expect(merged.importance).toBe(Math.max(...parts.map(part => part.importance)));
         expect(merged.variants.length).toBeGreaterThan(0);
@@ -288,7 +288,7 @@ describe('editorial engine', () => {
 
     it('should reserve room for a useful independent short piece alongside larger developments', () => {
       const evidence = fixture();
-      evidence.events.push({ type: 'DealMade', values: { FromPlayerID: 0, ToPlayerID: 2 },
+      evidence.events.push({ type: 'DealMade', values: { FromPlayerID: 0, ToPlayerID: 2, TradedItems: [{ ItemType: 'OpenBorders', FromPlayerID: 0 }] },
         source: { table: 'GameEvents', id: 123, turn: 10, createdAt: 10000 } });
       const revised = structuredClone(config);
       revised.defaults.maxItems = 2;
@@ -371,7 +371,7 @@ describe('editorial engine', () => {
       revised.defaults.maxItems = 1;
       const evidence = fixture();
       const matched = matchTemplates(detectTriggers(evidence, revised, context), revised, evidenceConditionContext(evidence, context));
-      const candidates = [matched.find(candidate => candidate.templateIds.includes('provincial-contrast'))!,
+      const candidates = [matched.find(candidate => candidate.templateIds.includes('population-boom'))!,
         matched.find(candidate => candidate.templateIds.includes('cultural-development'))!]
         .map((candidate, index) => ({ ...candidate, id: `candidate-${index}`, importance: 40, weight: 1 }));
       const state = createInitialPublicationState();

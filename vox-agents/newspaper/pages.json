@@ -11,9 +11,7 @@
     "id": "home",
     "label": "At Home",
     "tags": [
-      "domestic",
-      "cities",
-      "society"
+      "domestic"
     ],
     "minimum": 2,
     "order": 1
@@ -32,9 +30,7 @@
     "id": "abroad",
     "label": "Beyond Our Borders",
     "tags": [
-      "international",
-      "diplomacy",
-      "culture"
+      "international"
     ],
     "minimum": 2,
     "order": 3

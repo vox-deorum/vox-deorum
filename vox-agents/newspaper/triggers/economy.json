@@ -1,0 +1,83 @@
+[
+  {
+    "id": "budget-deficit",
+    "detector": "economyBudget",
+    "threshold": 1,
+    "scale": 20,
+    "tags": [
+      "domestic",
+      "economy"
+    ],
+    "stage": "deficit",
+    "tuning": {
+      "persistence": 2,
+      "maxGap": 5,
+      "window": 15
+    }
+  },
+  {
+    "id": "budget-recovery",
+    "detector": "economyBudget",
+    "threshold": 1,
+    "scale": 20,
+    "tags": [
+      "domestic",
+      "economy",
+      "recovery"
+    ],
+    "stage": "recovery",
+    "tuning": {
+      "persistence": 2,
+      "maxGap": 5,
+      "window": 15
+    }
+  },
+  {
+    "id": "treasury-reserve",
+    "detector": "economyBudget",
+    "threshold": 1,
+    "scale": 1,
+    "tags": [
+      "domestic",
+      "economy"
+    ],
+    "stage": "reserve",
+    "tuning": {
+      "reserve": 5,
+      "window": 15
+    }
+  },
+  {
+    "id": "income-shift",
+    "detector": "economyIncome",
+    "threshold": 1,
+    "scale": 40,
+    "tags": [
+      "domestic",
+      "economy"
+    ],
+    "tuning": {
+      "absolute": 10,
+      "relative": 0.25,
+      "window": 10
+    }
+  },
+  {
+    "id": "happiness-shift",
+    "detector": "happiness",
+    "threshold": 1,
+    "scale": 20,
+    "tags": [
+      "domestic",
+      "society"
+    ],
+    "tuning": {
+      "absolute": 10,
+      "milestones": [
+        35,
+        50
+      ],
+      "window": 10
+    }
+  }
+]

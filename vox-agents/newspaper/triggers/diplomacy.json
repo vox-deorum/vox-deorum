@@ -1,5 +1,15 @@
 [
   {
+    "id": "first-contact",
+    "detector": "firstContact",
+    "threshold": 1,
+    "scale": 1,
+    "tags": [
+      "international",
+      "diplomacy"
+    ]
+  },
+  {
     "id": "deal",
     "detector": "deal",
     "threshold": 1,
@@ -7,7 +17,12 @@
     "tags": [
       "international",
       "diplomacy"
-    ]
+    ],
+    "tuning": {
+      "absolute": 50,
+      "relative": 0.25,
+      "reserve": 10
+    }
   },
   {
     "id": "peace",

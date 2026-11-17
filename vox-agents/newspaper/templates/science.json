@@ -1,0 +1,112 @@
+[
+  {
+    "id": "era-account",
+    "triggerIds": [
+      "new-era"
+    ],
+    "tags": [
+      "science"
+    ],
+    "weight": {
+      "base": 1
+    },
+    "variants": [
+      {
+        "id": "account",
+        "weight": {
+          "base": 1
+        },
+        "headline": "{{partner}} enters {{era}}",
+        "body": [
+          "The team of {{partnerLink}} entered {{era}} in the observations ending at turn {{eventTurn}}."
+        ],
+        "links": [
+          {
+            "placeholder": "partnerLink",
+            "label": "{{partner}}",
+            "target": {
+              "type": "civilization",
+              "civilizationId": "{{partnerId}}"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "technology-account",
+    "triggerIds": [
+      "significant-technology"
+    ],
+    "tags": [
+      "science"
+    ],
+    "weight": {
+      "base": 1
+    },
+    "variants": [
+      {
+        "id": "account",
+        "weight": {
+          "base": 1
+        },
+        "headline": "{{technology}} joins our knowledge",
+        "body": [
+          "Our team acquired {{technology}} in the recorded research events at turn {{eventTurn}}. Review the technology tree when setting the next research goal."
+        ],
+        "links": []
+      }
+    ]
+  },
+  {
+    "id": "science-account",
+    "triggerIds": [
+      "science-shift"
+    ],
+    "tags": [
+      "science"
+    ],
+    "weight": {
+      "base": 1
+    },
+    "variants": [
+      {
+        "id": "account",
+        "weight": {
+          "base": 1
+        },
+        "headline": "Scientific output {{direction}}",
+        "body": [
+          "Our science per turn changed from {{previousOutput}} to {{output}} between turns {{fromTurn}} and {{toTurn}}."
+        ],
+        "links": []
+      }
+    ]
+  },
+  {
+    "id": "technology-lead-account",
+    "triggerIds": [
+      "technology-lead"
+    ],
+    "tags": [
+      "international",
+      "science"
+    ],
+    "weight": {
+      "base": 1
+    },
+    "variants": [
+      {
+        "id": "account",
+        "weight": {
+          "base": 1
+        },
+        "headline": "The known technology lead changes",
+        "body": [
+          "Among {{knownMajors}} known major civilizations with recent comparable observations, the technology-count leaders are now {{leaders}}, with {{technologies}} technologies. The earlier leaders were {{previousLeaders}}. This comparison covers the observations between turns {{fromTurn}} and {{toTurn}}."
+        ],
+        "links": []
+      }
+    ]
+  }
+]

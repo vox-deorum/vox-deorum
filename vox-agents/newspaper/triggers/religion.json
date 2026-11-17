@@ -1,0 +1,68 @@
+[
+  {
+    "id": "religion-pantheon",
+    "detector": "religionMilestone",
+    "threshold": 1,
+    "scale": 1,
+    "tags": [
+      "domestic",
+      "religion"
+    ],
+    "stage": "PantheonFounded"
+  },
+  {
+    "id": "religion-founded",
+    "detector": "religionMilestone",
+    "threshold": 1,
+    "scale": 1,
+    "tags": [
+      "domestic",
+      "religion"
+    ],
+    "stage": "ReligionFounded"
+  },
+  {
+    "id": "religion-enhanced",
+    "detector": "religionMilestone",
+    "threshold": 1,
+    "scale": 1,
+    "tags": [
+      "domestic",
+      "religion"
+    ],
+    "stage": "ReligionEnhanced"
+  },
+  {
+    "id": "religion-reformed",
+    "detector": "religionMilestone",
+    "threshold": 1,
+    "scale": 1,
+    "tags": [
+      "domestic",
+      "religion"
+    ],
+    "stage": "ReligionReformed"
+  },
+  {
+    "id": "city-conversions",
+    "detector": "cityReligion",
+    "threshold": 1,
+    "scale": 4,
+    "tags": [
+      "religion"
+    ],
+    "tuning": {
+      "window": 15
+    }
+  },
+  {
+    "id": "national-religion",
+    "detector": "nationalReligion",
+    "threshold": 1,
+    "scale": 1,
+    "tags": [
+      "domestic",
+      "religion"
+    ]
+  }
+]

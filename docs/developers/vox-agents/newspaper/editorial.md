@@ -12,7 +12,7 @@ MCP owns evidence schemas and reporting policy. Detectors use the projected obse
 
 ## Catalogue and eligibility
 
-The built-in catalogue lives under `vox-agents/newspaper/`. Templates and triggers are grouped into files by a topic tag, such as `trade` or `diplomacy`; each entry belongs to one file and retains all its tags. Designs have one file per identity. Each section file contains an array, with all JSON fully expanded using two-space indentation for editing.
+The built-in catalogue lives under `vox-agents/newspaper/`. Templates and triggers are grouped into topic files, such as `trade` or `diplomacy`; each entry belongs to one file and retains all its tags. Designs have one file per identity. Each section file contains an array, with all JSON fully expanded using two-space indentation for editing. The [trigger reference](triggers.md) lists the implemented developments, defaults, evidence requirements, and steps for tuning or extending coverage.
 
 | File | Controls |
 | --- | --- |
@@ -30,13 +30,13 @@ Designs select the supported Victorian or modern renderer family. Each needs an 
 
 ## Developments, selection, and continuity
 
-The initial detectors cover domestic city growth contrasts, changes in the concentration of own foreign-route gold, known foreign cultural development, and declarations of war against the receiver. Supported deal, peace, and recovery evidence supplies additional short pieces and authored combinations. Missing values and negative sentinels are unavailable observations. City lifecycle uncertainty suppresses comparisons that cannot establish continuity.
+Detectors cover cities, the domestic economy, trade, diplomacy, science, culture, and religion. Each development must meet its evidence and materiality rules before a template can turn it into a candidate. The [trigger reference](triggers.md) describes those rules and distinguishes event reports, snapshot changes, and persistent pressures. Existing incoming-war and peace coverage remains available.
 
 Importance comes from measured developments on a configured bounded scale. Comparisons can reach before the reporting period, but unchanged snapshots do not become new developments merely because another check occurs. A skipped check advances the reporting boundary and discards that check's candidates; series memory persists.
 
 Selection combines importance, decayed series history, novelty, variety, and feedback. Importance is dated and decays once per elapsed turn. Shared-series conflicts reserve each series for one selected item. Only explicit authored composites with compatible subjects and periods can merge: their importance is the maximum contributing importance, and their tags and series keys are deduplicated. A multi-series item contributes its final importance once to each series.
 
-An incoming declaration of war receives priority independently of reader votes. Its report leads an eligible breaking front page. A section appears only when it meets its configured minimum and includes a story beyond the front page. Page membership refers to canonical items, so a story repeated on the front and economy pages has one vote and one history contribution. Validation checks threat placement, subject variety where available, section minimums, and series uniqueness before publication.
+An incoming declaration of war receives priority independently of reader votes. Its report leads an eligible breaking front page. The built-in At Home page collects domestic stories, Beyond Our Borders collects international stories, and Trade and Livelihood uses economy and trade tags. A section appears only when it meets its configured minimum and includes a story beyond the front page. Page membership refers to canonical items, so a story repeated on the front and economy pages has one vote and one history contribution. Validation checks threat placement, subject variety where available, section minimums, and series uniqueness before publication.
 
 Authored placeholders become structured text and typed links. Prose and presentation use separate seeded random streams; page/layout tuning should not change wording. Decisions retain the seed, effective configuration identity and snapshot, candidate scores, merges, selected variants/layouts, evidence references, and feedback inputs. Reopening an issue reads stored content without running selection again.
 

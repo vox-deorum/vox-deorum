@@ -3,7 +3,7 @@ import Database from 'better-sqlite3';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { sql } from 'kysely';
-import { openReplayDatabase } from '../../../../src/newspaper/replay/database.js';
+import { openReplayDatabase, readReplayIdentities } from '../../../../src/newspaper/replay/database.js';
 import { createReplayRecording } from '../../../helpers/newspaper-replay.js';
 
 describe('replay read-only database', () => {
@@ -43,5 +43,21 @@ describe('replay read-only database', () => {
     const filename = path.join(path.dirname(recording.filename), 'missing.db');
     await expect(openReplayDatabase(filename)).rejects.toThrow();
     await expect(readFile(filename)).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
+  it('should recover recorded civilization identities and classify major players from IsMajor', async () => {
+    const sqlite = new Database(recording.filename);
+    sqlite.exec(`
+      INSERT INTO PlayerInformations (Key, TeamID, IsMajor, Civilization, Leader, IsHuman)
+        VALUES (2, 2, 0, 'Minor', 'City State', 0), (23, 23, 1, 'Major', 'Leader23', 0);
+    `);
+    sqlite.close();
+    db = await openReplayDatabase(recording.filename);
+    expect(await readReplayIdentities(db, 0)).toEqual({
+      receiverTeamId: 0, receiverOwnerName: 'Civ0', civilization: 'Civ0',
+      playerNames: { 0: 'Civ0', 1: 'Civ1', 2: 'Minor', 23: 'Major' },
+      playerTeamIds: { 0: 0, 1: 1, 2: 2, 23: 23 },
+      majorPlayerIds: [0, 1, 23],
+    });
   });
 });

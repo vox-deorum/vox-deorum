@@ -1,55 +1,26 @@
 [
   {
-    "id": "provincial-contrast",
+    "id": "population-milestone",
     "triggerIds": [
-      "city-contrast"
+      "city-population-milestone"
     ],
     "tags": [
       "domestic",
-      "cities"
+      "cities",
+      "society"
     ],
     "weight": {
       "base": 1
     },
     "variants": [
       {
-        "id": "settlement-account",
+        "id": "account",
         "weight": {
-          "base": 10
+          "base": 1
         },
-        "headline": "Two settlements, different fortunes",
+        "headline": "{{city}} passes a population milestone",
         "body": [
-          "Between turns {{fromTurn}} and {{toTurn}}, population in {{cityLink}} changed by {{growth}}, while {{otherCityLink}} changed by {{otherGrowth}}.",
-          "Compare food and current production in the city screen to understand the difference and decide whether either settlement needs attention."
-        ],
-        "links": [
-          {
-            "placeholder": "cityLink",
-            "label": "{{city}}",
-            "target": {
-              "type": "city",
-              "cityId": "{{cityId}}"
-            }
-          },
-          {
-            "placeholder": "otherCityLink",
-            "label": "{{otherCity}}",
-            "target": {
-              "type": "city",
-              "cityId": "{{otherCityId}}"
-            }
-          }
-        ]
-      },
-      {
-        "id": "provincial-notes",
-        "weight": {
-          "base": 6
-        },
-        "headline": "{{city}} and {{otherCity}} take different paths",
-        "body": [
-          "Our settlements do not move at one pace. Recorded population in {{cityLink}} changed by {{growth}}; in {{otherCity}}, by {{otherGrowth}}, over the comparison ending at turn {{toTurn}}.",
-          "A city that grows more slowly may be serving another purpose. Review its food balance and current work before drawing a conclusion."
+          "The population of {{cityLink}} rose from {{previousPopulation}} to {{population}} between turns {{fromTurn}} and {{toTurn}}, passing the {{milestone}} milestone."
         ],
         "links": [
           {
@@ -63,5 +34,260 @@
         ]
       }
     ]
+  },
+  {
+    "id": "population-boom",
+    "triggerIds": [
+      "city-population-boom"
+    ],
+    "tags": [
+      "domestic",
+      "cities",
+      "society"
+    ],
+    "weight": {
+      "base": 1
+    },
+    "variants": [
+      {
+        "id": "account",
+        "weight": {
+          "base": 1
+        },
+        "headline": "{{city}} grows rapidly",
+        "body": [
+          "{{cityLink}} gained {{growth}} population between turns {{fromTurn}} and {{toTurn}}, reaching {{population}}. The increase is substantial relative to the earlier population of {{previousPopulation}}."
+        ],
+        "links": [
+          {
+            "placeholder": "cityLink",
+            "label": "{{city}}",
+            "target": {
+              "type": "city",
+              "cityId": "{{cityId}}"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "population-decline",
+    "triggerIds": [
+      "city-population-decline"
+    ],
+    "tags": [
+      "domestic",
+      "cities",
+      "society"
+    ],
+    "weight": {
+      "base": 1
+    },
+    "variants": [
+      {
+        "id": "account",
+        "weight": {
+          "base": 1
+        },
+        "headline": "Population falls in {{city}}",
+        "body": [
+          "Recorded population in {{cityLink}} fell from {{previousPopulation}} to {{population}} between turns {{fromTurn}} and {{toTurn}} under the same ownership. Review its food balance and city management for the next decision."
+        ],
+        "links": [
+          {
+            "placeholder": "cityLink",
+            "label": "{{city}}",
+            "target": {
+              "type": "city",
+              "cityId": "{{cityId}}"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "food-shortage",
+    "triggerIds": [
+      "city-food-shortage"
+    ],
+    "tags": [
+      "domestic",
+      "cities",
+      "society"
+    ],
+    "weight": {
+      "base": 1
+    },
+    "variants": [
+      {
+        "id": "account",
+        "weight": {
+          "base": 1
+        },
+        "headline": "{{city}} faces {{stage}}",
+        "body": [
+          "Repeated observations show a negative food balance in {{cityLink}}. At turn {{toTurn}}, the balance was {{food}} food per turn with {{stored}} stored, about {{reserveTurns}} turns at that rate. Future production and consumption can change this estimate."
+        ],
+        "links": [
+          {
+            "placeholder": "cityLink",
+            "label": "{{city}}",
+            "target": {
+              "type": "city",
+              "cityId": "{{cityId}}"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "settlement-recovery",
+    "triggerIds": [
+      "city-recovery"
+    ],
+    "tags": [
+      "cities",
+      "recovery"
+    ],
+    "weight": {
+      "base": 1
+    },
+    "variants": [
+      {
+        "id": "account",
+        "weight": {
+          "base": 1
+        },
+        "headline": "{{city}} regains population",
+        "body": [
+          "Following an observed decline, {{cityLink}} gained {{growth}} population between turns {{recoveryFromTurn}} and {{recoveryToTurn}}, reaching {{population}}."
+        ],
+        "links": [
+          {
+            "placeholder": "cityLink",
+            "label": "{{city}}",
+            "target": {
+              "type": "city",
+              "cityId": "{{cityId}}"
+            }
+          }
+        ]
+      }
+    ],
+    "short": true
+  },
+  {
+    "id": "resistance-ends",
+    "triggerIds": [
+      "city-resistance"
+    ],
+    "tags": [
+      "domestic",
+      "cities",
+      "society"
+    ],
+    "weight": {
+      "base": 1
+    },
+    "variants": [
+      {
+        "id": "account",
+        "weight": {
+          "base": 1
+        },
+        "headline": "Resistance ends in {{city}}",
+        "body": [
+          "In {{cityLink}}, resistance has ended by the observation at turn {{toTurn}}. Review the city priorities as regular administration resumes."
+        ],
+        "links": [
+          {
+            "placeholder": "cityLink",
+            "label": "{{city}}",
+            "target": {
+              "type": "city",
+              "cityId": "{{cityId}}"
+            }
+          }
+        ]
+      }
+    ],
+    "short": true
+  },
+  {
+    "id": "administration-changes",
+    "triggerIds": [
+      "city-administration"
+    ],
+    "tags": [
+      "domestic",
+      "cities",
+      "society"
+    ],
+    "weight": {
+      "base": 1
+    },
+    "variants": [
+      {
+        "id": "account",
+        "weight": {
+          "base": 1
+        },
+        "headline": "Administration changes in {{city}}",
+        "body": [
+          "The observations at turns {{fromTurn}} and {{toTurn}} show a change in {{cityLink}}: {{status}}."
+        ],
+        "links": [
+          {
+            "placeholder": "cityLink",
+            "label": "{{city}}",
+            "target": {
+              "type": "city",
+              "cityId": "{{cityId}}"
+            }
+          }
+        ]
+      }
+    ],
+    "short": true
+  },
+  {
+    "id": "razing-observed",
+    "triggerIds": [
+      "city-razing"
+    ],
+    "tags": [
+      "domestic",
+      "cities",
+      "society"
+    ],
+    "weight": {
+      "base": 1
+    },
+    "variants": [
+      {
+        "id": "account",
+        "weight": {
+          "base": 1
+        },
+        "headline": "Razing is active in {{city}}",
+        "body": [
+          "At turn {{toTurn}}, {{cityLink}} has {{remaining}} razing turns recorded, following an earlier observation with no active razing."
+        ],
+        "links": [
+          {
+            "placeholder": "cityLink",
+            "label": "{{city}}",
+            "target": {
+              "type": "city",
+              "cityId": "{{cityId}}"
+            }
+          }
+        ]
+      }
+    ],
+    "short": true
   }
 ]

@@ -1,13 +1,1 @@
-[
-  {
-    "id": "city-recovery",
-    "detector": "cityRecovery",
-    "threshold": 1,
-    "scale": 4,
-    "tags": [
-      "domestic",
-      "cities",
-      "recovery"
-    ]
-  }
-]
+[]

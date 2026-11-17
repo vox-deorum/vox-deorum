@@ -7,6 +7,7 @@ The newspaper turns recorded game evidence into authored heuristic issues, displ
 | [Renderer](renderer.md) | Demo accepted in game; broader acceptance pending | Stored presentation snapshots, browser rendering, DDS export, and game viewer |
 | [Replay](replay.md) | Recorded publication and browser workflow verified | Recording evidence, separate output storage, issue reading, votes, preferences, and resume |
 | [Editorial](editorial.md) | Heuristic implementation; reading acceptance pending | Configured detection, authored stories, series, feedback, and stored presentation; later LLM editing |
+| [Triggers](triggers.md) | Implemented catalogue; recording tuning pending | Development conditions, defaults, evidence, repeat rules, and instructions for adding coverage |
 | [Evaluation](evaluation.md) | Planned | Offline experiments comparing editorial approaches |
 | [Live integration](live-integration.md) | Planned; save-capacity proof pending | Live scheduling, game-owned persistence, archive access, and player integration |
 

@@ -18,9 +18,35 @@ export const authoredVariantSchema = eligibleSchema.extend({
 export type AuthoredVariant = z.infer<typeof authoredVariantSchema>;
 /** Available measured detectors and their numeric tuning parameters. */
 const triggerSchema = z.object({
-  id: z.string().min(1), detector: z.enum(['cityContrast', 'tradeConcentration', 'foreignCulture', 'incomingWar', 'deal', 'peace', 'cityRecovery']),
+  id: z.string().min(1), detector: z.enum(['cityContrast', 'tradeConcentration', 'foreignCulture', 'incomingWar', 'deal', 'peace', 'cityRecovery',
+    'cityPopulation', 'cityFood', 'cityStatus', 'economyBudget', 'economyIncome', 'happiness', 'tradePartners', 'tradeContraction',
+    'tradePlunder', 'firstContact', 'era', 'technology', 'scienceOutput', 'technologyLead', 'policy', 'ideology', 'cultureOutput',
+    'tourismOutput', 'wonder', 'greatWorks', 'goldenAge', 'religionMilestone', 'cityReligion', 'nationalReligion']),
   condition: conditionSchema.optional(), threshold: z.number().nonnegative(), scale: z.number().positive(),
   tags: z.array(z.string().min(1)),
+  enabled: z.boolean().optional(),
+  stage: z.string().optional(),
+  tuning: z.object({ absolute: z.number().nonnegative().optional(), relative: z.number().nonnegative().optional(),
+    window: z.number().positive().optional(), persistence: z.number().positive().optional(), maxGap: z.number().positive().optional(),
+    reserve: z.number().nonnegative().optional(), share: z.number().min(0).max(1).optional(),
+    milestones: z.array(z.number()).optional(), identities: z.array(z.string()).optional() }).strict().optional(),
+}).strict().superRefine((trigger, ctx) => {
+  const stages: Record<string, string[]> = { cityPopulation: ['milestone', 'boom', 'decline'], cityStatus: ['resistance', 'administration', 'razing'],
+    economyBudget: ['deficit', 'recovery', 'reserve'], religionMilestone: ['PantheonFounded', 'ReligionFounded', 'ReligionEnhanced', 'ReligionReformed'] };
+  if (trigger.stage !== undefined && !stages[trigger.detector]?.includes(trigger.stage))
+    ctx.addIssue({ code: 'custom', path: ['stage'], message: `Unsupported stage for ${trigger.detector}` });
+  if (['cityPopulation', 'religionMilestone'].includes(trigger.detector) && trigger.stage === undefined)
+    ctx.addIssue({ code: 'custom', path: ['stage'], message: 'This detector requires a stage.' });
+  const allowed: Record<string, string[]> = {
+    cityPopulation: ['window', 'milestones', 'absolute', 'relative'], cityRecovery: ['window'], cityFood: ['window', 'persistence', 'maxGap', 'reserve'], cityStatus: ['window'],
+    economyBudget: ['window', 'persistence', 'maxGap', 'reserve'], economyIncome: ['window', 'absolute', 'relative'], happiness: ['window', 'absolute', 'milestones'],
+    tradePartners: ['window'], tradeContraction: ['window', 'absolute', 'relative', 'reserve'], tradeConcentration: ['window', 'relative', 'share'],
+    foreignCulture: ['window', 'absolute', 'relative'], cultureOutput: ['window', 'absolute', 'relative'], tourismOutput: ['window', 'absolute', 'relative'],
+    scienceOutput: ['window', 'absolute', 'relative'], technologyLead: ['window', 'maxGap', 'absolute'], technology: ['identities'], deal: ['maxGap', 'absolute', 'relative', 'reserve'],
+    wonder: ['window'], greatWorks: ['window'], goldenAge: ['window'], nationalReligion: ['window'], cityReligion: ['window'],
+  };
+  for (const key of Object.keys(trigger.tuning ?? {})) if (!allowed[trigger.detector]?.includes(key))
+    ctx.addIssue({ code: 'custom', path: ['tuning', key], message: `Unsupported tuning field for ${trigger.detector}` });
 });
 /** Templates explicitly name supported detectors and compatible authored composites. */
 const templateSchema = eligibleSchema.extend({

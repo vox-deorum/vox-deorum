@@ -5,6 +5,7 @@ import { queryNewspaperEvidence } from '../../../../../mcp-server/dist/newspaper
 import { openReadonlyGameDb } from '../../../../src/knowledge/database.js';
 import { openReplayDatabase } from '../../../../src/newspaper/replay/database.js';
 import { ReplaySession, ReplaySessionError } from '../../../../src/newspaper/replay/session.js';
+import { runEditorialCheck } from '../../../../src/newspaper/editorial/check.js';
 import { createReplayRecording, replaySettings as sourceSettings } from '../../../helpers/newspaper-replay.js';
 import { deferred } from '../../../helpers/deferred.js';
 
@@ -85,6 +86,39 @@ describe('replay session', () => {
     expect((await session.advance()).evidence.request).toMatchObject({ cutoffTurn: 18, comparisonRange: { fromTurn: 12, toTurn: 18 } });
     expect((await session.advance()).evidence.request.cutoffTurn).toBe(26);
     expect((await session.configure({ ...settings, durationUnit: 'recordedTurns' })).publicationIntervalTurns).toBe(5);
+  });
+
+  it.each([
+    { name: 'Epic', override: 2, durationUnit: 'recordedTurns', standardTurnsPerGameTurn: 1 / 1.5 },
+    { name: 'Epic', override: undefined, durationUnit: 'standardTurns', standardTurnsPerGameTurn: 1 / 1.5 },
+    { name: 'Unknown', override: 2, durationUnit: 'recordedTurns', standardTurnsPerGameTurn: 0.5 },
+    { name: 'Unknown', override: 2, durationUnit: 'standardTurns', standardTurnsPerGameTurn: 0.5 },
+    { name: null, override: undefined, durationUnit: 'recordedTurns', standardTurnsPerGameTurn: 1 },
+  ])('should pass known major identities and normalized pace to editorial checks for $name with $durationUnit', async ({ name, override, durationUnit, standardTurnsPerGameTurn }) => {
+    const sqlite = new Database(recording.filename);
+    sqlite.prepare('DELETE FROM GameMetadata WHERE Key = ?').run('gameSpeed');
+    if (name !== null) sqlite.prepare('INSERT INTO GameMetadata VALUES (?, ?)').run('gameSpeed', name);
+    sqlite.exec(`
+      INSERT INTO PlayerInformations (Key, TeamID, IsMajor, Civilization, Leader, IsHuman)
+        VALUES (2, 2, 0, 'Minor', 'City State', 0), (5, 5, 1, 'Unmet', 'Leader5', 0);
+      INSERT INTO PlayerSummaries (Key, Turn, CreatedAt, Player0, Payload, Cities, Population, Gold, GoldPerTurn, Technologies)
+        VALUES (2, 10, 1010, 1, '{}', 1, 1, 0, 0, 0);
+    `);
+    sqlite.close();
+    const check = vi.fn(runEditorialCheck);
+    session = new ReplaySession({ check });
+    await session.configure({ ...sourceSettings(recording.filename), durationUnit, speedMultiplierOverride: override });
+    const result = await session.advance();
+    expect(result.evidence.players.map(player => player.subjectID).sort()).toEqual([0, 1, 2]);
+    expect(check).toHaveBeenCalledOnce();
+    expect(check.mock.calls[0][0].context).toMatchObject({
+      receiverTeamId: 0, receiverOwnerName: 'Civ0', civilization: 'Civ0',
+      playerNames: { 0: 'Civ0', 1: 'Civ1', 2: 'Minor' },
+      playerTeamIds: { 0: 0, 1: 1, 2: 2 },
+      majorPlayerIds: [0, 1], standardTurnsPerGameTurn,
+    });
+    expect(check.mock.calls[0][0].context?.playerNames).not.toHaveProperty('5');
+    expect(check.mock.calls[0][0].context?.playerTeamIds).not.toHaveProperty('5');
   });
 
   it.each([

@@ -19,7 +19,7 @@
         },
         "headline": "An exchange with {{partner}}",
         "body": [
-          "Our civilization and {{partnerLink}} concluded a deal at turn {{eventTurn}}. Review the exchange in the diplomatic overview as you consider the next step in this relationship."
+          "Our civilization and {{partnerLink}} recorded a deal at turn {{eventTurn}} with these consequential terms: {{terms}}. Review the full exchange in the diplomatic overview."
         ],
         "links": [
           {
@@ -69,5 +69,40 @@
         ]
       }
     ]
+  },
+  {
+    "id": "contact-account",
+    "triggerIds": [
+      "first-contact"
+    ],
+    "tags": [
+      "diplomacy"
+    ],
+    "weight": {
+      "base": 1
+    },
+    "variants": [
+      {
+        "id": "account",
+        "weight": {
+          "base": 1
+        },
+        "headline": "First contact with {{partners}}",
+        "body": [
+          "Our team recorded contact with the team of {{partners}} at turn {{eventTurn}}. {{partnerLink}} is one of the civilizations on that team."
+        ],
+        "links": [
+          {
+            "placeholder": "partnerLink",
+            "label": "{{partner}}",
+            "target": {
+              "type": "civilization",
+              "civilizationId": "{{partnerId}}"
+            }
+          }
+        ]
+      }
+    ],
+    "short": true
   }
 ]

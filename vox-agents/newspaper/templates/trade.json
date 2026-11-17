@@ -140,5 +140,95 @@
         ]
       }
     ]
+  },
+  {
+    "id": "new-trade-partner",
+    "triggerIds": [
+      "trade-partner"
+    ],
+    "tags": [
+      "trade",
+      "economy"
+    ],
+    "weight": {
+      "base": 1
+    },
+    "variants": [
+      {
+        "id": "account",
+        "weight": {
+          "base": 1
+        },
+        "headline": "A new route partner: {{partner}}",
+        "body": [
+          "Our outgoing foreign routes now include {{partnerLink}}, absent from the complete earlier route observation at turn {{fromTurn}}. The new observation is dated turn {{toTurn}}."
+        ],
+        "links": [
+          {
+            "placeholder": "partnerLink",
+            "label": "{{partner}}",
+            "target": {
+              "type": "trade-relationship",
+              "partnerCivilizationId": "{{partnerId}}",
+              "direction": "export"
+            }
+          }
+        ]
+      }
+    ],
+    "short": true
+  },
+  {
+    "id": "route-contraction",
+    "triggerIds": [
+      "trade-contraction"
+    ],
+    "tags": [
+      "trade",
+      "economy"
+    ],
+    "weight": {
+      "base": 1
+    },
+    "variants": [
+      {
+        "id": "account",
+        "weight": {
+          "base": 1
+        },
+        "headline": "Foreign trade contracts",
+        "body": [
+          "Between turns {{fromTurn}} and {{toTurn}}, our outgoing foreign route count changed from {{previousRoutes}} to {{routes}}, and its positive gold yield from {{previousGold}} to {{gold}} per turn."
+        ],
+        "links": []
+      }
+    ]
+  },
+  {
+    "id": "route-plunder",
+    "triggerIds": [
+      "trade-plunder"
+    ],
+    "tags": [
+      "trade",
+      "economy"
+    ],
+    "weight": {
+      "base": 1
+    },
+    "variants": [
+      {
+        "id": "account",
+        "weight": {
+          "base": 1
+        },
+        "headline": "Plundering strikes our commerce",
+        "body": [
+          "During turns {{fromTurn}} to {{toTurn}}, {{plunderEvents}} route plundering events affecting our commerce were recorded. Total recorded plunder gold: {{plunderGold}}. Review the trade overview when replacing connections."
+        ],
+        "links": []
+      }
+    ],
+    "short": true
   }
 ]

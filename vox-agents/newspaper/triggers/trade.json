@@ -1,11 +1,55 @@
 [
   {
+    "id": "trade-partner",
+    "detector": "tradePartners",
+    "threshold": 1,
+    "scale": 1,
+    "tags": [
+      "international",
+      "economy",
+      "trade"
+    ]
+  },
+  {
+    "id": "trade-contraction",
+    "detector": "tradeContraction",
+    "threshold": 1,
+    "scale": 25,
+    "tags": [
+      "domestic",
+      "economy",
+      "trade"
+    ],
+    "tuning": {
+      "absolute": 2,
+      "relative": 0.25,
+      "reserve": 10,
+      "window": 10
+    }
+  },
+  {
     "id": "trade-concentration",
     "detector": "tradeConcentration",
-    "threshold": 5,
+    "threshold": 0,
     "scale": 35,
     "tags": [
       "international",
+      "economy",
+      "trade"
+    ],
+    "tuning": {
+      "relative": 0.2,
+      "share": 0.5,
+      "window": 15
+    }
+  },
+  {
+    "id": "trade-plunder",
+    "detector": "tradePlunder",
+    "threshold": 1,
+    "scale": 1,
+    "tags": [
+      "domestic",
       "economy",
       "trade"
     ]

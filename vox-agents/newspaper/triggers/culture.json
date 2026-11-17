@@ -1,12 +1,105 @@
 [
   {
+    "id": "policy-direction",
+    "detector": "policy",
+    "threshold": 1,
+    "scale": 3,
+    "tags": [
+      "domestic",
+      "culture"
+    ]
+  },
+  {
+    "id": "ideology-switch",
+    "detector": "ideology",
+    "threshold": 1,
+    "scale": 1,
+    "tags": [
+      "domestic",
+      "culture",
+      "society"
+    ]
+  },
+  {
+    "id": "domestic-culture",
+    "detector": "cultureOutput",
+    "threshold": 1,
+    "scale": 40,
+    "tags": [
+      "domestic",
+      "culture"
+    ],
+    "tuning": {
+      "absolute": 5,
+      "relative": 0.25,
+      "window": 10
+    }
+  },
+  {
     "id": "foreign-culture",
     "detector": "foreignCulture",
-    "threshold": 5,
+    "threshold": 1,
     "scale": 100,
     "tags": [
       "international",
       "culture"
+    ],
+    "tuning": {
+      "absolute": 5,
+      "relative": 0.25,
+      "window": 10
+    }
+  },
+  {
+    "id": "tourism-shift",
+    "detector": "tourismOutput",
+    "threshold": 1,
+    "scale": 40,
+    "tags": [
+      "culture"
+    ],
+    "tuning": {
+      "absolute": 5,
+      "relative": 0.25,
+      "window": 10
+    }
+  },
+  {
+    "id": "new-wonder",
+    "detector": "wonder",
+    "threshold": 1,
+    "scale": 1,
+    "tags": [
+      "culture",
+      "cities"
+    ],
+    "tuning": {
+      "window": 15
+    }
+  },
+  {
+    "id": "great-works",
+    "detector": "greatWorks",
+    "threshold": 1,
+    "scale": 3,
+    "tags": [
+      "domestic",
+      "culture",
+      "cities"
+    ],
+    "tuning": {
+      "window": 15
+    }
+  },
+  {
+    "id": "golden-age",
+    "detector": "goldenAge",
+    "threshold": 1,
+    "scale": 1,
+    "tags": [
+      "domestic",
+      "culture",
+      "society"
     ]
   }
 ]

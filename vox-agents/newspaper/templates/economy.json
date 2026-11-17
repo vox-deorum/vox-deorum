@@ -1,0 +1,128 @@
+[
+  {
+    "id": "budget-deficit-account",
+    "triggerIds": [
+      "budget-deficit"
+    ],
+    "tags": [
+      "economy"
+    ],
+    "weight": {
+      "base": 1
+    },
+    "variants": [
+      {
+        "id": "account",
+        "weight": {
+          "base": 1
+        },
+        "headline": "The budget enters a sustained deficit",
+        "body": [
+          "Repeated observations through turn {{toTurn}} show a deficit. Our latest net income is {{income}} gold per turn."
+        ],
+        "links": []
+      }
+    ]
+  },
+  {
+    "id": "budget-recovery-account",
+    "triggerIds": [
+      "budget-recovery"
+    ],
+    "tags": [
+      "economy",
+      "recovery"
+    ],
+    "weight": {
+      "base": 1
+    },
+    "variants": [
+      {
+        "id": "account",
+        "weight": {
+          "base": 1
+        },
+        "headline": "The budget returns to balance",
+        "body": [
+          "After a recorded deficit, repeated observations through turn {{toTurn}} show nonnegative net income, most recently {{income}} gold per turn."
+        ],
+        "links": []
+      }
+    ]
+  },
+  {
+    "id": "treasury-reserve-account",
+    "triggerIds": [
+      "treasury-reserve"
+    ],
+    "tags": [
+      "economy"
+    ],
+    "weight": {
+      "base": 1
+    },
+    "variants": [
+      {
+        "id": "account",
+        "weight": {
+          "base": 1
+        },
+        "headline": "The treasury has a short reserve",
+        "body": [
+          "At turn {{toTurn}}, the treasury holds {{gold}} gold with net income of {{income}} per turn. At that unchanged rate the reserve would last about {{reserveTurns}} game turns."
+        ],
+        "links": []
+      }
+    ]
+  },
+  {
+    "id": "income-account",
+    "triggerIds": [
+      "income-shift"
+    ],
+    "tags": [
+      "economy"
+    ],
+    "weight": {
+      "base": 1
+    },
+    "variants": [
+      {
+        "id": "account",
+        "weight": {
+          "base": 1
+        },
+        "headline": "National income {{direction}}",
+        "body": [
+          "Net gold per turn changed from {{previousOutput}} at turn {{fromTurn}} to {{output}} at turn {{toTurn}}. This is a recorded change of {{change}} gold per turn."
+        ],
+        "links": []
+      }
+    ]
+  },
+  {
+    "id": "happiness-account",
+    "triggerIds": [
+      "happiness-shift"
+    ],
+    "tags": [
+      "society"
+    ],
+    "weight": {
+      "base": 1
+    },
+    "variants": [
+      {
+        "id": "account",
+        "weight": {
+          "base": 1
+        },
+        "headline": "National happiness {{direction}}",
+        "body": [
+          "Recorded happiness changed from {{previousHappiness}}% to {{happiness}}% between turns {{fromTurn}} and {{toTurn}}. Review the happiness overview when choosing the next domestic priorities."
+        ],
+        "links": []
+      }
+    ]
+  }
+]

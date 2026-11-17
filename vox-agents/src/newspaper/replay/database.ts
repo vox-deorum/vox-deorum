@@ -20,7 +20,7 @@ export async function replaySourceIdentity(databasePath: string): Promise<string
 
 /** Recover only recorded identities needed to interpret team and ownership references. */
 export async function readReplayIdentities(db: Awaited<ReturnType<typeof openReplayDatabase>>, receiverPlayerID: number) {
-  const players = await db.selectFrom('PlayerInformations').select(['Key', 'TeamID', 'Civilization']).execute();
+  const players = await db.selectFrom('PlayerInformations').select(['Key', 'TeamID', 'Civilization', 'IsMajor']).execute();
   const receiver = players.find(player => player.Key === receiverPlayerID);
   return {
     receiverTeamId: receiver?.TeamID ?? undefined,
@@ -28,5 +28,6 @@ export async function readReplayIdentities(db: Awaited<ReturnType<typeof openRep
     civilization: receiver?.Civilization ?? undefined,
     playerNames: Object.fromEntries(players.filter(player => player.Civilization).map(player => [String(player.Key), player.Civilization!])),
     playerTeamIds: Object.fromEntries(players.filter(player => player.TeamID !== null).map(player => [String(player.Key), player.TeamID!])),
+    majorPlayerIds: players.filter(player => player.IsMajor === 1).map(player => player.Key),
   };
 }

@@ -54,5 +54,211 @@
         ]
       }
     ]
+  },
+  {
+    "id": "policy-account",
+    "triggerIds": [
+      "policy-direction"
+    ],
+    "tags": [
+      "culture"
+    ],
+    "weight": {
+      "base": 1
+    },
+    "variants": [
+      {
+        "id": "account",
+        "weight": {
+          "base": 1
+        },
+        "headline": "A new policy direction",
+        "body": [
+          "Our recorded policy adoptions and branch openings during this period include {{policies}}. The latest event is dated turn {{eventTurn}}."
+        ],
+        "links": []
+      }
+    ]
+  },
+  {
+    "id": "ideology-account",
+    "triggerIds": [
+      "ideology-switch"
+    ],
+    "tags": [
+      "culture",
+      "society"
+    ],
+    "weight": {
+      "base": 1
+    },
+    "variants": [
+      {
+        "id": "account",
+        "weight": {
+          "base": 1
+        },
+        "headline": "Our ideology changes",
+        "body": [
+          "A recorded switch from {{previousIdeology}} to {{ideology}} took place at turn {{eventTurn}}."
+        ],
+        "links": []
+      }
+    ]
+  },
+  {
+    "id": "domestic-culture-account",
+    "triggerIds": [
+      "domestic-culture"
+    ],
+    "tags": [
+      "culture"
+    ],
+    "weight": {
+      "base": 1
+    },
+    "variants": [
+      {
+        "id": "account",
+        "weight": {
+          "base": 1
+        },
+        "headline": "Our cultural output {{direction}}",
+        "body": [
+          "Culture per turn changed from {{previousOutput}} to {{output}} between turns {{fromTurn}} and {{toTurn}}."
+        ],
+        "links": []
+      }
+    ]
+  },
+  {
+    "id": "tourism-account",
+    "triggerIds": [
+      "tourism-shift"
+    ],
+    "tags": [
+      "culture"
+    ],
+    "weight": {
+      "base": 1
+    },
+    "variants": [
+      {
+        "id": "account",
+        "weight": {
+          "base": 1
+        },
+        "headline": "Tourism output {{direction}} in {{partner}}",
+        "body": [
+          "The permitted observations for {{partnerLink}} show tourism per turn changing from {{previousOutput}} to {{output}} between turns {{fromTurn}} and {{toTurn}}."
+        ],
+        "links": [
+          {
+            "placeholder": "partnerLink",
+            "label": "{{partner}}",
+            "target": {
+              "type": "civilization",
+              "civilizationId": "{{partnerId}}"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "wonder-account",
+    "triggerIds": [
+      "new-wonder"
+    ],
+    "tags": [
+      "culture",
+      "cities"
+    ],
+    "weight": {
+      "base": 1
+    },
+    "variants": [
+      {
+        "id": "account",
+        "weight": {
+          "base": 1
+        },
+        "headline": "New wonders recorded in {{city}}",
+        "body": [
+          "Comparable observations of {{cityLink}} under the same owner show these new wonders: {{wonders}}. They were absent at turn {{fromTurn}} and present at turn {{toTurn}}."
+        ],
+        "links": [
+          {
+            "placeholder": "cityLink",
+            "label": "{{city}}",
+            "target": {
+              "type": "city",
+              "cityId": "{{cityId}}"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "great-work-account",
+    "triggerIds": [
+      "great-works"
+    ],
+    "tags": [
+      "culture",
+      "cities"
+    ],
+    "weight": {
+      "base": 1
+    },
+    "variants": [
+      {
+        "id": "account",
+        "weight": {
+          "base": 1
+        },
+        "headline": "{{city}} adds to its great works",
+        "body": [
+          "The great-work collection in {{cityLink}} increased from {{previousWorks}} to {{works}} between turns {{fromTurn}} and {{toTurn}}."
+        ],
+        "links": [
+          {
+            "placeholder": "cityLink",
+            "label": "{{city}}",
+            "target": {
+              "type": "city",
+              "cityId": "{{cityId}}"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "golden-age-account",
+    "triggerIds": [
+      "golden-age"
+    ],
+    "tags": [
+      "culture",
+      "society"
+    ],
+    "weight": {
+      "base": 1
+    },
+    "variants": [
+      {
+        "id": "account",
+        "weight": {
+          "base": 1
+        },
+        "headline": "Our golden age {{stage}}",
+        "body": [
+          "Our recorded golden-age status changed between turns {{fromTurn}} and {{toTurn}}: the golden age {{stage}}."
+        ],
+        "links": []
+      }
+    ]
   }
 ]

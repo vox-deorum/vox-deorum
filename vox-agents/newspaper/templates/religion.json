@@ -1,0 +1,197 @@
+[
+  {
+    "id": "pantheon-account",
+    "triggerIds": [
+      "religion-pantheon"
+    ],
+    "tags": [
+      "religion"
+    ],
+    "weight": {
+      "base": 1
+    },
+    "variants": [
+      {
+        "id": "account",
+        "weight": {
+          "base": 1
+        },
+        "headline": "A pantheon is founded in {{partner}}",
+        "body": [
+          "{{partnerLink}} recorded a pantheon foundation at turn {{eventTurn}}."
+        ],
+        "links": [
+          {
+            "placeholder": "partnerLink",
+            "label": "{{partner}}",
+            "target": {
+              "type": "civilization",
+              "civilizationId": "{{partnerId}}"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "religion-founded-account",
+    "triggerIds": [
+      "religion-founded"
+    ],
+    "tags": [
+      "religion"
+    ],
+    "weight": {
+      "base": 1
+    },
+    "variants": [
+      {
+        "id": "account",
+        "weight": {
+          "base": 1
+        },
+        "headline": "{{religion}} is founded in {{partner}}",
+        "body": [
+          "{{partnerLink}} founded {{religion}} in the recorded event at turn {{eventTurn}}."
+        ],
+        "links": [
+          {
+            "placeholder": "partnerLink",
+            "label": "{{partner}}",
+            "target": {
+              "type": "civilization",
+              "civilizationId": "{{partnerId}}"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "religion-enhanced-account",
+    "triggerIds": [
+      "religion-enhanced"
+    ],
+    "tags": [
+      "religion"
+    ],
+    "weight": {
+      "base": 1
+    },
+    "variants": [
+      {
+        "id": "account",
+        "weight": {
+          "base": 1
+        },
+        "headline": "{{religion}} is enhanced in {{partner}}",
+        "body": [
+          "{{partnerLink}} enhanced {{religion}} in the recorded event at turn {{eventTurn}}."
+        ],
+        "links": [
+          {
+            "placeholder": "partnerLink",
+            "label": "{{partner}}",
+            "target": {
+              "type": "civilization",
+              "civilizationId": "{{partnerId}}"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "religion-reformed-account",
+    "triggerIds": [
+      "religion-reformed"
+    ],
+    "tags": [
+      "religion"
+    ],
+    "weight": {
+      "base": 1
+    },
+    "variants": [
+      {
+        "id": "account",
+        "weight": {
+          "base": 1
+        },
+        "headline": "{{religion}} is reformed in {{partner}}",
+        "body": [
+          "{{partnerLink}} reformed {{religion}} in the recorded event at turn {{eventTurn}}."
+        ],
+        "links": [
+          {
+            "placeholder": "partnerLink",
+            "label": "{{partner}}",
+            "target": {
+              "type": "civilization",
+              "civilizationId": "{{partnerId}}"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "city-conversion-account",
+    "triggerIds": [
+      "city-conversions"
+    ],
+    "tags": [
+      "religion"
+    ],
+    "weight": {
+      "base": 1
+    },
+    "variants": [
+      {
+        "id": "account",
+        "weight": {
+          "base": 1
+        },
+        "headline": "Religious change in {{partner}}",
+        "body": [
+          "Comparable observations and recorded events for {{partnerLink}} establish majority religion changes in {{conversions}} distinct cities between turns {{fromTurn}} and {{toTurn}}. The resulting religions include {{religions}}; {{reversals}} cities returned to an earlier observed majority during this period."
+        ],
+        "links": [
+          {
+            "placeholder": "partnerLink",
+            "label": "{{partner}}",
+            "target": {
+              "type": "civilization",
+              "civilizationId": "{{partnerId}}"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "national-religion-account",
+    "triggerIds": [
+      "national-religion"
+    ],
+    "tags": [
+      "religion"
+    ],
+    "weight": {
+      "base": 1
+    },
+    "variants": [
+      {
+        "id": "account",
+        "weight": {
+          "base": 1
+        },
+        "headline": "Our religious majority changes",
+        "body": [
+          "The national majority religion changed from {{previousReligion}} to {{religion}} between turns {{fromTurn}} and {{toTurn}}."
+        ],
+        "links": []
+      }
+    ]
+  }
+]
