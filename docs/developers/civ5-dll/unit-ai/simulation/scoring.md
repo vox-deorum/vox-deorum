@@ -1,26 +1,52 @@
 # Unit AI: Tactical Simulation Scoring
 
-This guide describes how `CvTacticalAI.cpp`, under `civ5-dll/CvGameCoreDLL_Expansion2`, scores actions and ranks plans. See the [simulation overview](overview.md) for the search procedure and safety checks, and [air search](air.md) for aircraft scoring.
+The [command loop](../commands/value.md) ranks fights. Tactical search then ranks plans for one fight or positioning task. Each plan is a sequence of unit actions, called **assignments** in `CvTacticalAI.cpp`. The search uses an **assignment score** to choose what to explore and a **plan total** to choose among completed plans.
 
-Scores rank useful damage, valuable actions, and good positioning. A high score still needs to pass the [acceptance checks](overview.md#acceptance-and-replay).
+```mermaid
+flowchart TD
+    START["Score starting tiles for comparison<br/>Add zero to the plan"] --> TRY["Rank candidate actions<br/>Plot change, damage, and bonuses"]
+    TRY -->|"Move, attack, pillage, heal, or hold"| SCORE["Add damage and bonuses<br/>Replace the unit's stored plot score"]
+    TRY -->|"Release the unit: A_BLOCKED"| KEEP["Keep the plan total as it is<br/>Leave remaining moves available"]
+    SCORE --> NEXT{"Plan complete?"}
+    KEEP --> NEXT
+    NEXT -->|"More actions to try"| TRY
+    NEXT -->|"Yes"| CHECK["Check safety and progress<br/>Keep the stored scores"]
+    CHECK -->|"Accepted"| RANK["Rank completed plans<br/>Damage, bonuses, stored plot scores, and trade gain"]
+```
+
+This page covers land and naval combat. See the [simulation overview](overview.md) for the search procedure and [air search](air.md) for aircraft, which score strikes and sweeps without an end-of-turn plot score.
 
 ## Assignment score
 
-An **assignment** combines damage, bonuses, and the change in plot score:
+The candidate score compares a proposed action with the unit's previous assignment, or with its starting plot score if it has not acted:
 
 `assignment score = new plot score - old plot score + 10 * (damage delta + bonus)`
 
 | Term | What it measures |
 | --- | --- |
-| Damage delta | `ScoreAttackDamage` credits damage dealt and subtracts damage received. Unit damage is capped at remaining HP; city damage permits limited overkill. Strengths read flanking, adjacency modifiers and auras from a neighborhood record of the planned board, where the plan has placed its units; general support, splash and repeat attacks are approximated. Healing, such as from pillaging, can also add value. |
-| Bonus | A direct unit kill adds 15 and city capture adds 100, before the 10× weight. Other bonuses cover focus fire, kill effects, civilian captures, pillaging, and barbarian camps. Ranged attacks also favor the requested target and movement left to disengage. |
-| Plot score | `ScorePlotForCombatUnitMove` combines ten times plot desirability, a danger adjustment, and small location and movement preferences. Only the change from the unit's previous plot score enters the assignment score. |
+| Damage delta | Damage dealt minus damage received, plus credited healing. `ScoreAttackDamage` caps unit damage at remaining HP and allows limited city overkill. Combat strength uses the planned board for flanking, adjacency and auras; general support, splash and repeat attacks are approximated. |
+| Bonus | Rewards for outcomes such as kills, captures and pillaging, or preferences such as focus fire. The table below shows their size after the 10× weight. |
+| Plot score | `ScorePlotForCombatUnitMove` combines ten times plot desirability with danger and smaller preferences such as staying near a friendly city or saving moves. The candidate uses the change in plot score; the plan stores the new value. |
 
-For example, dealing 30 damage, receiving 10, earning a 15-point kill bonus, and improving the plot score by 20 contributes `20 + 10 * (30 - 10 + 15) = 370`, before other contextual bonuses. Score components and the combined assignment score are clamped to the signed 16-bit range so large penalties cannot wrap into rewards.
+For example, an attack that deals 30 damage, takes 10, earns a kill and improves the plot score by 20 has a candidate score of `20 (plot change) + 10 × (30 dealt − 10 taken + 15 kill bonus) = 370`, before other bonuses. Score components and the combined assignment score are clamped to the signed 16-bit range so large penalties cannot wrap into rewards.
+
+### What each action scores
+
+| Action | Plot score | Damage or healing | Example bonuses |
+| --- | --- | --- | --- |
+| Move | Destination. Can gain points for closing on the target. | Damage on movement, if the unit has that ability. | Capturing a civilian or clearing a camp. |
+| Melee attack | Current tile, or the target tile if the unit advances. | Damage dealt and taken. | Kill or city capture. |
+| Ranged attack | Firing tile, evaluated after the shot. | Damage dealt. | Kill, shooting the requested target, or keeping moves to withdraw. |
+| Pillage | Current tile after pillaging. | Healing or damage from pillaging. | Pillaging a damaging improvement or a tile with a strategic resource. |
+| Heal in place (`A_HEAL`), for an eligible damaged unit with full moves | Current tile, with any frontline fortification credit. | HP restored, minus any expected damage from an adjacent enemy citadel. | Potential damage to adjacent enemies from a fortification ability. |
+| Hold in place (`A_FINISH_TEMP`) | Current tile, with provisional danger and any frontline fortification credit. | Expected damage from an adjacent enemy citadel, if any. | Potential damage to adjacent enemies from a fortification ability. |
+| Release the unit (`A_BLOCKED`) | Keeps any previously stored value. | Adds none. | Adds none. Remaining moves stay available for later tasks. |
+
+The search offers a ranged unit a hold or heal only if no shot qualifies in the local search. The starting assignment (`A_INITIAL`) supplies a plot reference for comparing candidates without adding points. The final check (`EM_FINAL`) can append a finish order (`A_FINISH`) without replacing any stored score, so a hold keeps the provisional plot score from `A_FINISH_TEMP`.
 
 ### Scale of the scoring items
 
-All values are in assignment score points, after the 10× weight where it applies, and come from `CvTacticalAI.cpp`.
+These values come from `CvTacticalAI.cpp` and include the 10× weight where it applies.
 
 | Item | Points | Enters plan ranking? |
 | --- | --- | --- |
@@ -28,20 +54,18 @@ All values are in assignment score points, after the 10× weight where it applie
 | Civilian capture | 1,500, or 200 for a worker | Yes |
 | Empty barbarian camp | 1,000 | Yes |
 | Direct unit kill | 150 | Yes |
-| Damage dealt or received | 10 per HP | Yes |
+| Damage and credited healing | +10 per HP dealt or restored; −10 per HP taken | Yes |
 | Moving onto an enemy citadel | 134 with moves left to pillage it, otherwise 67 | Yes |
 | Moving into our frontline citadel or a frontline city | 67, or 33 for a melee unit with friends beside and no enemy adjacent | Yes |
 | One tier of enemy-distance desirability | 40 to 60, such as 120 adjacent and 60 at two plots for first-line land units | Yes |
 | Move-time danger | Minus half the danger, minus 1 per 20% of current HP it represents | Yes |
-| **Trade intercept** | **15**, scaled by gold flavor and health | Yes |
-| **Trade guard** | **10**, scaled by gold flavor and health | Yes |
+| Trade intercept | 15, scaled by gold flavor and health | As plan trade gain |
+| Trade guard | 10, scaled by gold flavor and health | As plan trade gain |
 | Staying near our cities | Up to 10 | Yes |
 | Movement left | 1 per move | Yes |
-| Turn-end danger | Danger as a percent of current HP, compressed above 225 and doubled with no friend beside | For idle finishes |
-| Staying beside a friend | 8 to 13 | For idle finishes |
-| Defensive terrain | 1 per 5% defense | For idle finishes |
-
-`ScoreCombatUnitTurnEnd` supplies the last three values when setting starting scores and checking the final plan. If a combat unit's only assignment is to finish on its starting tile, the valid final plot score replaces its provisional score. For example, if that tile falls from +79 to −121, the completed plan loses 200 points. Units that move, attack, or heal retain their assignment scores. Units allowed to finish despite an unsafe tile keep their provisional score.
+| Turn-end danger | Danger as a percent of current HP, compressed above 225 and doubled with no friend beside | Starting reference and final check only |
+| Staying beside a friend | 8 to 13 | Starting reference and final check only |
+| Defensive terrain | 1 per 5% defense | Starting reference and final check only |
 
 ## Positioning and danger
 
@@ -53,7 +77,7 @@ With enemies present, the land desirability table peaks at 12:
 | Second line       | 2 plots                                            |
 | Third line        | 3 plots                                            |
 
-Naval units use a separate table. Without enemies, desirability follows distance to the tactical target. A unit more than four steps from the target earns 40 for each step closer and may not step away (`UpdatePlotDistanceToTarget` builds the distances). The target can be any plot, so positioning searches use the same pull toward their destination. City proximity and remaining movement add small preferences. Attacks include the score of the resulting location.
+Naval units use a separate table. Without enemies, desirability follows distance to the tactical target. When target distance matters, a unit more than four steps away earns 40 points per step closer, up to that four-step boundary, and cannot move farther away. `UpdatePlotDistanceToTarget` builds these distances for both combat and positioning tasks.
 
 Intermediate moves receive provisional danger penalties. `ScoreCombatUnitTurnEnd` checks final positions against remaining HP, adjusts for experience, and penalizes isolation more heavily. Nearby friendlies, terrain, air cover, and citadels can improve the result. Unsafe plots can be rejected outright.
 
@@ -70,19 +94,24 @@ Search order and final ranking use different scores and checks:
 
 ### Completed-plan score
 
-`CvBasePosition::UpdateScore` accumulates damage and bonuses and replaces the acting unit's stored plot score. `getScoreTotal` then reads those current components:
+`CvBasePosition::UpdateScore` accumulates damage and bonuses and keeps one stored plot score per unit. A new scored assignment replaces the unit's previous stored value. `getScoreTotal` adds the [trade gain](#how-plans-keep-the-score):
 
 `total score = 10 * (cumulative damage delta + cumulative bonuses) + sum of stored unit plot scores + trade gain`
 
-The [trade gain](#how-plans-keep-the-score) and any completion-time plot-score changes enter ranking immediately. For example, changing the sole stored plot score from 20 to 30 produces a total of 30 when damage, bonuses, and trade gain are zero.
+The blocked fallback's candidate score is `−10 − previous plot score`. For a unit that starts with a plot reference of +13, compare releasing it right away with holding the same tile at a provisional +79. Neither choice deals damage or earns an action bonus in this example:
 
-Leaving a unit unused earns no extra score. Completed plans with equal totals still prefer fewer assignments. The [24-map tuning study](../../../../../../vox-deorum-rl/docs/rollouts/snapshots/unused-unit-bonus-2026-11-14.md) compares unused-unit bonuses from 0 to 240.
+| Choice | Candidate score | Unit's contribution to the completed plan |
+| --- | --- | ---: |
+| Release (`A_BLOCKED`) | `−10 (fallback value) − 13 (start) = −23` | 0 |
+| Hold (`A_FINISH_TEMP`) | `79 (provisional) − 13 (start) = +66` | +79 |
+
+Even if the final check values the hold at −121, the plan keeps +79 if the check accepts it. A block after a move or attack preserves the points already earned. There is no extra bonus for an unused unit; see the [24-map tuning study](../../../../../../vox-deorum-rl/docs/rollouts/snapshots/unused-unit-bonus-2026-11-14.md).
 
 ### Last-round heuristic quirk
 
 The queue's last-round heuristic adds unscaled damage and bonus, plus new plot score minus old plot score. It also subtracts the acting unit's previous stored plot score when one exists. When the old score equals that stored entry, the previous value is subtracted twice.
 
-For the same 20-to-30 assignment, with zero damage and bonus, the last-round increment is `30 - 20 - 20 = -10`. This affects which branch the search explores next. Accepted completed plans use the current total described above.
+For a plot score that goes from 20 to 30 with zero damage and bonus, the last-round increment is `30 (new) − 20 (old) − 20 (stored) = −10`. This affects which branch the search explores next. Accepted plans rank by their plan total.
 
 ## Trade routes
 
@@ -125,7 +154,7 @@ The threat comes from the danger map's list of units that can move onto each plo
 | --- | --- |
 | `TacticalAIHelpers::SetSearchTradeRoutes` | At the root, before the unit cap, picks the routes that have a step on the search's plots: our own, and visible routes of teams at war with us. It reads the threats to our steps from the danger map once, and sets the gold weight and the root's trade score. |
 | `CvTacticalPosition::computeTradeScore` | Scores those routes for the whole position. |
-| `addAssignment` | Recomputes the trade score after every assignment that touches a step plot, kills, heals, or damages an enemy whose death matters to the score, splash included, and adds the change to the plan's trade gain, which `UpdateScore` puts in the total. Moves, attacks that advance, kills of a threat and captures all count, whatever order units move in. |
+| `addAssignment` | Recomputes the trade score after a scored assignment that touches a route step, kills, heals, or damages a unit whose death matters to the score, splash included. The change goes into the plan's trade gain. Moves, attacks that advance, kills of a threat and captures all count, whatever order units move in. |
 | `ScorePlotForCombatUnitMove` and melee attack scoring | Give each move, and each attack by where it leaves the unit, its unit's own trade gain as a rank bonus. The rank bonus picks which moves each unit tries and orders the search, but never enters the plan score. |
 | `isKillOrImprovedPosition` | Counts a higher trade score than the root's as progress, so a sideways move onto a step can pass. |
 
