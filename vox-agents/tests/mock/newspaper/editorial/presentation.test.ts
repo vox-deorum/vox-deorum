@@ -146,6 +146,29 @@ describe('editorial eligibility', () => {
 });
 
 describe('editorial presentation', () => {
+  it('should omit sections fully covered by the front page and retain sections with additional stories', () => {
+    const config = createConfig();
+    const candidates = ['home', 'trade', 'culture', 'war'].map(id => createCandidate(config, id));
+    candidates[3].tags = ['military'];
+    expect(render(config, candidates).issue.pages.map(page => page.id)).toEqual(['front', 'military']);
+
+    candidates[0].tags = ['military'];
+    candidates[3].tags = ['economy'];
+    const covered = render(config, candidates);
+    expect(covered.issue.pages.map(page => page.id)).toEqual(['front']);
+    expect(covered.layouts).not.toHaveProperty('military');
+
+    config.defaults.frontPageItems = 2;
+    candidates[2].tags = ['military'];
+    config.pages[1].minimum = 3;
+    expect(render(config, candidates).issue.pages.map(page => page.id)).toEqual(['front']);
+
+    config.pages[1].minimum = 2;
+    const additional = render(config, candidates);
+    expect(additional.issue.pages.map(page => page.id)).toEqual(['front', 'military']);
+    expect(additional.issue.pages[1].itemIds.map(id => additional.itemCandidates.get(id)?.id)).toEqual(['home', 'culture']);
+  });
+
   it('should retain a competitive eligible design and replace one that loses weight or eligibility', () => {
     const config = createConfig();
     config.designs[0].weight.base = 8;

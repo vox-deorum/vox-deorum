@@ -100,6 +100,7 @@ export function presentIssue(input: {
   }
   if (!items.length) return undefined;
   const pages: IssueDocument['pages'] = [];
+  const frontItemIds = new Set<string>();
   const layouts: Record<string, string> = {};
   const pageDefinitions = config.pages.filter(page => evaluateCondition(page.condition, context) === true)
     .sort((a, b) => Number(b.front) - Number(a.front) || a.order - b.order || a.id.localeCompare(b.id));
@@ -111,8 +112,10 @@ export function presentIssue(input: {
       const varied = members.slice(1).find(item => itemCandidates.get(item.id)!.subject !== leadSubject);
       if (varied) members = [lead, varied, ...members.filter(item => item !== lead && item !== varied)];
       members = members.slice(0, config.defaults.frontPageItems);
+      for (const item of members) frontItemIds.add(item.id);
     }
     if (!members.length || (!page.front && members.length < page.minimum)) continue;
+    if (!page.front && members.every(item => frontItemIds.has(item.id))) continue;
     const urgent = page.front && members.some(item => itemCandidates.get(item.id)?.urgent);
     const choices = design.layouts.filter(layout => evaluateCondition(layout.condition, context) === true &&
       (urgent ? layout.variant === 'breaking' : layout.variant !== 'breaking'));

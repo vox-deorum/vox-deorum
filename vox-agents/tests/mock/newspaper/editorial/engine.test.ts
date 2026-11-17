@@ -191,8 +191,10 @@ describe('editorial engine', () => {
     it('should publish reproducibly with one history contribution despite repeated page membership', () => {
       const state = createInitialPublicationState();
       const before = structuredClone(state);
-      const first = check(fixture(), state);
-      const second = check(fixture(), state);
+      const catalogue = structuredClone(config);
+      catalogue.defaults.frontPageItems = 2;
+      const first = check(fixture(), state, catalogue);
+      const second = check(fixture(), state, catalogue);
       expect(first).toEqual(second);
       expect(state).toEqual(before);
       expect(first.status).toBe('published');

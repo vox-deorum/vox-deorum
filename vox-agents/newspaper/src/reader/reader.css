@@ -263,7 +263,12 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  margin-top: 22px;
+  margin-top: 1em;
+  font-size: calc(18px * var(--vd-text-scale));
+}
+
+.vd-prose + .vd-story-footer:not(:has(.vd-text-link)) {
+  margin-top: 0;
 }
 
 .vd-story-links {
@@ -278,7 +283,7 @@
 .vd-text-link {
   max-width: 100%;
   overflow-wrap: anywhere;
-  padding: 8px 0;
+  padding: 0;
   color: var(--vd-accent);
   font: italic calc(14px * var(--vd-text-scale)) / 1.5 var(--vd-font-body);
   text-align: left;
@@ -295,8 +300,8 @@
 .vd-vote {
   position: relative;
   width: 40px;
-  height: 40px;
-  padding: 9px;
+  height: 24px;
+  padding: 1px 9px;
   border: 1px solid transparent;
   border-radius: 3px;
   background: none;
@@ -712,7 +717,7 @@
 }
 
 .vd-newspaper[data-design="modern"] .vd-story-footer {
-  margin-top: 14px;
+  font-size: calc(17px * var(--vd-text-scale));
 }
 
 .vd-newspaper[data-design="modern"] .vd-text-link {
