@@ -8,13 +8,14 @@ Triggers turn permitted recording evidence into measured developments and inferr
 | --- | --- |
 | `vox-agents/newspaper/triggers/` | Trigger IDs, detector choice, conditions, thresholds, scales, tags, and detector tuning |
 | `vox-agents/newspaper/templates/` | Authored headlines, paragraphs, placeholders, typed links, weights, and composites |
-| `vox-agents/src/newspaper/editorial/config.ts` | Configuration schema, overlay merging, and catalogue validation |
+| `vox-agents/src/newspaper/editorial/check.ts` | Check orchestration and the publication or skip decision |
 | `vox-agents/src/newspaper/editorial/triggers.ts` | Detector dispatch and bounded importance |
-| `vox-agents/src/newspaper/editorial/developments.ts` | Non-war dispatch, pace, and shared draft construction |
-| `vox-agents/src/newspaper/editorial/development-facts.ts` | Numeric measurements, identity parsing, history, persistence, city continuity, and route parsing |
-| `vox-agents/src/newspaper/editorial/city-developments.ts` | City population, food, status, wonders, and great works |
-| `vox-agents/src/newspaper/editorial/national-developments.ts` | National output, budget, happiness, trade, golden age, majority religion, and technology-lead comparisons |
-| `vox-agents/src/newspaper/editorial/event-developments.ts` | Contact, deals, eras, research, policies, ideology, religion milestones, and confirmed city-majority changes |
+| `vox-agents/src/newspaper/editorial/config/` | Configuration schema, types, and validation in `schema.ts`; catalogue file loading and overlays in `load.ts` |
+| `vox-agents/src/newspaper/editorial/developments/` | Non-war dispatch in `detect.ts`; city, national, and event measurements in `cities.ts`, `national.ts`, and `events.ts`; shared facts in `development-facts.ts` |
+| `vox-agents/src/newspaper/editorial/diplomacy/` | War and peace in `war-peace.ts`, score progress in `war-progress.ts`, relationship facts in `diplomacy-facts.ts`, and incident inference in `diplomacy-incidents.ts` |
+| `vox-agents/src/newspaper/editorial/selection/` | Authored templates, heuristic selection, feedback, and series memory |
+| `vox-agents/src/newspaper/editorial/presentation/` | Issue assembly in `issue.ts` and issue validation in `validation.ts` |
+| `vox-agents/src/newspaper/editorial/shared/` | Conditions, weights, editorial context, source deduplication, and deterministic serialization |
 | `mcp-server/src/newspaper/projection.ts` | Permitted historical fields and events |
 | `mcp-server/src/newspaper/queries.ts` | Recorded snapshots, comparison history, event windows, and city retirement |
 | `mcp-server/src/diplomacy/relationships.ts` | Shared relationship parsing and checks for war, friendship, alliances, and defensive pacts |
@@ -101,7 +102,7 @@ Reports that cover both scopes derive their `domestic` or `international` tag fr
 
 ## Shared placeholders
 
-Developments from `developments.ts` have `fromTurn` and `toTurn`, derived from their sources. National and event reports usually supply `partnerId` and `partner`, even when the partner is the receiver; city reports supply `cityId` and `city`. Use those IDs in typed links. The source detector remains the full contract for each branch. Each category page lists its family-specific placeholders.
+Developments from `editorial/developments/detect.ts` have `fromTurn` and `toTurn`, derived from their sources. National and event reports usually supply `partnerId` and `partner`, even when the partner is the receiver; city reports supply `cityId` and `city`. Use those IDs in typed links. The source detector remains the full contract for each branch. Each category page lists its family-specific placeholders.
 
 Output changes supply `output`, `previousOutput`, `change`, and `direction`. Culture metrics add more fields; see [culture](culture.md#placeholders).
 
@@ -140,7 +141,7 @@ Recovery compatibility, including the retained recovery IDs and the removed city
 
 There is no compatibility mapping for the former `incomingWar` or `peace` detector IDs. Update overlays to the current detector and trigger IDs. Publication checkpoints also require state schema 3; older checkpoints fail validation and must be regenerated. Resume restores a valid run's saved catalogue, while a fresh run uses current built-ins and any supplied overlay.
 
-Saved issues keep their authored content and decisions. Resume restores its original configuration snapshot, while future checks run the installed detector code. A fresh run uses the current built-ins plus the supplied overlay. Check older overrides against `config.ts` when upgrading, especially removed IDs, changed variant IDs, and unsupported tuning fields.
+Saved issues keep their authored content and decisions. Resume restores its original configuration snapshot, while future checks run the installed detector code. A fresh run uses the current built-ins plus the supplied overlay. Check older overrides against `editorial/config/schema.ts` when upgrading, especially removed IDs, changed variant IDs, and unsupported tuning fields.
 
 ## Add coverage
 

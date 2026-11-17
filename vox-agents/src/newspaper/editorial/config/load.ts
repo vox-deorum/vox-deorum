@@ -1,0 +1,95 @@
+/** Load grouped catalogue files, apply local overrides, and validate references together. */
+import { readFile, readdir } from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { z } from 'zod';
+import { editorialConfigSchema, type EditorialConfig } from './schema.js';
+
+/** Resolve built-in files from both source and installed dist directory layouts. */
+export function builtInCatalogueDirectory(): string {
+  return fileURLToPath(new URL('../../../../newspaper/', import.meta.url));
+}
+
+/** Read a JSON file while allowing an absent overlay file. */
+async function readCatalogueFile(
+  directory: string,
+  name: string,
+  optional = false
+): Promise<unknown> {
+  try {
+    return JSON.parse(await readFile(path.join(directory, `${name}.json`), 'utf8'));
+  } catch (error) {
+    if (optional && (error as NodeJS.ErrnoException).code === 'ENOENT') return undefined;
+    throw error;
+  }
+}
+
+/** Combine section arrays in filename order, allowing omitted overlay folders. */
+async function readCatalogueSection(
+  directory: string,
+  name: string,
+  optional = false
+): Promise<unknown[] | undefined> {
+  const sectionDirectory = path.join(directory, name);
+  let files;
+  try {
+    files = await readdir(sectionDirectory, { withFileTypes: true });
+  } catch (error) {
+    if (optional && (error as NodeJS.ErrnoException).code === 'ENOENT') return undefined;
+    throw error;
+  }
+  const sections = await Promise.all(
+    files
+      .filter((file) => file.isFile() && file.name.endsWith('.json'))
+      .map((file) => file.name)
+      .sort()
+      .map(async (filename) =>
+        z.array(z.unknown()).parse(await readCatalogueFile(sectionDirectory, filename.slice(0, -5)))
+      )
+  );
+  return sections.flat();
+}
+
+/** Merge object defaults and keyed catalogue arrays; an overlay can disable choices by weight. */
+function overlay(base: unknown, custom: unknown): unknown {
+  if (custom === undefined) return base;
+  if (
+    Array.isArray(base) &&
+    Array.isArray(custom) &&
+    [...base, ...custom].every(
+      (entry) => entry && typeof entry === 'object' && typeof entry.id === 'string'
+    )
+  ) {
+    const entries = new Map(base.map((entry) => [entry.id, entry]));
+    for (const entry of custom) entries.set(entry.id, overlay(entries.get(entry.id), entry));
+    return [...entries.values()];
+  }
+  if (
+    base &&
+    custom &&
+    typeof base === 'object' &&
+    typeof custom === 'object' &&
+    !Array.isArray(custom)
+  ) {
+    const result = { ...base } as Record<string, unknown>;
+    for (const [key, value] of Object.entries(custom)) result[key] = overlay(result[key], value);
+    return result;
+  }
+  return custom;
+}
+
+/** Load grouped built-ins and optional flat or grouped overrides, then validate together. */
+export async function loadEditorialConfig(directory?: string): Promise<EditorialConfig> {
+  const result: Record<string, unknown> = { version: 1 };
+  for (const name of ['defaults', 'triggers', 'templates', 'pages', 'designs']) {
+    const grouped = name === 'triggers' || name === 'templates' || name === 'designs';
+    const base = grouped
+      ? await readCatalogueSection(builtInCatalogueDirectory(), name)
+      : await readCatalogueFile(builtInCatalogueDirectory(), name);
+    let custom = directory ? await readCatalogueFile(directory, name, true) : undefined;
+    if (directory && grouped)
+      custom = overlay(custom, await readCatalogueSection(directory, name, true));
+    result[name] = overlay(base, custom);
+  }
+  return editorialConfigSchema.parse(result);
+}

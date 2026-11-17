@@ -1,6 +1,6 @@
 # Science triggers
 
-Science stories report eras, significant technologies, output changes, and changes in technology leadership. This page is for developers tuning or adding that coverage. Read the [trigger overview](overview.md) for shared controls, units, evidence rules, and repeat behavior. The catalogue is `vox-agents/newspaper/triggers/science.json`; authored variants are in `vox-agents/newspaper/templates/science.json`. Detection lives in `vox-agents/src/newspaper/editorial/event-developments.ts` and `national-developments.ts`.
+Science stories report eras, significant technologies, output changes, and changes in technology leadership. This page is for developers tuning or adding that coverage. Read the [trigger overview](overview.md) for shared controls, units, evidence rules, and repeat behavior. The catalogue is `vox-agents/newspaper/triggers/science.json`; authored variants are in `vox-agents/newspaper/templates/science.json`. Detection lives in `vox-agents/src/newspaper/editorial/developments/events.ts` and `developments/national.ts`.
 
 ## Conditions and defaults
 

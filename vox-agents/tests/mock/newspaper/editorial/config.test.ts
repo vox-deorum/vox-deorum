@@ -3,7 +3,8 @@ import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { loadEditorialConfig, editorialConfigSchema } from '../../../../src/newspaper/editorial/config.js';
+import { loadEditorialConfig } from '../../../../src/newspaper/editorial/config/load.js';
+import { editorialConfigSchema } from '../../../../src/newspaper/editorial/config/schema.js';
 
 describe('editorial catalogue files', () => {
   let directory: string;

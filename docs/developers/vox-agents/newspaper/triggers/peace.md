@@ -2,7 +2,7 @@
 
 Peace coverage reports settlements, their obligations and visible concessions, and enduring peace. This page is for developers locating the peace catalogue entries and their stages. Read the [trigger overview](overview.md) for shared controls, the [war and peace guide](war-and-peace.md) for settlement inference, progress conditions, tuning, placeholders, and source limits, and [editorial decisions](../editorial.md) for selection and persistence. Peace coverage uses recorded `MakePeace` events plus projected relationship snapshots; it adds no DLL events.
 
-The catalogue is `vox-agents/newspaper/triggers/peace.json`; authored variants are in `vox-agents/newspaper/templates/peace.json`. Detection and settlement grouping live in `vox-agents/src/newspaper/editorial/war-peace.ts` and `diplomacy-incidents.ts`. Shared relationship parsing is in `mcp-server/src/diplomacy/relationships.ts`, with visibility and identity resolution in `mcp-server/src/newspaper/projection.ts`.
+The catalogue is `vox-agents/newspaper/triggers/peace.json`; authored variants are in `vox-agents/newspaper/templates/peace.json`. Detection and settlement grouping live in `vox-agents/src/newspaper/editorial/diplomacy/war-peace.ts` and `diplomacy/diplomacy-incidents.ts`. Shared relationship parsing is in `mcp-server/src/diplomacy/relationships.ts`, with visibility and identity resolution in `mcp-server/src/newspaper/projection.ts`.
 
 ## Trigger IDs and stages
 

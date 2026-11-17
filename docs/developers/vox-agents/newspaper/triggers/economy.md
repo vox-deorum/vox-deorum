@@ -1,6 +1,6 @@
 # Domestic economy triggers
 
-Domestic economy stories report budget transitions, income changes, and happiness shifts for the receiver. This page is for developers tuning or adding that coverage. Read the [trigger overview](overview.md) for shared controls, units, evidence rules, and repeat behavior. The catalogue is `vox-agents/newspaper/triggers/economy.json`; authored variants are in `vox-agents/newspaper/templates/economy.json`. Detection lives in `vox-agents/src/newspaper/editorial/national-developments.ts`, with shared measurements and persistence in `development-facts.ts`.
+Domestic economy stories report budget transitions, income changes, and happiness shifts for the receiver. This page is for developers tuning or adding that coverage. Read the [trigger overview](overview.md) for shared controls, units, evidence rules, and repeat behavior. The catalogue is `vox-agents/newspaper/triggers/economy.json`; authored variants are in `vox-agents/newspaper/templates/economy.json`. Detection lives in `vox-agents/src/newspaper/editorial/developments/national.ts`, with shared measurements and persistence in `developments/development-facts.ts`.
 
 ## Conditions and defaults
 

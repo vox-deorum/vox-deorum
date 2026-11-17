@@ -2,15 +2,17 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { NewspaperEvidence, NewspaperSnapshot } from '../../../../../mcp-server/dist/newspaper/evidence.js';
 import { createInitialPublicationState, publicationStateSchema, type PublishedItemRecord } from '../../../../src/newspaper/contracts/publication.js';
-import { loadEditorialConfig, editorialConfigSchema, type EditorialConfig } from '../../../../src/newspaper/editorial/config.js';
-import { detectTriggers, evidenceConditionContext } from '../../../../src/newspaper/editorial/triggers.js';
-import { matchTemplates } from '../../../../src/newspaper/editorial/templates.js';
-import { computeFeedback, candidateFeedback } from '../../../../src/newspaper/editorial/feedback.js';
-import { decaySeries } from '../../../../src/newspaper/editorial/series.js';
-import { selectHeuristic } from '../../../../src/newspaper/editorial/heuristic.js';
+import { loadEditorialConfig } from '../../../../src/newspaper/editorial/config/load.js';
+import { editorialConfigSchema, type EditorialConfig } from '../../../../src/newspaper/editorial/config/schema.js';
+import { detectTriggers } from '../../../../src/newspaper/editorial/triggers.js';
+import { evidenceConditionContext } from '../../../../src/newspaper/editorial/shared/context.js';
+import { matchTemplates } from '../../../../src/newspaper/editorial/selection/templates.js';
+import { computeFeedback, candidateFeedback } from '../../../../src/newspaper/editorial/selection/feedback.js';
+import { decaySeries } from '../../../../src/newspaper/editorial/selection/series.js';
+import { selectHeuristic } from '../../../../src/newspaper/editorial/selection/heuristic.js';
 import { runEditorialCheck } from '../../../../src/newspaper/editorial/check.js';
-import { chooseDesign } from '../../../../src/newspaper/editorial/presentation.js';
-import { selectionWeight } from '../../../../src/newspaper/editorial/weights.js';
+import { chooseDesign } from '../../../../src/newspaper/editorial/presentation/issue.js';
+import { selectionWeight } from '../../../../src/newspaper/editorial/shared/weights.js';
 
 let config: EditorialConfig;
 const context = { receiverTeamId: 7, receiverOwnerName: 'France', playerNames: { '0': 'France', '1': 'Morocco', '2': 'Zulu' }, playerTeamIds: { '0': 7, '1': 8, '2': 9 } };

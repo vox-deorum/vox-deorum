@@ -1,6 +1,6 @@
 # Culture and politics triggers
 
-Culture and politics stories report policies, ideology, cultural output, tourism, wonders, great works, and golden ages. This page is for developers tuning or adding that coverage. Read the [trigger overview](overview.md) for shared controls, units, evidence rules, and repeat behavior. The catalogue is `vox-agents/newspaper/triggers/culture.json`; authored variants are in `vox-agents/newspaper/templates/culture.json`. Detection lives in `vox-agents/src/newspaper/editorial/event-developments.ts`, `national-developments.ts`, and `city-developments.ts`.
+Culture and politics stories report policies, ideology, cultural output, tourism, wonders, great works, and golden ages. This page is for developers tuning or adding that coverage. Read the [trigger overview](overview.md) for shared controls, units, evidence rules, and repeat behavior. The catalogue is `vox-agents/newspaper/triggers/culture.json`; authored variants are in `vox-agents/newspaper/templates/culture.json`. Detection lives in `vox-agents/src/newspaper/editorial/developments/events.ts`, `developments/national.ts`, and `developments/cities.ts`.
 
 ## Conditions and defaults
 

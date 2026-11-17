@@ -38,7 +38,7 @@ Vox Agents owns editing, replay orchestration, publications, and presentation un
 | Location | Responsibility |
 | --- | --- |
 | `contracts/` | Issues, versioned presentation and offline publication state, archive responses, reader interaction, serialized render data, and replay settings/responses |
-| `editorial/` | Configuration, evidence detection, authored writing, selection, series, feedback, presentation and validation |
+| `editorial/` | Check orchestration, configuration, city, national, event, and diplomacy measurement, selection, presentation, and shared helpers |
 | `replay/` | Read-only recording access through MCP's compiled queries, serialized sessions, routes, and atomic output commits |
 | `renderer/` | Browser-safe assets, layout, stored presentation resolution, shared reader state, and bridge interfaces |
 | `export/` | Browser capture, cache delivery, export queue, and host routes |

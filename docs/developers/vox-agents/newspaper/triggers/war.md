@@ -2,7 +2,7 @@
 
 War coverage reports declarations, obligations, city-state participation, and changes in recorded war score. This page is for developers locating the war catalogue entries and their stages. Read the [trigger overview](overview.md) for shared controls, the [war and peace guide](war-and-peace.md) for incident inference, progress conditions, tuning, placeholders, and source limits, and [editorial decisions](../editorial.md) for selection and persistence. War coverage uses recorded `DeclareWar` events plus projected relationship snapshots; it adds no DLL events.
 
-The catalogue is `vox-agents/newspaper/triggers/war.json`; authored variants are in `vox-agents/newspaper/templates/war.json`. Detection and grouping live in `vox-agents/src/newspaper/editorial/war-peace.ts`, `diplomacy-incidents.ts`, and `war-progress.ts`. Shared relationship parsing is in `mcp-server/src/diplomacy/relationships.ts`, with visibility and identity resolution in `mcp-server/src/newspaper/projection.ts`.
+The catalogue is `vox-agents/newspaper/triggers/war.json`; authored variants are in `vox-agents/newspaper/templates/war.json`. Detection and grouping live in `vox-agents/src/newspaper/editorial/diplomacy/war-peace.ts`, `diplomacy/diplomacy-incidents.ts`, and `diplomacy/war-progress.ts`. Shared relationship parsing is in `mcp-server/src/diplomacy/relationships.ts`, with visibility and identity resolution in `mcp-server/src/newspaper/projection.ts`.
 
 ## Trigger IDs and stages
 

@@ -4,7 +4,20 @@ The heuristic editor turns permitted historical evidence into authored issues wi
 
 ## Ownership and inputs
 
-Modules under `vox-agents/src/newspaper/editorial/` separate configuration, detection, matching, selection, feedback, presentation, and validation. `check.ts` accepts an evidence window, publication state, receiver identity, and effective configuration. It returns an issue and updated state, or a skipped check when eligible content or a design is unavailable. Configuration and validation errors preserve the original checkpoint and must be resolved before another attempt. The caller commits completed results. The configuration loader reads files; editorial computations do not open databases or call live game services.
+Modules under `vox-agents/src/newspaper/editorial/` are grouped by job:
+
+| Location | Responsibility |
+| --- | --- |
+| `check.ts` | Check orchestration and the publication or skip decision |
+| `triggers.ts` | Detector dispatch and bounded importance |
+| `config/` | Configuration schema, types, and validation in `schema.ts`; catalogue file loading and overlays in `load.ts` |
+| `developments/` | Non-war dispatch in `detect.ts`; city, national, and event measurement in `cities.ts`, `national.ts`, and `events.ts`; shared facts in `development-facts.ts` |
+| `diplomacy/` | War and peace in `war-peace.ts`, score progress in `war-progress.ts`, relationship facts in `diplomacy-facts.ts`, and incident inference in `diplomacy-incidents.ts` |
+| `selection/` | Authored matching in `templates.ts`, heuristic choice in `heuristic.ts`, feedback in `feedback.ts`, and series memory in `series.ts` |
+| `presentation/` | Issue assembly in `issue.ts` and validation in `validation.ts` |
+| `shared/` | Conditions and weights; `context.ts` owns `EditorialContext` and `evidenceConditionContext`; `sources.ts` deduplicates table and ID source references in first-seen order; `determinism.ts` owns stable serialization, configuration hashing, and seeded streams |
+
+`check.ts` accepts an evidence window, publication state, receiver identity, and effective configuration. It returns an issue and updated state, or a skipped check when eligible content or a design is unavailable. Configuration and validation errors preserve the original checkpoint and must be resolved before another attempt. The caller commits completed results. `config/load.ts` reads catalogue files; editorial computations do not open databases or call live game services.
 
 MCP owns evidence schemas and reporting policy. Detectors use the projected observations and their original source references. Recorded identity metadata resolves city owners and team IDs; it must not supply hidden measurements or reveal unmet civilizations. A player ID is not assumed to equal its team ID.
 

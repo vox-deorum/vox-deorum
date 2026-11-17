@@ -1,6 +1,6 @@
 # Diplomacy triggers
 
-Diplomacy stories report first contact and structured deals with other players. This page is for developers tuning or adding that coverage. Read the [trigger overview](overview.md) for shared controls, units, evidence rules, and repeat behavior. The catalogue is `vox-agents/newspaper/triggers/diplomacy.json`; authored variants are in `vox-agents/newspaper/templates/diplomacy.json`. Detection lives in `vox-agents/src/newspaper/editorial/event-developments.ts`, with shared relationship parsing in `mcp-server/src/diplomacy/relationships.ts` and deal visibility in `mcp-server/src/newspaper/projection.ts`.
+Diplomacy stories report first contact and structured deals with other players. This page is for developers tuning or adding that coverage. Read the [trigger overview](overview.md) for shared controls, units, evidence rules, and repeat behavior. The catalogue is `vox-agents/newspaper/triggers/diplomacy.json`; authored variants are in `vox-agents/newspaper/templates/diplomacy.json`. Detection lives in `vox-agents/src/newspaper/editorial/developments/events.ts`, with shared relationship parsing in `mcp-server/src/diplomacy/relationships.ts` and deal visibility in `mcp-server/src/newspaper/projection.ts`.
 
 Both shipped triggers use `threshold: 1`. Their supported tuning fields are listed below.
 

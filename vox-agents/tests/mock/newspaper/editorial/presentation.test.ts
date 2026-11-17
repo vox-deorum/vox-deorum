@@ -1,13 +1,14 @@
 /** Check configurable presentation decisions with controlled authored inputs. */
 import { describe, expect, it } from 'vitest';
 import { createInitialPublicationState } from '../../../../src/newspaper/contracts/publication.js';
-import { editorialConfigSchema, type EditorialConfig } from '../../../../src/newspaper/editorial/config.js';
-import { evaluateCondition, type ConditionContext } from '../../../../src/newspaper/editorial/conditions.js';
-import { computeFeedback } from '../../../../src/newspaper/editorial/feedback.js';
-import { selectHeuristic } from '../../../../src/newspaper/editorial/heuristic.js';
-import { chooseDesign, createEditorialStreams, presentIssue } from '../../../../src/newspaper/editorial/presentation.js';
-import { eligibleVariants, type EditorialCandidate } from '../../../../src/newspaper/editorial/templates.js';
-import { validateEditorialIssue } from '../../../../src/newspaper/editorial/validation.js';
+import { editorialConfigSchema, type EditorialConfig } from '../../../../src/newspaper/editorial/config/schema.js';
+import { evaluateCondition, type ConditionContext } from '../../../../src/newspaper/editorial/shared/conditions.js';
+import { computeFeedback } from '../../../../src/newspaper/editorial/selection/feedback.js';
+import { selectHeuristic } from '../../../../src/newspaper/editorial/selection/heuristic.js';
+import { createEditorialStreams } from '../../../../src/newspaper/editorial/shared/determinism.js';
+import { chooseDesign, presentIssue } from '../../../../src/newspaper/editorial/presentation/issue.js';
+import { eligibleVariants, type EditorialCandidate } from '../../../../src/newspaper/editorial/selection/templates.js';
+import { validateEditorialIssue } from '../../../../src/newspaper/editorial/presentation/validation.js';
 
 /** Build a complete small catalogue whose choices can be varied independently. */
 function createConfig(): EditorialConfig {

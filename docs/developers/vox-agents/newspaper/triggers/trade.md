@@ -1,6 +1,6 @@
 # Trade triggers
 
-Trade stories report changes in the receiver's foreign routes, their concentration, and plunder. This page is for developers tuning or adding that coverage. Read the [trigger overview](overview.md) for shared controls, units, evidence rules, and repeat behavior. The catalogue is `vox-agents/newspaper/triggers/trade.json`; authored variants are in `vox-agents/newspaper/templates/trade.json`. Detection lives in `vox-agents/src/newspaper/editorial/national-developments.ts` and `event-developments.ts`, with route parsing in `development-facts.ts`.
+Trade stories report changes in the receiver's foreign routes, their concentration, and plunder. This page is for developers tuning or adding that coverage. Read the [trigger overview](overview.md) for shared controls, units, evidence rules, and repeat behavior. The catalogue is `vox-agents/newspaper/triggers/trade.json`; authored variants are in `vox-agents/newspaper/templates/trade.json`. Detection lives in `vox-agents/src/newspaper/editorial/developments/national.ts` and `developments/events.ts`, with route parsing in `developments/development-facts.ts`.
 
 Snapshot detectors read complete outgoing foreign-route observations. Every route partner must resolve unambiguously from recorded identity metadata. Domestic routes and unassigned slots are excluded. Route counts include foreign routes with zero or sentinel gold; concentration uses only positive foreign-route gold.
 

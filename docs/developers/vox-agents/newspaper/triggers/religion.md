@@ -1,6 +1,6 @@
 # Religion triggers
 
-Religion stories report pantheons, religion milestones, city conversions, and changes in a national majority religion. This page is for developers tuning or adding that coverage. Read the [trigger overview](overview.md) for shared controls, units, evidence rules, and repeat behavior. The catalogue is `vox-agents/newspaper/triggers/religion.json`; authored variants are in `vox-agents/newspaper/templates/religion.json`. Detection lives in `vox-agents/src/newspaper/editorial/event-developments.ts`, `national-developments.ts`, and `development-facts.ts`.
+Religion stories report pantheons, religion milestones, city conversions, and changes in a national majority religion. This page is for developers tuning or adding that coverage. Read the [trigger overview](overview.md) for shared controls, units, evidence rules, and repeat behavior. The catalogue is `vox-agents/newspaper/triggers/religion.json`; authored variants are in `vox-agents/newspaper/templates/religion.json`. Detection lives in `vox-agents/src/newspaper/editorial/developments/events.ts`, `developments/national.ts`, and `developments/development-facts.ts`.
 
 ## Conditions and defaults
 

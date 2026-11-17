@@ -1,6 +1,6 @@
 # City triggers
 
-City stories report changes in the receiver's own cities, such as population, food, recovery, and administration. This page is for developers tuning or adding that coverage. Read the [trigger overview](overview.md) for shared controls, units, placeholders, continuity, and repeat rules. The catalogue is `vox-agents/newspaper/triggers/cities.json`; authored variants are in `vox-agents/newspaper/templates/cities.json`. Detection lives in `vox-agents/src/newspaper/editorial/city-developments.ts`, with shared measurements and continuity in `development-facts.ts`.
+City stories report changes in the receiver's own cities, such as population, food, recovery, and administration. This page is for developers tuning or adding that coverage. Read the [trigger overview](overview.md) for shared controls, units, placeholders, continuity, and repeat rules. The catalogue is `vox-agents/newspaper/triggers/cities.json`; authored variants are in `vox-agents/newspaper/templates/cities.json`. Detection lives in `vox-agents/src/newspaper/editorial/developments/cities.ts`, with shared measurements and continuity in `developments/development-facts.ts`.
 
 All city developments here concern the receiver's cities and require comparable same-owner observations. The `city-recovery` entry ships in `cities.json`, so its coverage is documented here; [recovery](recovery.md) maps the cross-category recovery entries.
 

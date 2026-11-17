@@ -130,17 +130,17 @@ These limits narrow particular claims while leaving room for useful stories. Rec
 | --- | --- |
 | `mcp-server/src/diplomacy/relationships.ts` | Shared public relationship parsing and predicates, also used by Archivist features. |
 | `mcp-server/src/newspaper/projection.ts` | Visibility, identity resolution, and permitted relationship fields. |
-| `editorial/diplomacy-facts.ts` | Dated relationship lookup, pair identity, and game-speed conversion. |
-| `editorial/diplomacy-incidents.ts` | Likely roots, obligations, cascade grouping, and settlement context. |
-| `editorial/war-progress.ts` | Score developments, precedence, and repeat controls. |
-| `editorial/war-peace.ts` | Pair observations, incident angles, and configured trigger creation. |
+| `editorial/diplomacy/diplomacy-facts.ts` | Dated relationship lookup, pair identity, and game-speed conversion. |
+| `editorial/diplomacy/diplomacy-incidents.ts` | Likely roots, obligations, cascade grouping, and settlement context. |
+| `editorial/diplomacy/war-progress.ts` | Score developments, precedence, and repeat controls. |
+| `editorial/diplomacy/war-peace.ts` | Pair observations, incident angles, and configured trigger creation. |
 | `contracts/diplomacy.ts` | Pair memory and inference audit contracts. |
 
 The relative `editorial/` and `contracts/` paths are under `vox-agents/src/newspaper/`.
 
 ### Authored placeholders
 
-The JSON variants hold ordinary declaration and settlement wording. Named participant clauses and city-state lists are assembled from the incident's variable membership in `war-peace.ts`.
+The JSON variants hold ordinary declaration and settlement wording. Named participant clauses and city-state lists are assembled from the incident's variable membership in `diplomacy/war-peace.ts`.
 
 | Placeholder | Contents |
 | --- | --- |

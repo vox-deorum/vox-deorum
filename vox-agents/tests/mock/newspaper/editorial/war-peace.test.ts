@@ -3,11 +3,12 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import type { NewspaperDiplomacySnapshot, NewspaperEvent, NewspaperEvidence } from '../../../../../mcp-server/dist/newspaper/evidence.js';
 import { createInitialPublicationState, publicationStateSchema } from '../../../../src/newspaper/contracts/publication.js';
 import type { DiplomacyMemory } from '../../../../src/newspaper/contracts/diplomacy.js';
-import { loadEditorialConfig, type EditorialConfig } from '../../../../src/newspaper/editorial/config.js';
-import { detectWarAndPeace, recordDiplomacyPublications } from '../../../../src/newspaper/editorial/war-peace.js';
+import { loadEditorialConfig } from '../../../../src/newspaper/editorial/config/load.js';
+import type { EditorialConfig } from '../../../../src/newspaper/editorial/config/schema.js';
+import { detectWarAndPeace, recordDiplomacyPublications } from '../../../../src/newspaper/editorial/diplomacy/war-peace.js';
 import { runEditorialCheck } from '../../../../src/newspaper/editorial/check.js';
-import { matchTemplates } from '../../../../src/newspaper/editorial/templates.js';
-import type { EditorialContext } from '../../../../src/newspaper/editorial/triggers.js';
+import { matchTemplates } from '../../../../src/newspaper/editorial/selection/templates.js';
+import type { EditorialContext } from '../../../../src/newspaper/editorial/shared/context.js';
 
 type Relationship = NewspaperDiplomacySnapshot['relationships'][number];
 let config: EditorialConfig;

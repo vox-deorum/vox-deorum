@@ -1,9 +1,11 @@
 /** Contracts for curated non-war coverage and its evidence boundaries. */
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { NewspaperEvidence, NewspaperEvent, NewspaperSnapshot } from '../../../../../mcp-server/dist/newspaper/evidence.js';
-import { loadEditorialConfig, editorialConfigSchema, type EditorialConfig } from '../../../../src/newspaper/editorial/config.js';
-import { detectTriggers, evidenceConditionContext } from '../../../../src/newspaper/editorial/triggers.js';
-import { matchTemplates } from '../../../../src/newspaper/editorial/templates.js';
+import { loadEditorialConfig } from '../../../../src/newspaper/editorial/config/load.js';
+import { editorialConfigSchema, type EditorialConfig } from '../../../../src/newspaper/editorial/config/schema.js';
+import { detectTriggers } from '../../../../src/newspaper/editorial/triggers.js';
+import { evidenceConditionContext } from '../../../../src/newspaper/editorial/shared/context.js';
+import { matchTemplates } from '../../../../src/newspaper/editorial/selection/templates.js';
 import { runEditorialCheck } from '../../../../src/newspaper/editorial/check.js';
 import { createInitialPublicationState } from '../../../../src/newspaper/contracts/publication.js';
 
