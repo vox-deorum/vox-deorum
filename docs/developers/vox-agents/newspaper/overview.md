@@ -7,16 +7,31 @@ The newspaper turns recorded game evidence into authored heuristic issues, displ
 | [Renderer](renderer.md) | Demo accepted in game; broader acceptance pending | Stored presentation snapshots, browser rendering, DDS export, and game viewer |
 | [Replay](replay.md) | Recorded publication and browser workflow verified | Recording evidence, separate output storage, issue reading, votes, preferences, and resume |
 | [Editorial](editorial.md) | Heuristic implementation; reading acceptance pending | Configured detection, authored stories, series, feedback, and stored presentation; later LLM editing |
-| [Triggers](triggers.md) | Implemented catalogue; recording tuning pending | Development conditions, defaults, evidence, repeat rules, and instructions for adding coverage |
-| [War and peace](war-and-peace.md) | Local inference; recording tuning pending | Declaration cascades, obligations, city-state involvement, score progress, and settlements |
+| [Trigger overview](triggers/overview.md) | Implemented catalogue; recording tuning pending | Shared controls, evidence, repeat rules, and the workflow for adding coverage |
+| [War and peace](triggers/war-and-peace.md) | Local inference; recording tuning pending | Declaration cascades, obligations, city-state involvement, score progress, and settlements |
 | [Evaluation](evaluation.md) | Planned | Offline experiments comparing editorial approaches |
 | [Live integration](live-integration.md) | Planned; save-capacity proof pending | Live scheduling, game-owned persistence, archive access, and player integration |
+
+Trigger coverage is documented by category. Each page names its catalogue and template file and covers conditions, defaults, evidence caveats, placeholders, and repeat rules.
+
+| Category | Page | Catalogue file |
+| --- | --- | --- |
+| Cities | [City triggers](triggers/cities.md) | `triggers/cities.json` |
+| Domestic economy | [Domestic economy triggers](triggers/economy.md) | `triggers/economy.json` |
+| Trade | [Trade triggers](triggers/trade.md) | `triggers/trade.json` |
+| Diplomacy | [Diplomacy triggers](triggers/diplomacy.md) | `triggers/diplomacy.json` |
+| Science | [Science triggers](triggers/science.md) | `triggers/science.json` |
+| Culture and politics | [Culture and politics triggers](triggers/culture.md) | `triggers/culture.json` |
+| Religion | [Religion triggers](triggers/religion.md) | `triggers/religion.json` |
+| Recovery | [Recovery triggers](triggers/recovery.md) | `triggers/recovery.json` |
+| War | [War triggers](triggers/war.md) | `triggers/war.json` |
+| Peace | [Peace triggers](triggers/peace.md) | `triggers/peace.json` |
 
 The [implementation roadmap](../../../plans/newspaper/implementation.md) describes the stages and their dependencies. Detailed requirements remain in each [implementation plan](../../../plans/newspaper/implementation/).
 
 MCP owns the browser-safe evidence schemas and source references in `mcp-server/src/newspaper/evidence.ts`, archive scope/index/query schemas in `protocol.ts`, historical reads in `queries.ts`, and reportable-field policy in `projection.ts`. The `get-newspaper-evidence` tool calls the same query used by standalone replay, with no live refresh. MCP does not import Vox Agents.
 
-War and peace coverage uses the already recorded `DeclareWar` and `MakePeace` events plus projected relationship snapshots. It adds no DLL events.
+War and peace coverage uses the already recorded `DeclareWar` and `MakePeace` events plus projected relationship snapshots. It adds no DLL events. The [war and peace guide](triggers/war-and-peace.md) explains how those observations become conflict accounts.
 
 Vox Agents owns editing, replay orchestration, publications, and presentation under `vox-agents/src/newspaper/`:
 

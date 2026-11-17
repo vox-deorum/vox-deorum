@@ -12,7 +12,7 @@ MCP owns evidence schemas and reporting policy. Detectors use the projected obse
 
 ## Catalogue and eligibility
 
-The built-in catalogue lives under `vox-agents/newspaper/`. Templates and triggers are grouped into topic files, such as `trade` or `diplomacy`; each entry belongs to one file and retains all its tags. Designs have one file per identity. Each section file contains an array, with all JSON fully expanded using two-space indentation for editing. The [trigger reference](triggers.md) lists the implemented developments, defaults, evidence requirements, and steps for tuning or extending coverage.
+The built-in catalogue lives under `vox-agents/newspaper/`. Templates and triggers are grouped into topic files, such as `trade` or `diplomacy`; each entry belongs to one file and retains all its tags. Designs have one file per identity. Each section file contains an array, with all JSON fully expanded using two-space indentation for editing. The [trigger overview](triggers/overview.md) explains shared controls, evidence, overlays, and coverage workflow; its category table links the per-file developments and defaults.
 
 | File | Controls |
 | --- | --- |
@@ -30,7 +30,7 @@ Designs select the supported Victorian or modern renderer family. Each needs an 
 
 ## Developments, selection, and continuity
 
-Detectors cover cities, the domestic economy, trade, diplomacy, science, culture, religion, war, and peace. Each development must meet its evidence and materiality rules before a template can turn it into a candidate. The [trigger reference](triggers.md) describes those rules. [War and peace coverage](war-and-peace.md) groups likely declaration cascades, distinguishes obligations and city-state involvement, and tracks score progress and settlements. Both editors aim for useful gameplay interpretation, with proportionate qualification for inferred causes.
+Detectors cover cities, the domestic economy, trade, diplomacy, science, culture, religion, war, and peace. Each development must meet its evidence and materiality rules before a template can turn it into a candidate. The [trigger overview](triggers/overview.md) and its category pages describe those rules. [War and peace coverage](triggers/war-and-peace.md) groups likely declaration cascades, distinguishes obligations and city-state involvement, and tracks score progress and settlements. Both editors aim for useful gameplay interpretation, with proportionate qualification for inferred causes.
 
 Importance comes from measured developments on a configured bounded scale. Comparisons can reach before the reporting period, but unchanged snapshots do not become new developments merely because another check occurs. A skipped check advances the reporting boundary, diplomacy observations, and series memory, then discards that check's candidates.
 

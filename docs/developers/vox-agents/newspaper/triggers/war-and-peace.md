@@ -1,6 +1,6 @@
 # War and peace coverage
 
-This guide is for developers tuning newspaper coverage of conflicts and settlements. It uses the existing recorded `DeclareWar` and `MakePeace` events plus MCP-projected relationship snapshots; it adds no DLL events. War and peace have separate trigger and template files. Battle reports and city captures belong to later military coverage. See [the trigger reference](triggers.md) for catalogue overlays and [editorial decisions](editorial.md) for selection and persistence.
+This guide is for developers tuning newspaper coverage of conflicts and settlements. It uses the existing recorded `DeclareWar` and `MakePeace` events plus MCP-projected relationship snapshots; it adds no DLL events. War and peace have separate trigger and template files, and their catalogue entries and stages are listed on the [war](war.md#trigger-ids-and-stages) and [peace](peace.md#trigger-ids-and-stages) pages. Battle reports and city captures belong to later military coverage. See the [trigger overview](overview.md) for catalogue overlays and [editorial decisions](../editorial.md) for selection and persistence.
 
 ## From observations to one account
 
@@ -60,38 +60,7 @@ If the city-state alliance-change angle is disabled or its condition does not ma
 
 Peace terms are available only under the existing deal visibility rules. A same-turn deal after the peace calls, with matching parties and visible terms, can explain concessions. A new capitulated relationship within five Standard turns can support a capitulation account. MCP's `MakePeace` projection contains only the originating player and target team; it omits the acting team, cause, and pacifier flag, so the event alone cannot identify a proposer or winner. A new voluntary-vassal relationship followed by evidence that its master is already at war can support an inherited-war account.
 
-### Catalogue IDs
-
-Each trigger has a matching template named with the trigger ID followed by `-account`. The detector selects the behavior, and `stage` selects the angle. Scope and participation placeholders distinguish our involvement from foreign reporting without duplicating the entire catalogue.
-
-| Detector | Trigger ID | Stage |
-| --- | --- | --- |
-| `warTransition` | `war-declaration` | `declaration` |
-| `warTransition` | `war-following-master` | `followingMaster` |
-| `warTransition` | `war-vassals-joining` | `vassalsJoining` |
-| `warTransition` | `war-defensive-pact` | `defensivePact` |
-| `warTransition` | `war-inherited-wars` | `inheritedWars` |
-| `warTransition` | `war-city-state-attack` | `cityStateAttack` |
-| `warTransition` | `war-city-state-joining` | `cityStateJoining` |
-| `warTransition` | `war-alliance-change` | `allianceChange` |
-| `warTransition` | `war-resumed` | `resumed` |
-| `warTransition` | `war-observed` | `observed` |
-| `peaceTransition` | `peace-agreement` | `agreement` |
-| `peaceTransition` | `peace-master-led` | `masterLed` |
-| `peaceTransition` | `peace-vassals-included` | `vassalsIncluded` |
-| `peaceTransition` | `peace-city-state-agreement` | `cityStateAgreement` |
-| `peaceTransition` | `peace-city-states-included` | `cityStatesIncluded` |
-| `peaceTransition` | `peace-partial` | `partial` |
-| `peaceTransition` | `peace-concessions` | `concessions` |
-| `peaceTransition` | `peace-capitulation` | `capitulation` |
-| `peaceTransition` | `peace-quiet-fronts` | `quietFronts` |
-| `enduringPeace` | `peace-enduring` | `enduring` |
-| `warProgress` | `war-progress-reversal` | `reversal` |
-| `warProgress` | `war-progress-commanding` | `commanding` |
-| `warProgress` | `war-progress-advantage` | `advantage` |
-| `warProgress` | `war-progress-swing` | `swing` |
-| `warProgress` | `war-progress-balance` | `balance` |
-| `warProgress` | `war-progress-stagnation` | `stagnation` |
+The [war](war.md#trigger-ids-and-stages) and [peace](peace.md#trigger-ids-and-stages) pages list each detector's trigger IDs and stages. The detector selects the behavior, and `stage` selects the angle. Scope and participation placeholders distinguish our involvement from foreign reporting without duplicating the entire catalogue.
 
 ## Score-based progress
 
