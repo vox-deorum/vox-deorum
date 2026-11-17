@@ -4,13 +4,13 @@ The [command loop](../commands/value.md) ranks fights. Tactical search then rank
 
 ```mermaid
 flowchart TD
-    START["Score starting tiles for comparison<br/>Add zero to the plan"] --> TRY["Rank candidate actions<br/>Plot change, damage, and bonuses"]
-    TRY -->|"Move, attack, pillage, heal, or hold"| SCORE["Add damage and bonuses<br/>Replace the unit's stored plot score"]
+    START["Score starting tiles for comparison<br/>Add zero to the plan"] --> TRY["Interim: rank actions on a partial plan<br/>Other units can still change the board"]
+    TRY -->|"Move, attack, pillage, heal, or hold"| SCORE["Add damage and bonuses<br/>Store this unit's interim plot score"]
     TRY -->|"Release the unit: A_BLOCKED"| KEEP["Keep the plan total as it is<br/>Leave remaining moves available"]
     SCORE --> NEXT{"Plan complete?"}
     KEEP --> NEXT
     NEXT -->|"More actions to try"| TRY
-    NEXT -->|"Yes"| CHECK["Check safety and progress<br/>Keep the stored scores"]
+    NEXT -->|"Yes"| CHECK["Final: check the completed plan<br/>Keep the stored interim scores"]
     CHECK -->|"Accepted"| RANK["Rank completed plans<br/>Damage, bonuses, stored plot scores, and trade gain"]
 ```
 
@@ -42,7 +42,13 @@ For example, an attack that deals 30 damage, takes 10, earns a kill and improves
 | Hold in place (`A_FINISH_TEMP`) | Current tile, with provisional danger and any frontline fortification credit. | Expected damage from an adjacent enemy citadel, if any. | Potential damage to adjacent enemies from a fortification ability. |
 | Release the unit (`A_BLOCKED`) | Keeps any previously stored value. | Adds none. | Adds none. Remaining moves stay available for later tasks. |
 
-The search offers a ranged unit a hold or heal only if no shot qualifies in the local search. The starting assignment (`A_INITIAL`) supplies a plot reference for comparing candidates without adding points. The final check (`EM_FINAL`) can append a finish order (`A_FINISH`) without replacing any stored score, so a hold keeps the provisional plot score from `A_FINISH_TEMP`.
+The search offers a ranged unit a hold or heal only if no shot qualifies in the local search. The starting assignment (`A_INITIAL`) supplies a plot reference for comparing candidates without adding points.
+
+### Why a hold has an interim score
+
+`A_FINISH_TEMP` means the search has proposed that **this unit** stay where it is. Other units can still kill a threat or move next to it. When proposing the hold, the search uses the lighter `EM_INTERMEDIATE` danger penalty and runs a quick safety check that can allow for friendly help. Using the full end-of-turn check at this point could reject a hold that another unit makes safe later in the plan.
+
+Once the plan is complete, `EM_FINAL` checks which enemies remain and which friendly units will end their turns nearby. It also uses a different danger formula: for example, it can double the penalty for an isolated unit even when the underlying danger is unchanged. The final check may reject the plan. If it accepts the hold, it appends `A_FINISH` and leaves the interim plot score in the plan total.
 
 ### Scale of the scoring items
 
@@ -105,7 +111,7 @@ The blocked fallback's candidate score is `−10 − previous plot score`. For a
 | Release (`A_BLOCKED`) | `−10 (fallback value) − 13 (start) = −23` | 0 |
 | Hold (`A_FINISH_TEMP`) | `79 (provisional) − 13 (start) = +66` | +79 |
 
-Even if the final check values the hold at −121, the plan keeps +79 if the check accepts it. A block after a move or attack preserves the points already earned. There is no extra bonus for an unused unit; see the [24-map tuning study](../../../../../../vox-deorum-rl/docs/rollouts/snapshots/unused-unit-bonus-2026-11-14.md).
+A negative final plot score can still pass the safety check. If the check values the hold at −121 and accepts it, the plan keeps +79. A block after a move or attack preserves the points already earned. There is no extra bonus for an unused unit; see the [24-map tuning study](../../../../../../vox-deorum-rl/docs/rollouts/snapshots/unused-unit-bonus-2026-11-14.md).
 
 ### Last-round heuristic quirk
 
