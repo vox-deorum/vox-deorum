@@ -324,7 +324,7 @@ describe('extractor', () => {
         Key: 0, Turn: 10, Score: 100, Era: 'Medieval Era', Cities: 3, Population: 50,
         Technologies: 12, GoldPerTurn: 15, MilitaryUnits: 8, MilitarySupply: 10,
         PolicyBranches: { Tradition: ['a', 'b'], Liberty: ['c'] },
-        Relationships: { Egypt: ['War (Our War Weariness: 25%)'] },
+        Relationships: { Egypt: ['War (Our Score: 0%; Our War Weariness: 25%)'] },
       });
       insertSummary(sqlite, { Key: 1, Turn: 10, Score: 90, Era: 'Medieval Era' });
       insertSummary(sqlite, { Key: 9, Turn: 10, MajorAlly: 'Rome' });

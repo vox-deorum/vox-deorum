@@ -124,6 +124,22 @@ describe('newspaper field projection', () => {
     expect(projectNewspaperEvent(deal() as any, absent)).toBeUndefined();
   });
 
+  it.each(['OldAllyPlayerID', 'NewAllyPlayerID'])('should retain an own alliance change as %s without exposing the unknown other ally', role => {
+    const otherRole = role === 'OldAllyPlayerID' ? 'NewAllyPlayerID' : 'OldAllyPlayerID';
+    const payload = {
+      MinorPlayerID: 1, [role]: 0, [otherRole]: 3,
+      [role.replace(/ID$/, '')]: { Name: 'Leader0', Civilization: 'Civ0' },
+      [otherRole.replace(/ID$/, '')]: { Name: 'Leader3', Civilization: 'Civ3' }
+    };
+    const row = { ID: 91, Turn: 10, CreatedAt: 3010, Player0: 1, Type: 'SetAlly', Payload: payload };
+    const values = projectNewspaperEvent(row as any, context())!.values;
+    expect(values).toMatchObject({ MinorPlayerID: 1, [role]: 0, [otherRole]: 3 });
+    expect(values).toHaveProperty(role.replace(/ID$/, ''), { Name: 'Leader0', Civilization: 'Civ0' });
+    expect(values).not.toHaveProperty(otherRole.replace(/ID$/, ''));
+    expect(projectNewspaperEvent({ ...row, Player0: 0 } as any, context())).toBeUndefined();
+    expect(projectNewspaperEvent({ ...row, Payload: { ...payload, [role]: 2 } } as any, context())).toBeUndefined();
+  });
+
   it('should copy nested deal inputs before exposing permitted terms', () => {
     const row = deal(0, 1);
     const original = structuredClone(row);

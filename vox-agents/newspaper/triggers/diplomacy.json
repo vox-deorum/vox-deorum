@@ -23,16 +23,5 @@
       "relative": 0.25,
       "reserve": 10
     }
-  },
-  {
-    "id": "peace",
-    "detector": "peace",
-    "threshold": 1,
-    "scale": 1,
-    "tags": [
-      "international",
-      "diplomacy",
-      "recovery"
-    ]
   }
 ]

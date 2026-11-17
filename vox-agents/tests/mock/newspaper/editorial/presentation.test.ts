@@ -20,8 +20,8 @@ function createConfig(): EditorialConfig {
       feedback: { window: 50, series: 3, tag: 1, bound: 10 },
     },
     triggers: [
-      { id: 'war', detector: 'incomingWar', threshold: 0, scale: 1, tags: ['military', 'foreign'] },
-      { id: 'peace', detector: 'peace', threshold: 0, scale: 1, tags: ['diplomacy'] },
+      { id: 'war', detector: 'warTransition', stage: 'declaration', threshold: 1, scale: 1, tags: ['military', 'foreign'] },
+      { id: 'peace', detector: 'peaceTransition', stage: 'agreement', threshold: 1, scale: 1, tags: ['diplomacy'] },
     ],
     templates: [{
       id: 'coverage', triggerIds: ['war'], tags: ['military'], weight: { base: 1 },

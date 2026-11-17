@@ -34,7 +34,7 @@ function savedIssue(): ArchiveIssue {
     votes: {},
     decision: {
       checkId: 'controlled-check', cutoffTurn: 12, configurationId: 'controlled', configurationSnapshot: {}, seed: 'controlled', editor: 'heuristic', status: 'published',
-      candidateScores: [], merges: [], selectedVariants: {}, designId: 'modern', layouts: {}, evidence: [],
+      candidateScores: [], merges: [], selectedVariants: {}, designId: 'modern', layouts: {}, evidence: [], diplomacyInference: [],
       feedback: { revision: '0', windowItemIds: [], votes: {}, tagCounts: {}, seriesAdjustments: {}, tagAdjustments: {}, coefficients: { series: 1, tag: 1, bound: 10, window: 50 } },
     },
     articles: [{

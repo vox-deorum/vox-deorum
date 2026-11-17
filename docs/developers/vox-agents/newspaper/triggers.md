@@ -1,6 +1,6 @@
 # Newspaper trigger reference
 
-Triggers turn permitted recording evidence into measured developments that authored templates can report. This page is for developers tuning coverage or adding a story family. Read [editorial decisions](editorial.md) for selection, votes, and presentation, and [replay](replay.md) for generating and inspecting issues.
+Triggers turn permitted recording evidence into measured developments and inferred accounts that authored templates can report. This page is for developers tuning coverage or adding a story family. Read [editorial decisions](editorial.md) for selection, votes, and presentation, [war and peace coverage](war-and-peace.md) for conflict inference and progress, and [replay](replay.md) for generating and inspecting issues.
 
 ## Where to work
 
@@ -9,7 +9,7 @@ Triggers turn permitted recording evidence into measured developments that autho
 | `vox-agents/newspaper/triggers/` | Trigger IDs, detector choice, conditions, thresholds, scales, tags, and detector tuning |
 | `vox-agents/newspaper/templates/` | Authored headlines, paragraphs, placeholders, typed links, weights, and composites |
 | `vox-agents/src/newspaper/editorial/config.ts` | Configuration schema, overlay merging, and catalogue validation |
-| `vox-agents/src/newspaper/editorial/triggers.ts` | Detector dispatch, bounded importance, and legacy war, peace, and city-contrast handling |
+| `vox-agents/src/newspaper/editorial/triggers.ts` | Detector dispatch and bounded importance |
 | `vox-agents/src/newspaper/editorial/developments.ts` | Non-war dispatch, pace, and shared draft construction |
 | `vox-agents/src/newspaper/editorial/development-facts.ts` | Numeric measurements, identity parsing, history, persistence, city continuity, and route parsing |
 | `vox-agents/src/newspaper/editorial/city-developments.ts` | City population, food, status, wonders, and great works |
@@ -17,6 +17,7 @@ Triggers turn permitted recording evidence into measured developments that autho
 | `vox-agents/src/newspaper/editorial/event-developments.ts` | Contact, deals, eras, research, policies, ideology, religion milestones, and confirmed city-majority changes |
 | `mcp-server/src/newspaper/projection.ts` | Permitted historical fields and events |
 | `mcp-server/src/newspaper/queries.ts` | Recorded snapshots, comparison history, event windows, and city retirement |
+| `mcp-server/src/diplomacy/relationships.ts` | Shared relationship parsing and checks for war, friendship, alliances, and defensive pacts |
 
 ```mermaid
 flowchart LR
@@ -39,7 +40,7 @@ A **trigger definition** is an editable catalogue entry with a stable `id`. Its 
 | `stage` | Selects a detector's branch, such as population `milestone`, `boom`, or `decline`. Use only the stages that detector handles. |
 | `condition` | Optional eligibility condition; a missing or unknown fact cannot satisfy it. |
 | `threshold` | Minimum measured magnitude that creates a development. Units depend on the detector. |
-| `scale` | Magnitude that reaches maximum importance; increasing it reduces the importance of the same development. Existing war and peace handling retains its original maximum-importance calculation. |
+| `scale` | Magnitude that reaches maximum importance; increasing it reduces the importance of the same development. |
 | `tags` | Topic and scope labels shared with templates, page membership, variety, and feedback. |
 | `tuning` | Detector-specific controls described in the catalogue below. |
 
@@ -79,7 +80,7 @@ Recorded enum fields can contain localized names: for example, `TechID`, `Religi
 
 The topic files under `triggers/` contain the shipped defaults. The following tables explain their conditions and units; templates in the matching topic files show the placeholders used in prose.
 
-Shipped triggers have `threshold: 1`, except `trade-concentration`, whose zero threshold preserves small crossings of its concentration boundary. Each row gives its `scale` and the magnitude compared with that threshold. History controls use the shared fallbacks above unless the row supplies a different value. Configuration validation rejects unknown trigger fields, unsupported stage names, and tuning fields that do not apply to that detector.
+Shipped triggers have `threshold: 1`, except `trade-concentration`, whose zero threshold preserves small crossings of its concentration boundary. Diplomacy triggers require `threshold: 1`; tune their stages with `enabled` and supported `tuning` fields. Each row gives its `scale` and the magnitude compared with that threshold. History controls use the shared fallbacks above unless the row supplies a different value. Configuration validation rejects unknown trigger fields, unsupported stage names, and tuning fields that do not apply to that detector and stage.
 
 ### Cities
 
@@ -165,9 +166,11 @@ Religion milestones cover permitted domestic and foreign subjects. Reports that 
 
 `CityConvertsReligion` also fires for follower-count changes. A first event without an earlier majority establishes a baseline; repeated events naming that same majority do not count as conversions. Capture or uncertain lifecycle evidence prevents a comparison from proving a majority change; same-turn ordering uses timestamps, with ties treated conservatively. A reversal requires an observed return to a previously seen majority within the available sequence.
 
-### Existing war and peace
+### War and peace
 
-`incoming-war` uses `incomingWar` for declarations against the receiver's team and retains urgent breaking-front-page priority. `peace` uses `peace` for a recorded peace involving that team. Both keep `threshold: 1` and `scale: 1`, partner identity, and `eventTurn`. Their behavior and authored templates are unchanged. Additional war coverage remains outside this catalogue expansion.
+War and peace have separate trigger and template files. `warTransition` and `peaceTransition` infer likely incidents from the existing `DeclareWar` and `MakePeace` events and dated relationship snapshots; they do not require new DLL events. `warProgress` measures changes in recorded war score; `enduringPeace` follows observed peace over time. The [war and peace guide](war-and-peace.md) documents grouping, score thresholds, shared and stage-specific tuning, placeholders, and source limitations.
+
+There is no compatibility mapping for the former `incomingWar` or `peace` detector IDs. Update overlays to the current detector and trigger IDs. Publication checkpoints also require state schema 3; older checkpoints fail validation and must be regenerated. Resume restores a valid run's saved catalogue, while a fresh run uses current built-ins and any supplied overlay.
 
 ### Available placeholders
 
@@ -181,6 +184,7 @@ Developments from `developments.ts` have `fromTurn` and `toTurn`, derived from t
 | Output changes | `output`, `previousOutput`, `change`, `direction`. Culture metrics also supply `culture`, `previousCulture`, `cultureChange`, `cultureFromTurn`, `cultureToTurn`; other output metrics supply only the generic names. |
 | Trade | Partner/share: `gold`, `share`, `previousShare`, `tradeFromTurn`, `tradeToTurn`. Contraction: `routes`, `previousRoutes`, `gold`, `previousGold`. Plunder: `plunderEvents`, `plunderGold`. |
 | Diplomacy | Contact: `partners`, `eventTurn`. Deal: `terms`, `significantTerms`, `eventTurn`. |
+| War and peace | See [war and peace placeholders](war-and-peace.md#authored-placeholders) for incident parties, direction, participants, concessions, score progress, and enduring peace. |
 | Science | Era: `era`, `eventTurn`. Technology: `technology`, `eventTurn`. Lead: `leaders`, `previousLeaders`, `technologies`, `knownMajors`. |
 | Culture and religion | Policies: `policies`; ideology: `previousIdeology`, `ideology`; wonders: `wonders`; great works: `works`, `previousWorks`, `addedWorks`; golden age: `stage`. Religion milestones: `religion`, `eventTurn`; conversions: `conversions` (distinct changed cities), `changes` (majority transitions), `religions` (observed new majorities), `reversals` (cities returning to an earlier majority); national majority: `religion`, `previousReligion`. |
 
@@ -215,7 +219,7 @@ With this override, population 10 to 12 fails the absolute requirement; 10 to 13
 
 `trade-concentration`, `foreign-culture`, `deal`, and `city-recovery` retain their trigger IDs. Their familiar trade, culture, and recovery placeholders remain available, including those used by `trade-and-exchange` and `trade-and-culture`. The new materiality and continuity rules still apply: `deal` now requires consequential structured terms, for example.
 
-Recovery's `settlement-recovery` template now lives in `templates/cities.json`; overlay merging uses IDs across files, so an override in `templates/recovery.json` still finds it. The shipped `city-contrast` trigger, `provincial-contrast` template, and `provincial-recovery` composite have been removed. `cityContrast` remains a supported detector for custom catalogues and saved configurations. Restoring that angle in a fresh overlay requires complete trigger and template definitions, including any composite dependencies; a partial override cannot inherit an entry that no longer ships.
+Recovery's `settlement-recovery` template lives in `templates/cities.json`. The old `city-contrast` trigger, `cityContrast` detector, `provincial-contrast` template, and `provincial-recovery` composite have been removed. New city angles should use the supported city detectors and their documented controls.
 
 Saved issues keep their authored content and decisions. Resume restores its original configuration snapshot, while future checks run the installed detector code. A fresh run uses the current built-ins plus the supplied overlay. Check older overrides against `config.ts` when upgrading, especially removed IDs, changed variant IDs, and unsupported tuning fields.
 

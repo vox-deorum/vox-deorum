@@ -2,6 +2,14 @@
 
 This guide helps designers and developers shape the proposed newspaper's layout, visual identity, and interactions. It builds on [the feature specification](spec.md). The [implementation roadmap](implementation.md) uses one HTML/CSS renderer for the browser reader and the images displayed in the game.
 
+## Interpret the game for the player
+
+The newspaper helps players understand their game through plausible interpretation. Event sequences, relationships, and trends can support inferred explanations without proving every cause. Prefer a useful account with proportionate qualification; broaden the account when competing explanations remain.
+
+Preserve recorded quantities and respect the reader's visibility. Use natural wording such as “appears to have joined through its defensive pact” when the cause is inferred. Keep technical confidence notes and source details in the inspector, and avoid repeating a disclaimer in every sentence.
+
+Build these interpretations locally from existing observations. Newspaper coverage does not add DLL events or collection machinery. A declaration and its allied responses should usually become one account of an expanding conflict. Give a direct attack on a city-state its own significance. War and peace are separate coverage categories; battle and city-capture reporting belong to later military work.
+
 ## Make each issue easy to skim
 
 Lead with one main story, followed by shorter pieces from varied places and subjects. Use type size, spacing, and dividing rules to show importance. Give the publication most of the screen, with little surrounding interface.

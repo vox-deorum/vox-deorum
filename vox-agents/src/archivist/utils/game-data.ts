@@ -9,6 +9,7 @@
 import type { Selectable } from 'kysely';
 import type { CityInformation, VictoryProgress } from '../../../../mcp-server/dist/knowledge/schema/index.js';
 import type { TurnContext } from '../types.js';
+import { hasDefensivePact, hasPeaceTreaty, isAtWar, isFriend, isMasterOf, isVassalOf } from '../../../../mcp-server/dist/diplomacy/relationships.js';
 
 // ---------------------------------------------------------------------------
 // Policies
@@ -79,8 +80,8 @@ export function parseDiplomatics(
     let hasWar = false;
 
     for (const status of statusArray) {
-      // War detection: "War (Our Score: ...)" — check for "War" followed by space or paren
-      if (!hasWar && (status.startsWith('War ') || status === 'War')) {
+      // Count each opponent once while retaining private weariness for archivist features.
+      if (!hasWar && isAtWar(status)) {
         result.activeWars++;
         hasWar = true;
         // Extract war weariness
@@ -92,14 +93,14 @@ export function parseDiplomatics(
           }
         }
       }
-      if (status.includes('Peace Treaty')) result.truces++;
-      if (status.includes('Defensive Pact')) result.defensivePacts++;
-      if (status.includes('Declaration of Friendship')) result.friends++;
+      if (hasPeaceTreaty(status)) result.truces++;
+      if (hasDefensivePact(status)) result.defensivePacts++;
+      if (isFriend(status)) result.friends++;
       if (status.includes('Denounced Them') || status.includes('Denounced By Them')) {
         result.denouncements++;
       }
-      if (status.includes('Our Vassal')) result.vassals++;
-      if (status.includes('Our Master')) result.isVassal = 1;
+      if (isMasterOf(status)) result.vassals++;
+      if (isVassalOf(status)) result.isVassal = 1;
     }
   }
 

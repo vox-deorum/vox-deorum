@@ -182,7 +182,7 @@ describe('reportsToRawEpisode', () => {
         Civilization: 'Rome',
         IsMajor: true,
         Relationships: {
-          Egypt: ['War (Our War Weariness: 40%)'],
+          Egypt: ['War (Our Score: 0%; Our War Weariness: 40%)'],
           Greece: ['Declaration of Friendship'],
           Venice: ['War'], // minor — must be ignored
         },

@@ -1,7 +1,7 @@
 /** Inspect fixture publications, replay checks, and permitted evidence outside the shared reader. */
 import { newspaperScreenLabels, type IssueDocument, type LinkTarget } from "../../../src/newspaper/contracts/issue.js";
 import type { ReaderAction, ReaderState } from "../../../src/newspaper/contracts/reader.js";
-import type { NewspaperEvidence, NewspaperSnapshot, NewspaperEvent } from "../../../../mcp-server/dist/newspaper/evidence.js";
+import type { NewspaperEvidence, NewspaperSnapshot, NewspaperEvent, NewspaperDiplomacySnapshot, NewspaperDiplomacyGap } from "../../../../mcp-server/dist/newspaper/evidence.js";
 import type { z } from "zod";
 import type { replayCheckSchema } from "../../../src/newspaper/contracts/replay.js";
 import type { PublishedItemRecord } from "../../../src/newspaper/contracts/publication.js";
@@ -204,10 +204,12 @@ export function renderEvidence(evidence: NewspaperEvidence | null): void {
     }
     root.append(heading, limitations);
   }
-  const groups: [string, (NewspaperSnapshot | NewspaperEvent)[]][] = [
+  const groups: [string, (NewspaperSnapshot | NewspaperEvent | NewspaperDiplomacySnapshot | NewspaperDiplomacyGap)[]][] = [
     ["Players", evidence.players], ["Cities", evidence.cities],
     ["Earlier players", evidence.comparisons.players], ["Earlier cities", evidence.comparisons.cities],
     ["Events", evidence.events],
+    ["Earlier diplomacy", evidence.diplomacy?.baseline ?? []], ["Diplomacy history", evidence.diplomacy?.history ?? []],
+    ["Diplomacy gaps", evidence.diplomacy?.gaps ?? []],
   ];
   for (const [label, rows] of groups) {
     const heading = document.createElement("h3");
@@ -220,7 +222,7 @@ export function renderEvidence(evidence: NewspaperEvidence | null): void {
       button.textContent = `${identity}, turn ${row.source.turn}, row ${row.source.id}`;
       /** Navigate to the referenced row's identity and the values permitted by the evidence query. */
       button.addEventListener("click", () => {
-        sourceView.textContent = JSON.stringify({ source: row.source, values: row.values }, null, 2);
+        sourceView.textContent = JSON.stringify(row, null, 2);
         sourceView.scrollIntoView({ block: "nearest" });
       });
       root.append(button);

@@ -8,12 +8,15 @@ The newspaper turns recorded game evidence into authored heuristic issues, displ
 | [Replay](replay.md) | Recorded publication and browser workflow verified | Recording evidence, separate output storage, issue reading, votes, preferences, and resume |
 | [Editorial](editorial.md) | Heuristic implementation; reading acceptance pending | Configured detection, authored stories, series, feedback, and stored presentation; later LLM editing |
 | [Triggers](triggers.md) | Implemented catalogue; recording tuning pending | Development conditions, defaults, evidence, repeat rules, and instructions for adding coverage |
+| [War and peace](war-and-peace.md) | Local inference; recording tuning pending | Declaration cascades, obligations, city-state involvement, score progress, and settlements |
 | [Evaluation](evaluation.md) | Planned | Offline experiments comparing editorial approaches |
 | [Live integration](live-integration.md) | Planned; save-capacity proof pending | Live scheduling, game-owned persistence, archive access, and player integration |
 
 The [implementation roadmap](../../../plans/newspaper/implementation.md) describes the stages and their dependencies. Detailed requirements remain in each [implementation plan](../../../plans/newspaper/implementation/).
 
 MCP owns the browser-safe evidence schemas and source references in `mcp-server/src/newspaper/evidence.ts`, archive scope/index/query schemas in `protocol.ts`, historical reads in `queries.ts`, and reportable-field policy in `projection.ts`. The `get-newspaper-evidence` tool calls the same query used by standalone replay, with no live refresh. MCP does not import Vox Agents.
+
+War and peace coverage uses the already recorded `DeclareWar` and `MakePeace` events plus projected relationship snapshots. It adds no DLL events.
 
 Vox Agents owns editing, replay orchestration, publications, and presentation under `vox-agents/src/newspaper/`:
 
@@ -31,4 +34,4 @@ The plain DOM reader lives in `vox-agents/newspaper/src/reader/`. Its applicatio
 
 To render an issue, supply a completed `IssueDocument` with publication identity, ordered pages, canonical items, typed links, and its saved presentation. Configurable design identities select fixed Victorian or modern renderer families; reopening an issue uses the saved colors, fonts, ornaments and layout choices. The [renderer guide](renderer.md) describes the schema 2 input, separate render profile and reader state, and exported bundle.
 
-The versioned schemas and SQLite output currently cover offline publication. The live game checkpoint format awaits the measured save-capacity proof in [Plan 5](../../../plans/newspaper/implementation/05-live-integration.md); offline persistence does not establish that game's save limits.
+Offline publication state uses schema 3, IssueDocument uses schema 2, and the replay output database uses SQLite `user_version` 2. These offline versions do not define the live game checkpoint format, which awaits the measured save-capacity proof in [Plan 5](../../../plans/newspaper/implementation/05-live-integration.md).

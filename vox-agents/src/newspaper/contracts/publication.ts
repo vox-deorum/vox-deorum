@@ -1,6 +1,7 @@
 /** Versioned offline editorial memory and audit records, free of runtime imports. */
 import { z } from 'zod';
 import { newspaperSourceReferenceSchema } from '../../../../mcp-server/dist/newspaper/evidence.js';
+import { diplomacyMemorySchema, diplomacyInferenceSchema } from './diplomacy.js';
 
 /** Receiver choices, resolved over catalogue defaults when the run is created. */
 export const publicationPreferencesSchema = z.object({
@@ -39,6 +40,7 @@ export const editorialDecisionRecordSchema = z.object({
   selectedVariants: z.record(z.string(), z.string()), designId: z.string().nullable(),
   layouts: z.record(z.string(), z.string()), evidence: z.array(newspaperSourceReferenceSchema),
   feedback: feedbackRecordSchema,
+  diplomacyInference: z.array(diplomacyInferenceSchema),
 });
 export type EditorialDecisionRecord = z.infer<typeof editorialDecisionRecordSchema>;
 /** Importance is dated so each elapsed turn is decayed exactly once. */
@@ -49,16 +51,17 @@ export const seriesStateSchema = z.object({
 export type SeriesState = z.infer<typeof seriesStateSchema>;
 /** Current offline memory excludes decisions, which are stored with each completed check. */
 export const publicationStateSchema = z.object({
-  schemaVersion: z.literal(2), lastCheckTurn: z.number().int().nullable(),
+  schemaVersion: z.literal(3), lastCheckTurn: z.number().int().nullable(),
   issues: z.array(publishedIssueRecordSchema), series: z.record(z.string(), seriesStateSchema),
   votes: z.record(z.string(), z.union([z.literal(-1), z.literal(0), z.literal(1)])),
   preferences: publicationPreferencesSchema, previousDesignId: z.string().nullable(),
+  diplomacy: diplomacyMemorySchema,
 });
 
 export type PublicationState = z.infer<typeof publicationStateSchema>;
 
 /** Create an empty receiver checkpoint with resolved publication preferences. */
 export function createInitialPublicationState(preferences: Partial<PublicationPreferences> = {}): PublicationState {
-  return { schemaVersion: 2, lastCheckTurn: null, issues: [], series: {}, votes: {},
+  return { schemaVersion: 3, lastCheckTurn: null, issues: [], series: {}, votes: {}, diplomacy: { pairs: {} },
     preferences: publicationPreferencesSchema.parse(preferences), previousDesignId: null };
 }

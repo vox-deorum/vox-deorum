@@ -21,6 +21,8 @@ The newspaper serves human civilizations. Giving LLM strategists the same public
 
 **Success:** the player enjoys skimming an issue, learns something useful, and finds a worthwhile opportunity or next step. Both the heuristic and LLM editors should achieve this.
 
+Useful gameplay interpretation guides both editors. Existing event sequences, relationships, and trends can support a plausible explanation even when every cause cannot be established. Preserve observed quantities, qualify inferred causes proportionately, and broaden an account when several explanations fit. Newspaper features derive this context locally from existing recordings, without adding DLL events or collection machinery.
+
 ## 2. The player experience
 
 ### 2.1 Reading an issue
@@ -269,7 +271,7 @@ Merge matched angles when their subjects, periods, and evidence support one usef
 
 **Tags** describe topics. Trigger tags describe the development; template tags describe the angle. A published item keeps the tags relevant to its final story. Tags place items on pages, balance variety within an issue, and carry votes into future weights. They stay out of the reading surface.
 
-Start with a small shared vocabulary: domestic, international, cities, economy, trade, culture, science, society, religion, diplomacy, war, and recovery.
+Start with a small shared vocabulary: domestic, international, cities, economy, trade, culture, science, society, religion, diplomacy, war, peace, and recovery. War covers declarations, participation, and score-based progress; peace covers settlements and their aftermath. Military coverage of battles and city captures is later work.
 
 **Pages** come from predefined, configurable page definitions:
 
@@ -301,7 +303,7 @@ Place the most useful stories on the front page and group further coverage on se
 
 | Situation | Required behavior |
 | --- | --- |
-| LLM interpretation | Allow editorial freedom within supplied evidence. Report facts from the triggers; algorithms supply factual comparisons and help maintain readability. |
+| Interpretation | Both editors may infer useful explanations from supplied sequences, relationships, and trends. Algorithms preserve recorded quantities and comparisons; prose qualifies uncertain causes when that helps the reader. |
 | Ad hoc item | Assign importance and series keys from the key grammar; record its angle and supporting triggers. It can start or join a series, or remain a short piece. Useful ideas can later become authored templates. |
 | LLM disabled or unavailable | Keep the core reading, series, and feedback experience through the heuristic editor. Skip LLM-only templates; eligible authored templates can cover the same development. |
 | Generation fails | Use an authored variant when the template has one; otherwise drop the item. Assemble the issue from what remains. |
@@ -386,7 +388,7 @@ The technical design will define each source's facts and periods. Both editors r
 
 | Evidence rule | Requirement |
 | --- | --- |
-| Factual support | Every published fact needs recorded support. |
+| Factual support | Preserve recorded quantities and support accounts with available observations. Causal explanations may be inferred; use broader wording when the evidence leaves competing explanations. |
 | Reporting cutoff | Use only evidence available by the reporting cutoff. |
 | Newly learned history | Can support a retrospective when the source justifies access. |
 | Older intelligence | Carry its date. |
@@ -447,7 +449,7 @@ flowchart TD
 | Area | Questions to answer |
 | --- | --- |
 | Usefulness | Does a busy late-game issue explain home and neighboring civilizations? Do hints teach a mechanic or suggest a worthwhile next step, especially for new players? |
-| Accuracy | Does every stated fact trace to supplied evidence available by the reporting cutoff? Is interpretation recognizable as interpretation? |
+| Grounding and usefulness | Are quantities faithful to evidence available by the reporting cutoff? Does the account help the player understand events, with proportionate qualification for inferred causes? |
 | Reporting access | Does extra information have a concrete reporting reason and improve play? |
 | Reading length | Does page count adapt to quiet and busy periods while important news stays easy to skim? |
 | Series | Are developments easier to follow across turns? Do fading and returning subjects feel timely? |

@@ -1,0 +1,128 @@
+[
+  {
+    "id": "peace-agreement",
+    "detector": "peaceTransition",
+    "stage": "agreement",
+    "threshold": 1,
+    "scale": 1,
+    "tags": [
+      "peace",
+      "diplomacy",
+      "recovery"
+    ]
+  },
+  {
+    "id": "peace-master-led",
+    "detector": "peaceTransition",
+    "stage": "masterLed",
+    "threshold": 1,
+    "scale": 1,
+    "tags": [
+      "peace",
+      "diplomacy",
+      "recovery"
+    ]
+  },
+  {
+    "id": "peace-vassals-included",
+    "detector": "peaceTransition",
+    "stage": "vassalsIncluded",
+    "threshold": 1,
+    "scale": 1,
+    "tags": [
+      "peace",
+      "diplomacy",
+      "recovery"
+    ]
+  },
+  {
+    "id": "peace-city-state-agreement",
+    "detector": "peaceTransition",
+    "stage": "cityStateAgreement",
+    "threshold": 1,
+    "scale": 1,
+    "tags": [
+      "peace",
+      "diplomacy",
+      "recovery"
+    ]
+  },
+  {
+    "id": "peace-city-states-included",
+    "detector": "peaceTransition",
+    "stage": "cityStatesIncluded",
+    "threshold": 1,
+    "scale": 1,
+    "tags": [
+      "peace",
+      "diplomacy",
+      "recovery"
+    ]
+  },
+  {
+    "id": "peace-partial",
+    "detector": "peaceTransition",
+    "stage": "partial",
+    "threshold": 1,
+    "scale": 1,
+    "tags": [
+      "peace",
+      "diplomacy",
+      "recovery"
+    ]
+  },
+  {
+    "id": "peace-concessions",
+    "detector": "peaceTransition",
+    "stage": "concessions",
+    "threshold": 1,
+    "scale": 1,
+    "tags": [
+      "peace",
+      "diplomacy",
+      "recovery"
+    ]
+  },
+  {
+    "id": "peace-capitulation",
+    "detector": "peaceTransition",
+    "stage": "capitulation",
+    "threshold": 1,
+    "scale": 1,
+    "tags": [
+      "peace",
+      "diplomacy",
+      "recovery"
+    ]
+  },
+  {
+    "id": "peace-quiet-fronts",
+    "detector": "peaceTransition",
+    "stage": "quietFronts",
+    "threshold": 1,
+    "scale": 1,
+    "tags": [
+      "peace",
+      "diplomacy",
+      "recovery"
+    ]
+  },
+  {
+    "id": "peace-enduring",
+    "detector": "enduringPeace",
+    "stage": "enduring",
+    "threshold": 1,
+    "scale": 1,
+    "tags": [
+      "peace",
+      "diplomacy",
+      "recovery"
+    ],
+    "tuning": {
+      "persistence": 25,
+      "freshness": 5,
+      "foreign": false,
+      "maxGap": 10
+    }
+  }
+]

@@ -95,26 +95,26 @@ describe('editorial engine', () => {
       expect(detectTriggers(evidence, config, context).some(trigger => trigger.definitionId === 'city-population-boom')).toBe(false);
     });
 
-    it('should require the receiving team for incoming war without inferring team from player id', () => {
+    it('should resolve an incoming war through the recorded player team mapping', () => {
       const evidence = fixture();
       evidence.events = [{ type: 'DeclareWar', values: { OriginatingPlayerID: 2, TargetTeamID: 7, IsAggressor: false },
         source: { table: 'GameEvents', id: 88, turn: 9, createdAt: 9000 } }];
       const triggers = detectTriggers(evidence, config, context);
-      expect(triggers.find(trigger => trigger.definitionId === 'incoming-war')).toMatchObject({ urgent: true, subject: 'civilization/2' });
-      expect(detectTriggers(evidence, config, { ...context, receiverTeamId: undefined }).some(trigger => trigger.urgent)).toBe(false);
+      expect(triggers.find(trigger => trigger.definitionId === 'war-declaration')).toMatchObject({ urgent: true, values: { partner: 'Zulu', rootIntent: 'unknown' } });
+      expect(detectTriggers(evidence, config, { ...context, receiverTeamId: undefined, playerTeamIds: { '1': 8, '2': 9 } }).some(trigger => trigger.urgent)).toBe(false);
     });
 
     it('should require known involvement before reporting a peace event', () => {
       const evidence = fixture();
       evidence.events = [{ type: 'MakePeace', values: { OriginatingPlayerID: 1 },
         source: { table: 'GameEvents', id: 88, turn: 9, createdAt: 9000 } }];
-      const unknownReceiver = { ...context, receiverTeamId: undefined };
-      expect(detectTriggers(evidence, config, unknownReceiver).some(trigger => trigger.definitionId === 'peace')).toBe(false);
+      const unknownReceiver = { ...context, receiverTeamId: undefined, playerTeamIds: { '1': 8, '2': 9 } };
+      expect(detectTriggers(evidence, config, unknownReceiver).some(trigger => trigger.definitionId.startsWith('peace-'))).toBe(false);
       evidence.events[0].values.TargetTeamID = 8;
-      expect(detectTriggers(evidence, config, unknownReceiver).some(trigger => trigger.definitionId === 'peace')).toBe(false);
+      expect(detectTriggers(evidence, config, unknownReceiver).some(trigger => trigger.definitionId.startsWith('peace-'))).toBe(false);
       evidence.events[0].values.TargetTeamID = 7;
-      expect(detectTriggers(evidence, config, context).find(trigger => trigger.definitionId === 'peace'))
-        .toMatchObject({ subject: 'civilization/1', values: { partnerId: 1, eventTurn: 9 } });
+      expect(detectTriggers(evidence, config, context).find(trigger => trigger.definitionId === 'peace-quiet-fronts'))
+        .toMatchObject({ values: { partner: 'Morocco', eventTurn: 9 } });
     });
 
     it('should recognize a population rebound only with an observed earlier decline', () => {
@@ -171,21 +171,17 @@ describe('editorial engine', () => {
       expect(selected.some(candidate => candidate.short)).toBe(false);
     });
 
-    it('should author compatible domestic recovery and urgent trade combinations', () => {
+    it('should author domestic recovery alongside an urgent diplomatic account', () => {
       const evidence = fixture();
       evidence.comparisons.cities.push(snapshot(3, 2, { Owner: 'France', Population: 13 }, true));
       evidence.events.push({ type: 'DeclareWar', values: { OriginatingPlayerID: 2, TargetTeamID: 7 },
         source: { table: 'GameEvents', id: 99, turn: 9, createdAt: 9000 } });
       const candidates = matchTemplates(detectTriggers(evidence, config, context), config, evidenceConditionContext(evidence, context));
       const domestic = candidates.find(candidate => candidate.templateIds.includes('settlement-recovery'))!;
-      const urgent = candidates.find(candidate => candidate.templateIds.includes('war-and-routes'))!;
+      const urgent = candidates.find(candidate => candidate.templateIds.includes('war-declaration-account'))!;
       expect(domestic).toMatchObject({ subject: 'city/3', values: { recoveryGrowth: 2, population: 12 } });
-      expect(urgent).toMatchObject({ urgent: true, subject: 'civilization/2', values: { eventTurn: 9, tradeFromTurn: 5, tradeToTurn: 10 } });
-      for (const merged of [urgent]) {
-        const parts = candidates.filter(candidate => merged.contributingIds.includes(candidate.id));
-        expect(merged.importance).toBe(Math.max(...parts.map(part => part.importance)));
-        expect(merged.variants.length).toBeGreaterThan(0);
-      }
+      expect(urgent).toMatchObject({ urgent: true, values: { eventTurn: 9, partner: 'Zulu' } });
+      expect(urgent.variants.length).toBeGreaterThan(0);
     });
 
     it('should publish reproducibly with one history contribution despite repeated page membership', () => {
@@ -347,7 +343,7 @@ describe('editorial engine', () => {
       expect(result.status).toBe('published');
       if (result.status !== 'published') return;
       const lead = result.state.issues.at(-1)!.items.find(item => item.id === result.issue.pages[0].itemIds[0])!;
-      expect(lead.templateIds).toContain('war-warning');
+      expect(lead.templateIds).toContain('war-declaration-account');
       expect(result.issue.pages[0].layout).toBe('breaking');
       expect(result.issue.pages[0].itemIds.length).toBeGreaterThan(1);
     });

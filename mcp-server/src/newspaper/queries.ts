@@ -4,7 +4,7 @@ import type { CityInformation, GameEvent } from '../knowledge/schema/timed.js';
 import { isVisible } from '../knowledge/expressions.js';
 import { readEvents, readSnapshotRange, readSnapshotsAtCutoff } from '../knowledge/history.js';
 import { newspaperEvidenceRequestSchema, type NewspaperEvidence, type NewspaperEvidenceRequest } from './evidence.js';
-import { projectNewspaperCity, projectNewspaperEvent, projectNewspaperPlayer, type NewspaperProjectionContext } from './projection.js';
+import { projectNewspaperCity, projectNewspaperDiplomacy, projectNewspaperEvent, projectNewspaperPlayer, type NewspaperProjectionContext } from './projection.js';
 
 /** Read permitted dated evidence through a caller-owned connection, without refresh or schema changes. */
 export async function queryNewspaperEvidence(
@@ -37,7 +37,7 @@ export async function queryNewspaperEvidence(
   const cutoffContext = contexts.get(request.cutoffTurn)!;
   const summaries = cutoffContext.summaries;
   // Stale national facts still use permission records from their own observation turn.
-  const staleTurns = [...new Set(summaries.filter(row => row.Turn < fromTurn).map(row => row.Turn))];
+  const staleTurns = [...new Set(baseSummaries.map(row => row.Turn))];
   await Promise.all(staleTurns.map(
     /** Resolve the original permission context for a national observation predating the window. */
     async turn => {
@@ -48,7 +48,14 @@ export async function queryNewspaperEvidence(
   const earlierPlayers = comparisonRange ? summaryHistory.filter(row =>
     row.Turn >= comparisonRange.fromTurn && row.Turn <= comparisonRange.toTurn) : [];
 
-  const result: NewspaperEvidence = { request, players: [], cities: [], comparisons: { players: [], cities: [] }, events: [] };
+  const result: NewspaperEvidence = { request, players: [], cities: [], comparisons: { players: [], cities: [] }, events: [],
+    diplomacy: { fromTurn, baseline: [], history: [], gaps: [] } };
+  for (const [rows, target] of [[baseSummaries, result.diplomacy!.baseline], [summaryHistory, result.diplomacy!.history]] as const) {
+    for (const row of rows) {
+      const projected = projectNewspaperDiplomacy(row, contexts.get(row.Turn)!, result.diplomacy!.gaps);
+      if (projected) target.push(projected);
+    }
+  }
   for (const [rows, target] of [[summaries, result.players], [earlierPlayers, result.comparisons.players]] as const) {
     for (const row of rows) {
       const projected = projectNewspaperPlayer(row, contexts.get(row.Turn)!);

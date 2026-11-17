@@ -10,7 +10,7 @@ import { config } from '../../src/utils/config.js';
 import { knowledgeManager } from '../../src/server.js';
 import type { KnowledgeStore } from '../../src/knowledge/store.js';
 import { isolateExternalManagers, readPublishedUrl } from '../fixtures/server-process.js';
-import { createEvidenceDatabase, openEvidenceRecording, seedEvidence } from './fixtures.js';
+import { createEvidenceDatabase, event, openEvidenceRecording, seedEvidence, summary } from './fixtures.js';
 import { queryNewspaperEvidence } from '../../src/newspaper/queries.js';
 
 describe('newspaper MCP transports', () => {
@@ -21,6 +21,15 @@ describe('newspaper MCP transports', () => {
     const shutdownFile = path.join(directory, 'shutdown-url.txt');
     const writer = await createEvidenceDatabase(filename);
     await seedEvidence(writer);
+    await event(writer, 107, 8, 'SetAlly', { MinorPlayerID: 1, OldAllyPlayerID: 0, NewAllyPlayerID: 3,
+      NewAllyPlayer: { Name: 'Leader3', Civilization: 'Civ3' } });
+    await summary(writer, 8, 0, 4, 2, { Relationships: { Civ1: ['War (Our Score: 0%; Our War Weariness: 10%)'] } });
+    await writer.updateTable('PlayerSummaries').set({ Relationships: JSON.stringify({
+      Civ1: ['War (Our Score: -12%; Our War Weariness: 61%)']
+    }) }).where('ID', '=', 1).execute();
+    await writer.updateTable('PlayerSummaries').set({ Relationships: JSON.stringify({
+      Civ1: ['Distance: Close', 'Defensive Pact', 'Our Vassal (Voluntary)']
+    }) }).where('ID', '=', 5).execute();
     // Older recordings remain readable without creating the new event index.
     await writer.schema.dropIndex('idx_gameevents_turn').execute();
     await writer.destroy();

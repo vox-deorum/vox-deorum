@@ -12,6 +12,7 @@ import type { Episode, TurnContext } from '../types.js';
 import { eraMap } from '../types.js';
 import { clamp, normalizeShare } from './math.js';
 import { countPolicies } from './game-data.js';
+import { hasDefensivePact, isAtWar, isFriend, isMasterOf, isVassalOf } from '../../../../mcp-server/dist/diplomacy/relationships.js';
 
 // ---------------------------------------------------------------------------
 // Neighbor vector helpers
@@ -32,14 +33,14 @@ export function parseDistance(statuses: string[]): number {
 export function parseStance(statuses: string[]): number {
   let stance = 2; // default: neutral
   for (const s of statuses) {
-    if (s.startsWith('War ') || s === 'War') return 4;
-    if (s.includes('Denounced') || s.includes('Our Master')) {
+    if (isAtWar(s)) return 4;
+    if (s.includes('Denounced') || isVassalOf(s)) {
       if (stance < 3) stance = 3;
     }
-    if (s.includes('Declaration of Friendship') || s.includes('Our Vassal')) {
+    if (isFriend(s) || isMasterOf(s)) {
       if (stance > 1) stance = 1;
     }
-    if (s.includes('Defensive Pact')) {
+    if (hasDefensivePact(s)) {
       stance = 0;
     }
   }

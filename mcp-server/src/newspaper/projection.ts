@@ -4,7 +4,8 @@ import type { CityInformation, GameEvent, PlayerSummary } from '../knowledge/sch
 import { projectCityReportFields, projectPlayerReportFields } from '../knowledge/helpers/report-projection.js';
 import { diplomaticEventSubjects, matchesSubjects, type EventSubjects } from '../knowledge/helpers/event-subjects.js';
 import { pickFields } from '../utils/fields.js';
-import type { NewspaperEvent, NewspaperSnapshot, NewspaperSourceReference } from './evidence.js';
+import { parseRelationship } from '../diplomacy/relationships.js';
+import type { NewspaperDiplomacyGap, NewspaperDiplomacySnapshot, NewspaperEvent, NewspaperSnapshot, NewspaperSourceReference } from './evidence.js';
 
 /** Historical access context supplied by the query, never by live getters. */
 export interface NewspaperProjectionContext {
@@ -57,6 +58,63 @@ export function projectNewspaperPlayer(row: Selectable<PlayerSummary>, context: 
   const values: Record<string, unknown> = projectPlayerReportFields(selected, level, points, info?.IsMajor === 1);
   if (!Object.keys(values).length) return undefined;
   return { source: reference, subjectID: row.Key, values };
+}
+
+/** Find every recorded identity matching a summary label before applying dated contact. */
+function resolveRelationshipIdentity(label: string, context: NewspaperProjectionContext): Selectable<PlayerInformation>[] {
+  return context.players.filter(player =>
+    player.Civilization === label || (player.IsMajor !== 1 && `City-State ${player.Civilization}` === label));
+}
+
+/** Project public relationship facts independently of raw national values and private summary strings. */
+export function projectNewspaperDiplomacy(
+  row: Selectable<PlayerSummary>, context: NewspaperProjectionContext, gaps: NewspaperDiplomacyGap[]
+): NewspaperDiplomacySnapshot | undefined {
+  const level = visibility(row, context.receiverPlayerID);
+  if (level !== 1 && level !== 2) return undefined;
+  const reference = source('PlayerSummaries', row);
+  /** Record a gap without exposing the unresolved raw label or its private data. */
+  function gap(kind: NewspaperDiplomacyGap['kind']): void {
+    if (!gaps.some(entry => entry.source.id === row.ID && entry.kind === kind)) gaps.push({ source: reference, subjectID: row.Key, kind });
+  }
+  const info = context.players.find(player => player.Key === row.Key);
+  if (!info) {
+    gap('unresolvedIdentity');
+    return undefined;
+  }
+  const result: NewspaperDiplomacySnapshot = {
+    source: reference, subjectID: row.Key, teamID: info.TeamID, isMajor: info.IsMajor === 1, relationships: []
+  };
+  /** Require a unique, dated visible identity before including an entry. */
+  function resolve(label: string): Selectable<PlayerInformation> | undefined {
+    const candidates = resolveRelationshipIdentity(label, context);
+    if (candidates.length !== 1) {
+      gap(candidates.length ? 'ambiguousIdentity' : 'unresolvedIdentity');
+      return undefined;
+    }
+    if (!knowsPlayer(candidates[0].Key, context)) {
+      gap('unresolvedIdentity');
+      return undefined;
+    }
+    return candidates[0];
+  }
+  const entries = row.Relationships;
+  if (!entries || typeof entries !== 'object' || (Array.isArray(entries) && entries.length > 0)) gap('missingRelationships');
+  else for (const [label, value] of Object.entries(entries)) {
+    const target = resolve(label);
+    if (!target || target.Key === row.Key) continue;
+    const facts = parseRelationship(value);
+    if (facts.state === 'unknown') gap('unknownRelationship');
+    result.relationships.push({ targetPlayerID: target.Key, targetTeamID: target.TeamID, ...facts });
+  }
+  if (info.IsMajor !== 1) {
+    if (row.MajorAlly === null) result.majorAllyPlayerID = null;
+    else if (typeof row.MajorAlly === 'string') {
+      const ally = resolve(row.MajorAlly);
+      if (ally?.IsMajor === 1) result.majorAllyPlayerID = ally.Key;
+    }
+  }
+  return result;
 }
 
 /** Select raw city facts under recorded basic or full access, preserving sentinel and boolean values. */
@@ -140,6 +198,13 @@ export const newspaperEventConfigs: Record<string, NewspaperEventConfig> = {
     }
   },
   TeamMeet: { fields: ['CurrentTeamID', 'OtherTeamID'], subjects: diplomaticEventSubjects.TeamMeet },
+  SetAlly: {
+    fields: ['MinorPlayerID', 'OldAllyPlayerID', 'NewAllyPlayerID'], subjects: diplomaticEventSubjects.SetAlly,
+    reportWhenInvolved: true
+  },
+  MinorAlliesChanged: {
+    fields: ['MinorPlayerID', 'MajorPlayerID', 'IsNowAlly'], subjects: diplomaticEventSubjects.MinorAlliesChanged
+  },
   CityCaptureComplete: {
     fields: ['OldOwnerID', 'NewOwnerID', 'CityID', 'CityX', 'CityY', 'Population', 'IsConquest'],
     subjects: diplomaticEventSubjects.CityCaptureComplete,
@@ -210,7 +275,8 @@ function playerIdentity(value: unknown, id: unknown, context: NewspaperProjectio
 
 /** Check that the receiver has met every player and team the event names. */
 function knowsSubjects(subjects: EventSubjects, payload: Record<string, unknown>, context: NewspaperProjectionContext): boolean {
-  return subjects.playerIdFields.every(field => !(field in payload) || knowsPlayer(payload[field], context)) &&
+  return subjects.playerIdFields.every(field => !(field in payload) ||
+    ((field === 'OldAllyPlayerID' || field === 'NewAllyPlayerID') && payload[field] === -1) || knowsPlayer(payload[field], context)) &&
     (subjects.teamIdFields ?? []).every(field => !(field in payload) || knowsTeam(payload[field], context));
 }
 
@@ -277,6 +343,9 @@ export function projectNewspaperEvent(row: Selectable<GameEvent>, context: Newsp
   if (config.insight && !hasInsight(config.insight, payload, context)) return undefined;
 
   const values: Record<string, unknown> = pickFields(payload, config.fields);
+  if (row.Type === 'MinorAlliesChanged' && (typeof values.IsNowAlly === 'boolean' || typeof values.IsNowAlly === 'number')) {
+    values.IsNowAlly = values.IsNowAlly !== false && values.IsNowAlly !== 0;
+  }
   // Enriched subjects are optional. Unknown identities never accompany a public event.
   for (const field of config.subjects.playerIdFields) {
     const key = field.replace(/ID$/, '');

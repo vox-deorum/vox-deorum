@@ -1,0 +1,400 @@
+[
+  {
+    "id": "peace-agreement-account",
+    "triggerIds": [
+      "peace-agreement"
+    ],
+    "tags": [
+      "peace",
+      "diplomacy",
+      "recovery"
+    ],
+    "weight": {
+      "base": 2
+    },
+    "short": false,
+    "variants": [
+      {
+        "id": "dispatch",
+        "weight": {
+          "base": 1
+        },
+        "headline": "Peace between {{firstParty}} and {{secondParty}}",
+        "body": [
+          "{{firstParty}} and {{secondParty}} have made peace. The agreement closes this front.",
+          "{{participantDetails}}",
+          "{{cityStates}}",
+          "Review the {{overview}} for current relations."
+        ],
+        "links": [
+          {
+            "placeholder": "overview",
+            "label": "diplomatic overview",
+            "target": {
+              "type": "screen",
+              "screen": "diplomacy"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "peace-master-led-account",
+    "triggerIds": [
+      "peace-master-led"
+    ],
+    "tags": [
+      "peace",
+      "diplomacy",
+      "recovery"
+    ],
+    "weight": {
+      "base": 2
+    },
+    "short": false,
+    "variants": [
+      {
+        "id": "dispatch",
+        "weight": {
+          "base": 1
+        },
+        "headline": "Peace through a master's settlement",
+        "body": [
+          "{{firstParty}} and {{secondParty}} have made peace. The settlement appears to include us through our master.",
+          "{{participantDetails}}",
+          "{{cityStates}}",
+          "Review the {{overview}} for current relations."
+        ],
+        "links": [
+          {
+            "placeholder": "overview",
+            "label": "diplomatic overview",
+            "target": {
+              "type": "screen",
+              "screen": "diplomacy"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "peace-vassals-included-account",
+    "triggerIds": [
+      "peace-vassals-included"
+    ],
+    "tags": [
+      "peace",
+      "diplomacy",
+      "recovery"
+    ],
+    "weight": {
+      "base": 2
+    },
+    "short": false,
+    "variants": [
+      {
+        "id": "dispatch",
+        "weight": {
+          "base": 1
+        },
+        "headline": "Vassals included in the settlement",
+        "body": [
+          "{{firstParty}} and {{secondParty}} have made peace. Vassals are included in the wider settlement.",
+          "{{participantDetails}}",
+          "{{cityStates}}",
+          "Review the {{overview}} for current relations."
+        ],
+        "links": [
+          {
+            "placeholder": "overview",
+            "label": "diplomatic overview",
+            "target": {
+              "type": "screen",
+              "screen": "diplomacy"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "peace-city-state-agreement-account",
+    "triggerIds": [
+      "peace-city-state-agreement"
+    ],
+    "tags": [
+      "peace",
+      "diplomacy",
+      "recovery"
+    ],
+    "weight": {
+      "base": 2
+    },
+    "short": false,
+    "variants": [
+      {
+        "id": "dispatch",
+        "weight": {
+          "base": 1
+        },
+        "headline": "Peace with a city-state",
+        "body": [
+          "{{firstParty}} and {{secondParty}} have made peace. The agreement ends the fighting involving the city-state.",
+          "{{participantDetails}}",
+          "{{cityStates}}",
+          "Review the {{overview}} for current relations."
+        ],
+        "links": [
+          {
+            "placeholder": "overview",
+            "label": "diplomatic overview",
+            "target": {
+              "type": "screen",
+              "screen": "diplomacy"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "peace-city-states-included-account",
+    "triggerIds": [
+      "peace-city-states-included"
+    ],
+    "tags": [
+      "peace",
+      "diplomacy",
+      "recovery"
+    ],
+    "weight": {
+      "base": 2
+    },
+    "short": false,
+    "variants": [
+      {
+        "id": "dispatch",
+        "weight": {
+          "base": 1
+        },
+        "headline": "City-states included in the peace",
+        "body": [
+          "{{firstParty}} and {{secondParty}} have made peace. Allied city-states are included in the wider settlement.",
+          "{{participantDetails}}",
+          "{{cityStates}}",
+          "Review the {{overview}} for current relations."
+        ],
+        "links": [
+          {
+            "placeholder": "overview",
+            "label": "diplomatic overview",
+            "target": {
+              "type": "screen",
+              "screen": "diplomacy"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "peace-partial-account",
+    "triggerIds": [
+      "peace-partial"
+    ],
+    "tags": [
+      "peace",
+      "diplomacy",
+      "recovery"
+    ],
+    "weight": {
+      "base": 2
+    },
+    "short": false,
+    "variants": [
+      {
+        "id": "dispatch",
+        "weight": {
+          "base": 1
+        },
+        "headline": "Peace on one front",
+        "body": [
+          "{{firstParty}} and {{secondParty}} have made peace. Other known fronts remain active.",
+          "{{participantDetails}}",
+          "{{cityStates}}",
+          "Review the {{overview}} for current relations."
+        ],
+        "links": [
+          {
+            "placeholder": "overview",
+            "label": "diplomatic overview",
+            "target": {
+              "type": "screen",
+              "screen": "diplomacy"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "peace-concessions-account",
+    "triggerIds": [
+      "peace-concessions"
+    ],
+    "tags": [
+      "peace",
+      "diplomacy",
+      "recovery"
+    ],
+    "weight": {
+      "base": 2
+    },
+    "short": false,
+    "variants": [
+      {
+        "id": "dispatch",
+        "weight": {
+          "base": 1
+        },
+        "headline": "Peace with visible concessions",
+        "body": [
+          "{{firstParty}} and {{secondParty}} have made peace. The agreement includes {{concessionTypes}}.",
+          "{{participantDetails}}",
+          "{{cityStates}}",
+          "Review the {{overview}} for current relations."
+        ],
+        "links": [
+          {
+            "placeholder": "overview",
+            "label": "diplomatic overview",
+            "target": {
+              "type": "screen",
+              "screen": "diplomacy"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "peace-capitulation-account",
+    "triggerIds": [
+      "peace-capitulation"
+    ],
+    "tags": [
+      "peace",
+      "diplomacy",
+      "recovery"
+    ],
+    "weight": {
+      "base": 8
+    },
+    "short": false,
+    "variants": [
+      {
+        "id": "dispatch",
+        "weight": {
+          "base": 1
+        },
+        "headline": "Capitulation accompanies the peace",
+        "body": [
+          "{{firstParty}} and {{secondParty}} have made peace. The settlement appears to include capitulation and a new master and vassal relationship.",
+          "{{participantDetails}}",
+          "{{cityStates}}",
+          "Review the {{overview}} for current relations."
+        ],
+        "links": [
+          {
+            "placeholder": "overview",
+            "label": "diplomatic overview",
+            "target": {
+              "type": "screen",
+              "screen": "diplomacy"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "peace-quiet-fronts-account",
+    "triggerIds": [
+      "peace-quiet-fronts"
+    ],
+    "tags": [
+      "peace",
+      "diplomacy",
+      "recovery"
+    ],
+    "weight": {
+      "base": 2
+    },
+    "short": false,
+    "variants": [
+      {
+        "id": "dispatch",
+        "weight": {
+          "base": 1
+        },
+        "headline": "Our known fronts fall quiet",
+        "body": [
+          "{{firstParty}} and {{secondParty}} have made peace. The known fronts involving these parties have fallen quiet.",
+          "{{participantDetails}}",
+          "{{cityStates}}",
+          "Review the {{overview}} for current relations."
+        ],
+        "links": [
+          {
+            "placeholder": "overview",
+            "label": "diplomatic overview",
+            "target": {
+              "type": "screen",
+              "screen": "diplomacy"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "peace-enduring-account",
+    "triggerIds": [
+      "peace-enduring"
+    ],
+    "tags": [
+      "peace",
+      "diplomacy",
+      "recovery"
+    ],
+    "weight": {
+      "base": 2
+    },
+    "short": true,
+    "variants": [
+      {
+        "id": "dispatch",
+        "weight": {
+          "base": 1
+        },
+        "headline": "Peace endures with {{partner}}",
+        "body": [
+          "{{perspective}} and {{partner}} have maintained peace across {{peaceTurns}} standard turns of known relations. The quiet on this front gives both sides room to rebuild and pursue other priorities.",
+          "Review current relations in the {{overview}}."
+        ],
+        "links": [
+          {
+            "placeholder": "overview",
+            "label": "diplomatic overview",
+            "target": {
+              "type": "screen",
+              "screen": "diplomacy"
+            }
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -58,6 +58,7 @@ function decisionRecord() {
     designId: 'modern',
     layouts: { front: 'ordinary' },
     evidence: [],
+    diplomacyInference: [],
     feedback: {
       revision: '1',
       windowItemIds: [],

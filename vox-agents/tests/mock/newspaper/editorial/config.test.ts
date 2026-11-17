@@ -3,7 +3,7 @@ import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { loadEditorialConfig } from '../../../../src/newspaper/editorial/config.js';
+import { loadEditorialConfig, editorialConfigSchema } from '../../../../src/newspaper/editorial/config.js';
 
 describe('editorial catalogue files', () => {
   let directory: string;
@@ -77,5 +77,17 @@ describe('editorial catalogue files', () => {
     await expect(loadEditorialConfig(directory)).rejects.toThrow();
     await writeFile(path.join(directory, 'templates/trade.json'), '{');
     await expect(loadEditorialConfig(directory)).rejects.toBeInstanceOf(SyntaxError);
+  });
+
+  it('should reject unsupported diplomacy controls and progress durations beyond shared history', async () => {
+    const base = await loadEditorialConfig();
+    for (const [id, change] of [
+      ['war-declaration', { threshold: 2 }], ['peace-agreement', { tuning: { freshness: 10 } }],
+      ['war-progress-commanding', { tuning: { cooldown: 10 } }], ['war-progress-stagnation', { tuning: { window: 30 } }],
+      ['war-progress-advantage', { tuning: { window: 15 } }],
+    ] as const) {
+      const altered = { ...base, triggers: base.triggers.map(entry => entry.id === id ? { ...entry, ...change } : entry) };
+      expect(editorialConfigSchema.safeParse(altered).success).toBe(false);
+    }
   });
 });

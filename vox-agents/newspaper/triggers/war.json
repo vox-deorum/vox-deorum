@@ -1,13 +1,219 @@
 [
   {
-    "id": "incoming-war",
-    "detector": "incomingWar",
+    "id": "war-declaration",
+    "detector": "warTransition",
+    "stage": "declaration",
     "threshold": 1,
     "scale": 1,
     "tags": [
-      "international",
       "war",
       "diplomacy"
     ]
+  },
+  {
+    "id": "war-following-master",
+    "detector": "warTransition",
+    "stage": "followingMaster",
+    "threshold": 1,
+    "scale": 1,
+    "tags": [
+      "war",
+      "diplomacy"
+    ]
+  },
+  {
+    "id": "war-vassals-joining",
+    "detector": "warTransition",
+    "stage": "vassalsJoining",
+    "threshold": 1,
+    "scale": 1,
+    "tags": [
+      "war",
+      "diplomacy"
+    ]
+  },
+  {
+    "id": "war-defensive-pact",
+    "detector": "warTransition",
+    "stage": "defensivePact",
+    "threshold": 1,
+    "scale": 1,
+    "tags": [
+      "war",
+      "diplomacy"
+    ]
+  },
+  {
+    "id": "war-inherited-wars",
+    "detector": "warTransition",
+    "stage": "inheritedWars",
+    "threshold": 1,
+    "scale": 1,
+    "tags": [
+      "war",
+      "diplomacy"
+    ]
+  },
+  {
+    "id": "war-city-state-attack",
+    "detector": "warTransition",
+    "stage": "cityStateAttack",
+    "threshold": 1,
+    "scale": 1,
+    "tags": [
+      "war",
+      "diplomacy"
+    ]
+  },
+  {
+    "id": "war-city-state-joining",
+    "detector": "warTransition",
+    "stage": "cityStateJoining",
+    "threshold": 1,
+    "scale": 1,
+    "tags": [
+      "war",
+      "diplomacy"
+    ]
+  },
+  {
+    "id": "war-alliance-change",
+    "detector": "warTransition",
+    "stage": "allianceChange",
+    "threshold": 1,
+    "scale": 1,
+    "tags": [
+      "war",
+      "diplomacy"
+    ]
+  },
+  {
+    "id": "war-resumed",
+    "detector": "warTransition",
+    "stage": "resumed",
+    "threshold": 1,
+    "scale": 1,
+    "tags": [
+      "war",
+      "diplomacy"
+    ]
+  },
+  {
+    "id": "war-observed",
+    "detector": "warTransition",
+    "stage": "observed",
+    "threshold": 1,
+    "scale": 1,
+    "tags": [
+      "war",
+      "diplomacy"
+    ]
+  },
+  {
+    "id": "war-progress-reversal",
+    "detector": "warProgress",
+    "stage": "reversal",
+    "threshold": 1,
+    "scale": 2,
+    "tags": [
+      "war",
+      "diplomacy"
+    ],
+    "tuning": {
+      "absolute": 25,
+      "persistence": 2,
+      "window": 15,
+      "foreign": true
+    }
+  },
+  {
+    "id": "war-progress-commanding",
+    "detector": "warProgress",
+    "stage": "commanding",
+    "threshold": 1,
+    "scale": 2,
+    "tags": [
+      "war",
+      "diplomacy"
+    ],
+    "tuning": {
+      "absolute": 60,
+      "persistence": 2,
+      "rearm": 50,
+      "foreign": true
+    }
+  },
+  {
+    "id": "war-progress-advantage",
+    "detector": "warProgress",
+    "stage": "advantage",
+    "threshold": 1,
+    "scale": 2,
+    "tags": [
+      "war",
+      "diplomacy"
+    ],
+    "tuning": {
+      "absolute": 25,
+      "persistence": 2,
+      "rearm": 15,
+      "window": 30,
+      "maxGap": 10,
+      "freshness": 5,
+      "cooldown": 10,
+      "foreign": true
+    }
+  },
+  {
+    "id": "war-progress-swing",
+    "detector": "warProgress",
+    "stage": "swing",
+    "threshold": 1,
+    "scale": 2,
+    "tags": [
+      "war",
+      "diplomacy"
+    ],
+    "tuning": {
+      "absolute": 25,
+      "window": 10,
+      "cooldown": 10,
+      "foreign": true
+    }
+  },
+  {
+    "id": "war-progress-balance",
+    "detector": "warProgress",
+    "stage": "balance",
+    "threshold": 1,
+    "scale": 2,
+    "tags": [
+      "war",
+      "diplomacy"
+    ],
+    "tuning": {
+      "absolute": 10,
+      "persistence": 5,
+      "cooldown": 10,
+      "foreign": true
+    }
+  },
+  {
+    "id": "war-progress-stagnation",
+    "detector": "warProgress",
+    "stage": "stagnation",
+    "threshold": 1,
+    "scale": 2,
+    "tags": [
+      "war",
+      "diplomacy"
+    ],
+    "tuning": {
+      "absolute": 10,
+      "persistence": 20,
+      "minimumSamples": 4,
+      "cooldown": 10,
+      "foreign": true
+    }
   }
 ]

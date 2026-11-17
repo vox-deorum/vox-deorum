@@ -10,6 +10,7 @@ import { detectTriggers, evidenceConditionContext, type EditorialContext } from 
 import { matchTemplates, uniqueSources } from './templates.js';
 import { configurationHash, createEditorialStreams, presentIssue } from './presentation.js';
 import { validateEditorialIssue } from './validation.js';
+import { detectWarAndPeace, recordDiplomacyPublications } from './war-peace.js';
 
 export interface EditorialCheckInput {
   campaignId: string;
@@ -32,7 +33,8 @@ export function runEditorialCheck(input: EditorialCheckInput): EditorialCheckRes
   const { config, evidence } = input;
   const turn = evidence.request.cutoffTurn;
   if (evidence.request.receiverPlayerID !== input.receiver.playerId) throw new Error('Evidence and receiver do not match.');
-  if ([...evidence.players, ...evidence.cities, ...evidence.comparisons.players, ...evidence.comparisons.cities, ...evidence.events]
+  if ([...evidence.players, ...evidence.cities, ...evidence.comparisons.players, ...evidence.comparisons.cities, ...evidence.events,
+    ...(evidence.diplomacy?.baseline ?? []), ...(evidence.diplomacy?.history ?? []), ...(evidence.diplomacy?.gaps ?? [])]
     .some(record => record.source.turn > turn)) throw new Error('Evidence includes observations after the cutoff.');
   if (input.state.lastCheckTurn !== null && turn <= input.state.lastCheckTurn) throw new Error('The editorial cutoff must follow the last completed check.');
   if (input.state.lastCheckTurn !== null && evidence.request.previousCheckTurn !== input.state.lastCheckTurn) throw new Error('Evidence must start after the last completed check.');
@@ -44,7 +46,9 @@ export function runEditorialCheck(input: EditorialCheckInput): EditorialCheckRes
     series: decaySeries(input.state.series, turn, config.defaults.decayPerTurn),
     issues: [...input.state.issues], votes: { ...input.state.votes }, preferences: { ...input.state.preferences } };
   const feedback = computeFeedback(state, config);
-  const triggers = detectTriggers(evidence, config, input.context);
+  const diplomacy = detectWarAndPeace(evidence, config, input.context ?? {}, input.state.diplomacy);
+  state.diplomacy = diplomacy.memory;
+  const triggers = detectTriggers(evidence, config, input.context, diplomacy.triggers);
   const candidates = matchTemplates(triggers, config, context).map(candidate => ({ ...candidate,
     seriesKeys: candidate.seriesKeys.map(key => `${scope}/${key}`) }));
   const selection = selectHeuristic(candidates, state, config, feedback);
@@ -54,6 +58,7 @@ export function runEditorialCheck(input: EditorialCheckInput): EditorialCheckRes
     status: 'skipped', candidateScores: selection.scores,
     merges: selection.selected.filter(candidate => candidate.contributingIds.length).map(candidate => ({ candidateId: candidate.id, contributingIds: candidate.contributingIds })),
     selectedVariants: {}, designId: null, layouts: {}, evidence: uniqueSources(selection.selected.flatMap(candidate => candidate.sources)), feedback,
+    diplomacyInference: diplomacy.audit,
   };
   /** Complete a skipped check with the same cursor and decay guarantees as a publication. */
   const skip = (reason: string): EditorialCheckResult => {
@@ -74,6 +79,7 @@ export function runEditorialCheck(input: EditorialCheckInput): EditorialCheckRes
       evidenceSummary: candidate.summary, sources: candidate.sources, fingerprint: candidate.fingerprint };
   });
   state.series = advanceSeries(state.series, records, turn);
+  recordDiplomacyPublications(state.diplomacy, records.flatMap(record => record.triggerIds), triggers, turn);
   state.issues.push({ issueId: issue.issueId, turn, items: records });
   state.previousDesignId = issue.publication.designId;
   decision.status = 'published';

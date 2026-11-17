@@ -16,7 +16,7 @@ async function checkFixture(published = true): Promise<{ checkpoint: ReplayCheck
   const decision: EditorialDecisionRecord = {
     checkId: 'check-10', cutoffTurn: 10, configurationId: 'test', configurationSnapshot: {}, seed: 'test', editor: 'heuristic',
     status: published ? 'published' : 'skipped', candidateScores: [], merges: [], selectedVariants: {}, designId: published ? issue.publication.designId : null,
-    layouts: {}, evidence: [], feedback: { revision: 'empty', windowItemIds: [], votes: {}, tagCounts: {}, seriesAdjustments: {}, tagAdjustments: {}, coefficients: { series: 2, tag: 1, bound: 5, window: 50 } },
+    layouts: {}, evidence: [], diplomacyInference: [], feedback: { revision: 'empty', windowItemIds: [], votes: {}, tagCounts: {}, seriesAdjustments: {}, tagAdjustments: {}, coefficients: { series: 2, tag: 1, bound: 5, window: 50 } },
   };
   const publication = createInitialPublicationState();
   publication.lastCheckTurn = 10;

@@ -15,6 +15,7 @@ export interface EditorialCandidate {
   templateIds: string[];
   contributingIds: string[];
   seriesKeys: string[];
+  conflictKeys?: string[];
   tags: string[];
   importance: number;
   urgent: boolean;
@@ -83,6 +84,7 @@ export function matchTemplates(triggers: DetectedTrigger[], config: EditorialCon
         period: { from: Math.min(...parts.map(part => part.period.from)), to: Math.max(...parts.map(part => part.period.to)) },
         triggerIds: parts.map(part => part.id), templateIds: [template.id], contributingIds: [],
         seriesKeys: [...new Set(parts.flatMap(part => part.seriesKeys))], tags: [...new Set([...template.tags, ...parts.flatMap(part => part.tags)])],
+        conflictKeys: [...new Set(parts.flatMap(part => part.conflictKeys ?? []))],
         importance: Math.max(...parts.map(part => part.importance)), urgent: parts.some(part => part.urgent), short: template.short,
         weight, variants, values, sources: uniqueSources(parts.flatMap(part => part.sources)), summary: parts.map(part => part.summary).join(' '),
         fingerprint: parts.map(part => part.fingerprint).sort().join('+') });
@@ -104,6 +106,7 @@ export function matchTemplates(triggers: DetectedTrigger[], config: EditorialCon
         period: { from: Math.min(...parts.map(part => part.period.from)), to: Math.max(...parts.map(part => part.period.to)) },
         triggerIds: [...new Set(parts.flatMap(part => part.triggerIds))], templateIds: [...new Set([template.id, ...parts.flatMap(part => part.templateIds)])],
         contributingIds: parts.map(part => part.id), seriesKeys: [...new Set(parts.flatMap(part => part.seriesKeys))],
+        conflictKeys: [...new Set(parts.flatMap(part => part.conflictKeys ?? []))],
         tags: [...new Set([...template.tags, ...parts.flatMap(part => part.tags)])], importance: Math.max(...parts.map(part => part.importance)),
         urgent: parts.some(part => part.urgent), short: template.short, weight, variants, values,
         sources: uniqueSources(parts.flatMap(part => part.sources)), summary: parts.map(part => part.summary).join(' '),

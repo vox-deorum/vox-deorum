@@ -151,18 +151,18 @@ describe('parseStance', () => {
   });
 
   it('should return war (4) immediately for a war status', () => {
-    expect(parseStance(['War (Our Score: 10)'])).toBe(4);
+    expect(parseStance(['War (Our Score: 10%; Our War Weariness: 0%)'])).toBe(4);
     expect(parseStance(['War'])).toBe(4);
   });
 
   it('should raise hostility to 3 for denouncements / being a vassal master', () => {
     expect(parseStance(['Denounced Them'])).toBe(3);
-    expect(parseStance(['Our Master'])).toBe(3);
+    expect(parseStance(['Our Master (Voluntary)'])).toBe(3);
   });
 
   it('should lower to 1 for friendship / having a vassal', () => {
     expect(parseStance(['Declaration of Friendship'])).toBe(1);
-    expect(parseStance(['Our Vassal'])).toBe(1);
+    expect(parseStance(['Our Vassal (Capitulated)'])).toBe(1);
   });
 
   it('should drop to 0 for a defensive pact', () => {
@@ -170,7 +170,7 @@ describe('parseStance', () => {
   });
 
   it('should let war override everything', () => {
-    expect(parseStance(['Defensive Pact', 'War (Our Score: 1)'])).toBe(4);
+    expect(parseStance(['Defensive Pact', 'War (Our Score: 1%; Our War Weariness: 0%)'])).toBe(4);
   });
 });
 
@@ -252,7 +252,7 @@ describe('buildNeighborVector', () => {
 
   it('should pad unused slots with NEUTRAL_PAD and keep values within [0,1]', () => {
     const summary = makeSummary({
-      Relationships: { Egypt: ['Distance: Neighbors', 'War (Our Score: 1)'] },
+      Relationships: { Egypt: ['Distance: Neighbors', 'War (Our Score: 1%; Our War Weariness: 0%)'] },
     });
     const { ctx, civToPlayerId } = makeContext([
       { pid: 1, civ: 'Egypt', summary: { MilitaryStrength: 200, Technologies: 30 } },

@@ -35,42 +35,6 @@
     ]
   },
   {
-    "id": "peace-brief",
-    "triggerIds": [
-      "peace"
-    ],
-    "tags": [
-      "diplomacy",
-      "recovery"
-    ],
-    "short": true,
-    "weight": {
-      "base": 1
-    },
-    "variants": [
-      {
-        "id": "peace-account",
-        "weight": {
-          "base": 10
-        },
-        "headline": "Peace with {{partner}}",
-        "body": [
-          "A peace event involving our team and {{partnerLink}} was recorded at turn {{eventTurn}}. Peace creates room to review damaged routes and city priorities; recovery will need later observations."
-        ],
-        "links": [
-          {
-            "placeholder": "partnerLink",
-            "label": "{{partner}}",
-            "target": {
-              "type": "civilization",
-              "civilizationId": "{{partnerId}}"
-            }
-          }
-        ]
-      }
-    ]
-  },
-  {
     "id": "contact-account",
     "triggerIds": [
       "first-contact"

@@ -14,6 +14,7 @@ export function selectHeuristic(candidates: EditorialCandidate[], state: Publica
   const usedSeries = new Set<string>();
   const usedTriggers = new Set<string>();
   const usedTags = new Set<string>();
+  const usedConflicts = new Set<string>();
   const selected: EditorialCandidate[] = [];
   const scores = new Map<string, number>();
   const published = new Set(state.issues.flatMap(issue => issue.items.map(item => item.fingerprint)));
@@ -35,11 +36,13 @@ export function selectHeuristic(candidates: EditorialCandidate[], state: Publica
     const candidate = remaining.shift()!;
     const weight = score(candidate);
     scores.set(candidate.id, weight);
-    if ((!candidate.urgent && weight <= 0) || candidate.seriesKeys.some(key => usedSeries.has(key)) || candidate.triggerIds.some(id => usedTriggers.has(id))) continue;
+    if ((!candidate.urgent && weight <= 0) || candidate.seriesKeys.some(key => usedSeries.has(key)) || candidate.triggerIds.some(id => usedTriggers.has(id)) ||
+      candidate.conflictKeys?.some(key => usedConflicts.has(key))) continue;
     selected.push(candidate);
     candidate.seriesKeys.forEach(key => usedSeries.add(key));
     candidate.triggerIds.forEach(id => usedTriggers.add(id));
     candidate.tags.forEach(tag => usedTags.add(tag));
+    candidate.conflictKeys?.forEach(key => usedConflicts.add(key));
   }
   for (const candidate of candidates) if (!scores.has(candidate.id)) scores.set(candidate.id, score(candidate));
   return { selected, scores: candidates.map(candidate => ({ id: candidate.id, score: scores.get(candidate.id)!, selected: selected.includes(candidate) })) };

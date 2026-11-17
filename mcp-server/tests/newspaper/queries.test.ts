@@ -26,6 +26,8 @@ describe('historical evidence queries', () => {
   });
 
   it('should return identical evidence with a large superseded history before the required window', async () => {
+    // The pre-window diplomacy baseline is required evidence too.
+    for (const key of [0, 1, 2]) await summary(db, 3000 + key, key, 4, 2);
     const before = await queryNewspaperEvidence(db, request);
     for (let index = 0; index < 1500; index++) {
       await summary(db, 1000 + index, index % 3, Math.floor(index / 300), 2, {
