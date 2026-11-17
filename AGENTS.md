@@ -15,16 +15,16 @@ Delegates follow this file and the documentation guide. Give writing delegates s
 ### Codex Delegation
 - Use OpenCode or GPT-6-Luna for exploration.
 - Use OpenCode for bounded work and quick checks.
-- Use GPT-6.1-Sol for complex implementation when your task needs staged execution.
+- Use GPT-6.2-Sol for complex implementation when your task needs staged execution.
 - Use Opus (Claude) for front-end design.
 - Use Opus (Claude) for independent reviews (do not give context!)
 
 ### Claude Code
 - Use OpenCode or GPT-6-Luna (Codex) for exploration.
 - Use OpenCode for bounded work and quick checks.
-- Use GPT-6.1-Sol for complex implementation when your task needs staged execution.
+- Use GPT-6.2-Sol for complex implementation when your task needs staged execution.
 - Use Opus subagents for front-end design.
-- Use GPT-6.1-Sol (Codex) for independent reviews (do not give context!)
+- Use GPT-6.2-Sol (Codex) for independent reviews (do not give context!)
 
 ## Project Overview
 
