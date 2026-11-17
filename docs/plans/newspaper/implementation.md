@@ -1,12 +1,12 @@
 # Newspaper implementation roadmap
 
-**Status: Plan 1's demo is accepted in game, Plan 2 is complete, and Plan 3 implements heuristic editing and durable offline replay.** Recorded publication, browser voting, and resume are verified. Human reading acceptance, broader game renderer checks, and the early save-capacity proof remain pending. Plans 4 and 5 remain planned. Plan 6, the trigger rule redesign, is documented and not yet built. This roadmap is for developers implementing the [newspaper specification](spec.md); each plan has its own deliverable and verification gate.
+**Status: Plan 1's demo is accepted in game, Plan 2 is complete, and Plan 3 implements heuristic editing and durable offline replay.** Recorded publication, browser voting, and resume are verified. Human reading acceptance and broader game renderer checks remain pending. Plans 4 and 5 remain planned. Plan 6 has a working expression runner; published issues still use Plan 3's detectors. This roadmap is for developers implementing the [newspaper specification](spec.md); each plan has its own deliverable and verification gate.
 
 ## Goal and success criteria
 
-Build one publication renderer that serves the offline browser reader and produces the images displayed inside Civilization V. Use it to evaluate recorded-game newspapers before connecting the editorial loop to live play and game saves.
+Build one publication renderer that serves the offline browser reader and produces the images displayed inside Civilization V. Use it to evaluate recorded-game newspapers before connecting the editorial loop to live play and MCP storage.
 
-Success means both editors produce useful, evidence-backed issues with continuing series; votes influence later coverage; browser and game readers use the same publication designs; and published issues remain readable after saving, loading, or losing the service connection.
+Success means both editors produce useful, evidence-backed issues with continuing series; votes influence later coverage; browser and game readers share publication designs; and loading a save restores the referenced archive from MCP. A missing renderer falls back to native text, and a service disconnect leaves the already open issue readable.
 
 ## Architecture decisions
 
@@ -19,7 +19,7 @@ Success means both editors produce useful, evidence-backed issues with continuin
 | Game reader | A Lua/XML viewer displays bounded image strips and places controls at the exported rectangles. Scrolling, section switching, link activation, and vote indicators respond locally. |
 | Text interaction | Browser text remains selectable and accessible. The game reader uses rasterized text; browser text selection and accessibility parity are outside its requirements. |
 | Durable content | Store structured articles, links, editorial memory, and presentation choices. Images and interaction maps are derived cache entries. Retain a basic native text view for missing caches while rendering is unavailable. |
-| Runtime ownership | Newspaper editing and rendering live in Vox Agents. MCP owns game-data collection, historical queries, and its queryable live publication copy. Standalone evaluation reads MCP's database directly and keeps publication output in a separate local database. The game save owns the live publication history. |
+| Runtime ownership | Vox Agents edits and renders. MCP owns game-data collection, historical queries, and the live archive in its per-game SQLite database. A game save carries only a small newspaper checkpoint ID per receiver. Standalone evaluation reads MCP's database directly and writes publication output to a separate database. |
 
 The [Playwright browser documentation](https://playwright.dev/docs/browsers#google-chrome--microsoft-edge) supports using installed Edge and Chrome. Its [screenshot](https://playwright.dev/docs/screenshots) and [page evaluation](https://playwright.dev/docs/evaluating) APIs provide the two export outputs. [DirectXTex's converter](https://github.com/microsoft/DirectXTex/wiki/Texconv) supports DDS output and legacy headers. VD's added footprint includes the browser library, fonts, art, the converter, and other runtime dependencies.
 
@@ -62,14 +62,14 @@ After implementing a work unit, fold its verified behavior, ownership, commands,
 | [2. Historical queries](implementation/02-replay.md) | Queries against MCP's dated records supply newspaper inputs; standalone evaluation reads the database directly. | Cutoff and field filtering work in both access paths, with inspectable source references. |
 | [3. Heuristic newspaper](implementation/03-heuristic-editor.md) | Configured triggers and authored templates produce stored issues, series, pages, and feedback-sensitive selections. | A complete read, vote, continue, and resume workflow produces useful coverage without an LLM. |
 | [4. Offline evaluation and LLM editor](implementation/04-offline-evaluation.md) | Complete the offline archive and design coverage; compare both editors on the same recordings. | Demonstrate continuity, merging, useful short pieces, fallback, and design evolution; review the reading experience. |
-| [5. Live publication and persistence](implementation/05-live-integration.md) | Human-only collection, background publication, save restoration, and the finished game reader. | Old saves restore the correct history and preferences; delayed work cannot cross timelines; reading survives service loss. |
+| [5. Live publication and MCP storage](implementation/05-live-integration.md) | Human-only collection, background publication, checkpoint restoration from MCP, and the finished game reader. | With the matching database, old saves select the right revisions, delayed work cannot cross timelines, and missing textures fall back to text. |
 | [6. Trigger rules](implementation/06-trigger-rules.md) | Triggers become rules: JavaScript expressions over a fact model with distance, named constants and shortcuts. The fixed detectors and the existing templates are removed and a small example set is re-added. | The documented example triggers produce developments from a recording, and each one's audit shows which part of its rule passed or stopped. |
 
-Plan 6 reworks Plan 3's triggers and can start now; it does not wait for Plans 4 and 5. Its design is already written up in the [trigger pages](../../developers/vox-agents/newspaper/triggers/overview.md), ahead of the code.
+Plan 6 reworks Plan 3's triggers independently of Plans 4 and 5. The [trigger guide](../../developers/vox-agents/newspaper/triggers/overview.md) distinguishes the shared runner from the rule catalogue and fact model still to come.
 
-The accepted game demo uses fixtures. Use Plan 3's generated issues for broader browser and game renderer acceptance before expanding the design catalogue. Live generation and save integration follow offline editorial evaluation.
+The accepted game demo uses fixtures. Use Plan 3's generated issues for broader browser and game renderer acceptance before expanding the design catalogue. Live integration follows offline editorial evaluation.
 
-The save-capacity proof in Plan 5's first step remains open. Current versioned issue, presentation, publication-state, and output-database schemas support offline storage. They do not establish a live save checkpoint format or capacity budget. Measure representative archives and decision records through the actual game save path before fixing that checkpoint design. The rest of Plan 5 still waits for offline evaluation.
+Plan 5 first verifies that the small checkpoint ID survives actual saves and loads, including same-turn branches. Measure archive growth and lookup times separately in MCP's database using generated archives and fixtures.
 
 ## Shared contracts and boundaries
 
@@ -83,10 +83,10 @@ Keep contracts in the existing workspaces: MCP owns evidence and browser-safe ar
 | Evidence requests, results and source references | MCP `newspaper/evidence.ts` | Plan 2; both query access paths use these schemas. |
 | Replay settings and HTTP responses | Vox Agents `contracts/replay.ts` | Plan 2, reusing MCP evidence contracts. |
 | Configuration, candidates and editor/check interfaces | Vox Agents `editorial/config/schema.ts`, `editorial/triggers.ts` and `editorial/check.ts` respectively | Plan 3, beside the code that uses them. |
-| Offline publication state, series, preferences and decisions; stored presentation | Vox Agents `contracts/publication.ts` and `contracts/design.ts` | Plan 3; live save capacity remains unproven. |
+| Editorial state, series, preferences and decisions; stored presentation | Vox Agents `contracts/publication.ts` and `contracts/design.ts` | Plan 3 implements offline storage; Plan 5 reuses the contracts for MCP storage. |
 | Archive indexes and queries; responses containing issue documents | MCP `newspaper/protocol.ts`; Vox Agents `contracts/archive.ts` respectively | Plan 3, reused for live reading in Plan 5. |
 | LLM proposal schemas; comparison-run records | Vox Agents `editorial/proposal.ts`; `replay/evaluation.ts` respectively | Plan 4. |
-| Save checkpoint schema, versions and migrations; live envelopes and revisions | Vox Agents `contracts/checkpoint.ts`; MCP `newspaper/protocol.ts` respectively | Plan 5; draft checkpoint format participates in the early save proof. |
+| Live revisions, database migrations, and transport envelopes | MCP `newspaper/{store,protocol}.ts` and `knowledge/schema/newspaper.ts` | Plan 5; the game restorable reference is a checkpoint ID. |
 
 Paths in the table are relative to `vox-agents/src/newspaper/` or `mcp-server/src/` as labelled. Infer TypeScript types from shared runtime schemas. Keep private helper types beside their implementation. Shared contracts must be browser-safe and independent of Node, DOM, renderer runtime, absolute paths, and live game objects. MCP never imports Vox Agents; browser code may import only browser-safe MCP contract modules.
 
@@ -101,15 +101,15 @@ Each folder groups a sustained responsibility. Move existing files and all consu
 | `vox-agents/src/newspaper/export/` | Browser worker, capture, DDS conversion, cache, server-mounted HTTP routes and export queue. Plan 5 extends the service with viewer pins and releases. |
 | `vox-agents/src/newspaper/editorial/` | Pure configuration, detection, selection, series, feedback, presentation and validation. Plan 3 establishes `check.ts` as dispatch/fallback owner; Plan 4 adds the constrained LLM adapter. |
 | `vox-agents/src/newspaper/replay/` | Read-only recording connection, serialized publication session, archive and feedback routes, and transactional offline output storage. Plan 4 adds comparison evaluation. |
-| `vox-agents/src/newspaper/live/` | Lifecycle, scheduler and MCP-backed state adapter in Plan 5. The game owns committed state. |
+| `vox-agents/src/newspaper/live/` | Lifecycle, scheduler, and adapter for the MCP publication store in Plan 5. |
 | `vox-agents/src/newspaper/{application,game-delivery}.ts` | Lazy shared renderer, sample orchestration and acknowledged MCP delivery. The VD server owns startup and shutdown. |
 | `vox-agents/newspaper/src/reader/` and `src/app/` | Reader DOM/layout and the browser application respectively, including replay controls and source inspection. Plan 4 completes archive navigation. The export entry stays at `src/export-bridge.ts`. |
 | `vox-agents/newspaper/` | `defaults.json`, `pages.json`, per-design files in `designs/`, and topic-tag files in `templates/` and `triggers/` supply runtime editorial choices; the installer includes them explicitly. |
-| `mcp-server/src/newspaper/` | Evidence contracts, queries and field projection in Plan 2; archive protocol types in Plan 3; live mirror and transport in Plan 5. `projection.ts` remains the single reporting-policy owner. |
+| `mcp-server/src/newspaper/` | Evidence contracts, queries and field projection in Plan 2; archive protocol types in Plan 3; authoritative live store and transport in Plan 5. `projection.ts` remains the single reporting-policy owner. |
 | `mcp-server/src/knowledge/` | Shared pure history reads in `history.ts`; Plan 5 collection in `newspaper-collection.ts` and database definitions in `schema/newspaper.ts`. |
-| `civ5-mod/UI/Newspaper/` | Viewer, XML, data helpers and mock. Plan 5 adds the game checkpoint store and transport here. |
+| `civ5-mod/UI/Newspaper/` | Viewer, XML, data helpers and mock. Plan 5 adds save-reference handling and transport here. |
 
-Replay supplies evidence and state to the editorial check and persists its accepted result through the offline store. Plan 5 will add a live adapter to the same boundary. `export/http.ts` accepts mode-specific routes before its fallback; replay owns offline mutations. Future live browser archive handlers expose reads, while the Lua reader owns live votes and preferences. Configurable design IDs select fixed renderer families, with their chosen colors, fonts and ornaments stored in the issue's versioned presentation snapshot.
+Replay supplies evidence and state to the editorial check and persists its accepted result through the offline store. Plan 5 adds a live adapter at the same boundary. `export/http.ts` accepts mode-specific routes before its fallback. Replay owns offline mutations; the game reader submits live feedback to MCP, and the live browser archive is read-only. Configurable design IDs select renderer families, with the chosen colors, fonts, and ornaments stored in the issue's presentation snapshot.
 
 ## Risks and decisions still requiring evidence
 
@@ -117,7 +117,7 @@ Replay supplies evidence and state to the editorial check and persists its accep
 - The initial size target is **at most 30 MiB of added installed production files**, including dependencies and bundled assets. This is a proposed engineering budget. Measure it before expanding the design catalogue; report any overrun with its cause.
 - Installed browsers can be absent, blocked by local policy, or updated independently. Detect capability when rendering is requested and preserve reading when export cannot run.
 - Historical records may be incomplete. Initial evaluation uses a suitable recording and skips comparisons whose required data is unreliable.
-- Save volume and texture-cache retention need measurement, starting with the early save-capacity proof. A portable save must retain readable text even when local images are missing. Persistence preserves the saved design and layout choices; regenerated images may differ slightly from the originals.
+- Measure database growth and texture-cache retention separately. To move a live archive to another installation, pair the save with a matching campaign database backup. Regenerated images use the stored design and layout choices and may differ slightly from the originals.
 - The live trade and espionage field policy needs a concrete field/strength matrix before new collection is implemented. Plan 2 uses existing recorded access; Plan 5 adds explicit new reporting grants.
 
 ## Verification and scope

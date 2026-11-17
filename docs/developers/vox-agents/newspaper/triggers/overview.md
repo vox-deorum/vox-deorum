@@ -1,6 +1,6 @@
 # Newspaper trigger overview
 
-**Status: target design, documented ahead of the code.** [Plan 6](../../../../plans/newspaper/implementation/06-trigger-rules.md) lists the build order. Until it lands, the code still uses the fixed detector catalogue that this design replaces.
+**Status: the expression runner is implemented.** The trigger entries, facts and evaluation described here remain the target design. Published issues still use fixed detectors and the existing templates. [Plan 6](../../../../plans/newspaper/implementation/06-trigger-rules.md) tracks the remaining stages.
 
 A **trigger** is a rule that spots one kind of development in the recorded game, such as "a neighboring foreign city changed from puppet to occupied". This page is for developers who add or tune newspaper coverage. It explains what a trigger entry contains, how a check evaluates it, and how to add one.
 
@@ -106,9 +106,11 @@ flowchart TD
 | Evaluate `importance` and `urgent` | Once per development, after grouping, so they can read `count`. | Both results |
 | Create the development | It carries the trigger ID, subject, values, importance, tags, period and the source rows behind each fact that the rule read. | Source references |
 
-A `when` entry passes when JavaScript treats its result as true, so `city.majorityReligion` passes for a city that has a majority religion. A rule that throws an error is reported with its trigger ID and expression and produces no development. `runEditorialCheck` validates every expression for syntax when the catalogue loads.
+A `when` entry passes when JavaScript treats its result as true, so `city.majorityReligion` passes for a city that has a majority religion. The trigger evaluator will use the runner's error details to skip a failed match and record why.
 
-Rules run in the QuickJS engine that `just-bash` provides, which the player workspace also uses. The newspaper starts it with no folders mounted and no network or clock, so a rule can read only facts, constants and helpers. The same recording, catalogue and check schedule therefore always produce the same developments.
+The shared runner uses QuickJS directly through `quickjs-wasi`. `prepareTriggerExpressions` in `editorial/config/expressions.ts` validates the expression fields of a merged rule catalogue before any facts are needed. Syntax errors name the rule, field and original expression. Keep the returned runner and field indices in memory; replay snapshots store the catalogue data.
+
+For each check, `editorial/shared/expressions.ts` evaluates the batch in a fresh sandbox. The caller supplies JSON globals and subject bindings and receives results in the same order. Rules have no filesystem, network, clock or random source. If an expression exceeds its execution allowance, the runner keeps completed results and skips that expression for the rest of the check. Other expressions can still run. After eight distinct expressions overrun, the runner skips the remainder of the batch. The trigger evaluator will connect this runner to published issues in step 5.
 
 ## Importance
 

@@ -21,13 +21,13 @@ Modules under `vox-agents/src/newspaper/editorial/` are grouped by job:
 
 MCP owns evidence schemas and reporting policy. Detectors use the projected observations and their original source references. Recorded identity metadata resolves city owners and team IDs; it must not supply hidden measurements or reveal unmet civilizations. A player ID is not assumed to equal its team ID.
 
-`contracts/publication.ts` defines the versioned checkpoint for series state, preferences, published-item evidence records, current votes, and diplomacy pair history. The session scopes it to a campaign, branch, and receiver. Publication-state checkpoints require schema 3; regenerate runs with older checkpoints. This state version is separate from IssueDocument schema 2 and offline replay SQLite `user_version` 2. Decisions use a separate schema and are stored beside completed checks and immutable issues, including the evidence behind inferred war and peace incidents. These offline contracts do not establish the live save representation; the save-capacity proof remains pending in [Plan 5](../../../plans/newspaper/implementation/05-live-integration.md).
+`contracts/publication.ts` defines editorial state for series, preferences, published-item evidence, current votes, and diplomacy pair history. The replay session scopes it to a campaign, branch, and receiver. State uses schema 3; regenerate runs with older state. This version is separate from IssueDocument schema 2 and the replay database's SQLite `user_version` 2. Decisions have their own schema and are stored beside checks and immutable issues, including the evidence behind inferred war and peace incidents. [Plan 5](../../../plans/newspaper/implementation/05-live-integration.md) will store live editorial state in MCP.
 
 ## Catalogue and eligibility
 
 The built-in catalogue lives under `vox-agents/newspaper/`. Templates and triggers are grouped into topic files, such as `trade` or `diplomacy`; each entry belongs to one file and retains all its tags. Designs have one file per identity. Each section file contains an array, with all JSON fully expanded using two-space indentation for editing.
 
-The trigger and condition parts of this section describe the target design in the [trigger overview](triggers/overview.md), documented ahead of the code. [Plan 6](../../../plans/newspaper/implementation/06-trigger-rules.md) lists the build order; until it lands, the code uses fixed detectors and a small condition vocabulary.
+The catalogue below describes the [target trigger design](triggers/overview.md). The shared expression runner is available. Published issues still use fixed detectors and the existing conditions for templates, weights, pages and designs. [Plan 6](../../../plans/newspaper/implementation/06-trigger-rules.md) tracks their replacement.
 
 | File | Controls |
 | --- | --- |

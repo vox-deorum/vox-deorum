@@ -69,7 +69,7 @@ For example, upvoting a neighbor's cultural rise encourages that series and simi
 | Publish decision | Publish when the period produced enough worthwhile stories. Otherwise skip the edition and drop its candidates; the next check starts fresh. Series history and trend comparisons still span longer windows. |
 | Player settings | Adjustable frequency and LLM use. |
 | Generation | Runs in the background. |
-| Service offline | Previously published issues remain readable. |
+| Service offline | An already open issue remains readable for the current session. Reconnect to browse the archive or submit feedback. |
 
 ## 3. Stories, series, and editorial choices
 
@@ -407,12 +407,12 @@ The technical design will define each source's facts and periods. Both editors r
 
 | Location or action | Behavior |
 | --- | --- |
-| Game save | The authoritative copy of the published archive and editorial memory. Old editions remain readable from the save. |
-| MCP | Keeps a queryable copy for future generation. |
+| MCP database | The authoritative archive and editorial state, including immutable issues and checkpoint history. |
+| Game save | Holds only a small checkpoint ID per receiver. Move the save with a matching campaign database backup to keep the archive. |
 | Offline replay | Preserves the same publication history alongside replay outputs. |
-| Load a campaign | Restore publication history and preferences from the save, truncate MCP's copy to the loaded timeline, and resume generation from that timeline's observations. Small mismatches between the two copies are acceptable. |
+| Load a campaign | Resolve the saved checkpoint in MCP and show its history and preferences. Later revisions remain available to the saves that reference them. If the checkpoint cannot be found, show that the archive is unavailable and keep the reference. |
 | Missing historical evidence | Build new comparisons from observations that remain valid. |
-| Rendered images | Keep a bounded local cache separate from the authoritative text and presentation choices. If images are missing and rendering is unavailable, show a basic text view from the save; restore the chosen design when rendering becomes available. |
+| Rendered images | Keep a bounded local cache. Show native text from the fetched issue when images are missing; restore its chosen design when rendering becomes available. |
 
 The newspaper works for a human civilization independently of an LLM strategist. Its initial role is to inform and entertain. Propaganda, censorship, press ownership, and happiness effects require separate design work.
 
@@ -431,7 +431,7 @@ flowchart TD
     B --> C[Read, vote, and continue replay]
     C --> D[Compare both editors and tune coverage]
     D --> B
-    D -->|Offline experience is useful| E[Live play, save persistence, and game reader]
+    D -->|Offline experience is useful| E[Live play, MCP archive, and game reader]
     E --> F[Later extensions]
 ```
 
@@ -443,7 +443,7 @@ flowchart TD
 | Required examples | A series starting, continuing, fading, and returning; a merged-template installment; useful short pieces. |
 | Editor comparison | Run heuristic and LLM editors on the same recording segments; compare coverage and continuity. |
 | Tuning | Adjust the JSON configuration: publication interval, thresholds, fade factor, variant and design weights, page minimums, and vote effects. Coverage depends on recorded fields and observation history. |
-| Live integration | Connect the same editorial loop to live play, game saves, the in-game reader, and the archive after the offline experience is useful. |
+| Live integration | Connect the editorial loop to live play and an MCP archive shared by the game and browser readers. Verify save checkpoint restoration. |
 | Later extensions | Graph rendering and graph-based reviews, richer artwork, audio, immediate special editions, and strategist publications. |
 
 ### 7.2 Evaluation checklist
@@ -472,9 +472,9 @@ These need answers in the technical design or the next round of examples.
 | Foreign reporting fields | Which facts each source grants and for which period. See [visibility research](research/research-visibility.md). |
 | Initial template catalogue | A small set spanning domestic city contrasts, trade relationships, and independent foreign developments. |
 | Tuning values | Trigger thresholds, fade factor, vote effects and tag distinctiveness, design stickiness share, and page minimums. |
-| Archive size | How much text, evidence, and editorial memory a late-campaign save can hold. |
+| Archive size | How much the MCP database grows over a long campaign and how quickly it retrieves a saved branch. |
 | Language | English first; other languages once the catalogue settles. |
 
 **Next steps:**
 
-Review the [implementation roadmap](implementation.md), then build the shared renderer proof. Continue through replay evidence, the heuristic newspaper, offline evaluation with both editors, and live publication with save persistence.
+Review the [implementation roadmap](implementation.md) for the renderer, replay evidence, heuristic newspaper, offline evaluation, and live publication with MCP storage.

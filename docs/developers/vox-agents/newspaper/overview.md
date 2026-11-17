@@ -8,13 +8,13 @@ The newspaper turns recorded game evidence into authored heuristic issues, displ
 | [Replay](replay.md) | Recorded publication and browser workflow verified | Recording evidence, separate output storage, issue reading, votes, preferences, and resume |
 | [Editorial](editorial.md) | Heuristic implementation; reading acceptance pending | Configured detection, authored stories, series, feedback, and stored presentation; later LLM editing |
 | [Evaluation](evaluation.md) | Planned | Offline experiments comparing editorial approaches |
-| [Live integration](live-integration.md) | Planned; save-capacity proof pending | Live scheduling, game-owned persistence, archive access, and player integration |
+| [Live integration](live-integration.md) | Planned | Live scheduling, MCP archive, save checkpoint IDs, and player integration |
 
-Trigger coverage is being redesigned. The trigger pages describe the target: each trigger is a rule, written as a JavaScript expression over facts built from the MCP server databases. The code still uses the earlier fixed detector catalogue until [Plan 6](../../../plans/newspaper/implementation/06-trigger-rules.md) is built.
+The new trigger design uses JavaScript expressions over facts from the MCP databases. The shared expression runner is implemented; published issues still use the fixed detectors and existing templates. [Plan 6](../../../plans/newspaper/implementation/06-trigger-rules.md) tracks the remaining work.
 
 | Trigger page | Status | Scope |
 | --- | --- | --- |
-| [Trigger overview](triggers/overview.md) | Target design | Trigger entries, evaluation, importance, repeats, grouping, and the workflow for adding coverage |
+| [Trigger overview](triggers/overview.md) | Runner implemented; trigger rules planned | Trigger entries, evaluation, importance, repeats, grouping, and the workflow for adding coverage |
 | [Facts](triggers/facts.md) | Target design | Cities, players, events, pairs and incidents; reading the past; hidden facts |
 | [Constants and shortcuts](triggers/constants.md) | Target design | Distance measurement, named distances, spans, sizes, type lists and shortcuts |
 | [Examples](triggers/examples.md) | Target design | Worked triggers, each with a template sketch |
@@ -42,4 +42,4 @@ The plain DOM reader lives in `vox-agents/newspaper/src/reader/`. Its applicatio
 
 To render an issue, supply a completed `IssueDocument` with publication identity, ordered pages, canonical items, typed links, and its saved presentation. Configurable design identities select fixed Victorian or modern renderer families; reopening an issue uses the saved colors, fonts, ornaments and layout choices. The [renderer guide](renderer.md) describes the schema 2 input, separate render profile and reader state, and exported bundle.
 
-Offline publication state uses schema 3, IssueDocument uses schema 2, and the replay output database uses SQLite `user_version` 2. These offline versions do not define the live game checkpoint format, which awaits the measured save-capacity proof in [Plan 5](../../../plans/newspaper/implementation/05-live-integration.md).
+Offline publication state uses schema 3, IssueDocument uses schema 2, and the replay output database uses SQLite `user_version` 2. [Plan 5](../../../plans/newspaper/implementation/05-live-integration.md) adds a live archive in MCP and a fixed-size checkpoint ID in the Civ V save.

@@ -1,9 +1,9 @@
 # Newspaper live integration
 
-**Status: Planned.** Live integration will collect evidence for human civilizations, schedule background publication checks, and persist issues and reader state with the game. It will add a dedicated Newspaper page to the VD UI, a shared browser reader, and an open-in-game action while keeping saved text readable when the service or renderer is unavailable.
+**Status: Planned.** Live integration will collect evidence and schedule background newspapers for human civilizations independently of a strategist. A Newspaper page in the VD UI will show scheduling controls, status, and the active archive, with options to read in the browser or in game.
 
-The Newspaper page will show historical issues for the current campaign and receiver from the reconciled MCP mirror, along with scheduler status and errors. Its enable/disable control will change background scheduling independently of a strategist. The game reader will own votes and preferences. The page will reuse the existing VD server, reader, and export service.
+MCP's per-game SQLite database will hold issues, presentation choices, checks, and editorial state. The game reader submits votes and preferences to MCP. Each receiving civilization's save data adds only a checkpoint ID. Loading an older save selects its database revision; copying a save alone does not bring the archive. Offline replay keeps its separate database.
 
-The game save will own live publication history and feedback. Offline replay will remain a separate workflow. Scheduling and publication must respect completed-turn boundaries and discard work made stale by loading or switching games.
+The in-game reader fetches issue text from MCP and displays it if the local render cache is missing or the renderer is unavailable. A disconnect leaves the open issue readable in memory. Reconnect to browse more issues or submit feedback.
 
-See [Plan 5: live publication, save persistence, and game reader](../../../plans/newspaper/implementation/05-live-integration.md). Save capacity, collection boundaries, visibility policy, and transport details remain open work in that plan.
+See [Plan 5](../../../plans/newspaper/implementation/05-live-integration.md) for checkpoint restoration, collection boundaries, visibility policy, and transport.

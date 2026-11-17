@@ -12,7 +12,7 @@ The newspaper fits the existing VP + EUI Lua/XML interface. Vox Deorum already h
 | --- | --- | --- |
 | Articles and archive lists | `civ5-mod/UI/VoxDeorumDiploPanel.xml` and `.lua` define repeated message instances, text sizing, scrolling, and older-history loading. `VoxDeorumHumanPanel.xml` and `.lua` build dynamic lists and detail panels. | Reuse these control patterns for headlines, bodies, series links, filters, and evidence expansion. The newspaper needs its own layout. |
 | Changing article length | The diplomacy panel measures populated controls and recalculates stacks and the scroll area. | Size rows after setting text. Check long names and localized text in the actual game fonts. |
-| Voting | Existing panels use button callbacks and outbound game events. | Upvote, downvote, and clear can use native controls associated with an article ID. A backend acknowledgement confirms synchronization of a vote; durability depends on the chosen save-backed state and remains unverified. |
+| Voting | Existing panels use button callbacks and outbound game events. | Upvote, downvote, and clear can use native controls associated with an article ID. Confirm a vote after MCP records it and the game installs the new checkpoint ID. |
 | Discreet entry point | EUI's `LUA/DiploCorner.lua`, under `civ5-dll/(3a) VP - EUI Compatibility Files/`, exposes `AdditionalInformationDropdownGatherEntries`. `VoxDeorumHumanTrigger.lua` provides a custom on-screen trigger. | A menu entry is an existing extension point. An unread badge needs a persisted read position and refresh behavior. |
 | Screen navigation | `VoxDeorumHumanPanel.lua` uses `Events.SearchForPediaEntry`; EUI panels provide game-popup and city-navigation examples. | Store typed targets with evidence, then resolve them when clicked. A historical city may have changed owner or disappeared. |
 | Simple charts | `civ5-dll/(1) Community Patch/Core Files/Overrides/ReplayViewer.xml` defines a `GraphLineInstance`; `ReplayViewer.lua` creates line segments and changes endpoints and colors. | Trends can use native line controls. Generated bitmaps are optional for basic evidence charts. |
@@ -46,7 +46,7 @@ The demonstrated route needs no new DLL texture API. The external process create
 
 Generated illustrations have a demonstrated delivery path. A prototype can retain a distinct DDS per illustration and resolve its absolute path on the local machine. Keep the file available when revisiting an issue, and check file availability before requesting a texture so a missing image can use a packaged fallback.
 
-Before treating this as a supported newspaper feature, test reopening old illustrations, save reloads, game restarts, missing-file fallback, image volume and memory use, other dimensions and encodings, and other supported renderers. Save portability needs a way to retain or restore image files on another machine. The exact VP build was not recorded for this DX11 experiment.
+Before treating this as a supported newspaper feature, test reopening old illustrations, save reloads, game restarts, missing-file fallback, image volume and memory use, other dimensions and encodings, and other supported renderers. Rebuild derived textures locally from the matching MCP database when a save moves to another machine. The exact VP build was not recorded for this DX11 experiment.
 
 The proposed reader uses this file-loading route for the publication's rendered text and art. The first implementation stage must verify larger textures, small-text quality, scrolling, and interaction alignment. Native text provides a missing-cache view. Charts and generated illustrations remain later extensions.
 
@@ -63,18 +63,16 @@ A newspaper transport could use this route to fetch issues, browse history, and 
 
 Two transport details matter for a prototype. The diplomacy panel pumps `Game.ProcessConnectionMessages()` during updates because the normal game tick stops in the leader scene. Verify delivery while the newspaper is open in any such scene. Also, `CvConnectionService::BroadcastEventFromLua()` builds outbound events in a 65,536-byte JSON memory pool and rejects overflow. This is a memory-pool limit with object overhead, not a guaranteed 64 KB article-text allowance or a universal limit on all transport directions. Keep UI requests and votes small, and verify backend issue/history batch limits separately. The existing synchronous `Game.CallExternal()` path waits up to one second; asynchronous requests are the better starting point for background generation.
 
-This transport does not satisfy offline reading by itself. The spec requires the in-game reader to obtain published editions from save-backed state while MCP is unavailable. MCP's copy supports generation and queries.
+MCP serves the archive and issue text over this transport. Native text remains available without rendered images once the reader has fetched the issue. A disconnect leaves the open issue readable in memory.
 
-## Save-backed archive primitives
+## Save checkpoint reference
 
 | Primitive | What the source establishes | What remains to test |
 | --- | --- | --- |
-| `Modding.OpenSaveData()` | `mcp-server/lua/game-identity.lua` stores game identity and last-sync time in a `Deorum` table. | Publication transactions, archive volume, autosave timing, and restoration from different saves of one campaign. |
-| Player script data | `CvLuaPlayer.cpp` exposes `GetScriptData()` and `SetScriptData()`. `CvPlayer.cpp` serializes `m_strScriptData` through its save visitor. | A namespaced representation, coexistence with other mods using the shared string, size and performance, and multiplayer behavior. |
+| `Modding.OpenSaveData()` | `mcp-server/lua/game-identity.lua` stores campaign identity and last-sync time in a `Deorum` table. | Test that a separate ID in the table restores the exact revision on save/load, including across same-turn saves. |
+| Player script data | `CvLuaPlayer.cpp` exposes `GetScriptData()` and `SetScriptData()`. `CvPlayer.cpp` serializes `m_strScriptData`. | The setter replaces a string shared with other mods. Plan 5 uses a separate key in the existing save database as its first choice. |
 
-The script-data path confirms that a per-player string participates in serialization. Both candidates still need newspaper save/load verification. Save an issue, an edited vote, and the receiving civilization's publication frequency and LLM-use preferences. Change the vote and preferences, publish another issue, then reload the earlier save. Verify that its history and preferences return, including the original visual design, layout variants, and page order of each saved issue, with the later issue absent.
-
-External artwork also needs retention and a missing-image fallback. Saving article text will not copy generated files when a save moves to another machine.
+[Plan 5](../implementation/05-live-integration.md) stores the archive in MCP and tests restoration through the saved ID. Save a game, publish another issue and change a vote, then reload and verify the earlier issue history, presentation, and feedback. Test with the matching database and with it missing.
 
 ## Seats and later checks
 

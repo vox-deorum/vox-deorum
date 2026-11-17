@@ -1,6 +1,6 @@
 # Plan 6: trigger rules
 
-**Status: design documented; implementation not started.** The target behavior is described in the [trigger overview](../../../developers/vox-agents/newspaper/triggers/overview.md), [facts](../../../developers/vox-agents/newspaper/triggers/facts.md), [constants and shortcuts](../../../developers/vox-agents/newspaper/triggers/constants.md), [examples](../../../developers/vox-agents/newspaper/triggers/examples.md) and [war and peace](../../../developers/vox-agents/newspaper/triggers/war-and-peace.md) pages. This plan is for the developer who builds it. See the [roadmap](../implementation.md) for the other stages.
+**Handoff: step 1 implements the shared expression runner. Step 2 (MCP evidence) awaits owner confirmation.** Start step 2 from [the evidence table](../../../developers/vox-agents/newspaper/triggers/facts.md#evidence-the-facts-rely-on) and the first remaining row below. Published issues still use the existing detectors and templates. See the [trigger overview](../../../developers/vox-agents/newspaper/triggers/overview.md) for the runner contract and the [roadmap](../implementation.md) for the other newspaper plans.
 
 ## Goal
 
@@ -18,11 +18,10 @@ Replace the 32 fixed detectors with rules. A trigger becomes a JavaScript expres
 
 ## Build order
 
-Use one numbered step per handoff. GPT-6.2-Sol implements the step, and Claude Code Opus reviews its diff in a fresh session. Return material findings to Sol and repeat verification and review. Record the verified result and next step here, leave changes unstaged, and wait for the owner's confirmation before starting that step.
+Use one numbered step per handoff. GPT-6.2-Sol implements the step, OpenCode handles bounded batch work, and Claude Code Opus reviews the step's diff in a fresh session. Return material findings to Sol and repeat verification and review. Record the verified result and next step here, do not stage changes, and wait for the owner's confirmation before starting the next step.
 
 | Step | Work | Done when |
 | --- | --- | --- |
-| 1. Expression runner | A shared runner in `editorial/shared/` that compiles catalogue expressions once and evaluates them against supplied objects in QuickJS. Evaluate a whole check in one sandbox call, since starting the sandbox per rule would be slow. Report syntax errors at catalogue load. | A test evaluates 200 expressions over 100 subjects in one call, and the measured time per check is recorded here. |
 | 2. Evidence | In `mcp-server/src/newspaper/`: add the events and fields listed under [evidence the facts rely on](../../../developers/vox-agents/newspaper/triggers/facts.md#evidence-the-facts-rely-on), resolve unit and building types to names, and resolve city owners to players. Match `CityTrained` to `UnitCreated` by unit ID to learn the unit type. Make the `PlayerGoldenAge` schema accept the `Status` field the DLL sends and read a boolean `true` as starting. Let snapshot and event reads reach the longest trigger `window` or `long`, and include each subject's last row before that point. | Visibility tests cover each added event and field for a receiver with and without access. |
 | 3. Fact model | Builders under `editorial/facts/` for `city`, `player`, `event` and the globals, with hex distance, snapshots (`before`, `previous`, `at`, `history`), hidden-fact handling and source references. | Tests cover each inferred fact with a present value, a hidden value and a first observation. |
 | 4. Constants and shortcuts | `vox-agents/newspaper/constants.json`, its schema, overlay merging, game-speed scaling of spans, and `is.<name>` shortcuts. | A constant overridden in an overlay changes the outcome of a rule that uses it. |
@@ -36,12 +35,20 @@ Use one numbered step per handoff. GPT-6.2-Sol implements the step, and Claude C
 
 | Question | How to settle it |
 | --- | --- |
-| Is `js-exec` fast enough for one batched call per check? | Measure in step 1 with a realistic fact model. Switch to `quickjs-emscripten` when a check takes more than about a second. |
-| How are facts passed into the sandbox? | Start with a JSON document plus a small bootstrap script that wraps it in accessor objects. Hidden facts need the accessor to stop the rule, so plain JSON alone is not enough. |
+| How will rules read inferred and hidden facts? | Step 1 passes JSON data into a fresh sandbox per check. Step 3 must build the guest-side accessors for history, hidden facts and source tracking. Step 5 must use those accessors for ordered rule evaluation and audits. |
 | Should recordings store map width for wrap-aware distance? | Add it to `GameMetadata` during step 2 when the change is small. Existing recordings keep unwrapped distance. |
 | Which unit and building names go into the type lists? | Take them from the Netherlands recording's `UnitCreated` and `CityConstructed` events in step 4. |
 
 ## Verification
+
+Step 1 is verified. GPT-6.2-Sol implemented the runner, OpenCode checked the documentation, and the final Claude Code Opus review (`claude-opus-5-5`) found no material correctness defects. All 369 newspaper mock tests passed across 37 files, and the MCP build, Vox Agents type check, and newspaper build passed. For step 5, derive `TriggerExpressionFields` from the new trigger schema and connect `prepareTriggerExpressions` when the catalogue loads or is restored.
+
+Step 1 measured 200 expressions over 100 subjects in one sandbox call on Node 22.23.3: 21.4 ms to compile the catalogue, 84.7 ms for the first check and 55.5 ms median across five more checks. This measures expression evaluation on supplied facts. It excludes database reads and issue selection. To repeat it in PowerShell:
+
+```powershell
+$env:VD_EXPRESSION_BENCHMARK = '1'
+npm run test:mock -w vox-agents -- tests/mock/newspaper/editorial/expression-batch.test.ts --silent=false
+```
 
 ```sh
 npm run build -w mcp-server
