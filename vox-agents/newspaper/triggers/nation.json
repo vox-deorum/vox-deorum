@@ -1,0 +1,65 @@
+[
+  {
+    "id": "capital-outgrown",
+    "subject": "world",
+    "when": [
+      "self.knows('capital') && Number.isFinite(self.capital.population)",
+      "self.cities.some(c => c.knows('population') && c.population > self.capital.population)"
+    ],
+    "values": {
+      "largestPopulation": "Math.max(...self.cities.filter(c => c.knows('population') && Number.isFinite(c.population)).map(c => c.population))",
+      "largest": "(() => { const names = self.cities.filter(c => c.knows('population') && c.population === largestPopulation).map(c => c.name); return names.length <= 2 ? names.join(' and ') : names.slice(0, -1).join(', ') + ', and ' + names[names.length - 1]; })()",
+      "tied": "self.cities.filter(c => c.knows('population') && c.population === largestPopulation).length > 1",
+      "capital": "self.capital.name"
+    },
+    "importance": 45
+  },
+  {
+    "id": "neighbor-army-overtakes",
+    "subject": "player",
+    "window": "medium",
+    "when": [
+      "!player.self && player.major && player.is.neighbor",
+      "[player.militaryStrength, self.militaryStrength, player.before.militaryStrength, self.before.militaryStrength].every(n => Number.isFinite(n) && n >= 0)",
+      "player.militaryStrength > self.militaryStrength",
+      "player.before.militaryStrength <= self.before.militaryStrength"
+    ],
+    "values": {
+      "neighbor": "player.name",
+      "ourStrength": "self.militaryStrength",
+      "theirStrength": "player.militaryStrength"
+    },
+    "importance": "ourStrength > 0 ? 40 + 40 * (theirStrength / ourStrength - 1) : 80"
+  },
+  {
+    "id": "technology-leader-changes",
+    "subject": "player",
+    "window": "short",
+    "when": [
+      "player.major",
+      "player.rank('technologies') === 1",
+      "player.before.rank('technologies') > 1",
+      "players.some(p => p.id !== player.id && p.knows('major') && p.major && p.knows('technologies') && Number.isFinite(p.technologies))"
+    ],
+    "values": {
+      "civilization": "player.name",
+      "count": "player.technologies",
+      "tied": "players.some(p => p.id !== player.id && p.knows('major') && p.major && p.knows('technologies') && p.technologies === player.technologies)"
+    },
+    "importance": "player.self ? 70 : 50"
+  },
+  {
+    "id": "golden-age-in-wartime",
+    "subject": "event",
+    "event": "PlayerGoldenAge",
+    "when": [
+      "event.starting",
+      "event.player.self",
+      "self.atWar"
+    ],
+    "values": {
+      "enemies": "(() => { const names = self.wars.filter(p => p.knows('name')).map(p => p.name); return names.length <= 2 ? names.join(' and ') || 'our adversaries' : names.slice(0, -1).join(', ') + ', and ' + names[names.length - 1]; })()"
+    },
+    "importance": 60
+  }
+]

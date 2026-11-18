@@ -94,7 +94,7 @@ export async function loadEditorialConfig(directory?: string): Promise<Editorial
   for (const name of ['defaults', 'constants', 'triggers', 'templates', 'pages', 'designs']) {
     const grouped = name === 'triggers' || name === 'templates' || name === 'designs';
     const base = grouped
-      ? (await readCatalogueSection(builtInCatalogueDirectory(), name, name === 'templates') ?? [])
+      ? await readCatalogueSection(builtInCatalogueDirectory(), name)
       : await readCatalogueFile(builtInCatalogueDirectory(), name);
     let custom = directory ? await readCatalogueFile(directory, name, true) : undefined;
     if (directory && grouped)

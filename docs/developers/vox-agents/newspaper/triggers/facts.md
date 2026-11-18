@@ -1,6 +1,6 @@
 # Newspaper trigger facts
 
-City, player, event, pair and incident facts live in `editorial/facts/`. Rules read current and historical values and use [shortcuts](constants.md#shortcuts) on those subjects. The stock catalogue ships two city rules and no templates, so a stock replay records rule audits without printing an issue.
+City, player, event, pair and incident facts live in `editorial/facts/`. Rules read current and historical values and use [shortcuts](constants.md#shortcuts) on those subjects. See the [stock examples](examples.md) for rules and templates that use them.
 
 The **fact model** is the set of objects a [trigger rule](overview.md) can read: cities, players, events, pairs and incidents. This page is the reference for developers writing rules. It lists every fact, says where each one comes from, and explains how to read the past.
 
@@ -68,6 +68,8 @@ The **reporting period** runs from the previous newspaper check to the cutoff tu
 | Basic (any city the receiver can see) | `id`, `name`, `x`, `y`, `population`, `majorityReligion`, `defenseStrength`, `hitPoints`, `maxHitPoints`, `isCapital`, `isPuppet`, `isOccupied`, `isCoastal`, `wonders`, `razingTurns`, `resistanceTurns` |
 | Detailed (the receiver's own cities and cities it has full insight into) | `foodStored`, `foodPerTurn`, `productionStored`, `productionPerTurn`, `currentProduction`, `productionTurnsLeft`, `goldPerTurn`, `sciencePerTurn`, `culturePerTurn`, `faithPerTurn`, `tourismPerTurn`, `happinessDelta`, `buildingCount`, `importantBuildings`, `greatWorkCount` |
 
+`city.happinessDelta` is the net local happiness in that snapshot. Negative values indicate local unhappiness, positive values indicate a surplus, and zero is balanced. Reading it requires a detailed city observation. To compare happiness across time, read it on two snapshots.
+
 ### Inferred city facts
 
 | Fact | Meaning | Inferred from |
@@ -108,6 +110,8 @@ Annexation has no recorded event. A rule reads it from the stored flags: `city.b
 
 The stored column `Cities` is exposed as `cityCount`, because `player.cities` is the list of that player's visible cities. The table lists possible fields. A receiver with full access to its own national summary can read its votes, resources, unit count, supply and deals. Foreign summaries use a smaller field list. City-states may have identity, ally, city count, population, gold, income, technologies, resources and relationships, subject to the same projection. A dated national observation establishes which identities are visible, including a known city-state with no readable national values.
 
+Read `self.happinessPercentage` for the receiver's national happiness. Vox Populi records it as a whole number on a 0–100 scale, with 50 corresponding to parity between happy and unhappy citizens. It can be missing from the evidence. This national measure and the net local value `city.happinessDelta` are both used by the [stock examples](examples.md) to choose a story's tone.
+
 ### Inferred player facts
 
 | Fact | Meaning | Inferred from |
@@ -146,7 +150,7 @@ A player ID of -1 means "nobody", and the matching player fact is then missing. 
 
 | Event | Names offered |
 | --- | --- |
-| `CityCaptureComplete` | `oldOwner`, `newOwner`, `isCapital`, `city` |
+| `CityCaptureComplete` | `oldOwner`, `newOwner`, `isCapital`, `isConquest`, `city` |
 | `PlayerCityFounded` | `player`, `plot`, `city` (the city now at that plot) |
 | `SetAlly` | `minorPlayer`, `oldAllyPlayer`, `newAllyPlayer` |
 | `PlayerGoldenAge` | `player`, `starting` |

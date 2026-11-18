@@ -1,0 +1,101 @@
+[
+  {
+    "id": "nearby-capital-falls-account",
+    "triggers": ["nearby-capital-falls"],
+    "tags": ["international", "military", "cities"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "named-capital",
+        "when": "event.city.name !== values.loser",
+        "headline": "{{city}}, capital of {{loser}}, falls to {{winner}}",
+        "body": [
+          "Forces of {{winner}} seized {{city}}, bringing a capital close to our own cities under new rule."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "capital-shares-owner-name",
+        "when": "event.city.name === values.loser",
+        "headline": "{{city}} falls to {{winner}}",
+        "body": [
+          "The capture of {{city}} gives {{winner}} a foothold close to our own cities."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "unnamed-capital",
+        "when": "!event.knows('city') || !event.city.knows('name')",
+        "headline": "Capital of {{loser}} falls to {{winner}}",
+        "body": [
+          "Forces of {{winner}} seized the capital of {{loser}}, bringing a city close to our own under new rule."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "enemy-wonder-nearby-account",
+    "triggers": ["enemy-wonder-nearby"],
+    "tags": ["international", "cities", "wonders"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "wonder-report",
+        "headline": "A new landmark in {{city}}: {{wonder}}",
+        "body": [
+          "We are at war with {{owner}}, but the news from nearby {{city}} concerns its builders. Work on the wonder is complete."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "city-state-ally-defects-account",
+    "triggers": ["city-state-ally-defects"],
+    "tags": ["international", "diplomacy", "city-states"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "change-of-allegiance",
+        "headline": "{{cityState}} leaves our alliance for {{rival}}",
+        "body": [
+          "Our alliance with {{cityState}} ended when the city-state made common cause with {{rival}}. The change gives our rival an ally close to our own cities."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "vassals-join-war-account",
+    "triggers": ["vassals-join-war"],
+    "tags": ["international", "diplomacy", "military"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "war-widens",
+        "headline": "War between {{initiator}} and {{target}} draws in {{vassals}}",
+        "body": [
+          "The declaration of war came from {{initiator}} and was aimed at {{target}}. Bound by obligations to their masters, {{vassals}} went to war as well."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "war-advantage-stalls-account",
+    "triggers": ["war-advantage-stalls"],
+    "tags": ["international", "military"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "stalled-campaign",
+        "headline": "Our momentum ebbs in the war with {{opponent}}",
+        "body": [
+          "We held a clear advantage earlier in the war against {{opponent}}. Lately the balance has hardly shifted. What once looked like momentum now looks like a long war."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  }
+]

@@ -1,6 +1,6 @@
 # Newspaper editorial decisions
 
-The heuristic editor turns permitted historical evidence into authored issues without an LLM. Step 7 evaluates trigger rules and every authored choice with JavaScript in QuickJS. The stock catalogue ships two city rules and no story templates, so a stock check finishes as a skipped check with a recorded audit rather than an issue. The editor keeps series memory, chooses compatible stories, and applies current reader votes to later coverage. [Replay](replay.md) owns offline persistence and the read, vote, continue, and resume workflow. The [renderer](renderer.md) displays the immutable issue and its saved presentation.
+The heuristic editor turns permitted historical evidence into authored issues without an LLM. A check with no eligible story or design is saved as a skipped check with its audit. The editor keeps series memory, chooses compatible stories, and applies current reader votes to later coverage. [Replay](replay.md) owns offline persistence and the read, vote, continue, and resume workflow. The [renderer](renderer.md) displays the immutable issue and its saved presentation.
 
 ## Ownership and inputs
 
@@ -17,7 +17,7 @@ Modules under `vox-agents/src/newspaper/editorial/` are grouped by job:
 | `presentation/` | Choice evaluation in `eligibility.ts`, issue assembly in `issue.ts`, and validation in `validation.ts` |
 | `shared/` | The QuickJS runner, choice eligibility in `eligibility.ts`, weights, `EditorialContext`, source references, and deterministic serialization |
 
-Add new coverage under `vox-agents/newspaper/triggers/` and any publishable story templates under `vox-agents/newspaper/templates/`. Extend `editorial/facts/` when a rule needs a fact the editor does not yet supply.
+Add new coverage under `vox-agents/newspaper/triggers/` and its story template under `vox-agents/newspaper/templates/`. Extend `editorial/facts/` when a rule needs a fact the editor does not yet supply.
 
 `check.ts` accepts an evidence window, the built fact model, game speed, publication state, receiver identity, and effective configuration. It returns an issue and updated state, or a skipped check when eligible content or a design is unavailable. Every enabled rule is evaluated and its audit is stored in the decision, including for a skipped check. Configuration and validation errors preserve the original checkpoint and must be resolved before another attempt. The caller commits completed results. `config/load.ts` reads catalogue files; editorial computations do not open databases or call live game services.
 
@@ -27,14 +27,14 @@ MCP owns evidence schemas and reporting policy. Rules use the projected observat
 
 ## Catalogue and eligibility
 
-The built-in catalogue lives under `vox-agents/newspaper/`. Triggers are grouped into topic files, such as `cities`; each entry belongs to one file and retains all its tags. Designs have one file per identity. Each section file contains an array, with all JSON fully expanded using two-space indentation for editing. The stock catalogue ships two rules in `triggers/cities.json` and no story templates. The built-in `templates/` directory may be absent. Add templates in an overlay to publish stories.
+The built-in catalogue lives under `vox-agents/newspaper/`. Rules and matching templates are grouped into `cities.json`, `nation.json`, and `foreign.json` in their respective directories. Each design has its own file. An overlay adds or tunes entries without replacing the stock catalogue.
 
 | File | Controls |
 | --- | --- |
 | `defaults.json` | Frequency, selection limits, decay, novelty, variety, stickiness, and feedback coefficients |
 | `constants.json` | Named distances, spans, sizes, type lists and shortcuts used by every expression. See [constants and shortcuts](triggers/constants.md). |
 | `triggers/*.json` | Trigger rules: subject, `when`, `values`, importance, repeat, grouping and tags. See the [trigger overview](triggers/overview.md). |
-| `templates/*.json` | Authored variants, typed links and short pieces; optional; no built-in directory is required |
+| `templates/*.json` | Authored variants, typed links and short pieces, grouped by topic like triggers |
 | `pages.json` | Front page, section membership, and section minimums |
 | `designs/*.json` | Design identities, fixed renderer families, saved tokens/assets, layouts, and eligibility |
 
@@ -87,13 +87,13 @@ The front page is unconditional. Each design needs one unconditional ordinary la
 
 The stock designs choose by `self.era`. `victorian` runs from the Classical through Future eras, `modern` from Modern through Future, and `oral-accounts` is the fallback for Ancient or unknown eras. Published presentation snapshots keep old issues independent of later catalogue changes.
 
-### Example: publish the settler rule
+### Example: tune the settler story
 
-The copyable overlay in the [trigger examples](triggers/examples.md#a-city-shrinks-after-sending-settlers) adds a template for `settler-departure`. It shows the shared choice shape, a variant condition on `lost`, subject aliases, and in-world prose that does not claim a literal headcount.
+The stock settler story chooses its tone based on local happiness. The [example overlay](triggers/examples.md#a-city-shrinks-after-sending-settlers) replaces the neutral variant's headline and body while keeping its condition, city link, and the other tones.
 
 ## Developments, selection, and continuity
 
-Trigger rules turn facts about cities, players, events, pairs, incidents and the world into developments. A rule must hold for its subject before a template can turn the development into a candidate. The [trigger overview](triggers/overview.md) describes rules and the [examples](triggers/examples.md) show complete ones. The stock catalogue ships `neighbor-puppet-annexed` and `settler-departure`; Step 8 adds the remaining 12 examples and their stories. Two of those examples use pair and incident facts and run as overlays now. [War and peace coverage](triggers/war-and-peace.md) groups likely declaration cascades, distinguishes obligations and city-state involvement, and tracks score progress and settlements.
+Trigger rules turn facts about cities, players, events, pairs, incidents and the world into developments. A rule must hold for its subject before a template can turn the development into a candidate. The [trigger overview](triggers/overview.md) describes rules and the [examples](triggers/examples.md) show the stock catalogue. [War and peace coverage](triggers/war-and-peace.md) groups likely declaration cascades, distinguishes obligations and city-state involvement, and tracks score progress and settlements.
 
 Importance comes from each trigger's `importance` expression on a scale from 0 to 100. Comparisons can reach before the reporting period, and an unchanged situation produces a new development only when its trigger sets `repeat` to a span and that span has passed. Repeat memory is saved with publication state. A skipped check advances the reporting boundary, diplomacy observations, rule repeat state, and series memory, then discards that check's candidates.
 

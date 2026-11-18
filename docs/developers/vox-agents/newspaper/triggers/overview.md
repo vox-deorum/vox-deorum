@@ -1,10 +1,10 @@
 # Newspaper trigger overview
 
-**Status: Steps 3 to 7 are implemented.** `editorial/facts/` builds city, player, event, pair, incident and global facts. `vox-agents/newspaper/constants.json` supplies named constants, type lists and shortcuts, with overlays and game-speed scaling of spans. `editorial/rules/` evaluates the configured rules, keeps repeat memory, and records a per-subject audit. Step 7 evaluates templates, variants, weights, pages, designs and layouts with the same QuickJS expressions. The stock catalogue ships two city rules, `neighbor-puppet-annexed` and `settler-departure`, and no story templates, so a stock replay records audits while skipping publication. Pair and incident facts, including the built-in pair shortcut, work in ordinary overlay rules, and the two documented diplomacy examples run as overlays. Step 8 adds the starting stories and the remaining documented rules. [Plan 6](../../../../plans/newspaper/implementation/06-trigger-rules.md) tracks the build order.
+Trigger rules test visible facts, keep repeat memory, and record an audit for each subject. The stock catalogue pairs rules under `vox-agents/newspaper/triggers/` with authored stories under `templates/`. Both use the same QuickJS expressions and [named constants](constants.md).
 
 A **trigger** is a rule that spots one kind of development in the recorded game, such as "a neighboring foreign city changed from puppet to occupied". This page is for developers who add or tune newspaper coverage. It explains what a trigger entry contains, how a check evaluates it, and how to add one.
 
-A rule is a JavaScript expression over a **fact model**: cities, players, events, pairs, incidents and relationships built from the MCP server databases. Code supplies the facts, including inferred ones such as distance or a city's former owner. The catalogue supplies the rules. A new rule therefore needs a new catalogue entry and no new code, as long as the facts exist. Authored templates turn its developments into stories; none ship in the stock catalogue.
+A rule is a JavaScript expression over a **fact model**: cities, players, events, pairs, incidents and relationships built from the MCP server databases. Code supplies the facts, including inferred ones such as distance or a city's former owner. The catalogue supplies the rules. A new rule therefore needs a new catalogue entry and no new code, as long as the facts exist. Authored templates turn its developments into stories; the stock catalogue pairs each rule with one.
 
 ```mermaid
 flowchart LR
@@ -21,14 +21,14 @@ flowchart LR
 | This page | Trigger entries, evaluation, importance, repeats, grouping, authoring workflow |
 | [Facts](facts.md) | Every subject, its stored and inferred facts, time access, hidden facts, helpers |
 | [Constants and shortcuts](constants.md) | Distance measurement, named distances, spans, sizes, type lists, shortcuts |
-| [Examples](examples.md) | Worked triggers with a target template sketch |
+| [Examples](examples.md) | Stock triggers and a copyable overlay for the neutral settler story |
 | [War and peace](war-and-peace.md) | How declarations and settlements become `incident` and `pair` facts |
 
 [Editorial decisions](../editorial.md) covers what happens after a development exists: templates, selection, votes and presentation. [Replay](../replay.md) covers generating and inspecting issues.
 
 ## A first example
 
-The trigger `settler-departure`, one of the two shipped rules, reports a city that shrank because it sent out settlers, while its food supply stayed healthy.
+The shipped `settler-departure` rule reports when one of our cities has shrunk, trained settlers, and still brings in more food than it uses.
 
 | Field | Value | Reads as |
 | --- | --- | --- |
@@ -46,7 +46,7 @@ The trigger `settler-departure`, one of the two shipped rules, reports a city th
 
 ## Trigger entries
 
-Entries live in JSON files under `vox-agents/newspaper/triggers/`. Files group entries by topic for editing convenience; the file name has no effect on behavior.
+Entries live in JSON files under `vox-agents/newspaper/triggers/`. Files group entries by topic, such as `cities`, `nation`, and `foreign`, for editing convenience; the file name has no effect on behavior.
 
 | Field | Required | Meaning | Example |
 | --- | --- | --- | --- |
@@ -108,7 +108,7 @@ flowchart TD
 
 A `when` entry passes when JavaScript treats its result as true, so `city.majorityReligion` passes for a city that has a majority religion. The rule evaluator uses the runner's error details to skip a failed match and records the field, expression, error or hidden fact in the audit.
 
-A stock check evaluates every enabled rule and stores this audit even when selection finds no template, so the shipped catalogue records audits while printing no issue.
+A stock check evaluates every enabled rule and stores this audit even when no story or design is eligible, so a quiet check still records its audit.
 
 The shared runner uses QuickJS directly through `quickjs-wasi`. `prepareEditorialExpressions` in `editorial/config/expressions.ts` validates the expression fields of a merged catalogue and the shortcut sources from `constants.json` before any facts are needed. Syntax errors name the choice, field and original expression. `getEditorialExpressions` in `config/load.ts` compiles a catalogue once; replay snapshots store the catalogue data, not bytecode or expression slots.
 
@@ -170,7 +170,7 @@ A template names one or more triggers in `triggers`. Every named trigger must fi
 | --- | --- |
 | `vox-agents/newspaper/triggers/` | Trigger entries |
 | `vox-agents/newspaper/constants.json` | Named constants, type lists and shortcuts |
-| `vox-agents/newspaper/templates/` | Authored headlines, paragraphs, placeholders, typed links and weights; optional; no built-in directory is required |
+| `vox-agents/newspaper/templates/` | Authored headlines, paragraphs, placeholders, typed links and weights, grouped by topic like triggers |
 | `vox-agents/src/newspaper/editorial/config/` | Catalogue schema and validation in `schema.ts`, constant validation and span scaling in `constants.ts`; file loading, overlays and catalogue compilation in `load.ts` and `expressions.ts` |
 | `vox-agents/src/newspaper/editorial/facts/` | Builds the fact model, including distance and inferred facts |
 | `vox-agents/src/newspaper/editorial/diplomacy/` | War and peace inference; its incident and pair facts reach rules through the fact model |
@@ -189,7 +189,7 @@ The legacy detectors are retired; new coverage belongs in `rules/`.
 2. Find the facts in [facts.md](facts.md) and the thresholds in [constants.md](constants.md). Prefer a named constant or shortcut over a bare number, so later tuning happens in one place.
 3. Add the entry to a file under `triggers/`. Order `when` from the most selective entry to the least.
 4. To publish a story, add a template whose `triggers` list names the trigger ID and whose variant has a positive weight. Identity placeholders come from visible facts. An ungrouped rule supplies scalar placeholders from `values`; a grouped rule exposes `{{key}}` and `{{count}}` in prose. See [authoring choices](../editorial.md#authoring-choices) and the [settler overlay](examples.md#a-city-shrinks-after-sending-settlers).
-5. Generate a fresh replay and read the rule audit. The audit shows, for each subject, which `when` entry stopped the rule. With a template added by overlay, read the article beside the same audit.
+5. Generate a fresh replay. For a published story, read the article beside its audit. For a skipped subject, the audit shows which condition stopped the rule.
 6. When a needed fact is absent, add it to the fact model. When the evidence behind it is absent, extend MCP's projection first. Both are code changes; see [adding a fact](facts.md#add-a-fact).
 
 Facts are inferred from what the databases hold, and useful coverage matters more than certainty. A rule may rely on an inferred fact such as `city.formerOwner` without proving it; wording in the template can carry any doubt worth mentioning.

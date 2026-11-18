@@ -5,6 +5,7 @@ import Database from 'better-sqlite3';
 import { queryNewspaperEvidence } from '../../../../../mcp-server/dist/newspaper/queries.js';
 import { ReplaySession } from '../../../../src/newspaper/replay/session.js';
 import { runEditorialCheck } from '../../../../src/newspaper/editorial/check.js';
+import { loadEditorialConfig } from '../../../../src/newspaper/editorial/config/load.js';
 import { ReplayStore } from '../../../../src/newspaper/replay/store.js';
 import { replaySourceIdentity } from '../../../../src/newspaper/replay/database.js';
 import { createReplayRecording, replaySettings, writeReplayPublicationCatalogue } from '../../../helpers/newspaper-replay.js';
@@ -203,9 +204,11 @@ describe('durable replay publication', () => {
   it('should read one history window and keep repeat memory from a skipped check after resume', async () => {
     const directory = path.join(path.dirname(recording.filename), 'repeat-catalogue');
     await mkdir(directory);
-    await writeFile(path.join(directory, 'triggers.json'), JSON.stringify([{
-      id: 'recorded-player', subject: 'player', window: 60, repeat: 'once', when: 'player.self',
-    }]));
+    const base = await loadEditorialConfig();
+    await writeFile(path.join(directory, 'triggers.json'), JSON.stringify([
+      ...base.triggers.map(rule => ({ id: rule.id, enabled: false })),
+      { id: 'recorded-player', subject: 'player', window: 60, repeat: 'once', when: 'player.self' },
+    ]));
     const query = vi.fn(queryNewspaperEvidence);
     session = new ReplaySession({ query });
     const configured = { ...settings(), fromTurn: 100, toTurn: 120, editorialConfigDirectory: directory };

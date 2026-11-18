@@ -22,16 +22,22 @@ describe('editorial catalogue files', () => {
     await writeFile(target, `${JSON.stringify(value, null, 2)}\n`);
   }
 
-  it('should load the owner rules and empty built-in templates while retaining styling', async () => {
+  it('should load the stock rules and their story templates while retaining styling', async () => {
     const base = await loadEditorialConfig();
-    expect(base.triggers.map(rule => rule.id)).toEqual(['neighbor-puppet-annexed', 'settler-departure']);
-    expect(base.templates).toEqual([]);
+    const ids = base.triggers.map(rule => rule.id);
+    expect(ids).toEqual(expect.arrayContaining([
+      'neighbor-puppet-annexed', 'settler-departure', 'capital-outgrown',
+      'neighbor-army-overtakes', 'technology-leader-changes', 'golden-age-in-wartime',
+    ]));
+    expect(ids).toHaveLength(14);
+    expect(base.templates.length).toBeGreaterThan(0);
+    expect(new Set(base.templates.flatMap(template => template.triggers))).toEqual(new Set(ids));
     expect(base.designs[0].layouts.map(layout => layout.variant)).toEqual(expect.arrayContaining(['ordinary', 'breaking']));
   });
 
   it('should merge trigger overrides by identity and replace primitive arrays', async () => {
     const base = await loadEditorialConfig();
-    const [trigger, other] = base.triggers;
+    const [trigger, ...others] = base.triggers;
     await writeDocument('defaults.json', { feedback: { tag: 0.25 } });
     await writeDocument('triggers.json', [{ id: trigger.id, tags: ['cities'], enabled: false }]);
     await writeDocument('triggers/local.json', [{ id: trigger.id, when: ['city.own', 'true'] }]);
@@ -39,7 +45,8 @@ describe('editorial catalogue files', () => {
 
     const loaded = await loadEditorialConfig(directory);
     expect(loaded.defaults.feedback).toEqual({ ...base.defaults.feedback, tag: 0.25 });
-    expect(loaded.triggers).toEqual([{ ...trigger, tags: ['cities'], enabled: false, when: ['city.own', 'true'] }, other]);
+    expect(loaded.triggers[0]).toEqual({ ...trigger, tags: ['cities'], enabled: false, when: ['city.own', 'true'] });
+    expect(loaded.triggers.slice(1)).toEqual(others);
     expect(loaded.pages.map(page => page.id)).toEqual([...base.pages.map(page => page.id), 'additional']);
     expect(loaded.designs).toEqual(base.designs);
   });
@@ -66,11 +73,11 @@ describe('editorial catalogue files', () => {
     await writeDocument('templates/ignored.json/nested.json', []);
 
     const loaded = await loadEditorialConfig(directory);
-    expect(loaded.templates[0]).toMatchObject({
-      id: 'local', weight: { base: 7 },
+    expect(loaded.templates.find(entry => entry.id === 'local')).toMatchObject({
+      weight: { base: 7 },
       variants: [{ id: 'primary', headline: 'Original', body: ['Replacement'] }],
     });
-    expect(loaded.templates.slice(1).map(entry => entry.id)).toEqual(['first', 'last']);
+    expect(loaded.templates.slice(base.templates.length).map(entry => entry.id)).toEqual(['local', 'first', 'last']);
     expect(loaded.triggers.at(-1)).toMatchObject({ id: 'custom-trigger', importance: 2 });
     expect(loaded.designs.find(entry => entry.id === design.id)).toEqual({ ...design, title: 'Custom title' });
   });
@@ -97,17 +104,18 @@ describe('editorial catalogue files', () => {
       ...['values', 'triggerValues', 'group', 'subject', 'period', '$kind'].map(name => ({ values: { [name]: '1' } })),
       ...['Math', 'undefined', 'NaN', 'JSON'].map(name => ({ values: { [name]: '1' } })),
     ])
-      expect(editorialConfigSchema.safeParse({ ...base, triggers: [{ ...rule, ...change }] }).success).toBe(false);
+      expect(editorialConfigSchema.safeParse({ ...base, triggers: [{ ...rule, ...change }], templates: [] }).success).toBe(false);
   });
 
   it('should reject listing the same required trigger twice in one template', async () => {
     const config = await loadEditorialConfig();
     const id = config.triggers[0].id;
+    const index = config.templates.length;
     await writeDocument('templates/local.json', [{
       id: 'trial', triggers: [id, id], tags: [], weight: { base: 1 }, variants: [],
     }]);
     await expect(loadEditorialConfig(directory)).rejects.toMatchObject({
-      issues: expect.arrayContaining([expect.objectContaining({ path: ['templates', 0, 'triggers'] })]),
+      issues: expect.arrayContaining([expect.objectContaining({ path: ['templates', index, 'triggers'] })]),
     });
   });
 
@@ -133,16 +141,16 @@ describe('editorial catalogue files', () => {
       const constants = { ...config.constants, sizes: { ...config.constants.sizes, [name]: 4 } };
       expect(editorialConfigSchema.safeParse({ ...config, constants }).success).toBe(false);
       const triggers = [{ ...rule, values: { [name]: 'city.id' } }];
-      expect(editorialConfigSchema.safeParse({ ...config, triggers }).success).toBe(false);
+      expect(editorialConfigSchema.safeParse({ ...config, triggers, templates: [] }).success).toBe(false);
     }
     const triggers = [{ ...rule, values: { largestCityId: 'city.id' } }];
-    await expect(parseEditorialConfig({ ...config, triggers })).resolves.toMatchObject({ triggers });
+    await expect(parseEditorialConfig({ ...config, triggers, templates: [] })).resolves.toMatchObject({ triggers });
   });
 
   it('should allow documented local values named distance and count', async () => {
     const base = await loadEditorialConfig();
     const rule = { id: 'rated', subject: 'world', when: 'true', values: { distance: '2', count: 'distance + 1' } };
-    await expect(parseEditorialConfig({ ...base, triggers: [rule] })).resolves.toMatchObject({ triggers: [rule] });
+    await expect(parseEditorialConfig({ ...base, triggers: [rule], templates: [] })).resolves.toMatchObject({ triggers: [rule] });
   });
 
   it('should prepare expression slots per catalogue and recompile when restoring authored JSON', async () => {
@@ -163,7 +171,7 @@ describe('editorial catalogue files', () => {
     const invalid = { ...trigger, urgent: 'city.own &&' };
     await writeDocument('triggers.json', [{ id: trigger.id, urgent: invalid.urgent }]);
     await expect(loadEditorialConfig(directory)).rejects.toThrow(trigger.id);
-    await expect(parseEditorialConfig({ ...config, triggers: [invalid] })).rejects.toThrow('urgent');
+    await expect(parseEditorialConfig({ ...config, triggers: [invalid], templates: [] })).rejects.toThrow('urgent');
   });
 
   it('should reject legacy choice fields even when the replacement fields are supplied', async () => {

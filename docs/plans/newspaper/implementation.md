@@ -1,6 +1,6 @@
 # Newspaper implementation roadmap
 
-**Status: Plan 1's demo is accepted in game, Plan 2 is complete, and Plan 3 implements heuristic editing and durable offline replay.** Recorded publication, browser voting, and resume are verified. Human reading acceptance and broader game renderer checks remain pending. Plans 4 and 5 remain planned. Plan 6 uses authored trigger rules in replay. The two built-in city rules produce audits; fresh story templates come in step 8. This roadmap is for developers implementing the [newspaper specification](spec.md); each plan has its own deliverable and verification gate.
+**Status: Plan 1's demo is accepted in game, Plan 2 is complete, and Plan 3 implements heuristic editing and durable offline replay.** Recorded publication, browser voting, and resume are verified. Human reading acceptance and broader game renderer checks remain pending. Plans 4 and 5 remain planned. Plan 6 now publishes 14 authored stories in replay. The next gate is reading the stock newspaper with the owner. This roadmap is for developers implementing the [newspaper specification](spec.md); each plan has its own deliverable and verification gate.
 
 ## Goal and success criteria
 

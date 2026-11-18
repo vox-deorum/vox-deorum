@@ -4,7 +4,7 @@ Replay reads a recorded MCP SQLite database and produces authored newspaper issu
 
 ## Generate examples from the command line
 
-Use the newspaper command to run replay against a recording without starting VD or Civilization V. With the stock catalogue, each check evaluates the two shipped rules and records their audits, then skips publication because no story templates ship. Run it from the repository root. Each run builds MCP's queries before loading replay, and PNG previews also build the reader. Help and argument errors skip builds:
+Use the newspaper command from the repository root to replay a recording without starting VD or Civilization V. Each run builds MCP's queries before loading replay, and PNG previews also build the reader. Help and argument errors skip builds:
 
 ```sh
 npm run newspaper -w vox-agents -- --help
@@ -12,12 +12,10 @@ npm run newspaper -w vox-agents -- --help
 
 Preview builds replace the shared `dist-newspaper` assets. Generate previews while VD is stopped, and rerun the command if a build is interrupted before restarting VD.
 
-These local recordings provide sources for replay and for the historical examples below. Rerunning them with the stock catalogue records rule audits and skipped checks; an overlay supplies additional rules, including pair and incident rules, and templates when you want issues. The commands exercise the full range, pacing and previews:
+This example checks a Standard pace Netherlands recording every five turns from 24 to 99. At turn 29, the stock catalogue prints the upbeat settler story from Amsterdam: “Good cheer in Amsterdam as settlers prepare to go.” The command previews that issue as a PNG and saves the audit for every check:
 
 ```sh
-npm run newspaper -w vox-agents -- --database mcp-server/archive/self-play/0d749c4f-69a7-4682-81b3-8fa70f38c012_1794782175768.db --player 7 --from 0 --to 350 --output .tmp/newspaper-examples/netherlands --render-turns 120,125,275,350
-npm run newspaper -w vox-agents -- --database mcp-server/archive/self-play/3bca0322-a5a8-490f-8a13-b4561bbc209c_1794623821605.db --player 7 --from 0 --to 300 --output .tmp/newspaper-examples/portugal --render-turns 300
-npm run newspaper -w vox-agents -- --database mcp-server/archive/self-play/f585b17d-4b95-4fd3-9ecc-f5f6fc9983c7_1794756822470.db --player 7 --from 0 --to 225 --output .tmp/newspaper-examples/mongolia --render-turns 185,225
+npm run newspaper -w vox-agents -- --database mcp-server/archive/self-play/0d749c4f-69a7-4682-81b3-8fa70f38c012_1794782175768.db --player 7 --from 24 --to 99 --every 5 --output .tmp/newspaper-examples/netherlands --render-turns 29
 ```
 
 Recordings are local development data. Substitute another recorded MCP database when these files are unavailable. Paths are relative to the directory where you invoked npm. Each run needs a new or empty output directory, keeping earlier examples available for comparison.
@@ -40,10 +38,10 @@ Before a requested preview run, the command builds dependencies and checks the i
 
 ### Iterate on a rule or overlay
 
-Create an override directory and mirror the catalogue paths being changed. To tune a shipped rule, copy `vox-agents/newspaper/triggers/cities.json` into a `triggers/` subfolder and edit that rule. To author a story, add a `templates/` file whose `triggers` list names the rule IDs that can offer it. Pair and incident rules are ordinary entries, so an overlay can add one with its own `triggers/` file; the stock catalogue ships neither. Then rerun the same recording and turn range with `--config` and a new output directory:
+Create an override directory and mirror the catalogue paths being changed. To tune a shipped rule, copy `vox-agents/newspaper/triggers/cities.json` into a `triggers/` subfolder and edit that rule. To tune a story, copy its template into a `templates/` subfolder and edit the prose or variants. Pair and incident rules are ordinary entries, and the stock catalogue includes war and peace coverage. Then rerun the same recording and turn range with `--config` and a new output directory:
 
 ```sh
-npm run newspaper -w vox-agents -- --database mcp-server/archive/self-play/0d749c4f-69a7-4682-81b3-8fa70f38c012_1794782175768.db --player 7 --from 0 --to 125 --config .tmp/newspaper-overlay --output .tmp/newspaper-examples/netherlands-revised --render-turns 120,125
+npm run newspaper -w vox-agents -- --database mcp-server/archive/self-play/0d749c4f-69a7-4682-81b3-8fa70f38c012_1794782175768.db --player 7 --from 24 --to 99 --every 5 --config .tmp/newspaper-overlay --output .tmp/newspaper-examples/netherlands-revised --render-turns 29
 ```
 
 Rule and template entries merge by ID. Arrays without IDs, such as a rule's `when` list or a variant's paragraphs, replace the inherited array. The [editorial guide](editorial.md#authoring-choices) describes template eligibility, weights and placeholders.
@@ -133,7 +131,7 @@ Event contact uses the final summary available for the event's turn. Normal coll
 
 ## Historical heuristic replay verification
 
-These results predate stage 5 and describe the retired detectors and templates. They remain evidence for replay storage, votes, and the reader workflow, not for the current catalogue.
+This historical run used retired detectors and templates. Its results cover replay storage, votes, and the reader workflow.
 
 On November 16, 2026, the Netherlands recording described below completed 89 publication checks from turn 0 through 440 at five-turn intervals, with a ten-turn comparison window. The run produced 81 issues containing 362 canonical articles, including three authored composites and nine breaking front pages; eight checks skipped publication. Saved designs comprised seven early accounts, 51 Victorian issues, and 23 modern issues. Useful reading samples include composites at cutoffs 120, 125, and 200, and incoming-war coverage beginning at cutoff 275.
 
@@ -145,7 +143,7 @@ Local verification artifacts are under `.tmp/newspaper-plan3/`: `acceptance.json
 
 ## Historical evidence-query verification
 
-This query run also predates stage 5. It measures recorded evidence retrieval and replay behavior, not current rule coverage.
+This historical run measures recorded evidence retrieval and replay behavior.
 
 On November 16, 2026, replay was exercised through the normal VD web server against `mcp-server/archive/self-play/0d749c4f-69a7-4682-81b3-8fa70f38c012_1794782175768.db`. Use the full knowledge database; the accompanying `-player-7.db` contains agent telemetry. The recording reports VP 5.2.7, DLL build `build-5.2.7-20261108-042403-54caaa5`, and Standard pace.
 

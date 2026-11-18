@@ -6,7 +6,6 @@ import { loadEditorialConfig, parseEditorialConfig } from '../../../../../src/ne
 import type { EditorialConfig } from '../../../../../src/newspaper/editorial/config/schema.js';
 import { buildNewspaperFacts } from '../../../../../src/newspaper/editorial/facts/index.js';
 import { context, evidence, event, relationship, snapshot, scores } from '../../../../helpers/newspaper-diplomacy.js';
-import { vassalsJoinWar, warAdvantageStalls } from '../../../../helpers/newspaper-diplomacy-rules.js';
 
 /** Supply visible identities at each date, as in a replay's projected baseline. */
 function withDatedVisibility(input: NewspaperEvidence, olderEvents: NewspaperEvidence['events']): NewspaperEvidence {
@@ -15,7 +14,7 @@ function withDatedVisibility(input: NewspaperEvidence, olderEvents: NewspaperEvi
     snapshots: { cities: [], players: visible }, events: [...olderEvents, ...input.events], gaps: [] } };
 }
 
-/** Evaluate the author overlays through the same check used by replay. */
+/** Evaluate the catalogue through the same check used by replay. */
 function check(config: EditorialConfig, input: NewspaperEvidence, olderEvents: NewspaperEvidence['events'] = []) {
   const evidence = withDatedVisibility(input, olderEvents);
   const facts = buildNewspaperFacts(evidence, {
@@ -37,12 +36,17 @@ describe('newspaper diplomacy trigger rules', () => {
       id: 'war-opening', subject: 'incident', window: 'long', when: "incident.kind == 'war'",
       values: { initiator: 'incident.initiator.name' }, importance: 55,
     };
-    const config = await parseEditorialConfig({ ...base, triggers: [vassalsJoinWar, summary],
-      templates: [vassalsJoinWar, summary].map(rule => ({
-        id: rule.id, triggers: [rule.id], tags: ['military'], weight: { base: 1 },
-        variants: [{ id: 'account', headline: '{{initiator}} opens a war',
-          body: ['The declaration starts a new war.'], weight: { base: 1 } }],
-      })),
+    const config = await parseEditorialConfig({
+      ...base,
+      triggers: [...base.triggers.filter(rule => rule.id === 'vassals-join-war'), summary],
+      templates: [
+        ...base.templates.filter(template => template.id === 'vassals-join-war-account'),
+        {
+          id: summary.id, triggers: [summary.id], tags: ['military'], weight: { base: 1 },
+          variants: [{ id: 'account', headline: '{{initiator}} opens a war',
+            body: ['The declaration starts a new war.'], weight: { base: 1 } }],
+        },
+      ],
     });
     const current = [
       event('DeclareWar', 1, 10, 0, 1, { IsAggressor: true }),
@@ -74,7 +78,7 @@ describe('newspaper diplomacy trigger rules', () => {
     const selected = result.decision.candidateScores.filter(score => score.selected).map(score => score.id);
     expect(selected).toHaveLength(2);
     expect(selected).toEqual(expect.arrayContaining([
-      expect.stringMatching(/^vassals-join-war\//),
+      expect.stringMatching(/^vassals-join-war-account\//),
       expect.stringMatching(/^war-opening\//),
     ]));
     expect(result.state.issues[0]?.items.flatMap(item => item.seriesKeys))
@@ -85,14 +89,13 @@ describe('newspaper diplomacy trigger rules', () => {
   });
 
   it.each(['gap', 'hidden'] as const)('should stop the stalled-war rule when the history has a %s', async kind => {
-    const base = await loadEditorialConfig();
-    const config = await parseEditorialConfig({ ...base, triggers: [warAdvantageStalls] });
+    const config = await loadEditorialConfig();
     const input = scores(Array.from({ length: 38 }, (_, index): [number, number] => [
       index + 13, index === 0 ? 27 : 20,
     ]).filter(([turn]) => kind !== 'gap' || turn !== 45), 49);
     if (kind === 'hidden') delete input.diplomacy!.history.at(-1)!.relationships[0].warScore;
     const result = await check(config, input);
-    expect(result.decision.triggerAudit[0].subjects).toMatchObject([{
+    expect(result.decision.triggerAudit.find(rule => rule.rule === 'war-advantage-stalls')?.subjects).toMatchObject([{
       subject: 'pair/0/1',
       outcome: kind === 'gap' ? 'false' : 'hidden',
     }]);

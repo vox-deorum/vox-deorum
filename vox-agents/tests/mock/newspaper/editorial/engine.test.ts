@@ -96,7 +96,7 @@ describe('editorial engine', () => {
       expect(noStories.decision.choiceErrors).toEqual(expectedErrors);
     });
 
-    it('should print a settler departure only when an authored variant is eligible', async () => {
+    it('should print a settler departure from the stock template and choose only an eligible authored variant', async () => {
       const stock = await loadEditorialConfig();
       const revised = editorialConfigSchema.parse({
         ...stock,
@@ -133,9 +133,11 @@ describe('editorial engine', () => {
         fromTurn: -1, baseline: { cities: [], players: [] },
         snapshots: { cities: [past, city], players: evidence.players }, events: [training], gaps: [],
       };
-      const empty = await check(evidence, createInitialPublicationState(), stock);
-      expect(empty.status).toBe('skipped');
-      expect(empty.decision.triggerAudit.find(rule => rule.rule === 'settler-departure')?.subjects)
+      const stockResult = await check(evidence, createInitialPublicationState(), stock);
+      expect(stockResult.status).toBe('published');
+      if (stockResult.status !== 'published') return;
+      expect(stockResult.decision.selectedVariants[stockResult.issue.items[0].id]).toBe('settler-departure-report');
+      expect(stockResult.decision.triggerAudit.find(rule => rule.rule === 'settler-departure')?.subjects)
         .toContainEqual(expect.objectContaining({ subject: 'city/10', outcome: 'fired' }));
 
       const result = await check(evidence, createInitialPublicationState(), revised);

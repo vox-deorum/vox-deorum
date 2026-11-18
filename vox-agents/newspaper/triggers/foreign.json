@@ -1,0 +1,66 @@
+[
+  {
+    "id": "nearby-capital-falls",
+    "subject": "event",
+    "event": "CityCaptureComplete",
+    "when": [
+      "event.isCapital && event.isConquest",
+      "!event.oldOwner.self && !event.newOwner.self",
+      "event.distance.own <= nearby"
+    ],
+    "values": { "loser": "event.oldOwner.name", "winner": "event.newOwner.name" },
+    "importance": "75"
+  },
+  {
+    "id": "enemy-wonder-nearby",
+    "subject": "city",
+    "window": "recent",
+    "when": [
+      "city.owner.enemy",
+      "city.distance.own <= nearby",
+      "city.built.some(b => city.wonders.includes(b.building))"
+    ],
+    "values": { "wonder": "city.built.find(b => city.wonders.includes(b.building)).building" },
+    "importance": "55"
+  },
+  {
+    "id": "city-state-ally-defects",
+    "subject": "event",
+    "event": "SetAlly",
+    "when": [
+      "event.oldAllyPlayer.self",
+      "event.newAllyPlayer.is.rival",
+      "event.minorPlayer.distance <= nearby"
+    ],
+    "values": { "cityState": "event.minorPlayer.name", "rival": "event.newAllyPlayer.name" },
+    "importance": "65"
+  },
+  {
+    "id": "vassals-join-war",
+    "subject": "incident",
+    "when": [
+      "incident.kind == 'war'",
+      "incident.participants.some(p => p.reason == 'vassal')"
+    ],
+    "values": {
+      "vassals": "incident.participants.filter(p => p.reason == 'vassal').map(p => p.player.name).join(', ')",
+      "initiator": "incident.initiator.name",
+      "target": "incident.target.name"
+    },
+    "importance": "incident.role == 'none' ? 45 : 80",
+    "urgent": "incident.role == 'target'"
+  },
+  {
+    "id": "war-advantage-stalls",
+    "subject": "pair",
+    "window": "long",
+    "when": [
+      "pair.involvesSelf && pair.atWar",
+      "pair.history.some(s => s.warScore >= 25)",
+      "held(pair, s => Math.abs(s.warScore - pair.warScore) <= 5, short)"
+    ],
+    "values": { "opponent": "pair.other.name" },
+    "importance": "50",
+    "repeat": "medium"
+  }
+]

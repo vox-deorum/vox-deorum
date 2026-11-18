@@ -64,7 +64,7 @@ Source: "..\vox-agents\newspaper\constants.json"; DestDir: "{app}\vox-agents\new
 Source: "..\vox-agents\newspaper\defaults.json"; DestDir: "{app}\vox-agents\newspaper"; Flags: ignoreversion
 Source: "..\vox-agents\newspaper\pages.json"; DestDir: "{app}\vox-agents\newspaper"; Flags: ignoreversion
 Source: "..\vox-agents\newspaper\designs\*.json"; DestDir: "{app}\vox-agents\newspaper\designs"; Flags: ignoreversion
-Source: "..\vox-agents\newspaper\templates\*.json"; DestDir: "{app}\vox-agents\newspaper\templates"; Flags: ignoreversion skipifsourcedoesntexist
+Source: "..\vox-agents\newspaper\templates\*.json"; DestDir: "{app}\vox-agents\newspaper\templates"; Flags: ignoreversion
 Source: "..\vox-agents\newspaper\triggers\*.json"; DestDir: "{app}\vox-agents\newspaper\triggers"; Flags: ignoreversion
 
 ; Civ5 mod files
@@ -118,7 +118,6 @@ Type: files; Name: "{app}\vox-agents\newspaper\triggers\religion.json"
 Type: files; Name: "{app}\vox-agents\newspaper\triggers\science.json"
 Type: files; Name: "{app}\vox-agents\newspaper\triggers\trade.json"
 Type: files; Name: "{app}\vox-agents\newspaper\triggers\war.json"
-Type: files; Name: "{app}\vox-agents\newspaper\templates\cities.json"
 Type: files; Name: "{app}\vox-agents\newspaper\templates\culture.json"
 Type: files; Name: "{app}\vox-agents\newspaper\templates\diplomacy.json"
 Type: files; Name: "{app}\vox-agents\newspaper\templates\economy.json"

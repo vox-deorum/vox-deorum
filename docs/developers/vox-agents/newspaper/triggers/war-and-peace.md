@@ -1,6 +1,6 @@
 # War and peace coverage
 
-**Status: the inference and its incident and pair facts are implemented.** Every check updates pair memory and the inference audit, including a skipped check. The stock catalogue has no war or peace rules and no templates. Pair and incident facts work in ordinary overlay rules, and the two documented diplomacy examples run as overlays. [Plan 6](../../../../plans/newspaper/implementation/06-trigger-rules.md) lists the build order.
+**Status: the inference and its incident and pair facts are implemented.** Every check updates pair memory and the inference audit, including a skipped check. The stock catalogue includes the `vassals-join-war` incident rule and the `war-advantage-stalls` pair rule, each with a story template. Pair and incident facts also work in overlay rules. [Plan 6](../../../../plans/newspaper/implementation/06-trigger-rules.md) lists the build order.
 
 Wars and settlements reach the newspaper as two kinds of [facts](facts.md): an **incident**, one declaration or settlement with everyone it drew in, and a **pair**, the standing between two players over time. This page is for developers writing war and peace rules or extending the inference. Code infers the facts; the stories are ordinary [trigger rules](overview.md) with `subject: incident` or `subject: pair`.
 

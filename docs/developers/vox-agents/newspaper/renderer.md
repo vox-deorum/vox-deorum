@@ -31,7 +31,7 @@ Font assets resolve to their registered family with all bundled weights and styl
 
 A configured identity such as `oral-accounts` can therefore use the Victorian renderer with its own colors and typography. Reopening the issue uses its saved snapshot without consulting today's catalogue. Export bundles keep the fixed renderer family in `designId`; cache keys include the entire issue and its presentation snapshot.
 
-An issue uses the ornament stored in its presentation snapshot. Installation packages `constants.json`, `defaults.json`, `pages.json`, and the JSON files in `designs/` and `triggers/` under `vox-agents/newspaper/`. A design chooses how the issue looks; an authored template chooses what it says. The stock catalogue includes no templates, so it produces no stories until the Step 8 catalogue.
+An issue uses the ornament stored in its presentation snapshot. Installation packages `constants.json`, `defaults.json`, `pages.json`, and the JSON files in `designs/`, `triggers/`, and `templates/` under `vox-agents/newspaper/`. A design chooses how the issue looks; an authored template chooses what it says. The stock catalogue pairs every rule with a template, so a recording can produce stories without an overlay.
 
 Keep these related values separate:
 
@@ -109,7 +109,7 @@ Vite cleans `dist-newspaper` on every build, then `scripts/utilities/package-new
 
 Run focused checks with `npm test -w vox-agents -- tests/mock/newspaper`, then run `npm run build:all` and `npm run test:all` for integration. Browser-driven tests use installed browsers and the built reader. Converter checks require the acquired executable.
 
-Broader game acceptance needs generated issues with actual stories, variable article lengths, and real link targets. The stock catalogue has no templates, so generated stories await the Step 8 starting catalogue; Step 7 supplies the authoring format. [Plan 1](../../../plans/newspaper/implementation/01-renderer.md) retains the remaining checks for layout quality, votes, reader state, game UI interactions, and cache loss. Record the VP build, DLL revision, DX renderer, resolution, UI scaling, render profile, and DDS format when performing those checks, keeping observed appearance and interaction separate from delivery acknowledgements.
+Broader game acceptance needs generated issues with variable article lengths and real link targets. The stock catalogue now supplies stories from recorded play. [Plan 1](../../../plans/newspaper/implementation/01-renderer.md) retains the remaining checks for layout quality, votes, reader state, game UI interactions, and cache loss. Record the VP build, DLL revision, DX renderer, resolution, UI scaling, render profile, and DDS format when performing those checks, keeping observed appearance and interaction separate from delivery acknowledgements.
 
 ## Local measurements
 

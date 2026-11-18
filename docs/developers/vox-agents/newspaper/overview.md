@@ -5,19 +5,19 @@ The newspaper publishes stories from a Civilization V recording. An authored tem
 | Page | Status | Scope |
 | --- | --- | --- |
 | [Renderer](renderer.md) | Demo accepted in game; broader acceptance pending | Stored presentation snapshots, browser rendering, DDS export, and game viewer |
-| [Replay](replay.md) | Rule evaluation, expressions and audits implemented; stock catalogue publishes nothing until Step 8 | Recording evidence, separate output storage, rule audits, issue reading, votes, preferences, and resume |
-| [Editorial](editorial.md) | Step 7 expressions implemented; stock catalogue has two rules and no templates | Rules, configuration, authored choices, selection, feedback, stored presentation, and audits |
+| [Replay](replay.md) | Rule evaluation, expressions and audits implemented; the stock catalogue publishes stories from recorded play | Recording evidence, separate output storage, rule audits, issue reading, votes, preferences, and resume |
+| [Editorial](editorial.md) | Steps 7 and 8 implemented; the stock catalogue has fourteen rules with matching templates | Rules, configuration, authored choices, selection, feedback, stored presentation, and audits |
 | [Evaluation](evaluation.md) | Planned | Offline experiments comparing editorial approaches |
 | [Live integration](live-integration.md) | Planned | Live scheduling, MCP archive, save checkpoint IDs, and player integration |
 
-JavaScript expressions in QuickJS decide which developments make news and which accounts are eligible to print. The stock rules are `settler-departure` and `neighbor-puppet-annexed`; use a [template overlay](triggers/examples.md#a-city-shrinks-after-sending-settlers) to publish one now. The stock catalogue records rule audits until step 8 adds the starting stories. See the [handoff and recorded examples](../../../plans/newspaper/implementation/06-trigger-rules.md).
+JavaScript expressions in QuickJS decide which developments make news and which accounts are eligible to print. The stock catalogue covers city, nation, and foreign affairs, with a story template for each rule. An overlay can tune a rule or add new coverage. See the [handoff and recorded examples](../../../plans/newspaper/implementation/06-trigger-rules.md).
 
 | Trigger page | Status | Scope |
 | --- | --- | --- |
 | [Trigger overview](triggers/overview.md) | Rules and authored expressions implemented | Trigger entries, evaluation, importance, repeats, grouping, and the workflow for adding coverage |
 | [Facts](triggers/facts.md) | City, player, event, pair and incident facts implemented | Cities, players, events, pairs and incidents; reading the past; hidden facts |
 | [Constants and shortcuts](triggers/constants.md) | Implemented | Distance measurement, named distances, spans, sizes, type lists and shortcuts |
-| [Examples](triggers/examples.md) | Two shipped rules; pair and incident examples run as overlays; settler template overlay | Worked triggers and a publishable template example |
+| [Examples](triggers/examples.md) | Stock rules and templates ship; examples also show overlay rules | Worked triggers and publishable templates |
 | [War and peace](triggers/war-and-peace.md) | Inference and rule facts implemented | Declaration cascades, obligations, city-state involvement, score progress and settlements as facts |
 
 The [implementation roadmap](../../../plans/newspaper/implementation.md) describes the stages and their dependencies. Detailed requirements remain in each [implementation plan](../../../plans/newspaper/implementation/).
@@ -36,7 +36,7 @@ Vox Agents owns editing, replay orchestration, publications, and presentation un
 | `renderer/` | Browser-safe assets, layout, stored presentation resolution, shared reader state, and bridge interfaces |
 | `export/` | Browser capture, cache delivery, export queue, and host routes |
 
-The normal VD server injects replay handlers before the newspaper fallbacks and drains replay and export work during shutdown. The JSON catalogue under `vox-agents/newspaper/` supplies runtime editorial settings and authored choices. Installation includes `constants.json`, `defaults.json`, `pages.json`, and the JSON files in `designs/` and `triggers/`. Templates are optional, and the stock catalogue includes none until Step 8.
+The normal VD server injects replay handlers before the newspaper fallbacks and drains replay and export work during shutdown. The JSON catalogue under `vox-agents/newspaper/` supplies runtime editorial settings and authored choices. Installation includes `constants.json`, `defaults.json`, `pages.json`, and the JSON files in `designs/`, `triggers/`, and `templates/`. An overlay's templates are optional.
 
 The plain DOM reader lives in `vox-agents/newspaper/src/reader/`. Its application shell in `vox-agents/newspaper/src/app/` coordinates fixtures, replay controls, stored issues, votes, and evidence/source inspection. Evidence inspection also works without a generated issue. The export entry point remains `src/export-bridge.ts`. The game viewer and data helpers live in `civ5-mod/UI/Newspaper/`.
 

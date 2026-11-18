@@ -28,5 +28,48 @@
       "lost": "city.before.population - city.population"
     },
     "importance": "30 + 10 * lost"
+  },
+  {
+    "id": "forward-settle",
+    "subject": "event",
+    "event": "PlayerCityFounded",
+    "when": [
+      "event.player.is.rival",
+      "event.distance.own <= adjacent"
+    ],
+    "values": {
+      "ours": "event.knows('city') && event.city.knows('nearestOwn') && event.city.nearestOwn.knows('name') ? event.city.nearestOwn.name : null",
+      "distance": "event.distance.own"
+    },
+    "importance": "90 - 10 * distance",
+    "urgent": "distance <= 2"
+  },
+  {
+    "id": "besieged-and-starving",
+    "subject": "city",
+    "when": [
+      "city.own",
+      "city.is.besieged",
+      "city.is.starving"
+    ],
+    "values": {
+      "damage": "(city.maxHitPoints - city.hitPoints) / city.maxHitPoints"
+    },
+    "importance": "60 + 40 * damage",
+    "urgent": "damage >= 0.5"
+  },
+  {
+    "id": "neighbors-convert",
+    "subject": "city",
+    "window": "recent",
+    "when": [
+      "city.is.neighbor",
+      "city.majorityReligion && changed(city, 'majorityReligion')"
+    ],
+    "group": {
+      "by": "city.majorityReligion",
+      "min": 3
+    },
+    "importance": "40 + 10 * count"
   }
 ]
