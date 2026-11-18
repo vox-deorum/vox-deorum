@@ -8,9 +8,10 @@ import {
 } from '../../contracts/issue.js';
 import type { PublicationState } from '../../contracts/publication.js';
 import type { EditorialConfig, EditorialDesign, AuthoredVariant } from '../config/schema.js';
-import { evaluateCondition, type ConditionContext } from '../shared/conditions.js';
-import { chooseWeighted, selectionWeight } from '../shared/weights.js';
+import { chooseWeighted } from '../shared/weights.js';
+import { uniqueSources } from '../shared/sources.js';
 import { placeholderPattern, substitute, resolveLinkTarget, type EditorialCandidate } from '../selection/templates.js';
+import type { PresentationWeights } from './eligibility.js';
 
 /** Render authored placeholders into text nodes and explicitly declared typed links. */
 export function renderAuthoredText(
@@ -44,23 +45,16 @@ export function renderAuthoredText(
 /** Choose a design with eligible positive layouts and retain the earlier identity while competitive. */
 export function chooseDesign(
   config: EditorialConfig,
-  context: ConditionContext,
+  weights: PresentationWeights,
   previousId: string | null,
   random: () => number
 ): EditorialDesign | undefined {
-  const eligible = config.designs.filter(
-    (design) =>
-      evaluateCondition(design.condition, context) === true &&
-      selectionWeight(design.weight, context) > 0
-  );
+  const eligible = config.designs.filter((design) => (weights.get(design) ?? 0) > 0);
   for (const design of eligible) {
     for (const variant of ['ordinary', 'breaking'])
       if (
         !design.layouts.some(
-          (layout) =>
-            layout.variant === variant &&
-            evaluateCondition(layout.condition, context) === true &&
-            selectionWeight(layout.weight, context) > 0
+          (layout) => layout.variant === variant && (weights.get(layout) ?? 0) > 0
         )
       ) {
         throw new Error(`Eligible design ${design.id} has no available ${variant} layout.`);
@@ -68,15 +62,15 @@ export function chooseDesign(
   }
   const strongest = Math.max(
     0,
-    ...eligible.map((design) => selectionWeight(design.weight, context))
+    ...eligible.map((design) => weights.get(design)!)
   );
   const previous = eligible.find((design) => design.id === previousId);
   if (
     previous &&
-    selectionWeight(previous.weight, context) >= strongest * config.defaults.designStickiness
+    weights.get(previous)! >= strongest * config.defaults.designStickiness
   )
     return previous;
-  return chooseWeighted(eligible, (design) => selectionWeight(design.weight, context), random);
+  return chooseWeighted(eligible, (design) => weights.get(design)!, random);
 }
 
 export interface PresentationResult {
@@ -96,27 +90,29 @@ export function presentIssue(input: {
   selected: EditorialCandidate[];
   state: PublicationState;
   config: EditorialConfig;
-  context: ConditionContext;
+  weights: PresentationWeights;
   proseRandom: () => number;
   presentationRandom: () => number;
 }): PresentationResult | undefined {
-  const { config, context, state } = input;
-  const design = chooseDesign(config, context, state.previousDesignId, input.presentationRandom);
+  const { config, weights, state } = input;
+  const design = chooseDesign(config, weights, state.previousDesignId, input.presentationRandom);
   if (!design || !input.selected.length) return undefined;
   const variants: Record<string, string> = {};
   const itemCandidates = new Map<string, EditorialCandidate>();
   const items: IssueItem[] = [];
   for (const [index, candidate] of input.selected.entries()) {
-    const candidateContext = { ...context, values: { ...context.values, ...candidate.values } };
     const variant = chooseWeighted(
       candidate.variants,
-      (choice) => selectionWeight(choice.weight, candidateContext),
+      (choice) => candidate.variantWeights[choice.id] ?? 0,
       input.proseRandom
     );
     if (!variant) continue;
     const id = `${input.issueId}/item/${index + 1}`;
     variants[id] = variant.id;
-    itemCandidates.set(id, candidate);
+    itemCandidates.set(id, {
+      ...candidate,
+      sources: uniqueSources([...candidate.sources, ...(candidate.variantSources[variant.id] ?? [])]),
+    });
     const prior = candidate.seriesKeys
       .map((key) => state.series[key])
       .filter((value) => value !== undefined)
@@ -132,7 +128,7 @@ export function presentIssue(input: {
       body: variant.body.map((paragraph) =>
         renderAuthoredText(paragraph, candidate.values, variant)
       ),
-      sourceNote: [{ type: 'text', text: 'Recorded game evidence' }],
+      sourceNote: [{ type: 'text', text: `From the editors of ${design.title}` }],
       ...(earlier
         ? {
             earlierReport: {
@@ -150,7 +146,7 @@ export function presentIssue(input: {
   const layouts: Record<string, string> = {};
   // Front pages sort first so later sections can skip items already displayed there.
   const pageDefinitions = config.pages
-    .filter((page) => evaluateCondition(page.condition, context) === true)
+    .filter((page) => (weights.get(page) ?? 0) > 0)
     .sort(
       (a, b) => Number(b.front) - Number(a.front) || a.order - b.order || a.id.localeCompare(b.id)
     );
@@ -173,13 +169,11 @@ export function presentIssue(input: {
     if (!page.front && members.every((item) => frontItemIds.has(item.id))) continue;
     const urgent = page.front && members.some((item) => itemCandidates.get(item.id)?.urgent);
     const choices = design.layouts.filter(
-      (layout) =>
-        evaluateCondition(layout.condition, context) === true &&
-        (urgent ? layout.variant === 'breaking' : layout.variant !== 'breaking')
+      (layout) => urgent ? layout.variant === 'breaking' : layout.variant !== 'breaking'
     );
     const layout = chooseWeighted(
       choices,
-      (choice) => selectionWeight(choice.weight, context),
+      (choice) => weights.get(choice) ?? 0,
       input.presentationRandom
     );
     if (!layout) throw new Error(`No eligible layout for page ${page.id}.`);

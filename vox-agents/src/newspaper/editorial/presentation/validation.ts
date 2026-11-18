@@ -1,26 +1,29 @@
 /** Shared deterministic validation for any future editor and its authored fallback. */
 import type { IssueDocument } from '../../contracts/issue.js';
 import { parseIssueDocument } from '../../renderer/validation.js';
-import { evaluateCondition, type ConditionContext } from '../shared/conditions.js';
 import type { EditorialConfig } from '../config/schema.js';
-import type { EditorialCandidate } from '../selection/templates.js';
+import type { PresentationWeights } from './eligibility.js';
+import type { PresentationResult } from './issue.js';
 
 /** Enforce canonical series, threat prominence, evidence dates and configured page minimums. */
 export function validateEditorialIssue(
-  issue: IssueDocument,
-  candidates: Map<string, EditorialCandidate>,
+  { issue, itemCandidates: candidates, layouts, variants }: PresentationResult,
   config: EditorialConfig,
-  context: ConditionContext
+  weights: PresentationWeights,
 ): IssueDocument {
   const parsed = parseIssueDocument(issue);
   const frontDefinition = config.pages.find((page) => page.front)!;
   const front = parsed.pages[0];
   if (front?.id !== frontDefinition.id)
     throw new Error('The front page must be first and eligible.');
+  const design = config.designs.find((entry) => entry.id === parsed.publication.designId);
+  if (!design || (weights.get(design) ?? 0) <= 0)
+    throw new Error('Unknown or ineligible design.');
   const seenSeries = new Set<string>();
   for (const item of parsed.items) {
     const candidate = candidates.get(item.id);
-    if (!candidate || !candidate.variants.length)
+    if (!candidate || !candidate.variants.some((variant) =>
+      variant.id === variants[item.id] && (candidate.variantWeights[variant.id] ?? 0) > 0))
       throw new Error('Every article requires an eligible authored candidate.');
     if (candidate.sources.some((source) => source.turn > parsed.cutoff.turn))
       throw new Error('Article evidence exceeds the cutoff.');
@@ -42,8 +45,13 @@ export function validateEditorialIssue(
     throw new Error('The front page must mix available subjects.');
   for (const page of parsed.pages) {
     const definition = config.pages.find((entry) => entry.id === page.id);
-    if (!definition || evaluateCondition(definition.condition, context) !== true)
+    if (!definition || (weights.get(definition) ?? 0) <= 0)
       throw new Error('Unknown or ineligible page.');
+    const layout = design.layouts.find((entry) => entry.id === layouts[page.id]);
+    const isBreaking = definition.front && page.itemIds.some((id) => candidates.get(id)?.urgent);
+    if (!layout || layout.variant !== page.layout || (weights.get(layout) ?? 0) <= 0 ||
+        (layout.variant === 'breaking') !== isBreaking)
+      throw new Error('Unknown or ineligible layout.');
     if (!definition.front && page.itemIds.length < definition.minimum)
       throw new Error('Section content is below its minimum.');
     if (

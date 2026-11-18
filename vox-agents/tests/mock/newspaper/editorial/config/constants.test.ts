@@ -73,6 +73,7 @@ describe('editorial constants and shortcuts', () => {
     for (const constants of [
       { distances: { 'too-far': 10 } },
       { distances: { turn: 10 } },
+      ...['values', 'triggerValues', 'group', 'subject', 'period', '$kind'].map(name => ({ sizes: { [name]: 1 } })),
       { sizes: { neighboring: 10 } },
       { spans: { recent: 0 } },
       { shares: { dominant: 1.1 } },

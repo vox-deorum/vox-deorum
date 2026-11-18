@@ -53,7 +53,6 @@ function decisionRecord() {
     editor: 'heuristic',
     status: 'published',
     candidateScores: [],
-    merges: [],
     selectedVariants: {},
     designId: 'modern',
     layouts: { front: 'ordinary' },

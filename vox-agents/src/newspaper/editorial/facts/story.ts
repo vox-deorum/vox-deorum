@@ -1,0 +1,73 @@
+/** Project names and IDs for authored prose from the same subjects expressions can read. */
+import type { NewspaperFactModel } from './index.js';
+import { fact, reference, type FactField, type FactKind, type FactObject, type FactReference } from './model.js';
+
+const kinds = ['city', 'player', 'event', 'incident', 'pair'] as const;
+
+interface StorySubject {
+  key: string;
+  kind: FactKind | 'world' | 'group';
+  fields?: FactObject;
+  ref?: FactReference;
+}
+
+/** Find visible subjects without interpreting an authored or recorded label as an ID. */
+export function storySubject(key: string, facts?: NewspaperFactModel): StorySubject {
+  const slash = key.indexOf('/');
+  const rawKind = key.slice(0, slash);
+  const kind = kinds.find((entry) => entry === rawKind);
+  if (!kind) return { key, kind: key === 'world' ? 'world' : 'group' };
+  if (!facts) return { key, kind };
+  const rawId = key.slice(slash + 1);
+  const id = kind === 'city' || kind === 'player' || kind === 'event' ? Number(rawId) : rawId;
+  if (String(id) !== rawId || !(facts.subjects[kind] as readonly (number | string)[]).includes(id))
+    return { key, kind };
+  const ref = reference(kind, id);
+  return { key, kind, ref, fields: storyFields(ref, facts) };
+}
+
+/** Follow a permitted reference at its explicit date or the cutoff. */
+function storyFields(ref: FactReference, facts: NewspaperFactModel): FactObject | undefined {
+  if (ref.kind === 'event') return facts.events.find(({ id }) => id === ref.id)?.fields;
+  if (ref.kind === 'incident') return facts.incidents.find(({ id }) => id === ref.id)?.fields;
+  const subject = ref.kind === 'city' ? facts.cities[Number(ref.id)] :
+    ref.kind === 'player' ? facts.players[Number(ref.id)] : facts.pairs[ref.id];
+  const turn = ref.turn;
+  if (turn === undefined) return subject?.current;
+  for (let index = (subject?.history.length ?? 0) - 1; index >= 0; index--) {
+    const entry = subject!.history[index];
+    if (entry.turn <= turn) return entry.fields;
+  }
+  return undefined;
+}
+
+/** Copy only a readable name or ID into prose metadata, retaining the sources behind a link. */
+function readIdentity(fields: FactObject | undefined, key: 'name' | 'id', link?: FactField): FactField | undefined {
+  const field = fields?.[key];
+  if (typeof field?.value !== 'number' && typeof field?.value !== 'string') return undefined;
+  return fact(field.value, [...(link?.sources ?? []), ...(field.sources ?? [])]);
+}
+
+/** Add subject namespaces and convenient name/ID aliases, leaving unavailable facts absent. */
+export function storyIdentity(subject: StorySubject, facts?: NewspaperFactModel): Record<string, FactField> {
+  const fields: Record<string, FactField> = Object.create(null);
+  for (const key of ['name', 'id'] as const) {
+    const field = readIdentity(subject.fields, key);
+    if (!field) continue;
+    fields['subject.' + key] = fields[subject.kind + '.' + key] = field;
+    fields[key === 'name' ? subject.kind : subject.kind + 'Id'] = field;
+  }
+  if (!facts) return fields;
+  for (const [name, link] of Object.entries(subject.fields ?? {})) {
+    const ref = link.value;
+    if (typeof ref !== 'object' || ref === null || !('$kind' in ref) || ref.$kind !== 'reference') continue;
+    const target = storyFields(ref as FactReference, facts);
+    for (const key of ['name', 'id'] as const) {
+      const field = readIdentity(target, key, link);
+      if (!field) continue;
+      fields[subject.kind + '.' + name + '.' + key] = field;
+      fields[key === 'name' ? name : name + 'Id'] = field;
+    }
+  }
+  return fields;
+}

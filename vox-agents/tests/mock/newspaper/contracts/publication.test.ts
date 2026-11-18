@@ -5,7 +5,7 @@ import { createInitialPublicationState, publicationStateSchema } from '../../../
 describe('publication memory', () => {
   it('should create current memory without accumulating audit decisions', () => {
     const state = createInitialPublicationState();
-    expect(state.schemaVersion).toBe(5);
+    expect(state.schemaVersion).toBe(6);
     expect(state).not.toHaveProperty('decisions');
     expect(publicationStateSchema.parse(state)).toEqual(state);
   });
@@ -19,7 +19,7 @@ describe('publication memory', () => {
     expect(publicationStateSchema.parse(state)).toEqual(state);
   });
 
-  it.each([1, 2, 3, 4, 99])('should reject unsupported memory version %s', schemaVersion => {
+  it.each([1, 2, 3, 4, 5, 99])('should reject unsupported memory version %s', schemaVersion => {
     expect(publicationStateSchema.safeParse({ ...createInitialPublicationState(), schemaVersion }).success).toBe(false);
   });
 });

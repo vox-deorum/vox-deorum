@@ -6,7 +6,7 @@ Configurable designs use Victorian and modern renderer families, section tabs, a
 
 ## Supply a completed issue
 
-The Zod schemas in `src/newspaper/contracts/issue.ts` are the source of the issue contract, and the TypeScript types are inferred from them. An `IssueDocument` holds ready articles in their publication order. The renderer builds the reading surface from the stored content and presentation.
+The Zod schemas in `src/newspaper/contracts/issue.ts` are the source of the issue contract, and the TypeScript types are inferred from them. An `IssueDocument` holds ready articles in their publication order. The renderer builds the reading surface from the stored content and presentation. Authored templates produce those articles; their `triggers`, optional `when` expressions and `{ base, adjustments }` weights are described in [editorial decisions](editorial.md#authoring-choices).
 
 | Field | Content |
 | --- | --- |
@@ -29,9 +29,9 @@ Issues use schema 2 and require `publication.presentation`, defined in `contract
 
 Font assets resolve to their registered family with all bundled weights and styles. Bold and italic text retain their corresponding faces, and missing files use the family's fallback stack while the reader becomes ready. Disposing the reader removes its font faces. The same saved colors, fonts and ornament apply in browser reading and export.
 
-A configured identity such as `early-account` can therefore use the Victorian renderer with its own colors and typography. Reopening the issue uses its saved snapshot without consulting today's catalogue. Export bundles keep the fixed renderer family in `designId`; cache keys include the entire issue and its presentation snapshot.
+A configured identity such as `oral-accounts` can therefore use the Victorian renderer with its own colors and typography. Reopening the issue uses its saved snapshot without consulting today's catalogue. Export bundles keep the fixed renderer family in `designId`; cache keys include the entire issue and its presentation snapshot.
 
-An issue uses the ornament stored in its presentation snapshot. Installation packages `constants.json`, `defaults.json`, `pages.json`, and the JSON files in `designs/` and `triggers/` under `vox-agents/newspaper/`. The stock catalogue includes no templates.
+An issue uses the ornament stored in its presentation snapshot. Installation packages `constants.json`, `defaults.json`, `pages.json`, and the JSON files in `designs/` and `triggers/` under `vox-agents/newspaper/`. A design chooses how the issue looks; an authored template chooses what it says. The stock catalogue includes no templates, so it produces no stories until the Step 8 catalogue.
 
 Keep these related values separate:
 
@@ -109,7 +109,7 @@ Vite cleans `dist-newspaper` on every build, then `scripts/utilities/package-new
 
 Run focused checks with `npm test -w vox-agents -- tests/mock/newspaper`, then run `npm run build:all` and `npm run test:all` for integration. Browser-driven tests use installed browsers and the built reader. Converter checks require the acquired executable.
 
-Broader game acceptance needs generated issues with actual stories, variable article lengths, and real link targets. The stock catalogue has no templates, so generated stories await stage 7 template expressions and stage 8 fresh in-game stories. [Plan 1](../../../plans/newspaper/implementation/01-renderer.md) retains the remaining checks for layout quality, votes, reader state, game UI interactions, and cache loss. Record the VP build, DLL revision, DX renderer, resolution, UI scaling, render profile, and DDS format when performing those checks, keeping observed appearance and interaction separate from delivery acknowledgements.
+Broader game acceptance needs generated issues with actual stories, variable article lengths, and real link targets. The stock catalogue has no templates, so generated stories await the Step 8 starting catalogue; Step 7 supplies the authoring format. [Plan 1](../../../plans/newspaper/implementation/01-renderer.md) retains the remaining checks for layout quality, votes, reader state, game UI interactions, and cache loss. Record the VP build, DLL revision, DX renderer, resolution, UI scaling, render profile, and DDS format when performing those checks, keeping observed appearance and interaction separate from delivery acknowledgements.
 
 ## Local measurements
 

@@ -1,9 +1,9 @@
 /** Behavioral checks for authored issues, selection, and feedback. */
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { NewspaperEvidence, NewspaperSnapshot } from '../../../../../mcp-server/dist/newspaper/evidence.js';
-import { createInitialPublicationState, publicationStateSchema, type PublishedItemRecord } from '../../../../src/newspaper/contracts/publication.js';
+import { createInitialPublicationState, editorialDecisionRecordSchema, publicationStateSchema, type PublishedItemRecord } from '../../../../src/newspaper/contracts/publication.js';
 import type { RuleDevelopment } from '../../../../src/newspaper/contracts/triggers.js';
-import { loadEditorialConfig } from '../../../../src/newspaper/editorial/config/load.js';
+import { getEditorialExpressions, loadEditorialConfig } from '../../../../src/newspaper/editorial/config/load.js';
 import { editorialConfigSchema, type EditorialConfig } from '../../../../src/newspaper/editorial/config/schema.js';
 import { buildNewspaperFacts } from '../../../../src/newspaper/editorial/facts/index.js';
 import { matchTemplates } from '../../../../src/newspaper/editorial/selection/templates.js';
@@ -12,7 +12,7 @@ import { decaySeries } from '../../../../src/newspaper/editorial/selection/serie
 import { selectHeuristic } from '../../../../src/newspaper/editorial/selection/heuristic.js';
 import { runEditorialCheck } from '../../../../src/newspaper/editorial/check.js';
 import { chooseDesign } from '../../../../src/newspaper/editorial/presentation/issue.js';
-import { selectionWeight } from '../../../../src/newspaper/editorial/shared/weights.js';
+import { evaluatePresentation } from '../../../../src/newspaper/editorial/presentation/eligibility.js';
 
 let config: EditorialConfig;
 
@@ -60,37 +60,102 @@ describe('editorial engine', () => {
         { id: 'balance', subject: 'player', when: ['player.self', 'player.gold > 10'], values: { amount: 'player.gold - 10' }, importance: 65 },
       ],
       templates: [
-        { id: 'ledger', triggerIds: ['ledger'], tags: ['economy'], weight: { base: 1 }, variants: [{ id: 'ledger', headline: 'Treasury: {{$balance}}', body: ['The account stood at {{$balance}} gold.'], weight: { base: 1 } }] },
-        { id: 'culture', triggerIds: ['culture'], tags: ['culture'], short: true, weight: { base: 1 }, variants: [{ id: 'culture', headline: 'New work', body: ['Cultural output reached {{amount}}.'], weight: { base: 1 } }] },
+        { id: 'ledger', triggers: ['ledger'], tags: ['economy'], weight: { base: 1 }, variants: [{ id: 'ledger', headline: 'Treasury: {{$balance}}', body: ['The account stood at {{$balance}} gold.'], weight: { base: 1 } }] },
+        { id: 'culture', triggers: ['culture'], tags: ['culture'], short: true, weight: { base: 1 }, variants: [{ id: 'culture', headline: 'New work', body: ['Cultural output reached {{amount}}.'], weight: { base: 1 } }] },
       ],
     });
   });
 
   describe('authored selection and history', () => {
-    it('should only compose compatible angles and combine their evidence', () => {
-      const revised = editorialConfigSchema.parse({ ...config, templates: [...config.templates,
-        { ...config.templates[0], id: 'balance', triggerIds: ['balance'] },
-        { ...config.templates[0], id: 'combined', triggerIds: ['ledger', 'balance'], compositeOf: ['ledger', 'balance'] },
-      ] });
-      const ledger = development('ledger', 'player/0', 75);
-      const balance = { ...development('balance', 'player/0', 60), sources: [snapshot(0, 5, {}).source] };
-      const result = matchTemplates([ledger, balance], revised, { values: {} });
-      expect(result.find(candidate => candidate.templateIds.includes('combined'))).toMatchObject({
-        importance: 75, contributingIds: expect.arrayContaining([expect.stringContaining(ledger.id), expect.stringContaining(balance.id)]),
-        sources: expect.arrayContaining([...ledger.sources, ...balance.sources]),
+    it('should archive runtime choice errors without printing failed stories or disrupting other coverage', async () => {
+      const revised = editorialConfigSchema.parse({
+        ...config,
+        templates: [
+          { ...config.templates[0], when: '(() => { throw new Error("template failure"); })()' },
+          { ...config.templates[0], id: 'failed-variant', variants: [
+            { ...config.templates[0].variants[0], when: '(() => { throw new Error("variant failure"); })()' },
+          ] },
+          config.templates[1],
+        ],
       });
-      expect(matchTemplates([ledger, { ...balance, subject: 'player/1' }], revised, { values: {} })
-        .some(candidate => candidate.templateIds.includes('combined'))).toBe(false);
+      const result = await check(fixture(), createInitialPublicationState(), revised);
+      expect(result.status).toBe('published');
+      if (result.status !== 'published') throw new Error('Expected unrelated coverage to publish.');
+      expect(result.state.issues[0].items.map(item => item.templateIds)).toEqual([['culture']]);
+      const expectedErrors = [
+        { choice: 'template ledger', field: 'when', message: 'template failure' },
+        { choice: 'template failed-variant / variant ledger', field: 'when', message: 'variant failure' },
+      ];
+      expect(editorialDecisionRecordSchema.parse(result.decision).choiceErrors).toEqual(expectedErrors);
+      const publicIssue = JSON.stringify(result.issue);
+      expect(publicIssue).not.toContain('template failure');
+      expect(publicIssue).not.toContain('variant failure');
+
+      const noStories = await check(fixture(), createInitialPublicationState(), { ...revised, templates: revised.templates.slice(0, 2) });
+      expect(noStories.status).toBe('skipped');
+      expect(noStories.decision.choiceErrors).toEqual(expectedErrors);
     });
 
-    it('should exclude unauthored and LLM-only templates and reserve space for an independent short item', () => {
+    it('should print a settler departure only when an authored variant is eligible', async () => {
+      const stock = await loadEditorialConfig();
+      const revised = editorialConfigSchema.parse({
+        ...stock,
+        templates: [{
+          id: 'pioneer-departure', triggers: ['settler-departure'], tags: ['home'],
+          when: 'city.id === 10 && values.lost === 2 && period.to === 10',
+          weight: { base: 1 },
+          variants: [
+            { id: 'unavailable', when: 'false', weight: { base: 10000 },
+              headline: '{{city.name}} welcomes new residents', body: ['Several families have arrived.'] },
+            { id: 'departure', when: 'lost > 0', weight: { base: 1 },
+              headline: 'Pioneers depart {{city.name}}', body: ['The settlement counts {{lost}} fewer residents.'] },
+          ],
+        }],
+      });
+      const evidence = fixture();
+      const past = {
+        subjectID: 10, values: { Name: 'Tours', OwnerID: 0, X: 10, Y: 0, Population: 8 },
+        source: { table: 'CityInformations' as const, id: 101, turn: 5, createdAt: 5002 },
+      };
+      const city = {
+        ...past, values: { ...past.values, Population: 6, FoodPerTurn: 2 },
+        source: { ...past.source, id: 102, turn: 10, createdAt: 10002 },
+      };
+      const training = {
+        type: 'CityTrained', values: { PlayerID: 0, CityID: 10, CityX: 10, CityY: 0, Unit: 'Pioneer' },
+        source: { table: 'GameEvents' as const, id: 103, turn: 7, createdAt: 7008 },
+      };
+      evidence.cities.push(city);
+      evidence.comparisons.cities.push(past);
+      evidence.events.push(training);
+      evidence.request.historyFromTurn = -1;
+      evidence.history = {
+        fromTurn: -1, baseline: { cities: [], players: [] },
+        snapshots: { cities: [past, city], players: evidence.players }, events: [training], gaps: [],
+      };
+      const empty = await check(evidence, createInitialPublicationState(), stock);
+      expect(empty.status).toBe('skipped');
+      expect(empty.decision.triggerAudit.find(rule => rule.rule === 'settler-departure')?.subjects)
+        .toContainEqual(expect.objectContaining({ subject: 'city/10', outcome: 'fired' }));
+
+      const result = await check(evidence, createInitialPublicationState(), revised);
+      expect(result.status).toBe('published');
+      if (result.status !== 'published') return;
+      const [article] = result.issue.items;
+      expect(result.decision.selectedVariants).toEqual({ [article.id]: 'departure' });
+      expect(article.headline).toContainEqual({ type: 'text', text: 'Tours' });
+      expect(article.body[0]).toContainEqual({ type: 'text', text: '2' });
+      expect(result.decision.evidence).toEqual(expect.arrayContaining([past.source, city.source, training.source]));
+    });
+
+    it('should exclude unauthored and LLM-only templates and reserve space for an independent short item', async () => {
       const revised = editorialConfigSchema.parse({ ...config, defaults: { ...config.defaults, maxItems: 2 }, templates: [
         ...config.templates, { ...config.templates[0], id: 'model', mode: 'llmOnly' }, { ...config.templates[0], id: 'missing', variants: [] },
-        { ...config.templates[0], id: 'balance', triggerIds: ['balance'] },
+        { ...config.templates[0], id: 'balance', triggers: ['balance'] },
       ] });
-      const candidates = matchTemplates([
+      const candidates = await matchTemplates([
         development('ledger', 'player/0', 90), development('balance', 'player/0', 80), development('culture', 'player/1', 10),
-      ], revised, { values: {} });
+      ], revised, await getEditorialExpressions(revised), { facts: buildNewspaperFacts(fixture()) });
       expect(candidates.map(candidate => candidate.templateIds[0])).toEqual(['ledger', 'culture', 'balance']);
       const state = createInitialPublicationState();
       expect(selectHeuristic(candidates, state, revised, computeFeedback(state, revised)).selected.map(candidate => candidate.templateIds[0]))
@@ -119,7 +184,7 @@ describe('editorial engine', () => {
 
     it('should publish independent rules about the same subject as separate series', async () => {
       const revised = editorialConfigSchema.parse({ ...config, templates: [...config.templates,
-        { ...config.templates[0], id: 'balance', triggerIds: ['balance'],
+        { ...config.templates[0], id: 'balance', triggers: ['balance'],
           variants: [{ id: 'surplus', headline: 'Surplus', body: ['{{amount}} remained.'], weight: { base: 1 } }] },
       ] });
       const result = await check(fixture(), createInitialPublicationState(), revised);
@@ -134,7 +199,7 @@ describe('editorial engine', () => {
         ...config, defaults: { ...config.defaults, frontPageItems: 2 },
         pages: [...config.pages, { id: 'ledger-and-culture', label: 'Local news', order: 10,
           minimum: 2, tags: ['economy', 'culture'] }],
-        templates: [...config.templates, { ...config.templates[0], id: 'balance', triggerIds: ['balance'],
+        templates: [...config.templates, { ...config.templates[0], id: 'balance', triggers: ['balance'],
           variants: [{ id: 'surplus', headline: 'Surplus', body: ['{{amount}} remained.'], weight: { base: 1 } }] }],
       });
       const result = await check(fixture(), createInitialPublicationState(), revised);
@@ -218,6 +283,67 @@ describe('editorial engine', () => {
       expect(future.status === 'published' && future.issue.publication.designId).toBe('modern');
     });
 
+    it('should save a skipped check when no design is eligible', async () => {
+      const revised = editorialConfigSchema.parse({
+        ...config,
+        designs: config.designs.map(design => ({ ...design, when: 'false' })),
+      });
+      const result = await check(fixture(), createInitialPublicationState(), revised);
+      expect(result.status).toBe('skipped');
+      expect(result.state.lastCheckTurn).toBe(10);
+      expect(result.state.issues).toHaveLength(0);
+      expect(result.decision.designId).toBeNull();
+      expect(result.decision).not.toHaveProperty('choiceErrors');
+      expect(result.decision.triggerAudit.some(rule => rule.subjects.some(subject => subject.outcome === 'fired')))
+        .toBe(true);
+    });
+
+    it('should save a design runtime error when it causes publication to skip', async () => {
+      const [design] = config.designs;
+      const revised = editorialConfigSchema.parse({
+        ...config,
+        designs: [{ ...design, when: '(() => { throw new Error("design failure"); })()' }],
+      });
+      const result = await check(fixture(), createInitialPublicationState(), revised);
+      expect(result.status).toBe('skipped');
+      expect(result.decision.choiceErrors).toEqual([
+        { choice: `design ${design.id}`, field: 'when', message: 'design failure' },
+      ]);
+    });
+
+    it('should explain when exhausting the shared rule budget prevented presentation choices', async () => {
+      const runawayRules = Array.from({ length: 8 }, (_, index) => ({
+        id: `runaway-${index}`, subject: 'world' as const, when: '(() => { while (true) {} })()',
+      }));
+      const oneRunaway = editorialConfigSchema.parse({ ...config, triggers: [...config.triggers, runawayRules[0]] });
+      const complete = await check(fixture(), createInitialPublicationState(), oneRunaway);
+      expect(complete.status).toBe('published');
+      expect(complete.decision).not.toHaveProperty('choiceErrors');
+
+      const exhausted = editorialConfigSchema.parse({ ...config, triggers: [...config.triggers, ...runawayRules] });
+      const result = await check(fixture(), createInitialPublicationState(), exhausted);
+      expect(result.status).toBe('skipped');
+      expect(result.decision.triggerAudit.find(rule => rule.rule === 'ledger')?.subjects)
+        .toContainEqual(expect.objectContaining({ outcome: 'fired' }));
+      expect(result.decision.reason).toMatch(/choices could not run.*interruption limit/);
+      expect(result.decision.choiceErrors).toEqual([
+        { choice: 'editorial choices', field: 'evaluation', message: expect.stringContaining('interruption limit') },
+      ]);
+
+      const fallback = editorialConfigSchema.parse({
+        ...exhausted,
+        designs: [...exhausted.designs, {
+          ...exhausted.designs[0], id: 'constant-fallback', when: undefined, weight: { base: 1 },
+        }],
+      });
+      const partial = await check(fixture(), createInitialPublicationState(), fallback);
+      expect(partial.status).toBe('published');
+      if (partial.status !== 'published') throw new Error('Expected the constant fallback to publish.');
+      expect(partial.issue.publication.designId).toBe('constant-fallback');
+      expect(partial.decision.choiceErrors).toEqual(result.decision.choiceErrors);
+      expect(JSON.stringify(partial.issue)).not.toContain('interruption limit');
+    });
+
     it('should reject an invalid layout without consuming a rule or mutating the checkpoint', async () => {
       const first = await check(fixture(10, 5, 0));
       expect(first.status).toBe('published');
@@ -225,7 +351,7 @@ describe('editorial engine', () => {
       const invalid = structuredClone(config);
       const active = invalid.designs.find(design => design.id === first.state.previousDesignId)!;
       const layout = active.layouts.find(entry => entry.variant === 'breaking')!;
-      layout.weight.adjustments = [{ condition: { op: 'eq', field: 'Era', value: 'Ancient Era' }, add: -layout.weight.base }];
+      layout.when = 'false';
       expect(editorialConfigSchema.safeParse(invalid).success).toBe(false);
       const evidence = fixture(20, 10, 150);
       await expect(check(evidence, first.state, invalid)).rejects.toThrow(/available breaking layout/i);
@@ -235,30 +361,30 @@ describe('editorial engine', () => {
       expect(retried.state.lastCheckTurn).toBe(20);
     });
 
-    it('should exclude the early account from all known later-era choices while preserving unknown and Ancient coverage', () => {
+    it('should exclude the early account from all known later-era choices while preserving unknown and Ancient coverage', async () => {
       const early = config.designs.find(design => design.id === 'oral-accounts')!;
-      for (const Era of ['Classical', 'Classical Era', 'Modern', 'Modern Era', 'Future', 'Future Era']) {
-        const conditions = { values: { Era } };
-        expect(selectionWeight(early.weight, conditions)).toBe(0);
-        for (let draw = 0; draw < 100; draw++) {
-          expect(chooseDesign(config, conditions, null, () => draw / 100)?.id).not.toBe('oral-accounts');
-          expect(chooseDesign(config, conditions, 'oral-accounts', () => draw / 100)?.id).not.toBe('oral-accounts');
-        }
-      }
-      for (const values of [{}, { Era: 'Unrecognized' }, { Era: 'Ancient' }, { Era: 'Ancient Era' }]) {
-        expect(selectionWeight(early.weight, { values })).toBeGreaterThan(0);
-        expect(chooseDesign(config, { values }, null, () => 0.99)?.id).toBe('oral-accounts');
+      const compiled = await getEditorialExpressions(config);
+      for (const [era, expected] of [
+        ['Classical', 0], ['Classical Era', 0], ['Modern', 0], ['Modern Era', 0], ['Future', 0], ['Future Era', 0],
+        [undefined, 10], ['Unrecognized', 10], ['Ancient', 10], ['Ancient Era', 10],
+      ] as const) {
+        const evidence = fixture();
+        evidence.players[0].values.Era = era;
+        const weights = await evaluatePresentation(config, compiled, { facts: buildNewspaperFacts(evidence) });
+        expect(weights.get(early)).toBe(expected);
+        if (expected === 0)
+          expect(chooseDesign(config, weights, 'oral-accounts', () => 0.99)?.id).not.toBe('oral-accounts');
       }
     });
 
   });
 
   describe('current-vote feedback', () => {
-    it('should change the next selected story when a current vote changes and restore it when cleared', () => {
+    it('should change the next selected story when a current vote changes and restore it when cleared', async () => {
       const revised = structuredClone(config);
       revised.defaults.maxItems = 1;
-      const candidates = matchTemplates([development('ledger', 'player/0'), development('culture', 'player/1')],
-        revised, { values: {} }).map((candidate, index) => ({ ...candidate, id: `candidate-${index}`, importance: 40, weight: 1 }));
+      const candidates = (await matchTemplates([development('ledger', 'player/0'), development('culture', 'player/1')],
+        revised, await getEditorialExpressions(revised), { facts: buildNewspaperFacts(fixture()) })).map((candidate, index) => ({ ...candidate, id: `candidate-${index}`, importance: 40, weight: 1 }));
       const state = createInitialPublicationState();
       state.issues = [{ issueId: 'old', turn: 1,
         items: [historyItem('reader-choice', candidates[1].tags, candidates[1].seriesKeys)] }];

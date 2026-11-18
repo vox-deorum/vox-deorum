@@ -259,7 +259,7 @@ describe('newspaper expressions', () => {
           },
         ],
       });
-      const interruption = { error: { ...runaway, message: expect.any(String) } };
+      const interruption = { error: { ...runaway, message: expect.any(String), interrupted: true } };
       const skipped = { error: { ...runaway, message: expect.any(String), skipped: true } };
       expect(result).toEqual([
         [

@@ -1,6 +1,6 @@
 # Plan 6: trigger rules
 
-**Handoff: war and peace facts now reach ordinary newspaper rules.** Two diplomacy overlays have fired on a recorded game. The stock catalogue still has two city rules and no story templates. Step 7 moves template and presentation conditions to expressions and starts after owner confirmation. See the [trigger overview](../../../developers/vox-agents/newspaper/triggers/overview.md) and [roadmap](../implementation.md).
+**Handoff: templates and presentation now use expressions.** Two overlay stories published on the Netherlands recording. The stock catalogue still has two city rules and no story templates. Step 8 adds the starting catalogue and requires owner confirmation. See [editorial authoring](../../../developers/vox-agents/newspaper/editorial.md#catalogue-and-eligibility) and the [roadmap](../implementation.md).
 
 ## Goal
 
@@ -22,17 +22,30 @@ Use one numbered step per handoff. GPT-6.2-Sol implements the step, OpenCode han
 
 | Step | Work | Done when |
 | --- | --- | --- |
-| 7. Templates and other conditions | Move template, variant, weight, page and design conditions to expressions. Templates name `triggers`, read rule `values`, and gain subject names, IDs and period placeholders from visible facts. Remove `shared/conditions.ts` and `compositeOf`. | The example templates publish, and a variant with a false `when` is never chosen. |
 | 8. Starting catalogue | Add the triggers from the examples page with full templates. | Each starting trigger fires in a test with controlled evidence, and a fresh replay of the Netherlands recording publishes issues from the new catalogue. |
 | 9. Reading | Read the replay with the owner and tune constants and importance. | The owner accepts the starting set as a base for writing more rules. |
 
-## Inputs for step 7
+## Inputs for step 8
 
-- Start in `editorial/config/` for catalogue validation and compilation, `editorial/selection/` for template eligibility, and `editorial/presentation/` for variants, designs, pages and layouts. Extend the existing QuickJS runner. Keep fact accessors under `editorial/facts/`, diplomacy inference under `editorial/diplomacy/`, and rule evaluation under `editorial/rules/`. Mirror these folders in tests.
-- Replace the finite conditions in `editorial/shared/conditions.ts` and the old `triggerIds` and `compositeOf` catalogue fields. Migrate the shipped page and design choices and the controlled test overlays together. Preserve an unconditional front page and usable fallback layouts. Old catalogue formats and checkpoints need no migration.
-- Give templates the rule's visible subject, names, IDs, period and scalar values. For a group, preserve the distinction between its key/count and the values belonging to each contributing subject. Keep cause diagnostics and raw evidence out of player-facing prose.
-- Demonstrate with an overlay that an example produces an in-game story and a variant with a false condition cannot print. Keep one selected account per diplomatic incident. The 14 shipped stories and replay reading are steps 8 and 9.
-- Preserve the existing DLL, recorder and event formats. City coordinates come from existing database rows. Map dimensions and wrap flags remain private to replay and never enter LLM input, rule facts or audits.
+1. Use the fourteen [worked triggers](../../../developers/vox-agents/newspaper/triggers/examples.md) as the checklist. Two city rules already ship; the vassal and stalled-war rules have been verified as overlays. Add the other twelve rules and write headlines and full newspaper copy for all fourteen. Group catalogue files by topic under `vox-agents/newspaper/triggers/` and `templates/`.
+2. Write from what a reader in that world could know. Use a visible subject name, show what changed, and explain why it matters when the facts support it. A population point is not one individual. A grouped headline can use the group's key and count; a member's value belongs to that member. Keep rule diagnostics in the inspector.
+3. Exercise each rule against controlled evidence, then run the Netherlands recording with a fresh output path. Check the text as well as the audits: placeholders must resolve, links must point to the intended subject, and incident alternatives must compete for one place. Stop for confirmation before the reading and tuning session in step 9.
+4. Keep fact accessors in `editorial/facts/`, war and peace inference in `editorial/diplomacy/`, and rule evaluation in `editorial/rules/`. Tests mirror those folders. Preserve the DLL, recorder and event formats. Read city coordinates from existing database rows. Map dimensions and wrap flags remain private to replay and never enter LLM input, rule facts or audits.
+
+## Template verification
+
+The [settler example](../../../developers/vox-agents/newspaper/triggers/examples.md#a-city-shrinks-after-sending-settlers) gives a copyable overlay. The Stage 7 check used the Netherlands recording named below, player 7, `--every 1`, and two templates:
+
+| Recorded turns | Result |
+| --- | --- |
+| 28 to 30 | Turn 29 published **Families leave Amsterdam for new lands**. The settlement variant required `lost >= 1`. A rival famine variant with `when: "false"` and a weight of one million stayed out. Turns 28 and 30 skipped publication. |
+| 367 | With `distances.neighboring` raised to 20 for this test, **Mumbai loses its puppet government** printed from the other shipped rule. The story drew its city and owner names from visible facts. The stock limit remains seven tiles. |
+
+The local overlay is in `.tmp/stage7-overlay/`. To repeat either check, pass that directory with CLI `--config` and use a fresh output directory. If the scratch files are gone, use the guide's settler example; for Mumbai, add a template naming `neighbor-puppet-annexed` and use the distance override above. Publication state is schema 6 and the offline SQLite store is version 5. Older outputs are refused without modification; the reader still uses IssueDocument schema 2.
+
+The Vox Agents build passed, followed by all 422 newspaper tests across 47 files. On Windows, finish the build before running the browser tests, which read the built reader assets. The two recorded articles each retained five source rows and neither audit reported a choice error. No replay JSON contained map dimensions or wrap flags. Local reading copies are in `.tmp/stage7-final-settlers/` and `.tmp/stage7-final-mumbai/`.
+
+GPT-6.2-Sol implemented the stage and addressed Opus's findings on grouped counts, interrupted weights and audit diagnostics. OpenCode migrated catalogue fixtures and updated the guides. Claude Code Opus reviewed the integrated changes and the final diagnostic fix, with no material findings left. Step 7 is complete.
 
 ## War and peace verification
 
@@ -45,7 +58,7 @@ The [vassal and stalled-war rules](../../../developers/vox-agents/newspaper/trig
 
 Use the [CLI replay](../../../developers/vox-agents/newspaper/replay.md#generate-examples-from-the-command-line) with either turn range, `--player 2 --every 1`, a fresh output path and a `--config` overlay containing the two rule definitions from the examples. Without a template, read the matches in `audit-<turn>.json`. To exercise publication, the automated rule tests supply templates and independently check that two accounts of the same incident compete while unrelated declarations can both print.
 
-Each completed check saves dated pair memory and the rule audit, including a skipped issue. History covers the configured long span and the longest enabled rule window. A fresh run starting late can only reconstruct older transitions from the permitted evidence it loads. To follow a war from its outset, start at or before the declaration. Use new outputs: publication state is schema 5 and the offline SQLite store is version 4.
+Each completed check saves dated pair memory and the rule audit, including a skipped issue. History covers the configured long span and the longest enabled rule window. A fresh run starting late can only reconstruct older transitions from the permitted evidence it loads. To follow a war from its outset, start at or before the declaration.
 
 GPT-6.2-Sol implemented step 6, OpenCode prepared the overlay and author guides, and Claude Code Opus independently reviewed the changes and the fixes. The Vox Agents build passed, and all 403 newspaper tests passed across 46 files. The Windows test run used `--maxWorkers=2 --hookTimeout=90000` so the installed browser could finish closing. The recorded checks also passed with the reviewed code; their audits contained no map dimensions or wrap flags.
 

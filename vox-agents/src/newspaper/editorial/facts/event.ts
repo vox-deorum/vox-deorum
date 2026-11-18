@@ -160,5 +160,6 @@ export function buildEventFacts(event: NewspaperEvent, context: FactBuildContext
     const { own } = context.distanceFromPlot(plot);
     if (own) fields.distance = fact({ own: fact(own.value, [...sources, ...own.sources ?? []]) }, sources);
   }
+  fields.id = fact(event.source.id, sources);
   return fields;
 }

@@ -32,18 +32,21 @@ export const feedbackRecordSchema = z.object({
   coefficients: z.object({ series: z.number(), tag: z.number(), bound: z.number(), window: z.number() }),
 });
 export type FeedbackRecord = z.infer<typeof feedbackRecordSchema>;
+/** Runtime authoring errors kept with the editorial audit. */
+const choiceExpressionErrorSchema = z.object({ choice: z.string(), field: z.string(), message: z.string() });
+export type ChoiceExpressionError = z.infer<typeof choiceExpressionErrorSchema>;
 /** Reproducible choices and supporting evidence for one completed check. */
 export const editorialDecisionRecordSchema = z.object({
   checkId: z.string(), cutoffTurn: z.number().int(), configurationId: z.string(),
   configurationSnapshot: z.unknown(), seed: z.string(), editor: z.literal('heuristic'),
   fallbackReason: z.string().optional(), status: z.enum(['published', 'skipped']), reason: z.string().optional(),
   candidateScores: z.array(z.object({ id: z.string(), score: z.number(), selected: z.boolean() })),
-  merges: z.array(z.object({ candidateId: z.string(), contributingIds: z.array(z.string()) })),
   selectedVariants: z.record(z.string(), z.string()), designId: z.string().nullable(),
   layouts: z.record(z.string(), z.string()), evidence: z.array(newspaperSourceReferenceSchema),
   feedback: feedbackRecordSchema,
   diplomacyInference: z.array(diplomacyInferenceSchema),
   triggerAudit: z.array(triggerRuleAuditSchema),
+  choiceErrors: z.array(choiceExpressionErrorSchema).min(1).optional(),
   evidenceRequest: newspaperEvidenceRequestSchema,
 });
 export type EditorialDecisionRecord = z.infer<typeof editorialDecisionRecordSchema>;
@@ -53,7 +56,7 @@ export const seriesStateSchema = z.object({
   lastPublishedTurn: z.number().int(), lastIssueId: z.string(), lastItemId: z.string(),
 });
 export type SeriesState = z.infer<typeof seriesStateSchema>;
-const publicationSchemaVersion = 5;
+const publicationSchemaVersion = 6;
 
 /** Current offline memory excludes decisions, which are stored with each completed check. */
 export const publicationStateSchema = z.object({

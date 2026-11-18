@@ -38,6 +38,7 @@ export const triggerRuleAuditSchema = z.strictObject({
     sources: sourcesSchema,
   })),
   groups: z.array(z.strictObject({
+    subject: subjectSchema,
     key: scalarSchema,
     ...ratingFields,
     matches: z.array(groupMatchSchema),

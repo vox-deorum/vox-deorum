@@ -3,21 +3,25 @@ import type { NewspaperEvidence } from '../../../../mcp-server/dist/newspaper/ev
 import type { IssueDocument, IssueReceiver } from '../contracts/issue.js';
 import type {
   PublicationState,
+  ChoiceExpressionError,
   EditorialDecisionRecord,
   PublishedItemRecord,
 } from '../contracts/publication.js';
 import type { EditorialConfig } from './config/schema.js';
-import { getEditorialTriggerExpressions } from './config/load.js';
+import { getEditorialExpressions } from './config/load.js';
+import { scaleEditorialConstants } from './config/constants.js';
 import { addDiplomacyFacts, type NewspaperFactModel } from './facts/index.js';
 import { evaluateTriggerRules, ruleHistoryTurns } from './rules/evaluate.js';
 import { computeFeedback } from './selection/feedback.js';
 import { selectHeuristic } from './selection/heuristic.js';
 import { advanceSeries, decaySeries } from './selection/series.js';
 import { matchTemplates } from './selection/templates.js';
-import { evidenceConditionContext, type EditorialContext } from './shared/context.js';
+import type { EditorialContext } from './shared/context.js';
+import type { ExpressionCheckBudget } from './shared/expressions.js';
 import { configurationHash, createEditorialStreams } from './shared/determinism.js';
 import { summarizeSources, uniqueSources } from './shared/sources.js';
 import { presentIssue } from './presentation/issue.js';
+import { evaluatePresentation } from './presentation/eligibility.js';
 import { validateEditorialIssue } from './presentation/validation.js';
 import { inferWarAndPeace } from './diplomacy/war-peace.js';
 
@@ -84,7 +88,6 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
   const scope = `${encodeURIComponent(input.campaignId)}/${encodeURIComponent(input.timelineId)}/receiver/${input.receiver.playerId}`;
   const checkId = `${scope}/check/${turn}`;
   const identitySeed = `${encodeURIComponent(input.campaignId)}/receiver/${input.receiver.playerId}/${turn}`;
-  const context = evidenceConditionContext(evidence, input.context ?? {});
   const state: PublicationState = {
     ...input.state,
     lastCheckTurn: turn,
@@ -99,17 +102,25 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
     standardTurnsPerGameTurn: 1 / input.speedMultiplier,
   }, input.state.diplomacy, ruleHistoryTurns(config.triggers, config.constants, input.speedMultiplier));
   state.diplomacy = diplomacy.memory;
+  const compiled = await getEditorialExpressions(config);
+  const choiceErrors = new Map<number, ChoiceExpressionError>();
+  const budget: ExpressionCheckBudget = { interruptedSlots: new Set(), choiceErrors };
+  const batch = {
+    facts: addDiplomacyFacts(facts, diplomacy),
+    constants: scaleEditorialConstants(config.constants, input.speedMultiplier),
+  };
   const rules = await evaluateTriggerRules({
     rules: config.triggers,
-    compiled: await getEditorialTriggerExpressions(config),
-    facts: addDiplomacyFacts(facts, diplomacy),
+    compiled,
+    facts: batch.facts,
     constants: config.constants,
     speedMultiplier: input.speedMultiplier,
     repeatState: input.state.triggerRepeats,
+    budget,
   });
   state.triggerRepeats = rules.repeatState;
   const triggers = rules.developments;
-  const candidates = matchTemplates(triggers, config, context).map((candidate) => ({
+  const candidates = (await matchTemplates(triggers, config, compiled, batch, budget)).map((candidate) => ({
     ...candidate,
     seriesKeys: candidate.seriesKeys.map((key) => `${scope}/${key}`),
   }));
@@ -126,12 +137,6 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
       : {}),
     status: 'skipped',
     candidateScores: selection.scores,
-    merges: selection.selected
-      .filter((candidate) => candidate.contributingIds.length)
-      .map((candidate) => ({
-        candidateId: candidate.id,
-        contributingIds: candidate.contributingIds,
-      })),
     selectedVariants: {},
     designId: null,
     layouts: {},
@@ -141,13 +146,23 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
     triggerAudit: rules.audit,
     evidenceRequest: { ...evidence.request },
   };
+  const choiceLimitMessage = 'Some editorial choices could not run because the check reached its expression interruption limit.';
+  /** Archive choice failures only when authoring diagnostics exist. */
+  const recordChoiceErrors = () => {
+    const errors = [...choiceErrors.values()];
+    if (budget.choiceEvaluationIncomplete)
+      errors.push({ choice: 'editorial choices', field: 'evaluation', message: choiceLimitMessage });
+    if (errors.length) decision.choiceErrors = errors;
+  };
   /** Complete a skipped check with the same cursor and decay guarantees as a publication. */
   const skip = (reason: string): EditorialCheckResult => {
-    decision.reason = reason;
-    return { status: 'skipped', reason, state, decision };
+    decision.reason = budget.choiceEvaluationIncomplete ? `${reason} ${choiceLimitMessage}` : reason;
+    recordChoiceErrors();
+    return { status: 'skipped', reason: decision.reason, state, decision };
   };
   if (!selection.selected.length) return skip('No eligible new authored stories.');
   const streams = createEditorialStreams(identitySeed, config);
+  const weights = await evaluatePresentation(config, compiled, batch, budget);
   const presentation = presentIssue({
     issueId: `${scope}/issue/${turn}`,
     campaignId: input.campaignId,
@@ -157,17 +172,12 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
     selected: selection.selected,
     state,
     config,
-    context,
+    weights,
     proseRandom: streams.prose,
     presentationRandom: streams.presentation,
   });
   if (!presentation) return skip('No eligible design or visible authored content.');
-  const issue = validateEditorialIssue(
-    presentation.issue,
-    presentation.itemCandidates,
-    config,
-    context
-  );
+  const issue = validateEditorialIssue(presentation, config, weights);
   const records: PublishedItemRecord[] = issue.items.map((item) => {
     const candidate = presentation.itemCandidates.get(item.id)!;
     return {
@@ -189,22 +199,17 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
   state.issues.push({ issueId: issue.issueId, turn, items: records });
   state.previousDesignId = issue.publication.designId;
   decision.status = 'published';
-  const displayedCandidates = new Set(presentation.itemCandidates.values());
+  const displayedCandidates = new Set(records.map((item) => presentation.itemCandidates.get(item.id)!.id));
   decision.candidateScores = decision.candidateScores.map((entry) => ({
     ...entry,
-    selected: [...displayedCandidates].some((candidate) => candidate.id === entry.id),
+    selected: displayedCandidates.has(entry.id),
   }));
-  decision.merges = [...displayedCandidates]
-    .filter((candidate) => candidate.contributingIds.length)
-    .map((candidate) => ({
-      candidateId: candidate.id,
-      contributingIds: candidate.contributingIds,
-    }));
   decision.evidence = uniqueSources(
-    [...displayedCandidates].flatMap((candidate) => candidate.sources)
+    records.flatMap((item) => item.sources)
   );
   decision.selectedVariants = presentation.variants;
   decision.designId = issue.publication.designId;
   decision.layouts = presentation.layouts;
+  recordChoiceErrors();
   return { status: 'published', issue, state, decision };
 }

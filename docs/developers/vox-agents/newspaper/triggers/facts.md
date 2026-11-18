@@ -134,6 +134,7 @@ The stored column `Cities` is exposed as `cityCount`, because `player.cities` is
 | Fact | Meaning |
 | --- | --- |
 | `type` | The recorded event type, such as `CityCaptureComplete` |
+| `id` | The recorded event's row ID |
 | `turn` | The turn it was recorded |
 | Payload fields | Each permitted payload field in camelCase. A player ID field also offers the player: `oldOwnerId` comes with `oldOwner`. A city ID field comes with the `city`, a unit type with `unit` (the unit name), and a building type with `building` (the building name). |
 | `player` | The main acting player, when the event has one |
@@ -160,6 +161,7 @@ The event types a rule may name are the ones in `newspaperEventConfigs` in `mcp-
 | Fact | Meaning |
 | --- | --- |
 | `a`, `b` | The two players |
+| `id` | Both player IDs in order, for example `2/7` |
 | `involvesSelf` | The receiver is one of them |
 | `other` | The player who is not the receiver, when `involvesSelf` |
 | `majors` | Both are major civilizations |
@@ -178,6 +180,7 @@ The event types a rule may name are the ones in `newspaperEventConfigs` in `mcp-
 | Fact | Meaning |
 | --- | --- |
 | `kind` | `war` or `peace` |
+| `id` | The inferred incident's identifier, shared by stories about that declaration or settlement |
 | `turn` | The turn of the recorded calls |
 | `initiator`, `target` | The players of the likely first call |
 | `pair` | The `pair` of `initiator` and `target` |

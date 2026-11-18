@@ -4,6 +4,7 @@ import { parse } from 'acorn';
 import { Intrinsics, QuickJS, type QuickJSOptions } from 'quickjs-wasi';
 import { errorMessage } from '../../../utils/errors.js';
 import type { NewspaperSourceReference } from '../../../../../mcp-server/dist/newspaper/evidence.js';
+import type { ChoiceExpressionError } from '../../contracts/publication.js';
 import { factGuestSource } from '../facts/guest.js';
 import { factModelWrap, type NewspaperFactModel } from '../facts/index.js';
 import { packNewspaperFacts, unpackFactSource } from '../facts/transport.js';
@@ -52,12 +53,15 @@ export interface ExpressionBatch {
 
 type ExpressionValue = undefined | null | boolean | number | string;
 export type ExpressionResult =
-  ({ value: ExpressionValue } | { error: EditorialExpression & { message: string; skipped?: true; unreached?: true; hidden?: string } }) &
+  ({ value: ExpressionValue } | { error: EditorialExpression & { message: string; interrupted?: true; skipped?: true; budgetExhausted?: true; unreached?: true; hidden?: string } }) &
   { sources?: NewspaperSourceReference[] };
 
 /** Share interruption accounting when a check needs several dependent batches. */
 export interface ExpressionCheckBudget {
   interruptedSlots: Set<number>;
+  choiceErrors?: Map<number, ChoiceExpressionError>;
+  /** At least one choice expression could not be attempted within the check's shared limit. */
+  choiceEvaluationIncomplete?: true;
 }
 
 export interface ExpressionRunner {
@@ -70,7 +74,7 @@ const memoryLimit = 64 * 1024 * 1024;
 const stackLimit = 256 * 1024;
 const interruptLimit = 2_000;
 const interruptionRecoveryLimit = 8;
-type RawResult = { value?: ExpressionValue; error?: string; skipped?: true; unreached?: true; hidden?: string; sources?: NewspaperSourceReference[] };
+type RawResult = { value?: ExpressionValue; error?: string; interrupted?: true; skipped?: true; budgetExhausted?: true; unreached?: true; hidden?: string; sources?: NewspaperSourceReference[] };
 type SandboxWasm = NonNullable<QuickJSOptions['wasm']>;
 // Node provides WebAssembly, but this package's TypeScript config excludes browser types.
 declare const WebAssembly: { compile(bytes: Uint8Array): Promise<SandboxWasm> };
@@ -342,7 +346,7 @@ async function evaluateRemaining(
     const completed = vm.dump(results) as RawResult[];
     // If the active expression had completed, the interruption happened in the batch machinery.
     if (completed.length !== started - 1) throw error;
-    completed.push({ error: 'Expression exceeded its execution allowance.' });
+    completed.push({ error: 'Expression exceeded its execution allowance.', interrupted: true });
     return { results: completed, interrupted: true };
   }
 }
@@ -404,6 +408,7 @@ async function evaluateBatch(
         } : {
           error: 'Expression skipped because the check reached its interruption limit.',
           skipped: true,
+          budgetExhausted: true,
         });
         if (ordered && (result.error !== undefined || (offset < ordered.guardCount && !result.value))) stopped = true;
         const sources = result.sources?.length ? { sources: result.sources } : {};
@@ -413,7 +418,9 @@ async function evaluateBatch(
               error: {
                 ...expressions[slot],
                 message: result.error,
+                ...(result.interrupted ? { interrupted: true } : {}),
                 ...(result.skipped ? { skipped: true } : {}),
+                ...(result.budgetExhausted ? { budgetExhausted: true } : {}),
                 ...(result.unreached ? { unreached: true } : {}),
                 ...(result.hidden === undefined ? {} : { hidden: result.hidden }),
               },

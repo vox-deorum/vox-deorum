@@ -6,7 +6,7 @@ import { resolveEditorialSpan, scaleEditorialConstants, type EditorialConstants 
 import type { CompiledTriggerExpressions, TriggerExpressionSlots } from '../config/expressions.js';
 import type { EditorialTriggerRule } from '../config/schema.js';
 import type { NewspaperFactModel } from '../facts/index.js';
-import type { ExpressionBatch, ExpressionResult } from '../shared/expressions.js';
+import type { ExpressionBatch, ExpressionCheckBudget, ExpressionResult } from '../shared/expressions.js';
 import { uniqueSources } from '../shared/sources.js';
 import { auditExpressions, expressionSources } from './audit.js';
 import { canRepeat, repeatPolicy } from './repeat.js';
@@ -21,6 +21,7 @@ interface EvaluateRulesInput {
   constants: EditorialConstants;
   speedMultiplier: number;
   repeatState?: TriggerRepeatState;
+  budget?: ExpressionCheckBudget;
 }
 
 type Group = ExpressionBatch['groups'][number];
@@ -86,7 +87,7 @@ function auditSteps(steps: readonly NamedStep[], results: readonly ExpressionRes
 
 /** Build a fresh repeat state, evaluating eligible subjects together before rating grouped matches. */
 export async function evaluateTriggerRules({
-  rules, compiled, facts, constants, speedMultiplier, repeatState = {},
+  rules, compiled, facts, constants, speedMultiplier, repeatState = {}, budget = { interruptedSlots: new Set() },
 }: EvaluateRulesInput): Promise<{
   developments: RuleDevelopment[]; audit: TriggerRuleAudit[]; repeatState: TriggerRepeatState;
 }> {
@@ -124,7 +125,6 @@ export async function evaluateTriggerRules({
     };
     return { rule, subjects, conflictBySubject, policy, limit, keys, allowed, guards, values, rate, steps, batch };
   });
-  const budget = { interruptedSlots: new Set<number>() };
   const checks = await compiled.runner.evaluate({ constants: scaled, facts, groups: plans.map(plan => plan.batch) }, budget);
   const pending: { batch: Group; complete(results: ExpressionResult[]): void }[] = [];
   const outcomes = plans.map((plan, planIndex) => {
@@ -210,9 +210,10 @@ export async function evaluateTriggerRules({
     }
 
     for (const { key, matches } of partitions.values()) {
+      const subject = `group/${rule.subject}/${JSON.stringify(key)}`;
       const entries: RuleGroupMatch[] = matches.map(({ subject, values: matchValues }) => ({ subject, values: matchValues }));
       const record: AuditGroup = {
-        key, matches: entries, outcome: 'too-small', expressions: [],
+        subject, key, matches: entries, outcome: 'too-small', expressions: [],
         sources: uniqueSources(matches.flatMap(match => match.sources)),
       };
       audit.groups.push(record);
@@ -227,7 +228,7 @@ export async function evaluateTriggerRules({
           record.outcome = error.error.hidden ? 'hidden' : 'error';
           return;
         }
-        emit(`group/${JSON.stringify(key)}`, entries.map(entry => entry.subject), placeholders, record.sources, results, record);
+        emit(subject, entries.map(entry => entry.subject), placeholders, record.sources, results, record);
         record.outcome = 'fired';
       };
       if (rate.length) pending.push({

@@ -1,35 +1,35 @@
 # Newspaper trigger examples
 
-**Status:** `neighbor-puppet-annexed` and `settler-departure` ship in `triggers/cities.json`. Stage 8 adds the remaining 12 rules and story templates. Two of those rules use pair and incident facts, which are available to ordinary overlay rules now. The shipped rules appear in replay audits; add an overlay template to publish a story now. [Plan 6](../../../../plans/newspaper/implementation/06-trigger-rules.md) lists the build order.
+**Status:** Step 7 authored choices are implemented. `neighbor-puppet-annexed` and `settler-departure` ship in `triggers/cities.json`; the stock catalogue still has no story templates. Step 8 adds the remaining 12 rules and their stories. Two of those rules use pair and incident facts, which are available to ordinary overlay rules now. The shipped rules appear in replay audits; add an overlay template, such as the settler example below, to publish a story now. [Plan 6](../../../../plans/newspaper/implementation/06-trigger-rules.md) lists the build order.
 
-This page shows worked [trigger rules](overview.md) for developers who want a starting point for their own. Each example gives the story in one sentence, the trigger entry, and a sketch of a template that reports it. Every name used here is defined in [facts](facts.md) or [constants and shortcuts](constants.md).
+This page shows worked [trigger rules](overview.md) for developers who want a starting point for their own. Each example gives the story in one sentence, the trigger entry, and a template sketch; the settler rule also has a complete overlay. Every name used here is defined in [facts](facts.md) or [constants and shortcuts](constants.md).
 
 | Example | Subject | Status | Shows |
 | --- | --- | --- | --- |
 | [A neighbor annexes its puppet](#a-neighbor-annexes-its-puppet) | `city` | Shipped | Distance, a status change read from two snapshots |
 | [A city shrinks after sending settlers](#a-city-shrinks-after-sending-settlers) | `city` | Shipped | Combining a decline, a trained unit and a healthy yield |
-| [A rival settles on our doorstep](#a-rival-settles-on-our-doorstep) | `event` | Stage 8 | Event location, `urgent` |
-| [A nearby capital falls to a third party](#a-nearby-capital-falls-to-a-third-party) | `event` | Stage 8 | Event payload players |
-| [Our city is besieged and starving](#our-city-is-besieged-and-starving) | `city` | Stage 8 | Shortcuts |
-| [An enemy finishes a wonder nearby](#an-enemy-finishes-a-wonder-nearby) | `city` | Stage 8 | Completed buildings, owner relationship |
-| [The capital is outgrown](#the-capital-is-outgrown) | `world` | Stage 8 | Comparing many subjects, `rearm` |
-| [A neighbor's army overtakes ours](#a-neighbors-army-overtakes-ours) | `player` | Stage 8 | Comparing a player with the receiver over time |
-| [Neighboring cities convert together](#neighboring-cities-convert-together) | `city` | Stage 8 | `group` |
-| [A city-state ally defects to a rival](#a-city-state-ally-defects-to-a-rival) | `event` | Stage 8 | Players named by an event |
-| [A new technology leader](#a-new-technology-leader) | `player` | Stage 8 | `rank`, past rank |
-| [A golden age begins in wartime](#a-golden-age-begins-in-wartime) | `event` | Stage 8 | An event combined with the receiver's state |
-| [Vassals follow their master to war](#vassals-follow-their-master-to-war) | `incident` | Overlay now, ships in stage 8 | Incident participants |
-| [Our war advantage stalls](#our-war-advantage-stalls) | `pair` | Overlay now, ships in stage 8 | `history`, `held`, a span as `repeat` |
+| [A rival settles on our doorstep](#a-rival-settles-on-our-doorstep) | `event` | Step 8 | Event location, `urgent` |
+| [A nearby capital falls to a third party](#a-nearby-capital-falls-to-a-third-party) | `event` | Step 8 | Event payload players |
+| [Our city is besieged and starving](#our-city-is-besieged-and-starving) | `city` | Step 8 | Shortcuts |
+| [An enemy finishes a wonder nearby](#an-enemy-finishes-a-wonder-nearby) | `city` | Step 8 | Completed buildings, owner relationship |
+| [The capital is outgrown](#the-capital-is-outgrown) | `world` | Step 8 | Comparing many subjects, `rearm` |
+| [A neighbor's army overtakes ours](#a-neighbors-army-overtakes-ours) | `player` | Step 8 | Comparing a player with the receiver over time |
+| [Neighboring cities convert together](#neighboring-cities-convert-together) | `city` | Step 8 | `group` |
+| [A city-state ally defects to a rival](#a-city-state-ally-defects-to-a-rival) | `event` | Step 8 | Players named by an event |
+| [A new technology leader](#a-new-technology-leader) | `player` | Step 8 | `rank`, past rank |
+| [A golden age begins in wartime](#a-golden-age-begins-in-wartime) | `event` | Step 8 | An event combined with the receiver's state |
+| [Vassals follow their master to war](#vassals-follow-their-master-to-war) | `incident` | Overlay now; stock in Step 8 | Incident participants |
+| [Our war advantage stalls](#our-war-advantage-stalls) | `pair` | Overlay now; stock in Step 8 | `history`, `held`, a span as `repeat` |
 
 ## How to read an example
 
 | Row | Meaning |
 | --- | --- |
 | `when` | Every listed expression must be true, checked in order |
-| `values` | Named results. For an ungrouped rule, non-null scalar values become placeholders written `{{name}}`. Groups offer only `count` and a non-null `key`; per-subject values stay in `matches`. |
-| Future headline sketch | An example of what a story could say. A publishable template also needs body paragraphs and a variant. |
+| `values` | Named results. For an ungrouped rule, non-null scalar values become placeholders written `{{name}}`. Groups offer only `{{key}}` and `{{count}}` in prose; per-subject values stay in `matches` for conditions. |
+| Future headline sketch | An example of what a Step 8 story could say. A publishable template also needs body paragraphs and a variant. |
 
-These sketches illustrate future stories and may use placeholders the rule does not supply. For an ungrouped rule in an overlay, define any names you use as rule values. For example, set `town: city.name` to use `{{town}}` in a headline. See [editorial decisions](../editorial.md#catalogue-and-eligibility).
+These sketches illustrate Step 8 stories and may use placeholders the rule does not supply. Identity placeholders such as `{{city}}`, `{{cityId}}` and `{{owner}}` come from the visible subject, and `{{subject.name}}`, `{{period.from}}` and `{{period.to}}` are always available. For an ungrouped rule in an overlay, define any other names as rule values, for example `town: city.name` to use `{{town}}`. A grouped rule exposes only `{{key}}` and `{{count}}`. See [authoring choices](../editorial.md#authoring-choices).
 
 ## A neighbor annexes its puppet
 
@@ -65,7 +65,42 @@ One of our cities lost population, trained a settler, and still has positive foo
 | | `city.foodPerTurn > 0` |
 | `values` | `lost`: `city.before.population - city.population` |
 | `importance` | `30 + 10 * lost`, so 40 for one population and 50 for two |
-| Future headline sketch | "Families leave {{city}} for new lands" |
+| Publishes | The `settler-departure` template overlay below |
+
+Save this as `<overlay>/templates/settler.json` and pass the overlay with CLI `--config` or the browser setting `editorialConfigDirectory`. Overlay entries merge by ID.
+
+```json
+[
+  {
+    "id": "settler-departure-account",
+    "triggers": [
+      "settler-departure"
+    ],
+    "tags": [
+      "cities",
+      "domestic"
+    ],
+    "weight": {
+      "base": 10
+    },
+    "variants": [
+      {
+        "id": "settler-departure-report",
+        "weight": {
+          "base": 1
+        },
+        "when": "lost > 0",
+        "headline": "Families leave {{city}} for new lands",
+        "body": [
+          "Settlers have set out from {{city}} to found a new town. Fewer people now call the city home, but its farms still grow more food than it eats."
+        ]
+      }
+    ]
+  }
+]
+```
+
+`lost` measures the city's change in population points. The variant uses it to choose the story; the reader sees the effect on the city.
 
 ## A rival settles on our doorstep
 

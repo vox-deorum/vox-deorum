@@ -2,11 +2,14 @@ import { z } from 'zod';
 import { presentationSchema } from '../../contracts/design.js';
 import { newspaperLayoutVariantSchema, linkTargetSchema } from '../../contracts/issue.js';
 import { getNewspaperAsset } from '../../renderer/assets.js';
-import { conditionSchema } from '../shared/conditions.js';
-import { weightSchema } from '../shared/weights.js';
 import { editorialConstantsSchema, editorialValueNameSchema } from './constants.js';
 
-const eligibleSchema = z.object({ condition: conditionSchema.optional(), weight: weightSchema });
+const expressionSchema = z.string().refine((source) => source.trim().length > 0, 'Expected an expression.');
+const weightSchema = z.strictObject({
+  base: z.number().finite(),
+  adjustments: z.array(z.strictObject({ when: expressionSchema, add: z.number().finite() })).default([]),
+});
+const eligibleSchema = z.strictObject({ when: expressionSchema.optional(), weight: weightSchema });
 /** Authored prose uses named placeholders and explicit typed link destinations. */
 export const authoredVariantSchema = eligibleSchema.extend({
   id: z.string().min(1),
@@ -23,7 +26,6 @@ export const authoredVariantSchema = eligibleSchema.extend({
     .default([]),
 });
 export type AuthoredVariant = z.infer<typeof authoredVariantSchema>;
-const expressionSchema = z.string().refine((source) => source.trim().length > 0, 'Expected an expression.');
 const spanSchema = z.union([z.string().min(1), z.number().positive()]);
 const eventTypesSchema = z.union([z.string().min(1), z.array(z.string().min(1)).min(1)]);
 
@@ -48,15 +50,14 @@ export const editorialTriggerRuleSchema = z.strictObject({
     ctx.addIssue({ code: 'custom', path: ['event'], message: 'Remove event or change the subject to event.' });
 });
 export type EditorialTriggerRule = z.infer<typeof editorialTriggerRuleSchema>;
-/** Templates explicitly name supported triggers and compatible authored composites. */
+/** Templates explicitly name supported triggers. */
 const templateSchema = eligibleSchema.extend({
   id: z.string().min(1),
-  triggerIds: z.array(z.string().min(1)).min(1),
+  triggers: z.array(z.string().min(1)).min(1),
   tags: z.array(z.string().min(1)),
   mode: z.enum(['authored', 'llmOnly']).default('authored'),
   short: z.boolean().default(false),
   variants: z.array(authoredVariantSchema),
-  compositeOf: z.array(z.string().min(1)).default([]),
 });
 export type EditorialTemplate = z.infer<typeof templateSchema>;
 const layoutSchema = eligibleSchema.extend({
@@ -100,14 +101,14 @@ export const editorialConfigSchema = z
     templates: z.array(templateSchema),
     pages: z
       .array(
-        z.object({
+        z.strictObject({
           id: z.string().min(1),
           label: z.string().min(1),
           tags: z.array(z.string()),
           minimum: z.number().int().positive(),
           order: z.number(),
           front: z.boolean().default(false),
-          condition: conditionSchema.optional(),
+          when: expressionSchema.optional(),
         })
       )
       .min(1),
@@ -127,7 +128,7 @@ export const editorialConfigSchema = z
         ids.add(entry.id);
       });
     }
-    const triggerIds = new Set(config.triggers.map((entry) => entry.id));
+    const rulesById = new Map(config.triggers.map((rule) => [rule.id, rule]));
     config.triggers.forEach((rule, index) => {
       for (const field of ['window', 'repeat'] as const) {
         const span = rule[field];
@@ -149,7 +150,6 @@ export const editorialConfigSchema = z
             message: `Value "${name}" collides with a named constant.`,
           });
     });
-    const templateIds = new Set(config.templates.map((entry) => entry.id));
     const pageIds = new Set(config.pages.map((entry) => entry.id));
     if (config.pages.filter((page) => page.front).length !== 1)
       ctx.addIssue({
@@ -158,7 +158,7 @@ export const editorialConfigSchema = z
         message: 'Exactly one front page is required.',
       });
     config.pages.forEach((page, index) => {
-      if (page.front && page.condition && page.condition.op !== 'always')
+      if (page.front && page.when !== undefined)
         ctx.addIssue({
           code: 'custom',
           path: ['pages', index],
@@ -166,20 +166,30 @@ export const editorialConfigSchema = z
         });
     });
     config.templates.forEach((template, index) => {
-      for (const id of template.triggerIds)
-        if (!triggerIds.has(id))
+      if (new Set(template.triggers).size !== template.triggers.length)
+        ctx.addIssue({
+          code: 'custom',
+          path: ['templates', index, 'triggers'],
+          message: 'Template trigger ids must be unique.',
+        });
+      const scopes = new Set<string>();
+      for (const id of template.triggers) {
+        const rule = rulesById.get(id);
+        if (!rule)
           ctx.addIssue({
             code: 'custom',
             path: ['templates', index],
             message: `Unknown trigger ${id}`,
           });
-      for (const id of template.compositeOf)
-        if (!templateIds.has(id) || id === template.id)
-          ctx.addIssue({
-            code: 'custom',
-            path: ['templates', index],
-            message: `Invalid composite template ${id}`,
-          });
+        else
+          scopes.add(`${rule.subject}/${rule.group ? 'grouped' : 'ungrouped'}`);
+      }
+      if (scopes.size > 1)
+        ctx.addIssue({
+          code: 'custom',
+          path: ['templates', index, 'triggers'],
+          message: 'Template triggers must use the same subject kind and must either all group their matches or all leave them ungrouped.',
+        });
       if (new Set(template.variants.map((variant) => variant.id)).size !== template.variants.length)
         ctx.addIssue({
           code: 'custom',
@@ -193,7 +203,7 @@ export const editorialConfigSchema = z
           !design.layouts.some(
             (layout) =>
               layout.variant === variant &&
-              (!layout.condition || layout.condition.op === 'always') &&
+              layout.when === undefined &&
               layout.weight.base > 0 &&
               layout.weight.adjustments.length === 0
           )

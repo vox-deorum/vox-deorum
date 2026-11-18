@@ -3,7 +3,7 @@ import type { NewspaperEvent, NewspaperEvidence, NewspaperSnapshot } from '../..
 import { triggerRepeatStateSchema, triggerRuleAuditSchema } from '../../../../../src/newspaper/contracts/triggers.js';
 import type { EditorialConstants } from '../../../../../src/newspaper/editorial/config/constants.js';
 import { prepareTriggerExpressions } from '../../../../../src/newspaper/editorial/config/expressions.js';
-import { getEditorialTriggerExpressions, loadEditorialConfig } from '../../../../../src/newspaper/editorial/config/load.js';
+import { getEditorialExpressions, loadEditorialConfig } from '../../../../../src/newspaper/editorial/config/load.js';
 import type { EditorialTriggerRule } from '../../../../../src/newspaper/editorial/config/schema.js';
 import { buildNewspaperFacts } from '../../../../../src/newspaper/editorial/facts/index.js';
 import { evaluateTriggerRules, ruleHistoryTurns } from '../../../../../src/newspaper/editorial/rules/evaluate.js';
@@ -21,7 +21,7 @@ const settlerId = 'settler-departure';
 async function runExamples(model: ReturnType<typeof facts>) {
   const config = await loadEditorialConfig();
   const rules = config.triggers.filter(rule => rule.id === annexationId || rule.id === settlerId);
-  const compiled = await getEditorialTriggerExpressions(config);
+  const compiled = await getEditorialExpressions(config);
   return evaluateTriggerRules({ rules, compiled, constants: config.constants, facts: model, speedMultiplier: 1 });
 }
 /** Supply two dated rows per city when needed, with distinct observation IDs. */
@@ -169,6 +169,17 @@ describe('newspaper trigger rules', () => {
   });
 
   describe('derived values and groups', () => {
+    it('should give groups of different subject kinds separate identities even when their keys match', async () => {
+      const run = await prepare([
+        { id: 'towns', subject: 'city', when: 'true', group: { by: '"border"', min: 1 }, tags: [] },
+        { id: 'states', subject: 'player', when: 'true', group: { by: '"border"', min: 1 }, tags: [] },
+      ]);
+      const result = await run(facts({ cities: [city(1, 1, 20, { Population: 4 })] }));
+      expect(result.developments.map(({ subject }) => subject)).toEqual(['group/city/"border"', 'group/player/"border"']);
+      expect(result.audit.map(({ groups }) => groups[0].subject))
+        .toEqual(result.developments.map(({ subject }) => subject));
+    });
+
     it('should bind scalar values in order, clamp importance, and apply group ratings only above the minimum', async () => {
       const rule: EditorialTriggerRule = { id: 'religion', subject: 'city', when: 'city.majorityReligion',
         values: { population: 'city.population', doubled: 'population * 2' },
@@ -183,6 +194,7 @@ describe('newspaper trigger rules', () => {
       const run = await prepare([rule]);
       const result = await run(facts({ cities }));
       expect(result.developments).toMatchObject([{
+        subject: 'group/city/"Buddhism"',
         seriesKeys: ['city/1', 'city/2'].map(subject => JSON.stringify(['religion', subject])), importance: 100, urgent: true,
         values: { count: 2, key: 'Buddhism', matches: [
           { subject: 'city/1', values: { population: 4, doubled: 8 } },
@@ -190,7 +202,10 @@ describe('newspaper trigger rules', () => {
         ] },
       }]);
       expect(result.developments[0].sources.map(source => source.id)).toEqual([1, 2]);
-      expect(result.audit[0].groups).toMatchObject([{ outcome: 'fired', importance: 100, urgent: true }, { outcome: 'too-small' }]);
+      expect(result.audit[0].groups).toMatchObject([
+        { subject: 'group/city/"Buddhism"', outcome: 'fired', importance: 100, urgent: true },
+        { subject: 'group/city/"singleton"', outcome: 'too-small' },
+      ]);
       expect(result.audit[0].groups[1].expressions).toEqual([]);
       expect(Object.keys(result.repeatState)).toHaveLength(2);
     });

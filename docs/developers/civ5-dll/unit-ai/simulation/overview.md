@@ -81,7 +81,9 @@ A position completes when all starting enemies are dead or all units have exhaus
 
 Final safety does not become more permissive from Low through High. Every level checks adjacent-enemy death traps and the edge of known visibility. The visibility-edge check skips cities, allowing a lone siege unit to capture a city there. Braveheart bypasses the remaining extreme-danger block. Frontline land cities and friendly citadels also have specific exemptions, but a city projected to fall even with its garrison loses its frontline bonus and related exemptions.
 
-Among the explored complete plans, a plan rejected only for lack of progress sets a minimum score for selection. The best accepted plan must score at least 80% of the highest progress-rejected score, and equality passes. When no plan was rejected for lack of progress, no floor applies. A negative floor moves the threshold toward zero, so a rejection at -100 requires -80 or better. If no accepted plan reaches the threshold, the search returns no assignments and leaves its participants available. The comparison happens before [support placement](#support-placement). Army gathering, reinforcement, and camp clearing can then use their usual approach fallback after an empty search.
+Among the explored complete plans, the highest score rejected only for lack of progress sets a minimum for selection. If that score is nonnegative, the best accepted plan must reach 80% of it. If it is negative, the best accepted plan must match or beat it. For example, +100 sets a cutoff of +80, and −100 sets a cutoff of −100. Equality passes in both cases. With no progress rejection, there is no cutoff.
+
+If no accepted plan reaches the cutoff, the search returns no assignments and leaves its participants available. The comparison happens before [support placement](#support-placement). Army gathering, reinforcement, and camp clearing can then use their usual approach fallback after an empty search.
 
 `ExecuteUnitAssignments` replays the selected plan after support placement. Mission-bearing assignments follow this loop:
 
@@ -117,4 +119,4 @@ Attack recruitment admits civilian support that can reach within two plots of th
 
 The search uses attack **checkpoints** to decide when coverage matters. Each checkpoint retains the combat position's last attack, its plots, and attacker domain, even when finish or stay-put assignments follow it. The available support-unit count determines how waits are grouped before the next attack, and duplicate pruning compares combat states too.
 
-A final attack bundled with another unit's stay-put action can score differently from the same actions in separate positions: final-position safety and placement rules run at different points.
+A final attack bundled with another unit's stay-put action can get a different candidate score from the same actions in separate positions because the checkpoint falls at a different point in the plan. The completed support plan ranks finishing units by their final placement and keeps the coverage bonuses earned for earlier attacks.

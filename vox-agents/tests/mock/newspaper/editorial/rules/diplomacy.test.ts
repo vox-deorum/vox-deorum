@@ -39,7 +39,7 @@ describe('newspaper diplomacy trigger rules', () => {
     };
     const config = await parseEditorialConfig({ ...base, triggers: [vassalsJoinWar, summary],
       templates: [vassalsJoinWar, summary].map(rule => ({
-        id: rule.id, triggerIds: [rule.id], tags: ['military'], weight: { base: 1 },
+        id: rule.id, triggers: [rule.id], tags: ['military'], weight: { base: 1 },
         variants: [{ id: 'account', headline: '{{initiator}} opens a war',
           body: ['The declaration starts a new war.'], weight: { base: 1 } }],
       })),

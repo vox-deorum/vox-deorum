@@ -428,14 +428,38 @@ function factRuntime(model, wrap, constants, shortcuts) {
       }, membership);
     }
 
-    // Only materialize top-level fact references when the expression reads their binding.
+    // Give expression bindings the same lazy access to subject references inside match lists.
+    function bindingValue(value, path) {
+      if (value === null || typeof value !== 'object') return value;
+      if (value.$kind === 'reference' && has(model.subjects, value.kind))
+        return resolve(value, path, model.turn);
+      if (value.$kind === 'subject') {
+        const fields = target(value.ref ?? {}, model.turn);
+        return record({
+          key: { value: value.key }, kind: { value: value.kind },
+          ...(fields?.id ? { id: fields.id } : {}),
+          ...(fields?.name ? { name: fields.name } : {}),
+        }, path, model.turn);
+      }
+      if (Array.isArray(value)) return list(value, (item, index) => bindingValue(item, path + '[' + index + ']'));
+      return bindingRecord(value, path);
+    }
+
+    // Bindings carry trusted references alongside plain, immutable expression data.
+    function bindingRecord(values, path) {
+      const properties = Object.create(null);
+      for (const key of Object.keys(values))
+        properties[key] = { enumerable: true, get: Object.freeze(() => bindingValue(values[key], path + '.' + key)) };
+      return Object.freeze(Object.defineProperties(Object.create(null), properties));
+    }
+
+    // Resolve a subject only when the expression actually uses that binding.
     function bindings(globalsInput, local) {
       const descriptors = Object.create(null);
       for (const values of [globalsInput, local]) if (values) for (const key of Object.keys(values)) {
         if (constantNames.has(key)) continue;
         const value = values[key];
-        descriptors[key] = value?.$kind === 'reference' && has(model.subjects, value.kind) ?
-          { get: Object.freeze(() => resolve(value, key, model.turn)) } : { value };
+        descriptors[key] = { get: Object.freeze(() => bindingValue(value, key)) };
       }
       return Object.freeze(Object.defineProperties(Object.create(globals), descriptors));
     }

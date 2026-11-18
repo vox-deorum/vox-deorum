@@ -3,55 +3,7 @@
     "id": "modern",
     "version": "1",
     "title": "The Civic Wire",
-    "condition": {
-      "op": "any",
-      "conditions": [
-        {
-          "op": "technology",
-          "id": "TECH_RADIO"
-        },
-        {
-          "op": "eq",
-          "field": "Era",
-          "value": "Modern"
-        },
-        {
-          "op": "eq",
-          "field": "Era",
-          "value": "Atomic"
-        },
-        {
-          "op": "eq",
-          "field": "Era",
-          "value": "Information"
-        },
-        {
-          "op": "eq",
-          "field": "Era",
-          "value": "Future"
-        },
-        {
-          "op": "eq",
-          "field": "Era",
-          "value": "Modern Era"
-        },
-        {
-          "op": "eq",
-          "field": "Era",
-          "value": "Atomic Era"
-        },
-        {
-          "op": "eq",
-          "field": "Era",
-          "value": "Information Era"
-        },
-        {
-          "op": "eq",
-          "field": "Era",
-          "value": "Future Era"
-        }
-      ]
-    },
+    "when": "['Modern', 'Atomic', 'Information', 'Future'].includes(self.era?.replace(' Era', ''))",
     "weight": {
       "base": 60
     },

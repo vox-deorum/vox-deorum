@@ -10,8 +10,8 @@ flowchart TD
     SCORE --> NEXT{"Plan complete?"}
     KEEP --> NEXT
     NEXT -->|"More actions to try"| TRY
-    NEXT -->|"Yes"| CHECK["Final: check the completed plan<br/>Keep the stored interim scores"]
-    CHECK -->|"Accepted"| RANK["Rank completed plans<br/>Damage, bonuses, stored plot scores, and trade gain"]
+    NEXT -->|"Yes"| CHECK["Final: check where units end their turns<br/>Replace their interim plot scores"]
+    CHECK -->|"Accepted"| RANK["Rank completed plans<br/>Damage, bonuses, positioning, and trade gain"]
 ```
 
 This page covers land and naval combat. See the [simulation overview](overview.md) for the search procedure and [air search](air.md) for aircraft, which score strikes and sweeps without an end-of-turn plot score.
@@ -48,7 +48,7 @@ The search offers a ranged unit a hold or heal only if no shot qualifies in the 
 
 `A_FINISH_TEMP` means the search has proposed that **this unit** stay where it is. Other units can still kill a threat or move next to it. When proposing the hold, the search uses the lighter `EM_INTERMEDIATE` danger penalty and runs a quick safety check that can allow for friendly help. Using the full end-of-turn check at this point could reject a hold that another unit makes safe later in the plan.
 
-Once the plan is complete, `EM_FINAL` checks which enemies remain and which friendly units will end their turns nearby. It also uses a different danger formula: for example, it can double the penalty for an isolated unit even when the underlying danger is unchanged. The final check may reject the plan. If it accepts the hold, it appends `A_FINISH` and leaves the interim plot score in the plan total.
+Once the plan is complete, `EM_FINAL` checks which enemies remain and which friendly units will end their turns nearby. It can double the danger penalty for an isolated unit even when the underlying danger is unchanged. If the unit's position is accepted, the search appends `A_FINISH` and uses the final plot score in the plan total. The same rule applies when a unit used up its moves by moving or attacking. A unit released to another fight keeps its last stored score.
 
 ### Scale of the scoring items
 
@@ -61,17 +61,17 @@ These values come from `CvTacticalAI.cpp` and include the 10× weight where it a
 | Empty barbarian camp | 1,000 | Yes |
 | Direct unit kill | 150 | Yes |
 | Damage and credited healing | +10 per HP dealt or restored; −10 per HP taken | Yes |
-| Moving onto an enemy citadel | 134 with moves left to pillage it, otherwise 67 | Yes |
-| Moving into our frontline citadel or a frontline city | 67, or 33 for a melee unit with friends beside and no enemy adjacent | Yes |
+| Enemy citadel | Moving onto it: 134 with moves left to pillage it, otherwise 67. Ending the turn there: one-third of its improvement damage. | Interim and final plot scores |
+| Our frontline citadel or a frontline city | Base 67, or 33 for a melee unit with friends beside and no enemy adjacent | Interim and final plot scores, using the rules for each stage |
 | One tier of enemy-distance desirability | 40 to 60, such as 120 adjacent and 60 at two plots for first-line land units | Yes |
-| Move-time danger | Minus half the danger, minus 1 per 20% of current HP it represents | Yes |
+| Move-time danger | Minus half the danger, minus 1 per 20% of current HP it represents | Interim plot score |
 | Trade intercept | 15, scaled by gold flavor and health | As plan trade gain |
 | Trade guard | 10, scaled by gold flavor and health | As plan trade gain |
 | Staying near our cities | Up to 10 | Yes |
 | Movement left | 1 per move | Yes |
-| Turn-end danger | Danger as a percent of current HP, compressed above 225 and doubled with no friend beside | Starting reference and final check only |
-| Staying beside a friend | 8 to 13 | Starting reference and final check only |
-| Defensive terrain | 1 per 5% defense | Starting reference and final check only |
+| Turn-end danger | Danger as a percent of current HP, compressed above 225 and doubled with no friend beside | Starting reference and final plot score |
+| Staying beside a friend | 8 to 13 | Starting reference and final plot score |
+| Defensive terrain | 1 per 5% defense | Starting reference and final plot score |
 
 ## Positioning and danger
 
@@ -83,7 +83,7 @@ With enemies present, the land desirability table peaks at 12:
 | Second line       | 2 plots                                            |
 | Third line        | 3 plots                                            |
 
-Naval units use a separate table. Without enemies, desirability follows distance to the tactical target. When target distance matters, a unit more than four steps away earns 40 points per step closer, up to that four-step boundary, and cannot move farther away. `UpdatePlotDistanceToTarget` builds these distances for both combat and positioning tasks.
+Naval units use a separate table. Without enemies, desirability follows distance to the tactical target. When target distance matters, a unit more than four steps away earns 40 interim points per step closer, up to that four-step boundary, and cannot move farther away. `UpdatePlotDistanceToTarget` builds these distances for both combat and positioning tasks.
 
 Intermediate moves receive provisional danger penalties. `ScoreCombatUnitTurnEnd` checks final positions against remaining HP, adjusts for experience, and penalizes isolation more heavily. Nearby friendlies, terrain, air cover, and citadels can improve the result. Unsafe plots can be rejected outright.
 
@@ -96,22 +96,22 @@ Search order and final ranking use different scores and checks:
 | Candidate generation | Assignment score | Prunes and orders candidate assignments. Rank-only bonuses for trade routes and air search affect this order separately. |
 | Search queue | Generation (search depth), then last-round rank | Favors shallow generations early and deeper ones later. Within a generation, favors the last-round heuristic plus rank-only bonuses. |
 | Completed plans | [Acceptance](overview.md#acceptance-and-replay) checks | Rejects unsafe or non-progressing plans. |
-| Final ranking | Current total score | Ranks accepted plans, highest first. Ties use fewer assignments, then lower position ID. |
+| Final ranking | Total with final plot scores for units committed to finishing | Ranks accepted plans, highest first. Ties use fewer assignments, then lower position ID. |
 
 ### Completed-plan score
 
-`CvBasePosition::UpdateScore` accumulates damage and bonuses and keeps one stored plot score per unit. A new scored assignment replaces the unit's previous stored value. `getScoreTotal` adds the [trade gain](#how-plans-keep-the-score):
+`CvBasePosition::UpdateScore` accumulates damage and bonuses and keeps one provisional plot score per unit. At completion, each `A_FINISH` replaces that unit's provisional score with its final plot value. The adjustment counts only the tile value, so final scoring cannot add damage or a bonus a second time. `getScoreTotal` also includes the [trade gain](#how-plans-keep-the-score):
 
-`total score = 10 * (cumulative damage delta + cumulative bonuses) + sum of stored unit plot scores + trade gain`
+`total score = 10 * (cumulative damage delta + cumulative bonuses) + sum of unit plot scores after final adjustments + trade gain`
 
-The blocked fallback's candidate score is `−10 − previous plot score`. For a unit that starts with a plot reference of +13, compare releasing it right away with holding the same tile at a provisional +79. Neither choice deals damage or earns an action bonus in this example:
+The blocked fallback's candidate score is `−10 − previous plot score`. In this example the starting reference is +13, the hold's provisional value is +79, and the final check accepts the same tile at −121. Neither choice deals damage or earns an action bonus:
 
 | Choice | Candidate score | Unit's contribution to the completed plan |
 | --- | --- | ---: |
 | Release (`A_BLOCKED`) | `−10 (fallback value) − 13 (start) = −23` | 0 |
-| Hold (`A_FINISH_TEMP`) | `79 (provisional) − 13 (start) = +66` | +79 |
+| Hold (`A_FINISH_TEMP`) | `79 (provisional) − 13 (start) = +66` | −121 (final plot value) |
 
-A negative final plot score can still pass the safety check. If the check values the hold at −121 and accepts it, the plan keeps +79. A block after a move or attack preserves the points already earned. There is no extra bonus for an unused unit; see the [24-map tuning study](../../../../../../vox-deorum-rl/docs/rollouts/snapshots/unused-unit-bonus-2026-11-14.md).
+A negative final plot score can still pass the safety check. Even when the rules allow an unsafe position, the plan ranks it by its calculated plot value. A block after a move or attack preserves the points already earned. Releasing a unit after a move can therefore score higher than finishing it on the same tile with a danger penalty; another task can still move the unit. There is no extra bonus for an unused unit; see the [24-map tuning study](../../../../../../vox-deorum-rl/docs/rollouts/snapshots/unused-unit-bonus-2026-11-14.md).
 
 ### Last-round heuristic quirk
 

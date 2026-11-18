@@ -1,6 +1,7 @@
 /** Turn permitted diplomacy observations into the public pair and incident fields. */
 import type { NewspaperSourceReference } from '../../../../../mcp-server/dist/newspaper/evidence.js';
 import type { DiplomacyPairObservation } from '../../contracts/diplomacy.js';
+import { diplomacyPairKey } from '../diplomacy/diplomacy-facts.js';
 import type { DiplomacyCheck } from '../diplomacy/war-peace.js';
 import { uniqueSources } from '../shared/sources.js';
 import type { FactObservation, FactSubject, NewspaperFactModel, DatedFact } from './index.js';
@@ -18,6 +19,7 @@ function pairFields(
   const { state, sources, since, sinceSources, lastWarScore, warScore, scoreSource, peaceAnchored, friends, pact } = observation;
   const involvesSelf = players.includes(model.receiverId);
   const fields: Record<string, FactField> = {
+    id: fact(diplomacyPairKey(a, b), sources),
     a: fact(reference('player', a), sources),
     b: fact(reference('player', b), sources),
     involvesSelf: fact(involvesSelf, sources),
@@ -104,6 +106,7 @@ export function buildDiplomacyFacts(model: NewspaperFactModel, diplomacy: Diplom
     const { id, turn, root, sources } = incident;
     if (!root.every(player => playerObservation(model, player, turn)?.fields)) continue;
     const fields: Record<string, FactField> = {
+      id: fact(id, sources),
       kind: fact(incident.kind, sources),
       turn: fact(turn, sources),
       participants: fact(incident.participants.filter(entry => playerObservation(model, entry.id, turn)?.fields)

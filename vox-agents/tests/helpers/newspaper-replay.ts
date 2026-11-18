@@ -64,7 +64,7 @@ export async function writeReplayPublicationCatalogue(databasePath: string) {
       values: { eventTurn: 'event.turn' }, tags: ['military'],
     }])),
     writeFile(path.join(directory, 'templates.json'), JSON.stringify([{
-      id: 'fixture-war-article', triggerIds: ['fixture-war-report'], tags: ['military'], weight: { base: 1 },
+      id: 'fixture-war-article', triggers: ['fixture-war-report'], tags: ['military'], weight: { base: 1 },
       variants: [{ id: 'notice', headline: 'War declared', body: ['The declaration came on turn {{eventTurn}}.'], weight: { base: 1 } }],
     }])),
   ]);

@@ -92,9 +92,9 @@ describe('durable replay publication', () => {
   });
 
   it.each([
-    { file: 'pages', entries: [{ id: 'front', condition: { op: 'technology', id: 'TECH_WRITING' } }] },
-    { file: 'designs', entries: [{ id: 'oral-accounts', layouts: [{ id: 'account', weight: { base: 10, adjustments: [{ condition: { op: 'always' }, add: -10 }] } }] }] },
-    { file: 'designs', entries: [{ id: 'oral-accounts', layouts: [{ id: 'urgent-account', condition: { op: 'technology', id: 'TECH_WRITING' } }] }] },
+    { file: 'pages', entries: [{ id: 'front', when: 'self.era === "Modern Era"' }] },
+    { file: 'designs', entries: [{ id: 'oral-accounts', layouts: [{ id: 'account', weight: { base: 10, adjustments: [{ when: 'true', add: -10 }] } }] }] },
+    { file: 'designs', entries: [{ id: 'oral-accounts', layouts: [{ id: 'urgent-account', when: 'self.era === "Modern Era"' }] }] },
   ])('should reject an overlay with an unavailable publication foundation before creating a run: %j', async ({ file, entries }) => {
     const directory = path.join(path.dirname(recording.filename), 'invalid-catalogue');
     await mkdir(directory);
