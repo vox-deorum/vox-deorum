@@ -4,4 +4,4 @@
 
 The [replay developer guide](../../../developers/vox-agents/newspaper/replay.md) owns the implemented behavior, module boundaries, startup commands, and acceptance results. It includes the tested recording and settings, source-traced domestic, trade, and foreign-culture examples, and recording limitations.
 
-No work remains in this stage. Continue with [Plan 3: heuristic newspaper](03-heuristic-editor.md) to turn evidence into generated issues and supply real content for further renderer acceptance. Durable replay output belongs to Plan 3, editorial comparisons to [Plan 4](04-offline-evaluation.md), and live collection and save integration to [Plan 5](05-live-integration.md).
+No work remains in this stage. [Plan 3](03-heuristic-editor.md) uses recorded evidence to publish and store issues. [Plan 4](04-triggers-templates-and-styles.md) uses replay to tune the authored newspaper; [Plan 7](07-llm-editors.md) compares editors, and [Plan 5](05-live-integration.md) covers live collection and save integration.

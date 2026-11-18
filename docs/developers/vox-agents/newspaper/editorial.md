@@ -117,10 +117,10 @@ Each unique item has one current vote: -1, 0, or +1. Assigning the same vote aga
 
 The decision records the corpus, votes, tag counts, coefficients, and resolved adjustments used for that check. This preserves an explanation even after votes change.
 
-Preferences store publication frequency in Standard-equivalent turns and whether LLM use is enabled. Built-in defaults are five turns and LLM disabled. Configured defaults override built-ins; saved receiver choices take precedence. Game speed resolves frequency to an integer interval of at least one turn. Changing frequency schedules from the last completed check. LLM writing and comparison evaluation remain in [Plan 4](../../../plans/newspaper/implementation/04-offline-evaluation.md).
+Preferences store publication frequency in Standard-equivalent turns and whether LLM use is enabled. Built-in defaults are five turns and LLM disabled. Configured defaults override built-ins; saved receiver choices take precedence. Game speed resolves frequency to an integer interval of at least one turn. Changing frequency schedules from the last completed check. [Plan 4](../../../plans/newspaper/implementation/04-triggers-templates-and-styles.md) settles the authored catalogue and shared language styles. [Plan 7](../../../plans/newspaper/implementation/07-llm-editors.md) makes the LLM preference effective and compares editors.
 
 ## Verification and remaining acceptance
 
 Focused tests live under `vox-agents/tests/mock/newspaper/`, mirroring editorial, replay, and renderer ownership. They exercise hidden facts, multi-trigger matching, group bindings, series conflicts and decay, urgent priority, page duplication, deterministic choices, vote replacement, transaction rollback, and resume. Run `npm run test:mock -w vox-agents -- tests/mock/newspaper`, `npm run type-check -w vox-agents`, and `npm run build:newspaper -w vox-agents`; integration uses root build and test commands.
 
-[Plan 3](../../../plans/newspaper/implementation/03-heuristic-editor.md) retains remaining acceptance gates. Thresholds, decay, content minimums, and vote strength need reading and tuning against recordings. Automated structural checks do not establish that the coverage is interesting or well paced.
+The stock catalogue's mechanics are accepted. [Plan 4](../../../plans/newspaper/implementation/04-triggers-templates-and-styles.md) owns reading acceptance and tuning against recordings, including thresholds, decay, content minimums, and vote strength.

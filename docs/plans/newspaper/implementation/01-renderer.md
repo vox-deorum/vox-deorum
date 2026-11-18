@@ -33,4 +33,4 @@ The renderer guide records production-pruned runtime exports, installer file sel
 
 Use focused Vitest checks under `vox-agents/tests/mock/newspaper/`, including browser layout/export checks with an installed browser and acquired converter. Run `npm run type-check:newspaper -w vox-agents`, `npm run build:newspaper -w vox-agents`, `npm run build:all`, and `npm run test:all` after implementation changes. Deploy mod edits using `civ5-mod/deploy.bat`; use the documented DLL build-and-copy workflow when DLL changes are needed.
 
-Editorial selection, durable feedback, archives, live publication, and save synchronization remain in Plans 3 to 5 of the [roadmap](../implementation.md).
+See the [roadmap](../implementation.md) for editorial selection, durable feedback, archives, and live publication.

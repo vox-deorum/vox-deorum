@@ -1,6 +1,8 @@
 # Newspaper implementation roadmap
 
-**Status: Plan 1's demo is accepted in game, Plan 2 is complete, and Plan 3 implements heuristic editing and durable offline replay.** Recorded publication, browser voting, and resume are verified. Human reading acceptance and broader game renderer checks remain pending. Plans 4 and 5 remain planned. Plan 6 now publishes 14 authored stories in replay. The next gate is reading the stock newspaper with the owner. This roadmap is for developers implementing the [newspaper specification](spec.md); each plan has its own deliverable and verification gate.
+**Status: the stock trigger mechanics are accepted and Plan 6 is closed.** Plan 1's game demo is accepted, Plan 2 is complete, and Plan 3 supplies heuristic editing, browser voting, and durable offline replay. Plan 4 now settles triggers, templates, and language styles before Plan 7 adds LLM editing. Broader game renderer checks and Plan 5 live integration remain pending.
+
+This roadmap tracks implementation of the [newspaper specification](spec.md).
 
 ## Goal and success criteria
 
@@ -48,7 +50,7 @@ The normal VD server hosts the reader, export service, and replay routes; the De
 
 Manual testing confirmed the demo's links, scrolling, and general newspaper UI in Civilization V. The viewer checks cache confinement and DDS validity through `Game.IsNewspaperTextureAvailable`, and uses native text when textures are unavailable. [Plan 1](implementation/01-renderer.md) retains delivery controls and broader layout, interaction, cache-loss, and installation checks. The [renderer guide](../../developers/vox-agents/newspaper/renderer.md) records the implemented behavior, demo acceptance, and local measurements.
 
-MCP owns historical evidence queries and recorded-access filtering under `mcp-server/src/newspaper/`, with shared history reads under `src/knowledge/`. Vox Agents reuses those queries for cutoff controls, source inspection, and heuristic publication. The Netherlands self-play recording passed 89 checks through turn 440 with source preservation. Plan 3 produced 81 saved issues and verified feedback, resume, and browser reading. Human reading acceptance remains pending before offline evaluation expands.
+MCP owns historical evidence queries and recorded-access filtering under `mcp-server/src/newspaper/`, with shared history reads under `src/knowledge/`. Vox Agents reuses those queries for cutoff controls, source inspection, and heuristic publication. A historical Netherlands replay verified 89 checks, 81 saved issues, feedback, resume, and browser reading. Plan 6 replaced that run's catalogue with 14 rules and 15 authored templates. The owner accepted the mechanics of the stock reading set; Plan 4 takes up editorial tuning and voice.
 
 ## Keeping plans current
 
@@ -60,20 +62,19 @@ After implementing a work unit, fold its verified behavior, ownership, commands,
 | --- | --- | --- |
 | [1. Shared renderer and game proof](implementation/01-renderer.md) | A fixture issue works in the browser and through the DDS viewer, with matching links, scrolling, tabs, and votes. | Readable text and correct interaction at representative sizes, safe missing-file behavior, and measured installation/runtime cost. |
 | [2. Historical queries](implementation/02-replay.md) | Queries against MCP's dated records supply newspaper inputs; standalone evaluation reads the database directly. | Cutoff and field filtering work in both access paths, with inspectable source references. |
-| [3. Heuristic newspaper](implementation/03-heuristic-editor.md) | Configured triggers and authored templates produce stored issues, series, pages, and feedback-sensitive selections. | A complete read, vote, continue, and resume workflow produces useful coverage without an LLM. |
-| [4. Offline evaluation and LLM editor](implementation/04-offline-evaluation.md) | Complete the offline archive and design coverage; compare both editors on the same recordings. | Demonstrate continuity, merging, useful short pieces, fallback, and design evolution; review the reading experience. |
+| [3. Heuristic newspaper](implementation/03-heuristic-editor.md) | Configured triggers and authored templates produce stored issues, series, pages, and selections shaped by votes. | Read, vote, continue, and resume without an LLM. |
+| [6. Trigger rules](implementation/06-trigger-rules.md) | Expressions over a fact model replace the fixed detectors. Stock rules have matching story templates. | Recorded issues and audits work, and the owner accepts the stock news mechanics. Closed. |
+| [4. Triggers, templates, and language styles](implementation/04-triggers-templates-and-styles.md) | Tune the stock catalogue in replay and settle shared language styles. Finish archive navigation as a separate work unit. | Accept recorded coverage and voice, and save a reproducible heuristic baseline. |
+| [7. LLM editors and offline comparison](implementation/07-llm-editors.md) | Add constrained model editing using the same evidence, styles, and series rules as authored editing. | Compare editors on the same inputs and demonstrate fallback and continuity when switching modes. |
 | [5. Live publication and MCP storage](implementation/05-live-integration.md) | Human-only collection, background publication, checkpoint restoration from MCP, and the finished game reader. | With the matching database, old saves select the right revisions, delayed work cannot cross timelines, and missing textures fall back to text. |
-| [6. Trigger rules](implementation/06-trigger-rules.md) | Triggers become rules: JavaScript expressions over a fact model with distance, named constants and shortcuts. The fixed detectors and the existing templates are removed and a small example set is re-added. | The documented example triggers produce developments from a recording, and each one's audit shows which part of its rule passed or stopped. |
 
-Plan 6 reworks Plan 3's triggers independently of Plans 4 and 5. The [trigger guide](../../developers/vox-agents/newspaper/triggers/overview.md) describes the working expression runner, facts and shortcuts, and the rule catalogue used by replay.
-
-The accepted game demo uses fixtures. Use Plan 3's generated issues for broader browser and game renderer acceptance before expanding the design catalogue. Live integration follows offline editorial evaluation.
+The [trigger guide](../../developers/vox-agents/newspaper/triggers/overview.md) describes the rule engine and catalogue used in replay. Use generated issues for broader browser and game renderer acceptance before expanding the design catalogue. Live integration follows the offline editorial evaluation.
 
 Plan 5 first verifies that the small checkpoint ID survives actual saves and loads, including same-turn branches. Measure archive growth and lookup times separately in MCP's database using generated archives and fixtures.
 
 ## Shared contracts and boundaries
 
-Keep contracts in the existing workspaces: MCP owns evidence and browser-safe archive protocol schemas; Vox Agents owns articles, editorial state, and rendering. The table separates the contracts implemented through Plan 3 from the proposed additions for Plans 4 and 5.
+Keep contracts in the existing workspaces: MCP owns evidence and browser-safe archive protocol schemas; Vox Agents owns articles, editorial state, and rendering.
 
 | Contract | Owner | Established in |
 | --- | --- | --- |
@@ -85,7 +86,8 @@ Keep contracts in the existing workspaces: MCP owns evidence and browser-safe ar
 | Trigger catalogue, developments and decisions | Vox Agents `editorial/config/`, `editorial/rules/`, `contracts/triggers.ts` and `editorial/check.ts` | Plan 6 evaluates rules; Plan 3's selection and presentation consume their developments. |
 | Editorial state, series, preferences and decisions; stored presentation | Vox Agents `contracts/publication.ts` and `contracts/design.ts` | Plan 3 implements offline storage; Plan 5 reuses the contracts for MCP storage. |
 | Archive indexes and queries; responses containing issue documents | MCP `newspaper/protocol.ts`; Vox Agents `contracts/archive.ts` respectively | Plan 3, reused for live reading in Plan 5. |
-| LLM proposal schemas; comparison-run records | Vox Agents `editorial/proposal.ts`; `replay/evaluation.ts` respectively | Plan 4. |
+| Language style catalogue and resolved style IDs | Vox Agents `editorial/config/` and the runtime catalogue under `vox-agents/newspaper/` | Plan 4 defines the shared styles; Plan 7 supplies the relevant guidance to the model. |
+| LLM proposals, editor decisions, and comparison records | Vox Agents `editorial/proposal.ts`, `contracts/publication.ts`, and `replay/evaluation.ts` | Plan 7. |
 | Live revisions, database migrations, and transport envelopes | MCP `newspaper/{store,protocol}.ts` and `knowledge/schema/newspaper.ts` | Plan 5; the game restorable reference is a checkpoint ID. |
 
 Paths in the table are relative to `vox-agents/src/newspaper/` or `mcp-server/src/` as labelled. Infer TypeScript types from shared runtime schemas. Keep private helper types beside their implementation. Shared contracts must be browser-safe and independent of Node, DOM, renderer runtime, absolute paths, and live game objects. MCP never imports Vox Agents; browser code may import only browser-safe MCP contract modules.
@@ -96,15 +98,15 @@ Each folder groups a sustained responsibility. Move existing files and all consu
 
 | Location | Responsibility and stage |
 | --- | --- |
-| `vox-agents/src/newspaper/contracts/` | Serialized content and boundary schemas across readers, editors and adapters. Plans 1 to 5 add the contracts listed above. |
+| `vox-agents/src/newspaper/contracts/` | Serialized content and boundary schemas across readers, editors and adapters. |
 | `vox-agents/src/newspaper/renderer/` | Layout, assets, stored presentation resolution, reader state, bridge interfaces and renderer capability checks. Serialized render data belongs to `contracts/render.ts`. |
 | `vox-agents/src/newspaper/export/` | Browser worker, capture, DDS conversion, cache, server-mounted HTTP routes and export queue. Plan 5 extends the service with viewer pins and releases. |
-| `vox-agents/src/newspaper/editorial/` | Pure configuration, detection, selection, series, feedback, presentation and validation. Plan 3 establishes `check.ts` as dispatch/fallback owner; Plan 4 adds the constrained LLM adapter. |
-| `vox-agents/src/newspaper/replay/` | Read-only recording connection, serialized publication session, archive and feedback routes, and transactional offline output storage. Plan 4 adds comparison evaluation. |
+| `vox-agents/src/newspaper/editorial/` | Configuration, detection, selection, series, feedback, presentation and validation. Plan 4 defines language styles; Plan 7 adds the constrained LLM adapter and fallback through `check.ts`. |
+| `vox-agents/src/newspaper/replay/` | Read-only recording connection, serialized publication session, archive and feedback routes, and transactional offline output storage. Plan 7 adds editorial comparisons. |
 | `vox-agents/src/newspaper/live/` | Lifecycle, scheduler, and adapter for the MCP publication store in Plan 5. |
 | `vox-agents/src/newspaper/{application,game-delivery}.ts` | Lazy shared renderer, sample orchestration and acknowledged MCP delivery. The VD server owns startup and shutdown. |
 | `vox-agents/newspaper/src/reader/` and `src/app/` | Reader DOM/layout and the browser application respectively, including replay controls and source inspection. Plan 4 completes archive navigation. The export entry stays at `src/export-bridge.ts`. |
-| `vox-agents/newspaper/` | `defaults.json`, `pages.json`, per-design files in `designs/`, and topic-tag files in `templates/` and `triggers/` supply runtime editorial choices; the installer includes them explicitly. |
+| `vox-agents/newspaper/` | `constants.json`, `defaults.json`, `pages.json`, and files in `designs/`, `templates/`, and `triggers/` supply runtime editorial choices. Plan 4 adds the shared language styles to this catalogue and the installer. |
 | `mcp-server/src/newspaper/` | Evidence contracts, queries and field projection in Plan 2; archive protocol types in Plan 3; authoritative live store and transport in Plan 5. `projection.ts` remains the single reporting-policy owner. |
 | `mcp-server/src/knowledge/` | Shared pure history reads in `history.ts`; Plan 5 collection in `newspaper-collection.ts` and database definitions in `schema/newspaper.ts`. |
 | `civ5-mod/UI/Newspaper/` | Viewer, XML, data helpers and mock. Plan 5 adds save-reference handling and transport here. |

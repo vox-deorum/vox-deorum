@@ -1,7 +1,7 @@
 # Newspaper offline evaluation
 
-**Status: Planned.** Offline evaluation will compare heuristic and LLM editorial decisions against the same recorded evidence and publication history. Experiments will assess coverage, continuity, useful short stories, merging and fading, fallback behavior, and design changes while keeping evidence access controlled.
+The [replay reader](replay.md) stores heuristic issues, votes, and series history, and shows the evidence and decisions behind each article. Use the [stock reading examples](replay.md#stock-catalogue-reading-examples) to see the mechanically accepted starting catalogue.
 
-The [offline replay reader](replay.md) already supports stored heuristic issues, votes, resume, and inspection of decisions and article evidence. Evaluation will extend it with archive filtering, series navigation, broader design coverage, and comparisons between editors. Reading acceptance will establish whether the coverage is useful before live publication is connected.
+[Plan 4](../../../plans/newspaper/implementation/04-triggers-templates-and-styles.md) will use recorded games to settle coverage, templates, and language styles and save a reproducible authored baseline. The reading review looks at usefulness, factual support, story mix, continuity, and voice.
 
-See [Plan 4: offline reader, LLM editor, and evaluation](../../../plans/newspaper/implementation/04-offline-evaluation.md). The plan owns the experiment design and acceptance checks.
+[Plan 7](../../../plans/newspaper/implementation/07-llm-editors.md) will compare the authored and model editors from that baseline with the same starting evidence, configuration, and history. It adds checks for fallback, mode changes, and model cost.

@@ -1,6 +1,6 @@
 ﻿# Newspaper: feature specification
 
-**Status:** conceptual draft for developers and designers. This document defines the intended experience. [Newspaper research](research/research.md) covers technology references, available data, and questions for technical design. The [newspaper design principles](design-principles.md) cover layout, visual identity, and interaction details. The [implementation roadmap](implementation.md) divides the work into five plans, beginning with a shared renderer for the browser and game readers.
+**Status:** conceptual draft for developers and designers. This document defines the intended experience. [Newspaper research](research/research.md) covers technology references and available data. The [design principles](design-principles.md) cover layout, visual identity, and interaction. The [implementation roadmap](implementation.md) tracks the work from a shared renderer through offline editing and live publication.
 
 ## 1. Goal
 
@@ -346,6 +346,7 @@ International stories can stand on their own before they affect the player. When
 ### 4.3 Voice
 
 - Use era-appropriate language, local character, and restrained humor.
+- Use the same style guidance for authored templates and model editors. Give each medium a recognizable voice without changing what its evidence supports.
 - Ground facts in game observations; make interpretation recognizable as interpretation.
 - Preserve earlier issues' original text and link to them from follow-ups.
 
@@ -429,9 +430,10 @@ flowchart TD
     R[Prove shared renderer with fixtures] --> A
     A[Choose recording segments] --> B[Replay and generate issues]
     B --> C[Read, vote, and continue replay]
-    C --> D[Compare both editors and tune coverage]
+    C --> D[Tune triggers, templates, and language styles]
     D --> B
-    D -->|Offline experience is useful| E[Live play, MCP archive, and game reader]
+    D --> M[Compare editors using the accepted baseline]
+    M -->|Offline experience is useful| E[Live play, MCP archive, and game reader]
     E --> F[Later extensions]
 ```
 
@@ -441,8 +443,8 @@ flowchart TD
 | First offline deliverable | Readable issues and series history, with a simple local workflow to read, vote, and continue replay. Save editorial choices, evidence, and seeds so decisions can be inspected. |
 | Initial coverage | Domestic city contrasts, trade relationships, and independent developments among known foreign civilizations. |
 | Required examples | A series starting, continuing, fading, and returning; a merged-template installment; useful short pieces. |
-| Editor comparison | Run heuristic and LLM editors on the same recording segments; compare coverage and continuity. |
-| Tuning | Adjust the JSON configuration: publication interval, thresholds, fade factor, variant and design weights, page minimums, and vote effects. Coverage depends on recorded fields and observation history. |
+| Tuning | Settle the trigger mix, authored templates, and language styles using recorded evidence. Adjust thresholds, fade, weights, page minimums, and vote effects. |
+| Editor comparison | Run heuristic and LLM editors on the same recording segments with shared style guidance; compare coverage and continuity. |
 | Live integration | Connect the editorial loop to live play and an MCP archive shared by the game and browser readers. Verify save checkpoint restoration. |
 | Later extensions | Graph rendering and graph-based reviews, richer artwork, audio, immediate special editions, and strategist publications. |
 
@@ -474,7 +476,3 @@ These need answers in the technical design or the next round of examples.
 | Tuning values | Trigger thresholds, fade factor, vote effects and tag distinctiveness, design stickiness share, and page minimums. |
 | Archive size | How much the MCP database grows over a long campaign and how quickly it retrieves a saved branch. |
 | Language | English first; other languages once the catalogue settles. |
-
-**Next steps:**
-
-Review the [implementation roadmap](implementation.md) for the renderer, replay evidence, heuristic newspaper, offline evaluation, and live publication with MCP storage.

@@ -1,6 +1,6 @@
 # Newspaper trigger constants and shortcuts
 
-**Status: constants and shortcuts are implemented.** The built-in `vox-agents/newspaper/constants.json` loads and merges with overlays. The shipped rules read these names. The stock catalogue ships fourteen rules and a story template for each, so a stock replay can publish matching stories. Pair shortcuts are available to stock and overlay pair rules. [Plan 6](../../../../plans/newspaper/implementation/06-trigger-rules.md) lists the build order.
+The built-in `vox-agents/newspaper/constants.json` supplies the names used by the stock catalogue and merges with overlays. Pair shortcuts are available to both stock and overlay rules.
 
 **Constants** give names to the numbers that [trigger rules](overview.md) compare against, such as `neighboring` for 7 tiles. **Shortcuts** give names to small expressions that many rules share, such as `city.is.neighbor`. This page is for developers writing or tuning rules. Both live in `vox-agents/newspaper/constants.json`, and changing one there changes every rule that uses it.
 

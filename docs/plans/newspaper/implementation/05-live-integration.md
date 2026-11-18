@@ -1,6 +1,6 @@
 # Plan 5: live publication, MCP storage, and game reader
 
-**Status: draft.** For developers integrating the newspaper after the offline evaluation gate in [the roadmap](../implementation.md). Recheck the named source files before implementation; this stage depends on the measured renderer and accepted editorial configuration.
+**Status: draft.** Live integration follows the accepted [authored baseline](04-triggers-templates-and-styles.md) and [offline LLM evaluation](07-llm-editors.md). Recheck the named source files before implementation; this stage also depends on the measured renderer.
 
 ## Goal and success criteria
 

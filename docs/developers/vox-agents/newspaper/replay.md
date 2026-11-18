@@ -36,6 +36,18 @@ A requested preview turn that was skipped or falls outside the publication sched
 
 Before a requested preview run, the command builds dependencies and checks the installed browser. A failed build stops the command before replay creates output. Ctrl+C cancels the active build or replay and returns a nonzero exit code. Once replay starts, failures retain a failed manifest and report, including completed previews. A forced termination or disk-write failure can leave partial files; `replay.sqlite` is the authority for committed checks. To continue that history in VD, choose Resume with the same recording and player, the output's `replay.sqlite`, and run ID `examples`. The CLI creates new runs; use a new output directory to rerun after fixing rules, overlays, or rendering. Its entry point is `src/newspaper/console.ts`; `cli/` owns options, artifacts, and previews.
 
+### Stock catalogue reading examples
+
+These samples describe the stock catalogue at Git revision `94671707a653ca0710806c50bc994e4e66b4ab95`. Use that revision and the Netherlands recording in the command above with no `--config` override to reproduce them. Give each run its own output directory. For a single cutoff, set both `--from` and `--to` to that turn and use `--every 1`.
+
+| Receiver and cutoffs | What to inspect |
+| --- | --- |
+| Netherlands (7), turns 24 to 99, every 5 | Amsterdam's settler story at turn 29 uses positive local happiness, several nations draw level in research at 59, and Rotterdam outgrows Amsterdam at 69. |
+| Netherlands (7), turn 112; Austria (4), turn 125 | Utrecht has zero local happiness and gets a straight report. Salzburg has negative local happiness and gets a critical account. |
+| Netherlands (7), turns 308 and 417, in separate runs | Wartime Golden Age coverage uses a straight voice at 47% national happiness and a supportive voice at 100%. |
+
+The five stock runs produced 11 issues and 18 articles in 20 checks. Each rule appeared in the audits. The owner accepted the stock news mechanics. Use the audits to see which variants won and why before tuning coverage or voice. The [trigger examples](triggers/examples.md) explain how local and national happiness affect the writing.
+
 ### Iterate on a rule or overlay
 
 Create an override directory and mirror the catalogue paths being changed. To tune a shipped rule, copy `vox-agents/newspaper/triggers/cities.json` into a `triggers/` subfolder and edit that rule. To tune a story, copy its template into a `templates/` subfolder and edit the prose or variants. Pair and incident rules are ordinary entries, and the stock catalogue includes war and peace coverage. Then rerun the same recording and turn range with `--config` and a new output directory:

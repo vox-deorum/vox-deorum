@@ -6,11 +6,11 @@ The newspaper publishes stories from a Civilization V recording. An authored tem
 | --- | --- | --- |
 | [Renderer](renderer.md) | Demo accepted in game; broader acceptance pending | Stored presentation snapshots, browser rendering, DDS export, and game viewer |
 | [Replay](replay.md) | Rule evaluation, expressions and audits implemented; the stock catalogue publishes stories from recorded play | Recording evidence, separate output storage, rule audits, issue reading, votes, preferences, and resume |
-| [Editorial](editorial.md) | Steps 7 and 8 implemented; the stock catalogue has fourteen rules with matching templates | Rules, configuration, authored choices, selection, feedback, stored presentation, and audits |
-| [Evaluation](evaluation.md) | Planned | Offline experiments comparing editorial approaches |
+| [Editorial](editorial.md) | Stock mechanics accepted; language tuning planned | Rules, configuration, authored choices, selection, feedback, stored presentation, and audits |
+| [Evaluation](evaluation.md) | Planned | Authored coverage and voice, then comparison with model editing |
 | [Live integration](live-integration.md) | Planned | Live scheduling, MCP archive, save checkpoint IDs, and player integration |
 
-JavaScript expressions in QuickJS decide which developments make news and which accounts are eligible to print. The stock catalogue covers city, nation, and foreign affairs, with a story template for each rule. An overlay can tune a rule or add new coverage. See the [handoff and recorded examples](../../../plans/newspaper/implementation/06-trigger-rules.md).
+JavaScript expressions in QuickJS decide which developments make news and which accounts are eligible to print. The stock catalogue covers city, nation, and foreign affairs, with a story template for each rule. An overlay can tune a rule or add new coverage. Use the [stock replay examples](replay.md#stock-catalogue-reading-examples) to see how the choices play out.
 
 | Trigger page | Status | Scope |
 | --- | --- | --- |
