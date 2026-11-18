@@ -217,16 +217,18 @@ The city allowance `C` (stored as `fCityUnit`, 3 typical units) is the largest u
 | Input | Meaning | Unit or range |
 | --- | --- | --- |
 | `R` | City HP remaining, floored at 1. | HP |
-| `D_c` | Local damage on the city, after garrison absorption. | HP |
+| `D_c` | Scored damage to the city, after garrison absorption. | HP |
 | `H` (**expected heal**) | City heal on its owner's next turn, per native `CvCity::doTurn`: 0 if blockaded by land and water; else base heal + building defense bonus + population (Vox Populi) + defense process bonus. The undisturbed tripling is left out, since we damaged the city. Attack share only. | HP |
 | **Available capturer** | A damage-filter unit passing `CanCapture`: melee, moves and an attack left, no capture prohibition. Same distance approximation as local damage; search confirms capture. Without one, useful damage stops at `R − 1`, since bombardment leaves 1 HP. | Yes or no |
 | City danger | The loop's copy of native city danger (`GetCityDangerByThreat`), from visible enemies before our next turn, at the [enemy roll](#damage-rolls). Defense share only. | HP |
 
 | Case | Fall share | Reads as |
 | --- | --- | --- |
-| Attack: `D_c ≥ R` and an available capturer | `f_att = 1` | Capture possible; healing no longer matters. |
+| Attack: realizable city damage reaches `R` and a capturer is available | `f_att = 1` | Capture possible; healing no longer matters. |
 | Attack: otherwise | `f_att = max(0, min(D_c, R − 1) − H) / R` | Damage capped at leaving 1 HP, minus healing, over remaining HP. Damage at or below `H` earns 0, though the garrison term can still pay. |
 | Defense | `f_def = min(1, city danger / R)` | No heal and no capturer: the defender plans for the [enemy roll](#damage-rolls). |
+
+With forecast readiness enabled, a checked fight scores **realizable damage + √(damage rejected for lack of reach)**. The loop takes the square root once for the target unit, city, or starting garrison. Only realizable damage can earn a kill or capture. Before a reach check, the opening estimate uses the local damage projection. For example, if readiness rejects all 77 projected city damage, the fight scores 8.775 HP before healing. A city expected to heal 14 HP still earns zero progress.
 
 **Local damage on a city** is what the [damage filter](recruitment.md#battlefield-estimate) of the local set deals in native quick attack simulations (`GetSimulatedDamageFromAttackOnCity`) at [our roll](#damage-rolls):
 
@@ -253,8 +255,8 @@ The city allowance `C` (stored as `fCityUnit`, 3 typical units) is the largest u
 
 | Case | Formula | Reads as |
 | --- | --- | --- |
-| Nonlethal, `D_t < R_t` | `K_t = F × (1 − q) × D_t / M` | Worth × health share (0.4) × share of maximum HP removed. |
-| Lethal, `D_t ≥ R_t` | `K_t = F × (q + (1 − q) × R_t / M)` | Whole living value: retained share (0.6) plus the health share left. The jump at the kill threshold is the incentive to finish targets. |
+| Realizable damage below `R_t` | `K_t = F × (1 − q) × min(D_t, R_t) / M` | Scored damage earns health value up to the HP the target has left. |
+| Realizable damage reaches `R_t` | `K_t = F × (q + (1 − q) × R_t / M)` | Whole living value: retained share (0.6) plus the health share left. |
 
 | Symbol | Meaning |
 | --- | --- |
