@@ -1,44 +1,13 @@
 /** Exercise permitted diplomacy incidents, pair continuity, and directional score history. */
 import { describe, expect, it } from 'vitest';
-import type { NewspaperDiplomacySnapshot, NewspaperEvent, NewspaperEvidence } from '../../../../../mcp-server/dist/newspaper/evidence.js';
-import type { DiplomacyMemory } from '../../../../src/newspaper/contracts/diplomacy.js';
-import { inferWarAndPeace } from '../../../../src/newspaper/editorial/diplomacy/war-peace.js';
-import type { EditorialContext } from '../../../../src/newspaper/editorial/shared/context.js';
+import type { NewspaperEvent, NewspaperEvidence } from '../../../../../../mcp-server/dist/newspaper/evidence.js';
+import { diplomacyMemorySchema, type DiplomacyMemory } from '../../../../../src/newspaper/contracts/diplomacy.js';
+import { inferWarAndPeace } from '../../../../../src/newspaper/editorial/diplomacy/war-peace.js';
+import { context, relationship, snapshot, event, evidence, scores } from '../../../../helpers/newspaper-diplomacy.js';
 
-type Relationship = NewspaperDiplomacySnapshot['relationships'][number];
-const names = { '0': 'France', '1': 'Brazil', '2': 'India', '3': 'Iroquois', '4': 'Byzantium', '5': 'Zulu', '10': 'Geneva', '11': 'Sidon', '12': 'Riga', '13': 'Kabul', '14': 'Unmet' };
-const context: EditorialContext = { playerNames: names, playerTeamIds: Object.fromEntries(Object.keys(names).map(id => [id, Number(id) + 100])), receiverTeamId: 100,
-  majorPlayerIds: [0, 1, 2, 3, 4, 5], standardTurnsPerGameTurn: 1 };
-
-/** Supply a resolved public relationship with optional directional war score and agreements. */
-function relationship(target: number, state: Relationship['state'] = 'peace', extra: Partial<Relationship> = {}): Relationship {
-  return { targetPlayerID: target, targetTeamID: target + 100, state, ...extra };
-}
-/** Build a dated public diplomacy observation with stable source identity. */
-function snapshot(player: number, turn: number, relationships: Relationship[], extra: Partial<NewspaperDiplomacySnapshot> = {}): NewspaperDiplomacySnapshot {
-  return { subjectID: player, teamID: player + 100, isMajor: player < 10, relationships,
-    source: { table: 'PlayerSummaries', id: turn * 100 + player, turn, createdAt: turn * 1000 }, ...extra };
-}
-/** Preserve separate native calls even when their event payloads match. */
-function event(type: string, id: number, turn: number, origin: number, target: number, extra: Record<string, unknown> = {}): NewspaperEvent {
-  return { type, values: { OriginatingPlayerID: origin, TargetTeamID: target + 100, ...extra },
-    source: { table: 'GameEvents', id, turn, createdAt: turn * 1000 } };
-}
-/** Build the smallest complete evidence envelope with only explicitly visible players. */
-function evidence(events: NewspaperEvent[] = [], history: NewspaperDiplomacySnapshot[] = [], cutoff = 10, previous = 5, receiver = 0): NewspaperEvidence {
-  const visible = [...new Set([receiver, ...history.flatMap(row => [row.subjectID, ...row.relationships.map(relation => relation.targetPlayerID)])])];
-  return { request: { receiverPlayerID: receiver, cutoffTurn: cutoff, previousCheckTurn: previous, comparisonRange: { fromTurn: Math.max(0, cutoff - 30), toTurn: cutoff } },
-    players: visible.map(subjectID => ({ subjectID, values: {}, source: { table: 'PlayerSummaries', id: cutoff * 10000 + subjectID, turn: cutoff, createdAt: cutoff * 1000 } })),
-    cities: [], comparisons: { players: [], cities: [] }, events,
-    diplomacy: { fromTurn: Math.max(0, cutoff - 30), baseline: [], history, gaps: [] } };
-}
 /** Run the standalone inference with receiver-aware metadata and optional prior pair memory. */
-function detect(input: NewspaperEvidence, memory?: DiplomacyMemory) {
-  return inferWarAndPeace(input, { ...context, receiverTeamId: input.request.receiverPlayerID + 100 }, memory);
-}
-/** Provide a continuous fixed-perspective major-war score history. */
-function scores(values: [number, number][], previous = 0): NewspaperEvidence {
-  return evidence([], values.map(([turn, warScore]) => snapshot(0, turn, [relationship(1, 'war', { warScore })])), values.at(-1)![0], previous);
+function detect(input: NewspaperEvidence, memory?: DiplomacyMemory, historyTurns?: number) {
+  return inferWarAndPeace(input, { ...context, receiverTeamId: input.request.receiverPlayerID + 100 }, memory, historyTurns);
 }
 describe('war and peace editorial inference', () => {
 
@@ -155,6 +124,7 @@ describe('war and peace editorial inference', () => {
         snapshot(10, 10, [relationship(1, 'war')], { majorAllyPlayerID: 0 })]);
       const result = detect(input);
       expect(result.audit.some(trigger => trigger.stage === 'allianceChange')).toBe(true);
+      expect(result.incidents.find(incident => incident.id.startsWith('alliance/'))?.role).toBeUndefined();
       expect(result.audit.filter(trigger => trigger.sources.some(source => source.id === 1010))).toHaveLength(1);
       const repeated = structuredClone(input);
       repeated.diplomacy!.history.push(snapshot(10, 10, [relationship(1, 'war')], {
@@ -195,7 +165,7 @@ describe('war and peace editorial inference', () => {
       expect(result.audit.some(trigger => trigger.stage === 'partial')).toBe(true);
       expect(result.audit.some(trigger => trigger.stage === 'quietFronts')).toBe(false);
       const resumed = detect(evidence([], [snapshot(10, 11, [relationship(0)]), snapshot(10, 12, [relationship(0, 'war')])], 12, 10), result.memory);
-      expect(resumed.audit.find(entry => entry.stage === 'resumed')?.sources[0].turn).toBe(12);
+      expect(resumed.incidents.find(entry => entry.resumed)).toMatchObject({ turn: 12, observed: true });
     });
     it('should match visible concessions only to the following deal between the settling parties', () => {
       const calls = [event('MakePeace', 2, 10, 0, 1),
@@ -230,16 +200,18 @@ describe('war and peace editorial inference', () => {
       const calls = [event('MakePeace', 1, 10, 0, 1), event('DeclareWar', 2, 10, 0, 1, { IsAggressor: true }), event('DeclareWar', 3, 10, 0, 0)];
       const result = detect(evidence(calls, [snapshot(0, 10, [relationship(1, 'war', { warScore: 1 })])], 10, 9), first.memory);
       expect(result.memory.pairs['0/1']).toMatchObject({ state: 'war', since: 10 });
-      expect(result.memory.pairs['0/1'].samples).toHaveLength(1);
+      expect(result.memory.pairs['0/1'].observations.at(-1)?.warScore).toBe(1);
       expect(result.memory.pairs['0/0']).toBeUndefined();
       expect(result.audit.some(trigger => trigger.stage === 'resumed')).toBe(true);
     });
 
-    it('should report the newest observed opening when a snapshot-only interval contains peace and renewed war', () => {
+    it('should distinguish an initial opening from a renewed war in the same reporting period', () => {
       const result = detect(evidence([], [snapshot(0, 0, [relationship(1)]), snapshot(0, 1, [relationship(1, 'war')]),
         snapshot(0, 2, [relationship(1)]), snapshot(0, 3, [relationship(1, 'war')])], 3, 0));
-      expect(result.audit).toHaveLength(1);
-      expect(result.audit[0]).toMatchObject({ stage: 'resumed', sources: [{ turn: 3 }] });
+      expect(result.incidents.map(({ turn, resumed, observed }) => ({ turn, resumed, observed }))).toEqual([
+        { turn: 1, resumed: false, observed: true }, { turn: 3, resumed: true, observed: true },
+      ]);
+      expect(result.audit.find(entry => entry.stage === 'resumed')?.sources.map(source => source.turn).sort()).toEqual([1, 2, 3]);
       expect(result.memory.pairs['0/1'].since).toBe(3);
     });
 
@@ -258,12 +230,12 @@ describe('war and peace editorial inference', () => {
   });
 
   describe('directional score history', () => {
-    it('should keep permitted samples across checks, expire old samples, and skip duplicate sources', () => {
-      const first = detect(scores([[1, 0], [5, 25], [8, 30]]));
-      const next = detect(scores([[5, 25], [8, 30], [33, 35]], 8), first.memory);
-      expect(next.memory.pairs['0/1'].samples.map(({ turn, score }) => [turn, score]))
-        .toEqual([[5, 25], [8, 30], [33, 35]]);
-      expect(first.memory.pairs['0/1'].samples.map(({ turn }) => turn)).toEqual([1, 5, 8]);
+    it('should retain long history, one older anchor, and no duplicate observations across checks', () => {
+      const first = detect(scores([[0, 0], [1, 0], [5, 25], [8, 30]]));
+      const next = detect(scores([[5, 25], [8, 30], [43, 35]], 8), first.memory);
+      expect(next.memory.pairs['0/1'].observations.map(({ turn, warScore }) => [turn, warScore]))
+        .toEqual([[1, 0], [5, 25], [8, 30], [43, 35]]);
+      expect(first.memory.pairs['0/1'].observations.map(({ turn }) => turn)).toEqual([0, 1, 5, 8]);
     });
 
     it('should use the fixed receiver perspective and ignore scores past the cutoff', () => {
@@ -272,7 +244,127 @@ describe('war and peace editorial inference', () => {
         snapshot(0, 2, [relationship(1, 'war', { warScore: 15 })]),
         snapshot(0, 4, [relationship(1, 'war', { warScore: 19 })]),
       ], 3, 1));
-      expect(result.memory.pairs['0/1'].samples.map(({ score }) => score)).toEqual([15]);
+      expect(result.memory.pairs['0/1'].observations.at(-1)).toMatchObject({ warScore: 15, scoreSource: { id: 200 } });
+    });
+
+    it('should keep a settled score in its original direction across serialized memory and hide unsigned scores', () => {
+      const opening = detect(evidence([], [snapshot(1, 4, [relationship(0, 'war', { warScore: -62 })]),
+        snapshot(0, 5, [relationship(1, 'war', { warScore: 25 })])], 5, 0, 1));
+      expect(opening.memory.pairs['0/1'].observations.at(-1)?.warScore).toBeUndefined();
+      const resume = diplomacyMemorySchema.parse(JSON.parse(JSON.stringify(opening.memory)));
+      const settlement = detect(evidence([event('MakePeace', 1, 8, 0, 1)], [snapshot(1, 8, [relationship(0)])], 8, 5, 1), resume);
+      expect(settlement.incidents[0].pair).toMatchObject({ state: 'peace', lastWarScore: { score: -62, source: { id: 401 } } });
+      expect(settlement.incidents[0].pair?.warScore).toBeUndefined();
+    });
+
+    it('should hide conflicting and unobserved pair state without treating it as peace', () => {
+      const input = evidence([], [snapshot(0, 4, [relationship(1, 'war', { warScore: 3 })]),
+        snapshot(0, 5, [relationship(1, 'war', { warScore: 5 })]), snapshot(1, 5, [relationship(0)]),
+        snapshot(0, 6, [relationship(1, 'war')]), snapshot(0, 7, [])], 7, 0);
+      const result = detect(input);
+      expect(result.memory.pairs['0/1'].observations.map(({ turn, state, warScore }) => [turn, state, warScore])).toEqual([
+        [4, 'war', 3], [5, 'unknown', undefined], [6, 'war', undefined], [7, 'unknown', undefined],
+      ]);
+      expect(result.incidents.map(incident => incident.turn)).toEqual([4]);
+    });
+
+    it('should use a same-turn wartime score only when it precedes the settlement', () => {
+      const row = snapshot(0, 8, [relationship(1, 'war', { warScore: 17 })]);
+      const peace = event('MakePeace', 1, 8, 0, 1);
+      const prior = snapshot(0, 7, [relationship(1, 'war', { warScore: 13 })]);
+      row.source.createdAt = peace.source.createdAt - 1;
+      expect(detect(evidence([peace], [prior, row], 8, 7)).incidents[0].pair?.lastWarScore).toMatchObject({ score: 17, source: row.source });
+      row.source.createdAt = peace.source.createdAt;
+      expect(detect(evidence([peace], [prior, row], 8, 7)).incidents[0].pair?.lastWarScore?.score).toBe(13);
+    });
+
+    it('should keep native declarations and settlements anchored when same-day reports disagree', () => {
+      const war = event('DeclareWar', 1, 5, 0, 1);
+      const peace = event('MakePeace', 2, 8, 0, 1);
+      const warScore = snapshot(0, 5, [relationship(1, 'war', { warScore: 12 })]);
+      const wrongPeace = snapshot(1, 5, [relationship(0)]);
+      const wrongWar = snapshot(0, 8, [relationship(1, 'war', { warScore: 19 })]);
+      const confirmedPeace = snapshot(1, 8, [relationship(0)]);
+      const result = detect(evidence([war, peace], [snapshot(0, 4, [relationship(1)]), warScore, wrongPeace, wrongWar, confirmedPeace], 8, 4));
+      expect(result.incidents).toMatchObject([
+        { turn: 5, kind: 'war', pair: { state: 'war', since: 5, warScore: 12, scoreSource: warScore.source } },
+        { turn: 8, kind: 'peace', pair: { state: 'peace', since: 8, peaceAnchored: true,
+          lastWarScore: { score: 12, source: warScore.source } } },
+      ]);
+      expect(result.memory.pairs['0/1'].state).toBe('peace');
+      expect(result.incidents[0].pair?.sources).toEqual([war.source, warScore.source]);
+      expect(result.incidents[1].pair?.sources).toEqual([peace.source, confirmedPeace.source]);
+    });
+
+    it('should recognize renewed war after ambiguous reports and a serialized check', () => {
+      const originalWar = snapshot(0, 1, [relationship(1, 'war', { warScore: 22 })]);
+      const settlement = snapshot(0, 2, [relationship(1)]);
+      const gap = [snapshot(0, 8, [relationship(1)]), snapshot(1, 8, [relationship(0, 'war')])];
+      const renewal = snapshot(0, 9, [relationship(1, 'war')]);
+      const peace = detect(evidence([], [originalWar, settlement], 2, 1));
+      const skipped = detect(evidence([], gap, 8, 7), peace.memory, 0);
+      expect(skipped.incidents).toEqual([]);
+      expect(skipped.memory.pairs['0/1'].observations.at(-1)).toMatchObject({ state: 'unknown', since: null, peaceAnchored: false });
+      const saved = diplomacyMemorySchema.parse(JSON.parse(JSON.stringify(skipped.memory)));
+      const afterGap = detect(evidence([], [renewal], 9, 8), saved, 0);
+      const uninterrupted = detect(evidence([], [originalWar, settlement, ...gap, renewal], 9, 8));
+      expect(afterGap.incidents).toEqual(uninterrupted.incidents);
+      expect(afterGap.incidents[0]).toMatchObject({ turn: 9, resumed: true, observed: true });
+      expect(afterGap.incidents[0].role).toBeUndefined();
+      expect(afterGap.incidents[0].sources).toContainEqual(settlement.source);
+      const native = detect(evidence([event('DeclareWar', 1, 9, 0, 1)], [renewal], 9, 8), saved);
+      expect(native.incidents[0]).toMatchObject({ resumed: true, observed: false, role: 'initiator' });
+    });
+
+    it('should preserve the fact of a settlement score without claiming continuous peace after a gap', () => {
+      const result = detect(evidence([], [snapshot(0, 1, [relationship(1, 'war', { warScore: -24 })]),
+        snapshot(0, 2, [relationship(1)]), snapshot(0, 3, []), snapshot(0, 4, [relationship(1)])], 4, 1));
+      expect(result.memory.pairs['0/1'].observations.at(-1)).toMatchObject({ state: 'peace', peaceAnchored: false,
+        lastWarScore: { score: -24, turn: 1 } });
+    });
+  });
+
+  describe('reporting period and retained evidence', () => {
+    it('should retain the scaled long span, a configured wider window, or the full current period', () => {
+      const input = scores(Array.from({ length: 101 }, (_, turn) => [turn, turn % 30]), 99);
+      const slow = inferWarAndPeace(input, { ...context, standardTurnsPerGameTurn: 0.5 });
+      expect(slow.memory.pairs['0/1'].observations[0].turn).toBe(19);
+      const explicit = detect(input, undefined, 55);
+      expect(explicit.memory.pairs['0/1'].observations[0].turn).toBe(44);
+      input.request.previousCheckTurn = 30;
+      const period = detect(input);
+      expect(period.memory.pairs['0/1'].observations[0].turn).toBe(29);
+    });
+
+    it('should reconstruct old transitions without reporting them and agree with an earlier skipped check', () => {
+      const rows = [snapshot(0, 1, [relationship(1)]), snapshot(0, 4, [relationship(1, 'war', { warScore: -14 })]),
+        snapshot(0, 7, [relationship(1)]), snapshot(0, 9, [relationship(1, 'war', { warScore: 9 })])];
+      const earlierCalls = [event('DeclareWar', 1, 3, 0, 1), event('MakePeace', 2, 6, 0, 1)];
+      const laterCall = event('DeclareWar', 3, 9, 0, 1);
+      const initial = detect(evidence(earlierCalls, rows.slice(0, 3), 7, 0));
+      const replay = evidence([laterCall], rows, 9, 7);
+      replay.history = { fromTurn: 0, baseline: { players: [], cities: [] }, snapshots: { players: [], cities: [] },
+        gaps: [], events: [...earlierCalls, laterCall] };
+      const cold = detect(replay);
+      const resumed = detect(replay, diplomacyMemorySchema.parse(JSON.parse(JSON.stringify(initial.memory))));
+      expect(initial.incidents[0].resumed).toBe(false);
+      expect(cold.incidents).toEqual(resumed.incidents);
+      expect(cold.memory).toEqual(resumed.memory);
+      expect(cold.incidents).toHaveLength(1);
+      expect(cold.incidents[0]).toMatchObject({ turn: 9, resumed: true, observed: false });
+    });
+
+    it('should keep the fronts and score of each settlement as of its reporting date', () => {
+      const calls = [event('MakePeace', 1, 8, 0, 1), event('MakePeace', 3, 11, 0, 2)];
+      const deal: NewspaperEvent = { type: 'DealMade', values: { FromPlayerID: 0, ToPlayerID: 1,
+        TradedItems: [{ ItemType: 'PeaceTreaty' }, { ItemType: 'Gold' }] }, source: { ...calls[0].source, id: 2 } };
+      const input = evidence([...calls, deal], [snapshot(0, 7, [relationship(1, 'war', { warScore: 5 }), relationship(2, 'war')]),
+        snapshot(0, 8, [relationship(1), relationship(2, 'war')]), snapshot(0, 11, [relationship(1), relationship(2)])], 11, 7);
+      const result = detect(input);
+      expect(result.incidents).toMatchObject([
+        { turn: 8, partial: true, concessions: ['gold'], pair: { lastWarScore: { score: 5 } } },
+        { turn: 11, partial: false, concessions: [] },
+      ]);
     });
   });
 });

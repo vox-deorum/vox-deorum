@@ -39,10 +39,10 @@ interface SubjectGroup {
 }
 
 /** Tell replay how much evidence to load beyond the reporting period. */
-export function longestRuleWindow(
+export function ruleHistoryTurns(
   rules: readonly EditorialTriggerRule[], constants: EditorialConstants, speedMultiplier: number,
 ): number {
-  let longest = 0;
+  let longest = resolveEditorialSpan('long', constants, speedMultiplier);
   for (const rule of rules)
     if (rule.enabled !== false && rule.window !== undefined)
       longest = Math.max(longest, resolveEditorialSpan(rule.window, constants, speedMultiplier));
@@ -96,6 +96,7 @@ export async function evaluateTriggerRules({
     const slots = compiled.slots.get(rule.id);
     if (!slots) throw new Error(`Missing compiled rule "${rule.id}".`);
     const subjects = listRuleSubjects(rule, facts);
+    const conflictBySubject = new Map(subjects.map(subject => [subject.key, subject.conflictKey]));
     const policy = repeatPolicy(rule, constants, speedMultiplier);
     const limit = rule.window === undefined ? facts.previous : Math.max(-1,
       facts.turn - resolveEditorialSpan(rule.window, constants, speedMultiplier));
@@ -121,13 +122,13 @@ export async function evaluateTriggerRules({
         numeric: steps.flatMap((step, index) => step.numeric ? [index] : []),
       },
     };
-    return { rule, subjects, policy, limit, keys, allowed, guards, values, rate, steps, batch };
+    return { rule, subjects, conflictBySubject, policy, limit, keys, allowed, guards, values, rate, steps, batch };
   });
   const budget = { interruptedSlots: new Set<number>() };
   const checks = await compiled.runner.evaluate({ constants: scaled, facts, groups: plans.map(plan => plan.batch) }, budget);
   const pending: { batch: Group; complete(results: ExpressionResult[]): void }[] = [];
   const outcomes = plans.map((plan, planIndex) => {
-    const { rule, subjects, policy, limit, keys, allowed, guards, values, rate, steps } = plan;
+    const { rule, subjects, conflictBySubject, policy, limit, keys, allowed, guards, values, rate, steps } = plan;
     const developments: RuleDevelopment[] = [];
     const audit: TriggerRuleAudit = {
       rule: rule.id, windowFromTurn: limit, subjectCount: subjects.length, subjects: [], groups: [],
@@ -140,17 +141,23 @@ export async function evaluateTriggerRules({
       const importanceStep = rate.findIndex(step => step.field === 'importance');
       const urgentStep = rate.findIndex(step => step.field === 'urgent');
       const importance = typeof rule.importance === 'number' ? rule.importance : scalar(rating[importanceStep]);
-      const fingerprint = JSON.stringify([rule.id, subject, ...(rule.subject === 'event' ? memberSubjects : [facts.turn])]);
+      const periodSubject = rule.subject === 'event' || rule.subject === 'incident';
+      const fingerprint = JSON.stringify([rule.id, subject, ...(periodSubject ? memberSubjects : [facts.turn])]);
       record.importance = typeof importance === 'number' ? Math.min(100, Math.max(0, importance)) : 50;
       record.urgent = !!scalar(rating[urgentStep]);
       const seriesKeys = memberSubjects.map(member => ruleSubjectKey(rule.id, member));
+      const conflictKeys = memberSubjects.flatMap(member => {
+        const key = conflictBySubject.get(member);
+        return key === undefined ? [] : [key];
+      });
       developments.push({
         id: fingerprint, fingerprint, definitionId: rule.id, subject, seriesKeys,
+        ...(conflictKeys.length ? { conflictKeys } : {}),
         period: { from: limit, to: facts.turn }, importance: record.importance,
         urgent: record.urgent, tags: [...(rule.tags ?? [])],
         values: placeholders, sources,
       });
-      if (rule.subject !== 'event')
+      if (!periodSubject)
         for (const key of seriesKeys) nextState[key] = { lastTurn: facts.turn, armed: false };
     }
 

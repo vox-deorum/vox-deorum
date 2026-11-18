@@ -9,9 +9,15 @@ const plot = (${plot.toString()});
 // Keep data, source rows and wrapping in this closure. Rules receive only public views.
 function factRuntime(model, wrap, constants, shortcuts) {
   const views = new Map();
-  const eventsById = new Map(model.events.map(event => [event.id, event]));
+  const datedFacts = {
+    event: new Map(model.events.map(event => [event.id, event])),
+    incident: new Map(model.incidents.map(incident => [incident.id, incident])),
+  };
+  const timelines = { city: model.cities, player: model.players, pair: model.pairs };
   const playerIds = Object.keys(model.players);
-  const currentIds = { city: new Set(model.subjects.city), player: new Set(model.subjects.player) };
+  const currentIds = {
+    city: new Set(model.subjects.city), player: new Set(model.subjects.player), pair: new Set(model.subjects.pair),
+  };
   const subjectInfo = new WeakMap();
   const expressionSubjects = new Map();
   const shortcutsByKind = new Map();
@@ -66,9 +72,10 @@ function factRuntime(model, wrap, constants, shortcuts) {
     return entries[lo - 1];
   }
 
-  // Read a city or player series without consulting an archive or exposing timeline data.
+  // Find the known subject's series without exposing timeline data or object prototypes.
   function series(kind, id) {
-    return (kind === 'city' ? model.cities : model.players)[id];
+    const subjects = timelines[kind];
+    return subjects && Object.hasOwn(subjects, id) ? subjects[id] : undefined;
   }
 
   // Group windows share the same evidence, but have different event and comparison views.
@@ -80,7 +87,7 @@ function factRuntime(model, wrap, constants, shortcuts) {
 
     // Resolve only IDs and versions that the builders already established as readable.
     function target(ref, date) {
-      if (ref.kind === 'event') return eventsById.get(ref.id)?.fields;
+      if (datedFacts[ref.kind]) return datedFacts[ref.kind].get(ref.id)?.fields;
       const subject = series(ref.kind, ref.id);
       const turn = ref.turn ?? date;
       return ref.turn === undefined && turn === model.turn ? subject?.current : observation(subject, turn)?.fields;
@@ -88,10 +95,10 @@ function factRuntime(model, wrap, constants, shortcuts) {
 
     // Availability can be checked from the timeline without unpacking a referenced row.
     function visibleTarget(ref, date) {
-      if (ref.kind === 'event') return eventsById.has(ref.id);
+      if (datedFacts[ref.kind]) return datedFacts[ref.kind].has(ref.id);
       const turn = ref.turn ?? date;
       return ref.turn === undefined && turn === model.turn ? currentIds[ref.kind].has(ref.id) :
-        !!observation(series(ref.kind, ref.id), turn)?.sources;
+        observation(series(ref.kind, ref.id), turn)?.segment !== undefined;
     }
 
     // Array reads cite the entry; length also depends on every readable member.
@@ -114,6 +121,8 @@ function factRuntime(model, wrap, constants, shortcuts) {
       if (value === null || typeof value !== 'object') return value;
       if (Array.isArray(value)) return list(value, (item, index) => expose(item, path + '[' + index + ']', date));
       if (value.$kind === 'reference') return resolve(value, path, date);
+      if (value.$kind === 'elapsed') return date - value.since;
+      if (value.$kind === 'anchoredPair') return subjectView('pair', value.id, value.turn, value.fields, false, undefined, true);
       if (value.$kind === 'window')
         return list(value.entries.filter(entry => entry.turn > from && entry.turn <= model.turn),
           (entry, index) => read(entry.field, path + '[' + index + ']', date),
@@ -166,13 +175,13 @@ function factRuntime(model, wrap, constants, shortcuts) {
     // Date a snapshot and reject a row from a different city that reused the same ID.
     function snapshot(kind, id, date, segment) {
       const entry = observation(series(kind, id), date);
-      return entry?.sources && entry.segment === segment ? entry : undefined;
+      return entry?.segment !== undefined && entry.segment === segment ? entry : undefined;
     }
 
     // Give snapshot subjects stable identities and expose only their dated facts.
-    function subjectView(kind, id, date, fields, current, entry) {
-      const key = kind + '/' + id + '/' + date;
-      const cache = current && kind !== 'event' ? currentSubjectsByKey : expressionSubjects;
+    function subjectView(kind, id, date, fields, current, entry, anchored = false) {
+      const key = (anchored ? 'anchor/' : '') + kind + '/' + id + '/' + date;
+      const cache = current && timelines[kind] ? currentSubjectsByKey : expressionSubjects;
       if (cache.has(key)) return cache.get(key);
       const methods = Object.create(null);
       const segment = entry?.segment;
@@ -184,7 +193,7 @@ function factRuntime(model, wrap, constants, shortcuts) {
         method('rank', Object.freeze(field => rank(id, date, fields, current, field)));
         method('relation', Object.freeze(other => relation(id, date, fields, other)));
       }
-      if (kind !== 'event' && current) {
+      if (timelines[kind] && current) {
         relative('before', from);
         relative('previous', model.previous);
         method('at', Object.freeze(span => {
@@ -192,8 +201,9 @@ function factRuntime(model, wrap, constants, shortcuts) {
           return getSnapshot(date - span, kind + '.at');
         }));
         method('history', undefined, () => {
-          const entries = series(kind, id).history.filter(candidate => candidate.sources &&
-            candidate.segment === segment && candidate.sources[0].turn > from && candidate.turn <= date);
+          const entries = series(kind, id).history.filter(candidate =>
+            candidate.segment !== undefined && candidate.segment === segment &&
+            (kind === 'pair' ? candidate.turn : candidate.sources[0].turn) > from && candidate.turn <= date);
           return list(entries, candidate => {
             cite(candidate.sources);
             return subjectView(kind, id, candidate.turn, candidate.fields, false, candidate);
@@ -202,7 +212,7 @@ function factRuntime(model, wrap, constants, shortcuts) {
       }
       const result = record(fields, kind, date, methods);
       cache.set(key, result);
-      subjectInfo.set(result, { kind, id, date, segment });
+      subjectInfo.set(result, { kind, id, date, segment, anchored });
       return result;
 
       // Present native-looking immutable helper methods rather than wire-only descriptors.
@@ -213,7 +223,7 @@ function factRuntime(model, wrap, constants, shortcuts) {
       function relative(name, date) {
         methods[name] = {
           known: track => {
-            const prior = snapshot(kind, id, date, segment);
+            const prior = pastObservation(date);
             if (track && prior) cite(prior.sources);
             return !!prior;
           },
@@ -222,10 +232,23 @@ function factRuntime(model, wrap, constants, shortcuts) {
       }
       // Attach the observation's evidence to reading a temporal subject.
       function getSnapshot(date, path) {
-        const prior = snapshot(kind, id, date, segment);
+        const prior = pastObservation(date);
         if (!prior) return missing(path);
         cite(prior.sources);
-        return subjectView(kind, id, date, prior.fields, false, prior);
+        let past = prior.fields;
+        // Older phases can prove war or peace, but their score cannot seed this phase's trend.
+        if (kind === 'pair' && prior.segment !== segment && has(past, 'warScore')) {
+          past = { ...past };
+          delete past.warScore;
+        }
+        return subjectView(kind, id, date, past, false, prior);
+      }
+      // Pairs retain prior known states across phase changes; cities must keep the same lifetime.
+      function pastObservation(date) {
+        if (kind !== 'pair') return snapshot(kind, id, date, segment);
+        if (date < model.earliestSnapshotTurn) return undefined;
+        const prior = observation(series(kind, id), date);
+        return prior?.segment === undefined ? undefined : prior;
       }
     }
 
@@ -252,11 +275,11 @@ function factRuntime(model, wrap, constants, shortcuts) {
 
     // A reference follows the queried snapshot's turn unless it specifies a date.
     function resolve(ref, path, date) {
-      if (ref.kind === 'event') {
-        const event = eventsById.get(ref.id);
-        if (!event) return missing(path);
-        cite(event.sources);
-        return subjectView('event', ref.id, model.turn, event.fields, true, undefined);
+      if (datedFacts[ref.kind]) {
+        const item = datedFacts[ref.kind].get(ref.id);
+        if (!item) return missing(path);
+        cite(item.sources);
+        return subjectView(ref.kind, ref.id, model.turn, item.fields, true, undefined);
       }
       const turn = ref.turn ?? date;
       const current = ref.turn === undefined && turn === model.turn;
@@ -323,12 +346,34 @@ function factRuntime(model, wrap, constants, shortcuts) {
     // Unloaded turns are hidden. Within covered history, a gap makes held false regardless of the test.
     function held(subject, test, span) {
       const info = subjectInfo.get(subject);
-      if (!info || info.kind === 'event' || typeof test !== 'function' ||
+      if (!info || !timelines[info.kind] || info.anchored || typeof test !== 'function' ||
           !Number.isSafeInteger(span) || span < 1) return false;
-      const first = info.date - span + 1;
+      // Pair spans compare the score at both endpoints, and every dated observation between them.
+      const first = info.date - span + (info.kind === 'pair' ? 0 : 1);
       if (first < model.earliestSnapshotTurn) return missing('held');
-      for (let date = first; date <= info.date; date++)
-        if (!snapshot(info.kind, info.id, date, info.segment)) return false;
+      const history = series(info.kind, info.id);
+      const current = info.kind === 'pair' ? observation(history, info.date) : undefined;
+      let priorPhase, phaseStart;
+      for (let date = first; date <= info.date; date++) {
+        const entry = observation(history, date);
+        if (entry?.segment === undefined || (info.kind === 'pair' ? entry.turn !== date : entry.segment !== info.segment)) {
+          if (info.kind === 'pair') {
+            cite(entry?.sources);
+            cite(current?.sources);
+          }
+          return false;
+        }
+        if (info.kind === 'pair') {
+          if (entry.segment !== info.segment) priorPhase = entry;
+          else phaseStart ??= entry;
+        }
+      }
+      if (priorPhase) {
+        cite(priorPhase.sources);
+        cite(phaseStart?.sources);
+        cite(current?.sources);
+        return false;
+      }
       for (let date = first; date <= info.date; date++) {
         const entry = snapshot(info.kind, info.id, date, info.segment);
         cite(entry.sources);

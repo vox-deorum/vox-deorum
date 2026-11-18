@@ -52,6 +52,7 @@ export const ruleDevelopmentSchema = z.strictObject({
   definitionId: z.string(),
   subject: subjectSchema,
   seriesKeys: z.array(z.string()),
+  conflictKeys: z.array(z.string()).optional(),
   period: z.strictObject({ from: z.number().int().min(-1), to: z.number().int().nonnegative() }),
   importance: z.number().min(0).max(100),
   urgent: z.boolean(),

@@ -5,10 +5,10 @@ import type { TriggerRepeatState } from '../../contracts/triggers.js';
 
 type Repeat = 'once' | 'rearm' | number;
 
-/** Use recorded turns for repeat intervals and never repeat the same recorded event. */
+/** Use recorded turns for repeat intervals; events and incidents occur once in a reporting period. */
 export function repeatPolicy(rule: EditorialTriggerRule, constants: EditorialConstants, speed: number): Repeat {
   const policy = rule.repeat ?? 'rearm';
-  if (rule.subject === 'event') return 'once';
+  if (rule.subject === 'event' || rule.subject === 'incident') return 'once';
   if (policy === 'once' || policy === 'rearm') return policy;
   return resolveEditorialSpan(policy, constants, speed);
 }

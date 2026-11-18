@@ -53,9 +53,11 @@ export const seriesStateSchema = z.object({
   lastPublishedTurn: z.number().int(), lastIssueId: z.string(), lastItemId: z.string(),
 });
 export type SeriesState = z.infer<typeof seriesStateSchema>;
+const publicationSchemaVersion = 5;
+
 /** Current offline memory excludes decisions, which are stored with each completed check. */
 export const publicationStateSchema = z.object({
-  schemaVersion: z.literal(4), lastCheckTurn: z.number().int().nullable(),
+  schemaVersion: z.literal(publicationSchemaVersion), lastCheckTurn: z.number().int().nullable(),
   issues: z.array(publishedIssueRecordSchema), series: z.record(z.string(), seriesStateSchema),
   votes: z.record(z.string(), z.union([z.literal(-1), z.literal(0), z.literal(1)])),
   preferences: publicationPreferencesSchema, previousDesignId: z.string().nullable(),
@@ -67,6 +69,6 @@ export type PublicationState = z.infer<typeof publicationStateSchema>;
 
 /** Create an empty receiver checkpoint with resolved publication preferences. */
 export function createInitialPublicationState(preferences: Partial<PublicationPreferences> = {}): PublicationState {
-  return { schemaVersion: 4, lastCheckTurn: null, issues: [], series: {}, votes: {}, diplomacy: { pairs: {} }, triggerRepeats: {},
+  return { schemaVersion: publicationSchemaVersion, lastCheckTurn: null, issues: [], series: {}, votes: {}, diplomacy: { pairs: {} }, triggerRepeats: {},
     preferences: publicationPreferencesSchema.parse(preferences), previousDesignId: null };
 }

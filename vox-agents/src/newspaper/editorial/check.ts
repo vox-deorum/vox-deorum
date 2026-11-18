@@ -8,8 +8,8 @@ import type {
 } from '../contracts/publication.js';
 import type { EditorialConfig } from './config/schema.js';
 import { getEditorialTriggerExpressions } from './config/load.js';
-import type { NewspaperFactModel } from './facts/index.js';
-import { evaluateTriggerRules } from './rules/evaluate.js';
+import { addDiplomacyFacts, type NewspaperFactModel } from './facts/index.js';
+import { evaluateTriggerRules, ruleHistoryTurns } from './rules/evaluate.js';
 import { computeFeedback } from './selection/feedback.js';
 import { selectHeuristic } from './selection/heuristic.js';
 import { advanceSeries, decaySeries } from './selection/series.js';
@@ -94,12 +94,15 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
     preferences: { ...input.state.preferences },
   };
   const feedback = computeFeedback(state, config);
-  const diplomacy = inferWarAndPeace(evidence, input.context ?? {}, input.state.diplomacy);
+  const diplomacy = inferWarAndPeace(evidence, {
+    ...input.context,
+    standardTurnsPerGameTurn: 1 / input.speedMultiplier,
+  }, input.state.diplomacy, ruleHistoryTurns(config.triggers, config.constants, input.speedMultiplier));
   state.diplomacy = diplomacy.memory;
   const rules = await evaluateTriggerRules({
     rules: config.triggers,
     compiled: await getEditorialTriggerExpressions(config),
-    facts,
+    facts: addDiplomacyFacts(facts, diplomacy),
     constants: config.constants,
     speedMultiplier: input.speedMultiplier,
     repeatState: input.state.triggerRepeats,

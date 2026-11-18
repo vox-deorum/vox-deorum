@@ -22,7 +22,7 @@ function playerFields(source: NewspaperSourceReference): FactObject {
 function model(): NewspaperFactModel {
   return {
     turn: 4, previous: 2, earliestWindowTurn: 0, earliestSnapshotTurn: 0, longTurns: 4,
-    receiverId: 7, game: {}, subjects: { player: [7], event: [recordedEvent.id], city: [] },
+    receiverId: 7, game: {}, subjects: { player: [7], event: [recordedEvent.id], city: [], pair: [], incident: [] },
     players: {
       7: {
         current: {
@@ -37,6 +37,8 @@ function model(): NewspaperFactModel {
       },
     },
     cities: {},
+    pairs: {},
+    incidents: [],
     events: [{ id: recordedEvent.id, turn: 4, fields: { type: fact('CityTrained', [recordedEvent]) }, sources: [recordedEvent] }],
   };
 }

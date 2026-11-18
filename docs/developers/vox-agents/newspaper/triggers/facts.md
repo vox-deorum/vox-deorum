@@ -1,6 +1,6 @@
 # Newspaper trigger facts
 
-City, player and event facts live in `editorial/facts/`. Rules read current and historical values and use [shortcuts](constants.md#shortcuts) on those subjects. The stock catalogue ships two city rules and no templates, so a stock replay records rule audits without printing an issue. Pair facts and incident facts arrive in [stage 6](../../../../plans/newspaper/implementation/06-trigger-rules.md).
+City, player, event, pair and incident facts live in `editorial/facts/`. Rules read current and historical values and use [shortcuts](constants.md#shortcuts) on those subjects. The stock catalogue ships two city rules and no templates, so a stock replay records rule audits without printing an issue.
 
 The **fact model** is the set of objects a [trigger rule](overview.md) can read: cities, players, events, pairs and incidents. This page is the reference for developers writing rules. It lists every fact, says where each one comes from, and explains how to read the past.
 
@@ -25,8 +25,8 @@ flowchart LR
 | `city` | City the receiver can see | [City](#city) |
 | `player` | Known major civilization or city-state | [Player](#player) |
 | `event` | Permitted event in the reporting period | [Event](#event) |
-| `pair` | Two known players with a recorded relationship, in stage 6 | [Pair](#pair) |
-| `incident` | Inferred war or peace incident, in stage 6 | [Incident](#incident) |
+| `pair` | Two known players with a recorded relationship | [Pair](#pair) |
+| `incident` | Inferred war or peace incident | [Incident](#incident) |
 
 The **receiver** is the player the newspaper is written for. Every fact reflects what the receiver was allowed to see on the turn it was recorded.
 
@@ -155,7 +155,7 @@ The event types a rule may name are the ones in `newspaperEventConfigs` in `mcp-
 
 ## Pair
 
-`pair` describes two known players and how they stand with each other. Pairs are unordered; `a` is the player with the lower ID. Pair facts reach rules in stage 6; the table is their target contract.
+`pair` describes two known players and how they stand with each other. Pairs are unordered; `a` is the player with the lower ID. Rules run once for each pair with a recorded relationship.
 
 | Fact | Meaning |
 | --- | --- |
@@ -169,10 +169,11 @@ The event types a rule may name are the ones in `newspaperEventConfigs` in `mcp-
 | `peaceTurns` | Recorded turns since a known settlement or an observed change from war to peace |
 | `lastWarScore` | The last `warScore` recorded before the latest peace |
 | `friends`, `pact` | Declared friendship, defensive pact |
+| `is.<name>` | A [shortcut](constants.md#shortcuts), such as `pair.is.foreignWar` |
 
 ## Incident
 
-`incident` is one inferred war or peace event with everyone it drew in. Stage 6 exposes these facts to rules. [War and peace](war-and-peace.md) explains the inference.
+`incident` is one inferred war or peace event with everyone it drew in. Incident rules run on incidents from the reporting period. [War and peace](war-and-peace.md) explains the inference.
 
 | Fact | Meaning |
 | --- | --- |
@@ -185,14 +186,14 @@ The event types a rule may name are the ones in `newspaperEventConfigs` in `mcp-
 | `role` | The receiver's part: `initiator`, `target`, `joined` or `none` |
 | `reason` | Why the receiver takes part, using the same values as a participant's `reason` |
 | `resumed` | For war: the two had fought before and were known to be at peace |
-| `observed` | For war: the fighting was seen in relationship snapshots, with no recorded declaration |
+| `observed` | For war: the fighting was seen in relationship snapshots, with no recorded declaration. The direction of the attack and each party's participation role may then be unknown. |
 | `partial` | For peace: one of the two settling players still has another recent war open |
 | `concessions` | For peace: the kinds of visible concessions, empty when none are visible |
 | `capitulation` | For peace: a new capitulated vassal relationship followed |
 
 ## Reading the past
 
-`city`, `player` and `pair` offer the same accessors; pair accessors follow with stage 6. `city` is used below.
+`city`, `player` and `pair` offer the same accessors. `city` is used below.
 
 | Accessor | Reads | Example |
 | --- | --- | --- |
@@ -204,9 +205,11 @@ The event types a rule may name are the ones in `newspaperEventConfigs` in `mcp-
 
 A snapshot offers the stored facts, plus `owner` for a city, `rank(field)` and `relation(other)` for a player, and `atWar` and `warScore` for a pair. The databases record a row only when something changed, so a snapshot "at" a turn is the latest row at or before it.
 
+For a pair, `pair.before`, `pair.previous` and `pair.at(span)` keep the flags and elapsed turns across a transition into or out of war, but a war score from another war or across an unobserved gap is unavailable. `pair.history` holds only the current phase. A run begun late cannot recover an older war score or start date outside its loaded history.
+
 | Helper | Meaning | Example |
 | --- | --- | --- |
-| `held(subject, test, span)` | The test was true on every turn of the span. An observed gap makes it false. If the span starts before the loaded snapshot history, the result is hidden. | `held(city, s => s.foodPerTurn < 0, short)` |
+| `held(subject, test, span)` | The test was true on every turn of the span. For a pair, every turn from the cutoff minus the span through the cutoff inclusive needs an actual recorded sample, so an observed gap makes it false. If the span starts before the loaded snapshot history, the result is hidden. | `held(city, s => s.foodPerTurn < 0, short)` |
 | `crossed(now, before, boundary)` | The value rose from below the boundary to it or above | `crossed(city.population, city.before.population, metropolis)` |
 | `dropped(now, before, boundary)` | The value fell from the boundary or above to below it | `dropped(player.happinessPercentage, player.before.happinessPercentage, 50)` |
 | `pct(now, before)` | Relative change, where 0.25 is a 25% rise | `pct(player.sciencePerTurn, player.before.sciencePerTurn) >= 0.25` |

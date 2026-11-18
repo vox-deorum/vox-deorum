@@ -1,6 +1,6 @@
 # Newspaper trigger constants and shortcuts
 
-**Status: constants and shortcuts are implemented.** The built-in `vox-agents/newspaper/constants.json` loads and merges with overlays. The shipped rules read these names. The stock catalogue has two city rules and no story templates, so a stock replay records rule audits while skipping publication. Pair shortcuts wait for pair facts in stage 6. [Plan 6](../../../../plans/newspaper/implementation/06-trigger-rules.md) lists the remaining stages.
+**Status: constants and shortcuts are implemented.** The built-in `vox-agents/newspaper/constants.json` loads and merges with overlays. The shipped rules read these names. The stock catalogue has two city rules and no story templates, so a stock replay records rule audits while skipping publication. Pair shortcuts work in ordinary overlay rules. [Plan 6](../../../../plans/newspaper/implementation/06-trigger-rules.md) lists the remaining stages.
 
 **Constants** give names to the numbers that [trigger rules](overview.md) compare against, such as `neighboring` for 7 tiles. **Shortcuts** give names to small expressions that many rules share, such as `city.is.neighbor`. This page is for developers writing or tuning rules. Both live in `vox-agents/newspaper/constants.json`, and changing one there changes every rule that uses it.
 
@@ -89,7 +89,7 @@ A shortcut is a named expression for one subject. It reads like a fact and can u
 | `player.is.rival` | `player.major && !player.self && !player.friend && !player.ally` | A major civilization we have no friendship or pact with |
 | `pair.is.foreignWar` | `pair.atWar && !pair.involvesSelf && pair.majors` | A war between two other major civilizations |
 
-The `pair.is.foreignWar` source is authored in the built-in file, but pair facts arrive in stage 6. A trigger cannot read this shortcut until then.
+The `pair.is.foreignWar` source is authored in the built-in file and reads pair facts in pair rules.
 
 A worked check of `city.is.starving`, with `recent` at 5 turns on Standard speed:
 

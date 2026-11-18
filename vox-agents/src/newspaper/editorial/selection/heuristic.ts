@@ -9,7 +9,7 @@ export interface HeuristicSelection {
   scores: { id: string; score: number; selected: boolean }[];
 }
 
-/** Score evidence-backed choices, reserving shared series for their strongest supported angle. */
+/** Score evidence-backed choices, selecting one angle per incident, series or development. */
 export function selectHeuristic(
   candidates: EditorialCandidate[],
   state: PublicationState,
@@ -18,6 +18,7 @@ export function selectHeuristic(
 ): HeuristicSelection {
   const usedSeries = new Set<string>();
   const usedTriggers = new Set<string>();
+  const usedConflicts = new Set<string>();
   const usedTags = new Set<string>();
   const selected: EditorialCandidate[] = [];
   const scores = new Map<string, number>();
@@ -27,6 +28,11 @@ export function selectHeuristic(
   const remaining = candidates.filter(
     (candidate) => candidate.variants.length && !published.has(candidate.fingerprint)
   );
+  /** Check whether a selected story already covers any of this candidate's subjects. */
+  const conflicts = (candidate: EditorialCandidate) =>
+    candidate.seriesKeys.some((key) => usedSeries.has(key)) ||
+    candidate.triggerIds.some((id) => usedTriggers.has(id)) ||
+    (candidate.conflictKeys ?? []).some((key) => usedConflicts.has(key));
   /** Resolve current variety without mutating persistent history. */
   const score = (candidate: EditorialCandidate): number => {
     const memory = Math.max(
@@ -53,8 +59,7 @@ export function selectHeuristic(
         (candidate) =>
           candidate.short &&
           score(candidate) > 0 &&
-          !candidate.seriesKeys.some((key) => usedSeries.has(key)) &&
-          !candidate.triggerIds.some((id) => usedTriggers.has(id))
+          !conflicts(candidate)
       );
     remaining.sort(
       (left, right) =>
@@ -68,13 +73,13 @@ export function selectHeuristic(
     scores.set(candidate.id, weight);
     if (
       (!candidate.urgent && weight <= 0) ||
-      candidate.seriesKeys.some((key) => usedSeries.has(key)) ||
-      candidate.triggerIds.some((id) => usedTriggers.has(id))
+      conflicts(candidate)
     )
       continue;
     selected.push(candidate);
     candidate.seriesKeys.forEach((key) => usedSeries.add(key));
     candidate.triggerIds.forEach((id) => usedTriggers.add(id));
+    candidate.conflictKeys?.forEach((key) => usedConflicts.add(key));
     candidate.tags.forEach((tag) => usedTags.add(tag));
   }
   for (const candidate of candidates)

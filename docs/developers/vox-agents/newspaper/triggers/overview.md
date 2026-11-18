@@ -1,10 +1,10 @@
 # Newspaper trigger overview
 
-**Status: stages 3 to 5 are implemented.** `editorial/facts/` builds city, player, event and global facts. `vox-agents/newspaper/constants.json` supplies named constants, type lists and shortcuts, with overlays and game-speed scaling of spans. `editorial/rules/` evaluates the configured rules, keeps repeat memory, and records a per-subject audit. The stock catalogue ships two city rules, `neighbor-puppet-annexed` and `settler-departure`, and no story templates, so a stock replay records audits while skipping publication. Pair and incident facts arrive in stage 6, template, weight and page expressions in stage 7, and fresh in-game stories in stage 8. [Plan 6](../../../../plans/newspaper/implementation/06-trigger-rules.md) tracks the remaining stages.
+**Status: stages 3 to 6 are implemented.** `editorial/facts/` builds city, player, event, pair, incident and global facts. `vox-agents/newspaper/constants.json` supplies named constants, type lists and shortcuts, with overlays and game-speed scaling of spans. `editorial/rules/` evaluates the configured rules, keeps repeat memory, and records a per-subject audit. The stock catalogue ships two city rules, `neighbor-puppet-annexed` and `settler-departure`, and no story templates, so a stock replay records audits while skipping publication. Pair and incident facts, including the built-in pair shortcut, work in ordinary overlay rules, and the two documented diplomacy examples run as overlays. Template, weight and page expressions arrive in stage 7, and fresh in-game stories in stage 8. [Plan 6](../../../../plans/newspaper/implementation/06-trigger-rules.md) tracks the remaining stages.
 
 A **trigger** is a rule that spots one kind of development in the recorded game, such as "a neighboring foreign city changed from puppet to occupied". This page is for developers who add or tune newspaper coverage. It explains what a trigger entry contains, how a check evaluates it, and how to add one.
 
-A rule is a JavaScript expression over a **fact model**: cities, players, events and relationships built from the MCP server databases. Code supplies the facts, including inferred ones such as distance or a city's former owner. The catalogue supplies the rules. A new rule therefore needs a new catalogue entry and no new code, as long as the facts exist. Authored templates turn its developments into stories; none ship in the stock catalogue.
+A rule is a JavaScript expression over a **fact model**: cities, players, events, pairs, incidents and relationships built from the MCP server databases. Code supplies the facts, including inferred ones such as distance or a city's former owner. The catalogue supplies the rules. A new rule therefore needs a new catalogue entry and no new code, as long as the facts exist. Authored templates turn its developments into stories; none ship in the stock catalogue.
 
 ```mermaid
 flowchart LR
@@ -71,9 +71,9 @@ Expressions in `values`, `importance` and `urgent` can read earlier `values` by 
 | --- | --- | --- |
 | `city` | Each city the receiver can see at the cutoff turn | `city` |
 | `player` | Each known major civilization and city-state, including the receiver | `player` |
-| `pair` | Each pair of known players with a recorded relationship, once stage 6 exposes pair facts | `pair` |
+| `pair` | Each pair of known players with a recorded relationship | `pair` |
 | `event` | Each permitted event of the listed types inside the reporting period, whatever the `window` | `event` |
-| `incident` | Each inferred war or peace incident inside the reporting period, once stage 6 exposes incident facts | `incident` |
+| `incident` | Each inferred war or peace incident inside the reporting period | `incident` |
 | `world` | Once per check, for rules that compare many subjects | The globals only |
 
 Every expression can also read the globals `self` (the receiver), `players`, `cities`, `events`, `turn` and `game`. A `city` rule can therefore compare its city against `self.capital`, and a `world` rule can scan `players` for a new leader.
@@ -137,7 +137,7 @@ Results below 0 become 0 and results above 100 become 100.
 | `once` | Never, for that subject in this game | Milestones, such as a city's first wonder |
 | A span, such as `medium` | At the first check after that many Standard turns where the rule is true, even when it stayed true throughout | Long-running situations worth a follow-up |
 
-Each event is its own subject, so an `event` rule fires once per event without any `repeat` setting. The publication fingerprint prevents the same development from being selected twice. Follow-up links and votes belong to a particular rule and subject: a trade story about a city stays separate from a political story about that city. Publication state schema 4 keeps the repeat state, so resuming a run preserves it. A skipped check still advances it.
+Each event is its own subject, so an `event` rule fires once per event without any `repeat` setting. The publication fingerprint prevents the same development from being selected twice. Follow-up links and votes belong to a particular rule and subject: a trade story about a city stays separate from a political story about that city. Publication state schema 5 keeps the repeat state, so resuming a run preserves it. A skipped check still advances it.
 
 ## Grouping
 
@@ -171,7 +171,7 @@ A template names one trigger, or several triggers that must fire for the same su
 | `vox-agents/newspaper/templates/` | Authored headlines, paragraphs, placeholders, typed links and weights; optional; no built-in directory is required |
 | `vox-agents/src/newspaper/editorial/config/` | Catalogue schema and validation in `schema.ts`, constant validation and span scaling in `constants.ts`; file loading, overlays and expression preparation in `load.ts` and `expressions.ts` |
 | `vox-agents/src/newspaper/editorial/facts/` | Builds the fact model, including distance and inferred facts |
-| `vox-agents/src/newspaper/editorial/diplomacy/` | War and peace inference; stage 6 feeds `incident` and `pair` facts to rules |
+| `vox-agents/src/newspaper/editorial/diplomacy/` | War and peace inference; its incident and pair facts reach rules through the fact model |
 | `vox-agents/src/newspaper/editorial/rules/` | Rule evaluation, repeats, grouping and the audit |
 | `vox-agents/src/newspaper/editorial/shared/` | The expression runner used by rules; conditions and weights for templates, pages and designs until stage 7 |
 | `mcp-server/src/newspaper/projection.ts` | Which historical fields and events the newspaper may read |

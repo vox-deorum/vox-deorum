@@ -7,18 +7,29 @@ import type {
 } from '../../../../../mcp-server/dist/newspaper/evidence.js';
 import { isRecord } from '../../../utils/guards.js';
 
-export type FactKind = 'city' | 'player' | 'event';
+export type FactKind = 'city' | 'player' | 'event' | 'pair' | 'incident';
 export type FactReference = {
   readonly $kind: 'reference';
   readonly kind: FactKind;
-  readonly id: number;
+  readonly id: number | string;
   readonly turn?: number;
 };
 export interface FactWindow {
   readonly $kind: 'window';
   readonly entries: readonly { turn: number; field: FactField }[];
 }
-export type FactValue = null | boolean | number | string | readonly FactValue[] | FactObject | FactReference | FactWindow;
+interface FactElapsed {
+  readonly $kind: 'elapsed';
+  readonly since: number;
+}
+interface FactAnchoredPair {
+  readonly $kind: 'anchoredPair';
+  readonly id: string;
+  readonly turn: number;
+  readonly fields: FactObject;
+}
+export type FactValue = null | boolean | number | string | readonly FactValue[] | FactObject |
+  FactReference | FactWindow | FactElapsed | FactAnchoredPair;
 export interface FactField {
   readonly value: FactValue;
   readonly sources?: readonly NewspaperSourceReference[];
@@ -33,7 +44,7 @@ export function fact(value: FactValue, sources?: readonly NewspaperSourceReferen
 }
 
 /** Link to a subject visible at the containing fact's turn or an explicitly dated turn. */
-export function reference(kind: FactKind, id: number, turn?: number): FactReference {
+export function reference(kind: FactKind, id: number | string, turn?: number): FactReference {
   return { $kind: 'reference', kind, id, ...(turn === undefined ? {} : { turn }) };
 }
 

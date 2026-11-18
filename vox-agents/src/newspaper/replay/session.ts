@@ -12,7 +12,7 @@ import { loadEditorialConfig, parseEditorialConfig } from '../editorial/config/l
 import type { EditorialConfig } from '../editorial/config/schema.js';
 import { resolveEditorialSpan } from '../editorial/config/constants.js';
 import { runEditorialCheck } from '../editorial/check.js';
-import { longestRuleWindow } from '../editorial/rules/evaluate.js';
+import { ruleHistoryTurns } from '../editorial/rules/evaluate.js';
 import { openReplayDatabase, replaySourceIdentity, readReplayIdentities } from './database.js';
 import { readReplayFacts, replayFactRequest } from './facts.js';
 import { ReplayStore, ReplayStoreConflictError, resolveReplayOutput } from './store.js';
@@ -245,7 +245,7 @@ export class ReplaySession {
     const { multiplier: speedMultiplier } = state.speed;
     const spans = this.config && {
       longTurns: resolveEditorialSpan('long', this.config.constants, speedMultiplier),
-      longestWindowTurns: longestRuleWindow(this.config.triggers, this.config.constants, speedMultiplier),
+      historyTurns: ruleHistoryTurns(this.config.triggers, this.config.constants, speedMultiplier),
       speedMultiplier,
     };
     if (advance) {

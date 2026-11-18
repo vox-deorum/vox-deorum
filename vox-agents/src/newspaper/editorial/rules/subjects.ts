@@ -8,13 +8,14 @@ export interface RuleSubject {
   key: string;
   bindings: ExpressionBindings;
   sources?: NewspaperFactModel['events'][number]['sources'];
+  conflictKey?: string;
 }
 
 /** Identify one rule and subject for repeat memory and continuing coverage. */
 export function ruleSubjectKey(rule: string, subject: string): string {
   return JSON.stringify([rule, subject]);
 }
-/** Return stable subject identities; event filters always use the reporting period. */
+/** Return stable subject identities; event and incident filters always use the reporting period. */
 export function listRuleSubjects(rule: EditorialTriggerRule, facts: NewspaperFactModel): RuleSubject[] {
   switch (rule.subject) {
     case 'world':
@@ -36,7 +37,14 @@ export function listRuleSubjects(rule: EditorialTriggerRule, facts: NewspaperFac
       }));
     }
     case 'pair':
+      return [...facts.subjects.pair].sort().map(id => ({
+        key: `pair/${id}`, bindings: { pair: reference('pair', id) },
+      }));
     case 'incident':
-      return [];
+      return facts.incidents.filter(incident => incident.turn > facts.previous && incident.turn <= facts.turn)
+        .sort((a, b) => a.turn - b.turn || a.id.localeCompare(b.id)).map(incident => ({
+          key: `incident/${incident.id}`, bindings: { incident: reference('incident', incident.id) },
+          sources: incident.sources, conflictKey: `incident/${incident.id}`,
+        }));
   }
 }

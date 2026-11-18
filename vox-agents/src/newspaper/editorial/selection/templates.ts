@@ -19,6 +19,7 @@ export interface EditorialCandidate {
   templateIds: string[];
   contributingIds: string[];
   seriesKeys: string[];
+  conflictKeys?: string[];
   tags: string[];
   importance: number;
   urgent: boolean;
@@ -134,6 +135,7 @@ export function matchTemplates(
         templateIds: [template.id],
         contributingIds: [],
         seriesKeys: [...new Set(parts.flatMap((part) => part.seriesKeys))],
+        conflictKeys: [...new Set(parts.flatMap((part) => part.conflictKeys ?? []))],
         tags: [...new Set([...template.tags, ...parts.flatMap((part) => part.tags)])],
         importance: Math.max(...parts.map((part) => part.importance)),
         urgent: parts.some((part) => part.urgent),
@@ -191,6 +193,7 @@ export function matchTemplates(
         templateIds: [...new Set([template.id, ...parts.flatMap((part) => part.templateIds)])],
         contributingIds: parts.map((part) => part.id),
         seriesKeys: [...new Set(parts.flatMap((part) => part.seriesKeys))],
+        conflictKeys: [...new Set(parts.flatMap((part) => part.conflictKeys ?? []))],
         tags: [...new Set([...template.tags, ...parts.flatMap((part) => part.tags)])],
         importance: Math.max(...parts.map((part) => part.importance)),
         urgent: parts.some((part) => part.urgent),

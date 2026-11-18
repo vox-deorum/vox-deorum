@@ -6,7 +6,7 @@ import { prepareTriggerExpressions } from '../../../../../src/newspaper/editoria
 import { getEditorialTriggerExpressions, loadEditorialConfig } from '../../../../../src/newspaper/editorial/config/load.js';
 import type { EditorialTriggerRule } from '../../../../../src/newspaper/editorial/config/schema.js';
 import { buildNewspaperFacts } from '../../../../../src/newspaper/editorial/facts/index.js';
-import { evaluateTriggerRules, longestRuleWindow } from '../../../../../src/newspaper/editorial/rules/evaluate.js';
+import { evaluateTriggerRules, ruleHistoryTurns } from '../../../../../src/newspaper/editorial/rules/evaluate.js';
 
 const constants: EditorialConstants = {
   distances: { neighboring: 7 },
@@ -117,7 +117,7 @@ describe('newspaper trigger rules', () => {
         event(203, 19, 'CityTrained', {}),
       ] });
       const result = await run(input);
-      expect(longestRuleWindow([rule, { ...rule, window: 90, enabled: false }], constants, 2)).toBe(90);
+      expect(ruleHistoryTurns([rule, { ...rule, window: 90, enabled: false }], constants, 2)).toBe(90);
       expect(result.audit.map(record => record.subjectCount)).toEqual([1, 0, 0]);
       expect(result.developments).toMatchObject([{ subject: 'event/204', values: { eventTurn: 20, observed: 4 } }]);
       expect(result.repeatState).toEqual({});

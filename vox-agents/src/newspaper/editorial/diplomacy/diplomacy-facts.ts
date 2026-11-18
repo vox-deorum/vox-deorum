@@ -21,8 +21,9 @@ export function createDiplomacyPair(a: number, b: number, receiver: number): Dip
     state: 'unknown',
     since: null,
     lastObserved: null,
-    samples: [],
     peaceAnchored: false,
+    observations: [],
+    foughtBefore: false,
   };
 }
 /** Distinguish native call IDs from service-created events in the reserved per-turn offset range. */
@@ -34,7 +35,7 @@ export interface DiplomacyFacts {
   snapshots: NewspaperDiplomacySnapshot[];
   causalFreshness: number;
   team: (player: number) => number | undefined;
-  member: (team: number) => number | undefined;
+  member: (team: number, turn?: number) => number | undefined;
   major: (player: number) => boolean | undefined;
   name: (player: number) => string;
   observation: (
@@ -77,6 +78,19 @@ export function diplomacyFacts(
   visible.add(evidence.request.receiverPlayerID);
   for (const row of snapshots)
     for (const entry of row.relationships) visible.add(entry.targetPlayerID);
+  const firstSeen = new Map<number, number>();
+  /** Index only dates where the projection already supplied this identity. */
+  function note(player: number, turn: number): void {
+    firstSeen.set(player, Math.min(firstSeen.get(player) ?? Infinity, turn));
+  }
+  note(evidence.request.receiverPlayerID, -1);
+  for (const row of [...evidence.players, ...evidence.comparisons.players,
+    ...(evidence.history?.baseline.players ?? []), ...(evidence.history?.snapshots.players ?? [])]) note(row.subjectID, row.source.turn);
+  for (const row of snapshots) {
+    note(row.subjectID, row.source.turn);
+    for (const relation of row.relationships) note(relation.targetPlayerID, row.source.turn);
+    if (row.majorAllyPlayerID != null) note(row.majorAllyPlayerID, row.source.turn);
+  }
   const teams = new Map<number, number>(
     Object.entries(context.playerTeamIds ?? {})
       .filter(([id]) => visible.has(Number(id)))
@@ -86,6 +100,7 @@ export function diplomacyFacts(
   for (const row of snapshots) {
     teams.set(row.subjectID, row.teamID);
     majors.set(row.subjectID, row.isMajor);
+    for (const entry of row.relationships) teams.set(entry.targetPlayerID, entry.targetTeamID);
   }
   if (context.receiverTeamId !== undefined)
     teams.set(evidence.request.receiverPlayerID, context.receiverTeamId);
@@ -93,6 +108,7 @@ export function diplomacyFacts(
     context.standardTurnsPerGameTurn && context.standardTurnsPerGameTurn > 0
       ? context.standardTurnsPerGameTurn
       : 1;
+  const playerGaps = evidence.history?.gaps.filter(gap => gap.table === 'PlayerSummaries') ?? [];
   /** Prefer a prior row; same-turn rows can corroborate an obligation when no fresh prior survives. */
   function observation(
     player: number,
@@ -103,6 +119,7 @@ export function diplomacyFacts(
       (row) =>
         row.subjectID === player &&
         row.source.turn <= turn &&
+        !playerGaps.some(gap => gap.subjectID === player && gap.turn > row.source.turn && gap.turn <= turn) &&
         (!fresh || (turn - row.source.turn) * rate <= causalFreshness)
     );
     return rows.filter((row) => row.source.turn < turn).at(-1) ?? rows.at(-1);
@@ -136,7 +153,8 @@ export function diplomacyFacts(
       row?.majorAllyPlayerID === undefined
         ? undefined
         : { playerID: row.majorAllyPlayerID, source: row.source };
-    const changes = evidence.events
+    const events = evidence.history?.events ?? evidence.events;
+    const changes = events
       .filter(
         (event) =>
           ['SetAlly', 'MinorAlliesChanged'].includes(event.type) &&
@@ -164,7 +182,7 @@ export function diplomacyFacts(
       )
         result = { playerID: null, source: event.source };
     }
-    const explicitThisTurn = evidence.events.some(
+    const explicitThisTurn = events.some(
       (event) =>
         ['SetAlly', 'MinorAlliesChanged'].includes(event.type) &&
         nativeDiplomacySource(event.source) &&
@@ -189,32 +207,24 @@ export function diplomacyFacts(
   }
   /** Resolve a prior explicit pair state; contradictory equally dated observations remain unknown. */
   function priorState(a: number, b: number, turn: number): 'war' | 'peace' | undefined {
-    const rows = snapshots
-      .filter(
-        (row) =>
-          row.source.turn < turn &&
-          (turn - row.source.turn) * rate <= causalFreshness &&
-          (row.subjectID === a || row.subjectID === b)
-      )
-      .flatMap((row) =>
-        row.relationships
-          .filter(
-            (entry) =>
-              entry.targetPlayerID === (row.subjectID === a ? b : a) && entry.state !== 'unknown'
-          )
-          .map((entry) => ({ turn: row.source.turn, state: entry.state }))
-      );
+    const rows = [a, b].flatMap(player => {
+      const row = snapshots.filter(candidate => candidate.subjectID === player && candidate.source.turn < turn &&
+        (turn - candidate.source.turn) * rate <= causalFreshness &&
+        !playerGaps.some(gap => gap.subjectID === player && gap.turn > candidate.source.turn && gap.turn <= turn)).at(-1);
+      const state = row?.relationships.find(entry => entry.targetPlayerID === (player === a ? b : a))?.state;
+      return row && state ? [{ turn: row.source.turn, state }] : [];
+    });
     const latestTurn = Math.max(...rows.map((row) => row.turn));
     const states = new Set(rows.filter((row) => row.turn === latestTurn).map((row) => row.state));
-    return states.size === 1 ? ([...states][0] as 'war' | 'peace') : undefined;
+    return states.size === 1 && !states.has('unknown') ? ([...states][0] as 'war' | 'peace') : undefined;
   }
   /** Resolve a known player's recorded team without assuming player and team IDs match. */
   function team(player: number): number | undefined {
     return teams.get(player);
   }
   /** Resolve a team only when its permitted metadata identifies one player. */
-  function member(teamID: number): number | undefined {
-    const members = [...teams].filter(([, id]) => id === teamID);
+  function member(teamID: number, turn = Infinity): number | undefined {
+    const members = [...teams].filter(([player, id]) => id === teamID && (firstSeen.get(player) ?? Infinity) <= turn);
     return members.length === 1 ? members[0][0] : undefined;
   }
   /** Preserve missing major/minor metadata as unknown. */

@@ -4,17 +4,17 @@ import type { NewspaperEvidenceRequest } from '../../../../mcp-server/dist/newsp
 import { queryNewspaperEvidence } from '../../../../mcp-server/dist/newspaper/queries.js';
 import { buildNewspaperFacts } from '../editorial/facts/index.js';
 
-type ReplayFactSpans = { longTurns: number; longestWindowTurns?: number; speedMultiplier?: number };
+type ReplayFactSpans = { longTurns: number; historyTurns?: number; speedMultiplier?: number };
 
 /** Select the same permitted history for publication and evidence inspection. */
 export function replayFactRequest(
   request: Omit<NewspaperEvidenceRequest, 'historyFromTurn'>,
-  { longTurns, longestWindowTurns = 0 }: ReplayFactSpans,
+  { longTurns, historyTurns = longTurns }: ReplayFactSpans,
 ): NewspaperEvidenceRequest {
-  if (!Number.isSafeInteger(longTurns) || longTurns < 1 || !Number.isSafeInteger(longestWindowTurns) || longestWindowTurns < 0)
-    throw new RangeError('Fact history spans must be whole recorded turns and longTurns must be positive.');
+  if (!Number.isSafeInteger(longTurns) || longTurns < 1 || !Number.isSafeInteger(historyTurns) || historyTurns < longTurns)
+    throw new RangeError('Fact history must cover the long span in whole recorded turns.');
   return {
-    ...request, historyFromTurn: Math.max(-1, request.cutoffTurn - Math.max(longTurns, longestWindowTurns)),
+    ...request, historyFromTurn: Math.max(-1, request.cutoffTurn - historyTurns),
   };
 }
 

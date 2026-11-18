@@ -31,6 +31,7 @@ export interface DiplomaticIncident {
   pairs: { players: [number, number]; confidence: 'likely' | 'corroborated' }[];
   stage: string;
   concessionTypes: string;
+  capitulation?: boolean;
   audit: DiplomacyInference;
 }
 
@@ -85,6 +86,7 @@ function participate(
   else if (existing.cause === 'participation' && cause !== 'participation') {
     existing.side = side;
     existing.cause = cause;
+    existing.anchor = anchor;
   }
 }
 /** Resolve an obligation through any already joined member of a side, including allied city-states. */
@@ -272,7 +274,7 @@ function settlement(
 ): void {
   if (!incident.root) return;
   const [a, b] = incident.root;
-  const deal = peaceDeal(incident, evidence.events, facts);
+  const deal = peaceDeal(incident, evidence.history?.events ?? evidence.events, facts);
   const items =
     deal && Array.isArray(deal.values.TradedItems)
       ? (deal.values.TradedItems.filter((item) => item && typeof item === 'object') as Record<
@@ -303,7 +305,14 @@ function settlement(
   incident.concessionTypes = [
     ...new Set(concessions.map((item) => concessionLabels[String(item.ItemType)])),
   ].join(', ');
-  const newCapitulation = facts.snapshots.some(
+  const prior = [a, b].flatMap((player, index) => {
+    const row = facts.snapshots.filter(entry => entry.subjectID === player && entry.source.turn < incident.turn).at(-1);
+    const relationship = row?.relationships.find(entry => entry.targetPlayerID === [b, a][index]);
+    return row && relationship && relationship.state !== 'unknown' ? [{ row, relationship }] : [];
+  });
+  const canEstablishChange = prior.length > 0 && !prior.some(({ relationship }) =>
+    relationship.master === 'capitulated' || relationship.vassal === 'capitulated');
+  const capitulation = canEstablishChange ? facts.snapshots.find(
     (row) =>
       row.source.turn >= incident.turn &&
       facts.standard(row.source.turn - incident.turn) <= facts.causalFreshness &&
@@ -311,20 +320,11 @@ function settlement(
       row.relationships.some(
         (entry) =>
           entry.targetPlayerID === (row.subjectID === a ? b : a) &&
-          (entry.master === 'capitulated' || entry.vassal === 'capitulated') &&
-          !facts.snapshots.some(
-            (before) =>
-              before.subjectID === row.subjectID &&
-              before.source.turn < incident.turn &&
-              before.relationships.some(
-                (old) =>
-                  old.targetPlayerID === entry.targetPlayerID &&
-                  (old.master === 'capitulated' || old.vassal === 'capitulated')
-              )
-          )
+          (entry.master === 'capitulated' || entry.vassal === 'capitulated')
       )
-  );
-  if (newCapitulation) incident.stage = 'capitulation';
+  ) : undefined;
+  incident.capitulation = !!capitulation;
+  if (capitulation) incident.stage = 'capitulation';
   else if (concessions.length) incident.stage = 'concessions';
   else if (incident.participants.some((entry) => entry.cause === 'followingMaster'))
     incident.stage = 'vassalsIncluded';
@@ -333,17 +333,7 @@ function settlement(
   else if (incident.participants.some((entry) => facts.major(entry.id) === false))
     incident.stage = 'cityStatesIncluded';
   else incident.stage = 'agreement';
-  if (newCapitulation)
-    incident.sources.push(
-      ...facts.snapshots
-        .filter(
-          (row) =>
-            (row.subjectID === a || row.subjectID === b) &&
-            row.source.turn >= incident.turn &&
-            facts.standard(row.source.turn - incident.turn) <= facts.causalFreshness
-        )
-        .map((row) => row.source)
-    );
+  if (capitulation) incident.sources.push(capitulation.source, ...prior.map(({ row }) => row.source));
 }
 
 /** Reconstruct local war and peace accounts using native IDs, leaving dynamic event offsets out of call order. */
@@ -352,19 +342,18 @@ export function reconstructDiplomaticIncidents(
   facts: DiplomacyFacts
 ): DiplomaticIncident[] {
   const incidents: DiplomaticIncident[] = [];
-  const native = evidence.events
+  const native = (evidence.history?.events ?? evidence.events)
     .filter(
       (event) =>
         nativeDiplomacySource(event.source) &&
         ['DeclareWar', 'MakePeace'].includes(event.type) &&
-        event.source.turn > evidence.request.previousCheckTurn &&
         event.source.turn <= evidence.request.cutoffTurn
     )
     .sort((a, b) => a.source.turn - b.source.turn || a.source.id - b.source.id);
   for (const event of native) {
     const origin = id(event.values.OriginatingPlayerID);
     const targetTeam = id(event.values.TargetTeamID);
-    const target = targetTeam === undefined ? undefined : facts.member(targetTeam);
+    const target = targetTeam === undefined ? undefined : facts.member(targetTeam, event.source.turn);
     const kind = event.type === 'DeclareWar' ? 'war' : 'peace';
     const preceding = [...incidents]
       .reverse()
@@ -465,7 +454,7 @@ export function reconstructDiplomaticIncidents(
                 incident.turn,
                 event.source.id,
                 id(event.values.OriginatingPlayerID) === entry.id
-                  ? facts.member(Number(event.values.TargetTeamID))
+                  ? facts.member(Number(event.values.TargetTeamID), event.source.turn)
                   : id(event.values.OriginatingPlayerID)
               )?.inferred
           )

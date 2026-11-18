@@ -109,7 +109,7 @@ Vite cleans `dist-newspaper` on every build, then `scripts/utilities/package-new
 
 Run focused checks with `npm test -w vox-agents -- tests/mock/newspaper`, then run `npm run build:all` and `npm run test:all` for integration. Browser-driven tests use installed browsers and the built reader. Converter checks require the acquired executable.
 
-Broader game acceptance needs generated issues with actual stories, variable article lengths, and real link targets. The stock catalogue has no templates, so generated stories await stage 6 facts, stage 7 template expressions, and stage 8 fresh in-game stories. [Plan 1](../../../plans/newspaper/implementation/01-renderer.md) retains the remaining checks for layout quality, votes, reader state, game UI interactions, and cache loss. Record the VP build, DLL revision, DX renderer, resolution, UI scaling, render profile, and DDS format when performing those checks, keeping observed appearance and interaction separate from delivery acknowledgements.
+Broader game acceptance needs generated issues with actual stories, variable article lengths, and real link targets. The stock catalogue has no templates, so generated stories await stage 7 template expressions and stage 8 fresh in-game stories. [Plan 1](../../../plans/newspaper/implementation/01-renderer.md) retains the remaining checks for layout quality, votes, reader state, game UI interactions, and cache loss. Record the VP build, DLL revision, DX renderer, resolution, UI scaling, render profile, and DDS format when performing those checks, keeping observed appearance and interaction separate from delivery acknowledgements.
 
 ## Local measurements
 

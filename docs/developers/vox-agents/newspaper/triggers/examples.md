@@ -1,6 +1,6 @@
 # Newspaper trigger examples
 
-**Status:** `neighbor-puppet-annexed` and `settler-departure` ship in `triggers/cities.json`. Stage 8 adds the remaining 12 rules and story templates. Two rules need the incident and pair facts from stage 6. The shipped rules appear in replay audits; add an overlay template to publish a story now. [Plan 6](../../../../plans/newspaper/implementation/06-trigger-rules.md) lists the build order.
+**Status:** `neighbor-puppet-annexed` and `settler-departure` ship in `triggers/cities.json`. Stage 8 adds the remaining 12 rules and story templates. Two of those rules use pair and incident facts, which are available to ordinary overlay rules now. The shipped rules appear in replay audits; add an overlay template to publish a story now. [Plan 6](../../../../plans/newspaper/implementation/06-trigger-rules.md) lists the build order.
 
 This page shows worked [trigger rules](overview.md) for developers who want a starting point for their own. Each example gives the story in one sentence, the trigger entry, and a sketch of a template that reports it. Every name used here is defined in [facts](facts.md) or [constants and shortcuts](constants.md).
 
@@ -18,8 +18,8 @@ This page shows worked [trigger rules](overview.md) for developers who want a st
 | [A city-state ally defects to a rival](#a-city-state-ally-defects-to-a-rival) | `event` | Stage 8 | Players named by an event |
 | [A new technology leader](#a-new-technology-leader) | `player` | Stage 8 | `rank`, past rank |
 | [A golden age begins in wartime](#a-golden-age-begins-in-wartime) | `event` | Stage 8 | An event combined with the receiver's state |
-| [Vassals follow their master to war](#vassals-follow-their-master-to-war) | `incident` | Stage 8 (needs stage 6 facts) | Incident participants |
-| [Our war advantage stalls](#our-war-advantage-stalls) | `pair` | Stage 8 (needs stage 6 facts) | `history`, `held`, a span as `repeat` |
+| [Vassals follow their master to war](#vassals-follow-their-master-to-war) | `incident` | Overlay now, ships in stage 8 | Incident participants |
+| [Our war advantage stalls](#our-war-advantage-stalls) | `pair` | Overlay now, ships in stage 8 | `history`, `held`, a span as `repeat` |
 
 ## How to read an example
 

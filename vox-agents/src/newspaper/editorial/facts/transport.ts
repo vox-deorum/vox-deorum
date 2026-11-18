@@ -1,6 +1,6 @@
 /** Compact transport between the fact builders and the bounded QuickJS heap. */
 import type { NewspaperSourceReference } from '../../../../../mcp-server/dist/newspaper/evidence.js';
-import type { FactSubject, NewspaperFactModel } from './index.js';
+import type { DatedFact, FactSubject, NewspaperFactModel } from './index.js';
 import type { FactObject } from './model.js';
 
 interface PackedSubject {
@@ -9,11 +9,15 @@ interface PackedSubject {
 }
 
 /** The wire keeps each record opaque until a rule needs it and interns repeated citations. */
-export interface PackedNewspaperFacts extends Omit<NewspaperFactModel, 'game' | 'cities' | 'players' | 'events'> {
+interface PackedDatedFact<Id> { readonly id: Id; readonly turn: number; readonly f: string; readonly s: number }
+
+export interface PackedNewspaperFacts extends Omit<NewspaperFactModel, 'game' | 'cities' | 'players' | 'events' | 'pairs' | 'incidents'> {
   readonly g: string;
   readonly cities: Readonly<Record<number, PackedSubject>>;
   readonly players: Readonly<Record<number, PackedSubject>>;
-  readonly events: readonly { id: number; turn: number; f: string; s: number }[];
+  readonly pairs: Readonly<Record<string, PackedSubject>>;
+  readonly events: readonly PackedDatedFact<number>[];
+  readonly incidents: readonly PackedDatedFact<string>[];
   readonly sources: readonly NewspaperSourceReference[];
   readonly sourceLists: readonly (readonly number[])[];
 }
@@ -61,7 +65,7 @@ export function packNewspaperFacts(model: NewspaperFactModel): PackedNewspaperFa
   }
 
   /** Pack a timeline without dropping gaps or changing its dated subject keys. */
-  function packSubjects(subjects: Readonly<Record<number, FactSubject>>): Record<number, PackedSubject> {
+  function packSubjects(subjects: Readonly<Record<string, FactSubject>>): Record<string, PackedSubject> {
     return Object.fromEntries(Object.entries(subjects).map(([id, { current, history }]) => [id, {
       c: current && packFields(current),
       history: history.map(({ turn, segment, fields, sources }) => ({
@@ -70,17 +74,24 @@ export function packNewspaperFacts(model: NewspaperFactModel): PackedNewspaperFa
     }]));
   }
 
+  /** Pack dated event and incident rows using the same lazy record format. */
+  function packDated<Id extends string | number>(items: readonly DatedFact<Id>[]): PackedDatedFact<Id>[] {
+    return items.map(({ id, turn, fields, sources }) => ({
+      id, turn, f: packFields(fields), s: packSources(sources),
+    }));
+  }
+
   return {
     turn: model.turn, previous: model.previous, earliestWindowTurn: model.earliestWindowTurn,
     earliestSnapshotTurn: model.earliestSnapshotTurn,
     longTurns: model.longTurns, receiverId: model.receiverId,
     g: packFields(model.game),
-    subjects: { city: [...model.subjects.city], player: [...model.subjects.player], event: [...model.subjects.event] },
+    subjects: model.subjects,
     cities: packSubjects(model.cities),
     players: packSubjects(model.players),
-    events: model.events.map(({ id, turn, fields, sources }) => ({
-      id, turn, f: packFields(fields), s: packSources(sources),
-    })),
+    pairs: packSubjects(model.pairs),
+    events: packDated(model.events),
+    incidents: packDated(model.incidents),
     sources, sourceLists,
   };
 }
@@ -131,7 +142,9 @@ function unpackFacts(wire) {
     subjects: wire.subjects,
     cities: unpackSubjects(wire.cities),
     players: unpackSubjects(wire.players),
+    pairs: unpackSubjects(wire.pairs),
     events: wire.events.map(unpackRow),
+    incidents: wire.incidents.map(unpackRow),
   };
 }
 `;

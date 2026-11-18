@@ -156,20 +156,20 @@ describe('offline replay output store', () => {
     restored.publication.preferences.llmEnabled = true;
     store.save(restored);
     const saved = new Database(filename, { readonly: true });
-    expect(saved.pragma('user_version', { simple: true })).toBe(3);
+    expect(saved.pragma('user_version', { simple: true })).toBe(4);
     expect(saved.prepare('SELECT Revision FROM OfflineReplayRuns').get()).toEqual({ Revision: 1 });
     saved.close();
   });
 
-  it('should reject version one output without modifying it', async () => {
+  it.each([1, 3])('should reject version %s output without modifying it', async version => {
     const { checkpoint } = await checkFixture(false);
-    const originalPath = path.join(path.dirname(recording.filename), 'version-one.sqlite');
+    const originalPath = path.join(path.dirname(recording.filename), `version-${version}.sqlite`);
     const original = new ReplayStore(originalPath);
     original.create('source', checkpoint);
     original.close();
     const sqlite = new Database(originalPath);
-    sqlite.exec('ALTER TABLE OfflineReplayRuns DROP COLUMN Revision');
-    sqlite.pragma('user_version = 1');
+    if (version === 1) sqlite.exec('ALTER TABLE OfflineReplayRuns DROP COLUMN Revision');
+    sqlite.pragma(`user_version = ${version}`);
     sqlite.close();
     const bytes = await readFile(originalPath);
     expect(() => new ReplayStore(originalPath)).toThrow(/new output path/i);

@@ -3,11 +3,13 @@ import type {
   NewspaperEvent, NewspaperEvidence, NewspaperSnapshot, NewspaperSourceReference,
 } from '../../../../../mcp-server/dist/newspaper/evidence.js';
 import { resolveGameSpeedMultiplier } from '../../../knowledge/game-speed.js';
+import type { DiplomacyCheck } from '../diplomacy/war-peace.js';
 import { buildCityFacts, buildCitySnapshotFacts } from './city.js';
+import { buildDiplomacyFacts } from './diplomacy.js';
 import { buildEventFacts } from './event.js';
 import { buildPlayerFacts, buildPlayerSnapshotFacts } from './player.js';
 import { distanceContext, mapWrap, type MapWrap } from './distance.js';
-import { fact, rowSources, type FactBuildContext, type FactKind, type FactMetadata, type FactObject } from './model.js';
+import { fact, rowSources, type FactBuildContext, type FactMetadata, type FactObject } from './model.js';
 import { buildTimeline, observedAt, rowsAt, type Observation } from './timeline.js';
 
 export interface FactObservation {
@@ -21,6 +23,13 @@ export interface FactSubject {
   readonly history: readonly FactObservation[];
 }
 
+export interface DatedFact<Id extends number | string> {
+  readonly id: Id;
+  readonly turn: number;
+  readonly fields: FactObject;
+  readonly sources: readonly NewspaperSourceReference[];
+}
+
 export interface NewspaperFactModel {
   readonly turn: number;
   readonly previous: number;
@@ -29,10 +38,18 @@ export interface NewspaperFactModel {
   readonly longTurns: number;
   readonly receiverId: number;
   readonly game: FactObject;
-  readonly subjects: Readonly<Record<FactKind, readonly number[]>>;
+  readonly subjects: {
+    readonly city: readonly number[];
+    readonly player: readonly number[];
+    readonly event: readonly number[];
+    readonly pair: readonly string[];
+    readonly incident: readonly string[];
+  };
   readonly cities: Readonly<Record<number, FactSubject>>;
   readonly players: Readonly<Record<number, FactSubject>>;
-  readonly events: readonly { id: number; turn: number; fields: FactObject; sources: readonly NewspaperSourceReference[] }[];
+  readonly events: readonly DatedFact<number>[];
+  readonly pairs: Readonly<Record<string, FactSubject>>;
+  readonly incidents: readonly DatedFact<string>[];
 }
 
 const privateWrap = new WeakMap<NewspaperFactModel, MapWrap>();
@@ -42,6 +59,17 @@ export function factModelWrap(model: NewspaperFactModel): MapWrap | undefined {
   return privateWrap.get(model);
 }
 
+/** Attach the check's inferred diplomacy without exposing its inspector records or private geometry. */
+export function addDiplomacyFacts(model: NewspaperFactModel, diplomacy: DiplomacyCheck): NewspaperFactModel {
+  const { pairs, incidents, ids } = buildDiplomacyFacts(model, diplomacy);
+  const enriched = {
+    ...model, pairs, incidents,
+    subjects: { ...model.subjects, pair: ids, incident: incidents.map(item => item.id) },
+  };
+  const wrap = privateWrap.get(model);
+  if (wrap) privateWrap.set(enriched, wrap);
+  return enriched;
+}
 /** Collect the projected events once in recorded turn and insertion order. */
 function datedEvents(evidence: NewspaperEvidence): NewspaperEvent[] {
   const byId = new Map((evidence.history?.events ?? []).map(event => [event.source.id, event]));
@@ -167,12 +195,16 @@ export function buildNewspaperFacts(
       city: cutoff.cities.map(row => row.subjectID),
       player: cutoff.players.map(row => row.subjectID),
       event: events.filter(event => event.source.turn > previousCheckTurn).map(event => event.source.id),
+      pair: [],
+      incident: [],
     },
     cities: subjects(cities, cutoff.cities, buildCityFacts, buildCitySnapshotFacts),
     players: subjects(players, cutoff.players, buildPlayerFacts, buildPlayerSnapshotFacts),
     events: events.map(event => ({
       id: event.source.id, turn: event.source.turn, fields: buildEventFacts(event, cutoff), sources: rowSources(event),
     })),
+    pairs: {},
+    incidents: [],
   };
   privateWrap.set(model, wrap);
   return model;

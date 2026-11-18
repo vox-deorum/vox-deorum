@@ -10,36 +10,27 @@ import {
 } from '../../../../../mcp-server/dist/diplomacy/relationships.js';
 import type {
   DiplomacyMemory,
-  DiplomacyPair,
+  DiplomacyIncidentFact,
+  DiplomacyReason,
   DiplomacyInference,
 } from '../../contracts/diplomacy.js';
 import type { EditorialContext } from '../shared/context.js';
 import { uniqueSources } from '../shared/sources.js';
 import {
-  createDiplomacyPair,
   diplomacyFacts,
   diplomacyPairKey,
   type DiplomacyFacts,
 } from './diplomacy-facts.js';
 import { reconstructDiplomaticIncidents } from './diplomacy-incidents.js';
-/** Standard-turn history retained for directional war scores. */
-export const diplomacyHistoryStandardTurns = 30;
+import { advancePairHistory } from './pair-history.js';
+/** Default history in Standard turns when no catalogue window is supplied. */
+const defaultHistoryStandardTurns = 40;
 const causalFreshness = 5;
-const peaceMaxGap = 10;
 
 export interface DiplomacyCheck {
   memory: DiplomacyMemory;
   audit: DiplomacyInference[];
-}
-
-/** Reset a pair's score history and continuity whenever peace or renewed war changes its state. */
-function transition(pair: DiplomacyPair, state: 'war' | 'peace', turn: number): void {
-  if (pair.state === state) return;
-  pair.peaceAnchored = state === 'peace' && pair.state === 'war';
-  pair.state = state;
-  pair.since = turn;
-  pair.lastObserved = turn;
-  pair.samples = [];
+  incidents: DiplomacyIncidentFact[];
 }
 /** Identify a new voluntary-vassal connection that can plausibly carry an existing master's war. */
 function inheritedWar(
@@ -47,7 +38,7 @@ function inheritedWar(
   player: number,
   enemy: number,
   turn: number
-): number | undefined {
+): { player: number; sources: NewspaperSourceReference[] } | undefined {
   const rows = facts.snapshots.filter(
     (row) =>
       row.subjectID === player &&
@@ -70,126 +61,50 @@ function inheritedWar(
           (old) =>
             old.targetPlayerID === relation.targetPlayerID && (isVassalOf(old) || isMasterOf(old))
         )
-      )
-        return relation.targetPlayerID;
+      ) {
+        const supportingWar = facts.source(relation.targetPlayerID, turn, enemy);
+        return { player, sources: uniqueSources([prior.source, row.source, ...(supportingWar ? [supportingWar] : [])]) };
+      }
     }
   return undefined;
+}
+
+/** Convert inference labels to the participant vocabulary exposed in rules. */
+function reasonFor(cause: string): DiplomacyReason {
+  switch (cause) {
+    case 'defensivePact': return 'pact';
+    case 'followingMaster': return 'vassal';
+    case 'vassalsJoining': return 'master';
+    case 'cityStateJoining': return 'cityStateAlly';
+    case 'inheritedWars': return 'inherited';
+    default: return 'root';
+  }
 }
 
 /** Reconstruct permitted war and peace incidents and preserve pair continuity. */
 export function inferWarAndPeace(
   evidence: NewspaperEvidence,
   context: EditorialContext,
-  previous: DiplomacyMemory = { pairs: {} }
+  previous: DiplomacyMemory = { pairs: {} },
+  historyTurns?: number,
 ): DiplomacyCheck {
   const memory = structuredClone(previous);
   const audit: DiplomacyInference[] = [];
+  const incidentFacts: DiplomacyIncidentFact[] = [];
   const facts = diplomacyFacts(evidence, context, causalFreshness);
   const {
     cutoffTurn: cutoff,
     receiverPlayerID: receiver,
     previousCheckTurn: lastCheck,
   } = evidence.request;
-  /** Get one stable pair whose perspective does not depend on whichever ally supplied a snapshot. */
-  function pairFor(a: number, b: number): DiplomacyPair {
-    const key = diplomacyPairKey(a, b);
-    return (memory.pairs[key] ??= createDiplomacyPair(a, b, receiver));
-  }
   const incidents = reconstructDiplomaticIncidents(evidence, facts);
-  const nativePairs = new Map<string, number>();
-  for (const incident of incidents) {
-    for (const actual of incident.pairs) {
-      const [a, b] = actual.players;
-      if (a === b) continue;
-      const pair = pairFor(a, b);
-      const resumed = incident.kind === 'war' && pair.state === 'peace';
-      transition(pair, incident.kind === 'war' ? 'war' : 'peace', incident.turn);
-      if (incident.kind === 'peace') pair.peaceAnchored = true;
-      nativePairs.set(diplomacyPairKey(a, b), incident.turn);
-      if (resumed && incident.stage === 'declaration') incident.stage = 'resumed';
-    }
-  }
-
-  // Process final-per-turn observations once per directed pair. Native transitions anchor same-turn continuity.
-  const observations = new Map<
-    string,
-    {
-      row: DiplomacyFacts['snapshots'][number];
-      relation: DiplomacyFacts['snapshots'][number]['relationships'][number];
-    }
-  >();
-  for (const row of facts.snapshots)
-    for (const relation of row.relationships) {
-      if (row.subjectID === relation.targetPlayerID) continue;
-      const pair = pairFor(row.subjectID, relation.targetPlayerID);
-      if (row.subjectID !== pair.perspective && row.isMajor) continue;
-      const key = `${diplomacyPairKey(row.subjectID, relation.targetPlayerID)}/${row.source.turn}`;
-      const before = observations.get(key);
-      if (
-        !before ||
-        (row.subjectID === pair.perspective && before.row.subjectID !== pair.perspective) ||
-        ((row.subjectID === pair.perspective) === (before.row.subjectID === pair.perspective) &&
-          row.source.id > before.row.source.id)
-      )
-        observations.set(key, { row, relation });
-    }
-  const observedTransitions = new Map<
-    string,
-    { pair: DiplomacyPair; previousState: DiplomacyPair['state']; source: NewspaperSourceReference }
-  >();
-  for (const { row, relation } of [...observations.values()].sort(
-    (a, b) => a.row.source.turn - b.row.source.turn || a.row.source.id - b.row.source.id
-  )) {
-    const pair = pairFor(row.subjectID, relation.targetPlayerID);
-    if ((pair.since !== null && row.source.turn < pair.since) || relation.state === 'unknown')
-      continue;
-    const nativeTurn = nativePairs.get(diplomacyPairKey(...pair.players));
-    if (nativeTurn === row.source.turn && pair.state !== relation.state) continue;
-    const previousState = pair.state;
-    const isNew = pair.lastObserved === null || row.source.turn > pair.lastObserved;
-    const nativeAnchor = nativeTurn === row.source.turn && pair.samples.length === 0;
-    if (!isNew && !nativeAnchor) continue;
-    if (pair.state !== relation.state) {
-      transition(pair, relation.state, row.source.turn);
-      if (row.source.turn > lastCheck && nativeTurn !== row.source.turn)
-        observedTransitions.set(diplomacyPairKey(...pair.players), {
-          pair,
-          previousState,
-          source: row.source,
-        });
-    } else if (
-      pair.state === 'peace' &&
-      pair.lastObserved !== null &&
-      facts.standard(row.source.turn - pair.lastObserved) > peaceMaxGap
-    ) {
-      pair.since = row.source.turn;
-    }
-    if (isNew || nativeTurn === row.source.turn) pair.lastObserved = row.source.turn;
-    if (
-      relation.state !== 'war' ||
-      facts.major(pair.players[0]) !== true ||
-      facts.major(pair.players[1]) !== true ||
-      relation.warScore === undefined ||
-      !Number.isFinite(relation.warScore) ||
-      Math.abs(relation.warScore) > 100
-    )
-      continue;
-    const sourceKey = `${row.source.table}/${row.source.id}`;
-    if (
-      pair.samples.some(
-        (sample) =>
-          `${sample.source.table}/${sample.source.id}` === sourceKey ||
-          sample.turn === row.source.turn
-      )
-    )
-      continue;
-    pair.samples.push({ turn: row.source.turn, score: relation.warScore, source: row.source });
-    pair.samples = pair.samples
-      .filter((sample) => facts.standard(cutoff - sample.turn) <= diplomacyHistoryStandardTurns)
-      .sort((a, b) => a.turn - b.turn);
-  }
+  const retention = Math.max(cutoff - lastCheck, historyTurns ?? Math.ceil(defaultHistoryStandardTurns / facts.standard(1)));
+  const { openings, byIncident } = advancePairHistory(
+    evidence, facts, memory, incidents, retention,
+  );
 
   for (const incident of incidents) {
+    if (incident.turn <= lastCheck) continue;
     if (!incident.root) {
       audit.push(incident.audit);
       continue;
@@ -199,7 +114,8 @@ export function inferWarAndPeace(
       audit.push(incident.audit);
       continue;
     }
-    let stage = incident.stage;
+    const pairContext = byIncident.get(incident.id);
+    let stage = pairContext?.resumed && incident.kind === 'war' ? 'resumed' : incident.stage;
     const ownParticipation = incident.participants.find((entry) => entry.id === receiver);
     const cause =
       ownParticipation?.cause ??
@@ -240,13 +156,7 @@ export function inferWarAndPeace(
       }
     } else {
       if (ownParticipation?.cause === 'followingMaster') stage = 'masterLed';
-      const knownRemaining = Object.values(memory.pairs).some(
-        (pair) =>
-          pair.state === 'war' &&
-          pair.players.some((player) => player === a || player === b) &&
-          pair.lastObserved !== null &&
-          facts.standard(cutoff - pair.lastObserved) <= causalFreshness
-      );
+      const knownRemaining = !!pairContext?.partialSources.length;
       if (knownRemaining && ['agreement', 'quietFronts'].includes(stage)) stage = 'partial';
       else if (!knownRemaining && stage === 'agreement' && domestic) stage = 'quietFronts';
     }
@@ -265,8 +175,27 @@ export function inferWarAndPeace(
             : []),
         ].filter((source): source is NewspaperSourceReference => !!source)
       );
-    incident.sources = uniqueSources([...incident.sources, ...relationshipSources]);
+    incident.sources = uniqueSources([
+      ...incident.sources, ...relationshipSources, ...(inherited?.sources ?? []),
+      ...(pairContext?.partialSources ?? []), ...(pairContext?.resumedSources ?? []),
+    ]);
     incident.audit.sources = incident.sources;
+    /** Attribute an inherited war to the new vassal or master supported by the summaries. */
+    function participantReason(entry: (typeof incident.participants)[number]): DiplomacyReason {
+      return reasonFor(inherited && entry.id === inherited.player ? 'inheritedWars' : entry.cause);
+    }
+    incidentFacts.push({
+      id: incident.id, kind: incident.kind, turn: incident.turn, root: incident.root,
+      participants: incident.participants.filter(entry => facts.major(entry.id) === true).map(entry => ({
+        id: entry.id, side: entry.side === a ? 'initiator' : 'target', reason: participantReason(entry),
+      })),
+      cityStates: incident.participants.filter(entry => facts.major(entry.id) === false).map(entry => entry.id),
+      role: receiver === a ? 'initiator' : receiver === b ? 'target' : domestic ? 'joined' : 'none',
+      reason: ownParticipation ? participantReason(ownParticipation) : undefined,
+      resumed: !!pairContext?.resumed, observed: false, partial: !!pairContext?.partialSources.length,
+      capitulation: !!incident.capitulation, concessions: incident.concessionTypes ? incident.concessionTypes.split(', ') : [],
+      sources: incident.sources, pair: pairContext?.observation,
+    });
     audit.push({
       ...incident.audit,
       stage,
@@ -324,24 +253,27 @@ export function inferWarAndPeace(
       )
     )
   );
-  for (const change of observedTransitions.values()) {
-    const { pair, source, previousState } = change;
+  for (const { pair, observation, resumed, sources } of openings) {
     const [a, b] = pair.players;
+    const turn = observation.turn;
+    const pairId = diplomacyPairKey(a, b);
     if (
       (facts.major(a) === false && facts.major(b) === false) ||
-      pair.state !== 'war' ||
-      alliancePairKeys.has(`${diplomacyPairKey(a, b)}/${source.turn}`)
+      turn <= lastCheck ||
+      alliancePairKeys.has(`${pairId}/${turn}`)
     )
       continue;
     const inherited =
-      inheritedWar(facts, a, b, source.turn) ?? inheritedWar(facts, b, a, source.turn);
-    const stage =
-      inherited !== undefined
-        ? 'inheritedWars'
-        : previousState === 'peace'
-          ? 'resumed'
-          : 'observed';
-    const key = `observed/${diplomacyPairKey(a, b)}/${source.turn}`;
+      inheritedWar(facts, a, b, turn) ?? inheritedWar(facts, b, a, turn);
+    const stage = inherited ? 'inheritedWars' : resumed ? 'resumed' : 'observed';
+    const key = `observed/${pairId}/${turn}`;
+    const openingSources = uniqueSources([...sources, ...(inherited?.sources ?? [])]);
+    incidentFacts.push({
+      id: key, kind: 'war', turn, root: [a, b], rootRolesUnknown: true,
+      participants: [], cityStates: [a, b].filter(player => facts.major(player) === false),
+      role: pair.players.includes(receiver) ? undefined : 'none', resumed, observed: true, partial: false, capitulation: false, concessions: [],
+      sources: openingSources, pair: observation,
+    });
     audit.push({
       incidentId: key,
       kind: 'continuity',
@@ -350,7 +282,7 @@ export function inferWarAndPeace(
       participationCause: stage,
       confidence: 'corroborated',
       alternatives: ['The declaration sequence is unavailable.'],
-      sources: [source],
+      sources: openingSources,
     });
   }
 
@@ -361,8 +293,21 @@ export function inferWarAndPeace(
     const key = `alliance/${row.subjectID}/${row.source.turn}`;
     if (reportedAlliances.has(key)) continue;
     reportedAlliances.add(key);
-    const sources = uniqueSources([prior.source, row.source, ...(event ? [event.source] : [])]);
+    const opponent = opponents[0].targetPlayerID;
+    const alliedWar = facts.source(ally, row.source.turn, opponent);
+    const sources = uniqueSources([prior.source, row.source, ...(event ? [event.source] : []), ...(alliedWar ? [alliedWar] : [])]);
     const players = [ally, opponents[0].targetPlayerID];
+    const pair = [row.subjectID, opponent] as [number, number];
+    incidentFacts.push({
+      id: key, kind: 'war', turn: row.source.turn, root: pair, rootRolesUnknown: true,
+      participants: [], cityStates: [row.subjectID],
+      role: receiver === row.subjectID ? 'joined' : receiver === ally || receiver === opponent ? undefined : 'none',
+      reason: receiver === row.subjectID ? 'cityStateAlly' : undefined,
+      resumed: openings.some(opening => opening.observation.turn === row.source.turn && opening.resumed &&
+        diplomacyPairKey(...opening.pair.players) === diplomacyPairKey(...pair)),
+      observed: true, partial: false, capitulation: false, concessions: [], sources,
+      pair: memory.pairs[diplomacyPairKey(...pair)]?.observations.find(observation => observation.turn === row.source.turn),
+    });
     audit.push({
       stage: 'allianceChange',
       incidentId: key,
@@ -375,9 +320,6 @@ export function inferWarAndPeace(
     });
   }
 
-  for (const pair of Object.values(memory.pairs))
-    pair.samples = pair.samples.filter(
-      (sample) => facts.standard(cutoff - sample.turn) <= diplomacyHistoryStandardTurns
-    );
-  return { memory, audit };
+  incidentFacts.sort((a, b) => a.turn - b.turn);
+  return { memory, audit, incidents: incidentFacts };
 }

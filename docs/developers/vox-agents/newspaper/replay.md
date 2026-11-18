@@ -12,7 +12,7 @@ npm run newspaper -w vox-agents -- --help
 
 Preview builds replace the shared `dist-newspaper` assets. Generate previews while VD is stopped, and rerun the command if a build is interrupted before restarting VD.
 
-These local recordings provide sources for replay and for the historical examples below. Rerunning them with the stock catalogue records rule audits and skipped checks; an overlay supplies templates when you want issues. The commands exercise the full range, pacing and previews:
+These local recordings provide sources for replay and for the historical examples below. Rerunning them with the stock catalogue records rule audits and skipped checks; an overlay supplies additional rules, including pair and incident rules, and templates when you want issues. The commands exercise the full range, pacing and previews:
 
 ```sh
 npm run newspaper -w vox-agents -- --database mcp-server/archive/self-play/0d749c4f-69a7-4682-81b3-8fa70f38c012_1794782175768.db --player 7 --from 0 --to 350 --output .tmp/newspaper-examples/netherlands --render-turns 120,125,275,350
@@ -40,7 +40,7 @@ Before a requested preview run, the command builds dependencies and checks the i
 
 ### Iterate on a rule or overlay
 
-Create an override directory and mirror the catalogue paths being changed. To tune a shipped rule, copy `vox-agents/newspaper/triggers/cities.json` into a `triggers/` subfolder and edit that rule. To author a story, add a `templates/` file whose entries name the rule IDs. Then rerun the same recording and turn range with `--config` and a new output directory:
+Create an override directory and mirror the catalogue paths being changed. To tune a shipped rule, copy `vox-agents/newspaper/triggers/cities.json` into a `triggers/` subfolder and edit that rule. To author a story, add a `templates/` file whose entries name the rule IDs. Pair and incident rules are ordinary entries, so an overlay can add one with its own `triggers/` file; the stock catalogue ships neither. Then rerun the same recording and turn range with `--config` and a new output directory:
 
 ```sh
 npm run newspaper -w vox-agents -- --database mcp-server/archive/self-play/0d749c4f-69a7-4682-81b3-8fa70f38c012_1794782175768.db --player 7 --from 0 --to 125 --config .tmp/newspaper-overlay --output .tmp/newspaper-examples/netherlands-revised --render-turns 120,125
@@ -89,7 +89,7 @@ Fixture selection and link destinations remain available alongside the persisted
 
 `replay/database.ts` wraps the read-only opener in `knowledge/database.ts`, inheriting its JSON decoding. It initializes the lazy connection without SQL so shutdown can release an unused source. The recording receives no schema setup, migrations, writes, or live refresh. `replay/store.ts` versions the separate offline output and commits each check's content or skip, evidence summaries, decision, rule repeat state, series state, and cursor in one transaction, with a unique cutoff per run and receiver. Plan 5 puts live publication storage in MCP's per-game database.
 
-`replay/session.ts` owns both connections and serializes configuration, queries, checks, archive reads, votes, preferences, and shutdown. Required publication advance scope is checked within that queue, after any earlier configuration. The offline SQLite store uses `user_version` 3 and stores a checkpoint revision; an output database with an unsupported version is rejected, so regenerate older local replay output. This storage version is separate from publication-state schema 4 and IssueDocument schema 2. Every check, vote, and preference write must match the revision captured when that process created or resumed the run. If another VD process has changed it, the write returns 409 and its transaction rolls back; resume the run to reload the latest cursor and votes before continuing. Reusing an existing run ID also returns 409 with resume guidance. Shutdown rejects new work, drains accepted operations, and closes both databases. The export application retains its separate queue and shutdown.
+`replay/session.ts` owns both connections and serializes configuration, queries, checks, archive reads, votes, preferences, and shutdown. Required publication advance scope is checked within that queue, after any earlier configuration. The offline SQLite store uses `user_version` 4 and stores a checkpoint revision; an output database with an unsupported version is rejected, so regenerate older local replay output. This storage version is separate from publication-state schema 5 and IssueDocument schema 2. Every check, vote, and preference write must match the revision captured when that process created or resumed the run. If another VD process has changed it, the write returns 409 and its transaction rolls back; resume the run to reload the latest cursor and votes before continuing. Reusing an existing run ID also returns 409 with resume guidance. Shutdown rejects new work, drains accepted operations, and closes both databases. The export application retains its separate queue and shutdown.
 
 `replay/http.ts` mounts through the existing newspaper host hook with its own JSON parser before API fallbacks and the server's general parser. Routes are loopback-only. Paths below are relative to `/api/newspaper/replay`.
 
