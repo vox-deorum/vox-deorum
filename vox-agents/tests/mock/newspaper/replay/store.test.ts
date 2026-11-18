@@ -16,13 +16,13 @@ async function checkFixture(published = true): Promise<{ checkpoint: ReplayCheck
   const decision: EditorialDecisionRecord = {
     checkId: 'check-10', cutoffTurn: 10, configurationId: 'test', configurationSnapshot: {}, seed: 'test', editor: 'heuristic',
     status: published ? 'published' : 'skipped', candidateScores: [], merges: [], selectedVariants: {}, designId: published ? issue.publication.designId : null,
-    layouts: {}, evidence: [], diplomacyInference: [], feedback: { revision: 'empty', windowItemIds: [], votes: {}, tagCounts: {}, seriesAdjustments: {}, tagAdjustments: {}, coefficients: { series: 2, tag: 1, bound: 5, window: 50 } },
+    layouts: {}, evidence: [], diplomacyInference: [], triggerAudit: [], evidenceRequest: { cutoffTurn: 10, previousCheckTurn: 9, receiverPlayerID: 0 }, feedback: { revision: 'empty', windowItemIds: [], votes: {}, tagCounts: {}, seriesAdjustments: {}, tagAdjustments: {}, coefficients: { series: 2, tag: 1, bound: 5, window: 50 } },
   };
   const publication = createInitialPublicationState();
   publication.lastCheckTurn = 10;
   if (published) publication.issues.push({ issueId: issue.issueId, turn: 10, items: issue.items.map(item => ({
     id: item.id, issueId: issue.issueId, turn: 10, tags: item.tags, seriesKeys: item.seriesKeys,
-    templateIds: ['fixture'], triggerIds: ['controlled'], importance: 5, evidenceSummary: 'Recorded observations', sources: [], fingerprint: item.id,
+    templateIds: ['fixture'], triggerIds: ['controlled'], importance: 5, headline: item.headline, evidenceSummary: 'Recorded observations', sources: [], fingerprint: item.id,
   })) });
   return {
     checkpoint: { session: replayStateSchema.parse({
@@ -156,7 +156,7 @@ describe('offline replay output store', () => {
     restored.publication.preferences.llmEnabled = true;
     store.save(restored);
     const saved = new Database(filename, { readonly: true });
-    expect(saved.pragma('user_version', { simple: true })).toBe(2);
+    expect(saved.pragma('user_version', { simple: true })).toBe(3);
     expect(saved.prepare('SELECT Revision FROM OfflineReplayRuns').get()).toEqual({ Revision: 1 });
     saved.close();
   });
@@ -172,7 +172,7 @@ describe('offline replay output store', () => {
     sqlite.pragma('user_version = 1');
     sqlite.close();
     const bytes = await readFile(originalPath);
-    expect(() => new ReplayStore(originalPath)).toThrow();
+    expect(() => new ReplayStore(originalPath)).toThrow(/new output path/i);
     expect(await readFile(originalPath)).toEqual(bytes);
   });
 

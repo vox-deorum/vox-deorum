@@ -1,6 +1,6 @@
 # Newspaper trigger facts
 
-City, player and event facts live in `editorial/facts/`. Rules can read current and historical values and use [shortcuts](constants.md#shortcuts) on those subjects. Published newspapers still use fixed detectors. The rule catalogue, pair facts and incident facts come in later [stages](../../../../plans/newspaper/implementation/06-trigger-rules.md).
+City, player and event facts live in `editorial/facts/`. Rules read current and historical values and use [shortcuts](constants.md#shortcuts) on those subjects. The stock catalogue ships two city rules and no templates, so a stock replay records rule audits without printing an issue. Pair facts and incident facts arrive in [stage 6](../../../../plans/newspaper/implementation/06-trigger-rules.md).
 
 The **fact model** is the set of objects a [trigger rule](overview.md) can read: cities, players, events, pairs and incidents. This page is the reference for developers writing rules. It lists every fact, says where each one comes from, and explains how to read the past.
 
@@ -25,8 +25,8 @@ flowchart LR
 | `city` | City the receiver can see | [City](#city) |
 | `player` | Known major civilization or city-state | [Player](#player) |
 | `event` | Permitted event in the reporting period | [Event](#event) |
-| `pair` | Two known players with a recorded relationship | [Pair](#pair) |
-| `incident` | Inferred war or peace incident | [Incident](#incident) |
+| `pair` | Two known players with a recorded relationship, in stage 6 | [Pair](#pair) |
+| `incident` | Inferred war or peace incident, in stage 6 | [Incident](#incident) |
 
 The **receiver** is the player the newspaper is written for. Every fact reflects what the receiver was allowed to see on the turn it was recorded.
 
@@ -87,7 +87,7 @@ The **reporting period** runs from the previous newspaper check to the cutoff tu
 | `events` | Every permitted event inside the window that names this city or its plot | Event city IDs and coordinates |
 | `is.<name>` | A [shortcut](constants.md#shortcuts), such as `city.is.neighbor` | The catalogue |
 
-Annexation has no recorded event. A rule reads it from the stored flags: `city.before.isPuppet && !city.isPuppet && city.isOccupied`.
+Annexation has no recorded event. A rule reads it from the stored flags: `city.before.isPuppet && !city.isPuppet && city.isOccupied`. The shipped `neighbor-puppet-annexed` rule combines them with `city.is.neighbor` and an unchanged owner.
 
 ## Player
 
@@ -155,7 +155,7 @@ The event types a rule may name are the ones in `newspaperEventConfigs` in `mcp-
 
 ## Pair
 
-`pair` describes two known players and how they stand with each other. Pairs are unordered; `a` is the player with the lower ID.
+`pair` describes two known players and how they stand with each other. Pairs are unordered; `a` is the player with the lower ID. Pair facts reach rules in stage 6; the table is their target contract.
 
 | Fact | Meaning |
 | --- | --- |
@@ -172,7 +172,7 @@ The event types a rule may name are the ones in `newspaperEventConfigs` in `mcp-
 
 ## Incident
 
-`incident` is one inferred war or peace event with everyone it drew in. [War and peace](war-and-peace.md) explains the inference.
+`incident` is one inferred war or peace event with everyone it drew in. Stage 6 exposes these facts to rules. [War and peace](war-and-peace.md) explains the inference.
 
 | Fact | Meaning |
 | --- | --- |
@@ -192,7 +192,7 @@ The event types a rule may name are the ones in `newspaperEventConfigs` in `mcp-
 
 ## Reading the past
 
-`city`, `player` and `pair` offer the same accessors. `city` is used below.
+`city`, `player` and `pair` offer the same accessors; pair accessors follow with stage 6. `city` is used below.
 
 | Accessor | Reads | Example |
 | --- | --- | --- |

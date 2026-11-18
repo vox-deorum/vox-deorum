@@ -19,7 +19,6 @@ export function selectHeuristic(
   const usedSeries = new Set<string>();
   const usedTriggers = new Set<string>();
   const usedTags = new Set<string>();
-  const usedConflicts = new Set<string>();
   const selected: EditorialCandidate[] = [];
   const scores = new Map<string, number>();
   const published = new Set(
@@ -70,15 +69,13 @@ export function selectHeuristic(
     if (
       (!candidate.urgent && weight <= 0) ||
       candidate.seriesKeys.some((key) => usedSeries.has(key)) ||
-      candidate.triggerIds.some((id) => usedTriggers.has(id)) ||
-      candidate.conflictKeys?.some((key) => usedConflicts.has(key))
+      candidate.triggerIds.some((id) => usedTriggers.has(id))
     )
       continue;
     selected.push(candidate);
     candidate.seriesKeys.forEach((key) => usedSeries.add(key));
     candidate.triggerIds.forEach((id) => usedTriggers.add(id));
     candidate.tags.forEach((tag) => usedTags.add(tag));
-    candidate.conflictKeys?.forEach((key) => usedConflicts.add(key));
   }
   for (const candidate of candidates)
     if (!scores.has(candidate.id)) scores.set(candidate.id, score(candidate));

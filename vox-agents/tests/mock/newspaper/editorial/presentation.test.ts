@@ -22,8 +22,8 @@ function createConfig(): EditorialConfig {
     },
     constants: { distances: {}, spans: { long: 40 }, sizes: {}, shares: {}, types: {}, shortcuts: {} },
     triggers: [
-      { id: 'war', detector: 'warTransition', stage: 'declaration', threshold: 1, scale: 1, tags: ['military', 'foreign'] },
-      { id: 'peace', detector: 'peaceTransition', stage: 'agreement', threshold: 1, scale: 1, tags: ['diplomacy'] },
+      { id: 'war', subject: 'world', when: 'true', tags: ['military', 'foreign'] },
+      { id: 'peace', subject: 'world', when: 'true', tags: ['diplomacy'] },
     ],
     templates: [{
       id: 'coverage', triggerIds: ['war'], tags: ['military'], weight: { base: 1 },
@@ -54,7 +54,7 @@ function createCandidate(config: EditorialConfig, id: string, urgent = false): E
     templateIds: ['coverage'], contributingIds: [], seriesKeys: [`series/${id}`],
     tags: [urgent ? 'military' : 'economy'], importance: urgent ? 1 : 20, urgent,
     short: false, weight: 1, variants: config.templates[0].variants,
-    values: { name: id }, sources: [], summary: `Observation ${id}`, fingerprint: id,
+    values: { name: id }, sources: [], fingerprint: id,
   };
 }
 

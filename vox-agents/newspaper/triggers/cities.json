@@ -1,121 +1,32 @@
 [
   {
-    "id": "city-population-milestone",
-    "detector": "cityPopulation",
-    "threshold": 1,
-    "scale": 20,
-    "tags": [
-      "domestic",
-      "cities",
-      "society"
+    "id": "neighbor-puppet-annexed",
+    "subject": "city",
+    "window": "recent",
+    "when": [
+      "city.is.neighbor",
+      "city.before.isPuppet",
+      "!city.isPuppet && city.isOccupied",
+      "city.before.owner.id == city.owner.id"
     ],
-    "stage": "milestone",
-    "tuning": {
-      "milestones": [
-        5,
-        10,
-        20
-      ],
-      "window": 15
-    }
+    "values": {
+      "distance": "city.distance.own"
+    },
+    "importance": "70 - 3 * distance"
   },
   {
-    "id": "city-population-boom",
-    "detector": "cityPopulation",
-    "threshold": 1,
-    "scale": 5,
-    "tags": [
-      "domestic",
-      "cities",
-      "society"
+    "id": "settler-departure",
+    "subject": "city",
+    "window": "recent",
+    "when": [
+      "city.own",
+      "city.population < city.before.population",
+      "city.trained.some(t => settlers.includes(t.unit))",
+      "city.foodPerTurn > 0"
     ],
-    "stage": "boom",
-    "tuning": {
-      "absolute": 2,
-      "relative": 0.2,
-      "window": 10
-    }
-  },
-  {
-    "id": "city-population-decline",
-    "detector": "cityPopulation",
-    "threshold": 1,
-    "scale": 3,
-    "tags": [
-      "domestic",
-      "cities",
-      "society"
-    ],
-    "stage": "decline",
-    "tuning": {
-      "window": 10
-    }
-  },
-  {
-    "id": "city-food-shortage",
-    "detector": "cityFood",
-    "threshold": 1,
-    "scale": 5,
-    "tags": [
-      "domestic",
-      "cities",
-      "society"
-    ],
-    "tuning": {
-      "persistence": 2,
-      "maxGap": 5,
-      "window": 15,
-      "reserve": 3
-    }
-  },
-  {
-    "id": "city-recovery",
-    "detector": "cityRecovery",
-    "threshold": 1,
-    "scale": 4,
-    "tags": [
-      "domestic",
-      "cities",
-      "recovery"
-    ],
-    "tuning": {
-      "window": 15
-    }
-  },
-  {
-    "id": "city-resistance",
-    "detector": "cityStatus",
-    "threshold": 1,
-    "scale": 1,
-    "tags": [
-      "domestic",
-      "cities",
-      "society"
-    ],
-    "stage": "resistance"
-  },
-  {
-    "id": "city-administration",
-    "detector": "cityStatus",
-    "threshold": 1,
-    "scale": 2,
-    "tags": [
-      "domestic",
-      "cities",
-      "society"
-    ],
-    "stage": "administration"
-  },
-  {
-    "id": "city-razing",
-    "detector": "cityStatus",
-    "threshold": 1,
-    "scale": 1,
-    "tags": [
-      "domestic",
-      "cities",
-      "society"
-    ],
-    "stage": "razing"
+    "values": {
+      "lost": "city.before.population - city.population"
+    },
+    "importance": "30 + 10 * lost"
   }
 ]

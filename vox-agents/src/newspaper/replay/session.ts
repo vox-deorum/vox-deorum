@@ -1,5 +1,5 @@
 import { queryNewspaperEvidence } from '../../../../mcp-server/dist/newspaper/queries.js';
-import type { NewspaperEvidenceRequest } from '../../../../mcp-server/dist/newspaper/evidence.js';
+import type { NewspaperEvidence, NewspaperEvidenceRequest } from '../../../../mcp-server/dist/newspaper/evidence.js';
 import { newspaperArchiveQuerySchema, newspaperArchiveScopeSchema } from '../../../../mcp-server/dist/newspaper/protocol.js';
 import { randomUUID } from 'node:crypto';
 import { getGameMetadataValue } from '../../knowledge/database.js';
@@ -10,8 +10,11 @@ import { archiveVoteRequestSchema, type ArchiveIssue, type ArchiveList } from '.
 import { createInitialPublicationState, publicationStateSchema, type PublicationState } from '../contracts/publication.js';
 import { loadEditorialConfig, parseEditorialConfig } from '../editorial/config/load.js';
 import type { EditorialConfig } from '../editorial/config/schema.js';
+import { resolveEditorialSpan } from '../editorial/config/constants.js';
 import { runEditorialCheck } from '../editorial/check.js';
+import { longestRuleWindow } from '../editorial/rules/evaluate.js';
 import { openReplayDatabase, replaySourceIdentity, readReplayIdentities } from './database.js';
+import { readReplayFacts, replayFactRequest } from './facts.js';
 import { ReplayStore, ReplayStoreConflictError, resolveReplayOutput } from './store.js';
 
 /** A replay failure with an HTTP status meaningful to the local application. */
@@ -32,6 +35,12 @@ interface ReplayDependencies {
   open?: typeof openReplayDatabase;
   query?: typeof queryNewspaperEvidence;
   check?: typeof runEditorialCheck;
+}
+
+/** Keep internal fact history off the wire while preserving the inspector's evidence panels. */
+function inspectorEvidence(evidence: NewspaperEvidence): NewspaperEvidence {
+  const { history: _history, ...inspection } = evidence;
+  return inspection;
 }
 
 /** Own one read-only source and serialize settings, reads, cursor changes, and shutdown. */
@@ -232,12 +241,19 @@ export class ReplaySession {
       receiverPlayerID: state.settings.receiverPlayerID, previousCheckTurn, cutoffTurn,
       ...(state.comparisonTurns > 0 ? { comparisonRange: { fromTurn: Math.max(0, cutoffTurn - state.comparisonTurns), toTurn: cutoffTurn } } : {}),
     };
-    const evidence = await (this.dependencies.query ?? queryNewspaperEvidence)(this.db!, request);
+    const query = this.dependencies.query ?? queryNewspaperEvidence;
+    const { multiplier: speedMultiplier } = state.speed;
+    const spans = this.config && {
+      longTurns: resolveEditorialSpan('long', this.config.constants, speedMultiplier),
+      longestWindowTurns: longestRuleWindow(this.config.triggers, this.config.constants, speedMultiplier),
+      speedMultiplier,
+    };
     if (advance) {
       state.cursor = { cutoffTurn, previousCheckTurn, finished: cutoffTurn === state.settings.toTurn };
-      if (this.store && this.publication && this.config) {
+      if (this.store && this.publication && this.config && spans) {
         const existing = this.store.getCheck(state.runId!, state.settings.receiverPlayerID, cutoffTurn);
         if (existing) throw new ReplaySessionError('This cutoff is already completed; resume the saved run.', 409);
+        const { evidence, facts } = await readReplayFacts(this.db!, request, spans, query);
         const visiblePlayers = new Set(evidence.players.map(player => String(player.subjectID)));
         visiblePlayers.add(String(state.settings.receiverPlayerID));
         const context = this.context ? {
@@ -247,19 +263,20 @@ export class ReplaySession {
           majorPlayerIds: this.context.majorPlayerIds.filter(id => visiblePlayers.has(String(id))),
           standardTurnsPerGameTurn: 1 / state.speed.multiplier,
         } : undefined;
-        const result = (this.dependencies.check ?? runEditorialCheck)({
+        const result = await (this.dependencies.check ?? runEditorialCheck)({
           campaignId: this.campaignId!, timelineId: state.runId!,
           receiver: { playerId: state.settings.receiverPlayerID, label: this.context?.receiverOwnerName ?? `Player ${state.settings.receiverPlayerID}`, civilizationId: this.context?.civilization },
-          evidence, state: publicationStateSchema.parse(this.publication), config: this.config, context,
+          evidence, facts, speedMultiplier, state: publicationStateSchema.parse(this.publication), config: this.config, context,
         });
         const check = this.store.commit({ session: state, publication: result.state, configuration: this.config }, result);
         this.publication = result.state;
         this.state = state;
-        return { session: this.snapshot(), evidence, check };
+        return { session: this.snapshot(), evidence: inspectorEvidence(evidence), check };
       }
-      this.state = state;
     }
-    return { session: this.snapshot(), evidence };
+    const evidence = await query(this.db!, spans ? replayFactRequest(request, spans) : request);
+    if (advance) this.state = state;
+    return { session: this.snapshot(), evidence: inspectorEvidence(evidence) };
   }
 
   /** Reject stale or mismatched browser scopes before any source query or mutation. */

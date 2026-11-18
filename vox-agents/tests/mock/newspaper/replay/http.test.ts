@@ -7,7 +7,7 @@ import { startNewspaperHost } from '../../../../src/newspaper/export/http.js';
 import { mountReplayRoutes } from '../../../../src/newspaper/replay/http.js';
 import { ReplaySession } from '../../../../src/newspaper/replay/session.js';
 import { replayEvidenceResponseSchema, replayStateSchema } from '../../../../src/newspaper/contracts/replay.js';
-import { createReplayRecording, replaySettings as sourceSettings } from '../../../helpers/newspaper-replay.js';
+import { createReplayRecording, replaySettings as sourceSettings, writeReplayPublicationCatalogue } from '../../../helpers/newspaper-replay.js';
 
 /** Keep evidence-only lifecycle checks independent of the publication output store. */
 function replaySettings(databasePath: string) { return { ...sourceSettings(databasePath), publicationEnabled: false }; }
@@ -82,6 +82,7 @@ describe('replay HTTP routes', () => {
     const scope = { runId: 'http-run', receiverPlayerID: 0 };
     await request(host.app).put('/api/newspaper/replay').send({
       ...sourceSettings(recording.filename), fromTurn: 6, toTurn: 30, ...scope,
+      editorialConfigDirectory: await writeReplayPublicationCatalogue(recording.filename),
       outputPath: path.join(path.dirname(recording.filename), 'http-output.sqlite'),
     }).expect(200);
     await request(host.app).post('/api/newspaper/replay/advance').send({}).expect(400);

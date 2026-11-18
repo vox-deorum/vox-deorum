@@ -1,10 +1,10 @@
 # Newspaper trigger overview
 
-**Status: the expression runner, the stage 3 fact model, and stage 4 constants and shortcuts are implemented.** `editorial/facts/` builds city, player, event and global facts. `vox-agents/newspaper/constants.json` supplies named constants, type lists and shortcuts, with overlays and game-speed scaling of spans. Trigger evaluation comes in stage 5 and pair facts in stage 6, so the trigger entries and evaluation described here remain the target design. Published editions still use fixed detectors and the existing templates. [Plan 6](../../../../plans/newspaper/implementation/06-trigger-rules.md) tracks the remaining stages.
+**Status: stages 3 to 5 are implemented.** `editorial/facts/` builds city, player, event and global facts. `vox-agents/newspaper/constants.json` supplies named constants, type lists and shortcuts, with overlays and game-speed scaling of spans. `editorial/rules/` evaluates the configured rules, keeps repeat memory, and records a per-subject audit. The stock catalogue ships two city rules, `neighbor-puppet-annexed` and `settler-departure`, and no story templates, so a stock replay records audits while skipping publication. Pair and incident facts arrive in stage 6, template, weight and page expressions in stage 7, and fresh in-game stories in stage 8. [Plan 6](../../../../plans/newspaper/implementation/06-trigger-rules.md) tracks the remaining stages.
 
 A **trigger** is a rule that spots one kind of development in the recorded game, such as "a neighboring foreign city changed from puppet to occupied". This page is for developers who add or tune newspaper coverage. It explains what a trigger entry contains, how a check evaluates it, and how to add one.
 
-A rule is a JavaScript expression over a **fact model**: cities, players, events and relationships built from the MCP server databases. Code supplies the facts, including inferred ones such as distance or a city's former owner. The catalogue supplies the rules. A new kind of story therefore needs a new catalogue entry and no new code, as long as the facts exist.
+A rule is a JavaScript expression over a **fact model**: cities, players, events and relationships built from the MCP server databases. Code supplies the facts, including inferred ones such as distance or a city's former owner. The catalogue supplies the rules. A new rule therefore needs a new catalogue entry and no new code, as long as the facts exist. Authored templates turn its developments into stories; none ship in the stock catalogue.
 
 ```mermaid
 flowchart LR
@@ -21,14 +21,14 @@ flowchart LR
 | This page | Trigger entries, evaluation, importance, repeats, grouping, authoring workflow |
 | [Facts](facts.md) | Every subject, its stored and inferred facts, time access, hidden facts, helpers |
 | [Constants and shortcuts](constants.md) | Distance measurement, named distances, spans, sizes, type lists, shortcuts |
-| [Examples](examples.md) | Worked triggers with a matching template sketch |
+| [Examples](examples.md) | Worked triggers with a target template sketch |
 | [War and peace](war-and-peace.md) | How declarations and settlements become `incident` and `pair` facts |
 
 [Editorial decisions](../editorial.md) covers what happens after a development exists: templates, selection, votes and presentation. [Replay](../replay.md) covers generating and inspecting issues.
 
 ## A first example
 
-The trigger `settler-departure` reports a city that shrank because it sent out settlers, while its food supply stayed healthy.
+The trigger `settler-departure`, one of the two shipped rules, reports a city that shrank because it sent out settlers, while its food supply stayed healthy.
 
 | Field | Value | Reads as |
 | --- | --- | --- |
@@ -39,7 +39,7 @@ The trigger `settler-departure` reports a city that shrank because it sent out s
 | | `city.population < city.before.population` | Smaller than at the start of the window |
 | | `city.trained.some(t => settlers.includes(t.unit))` | Trained a settler inside the window |
 | | `city.foodPerTurn > 0` | Food is still positive |
-| `values` | `lost`: `city.before.population - city.population` | A placeholder for the template |
+| `values` | `lost`: `city.before.population - city.population` | Supplies a placeholder for this ungrouped rule |
 | `importance` | `30 + 10 * lost` | 40 for one lost population, 50 for two |
 
 `recent` and `settlers` are [constants](constants.md). `city.before` and `city.trained` are [facts](facts.md#city).
@@ -55,7 +55,7 @@ Entries live in JSON files under `vox-agents/newspaper/triggers/`. Files group e
 | `event` | For `subject: event` | The event type, or list of types, the rule runs on. | `CityCaptureComplete` |
 | `window` | No | How far back the rule looks: `before`, `history`, the `events` global and facts such as `city.trained`. A named span or a number of Standard turns. When omitted, the window is the **reporting period**, which starts at the previous newspaper check. | `recent` |
 | `when` | Yes | The rule. One expression, or a list of expressions that must all be true. | The four entries in the [first example](#a-first-example) |
-| `values` | No | Named expressions that become template placeholders. | `lost: city.before.population - city.population` |
+| `values` | No | Named expressions. Non-null scalar results become placeholders for ungrouped developments. | `lost: city.before.population - city.population` |
 | `importance` | No | A number or expression, kept within 0 to 100. Defaults to 50. | `30 + 10 * lost` |
 | `urgent` | No | Expression. When true, the development may lead a breaking front page. | `city.distance.own <= adjacent` |
 | `group` | No | Merges several matches into one development. See [grouping](#grouping). | `by: city.owner.id`, `min: 2` |
@@ -71,9 +71,9 @@ Expressions in `values`, `importance` and `urgent` can read earlier `values` by 
 | --- | --- | --- |
 | `city` | Each city the receiver can see at the cutoff turn | `city` |
 | `player` | Each known major civilization and city-state, including the receiver | `player` |
-| `pair` | Each pair of known players with a recorded relationship | `pair` |
+| `pair` | Each pair of known players with a recorded relationship, once stage 6 exposes pair facts | `pair` |
 | `event` | Each permitted event of the listed types inside the reporting period, whatever the `window` | `event` |
-| `incident` | Each inferred war or peace incident inside the reporting period, whatever the `window` | `incident` |
+| `incident` | Each inferred war or peace incident inside the reporting period, once stage 6 exposes incident facts | `incident` |
 | `world` | Once per check, for rules that compare many subjects | The globals only |
 
 Every expression can also read the globals `self` (the receiver), `players`, `cities`, `events`, `turn` and `game`. A `city` rule can therefore compare its city against `self.capital`, and a `world` rule can scan `players` for a new leader.
@@ -96,7 +96,7 @@ flowchart TD
 
 | Step | What happens | Recorded in the audit |
 | --- | --- | --- |
-| Build facts | `vox-agents/src/newspaper/editorial/` turns the evidence window into the fact model, once per check. | The evidence request and cutoff |
+| Build facts | `vox-agents/src/newspaper/editorial/facts/` turns the evidence window into the fact model, once per check. | The evidence request and cutoff |
 | List subjects | Each trigger receives the subjects of its kind. | Subject count |
 | Evaluate `when` | Entries run in order and stop at the first that is false. Put cheap, selective entries such as `city.foreign` first. | The index of the failing entry |
 | Hidden or missing facts | Reading a fact the receiver cannot see, or a snapshot that does not exist, ends the rule for that subject. See [hidden facts](facts.md#hidden-and-missing-facts). | `hidden` and the fact name |
@@ -106,11 +106,13 @@ flowchart TD
 | Evaluate `importance` and `urgent` | Once per development, after grouping, so they can read `count`. | Both results |
 | Create the development | It carries the trigger ID, subject, values, importance, tags, period and the source rows behind each fact that the rule read. | Source references |
 
-A `when` entry passes when JavaScript treats its result as true, so `city.majorityReligion` passes for a city that has a majority religion. The trigger evaluator will use the runner's error details to skip a failed match and record why.
+A `when` entry passes when JavaScript treats its result as true, so `city.majorityReligion` passes for a city that has a majority religion. The rule evaluator uses the runner's error details to skip a failed match and records the field, expression, error or hidden fact in the audit.
 
-The shared runner uses QuickJS directly through `quickjs-wasi`. `prepareTriggerExpressions` in `editorial/config/expressions.ts` validates the expression fields of a merged rule catalogue and the shortcut sources from `constants.json` before any facts are needed. Syntax errors name the rule, field and original expression. Keep the returned runner and field indices in memory; replay snapshots store the catalogue data.
+A stock check evaluates every enabled rule and stores this audit even when selection finds no template, so the shipped catalogue records audits while printing no issue.
 
-For each check, `editorial/shared/expressions.ts` evaluates the batch in a fresh sandbox. The caller supplies JSON globals, subject bindings and scaled constants and receives results in the same order. Rules have no filesystem, network, clock or random source. If an expression exceeds its execution allowance, the runner keeps completed results and skips that expression for the rest of the check. Other expressions can still run. After eight distinct expressions overrun, the runner skips the remainder of the batch. The trigger evaluator will connect this runner to published issues in step 5.
+The shared runner uses QuickJS directly through `quickjs-wasi`. `prepareTriggerExpressions` in `editorial/config/expressions.ts` validates the expression fields of a merged rule catalogue and the shortcut sources from `constants.json` before any facts are needed. Syntax errors name the rule, field and original expression. `getEditorialTriggerExpressions` compiles a catalogue once; replay snapshots store the catalogue data, not bytecode or expression slots.
+
+For each check, `editorial/shared/expressions.ts` evaluates the batch in a fresh sandbox. The caller supplies JSON globals, subject bindings and scaled constants and receives results in the same order. Rules have no filesystem, network, clock or random source. If an expression exceeds its execution allowance, the runner keeps completed results and skips that expression for the rest of the check. Other expressions can still run. After eight distinct expressions overrun, the runner skips the remainder of the batch. The rule evaluator batches each rule's fields per subject, then hands matched developments to template matching.
 
 ## Importance
 
@@ -135,7 +137,7 @@ Results below 0 become 0 and results above 100 become 100.
 | `once` | Never, for that subject in this game | Milestones, such as a city's first wonder |
 | A span, such as `medium` | At the first check after that many Standard turns where the rule is true, even when it stayed true throughout | Long-running situations worth a follow-up |
 
-Each event is its own subject, so an `event` rule fires once per event without any `repeat` setting. Published fingerprints still prevent an identical development from being selected twice, and series keys still connect later stories about the same city, civilization or pair. The publication state saved by replay keeps the repeat state, so resuming a run preserves it.
+Each event is its own subject, so an `event` rule fires once per event without any `repeat` setting. The publication fingerprint prevents the same development from being selected twice. Follow-up links and votes belong to a particular rule and subject: a trade story about a city stays separate from a political story about that city. Publication state schema 4 keeps the repeat state, so resuming a run preserves it. A skipped check still advances it.
 
 ## Grouping
 
@@ -146,20 +148,19 @@ Each event is its own subject, so an `event` rule fires once per event without a
 | `by` | Expression evaluated per match. Matches with equal results merge. | `city.majorityReligion` |
 | `min` | Smallest number of matches that creates the grouped development. Fewer matches produce nothing. Defaults to 2. | `3` |
 
-A grouped development offers `count`, `key` and `matches`, the list of matched subjects with their own `values`. The trigger's `importance` and `urgent` run once for the group and read these three names and the globals, as in `40 + 10 * count`. Templates receive the same names as placeholders.
+A grouped development offers `count`, `key` and `matches`, the list of matched subjects with their own `values`. The trigger's `importance` and `urgent` run once for the group and read these three names and the globals, as in `40 + 10 * count`. Templates can render `count` and a non-null scalar `key` as placeholders. The structured `matches` list is available to rule expressions.
 
-## One language for every condition
+## Expressions and remaining conditions
 
-Templates, variants, weights, pages and designs use the same expressions and the same facts as triggers.
+Trigger expressions read the fact model. Template, weight, page and design conditions still use the structured condition schema; stage 7 moves them onto the same expressions and facts.
 
-| Place | Reads | Example |
+| Place | Reads | Status |
 | --- | --- | --- |
-| Trigger `when` | Its subject and the globals | `city.is.neighbor && city.isPuppet` |
-| Template or variant `when` | The development's subject and `values`, and the globals | `lost >= 2` |
-| Weight adjustment `when` | Same as the variant | `self.era == 'Ancient Era'` |
-| Page or design `when` | The globals | `self.atWar` |
+| Trigger `when`, `values`, `importance`, `urgent` and `group.by` | Its subject, earlier values and the globals | JavaScript expression, implemented |
+| Page conditions; template, design and layout conditions and weight adjustments | Editorial context: receiver player values, `civilization`, `receiverPlayerId`, `cutoffTurn` and any supplied technology history | Structured condition until stage 7 |
+| Variant conditions and weight adjustments | The same editorial context plus the development's `values` | Structured condition until stage 7 |
 
-A template names one trigger, or several triggers that must fire for the same subject in the same check. Since one rule can state a conjunction directly, a combined story is usually a single trigger. [Editorial decisions](../editorial.md#catalogue-and-eligibility) describes template matching.
+A template names one trigger, or several triggers that must fire for the same subject in the same check with overlapping evidence periods. Since one rule can state a conjunction directly, a combined story is usually a single trigger. [Editorial decisions](../editorial.md#catalogue-and-eligibility) describes template matching.
 
 ## Where to work
 
@@ -167,22 +168,24 @@ A template names one trigger, or several triggers that must fire for the same su
 | --- | --- |
 | `vox-agents/newspaper/triggers/` | Trigger entries |
 | `vox-agents/newspaper/constants.json` | Named constants, type lists and shortcuts |
-| `vox-agents/newspaper/templates/` | Authored headlines, paragraphs, placeholders, typed links and weights |
-| `vox-agents/src/newspaper/editorial/config/` | Catalogue schema and validation in `schema.ts`, constant validation and span scaling in `constants.ts`; file loading and overlays in `load.ts` |
+| `vox-agents/newspaper/templates/` | Authored headlines, paragraphs, placeholders, typed links and weights; optional; no built-in directory is required |
+| `vox-agents/src/newspaper/editorial/config/` | Catalogue schema and validation in `schema.ts`, constant validation and span scaling in `constants.ts`; file loading, overlays and expression preparation in `load.ts` and `expressions.ts` |
 | `vox-agents/src/newspaper/editorial/facts/` | Builds the fact model, including distance and inferred facts |
-| `vox-agents/src/newspaper/editorial/diplomacy/` | War and peace inference that feeds `incident` and `pair` facts |
-| `vox-agents/src/newspaper/editorial/triggers.ts` | Rule evaluation, repeats, grouping and the audit |
-| `vox-agents/src/newspaper/editorial/shared/` | The expression runner shared by triggers, templates, pages and designs |
+| `vox-agents/src/newspaper/editorial/diplomacy/` | War and peace inference; stage 6 feeds `incident` and `pair` facts to rules |
+| `vox-agents/src/newspaper/editorial/rules/` | Rule evaluation, repeats, grouping and the audit |
+| `vox-agents/src/newspaper/editorial/shared/` | The expression runner used by rules; conditions and weights for templates, pages and designs until stage 7 |
 | `mcp-server/src/newspaper/projection.ts` | Which historical fields and events the newspaper may read |
 | `mcp-server/src/newspaper/queries.ts` | Recorded snapshots, comparison history and event windows |
+
+The legacy detectors are retired; new coverage belongs in `rules/`.
 
 ## Add a trigger
 
 1. Write the story in one sentence, then pick the subject it is about. "A nearby city-state ally flipped to a rival" is about an event; "our capital is no longer our largest city" is about the world.
 2. Find the facts in [facts.md](facts.md) and the thresholds in [constants.md](constants.md). Prefer a named constant or shortcut over a bare number, so later tuning happens in one place.
 3. Add the entry to a file under `triggers/`. Order `when` from the most selective entry to the least.
-4. Add a template that names the trigger ID and uses its `values` as placeholders. [Examples](examples.md) pairs each trigger with a template sketch.
-5. Generate a fresh replay and read the article beside its audit. The audit shows, for each subject, which `when` entry stopped the rule.
+4. To publish a story, add a template that names the trigger ID. An ungrouped rule supplies scalar placeholders from `values`; a grouped rule supplies `count` and a non-null `key`. See [examples](examples.md) for headline sketches.
+5. Generate a fresh replay and read the rule audit. The audit shows, for each subject, which `when` entry stopped the rule. With a template added by overlay, read the article beside the same audit.
 6. When a needed fact is absent, add it to the fact model. When the evidence behind it is absent, extend MCP's projection first. Both are code changes; see [adding a fact](facts.md#add-a-fact).
 
 Facts are inferred from what the databases hold, and useful coverage matters more than certainty. A rule may rely on an inferred fact such as `city.formerOwner` without proving it; wording in the template can carry any doubt worth mentioning.

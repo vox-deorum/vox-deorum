@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Database from 'better-sqlite3';
 import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 import { queryNewspaperEvidence } from '../../../../../mcp-server/dist/newspaper/queries.js';
 import { openReadonlyGameDb } from '../../../../src/knowledge/database.js';
 import { openReplayDatabase } from '../../../../src/newspaper/replay/database.js';
@@ -107,7 +108,8 @@ describe('replay session', () => {
     sqlite.close();
     const check = vi.fn(runEditorialCheck);
     session = new ReplaySession({ check });
-    await session.configure({ ...sourceSettings(recording.filename), durationUnit, speedMultiplierOverride: override });
+    await session.configure({ ...sourceSettings(recording.filename), durationUnit, speedMultiplierOverride: override,
+      outputPath: path.join(path.dirname(recording.filename), 'pace.sqlite') });
     const result = await session.advance();
     expect(result.evidence.players.map(player => player.subjectID).sort()).toEqual([0, 1, 2]);
     expect(check).toHaveBeenCalledOnce();

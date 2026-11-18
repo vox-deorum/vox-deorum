@@ -1,6 +1,6 @@
 # Plan 6: trigger rules
 
-**Handoff: the expression runner, recorded evidence, city/player/event facts, constants and shortcuts are in place. Step 5, trigger evaluation, waits for owner confirmation.** Published issues still use the existing detectors and templates. See the [trigger overview](../../../developers/vox-agents/newspaper/triggers/overview.md) and [roadmap](../implementation.md).
+**Handoff: replay now evaluates the two shipped city rules and saves their audits.** The old detectors and story templates have been removed. A stock replay can record a development without printing an issue. Step 6 exposes war and peace facts and starts after owner confirmation. See the [trigger overview](../../../developers/vox-agents/newspaper/triggers/overview.md) and [roadmap](../implementation.md).
 
 ## Goal
 
@@ -22,52 +22,31 @@ Use one numbered step per handoff. GPT-6.2-Sol implements the step, OpenCode han
 
 | Step | Work | Done when |
 | --- | --- | --- |
-| 5. Trigger evaluation | The new trigger schema, subject listing, ordered `when` evaluation, `values`, `importance`, `urgent`, `repeat` state, `group`, and the audit record. Remove `developments/` detectors and the detector dispatch. | The two owner examples, `neighbor-puppet-annexed` and `settler-departure`, fire on controlled evidence and stay silent when one `when` entry is false. |
-| 6. War and peace facts | Reshape `diplomacy/` output into `incident` and `pair` facts and delete its trigger creation. The existing `resumed`, `observed` and `partial` stages become the flags of the same names, and the pair keeps its last wartime score as `lastWarScore`. | The documented incident and pair rules fire on the existing diplomacy test recordings. |
-| 7. Templates and other conditions | Move template, variant, weight, page and design conditions to expressions. Templates name `triggers` and read `values`. Remove `shared/conditions.ts` and `compositeOf`. | The example templates publish, and a variant with a false `when` is never chosen. |
+| 6. War and peace facts | Expose the existing diplomacy inference as `incident` and `pair` facts. The existing `resumed`, `observed` and `partial` stages become the flags of the same names, and the pair keeps its last wartime score as `lastWarScore`. | The documented incident and pair rules fire on the existing diplomacy test recordings. |
+| 7. Templates and other conditions | Move template, variant, weight, page and design conditions to expressions. Templates name `triggers`, read rule `values`, and gain subject names, IDs and period placeholders from visible facts. Remove `shared/conditions.ts` and `compositeOf`. | The example templates publish, and a variant with a false `when` is never chosen. |
 | 8. Starting catalogue | Add the triggers from the examples page with full templates. | Each starting trigger fires in a test with controlled evidence, and a fresh replay of the Netherlands recording publishes issues from the new catalogue. |
 | 9. Reading | Read the replay with the owner and tune constants and importance. | The owner accepts the starting set as a base for writing more rules. |
 
-## Inputs for step 5
+## Inputs for step 6
 
-- **Folder layout:** Put subject enumeration, ordered rule evaluation, repeats, grouping and audit construction under `vox-agents/src/newspaper/editorial/rules/`, with matching tests under `tests/mock/newspaper/editorial/rules/`. Keep schemas, overlays and expression preparation in `editorial/config/`, fact accessors in `editorial/facts/`, and database access in `newspaper/replay/`. Keep war and peace inference in `editorial/diplomacy/` for step 6.
-- **Load once per catalogue:** `loadEditorialConfig` and `parseEditorialConfig` validate new and restored catalogues. When adding the new trigger schema, compile rules and shortcuts together with `prepareTriggerExpressions(rules, config.constants)` and retain the runner and slots in memory. Save the authored JSON. For each game, pass `scaleEditorialConstants(config.constants, speed.multiplier)` as the batch's `constants`; use `resolveEditorialSpan` for named or numeric windows and repeat intervals.
-- **Read once per check:** Give `readReplayFacts` the scaled `long` and the longest enabled window. Share the returned model across rule groups. A group's exclusive `windowFromTurn` defaults to the previous check. It controls histories and event lists; the reporting period selects event subjects. The runner returns source rows and any hidden field per expression. Carry these into the audit, and stop evaluating a subject at the first failed condition.
-- **Acceptance:** Replace the detector dispatch and remove the legacy trigger and story catalogues. Use the documented [neighbor annexation and settler departure examples](../../../developers/vox-agents/newspaper/triggers/examples.md) to test matches, nonmatches and audits. Fresh in-game headlines and bodies are step 8. Start a fresh replay; no old newspaper checkpoint or template compatibility is required.
+- Follow the [war and peace reference](../../../developers/vox-agents/newspaper/triggers/war-and-peace.md) and the [incident and pair examples](../../../developers/vox-agents/newspaper/triggers/examples.md). Use the existing `DeclareWar`, `MakePeace` and visible relationship rows. City coordinates come from recorded city rows. The DLL, event formats and collection stay unchanged. Map dimensions and wrap flags stay private to replay.
+- Keep inference in `editorial/diplomacy/`. Its `inferWarAndPeace` updates pair memory and returns an inspector audit on every check, including skipped ones. It no longer makes triggers. Preserve participant roles, causes, ownership of source rows, reporting dates, and gaps when exposing that information to rules.
+- Build the new fact accessors under `editorial/facts/`; put model and visibility tests under `tests/mock/newspaper/editorial/facts/`. Subject enumeration, repeats, grouping and auditing belong in `editorial/rules/`, with matching tests. Standalone database reads stay in `replay/`. `rules/subjects.ts` currently returns no pairs or incidents.
+- A transition currently clears pair score samples, and inference retains 30 Standard turns. Carry the last wartime score into peace and keep enough evidence for the configured `long` window (40 Standard turns by default). Preserve the direction of scores and require visible observations across a claimed continuous span. A skipped issue or a resumed run must yield the same facts as uninterrupted play.
+- Run the documented vassal and stalled-war rules over the existing diplomacy fixtures. Give every story about the same incident a shared selection conflict key while keeping follow-up series specific to each rule and subject. Confirm that unrelated declarations stay separate, missing scores stay hidden, and incident subjects use the reporting period even when the rule requests a longer history. Leave template conditions to step 7 and shipped prose to step 8.
 
-Keep city positions and ownership tied to permitted database rows. Map dimensions and wrap flags stay private in replay and never go into rules, tool responses or LLM prompts. The DLL, event payloads and collection stay unchanged. The [facts reference](../../../developers/vox-agents/newspaper/triggers/facts.md#evidence-the-facts-rely-on) describes the limitations of older recordings.
+## Verification and replay
 
-## Verification
+The built-in catalogue has two rules in `vox-agents/newspaper/triggers/cities.json` and no story templates. The controlled tests in `tests/mock/newspaper/editorial/rules/` use those shipped rules. Start a fresh replay output: publication state is schema 4 and the offline SQLite store is version 3. Older newspaper outputs remain unchanged; choose a different output path for new runs.
 
-Step 4 is verified. GPT-6.2-Sol implemented the catalogue and runtime shortcuts. OpenCode checked packaging, updated the authoring guides and fixed the presentation fixture identified by Opus and the full test run. Claude Code Opus (`claude-opus-5-5`) found no material runtime defects and verified the corrected historical shortcut example. The Vox Agents build, including the reader and UI, passed. All 421 newspaper tests passed across 43 files. The installer includes `newspaper/constants.json` alongside the other catalogue files.
+The Netherlands recording is `mcp-server/archive/self-play/0d749c4f-69a7-4682-81b3-8fa70f38c012_1794782175768.db`; the Dutch receiver is player 7. For a short [CLI replay](../../../developers/vox-agents/newspaper/replay.md#generate-examples-from-the-command-line), use `--player 7 --from 28 --to 30 --every 1` and a new output directory. On turn 28 Amsterdam's population had not fallen. On turn 29 it fell from five to four, trained a settler and had a food surplus of six. The audit records `lost: 1`, importance 40 and five source rows. Turn 30 records the existing match as a repeat. All three checks skip publication with the stock catalogue.
 
-In the Netherlands recording below, receiver 7 on turn 150 could see Akkad (city 1258) and Bursa (city 1757), each nine tiles from the nearest Dutch city. The rule `city.is.neighbor` was false for both with the built-in seven-tile cutoff and true for both with `{"distances":{"neighboring":9}}` in an overlay. Both measurements cited the two city records. The built-in unit and building lists use names checked against this recording’s `UnitCreated` and `CityConstructed` events.
+At turn 367, replay evaluated both rules for 74 visible cities. Mumbai changed from puppet to occupied, 20 tiles from the closest Dutch city. The built-in seven-tile neighbor limit stopped the rule at its first condition. An overlay setting `distances.neighboring` to 20 let it fire with importance 10 and five source rows.
 
-Step 3 is verified. GPT-6.2-Sol implemented the facts, OpenCode checked the layout and helped with projection and docs, and Claude Code Opus (`claude-opus-5-5`) independently reviewed the changes. The final review found no material issues in the revisions. All 98 MCP newspaper and private settings tests passed, including HTTP and stdio. The 411 Vox Agents newspaper tests passed across the full run and focused reruns: one layout test failed to load the export bridge during the full run and two browser suites timed out closing. The layout test and both teardown paths passed when rerun after the build. The MCP and Vox Agents builds and focused lint checks passed.
+GPT-6.2-Sol implemented the stage, OpenCode updated fixtures and author guides, and Claude Code Opus independently reviewed the changes. The Vox Agents build and all 384 newspaper tests across 43 files passed. An Inno Setup smoke build accepted an installation without a templates directory. Upgrades remove the 19 retired catalogue filenames and leave other JSON files in place.
 
-The read-only replay check used the Netherlands archive named below. At cutoff 21, previous check 20, the Dutch receiver saw the Warrior trained at Amsterdam; Germany did not. The Shrine appeared in the longer city building list, outside that reporting period. At turn 350 the Dutch receiver had 71 visible cities; at turn 439 it had 75. Both checks evaluated historical facts within the existing 64 MB QuickJS limit. The transport shares repeated citations and decodes records as needed. The fixture in `vox-agents/tests/mock/newspaper/replay/facts.test.ts` covers private wrap geometry and event windows through the same replay entry point.
+The earlier stages established the QuickJS expression runner, MCP evidence and private map settings, city/player/event facts and the constants catalogue. Prior receiver checks on the same recording found that Germany could not see the Dutch Warrior trained in Amsterdam on turn 21. Raising the neighboring distance from seven to nine tiles brought Akkad and Bursa into range on turn 150. The [facts reference](../../../developers/vox-agents/newspaper/triggers/facts.md#evidence-the-facts-rely-on) describes recording limitations.
 
-Step 1 is verified. GPT-6.2-Sol implemented the runner, OpenCode checked the documentation, and the final Claude Code Opus review (`claude-opus-5-5`) found no material correctness defects. All 369 newspaper mock tests passed across 37 files, and the MCP build, Vox Agents type check, and newspaper build passed. For step 5, derive `TriggerExpressionFields` from the new trigger schema and connect `prepareTriggerExpressions` when the catalogue loads or is restored.
+To repeat the automated check, build Vox Agents with `npm run build -w vox-agents`, then run `npm run test:mock -w vox-agents -- tests/mock/newspaper --maxWorkers=2`. Build MCP first if its compiled evidence contracts are missing.
 
-Step 2 is verified. GPT-6.2-Sol implemented the recorded evidence reads. OpenCode checked the stored fields and reference pages. Sol addressed the Opus findings on witnessed removals and repeated reads for old city observations. A fresh Claude Code Opus review (`claude-opus-5-5`) found no material correctness or disclosure issues. All 95 MCP newspaper and private settings tests passed, including HTTP and stdio. All 369 Vox Agents newspaper tests, the MCP build, Vox Agents type check and newspaper build passed. No live game was needed.
-
-Step 2 was also checked against the Netherlands recording in `mcp-server/archive/self-play/0d749c4f-69a7-4682-81b3-8fa70f38c012_1794782175768.db`, opened read-only. With a previous check of 20, cutoff 21 and history start 10, player 7 saw Amsterdam train a Warrior at (66, 12), backed by the turn-20 city row and the turn-21 unit creation. The turn-12 Shrine appeared only in history. Player 0 saw neither event. The DLL, event recording and city collection were unchanged.
-
-Step 1 measured 200 expressions over 100 subjects in one sandbox call on Node 22.23.3: 21.4 ms to compile the catalogue, 84.7 ms for the first check and 55.5 ms median across five more checks. This measures expression evaluation on supplied facts. It excludes database reads and issue selection. To repeat it in PowerShell:
-
-```powershell
-$env:VD_EXPRESSION_BENCHMARK = '1'
-npm run test:mock -w vox-agents -- tests/mock/newspaper/editorial/expression-batch.test.ts --silent=false
-```
-
-```sh
-npm run build -w mcp-server
-npm run test:mock -w mcp-server -- tests/newspaper
-npm run test:mock -w vox-agents -- tests/mock/newspaper
-npm run type-check -w vox-agents
-npm run build:newspaper -w vox-agents
-```
-
-After step 8, generate a fresh replay with the [replay CLI](../../../developers/vox-agents/newspaper/replay.md#generate-examples-from-the-command-line) and confirm each example trigger appears in at least one audit, either firing or stopping at a named `when` entry.
-
-When each step lands, remove the "target design" status line from the developer pages it completes and delete the finished row from this plan.
+After step 8, generate a fresh replay and read the resulting issues. Confirm each example has at least one audit showing a match or the condition that stopped it.

@@ -4,7 +4,7 @@ Replay reads a recorded MCP SQLite database and produces authored newspaper issu
 
 ## Generate examples from the command line
 
-Use the newspaper command to develop templates without starting VD or Civilization V. Run it from the repository root. Each run builds MCP's queries before loading replay, and PNG previews also build the reader. Help and argument errors skip builds:
+Use the newspaper command to run replay against a recording without starting VD or Civilization V. With the stock catalogue, each check evaluates the two shipped rules and records their audits, then skips publication because no story templates ship. Run it from the repository root. Each run builds MCP's queries before loading replay, and PNG previews also build the reader. Help and argument errors skip builds:
 
 ```sh
 npm run newspaper -w vox-agents -- --help
@@ -12,7 +12,7 @@ npm run newspaper -w vox-agents -- --help
 
 Preview builds replace the shared `dist-newspaper` assets. Generate previews while VD is stopped, and rerun the command if a build is interrupted before restarting VD.
 
-These local recordings provide examples of city recovery, trade, diplomacy, breaking news, and changing visual designs:
+These local recordings provide sources for replay and for the historical examples below. Rerunning them with the stock catalogue records rule audits and skipped checks; an overlay supplies templates when you want issues. The commands exercise the full range, pacing and previews:
 
 ```sh
 npm run newspaper -w vox-agents -- --database mcp-server/archive/self-play/0d749c4f-69a7-4682-81b3-8fa70f38c012_1794782175768.db --player 7 --from 0 --to 350 --output .tmp/newspaper-examples/netherlands --render-turns 120,125,275,350
@@ -29,24 +29,24 @@ Recordings are local development data. Substitute another recorded MCP database 
 | `--from`, `--to` | Inclusive recorded-turn range. Start at zero to preserve the full series history. |
 | `--every` | Publication frequency in Standard-equivalent turns; defaults to five. |
 | `--comparison` | Comparison history in recorded turns; defaults to ten. |
-| `--config` | Directory containing catalogue overrides, such as `templates/trade.json` or `triggers/war.json`. |
+| `--config` | Directory containing catalogue overrides, such as `triggers/cities.json` or an added `templates/` file. |
 | `--render-turns` | Comma-separated publication cutoffs to render as PNGs. Requires installed Edge or Chrome; the command builds the reader. |
 
 Open the output's `index.html` directly in a browser. The report opens with the selected rendered pages, grouped under their issue headings. A disclosure under each issue holds its page contents, article prose, evidence tables, and each article's editorial identity. Below the issues, one disclosure holds the run source, settings, and every editorial check with its status and audit link; issues without page images are collapsed in a separate disclosure. Issue and article links use address fragments, so opening a link expands the disclosures containing its target, including on a repeated click of the current link.
 
 A requested preview turn that was skipped or falls outside the publication schedule appears in a note after the rendered issues instead of becoming an issue. `issue-<turn>.json` contains the publication, `audit-<turn>.json` records the editorial decision and article evidence, `run.json` indexes the run, and `replay.sqlite` retains its checks and history. Omit `--render-turns` for a faster text-and-JSON pass without a browser; every issue is then collapsed in the unrendered list.
 
-Before a requested preview run, the command builds dependencies and checks the installed browser. A failed build stops the command before replay creates output. Ctrl+C cancels the active build or replay and returns a nonzero exit code. Once replay starts, failures retain a failed manifest and report, including completed previews. A forced termination or disk-write failure can leave partial files; `replay.sqlite` is the authority for committed checks. To continue that history in VD, choose Resume with the same recording and player, the output's `replay.sqlite`, and run ID `examples`. The CLI creates new runs; use a new output directory to rerun after fixing templates or rendering. Its entry point is `src/newspaper/console.ts`; `cli/` owns options, artifacts, and previews.
+Before a requested preview run, the command builds dependencies and checks the installed browser. A failed build stops the command before replay creates output. Ctrl+C cancels the active build or replay and returns a nonzero exit code. Once replay starts, failures retain a failed manifest and report, including completed previews. A forced termination or disk-write failure can leave partial files; `replay.sqlite` is the authority for committed checks. To continue that history in VD, choose Resume with the same recording and player, the output's `replay.sqlite`, and run ID `examples`. The CLI creates new runs; use a new output directory to rerun after fixing rules, overlays, or rendering. Its entry point is `src/newspaper/console.ts`; `cli/` owns options, artifacts, and previews.
 
-### Iterate on a template
+### Iterate on a rule or overlay
 
-Create an override directory with a `templates/` subfolder and copy the topic file you want to edit, such as `vox-agents/newspaper/templates/trade.json`, into that subfolder. Edit a template's authored variants, then rerun the same recording and turn range with `--config` and a new output directory:
+Create an override directory and mirror the catalogue paths being changed. To tune a shipped rule, copy `vox-agents/newspaper/triggers/cities.json` into a `triggers/` subfolder and edit that rule. To author a story, add a `templates/` file whose entries name the rule IDs. Then rerun the same recording and turn range with `--config` and a new output directory:
 
 ```sh
-npm run newspaper -w vox-agents -- --database mcp-server/archive/self-play/0d749c4f-69a7-4682-81b3-8fa70f38c012_1794782175768.db --player 7 --from 0 --to 125 --config .tmp/newspaper-templates --output .tmp/newspaper-examples/netherlands-revised --render-turns 120,125
+npm run newspaper -w vox-agents -- --database mcp-server/archive/self-play/0d749c4f-69a7-4682-81b3-8fa70f38c012_1794782175768.db --player 7 --from 0 --to 125 --config .tmp/newspaper-overlay --output .tmp/newspaper-examples/netherlands-revised --render-turns 120,125
 ```
 
-Templates and their variants merge by ID. Arrays without IDs, such as body paragraphs and tags, replace the corresponding arrays. Keep the template's supported placeholders and link targets. See the [editorial guide](editorial.md) for conditions, weights, detectors, and composites. The audit records show candidate scores, selected variants, merges, and dated sources. If the intended story is absent, check the recorded evidence, eligibility, and competing candidates before changing its prose. New detector behavior requires code.
+Rule entries and templates merge by ID; a rule entry supplies only the fields it changes. Arrays without IDs, such as `when` lists, body paragraphs and tags, replace the corresponding arrays. Keep the template's supported placeholders and link targets. See the [trigger overview](triggers/overview.md) and the [editorial guide](editorial.md) for conditions, weights, and composites. The audit records show each subject's outcome, the failing `when` entry, hidden facts, values, grouping, and dated sources. With no template, the audit is the only record of a rule match. If the intended story is absent, check the recorded evidence, eligibility, and competing candidates before changing its prose. New facts require code.
 
 Always generate a fresh run after changing the catalogue: resuming an existing run restores its saved configuration. Keep the same source, receiver, range, and frequency when comparing edits, since these determine the series history.
 
@@ -87,9 +87,9 @@ Fixture selection and link destinations remain available alongside the persisted
 
 ## Source and HTTP ownership
 
-`replay/database.ts` wraps the read-only opener in `knowledge/database.ts`, inheriting its JSON decoding. It initializes the lazy connection without SQL so shutdown can release an unused source. The recording receives no schema setup, migrations, writes, or live refresh. `replay/store.ts` versions the separate offline output and commits each check's content or skip, evidence summaries, decision, series state, and cursor in one transaction, with a unique cutoff per run and receiver. Plan 5 puts live publication storage in MCP's per-game database.
+`replay/database.ts` wraps the read-only opener in `knowledge/database.ts`, inheriting its JSON decoding. It initializes the lazy connection without SQL so shutdown can release an unused source. The recording receives no schema setup, migrations, writes, or live refresh. `replay/store.ts` versions the separate offline output and commits each check's content or skip, evidence summaries, decision, rule repeat state, series state, and cursor in one transaction, with a unique cutoff per run and receiver. Plan 5 puts live publication storage in MCP's per-game database.
 
-`replay/session.ts` owns both connections and serializes configuration, queries, checks, archive reads, votes, preferences, and shutdown. Required publication advance scope is checked within that queue, after any earlier configuration. The offline SQLite store uses `user_version` 2 and stores a checkpoint revision; an output database with an unsupported version is rejected, so regenerate older local replay output. This storage version is separate from publication-state schema 3 and IssueDocument schema 2. Every check, vote, and preference write must match the revision captured when that process created or resumed the run. If another VD process has changed it, the write returns 409 and its transaction rolls back; resume the run to reload the latest cursor and votes before continuing. Reusing an existing run ID also returns 409 with resume guidance. Shutdown rejects new work, drains accepted operations, and closes both databases. The export application retains its separate queue and shutdown.
+`replay/session.ts` owns both connections and serializes configuration, queries, checks, archive reads, votes, preferences, and shutdown. Required publication advance scope is checked within that queue, after any earlier configuration. The offline SQLite store uses `user_version` 3 and stores a checkpoint revision; an output database with an unsupported version is rejected, so regenerate older local replay output. This storage version is separate from publication-state schema 4 and IssueDocument schema 2. Every check, vote, and preference write must match the revision captured when that process created or resumed the run. If another VD process has changed it, the write returns 409 and its transaction rolls back; resume the run to reload the latest cursor and votes before continuing. Reusing an existing run ID also returns 409 with resume guidance. Shutdown rejects new work, drains accepted operations, and closes both databases. The export application retains its separate queue and shutdown.
 
 `replay/http.ts` mounts through the existing newspaper host hook with its own JSON parser before API fallbacks and the server's general parser. Routes are loopback-only. Paths below are relative to `/api/newspaper/replay`.
 
@@ -129,7 +129,9 @@ Recorded player names and civilizations are kept only for met subjects, matched 
 
 Event contact uses the final summary available for the event's turn. Normal collection refreshes summaries at the end of the round, after its events, and live tools can refresh them earlier. An incomplete recording or failed final refresh can leave an earlier summary that lacks a same-turn meeting. Those events remain omitted; later-turn contact cannot grant access retroactively. Replay contracts and browser code import only browser-safe evidence contracts from MCP; query implementations stay on the server.
 
-## Heuristic replay verification
+## Historical heuristic replay verification
+
+These results predate stage 5 and describe the retired detectors and templates. They remain evidence for replay storage, votes, and the reader workflow, not for the current catalogue.
 
 On November 16, 2026, the Netherlands recording described below completed 89 publication checks from turn 0 through 440 at five-turn intervals, with a ten-turn comparison window. The run produced 81 issues containing 362 canonical articles, including three authored composites and nine breaking front pages; eight checks skipped publication. Saved designs comprised seven early accounts, 51 Victorian issues, and 23 modern issues. Useful reading samples include composites at cutoffs 120, 125, and 200, and incoming-war coverage beginning at cutoff 275.
 
@@ -140,6 +142,8 @@ An installed Edge browser (`157.0.8103.51`) opened the 81-issue archive, read th
 Local verification artifacts are under `.tmp/newspaper-plan3/`: `acceptance.json` identifies the output database, `browser-acceptance.json` records the browser result, and `browser-latest.png` shows the final issue. Use the command-line workflow above for reproducible new runs. To inspect the measured archive manually, choose Resume with that output path, run ID `netherlands-acceptance`, and receiver `7`.
 
 ## Historical evidence-query verification
+
+This query run also predates stage 5. It measures recorded evidence retrieval and replay behavior, not current rule coverage.
 
 On November 16, 2026, replay was exercised through the normal VD web server against `mcp-server/archive/self-play/0d749c4f-69a7-4682-81b3-8fa70f38c012_1794782175768.db`. Use the full knowledge database; the accompanying `-player-7.db` contains agent telemetry. The recording reports VP 5.2.7, DLL build `build-5.2.7-20261108-042403-54caaa5`, and Standard pace.
 
@@ -165,7 +169,7 @@ Selected results below count all permitted subjects, including city-states. Even
 | 300 | 25 | 75 | 264 / 815 | 57 |
 | 440 | 25 | 74 | 141 / 750 | 113 |
 
-The source inspector exposes concrete inputs for later story detectors:
+The source inspector exposes concrete inputs for rule authors:
 
 | Example | Source | Recorded evidence |
 | --- | --- | --- |

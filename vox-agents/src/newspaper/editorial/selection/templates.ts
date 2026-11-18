@@ -5,7 +5,10 @@ import type { EditorialConfig, EditorialTemplate, AuthoredVariant } from '../con
 import { evaluateCondition, type ConditionContext } from '../shared/conditions.js';
 import { uniqueSources } from '../shared/sources.js';
 import { selectionWeight } from '../shared/weights.js';
-import type { DetectedTrigger } from '../triggers.js';
+import type { RuleDevelopment } from '../../contracts/triggers.js';
+
+type TemplateValues = RuleDevelopment['values'];
+export const placeholderPattern = /\{\{([^{}]+)\}\}/g;
 
 /** A complete, evidence-supported authored choice available to an editor. */
 export interface EditorialCandidate {
@@ -16,30 +19,29 @@ export interface EditorialCandidate {
   templateIds: string[];
   contributingIds: string[];
   seriesKeys: string[];
-  conflictKeys?: string[];
   tags: string[];
   importance: number;
   urgent: boolean;
   short: boolean;
   weight: number;
   variants: AuthoredVariant[];
-  values: Record<string, string | number>;
+  values: TemplateValues;
   sources: NewspaperSourceReference[];
-  summary: string;
   fingerprint: string;
 }
 
 /** Substitute authored placeholders, preserving unresolved values for explicit validation. */
-export function substitute(text: string, values: Record<string, string | number>): string {
-  return text.replace(/\{\{([a-zA-Z][a-zA-Z0-9]*)\}\}/g, (whole, key: string) =>
-    values[key] === undefined ? whole : String(values[key])
-  );
+export function substitute(text: string, values: TemplateValues): string {
+  return text.replace(placeholderPattern, (whole, key: string) => {
+    const value = Object.hasOwn(values, key) ? values[key] : undefined;
+    return value == null || typeof value === 'object' ? whole : String(value);
+  });
 }
 
 /** Resolve typed link destinations using the same finite authored placeholders. */
 export function resolveLinkTarget(
   target: AuthoredVariant['links'][number]['target'],
-  values: Record<string, string | number>
+  values: TemplateValues
 ): AuthoredVariant['links'][number]['target'] {
   return linkTargetSchema.parse(
     Object.fromEntries(
@@ -55,7 +57,7 @@ export function resolveLinkTarget(
 export function eligibleVariants(
   template: EditorialTemplate,
   context: ConditionContext,
-  values: Record<string, string | number>
+  values: TemplateValues
 ): AuthoredVariant[] {
   return template.variants.filter((variant) => {
     if (
@@ -70,11 +72,11 @@ export function eligibleVariants(
       ),
     };
     const rendered = [variant.headline, ...variant.body].map((text) => substitute(text, augmented));
-    if (rendered.some((text) => /\{\{[^}]+\}\}/.test(text))) return false;
+    if (rendered.some((text) => text.match(placeholderPattern))) return false;
     return variant.links.every(
       (link) =>
-        !/\{\{[^}]+\}\}/.test(JSON.stringify(resolveLinkTarget(link.target, values))) &&
-        !/\{\{[^}]+\}\}/.test(substitute(link.label, values))
+        !JSON.stringify(resolveLinkTarget(link.target, values)).match(placeholderPattern) &&
+        !substitute(link.label, values).match(placeholderPattern)
     );
   });
 }
@@ -99,7 +101,7 @@ function combinations<T>(groups: T[][]): T[][] {
 
 /** Materialize supported base and composite templates with canonical evidence and importance. */
 export function matchTemplates(
-  triggers: DetectedTrigger[],
+  triggers: RuleDevelopment[],
   config: EditorialConfig,
   context: ConditionContext
 ): EditorialCandidate[] {
@@ -114,10 +116,7 @@ export function matchTemplates(
     );
     for (const parts of combinations(groups)) {
       if (!parts.length || !compatible(parts)) continue;
-      const values = Object.assign({}, ...parts.map((part) => part.values)) as Record<
-        string,
-        string | number
-      >;
+      const values = parts.reduce<TemplateValues>((merged, part) => ({ ...merged, ...part.values }), {});
       const variants = eligibleVariants(
         template,
         { ...context, values: { ...context.values, ...values } },
@@ -136,7 +135,6 @@ export function matchTemplates(
         contributingIds: [],
         seriesKeys: [...new Set(parts.flatMap((part) => part.seriesKeys))],
         tags: [...new Set([...template.tags, ...parts.flatMap((part) => part.tags)])],
-        conflictKeys: [...new Set(parts.flatMap((part) => part.conflictKeys ?? []))],
         importance: Math.max(...parts.map((part) => part.importance)),
         urgent: parts.some((part) => part.urgent),
         short: template.short,
@@ -144,7 +142,6 @@ export function matchTemplates(
         variants,
         values,
         sources: uniqueSources(parts.flatMap((part) => part.sources)),
-        summary: parts.map((part) => part.summary).join(' '),
         fingerprint: parts
           .map((part) => part.fingerprint)
           .sort()
@@ -176,10 +173,7 @@ export function matchTemplates(
         )
       )
         continue;
-      const values = Object.assign({}, ...parts.map((part) => part.values)) as Record<
-        string,
-        string | number
-      >;
+      const values = parts.reduce<TemplateValues>((merged, part) => ({ ...merged, ...part.values }), {});
       const variants = eligibleVariants(
         template,
         { ...context, values: { ...context.values, ...values } },
@@ -197,7 +191,6 @@ export function matchTemplates(
         templateIds: [...new Set([template.id, ...parts.flatMap((part) => part.templateIds)])],
         contributingIds: parts.map((part) => part.id),
         seriesKeys: [...new Set(parts.flatMap((part) => part.seriesKeys))],
-        conflictKeys: [...new Set(parts.flatMap((part) => part.conflictKeys ?? []))],
         tags: [...new Set([...template.tags, ...parts.flatMap((part) => part.tags)])],
         importance: Math.max(...parts.map((part) => part.importance)),
         urgent: parts.some((part) => part.urgent),
@@ -206,7 +199,6 @@ export function matchTemplates(
         variants,
         values,
         sources: uniqueSources(parts.flatMap((part) => part.sources)),
-        summary: parts.map((part) => part.summary).join(' '),
         fingerprint: parts
           .map((part) => part.fingerprint)
           .sort()

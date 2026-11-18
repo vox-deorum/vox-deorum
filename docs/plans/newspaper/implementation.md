@@ -1,6 +1,6 @@
 # Newspaper implementation roadmap
 
-**Status: Plan 1's demo is accepted in game, Plan 2 is complete, and Plan 3 implements heuristic editing and durable offline replay.** Recorded publication, browser voting, and resume are verified. Human reading acceptance and broader game renderer checks remain pending. Plans 4 and 5 remain planned. Plan 6 has a working expression runner; published issues still use Plan 3's detectors. This roadmap is for developers implementing the [newspaper specification](spec.md); each plan has its own deliverable and verification gate.
+**Status: Plan 1's demo is accepted in game, Plan 2 is complete, and Plan 3 implements heuristic editing and durable offline replay.** Recorded publication, browser voting, and resume are verified. Human reading acceptance and broader game renderer checks remain pending. Plans 4 and 5 remain planned. Plan 6 uses authored trigger rules in replay. The two built-in city rules produce audits; fresh story templates come in step 8. This roadmap is for developers implementing the [newspaper specification](spec.md); each plan has its own deliverable and verification gate.
 
 ## Goal and success criteria
 
@@ -65,7 +65,7 @@ After implementing a work unit, fold its verified behavior, ownership, commands,
 | [5. Live publication and MCP storage](implementation/05-live-integration.md) | Human-only collection, background publication, checkpoint restoration from MCP, and the finished game reader. | With the matching database, old saves select the right revisions, delayed work cannot cross timelines, and missing textures fall back to text. |
 | [6. Trigger rules](implementation/06-trigger-rules.md) | Triggers become rules: JavaScript expressions over a fact model with distance, named constants and shortcuts. The fixed detectors and the existing templates are removed and a small example set is re-added. | The documented example triggers produce developments from a recording, and each one's audit shows which part of its rule passed or stopped. |
 
-Plan 6 reworks Plan 3's triggers independently of Plans 4 and 5. The [trigger guide](../../developers/vox-agents/newspaper/triggers/overview.md) describes the working expression runner, facts and shortcuts, and the rule catalogue that will replace the fixed detectors.
+Plan 6 reworks Plan 3's triggers independently of Plans 4 and 5. The [trigger guide](../../developers/vox-agents/newspaper/triggers/overview.md) describes the working expression runner, facts and shortcuts, and the rule catalogue used by replay.
 
 The accepted game demo uses fixtures. Use Plan 3's generated issues for broader browser and game renderer acceptance before expanding the design catalogue. Live integration follows offline editorial evaluation.
 
@@ -82,7 +82,7 @@ Keep contracts in the existing workspaces: MCP owns evidence and browser-safe ar
 | Browser export bridge, measurements and capture interfaces | Vox Agents `renderer/bridge.ts` | Plan 1; separate from persisted render data. |
 | Evidence requests, results and source references | MCP `newspaper/evidence.ts` | Plan 2; both query access paths use these schemas. |
 | Replay settings and HTTP responses | Vox Agents `contracts/replay.ts` | Plan 2, reusing MCP evidence contracts. |
-| Configuration, candidates and editor/check interfaces | Vox Agents `editorial/config/schema.ts`, `editorial/triggers.ts` and `editorial/check.ts` respectively | Plan 3, beside the code that uses them. |
+| Trigger catalogue, developments and decisions | Vox Agents `editorial/config/`, `editorial/rules/`, `contracts/triggers.ts` and `editorial/check.ts` | Plan 6 evaluates rules; Plan 3's selection and presentation consume their developments. |
 | Editorial state, series, preferences and decisions; stored presentation | Vox Agents `contracts/publication.ts` and `contracts/design.ts` | Plan 3 implements offline storage; Plan 5 reuses the contracts for MCP storage. |
 | Archive indexes and queries; responses containing issue documents | MCP `newspaper/protocol.ts`; Vox Agents `contracts/archive.ts` respectively | Plan 3, reused for live reading in Plan 5. |
 | LLM proposal schemas; comparison-run records | Vox Agents `editorial/proposal.ts`; `replay/evaluation.ts` respectively | Plan 4. |

@@ -34,12 +34,12 @@ function savedIssue(): ArchiveIssue {
     votes: {},
     decision: {
       checkId: 'controlled-check', cutoffTurn: 12, configurationId: 'controlled', configurationSnapshot: {}, seed: 'controlled', editor: 'heuristic', status: 'published',
-      candidateScores: [], merges: [], selectedVariants: {}, designId: 'modern', layouts: {}, evidence: [], diplomacyInference: [],
+      candidateScores: [], merges: [], selectedVariants: {}, designId: 'modern', layouts: {}, evidence: [], diplomacyInference: [], triggerAudit: [], evidenceRequest: { cutoffTurn: 12, previousCheckTurn: 11, receiverPlayerID: 0 },
       feedback: { revision: '0', windowItemIds: [], votes: {}, tagCounts: {}, seriesAdjustments: {}, tagAdjustments: {}, coefficients: { series: 1, tag: 1, bound: 10, window: 50 } },
     },
     articles: [{
       id: 'shared-item', issueId: issue.issueId, turn: 12, tags: ['economy'], seriesKeys: [], templateIds: ['controlled-template'], triggerIds: ['controlled-trigger'],
-      importance: 5, evidenceSummary: 'Controlled evidence summary', sources: [{ table: 'PlayerSummaries', id: 3, turn: 12, createdAt: 123 }], fingerprint: 'controlled/12',
+      importance: 5, headline: issue.items[0].headline, evidenceSummary: 'Controlled evidence summary', sources: [{ table: 'PlayerSummaries', id: 3, turn: 12, createdAt: 123 }], fingerprint: 'controlled/12',
     }],
   };
 }

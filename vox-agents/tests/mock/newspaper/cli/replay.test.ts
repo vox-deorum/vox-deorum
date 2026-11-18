@@ -4,7 +4,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import Database from 'better-sqlite3';
-import { createReplayRecording } from '../../../helpers/newspaper-replay.js';
+import { createReplayRecording, writeReplayPublicationCatalogue } from '../../../helpers/newspaper-replay.js';
 import { parseNewspaperOptions, type NewspaperCliOptions } from '../../../../src/newspaper/cli/options.js';
 import { newspaperReportHtml, runNewspaperReplay, type NewspaperRunManifest } from '../../../../src/newspaper/cli/replay.js';
 import type { ArchiveIssue } from '../../../../src/newspaper/contracts/archive.js';
@@ -57,8 +57,9 @@ describe('newspaper replay command artifacts', () => {
   let options: NewspaperCliOptions;
   beforeEach(async () => {
     recording = await createReplayRecording();
+    const catalogue = await writeReplayPublicationCatalogue(recording.filename);
     options = parseNewspaperOptions(['--database', recording.filename, '--output', path.join(path.dirname(recording.filename), 'examples'),
-      '--player', '0', '--from', '6', '--to', '18', '--render-turns', '7'])!;
+      '--config', catalogue, '--player', '0', '--from', '6', '--to', '18', '--render-turns', '7'])!;
   });
   afterEach(async () => { vi.restoreAllMocks(); await recording.cleanup(); });
 

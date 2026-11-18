@@ -10,7 +10,7 @@ import type { PublicationState } from '../../contracts/publication.js';
 import type { EditorialConfig, EditorialDesign, AuthoredVariant } from '../config/schema.js';
 import { evaluateCondition, type ConditionContext } from '../shared/conditions.js';
 import { chooseWeighted, selectionWeight } from '../shared/weights.js';
-import { substitute, resolveLinkTarget, type EditorialCandidate } from '../selection/templates.js';
+import { placeholderPattern, substitute, resolveLinkTarget, type EditorialCandidate } from '../selection/templates.js';
 
 /** Render authored placeholders into text nodes and explicitly declared typed links. */
 export function renderAuthoredText(
@@ -20,8 +20,7 @@ export function renderAuthoredText(
 ): InlineText {
   const nodes: InlineText = [];
   let cursor = 0;
-  const pattern = /\{\{([a-zA-Z][a-zA-Z0-9]*)\}\}/g;
-  for (const match of text.matchAll(pattern)) {
+  for (const match of text.matchAll(placeholderPattern)) {
     const position = match.index!;
     if (position > cursor) nodes.push({ type: 'text', text: text.slice(cursor, position) });
     const link = variant.links.find((entry) => entry.placeholder === match[1]);
@@ -34,7 +33,7 @@ export function renderAuthoredText(
     else
       nodes.push({
         type: 'text',
-        text: values[match[1]] === undefined ? match[0] : String(values[match[1]]),
+        text: substitute(match[0], values),
       });
     cursor = position + match[0].length;
   }
@@ -133,13 +132,13 @@ export function presentIssue(input: {
       body: variant.body.map((paragraph) =>
         renderAuthoredText(paragraph, candidate.values, variant)
       ),
-      sourceNote: [{ type: 'text', text: candidate.summary }],
+      sourceNote: [{ type: 'text', text: 'Recorded game evidence' }],
       ...(earlier
         ? {
             earlierReport: {
               label: 'Earlier report',
               target: { type: 'article' as const, issueId: earlier.issueId, itemId: earlier.id },
-              summary: [[{ type: 'text' as const, text: earlier.evidenceSummary }]],
+              summary: [earlier.headline],
             },
           }
         : {}),

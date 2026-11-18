@@ -58,7 +58,7 @@ function decisionRecord() {
     designId: 'modern',
     layouts: { front: 'ordinary' },
     evidence: [],
-    diplomacyInference: [],
+    diplomacyInference: [], triggerAudit: [], evidenceRequest: { cutoffTurn: 12, previousCheckTurn: 11, receiverPlayerID: 4 },
     feedback: {
       revision: '1',
       windowItemIds: [],
@@ -160,7 +160,7 @@ describe('replay browser API', () => {
     const article = {
       id: 'shared-item', issueId: issue.issueId, turn: 12, tags: ['economy'], seriesKeys: [],
       templateIds: ['trade-report'], triggerIds: ['trade-change'], importance: 5,
-      evidenceSummary: 'Observed trade change', sources: [{ table: 'PlayerSummaries', id: 3, turn: 12, createdAt: 123 }], fingerprint: 'trade/12',
+      headline: issue.items[0].headline, evidenceSummary: 'Observed trade change', sources: [{ table: 'PlayerSummaries', id: 3, turn: 12, createdAt: 123 }], fingerprint: 'trade/12',
     };
     const fetchMock = stubJson({
       index: {

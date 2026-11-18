@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { Kysely, SqliteDialect } from 'kysely';
@@ -52,4 +52,21 @@ export async function createReplayRecording(speed: string | null = 'Epic') {
 /** Supply a turn window that crosses same-turn versions and includes structured evidence. */
 export function replaySettings(databasePath: string) {
   return { databasePath, receiverPlayerID: 0, fromTurn: 10, toTurn: 18, publicationInterval: 5, comparisonTurns: 5 };
+}
+
+/** Author a test article for the permitted turn-six event in the recording. */
+export async function writeReplayPublicationCatalogue(databasePath: string) {
+  const directory = path.join(path.dirname(databasePath), 'publication-catalogue');
+  await mkdir(directory, { recursive: true });
+  await Promise.all([
+    writeFile(path.join(directory, 'triggers.json'), JSON.stringify([{
+      id: 'fixture-war-report', subject: 'event', event: 'DeclareWar', when: 'event.type === "DeclareWar"',
+      values: { eventTurn: 'event.turn' }, tags: ['military'],
+    }])),
+    writeFile(path.join(directory, 'templates.json'), JSON.stringify([{
+      id: 'fixture-war-article', triggerIds: ['fixture-war-report'], tags: ['military'], weight: { base: 1 },
+      variants: [{ id: 'notice', headline: 'War declared', body: ['The declaration came on turn {{eventTurn}}.'], weight: { base: 1 } }],
+    }])),
+  ]);
+  return directory;
 }

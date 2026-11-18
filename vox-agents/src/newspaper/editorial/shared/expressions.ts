@@ -38,17 +38,31 @@ export interface ExpressionBatch {
     expressions: readonly number[];
     /** Local bindings, which can override check globals. */
     subjects: readonly ExpressionBindings[];
+    /** Optional ordered script: stop on a falsy guard or an error, and bind successful results by name. */
+    ordered?: {
+      guardCount: number;
+      bind?: Readonly<Record<number, string>>;
+      /** Limit how many steps may be evaluated for each subject. */
+      limits?: readonly number[];
+      /** Steps whose result must be a finite number. */
+      numeric?: readonly number[];
+    };
   }[];
 }
 
 type ExpressionValue = undefined | null | boolean | number | string;
 export type ExpressionResult =
-  ({ value: ExpressionValue } | { error: EditorialExpression & { message: string; skipped?: true; hidden?: string } }) &
+  ({ value: ExpressionValue } | { error: EditorialExpression & { message: string; skipped?: true; unreached?: true; hidden?: string } }) &
   { sources?: NewspaperSourceReference[] };
+
+/** Share interruption accounting when a check needs several dependent batches. */
+export interface ExpressionCheckBudget {
+  interruptedSlots: Set<number>;
+}
 
 export interface ExpressionRunner {
   /** Evaluate results in group, subject and expression order. */
-  evaluate(batch: ExpressionBatch): Promise<ExpressionResult[][][]>;
+  evaluate(batch: ExpressionBatch, budget?: ExpressionCheckBudget): Promise<ExpressionResult[][][]>;
 }
 
 const filename = 'newspaper-expressions.js';
@@ -56,7 +70,7 @@ const memoryLimit = 64 * 1024 * 1024;
 const stackLimit = 256 * 1024;
 const interruptLimit = 2_000;
 const interruptionRecoveryLimit = 8;
-type RawResult = { value?: ExpressionValue; error?: string; skipped?: true; hidden?: string; sources?: NewspaperSourceReference[] };
+type RawResult = { value?: ExpressionValue; error?: string; skipped?: true; unreached?: true; hidden?: string; sources?: NewspaperSourceReference[] };
 type SandboxWasm = NonNullable<QuickJSOptions['wasm']>;
 // Node provides WebAssembly, but this package's TypeScript config excludes browser types.
 declare const WebAssembly: { compile(bytes: Uint8Array): Promise<SandboxWasm> };
@@ -197,7 +211,7 @@ ${factGuestSource}
     }
   }
 
-  for (const { expressions: slots, subjects, windowFromTurn } of input.groups) {
+  for (const { expressions: slots, subjects, windowFromTurn, ordered } of input.groups) {
     const size = slots.length * subjects.length;
     if (skip >= size) {
       skip -= size;
@@ -205,16 +219,41 @@ ${factGuestSource}
     }
     const view = facts?.view(windowFromTurn ?? input.facts.previous);
     for (let index = Math.floor(skip / slots.length); index < subjects.length; index++) {
-      const bindings = view
+      const base = view
         ? view.bindings(input.globals, subjects[index])
         : Object.freeze(Object.assign(Object.create(null), input.globals, subjects[index], input.constants));
-      for (let offset = skip % slots.length; offset < slots.length; offset++) {
+      let bindings = base;
+      const first = skip % slots.length;
+      // Resuming partway through this subject means an earlier ordered step timed out.
+      let stopped = !!ordered && first > 0;
+      // Bind each successful scalar result for subsequent expressions.
+      function step(offset, result) {
+        if (!ordered) return;
+        if (result.error !== undefined || (offset < ordered.guardCount && !result.value)) {
+          stopped = true;
+          return;
+        }
+        const name = ordered.bind?.[offset];
+        if (name !== undefined) {
+          bindings = Object.freeze(Object.defineProperty(Object.create(bindings), name, { value: result.value }));
+        }
+      }
+      for (let offset = first; offset < slots.length; offset++) {
         const slot = slots[offset];
         begin();
+        if (stopped || offset >= (ordered?.limits?.[index] ?? slots.length)) {
+          results.push({ error: 'Expression was not reached.', unreached: true });
+          continue;
+        }
         facts?.reset();
-        results.push(disabled.has(slot)
+        let result = disabled.has(slot)
           ? { error: 'Expression exceeded its allowance earlier in this check.', skipped: true }
-          : facts ? facts.result(evaluate(slot, bindings)) : evaluate(slot, bindings));
+          : facts ? facts.result(evaluate(slot, bindings)) : evaluate(slot, bindings);
+        if (result.error === undefined && ordered?.numeric?.includes(offset) && !Number.isFinite(result.value)) {
+          result = { ...result, error: 'Expected a finite number.' };
+        }
+        results.push(result);
+        step(offset, result);
       }
       skip = 0;
     }
@@ -323,7 +362,8 @@ function slotAt(batch: ExpressionBatch, ordinal: number): number {
 async function evaluateBatch(
   batch: ExpressionBatch,
   expressions: readonly EditorialExpression[],
-  bytecode: Uint8Array
+  bytecode: Uint8Array,
+  budget: ExpressionCheckBudget
 ): Promise<ExpressionResult[][][]> {
   let size = 0;
   for (const group of batch.groups) {
@@ -347,7 +387,7 @@ async function evaluateBatch(
     return value;
   });
   const output: RawResult[] = [];
-  const disabled = new Set<number>();
+  const disabled = budget.interruptedSlots;
   while (output.length < size && disabled.size < interruptionRecoveryLimit) {
     const chunk = await evaluateRemaining(input, bytecode, output.length, disabled);
     for (const result of chunk.results) output.push(result);
@@ -355,13 +395,17 @@ async function evaluateBatch(
     disabled.add(slotAt(batch, output.length - 1));
   }
   let cursor = 0;
-  return batch.groups.map(({ subjects, expressions: slots }) =>
-    subjects.map(() =>
-      slots.map((slot) => {
-        const result: RawResult = output[cursor++] ?? {
+  return batch.groups.map(({ subjects, expressions: slots, ordered }) =>
+    subjects.map(() => {
+      let stopped = false;
+      return slots.map((slot, offset) => {
+        const result: RawResult = output[cursor++] ?? (stopped ? {
+          error: 'Expression was not reached.', unreached: true,
+        } : {
           error: 'Expression skipped because the check reached its interruption limit.',
           skipped: true,
-        };
+        });
+        if (ordered && (result.error !== undefined || (offset < ordered.guardCount && !result.value))) stopped = true;
         const sources = result.sources?.length ? { sources: result.sources } : {};
         return result.error === undefined
           ? { value: result.value, ...sources }
@@ -370,15 +414,15 @@ async function evaluateBatch(
                 ...expressions[slot],
                 message: result.error,
                 ...(result.skipped ? { skipped: true } : {}),
+                ...(result.unreached ? { unreached: true } : {}),
                 ...(result.hidden === undefined ? {} : { hidden: result.hidden }),
               },
               ...sources,
             };
-      })
-    )
+      });
+    })
   );
 }
-
 /** Prepare one catalogue's expressions, retaining only bytecode and source locations between checks. */
 export async function compileEditorialExpressions(
   definitions: readonly EditorialExpression[],
@@ -387,5 +431,5 @@ export async function compileEditorialExpressions(
   const expressions = definitions.map((definition) => ({ ...definition }));
   using vm = await createSandbox('compile');
   const bytecode = compileBatch(vm, expressions, options.shortcuts);
-  return { evaluate: (batch) => evaluateBatch(batch, expressions, bytecode) };
+  return { evaluate: (batch, budget = { interruptedSlots: new Set() }) => evaluateBatch(batch, expressions, bytecode, budget) };
 }

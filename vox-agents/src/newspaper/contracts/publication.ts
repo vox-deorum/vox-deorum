@@ -1,7 +1,9 @@
 /** Versioned offline editorial memory and audit records, free of runtime imports. */
 import { z } from 'zod';
-import { newspaperSourceReferenceSchema } from '../../../../mcp-server/dist/newspaper/evidence.js';
+import { newspaperEvidenceRequestSchema, newspaperSourceReferenceSchema } from '../../../../mcp-server/dist/newspaper/evidence.js';
 import { diplomacyMemorySchema, diplomacyInferenceSchema } from './diplomacy.js';
+import { inlineTextSchema } from './issue.js';
+import { triggerRepeatStateSchema, triggerRuleAuditSchema } from './triggers.js';
 
 /** Receiver choices, resolved over catalogue defaults when the run is created. */
 export const publicationPreferencesSchema = z.object({
@@ -13,7 +15,7 @@ export type PublicationPreferences = z.infer<typeof publicationPreferencesSchema
 export const publishedItemRecordSchema = z.object({
   id: z.string(), issueId: z.string(), turn: z.number().int(), tags: z.array(z.string()),
   seriesKeys: z.array(z.string()), templateIds: z.array(z.string()), triggerIds: z.array(z.string()),
-  importance: z.number().finite(), evidenceSummary: z.string(),
+  importance: z.number().finite(), headline: inlineTextSchema, evidenceSummary: z.string(),
   sources: z.array(newspaperSourceReferenceSchema), fingerprint: z.string(),
 });
 export type PublishedItemRecord = z.infer<typeof publishedItemRecordSchema>;
@@ -41,6 +43,8 @@ export const editorialDecisionRecordSchema = z.object({
   layouts: z.record(z.string(), z.string()), evidence: z.array(newspaperSourceReferenceSchema),
   feedback: feedbackRecordSchema,
   diplomacyInference: z.array(diplomacyInferenceSchema),
+  triggerAudit: z.array(triggerRuleAuditSchema),
+  evidenceRequest: newspaperEvidenceRequestSchema,
 });
 export type EditorialDecisionRecord = z.infer<typeof editorialDecisionRecordSchema>;
 /** Importance is dated so each elapsed turn is decayed exactly once. */
@@ -51,17 +55,18 @@ export const seriesStateSchema = z.object({
 export type SeriesState = z.infer<typeof seriesStateSchema>;
 /** Current offline memory excludes decisions, which are stored with each completed check. */
 export const publicationStateSchema = z.object({
-  schemaVersion: z.literal(3), lastCheckTurn: z.number().int().nullable(),
+  schemaVersion: z.literal(4), lastCheckTurn: z.number().int().nullable(),
   issues: z.array(publishedIssueRecordSchema), series: z.record(z.string(), seriesStateSchema),
   votes: z.record(z.string(), z.union([z.literal(-1), z.literal(0), z.literal(1)])),
   preferences: publicationPreferencesSchema, previousDesignId: z.string().nullable(),
   diplomacy: diplomacyMemorySchema,
+  triggerRepeats: triggerRepeatStateSchema,
 });
 
 export type PublicationState = z.infer<typeof publicationStateSchema>;
 
 /** Create an empty receiver checkpoint with resolved publication preferences. */
 export function createInitialPublicationState(preferences: Partial<PublicationPreferences> = {}): PublicationState {
-  return { schemaVersion: 3, lastCheckTurn: null, issues: [], series: {}, votes: {}, diplomacy: { pairs: {} },
+  return { schemaVersion: 4, lastCheckTurn: null, issues: [], series: {}, votes: {}, diplomacy: { pairs: {} }, triggerRepeats: {},
     preferences: publicationPreferencesSchema.parse(preferences), previousDesignId: null };
 }

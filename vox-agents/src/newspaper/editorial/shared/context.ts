@@ -11,7 +11,6 @@ export interface EditorialContext {
   technologies?: string[];
   technologyHistoryComplete?: boolean;
   civilization?: string;
-  technologyIdentities?: Record<string, { type: string; name: string }>;
   majorPlayerIds?: number[];
   standardTurnsPerGameTurn?: number;
 }

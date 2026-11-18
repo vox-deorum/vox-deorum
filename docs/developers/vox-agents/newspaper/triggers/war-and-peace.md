@@ -1,8 +1,8 @@
 # War and peace coverage
 
-**Status: target design, documented ahead of the code.** [Plan 6](../../../../plans/newspaper/implementation/06-trigger-rules.md) lists the build order. The inference described here exists today; its output becomes facts for ordinary rules.
+**Status: the inference is implemented; its incident and pair facts reach rules in stage 6.** Every check updates pair memory and the inference audit, including a skipped check. The stock catalogue has no war or peace rules and no templates. [Plan 6](../../../../plans/newspaper/implementation/06-trigger-rules.md) lists the build order.
 
-Wars and settlements reach the newspaper as two kinds of [facts](facts.md): an **incident**, one declaration or settlement with everyone it drew in, and a **pair**, the standing between two players over time. This page is for developers writing war and peace rules or extending the inference. Code infers the facts; the stories themselves are ordinary [trigger rules](overview.md) with `subject: incident` or `subject: pair`.
+Wars and settlements reach the newspaper as two kinds of [facts](facts.md): an **incident**, one declaration or settlement with everyone it drew in, and a **pair**, the standing between two players over time. This page is for developers writing war and peace rules or extending the inference. Code infers the facts; once stage 6 exposes them, the stories are ordinary [trigger rules](overview.md) with `subject: incident` or `subject: pair`.
 
 The inference uses the recorded `DeclareWar` and `MakePeace` events plus MCP-projected relationship snapshots. Battle reports and city captures are separate rules over `event` and `city` subjects.
 
@@ -38,7 +38,7 @@ Recursive event payloads sometimes repeat the original initiator while naming a 
 
 ## Incident facts in rules
 
-The [incident fact table](facts.md#incident) lists every field. These rules show the angles the facts support.
+The [incident fact table](facts.md#incident) lists every field. Once stage 6 exposes the facts, these rules show the angles they support.
 
 | Story | `when` |
 | --- | --- |
@@ -54,7 +54,7 @@ The [incident fact table](facts.md#incident) lists every field. These rules show
 | Peace with visible concessions | `incident.kind == 'peace' && incident.concessions.length > 0` |
 | A capitulation | `incident.kind == 'peace' && incident.capitulation` |
 
-Every development from one incident shares a conflict key, so selection publishes at most one account of it per issue. Set `urgent` to `incident.kind == 'war' && incident.role == 'target'` to let an attack on the receiver lead a breaking front page.
+Every development from one incident will share a conflict key, so selection publishes at most one account of it per issue once stage 6 supplies the facts. Set `urgent` to `incident.kind == 'war' && incident.role == 'target'` to let an attack on the receiver lead a breaking front page.
 
 | Useful `values` | Expression |
 | --- | --- |
@@ -65,7 +65,7 @@ Every development from one incident shares a conflict key, so selection publishe
 
 ## Pair facts in rules
 
-A pair tracks the observed war or peace state between two visible players. **War score** is the recorded balance of damage between two major civilizations, from -100 to 100. `pair.warScore` is given from the receiver's perspective when the receiver is one of the two. It is separate from national score, and allied scores are not added together.
+A pair tracks the observed war or peace state between two visible players. Stage 6 exposes pair facts to rules. **War score** is the recorded balance of damage between two major civilizations, from -100 to 100. `pair.warScore` is given from the receiver's perspective when the receiver is one of the two. It is separate from national score, and allied scores are not added together.
 
 | Story | `window` | `when` |
 | --- | --- | --- |
@@ -126,15 +126,15 @@ A same-turn deal after the peace calls, with matching parties and visible terms,
 | `mcp-server/src/newspaper/projection.ts` | Visibility, identity resolution and permitted relationship fields |
 | `editorial/diplomacy/diplomacy-facts.ts` | Dated relationship lookup, pair identity and game-speed conversion |
 | `editorial/diplomacy/diplomacy-incidents.ts` | Likely roots, obligations, cascade grouping and settlement context |
-| `editorial/diplomacy/war-peace.ts` | Pair history and the `incident` and `pair` facts handed to rules |
+| `editorial/diplomacy/war-peace.ts` | Pair history, score samples and the inference audit; stage 6 hands the `incident` and `pair` facts to rules |
 | `contracts/diplomacy.ts` | Pair memory and inference audit contracts |
 
 The relative `editorial/` and `contracts/` paths are under `vox-agents/src/newspaper/`.
 
 To extend coverage:
 
-1. For a new angle on existing facts, add a trigger under `vox-agents/newspaper/triggers/` and a template. No code changes.
+1. For a new angle on existing facts, add a trigger under `vox-agents/newspaper/triggers/` and a template. No code changes. War and peace rules wait for stage 6 facts.
 2. For a new fact, such as a new participation reason, add it to the inference and to the [incident](facts.md#incident) or [pair](facts.md#pair) table. Put relationship interpretation in the shared helpers when it is useful beyond the newspaper.
-3. Test the inference with independent wars, recursive responses, missing observations and a skipped check, then read the resulting prose in replay.
+3. Test the inference with independent wars, recursive responses, missing observations and a skipped check, then read the inference audit in replay.
 
-Skipped checks still advance pair history, so a later rule sees the scores from the skipped period. A pair that went unobserved for several turns has a gap there, and `held` is false across it. The inference audit is saved with each editorial decision and stays out of the article's prose.
+Skipped checks still advance pair history, so once stage 6 exposes the facts to rules, a later rule sees the scores from the skipped period. A pair that went unobserved for several turns has a gap there, and `held` is false across it. The inference audit is saved with each editorial decision and stays out of the article's prose.

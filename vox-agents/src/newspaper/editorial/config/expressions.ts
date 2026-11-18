@@ -5,15 +5,11 @@ import {
   type ExpressionRunner,
 } from '../shared/expressions.js';
 import type { EditorialConstants } from './constants.js';
+import type { EditorialTriggerRule } from './schema.js';
 
-export interface TriggerExpressionFields {
-  id: string;
-  when: string | readonly string[];
-  values?: Readonly<Record<string, string>>;
-  importance?: number | string;
-  urgent?: string;
-  group?: { by: string };
-}
+type TriggerExpressionFields = Pick<EditorialTriggerRule, 'id' | 'values' | 'importance' | 'urgent' | 'group'> & {
+  when: Readonly<EditorialTriggerRule['when']>;
+};
 
 /** Indices of the compiled expressions used by one rule. */
 export interface TriggerExpressionSlots {

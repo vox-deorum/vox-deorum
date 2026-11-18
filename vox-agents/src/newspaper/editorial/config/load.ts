@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
 import { isRecord } from '../../../utils/guards.js';
-import { prepareTriggerExpressions } from './expressions.js';
+import { prepareTriggerExpressions, type CompiledTriggerExpressions } from './expressions.js';
 import { editorialConfigSchema, type EditorialConfig } from './schema.js';
 
 /** Resolve built-in files from both source and installed dist directory layouts. */
@@ -76,13 +76,25 @@ function overlay(base: unknown, custom: unknown): unknown {
   return custom;
 }
 
+const compiledCatalogues = new WeakMap<EditorialConfig, Promise<CompiledTriggerExpressions>>();
+
+/** Compile a catalogue only once; bytecode and expression slots stay out of saved runs. */
+export function getEditorialTriggerExpressions(config: EditorialConfig): Promise<CompiledTriggerExpressions> {
+  let prepared = compiledCatalogues.get(config);
+  if (!prepared) {
+    prepared = prepareTriggerExpressions(config.triggers, config.constants);
+    compiledCatalogues.set(config, prepared);
+  }
+  return prepared;
+}
+
 /** Load grouped built-ins and optional flat or grouped overrides, then validate together. */
 export async function loadEditorialConfig(directory?: string): Promise<EditorialConfig> {
   const result: Record<string, unknown> = { version: 1 };
   for (const name of ['defaults', 'constants', 'triggers', 'templates', 'pages', 'designs']) {
     const grouped = name === 'triggers' || name === 'templates' || name === 'designs';
     const base = grouped
-      ? await readCatalogueSection(builtInCatalogueDirectory(), name)
+      ? (await readCatalogueSection(builtInCatalogueDirectory(), name, name === 'templates') ?? [])
       : await readCatalogueFile(builtInCatalogueDirectory(), name);
     let custom = directory ? await readCatalogueFile(directory, name, true) : undefined;
     if (directory && grouped)
@@ -95,6 +107,6 @@ export async function loadEditorialConfig(directory?: string): Promise<Editorial
 /** Apply the same validation to merged files and serialized replay configurations. */
 export async function parseEditorialConfig(input: unknown): Promise<EditorialConfig> {
   const config = editorialConfigSchema.parse(input);
-  await prepareTriggerExpressions([], config.constants);
+  await getEditorialTriggerExpressions(config);
   return config;
 }

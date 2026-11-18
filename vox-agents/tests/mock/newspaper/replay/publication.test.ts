@@ -2,26 +2,29 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import Database from 'better-sqlite3';
+import { queryNewspaperEvidence } from '../../../../../mcp-server/dist/newspaper/queries.js';
 import { ReplaySession } from '../../../../src/newspaper/replay/session.js';
 import { runEditorialCheck } from '../../../../src/newspaper/editorial/check.js';
 import { ReplayStore } from '../../../../src/newspaper/replay/store.js';
 import { replaySourceIdentity } from '../../../../src/newspaper/replay/database.js';
-import { createReplayRecording, replaySettings } from '../../../helpers/newspaper-replay.js';
+import { createReplayRecording, replaySettings, writeReplayPublicationCatalogue } from '../../../helpers/newspaper-replay.js';
 
 describe('durable replay publication', () => {
   let recording: Awaited<ReturnType<typeof createReplayRecording>>;
   let session: ReplaySession;
   let outputPath: string;
+  let catalogue: string;
   beforeEach(async () => {
     recording = await createReplayRecording();
     outputPath = path.join(path.dirname(recording.filename), 'newspaper.sqlite');
+    catalogue = await writeReplayPublicationCatalogue(recording.filename);
     session = new ReplaySession();
   });
   afterEach(async () => { await session.close(); await recording.cleanup(); });
 
-  /** Start a window containing a recorded threat against the receiving team. */
+  /** Start a window containing the event used by the controlled catalogue. */
   function settings() {
-    return { ...replaySettings(recording.filename), fromTurn: 6, toTurn: 40, outputPath, runId: 'main' };
+    return { ...replaySettings(recording.filename), fromTurn: 6, toTurn: 40, outputPath, runId: 'main', editorialConfigDirectory: catalogue };
   }
 
   it('should replace votes, reject stale scopes, reschedule frequency and resume immutable history', async () => {
@@ -52,9 +55,10 @@ describe('durable replay publication', () => {
     expect(next.check!.decision.feedback.votes[itemId]).toBe(1);
     expect(next.check!.decision.feedback.windowItemIds.filter(id => id === itemId)).toHaveLength(1);
     expect(Object.values(next.check!.decision.feedback.seriesAdjustments).some(value => value > 0)).toBe(true);
-    expect((await session.getIssue(issueId)).articles.find(item => item.id === itemId)).toMatchObject({
-      templateIds: expect.any(Array), sources: expect.any(Array), evidenceSummary: expect.any(String),
-    });
+    const article = (await session.getIssue(issueId)).articles.find(item => item.id === itemId)!;
+    expect(article.sources).toEqual(expect.arrayContaining([expect.objectContaining({ table: 'GameEvents', id: 101, turn: 6 })]));
+    expect(article.evidenceSummary).toMatch(/\b6\b/);
+    expect(article.evidenceSummary).not.toContain('fixture-war-report');
     expect((await session.getIssue(issueId)).issue).toEqual(original.issue);
     expect((await session.getIssue(issueId)).decision).toEqual(original.decision);
     const before = await session.getState();
@@ -169,8 +173,8 @@ describe('durable replay publication', () => {
     const competitor = new ReplayStore(outputPath);
     try {
       const saved = competitor.load('main', 0, await replaySourceIdentity(recording.filename));
-      session = new ReplaySession({ check: input => {
-        const result = runEditorialCheck(input);
+      session = new ReplaySession({ check: async input => {
+        const result = await runEditorialCheck(input);
         const winning = structuredClone(result);
         winning.state.preferences.llmEnabled = true;
         const competitorSession = structuredClone(saved.session);
@@ -194,5 +198,31 @@ describe('durable replay publication', () => {
       expect((await session.getState()).cursor.cutoffTurn).toBe(14);
       expect((await session.getState()).preferences?.llmEnabled).toBe(true);
     } finally { competitor.close(); }
+  });
+
+  it('should read one history window and keep repeat memory from a skipped check after resume', async () => {
+    const directory = path.join(path.dirname(recording.filename), 'repeat-catalogue');
+    await mkdir(directory);
+    await writeFile(path.join(directory, 'triggers.json'), JSON.stringify([{
+      id: 'recorded-player', subject: 'player', window: 60, repeat: 'once', when: 'player.self',
+    }]));
+    const query = vi.fn(queryNewspaperEvidence);
+    session = new ReplaySession({ query });
+    const configured = { ...settings(), fromTurn: 100, toTurn: 120, editorialConfigDirectory: directory };
+    await session.configure(configured);
+    const first = await session.advance();
+    expect(query).toHaveBeenCalledOnce();
+    expect(first.evidence.request.historyFromTurn).toBe(10); // 60 Standard turns at Epic speed.
+    expect(first.evidence).not.toHaveProperty('history');
+    expect((await session.evidence()).evidence).toEqual(first.evidence);
+    expect(first.check?.status).toBe('skipped');
+    expect(first.check?.decision.triggerAudit.find(audit => audit.rule === 'recorded-player')?.subjects)
+      .toEqual(expect.arrayContaining([expect.objectContaining({ subject: 'player/0', outcome: 'fired' })]));
+    await session.close();
+    session = new ReplaySession();
+    await session.configure({ ...configured, mode: 'resume' });
+    const next = await session.advance();
+    expect(next.check?.decision.triggerAudit.find(audit => audit.rule === 'recorded-player')?.subjects)
+      .toEqual(expect.arrayContaining([expect.objectContaining({ subject: 'player/0', outcome: 'repeat' })]));
   });
 });

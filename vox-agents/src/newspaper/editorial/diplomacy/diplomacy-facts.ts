@@ -22,14 +22,7 @@ export function createDiplomacyPair(a: number, b: number, receiver: number): Dip
     since: null,
     lastObserved: null,
     samples: [],
-    lastPublication: null,
-    advantageArmed: true,
-    commandingArmed: true,
-    lastKinds: {},
-    enduringPublished: false,
     peaceAnchored: false,
-    stagnationScore: null,
-    stagnationEpisodeTurn: null,
   };
 }
 /** Distinguish native call IDs from service-created events in the reserved per-turn offset range. */

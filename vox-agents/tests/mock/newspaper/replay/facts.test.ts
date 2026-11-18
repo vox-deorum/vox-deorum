@@ -20,7 +20,7 @@ describe('facts from a replay recording', () => {
       } finally { sqlite.close(); }
       const db = await openReplayDatabase(recording.filename);
       try {
-        const facts = await readReplayFacts(db, {receiverPlayerID: 0, previousCheckTurn: 9, cutoffTurn: 10},
+        const { facts } = await readReplayFacts(db, {receiverPlayerID: 0, previousCheckTurn: 9, cutoffTurn: 10},
           {longTurns: 5, longestWindowTurns: 8});
         const expressions = [
           'players.map(p => p.name).join(",")', 'self.leader', 'game.speedMultiplier', 'game.maxTurns',

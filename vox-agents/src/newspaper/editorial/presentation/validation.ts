@@ -36,7 +36,7 @@ export function validateEditorialIssue(
     urgent.length &&
     (!urgent.some((item) => item.id === front.itemIds[0]) || front.layout !== 'breaking')
   )
-    throw new Error('Incoming war must lead a breaking front page.');
+    throw new Error('An urgent development must lead a breaking front page.');
   const subjects = new Set(parsed.items.map((item) => candidates.get(item.id)?.subject));
   if (subjects.size > 1 && new Set(front.itemIds.map((id) => candidates.get(id)?.subject)).size < 2)
     throw new Error('The front page must mix available subjects.');

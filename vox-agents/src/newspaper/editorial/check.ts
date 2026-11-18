@@ -7,23 +7,27 @@ import type {
   PublishedItemRecord,
 } from '../contracts/publication.js';
 import type { EditorialConfig } from './config/schema.js';
+import { getEditorialTriggerExpressions } from './config/load.js';
+import type { NewspaperFactModel } from './facts/index.js';
+import { evaluateTriggerRules } from './rules/evaluate.js';
 import { computeFeedback } from './selection/feedback.js';
 import { selectHeuristic } from './selection/heuristic.js';
 import { advanceSeries, decaySeries } from './selection/series.js';
-import { detectTriggers } from './triggers.js';
 import { matchTemplates } from './selection/templates.js';
 import { evidenceConditionContext, type EditorialContext } from './shared/context.js';
 import { configurationHash, createEditorialStreams } from './shared/determinism.js';
-import { uniqueSources } from './shared/sources.js';
+import { summarizeSources, uniqueSources } from './shared/sources.js';
 import { presentIssue } from './presentation/issue.js';
 import { validateEditorialIssue } from './presentation/validation.js';
-import { detectWarAndPeace, recordDiplomacyPublications } from './diplomacy/war-peace.js';
+import { inferWarAndPeace } from './diplomacy/war-peace.js';
 
 export interface EditorialCheckInput {
   campaignId: string;
   timelineId: string;
   receiver: IssueReceiver;
   evidence: NewspaperEvidence;
+  facts: NewspaperFactModel;
+  speedMultiplier: number;
   state: PublicationState;
   config: EditorialConfig;
   configurationId?: string;
@@ -44,11 +48,14 @@ export type EditorialCheckResult =
     };
 
 /** Run one immutable, deterministic check and return its complete transactional checkpoint. */
-export function runEditorialCheck(input: EditorialCheckInput): EditorialCheckResult {
-  const { config, evidence } = input;
+export async function runEditorialCheck(input: EditorialCheckInput): Promise<EditorialCheckResult> {
+  const { config, evidence, facts } = input;
   const turn = evidence.request.cutoffTurn;
   if (evidence.request.receiverPlayerID !== input.receiver.playerId)
     throw new Error('Evidence and receiver do not match.');
+  if (facts.turn !== turn || facts.previous !== evidence.request.previousCheckTurn ||
+      facts.receiverId !== input.receiver.playerId)
+    throw new Error('Facts must use the same cutoff, reporting period and receiver as the evidence.');
   if (
     [
       ...evidence.players,
@@ -56,6 +63,11 @@ export function runEditorialCheck(input: EditorialCheckInput): EditorialCheckRes
       ...evidence.comparisons.players,
       ...evidence.comparisons.cities,
       ...evidence.events,
+      ...(evidence.history?.baseline.players ?? []),
+      ...(evidence.history?.baseline.cities ?? []),
+      ...(evidence.history?.snapshots.players ?? []),
+      ...(evidence.history?.snapshots.cities ?? []),
+      ...(evidence.history?.events ?? []),
       ...(evidence.diplomacy?.baseline ?? []),
       ...(evidence.diplomacy?.history ?? []),
       ...(evidence.diplomacy?.gaps ?? []),
@@ -82,9 +94,18 @@ export function runEditorialCheck(input: EditorialCheckInput): EditorialCheckRes
     preferences: { ...input.state.preferences },
   };
   const feedback = computeFeedback(state, config);
-  const diplomacy = detectWarAndPeace(evidence, config, input.context ?? {}, input.state.diplomacy);
+  const diplomacy = inferWarAndPeace(evidence, input.context ?? {}, input.state.diplomacy);
   state.diplomacy = diplomacy.memory;
-  const triggers = detectTriggers(evidence, config, input.context, diplomacy.triggers);
+  const rules = await evaluateTriggerRules({
+    rules: config.triggers,
+    compiled: await getEditorialTriggerExpressions(config),
+    facts,
+    constants: config.constants,
+    speedMultiplier: input.speedMultiplier,
+    repeatState: input.state.triggerRepeats,
+  });
+  state.triggerRepeats = rules.repeatState;
+  const triggers = rules.developments;
   const candidates = matchTemplates(triggers, config, context).map((candidate) => ({
     ...candidate,
     seriesKeys: candidate.seriesKeys.map((key) => `${scope}/${key}`),
@@ -114,6 +135,8 @@ export function runEditorialCheck(input: EditorialCheckInput): EditorialCheckRes
     evidence: uniqueSources(selection.selected.flatMap((candidate) => candidate.sources)),
     feedback,
     diplomacyInference: diplomacy.audit,
+    triggerAudit: rules.audit,
+    evidenceRequest: { ...evidence.request },
   };
   /** Complete a skipped check with the same cursor and decay guarantees as a publication. */
   const skip = (reason: string): EditorialCheckResult => {
@@ -153,18 +176,13 @@ export function runEditorialCheck(input: EditorialCheckInput): EditorialCheckRes
       templateIds: candidate.templateIds,
       triggerIds: candidate.triggerIds,
       importance: candidate.importance,
-      evidenceSummary: candidate.summary,
+      headline: item.headline,
+      evidenceSummary: summarizeSources(candidate.sources),
       sources: candidate.sources,
       fingerprint: candidate.fingerprint,
     };
   });
   state.series = advanceSeries(state.series, records, turn);
-  recordDiplomacyPublications(
-    state.diplomacy,
-    records.flatMap((record) => record.triggerIds),
-    triggers,
-    turn
-  );
   state.issues.push({ issueId: issue.issueId, turn, items: records });
   state.previousDesignId = issue.publication.designId;
   decision.status = 'published';

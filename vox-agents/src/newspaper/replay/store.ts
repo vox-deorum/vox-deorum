@@ -43,7 +43,9 @@ export class ReplayStore {
       this.db.pragma('foreign_keys = ON');
       const version = this.db.pragma('user_version', { simple: true });
       const tables = this.db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as { name: string }[];
-      if (version !== 0 && version !== 2) throw new Error('Unsupported offline newspaper database version.');
+      if (version !== 0 && version !== 3) {
+        throw new Error('Unsupported offline newspaper database version. Choose a new output path to start a fresh run.');
+      }
       if (version === 0 && tables.length) throw new Error('The output path contains a different database.');
       if (version !== 0 && !['OfflineReplayRuns', 'OfflineReplayChecks', 'OfflineReplayIssues'].every(name => tables.some(table => table.name === name))) {
         throw new Error('The output path is not an offline newspaper database.');
@@ -66,7 +68,7 @@ export class ReplayStore {
             FOREIGN KEY (RunID, Receiver) REFERENCES OfflineReplayRuns(RunID, Receiver)
           );
         `);
-        this.db.pragma('user_version = 2');
+        this.db.pragma('user_version = 3');
       }).immediate();
     } catch (error) { this.db.close(); throw error; }
   }
