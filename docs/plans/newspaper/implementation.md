@@ -1,6 +1,6 @@
 # Newspaper implementation roadmap
 
-**Status: the stock trigger mechanics are accepted.** Plan 6 still has operation reports, front reports and ship launches to cover. Plan 1's game demo is accepted, Plan 2 is complete, and Plan 3 supplies heuristic editing, browser voting, and durable offline replay. Plan 4 settles triggers, templates and language styles before Plan 7 adds LLM editing. Broader game renderer checks and Plan 5 live integration remain pending.
+**Status: the stock trigger mechanics are accepted.** Plan 6 still has front reports and ship launches to cover. Plan 1's game demo is accepted, Plan 2 is complete, and Plan 3 supplies heuristic editing, browser voting, and durable offline replay. Plan 4 settles triggers, templates and language styles before Plan 7 adds LLM editing. Broader game renderer checks and Plan 5 live integration remain pending.
 
 This roadmap tracks implementation of the [newspaper specification](spec.md).
 
@@ -118,7 +118,7 @@ Replay supplies evidence and state to the editorial check and persists its resul
 - Installed browsers can be absent, blocked by local policy, or updated independently. Detect capability when rendering is requested and preserve reading when export cannot run.
 - Historical records may be incomplete. Initial evaluation uses a suitable recording and skips comparisons whose required data is unreliable.
 - Measure texture-cache retention with generated issues. Regenerated images use the stored design and layout choices and may differ slightly from the originals.
-- Live and replay use the same visibility rules. Stage 4b uses recorded espionage and election events. Stage 4c uses private tactical observations and matches training events to ship types and ports.
+- Live and replay use the same visibility rules. Stage 4c will use private tactical observations and match training events to ship types and ports.
 
 ## Verification and scope
 

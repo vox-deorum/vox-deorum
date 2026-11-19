@@ -9,6 +9,7 @@ import { runEditorialCheck } from '../../../../src/newspaper/editorial/check.js'
 import { loadEditorialConfig } from '../../../../src/newspaper/editorial/config/load.js';
 import { editorialConfigSchema, type EditorialConfig } from '../../../../src/newspaper/editorial/config/schema.js';
 import { buildNewspaperFacts } from '../../../../src/newspaper/editorial/facts/index.js';
+import type { FactWindow } from '../../../../src/newspaper/editorial/facts/model.js';
 import { evidence as buildEvidence, relationship, snapshot } from '../../../helpers/newspaper-diplomacy.js';
 
 const probeDirectory = fileURLToPath(new URL('../../../../newspaper/probes/', import.meta.url));
@@ -31,6 +32,7 @@ let quietConfig: EditorialConfig;
 let spyConfig: EditorialConfig;
 let diplomatConfig: EditorialConfig;
 let foreignPolicyConfig: EditorialConfig;
+let espionageConfig: EditorialConfig;
 
 /** Supply dated contact and cover the stock rules' lookback windows. */
 function probeEvidence({
@@ -76,6 +78,17 @@ function probeEvidence({
   return projected;
 }
 
+/** Build the fact model for projected evidence with the chosen catalogue. */
+function buildFacts(projected: NewspaperEvidence, catalogue = probeConfig) {
+  return buildNewspaperFacts(projected, {
+    playerIdentities: {
+      0: { name: 'France', major: true, teamId: 100 },
+      1: { name: 'Persia', major: true, teamId: 101 },
+      2: { name: 'The Huns', major: true, teamId: 102 },
+    },
+  }, { ideologies: catalogue.constants.types.ideologies });
+}
+
 /** Run the editor on projected evidence with the chosen catalogue. */
 function check(
   projected: NewspaperEvidence,
@@ -83,13 +96,7 @@ function check(
   state = createInitialPublicationState(),
   campaignId = 'campaign',
 ) {
-  const facts = buildNewspaperFacts(projected, {
-    playerIdentities: {
-      0: { name: 'France', major: true, teamId: 100 },
-      1: { name: 'Persia', major: true, teamId: 101 },
-      2: { name: 'The Huns', major: true, teamId: 102 },
-    },
-  }, { ideologies: catalogue.constants.types.ideologies });
+  const facts = buildFacts(projected, catalogue);
   return runEditorialCheck({
     campaignId,
     timelineId: 'probe',
@@ -103,8 +110,19 @@ function check(
 }
 
 /** Supply a projected event on a date when the actors were already known. */
-function probeEvent(type: string, values: NewspaperEvent['values'], id = 101): NewspaperEvent {
-  return { type, values, source: { table: 'GameEvents', id, turn: 8, createdAt: 8000 } };
+function probeEvent(
+  type: string,
+  values: NewspaperEvent['values'],
+  id = 101,
+  turn = 8,
+  reportTurn?: number,
+): NewspaperEvent {
+  return {
+    type,
+    values,
+    source: { table: 'GameEvents', id, turn, createdAt: 8000 },
+    ...(reportTurn === undefined ? {} : { reportTurn }),
+  };
 }
 
 /** Build a validated catalogue variant with only the named probe rules and templates. */
@@ -145,6 +163,16 @@ function auditSubject(
   return result.decision.triggerAudit
     .find((audit) => audit.rule === ruleId)
     ?.subjects.find((entry) => entry.subject === subject);
+}
+
+/** Find one audited expression value for a rule and subject. */
+function auditValue(
+  result: Awaited<ReturnType<typeof check>>,
+  ruleId: string,
+  subject: string,
+  field: string,
+) {
+  return auditSubject(result, ruleId, subject)?.expressions.find((entry) => entry.field === field);
 }
 
 /** Find the immutable issue item for a published record. */
@@ -216,6 +244,12 @@ describe('probe overlay', () => {
     );
     foreignPolicyConfig = probeCatalogue(
       ['probe-foreign-policies'], ['probe-foreign-policies-account'],
+    );
+    espionageConfig = probeCatalogue(
+      ['probe-espionage-tech', 'probe-spy-loss', 'probe-defender-report', 'probe-election-influence'],
+      ['probe-espionage-tech-account', 'probe-spy-loss-account', 'probe-defender-report-account',
+        'probe-election-influence-account'],
+      { maxItems: 1 },
     );
   });
 
@@ -570,6 +604,211 @@ describe('probe overlay', () => {
 
       expect(publishedItem(result.state, 'probe-foreign-policies-account')).toBeUndefined();
       expect(auditSubject(result, 'probe-foreign-policies', 'player/1')?.outcome).toBe(outcome);
+    });
+  });
+
+  describe('espionage and election probes', () => {
+    describe('technology theft', () => {
+      it('should publish a likely source-side gain with its original evidence', async () => {
+        const theft = probeEvent('EspionageResult', {
+          Perspective: 'source', SpyResult: 'Detected', SourcePlayerID: 0, TargetPlayerID: 1,
+          CityX: 10, CityY: 0, CityName: 'Persepolis', Tech: 'Steam Power',
+        });
+        theft.relatedSources = [{ table: 'GameEvents', id: 102, turn: 8, createdAt: 8000 }];
+        const projected = probeEvidence({ events: [theft] });
+        const result = await check(projected, espionageConfig);
+        const record = publishedItem(result.state, 'probe-espionage-tech-account');
+
+        expect(record).toBeDefined();
+        expect(record!.ruleIds).toContain('probe-espionage-tech');
+        expect(record!.subject).toBe('event/101');
+        expect(auditValue(result, 'probe-espionage-tech', 'event/101', 'values.technology')?.value)
+          .toBe('Steam Power');
+        expect(record!.sources).toEqual(expect.arrayContaining([theft.source, ...theft.relatedSources]));
+        const printed = issueItem(result, record!.id);
+        expect(headlineText(printed!.body[0])).toContain('Steam Power');
+        expect(headlineText(printed!.body[0])).toContain('Persepolis');
+      });
+
+      it('should fall back to a generic city when the operation has no recorded name', async () => {
+        const theft = probeEvent('EspionageResult', {
+          Perspective: 'source', SpyResult: 'Undetected', SourcePlayerID: 0, TargetPlayerID: 1,
+          CityX: 10, CityY: 0, Tech: 'Steam Power',
+        });
+        const result = await check(probeEvidence({ events: [theft] }), espionageConfig);
+        const record = publishedItem(result.state, 'probe-espionage-tech-account');
+
+        expect(record).toBeDefined();
+        const printed = issueItem(result, record!.id);
+        expect(headlineText(printed!.body[0])).toContain('Steam Power');
+        expect(headlineText(printed!.body[0])).not.toMatch(/\{\{|\bundefined\b/);
+      });
+
+      it('should leave an unnamed technology out of the theft story', async () => {
+        const attempt = probeEvent('EspionageResult', {
+          Perspective: 'source', SpyResult: 'Detected', SourcePlayerID: 0, TargetPlayerID: 1,
+        });
+        const result = await check(probeEvidence({ events: [attempt] }), espionageConfig);
+
+        expect(publishedItem(result.state, 'probe-espionage-tech-account')).toBeUndefined();
+        expect(auditSubject(result, 'probe-espionage-tech', 'event/101')?.outcome).toBe('false');
+      });
+    });
+
+    describe('spy loss', () => {
+      it.each(['Killed', 'KilledNotIdentified'])('should report %s without a city name', async (outcome) => {
+        const loss = probeEvent('EspionageResult', {
+          Perspective: 'source', SpyResult: outcome, SourcePlayerID: 0, TargetPlayerID: 1,
+        });
+        const result = await check(probeEvidence({ events: [loss] }), espionageConfig);
+        const record = publishedItem(result.state, 'probe-spy-loss-account');
+
+        expect(record).toBeDefined();
+        expect(record!.ruleIds).toContain('probe-spy-loss');
+        expect(auditSubject(result, 'probe-spy-loss', 'event/101')?.outcome).toBe('fired');
+        expect(record!.sources).toContainEqual(loss.source);
+        const printed = issueItem(result, record!.id);
+        expect(headlineText(printed!.body[0])).not.toMatch(/\{\{|\bundefined\b/);
+      });
+
+      it('should keep the loss story ahead of a technology gain from the same operation', async () => {
+        const loss = probeEvent('EspionageResult', {
+          Perspective: 'source', SpyResult: 'Killed', SourcePlayerID: 0, TargetPlayerID: 1,
+          CityName: 'Persepolis', Tech: 'Steam Power',
+        });
+        const result = await check(probeEvidence({ events: [loss] }), espionageConfig);
+
+        expect(publishedItem(result.state, 'probe-spy-loss-account')).toBeDefined();
+        expect(publishedItem(result.state, 'probe-espionage-tech-account')).toBeUndefined();
+        expect(auditSubject(result, 'probe-espionage-tech', 'event/101')?.outcome).toBe('fired');
+      });
+    });
+
+    describe('defender reports', () => {
+      it('should name a resolved source and cite its player row', async () => {
+        const report = probeEvent('EspionageResult', {
+          Perspective: 'target', SpyResult: 'Identified', SourcePlayerID: 1, TargetPlayerID: 0,
+          CityName: 'Paris', CityX: 0, CityY: 0,
+        });
+        const projected = probeEvidence({ events: [report] });
+        const result = await check(projected, espionageConfig);
+        const record = publishedItem(result.state, 'probe-defender-report-account');
+
+        expect(record).toBeDefined();
+        expect(record!.ruleIds).toContain('probe-defender-report');
+        const playerSource = projected.players.find((player) => player.subjectID === 1)!.source;
+        expect(record!.sources).toEqual(expect.arrayContaining([report.source, playerSource]));
+        const printed = issueItem(result, record!.id);
+        expect(headlineText(printed!.body[0])).toContain('Persia');
+        expect(headlineText(printed!.body[0])).toContain('Paris');
+      });
+
+      it('should keep an anonymous source generic without a player citation', async () => {
+        const report = probeEvent('EspionageResult', {
+          Perspective: 'target', SpyResult: 'KilledNotIdentified', TargetPlayerID: 0,
+        });
+        const projected = probeEvidence({ events: [report] });
+        const result = await check(projected, espionageConfig);
+        const record = publishedItem(result.state, 'probe-defender-report-account');
+
+        expect(record).toBeDefined();
+        const playerSource = projected.players.find((player) => player.subjectID === 1)!.source;
+        expect(record!.sources).not.toContainEqual(playerSource);
+        const printed = issueItem(result, record!.id);
+        expect(headlineText(printed!.body[0])).not.toContain('Persia');
+        expect(headlineText(printed!.body[0])).not.toMatch(/\{\{|\bundefined\b/);
+      });
+    });
+
+    describe('election influence', () => {
+      it.each([
+        { type: 'ElectionResultSuccess', change: 12, cityState: 'Geneva' },
+        { type: 'ElectionResultFailure', change: -8, cityState: undefined },
+      ])('should report a $type change of $change', async ({ type, change, cityState }) => {
+        const election = probeEvent(type, {
+          PlayerID: 0, InfluenceChange: change, ...(cityState === undefined ? {} : { CityState: cityState }),
+        });
+        const result = await check(probeEvidence({ events: [election] }), espionageConfig);
+        const record = publishedItem(result.state, 'probe-election-influence-account');
+
+        expect(record).toBeDefined();
+        expect(record!.ruleIds).toContain('probe-election-influence');
+        expect(auditValue(result, 'probe-election-influence', 'event/101', 'values.change')?.value).toBe(change);
+        expect(record!.sources).toContainEqual(election.source);
+        const printed = issueItem(result, record!.id);
+        expect(headlineText(printed!.body[0])).toContain(String(change));
+        expect(headlineText(printed!.body[0])).not.toMatch(/\{\{|\bundefined\b/);
+        if (cityState) expect(headlineText(printed!.body[0])).toContain(cityState);
+      });
+
+      it('should not report a zero influence change', async () => {
+        const election = probeEvent('ElectionResultSuccess', {
+          PlayerID: 0, InfluenceChange: 0, CityState: 'Geneva',
+        });
+        const result = await check(probeEvidence({ events: [election] }), espionageConfig);
+
+        expect(publishedItem(result.state, 'probe-election-influence-account')).toBeUndefined();
+        expect(auditSubject(result, 'probe-election-influence', 'event/101')?.outcome).toBe('false');
+      });
+    });
+
+    describe('delayed reports', () => {
+      /** Build a defender report recorded at its operation and dated again when reported. */
+      const delayed = () => probeEvent('EspionageResult', {
+        Perspective: 'target', SpyResult: 'Identified', SourcePlayerID: 1, TargetPlayerID: 0,
+        CityName: 'Paris', CityX: 10, CityY: 0,
+      }, 101, 8, 9);
+
+      it('should expose the report turn while citing the original row date', () => {
+        const report = delayed();
+        const model = buildFacts(probeEvidence({ turn: 9, previous: 5, events: [report] }), espionageConfig);
+        const row = model.events.find((event) => event.id === 101);
+
+        expect(row?.turn).toBe(9);
+        expect(row?.fields.turn).toEqual({ value: 9, sources: [report.source] });
+        expect(row?.sources).toContainEqual(report.source);
+      });
+
+      it('should keep the report out of facts and timelines before its report turn', async () => {
+        const report = delayed();
+        const projected = probeEvidence({ turn: 8, previous: 5, events: [report] });
+        const model = buildFacts(projected, espionageConfig);
+        const playerEvents = model.players[0].current!.events.value as FactWindow;
+
+        expect(model.events.some((event) => event.id === 101)).toBe(false);
+        expect(model.subjects.event).not.toContain(101);
+        expect(playerEvents.entries.some((entry) => entry.turn === 9)).toBe(false);
+        const result = await check(projected, espionageConfig);
+        expect(result.status).toBe('skipped');
+        expect(auditSubject(result, 'probe-defender-report', 'event/101')).toBeUndefined();
+      });
+
+      it('should treat a delayed report as new even when its operation is outside the reporting window', async () => {
+        const report = probeEvent('EspionageResult', {
+          Perspective: 'target', SpyResult: 'KilledNotIdentified', TargetPlayerID: 0,
+        }, 101, 8, 9);
+        const result = await check(probeEvidence({ turn: 9, previous: 8, events: [report] }), espionageConfig);
+
+        expect(result.status).toBe('published');
+        expect(publishedItem(result.state, 'probe-defender-report-account')).toBeDefined();
+        expect(auditSubject(result, 'probe-defender-report', 'event/101')?.outcome).toBe('fired');
+      });
+
+      it('should use the report turn in city and player event timelines', () => {
+        const report = delayed();
+        const projected = probeEvidence({ turn: 9, previous: 5, events: [report] });
+        const city = projected.cities.find((row) => row.subjectID === 11)!;
+        projected.history!.snapshots.cities = [
+          { ...city, source: { table: 'CityInformations', id: 301, turn: 8, createdAt: 8000 } },
+          ...projected.history!.snapshots.cities,
+        ];
+        const model = buildFacts(projected, espionageConfig);
+        const playerEvents = model.players[0].current!.events.value as FactWindow;
+        const cityEvents = model.cities[11].current!.events.value as FactWindow;
+
+        expect(playerEvents.entries).toEqual(expect.arrayContaining([expect.objectContaining({ turn: 9 })]));
+        expect(cityEvents.entries).toEqual(expect.arrayContaining([expect.objectContaining({ turn: 9 })]));
+      });
     });
   });
 

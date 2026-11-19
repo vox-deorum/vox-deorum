@@ -5,12 +5,14 @@ import { isVisible } from '../knowledge/expressions.js';
 import { readEvents, readSnapshotRange, readSnapshotsAtCutoff } from '../knowledge/history.js';
 import type { RecordedRoster } from './espionage.js';
 import {
-  newspaperEvidenceRequestSchema, type NewspaperEvent, type NewspaperEvidence, type NewspaperEvidenceRequest, type NewspaperHistory, type NewspaperSnapshot
+  eventReportTurn, newspaperEvidenceRequestSchema,
+  type NewspaperEvent, type NewspaperEvidence, type NewspaperEvidenceRequest, type NewspaperHistory, type NewspaperSnapshot
 } from './evidence.js';
 import {
   newspaperEventConfigs, newspaperWorldNewsTypes, projectNewspaperCity, projectNewspaperDiplomacy,
   projectNewspaperEvent, projectNewspaperPlayer, type NewspaperCityProjectionContext, type NewspaperProjectionContext
 } from './projection.js';
+import { projectEspionageEvidence } from './espionage-operations.js';
 
 type ReceiverField = keyof KnowledgeDatabase['PlayerSummaries'] & `Player${number}`;
 type CityRow = Selectable<CityInformation>;
@@ -23,9 +25,12 @@ export async function queryNewspaperEvidence(
   const { cutoffTurn, previousCheckTurn, receiverPlayerID, comparisonRange } = request;
   const historyFromTurn = request.historyFromTurn === undefined ? undefined : Math.min(request.historyFromTurn, previousCheckTurn);
   const eventFromTurn = (historyFromTurn ?? previousCheckTurn) + 1;
+  // A defender report can follow an operation on the exclusive event bound, so private reads start at that bound.
+  const operationFromTurn = eventFromTurn - 1;
   const fromTurn = Math.min(eventFromTurn, comparisonRange?.fromTurn ?? cutoffTurn, cutoffTurn);
   const visibilityField = `Player${receiverPlayerID}` as ReceiverField;
-  const [players, baseSummaries, summaryHistory, cities, events, uncheckedEvents, earlierCities, baselineCities, historyCities, cityLifecycle] = await Promise.all([
+  const [players, baseSummaries, summaryHistory, cities, events, uncheckedEvents, earlierCities, baselineCities, historyCities,
+    cityLifecycle, espionageRows] = await Promise.all([
     db.selectFrom('PlayerInformations').selectAll().execute(),
     readSnapshotsAtCutoff(db, 'PlayerSummaries', fromTurn - 1),
     readSnapshotRange(db, 'PlayerSummaries', fromTurn, cutoffTurn),
@@ -39,8 +44,31 @@ export async function queryNewspaperEvidence(
     historyFromTurn === undefined ? [] : readSnapshotRange(db, 'CityInformations', historyFromTurn + 1, cutoffTurn),
     db.selectFrom('GameEvents').selectAll()
       .where('Type', 'in', ['CityRazed', 'CityCaptureComplete', 'CityFlipped', 'PlayerCityFounded', 'UnitCityFounded'])
-      .where('Turn', '<=', cutoffTurn).where(isVisible(receiverPlayerID)).execute()
+      .where('Turn', '<=', cutoffTurn).where(isVisible(receiverPlayerID)).execute(),
+    db.selectFrom('GameEvents').selectAll()
+      .where('Type', 'in', ['EspionageResult', 'ElectionResultSuccess', 'ElectionResultFailure'])
+      .where('Turn', '>=', operationFromTurn).where('Turn', '<=', cutoffTurn)
+      .orderBy('Turn').orderBy('ID').execute()
   ]);
+  const operationTurns = [...new Set(espionageRows.filter(row => row.Type === 'EspionageResult').map(row => row.Turn))]
+    .sort((a, b) => a - b);
+  const operationEndTurn = operationTurns.length ? Math.min(cutoffTurn, operationTurns[operationTurns.length - 1]! + 1) : cutoffTurn;
+  let playerTurns: Selectable<GameEvent>[] = [];
+  let techGains: Selectable<GameEvent>[] = [];
+  let cityLosses: Selectable<GameEvent>[] = [];
+  if (operationTurns.length) {
+    [playerTurns, techGains, cityLosses] = await Promise.all([
+      db.selectFrom('GameEvents').selectAll().where('Type', '=', 'PlayerDoTurn')
+        .where('Turn', '>=', operationTurns[0]!).where('Turn', '<=', operationEndTurn)
+        .orderBy('Turn').orderBy('ID').execute(),
+      db.selectFrom('GameEvents').selectAll().where('Type', '=', 'TeamTechResearched')
+        .where('Turn', 'in', operationTurns).orderBy('Turn').orderBy('ID').execute(),
+      db.selectFrom('GameEvents').selectAll()
+        .where('Type', 'in', ['CityRazed', 'CityCaptureComplete', 'CityFlipped'])
+        .where('Turn', '>=', operationTurns[0]!).where('Turn', '<=', operationEndTurn)
+        .orderBy('Turn').orderBy('ID').execute()
+    ]);
+  }
 
   const result: NewspaperEvidence = { request, players: [], cities: [], comparisons: { players: [], cities: [] }, events: [],
     diplomacy: { fromTurn, baseline: [], history: [], gaps: [] } };
@@ -176,17 +204,23 @@ export async function queryNewspaperEvidence(
       if (projected) target.push(projected);
     }
   }
-  const windowEvents: NewspaperEvent[] = [];
+  const projectedEvents = projectEspionageEvidence({
+    receiverPlayerID, players, rows: espionageRows, playerTurns, techGains, cityLosses
+  });
   for (const row of boundedEvents) {
     const projected = projectNewspaperEvent(row, contexts.get(row.Turn)!);
-    if (!projected) continue;
-    if (row.Turn > previousCheckTurn) result.events.push(projected);
-    if (historyFromTurn !== undefined) windowEvents.push(projected);
+    if (projected) projectedEvents.push(projected);
+  }
+  projectedEvents.sort((a, b) => eventReportTurn(a) - eventReportTurn(b) || a.source.id - b.source.id);
+  const windowEvents: NewspaperEvent[] = [];
+  for (const projected of projectedEvents) {
+    const turn = eventReportTurn(projected);
+    if (turn > previousCheckTurn) result.events.push(projected);
+    if (historyFromTurn !== undefined && turn > historyFromTurn) windowEvents.push(projected);
   }
   if (historyFromTurn !== undefined) {
     const history: NewspaperHistory = { fromTurn: historyFromTurn, baseline: { players: [], cities: [] },
-      snapshots: { players: [], cities: [] }, gaps: [],
-      events: windowEvents.sort((a, b) => a.source.turn - b.source.turn || a.source.id - b.source.id) };
+      snapshots: { players: [], cities: [] }, gaps: [], events: windowEvents };
     appendHistory(history, 'players', contexts.get(historyFromTurn)!.summaries,
       summaryHistory.filter(row => row.Turn > historyFromTurn),
       /** Use the baseline date for its as-of view and the recorded date for each following observation. */

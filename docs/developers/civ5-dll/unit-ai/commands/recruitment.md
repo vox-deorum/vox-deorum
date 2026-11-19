@@ -1,6 +1,6 @@
 # Unit AI: Command Recruitment
 
-**Recruitment** tells the [command loop](overview.md) which units are local and which can arrive through Reinforce. A **local set** supplies strength and damage estimates; **incoming candidates** supply the reinforcement selection.
+**Recruitment** tells the [command loop](overview.md) which units are local, which can arrive through Reinforce and which can leave through Withdraw. A **local set** supplies strength and damage estimates; **incoming candidates** supply the reinforcement selection.
 
 The implementation is in `civ5-dll/CvGameCoreDLL_Expansion2/CvTacticalOperationalLoop.h` and `.cpp`; the stage table names its entry points.
 
@@ -17,30 +17,34 @@ flowchart TD
     H --> T
     M --> F["Fight stake<br/>local damage"]
     SEL --> R["Reinforce<br/>help, swing and priority"]
+    L --> W["Withdraw recruits<br/>victims and local units that can leave"]
+    W --> WD["Withdraw<br/>removable exposure and priority"]
 ```
 
 | Stage | Function | Produces | Feeds |
 | --- | --- | --- | --- |
 | Scan | `GatherLocalSet` | A strength list, plus a damage list when a stake is needed. | Tallies and local damage. |
-| Tally | `LocalStrength`, `LocalCityStrength`, `EnemyCenterStrength`, `EnemyCityStrength` | Local friendly strength `L` and enemy strength `T`. | [Theater](value.md#theater-multiplier) and Reinforce. |
+| Tally | `LocalStrength`, `LocalCityStrength`, `EnemyCenterStrength`, `EnemyCityStrength` | Local friendly strength `L` and enemy strength `T`. | [Theater](value.md#theater-multiplier), Reinforce and Withdraw. |
 | Candidates | `GatherReinforceCandidates` | Incoming units with travel and join turns. | Selection. |
 | Selection | `SelectReinforcement` | `need`, the selection, help and the capture role. | [Reinforce priority](reinforcement.md#reinforce-priority). |
+| Withdraw recruits | `GatherWithdrawRecruits` | Our combat units at the battlefield that can leave. | [Withdraw priority](withdrawal.md#withdraw-priority). |
 
 ## Battlefield estimate
 
-`EstimateBattlefield` shares one local scan between fight and Reinforce estimates, computing the strength and stake the open offers need without pathfinding.
+`EstimateBattlefield` shares one local scan between fight, Reinforce and Withdraw estimates, computing the strength and stake the open offers need without pathfinding.
 
 | Step | Rule |
 | --- | --- |
 | Scan | `GatherLocalSet` builds the local set for the center's domains. |
 | Fight | `EstimateFight` computes the [stake](value.md#fight-priority). At an enemy city or unit it simulates local damage; at our city it reads the loop's copy of native city danger at the [enemy roll](value.md#damage-rolls). |
 | Reinforce | `EstimateReinforce` selects incoming units and scores the share of the fight priority they swing ([swing](reinforcement.md#swing)). |
+| Withdraw | `EstimateWithdraw` gathers recruits and scores the exposure the retreat removes at the share help leaves uncovered ([Withdraw priority](withdrawal.md#withdraw-priority)). |
 
 | Ordering rule | Why |
 | --- | --- |
 | City battlefields run before unit battlefields. | A unit fight reads its zone city's theater, which the city pass refreshes first. |
-| A city with both offers closed still refreshes its theater, with no stake. | Unit fights in its zone read that theater. |
-| An open Reinforce keeps the fight estimate running after the fight executed. | Selection needs the fight's current `L`, `T` and priority as its baseline. |
+| A city with every offer closed still refreshes its theater, with no stake. | Unit fights in its zone read that theater. |
+| An open Reinforce or Withdraw keeps the battlefield estimate running after the fight executed. | Reinforce selection needs the fight's current `L`, `T` and priority; Withdraw reads the refreshed theater, local set and strength share. |
 | Reinforce estimation stops when its offer is no longer open. | There is nothing left to score. A closed [gate](reinforcement.md#reinforce-priority) also skips the candidate scan. |
 
 The **local set** holds our units near enough to count at the center. Define `R_s` (**strike reach**) as `max(1, m) + rng`, where `m` is base moves and `rng` is attack range, 0 for a melee unit. `d` is plain plot distance. Land and sea units use `R_s`; an aircraft uses its range from its base, and it never counts toward `L` or becomes a candidate.
@@ -113,7 +117,7 @@ A wounded unit takes two reductions: native's damage modifier and the explicit h
 | `T` (**enemy strength**) at our city | `EnemyCityStrength`: approach-list units by `UnitStrengthAgainstCity`, plus visible units that native danger finds able to attack the city plot, each counted once. |
 | `T` at an enemy center | `EnemyCenterStrength`: visible hostile land or sea units within 4 plots in the center's domains, by `UnitStrength`, plus hostile cities within 4 plots. A city at 0 HP still contributes with 1 HP, and a revealed center city counts even when fogged. A city's strength already includes its garrison, which is excluded from the unit tally. |
 
-Counted enemies feed [Reinforce retirement](overview.md#overlapping-offers): an executed Reinforce retires another enemy battlefield when its target lies in the executed estimate's counted set. Our cities' own offers are exempt.
+Counted enemies feed [Reinforce retirement](overview.md#overlapping-offers): an executed Reinforce that moved a unit retires another enemy battlefield when its target lies in the executed estimate's counted set. Our cities' own offers are exempt.
 
 **Strength example.** All inputs are supplied and use a convenient scale: a unit at 40 of 100 HP with native strength 100; our city with strength value 1000 at 150 of 250 HP and local units totaling 100; a hostile city with strength value 1000 at 150 of 250 HP. `B_city` is a city's strength value, and `R_c` and `M_c` are its remaining and maximum HP.
 
@@ -140,6 +144,18 @@ Counted enemies feed [Reinforce retirement](overview.md#overlapping-offers): an 
 ## City defense recruits
 
 `GatherCityEndangered` reads the turn's [endangered units](value.md#exposure) and adds units in a friendly city that face danger; `GatherCityDefenders` adds other eligible defenders. The [city-defense table](execution.md#city-defense) defines both groups, including garrisons, aircraft and carriers. Endangered recruits contribute [defensive exposure](value.md#own-city-stake) even when the city faces no damage.
+
+## Withdraw recruits
+
+`GatherWithdrawRecruits` collects our units that can leave an enemy-unit or enemy-city battlefield. Own cities have no Withdraw recruits.
+
+| Rule | Detail |
+| --- | --- |
+| Source pool | The target's threat victims plus the [local strength set](#battlefield-estimate). At an enemy city, the garrison's victims also join. |
+| Eligibility | A living land or sea combat unit on the turn's starting roster, outside an army, able to move, outside a friendly city, not a held garrison and not already in `withdrawnUnits`. |
+| Order | Ascending unit ID, without duplicates. |
+
+An endangered recruit starts the offer; every other eligible recruit still travels with it. The [Withdraw page](withdrawal.md#recruits) covers how the group sets the priority and how execution moves it.
 
 ## Candidates and selection
 

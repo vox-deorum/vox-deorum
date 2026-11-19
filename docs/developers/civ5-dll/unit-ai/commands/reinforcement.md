@@ -1,12 +1,12 @@
 # Unit AI: Reinforcement Priorities
 
-Each [battlefield](overview.md#battlefields) has a **Reinforce offer** to bring distant units toward its center. Its **priority** is the battlefield's [fight priority](value.md#fight-priority) times the share of the outcome the arriving units swing, so marches and fights compete in one queue on one base.
+Each [battlefield](overview.md#battlefields) has a **Reinforce offer** to bring distant units toward its center. Its **priority** is the battlefield's [fight priority](value.md#fight-priority) times the share of the outcome the arriving units swing, so marches and fights compete in one queue on one base. At an enemy battlefield the offer shares the field with a [Withdraw](withdrawal.md); a Withdraw that moves a unit closes this offer for the rest of the turn.
 
 ```mermaid
 flowchart TD
     P["Priority = θ × stake × swing"]
     P --> T["Theater θ<br/>the fight's own multiplier"]
-    P --> B["Stake<br/>the fight's current stake"]
+    P --> B["Stake<br/>the fight's current stake<br/>exposure at s"]
     P --> W["Swing<br/>rise in our strength share"]
     W --> H["Help<br/>selected strength / join turns"]
     H --> S["Selection<br/>nearest units until full strength covers need"]
@@ -23,6 +23,7 @@ flowchart TD
 | `θ` | The zone's current theater. | The same value. |
 | Stake | What local units can change this turn. | The same value. |
 | Share | Already inside the stake, from damage. | **Swing**, from strength: 0 to 1. |
+| Peer offer | The battlefield's Withdraw competes for the exposure the fight does not protect. | Excluded by that Withdraw once it moves a unit. |
 
 ## Shared values and scales
 
@@ -37,9 +38,9 @@ Strength uses the [strength tallies](recruitment.md#strength-tallies); stake, we
 | `S` | Selected units' full strength, including any role unit. | Strength. |
 | `j` (**join turns**) | `max(1, travel turns − 1)`, from the [distance estimate](recruitment.md#candidates-and-selection). | Whole turns, at least 1. |
 | `help` | Sum over selected units of strength / `j`: strength discounted by how long it takes to join. | 0 to `S`. |
-| `s`, `s⁺` (**strength share**) | Our share of fighting power at the center, now and with `help` added to `L`. Defined in [swing](#swing). | 0 to 1; 0.5 at parity. |
+| `s`, `s⁺` (**strength share**) | Our share of fighting power at the center, now and with `help` added to `L`. The fight counts its exposure at `s`, and a [Withdraw](withdrawal.md) competes for the rest. Defined in [swing](#swing). | 0 to 1; 0.5 at parity. |
 | `θ` | Current [theater multiplier](value.md#theater-multiplier) of the destination's zone. | Theater floor (0.2) to 1. |
-| Stake | The battlefield fight's current [stake](value.md#fight-priority), exposure included. | Typical units. |
+| Stake | The battlefield fight's current [stake](value.md#fight-priority), with exposure at `s`. | Typical units. |
 
 ## Running example inputs
 
@@ -82,7 +83,7 @@ Examples use these inputs unless they state their own. Results are rounded only 
 | Gate | Our city | Enemy unit or city |
 | --- | --- | --- |
 | Border | None. | Destination zone must be ours or adjacent to ours, by the turn's initial zone data. |
-| Posture | None. | Withdraw gives priority 0. |
+| Posture | None. | Withdraw posture gives priority 0. |
 | **Short selection** | None: defending is never optional, so partial help still counts. | Candidates run out before full strength covers need, so `(L + S) / T < r`: priority 0. The stack must hold once it arrives. |
 | No selection | Priority 0. | Priority 0. |
 
@@ -96,7 +97,7 @@ The **swing** is the rise in our strength share when help joins.
 
 | Part | Reads as |
 | --- | --- |
-| `s` (**strength share**) | Our share of fighting power, squared per Lanchester's square law with the theater's exponent (`theater.steepness`, 2). It is the theater's [pressure](value.md#theater-multiplier) at an enemy city and `1 − pressure` at ours. 1 with no enemy strength. |
+| `s` (**strength share**) | Our share of fighting power, squared per Lanchester's square law with the theater's exponent (`theater.steepness`, 2). It is the theater's [pressure](value.md#theater-multiplier) at an enemy city and `1 − pressure` at ours. 1 with no enemy strength. The fight counts its exposure at `s`, so a Withdraw of the same units takes the rest. |
 | `L`, `T` | The battlefield's own tallies. At a city they are the theater inputs; at a unit they are centered on the target. |
 | `s⁺ − s` | Each added unit is worth less once our side dominates, so no separate cap is needed. As help grows without limit the swing approaches `1 − s`. |
 
@@ -141,7 +142,7 @@ Every row uses the running strengths and the spearman, so the swing is 0.332308,
 | Large enemy city (45) at 125 of 250 HP, 50 local damage | `0.2 + 0.8 × 0.653846 (c) = 0.723077` | `3 (C) × 0.24 (f_att) = 0.72` | `0.723077 (θ) × 0.72 (stake) × 0.332308 (swing) = 0.173` |
 | Same city at full health | `0.2 + 0.8 × 0.307692 (c = p) = 0.446154` | `3 (C) × 0.12 (f_att) = 0.36` | `0.446154 (θ) × 0.36 (stake) × 0.332308 (swing) = 0.053` |
 | Enemy city (20) at half HP, `L = 0`, `T = 100`, one unit of strength 100 at `j = 1` | 0.4 | 0: no local units | 0: a new battlefield, left to armies |
-| Knight worth 700 threatening our archer, 45 local damage, cityless zone | 0.2 (theater floor) | 1.075, from [destruction and exposure together](value.md#exposure) | `0.2 (θ) × 1.075 (stake) × 0.332308 (swing) = 0.071` |
+| Knight worth 700 threatening our archer, 45 local damage, cityless zone, equal strength | 0.2 (theater floor) | 0.695, from [destruction and exposure together](value.md#exposure) at `s = 0.5` | `0.2 (θ) × 0.695 (stake) × 0.332308 (swing) = 0.046` |
 | That knight alone, 30 local damage | 0.2 | 0.21 | `0.2 (θ) × 0.21 (stake) × 0.332308 (swing) = 0.014` |
 | That knight, no local damage | 0.2 | 0 | 0: no local units can hurt it |
 | That knight, only a unit of strength 25 in range | 0.2 | 0.21 | 0: `(100 (L) + 25 (S)) / 150 (T) = 0.83` is below `r = 1`, a short selection |
@@ -155,6 +156,19 @@ Every row uses the running strengths and the spearman, so the swing is 0.332308,
 | Spearman (help 100) | 0.332308 | 0.320 |
 | Supplied large group (help 400) | 0.609739 | 0.588 |
 | Unlimited | 0.692308 | 0.667, the bound |
+
+## Withdraw at the same battlefield
+
+A Reinforce and a [Withdraw](withdrawal.md) at one battlefield compete for the same turn. An executed Reinforce that moves a unit retires the open Withdraw. A Withdraw closes the Reinforce only when it moves or loses a unit; a Withdraw that moves nobody leaves Reinforce open. A refusal closes nothing.
+
+| Event | Effect on the other offer |
+| --- | --- |
+| Reinforce executes and moves a unit | The battlefield's open Withdraw retires. |
+| Withdraw moves or loses a unit | This Reinforce retires, along with the battlefield's fight. |
+| Withdraw moves nobody | This Reinforce stays open. |
+| Either offer is refused | Nothing else closes. |
+
+The shared stake already carries the exposure split by [strength share](value.md#strength-share): the fight keeps the exposure its own strength can protect, and the Withdraw competes for the part help does not cover. A Withdraw that moves a unit therefore closes the Reinforce, and a Reinforce that moved a unit retires the Withdraw before it can pull back the new arrivals.
 
 ## Marches against fights
 

@@ -173,7 +173,7 @@ The cutoff roster supplies the current view. An event reads the latest roster fr
 | --- | --- |
 | `type` | The recorded event type, such as `CityCaptureComplete` |
 | `id` | The recorded event's row ID |
-| `turn` | The turn it was recorded |
+| `turn` | The recorded turn, or the receiver's next turn for a delayed defender report. The source citation keeps the original date. |
 | Payload fields | Each permitted field in camelCase. An ID may also offer a link: `oldOwnerId` comes with `oldOwner` when the player can be resolved. |
 | Recorded names | `tech`, `policy`, `branch`, `oldBranch`, `newBranch`, `religion`, `unit` and `building` hold the names as recorded. A numeric ID alone does not supply a name. |
 | `person`, `kind` | A named great person's own name and what happened: `born`, `expended` (used for an action) or `died` |
@@ -192,12 +192,18 @@ A player ID of -1 means "nobody", and the matching player fact is then missing. 
 | `SetAlly` | `minorPlayer`, `oldAllyPlayer`, `newAllyPlayer` |
 | `PlayerGoldenAge` | `player`, `starting` |
 | `TeamTechResearched` | `teamId`, `players`, `player` for a single linked member, `tech`. A witnessed event also carries `changeAmount`; a negative value means the team lost the technology. A gain can come from research, a grant or theft. |
+| `EspionageResult` | `perspective` (`source` or `target`), `spyResult`, `cityName` when recorded, and links to the parties when their identity is available. The source may also get an inferred `tech` name. |
+| `ElectionResultSuccess`, `ElectionResultFailure` | `player`, signed `influenceChange`, and `cityState` when the capital's label resolves. Failure applies only to a player with a recorded spy in the election. |
 | `PlayerAdoptPolicyBranch` | `player`, `branch` |
 | `UnitCreated` | `player`, `unit`, `plot`. A named great person adds `person` and `kind: 'born'`. Unwitnessed births supply only the owner and name. |
 | `GreatPersonExpended` | `player`, `unit`, `plot`. A named great person adds `person` and `kind: 'expended'`. |
 | `UnitPrekill` | `player` (the owner), `unit`, `plot`, `person`, `kind: 'died'` and `attackingPlayer` when the final removal records a known attacker |
 
 The event types a rule may name are the ones in `newspaperEventConfigs` in `mcp-server/src/newspaper/projection.ts`. [Evidence the facts rely on](#evidence-the-facts-rely-on) describes how those rows are projected.
+
+Operation reports are private to the spy's owner and the city defender. The defender can report a detected operation from its next recorded turn if it still appears to hold the city. Only `Identified` and `Killed` reveal the source. `Detected` and `KilledNotIdentified` leave the source anonymous; `Undetected` produces no defender report. The recording does not confirm that the game delivered a notification.
+
+Only the spy's owner can infer a technology name. The query looks for one named positive gain by the owner's team in the next ten event IDs on the same turn and requires that only one operation matches that gain. A killed spy can still have completed the operation. The gain may come from ordinary research or another grant, so use wording such as "may have obtained" and leave the technology unnamed when the match is unclear. Election influence is private to the affected player and is measured in influence points.
 
 ## Pair
 
@@ -286,7 +292,7 @@ A first observation therefore establishes a baseline. A city seen for the first 
 
 ## Evidence the facts rely on
 
-The shared evidence query reads recorded rows for one receiver. It returns cutoff snapshots, optional comparison snapshots, derived diplomacy and events after `previousCheckTurn` through the cutoff. Projection applies recorded visibility and each event's contact and insight rules. City snapshots include the recorded `IsCapital`. A readable player row includes recorded `MilitaryStrength` for the receiver or at access level 2.
+The shared evidence query reads recorded rows for one receiver. It returns cutoff snapshots, optional comparison snapshots, derived diplomacy and events after `previousCheckTurn` through the cutoff. Projection applies recorded visibility and each event's contact and insight rules. Espionage operations and elections use the recorded participant IDs for access. City snapshots include the recorded `IsCapital`. A readable player row includes recorded `MilitaryStrength` for the receiver or at access level 2.
 
 World news can report a technology gain or a named great person's birth without a witness. The receiver must have met the owner by the event turn, including every member of a team that gained a technology. The unwitnessed record carries only the owner ID and name of the technology or person. For example, a paper can report that Hypatia appeared in Persia without revealing her city or unit type.
 

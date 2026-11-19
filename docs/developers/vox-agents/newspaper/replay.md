@@ -155,6 +155,10 @@ An installed Edge browser (`157.0.8103.51`) opened the 81-issue archive, read th
 
 Local verification artifacts are under `.tmp/newspaper-plan3/`: `acceptance.json` identifies the output database, `browser-acceptance.json` records the browser result, and `browser-latest.png` shows the final issue. Use the command-line workflow above for reproducible new runs. To inspect the measured archive manually, choose Resume with that output path, run ID `netherlands-acceptance`, and receiver `7`.
 
+## Replaying private espionage reports
+
+Use the Netherlands recording below with the `vox-agents/newspaper/probes` overlay. Replay turn 216 for India (player 1) and the Ottomans (player 5). India's operation at Istanbul (row `216000196`) is followed by the team's Civil Service gain (`216000197`). The Ottoman report names India and cites the operation and its next recorded turn (`216000654`); the technology inference is private to India. The source inspector shows the original date and the report date when they differ. See [event facts](triggers/facts.md#event) for what these records can establish.
+
 ## Historical evidence-query verification
 
 This historical run measures recorded evidence retrieval and replay behavior.

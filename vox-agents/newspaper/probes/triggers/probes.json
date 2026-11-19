@@ -157,5 +157,63 @@
     },
     "tags": ["politics"],
     "importance": 55
+  },
+  {
+    "id": "probe-espionage-tech",
+    "subject": "event",
+    "event": "EspionageResult",
+    "when": [
+      "event.perspective == 'source'",
+      "event.knows('tech')"
+    ],
+    "values": {
+      "technology": "event.tech",
+      "civilization": "event.knows('targetPlayer') && event.targetPlayer.knows('name') ? event.targetPlayer.name : 'a foreign power'",
+      "operationSite": "event.knows('cityName') ? event.cityName : 'a foreign city'"
+    },
+    "tags": ["science"],
+    "importance": 70
+  },
+  {
+    "id": "probe-spy-loss",
+    "subject": "event",
+    "event": "EspionageResult",
+    "when": [
+      "event.perspective == 'source'",
+      "event.spyResult == 'Killed' || event.spyResult == 'KilledNotIdentified'"
+    ],
+    "values": {
+      "operationSite": "event.knows('cityName') ? event.cityName : 'a foreign city'"
+    },
+    "tags": ["military"],
+    "importance": 85
+  },
+  {
+    "id": "probe-defender-report",
+    "subject": "event",
+    "event": "EspionageResult",
+    "when": ["event.perspective == 'target'"],
+    "values": {
+      "civilization": "event.knows('sourcePlayer') && event.sourcePlayer.knows('name') && !event.sourcePlayer.self ? event.sourcePlayer.name : 'an unidentified power'",
+      "operationSite": "event.knows('cityName') ? event.cityName : 'our territory'"
+    },
+    "tags": ["international"],
+    "importance": 75
+  },
+  {
+    "id": "probe-election-influence",
+    "subject": "event",
+    "event": ["ElectionResultSuccess", "ElectionResultFailure"],
+    "when": [
+      "event.playerId == self.id",
+      "event.knows('influenceChange')",
+      "event.influenceChange != 0"
+    ],
+    "values": {
+      "change": "event.influenceChange",
+      "cityState": "event.knows('cityState') ? event.cityState : 'a city-state'"
+    },
+    "tags": ["international"],
+    "importance": 55
   }
 ]

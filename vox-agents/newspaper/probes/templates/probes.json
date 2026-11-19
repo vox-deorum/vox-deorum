@@ -196,5 +196,61 @@
         "weight": { "base": 1 }
       }
     ]
+  },
+  {
+    "id": "probe-espionage-tech-account",
+    "triggers": ["probe-espionage-tech"],
+    "tags": ["science"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "probe-espionage-tech-report",
+        "headline": "A likely theft of {{technology}}",
+        "body": ["Our operation in {{operationSite}} may have obtained {{technology}} from {{civilization}}."],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "probe-spy-loss-account",
+    "triggers": ["probe-spy-loss"],
+    "tags": ["military"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "probe-spy-loss-report",
+        "headline": "An agent lost in {{operationSite}}",
+        "body": ["Our spy was killed during an operation in {{operationSite}}."],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "probe-defender-report-account",
+    "triggers": ["probe-defender-report"],
+    "tags": ["international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "probe-defender-report-story",
+        "headline": "A foreign operation in {{operationSite}}",
+        "body": ["A spy from {{civilization}} was detected in {{operationSite}}."],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "probe-election-influence-account",
+    "triggers": ["probe-election-influence"],
+    "tags": ["international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "probe-election-influence-report",
+        "headline": "Election news from {{cityState}}",
+        "body": ["Our influence with {{cityState}} changed by {{change}}."],
+        "weight": { "base": 1 }
+      }
+    ]
   }
 ]

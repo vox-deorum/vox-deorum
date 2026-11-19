@@ -192,7 +192,7 @@ export interface DealTermsConfig {
 
 /** How one supported event type becomes newspaper evidence. Event types without a config are never reported. */
 export interface NewspaperEventConfig {
-  /** Payload fields copied into evidence. Name fields publish under their name key; unlisted payload fields never enter editorial input. */
+  /** Payload fields copied by generic projection. Private types provide their own projection. */
   fields: string[];
   /** Player and team ID fields naming the event's subjects, which the receiver must have met. */
   subjects: EventSubjects;
@@ -215,12 +215,16 @@ export interface NewspaperEventConfig {
     nameFields: readonly (keyof typeof eventNameFields)[];
     allows?: (payload: Record<string, unknown>) => boolean;
   };
+  /** Private event types are projected only for their exact recorded parties, never from visibility flags. */
+  private?: boolean;
 }
 
 /** Subjects for events naming a single player. */
 const playerSubject: EventSubjects = { playerIdFields: ['PlayerID'] };
 /** Subjects for events naming a single team. */
 const teamSubject: EventSubjects = { playerIdFields: [], teamIdFields: ['TeamID'] };
+/** Both election outcomes report privately to the affected player. */
+const privateElection: NewspaperEventConfig = { fields: [], subjects: playerSubject, private: true };
 
 /** Newspaper reporting policy for every supported event type. War and peace share one policy. */
 export const newspaperEventConfigs: Record<string, NewspaperEventConfig> = {
@@ -366,7 +370,14 @@ export const newspaperEventConfigs: Record<string, NewspaperEventConfig> = {
     fields: ['OwnerID', 'ReligionID', 'CityX', 'CityY'],
     subjects: { playerIdFields: ['OwnerID'] },
     cities: { City: 'OwnerID' }
-  }
+  },
+  EspionageResult: {
+    fields: [],
+    subjects: { playerIdFields: ['SourcePlayerID', 'TargetPlayerID'] },
+    private: true
+  },
+  ElectionResultSuccess: privateElection,
+  ElectionResultFailure: privateElection
 };
 
 /** Recorded name fields and the evidence key each becomes. Unlisted values stay private. */
@@ -571,7 +582,8 @@ function projectWorldNewsEvent(row: Selectable<GameEvent>, config: NewspaperEven
 /** Project a supported event under its configured policy, using dated contact and recorded access. */
 export function projectNewspaperEvent(row: Selectable<GameEvent>, context: NewspaperProjectionContext): NewspaperEvent | undefined {
   const config = newspaperEventConfigs[row.Type];
-  if (!config) return undefined;
+  // Private events use their participant projection and never become generic visibility evidence.
+  if (!config || config.private) return undefined;
   const replacement = row.Type === 'UnitCreated' && !!nameFieldText(row.Payload, 'Person') && convertedUnit(row, context);
   if (!witnessedEvent(row, context.receiverPlayerID)) return replacement ? undefined : projectWorldNewsEvent(row, config, context);
   if (row.Type === 'UnitPrekill' && !reportablePrekill(row, context)) return undefined;

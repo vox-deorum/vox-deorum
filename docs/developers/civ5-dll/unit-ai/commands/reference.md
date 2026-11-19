@@ -5,7 +5,7 @@ Use this reference to tune or inspect the [command loop](overview.md). It lists 
 ```mermaid
 flowchart TD
     S["Settings<br/>defines and constant tables"] --> W["Turn inputs<br/>mapped flavors, weights and scales"]
-    W --> P["Priorities<br/>fight and Reinforce"]
+    W --> P["Priorities<br/>fight, Reinforce and Withdraw"]
     W --> F["Search preferences<br/>geography, posture and kind"]
     P --> R["Turn record<br/>offers, snapshots and decisions"]
     F --> R
@@ -33,7 +33,7 @@ The game defines are in `(1) Community Patch/Database Changes/Defines/CoreDefine
 | Posture | RISK | OCCUPATION | ATTRITION | HOLD_CITY | HOLD_GROUND |
 | --- | --- | --- | --- | --- | --- |
 | None | 0 | 0 | 0 | 0 | 0 |
-| Withdraw | −30 | −20 | 0 | +10 | −10 |
+| Withdraw posture | −30 | −20 | 0 | +10 | −10 |
 | Attrition | −20 | 0 | +20 | 0 | 0 |
 | Exploit flanks | −10 | 0 | +10 | 0 | 0 |
 | Steamroll | +10 | +5 | +15 | −10 | −10 |
@@ -46,9 +46,10 @@ The game defines are in `(1) Community Patch/Database Changes/Defines/CoreDefine
 | Unit fight | 0 | 0 | 0 | 0 | 0 |
 | City fight | +10 | +15 | −25 | −5 | −5 |
 | Reinforce | −15 | −10 | −10 | +10 | +20 |
+| Withdraw | −30 | 0 | 0 | +10 | 0 |
 | Own-city fight | 0 | 0 | 0 | 0 | 0 |
 
-The own-city kind row adds no offset. Posture rows follow native values except that Hedgehog uses −15 for RISK (willingness to accept danger), compared with native's −10. Enemy-city and reinforcement kind rows are derived from native's CityAssault and Reinforce rows by subtracting the mean of their posture rows and rounding to multiples of 5. Withdraw zones contribute their posture offsets to fights and reinforcement; the loop has no separate withdrawal command.
+The own-city kind row adds no offset. Posture rows follow native values except that Hedgehog uses −15 for RISK (willingness to accept danger), compared with native's −10. Enemy-city and reinforcement kind rows are derived from native's CityAssault and Reinforce rows by subtracting the mean of their posture rows and rounding to multiples of 5. The Withdraw kind row is set directly and applies to the Withdraw command. Withdraw posture zones also contribute their posture offsets to the searches there, including fights and Reinforce.
 
 ## Weights file
 
@@ -67,6 +68,8 @@ The own-city kind row adds no offset. Posture rows follow native values except t
 | `city.units` | 3 | Size of a city fight in typical units; this is `C` (city allowance). |
 | `readiness.maxFailures` | 3 | Truncated to an integer and floored at 1 for the failure limit. |
 | `reinforce.strengthRatio` | 1 | `r` (desired strength ratio): with `T` (enemy strength) and `L` (local friendly strength), need is `max(0, rT − L)`, and selection stops once full strength covers it. Selection and the enemy-center parity gate use `r`; the score reads the resulting selection. |
+| `withdraw.enabled` | 1 | Nonzero lets enemy-unit and enemy-city battlefields offer Withdraw. |
+| `exposure.split` | 1 | Nonzero splits exposure by strength share; 0 counts it in full. |
 
 Enemy-unit stakes use attrition, risk, hold-ground and hold-city (city relief); enemy-city stakes use occupation, attrition and risk. Own-city stakes use hold-city and risk. The simulator's settings template requires a positive reinforcement strength ratio; overrides use the supported table names.
 
@@ -118,16 +121,16 @@ These parameters affect both the shared value functions and the simulator's grad
 
 | Record | Contents |
 | --- | --- |
-| `offers` | Battlefield, kind, target, owner and zone, once per offer in the pass. |
+| `offers` | Battlefield, kind, target, owner and zone, once per offer slot in the pass, including gated slots. |
 | `steps` | Opening estimate at step 0, then one step per post-command estimate. A command ends its step; the final end reason is `noReadyOffer`, `commandCap` or `stopped`. A host failure, game over or exception closes the last step as `stopped`, including post-command threat or estimate failures. |
-| Snapshot | Ready rank, state, estimate, theater multiplier, importance, pressure, contest, damage level, swing and nonzero stake terms. Each term retains value and weighted contribution. Resolved weights appear once per pass. Missing terms mean zero value and contribution. |
-| Event | Ordered check, provider refusal or terminating command, with before/after state and estimate. A refusal retains its terminating command with a READY-to-REFUSED transition and adds a separate refusal event. Count commands once, including refusals, and count skips from checks ending at the failure limit. Reduced Reinforce checks return to the current queue. |
+| Snapshot | Ready rank, offer slot, state, estimate, theater multiplier, importance, pressure, contest, damage level, swing (1 for fights and Withdraw), exposure share, removable exposure, Withdraw share, chosen withdrawal destinations and nonzero stake terms (the battlefield's fight stake). Each term retains value and weighted contribution. Resolved weights appear once per pass. Missing terms mean zero value and contribution. |
+| Event | Ordered check, provider refusal or terminating command, with before/after state and estimate. A refusal retains its terminating command with a READY-to-REFUSED transition and adds a separate refusal event. Count commands once, including refusals, and count skips from checks ending at the failure limit. Reduced Reinforce and Withdraw checks return to the current queue. |
 | Closed state | Target gone, city lost, retired, failure limit, provider refusal or execution. Its scalar estimate remains the last computed value. |
-| `commands` | Step and command identity, execution priority `fEstimate`, prior failures, admission and final flavor decisions, geometry, attempts, selected units, movement, existing endangered-unit dispositions and retired offers. City-fire-only commands remain present. |
+| `commands` | Step and command identity, execution priority `fEstimate`, prior failures, admission and final flavor decisions, geometry, attempts, selected units, moved units, existing endangered-unit dispositions and retired offers. City-fire-only commands remain present. |
 | `checks`, `vSkipped`, `bCommandCap` | Readiness and count inputs, preserving the loop's failure accounting. |
 | Settings and turn inputs | Complete settings compared with the same build's defaults, mapped flavors, resolved weights and fixed scales. The simulator writes settings once per start, and inputs once per evaluated-player pass. |
 
-Trace version 1 writes every offer in the opening step, then complete replacement rows only when recorded scalars change. Reconstruct a step by replacing rows keyed by battlefield and Reinforce flag in the preceding estimate snapshot. An empty snapshot keeps that table. Events describe queue transitions within a step and do not alter this baseline. New offers add rows and closed offers remain present. `full_snapshots` in `learning/evaluation/operational_records.py` implements this rule.
+The trace writes every offer slot in the opening step, then complete replacement rows only when recorded scalars change. Rows are keyed by battlefield and offer slot. Reconstruct a step by replacing rows in the preceding estimate snapshot. An empty snapshot keeps that table. Events describe queue transitions within a step and do not alter this baseline. New offers add rows and closed offers remain present.
 
 Snapshots carry no unit lists; command and check structures hold detailed diagnostics. The shared record does not define the capture schema or search-order export. See the [simulator guide](../../../../../../vox-deorum-rl/docs/operations/simulator.md#records) for rollout writing and host integration.
 
@@ -157,7 +160,7 @@ A search request's **purpose** labels its command and territory; retries keep th
 | --- | --- |
 | `CityAttack` | Enemy-city fight. |
 | `CityDefense` | Own-city fight. |
-| `Reinforce` | Reinforcement. |
+| `Reinforce` | Reinforcement and withdrawal. |
 | `BattleFriendly` | Enemy-unit fight in our team's zone. |
 | `BattleNeutral` | Enemy-unit fight in unowned territory, or another team's zone whose owner is not at war with us. |
 | `BattleEnemy` | Enemy-unit fight in enemy territory. |
@@ -183,6 +186,8 @@ The source is in `civ5-dll/CvGameCoreDLL_Expansion2`.
 | Strength | `LocalStrength` and `LocalCityStrength` read the strength filter; `EnemyCenterStrength` counts opposition. |
 | Incoming selection | `GatherReinforceCandidates`, `TravelTurns`, `IsCapturer` and `SelectReinforcement` fill `SOperationalCandidate` and `SOperationalReinforce`. |
 | Reinforce lifecycle | `CheckReinforce` checks reach, `ExecuteReinforce` marches through `CanMarch` and `MarchFlags`, and `RetiresReinforce` applies overlap retirement. |
+| Withdraw estimate | `EstimateWithdraw` calls `GatherWithdrawRecruits` for the recruits, `RemovableExposure` for the exposure a retreat removes, and `WithdrawPriority` for the estimate from theater, risk weight, typical-unit worth and the uncovered strength share. |
+| Withdraw lifecycle | `CheckWithdraw` chooses per-domain destinations through `WithdrawDestination`; `ExecuteWithdraw` runs one `PositionUnitsAroundTarget` search per domain, with the land group first. |
 | Queue ranking | `OperationalOfferBefore` shares the estimate, kind, plot and stable build-order comparison between native selection and sorted snapshot ranks. |
 
 ### Native integration
@@ -209,7 +214,7 @@ The simulator extracts the loop, weights and value source from the DLL and suppl
 
 ## Copies of native functions
 
-Each copy's source comment names its native original so a Vox Populi update can be compared against it. Copies need explicit upkeep when upstream behavior changes.
+Each copy's source comment names its native original or the copy it follows, so a Vox Populi update can be compared against it. Copies need explicit upkeep when upstream behavior changes.
 
 | Copy | Native original | Change |
 | --- | --- | --- |
@@ -227,6 +232,7 @@ Each copy's source comment names its native original so a Vox Populi update can 
 | `GetDangerByThreat` | Unit overload of `CvDangerPlotContents::GetDanger` | List each enemy unit's and city's damage contribution. It differs from native in three intended ways: the [enemy roll](value.md#damage-rolls) for the attacker's damage, with our unit's retaliation at our roll for the suicide check; city danger from the loop's own city-danger copy; and the garrison exposure threshold at the actual city-fall point instead of native's 50 HP margin. |
 | `GetCityDangerByThreat` | City overload of `CvDangerPlotContents::GetDanger` | Supply own-city danger for defense and relief. It copies the city overload, adds the per-threat damage list, and runs at the [enemy roll](value.md#damage-rolls), with our interceptor's hit at our roll. |
 | `GatherReinforceCandidates` | Candidate filters in `CvTacticalAI::PlotReinforcementMoves` | The [candidate and selection rules](recruitment.md#candidates-and-selection), with the [enemy-center gates](reinforcement.md#reinforce-priority). |
-| `CanMarch` and `MarchFlags` | Far-out path flags and danger limit in `CvTacticalAI::PositionUnitsAroundTarget` | Safe embark for land units in place of native's two no-embark rules; first-stop danger at half remaining HP for attacking non-siege units, otherwise 0. |
+| `CanMarch` and `MarchFlags` | Far-out path flags and danger limit in `CvTacticalAI::PositionUnitsAroundTarget` | Safe embark for land units in place of native's two no-embark rules; first-stop danger at half remaining HP for attacking non-siege units, otherwise 0. A Withdraw also accepts a first stop below both the current danger and the unit's hit points. |
 | `SearchReachPlots` | One domain of `TacticalAIHelpers::UpdatePlotDistanceToTarget` | The flood stops at 4 steps. |
-| `PositionUnitsAroundTarget` | `CvTacticalAI::PositionUnitsAroundTarget` | Called by `ExecuteReinforce`. Run the search through `ExecuteEngagement` after the spotter move, exclude held garrisons from spotting and path moves, and send path moves through `CanMarch` and `MarchFlags`. |
+| `WithdrawDestination` | The `SearchReachPlots` flood of one domain of `TacticalAIHelpers::UpdatePlotDistanceToTarget` | Flood from the battlefield or the first endangered recruit, stop at the recruit range, and pick the closest friendly city, which must be coastal for a sea domain. Ties go to the lower plot index. |
+| `PositionUnitsAroundTarget` | `CvTacticalAI::PositionUnitsAroundTarget` | Called by `ExecuteReinforce` and `ExecuteWithdraw`. Run the search through `ExecuteEngagement` after the spotter move, exclude held garrisons from spotting and path moves, and send path moves through `CanMarch` and `MarchFlags`. |

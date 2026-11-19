@@ -107,6 +107,10 @@ A land unit in a friendly-team frontline city adds two terms before HOLD_CITY sc
 
 A city projected to fall even with the unit inside loses the frontline bonus and its related safety exemptions. [Garrison timing](../tactics/engagements.md#garrisons) determines whether the unit joins a zone search.
 
+### Operational rows
+
+The [operational loop](../commands/overview.md) maps the same five flavors into separate priority and search weights. Its posture rows and command-kind rows, including Withdraw, are listed in the [command reference](../commands/reference.md#posture-rows-and-kind-rows). A Withdraw command uses the Withdraw kind row; a Withdraw posture zone applies its posture row to every search there.
+
 ## RISK thresholds
 
 `TacticalAIHelpers::SetSearchRiskThresholds` sets two values once per search:

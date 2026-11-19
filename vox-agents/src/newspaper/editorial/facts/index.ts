@@ -1,6 +1,6 @@
 /** Build one permission-filtered fact model for all expression groups in a check. */
-import type {
-  NewspaperEvent, NewspaperEvidence, NewspaperSnapshot, NewspaperSourceReference,
+import {
+  eventReportTurn, type NewspaperEvent, type NewspaperEvidence, type NewspaperSnapshot, type NewspaperSourceReference,
 } from '../../../../../mcp-server/dist/newspaper/evidence.js';
 import { resolveGameSpeedMultiplier } from '../../../knowledge/game-speed.js';
 import type { DiplomacyCheck } from '../diplomacy/war-peace.js';
@@ -93,11 +93,12 @@ export function addPressFacts(model: NewspaperFactModel, press: NewspaperPress):
   if (wrap) privateWrap.set(enriched, wrap);
   return enriched;
 }
-/** Collect the projected events once in recorded turn and insertion order. */
+/** Collect the projected events once in effective reporting turn and insertion order. */
 function datedEvents(evidence: NewspaperEvidence): NewspaperEvent[] {
   const byId = new Map((evidence.history?.events ?? []).map(event => [event.source.id, event]));
   for (const event of evidence.events) byId.set(event.source.id, event);
-  return [...byId.values()].sort((a, b) => a.source.turn - b.source.turn || a.source.id - b.source.id);
+  return [...byId.values()].sort((a, b) =>
+    eventReportTurn(a) - eventReportTurn(b) || a.source.id - b.source.id);
 }
 
 /** Expose the small set of public game settings used by editorial rules. */
@@ -123,7 +124,7 @@ export function buildNewspaperFacts(
   const longTurns = options.longTurns ?? Math.max(1, Math.round(40 * (speed ?? 1)));
   if (!Number.isSafeInteger(longTurns) || longTurns < 1) throw new RangeError('longTurns must be a positive integer.');
 
-  const events = datedEvents(evidence);
+  const events = datedEvents(evidence).filter(event => eventReportTurn(event) <= cutoffTurn);
   const cities = buildTimeline(evidence, 'cities', events);
   const players = buildTimeline(evidence, 'players', events);
   const wrap = mapWrap(metadata);
@@ -155,7 +156,7 @@ export function buildNewspaperFacts(
       evidence, metadata, receiverId: receiverPlayerID, turn, ideologies: options.ideologies,
       get players() { return playerRows ??= rowsAt(players, turn); },
       get cities() { return cityRows ??= rowsAt(cities, turn); },
-      get events() { return eventRows ??= events.filter(event => event.source.turn <= turn); },
+      get events() { return eventRows ??= events.filter(event => eventReportTurn(event) <= turn); },
       /** The first projection only approximates founding when the recording itself has a baseline. */
       firstCityTurn(row) {
         const start = metadata.recordingStartTurn;
@@ -217,14 +218,14 @@ export function buildNewspaperFacts(
     subjects: {
       city: cutoff.cities.map(row => row.subjectID),
       player: cutoff.players.map(row => row.subjectID),
-      event: events.filter(event => event.source.turn > previousCheckTurn).map(event => event.source.id),
+      event: events.filter(event => eventReportTurn(event) > previousCheckTurn).map(event => event.source.id),
       pair: [],
       incident: [],
     },
     cities: subjects(cities, cutoff.cities, buildCityFacts, buildCitySnapshotFacts),
     players: subjects(players, cutoff.players, buildPlayerFacts, buildPlayerSnapshotFacts),
     events: events.map(event => ({
-      id: event.source.id, turn: event.source.turn, fields: buildEventFacts(event, cutoff), sources: rowSources(event),
+      id: event.source.id, turn: eventReportTurn(event), fields: buildEventFacts(event, cutoff), sources: rowSources(event),
     })),
     pairs: {},
     incidents: [],

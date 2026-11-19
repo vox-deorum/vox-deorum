@@ -21,6 +21,10 @@ describe('newspaper MCP transports', () => {
     const shutdownFile = path.join(directory, 'shutdown-url.txt');
     const writer = await createEvidenceDatabase(filename);
     await seedEvidence(writer);
+    await event(writer, 108, 5, 'EspionageResult', {
+      SourcePlayerID: 1, TargetPlayerID: 0, SpyResult: 'Detected', CityX: 4, CityY: 3,
+    }, 0);
+    await event(writer, 109, 6, 'PlayerDoTurn', { PlayerID: 0 }, 0);
     await event(writer, 107, 8, 'SetAlly', { MinorPlayerID: 1, OldAllyPlayerID: 0, NewAllyPlayerID: 3,
       NewAllyPlayer: { Name: 'Leader3', Civilization: 'Civ3' } });
     await summary(writer, 8, 0, 4, 2, { Relationships: { Civ1: ['War (Our Score: 0%; Our War Weariness: 10%)'] } });
@@ -37,6 +41,10 @@ describe('newspaper MCP transports', () => {
     const db = openEvidenceRecording(filename);
     const request = { receiverPlayerID: 0, previousCheckTurn: 5, cutoffTurn: 10, historyFromTurn: 4, comparisonRange: { fromTurn: 5, toTurn: 10 } };
     const expected = await queryNewspaperEvidence(db, request);
+    const defender = expected.events.find(row => row.type === 'EspionageResult');
+    expect(defender).toMatchObject({ source: { id: 108, turn: 5 }, reportTurn: 6,
+      values: { Perspective: 'target', SpyResult: 'Detected' } });
+    expect(defender?.values).not.toHaveProperty('SourcePlayerID');
     const restoreManagers = await isolateExternalManagers();
     vi.spyOn(knowledgeManager, 'getStore').mockReturnValue({ getDatabase: () => db } as KnowledgeStore);
     vi.spyOn(knowledgeManager, 'getTurn').mockReturnValue(11);

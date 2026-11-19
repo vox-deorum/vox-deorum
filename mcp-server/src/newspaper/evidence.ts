@@ -40,6 +40,8 @@ export const newspaperEventSchema = z.object({
   source: newspaperSourceReferenceSchema,
   relatedSources: z.array(newspaperSourceReferenceSchema).optional().describe('Permitted supporting rows used for joined values'),
   type: z.string().describe('Recorded event type'),
+  reportTurn: z.number().int().min(0).optional()
+    .describe('Effective report turn when a defender report follows the original operation turn'),
   values: z.record(z.string(), z.unknown()).describe('Selected raw event payload')
 });
 
@@ -116,3 +118,8 @@ export type NewspaperHistory = z.infer<typeof newspaperHistorySchema>;
 export type NewspaperEvidence = z.infer<typeof newspaperEvidenceSchema>;
 export type NewspaperDiplomacySnapshot = z.infer<typeof newspaperDiplomacySnapshotSchema>;
 export type NewspaperDiplomacyGap = z.infer<typeof newspaperDiplomacyGapSchema>;
+
+/** Date a deferred report by its eligible turn while preserving its original citation date. */
+export function eventReportTurn(event: NewspaperEvent): number {
+  return event.reportTurn ?? event.source.turn;
+}

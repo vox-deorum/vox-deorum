@@ -1,4 +1,5 @@
-import type { NewspaperEvent, NewspaperSnapshot, NewspaperSourceReference } from '../../../../../mcp-server/dist/newspaper/evidence.js';
+import { eventReportTurn, type NewspaperEvent, type NewspaperSnapshot,
+  type NewspaperSourceReference } from '../../../../../mcp-server/dist/newspaper/evidence.js';
 import { isRecord } from '../../../utils/guards.js';
 import { uniqueSources } from '../shared/sources.js';
 import { compareFactDates, eventsForCity, isCapture, isFounding, recordedId } from './event-city.js';
@@ -241,8 +242,10 @@ export function buildCityFacts(row: NewspaperSnapshot, context: FactBuildContext
   }
 
   const { built, conversions } = cityChanges(events, history);
-  fields.events = windowFacts(events.map(event => ({ turn: event.source.turn,
-    field: fact(reference('event', event.source.id), [...sources, ...rowSources(event)]) })), sources);
+  const eventEntries = events.map(event => ({ turn: eventReportTurn(event),
+    field: fact(reference('event', event.source.id), [...sources, ...rowSources(event)]) }))
+    .sort((a, b) => a.turn - b.turn);
+  fields.events = windowFacts(eventEntries, sources);
   fields.trained = windowFacts(events.filter(event => event.type === 'CityTrained').map(trained), sources);
   fields.built = windowFacts(built, sources);
   fields.conversions = windowFacts(conversions, sources);

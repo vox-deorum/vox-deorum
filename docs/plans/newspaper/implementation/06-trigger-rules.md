@@ -1,14 +1,12 @@
 # Plan 6: trigger rules
 
-**Status: open.** The owner accepted the mechanics of the 14 stock rules and 15 authored templates. Stages 5 through 7 and Stage 4a are implemented. The [trigger facts](../../../developers/vox-agents/newspaper/triggers/facts.md#covert-presence-and-roster-points), [replay guide](../../../developers/vox-agents/newspaper/replay.md) and [knowledge reference](../../../../mcp-server/docs/knowledge.md) describe how Stage 4a derives spy and diplomat presence and access to detail from existing rosters.
+**Status: open.** The owner accepted the mechanics of the 14 stock rules and 15 authored templates. Stages 4a, 4b and 5 through 7 are implemented. The [trigger facts](../../../developers/vox-agents/newspaper/triggers/facts.md#covert-presence-and-roster-points) and [knowledge reference](../../../../mcp-server/docs/knowledge.md) describe how Stage 4a derives covert presence and access to detail from existing rosters.
 
 [Plan 4](04-triggers-templates-and-styles.md) owns trigger tuning, template writing and language styles, and decides which of the new capabilities become stock stories. [Plan 7](07-llm-editors.md) uses that baseline for LLM editing and comparison.
 
 ## Goal and success criteria
 
-The remaining stages let a catalogue author report an espionage outcome, a likely stolen technology or a change in election influence; describe forces observed on the receiver's fronts; and report the type and port of a new ship.
-
-Each remaining stage adds a group of capabilities and verifies it with [catalogue probes](../../../developers/vox-agents/newspaper/triggers/overview.md#probe-catalogue-behavior).
+Stage 4c will let a catalogue author describe forces observed on the receiver's fronts and report the type and port of a new ship. [Catalogue probes](../../../developers/vox-agents/newspaper/triggers/overview.md#probe-catalogue-behavior) verify what observations can support.
 
 The strategist's tools (`get-cities`, `get-players`, `get-events`, `get-military-report`) keep their current outputs.
 
@@ -16,7 +14,6 @@ The strategist's tools (`get-cities`, `get-players`, `get-events`, `get-military
 
 | Wanted | Gap |
 | --- | --- |
-| Espionage stories | The recorder stores the queued `EspionageResult` and election results. The queue row precedes the reward and gives no confirmation of what the defender saw. |
 | Front reports | The recorder already saves private `TacticalZones` rows with posture and visible unit counts. The newspaper does not read them yet. |
 | Ship launches | The newspaper already joins some `CityTrained` rows to a unit type and city. Generic event flags can include witnesses to a different unit or city with the same local ID. |
 
@@ -26,11 +23,7 @@ Extend the existing [probe overlay and tests](../../../developers/vox-agents/new
 
 ### Stage 4b: espionage operations
 
-Derive private reports in MCP's shared newspaper query and projection. For example, India gained Civil Service immediately after a recorded operation, so its paper can report a likely theft. A killed spy can still have completed the operation. Stage 4b needs no recorder, event schema or DLL changes.
-
-1. **Operations.** Read stored `EspionageResult` rows with `SourcePlayerID` and `TargetPlayerID` (the recorder's name for `EspionageNotificationData`). Project the recorded city and recognized `SpyResult` to the exact source. For the exact target, look back one extra turn and date the report to its next recorded `PlayerDoTurn`; publish only within the requested event window. Skip undetected operations and cases where the target is known to have lost the city before that turn. Name the source only for `Identified` or `Killed`; omit source identity from the projected evidence for `Detected` and `KilledNotIdentified`. Leave the target's reward details and notification delivery unknown. Teammates and plot witnesses receive no private operation evidence.
-2. **Likely technology.** For the source only, look for a named `TeamTechResearched` with `ChangeAmount > 0` for its recorded team in the next ten event IDs of the same turn. Attach the name as an inferred `event.tech` when the gain matches just one operation and the operation matches just one gain. Cite both rows. Research and other grants use the same hook, so the probe describes a likely theft. If the pairing fails, report the outcome alone.
-3. **Elections and probes.** Project `ElectionResultSuccess` and `ElectionResultFailure` only to their `PlayerID`; require `SpyID >= 0` for failure. Use `Value` for the gain and `-DiminishAmount / 100` for the loss, and name the city-state when the recorded capital plot resolves. Add probes for likely theft, spy loss, defender reports and election influence. Document the limits in the [event facts](../../../developers/vox-agents/newspaper/triggers/facts.md#event) and [replay guide](../../../developers/vox-agents/newspaper/replay.md).
+**Implemented.** Live and replay derive private reports from recorded operations, player turns, team technology gains and election results. The [event facts](../../../developers/vox-agents/newspaper/triggers/facts.md#event) explain when a technology is inferred and when a defender report can name its source. The [replay guide](../../../developers/vox-agents/newspaper/replay.md#replaying-private-espionage-reports) shows the India and Ottoman reports for the same operation.
 
 ### Stage 4c: front reports and ship launches
 

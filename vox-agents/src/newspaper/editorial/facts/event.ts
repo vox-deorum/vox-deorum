@@ -1,4 +1,5 @@
-import type { NewspaperEvent, NewspaperSnapshot, NewspaperSourceReference } from '../../../../../mcp-server/dist/newspaper/evidence.js';
+import { eventReportTurn, type NewspaperEvent, type NewspaperSnapshot,
+  type NewspaperSourceReference } from '../../../../../mcp-server/dist/newspaper/evidence.js';
 import { isRecord } from '../../../utils/guards.js';
 import { uniqueSources } from '../shared/sources.js';
 import { eventCityTargets, eventConfig, eventPlot, recordedId, resolveEventCity } from './event-city.js';
@@ -127,7 +128,7 @@ export function buildEventFacts(event: NewspaperEvent, context: FactBuildContext
   const config = eventConfig(type);
   const sources = rowSources(event);
   const fields: Record<string, FactField> = Object.assign(Object.create(null), {
-    type: fact(type, sources), turn: fact(event.source.turn, sources)
+    type: fact(type, sources), turn: fact(eventReportTurn(event), sources)
   });
   const playerFields = config?.subjects.playerIdFields ?? [];
   const involved = involvedSubjectSources(event, context);

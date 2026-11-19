@@ -1,8 +1,9 @@
 import {
   hasDefensivePact, isAlly, isAtWar, isFriend, isMasterOf, isVassalOf
 } from '../../../../../mcp-server/dist/diplomacy/relationships.js';
-import type {
-  NewspaperDiplomacyGap, NewspaperDiplomacySnapshot, NewspaperEvent, NewspaperEvidence, NewspaperSnapshot
+import {
+  eventReportTurn, type NewspaperDiplomacyGap, type NewspaperDiplomacySnapshot, type NewspaperEvent,
+  type NewspaperEvidence, type NewspaperSnapshot
 } from '../../../../../mcp-server/dist/newspaper/evidence.js';
 import { matchesSubjects } from '../../../../../mcp-server/dist/knowledge/helpers/event-subjects.js';
 import { isRecord } from '../../../utils/guards.js';
@@ -242,7 +243,7 @@ export function buildPlayerFacts(row: NewspaperSnapshot, context: FactBuildConte
   }
   fields.events = windowFacts(context.events.filter(event => namesPlayer(event, row, context))
     .map(event => ({
-      turn: event.source.turn,
+      turn: eventReportTurn(event),
       field: fact(reference('event', event.source.id), rowSources(event))
     })), sources);
   return fields;

@@ -12,7 +12,7 @@ The relevant code is in `civ5-dll/CvGameCoreDLL_Expansion2`, primarily `CvTactic
 | [Movement](movement.md) | Operation army movement, tactical reinforcement, and withdrawal. |
 | [Engagements](engagements.md) | When combat searches run, who joins, and garrison and opportunity searches. |
 | [Air operations](air.md) | Aircraft ownership, conventional strikes, interception, patrol, and rebasing. |
-| [Operational loop](../commands/overview.md) | The flagged command loop for combat and reinforcement, with guides to value, recruitment, reinforcement, execution and settings. |
+| [Operational loop](../commands/overview.md) | The flagged command loop for combat, reinforcement and withdrawal, with guides to value, recruitment, reinforcement, withdrawal, execution and settings. |
 | [Simulation](../simulation/overview.md) | Coordinated plans, scoring, acceptance, and replay. |
 | [Pathfinding](../pathfinding.md) | Reachable plots, movement policy, and danger costs. |
 

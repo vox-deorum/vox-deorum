@@ -1,7 +1,10 @@
 /** Inspect fixture publications, replay checks, and permitted evidence outside the shared reader. */
 import { newspaperScreenLabels, type IssueDocument, type LinkTarget } from "../../../src/newspaper/contracts/issue.js";
 import type { ReaderAction, ReaderState } from "../../../src/newspaper/contracts/reader.js";
-import type { NewspaperEvidence, NewspaperSnapshot, NewspaperEvent, NewspaperDiplomacySnapshot, NewspaperDiplomacyGap } from "../../../../mcp-server/dist/newspaper/evidence.js";
+import {
+  eventReportTurn, type NewspaperEvidence, type NewspaperSnapshot, type NewspaperEvent,
+  type NewspaperDiplomacySnapshot, type NewspaperDiplomacyGap,
+} from "../../../../mcp-server/dist/newspaper/evidence.js";
 import type { z } from "zod";
 import type { replayCheckSchema } from "../../../src/newspaper/contracts/replay.js";
 import type { PublishedItemRecord } from "../../../src/newspaper/contracts/publication.js";
@@ -219,7 +222,9 @@ export function renderEvidence(evidence: NewspaperEvidence | null): void {
       const button = document.createElement("button");
       button.type = "button";
       const identity = "subjectID" in row ? `subject ${row.subjectID}` : row.type;
-      button.textContent = `${identity}, turn ${row.source.turn}, row ${row.source.id}`;
+      const turn = "type" in row ? eventReportTurn(row) : row.source.turn;
+      const sourceTurn = turn === row.source.turn ? "" : `, source turn ${row.source.turn}`;
+      button.textContent = `${identity}, turn ${turn}${sourceTurn}, row ${row.source.id}`;
       /** Navigate to the referenced row's identity and the values permitted by the evidence query. */
       button.addEventListener("click", () => {
         sourceView.textContent = JSON.stringify(row, null, 2);
