@@ -70,12 +70,6 @@ Voice is chosen once per issue and kept while it stays eligible, the way designs
 7. **List design candidates.** Record which further visual designs the kept voices call for, such as bamboo slips or a portrait card feed. Building them belongs to [Plan 1](01-renderer.md) after its size budget is measured.
 8. **Tag the stock variants and document.** Tag the existing variants that already carry a stance. Package `styles.json` in `scripts/installer.iss`. Describe the axes and weights in the [editorial guide](../../../developers/vox-agents/newspaper/editorial.md).
 
-## Risks and open questions
-
-- **Combinations to fill.** 8 voices × 5 stances × 6 genres is 240 cells per template. Plan 4c fills chosen cells only, and the neutral report in the general voice is the fallback for everything else.
-- **Stance coherence.** Per-article stance could make one issue praise and attack the government. If the samples read that way, add a per-publication leaning that persists across issues and shifts slowly. This is the owner's call after step 3.
-- **Old issues.** Stored issues keep their prose. Saved configurations without styles load with the defaults.
-
 ## Verification
 
 - Mock tests under `tests/mock/newspaper/`: unknown style IDs fail to load; untagged variants take the defaults; a controlled fact change, such as low versus high happiness, shifts which stance wins; the audit records the choices.
