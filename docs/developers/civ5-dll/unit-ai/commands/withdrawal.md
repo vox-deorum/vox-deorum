@@ -6,11 +6,12 @@ A fight and a Withdraw count different exposure pools. The fight counts its targ
 
 ```mermaid
 flowchart TD
-    P["Priority = θ × w_R × X / Z_T × (1 − s⁺)"]
+    P["Withdraw priority"]
     P --> T["Theater θ<br/>the target zone's multiplier"]
     P --> X["X, removable exposure<br/>what the retreat removes"]
     P --> S["s⁺<br/>our share once help joins"]
     P --> R["w_R / Z_T<br/>risk weight over typical worth"]
+    P --> F["Readiness discount<br/>0.7 per failed check"]
     X --> C["Capped exposure<br/>each threat's largest victims"]
     X --> G["Recruits<br/>every combat unit that can leave"]
     G --> D["Destination<br/>closest friendly city per domain"]
@@ -25,7 +26,7 @@ flowchart TD
 
 | Part | Fight | Reinforce | Withdraw |
 | --- | --- | --- | --- |
-| Priority | `θ × stake` | `θ × stake × swing` | `θ × w_R × X / Z_T × (1 − s⁺)` |
+| Priority | `θ × stake` | `θ × stake × swing` | `θ × w_R × X / Z_T × (1 − s⁺) × 0.7^n` |
 | Strength share | `s` inside the exposure term | Swing from the share | `1 − s⁺` over its own removable exposure `X` |
 | Units | Local set | Incoming selection | Every combat unit at the battlefield that can leave |
 | Direction | At the center | Toward the center | Toward a friendly city |
@@ -60,13 +61,14 @@ The examples use the [value page's running inputs](value.md#running-example-inpu
 
 **Rule: the exposure the retreat removes, times the part that our strength and ready help do not cover.**
 
-`priority = θ × w_R × X / Z_T × (1 − s⁺)`
+`priority = θ × w_R × X / Z_T × (1 − s⁺) × 0.7^n`
 
 | Part | Reads as |
 | --- | --- |
 | `θ × w_R / Z_T` | The theater, risk weight and scale the fight uses, so both offers share one priority scale. |
 | `X / Z_T` | The exposure the whole recruit group takes with it, in typical units. |
 | `1 − s⁺` | The part our strength cannot protect. When the enemy has triple our strength and no help is coming, it is 0.9; when help brings parity, it is 0.5. A lower projection leaves the fight's share in place, so help never raises the priority. |
+| `0.7^n` | Discount for the offer's `n` failed readiness checks this turn: full priority before any failure, 70% after one, and 49% after two. |
 
 | Gate | Rule |
 | --- | --- |
@@ -140,7 +142,7 @@ A recruit's value at risk is its contribution to `X` only when no staying victim
 | No reachable | After the reduction check, no endangered recruit with a destination can march toward it, or the path's first stop is the unit's own plot. |
 | Passed | At least one endangered recruit can march. |
 
-A failed check adds one failure and makes the offer inactive, or skipped at `readiness.maxFailures` (3). It does not change the estimate, so a later re-estimation can return an inactive offer to ready; a failure that reaches the limit can move it straight from ready to skipped. A reduced check counts no failure. A Withdraw never waits and never runs forecast readiness.
+A failed check adds one failure and makes the offer inactive, or skipped at `readiness.maxFailures` (3). A later re-estimation can return an inactive offer to ready. It recalculates the priority from the current board and applies the accumulated failure discount, so a fight that opens a route can still enable a retreat. A reduced check counts no failure.
 
 **March rule.** A path passes when its first-turn stop stays within native's danger limit, or when the stop's danger is below both the current plot's danger and the unit's hit points. Staying is usually worse than that stop, and a lethal stop is still refused.
 
