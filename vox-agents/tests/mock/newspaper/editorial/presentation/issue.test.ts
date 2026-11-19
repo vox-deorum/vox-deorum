@@ -148,6 +148,33 @@ describe('masthead terms', () => {
 });
 
 describe('editorial presentation', () => {
+  it('should gently discourage repeated genres and allow mixed voices in one issue', async () => {
+    const config = createConfig();
+    config.styles = { voice: [{ id: 'general' }, { id: 'wire' }], stance: [{ id: 'neutral' }],
+      genre: [{ id: 'report' }, { id: 'letter' }], rules: [] };
+    Object.assign(config.templates[0].variants[1], { voice: 'wire', stance: 'neutral', genre: 'letter' });
+    const candidates = ['first', 'second', 'third'].map(id => createCandidate(config, id));
+    candidates[0].variantWeights = { first: 1, second: 0 };
+    candidates[1].variantWeights = candidates[2].variantWeights = { first: 1, second: 1 };
+    const weights = await choices(config);
+    /** Supply draws near the tie and near the lower bound to distinguish a nudge from a ban. */
+    function publish() {
+      const draws = [0.5, 0.45, 0.1];
+      return presentIssue({
+        issueId: 'issue/5', campaignId: 'campaign', timelineId: 'branch', receiver: { playerId: 0, label: 'Receiver' }, turn: 5,
+        selected: candidates, state: createInitialPublicationState(), config, weights,
+        proseRandom: () => draws.shift()!, presentationRandom: () => 0,
+      })!;
+    }
+    const styles = [
+      { voice: 'general', stance: 'neutral', genre: 'report' },
+      { voice: 'wire', stance: 'neutral', genre: 'letter' },
+      { voice: 'general', stance: 'neutral', genre: 'report' },
+    ];
+    expect(Object.values(publish().styles)).toEqual(styles);
+    expect(Object.values(publish().styles)).toEqual(styles);
+  });
+
   it('should omit sections fully covered by the front page and retain sections with additional stories', async () => {
     const config = createConfig();
     const candidates = ['home', 'trade', 'culture', 'war'].map(id => createCandidate(config, id));
@@ -196,6 +223,7 @@ describe('editorial presentation', () => {
     expect(hidden.issue.pages.map(page => page.id)).toEqual(['front']);
     expect([...hidden.itemCandidates.values()].map(candidate => candidate.id)).toEqual(['home', 'trade']);
     expect(Object.keys(hidden.variants)).toHaveLength(2);
+    expect(Object.keys(hidden.styles)).toEqual(hidden.issue.items.map(item => item.id));
     expect(() => validateEditorialIssue(hidden, visible, hidden.weights)).not.toThrow();
     expect(() => validateEditorialIssue(shown, visible, hidden.weights)).toThrow(/ineligible page/i);
   });

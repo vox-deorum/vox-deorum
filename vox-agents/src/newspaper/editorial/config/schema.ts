@@ -1,8 +1,10 @@
 import { z } from 'zod';
 import { presentationSchema } from '../../contracts/design.js';
 import { newspaperLayoutVariantSchema, linkTargetSchema } from '../../contracts/issue.js';
+import { variantStyleAxes, variantStyleSchema } from '../../contracts/style.js';
 import { getNewspaperAsset } from '../../renderer/assets.js';
 import { editorialConstantsSchema, editorialValueNameSchema } from './constants.js';
+import { defaultVariantStyle, styleCatalogueSchema } from './styles.js';
 
 const expressionSchema = z.string().refine((source) => source.trim().length > 0, 'Expected an expression.');
 const weightSchema = z.strictObject({
@@ -13,6 +15,7 @@ const eligibleSchema = z.strictObject({ when: expressionSchema.optional(), weigh
 /** Authored prose uses named placeholders and explicit typed link destinations. */
 export const authoredVariantSchema = eligibleSchema.extend({
   id: z.string().min(1),
+  ...variantStyleSchema.partial().shape,
   headline: z.string().min(1),
   subheadline: z.string().min(1).optional(),
   byline: z.string().min(1).optional(),
@@ -26,7 +29,11 @@ export const authoredVariantSchema = eligibleSchema.extend({
       })
     )
     .default([]),
-});
+}).refine(
+  (variant) => variantStyleAxes.every((axis) => variant[axis] === undefined) ||
+    variantStyleAxes.every((axis) => variant[axis] !== undefined),
+  'Set voice, stance and genre together.',
+);
 export type AuthoredVariant = z.infer<typeof authoredVariantSchema>;
 const spanSchema = z.union([z.string().min(1), z.number().positive()]);
 const eventTypesSchema = z.union([z.string().min(1), z.array(z.string().min(1)).min(1)]);
@@ -117,6 +124,7 @@ export const editorialConfigSchema = z
       )
       .min(1),
     designs: z.array(designSchema).min(1),
+    styles: styleCatalogueSchema.optional(),
   })
   .superRefine((config, ctx) => {
     // Validate all catalogue identifiers before resolving references.
@@ -131,6 +139,34 @@ export const editorialConfigSchema = z
           });
         ids.add(entry.id);
       });
+    }
+    /** Index one style section while reporting duplicate IDs at their source. */
+    function indexStyleIds(section: string, entries: readonly { id: string }[]): Set<string> {
+      const ids = new Set<string>();
+      for (const [index, { id }] of entries.entries()) {
+        if (ids.has(id))
+          ctx.addIssue({ code: 'custom', path: ['styles', section, index, 'id'], message: `Duplicate style ID "${id}".` });
+        ids.add(id);
+      }
+      return ids;
+    }
+    const styleIds = new Map(variantStyleAxes.map(axis => {
+      const ids = config.styles ? indexStyleIds(axis, config.styles[axis]) : new Set<string>([defaultVariantStyle[axis]]);
+      if (!ids.has(defaultVariantStyle[axis]))
+        ctx.addIssue({ code: 'custom', path: ['styles', axis], message: `Register the default ${axis} tag "${defaultVariantStyle[axis]}".` });
+      return [axis, ids] as const;
+    }));
+    /** Check each explicit tag against its axis in the same effective catalogue. */
+    function checkStyleTags(tags: Partial<z.infer<typeof variantStyleSchema>>, path: (string | number)[]): void {
+      for (const axis of variantStyleAxes) {
+        const id = tags[axis];
+        if (id !== undefined && !styleIds.get(axis)?.has(id))
+          ctx.addIssue({ code: 'custom', path: [...path, axis], message: `Unknown ${axis} tag "${id}".` });
+      }
+    }
+    if (config.styles) {
+      indexStyleIds('rules', config.styles.rules);
+      config.styles.rules.forEach((rule, index) => checkStyleTags(rule.match, ['styles', 'rules', index, 'match']));
     }
     const rulesById = new Map(config.triggers.map((rule) => [rule.id, rule]));
     config.triggers.forEach((rule, index) => {
@@ -200,6 +236,8 @@ export const editorialConfigSchema = z
           path: ['templates', index],
           message: 'Variant ids must be unique.',
         });
+      template.variants.forEach((variant, variantIndex) =>
+        checkStyleTags(variant, ['templates', index, 'variants', variantIndex]));
     });
     config.designs.forEach((design, index) => {
       for (const variant of ['ordinary', 'breaking']) {

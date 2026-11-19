@@ -13,7 +13,7 @@ Modules under `vox-agents/src/newspaper/editorial/` are grouped by job:
 | `diplomacy/` | War and peace inference, incident grouping, and dated pair state and scores |
 | `rules/` | Rule evaluation, repeat memory, grouping, and the per-subject audit |
 | `config/` | Catalogue schema and validation in `schema.ts`; file loading and overlays in `load.ts`; catalogue compilation in `expressions.ts` through `prepareEditorialExpressions` and `getEditorialExpressions` |
-| `selection/` | Template matching in `templates.ts`, heuristic choice in `heuristic.ts`, feedback in `feedback.ts`, and series memory in `series.ts` |
+| `selection/` | Template matching, heuristic choice, style preferences, feedback, and series memory |
 | `presentation/` | Choice evaluation in `eligibility.ts`, issue assembly in `issue.ts`, and validation in `validation.ts` |
 | `shared/` | The QuickJS runner, choice eligibility in `eligibility.ts`, weights, `EditorialContext`, source references, and deterministic serialization |
 
@@ -35,6 +35,7 @@ The built-in catalogue lives under `vox-agents/newspaper/`. Rules and matching t
 | `constants.json` | Named distances, spans, sizes, type lists and shortcuts, plus printable terms used by prose and mastheads. See [constants and shortcuts](triggers/constants.md). |
 | `triggers/*.json` | Trigger rules: subject, `when`, `values`, importance, repeat, grouping and tags. See the [trigger overview](triggers/overview.md). |
 | `templates/*.json` | Authored variants, typed links and short pieces, grouped by topic like triggers |
+| `styles.json` | Registered voice, stance and genre tags, optional writing guidance, and rules that prefer matching variants |
 | `pages.json` | Front page, section membership, and section minimums |
 | `designs/*.json` | Design identities, fixed renderer families, saved tokens/assets, masthead title and motto, layouts, and eligibility |
 
@@ -60,9 +61,19 @@ A template names one or more rules in `triggers`. They must all fire for the sam
 | `mode` | `authored` (default) or `llmOnly`; the heuristic editor skips `llmOnly` templates |
 | `short` | Marks a short filler story reserved near the item limit |
 | `weight` | Base weight and conditional adjustments |
-| `variants` | Authored prose choices, each with `id`, `headline`, `body`, optional `subheadline`, optional `byline`, optional `links`, optional `when`, and `weight` |
+| `variants` | Authored prose choices with an ID, text, links, eligibility, weight, and style tags |
 
 `id`, `triggers`, `tags`, `weight` and `variants` are required. Each variant requires `id`, `headline`, `body` and `weight`; `subheadline`, `byline`, `when` and `links` are optional. The reader draws the subheadline under the headline and the byline below it, so an opinion piece or a signed report can carry both.
+
+### Variant styles
+
+Set `voice`, `stance` and `genre` together. Each ID must be registered for its axis in `styles.json`. An untagged variant uses `general`, `neutral` and `report`. These tags describe the prose and do not change the template's topic tags, page placement or layout.
+
+Each preference rule has an `id`, a `match` with at least one tag, a `when` expression, and a positive `multiplier`. All named tags must match. For example, a rule matching both `pro-government` and `letter` can double the weight of a supportive letter when `self.happinessPercentage > 50`. A supportive report does not receive that bonus. Use the variant's own `when` for evidence required by its wording.
+
+Guard subject-specific facts in shared rules. For example, check `subject.kind === 'city'` before reading `city.happinessDelta`. The editor applies rules after choosing stories. A false condition, an error, or unavailable evidence leaves the weight unchanged. For displayed stories, facts read by applied preferences join the decision audit without becoming evidence for the article's claims.
+
+The editor makes one weighted draw per article and slightly discounts genres already drawn in the same issue, including draws for articles later omitted from the pages. Voices can mix. Saved catalogues without `styles` keep their original draw behavior. The stock catalogue supplies the three default tags; add other tags, guidance and rules through an overlay.
 
 ### Placeholders and facts
 
@@ -116,7 +127,7 @@ Selection combines importance, decayed series history, novelty, variety, templat
 
 If selection includes an eligible urgent story, one urgent story leads a breaking front page. A rule decides urgency from incident facts. The built-in At Home page collects domestic stories, Beyond Our Borders collects international stories, and Trade and Livelihood uses economy and trade tags. A section appears only when it meets its configured minimum and includes a story beyond the front page. Page membership refers to canonical items, so a story repeated on the front and economy pages has one vote and one history contribution. Validation checks threat placement, subject variety where available, section minimums, and series uniqueness before publication.
 
-Authored placeholders become structured text and typed links. Prose and presentation use separate seeded random streams; page/layout tuning should not change wording. Decisions retain the seed, effective configuration identity and snapshot, candidate scores, selected variants/layouts, evidence references, feedback inputs, the trigger audit, and repeat outcomes. Reopening an issue reads stored content without running selection again.
+Authored placeholders become structured text and typed links. Prose and presentation use separate seeded random streams; page and layout tuning should not change wording. Decisions retain the seed, configuration identity and snapshot, candidate scores, selected variants and layouts, evidence, feedback, and the trigger audit. The `selectedStyles` map records tags for each displayed article under the same item ID as `selectedVariants`. Reopening an issue reads stored content without running selection again.
 
 ## Votes and preferences
 
@@ -132,7 +143,7 @@ Each unique item has one current vote: -1, 0, or +1. Assigning the same vote aga
 
 The decision records the corpus, votes, tag counts, coefficients, and resolved adjustments used for that check. This preserves an explanation even after votes change.
 
-Preferences store publication frequency in Standard-equivalent turns and whether LLM use is enabled. Built-in defaults are five turns and LLM disabled. Configured defaults override built-ins; saved receiver choices take precedence. Game speed resolves frequency to an integer interval of at least one turn. Changing frequency schedules from the last completed check. Plans [4a](../../../plans/newspaper/implementation/04a-styles.md), [4b](../../../plans/newspaper/implementation/04b-story-mining.md) and [4c](../../../plans/newspaper/implementation/04c-variant-drafting.md) settle styles, story types and authored variants. [Plan 7](../../../plans/newspaper/implementation/07-llm-editors.md) makes the LLM preference effective and compares editors.
+Preferences store publication frequency in Standard-equivalent turns and whether LLM use is enabled. Built-in defaults are five turns and LLM disabled. Configured defaults override built-ins; saved receiver choices take precedence. Game speed resolves frequency to an integer interval of at least one turn. Changing frequency schedules from the last completed check. Plans [4b](../../../plans/newspaper/implementation/04b-story-mining.md) and [4c](../../../plans/newspaper/implementation/04c-variant-drafting.md) add story types and authored variants. [Plan 7](../../../plans/newspaper/implementation/07-llm-editors.md) makes the LLM preference effective and compares editors.
 
 ## Verification and remaining acceptance
 

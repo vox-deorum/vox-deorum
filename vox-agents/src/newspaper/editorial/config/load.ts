@@ -91,7 +91,7 @@ export function getEditorialExpressions(config: EditorialConfig): Promise<Compil
 /** Load grouped built-ins and optional flat or grouped overrides, then validate together. */
 export async function loadEditorialConfig(directory?: string): Promise<EditorialConfig> {
   const result: Record<string, unknown> = { version: 1 };
-  for (const name of ['defaults', 'constants', 'triggers', 'templates', 'pages', 'designs']) {
+  for (const name of ['defaults', 'constants', 'triggers', 'templates', 'pages', 'designs', 'styles']) {
     const grouped = name === 'triggers' || name === 'templates' || name === 'designs';
     const base = grouped
       ? await readCatalogueSection(builtInCatalogueDirectory(), name)

@@ -1,6 +1,6 @@
 # Plan 4c: drafting variants
 
-**Status: draft, blocked on [Plan 4a](04a-styles.md) and [Plan 4b](04b-story-mining.md).** Third of three streams. It takes the style catalogue from 4a and the story types from 4b and fills the catalogue with authored variants, written by LLMs that write well and checked before they ship.
+**Status: draft.** Use the tag catalogue from [Plan 4a](04a-styles.md), the owner's writing guidance, and the story types from [Plan 4b](04b-story-mining.md) to draft and check authored variants.
 
 ## Goal and success criteria
 
@@ -21,7 +21,7 @@ Done means:
 | Placeholders | `{{name}}` values from rule values, identity fields, `terms.*`, the subject, the period and the group. A variant with an unresolved placeholder is not printed. | `substitute` and `printable` in `editorial/selection/templates.ts` |
 | Overlays | A directory of catalogue files merges over the stock catalogue by ID. Replay takes it with `--config`. | `editorial/config/load.ts` |
 | Reading in context | The replay command renders issues and audits from a recording. | [Replay guide](../../../developers/vox-agents/newspaper/replay.md) |
-| Style guidance | Added by Plan 4a in `newspaper/styles.json`. | |
+| Style tags and guidance | Variants use voice, stance and genre IDs with optional owner-written guidance in `newspaper/styles.json`. | [Plan 4a](04a-styles.md) |
 
 Paths are relative to `vox-agents/src/newspaper/` for code and `vox-agents/` for the runtime catalogue.
 
@@ -57,7 +57,7 @@ Use two or three variants per filled cell where a story repeats often, so the wo
    | House rules | No modern terms in early voices, no real-world references the game does not have. The style guidance lists these per voice. |
 
 5. **Review.** Render a reading sheet per voice from the drafts that passed, using the example values. The owner reads a sample, marks accept or reject with a short reason, and the reasons go back into that voice's guidance in `styles.json`. Redraft rejected cells once with the improved guidance.
-6. **Read in context.** Replay two or three recordings from different eras with the overlay and read whole issues. Look for issues where voices clash, a stance appears with no cause, or the same phrasing repeats across stories.
+6. **Read in context.** Replay two or three recordings from different eras with the overlay and read whole issues. Voices may mix. Check whether each fits its article and whether the issue repeats phrasing or relies on unsupported claims.
 7. **Merge and document.** Move accepted variants into the stock template files, tagged with their voice, stance and genre. Regenerate the coverage table into the [editorial guide](../../../developers/vox-agents/newspaper/editorial.md) and refresh the trigger examples whose wording changed.
 
 ## Risks and open questions

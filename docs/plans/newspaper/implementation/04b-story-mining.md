@@ -1,6 +1,6 @@
 # Plan 4b: story mining through the archivist
 
-**Status: draft.** Second of three streams. It starts from interesting stories and works backwards to triggers. [Plan 4a](04a-styles.md) settles styles in parallel, and [Plan 4c](04c-variant-drafting.md) writes the variants for the stories accepted here.
+**Status: draft.** Start from interesting stories and work backwards to triggers. [Plan 4c](04c-variant-drafting.md) writes variants for the stories accepted here using the tags from [Plan 4a](04a-styles.md).
 
 ## Goal and success criteria
 
@@ -58,7 +58,7 @@ Add a **stories mode** to the archivist (`--stories`). It runs Phase A as today,
    | --- | --- |
    | `headline` | A working headline. |
    | `pitch` | One or two sentences on the story and why a reader would care. |
-   | `genre`, `stance` | Free text. These feed Plan 4a's brainstorm. |
+   | `genre`, `stance` | Free text the owner can consider when directing the variant drafts. |
    | `subject` | City, civilization, pair of civilizations, event, or the whole world. |
    | `basis` | What in the reading material prompted it. |
    | `wants` | Anything the model wished it knew to write the story. This points at missing facts. |
@@ -74,7 +74,7 @@ Add a **stories mode** to the archivist (`--stories`). It runs Phase A as today,
    | New angle | An existing rule fires; a new template is enough. | Template stub. |
    | New rule | Existing facts can express the trigger. | Rule and template stub. |
    | Needs a fact | The story needs something the fact model lacks. | List the fact and where it would come from. |
-   | Style idea | The pitch is about tone or format. | Hand to Plan 4a. |
+   | Style idea | The pitch is about tone or format. | Pass to the owner with the drafting notes. |
    | Drop | Not a newspaper story, or impossible to observe. | None. |
 
    Write `backlog.md` beside `clusters.md` as one table sorted by cluster size. Expect mistakes in bucketing; the owner's review corrects them.

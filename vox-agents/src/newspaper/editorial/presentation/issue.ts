@@ -8,8 +8,10 @@ import {
   type IssueReceiver,
 } from '../../contracts/issue.js';
 import type { PublicationState } from '../../contracts/publication.js';
+import type { VariantStyle } from '../../contracts/style.js';
 import type { EditorialConfig, EditorialDesign, AuthoredVariant } from '../config/schema.js';
 import type { EditorialTerms } from '../config/expressions.js';
+import { resolveVariantStyle } from '../config/styles.js';
 import { chooseWeighted } from '../shared/weights.js';
 import { uniqueSources } from '../shared/sources.js';
 import {
@@ -116,6 +118,7 @@ export function chooseDesign(
 export interface PresentationResult {
   issue: IssueDocument;
   variants: Record<string, string>;
+  styles: Record<string, VariantStyle>;
   layouts: Record<string, string>;
   itemCandidates: Map<string, EditorialCandidate>;
   mastheadSources: NewspaperSourceReference[];
@@ -143,17 +146,27 @@ export function presentIssue(input: {
   const masthead = resolveMasthead(design, terms, config.defaults.publicationTitle);
   if (!masthead) return undefined;
   const variants: Record<string, string> = {};
+  const styles: Record<string, VariantStyle> = {};
+  const genreCounts = new Map<string, number>();
   const itemCandidates = new Map<string, EditorialCandidate>();
   const items: IssueItem[] = [];
   for (const [index, candidate] of input.selected.entries()) {
     const variant = chooseWeighted(
       candidate.variants,
-      (choice) => candidate.variantWeights[choice.id] ?? 0,
+      (choice) => {
+        const weight = candidate.variantWeights[choice.id] ?? 0;
+        if (!config.styles) return weight;
+        const count = genreCounts.get(resolveVariantStyle(choice).genre) ?? 0;
+        return weight / (1 + 0.25 * count);
+      },
       input.proseRandom
     );
     if (!variant) continue;
     const id = `${input.issueId}/item/${index + 1}`;
     variants[id] = variant.id;
+    const style = resolveVariantStyle(variant);
+    styles[id] = style;
+    genreCounts.set(style.genre, (genreCounts.get(style.genre) ?? 0) + 1);
     itemCandidates.set(id, {
       ...candidate,
       sources: uniqueSources([...candidate.sources, ...(candidate.variantSources[variant.id] ?? [])]),
@@ -259,6 +272,7 @@ export function presentIssue(input: {
       items: visibleItems,
     },
     variants: Object.fromEntries(Object.entries(variants).filter(([id]) => displayed.has(id))),
+    styles: Object.fromEntries(Object.entries(styles).filter(([id]) => displayed.has(id))),
     layouts,
     itemCandidates,
     mastheadSources: masthead.sources,

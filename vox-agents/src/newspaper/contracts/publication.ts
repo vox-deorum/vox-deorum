@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { newspaperEvidenceRequestSchema, newspaperSourceReferenceSchema } from '../../../../mcp-server/dist/newspaper/evidence.js';
 import { diplomacyMemorySchema, diplomacyInferenceSchema } from './diplomacy.js';
 import { inlineTextSchema } from './issue.js';
+import { variantStyleSchema } from './style.js';
 import { triggerRepeatStateSchema, triggerRuleAuditSchema } from './triggers.js';
 
 /** Receiver choices, resolved over catalogue defaults when the run is created. */
@@ -43,6 +44,7 @@ export const editorialDecisionRecordSchema = z.object({
   fallbackReason: z.string().optional(), status: z.enum(['published', 'skipped']), reason: z.string().optional(),
   candidateScores: z.array(z.object({ id: z.string(), score: z.number(), selected: z.boolean() })),
   selectedVariants: z.record(z.string(), z.string()), designId: z.string().nullable(),
+  selectedStyles: z.record(z.string(), variantStyleSchema).optional(),
   layouts: z.record(z.string(), z.string()), evidence: z.array(newspaperSourceReferenceSchema),
   feedback: feedbackRecordSchema,
   diplomacyInference: z.array(diplomacyInferenceSchema),

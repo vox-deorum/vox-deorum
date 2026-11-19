@@ -33,6 +33,8 @@ export interface EditorialCandidate {
   variants: AuthoredVariant[];
   variantWeights: Record<string, number>;
   variantSources: Record<string, NewspaperSourceReference[]>;
+  /** Check-local fact bindings used by style rules after the story is selected. */
+  variantBindings?: ExpressionBindings;
   values: TemplateValues;
   sources: NewspaperSourceReference[];
   fingerprint: string;
@@ -238,7 +240,10 @@ export async function matchTemplates(
       sources[variant.id] = uniqueSources([...result.sources, ...placeholderSources(variant, choice, terms)]);
       return true;
     });
-    return eligible.length ? [candidate(template, parts, period, choice.placeholders, rating, eligible, weights, sources)] : [];
+    return eligible.length ? [candidate(
+      template, parts, period, choice.placeholders, rating, eligible, weights, sources,
+      compiled.styleRules.length ? choice.bindings : undefined,
+    )] : [];
   });
 }
 
@@ -247,6 +252,7 @@ function candidate(
   template: EditorialTemplate, parts: readonly RuleDevelopment[], period: Period, values: TemplateValues,
   rating: { weight: number; sources: NewspaperSourceReference[] }, variants: AuthoredVariant[],
   variantWeights: EditorialCandidate['variantWeights'], variantSources: EditorialCandidate['variantSources'],
+  variantBindings?: ExpressionBindings,
 ): EditorialCandidate {
   return {
     id: `${template.id}/${parts.map((part) => part.id).join('+')}`,
@@ -263,6 +269,7 @@ function candidate(
     short: template.short,
     weight: rating.weight,
     variants, variantWeights, variantSources, values,
+    ...(variantBindings === undefined ? {} : { variantBindings }),
     sources: uniqueSources([...parts.flatMap((part) => part.sources), ...rating.sources]),
     fingerprint: parts.map((part) => part.fingerprint).sort().join('+'),
   };

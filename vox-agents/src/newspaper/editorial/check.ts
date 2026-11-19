@@ -22,6 +22,7 @@ import { computeFeedback } from './selection/feedback.js';
 import { selectHeuristic } from './selection/heuristic.js';
 import { advanceSeries, decaySeries } from './selection/series.js';
 import { matchTemplates } from './selection/templates.js';
+import { applyStylePreferences } from './selection/styles.js';
 import type { EditorialContext } from './shared/context.js';
 import type { ExpressionBatch, ExpressionCheckBudget } from './shared/expressions.js';
 import { recordChoiceError } from './shared/eligibility.js';
@@ -199,13 +200,14 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
   if (!selection.selected.length) return skip('No eligible new authored stories.');
   const streams = createEditorialStreams(identitySeed, config);
   const weights = await evaluatePresentation(config, compiled, batch, budget);
+  const { selected, sources: styleSources } = await applyStylePreferences(selection.selected, compiled, batch, budget);
   const presentation = presentIssue({
     issueId: `${scope}/issue/${turn}`,
     campaignId: input.campaignId,
     timelineId: input.timelineId,
     receiver: input.receiver,
     turn,
-    selected: selection.selected,
+    selected,
     state,
     config,
     weights,
@@ -246,8 +248,10 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
   decision.evidence = uniqueSources([
     ...records.flatMap((item) => item.sources),
     ...presentation.mastheadSources,
+    ...[...displayedCandidates].flatMap(id => styleSources.get(id) ?? []),
   ]);
   decision.selectedVariants = presentation.variants;
+  decision.selectedStyles = presentation.styles;
   decision.designId = issue.publication.designId;
   decision.layouts = presentation.layouts;
   recordChoiceErrors();

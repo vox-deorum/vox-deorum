@@ -7,6 +7,7 @@ import { queryNewspaperEvidence } from '../../../../../mcp-server/dist/newspaper
 import { ReplaySession } from '../../../../src/newspaper/replay/session.js';
 import { runEditorialCheck } from '../../../../src/newspaper/editorial/check.js';
 import { loadEditorialConfig } from '../../../../src/newspaper/editorial/config/load.js';
+import { createEditorialStreams } from '../../../../src/newspaper/editorial/shared/determinism.js';
 import { ReplayStore } from '../../../../src/newspaper/replay/store.js';
 import { replaySourceIdentity } from '../../../../src/newspaper/replay/database.js';
 import { createReplayRecording, replaySettings, writeReplayPublicationCatalogue } from '../../../helpers/newspaper-replay.js';
@@ -143,6 +144,32 @@ describe('durable replay publication', () => {
     const continued = await session.advance();
     expect(check.mock.calls[0][0].config.defaults.frequencyStandardTurns).toBe(3);
     expect(continued.check!.decision.configurationId).toBe(first.check!.decision.configurationId);
+  });
+
+  it('should resume a catalogue saved before style tags without changing its prose draw', async () => {
+    const initialized = await session.configure(settings());
+    await session.close();
+    const identity = await replaySourceIdentity(recording.filename);
+    const { styles: _styles, ...legacy } = await loadEditorialConfig(catalogue);
+    const template = legacy.templates.find(entry => entry.id === 'fixture-war-article')!;
+    template.variants.push({ ...template.variants[0], id: 'dispatch', headline: 'A new dispatch' });
+    legacy.templates = [template];
+
+    const store = new ReplayStore(outputPath);
+    try {
+      const checkpoint = store.load('main', 0, identity);
+      store.create(identity, { ...checkpoint, session: { ...initialized, runId: 'legacy' }, configuration: legacy });
+    } finally { store.close(); }
+
+    const draw = createEditorialStreams(`${encodeURIComponent(identity)}/receiver/0/6`, legacy).prose();
+    session = new ReplaySession();
+    await session.configure({ ...settings(), runId: 'legacy', mode: 'resume' });
+    const result = await session.advance();
+    expect(result.check?.status).toBe('published');
+    const decision = result.check!.decision;
+    expect(decision.configurationSnapshot).toEqual(legacy);
+    expect(Object.values(decision.selectedVariants)).toEqual([draw < 0.5 ? 'notice' : 'dispatch']);
+    expect(Object.values(decision.selectedStyles!)).toEqual([{ voice: 'general', stance: 'neutral', genre: 'report' }]);
   });
 
   it.each([

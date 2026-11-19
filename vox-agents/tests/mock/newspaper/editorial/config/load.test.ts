@@ -35,6 +35,34 @@ describe('editorial catalogue files', () => {
     expect(base.designs[0].layouts.map(layout => layout.variant)).toEqual(expect.arrayContaining(['ordinary', 'breaking']));
   });
 
+  it('should merge style additions by ID and reject unregistered or partial variant tags', async () => {
+    const base = await loadEditorialConfig();
+    const template = base.templates[0];
+    const variant = template.variants[0];
+    const match = { voice: 'general', genre: 'letter' };
+    const rules = [{ id: 'letters', match, when: 'true', multiplier: 2 }];
+    /** Apply a style change without repeating the stock prose. */
+    async function writeTags(tags: Record<string, string>) {
+      await writeDocument('templates.json', [{ id: template.id, variants: [{ id: variant.id, ...tags }] }]);
+    }
+    await writeDocument('styles.json', { genre: [{ id: 'letter' }], rules });
+    await writeTags({ voice: 'general', stance: 'neutral', genre: 'letter' });
+    const loaded = await loadEditorialConfig(directory);
+    expect(loaded.styles?.genre.map(genre => genre.id)).toEqual(['report', 'letter']);
+    expect(loaded.templates[0].variants[0]).toMatchObject({ ...match, stance: 'neutral' });
+    await writeTags({ voice: 'general' });
+    await expect(loadEditorialConfig(directory)).rejects.toThrow('Set voice, stance and genre together');
+    await writeTags({ voice: 'general', stance: 'letter', genre: 'letter' });
+    await expect(loadEditorialConfig(directory)).rejects.toThrow('Unknown stance tag');
+    await writeTags({ voice: 'general', stance: 'neutral', genre: 'letter' });
+    await writeDocument('styles.json', { genre: [{ id: 'letter' }], rules: [{ ...rules[0], match: { voice: 'letter' } }] });
+    await expect(loadEditorialConfig(directory)).rejects.toThrow('Unknown voice tag');
+    await writeDocument('styles.json', { genre: [{ id: 'letter' }], rules: [{ ...rules[0], multiplier: 0 }] });
+    await expect(loadEditorialConfig(directory)).rejects.toMatchObject({
+      issues: expect.arrayContaining([expect.objectContaining({ path: ['styles', 'rules', 0, 'multiplier'] })]),
+    });
+  });
+
   it('should merge trigger overrides by identity and replace primitive arrays', async () => {
     const base = await loadEditorialConfig();
     const [trigger, ...others] = base.triggers;

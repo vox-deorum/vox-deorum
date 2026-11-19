@@ -13,6 +13,7 @@ import { selectHeuristic } from '../../../../src/newspaper/editorial/selection/h
 import { runEditorialCheck } from '../../../../src/newspaper/editorial/check.js';
 import { chooseDesign } from '../../../../src/newspaper/editorial/presentation/issue.js';
 import { evaluatePresentation } from '../../../../src/newspaper/editorial/presentation/eligibility.js';
+import { createEditorialStreams } from '../../../../src/newspaper/editorial/shared/determinism.js';
 
 let config: EditorialConfig;
 
@@ -31,8 +32,8 @@ function fixture(turn = 10, previousCheckTurn = 5, gold = 20, Era = 'Ancient Era
 }
 
 /** Run the real editor on a single fact model. */
-function check(evidence: NewspaperEvidence, state = createInitialPublicationState(), catalogue = config, timelineId = 'branch') {
-  return runEditorialCheck({ campaignId: 'campaign', timelineId, receiver: { playerId: 0, label: 'France' },
+function check(evidence: NewspaperEvidence, state = createInitialPublicationState(), catalogue = config, timelineId = 'branch', campaignId = 'campaign') {
+  return runEditorialCheck({ campaignId, timelineId, receiver: { playerId: 0, label: 'France' },
     evidence, facts: buildNewspaperFacts(evidence), speedMultiplier: 1, state, config: catalogue });
 }
 
@@ -67,6 +68,80 @@ describe('editorial engine', () => {
   });
 
   describe('authored selection and history', () => {
+    it('should prefer a tag combination using visible happiness without changing eligibility or story selection', async () => {
+      const prose = { headline: 'Settlers', body: ['The town trained settlers.'], voice: 'general', weight: { base: 1 } };
+      const tagged = editorialConfigSchema.parse({
+        ...config,
+        styles: {
+          voice: [{ id: 'general' }], stance: [{ id: 'neutral' }, { id: 'pro-government' }],
+          genre: [{ id: 'report' }, { id: 'letter' }],
+          rules: [{
+            id: 'happy-letters', match: { stance: 'pro-government', genre: 'letter' },
+            when: "(self.knows('happinessPercentage') && self.happinessPercentage > 50) || " +
+              "(subject.kind === 'city' && city.own && city.knows('happinessDelta') && city.happinessDelta > 0)",
+            multiplier: 4,
+          }],
+        },
+        triggers: [{ id: 'settlers', subject: 'city', when: 'city.own', importance: 70 }],
+        templates: [{ id: 'settlers', triggers: ['settlers'], tags: [], weight: { base: 1 }, variants: [
+          { ...prose, id: 'ineligible', stance: 'pro-government', genre: 'letter', when: 'false', weight: { base: 1000 } },
+          { ...prose, id: 'supportive-letter', stance: 'pro-government', genre: 'letter' },
+          { ...prose, id: 'supportive-report', stance: 'pro-government', genre: 'report' },
+          { ...prose, id: 'neutral-letter', stance: 'neutral', genre: 'letter' },
+        ] }],
+      });
+      const unweighted = { ...tagged, styles: { ...tagged.styles!, rules: [] } };
+      const campaigns = Array.from({ length: 48 }, (_, i) => `campaign-${i}`);
+      /** Select seeds that exercise a change in odds and outcomes outside the preferred variant. */
+      function campaignFor(lower: number, upper: number): string {
+        const campaign = campaigns.find(id => {
+          const draw = createEditorialStreams(`${id}/receiver/0/10`, tagged).prose();
+          return draw > lower && draw < upper;
+        });
+        if (!campaign) throw new Error(`No campaign draw between ${lower} and ${upper}.`);
+        return campaign;
+      }
+      /** Run one city story with independent national and local readings. */
+      async function publish(campaign: string, national?: number, local?: number, catalogue = tagged) {
+        const evidence = fixture();
+        if (national !== undefined) evidence.players[0].values.HappinessPercentage = national;
+        const values = { OwnerID: 0, Name: 'Tours', ...(local === undefined ? {} : { HappinessDelta: local }) };
+        evidence.cities.push({
+          subjectID: 2, source: { table: 'CityInformations', id: 42, turn: 10, createdAt: 10_000 }, values,
+        });
+        const result = await check(evidence, createInitialPublicationState(), catalogue, 'branch', campaign);
+        if (result.status !== 'published') throw new Error(result.reason);
+        const id = result.issue.items[0].id;
+        return {
+          decision: result.decision, articleSources: result.state.issues[0].items[0].sources,
+          variant: result.decision.selectedVariants[id], style: result.decision.selectedStyles?.[id],
+        };
+      }
+      const swing = campaignFor(0.4, 0.55);
+      const baseline = await publish(swing, 70, undefined, unweighted);
+      const happier = await publish(swing, 70);
+      expect(baseline.variant).toBe('supportive-report');
+      expect(happier).toMatchObject({
+        variant: 'supportive-letter', style: { voice: 'general', stance: 'pro-government', genre: 'letter' },
+      });
+      expect(happier.decision.candidateScores).toEqual(baseline.decision.candidateScores);
+      expect(happier.decision).toMatchObject({ designId: baseline.decision.designId, layouts: baseline.decision.layouts });
+      expect(happier.decision.evidence).toContainEqual(snapshot(0, 10, {}).source);
+      expect(baseline.decision.evidence).not.toContainEqual(snapshot(0, 10, {}).source);
+      expect(happier.articleSources).toEqual(baseline.articleSources);
+      expect((await publish(swing, undefined, 2)).variant).toBe('supportive-letter');
+      expect((await publish(swing)).variant).toBe(baseline.variant);
+      expect((await publish(swing, 35, -2)).variant).toBe(baseline.variant);
+      expect((await publish(campaignFor(0.70, 0.80), 70)).variant).toBe('supportive-report');
+      expect((await publish(campaignFor(0.90, 0.99), 70)).variant).toBe('neutral-letter');
+      const playerStory = { ...tagged, triggers: [{ ...tagged.triggers[0], subject: 'player' as const, when: 'player.self' }] };
+      expect((await publish(swing, undefined, undefined, playerStory)).decision.choiceErrors).toBeUndefined();
+      const uniformVoice = { ...tagged, styles: {
+        ...tagged.styles!, rules: [{ ...tagged.styles!.rules[0], match: { voice: 'general' } }],
+      } };
+      expect((await publish(swing, 70, undefined, uniformVoice)).decision.evidence).toEqual(baseline.decision.evidence);
+    });
+
     it('should require printable credits and keep the evidence for a credit printed as a link', async () => {
       const revised = editorialConfigSchema.parse({
         ...config,

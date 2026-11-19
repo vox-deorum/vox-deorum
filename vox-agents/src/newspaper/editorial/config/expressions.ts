@@ -8,6 +8,7 @@ import {
 import type { EditorialConstants } from './constants.js';
 import type { EditorialConfig, EditorialTriggerRule } from './schema.js';
 import type { ChoiceExpressions } from '../shared/eligibility.js';
+import type { StyleCatalogue } from './styles.js';
 
 type TriggerExpressionFields = Pick<EditorialTriggerRule, 'id' | 'values' | 'importance' | 'urgent' | 'group'> & {
   when: Readonly<EditorialTriggerRule['when']>;
@@ -50,6 +51,7 @@ export interface CompiledEditorialExpressions extends CompiledTriggerExpressions
   templates: ReadonlyMap<string, PreparedTemplate>;
   pages: ReadonlyMap<string, ChoiceExpressions>;
   designs: ReadonlyMap<string, PreparedDesign>;
+  styleRules: readonly (StyleCatalogue['rules'][number] & { slot: number })[];
 }
 
 /** Compile the expression fields of each rule and keep its catalogue location for diagnostics. */
@@ -139,7 +141,10 @@ export async function prepareEditorialExpressions(config: EditorialConfig): Prom
       layout.id, choice(`design ${design.id} / layout ${layout.id}`, layout),
     ])),
   }]));
+  const styleRules = (config.styles?.rules ?? []).map(rule => ({
+    ...rule, slot: addExpression(expressions, `style rule ${rule.id}`, 'when', rule.when),
+  }));
 
   const runner = await compileEditorialExpressions(expressions, { shortcuts: config.constants.shortcuts });
-  return { runner, slots, terms, templates, pages, designs };
+  return { runner, slots, terms, templates, pages, designs, styleRules };
 }

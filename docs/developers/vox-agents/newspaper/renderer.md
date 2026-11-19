@@ -33,7 +33,7 @@ Font assets resolve to their registered family with all bundled weights and styl
 
 A configured identity such as `oral-accounts` can therefore use the Victorian renderer with its own colors and typography. Reopening the issue uses its saved snapshot without consulting today's catalogue. Export bundles keep the fixed renderer family in `designId`; cache keys include the entire issue and its presentation snapshot.
 
-An issue uses the ornament stored in its presentation snapshot. Installation packages `constants.json`, `defaults.json`, `pages.json`, and the JSON files in `designs/`, `triggers/`, and `templates/` under `vox-agents/newspaper/`. A design chooses how the issue looks; an authored template chooses what it says. The stock catalogue pairs every rule with a template, so a recording can produce stories without an overlay.
+An issue uses the ornament stored in its presentation snapshot. Installation includes the runtime [editorial catalogue](editorial.md#catalogue-and-eligibility). A design chooses how the issue looks; an authored template chooses what it says. The stock catalogue pairs every rule with a template, so a recording can produce stories without an overlay.
 
 Keep these related values separate:
 
