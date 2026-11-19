@@ -2,7 +2,7 @@
 
 **Status: implemented.** The owner accepted the mechanics of the 14 stock rules and 15 authored templates. The [trigger facts](../../../developers/vox-agents/newspaper/triggers/facts.md#covert-presence-and-roster-points) and [knowledge reference](../../../../mcp-server/docs/knowledge.md) describe how Stage 4a derives covert presence and access to detail from existing rosters. The in-game acceptance check depends on [Plan 5](05-live-integration.md).
 
-[Plan 4](04-triggers-templates-and-styles.md) owns trigger tuning, template writing and language styles, and decides which of the new capabilities become stock stories. [Plan 7](07-llm-editors.md) uses that baseline for LLM editing and comparison.
+[Plan 4b](04b-story-mining.md) decides which story types, including the new capabilities here, become stock stories. [Plan 4a](04a-styles.md) owns styles and [Plan 4c](04c-variant-drafting.md) owns template writing. [Plan 7](07-llm-editors.md) builds LLM editing and comparison on that catalogue.
 
 ## Goal and success criteria
 
@@ -44,7 +44,7 @@ For Stage 4c, use the [three Netherlands replay cases](../../../developers/vox-a
 
 ## Out of scope
 
-- Shipping probes as stock stories, and shared language styles: [Plan 4](04-triggers-templates-and-styles.md).
+- Shipping probes as stock stories: [Plan 4b](04b-story-mining.md). Shared styles: [Plan 4a](04a-styles.md).
 - Spy names, ranks and mission assignments; gold amounts, stolen great works, coups and exact defender notifications; and ongoing foreign covert assignments.
 - Complete national military rosters and new access grants, foreign tactical maps, individual unit names and movement histories, and city event coverage beyond recorded ship launches.
 - Names for eras and beliefs in events, which are recorded as numbers.
