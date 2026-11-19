@@ -94,14 +94,14 @@ export function advancePairHistory(
   for (const [turn, { calls, rows, gaps }] of [...days].sort(([a], [b]) => a - b)) {
     const native = new Map<string, DiplomaticIncident>();
     /** Read only the endpoints' permitted reports for this date. */
-    function pairReports(pair: DiplomacyPair) {
+    const pairReports = (pair: DiplomacyPair) => {
       return pair.players.flatMap((player, index) => {
         const row = rows.get(player);
         if (!row) return [];
         const relation = row.relationships.find(entry => entry.targetPlayerID === pair.players[1 - index]);
         return relation && relation.state !== 'unknown' ? [{ relation, row }] : [];
       });
-    }
+    };
     for (const incident of calls) {
       const visited = new Set<string>();
       for (const { players: [a, b] } of incident.pairs) {

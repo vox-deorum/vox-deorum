@@ -31,6 +31,11 @@ function pairFields(
     uniqueSources([...(own.sources ?? []), ...(other.sources ?? [])]));
   if (state !== 'unknown') {
     const continuity = uniqueSources([...sources, ...(sinceSources ?? [])]);
+
+    /** An incident freezes pair durations at the date of the recorded calls. */
+    const duration = (since: number): FactField => {
+      return fact({ $kind: 'elapsed', since }, continuity);
+    };
     fields.atWar = fact(state === 'war', sources);
     if (state === 'peace') fields.warTurns = fact(0, sources);
     else if (since !== null) fields.warTurns = duration(since);
@@ -39,11 +44,6 @@ function pairFields(
     if (lastWarScore !== undefined) fields.lastWarScore = fact(lastWarScore.score, [lastWarScore.source, ...continuity]);
     if (friends !== undefined) fields.friends = fact(friends, sources);
     if (pact !== undefined) fields.pact = fact(pact, sources);
-
-    /** An incident freezes pair durations at the date of the recorded calls. */
-    function duration(since: number): FactField {
-      return fact({ $kind: 'elapsed', since }, continuity);
-    }
   }
   return fields;
 }
@@ -105,6 +105,12 @@ export function buildDiplomacyFacts(model: NewspaperFactModel, diplomacy: Diplom
     if (incident.turn <= model.previous || incident.turn > model.turn) continue;
     const { id, turn, root, sources } = incident;
     if (!root.every(player => playerObservation(model, player, turn)?.fields)) continue;
+
+    /** Use cutoff player facts when available, with the incident-date identity as a fallback. */
+    const playerLink = (player: number, rows: readonly NewspaperSourceReference[]): FactField => {
+      const dated = playerObservation(model, player, turn)?.sources ?? [];
+      return fact(reference('player', player, visible.has(player) ? undefined : turn), uniqueSources([...rows, ...dated]));
+    };
     const fields: Record<string, FactField> = {
       id: fact(id, sources),
       kind: fact(incident.kind, sources),
@@ -136,12 +142,6 @@ export function buildDiplomacyFacts(model: NewspaperFactModel, diplomacy: Diplom
       }, sources);
     }
     incidents.push({ id, turn, fields, sources });
-
-    /** Use cutoff player facts when available, with the incident-date identity as a fallback. */
-    function playerLink(player: number, rows: readonly NewspaperSourceReference[]): FactField {
-      const dated = playerObservation(model, player, turn)?.sources ?? [];
-      return fact(reference('player', player, visible.has(player) ? undefined : turn), uniqueSources([...rows, ...dated]));
-    }
   }
   incidents.sort((a, b) => a.turn - b.turn || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   return { pairs, incidents, ids };

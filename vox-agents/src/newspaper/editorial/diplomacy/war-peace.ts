@@ -181,9 +181,9 @@ export function inferWarAndPeace(
     ]);
     incident.audit.sources = incident.sources;
     /** Attribute an inherited war to the new vassal or master supported by the summaries. */
-    function participantReason(entry: (typeof incident.participants)[number]): DiplomacyReason {
+    const participantReason = (entry: (typeof incident.participants)[number]): DiplomacyReason => {
       return reasonFor(inherited && entry.id === inherited.player ? 'inheritedWars' : entry.cause);
-    }
+    };
     incidentFacts.push({
       id: incident.id, kind: incident.kind, turn: incident.turn, root: incident.root,
       participants: incident.participants.filter(entry => facts.major(entry.id) === true).map(entry => ({

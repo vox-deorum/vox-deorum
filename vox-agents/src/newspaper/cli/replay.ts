@@ -212,6 +212,14 @@ export async function runNewspaperReplay(options: NewspaperCliOptions, signal?: 
   await saveJson(manifestPath, manifest, true);
   const session = new ReplaySession();
   const issues: ArchiveIssue[] = [];
+  let failure: { cause: unknown } | undefined;
+  /** Keep the original failure if session cleanup also fails. */
+  function recordFailure(error: unknown): void {
+    if (failure) return;
+    failure = { cause: error };
+    manifest.status = 'failed';
+    manifest.error = error instanceof Error ? error.message : String(error);
+  }
   try {
     signal?.throwIfAborted();
     if (options.config && !(await stat(options.config)).isDirectory()) throw new Error('--config must name an existing catalogue overlay directory.');
@@ -259,24 +267,17 @@ export async function runNewspaperReplay(options: NewspaperCliOptions, signal?: 
     signal?.throwIfAborted();
     manifest.status = 'complete';
   } catch (error) {
-    manifest.status = 'failed';
-    manifest.error = error instanceof Error ? error.message : String(error);
-    throw error;
+    recordFailure(error);
   } finally {
     try {
       await session.close();
       signal?.throwIfAborted();
     } catch (error) {
-      if (manifest.status !== 'failed') {
-        manifest.status = 'failed';
-        manifest.error = error instanceof Error ? error.message : String(error);
-        throw error;
-      }
+      recordFailure(error);
     }
-    finally {
-      await saveJson(manifestPath, manifest);
-      await writeFile(path.join(options.output, 'index.html'), newspaperReportHtml(manifest, issues));
-    }
+    await saveJson(manifestPath, manifest);
+    await writeFile(path.join(options.output, 'index.html'), newspaperReportHtml(manifest, issues));
   }
+  if (failure) throw failure.cause;
   return manifest;
 }
