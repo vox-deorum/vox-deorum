@@ -72,7 +72,7 @@ The **reporting period** runs from the previous newspaper check to the cutoff tu
 
 `city.happinessDelta` is the net local happiness in that snapshot. Negative values indicate local unhappiness, positive values indicate a surplus, and zero is balanced. Reading it requires a detailed city observation. To compare happiness across time, read it on two snapshots.
 
-`city.unhappiness` breaks local unhappiness into causes when detailed city evidence includes `UnhappinessSources`. Regular recordings do not yet collect this data. When the object is present, a missing cause reads 0.
+`city.unhappiness` breaks local unhappiness into causes from a detailed city observation. An empty `UnhappinessSources` object means all causes read 0. Older observations without the object leave the breakdown unknown. The strategist's city report still gives only net `HappinessDelta`.
 
 | Key | Cause |
 | --- | --- |
@@ -86,9 +86,9 @@ The **reporting period** runs from the previous newspaper check to the cutoff tu
 | `pillaged` | Pillaged tiles |
 | `buildings` | Buildings |
 | `specialists` | Specialists |
-| `top` | The name of the largest positive cause, or `null` if there is none |
+| `top` | The name of the largest recorded positive cause, or `null` if there is none |
 
-The game applies a population cap and handles resistance, razing and puppets separately, so these readings can differ from the net `happinessDelta`. Compare causes with each other and against small thresholds. A missing or malformed observation is hidden. `top` breaks ties by the order above.
+Compare these readings with each other and against small thresholds. The list omits occupation and empire-wide unhappiness. The game also applies a population cap and handles resistance, razing and puppets separately, so the readings can differ from the net `happinessDelta`. A missing or malformed observation is hidden. `top` breaks ties by the order above.
 
 ### Inferred city facts
 
@@ -273,7 +273,7 @@ A first observation therefore establishes a baseline. A city seen for the first 
 
 ## Evidence the facts rely on
 
-`get-newspaper-evidence` reads recorded rows for one receiver. It returns cutoff snapshots, optional comparison snapshots, derived diplomacy and events after `previousCheckTurn` through the cutoff. Projection applies recorded visibility and each event's contact and insight rules. City snapshots include the recorded `IsCapital`. A readable player row includes recorded `MilitaryStrength` for the receiver or at access level 2.
+The shared evidence query reads recorded rows for one receiver. It returns cutoff snapshots, optional comparison snapshots, derived diplomacy and events after `previousCheckTurn` through the cutoff. Projection applies recorded visibility and each event's contact and insight rules. City snapshots include the recorded `IsCapital`. A readable player row includes recorded `MilitaryStrength` for the receiver or at access level 2.
 
 World news can report a technology gain or a named great person's birth without a witness. The receiver must have met the owner by the event turn, including every member of a team that gained a technology. The unwitnessed record carries only the owner ID and name of the technology or person. For example, a paper can report that Hypatia appeared in Persia without revealing her city or unit type.
 

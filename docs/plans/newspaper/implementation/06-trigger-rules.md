@@ -1,12 +1,12 @@
 # Plan 6: trigger rules
 
-**Status: open.** The rule engine, 14 stock rules and 15 authored templates are in place, and the owner accepted their mechanics. The [event facts and reporting rules](../../../developers/vox-agents/newspaper/triggers/facts.md#event) include named great people and world news. Stages 6 and 7 are implemented with catalogue probes and reader coverage. Stage 4 starts with passive espionage and agent presence.
+**Status: open.** The rule engine, 14 stock rules and 15 authored templates are in place, and the owner accepted their mechanics. The [event facts and reporting rules](../../../developers/vox-agents/newspaper/triggers/facts.md#event) include named great people and world news. Stages 5 through 7 are implemented. Stage 4 starts with passive espionage and agent presence.
 
 [Plan 4](04-triggers-templates-and-styles.md) owns trigger tuning, template writing and language styles, and decides which of the new capabilities become stock stories. [Plan 7](07-llm-editors.md) uses that baseline for LLM editing and comparison.
 
 ## Goal and success criteria
 
-The remaining stages let a catalogue author report what a spy sees in a city, distinguish an absent diplomat from an unobserved one, report the theft of a technology, and count own and visible foreign military units. They also add opinions on city unhappiness.
+The remaining stages let a catalogue author report what a spy sees in a city, distinguish an absent diplomat from an unobserved one, report the theft of a technology, and count own and visible foreign military units.
 
 Each remaining stage adds a group of capabilities and verifies it with [catalogue probes](../../../developers/vox-agents/newspaper/triggers/overview.md#probe-catalogue-behavior).
 
@@ -19,7 +19,6 @@ One rule holds throughout: the strategist's tools (`get-cities`, `get-players`, 
 | Passive espionage and presence | `PlayerSummaries.Spies` already stores each player's agents, including diplomats, with display locations and states and current network points. It lacks stable assignment fields and Vox Populi's `RevealCityScreen` flag. The old `DiplomatPoints` collector looks for a `CityOwner` field Lua does not return. |
 | Espionage stories | The recorder stores the queued outcome as `EspionageResult` and records elections. The operation row precedes the reward and does not show what the defender was eventually told. |
 | Unit rosters | `TacticalZones` stores per-zone counts by civilization and unit type. Its storage misses the unassigned zone, and the rows don't identify which report they came from. |
-| Unhappiness by cause | Only net `HappinessDelta` is captured. The DLL exposes each cause to Lua. |
 
 ## Stages
 
@@ -55,23 +54,7 @@ Derive own and foreign military counts from the receiver's recorded tactical zon
 
 ### Stage 5: unhappiness by cause
 
-- `mcp-server/lua/get-city-information.lua`, level 2 block: build `UnhappinessSources`, an object of the nonzero readings below. Each value is that cause's own reading for the city. The game's final total also applies a population cap and handles resistance, razing and puppets separately, so rules compare causes with each other and against small thresholds.
-
-  | Key | Lua getter on `City` |
-  | --- | --- |
-  | `Culture` (boredom) | `GetUnhappinessFromYield(YieldTypes.YIELD_CULTURE)` |
-  | `Gold` (poverty) | `GetUnhappinessFromYield(YieldTypes.YIELD_GOLD)` |
-  | `Science` (illiteracy) | `GetUnhappinessFromYield(YieldTypes.YIELD_SCIENCE)` |
-  | `Distress` | `GetUnhappinessFromYield(YieldTypes.YIELD_FOOD)` |
-  | `Religion` | `GetUnhappinessFromReligiousUnrest()` |
-  | `Isolation`, `Famine`, `PillagedTiles`, `Buildings` | `GetUnhappinessFromIsolation()`, `GetUnhappinessFromFamine()`, `GetUnhappinessFromPillagedTiles()`, `GetUnhappinessFromBuildings()` |
-  | `Specialists` | `getUnhappinessFromSpecialists()` |
-
-- `mcp-server/src/knowledge/schema/timed.ts` and `schema/setup.ts`: nullable JSON column `UnhappinessSources` on `CityInformations`.
-- `projectNewspaperCity`: pick `UnhappinessSources` through a newspaper-only field list whenever the paper has full city detail, including a Stage 4 city-screen grant at cutoff. `cityDetailFields` and the `get-cities` schema stay as they are.
-- `vox-agents/src/newspaper/editorial/facts/city.ts`: detailed fact `city.unhappiness` with `culture`, `gold`, `science`, `distress`, `religion`, `isolation`, `famine`, `pillaged`, `buildings`, `specialists`, and `top`, the name of the largest cause. A cause missing from the object reads 0.
-- Probe: `probe-culture-opinion` (an own city where `city.unhappiness.top == 'culture'` and `city.unhappiness.culture >= 2`). It gains its opinion styling in stage 7.
-- Docs: `triggers/facts.md`, `mcp-server/docs/knowledge.md`.
+**Implemented.** City observations record nonzero [unhappiness causes](../../../developers/vox-agents/newspaper/triggers/facts.md#city) for the newspaper at full access. The [Opinion probe](../../../developers/vox-agents/newspaper/triggers/examples.md#an-opinion-piece-on-city-unhappiness) can use recorded boredom. Strategists still get only net happiness through `get-cities`, and their tool lists omit `get-newspaper-evidence`. Stage 4 will apply the same detail rules to its city-screen grants.
 
 ### Stage 6: masthead and vocabulary
 
@@ -79,7 +62,7 @@ Derive own and foreign military counts from the receiver's recorded tactical zon
 
 ### Stage 7: genre, memory and chance
 
-**Implemented.** Variants can add [subheadlines and bylines](../../../developers/vox-agents/newspaper/editorial.md#authoring-choices). Expressions can read [publication memory](../../../developers/vox-agents/newspaper/triggers/overview.md#publication-memory), and rules can use [seeded chance](../../../developers/vox-agents/newspaper/triggers/overview.md#chance). The [probes](../../../developers/vox-agents/newspaper/triggers/examples.md#probe-catalogue-examples) cover the Opinion page, obituaries, a peace follow-up, a hundredth issue and a quiet spell. The opinion probe uses synthetic city data until Stage 5 records unhappiness causes.
+**Implemented.** Variants can add [subheadlines and bylines](../../../developers/vox-agents/newspaper/editorial.md#authoring-choices). Expressions can read [publication memory](../../../developers/vox-agents/newspaper/triggers/overview.md#publication-memory), and rules can use [seeded chance](../../../developers/vox-agents/newspaper/triggers/overview.md#chance). The [probes](../../../developers/vox-agents/newspaper/triggers/examples.md#probe-catalogue-examples) cover the Opinion page, obituaries, a peace follow-up, a hundredth issue and a quiet spell.
 
 ## Verification
 
@@ -87,7 +70,7 @@ After each stage, run from the repository root, in this order: `npm run build -w
 
 Test new projection fields and gates under `mcp-server/tests/newspaper/` and new facts under `vox-agents/tests/mock/newspaper/editorial/facts/`. Use synthetic summaries and events for automated replay and check the Lua roster in the game. Verify a third player who sees a city receives neither covert presence nor a private espionage operation. Check strategist results against the same inputs.
 
-After Stage 5, build the DLL, play a short game and replay it with `--config vox-agents/newspaper/probes`. Check the spy's city screen before and after the unlock and both directions of diplomat presence. On a turn when the receiver's strategist ran, compare the newspaper counts with that military report. A named great person, a stolen technology and `UnhappinessSources` appear in the newspaper evidence. Verify `get-events`, `get-players`, `get-cities` and `get-military-report` retain their existing behavior.
+Once the Stage 4 work is complete, build the DLL, play a short game and replay it with `--config vox-agents/newspaper/probes`. Check the spy's city screen before and after the unlock and both directions of diplomat presence. On a turn when the receiver's strategist ran, compare the newspaper counts with that military report. Check that a named great person, a stolen technology and `UnhappinessSources` appear in the newspaper evidence. Verify `get-events`, `get-players`, `get-cities` and `get-military-report` retain their existing behavior.
 
 ## Out of scope
 

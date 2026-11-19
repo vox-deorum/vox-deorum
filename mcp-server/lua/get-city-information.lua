@@ -149,6 +149,29 @@ for playerID = 0, GameDefines.MAX_CIV_PLAYERS do
       -- Get happiness
       cityData.HappinessDelta = city:getHappinessDelta()
 
+      -- Collect every nonzero cause of unhappiness for the newspaper. The game applies
+      -- its own population cap and handles resistance, razing and puppets separately.
+      local unhappinessCauses = {
+        { "Culture", city:GetUnhappinessFromYield(YieldTypes.YIELD_CULTURE) },
+        { "Gold", city:GetUnhappinessFromYield(YieldTypes.YIELD_GOLD) },
+        { "Science", city:GetUnhappinessFromYield(YieldTypes.YIELD_SCIENCE) },
+        { "Distress", city:GetUnhappinessFromYield(YieldTypes.YIELD_FOOD) },
+        { "Religion", city:GetUnhappinessFromReligiousUnrest() },
+        { "Isolation", city:GetUnhappinessFromIsolation() },
+        { "Famine", city:GetUnhappinessFromFamine() },
+        { "PillagedTiles", city:GetUnhappinessFromPillagedTiles() },
+        { "Buildings", city:GetUnhappinessFromBuildings() },
+        { "Specialists", city:getUnhappinessFromSpecialists() }
+      }
+      local unhappinessSources = {}
+      for _, cause in ipairs(unhappinessCauses) do
+        if cause[2] ~= 0 then
+          unhappinessSources[cause[1]] = cause[2]
+        end
+      end
+      -- Keep the observed empty table so an all-zero city stays distinguishable from an unrecorded one.
+      cityData.UnhappinessSources = unhappinessSources
+
       -- Additional city status flags (visible at level 2)
       cityData.RazingTurns = city:IsRazing() and city:GetRazingTurns() or 0
       cityData.ResistanceTurns = city:IsResistance() and city:GetResistanceTurns() or 0

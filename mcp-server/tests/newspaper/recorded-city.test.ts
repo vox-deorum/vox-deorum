@@ -131,3 +131,33 @@ describe('dated newspaper joins', () => {
     });
   });
 });
+
+describe('newspaper city unhappiness', () => {
+  it('reports recorded causes only at full access and keeps an observed empty reading', async () => {
+    await city({ ID: 22, Key: 43, Turn: 12, Player0: 2, UnhappinessSources: { Culture: 3, Distress: 1 } });
+    await city({ ID: 23, Key: 44, Turn: 12, Player0: 1, UnhappinessSources: { Culture: 2 } });
+    await city({ ID: 24, Key: 45, Turn: 12, Player0: 2, UnhappinessSources: {} });
+    await city({ ID: 25, Key: 46, Turn: 12, Player0: 2, UnhappinessSources: null });
+
+    const evidence = await queryNewspaperEvidence(db, request);
+
+    const full = evidence.cities.find(row => row.subjectID === 43);
+    expect(full?.values.UnhappinessSources).toEqual({ Culture: 3, Distress: 1 });
+    expect(full?.source).toMatchObject({ table: 'CityInformations', id: 22, turn: 12 });
+    expect(evidence.cities.find(row => row.subjectID === 44)?.values).not.toHaveProperty('UnhappinessSources');
+    expect(evidence.cities.find(row => row.subjectID === 45)).toMatchObject({
+      values: { UnhappinessSources: {} }, source: { table: 'CityInformations', id: 24, turn: 12 }
+    });
+    expect(evidence.cities.find(row => row.subjectID === 46)?.values).not.toHaveProperty('UnhappinessSources');
+  });
+
+  it('reads old recordings without the causes column', async () => {
+    await db.updateTable('CityInformations').set({ Player0: 2 }).where('ID', '=', 21).execute();
+    await db.schema.alterTable('CityInformations').dropColumn('UnhappinessSources').execute();
+
+    const evidence = await queryNewspaperEvidence(db, request);
+    const projected = evidence.cities.find(row => row.subjectID === 42);
+    expect(projected?.values).toHaveProperty('HappinessDelta', 0);
+    expect(projected?.values).not.toHaveProperty('UnhappinessSources');
+  });
+});

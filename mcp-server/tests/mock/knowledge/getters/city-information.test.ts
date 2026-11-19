@@ -15,6 +15,7 @@ import { gameDatabase } from '../../../../src/server.js';
 import { setupStore } from '../../helpers.js';
 import { LuaFunction } from '../../../../src/bridge/lua-function.js';
 import { getCityInformations } from '../../../../src/knowledge/getters/city-information.js';
+import { setupKnowledgeDatabase } from '../../../../src/knowledge/schema/setup.js';
 import type { KnowledgeStore } from '../../../../src/knowledge/store.js';
 
 let store: KnowledgeStore;
@@ -116,6 +117,36 @@ describe('getCityInformations', () => {
     } finally {
       await cleanup();
     }
+  });
+
+  it('round-trips recorded unhappiness causes, including an all-zero reading', async () => {
+    mockLua([
+      city(10, { UnhappinessSources: { Culture: 3, Distress: 1 } }),
+      city(11, { UnhappinessSources: {} }),
+      city(12),
+    ]);
+
+    await getCityInformations();
+
+    expect((await store.getMutableKnowledge('CityInformations', 10))?.UnhappinessSources)
+      .toEqual({ Culture: 3, Distress: 1 });
+    expect((await store.getMutableKnowledge('CityInformations', 11))?.UnhappinessSources).toEqual({});
+    expect((await store.getMutableKnowledge('CityInformations', 12))?.UnhappinessSources).toBeNull();
+  });
+
+  it('keeps old city history and resumes recording causes when writable setup upgrades the schema', async () => {
+    const db = store.getDatabase();
+    await db.schema.alterTable('CityInformations').dropColumn('UnhappinessSources').execute();
+    mockLua([city(10)]);
+    await getCityInformations();
+    await setupKnowledgeDatabase(db);
+
+    mockLua([city(10, { UnhappinessSources: { Culture: 2 } })]);
+    await getCityInformations();
+    expect(await store.getMutableKnowledgeHistory('CityInformations', 10)).toMatchObject([
+      { Version: 2, UnhappinessSources: { Culture: 2 } },
+      { Version: 1, UnhappinessSources: null },
+    ]);
   });
 
 });

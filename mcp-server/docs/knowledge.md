@@ -77,7 +77,7 @@ Versioned data with change tracking. Used for:
 
 - **PlayerSummaries**: Score, economy, military, diplomacy (~30 fields)
 - **PlayerOpinions**: Diplomatic opinions to/from each player
-- **CityInformations**: Population, production, buildings, wonders (~20 fields)
+- **CityInformations**: Population, production, buildings, wonders, and local happiness. `UnhappinessSources` records nonzero city cause readings as JSON for detailed newspaper evidence. An empty object records zero for every cause; `NULL` means it was not recorded. `get-cities` keeps the existing `HappinessDelta` field.
 - **StrategyChanges**: Grand/economic/military strategy selections
 - **PolicyChanges**: Policy branch and policy selections
 - **ResearchChanges**: Technology research decisions

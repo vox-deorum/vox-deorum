@@ -42,6 +42,8 @@ const ownPlayerFields = [
 ] as const;
 const foreignPlayerFields = ['Era', 'Cities', 'Population', 'CulturePerTurn', 'TourismPerTurn',
   'Technologies', 'PolicyBranches', 'FoundedReligion', 'MajorityReligion'] as const;
+/** City fields reported only by the newspaper, outside the strategist's city list and its schema. */
+const newspaperCityOnlyFields = ['UnhappinessSources'] as const;
 
 /** Get recorded diplomat strength only from a fully accessible receiver snapshot. */
 function diplomatPoints(target: number, context: NewspaperProjectionContext): number {
@@ -130,6 +132,11 @@ export function projectNewspaperCity(row: Selectable<CityInformation>, context: 
   if (level !== 1 && level !== 2) return undefined;
   const { Key: _key, ...fields } = projectCityReportFields(row, level);
   const values: Record<string, unknown> = { ...fields, ...pickFields(row, ['IsCapital']) };
+  // Unhappiness causes are newspaper-only. Omit an unrecorded reading and keep an observed empty object.
+  if (level === 2) {
+    const unhappiness = pickFields(row, newspaperCityOnlyFields).UnhappinessSources;
+    if (unhappiness !== undefined && unhappiness !== null) values.UnhappinessSources = structuredClone(unhappiness);
+  }
   const owner = cityOwner(row, context);
   if (owner) values.OwnerID = owner.id;
   return { source: reference, subjectID: row.Key, values,

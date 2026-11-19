@@ -299,6 +299,7 @@ export interface CityInformation extends MutableKnowledge, CityInformationBasic 
   FaithPerTurn: number; // Faith generated per turn
   TourismPerTurn: number; // Tourism generated
   HappinessDelta: number; // Local happiness
+  UnhappinessSources: JSONColumnType<Record<string, number>> | null; // Nonzero unhappiness causes by name; null when unrecorded
   RazingTurns: number; // Turns until razed (0 if not razing)
   ResistanceTurns: number; // Resistance turns remaining
   BuildingCount: number; // Total number of buildings

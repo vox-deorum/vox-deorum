@@ -15,6 +15,17 @@ import {
 } from './table-utils.js';
 
 /**
+ * Add the newspaper unhappiness column to a writable database created before it existed.
+ * Live game files are reopened across sessions, so creation alone would leave old tables without the column.
+ */
+async function ensureCityUnhappinessSourcesColumn(db: Kysely<KnowledgeDatabase>): Promise<void> {
+  const table = (await db.introspection.getTables()).find(entry => entry.name === 'CityInformations');
+  if (table && !table.columns.some(column => column.name === 'UnhappinessSources')) {
+    await db.schema.alterTable('CityInformations').addColumn('UnhappinessSources', 'text').execute();
+  }
+}
+
+/**
  * Setup a knowledge database
  * Creates the database file and schema if it doesn't exist
  * Always runs migrations and creates database if not exists
@@ -291,6 +302,7 @@ export async function setupKnowledgeDatabase(
     .addColumn('FaithPerTurn', 'integer', (col) => col.notNull())
     .addColumn('TourismPerTurn', 'integer', (col) => col.notNull())
     .addColumn('HappinessDelta', 'integer', (col) => col.notNull())
+    .addColumn('UnhappinessSources', 'text') // JSON object of nonzero unhappiness causes
     .addColumn('RazingTurns', 'integer', (col) => col.notNull())
     .addColumn('ResistanceTurns', 'integer', (col) => col.notNull())
     .addColumn('BuildingCount', 'integer', (col) => col.notNull())
@@ -302,6 +314,8 @@ export async function setupKnowledgeDatabase(
     .execute();
   // Create indexes for CityInformations table
   await createMutableKnowledgeIndexes(db, 'CityInformations');
+  // Reuse an existing game file by adding the column a previous schema version lacked.
+  await ensureCityUnhappinessSourcesColumn(db);
 
   // Create PlayerInformation table (PublicKnowledge implementation)
   await createPublicKnowledgeTable(db, 'PlayerInformations')

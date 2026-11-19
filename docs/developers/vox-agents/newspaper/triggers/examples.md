@@ -74,7 +74,7 @@ Load the [probe overlay](../../../../../vox-agents/newspaper/probes/) with `--co
 
 ### An opinion piece on city unhappiness
 
-`probe-culture-opinion` fires for one of our cities when boredom is its largest [unhappiness cause](facts.md#city) and reads at least 2. The subheadline prints the reading as `{{culture}}`, and the byline credits a correspondent in `{{city}}`. The Opinion page collects the `opinion` tag and appears when at least one of those stories falls outside the front page. The probe test supplies the cause data because regular recordings do not yet collect it.
+`probe-culture-opinion` fires for one of our cities when boredom is its largest recorded [unhappiness cause](facts.md#city) and reads at least 2. The subheadline prints the reading as `{{culture}}`, and the byline credits a correspondent in `{{city}}`. The Opinion page appears when at least one story tagged `opinion` falls outside the front page.
 
 ### A retraction after a printed peace
 

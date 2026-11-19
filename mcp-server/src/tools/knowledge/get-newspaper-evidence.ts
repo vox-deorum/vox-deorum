@@ -4,7 +4,7 @@ import { knowledgeManager } from '../../server.js';
 import { newspaperEvidenceRequestSchema, newspaperEvidenceSchema } from '../../newspaper/evidence.js';
 import { queryNewspaperEvidence } from '../../newspaper/queries.js';
 
-// Use the agent's existing PlayerID binding while leaving the shared replay contract unchanged.
+// Use the MCP convention for player arguments while keeping the shared replay contract unchanged.
 const { receiverPlayerID, ...requestFields } = newspaperEvidenceRequestSchema.shape;
 const inputSchema = z.object({ ...requestFields, PlayerID: receiverPlayerID });
 

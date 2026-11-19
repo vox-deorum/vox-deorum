@@ -96,4 +96,24 @@ describe('get-cities', () => {
     const ownerCannotRevealHidden = await client.call({ PlayerID: 0, Owner: 'LeaderA' });
     expect(ownerCannotRevealHidden).toEqual({});
   });
+
+  it('keeps HappinessDelta and omits recorded unhappiness causes for full detail and unscoped reads', async () => {
+    vi.mocked(cityInformation.getCityInformations).mockResolvedValue([
+      {
+        ...city(30, 'Carthage', 'LeaderC', [2, 2, 0]),
+        HappinessDelta: -4,
+        UnhappinessSources: { Culture: 3, Religion: 1 }
+      }
+    ] as any);
+
+    // A level-2 receiver gets the existing net happiness value without the cause breakdown.
+    const full = (await client.call({ PlayerID: 0 })).LeaderC.Carthage;
+    expect(full.HappinessDelta).toBe(-4);
+    expect(full).not.toHaveProperty('UnhappinessSources');
+
+    // The unscoped response reads at full detail too, and follows the same rule.
+    const unscoped = (await client.call({})).LeaderC.Carthage;
+    expect(unscoped.HappinessDelta).toBe(-4);
+    expect(unscoped).not.toHaveProperty('UnhappinessSources');
+  });
 });
