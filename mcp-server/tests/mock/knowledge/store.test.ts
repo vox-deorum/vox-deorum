@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { setupStore } from '../helpers.js';
+import { seedPlayer, setupStore } from '../helpers.js';
 import { knowledgeManager, gameDatabase } from '../../../src/server.js';
 import { bridgeManager } from '../../../src/server.js';
 import * as gameIdentity from '../../../src/knowledge/getters/game-identity.js';
@@ -293,6 +293,25 @@ describe('handleGameEvent', () => {
     });
 
     expect(await store.getDatabase().selectFrom('GameEvents').selectAll().execute()).toHaveLength(0);
+  });
+
+  it('records a human military report without a strategist, while skipping AI seats', async () => {
+    await seedPlayer(store, 1, { isHuman: 1 });
+    await seedPlayer(store, 2, { isHuman: 0 });
+    vi.spyOn(LuaFunction.prototype, 'execute').mockImplementation(async function (this: LuaFunction) {
+      if (this.name !== 'getMilitaryReport') return { success: false };
+      return { success: true, result: [{}, {
+        0: { ZoneID: 0, Territory: 'None', Dominance: 'None', Domain: 'None', Units: { Rome: { 1: 1 } } }
+      }] };
+    });
+
+    await store.handleGameEvent(10_000_020, 'PlayerDoneTurn', { PlayerID: 1, NextPlayerID: 2 });
+    await store.handleGameEvent(10_000_021, 'PlayerDoneTurn', { PlayerID: 2, NextPlayerID: 3 });
+
+    const rows = await store.getDatabase().selectFrom('TacticalZones').selectAll().execute();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ ZoneID: 0, PlayerID: 1, Turn: 10, Player1: 2, Player2: 0 });
+    expect(Object.values(rows[0].Units.Rome)).toEqual([1]);
   });
 
   it('still advances the active player and notifies when a turn-end read fails', async () => {

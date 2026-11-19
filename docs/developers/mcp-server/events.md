@@ -29,7 +29,7 @@ When an event arrives, the manager routes it down one of three paths.
 
 Some events trigger work rather than only being stored, because they mark moments when the server should refresh its picture of the world. The main one is `PlayerDoneTurn`, and it fires two different refreshes depending on whose turn just ended:
 
-- **A major civ finishing its turn** (a `PlayerID` below 22) refreshes that one player's **opinions, strategy, and persona**. These are per-player snapshots, taken 22 times a round at most.
+- **A major civ finishing its turn** (a `PlayerID` below 22) refreshes that player's **opinions, strategy, persona, and military report**. These are per-player snapshots, taken 22 times a round at most.
 - **The end of the round** refreshes **player summaries and city information** for everyone at once. The server detects this by watching for `PlayerID` 63, the barbarian slot, whose turn always ends last. Treating it as a sentinel means the expensive whole-world snapshot runs once per round instead of once per civ.
 
 Two other event kinds matter:

@@ -87,9 +87,14 @@ export async function getMilitaryReport(
   // Save tactical zone information with units in batch
   if (saving && zones) {
     // Convert zones object to array for batch processing
-    const zoneItems = Object.entries(zones as Record<string, Record<string, unknown>>)
-      .map(([_, zone]) => ({
-        data: zone,
+    const zoneItems = Object.values(zones as Record<string, Record<string, unknown>>)
+      .map(zone => ({
+        // Lua's unassigned zone has no geometry or tactical assessment.
+        data: zone.ZoneID === 0 ? {
+          Posture: 'None', AreaID: -1, CenterX: -1, CenterY: -1,
+          Plots: 0, Value: 0, FriendlyStrength: 0, EnemyStrength: 0, NeutralStrength: 0,
+          Neighbors: [], ...zone
+        } : zone,
         extra: {
           PlayerID: playerID
         },

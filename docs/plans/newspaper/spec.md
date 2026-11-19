@@ -21,7 +21,6 @@ The newspaper serves human civilizations. Giving LLM strategists the same public
 
 **Success:** the player enjoys skimming an issue, learns something useful, and finds a worthwhile opportunity or next step. Both the heuristic and LLM editors should achieve this.
 
-Useful gameplay interpretation guides both editors. Existing event sequences, relationships, and trends can support a plausible explanation even when every cause cannot be established. Preserve observed quantities, qualify inferred causes proportionately, and broaden an account when several explanations fit. Newspaper features derive this context locally from existing recordings, without adding DLL events or collection machinery.
 
 ## 2. The player experience
 

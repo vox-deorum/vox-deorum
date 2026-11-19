@@ -29,6 +29,7 @@ import { getPlayerPersona } from './getters/player-persona.js';
 import { getPlayerOpinions } from './getters/player-opinions.js';
 import { getPlayerSummaries } from './getters/player-summary.js';
 import { getCityInformations } from './getters/city-information.js';
+import { getMilitaryReport } from './getters/military-report.js';
 import { getRandomSeeds } from './getters/random-seeds.js';
 import { setTimeout } from 'node:timers/promises';
 import PQueue from 'p-queue';
@@ -353,7 +354,8 @@ export class KnowledgeStore {
               await settleReads(data.PlayerID, {
                 getPlayerOpinions: getPlayerOpinions(data.PlayerID),
                 getPlayerStrategy: getPlayerStrategy(data.PlayerID),
-                getPlayerPersona: getPlayerPersona(data.PlayerID)
+                getPlayerPersona: getPlayerPersona(data.PlayerID),
+                getMilitaryReport: getMilitaryReport(data.PlayerID)
               });
             }
             knowledgeManager.updateActivePlayer(data.NextPlayerID);
@@ -436,15 +438,14 @@ export class KnowledgeStore {
             ...extra,
             Turn: turn
           };
-          if (!newEntry.payload)
-            newEntry.payload = {};
+          newEntry.Payload ??= {};
 
           // Apply visibility flags if provided
           if (visibilityFlags !== undefined)
             applyVisibility(newEntry, visibilityFlags);
 
           // Insert the entry
-          trx.insertInto(tableName)
+          await trx.insertInto(tableName)
             .values(newEntry)
             .execute();
         }
