@@ -2,7 +2,7 @@
 import type { NewspaperSourceReference } from '../../../../../mcp-server/dist/newspaper/evidence.js';
 import { linkTargetSchema } from '../../contracts/issue.js';
 import type { RuleDevelopment, RuleScalar } from '../../contracts/triggers.js';
-import type { CompiledEditorialExpressions } from '../config/expressions.js';
+import type { CompiledEditorialExpressions, EditorialTerms } from '../config/expressions.js';
 import type { EditorialConfig, EditorialTemplate, AuthoredVariant } from '../config/schema.js';
 import { storyIdentity, storySubject } from '../facts/story.js';
 import { evaluateChoices } from '../shared/eligibility.js';
@@ -44,6 +44,11 @@ export function substitute(text: string, values: TemplateValues): string {
   });
 }
 
+/** Expose resolved terms under the `terms.` prefix used by authored placeholders. */
+export function termPlaceholders(terms?: EditorialTerms): Record<string, string | number> {
+  return Object.fromEntries([...(terms ?? [])].map(([name, term]) => [`terms.${name}`, term.value]));
+}
+
 /** Substitute destination fields using the same authored placeholders as prose. */
 function substituteTarget(
   target: AuthoredVariant['links'][number]['target'],
@@ -71,7 +76,8 @@ function printable(variant: AuthoredVariant, values: TemplateValues): boolean {
   if ([variant.headline, ...variant.body].some((source) => substitute(source, augmented).match(placeholderPattern)))
     return false;
   return variant.links.every((link) => {
-    if (substitute(link.label, values).match(placeholderPattern)) return false;
+    const label = substitute(link.label, values);
+    if (!label || label.match(placeholderPattern)) return false;
     const target = linkTargetSchema.safeParse(substituteTarget(link.target, values));
     return target.success && !JSON.stringify(target.data).match(placeholderPattern);
   });
@@ -95,7 +101,7 @@ function supportingMatch(ids: readonly string[], rules: ReadonlyMap<string, Rule
 
 /** Build candidate bindings and printable values without flattening members of a group. */
 function templateFacts(
-  parts: readonly RuleDevelopment[], period: Period, facts?: BatchFacts['facts']
+  parts: readonly RuleDevelopment[], period: Period, facts?: BatchFacts['facts'], terms?: EditorialTerms
 ) {
   const subject = storySubject(parts[0].subject, facts);
   const identity = storyIdentity(subject, facts);
@@ -146,6 +152,7 @@ function templateFacts(
     .filter(([key]) => !repeated.has(key))
     .map(([key, field]) => [key, field.value as RuleScalar]));
   const placeholders: TemplateValues = {
+    ...termPlaceholders(terms),
     ...identityValues,
     ...values,
     ...qualified,
@@ -162,12 +169,13 @@ function templateFacts(
 
 /** Find source rows for the visible identities actually printed by a variant. */
 function placeholderSources(
-  variant: AuthoredVariant, choice: ReturnType<typeof templateFacts>
+  variant: AuthoredVariant, choice: ReturnType<typeof templateFacts>, terms?: EditorialTerms
 ): NewspaperSourceReference[] {
   const used = [
     variant.headline, ...variant.body, ...variant.links.flatMap((link) => [link.label, ...Object.values(link.target)]),
   ].flatMap((text) => [...text.matchAll(placeholderPattern)].map((match) => match[1]));
   return used.flatMap((key) => {
+    if (key.startsWith('terms.')) return terms?.get(key.slice('terms.'.length))?.sources ?? [];
     const field = choice.identity[key];
     return field?.value === choice.placeholders[key] ? field?.sources ?? [] : [];
   });
@@ -179,7 +187,8 @@ export async function matchTemplates(
   config: EditorialConfig,
   compiled: CompiledEditorialExpressions,
   batch: BatchFacts,
-  budget?: ExpressionCheckBudget
+  budget?: ExpressionCheckBudget,
+  terms?: EditorialTerms
 ): Promise<EditorialCandidate[]> {
   const bySubject = new Map<string, Map<string, RuleDevelopment>>();
   for (const part of triggers) {
@@ -194,7 +203,7 @@ export async function matchTemplates(
     for (const rules of bySubject.values()) {
       const match = supportingMatch(template.triggers, rules);
       if (!match) continue;
-      const choice = templateFacts(match.parts, match.period, batch.facts);
+      const choice = templateFacts(match.parts, match.period, batch.facts, terms);
       const variants = template.variants.filter((variant) => printable(variant, choice.placeholders));
       if (variants.length) plans.push({ template, prepared, ...match, choice, variants });
     }
@@ -218,7 +227,7 @@ export async function matchTemplates(
       const result = variantWeights[offset++];
       if (result.weight <= 0) return false;
       weights[variant.id] = result.weight;
-      sources[variant.id] = uniqueSources([...result.sources, ...placeholderSources(variant, choice)]);
+      sources[variant.id] = uniqueSources([...result.sources, ...placeholderSources(variant, choice, terms)]);
       return true;
     });
     return eligible.length ? [candidate(template, parts, period, choice.placeholders, rating, eligible, weights, sources)] : [];

@@ -2,7 +2,8 @@
   {
     "id": "probe-communist-press",
     "version": "1",
-    "title": "The People's Daily",
+    "title": "The {{terms.capital}} Worker",
+    "motto": "All power to {{terms.ruler}}",
     "when": "self.ideology == 'Order'",
     "weight": {
       "base": 20

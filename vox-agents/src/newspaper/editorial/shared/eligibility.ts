@@ -28,6 +28,20 @@ function matches(result: ExpressionResult): boolean {
   return 'value' in result && !!result.value;
 }
 
+/** Record a diagnostic for a failed expression while leaving hidden, skipped and unreached reads unreported. */
+export function recordChoiceError(
+  result: ExpressionResult,
+  slot: number,
+  budget?: ExpressionCheckBudget,
+): void {
+  if (!('error' in result)) return;
+  const { rule, field, message, hidden, skipped, unreached, budgetExhausted } = result.error;
+  if (budgetExhausted && budget) budget.choiceEvaluationIncomplete = true;
+  const errors = budget?.choiceErrors;
+  if (!errors || errors.has(slot) || hidden !== undefined || skipped || unreached) return;
+  errors.set(slot, { choice: rule, field, message: message.slice(0, 500) });
+}
+
 /** Build one batch across all applicable subjects, bypassing constant choices. */
 export async function evaluateChoices(
   runner: ExpressionRunner,
@@ -49,14 +63,7 @@ export async function evaluateChoices(
     const results = await runner.evaluate({ ...batch, groups }, budget);
     targets.forEach(({ index, slots }, offset) => {
       const evaluated = results[offset][0];
-      const errors = budget.choiceErrors;
-      evaluated.forEach((result, step) => {
-        if (!('error' in result)) return;
-        const { rule, field, message, hidden, skipped, unreached, budgetExhausted } = result.error;
-        if (budgetExhausted) budget.choiceEvaluationIncomplete = true;
-        if (!errors || errors.has(slots[step]) || hidden !== undefined || skipped || unreached) return;
-        errors.set(slots[step], { choice: rule, field, message: message.slice(0, 500) });
-      });
+      evaluated.forEach((result, step) => recordChoiceError(result, slots[step], budget));
       apply(evaluated, index);
     });
   }

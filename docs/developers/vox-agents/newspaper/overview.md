@@ -8,7 +8,7 @@ The newspaper publishes stories from a Civilization V recording. An authored tem
 | [Replay](replay.md) | Rule evaluation, expressions and audits implemented; the stock catalogue publishes stories from recorded play | Recording evidence, separate output storage, rule audits, issue reading, votes, preferences, and resume |
 | [Editorial](editorial.md) | Stock mechanics accepted; language tuning planned | Rules, configuration, authored choices, selection, feedback, stored presentation, and audits |
 | [Evaluation](evaluation.md) | Planned | Authored coverage and voice, then comparison with model editing |
-| [Live integration](live-integration.md) | Planned | Live scheduling, MCP archive, save checkpoint IDs, and player integration |
+| [Live integration](live-integration.md) | Planned | Periodic checks against MCP's existing records and in-game access to the latest issue |
 
 JavaScript expressions in QuickJS decide which developments make news and which accounts are eligible to print. The stock catalogue covers city, nation, and foreign affairs, with a story template for each rule. An overlay can tune a rule or add new coverage. Use the [stock replay examples](replay.md#stock-catalogue-reading-examples) to see how the choices play out.
 
@@ -42,4 +42,4 @@ The plain DOM reader lives in `vox-agents/newspaper/src/reader/`. Its applicatio
 
 To render an issue, supply a completed `IssueDocument` with publication identity, ordered pages, canonical items, typed links, and its saved presentation. Configurable design identities select fixed Victorian or modern renderer families; reopening an issue uses the saved colors, fonts, ornaments and layout choices. The [renderer guide](renderer.md) describes the schema 2 input, separate render profile and reader state, and exported bundle.
 
-Offline publication state uses schema 6, IssueDocument uses schema 2, and the replay output database uses SQLite `user_version` 5. [Plan 5](../../../plans/newspaper/implementation/05-live-integration.md) adds a live archive in MCP and a fixed-size checkpoint ID in the Civ V save.
+Offline publication state uses schema 6, IssueDocument uses schema 2, and the replay output database uses SQLite `user_version` 5.

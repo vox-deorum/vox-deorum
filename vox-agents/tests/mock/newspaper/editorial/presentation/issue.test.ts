@@ -2,7 +2,9 @@
 import { describe, expect, it } from 'vitest';
 import { createInitialPublicationState } from '../../../../../src/newspaper/contracts/publication.js';
 import { editorialConfigSchema, type EditorialConfig } from '../../../../../src/newspaper/editorial/config/schema.js';
-import { prepareEditorialExpressions } from '../../../../../src/newspaper/editorial/config/expressions.js';
+import {
+  prepareEditorialExpressions, type EditorialTerms,
+} from '../../../../../src/newspaper/editorial/config/expressions.js';
 import { buildNewspaperFacts } from '../../../../../src/newspaper/editorial/facts/index.js';
 import { evaluatePresentation } from '../../../../../src/newspaper/editorial/presentation/eligibility.js';
 import { computeFeedback } from '../../../../../src/newspaper/editorial/selection/feedback.js';
@@ -74,13 +76,16 @@ async function choices(config: EditorialConfig, receiverEra?: string) {
 }
 
 /** Use the real presentation boundary with deterministic independent choice streams. */
-async function render(config: EditorialConfig, candidates: EditorialCandidate[], seed = 'campaign/receiver/5') {
+async function render(
+  config: EditorialConfig, candidates: EditorialCandidate[], seed = 'campaign/receiver/5',
+  terms: EditorialTerms = new Map(),
+) {
   const streams = createEditorialStreams(seed, config);
   const weights = await choices(config);
   const result = presentIssue({
     issueId: 'issue/5', campaignId: 'campaign', timelineId: 'branch', receiver: { playerId: 0, label: 'Receiver' }, turn: 5,
     selected: candidates, state: createInitialPublicationState(), config, weights,
-    proseRandom: streams.prose, presentationRandom: streams.presentation,
+    proseRandom: streams.prose, presentationRandom: streams.presentation, terms,
   })!;
   return { ...result, weights };
 }
@@ -95,6 +100,50 @@ describe('editorial eligibility', () => {
     expect(chooseDesign(config, unknown, null, () => 0.99)?.id).toBe('early-account');
     const modern = await choices(config, 'Modern Era');
     expect(chooseDesign(config, modern, null, () => 0.99)?.id).toBe('modern-journal');
+  });
+});
+
+describe('masthead terms', () => {
+  it('should leave out a design while its title or motto has an unresolved term', async () => {
+    const config = createConfig();
+    config.designs[0].title = 'The {{terms.capital}} Herald';
+    config.designs.push({
+      ...structuredClone(config.designs[0]), id: 'fallback', title: 'Fallback', motto: undefined,
+    });
+    const weights = await choices(config);
+    expect(chooseDesign(config, weights, 'early-account', () => 0, new Map())?.id).toBe('fallback');
+
+    const capital: EditorialTerms = new Map([['capital', { value: 'Paris', sources: [] }]]);
+    expect(chooseDesign(config, weights, 'early-account', () => 0.99, capital)?.id).toBe('early-account');
+
+    config.designs[0].title = 'Stable title';
+    config.designs[0].motto = 'A journal of {{terms.master}}';
+    expect(chooseDesign(config, weights, 'early-account', () => 0.99, capital)?.id).toBe('fallback');
+    const master: EditorialTerms = new Map([
+      ['capital', { value: 'Paris', sources: [] }],
+      ['master', { value: 'Persia', sources: [] }],
+    ]);
+    expect(chooseDesign(config, weights, 'early-account', () => 0.99, master)?.id).toBe('early-account');
+  });
+
+  it('should resolve the masthead and source note without attributing terms to unrelated articles', async () => {
+    const config = createConfig();
+    config.designs[0].title = 'The {{terms.ruler}} Times';
+    config.designs[0].motto = '{{terms.amount}} voices';
+    const source = { table: 'PlayerSummaries' as const, id: 99, turn: 5, createdAt: 500 };
+    const terms: EditorialTerms = new Map([
+      ['ruler', { value: 'Party', sources: [source] }],
+      ['amount', { value: 0, sources: [source] }],
+    ]);
+    const result = await render(config, [createCandidate(config, 'home')], 'masthead', terms);
+
+    expect(result.issue.publication).toMatchObject({ title: 'The Party Times', motto: '0 voices' });
+    expect(result.issue.items[0].sourceNote).toEqual([
+      { type: 'text', text: 'From the editors of The Party Times' },
+    ]);
+    expect(result.mastheadSources).toEqual([source]);
+    const printed = result.itemCandidates.get(result.issue.items[0].id)!;
+    expect(printed.sources).not.toEqual(expect.arrayContaining([source]));
   });
 });
 

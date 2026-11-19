@@ -12,8 +12,8 @@ The newspaper fits the existing VP + EUI Lua/XML interface. Vox Deorum already h
 | --- | --- | --- |
 | Articles and archive lists | `civ5-mod/UI/VoxDeorumDiploPanel.xml` and `.lua` define repeated message instances, text sizing, scrolling, and older-history loading. `VoxDeorumHumanPanel.xml` and `.lua` build dynamic lists and detail panels. | Reuse these control patterns for headlines, bodies, series links, filters, and evidence expansion. The newspaper needs its own layout. |
 | Changing article length | The diplomacy panel measures populated controls and recalculates stacks and the scroll area. | Size rows after setting text. Check long names and localized text in the actual game fonts. |
-| Voting | Existing panels use button callbacks and outbound game events. | Upvote, downvote, and clear can use native controls associated with an article ID. Confirm a vote after MCP records it and the game installs the new checkpoint ID. |
-| Discreet entry point | EUI's `LUA/DiploCorner.lua`, under `civ5-dll/(3a) VP - EUI Compatibility Files/`, exposes `AdditionalInformationDropdownGatherEntries`. `VoxDeorumHumanTrigger.lua` provides a custom on-screen trigger. | A menu entry is an existing extension point. An unread badge needs a persisted read position and refresh behavior. |
+| Voting | Existing panels use button callbacks and outbound game events. | Future live voting can use native controls associated with an article ID. |
+| Discreet entry point | EUI's `LUA/DiploCorner.lua`, under `civ5-dll/(3a) VP - EUI Compatibility Files/`, exposes `AdditionalInformationDropdownGatherEntries`. `VoxDeorumHumanTrigger.lua` provides a custom on-screen trigger. | Use the menu extension point and keep the unread indicator in memory for the current session. |
 | Screen navigation | `VoxDeorumHumanPanel.lua` uses `Events.SearchForPediaEntry`; EUI panels provide game-popup and city-navigation examples. | Store typed targets with evidence, then resolve them when clicked. A historical city may have changed owner or disappeared. |
 | Simple charts | `civ5-dll/(1) Community Patch/Core Files/Overrides/ReplayViewer.xml` defines a `GraphLineInstance`; `ReplayViewer.lua` creates line segments and changes endpoints and colors. | Trends can use native line controls. Generated bitmaps are optional for basic evidence charts. |
 
@@ -63,16 +63,16 @@ A newspaper transport could use this route to fetch issues, browse history, and 
 
 Two transport details matter for a prototype. The diplomacy panel pumps `Game.ProcessConnectionMessages()` during updates because the normal game tick stops in the leader scene. Verify delivery while the newspaper is open in any such scene. Also, `CvConnectionService::BroadcastEventFromLua()` builds outbound events in a 65,536-byte JSON memory pool and rejects overflow. This is a memory-pool limit with object overhead, not a guaranteed 64 KB article-text allowance or a universal limit on all transport directions. Keep UI requests and votes small, and verify backend issue/history batch limits separately. The existing synchronous `Game.CallExternal()` path waits up to one second; asynchronous requests are the better starting point for background generation.
 
-MCP serves the archive and issue text over this transport. Native text remains available without rendered images once the reader has fetched the issue. A disconnect leaves the open issue readable in memory.
+The existing delivery path can carry the latest issue. Native text remains available without rendered images once the reader has received it.
 
-## Save checkpoint reference
+## Save checkpoint research for a future archive
 
 | Primitive | What the source establishes | What remains to test |
 | --- | --- | --- |
 | `Modding.OpenSaveData()` | `mcp-server/lua/game-identity.lua` stores campaign identity and last-sync time in a `Deorum` table. | Test that a separate ID in the table restores the exact revision on save/load, including across same-turn saves. |
-| Player script data | `CvLuaPlayer.cpp` exposes `GetScriptData()` and `SetScriptData()`. `CvPlayer.cpp` serializes `m_strScriptData`. | The setter replaces a string shared with other mods. Plan 5 uses a separate key in the existing save database as its first choice. |
+| Player script data | `CvLuaPlayer.cpp` exposes `GetScriptData()` and `SetScriptData()`. `CvPlayer.cpp` serializes `m_strScriptData`. | The setter replaces a string shared with other mods. A separate key in the save database can avoid that conflict. |
 
-[Plan 5](../implementation/05-live-integration.md) stores the archive in MCP and tests restoration through the saved ID. Save a game, publish another issue and change a vote, then reload and verify the earlier issue history, presentation, and feedback. Test with the matching database and with it missing.
+Archive and save restoration are outside [Plan 5](../implementation/05-live-integration.md).
 
 ## Seats and later checks
 

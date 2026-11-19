@@ -39,6 +39,9 @@ export const editorialValueNameSchema = identifierSchema.refine(
 const shortcutNameSchema = identifierSchema.refine(name => !['knows', 'relations', 'toJSON'].includes(name), 'Name is reserved by the fact view.');
 const spanSchema = z.number().positive();
 const shortcutGroupSchema = z.record(shortcutNameSchema, z.string().refine(source => source.trim().length > 0, 'Expected an expression.'));
+const termGroupSchema = z.record(
+  constantNameSchema, z.string().refine(source => source.trim().length > 0, 'Expected an expression.')
+);
 
 /** Authoring format and serialized replay format. Spans are always stored in Standard turns. */
 export const editorialConstantsSchema = z.strictObject({
@@ -48,6 +51,7 @@ export const editorialConstantsSchema = z.strictObject({
   shares: z.record(constantNameSchema, z.number().min(0).max(1)),
   types: z.record(constantNameSchema, z.array(z.string().min(1))),
   shortcuts: z.partialRecord(z.enum(editorialShortcutSubjects), shortcutGroupSchema),
+  terms: termGroupSchema.optional(),
 }).superRefine((constants, ctx) => {
   const seen = new Set<string>();
   for (const group of ['distances', 'spans', 'sizes', 'shares', 'types'] as const) {

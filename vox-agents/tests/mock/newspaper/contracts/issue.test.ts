@@ -14,6 +14,18 @@ describe("newspaper issue contracts", () => {
     expect(issueDocumentSchema.safeParse({ ...issue, schemaVersion: 99 }).success).toBe(false);
   });
 
+  it("should keep an optional publication motto while accepting older issues without one", () => {
+    const issue = createNewspaperIssue();
+    const { motto: _motto, ...publication } = issue.publication;
+    expect(issueDocumentSchema.parse({ ...issue, publication }).publication.motto).toBeUndefined();
+
+    issue.publication.motto = "All power to the Party";
+    expect(issueDocumentSchema.parse(issue).publication.motto).toBe(issue.publication.motto);
+    expect(issueDocumentSchema.safeParse({
+      ...issue, publication: { ...issue.publication, motto: "" },
+    }).success).toBe(false);
+  });
+
   it("should allow sharing an item across pages but reject repeats within a page", () => {
     const issue = createNewspaperIssue();
     expect(issueDocumentSchema.parse(issue).pages).toHaveLength(2);

@@ -8,4 +8,4 @@ Carry editorial reading acceptance and catalogue tuning into [Plan 4](04-trigger
 
 ## Live persistence boundary
 
-The versioned SQLite store and publication contracts serve offline runs. [Plan 5](05-live-integration.md) will store live issues and editorial state in MCP's per-game database, referenced by a fixed-size checkpoint ID in the Civ V save. Use generated archives and fixtures to measure MCP storage and lookup costs.
+The versioned SQLite store and publication contracts serve offline runs. [Plan 5](05-live-integration.md) reuses the editor during play and keeps the latest issue in memory.

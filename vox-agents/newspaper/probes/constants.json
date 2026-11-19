@@ -1,5 +1,10 @@
 {
   "sizes": {
     "probeTreasury": 100
+  },
+  "terms": {
+    "capital": "self.capital.name",
+    "ruler": "self.ideology == 'Order' ? 'the Party' : 'the Crown'",
+    "master": "players.find(p => p.knows('master') && p.master)?.name"
   }
 }

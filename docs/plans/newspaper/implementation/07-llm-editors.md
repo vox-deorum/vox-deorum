@@ -21,4 +21,4 @@ Add an optional LLM editorial mode that shares the heuristic editor's evidence, 
 
 Use a controlled adapter to exercise valid proposals, unrecognized styles, unknown subjects, unavailable evidence, inflated quantities or importance, duplicate series, malformed output, provider failure, and cancellation. Verify item and whole-check fallback, including omission of a model-only item when no authored fallback applies. Verify that the disabled setting makes no model calls and switching modes continues the same canonical series, votes, and prior articles. Include an ad hoc angle that a matching authored template can continue. Use a real configured provider for the reading comparison and separately record cost and latency. Run focused editorial, replay, and contract tests, then `npm run build:all` and `npm run test:all` at handoff.
 
-Catalogue and language-style authoring belong to Plan 4. Live scheduling, MCP storage, foreign-reporting collection, and game UI settings belong to Plan 5.
+Catalogue and language-style authoring belong to Plan 4. Periodic checks and the in-game controls for opening the latest issue belong to Plan 5.

@@ -23,7 +23,7 @@ Add new coverage under `vox-agents/newspaper/triggers/` and its story template u
 
 MCP owns evidence schemas and reporting policy. Rules use the projected observations and their original source references. Recorded identity metadata resolves city owners and team IDs; it must not supply hidden measurements or reveal unmet civilizations. A player ID is not assumed to equal its team ID.
 
-`contracts/publication.ts` defines editorial state for series, preferences, published-item evidence, current votes, diplomacy pair history, and rule repeat memory. The replay session scopes it to a campaign, branch, and receiver. State uses schema 6; regenerate runs with older state. This version is separate from IssueDocument schema 2 and the replay database's SQLite `user_version` 5. Decisions have their own schema and are stored beside checks and immutable issues, including the trigger audit, repeat outcomes, and the evidence behind inferred war and peace incidents. [Plan 5](../../../plans/newspaper/implementation/05-live-integration.md) will store live editorial state in MCP.
+`contracts/publication.ts` defines editorial state for series, preferences, published-item evidence, current votes, diplomacy pair history, and rule repeat memory. The replay session scopes it to a campaign, branch, and receiver. State uses schema 6; regenerate runs with older state. This version is separate from IssueDocument schema 2 and the replay database's SQLite `user_version` 5. Replay stores decisions beside checks and immutable issues, including the trigger audit, repeat outcomes, and the evidence behind inferred war and peace incidents.
 
 ## Catalogue and eligibility
 
@@ -32,11 +32,11 @@ The built-in catalogue lives under `vox-agents/newspaper/`. Rules and matching t
 | File | Controls |
 | --- | --- |
 | `defaults.json` | Frequency, selection limits, decay, novelty, variety, stickiness, and feedback coefficients |
-| `constants.json` | Named distances, spans, sizes, type lists and shortcuts used by every expression. See [constants and shortcuts](triggers/constants.md). |
+| `constants.json` | Named distances, spans, sizes, type lists and shortcuts, plus printable terms used by prose and mastheads. See [constants and shortcuts](triggers/constants.md). |
 | `triggers/*.json` | Trigger rules: subject, `when`, `values`, importance, repeat, grouping and tags. See the [trigger overview](triggers/overview.md). |
 | `templates/*.json` | Authored variants, typed links and short pieces, grouped by topic like triggers |
 | `pages.json` | Front page, section membership, and section minimums |
-| `designs/*.json` | Design identities, fixed renderer families, saved tokens/assets, layouts, and eligibility |
+| `designs/*.json` | Design identities, fixed renderer families, saved tokens/assets, masthead title and motto, layouts, and eligibility |
 
 An optional configured directory mirrors this structure and can supply only the files being changed. Section files load in filename order. Defaults and constants merge as objects; entries and authored variants merge by ID across files. Arrays without IDs, such as paragraphs, tags and `when` lists, replace the existing arrays. Effective configuration is validated before the run starts and saved for resume.
 
@@ -76,8 +76,9 @@ Prose and typed link values use `{{name}}` placeholders. The editor supplies the
 | `{{city.owner.name}}` | A namespaced reference, here the owner of a city subject |
 | `{{lost}}` | A scalar rule value from the ungrouped development |
 | `{{key}}`, `{{count}}` | A grouped development's non-null scalar key and member count |
+| `{{terms.<name>}}` | A printable [term](triggers/constants.md#terms) defined by the catalogue, such as the receiver's capital |
 
-Use qualified names such as `{{city.owner.name}}` and `{{subject.id}}` for recorded identities. An unresolved placeholder or invalid link destination makes that variant unprintable.
+Use qualified names such as `{{city.owner.name}}` and `{{subject.id}}` for recorded identities. An unresolved placeholder, empty link label or invalid link destination makes the variant unprintable. The editor evaluates a term once from the check's global facts, so `{{terms.capital}}` means the same thing in every article. Each variant cites the rows behind the terms it prints.
 
 For a single group, prose can print `{{key}}` and `{{count}}`. Expressions can read each member, for example `group.matches[0].city.name` and `group.matches[0].values`. If two rules grouped cities by the same religion, they may have counted different cities. Name the rule in the placeholder, such as `{{triggerValues.conversions.count}}`, or read its members with `triggerValues.conversions.matches`. When two ungrouped rules supply the same value name, qualify it the same way. An ambiguous bare placeholder leaves that variant out.
 
@@ -86,6 +87,18 @@ For a single group, prose can print `{{key}}` and `{{count}}`. Expressions can r
 The front page is unconditional. Each design needs one unconditional ordinary layout and one unconditional breaking layout, both with a constant positive weight. Other pages can use `when`; designs and extra layouts can also adjust their weights. Section labels must name configured pages, and fonts and ornaments are validated against renderer assets.
 
 The stock designs choose by `self.era`. `victorian` runs from the Classical through Future eras, `modern` from Modern through Future, and `oral-accounts` is the fallback for Ancient or unknown eras. Published presentation snapshots keep old issues independent of later catalogue changes.
+
+### Masthead and terms
+
+A design's `title` and optional `motto` may print [terms](triggers/constants.md#terms), the named printable expressions a catalogue defines under `constants.terms`. `presentIssue` substitutes the resolved terms into both and uses `defaults.publicationTitle` only when the resolved title is empty. `chooseDesign` rejects a design whose title or motto still holds an unresolved placeholder before it weights designs, so an ineligible design is never chosen, including when it was the previous issue's design. Layout availability is checked only for designs that pass.
+
+| Masthead field | Behavior |
+| --- | --- |
+| `title` | Resolved title stored in `publication.title`; also named in each item's "From the editors of ..." source note |
+| `motto` | Optional resolved line stored in `publication.motto`; the reader draws it under the title |
+| Evidence | The rows read by printed terms join the decision's evidence; article sources stay with their own article |
+
+The resolved values are part of the stored issue, so a later change to a term or design does not rewrite an older masthead. A publication without `motto` renders as before.
 
 ### Example: tune the settler story
 

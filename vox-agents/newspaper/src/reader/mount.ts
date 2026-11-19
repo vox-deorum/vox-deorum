@@ -104,6 +104,8 @@ export function mountReader(
   const masthead = createElement("div", "vd-masthead");
   const title = createElement("h1", "vd-title", issue.publication.title);
   masthead.append(title);
+  if (issue.publication.motto)
+    masthead.append(createElement("p", "vd-motto", issue.publication.motto));
 
   if (issue.publication.presentation.assets?.ornamentAssetId) {
     const ornament = createOrnamentImage(issue, assetBaseUrl);

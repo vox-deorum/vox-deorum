@@ -89,6 +89,17 @@
   font-family: var(--vd-font-masthead, "UnifrakturMaguntia"), "Bodoni Moda", Georgia, serif;
 }
 
+.vd-motto {
+  margin: 6px 0 0;
+  color: var(--vd-accent);
+  font-family: var(--vd-font-body);
+  font-size: calc(18px * var(--vd-text-scale));
+  font-style: italic;
+  line-height: 1.35;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
 .vd-ornament {
   display: block;
   width: 84%;

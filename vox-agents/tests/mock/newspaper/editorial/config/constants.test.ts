@@ -80,10 +80,32 @@ describe('editorial constants and shortcuts', () => {
       { types: { workers: ['Worker', 2] } },
       { shortcuts: { world: { alert: 'true' } } },
       { shortcuts: { city: { knows: 'true' } } },
+      { terms: { 'too-far': '1' } },
+      { terms: { turn: '1' } },
     ]) {
       await writeConstants(constants);
       await expect(loadEditorialConfig(directory)).rejects.toMatchObject({ issues: expect.any(Array) });
     }
+  });
+
+  it('should load printable terms in the authored and serialized catalogue', async () => {
+    const terms = {
+      capital: 'self.capital.name',
+      ruler: "self.ideology == 'Order' ? 'the Party' : 'the Crown'",
+    };
+    await writeConstants({ terms });
+    const config = await loadEditorialConfig(directory);
+    expect(config.constants.terms).toEqual(terms);
+    const restored = await parseEditorialConfig(JSON.parse(JSON.stringify(config)));
+    expect(restored.constants.terms).toEqual(terms);
+    const { terms: _terms, ...constants } = config.constants;
+    const withoutTerms = await parseEditorialConfig({ ...config, constants });
+    expect(withoutTerms.constants.terms).toBeUndefined();
+  });
+
+  it('should reject an invalid term expression with its catalogue name', async () => {
+    await writeConstants({ terms: { broken: 'true &&' } });
+    await expect(loadEditorialConfig(directory)).rejects.toThrow('constants.terms.broken');
   });
 
   it('should reject invalid shortcut expressions before evaluating any facts', async () => {

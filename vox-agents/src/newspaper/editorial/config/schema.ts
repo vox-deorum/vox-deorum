@@ -68,6 +68,7 @@ const designSchema = eligibleSchema.extend({
   id: z.string().min(1),
   version: z.string().min(1),
   title: z.string().min(1),
+  motto: z.string().min(1).optional(),
   presentation: presentationSchema,
   layouts: z.array(layoutSchema).min(1),
   pageLabels: z.record(z.string(), z.string()).default({}),

@@ -8,6 +8,11 @@ import type {
   PublishedItemRecord,
 } from '../contracts/publication.js';
 import type { EditorialConfig } from './config/schema.js';
+import type {
+  CompiledTriggerExpressions,
+  EditorialTerm,
+  EditorialTerms,
+} from './config/expressions.js';
 import { getEditorialExpressions } from './config/load.js';
 import { scaleEditorialConstants } from './config/constants.js';
 import { addDiplomacyFacts, type NewspaperFactModel } from './facts/index.js';
@@ -17,7 +22,8 @@ import { selectHeuristic } from './selection/heuristic.js';
 import { advanceSeries, decaySeries } from './selection/series.js';
 import { matchTemplates } from './selection/templates.js';
 import type { EditorialContext } from './shared/context.js';
-import type { ExpressionCheckBudget } from './shared/expressions.js';
+import type { ExpressionBatch, ExpressionCheckBudget } from './shared/expressions.js';
+import { recordChoiceError } from './shared/eligibility.js';
 import { configurationHash, createEditorialStreams } from './shared/determinism.js';
 import { summarizeSources, uniqueSources } from './shared/sources.js';
 import { presentIssue } from './presentation/issue.js';
@@ -50,6 +56,32 @@ export type EditorialCheckResult =
       state: PublicationState;
       decision: EditorialDecisionRecord;
     };
+
+/** Evaluate configured terms once per check and keep only printable values with their evidence. */
+export async function evaluateEditorialTerms(
+  compiled: CompiledTriggerExpressions,
+  batch: Pick<ExpressionBatch, 'facts' | 'constants'>,
+  budget?: ExpressionCheckBudget
+): Promise<EditorialTerms> {
+  const entries = [...compiled.terms.entries()];
+  if (!entries.length) return new Map();
+  const [[results]] = await compiled.runner.evaluate({
+    ...batch,
+    groups: [{ expressions: entries.map(([, slot]) => slot), subjects: [{}] }],
+  }, budget);
+  const terms = new Map<string, EditorialTerm>();
+  entries.forEach(([name, slot], index) => {
+    const result = results[index];
+    if ('error' in result) {
+      recordChoiceError(result, slot, budget);
+      return;
+    }
+    const value = result.value;
+    if (typeof value !== 'string' && (typeof value !== 'number' || !Number.isFinite(value))) return;
+    terms.set(name, { value, sources: result.sources ?? [] });
+  });
+  return terms;
+}
 
 /** Run one immutable, deterministic check and return its complete transactional checkpoint. */
 export async function runEditorialCheck(input: EditorialCheckInput): Promise<EditorialCheckResult> {
@@ -119,8 +151,9 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
     budget,
   });
   state.triggerRepeats = rules.repeatState;
+  const terms = await evaluateEditorialTerms(compiled, batch, budget);
   const triggers = rules.developments;
-  const candidates = (await matchTemplates(triggers, config, compiled, batch, budget)).map((candidate) => ({
+  const candidates = (await matchTemplates(triggers, config, compiled, batch, budget, terms)).map((candidate) => ({
     ...candidate,
     seriesKeys: candidate.seriesKeys.map((key) => `${scope}/${key}`),
   }));
@@ -175,6 +208,7 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
     weights,
     proseRandom: streams.prose,
     presentationRandom: streams.presentation,
+    terms,
   });
   if (!presentation) return skip('No eligible design or visible authored content.');
   const issue = validateEditorialIssue(presentation, config, weights);
@@ -204,9 +238,10 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
     ...entry,
     selected: displayedCandidates.has(entry.id),
   }));
-  decision.evidence = uniqueSources(
-    records.flatMap((item) => item.sources)
-  );
+  decision.evidence = uniqueSources([
+    ...records.flatMap((item) => item.sources),
+    ...presentation.mastheadSources,
+  ]);
   decision.selectedVariants = presentation.variants;
   decision.designId = issue.publication.designId;
   decision.layouts = presentation.layouts;

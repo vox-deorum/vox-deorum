@@ -1,4 +1,5 @@
 /** Prepare the expressions of a merged catalogue before evaluating checks. */
+import type { NewspaperSourceReference } from '../../../../../mcp-server/dist/newspaper/evidence.js';
 import {
   compileEditorialExpressions,
   type EditorialExpression,
@@ -21,10 +22,20 @@ export interface TriggerExpressionSlots {
   readonly groupBy?: number;
 }
 
+/** A printable term and the recorded rows its expression read. */
+export interface EditorialTerm {
+  readonly value: string | number;
+  readonly sources: NewspaperSourceReference[];
+}
+/** Resolved terms by their catalogue name. */
+export type EditorialTerms = ReadonlyMap<string, EditorialTerm>;
+
 export interface CompiledTriggerExpressions {
   runner: ExpressionRunner;
   /** Expression indices by trigger ID and field, kept out of the saved catalogue. */
   slots: ReadonlyMap<string, TriggerExpressionSlots>;
+  /** Expression indices by printable term name. */
+  terms: ReadonlyMap<string, number>;
 }
 
 interface PreparedTemplate extends ChoiceExpressions {
@@ -47,13 +58,27 @@ export async function prepareTriggerExpressions(
   constants?: EditorialConstants,
 ): Promise<CompiledTriggerExpressions> {
   const expressions: EditorialExpression[] = [];
+  const terms = termSlots(constants?.terms, expressions);
   const slots = triggerSlots(rules, expressions);
-  return { runner: await compileEditorialExpressions(expressions, { shortcuts: constants?.shortcuts }), slots };
+  return {
+    runner: await compileEditorialExpressions(expressions, { shortcuts: constants?.shortcuts }),
+    slots, terms,
+  };
 }
 
 /** Record a compiled index and its authored location. */
 function addExpression(expressions: EditorialExpression[], rule: string, field: string, source: string): number {
   return expressions.push({ rule, field, source }) - 1;
+}
+
+/** Register printable terms beside shortcuts, keeping their catalogue names for diagnostics. */
+function termSlots(
+  terms: Readonly<Record<string, string>> | undefined,
+  expressions: EditorialExpression[]
+): ReadonlyMap<string, number> {
+  return new Map(Object.entries(terms ?? {}).map(([name, source]) =>
+    [name, addExpression(expressions, `constants.terms.${name}`, 'expression', source)]
+  ));
 }
 
 /** Register all rule fields in the catalogue's common expression table. */
@@ -86,6 +111,7 @@ function triggerSlots(rules: readonly TriggerExpressionFields[], expressions: Ed
 /** Compile rules and choices together so constants and shortcuts have one definition per catalogue. */
 export async function prepareEditorialExpressions(config: EditorialConfig): Promise<CompiledEditorialExpressions> {
   const expressions: EditorialExpression[] = [];
+  const terms = termSlots(config.constants.terms, expressions);
   const slots = triggerSlots(config.triggers, expressions);
 
   /** Prepare one authored choice; omitted expressions need no sandbox work. */
@@ -115,5 +141,5 @@ export async function prepareEditorialExpressions(config: EditorialConfig): Prom
   }]));
 
   const runner = await compileEditorialExpressions(expressions, { shortcuts: config.constants.shortcuts });
-  return { runner, slots, templates, pages, designs };
+  return { runner, slots, terms, templates, pages, designs };
 }

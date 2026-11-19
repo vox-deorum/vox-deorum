@@ -399,6 +399,8 @@ The technical design will define each source's facts and periods. Both editors r
 
 ### 6.2 Persistence and loading
 
+The first live version keeps the latest issue in memory. An icon announces a new issue, and the icon and top menu open it. The durable archive and save behavior below are a possible follow-up.
+
 | Stored content | What to preserve |
 | --- | --- |
 | Articles | Text and links shown to the player, plus tags, evidence summaries, reporting sources, and contributing templates for the editor and inspection. |
@@ -433,7 +435,7 @@ flowchart TD
     C --> D[Tune triggers, templates, and language styles]
     D --> B
     D --> M[Compare editors using the accepted baseline]
-    M -->|Offline experience is useful| E[Live play, MCP archive, and game reader]
+    M -->|Offline experience is useful| E[Periodic live checks and in-game reading]
     E --> F[Later extensions]
 ```
 
@@ -445,7 +447,7 @@ flowchart TD
 | Required examples | A series starting, continuing, fading, and returning; a merged-template installment; useful short pieces. |
 | Tuning | Settle the trigger mix, authored templates, and language styles using recorded evidence. Adjust thresholds, fade, weights, page minimums, and vote effects. |
 | Editor comparison | Run heuristic and LLM editors on the same recording segments with shared style guidance; compare coverage and continuity. |
-| Live integration | Connect the editorial loop to live play and an MCP archive shared by the game and browser readers. Verify save checkpoint restoration. |
+| Live integration | Run the editorial check every few completed turns against MCP's existing records. Open the latest issue from a notification icon or the top menu. |
 | Later extensions | Graph rendering and graph-based reviews, richer artwork, audio, immediate special editions, and strategist publications. |
 
 ### 7.2 Evaluation checklist

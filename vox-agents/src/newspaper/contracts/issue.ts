@@ -296,6 +296,8 @@ export type IssueCutoff = z.infer<typeof issueCutoffSchema>;
 export const issuePublicationSchema = z.object({
   /** Name displayed on the publication. */
   title: z.string().min(1),
+  /** Optional motto displayed under the masthead. */
+  motto: z.string().min(1).optional(),
   /** Configurable visual design identity, retained with the published issue. */
   designId: z.string().min(1),
   /** Version of the selected visual design. */

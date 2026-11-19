@@ -1,4 +1,5 @@
 /** Independent deterministic authored-prose and visual-presentation choices. */
+import type { NewspaperSourceReference } from '../../../../../mcp-server/dist/newspaper/evidence.js';
 import {
   newspaperIssueSchemaVersion,
   type IssueDocument,
@@ -8,9 +9,12 @@ import {
 } from '../../contracts/issue.js';
 import type { PublicationState } from '../../contracts/publication.js';
 import type { EditorialConfig, EditorialDesign, AuthoredVariant } from '../config/schema.js';
+import type { EditorialTerms } from '../config/expressions.js';
 import { chooseWeighted } from '../shared/weights.js';
 import { uniqueSources } from '../shared/sources.js';
-import { placeholderPattern, substitute, resolveLinkTarget, type EditorialCandidate } from '../selection/templates.js';
+import {
+  placeholderPattern, substitute, resolveLinkTarget, termPlaceholders, type EditorialCandidate
+} from '../selection/templates.js';
 import type { PresentationWeights } from './eligibility.js';
 
 /** Render authored placeholders into text nodes and explicitly declared typed links. */
@@ -42,14 +46,50 @@ export function renderAuthoredText(
   return nodes.length ? nodes : [{ type: 'text', text }];
 }
 
-/** Choose a design with eligible positive layouts and retain the earlier identity while competitive. */
+/** A design title and motto after term substitution, with the rows cited by the terms it prints. */
+export interface ResolvedMasthead {
+  title: string;
+  motto?: string;
+  sources: NewspaperSourceReference[];
+}
+
+/** Substitute printable terms into a design's masthead, or reject it while a placeholder remains. */
+export function resolveMasthead(
+  design: EditorialDesign,
+  terms: EditorialTerms = new Map(),
+  fallbackTitle = ''
+): ResolvedMasthead | undefined {
+  const values = termPlaceholders(terms);
+  const resolvedTitle = substitute(design.title, values);
+  if (resolvedTitle.match(placeholderPattern)) return undefined;
+  const resolvedMotto = design.motto === undefined ? undefined : substitute(design.motto, values);
+  if (resolvedMotto?.match(placeholderPattern)) return undefined;
+  const title = resolvedTitle || fallbackTitle;
+  const used = [
+    ...(resolvedTitle ? [design.title] : []),
+    ...(resolvedMotto ? [design.motto!] : []),
+  ].flatMap((text) => [...text.matchAll(placeholderPattern)].map((match) => match[1]));
+  const sources = uniqueSources(used.flatMap((key) =>
+    key.startsWith('terms.') ? terms.get(key.slice('terms.'.length))?.sources ?? [] : []
+  ));
+  return {
+    title,
+    ...(resolvedMotto ? { motto: resolvedMotto } : {}),
+    sources,
+  };
+}
+
+/** Choose a design with a printable masthead and eligible positive layouts, retaining the earlier identity while competitive. */
 export function chooseDesign(
   config: EditorialConfig,
   weights: PresentationWeights,
   previousId: string | null,
-  random: () => number
+  random: () => number,
+  terms: EditorialTerms = new Map()
 ): EditorialDesign | undefined {
-  const eligible = config.designs.filter((design) => (weights.get(design) ?? 0) > 0);
+  const eligible = config.designs.filter((design) =>
+    (weights.get(design) ?? 0) > 0 && resolveMasthead(design, terms) !== undefined
+  );
   for (const design of eligible) {
     for (const variant of ['ordinary', 'breaking'])
       if (
@@ -78,6 +118,7 @@ export interface PresentationResult {
   variants: Record<string, string>;
   layouts: Record<string, string>;
   itemCandidates: Map<string, EditorialCandidate>;
+  mastheadSources: NewspaperSourceReference[];
 }
 
 /** Write canonical articles, prioritize immediate threats, and adapt section pages to available content. */
@@ -93,10 +134,14 @@ export function presentIssue(input: {
   weights: PresentationWeights;
   proseRandom: () => number;
   presentationRandom: () => number;
+  terms?: EditorialTerms;
 }): PresentationResult | undefined {
   const { config, weights, state } = input;
-  const design = chooseDesign(config, weights, state.previousDesignId, input.presentationRandom);
+  const terms = input.terms ?? new Map();
+  const design = chooseDesign(config, weights, state.previousDesignId, input.presentationRandom, terms);
   if (!design || !input.selected.length) return undefined;
+  const masthead = resolveMasthead(design, terms, config.defaults.publicationTitle);
+  if (!masthead) return undefined;
   const variants: Record<string, string> = {};
   const itemCandidates = new Map<string, EditorialCandidate>();
   const items: IssueItem[] = [];
@@ -128,7 +173,7 @@ export function presentIssue(input: {
       body: variant.body.map((paragraph) =>
         renderAuthoredText(paragraph, candidate.values, variant)
       ),
-      sourceNote: [{ type: 'text', text: `From the editors of ${design.title}` }],
+      sourceNote: [{ type: 'text', text: `From the editors of ${masthead.title}` }],
       ...(earlier
         ? {
             earlierReport: {
@@ -198,7 +243,8 @@ export function presentIssue(input: {
       receiver: input.receiver,
       cutoff: { turn: input.turn, label: `Turn ${input.turn}` },
       publication: {
-        title: design.title || config.defaults.publicationTitle,
+        title: masthead.title,
+        ...(masthead.motto === undefined ? {} : { motto: masthead.motto }),
         designId: design.id,
         designVersion: design.version,
         presentation: structuredClone(design.presentation),
@@ -209,5 +255,6 @@ export function presentIssue(input: {
     variants: Object.fromEntries(Object.entries(variants).filter(([id]) => displayed.has(id))),
     layouts,
     itemCandidates,
+    mastheadSources: masthead.sources,
   };
 }

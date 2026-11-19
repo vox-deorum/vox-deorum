@@ -92,6 +92,23 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('stored newspaper
     }
   }, 60_000);
 
+  it('should draw a publication motto under the masthead', async context => {
+    if (!browser) { context.skip(unavailable); return; }
+    const issue = createNewspaperIssue();
+    issue.publication.motto = 'All power to the Party';
+    const page = await browser.newPage();
+    try {
+      await page.goto(`${host.url}/newspaper/export.html`);
+      await page.evaluate(async issueInput => window.voxDeorumNewspaperExport!.mount(issueInput, {
+        viewportWidth: 1280, viewportHeight: 720, paperWidth: 1200, displayScale: 1,
+        textScale: 1, rasterScale: 1, maxTextureWidth: 4096, maxTextureHeight: 2048, scrollbarGutter: 16,
+      }), issue);
+      expect(await page.locator('.vd-masthead .vd-title + .vd-motto').textContent()).toBe(issue.publication.motto);
+    } finally {
+      await page.close();
+    }
+  }, 60_000);
+
   it('should keep a readable fallback and release instance faces when registered font files cannot load', async context => {
     if (!browser) { context.skip(unavailable); return; }
     const issue = createNewspaperIssue();

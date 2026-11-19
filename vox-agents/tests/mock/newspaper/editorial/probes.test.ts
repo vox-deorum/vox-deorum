@@ -7,27 +7,42 @@ import { runEditorialCheck } from '../../../../src/newspaper/editorial/check.js'
 import { loadEditorialConfig } from '../../../../src/newspaper/editorial/config/load.js';
 import type { EditorialConfig } from '../../../../src/newspaper/editorial/config/schema.js';
 import { buildNewspaperFacts } from '../../../../src/newspaper/editorial/facts/index.js';
-import { evidence as buildEvidence, snapshot } from '../../../helpers/newspaper-diplomacy.js';
+import { evidence as buildEvidence, relationship, snapshot } from '../../../helpers/newspaper-diplomacy.js';
 
 const probeDirectory = fileURLToPath(new URL('../../../../newspaper/probes/', import.meta.url));
+const probeTriggerId = 'probe-treasury';
 const probeTemplateId = 'probe-treasury-account';
 const probeDesignId = 'probe-communist-press';
 
 let defaultConfig: EditorialConfig;
 let probeConfig: EditorialConfig;
 let probeOnlyConfig: EditorialConfig;
+let capitalConfig: EditorialConfig;
+let vassalConfig: EditorialConfig;
 
 /** Supply dated contact and cover the stock rules' lookback windows. */
-function probeEvidence({ gold = 0, branch = 'Tradition', events = [], riderX = 10 }: {
+function probeEvidence({
+  gold = 0, branch = 'Tradition', events = [], riderX = 10, turn = 10, previous = 5,
+  ownCities = [], relationships = [],
+}: {
   gold?: number; branch?: string; events?: NewspaperEvent[]; riderX?: number;
+  turn?: number; previous?: number; ownCities?: { name: string; capital?: boolean }[];
+  relationships?: ReturnType<typeof relationship>[];
 } = {}): NewspaperEvidence {
-  const projected = buildEvidence(events, [snapshot(0, 5, []), snapshot(1, 5, []), snapshot(2, 5, [])]);
-  for (const row of projected.players) row.source = snapshot(row.subjectID, 5, []).source;
+  const history = [0, 1, 2].map((id) =>
+    snapshot(id, relationships.length ? turn : previous, id === 0 ? relationships : []));
+  const projected = buildEvidence(events, history, turn, previous);
+  for (const row of projected.players) row.source = history.find((entry) => entry.subjectID === row.subjectID)!.source;
   projected.players[0].values = { Gold: gold, PolicyBranches: { [branch]: [] } };
   projected.cities = [
-    { subjectID: 11, source: { table: 'CityInformations', id: 201, turn: 10, createdAt: 10_000 },
+    ...ownCities.map((city, index) => ({
+      subjectID: 100 + index,
+      source: { table: 'CityInformations' as const, id: 300 + turn * 10 + index, turn, createdAt: turn * 1000 },
+      values: { OwnerID: 0, Name: city.name, IsCapital: city.capital ? 1 : 0, X: 0, Y: 0 },
+    })),
+    { subjectID: 11, source: { table: 'CityInformations', id: 201, turn, createdAt: turn * 1000 },
       values: { OwnerID: 1, Name: 'Persepolis', X: riderX, Y: 0 } },
-    { subjectID: 12, source: { table: 'CityInformations', id: 202, turn: 10, createdAt: 10_000 },
+    { subjectID: 12, source: { table: 'CityInformations', id: 202, turn, createdAt: turn * 1000 },
       values: { OwnerID: 2, Name: 'Attila’s Court', X: 3, Y: 0 } },
   ];
   projected.request.historyFromTurn = -1;
@@ -42,7 +57,11 @@ function probeEvidence({ gold = 0, branch = 'Tradition', events = [], riderX = 1
 }
 
 /** Run the editor on projected evidence with the chosen catalogue. */
-function check(projected: NewspaperEvidence, catalogue = probeConfig) {
+function check(
+  projected: NewspaperEvidence,
+  catalogue = probeConfig,
+  state = createInitialPublicationState(),
+) {
   const facts = buildNewspaperFacts(projected, {
     playerIdentities: {
       0: { name: 'France', major: true, teamId: 100 },
@@ -57,7 +76,7 @@ function check(projected: NewspaperEvidence, catalogue = probeConfig) {
     evidence: projected,
     facts,
     speedMultiplier: 1,
-    state: createInitialPublicationState(),
+    state,
     config: catalogue,
   });
 }
@@ -89,6 +108,18 @@ describe('probe overlay', () => {
     probeOnlyConfig = {
       ...probeConfig,
       designs: probeConfig.designs.filter((design) => design.id === probeDesignId),
+    };
+    const repeatableTriggers = probeConfig.triggers.map((trigger) =>
+      trigger.id === probeTriggerId ? { ...trigger, repeat: 1 } : trigger);
+    capitalConfig = {
+      ...probeConfig,
+      triggers: repeatableTriggers,
+      designs: probeConfig.designs.filter((design) => design.id === 'probe-capital-masthead'),
+    };
+    vassalConfig = {
+      ...probeConfig,
+      triggers: repeatableTriggers,
+      designs: probeConfig.designs.filter((design) => design.id === 'probe-vassal-strapline'),
     };
   });
 
@@ -136,12 +167,15 @@ describe('probe overlay', () => {
   describe('great people probes', () => {
     it('should report a named birth abroad from only a player and a name', async () => {
       const birth = probeEvent('UnitCreated', { PlayerID: 1, Person: 'Ptolemy' });
-      const result = await check(probeEvidence({ events: [birth] }));
+      const projected = probeEvidence({ events: [birth] });
+      const result = await check(projected);
       const item = publishedItem(result.state, 'probe-foreign-birth-account');
 
       expect(item).toBeDefined();
       expect(headlineText(item!.headline)).toContain('Ptolemy');
-      expect(item!.sources).toEqual(expect.arrayContaining([birth.source, snapshot(1, 5, []).source]));
+      expect(item!.sources).toEqual(expect.arrayContaining([
+        birth.source, projected.players.find((player) => player.subjectID === 1)!.source,
+      ]));
     });
 
     it.each([
@@ -163,13 +197,16 @@ describe('probe overlay', () => {
         values: { OwnerID: 0, AttackingPlayerID: -1, Person: 'Hypatia' }, variant: 'probe-obituary-died' },
     ])('should report a named $kind as one obituary without coordinates', async ({ type, owner, values, variant }) => {
       const obituary = probeEvent(type, values);
-      const result = await check(probeEvidence({ events: [obituary] }));
+      const projected = probeEvidence({ events: [obituary] });
+      const result = await check(projected);
       const item = publishedItem(result.state, 'probe-obituary-account');
 
       expect(item).toBeDefined();
       expect(headlineText(item!.headline)).toContain('Hypatia');
       expect(result.decision.selectedVariants[item!.id]).toBe(variant);
-      expect(item!.sources).toEqual(expect.arrayContaining([obituary.source, snapshot(owner, 5, []).source]));
+      expect(item!.sources).toEqual(expect.arrayContaining([
+        obituary.source, projected.players.find((player) => player.subjectID === owner)!.source,
+      ]));
     });
 
     it.each([
@@ -183,17 +220,66 @@ describe('probe overlay', () => {
 
   describe("People's Daily design", () => {
     it('should choose the probe design when the receiver follows Order', async () => {
-      const result = await check(probeEvidence({ gold: 100, branch: 'Order' }), probeOnlyConfig);
+      const result = await check(probeEvidence({
+        gold: 100, branch: 'Order', ownCities: [{ name: 'Paris', capital: true }],
+      }), probeOnlyConfig);
       expect(result.status).toBe('published');
       if (result.status !== 'published') return;
       expect(result.issue.publication.designId).toBe(probeDesignId);
+      expect(result.issue.publication.title).toBe('The Paris Worker');
+      expect(result.issue.publication.motto).toBe('All power to the Party');
     });
 
     it('should not publish with this design when the receiver follows Freedom', async () => {
-      const result = await check(probeEvidence({ gold: 100, branch: 'Freedom' }), probeOnlyConfig);
+      const result = await check(probeEvidence({
+        gold: 100, branch: 'Freedom', ownCities: [{ name: 'Paris', capital: true }],
+      }), probeOnlyConfig);
       expect(result.status).toBe('skipped');
       expect(
         result.decision.candidateScores.some(
+          (candidate) => candidate.selected && candidate.id.startsWith(`${probeTemplateId}/`)
+        )
+      ).toBe(true);
+    });
+  });
+
+  describe('masthead probes', () => {
+    it('should follow a moved capital and cite the title term separately from articles', async () => {
+      const firstEvidence = probeEvidence({
+        gold: 100, ownCities: [{ name: 'Paris', capital: true }, { name: 'Orleans', capital: false }],
+      });
+      const first = await check(firstEvidence, capitalConfig);
+      expect(first.status).toBe('published');
+      if (first.status !== 'published') return;
+      expect(first.issue.publication.title).toBe('The Paris Herald');
+      const capitalSource = firstEvidence.cities.find((city) => city.values.Name === 'Paris')!.source;
+      expect(first.decision.evidence).toContainEqual(capitalSource);
+      expect(publishedItem(first.state, probeTemplateId)!.sources).not.toContainEqual(capitalSource);
+
+      const second = await check(probeEvidence({
+        gold: 100, turn: 15, previous: 10,
+        ownCities: [{ name: 'Paris', capital: false }, { name: 'Orleans', capital: true }],
+      }), capitalConfig, first.state);
+      expect(second.status).toBe('published');
+      if (second.status !== 'published') return;
+      expect(second.issue.publication.title).toBe('The Orleans Herald');
+    });
+
+    it('should drop a selected design when its motto loses our master', async () => {
+      const first = await check(probeEvidence({
+        gold: 100, relationships: [relationship(2, 'peace', { master: 'voluntary' })],
+      }), vassalConfig);
+      expect(first.status).toBe('published');
+      if (first.status !== 'published') return;
+      expect(first.issue.publication.designId).toBe('probe-vassal-strapline');
+      expect(first.issue.publication.motto).toBe("A journal of The Huns's dominion");
+
+      const second = await check(probeEvidence({
+        gold: 100, turn: 15, previous: 10, relationships: [relationship(2)],
+      }), vassalConfig, first.state);
+      expect(second.status).toBe('skipped');
+      expect(
+        second.decision.candidateScores.some(
           (candidate) => candidate.selected && candidate.id.startsWith(`${probeTemplateId}/`)
         )
       ).toBe(true);

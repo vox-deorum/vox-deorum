@@ -1,8 +1,8 @@
 # Newspaper trigger constants and shortcuts
 
-The built-in `vox-agents/newspaper/constants.json` supplies the names used by the stock catalogue and merges with overlays. Pair shortcuts are available to both stock and overlay rules.
+The built-in `vox-agents/newspaper/constants.json` supplies the names used by the stock catalogue and merges with overlays. Pair shortcuts are available to both stock and overlay rules. The stock file does not define terms yet; the probe overlay in `vox-agents/newspaper/probes/constants.json` shows how to add them.
 
-**Constants** give names to the numbers that [trigger rules](overview.md) compare against, such as `neighboring` for 7 tiles. **Shortcuts** give names to small expressions that many rules share, such as `city.is.neighbor`. This page is for developers writing or tuning rules. Both live in `vox-agents/newspaper/constants.json`, and changing one there changes every rule that uses it.
+**Constants** give names to the numbers that [trigger rules](overview.md) compare against, such as `neighboring` for 7 tiles. **Shortcuts** give names to small expressions that many rules share, such as `city.is.neighbor`. **Terms** give printable names to expressions that read the facts, so prose, titles and mottos can share a phrase. This page is for developers writing or tuning rules. All three are configured in a catalogue's `constants.json`, and changing one there changes everything that uses it.
 
 | Group | Holds | Used as | Example |
 | --- | --- | --- | --- |
@@ -12,6 +12,7 @@ The built-in `vox-agents/newspaper/constants.json` supplies the names used by th
 | `shares` | Fractions from 0 to 1 | A plain name | `majority` |
 | `types` | Lists of recorded names | A plain name holding a list | `settlers` |
 | `shortcuts` | Expressions grouped by subject | `<subject>.is.<name>` | `city.is.neighbor` |
+| `terms` | Printable expressions that return text or a finite number | `{{terms.<name>}}` in prose, titles and mottos | `{{terms.ruler}}` |
 
 ## Distance
 
@@ -105,6 +106,22 @@ A shortcut that reads a [hidden fact](facts.md#hidden-and-missing-facts) is hidd
 
 Shortcuts follow the subject they are read on: `city.before.is.conquered` tests the earlier city flags, and `city.owner.is.rival` tests the city's linked owner. Globals such as `cities` and `turn` still describe the current check. A historical shortcut can use only the facts available on that snapshot. For example, `city.before.is.frontier` is hidden because `city.own` is available only at the cutoff.
 
+## Terms
+
+A term is a named expression that reads the check's global facts and returns text or a finite number. Terms are for printing only: expressions continue to read facts directly, and terms are not added as expression bindings. Prose uses `{{terms.<name>}}`, and a design `title` or `motto` can use the same placeholder. Term names follow the same identifier and reserved-name rules as constants. See [masthead and terms](../editorial.md#masthead-and-terms).
+
+The editor evaluates each term once per check with the same sandbox, visible facts and execution budget as the rules. A term keeps the recorded rows its expression read. An expression that fails, reads a [hidden fact](facts.md#hidden-and-missing-facts), or returns another type supplies no value. The decision records runtime errors and leaves ordinary missing facts out of the error log. A missing term makes a variant that prints it ineligible. The same rule applies to a design whose title or motto prints it.
+
+| Term | Expression | Prints |
+| --- | --- | --- |
+| `capital` | `self.capital.name` | The receiver's capital, when exactly one visible own city is marked as its capital |
+| `ruler` | `self.ideology == 'Order' ? 'the Party' : 'the Crown'` | A phrase chosen from the receiver's ideology |
+| `master` | `players.find(p => p.knows('master') && p.master)?.name` | The name of the player who is our master |
+
+These rows come from the probe overlay, which uses them in its masthead designs. The `knows` check keeps the search from reading `master` on a player who has no such fact.
+
+A printed term's rows join the evidence of that article or masthead. They are not attached to a sibling variant or an unrelated article.
+
 ## Change or add a name
 
 | Goal | Edit |
@@ -115,5 +132,6 @@ Shortcuts follow the subject they are read on: `city.before.is.conquered` tests 
 | Override one shortcut | A subject and name under `shortcuts`. Only that source changes. |
 | Add a constant or type list | A new name in its group. Names must be valid JavaScript identifiers and must not collide with a global such as `self` or `turn`. |
 | Add a shortcut | A new name under its subject with its expression. Catalogue loading validates it like any rule. |
+| Add or change a term | A name under `terms` with the expression for its printed value. See [terms](#terms). |
 
 Add a name when at least two rules share the idea. A threshold used by one rule reads more clearly inside that rule.
