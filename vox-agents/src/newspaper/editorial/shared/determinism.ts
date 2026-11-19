@@ -1,4 +1,5 @@
 /** Stable configuration serialization and independent deterministic editorial streams. */
+import { createHash } from 'node:crypto';
 import seedrandom from 'seedrandom';
 import type { EditorialConfig } from '../config/schema.js';
 
@@ -19,6 +20,12 @@ export function configurationHash(value: unknown): string {
   for (const character of stableSerialize(value))
     hash = Math.imul(hash ^ character.charCodeAt(0), 16777619);
   return (hash >>> 0).toString(16).padStart(8, '0');
+}
+
+/** Draw a stable number in [0, 1) from the check identity, rule definition and subject identity. */
+export function stableDraw(identitySeed: string, ruleId: string, subject: string): number {
+  const digest = createHash('sha256').update(JSON.stringify([identitySeed, ruleId, subject])).digest();
+  return digest.readUInt32BE(0) / 0x100000000;
 }
 
 /** Bind independent streams only to the configuration sections that affect their choices. */

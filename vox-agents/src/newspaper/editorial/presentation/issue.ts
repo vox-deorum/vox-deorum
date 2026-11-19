@@ -170,6 +170,12 @@ export function presentIssue(input: {
       tags: candidate.tags,
       seriesKeys: candidate.seriesKeys,
       headline: renderAuthoredText(variant.headline, candidate.values, variant),
+      ...(variant.subheadline === undefined
+        ? {}
+        : { subheadline: renderAuthoredText(variant.subheadline, candidate.values, variant) }),
+      ...(variant.byline === undefined
+        ? {}
+        : { byline: renderAuthoredText(variant.byline, candidate.values, variant) }),
       body: variant.body.map((paragraph) =>
         renderAuthoredText(paragraph, candidate.values, variant)
       ),

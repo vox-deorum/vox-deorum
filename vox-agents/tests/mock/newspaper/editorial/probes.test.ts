@@ -5,7 +5,7 @@ import type { NewspaperEvent, NewspaperEvidence } from '../../../../../mcp-serve
 import { createInitialPublicationState, type PublicationState } from '../../../../src/newspaper/contracts/publication.js';
 import { runEditorialCheck } from '../../../../src/newspaper/editorial/check.js';
 import { loadEditorialConfig } from '../../../../src/newspaper/editorial/config/load.js';
-import type { EditorialConfig } from '../../../../src/newspaper/editorial/config/schema.js';
+import { editorialConfigSchema, type EditorialConfig } from '../../../../src/newspaper/editorial/config/schema.js';
 import { buildNewspaperFacts } from '../../../../src/newspaper/editorial/facts/index.js';
 import { evidence as buildEvidence, relationship, snapshot } from '../../../helpers/newspaper-diplomacy.js';
 
@@ -14,11 +14,18 @@ const probeTriggerId = 'probe-treasury';
 const probeTemplateId = 'probe-treasury-account';
 const probeDesignId = 'probe-communist-press';
 
+type Inline = PublicationState['issues'][number]['items'][number]['headline'];
+
 let defaultConfig: EditorialConfig;
 let probeConfig: EditorialConfig;
 let probeOnlyConfig: EditorialConfig;
 let capitalConfig: EditorialConfig;
 let vassalConfig: EditorialConfig;
+let opinionConfig: EditorialConfig;
+let opinionOnlyConfig: EditorialConfig;
+let peaceConfig: EditorialConfig;
+let milestoneConfig: EditorialConfig;
+let quietConfig: EditorialConfig;
 
 /** Supply dated contact and cover the stock rules' lookback windows. */
 function probeEvidence({
@@ -26,7 +33,8 @@ function probeEvidence({
   ownCities = [], relationships = [],
 }: {
   gold?: number; branch?: string; events?: NewspaperEvent[]; riderX?: number;
-  turn?: number; previous?: number; ownCities?: { name: string; capital?: boolean }[];
+  turn?: number; previous?: number;
+  ownCities?: { name: string; capital?: boolean; unhappiness?: unknown }[];
   relationships?: ReturnType<typeof relationship>[];
 } = {}): NewspaperEvidence {
   const history = [0, 1, 2].map((id) =>
@@ -38,7 +46,10 @@ function probeEvidence({
     ...ownCities.map((city, index) => ({
       subjectID: 100 + index,
       source: { table: 'CityInformations' as const, id: 300 + turn * 10 + index, turn, createdAt: turn * 1000 },
-      values: { OwnerID: 0, Name: city.name, IsCapital: city.capital ? 1 : 0, X: 0, Y: 0 },
+      values: {
+        OwnerID: 0, Name: city.name, IsCapital: city.capital ? 1 : 0, X: 0, Y: 0,
+        ...(city.unhappiness === undefined ? {} : { UnhappinessSources: city.unhappiness }),
+      },
     })),
     { subjectID: 11, source: { table: 'CityInformations', id: 201, turn, createdAt: turn * 1000 },
       values: { OwnerID: 1, Name: 'Persepolis', X: riderX, Y: 0 } },
@@ -61,6 +72,7 @@ function check(
   projected: NewspaperEvidence,
   catalogue = probeConfig,
   state = createInitialPublicationState(),
+  campaignId = 'campaign',
 ) {
   const facts = buildNewspaperFacts(projected, {
     playerIdentities: {
@@ -70,7 +82,7 @@ function check(
     },
   }, { ideologies: catalogue.constants.types.ideologies });
   return runEditorialCheck({
-    campaignId: 'campaign',
+    campaignId,
     timelineId: 'probe',
     receiver: { playerId: 0, label: 'France' },
     evidence: projected,
@@ -82,8 +94,56 @@ function check(
 }
 
 /** Supply a projected event on a date when the actors were already known. */
-function probeEvent(type: string, values: NewspaperEvent['values']): NewspaperEvent {
-  return { type, values, source: { table: 'GameEvents', id: 101, turn: 8, createdAt: 8000 } };
+function probeEvent(type: string, values: NewspaperEvent['values'], id = 101): NewspaperEvent {
+  return { type, values, source: { table: 'GameEvents', id, turn: 8, createdAt: 8000 } };
+}
+
+/** Build a validated catalogue variant with only the named probe rules and templates. */
+function probeCatalogue(
+  triggerIds: string[],
+  templateIds: string[],
+  defaults: Partial<EditorialConfig['defaults']> = {},
+): EditorialConfig {
+  return editorialConfigSchema.parse({
+    ...probeConfig,
+    triggers: probeConfig.triggers.filter((trigger) => triggerIds.includes(trigger.id)),
+    templates: probeConfig.templates.filter((template) => templateIds.includes(template.id)),
+    defaults: { ...probeConfig.defaults, ...defaults },
+  });
+}
+
+/** Record prior issues without articles, for press counts and the last issue turn. */
+function pastIssues(count: number, turn = 1): PublicationState {
+  return {
+    ...createInitialPublicationState(),
+    issues: Array.from({ length: count }, (_, index) => ({
+      issueId: `issue/${index + 1}`, turn, items: [],
+    })),
+  };
+}
+
+/** Record one prior issue so press.lastIssueTurn and the check cursor agree. */
+function lastIssueState(turn: number): PublicationState {
+  return { ...pastIssues(1, turn), lastCheckTurn: turn };
+}
+
+/** Find the audit entry for one rule and subject. */
+function auditSubject(
+  result: Awaited<ReturnType<typeof check>>,
+  ruleId: string,
+  subject: string,
+) {
+  return result.decision.triggerAudit
+    .find((audit) => audit.rule === ruleId)
+    ?.subjects.find((entry) => entry.subject === subject);
+}
+
+/** Find the immutable issue item for a published record. */
+function issueItem(
+  result: Awaited<ReturnType<typeof check>>,
+  itemId: string,
+) {
+  return result.status === 'published' ? result.issue.items.find((item) => item.id === itemId) : undefined;
 }
 
 /** Read which templates actually made it into print. */
@@ -96,9 +156,9 @@ function publishedItem(state: PublicationState, templateId: string) {
   return state.issues.flatMap((issue) => issue.items).find((item) => item.templateIds.includes(templateId));
 }
 
-/** Read one headline as plain text. */
-function headlineText(headline: PublicationState['issues'][number]['items'][number]['headline']) {
-  return headline.map((node) => 'text' in node ? node.text : '').join('');
+/** Read inline text as plain text, including absent optional fields. */
+function headlineText(text: Inline | undefined) {
+  return (text ?? []).map((node) => 'text' in node ? node.text : '').join('');
 }
 
 describe('probe overlay', () => {
@@ -121,6 +181,24 @@ describe('probe overlay', () => {
       triggers: repeatableTriggers,
       designs: probeConfig.designs.filter((design) => design.id === 'probe-vassal-strapline'),
     };
+    opinionConfig = probeCatalogue(
+      ['probe-treasury', 'probe-huns-riding', 'probe-ideology-adopted', 'probe-obituary', 'probe-culture-opinion'],
+      ['probe-treasury-account', 'probe-huns-riding-account', 'probe-ideology-adopted-account',
+        'probe-obituary-account', 'probe-culture-opinion-account'],
+      { maxItems: 5, frontPageItems: 4 },
+    );
+    opinionOnlyConfig = probeCatalogue(
+      ['probe-culture-opinion'], ['probe-culture-opinion-account'],
+    );
+    peaceConfig = probeCatalogue(
+      ['probe-peace', 'probe-retraction'], ['probe-peace-account', 'probe-retraction-account'],
+    );
+    milestoneConfig = probeCatalogue(
+      ['probe-hundredth-issue'], ['probe-hundredth-issue-account'],
+    );
+    quietConfig = probeCatalogue(
+      ['probe-quiet-spell'], ['probe-quiet-spell-account'],
+    );
   });
 
   describe('treasury probe', () => {
@@ -187,22 +265,29 @@ describe('probe overlay', () => {
     });
 
     it.each([
-      { kind: 'expenditure abroad', type: 'GreatPersonExpended', owner: 1,
+      { kind: 'expenditure abroad', type: 'GreatPersonExpended', owner: 1, civilization: 'Persia',
         values: { PlayerID: 1, Person: 'Hypatia' }, variant: 'probe-obituary-expended' },
-      { kind: 'expenditure at home', type: 'GreatPersonExpended', owner: 0,
+      { kind: 'expenditure at home', type: 'GreatPersonExpended', owner: 0, civilization: 'France',
         values: { PlayerID: 0, Person: 'Hypatia' }, variant: 'probe-obituary-expended' },
-      { kind: 'death abroad', type: 'UnitPrekill', owner: 1,
+      { kind: 'death abroad', type: 'UnitPrekill', owner: 1, civilization: 'Persia',
         values: { OwnerID: 1, AttackingPlayerID: -1, Person: 'Hypatia' }, variant: 'probe-obituary-died' },
-      { kind: 'death at home', type: 'UnitPrekill', owner: 0,
+      { kind: 'death at home', type: 'UnitPrekill', owner: 0, civilization: 'France',
         values: { OwnerID: 0, AttackingPlayerID: -1, Person: 'Hypatia' }, variant: 'probe-obituary-died' },
-    ])('should report a named $kind as one obituary without coordinates', async ({ type, owner, values, variant }) => {
+    ])('should report a named $kind as one obituary without coordinates', async ({ type, owner, civilization, values, variant }) => {
       const obituary = probeEvent(type, values);
       const projected = probeEvidence({ events: [obituary] });
       const result = await check(projected);
       const item = publishedItem(result.state, 'probe-obituary-account');
 
       expect(item).toBeDefined();
+      const printed = issueItem(result, item!.id);
+      expect(printed).toBeDefined();
+      expect(item!.ruleIds).toContain('probe-obituary');
+      expect(item!.subject).toMatch(/^event\//);
       expect(headlineText(item!.headline)).toContain('Hypatia');
+      expect(headlineText(printed!.subheadline)).toContain('Hypatia');
+      expect(headlineText(printed!.subheadline)).toContain(civilization);
+      expect(headlineText(printed!.byline)).toContain(civilization);
       expect(result.decision.selectedVariants[item!.id]).toBe(variant);
       expect(item!.sources).toEqual(expect.arrayContaining([
         obituary.source, projected.players.find((player) => player.subjectID === owner)!.source,
@@ -215,6 +300,155 @@ describe('probe overlay', () => {
     ])('should not report an unnamed $type', async ({ type, values }) => {
       const result = await check(probeEvidence({ events: [probeEvent(type, values)] }));
       expect(publishedItem(result.state, 'probe-obituary-account')).toBeUndefined();
+    });
+  });
+
+  describe('unhappiness probes', () => {
+    it.each([
+      { label: 'no cause detail', unhappiness: undefined },
+      { label: 'a non-numeric cause', unhappiness: { Culture: 'much' } },
+    ])('should hide the culture opinion with $label', async ({ unhappiness }) => {
+      const result = await check(probeEvidence({
+        ownCities: [{ name: 'Paris', capital: true, unhappiness }],
+      }), opinionOnlyConfig);
+
+      expect(result.status).toBe('skipped');
+      expect(auditSubject(result, 'probe-culture-opinion', 'city/100')?.outcome).toBe('hidden');
+    });
+
+    it('should not report culture when another cause is larger', async () => {
+      const result = await check(probeEvidence({
+        ownCities: [{ name: 'Paris', capital: true, unhappiness: { Culture: 2, Distress: 5 } }],
+      }), opinionOnlyConfig);
+
+      expect(result.status).toBe('skipped');
+      expect(auditSubject(result, 'probe-culture-opinion', 'city/100')?.outcome).toBe('false');
+    });
+  });
+
+  describe('opinion page probe', () => {
+    it('should place the culture opinion beyond the front page with its subheadline and byline', async () => {
+      const events = [
+        probeEvent('TeamTechResearched', { TeamID: 101, Tech: 'Horseback Riding' }, 101),
+        probeEvent('PlayerAdoptPolicyBranch', { PlayerID: 1, Branch: 'Freedom' }, 102),
+        probeEvent('GreatPersonExpended', { PlayerID: 1, Person: 'Hypatia' }, 103),
+      ];
+      const result = await check(probeEvidence({
+        gold: 100, events,
+        ownCities: [{ name: 'Paris', capital: true, unhappiness: { Culture: 3 } }],
+      }), opinionConfig);
+
+      expect(result.status).toBe('published');
+      if (result.status !== 'published') return;
+      const record = publishedItem(result.state, 'probe-culture-opinion-account');
+      expect(record).toBeDefined();
+      expect(record!.ruleIds).toContain('probe-culture-opinion');
+      expect(record!.subject).toBe('city/100');
+      const printed = issueItem(result, record!.id);
+      expect(printed).toBeDefined();
+      expect(result.issue.pages.find((page) => page.id === 'opinion')?.itemIds).toContain(record!.id);
+      expect(result.issue.pages.find((page) => page.id === 'front')?.itemIds).not.toContain(record!.id);
+      expect(headlineText(printed!.headline)).toContain('Paris');
+      expect(headlineText(printed!.subheadline)).toContain('3');
+      expect(headlineText(printed!.subheadline)).toContain('Paris');
+      expect(headlineText(printed!.byline)).toContain('Paris');
+    });
+  });
+
+  describe('peace retraction probes', () => {
+    it('should retract a peace story while the printed report is recent', async () => {
+      const peace = await check(probeEvidence({ relationships: [relationship(1)] }), peaceConfig);
+      expect(peace.status).toBe('published');
+      const peaceRecord = publishedItem(peace.state, 'probe-peace-account');
+      expect(peaceRecord).toBeDefined();
+      expect(peaceRecord!.ruleIds).toContain('probe-peace');
+      expect(peaceRecord!.subject).toBe('pair/0/1');
+
+      const result = await check(probeEvidence({
+        turn: 15, previous: 10, relationships: [relationship(1, 'war')],
+      }), peaceConfig, peace.state);
+
+      expect(result.status).toBe('published');
+      const record = publishedItem(result.state, 'probe-retraction-account');
+      expect(record).toBeDefined();
+      expect(record!.ruleIds).toContain('probe-retraction');
+      expect(record!.subject).toBe('pair/0/1');
+      const printed = issueItem(result, record!.id);
+      expect(printed).toBeDefined();
+      expect(headlineText(printed!.headline)).toContain('Persia');
+      expect(headlineText(printed!.body[0])).toContain('5');
+    });
+
+    it('should not retract a war without an earlier peace story in print', async () => {
+      const result = await check(probeEvidence({
+        relationships: [relationship(1, 'war')],
+      }), peaceConfig);
+
+      expect(result.status).toBe('skipped');
+      expect(auditSubject(result, 'probe-retraction', 'pair/0/1')?.outcome).toBe('false');
+    });
+
+    it('should not retract a war after the printed peace story is too old', async () => {
+      const peace = await check(probeEvidence({ relationships: [relationship(1)] }), peaceConfig);
+      expect(peace.status).toBe('published');
+
+      const result = await check(probeEvidence({
+        turn: 30, previous: 10, relationships: [relationship(1, 'war')],
+      }), peaceConfig, peace.state);
+
+      expect(result.status).toBe('skipped');
+      expect(auditSubject(result, 'probe-retraction', 'pair/0/1')?.outcome).toBe('false');
+    });
+  });
+
+  describe('milestone and chance probes', () => {
+    it('should publish the hundredth issue only after ninety-nine issues', async () => {
+      const result = await check(probeEvidence(), milestoneConfig, pastIssues(99));
+
+      expect(result.status).toBe('published');
+      const record = publishedItem(result.state, 'probe-hundredth-issue-account');
+      expect(record).toBeDefined();
+      expect(record!.ruleIds).toContain('probe-hundredth-issue');
+      const printed = issueItem(result, record!.id);
+      expect(printed).toBeDefined();
+      expect(headlineText(printed!.body[0])).toContain('100');
+
+      const early = await check(probeEvidence(), milestoneConfig, pastIssues(98));
+      expect(early.status).toBe('skipped');
+      expect(auditSubject(early, 'probe-hundredth-issue', 'world')?.outcome).toBe('false');
+    });
+
+    it('should leave the quiet-spell story out when there is no issue or the gap is short', async () => {
+      const never = await check(probeEvidence({ turn: 30, previous: 5 }), quietConfig);
+      expect(never.status).toBe('skipped');
+      expect(auditSubject(never, 'probe-quiet-spell', 'world')?.outcome).toBe('false');
+
+      const early = await check(probeEvidence(), quietConfig, lastIssueState(5));
+      expect(early.status).toBe('skipped');
+      expect(auditSubject(early, 'probe-quiet-spell', 'world')?.outcome).toBe('false');
+    });
+
+    it('should let the seeded draw both publish and suppress the quiet-spell story', async () => {
+      const campaigns = Array.from({ length: 40 }, (_, index) => `quiet-${index}`);
+      const results: Awaited<ReturnType<typeof check>>[] = [];
+      for (const campaignId of campaigns)
+        results.push(await check(probeEvidence({ turn: 30, previous: 5 }), quietConfig,
+          lastIssueState(5), campaignId));
+      const passed = results.find((result) => result.status === 'published');
+      const failed = results.find((result) =>
+        auditSubject(result, 'probe-quiet-spell', 'world')?.outcome === 'chance');
+      const repeatKey = JSON.stringify(['probe-quiet-spell', 'world']);
+
+      expect(passed).toBeDefined();
+      expect(failed).toBeDefined();
+      expect(failed!.status).toBe('skipped');
+      expect(failed!.state.triggerRepeats[repeatKey]).toBeUndefined();
+      expect(passed!.state.triggerRepeats[repeatKey]?.lastTurn).toBe(30);
+      const record = publishedItem(passed!.state, 'probe-quiet-spell-account');
+      expect(record).toBeDefined();
+      const printed = issueItem(passed!, record!.id);
+      expect(printed).toBeDefined();
+      expect(headlineText(printed!.body[0])).toContain('25');
     });
   });
 

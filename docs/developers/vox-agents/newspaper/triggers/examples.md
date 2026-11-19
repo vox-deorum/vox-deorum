@@ -67,3 +67,19 @@ The `golden-age-in-wartime-account` template uses `self.happinessPercentage`, th
 ### Vassals follow their master to war
 
 `vassals-join-war` uses [incident facts](facts.md#incident) to report the declaration and name the vassals together. It counts a war involving the receiver as more important than a foreign war, and marks the story urgent if the receiver was the target. See [War and peace](war-and-peace.md) for how the incident identifies participants and their reasons for joining.
+
+## Probe catalogue examples
+
+Load the [probe overlay](../../../../../vox-agents/newspaper/probes/) with `--config vox-agents/newspaper/probes`. The entries are in [probe rules](../../../../../vox-agents/newspaper/probes/triggers/probes.json) and [probe templates](../../../../../vox-agents/newspaper/probes/templates/probes.json).
+
+### An opinion piece on city unhappiness
+
+`probe-culture-opinion` fires for one of our cities when boredom is its largest [unhappiness cause](facts.md#city) and reads at least 2. The subheadline prints the reading as `{{culture}}`, and the byline credits a correspondent in `{{city}}`. The Opinion page collects the `opinion` tag and appears when at least one of those stories falls outside the front page. The probe test supplies the cause data because regular recordings do not yet collect it.
+
+### A retraction after a printed peace
+
+`probe-peace` reports when the receiver is at peace with another player. If war breaks out, `probe-retraction` looks up the last report with `printed('probe-peace', pair)` and checks that it was published within `short` turns. The guard checks for a result before reading its turn, so a peace story that never made it into print cannot trigger the follow-up.
+
+### A rare piece after a quiet spell
+
+`probe-quiet-spell` requires a previous issue and a gap of at least `medium` turns. It subtracts `press.lastIssueTurn` from the cutoff and uses `chance: 0.25` to pass only some eligible checks. A failed draw records `chance` in the audit without spending the repeat, so a later quiet check can try again. For a fixed milestone, `probe-hundredth-issue` fires when `press.issues == 99`.

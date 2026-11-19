@@ -226,6 +226,7 @@
 
 .vd-headline a,
 .vd-deck a,
+.vd-byline a,
 .vd-prose a {
   color: var(--vd-accent);
   text-decoration-thickness: 1px;
@@ -234,6 +235,7 @@
 
 .vd-headline a:hover,
 .vd-deck a:hover,
+.vd-byline a:hover,
 .vd-prose a:hover {
   text-decoration-thickness: 2px;
 }
@@ -241,6 +243,16 @@
 .vd-deck {
   margin: -5px 0 25px;
   font: italic calc(28px * var(--vd-text-scale)) / 1.25 var(--vd-font-display);
+}
+
+.vd-byline {
+  margin: -10px 0 25px;
+  font: italic calc(16px * var(--vd-text-scale)) / 1.4 var(--vd-font-body);
+  opacity: 0.7;
+}
+
+.vd-deck + .vd-byline {
+  margin-top: -16px;
 }
 
 .vd-prose {
@@ -463,6 +475,10 @@
   text-align: center;
 }
 
+.vd-storylist[data-layout="breaking"] .vd-story--lead .vd-byline {
+  text-align: center;
+}
+
 .vd-breaking-columns {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -507,6 +523,10 @@
 .vd-storylist[data-layout="analysis"] .vd-story--lead .vd-deck {
   padding-bottom: 24px;
   border-bottom: 1px solid var(--vd-ink);
+}
+
+.vd-storylist[data-layout="analysis"] .vd-story--lead .vd-byline {
+  margin-top: -18px;
 }
 
 .vd-analysis-columns {
@@ -693,6 +713,12 @@
   text-align: left;
 }
 
+.vd-newspaper[data-design="modern"] .vd-byline {
+  margin: 0 0 16px;
+  font: 400 calc(14px * var(--vd-text-scale)) / 1.5 var(--vd-font-body);
+  text-align: left;
+}
+
 .vd-newspaper[data-design="modern"] .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-headline,
 .vd-newspaper[data-design="modern"] .vd-storylist[data-layout="analysis"] .vd-story--lead .vd-headline {
   font: 800 calc(32px * var(--vd-text-scale)) / 1.15 var(--vd-font-display);
@@ -705,6 +731,12 @@
 .vd-newspaper[data-design="modern"] .vd-storylist[data-layout="analysis"] .vd-story--lead .vd-deck {
   padding-bottom: 14px;
   font: 400 calc(16px * var(--vd-text-scale)) / 1.5 var(--vd-font-body);
+  text-align: left;
+}
+
+.vd-newspaper[data-design="modern"] .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-byline,
+.vd-newspaper[data-design="modern"] .vd-storylist[data-layout="analysis"] .vd-story--lead .vd-byline {
+  margin-top: -8px;
   text-align: left;
 }
 

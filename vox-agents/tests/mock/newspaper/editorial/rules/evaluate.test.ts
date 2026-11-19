@@ -56,8 +56,9 @@ function facts({ cities = [], history = cities, events = [], turn = 20, previous
 /** Compile once and share the prepared catalogue between checks. */
 async function prepare(rules: EditorialTriggerRule[], speedMultiplier = 1) {
   const compiled = await prepareTriggerExpressions(rules, constants);
-  return (model: ReturnType<typeof facts>, repeatState?: Awaited<ReturnType<typeof evaluateTriggerRules>>['repeatState']) =>
-    evaluateTriggerRules({ rules, compiled, constants, facts: model, speedMultiplier, repeatState });
+  return (model: ReturnType<typeof facts>, repeatState?: Awaited<ReturnType<typeof evaluateTriggerRules>>['repeatState'],
+    identitySeed?: string) =>
+    evaluateTriggerRules({ rules, compiled, constants, facts: model, speedMultiplier, repeatState, identitySeed });
 }
 
 /** Produce examples with controlled visibility and recorded history. */
@@ -165,6 +166,63 @@ describe('newspaper trigger rules', () => {
       const t30 = await run(facts({ turn: 30 }), t29.repeatState);
       expect(t30.developments.map(d => d.definitionId)).toEqual(['span']);
       expect(restored).toEqual(t20.repeatState);
+    });
+  });
+
+  describe('chance', () => {
+    it('should skip only eligible subjects and groups without spending their repeat memory', async () => {
+      const rejected: EditorialTriggerRule = {
+        id: 'rejected', subject: 'world', when: 'true', chance: 0, tags: [],
+        values: { broken: 'unknownValue()' },
+      };
+      const group: EditorialTriggerRule = {
+        id: 'group', subject: 'city', when: 'true', chance: 0, tags: [],
+        group: { by: 'city.population > 1 ? "large" : "small"' }, importance: 'unknownValue()',
+      };
+      const rules = [
+        rejected, { ...rejected, id: 'repeated' }, { ...rejected, id: 'false', when: 'false' },
+        { ...rejected, id: 'certain', chance: 1, values: {} }, group,
+      ];
+      const run = await prepare(rules);
+      const result = await run(facts({ cities: [
+        city(1, 1, 20, { Population: 3 }),
+        city(2, 2, 20, { Population: 2 }),
+        city(3, 3, 20, { Population: 1 }),
+      ] }), { '["repeated","world"]': { lastTurn: 19, armed: false } }, 'campaign/receiver/0/20');
+      expect(result.audit.slice(0, 4).map(({ subjects }) => subjects[0].outcome))
+        .toEqual(['chance', 'repeat', 'false', 'fired']);
+      expect(result.audit[0].subjects[0].expressions.map(({ field }) => field)).toEqual(['when']);
+      expect(result.audit[4].groups).toMatchObject([
+        { key: 'large', outcome: 'chance', expressions: [] },
+        { key: 'small', outcome: 'too-small', expressions: [] },
+      ]);
+      expect(result.developments.map(({ definitionId }) => definitionId)).toEqual(['certain']);
+      expect(Object.keys(result.repeatState).sort()).toEqual(['["certain","world"]', '["repeated","world"]']);
+      expect(triggerRuleAuditSchema.array().parse(result.audit)).toEqual(result.audit);
+    });
+
+    it('should keep subject and group results stable when the catalogue and group membership change', async () => {
+      const grouped: EditorialTriggerRule = {
+        id: 'grouped', subject: 'city', when: 'true', chance: 0.5,
+        group: { by: '"area"' }, tags: [],
+      };
+      const subject: EditorialTriggerRule = {
+        id: 'subject', subject: 'city', when: 'true', chance: 0.5, tags: [],
+      };
+      const run = await prepare([grouped, subject]);
+      const revised = await prepare([{ ...subject, id: 'other' }, subject, grouped]);
+      const cities = [city(3, 3, 20, {}), city(2, 2, 20, {})];
+      const outcomes = new Set<string>();
+      for (const seed of ['west', 'east', 'north', 'south', 'centre', 'coast']) {
+        const original = await run(facts({ cities }), {}, seed);
+        const changed = await revised(facts({ cities: [...cities, city(1, 1, 20, {})] }), {}, seed);
+        const outcome = original.audit[0].groups[0].outcome;
+        outcomes.add(outcome);
+        expect(changed.audit[2].groups[0].outcome).toBe(outcome);
+        expect(changed.audit[1].subjects.slice(1).map(({ outcome: status }) => status))
+          .toEqual(original.audit[1].subjects.map(({ outcome: status }) => status));
+      }
+      expect(outcomes).toEqual(new Set(['chance', 'fired']));
     });
   });
 

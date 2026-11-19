@@ -90,8 +90,10 @@ describe('newspaper replay command artifacts', () => {
           expect(html).toContain(`id="turn-${summary.turn}"`);
           for (const item of issue.items) expect(html.split(`id="article-${encodeURIComponent(item.id)}"`)).toHaveLength(2);
           archive.issue.items[0].body = [[{ type: 'text', text: '<script>alert("unsafe")</script>' }]];
+          archive.issue.items[0].byline = [{ type: 'text', text: 'By the <Arts> desk' }];
           const escaped = newspaperReportHtml(manifest, [archive]);
           expect(escaped).toContain('&lt;script&gt;');
+          expect(escaped).toContain('By the &lt;Arts&gt; desk');
           expect(escaped).not.toContain('<script>alert');
         }
       }

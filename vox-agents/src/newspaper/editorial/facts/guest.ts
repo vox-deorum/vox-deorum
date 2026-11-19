@@ -20,6 +20,7 @@ function factRuntime(model, wrap, constants, shortcuts) {
     city: new Set(model.subjects.city), player: new Set(model.subjects.player), pair: new Set(model.subjects.pair),
   };
   const subjectInfo = new WeakMap();
+  const printedSubjectKeys = new WeakMap();
   const expressionSubjects = new Map();
   const shortcutsByKind = new Map();
   const constantNames = new Set(Object.keys(constants ?? {}));
@@ -29,6 +30,39 @@ function factRuntime(model, wrap, constants, shortcuts) {
   }
   let hidden;
   let sources = new Map();
+
+  // Copy prior issue memory once and freeze it so expressions cannot alter later checks.
+  const press = Object.freeze({
+    issues: model.press ? model.press.issues : 0,
+    lastIssueTurn: model.press ? model.press.lastIssueTurn : null,
+  });
+  const printedRules = Object.create(null);
+  const printedSubjects = Object.create(null);
+  if (model.press) {
+    for (const [key, entry] of Object.entries(model.press.rules))
+      printedRules[key] = Object.freeze({ turn: entry.turn, count: entry.count });
+    for (const [key, entry] of Object.entries(model.press.subjects))
+      printedSubjects[key] = Object.freeze({ turn: entry.turn, count: entry.count });
+  }
+  Object.freeze(printedRules);
+  Object.freeze(printedSubjects);
+
+  // Register a printable key for a trusted city, player or pair view.
+  function registerPrintedSubject(view, kind, id) {
+    if (kind !== 'city' && kind !== 'player' && kind !== 'pair') return;
+    if (typeof id === 'number' || typeof id === 'string') printedSubjectKeys.set(view, kind + '/' + id);
+  }
+
+  // Return the latest printed count for a rule, optionally limited to one registered subject.
+  function printedArticles(ruleId, subject) {
+    if (typeof ruleId !== 'string' || ruleId === '') return null;
+    if (subject === undefined)
+      return Object.hasOwn(printedRules, ruleId) ? printedRules[ruleId] : null;
+    const subjectKey = typeof subject === 'object' && subject !== null ? printedSubjectKeys.get(subject) : undefined;
+    if (subjectKey === undefined) return null;
+    const key = JSON.stringify([ruleId, subjectKey]);
+    return Object.hasOwn(printedSubjects, key) ? printedSubjects[key] : null;
+  }
 
   // Record a readable fact's permitted supporting rows once in order of first use.
   function cite(rows) {
@@ -214,6 +248,7 @@ function factRuntime(model, wrap, constants, shortcuts) {
       const result = record(fields, kind, date, methods);
       cache.set(key, result);
       subjectInfo.set(result, { kind, id, date, segment, anchored });
+      registerPrintedSubject(result, kind, anchored && kind === 'pair' ? fields.id?.value : id);
       return result;
 
       // Present native-looking immutable helper methods rather than wire-only descriptors.
@@ -424,6 +459,8 @@ function factRuntime(model, wrap, constants, shortcuts) {
       events: { value: list(selectedEvents, event => resolve({ kind: 'event', id: event.id }, 'event', model.turn),
         event => event.sources) },
       turn: { value: model.turn },
+      press: { value: press },
+      printed: { value: Object.freeze((ruleId, subject) => printedArticles(ruleId, subject)) },
       game: { value: record(model.game, 'game', model.turn) },
       distance: { value: Object.freeze((a, b) => {
         const first = distanceOperand(a), second = distanceOperand(b);
@@ -457,11 +494,13 @@ function factRuntime(model, wrap, constants, shortcuts) {
         return resolve(value, path, model.turn);
       if (value.$kind === 'subject') {
         const fields = target(value.ref ?? {}, model.turn);
-        return record({
+        const subject = record({
           key: { value: value.key }, kind: { value: value.kind },
           ...(fields?.id ? { id: fields.id } : {}),
           ...(fields?.name ? { name: fields.name } : {}),
         }, path, model.turn);
+        registerPrintedSubject(subject, value.ref?.kind, value.ref?.id);
+        return subject;
       }
       if (Array.isArray(value)) return list(value, (item, index) => bindingValue(item, path + '[' + index + ']'));
       return bindingRecord(value, path);

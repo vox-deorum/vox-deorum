@@ -54,7 +54,7 @@ function createConfig(): EditorialConfig {
 /** Build a prequalified candidate as supplied by the template matcher. */
 function createCandidate(config: EditorialConfig, id: string, urgent = false): EditorialCandidate {
   return {
-    id, subject: id, period: { from: 1, to: 5 }, triggerIds: [`trigger/${id}`],
+    id, subject: id, period: { from: 1, to: 5 }, triggerIds: [`trigger/${id}`], ruleIds: ['trigger'],
     templateIds: ['coverage'], seriesKeys: [`series/${id}`],
     tags: [urgent ? 'military' : 'economy'], importance: urgent ? 1 : 20, urgent,
     short: false, weight: 1, variants: config.templates[0].variants, variantWeights: { first: 1, second: 2 }, variantSources: {},

@@ -67,6 +67,8 @@
         "id": "probe-obituary-expended",
         "when": "kind == 'expended'",
         "headline": "The last act of {{person}}",
+        "subheadline": "{{civilization}} marks the close of {{person}}'s service",
+        "byline": "By our {{civilization}} correspondent",
         "body": ["The act marks the end of {{person}}'s service to {{civilization}}."],
         "weight": { "base": 1 }
       },
@@ -74,7 +76,81 @@
         "id": "probe-obituary-died",
         "when": "kind == 'died'",
         "headline": "{{person}} has died",
+        "subheadline": "{{civilization}} mourns {{person}}",
+        "byline": "From our {{civilization}} desk",
         "body": ["We remember {{person}} for their service to {{civilization}}."],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "probe-culture-opinion-account",
+    "triggers": ["probe-culture-opinion"],
+    "tags": ["opinion"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "probe-culture-opinion-report",
+        "headline": "Boredom stirs unrest in {{city}}",
+        "subheadline": "{{culture}} points of cultural neglect weigh on {{city}}",
+        "byline": "By our correspondent in {{city}}",
+        "body": ["The city's people have little to occupy their minds, and the neglect shows in the local mood."],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "probe-peace-account",
+    "triggers": ["probe-peace"],
+    "tags": ["international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "probe-peace-report",
+        "headline": "Peace with {{other}}",
+        "body": ["The latest reports place us at peace with {{other}}."],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "probe-retraction-account",
+    "triggers": ["probe-retraction"],
+    "tags": ["international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "probe-retraction-report",
+        "headline": "War returns with {{other}}",
+        "body": ["Only {{sincePeace}} turns after we reported peace, war has broken out with {{other}}."],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "probe-hundredth-issue-account",
+    "triggers": ["probe-hundredth-issue"],
+    "tags": ["domestic"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "probe-hundredth-issue-report",
+        "headline": "The hundredth issue",
+        "body": ["This is issue number {{issue}} of our paper."],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "probe-quiet-spell-account",
+    "triggers": ["probe-quiet-spell"],
+    "tags": ["domestic"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "probe-quiet-spell-report",
+        "headline": "The presses fall silent",
+        "body": ["No issue has appeared for {{gap}} turns."],
         "weight": { "base": 1 }
       }
     ]

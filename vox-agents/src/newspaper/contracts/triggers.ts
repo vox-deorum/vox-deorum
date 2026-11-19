@@ -30,7 +30,7 @@ export const triggerRuleAuditSchema = z.strictObject({
   subjectCount: z.number().int().nonnegative(),
   subjects: z.array(z.strictObject({
     subject: subjectSchema,
-    outcome: z.enum(['false', 'hidden', 'error', 'repeat', 'matched', 'fired']),
+    outcome: z.enum(['false', 'hidden', 'error', 'repeat', 'chance', 'matched', 'fired']),
     failedWhen: z.number().int().nonnegative().optional(),
     repeat: repeatEntrySchema.optional(),
     ...ratingFields,
@@ -42,7 +42,7 @@ export const triggerRuleAuditSchema = z.strictObject({
     key: scalarSchema,
     ...ratingFields,
     matches: z.array(groupMatchSchema),
-    outcome: z.enum(['too-small', 'hidden', 'error', 'fired']),
+    outcome: z.enum(['too-small', 'hidden', 'error', 'chance', 'fired']),
     expressions: z.array(expressionAuditSchema),
     sources: sourcesSchema,
   })),

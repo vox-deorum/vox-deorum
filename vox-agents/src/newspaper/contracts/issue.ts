@@ -240,6 +240,8 @@ export const issueItemSchema = z.object({
   headline: inlineTextSchema,
   /** Optional supporting heading below the headline. */
   subheadline: inlineTextSchema.optional(),
+  /** Optional author credit below the headline. */
+  byline: inlineTextSchema.optional(),
   /** Article paragraphs. */
   body: paragraphsSchema,
   /** Editorial explanation of the observations supporting the item. */

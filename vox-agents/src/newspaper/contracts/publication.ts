@@ -15,6 +15,7 @@ export type PublicationPreferences = z.infer<typeof publicationPreferencesSchema
 export const publishedItemRecordSchema = z.object({
   id: z.string(), issueId: z.string(), turn: z.number().int(), tags: z.array(z.string()),
   seriesKeys: z.array(z.string()), templateIds: z.array(z.string()), triggerIds: z.array(z.string()),
+  ruleIds: z.array(z.string()).optional(), subject: z.string().optional(),
   importance: z.number().finite(), headline: inlineTextSchema, evidenceSummary: z.string(),
   sources: z.array(newspaperSourceReferenceSchema), fingerprint: z.string(),
 });

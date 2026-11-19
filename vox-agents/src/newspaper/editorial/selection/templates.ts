@@ -20,6 +20,8 @@ export interface EditorialCandidate {
   subject: string;
   period: Period;
   triggerIds: string[];
+  /** Trigger definition IDs supporting the candidate, retained for printed-article memory. */
+  ruleIds: string[];
   templateIds: string[];
   seriesKeys: string[];
   conflictKeys?: string[];
@@ -73,7 +75,7 @@ function printable(variant: AuthoredVariant, values: TemplateValues): boolean {
     ...values,
     ...Object.fromEntries(variant.links.map((link) => [link.placeholder, substitute(link.label, values)])),
   };
-  if ([variant.headline, ...variant.body].some((source) => substitute(source, augmented).match(placeholderPattern)))
+  if (variantText(variant).some((source) => substitute(source, augmented).match(placeholderPattern)))
     return false;
   return variant.links.every((link) => {
     const label = substitute(link.label, values);
@@ -81,6 +83,11 @@ function printable(variant: AuthoredVariant, values: TemplateValues): boolean {
     const target = linkTargetSchema.safeParse(substituteTarget(link.target, values));
     return target.success && !JSON.stringify(target.data).match(placeholderPattern);
   });
+}
+
+/** List the prose fields checked for placeholders and their evidence. */
+function variantText({ headline, subheadline, byline, body }: AuthoredVariant): string[] {
+  return [headline, subheadline, byline, ...body].filter(value => value !== undefined);
 }
 
 /** Require every named rule and intersect their windows, whose lower bounds are exclusive. */
@@ -172,7 +179,8 @@ function placeholderSources(
   variant: AuthoredVariant, choice: ReturnType<typeof templateFacts>, terms?: EditorialTerms
 ): NewspaperSourceReference[] {
   const used = [
-    variant.headline, ...variant.body, ...variant.links.flatMap((link) => [link.label, ...Object.values(link.target)]),
+    ...variantText(variant),
+    ...variant.links.flatMap((link) => [link.label, ...Object.values(link.target)]),
   ].flatMap((text) => [...text.matchAll(placeholderPattern)].map((match) => match[1]));
   return used.flatMap((key) => {
     if (key.startsWith('terms.')) return terms?.get(key.slice('terms.'.length))?.sources ?? [];
@@ -245,6 +253,7 @@ function candidate(
     subject: parts[0].subject,
     period,
     triggerIds: parts.map((part) => part.id),
+    ruleIds: [...new Set(parts.map((part) => part.definitionId))],
     templateIds: [template.id],
     seriesKeys: [...new Set(parts.flatMap((part) => part.seriesKeys))],
     conflictKeys: [...new Set(parts.flatMap((part) => part.conflictKeys ?? []))],

@@ -15,8 +15,9 @@ import type {
 } from './config/expressions.js';
 import { getEditorialExpressions } from './config/load.js';
 import { scaleEditorialConstants } from './config/constants.js';
-import { addDiplomacyFacts, type NewspaperFactModel } from './facts/index.js';
+import { addDiplomacyFacts, addPressFacts, type NewspaperFactModel } from './facts/index.js';
 import { evaluateTriggerRules, ruleHistoryTurns } from './rules/evaluate.js';
+import { buildPress } from './rules/press.js';
 import { computeFeedback } from './selection/feedback.js';
 import { selectHeuristic } from './selection/heuristic.js';
 import { advanceSeries, decaySeries } from './selection/series.js';
@@ -138,7 +139,7 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
   const choiceErrors = new Map<number, ChoiceExpressionError>();
   const budget: ExpressionCheckBudget = { interruptedSlots: new Set(), choiceErrors };
   const batch = {
-    facts: addDiplomacyFacts(facts, diplomacy),
+    facts: addPressFacts(addDiplomacyFacts(facts, diplomacy), buildPress(input.state)),
     constants: scaleEditorialConstants(config.constants, input.speedMultiplier),
   };
   const rules = await evaluateTriggerRules({
@@ -149,6 +150,7 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
     speedMultiplier: input.speedMultiplier,
     repeatState: input.state.triggerRepeats,
     budget,
+    identitySeed,
   });
   state.triggerRepeats = rules.repeatState;
   const terms = await evaluateEditorialTerms(compiled, batch, budget);
@@ -222,6 +224,8 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
       seriesKeys: item.seriesKeys,
       templateIds: candidate.templateIds,
       triggerIds: candidate.triggerIds,
+      ruleIds: candidate.ruleIds,
+      subject: candidate.subject,
       importance: candidate.importance,
       headline: item.headline,
       evidenceSummary: summarizeSources(candidate.sources),

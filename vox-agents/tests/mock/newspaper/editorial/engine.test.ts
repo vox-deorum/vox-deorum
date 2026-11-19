@@ -67,6 +67,84 @@ describe('editorial engine', () => {
   });
 
   describe('authored selection and history', () => {
+    it('should require printable credits and keep the evidence for a credit printed as a link', async () => {
+      const revised = editorialConfigSchema.parse({
+        ...config,
+        constants: { ...config.constants, terms: { cityDesk: 'self.capital.name' } },
+        triggers: [config.triggers[0]],
+        templates: [{
+          ...config.templates[0], variants: [
+            { ...config.templates[0].variants[0], id: 'missing-deck', subheadline: '{{missingDeck}}' },
+            { ...config.templates[0].variants[0], id: 'missing-credit', byline: '{{missingCredit}}' },
+            { ...config.templates[0].variants[0], id: 'credited', subheadline: 'Balance: {{$balance}}',
+              byline: 'By {{desk}}', links: [{
+                placeholder: 'desk', label: 'the {{terms.cityDesk}} desk', target: { type: 'screen', screen: 'map' },
+              }] },
+          ],
+        }],
+      });
+      const evidence = fixture();
+      const citySource = { table: 'CityInformations' as const, id: 42, turn: 10, createdAt: 10_000 };
+      evidence.cities.push({ subjectID: 2, source: citySource, values: { OwnerID: 0, Name: 'Tours', IsCapital: 1 } });
+      const result = await check(evidence, createInitialPublicationState(), revised);
+      if (result.status !== 'published') throw new Error(result.reason);
+      const [article] = result.issue.items;
+      expect(result.decision.selectedVariants[article.id]).toBe('credited');
+      expect(article.subheadline).toContainEqual({ type: 'text', text: '20' });
+      expect(article.byline).toContainEqual({
+        type: 'link', text: 'the Tours desk', target: { type: 'screen', screen: 'map' },
+      });
+      expect(result.state.issues[0].items[0].sources).toContainEqual(citySource);
+    });
+
+    it('should let rules and choices read only the articles printed before this check', async () => {
+      const firstCatalogue = editorialConfigSchema.parse({
+        ...config,
+        triggers: [
+          config.triggers[0],
+          { id: 'roundup', subject: 'player', when: 'press.issues === 1 && printed("ledger") === null',
+            group: { by: '"news"' }, importance: 'press.lastIssueTurn + count + 50' },
+          { id: 'unused', subject: 'world', when: 'true' },
+        ],
+        templates: [
+          config.templates[0],
+          { id: 'roundup', triggers: ['roundup'], tags: [], weight: { base: 1 },
+            variants: [{ id: 'roundup', headline: 'The roundup',
+              body: ['Coverage of {{count}} players.'], weight: { base: 1 } }] },
+        ],
+      });
+      const legacy = createInitialPublicationState();
+      legacy.issues.push({ issueId: 'old', turn: 1, items: [historyItem('old-article', [])] });
+      const first = await check(fixture(), legacy, firstCatalogue);
+      expect(first.status).toBe('published');
+      expect(first.decision.triggerAudit.find(({ rule }) => rule === 'unused')?.subjects[0].outcome).toBe('fired');
+      expect(first.state.issues.at(-1)?.items).toEqual(expect.arrayContaining([
+        expect.objectContaining({ ruleIds: ['ledger'], subject: 'player/0' }),
+        expect.objectContaining({ ruleIds: ['roundup'], subject: 'group/player/"news"', importance: 53 }),
+      ]));
+
+      const memory = 'press.issues === 2 && press.lastIssueTurn === 10 && printed("ledger", self)?.turn === 10 && ' +
+        'printed("ledger", self).count === 1 && printed("ledger", players[1]) === null && ' +
+        'printed("roundup")?.count === 1 && printed("roundup", self) === null && ' +
+        'printed("unused") === null && printed("observed") === null';
+      const secondCatalogue = editorialConfigSchema.parse({
+        ...config,
+        triggers: [{ id: 'follow-up', subject: 'player', when: ['player.self', 'player.is.hasPrinted'] }],
+        constants: { ...config.constants, shortcuts: { ...config.constants.shortcuts,
+          player: { ...config.constants.shortcuts.player, hasPrinted: memory } } },
+        templates: [{ id: 'follow-up', triggers: ['follow-up'], tags: [], weight: { base: 1 },
+          when: `${memory} && printed("ledger", subject)?.turn === 10 && printed("ledger", "player/0") === null`,
+          variants: [{ id: 'follow-up', when: memory, headline: 'A second report',
+            body: ['More news.'], weight: { base: 1 } }] }],
+        designs: config.designs.map(design => ({ ...design, when: memory })),
+      });
+      const restored = publicationStateSchema.parse(JSON.parse(JSON.stringify(first.state)));
+      const second = await check(fixture(15, 10), restored, secondCatalogue);
+      expect(second.status).toBe('published');
+      expect(second.state.issues.at(-1)?.items[0].ruleIds).toEqual(['follow-up']);
+      expect(restored.issues).toHaveLength(2);
+    });
+
     it('should archive runtime choice errors without printing failed stories or disrupting other coverage', async () => {
       const revised = editorialConfigSchema.parse({
         ...config,

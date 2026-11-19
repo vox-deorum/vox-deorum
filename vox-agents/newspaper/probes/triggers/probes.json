@@ -58,5 +58,60 @@
       "civilization": "event.knows('player') && event.player.knows('name') ? event.player.name : 'their people'"
     },
     "importance": 75
+  },
+  {
+    "id": "probe-culture-opinion",
+    "subject": "city",
+    "when": [
+      "city.own",
+      "city.unhappiness.top == 'culture'",
+      "city.unhappiness.culture >= 2"
+    ],
+    "values": {
+      "culture": "city.unhappiness.culture",
+      "top": "city.unhappiness.top"
+    },
+    "tags": ["culture"],
+    "importance": 20
+  },
+  {
+    "id": "probe-peace",
+    "subject": "pair",
+    "when": ["pair.involvesSelf", "pair.atWar == false"],
+    "values": { "other": "pair.other.name" },
+    "tags": ["international"],
+    "importance": 60
+  },
+  {
+    "id": "probe-retraction",
+    "subject": "pair",
+    "when": [
+      "pair.involvesSelf",
+      "pair.atWar",
+      "printed('probe-peace', pair) && turn - printed('probe-peace', pair).turn <= short"
+    ],
+    "values": {
+      "other": "pair.other.name",
+      "sincePeace": "turn - printed('probe-peace', pair).turn"
+    },
+    "tags": ["international"],
+    "importance": 80
+  },
+  {
+    "id": "probe-hundredth-issue",
+    "subject": "world",
+    "when": ["press.issues == 99"],
+    "values": { "issue": "press.issues + 1" },
+    "tags": ["domestic"],
+    "importance": 60
+  },
+  {
+    "id": "probe-quiet-spell",
+    "subject": "world",
+    "when": ["press.lastIssueTurn != null && turn - press.lastIssueTurn >= medium"],
+    "values": { "gap": "turn - press.lastIssueTurn" },
+    "chance": 0.25,
+    "tags": ["domestic"],
+    "importance": 30
   }
 ]

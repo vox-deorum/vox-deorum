@@ -13,6 +13,13 @@ const cityFields = [
   'TourismPerTurn', 'HappinessDelta', 'BuildingCount', 'ImportantBuildings', 'GreatWorkCount'
 ] as const;
 
+// Projected cause readings keep the order used to break ties for the largest cause.
+const unhappinessSources = [
+  ['culture', 'Culture'], ['gold', 'Gold'], ['science', 'Science'], ['distress', 'Distress'],
+  ['religion', 'Religion'], ['isolation', 'Isolation'], ['famine', 'Famine'],
+  ['pillaged', 'PillagedTiles'], ['buildings', 'Buildings'], ['specialists', 'Specialists'],
+] as const;
+
 type DatedFact = { turn: number; field: FactField };
 type Change = { row: NewspaperSnapshot | NewspaperEvent; value: string | number | null | undefined; sources: NewspaperSourceReference[] };
 type SnapshotChange = Change & { before: NewspaperSnapshot; lastReligionReport?: NewspaperEvent };
@@ -26,6 +33,9 @@ export function buildCitySnapshotFacts(row: NewspaperSnapshot, context: FactBuil
     const value = recordedFact(cityValue(key, raw), sources);
     if (value) fields[key[0].toLowerCase() + key.slice(1)] = value;
   }
+  const unhappiness = unhappinessCauses(row.values.UnhappinessSources);
+  const causes = unhappiness && recordedFact(unhappiness, sources);
+  if (causes) fields.unhappiness = causes;
   const owner = recordedId(row.values.OwnerID);
   if (owner !== undefined && context.players.some(player => player.subjectID === owner)) {
     fields.owner = fact(reference('player', owner), sources);
@@ -38,6 +48,23 @@ function cityValue(key: typeof cityFields[number], raw: unknown): unknown {
   if (raw === null) return null;
   if (key === 'Wonders' || key === 'ImportantBuildings') return names(raw);
   return key.startsWith('Is') ? recordedBoolean(raw) : raw;
+}
+
+/** Read projected unhappiness causes, reading a missing cause as zero and naming the largest positive one. */
+function unhappinessCauses(value: unknown): Record<string, number | string | null> | undefined {
+  if (!isRecord(value)) return undefined;
+  const causes: Record<string, number> = {};
+  for (const [name, field] of unhappinessSources) {
+    const reading = Object.hasOwn(value, field) ? value[field] : 0;
+    if (typeof reading !== 'number' || !Number.isFinite(reading)) return undefined;
+    causes[name] = reading;
+  }
+  let top: string | null = null;
+  for (const [name] of unhappinessSources) {
+    if (causes[name] <= 0) continue;
+    if (top === null || causes[name] > causes[top]) top = name;
+  }
+  return { ...causes, top };
 }
 
 /** Read the most recent different known owner in the same continuous city history. */

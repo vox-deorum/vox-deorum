@@ -14,6 +14,8 @@ const eligibleSchema = z.strictObject({ when: expressionSchema.optional(), weigh
 export const authoredVariantSchema = eligibleSchema.extend({
   id: z.string().min(1),
   headline: z.string().min(1),
+  subheadline: z.string().min(1).optional(),
+  byline: z.string().min(1).optional(),
   body: z.array(z.string().min(1)).min(1),
   links: z
     .array(
@@ -40,6 +42,7 @@ export const editorialTriggerRuleSchema = z.strictObject({
   importance: z.union([z.number(), expressionSchema]).optional(),
   urgent: expressionSchema.optional(),
   group: z.strictObject({ by: expressionSchema, min: z.number().int().positive().optional() }).optional(),
+  chance: z.number().min(0).max(1).optional(),
   repeat: spanSchema.optional(),
   tags: z.array(z.string().min(1)).default([]),
   enabled: z.boolean().optional(),

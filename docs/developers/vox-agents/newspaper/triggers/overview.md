@@ -18,7 +18,7 @@ flowchart LR
 
 | Page | Covers |
 | --- | --- |
-| This page | Trigger entries, evaluation, importance, repeats, grouping, authoring workflow |
+| This page | Trigger entries, evaluation, importance, repeats, publication memory, chance, grouping, authoring workflow |
 | [Facts](facts.md) | Every subject, its stored and inferred facts, time access, hidden facts, helpers |
 | [Constants and shortcuts](constants.md) | Distance measurement, named distances, spans, sizes, type lists, shortcuts |
 | [Examples](examples.md) | Stock triggers and a copyable overlay for the neutral settler story |
@@ -60,6 +60,7 @@ Entries live in JSON files under `vox-agents/newspaper/triggers/`. Files group e
 | `urgent` | No | Expression. When true, the development may lead a breaking front page. | `city.distance.own <= adjacent` |
 | `group` | No | Merges several matches into one development. See [grouping](#grouping). | `by: city.owner.id`, `min: 2` |
 | `repeat` | No | When the same subject may fire again: `rearm` (default), `once`, or a span. See [repeats](#repeats). | `medium` |
+| `chance` | No | Probability from 0 to 1 that a passing subject or group still produces a development. See [chance](#chance). | `0.25` |
 | `tags` | No | Topic and scope labels shared with templates, pages, variety and feedback. | `cities`, `international` |
 | `enabled` | No | Set to `false` to switch the trigger off. | `false` |
 
@@ -76,7 +77,7 @@ Expressions in `values`, `importance` and `urgent` can read earlier `values` by 
 | `incident` | Each inferred war or peace incident inside the reporting period | `incident` |
 | `world` | Once per check, for rules that compare many subjects | The globals only |
 
-Every expression can also read the globals `self` (the receiver), `players`, `cities`, `events`, `turn` and `game`. A `city` rule can therefore compare its city against `self.capital`, and a `world` rule can scan `players` for a new leader.
+Every expression can also read the globals `self` (the receiver), `players`, `cities`, `events`, `turn` and `game`. A `city` rule can therefore compare its city against `self.capital`, and a `world` rule can scan `players` for a new leader. Trigger, template and presentation expressions can also read the publication memory globals `press` and `printed`. See [publication memory](#publication-memory).
 
 ## How a check evaluates triggers
 
@@ -88,9 +89,15 @@ flowchart TD
     When -->|a fact is hidden or missing| Stop
     When -->|all true| Repeat{Allowed by repeat?}
     Repeat -->|no| Stop
-    Repeat -->|yes| Values[Evaluate values]
-    Values --> Group[Apply grouping]
-    Group --> Rate[Evaluate importance and urgent]
+    Repeat -->|yes| Grouped{Grouped rule?}
+    Grouped -->|no| SubjectDraw{Passes subject draw?}
+    SubjectDraw -->|no| Stop
+    SubjectDraw -->|yes| Values[Evaluate values]
+    Grouped -->|yes| Group[Evaluate values and form groups]
+    Group --> GroupDraw{Passes group draw?}
+    GroupDraw -->|no| Stop
+    GroupDraw -->|yes| Rate[Evaluate importance and urgent]
+    Values --> Rate
     Rate --> Dev[Development]
 ```
 
@@ -101,6 +108,7 @@ flowchart TD
 | Evaluate `when` | Entries run in order and stop at the first that is false. Put cheap, selective entries such as `city.foreign` first. | The index of the failing entry |
 | Hidden or missing facts | Reading a fact the receiver cannot see, or a snapshot that does not exist, ends the rule for that subject. See [hidden facts](facts.md#hidden-and-missing-facts). | `hidden` and the fact name |
 | Check `repeat` | A subject that already fired may be held back. | The repeat state |
+| Draw `chance` | A rule with `chance` keeps only the subjects or groups that pass the seeded draw. See [chance](#chance). | `chance` when the draw fails |
 | Evaluate `values` | Once per matching subject. | Every value |
 | Apply grouping | A trigger with `group` merges its matches. See [grouping](#grouping). | The key and the matches |
 | Evaluate `importance` and `urgent` | Once per development, after grouping, so they can read `count`. | Both results |
@@ -138,6 +146,27 @@ Results below 0 become 0 and results above 100 become 100.
 | A span, such as `medium` | At the first check after that many Standard turns where the rule is true, even when it stayed true throughout | Long-running situations worth a follow-up |
 
 Each event is its own subject, so an `event` rule fires once per event without any `repeat` setting. The publication fingerprint prevents the same development from being selected twice. Follow-up links and votes belong to a particular rule and subject: a trade story about a city stays separate from a political story about that city. Publication state schema 6 keeps the repeat state, so resuming a run preserves it. A skipped check still advances it.
+
+## Publication memory
+
+A check builds `press` and `printed` from the publication state. Rules, templates and presentation can read them, so a story can refer to earlier coverage.
+
+| Name | Value |
+| --- | --- |
+| `press.issues` | Number of issues published |
+| `press.lastIssueTurn` | Turn of the latest issue, or `null` |
+| `printed(ruleId)` | `{turn, count}`: the latest turn and the number of published articles that rule supported; `null` when none |
+| `printed(ruleId, subject)` | The same for articles about one city, player or pair |
+
+`printed` counts articles from issues already published before this check. Pass a city, player or pair fact to restrict the lookup. For example, use `printed('probe-peace', pair)` in a pair rule, or pass the template's `subject` for a story about one of those subjects. Older articles without rule IDs count toward `press.issues` and have no attribution in `printed`.
+
+A grouped article is recorded under its group key. It counts in `printed(ruleId)` and is never credited to an individual member. Skipped checks leave both the issue count and article history as they were.
+
+## Chance
+
+A rule with `chance` holds back some of the subjects that pass its conditions. The draw happens after `when` and `repeat` pass, once per subject or once per group key. It uses a number in [0, 1) hashed from the check's identity seed, the rule ID and the subject or group key, so the same check makes the same decision. A failed draw records the audit outcome `chance` and writes no repeat memory. A condition that stays eligible draws again at every later check until it fires.
+
+Running the same catalogue entry with a different campaign or receiver changes the identity seed, so the same subject can draw differently in another run. To test both outcomes deterministically, vary the campaign ID rather than the rule.
 
 ## Grouping
 
@@ -211,9 +240,18 @@ Constants in an overlay merge group by group and name by name. A type list is on
 
 ## Probe catalogue behavior
 
-The developer overlay in `vox-agents/newspaper/probes/` mirrors the catalogue paths for constants, triggers, templates, designs and pages. Its empty `pages.json` leaves the stock pages in place. To try it in a fresh CLI replay, pass `--config vox-agents/newspaper/probes` from the repository root. The stock catalogue and installer omit these probes.
+The developer overlay in `vox-agents/newspaper/probes/` mirrors the catalogue paths for constants, triggers, templates, designs and pages. Its `pages.json` adds an Opinion page that collects the `opinion` tag. To try it in a fresh CLI replay, pass `--config vox-agents/newspaper/probes` from the repository root. The stock catalogue and installer omit these probes.
 
-`vox-agents/tests/mock/newspaper/editorial/probes.test.ts` loads the overlay and checks which stories and designs appear in print. The treasury story appears at 100 gold, the Huns story follows a neighbor's gain of Horseback Riding, and the ideology story matches a branch in the `ideologies` list. The great person stories cover a named birth abroad and an obituary after a witnessed use or death. The People's Daily design qualifies when the receiver follows Order.
+`vox-agents/tests/mock/newspaper/editorial/probes.test.ts` loads the overlay and checks which stories and designs appear in print. The treasury story appears at 100 gold, the Huns story follows a neighbor's gain of Horseback Riding, and the ideology story matches a branch in the `ideologies` list. The great person stories cover a named birth abroad and an obituary, with authored subheadline and byline. The People's Daily design qualifies when the receiver follows Order.
+
+The newer probes cover the stage 7 capabilities:
+
+| Probe | Exercises |
+| --- | --- |
+| `probe-culture-opinion` | A city whose largest unhappiness cause is culture. Its low importance keeps it off the front page when larger stories compete, so it draws the Opinion page. |
+| `probe-peace`, `probe-retraction` | Publication memory: a printed peace story, then a war with that same pair within the `short` span. |
+| `probe-hundredth-issue` | A milestone read from `press.issues`. |
+| `probe-quiet-spell` | A gap of at least `medium` turns since the last issue, with `chance: 0.25` for a rare piece. |
 
 ## Verify changes
 

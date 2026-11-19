@@ -6,6 +6,7 @@ import { resolveEditorialSpan, scaleEditorialConstants, type EditorialConstants 
 import type { CompiledTriggerExpressions, TriggerExpressionSlots } from '../config/expressions.js';
 import type { EditorialTriggerRule } from '../config/schema.js';
 import type { NewspaperFactModel } from '../facts/index.js';
+import { stableDraw } from '../shared/determinism.js';
 import type { ExpressionBatch, ExpressionCheckBudget, ExpressionResult } from '../shared/expressions.js';
 import { uniqueSources } from '../shared/sources.js';
 import { auditExpressions, expressionSources } from './audit.js';
@@ -22,6 +23,8 @@ interface EvaluateRulesInput {
   speedMultiplier: number;
   repeatState?: TriggerRepeatState;
   budget?: ExpressionCheckBudget;
+  /** Check identity used by optional chance draws; omitted callers keep the previous shape. */
+  identitySeed?: string;
 }
 
 type Group = ExpressionBatch['groups'][number];
@@ -88,6 +91,7 @@ function auditSteps(steps: readonly NamedStep[], results: readonly ExpressionRes
 /** Build a fresh repeat state, evaluating eligible subjects together before rating grouped matches. */
 export async function evaluateTriggerRules({
   rules, compiled, facts, constants, speedMultiplier, repeatState = {}, budget = { interruptedSlots: new Set() },
+  identitySeed = '',
 }: EvaluateRulesInput): Promise<{
   developments: RuleDevelopment[]; audit: TriggerRuleAudit[]; repeatState: TriggerRepeatState;
 }> {
@@ -103,6 +107,10 @@ export async function evaluateTriggerRules({
       facts.turn - resolveEditorialSpan(rule.window, constants, speedMultiplier));
     const keys = subjects.map(subject => ruleSubjectKey(rule.id, subject.key));
     const allowed = keys.map(key => canRepeat(repeatState[key], policy, facts.turn));
+    // Ungrouped chance is known before the batch, so a failed draw stops rating and value steps.
+    const chanceFailed = subjects.map(subject =>
+      rule.group === undefined && rule.chance !== undefined &&
+      stableDraw(identitySeed, rule.id, subject.key) >= rule.chance);
     const when = typeof rule.when === 'string' ? [rule.when] : rule.when;
     const guards = when.map((source, index) => ({
       slot: slots.when[index], field: typeof rule.when === 'string' ? 'when' : `when[${index}]`, source,
@@ -119,16 +127,20 @@ export async function evaluateTriggerRules({
       ordered: {
         guardCount: guards.length,
         bind: Object.fromEntries(steps.flatMap((step, index) => step.bind === undefined ? [] : [[index, step.bind]])),
-        limits: allowed.map(pass => pass ? steps.length : guards.length),
+        limits: subjects.map((_, index) => allowed[index] && !chanceFailed[index] ? steps.length : guards.length),
         numeric: steps.flatMap((step, index) => step.numeric ? [index] : []),
       },
     };
-    return { rule, subjects, conflictBySubject, policy, limit, keys, allowed, guards, values, rate, steps, batch };
+    return {
+      rule, subjects, conflictBySubject, policy, limit, keys, allowed, chanceFailed,
+      guards, values, rate, steps, batch,
+    };
   });
   const checks = await compiled.runner.evaluate({ constants: scaled, facts, groups: plans.map(plan => plan.batch) }, budget);
   const pending: { batch: Group; complete(results: ExpressionResult[]): void }[] = [];
   const outcomes = plans.map((plan, planIndex) => {
-    const { rule, subjects, conflictBySubject, policy, limit, keys, allowed, guards, values, rate, steps } = plan;
+    const { rule, subjects, conflictBySubject, policy, limit, keys, allowed, chanceFailed,
+      guards, values, rate, steps } = plan;
     const developments: RuleDevelopment[] = [];
     const audit: TriggerRuleAudit = {
       rule: rule.id, windowFromTurn: limit, subjectCount: subjects.length, subjects: [], groups: [],
@@ -182,6 +194,10 @@ export async function evaluateTriggerRules({
         record.outcome = 'repeat';
         continue;
       }
+      if (chanceFailed[index]) {
+        record.outcome = 'chance';
+        continue;
+      }
       const failure = results.find(result => 'error' in result);
       if (failure && 'error' in failure) {
         record.outcome = failure.error.hidden ? 'hidden' : 'error';
@@ -218,6 +234,12 @@ export async function evaluateTriggerRules({
       };
       audit.groups.push(record);
       if (matches.length < (rule.group?.min ?? 2)) continue;
+      // A grouped chance draw happens once per group, before rating or repeat memory.
+      if (rule.chance !== undefined &&
+          stableDraw(identitySeed, rule.id, subject) >= rule.chance) {
+        record.outcome = 'chance';
+        continue;
+      }
       const placeholders = { count: matches.length, key, matches: entries };
       /** Combine both evaluation phases' evidence before emitting the group. */
       const complete = (results: ExpressionResult[]) => {

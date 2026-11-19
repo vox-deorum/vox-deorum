@@ -53,6 +53,8 @@ Every expression can read these, whatever its subject.
 | `events` | Every permitted event in the trigger's window, oldest first |
 | `turn` | The cutoff turn of this check |
 | `game` | `speed` (the recorded game speed name), `speedMultiplier`, `mapSize`, `startEra`, `maxTurns` |
+| `press` | Publication memory: `issues` (published issue count) and `lastIssueTurn` (turn of the latest issue, or `null`) |
+| `printed(ruleId, subject?)` | `{turn, count}` for published articles a rule supported, or `null` when none. The optional `subject` limits the count to one city, player or pair. See [publication memory](overview.md#publication-memory). |
 | `distance(a, b)` | Hex distance between players, cities, plots or events. See [distance](constants.md#distance). |
 
 The **reporting period** runs from the previous newspaper check to the cutoff turn. A trigger's **window** is its `window` field, or the reporting period when the field is omitted. Inferred facts such as `owner` and `distance` describe the cutoff turn, including when an `event` rule reads them.
@@ -66,9 +68,27 @@ The **reporting period** runs from the previous newspaper check to the cutoff tu
 | Access | Facts |
 | --- | --- |
 | Basic (any city the receiver can see) | `id`, `name`, `x`, `y`, `population`, `majorityReligion`, `defenseStrength`, `hitPoints`, `maxHitPoints`, `isCapital`, `isPuppet`, `isOccupied`, `isCoastal`, `wonders`, `razingTurns`, `resistanceTurns` |
-| Detailed (the receiver's own cities and cities it has full insight into) | `foodStored`, `foodPerTurn`, `productionStored`, `productionPerTurn`, `currentProduction`, `productionTurnsLeft`, `goldPerTurn`, `sciencePerTurn`, `culturePerTurn`, `faithPerTurn`, `tourismPerTurn`, `happinessDelta`, `buildingCount`, `importantBuildings`, `greatWorkCount` |
+| Detailed (the receiver's own cities and cities it has full insight into) | `foodStored`, `foodPerTurn`, `productionStored`, `productionPerTurn`, `currentProduction`, `productionTurnsLeft`, `goldPerTurn`, `sciencePerTurn`, `culturePerTurn`, `faithPerTurn`, `tourismPerTurn`, `happinessDelta`, `unhappiness`, `buildingCount`, `importantBuildings`, `greatWorkCount` |
 
 `city.happinessDelta` is the net local happiness in that snapshot. Negative values indicate local unhappiness, positive values indicate a surplus, and zero is balanced. Reading it requires a detailed city observation. To compare happiness across time, read it on two snapshots.
+
+`city.unhappiness` breaks local unhappiness into causes when detailed city evidence includes `UnhappinessSources`. Regular recordings do not yet collect this data. When the object is present, a missing cause reads 0.
+
+| Key | Cause |
+| --- | --- |
+| `culture` | Boredom from culture |
+| `gold` | Poverty from gold |
+| `science` | Illiteracy from science |
+| `distress` | Distress from food |
+| `religion` | Religious unrest |
+| `isolation` | Isolation |
+| `famine` | Famine |
+| `pillaged` | Pillaged tiles |
+| `buildings` | Buildings |
+| `specialists` | Specialists |
+| `top` | The name of the largest positive cause, or `null` if there is none |
+
+The game applies a population cap and handles resistance, razing and puppets separately, so these readings can differ from the net `happinessDelta`. Compare causes with each other and against small thresholds. A missing or malformed observation is hidden. `top` breaks ties by the order above.
 
 ### Inferred city facts
 

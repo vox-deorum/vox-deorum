@@ -48,7 +48,7 @@ Templates, variants, pages, designs and layouts can have a JavaScript expression
 - Each true adjustment adds its `add` value. A false condition or unavailable fact contributes nothing. A choice whose adjustment could not finish within the execution budget is left out.
 - The final weight must be greater than zero. Weight influences design, layout and variant selection; template weight joins the candidate score.
 
-All conditions run in the shared QuickJS sandbox with no filesystem, network, clock or random source. A trigger expression reads its subject, earlier values and the check globals. Template and variant conditions read the visible fact namespace for the subject, such as `city.population`, plus the candidate bindings described below. Page, design and layout conditions read the visible facts and check globals without candidate bindings.
+All conditions run in the shared QuickJS sandbox with no filesystem, network, clock or random source. A trigger expression reads its subject, earlier values and the check globals. Template and variant conditions read the visible fact namespace for the subject, such as `city.population`, plus the candidate bindings described below. Page, design and layout conditions read the visible facts and check globals without candidate bindings. Trigger, template and presentation expressions can also read the publication memory globals `press` and `printed`; see [publication memory](triggers/overview.md#publication-memory).
 
 A template names one or more rules in `triggers`. They must all fire for the same subject with overlapping evidence periods. For example, two city rules must match the same city. Grouped rules can combine with other grouped rules of the same subject kind and key. The editor uses the overlapping period, the highest importance and the combined tags.
 
@@ -60,13 +60,13 @@ A template names one or more rules in `triggers`. They must all fire for the sam
 | `mode` | `authored` (default) or `llmOnly`; the heuristic editor skips `llmOnly` templates |
 | `short` | Marks a short filler story reserved near the item limit |
 | `weight` | Base weight and conditional adjustments |
-| `variants` | Authored prose choices, each with `id`, `headline`, `body`, optional `links`, optional `when`, and `weight` |
+| `variants` | Authored prose choices, each with `id`, `headline`, `body`, optional `subheadline`, optional `byline`, optional `links`, optional `when`, and `weight` |
 
-`id`, `triggers`, `tags`, `weight` and `variants` are required. Each variant requires `id`, `headline`, `body` and `weight`; `when` and `links` are optional.
+`id`, `triggers`, `tags`, `weight` and `variants` are required. Each variant requires `id`, `headline`, `body` and `weight`; `subheadline`, `byline`, `when` and `links` are optional. The reader draws the subheadline under the headline and the byline below it, so an opinion piece or a signed report can carry both.
 
 ### Placeholders and facts
 
-Prose and typed link values use `{{name}}` placeholders. The editor supplies these from the same visible subject that rules can read:
+Prose and typed link values use `{{name}}` placeholders. Headlines, subheadlines, bylines and bodies all use the same placeholders, and every one of them joins the printable text and its source rows. The editor supplies these from the same visible subject that rules can read:
 
 | Placeholder | Value |
 | --- | --- |
@@ -108,7 +108,9 @@ The stock settler story chooses its tone based on local happiness. The [example 
 
 Trigger rules turn facts about cities, players, events, pairs, incidents and the world into developments. A rule must hold for its subject before a template can turn the development into a candidate. The [trigger overview](triggers/overview.md) describes rules and the [examples](triggers/examples.md) show the stock catalogue. [War and peace coverage](triggers/war-and-peace.md) groups likely declaration cascades, distinguishes obligations and city-state involvement, and tracks score progress and settlements.
 
-Importance comes from each trigger's `importance` expression on a scale from 0 to 100. Comparisons can reach before the reporting period, and an unchanged situation produces a new development only when its trigger sets `repeat` to a span and that span has passed. Repeat memory is saved with publication state. A skipped check advances the reporting boundary, diplomacy observations, rule repeat state, and series memory, then discards that check's candidates.
+Importance comes from each trigger's `importance` expression on a scale from 0 to 100. Comparisons can reach before the reporting period, and an unchanged situation produces a new development only when its trigger sets `repeat` to a span and that span has passed. A rule with `chance` drops some passing subjects or groups; the draw is seeded from the check, rule and subject, and its failure records the audit outcome `chance` without writing repeat memory. Repeat memory is saved with publication state. A skipped check advances the reporting boundary, diplomacy observations, rule repeat state, and series memory, then discards that check's candidates.
+
+Each published article records the rule IDs and subject behind it, so later expressions can read them through `printed`. A grouped article is recorded under its group subject, while the global count still includes it. Articles published before this memory are not attributed. See [publication memory](triggers/overview.md#publication-memory) and [chance](triggers/overview.md#chance).
 
 Selection combines importance, decayed series history, novelty, variety, template weight, and feedback. Importance is dated and decays once per elapsed turn. Each series follows one rule and subject. Selection reserves each series for one item per issue. A template that names several triggers takes the highest importance among them, and its tags and series keys are deduplicated. A multi-series item contributes its final importance once to each series.
 

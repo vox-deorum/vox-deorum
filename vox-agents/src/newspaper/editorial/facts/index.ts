@@ -30,6 +30,20 @@ export interface DatedFact<Id extends number | string> {
   readonly sources: readonly NewspaperSourceReference[];
 }
 
+/** Printed-article history for one rule, or one rule and supported subject. */
+export interface NewspaperPrintedArticle {
+  readonly turn: number;
+  readonly count: number;
+}
+
+/** Receiver publication memory exposed to expressions as `press` and `printed`. */
+export interface NewspaperPress {
+  readonly issues: number;
+  readonly lastIssueTurn: number | null;
+  readonly rules: Readonly<Record<string, NewspaperPrintedArticle>>;
+  readonly subjects: Readonly<Record<string, NewspaperPrintedArticle>>;
+}
+
 export interface NewspaperFactModel {
   readonly turn: number;
   readonly previous: number;
@@ -38,6 +52,8 @@ export interface NewspaperFactModel {
   readonly longTurns: number;
   readonly receiverId: number;
   readonly game: FactObject;
+  /** Prior issue memory, attached by the check rather than by an evidence builder. */
+  readonly press?: NewspaperPress;
   readonly subjects: {
     readonly city: readonly number[];
     readonly player: readonly number[];
@@ -66,6 +82,13 @@ export function addDiplomacyFacts(model: NewspaperFactModel, diplomacy: Diplomac
     ...model, pairs, incidents,
     subjects: { ...model.subjects, pair: ids, incident: incidents.map(item => item.id) },
   };
+  const wrap = privateWrap.get(model);
+  if (wrap) privateWrap.set(enriched, wrap);
+  return enriched;
+}
+/** Attach the receiver's prior issue memory without adding archive provenance. */
+export function addPressFacts(model: NewspaperFactModel, press: NewspaperPress): NewspaperFactModel {
+  const enriched = { ...model, press };
   const wrap = privateWrap.get(model);
   if (wrap) privateWrap.set(enriched, wrap);
   return enriched;

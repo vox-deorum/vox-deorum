@@ -1,0 +1,81 @@
+[
+  {
+    "id": "probe-capital-masthead",
+    "version": "1",
+    "title": "The {{terms.capital}} Herald",
+    "weight": {
+      "base": 1
+    },
+    "presentation": {
+      "schemaVersion": 1,
+      "rendererFamily": "victorian",
+      "tokens": {
+        "paperColor": "#f2ead7",
+        "inkColor": "#241d18",
+        "accentColor": "#7a1f1f",
+        "bodyFontAssetId": "font-libre-caslon-400",
+        "headingFontAssetId": "font-bodoni-moda-700",
+        "mastheadFontAssetId": "font-unifrakturmaguntia-400"
+      }
+    },
+    "layouts": [
+      {
+        "id": "capital-ordinary",
+        "variant": "ordinary",
+        "weight": {
+          "base": 10
+        }
+      },
+      {
+        "id": "capital-breaking",
+        "variant": "breaking",
+        "weight": {
+          "base": 10
+        }
+      }
+    ],
+    "pageLabels": {
+      "front": "Front Page"
+    }
+  },
+  {
+    "id": "probe-vassal-strapline",
+    "version": "1",
+    "title": "The Dependency Register",
+    "motto": "A journal of {{terms.master}}'s dominion",
+    "weight": {
+      "base": 1
+    },
+    "presentation": {
+      "schemaVersion": 1,
+      "rendererFamily": "victorian",
+      "tokens": {
+        "paperColor": "#f2ead7",
+        "inkColor": "#241d18",
+        "accentColor": "#7a1f1f",
+        "bodyFontAssetId": "font-libre-caslon-400",
+        "headingFontAssetId": "font-bodoni-moda-700",
+        "mastheadFontAssetId": "font-unifrakturmaguntia-400"
+      }
+    },
+    "layouts": [
+      {
+        "id": "vassal-ordinary",
+        "variant": "ordinary",
+        "weight": {
+          "base": 10
+        }
+      },
+      {
+        "id": "vassal-breaking",
+        "variant": "breaking",
+        "weight": {
+          "base": 10
+        }
+      }
+    ],
+    "pageLabels": {
+      "front": "Front Page"
+    }
+  }
+]

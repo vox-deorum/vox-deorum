@@ -54,6 +54,12 @@ export function renderStory(
     content.append(subheadline);
   }
 
+  if (item.byline) {
+    const byline = createElement("p", "vd-byline");
+    appendInlineNodes(byline, item.byline, item.id, bindReaderAction);
+    content.append(byline);
+  }
+
   const prose = createElement("div", "vd-prose");
   appendParagraphs(prose, item.body, item.id, bindReaderAction);
   const footer = renderStoryFooter(item, vote, designId, assetBaseUrl);
