@@ -23,6 +23,7 @@ function factRuntime(model, wrap, constants, shortcuts) {
   const printedSubjectKeys = new WeakMap();
   const expressionSubjects = new Map();
   const shortcutsByKind = new Map();
+  const internalFields = new Set(['relations', 'technologyChanges']);
   const constantNames = new Set(Object.keys(constants ?? {}));
   for (const [kind, name, test] of shortcuts) {
     if (!shortcutsByKind.has(kind)) shortcutsByKind.set(kind, new Map());
@@ -176,7 +177,7 @@ function factRuntime(model, wrap, constants, shortcuts) {
     function record(fields, path, date, methods = {}) {
       const object = Object.create(null);
       for (const key of Object.keys(fields)) {
-        if (key === 'relations' || key === 'knows' || has(methods, key)) continue;
+        if (internalFields.has(key) || key === 'knows' || has(methods, key)) continue;
         if (!knownField(key, false)) continue;
         Object.defineProperty(object, key, {
           enumerable: true, get: Object.freeze(() => read(fields[key], path + '.' + key, date)),
@@ -191,14 +192,14 @@ function factRuntime(model, wrap, constants, shortcuts) {
       return new Proxy(object, {
         get(object, key, receiver) {
           if (typeof key === 'symbol' || has(object, key)) return Reflect.get(object, key, receiver);
-          if (has(fields, key) && key !== 'relations') cite(fields[key].sources);
+          if (has(fields, key) && !internalFields.has(key)) cite(fields[key].sources);
           return missing(path + '.' + key);
         },
       });
 
       // Existence checks avoid reading hidden values and cite a positive resolution.
       function knownField(key, track) {
-        if (typeof key !== 'string' || key === 'relations') return false;
+        if (typeof key !== 'string' || internalFields.has(key)) return false;
         if (has(methods, key)) return methods[key].known(track);
         const field = has(fields, key) ? fields[key] : undefined;
         if (!field || field.hidden || field.value?.$kind === 'reference' && !visibleTarget(field.value, date)) return false;
@@ -227,6 +228,11 @@ function factRuntime(model, wrap, constants, shortcuts) {
       if (kind === 'player') {
         method('rank', Object.freeze(field => rank(id, date, fields, current, field)));
         method('relation', Object.freeze(other => relation(id, date, fields, other)));
+        method('hasTechnology', Object.freeze(name => {
+          const changes = fields.technologyChanges?.value;
+          if (typeof name !== 'string' || !changes || !has(changes, name)) return undefined;
+          return read(changes[name], 'player.hasTechnology', date);
+        }));
       }
       if (timelines[kind] && current) {
         relative('before', from);

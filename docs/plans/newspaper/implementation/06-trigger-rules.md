@@ -48,5 +48,5 @@ For Stage 4c, use the [three Netherlands replay cases](../../../developers/vox-a
 - Spy names, ranks and mission assignments; gold amounts, stolen great works, coups and exact defender notifications; and ongoing foreign covert assignments.
 - Complete national military rosters and new access grants, foreign tactical maps, individual unit names and movement histories, and city event coverage beyond recorded ship launches.
 - Names for eras and beliefs in events, which are recorded as numbers.
-- The list of technologies a player holds (only a count is captured), game year, World Congress resolutions.
+- Complete technology holdings, game year, and World Congress resolutions. The receiver can check named gains and losses through the cutoff with `self.hasTechnology`; player summaries still carry only the count.
 - Stable keys such as `CIVILIZATION_HUNS`. The catalogue keeps matching recorded display names.

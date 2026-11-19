@@ -32,6 +32,7 @@ describe('newspaper MCP transports', () => {
       SourcePlayerID: 1, TargetPlayerID: 0, SpyResult: 'Detected', CityX: 4, CityY: 3,
     }, 0);
     await event(writer, 109, 6, 'PlayerDoTurn', { PlayerID: 0 }, 0);
+    await event(writer, 110, 3, 'TeamTechResearched', { TeamID: 0, TechID: 'Printing Press', ChangeAmount: 1 }, 0);
     await event(writer, 107, 8, 'SetAlly', { MinorPlayerID: 1, OldAllyPlayerID: 0, NewAllyPlayerID: 3,
       NewAllyPlayer: { Name: 'Leader3', Civilization: 'Civ3' } });
     await summary(writer, 8, 0, 4, 2, { Relationships: { Civ1: ['War (Our Score: 0%; Our War Weariness: 10%)'] } });
@@ -50,6 +51,9 @@ describe('newspaper MCP transports', () => {
     const expected = await queryNewspaperEvidence(db, request);
     expect(expected.tacticalZones).toMatchObject([
       { source: { table: 'TacticalZones', id: 320 }, units: { Civ1: { Frigate: 1 } } },
+    ]);
+    expect(expected.receiverTechnologies).toMatchObject([
+      { name: 'Printing Press', gained: true, source: { table: 'GameEvents', id: 110 } },
     ]);
     const defender = expected.events.find(row => row.type === 'EspionageResult');
     expect(defender).toMatchObject({ source: { id: 108, turn: 5 }, reportTurn: 6,

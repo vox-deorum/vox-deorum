@@ -2,6 +2,7 @@ import type { Selectable } from 'kysely';
 import type { GameEvent } from '../knowledge/schema/timed.js';
 import type { NewspaperEvent, NewspaperSourceReference } from './evidence.js';
 import { source } from './recorded-city.js';
+import { namedTechnology } from './technologies.js';
 
 type EventRow = Selectable<GameEvent>;
 type Payload = Record<string, unknown>;
@@ -86,7 +87,7 @@ function projectTechnologyGains(
 function isPositiveNamedGain(row: EventRow): boolean {
   if (row.Type !== 'TeamTechResearched') return false;
   const change = finiteNumber(row.Payload.ChangeAmount);
-  return change !== undefined && change > 0 && namedTech(row.Payload.TechID) !== undefined;
+  return change !== undefined && change > 0 && namedTechnology(row.Payload.TechID) !== undefined;
 }
 
 /** Project one operation for the exact source or target, with the target's deferred report turn. */
@@ -99,7 +100,7 @@ function projectOperation(
       ...operationCity(row.Payload)
     };
     const gain = technology.get(row.ID);
-    const tech = gain ? namedTech(gain.Payload.TechID) : undefined;
+    const tech = gain ? namedTechnology(gain.Payload.TechID) : undefined;
     if (tech) values.Tech = tech;
     const related: NewspaperSourceReference[] = gain ? [source('GameEvents', gain)] : [];
     return {
@@ -217,13 +218,6 @@ function cityStateLabel(payload: Payload): string | undefined {
 function nestedLabel(value: unknown, field: string): string | undefined {
   const label = record(value)?.[field];
   return typeof label === 'string' && label.trim() ? label.trim() : undefined;
-}
-
-/** Keep a recorded technology name, rejecting the game's empty sentinel. */
-function namedTech(value: unknown): string | undefined {
-  if (typeof value !== 'string') return undefined;
-  const name = value.trim();
-  return name && name.toLowerCase() !== 'none' ? name : undefined;
 }
 
 /** Read a finite recorded number. */

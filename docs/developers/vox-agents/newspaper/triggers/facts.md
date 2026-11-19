@@ -167,6 +167,12 @@ A `Withdraw` posture is the AI's assessment during that turn. The recorder can r
 
 The two diplomat facts apply to known foreign majors. Policy and deal insight comes from the receiver's outgoing diplomat.
 
+### Technology milestones
+
+`self.hasTechnology('Printing Press')` reads the receiving team's latest recorded change for that technology through the cutoff, including events before the trigger window. Use the display name from the recording. The check returns `true` for a gain and `false` for a loss, and cites the event. Gains include research, grants, and theft.
+
+The check returns `undefined` for rival players, earlier snapshots, or names it has no record of. This includes any starting technologies that were never logged. Use an era fallback when the result is unknown.
+
 ### Covert presence and roster points
 
 The newspaper matches roles and locations in the recorded spy rosters. It reads supported state labels and can also recognize a spy gathering intelligence or a diplomat schmoozing across game languages: Vox Populi only records a nonnegative network balance for those two states. An empty roster or a clear miss establishes absence. A missing roster, ambiguous match or unrecognized state without that balance leaves presence unknown.

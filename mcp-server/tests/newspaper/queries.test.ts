@@ -12,6 +12,23 @@ beforeEach(async () => { db = await createEvidenceDatabase(); await seedEvidence
 afterEach(async () => { await db.destroy(); });
 
 describe('historical evidence queries', () => {
+  it('should keep the receiving team’s last named technology changes through the cutoff', async () => {
+    await event(db, 200, 2, 'TeamTechResearched', { TeamID: 0, TechID: 'Printing Press', ChangeAmount: 1 }, 0);
+    await event(db, 201, 4, 'TeamTechResearched', { TeamID: 0, TechID: 'Writing', ChangeAmount: 1 });
+    await event(db, 202, 4, 'TeamTechResearched', { TeamID: 0, TechID: 'Writing', ChangeAmount: -1 });
+    await event(db, 203, 8, 'TeamTechResearched', { TeamID: 1, TechID: 'Radio', ChangeAmount: 1 });
+    await event(db, 204, 9, 'TeamTechResearched', { TeamID: 0, TechID: 8, ChangeAmount: 1 });
+    await event(db, 205, 10, 'TeamTechResearched', { TeamID: 0, TechID: 'Writing', ChangeAmount: 0 });
+    await event(db, 206, 11, 'TeamTechResearched', { TeamID: 0, TechID: 'Printing Press', ChangeAmount: -1 });
+
+    const evidence = newspaperEvidenceSchema.parse(await queryNewspaperEvidence(db, request));
+    expect(evidence.receiverTechnologies).toEqual([
+      { name: 'Writing', gained: false, source: { table: 'GameEvents', id: 202, turn: 4, createdAt: 2004 } },
+      { name: 'Printing Press', gained: true, source: { table: 'GameEvents', id: 200, turn: 2, createdAt: 2002 } },
+    ]);
+    expect(evidence.events.some(row => row.source.id === 200 || row.source.id === 202)).toBe(false);
+  });
+
   it('should publish a met civilization’s named birth and use only visible events as stories about its deaths', async () => {
     const unit = { GreatPerson: 'Hypatia' };
     // An unrelated unit with the same local ID can extend the common event visibility.

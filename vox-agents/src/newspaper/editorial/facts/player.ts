@@ -222,8 +222,11 @@ export function buildPlayerFacts(row: NewspaperSnapshot, context: FactBuildConte
   if (capitals.length === 1) fields.capital = fact(reference('city', capitals[0].subjectID), rowSources(capitals[0]));
   const distance = id === context.receiverId ? fact(0, sources) : context.playerDistance(ownCities);
   if (distance) fields.distance = distance;
-  // Front observations are private and current only, with each row carrying its own citation.
+  // Named technology changes and front observations are private and available at the cutoff.
   if (id === context.receiverId) {
+    fields.technologyChanges = fact(Object.fromEntries((context.evidence.receiverTechnologies ?? [])
+      .filter(tech => tech.source.turn <= context.turn)
+      .map(tech => [tech.name, fact(tech.gained, [tech.source])])));
     const zones = (context.evidence.tacticalZones ?? [])
       .filter(zone => zone.source.turn === context.turn)
       .map(tacticalZoneFacts);

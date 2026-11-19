@@ -31,11 +31,10 @@ Done means:
 | Civilization facts | `self.name`, `self.leader`, `self.era`, `self.ideology`, policy branches, religion. | `editorial/facts/player.ts` |
 | Relationship facts | `relation(other)` gives war, friendship, defensive pact, vassalage and war score. | `editorial/facts/guest.ts` |
 
-Two facts the axes want are missing:
+Two gaps the axes want to close:
 
-| Missing fact | Effect | Handling in this plan |
+| Gap | Effect | Handling in this plan |
 | --- | --- | --- |
-| The list of researched technologies. Only a count is recorded. | Voice cannot follow the Printing Press or Radio milestones in the [spec](../spec.md#5-evolution-with-technology). | Weight voice by `self.era` first. Step 6 decides whether to record the list. |
 | Denouncement. MCP recognizes the relationship text but builds no fact. | Anti-foreign stance can only follow war, never a denouncement. | Start with war and friendship. Add the fact if the sample sheet shows the gap matters. |
 
 Paths in this plan are relative to `vox-agents/src/newspaper/` for code and `vox-agents/` for the runtime catalogue.
@@ -61,7 +60,7 @@ Voice is chosen once per issue and kept while it stays eligible, the way designs
 
    | Entry | Starting weight rule |
    | --- | --- |
-   | Voice | Base weight by era band; a bonus for the named civilizations it was written for. |
+   | Voice | Base weight by era band and named technology milestones, using the era when a name is unknown; a bonus for the named civilizations it was written for. |
    | Anti-government | Low base; rises as `self.happinessPercentage` falls. |
    | Pro-government | Rises with happiness and during a Golden Age. |
    | Anti-foreign government | Applies when the story's subject is another civilization; rises at war with it. |
@@ -71,7 +70,7 @@ Voice is chosen once per issue and kept while it stays eligible, the way designs
    | Joke, anecdote | Only for short templates; lower in an issue with an urgent story. |
 
 5. **Add the schema and selection.** Add the `styles.json` schema and loading to `editorial/config/{schema,load}.ts`. Add optional `voice`, `stance` and `genre` to the variant schema, defaulting to a general voice, `neutral` and `report`, so the 25 stock variants stay valid. Reject unknown IDs at load. Choose the issue's voice beside the design in `editorial/presentation/issue.ts`, then multiply the axis weights into the variant weights. Give stance rules access to the candidate's subject so foreign stances can test the relationship. Record the chosen voice and each article's stance and genre beside `selectedVariants` in `contracts/publication.ts`.
-6. **Decide on the technology list.** If era bands make voices change at the wrong time in replay, add the researched technology list to the recorded player summary and the fact model as a separate change. Otherwise leave it.
+6. **Validate milestones on recordings.** Replay the voice rules against existing recordings, checking named technology milestones with `self.hasTechnology` and era bands where a name is unknown. Add a researched technology list to the recorded player summary only if incomplete recordings change the voice at a milestone.
 7. **List design candidates.** Record which further visual designs the kept voices call for, such as bamboo slips or a portrait card feed. Building them belongs to [Plan 1](01-renderer.md) after its size budget is measured.
 8. **Tag the stock variants and document.** Tag the existing variants that already carry a stance. Package `styles.json` in `scripts/installer.iss`. Describe the axes and weights in the [editorial guide](../../../developers/vox-agents/newspaper/editorial.md).
 

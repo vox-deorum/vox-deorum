@@ -292,6 +292,32 @@ describe('newspaper player facts', () => {
   });
 
   describe('player expressions', () => {
+    it('should resolve named gains and losses with their sources and leave unrecorded technologies unknown', async () => {
+      const printing = { table: 'GameEvents', id: 110, turn: 1, createdAt: 1 } as const;
+      const writing = { table: 'GameEvents', id: 111, turn: 3, createdAt: 3 } as const;
+      const at = context(6, { receiverTechnologies: [
+        { name: 'Printing Press', gained: true, source: printing },
+        { name: 'Writing', gained: false, source: writing },
+      ] });
+      const expressions = [
+        "self.hasTechnology('Printing Press')",
+        "self.hasTechnology('Writing')",
+        "self.hasTechnology('Radio') === undefined",
+        "rival.hasTechnology('Printing Press') === undefined",
+        "self.before.hasTechnology('Printing Press') === undefined",
+      ];
+      const runner = await compileEditorialExpressions(expressions.map(source => ({
+        rule: 'research-milestone', field: 'when', source
+      })));
+      const [[[gain, loss, missing, foreign, historical]]] = await runner.evaluate({
+        facts: buildNewspaperFacts(at.evidence, at.metadata),
+        groups: [{ expressions: [0, 1, 2, 3, 4], subjects: [{ rival: reference('player', 1) }] }]
+      });
+      expect(gain).toEqual({ value: true, sources: [printing] });
+      expect(loss).toEqual({ value: false, sources: [writing] });
+      for (const result of [missing, foreign, historical]) expect(result).toMatchObject({ value: true });
+    });
+
     it('should rank visible majors and reconcile reciprocal relations at the date of a carried snapshot', async () => {
       const at = context(6);
       const sources = [

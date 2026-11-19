@@ -45,6 +45,13 @@ export const newspaperEventSchema = z.object({
   values: z.record(z.string(), z.unknown()).describe('Selected raw event payload')
 });
 
+/** The most recent named change for a technology on the receiving team. */
+export const newspaperTechnologySchema = z.object({
+  source: newspaperSourceReferenceSchema.extend({ table: z.literal('GameEvents') }),
+  name: z.string().describe('Technology name in the recording'),
+  gained: z.boolean().describe('Whether the last recorded change was a gain')
+});
+
 /** Public relationship observations derived from a visible dated summary. */
 export const newspaperDiplomacySnapshotSchema = z.object({
   source: newspaperSourceReferenceSchema.describe('Original national summary row and observation date'),
@@ -113,6 +120,8 @@ export const newspaperEvidenceSchema = z.object({
   cities: z.array(newspaperSnapshotSchema).describe('Latest permitted city snapshots at cutoff'),
   comparisons: newspaperSnapshotSetSchema.describe('Final insertion per subject and turn within the requested comparison range'),
   events: z.array(newspaperEventSchema).describe('Permitted events after previous check through cutoff'),
+  receiverTechnologies: z.array(newspaperTechnologySchema).optional()
+    .describe('Last recorded change per named technology on the receiving team through the cutoff'),
   tacticalZones: z.array(newspaperTacticalZoneSchema).optional()
     .describe('Latest permitted observation per zone during the cutoff turn, ordered by zone ID; absent when the table is unavailable'),
   history: newspaperHistorySchema.optional().describe('Trigger history when a start turn is requested'),
@@ -128,6 +137,7 @@ export type NewspaperEvidenceRequest = z.infer<typeof newspaperEvidenceRequestSc
 export type NewspaperSourceReference = z.infer<typeof newspaperSourceReferenceSchema>;
 export type NewspaperSnapshot = z.infer<typeof newspaperSnapshotSchema>;
 export type NewspaperEvent = z.infer<typeof newspaperEventSchema>;
+export type NewspaperTechnology = z.infer<typeof newspaperTechnologySchema>;
 export type NewspaperTacticalZone = z.infer<typeof newspaperTacticalZoneSchema>;
 export type NewspaperHistory = z.infer<typeof newspaperHistorySchema>;
 export type NewspaperEvidence = z.infer<typeof newspaperEvidenceSchema>;

@@ -14,6 +14,7 @@ import {
   type NewspaperCityProjectionContext, type NewspaperProjectionContext
 } from './projection.js';
 import { projectEspionageEvidence } from './espionage-operations.js';
+import { readReceiverTechnologies } from './technologies.js';
 
 type ReceiverField = keyof KnowledgeDatabase['PlayerSummaries'] & `Player${number}`;
 type CityRow = Selectable<CityInformation>;
@@ -30,9 +31,10 @@ export async function queryNewspaperEvidence(
   const operationFromTurn = eventFromTurn - 1;
   const fromTurn = Math.min(eventFromTurn, comparisonRange?.fromTurn ?? cutoffTurn, cutoffTurn);
   const visibilityField = `Player${receiverPlayerID}` as ReceiverField;
+  const playersRead = db.selectFrom('PlayerInformations').selectAll().execute();
   const [players, baseSummaries, summaryHistory, cities, events, uncheckedEvents, earlierCities, baselineCities, historyCities,
-    cityLifecycle, espionageRows, tacticalZones] = await Promise.all([
-    db.selectFrom('PlayerInformations').selectAll().execute(),
+    cityLifecycle, espionageRows, tacticalZones, technologies] = await Promise.all([
+    playersRead,
     readSnapshotsAtCutoff(db, 'PlayerSummaries', fromTurn - 1),
     readSnapshotRange(db, 'PlayerSummaries', fromTurn, cutoffTurn),
     readSnapshotsAtCutoff(db, 'CityInformations', cutoffTurn),
@@ -50,7 +52,8 @@ export async function queryNewspaperEvidence(
       .where('Type', 'in', ['EspionageResult', 'ElectionResultSuccess', 'ElectionResultFailure'])
       .where('Turn', '>=', operationFromTurn).where('Turn', '<=', cutoffTurn)
       .orderBy('Turn').orderBy('ID').execute(),
-    readTacticalZones(db, cutoffTurn, receiverPlayerID, visibilityField)
+    readTacticalZones(db, cutoffTurn, receiverPlayerID, visibilityField),
+    playersRead.then(rows => readReceiverTechnologies(db, rows.find(player => player.Key === receiverPlayerID)?.TeamID, cutoffTurn))
   ]);
   const operationTurns = [...new Set(espionageRows.filter(row => row.Type === 'EspionageResult').map(row => row.Turn))]
     .sort((a, b) => a - b);
@@ -74,6 +77,7 @@ export async function queryNewspaperEvidence(
 
   const result: NewspaperEvidence = { request, players: [], cities: [], comparisons: { players: [], cities: [] }, events: [],
     diplomacy: { fromTurn, baseline: [], history: [], gaps: [] } };
+  if (technologies.length) result.receiverTechnologies = technologies;
   /** Take a row only at an access level supported by the snapshot projection. */
   function visible(row: Pick<CityRow, ReceiverField>): boolean {
     const level = row[visibilityField];

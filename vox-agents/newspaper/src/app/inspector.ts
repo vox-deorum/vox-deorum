@@ -3,7 +3,7 @@ import { newspaperScreenLabels, type IssueDocument, type LinkTarget } from "../.
 import type { ReaderAction, ReaderState } from "../../../src/newspaper/contracts/reader.js";
 import {
   eventReportTurn, type NewspaperEvidence, type NewspaperSnapshot, type NewspaperEvent,
-  type NewspaperDiplomacySnapshot, type NewspaperDiplomacyGap, type NewspaperTacticalZone,
+  type NewspaperDiplomacySnapshot, type NewspaperDiplomacyGap, type NewspaperTacticalZone, type NewspaperTechnology,
 } from "../../../../mcp-server/dist/newspaper/evidence.js";
 import type { z } from "zod";
 import type { replayCheckSchema } from "../../../src/newspaper/contracts/replay.js";
@@ -207,10 +207,12 @@ export function renderEvidence(evidence: NewspaperEvidence | null): void {
     }
     root.append(heading, limitations);
   }
-  type EvidenceRow = NewspaperSnapshot | NewspaperEvent | NewspaperDiplomacySnapshot | NewspaperDiplomacyGap | NewspaperTacticalZone;
+  type EvidenceRow = NewspaperSnapshot | NewspaperEvent | NewspaperDiplomacySnapshot | NewspaperDiplomacyGap
+    | NewspaperTacticalZone | NewspaperTechnology;
   const groups: [string, EvidenceRow[]][] = [
     ["Players", evidence.players], ["Cities", evidence.cities],
     ["Tactical zones", evidence.tacticalZones ?? []],
+    ["Receiver technologies", evidence.receiverTechnologies ?? []],
     ["Earlier players", evidence.comparisons.players], ["Earlier cities", evidence.comparisons.cities],
     ["Events", evidence.events],
     ["Earlier diplomacy", evidence.diplomacy?.baseline ?? []], ["Diplomacy history", evidence.diplomacy?.history ?? []],
@@ -224,7 +226,7 @@ export function renderEvidence(evidence: NewspaperEvidence | null): void {
       const button = document.createElement("button");
       button.type = "button";
       const identity = "zoneID" in row ? `zone ${row.zoneID}${row.city ? ` (${row.city})` : ""}`
-        : "subjectID" in row ? `subject ${row.subjectID}` : row.type;
+        : "subjectID" in row ? `subject ${row.subjectID}` : "name" in row ? row.name : row.type;
       const turn = "type" in row ? eventReportTurn(row) : row.source.turn;
       const sourceTurn = turn === row.source.turn ? "" : `, source turn ${row.source.turn}`;
       button.textContent = `${identity}, turn ${turn}${sourceTurn}, row ${row.source.id}`;
