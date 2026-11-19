@@ -1,0 +1,14 @@
+[
+  {
+    "id": "probe-treasury",
+    "subject": "player",
+    "when": [
+      "player.self",
+      "player.gold >= probeTreasury"
+    ],
+    "values": {
+      "treasury": "player.gold"
+    },
+    "importance": 65
+  }
+]

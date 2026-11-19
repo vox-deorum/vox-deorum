@@ -8,7 +8,7 @@
 
 The newspaper's trigger rules and templates express 14 stock stories. Many stories an author would want are out of reach: a communist paper with its own masthead, an opinion piece on a city's boredom, a notice that Isaac Newton was born in a distant land, a report that a spy stole a technology, an easter egg when a neighbor of the Huns learns Horseback Riding.
 
-This plan raises expressivity in seven stages. Each stage adds one group of capabilities and ends when its **probe stories** pass. A probe story is a small trigger, template or design in an overlay catalogue, tested against synthetic facts.
+Each remaining stage adds a group of capabilities and verifies it with [catalogue probes](../../../developers/vox-agents/newspaper/triggers/overview.md#probe-catalogue-behavior).
 
 One rule holds throughout: the strategist's tools (`get-cities`, `get-players`, `get-events`) return what they return today.
 
@@ -28,13 +28,7 @@ One rule holds throughout: the strategist's tools (`get-cities`, `get-players`, 
 
 ## Stages
 
-Stages 2 to 5 change the MCP server projection and the fact builders. Stage 4 also changes the DLL. Stages 6 and 7 change only the editor. Each stage rewrites the affected sections of the documentation pages named in its last bullet.
-
-### Stage 1: probe overlay
-
-- Create the overlay `vox-agents/newspaper/probes/` with `constants.json`, `triggers/probes.json`, `templates/probes.json`, `designs/peoples-daily.json` and `pages.json`. It loads only through `--config`.
-- Add `vox-agents/tests/mock/newspaper/editorial/probes.test.ts`. Each probe gets a small fact model built with the existing test helpers, one case that publishes it and one that does not. Story probes assert on template IDs. Design probes make the probe design the only eligible one and assert on `issue.publication`.
-- Later stages add their probes to this overlay and this test.
+Extend the existing [probe overlay and tests](../../../developers/vox-agents/newspaper/triggers/overview.md#probe-catalogue-behavior) with each stage. Stages 2 to 5 change the MCP server projection and the fact builders. Stage 4 also changes the DLL. Stages 6 and 7 change only the editor. Each stage rewrites the affected sections of the documentation pages named in its last bullet.
 
 ### Stage 2: names and world news
 
@@ -131,7 +125,7 @@ Espionage is private to its two parties. The Lua visibility also marks players w
 
 After each stage, run from the repository root, in this order: `npm run build -w mcp-server`, `npm run test:mock -w mcp-server`, `npm run test:mock -w vox-agents -- tests/mock/newspaper`, `npm run type-check -w vox-agents` and `npm run build:newspaper -w vox-agents`. The MCP server is built first because the newspaper replay loads its compiled output.
 
-Each stage adds projection tests under `mcp-server/tests/newspaper/` for its new fields and gates, and fact tests under `vox-agents/tests/mock/newspaper/editorial/facts/`. Examples: a third player who sees the city gets no espionage event; an unwitnessed foreign birth carries no coordinates; `get-events` returns a great person event without the `GreatPerson` key.
+Test new projection fields and gates under `mcp-server/tests/newspaper/` and new facts under `vox-agents/tests/mock/newspaper/editorial/facts/`. Examples: a third player who sees the city gets no espionage event; an unwitnessed foreign birth carries no coordinates; `get-events` returns a great person event without the `GreatPerson` key.
 
 After stage 5, build the DLL, play a short game and replay it with `--config vox-agents/newspaper/probes`. A named great person, a stolen technology and `UnhappinessSources` appear in the newspaper evidence, and `get-events` and `get-cities` return the same fields as before.
 

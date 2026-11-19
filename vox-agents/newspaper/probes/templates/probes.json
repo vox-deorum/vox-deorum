@@ -1,0 +1,18 @@
+[
+  {
+    "id": "probe-treasury-account",
+    "triggers": ["probe-treasury"],
+    "tags": ["economy"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "probe-treasury-report",
+        "headline": "Treasury reaches {{treasury}} gold",
+        "body": [
+          "The treasury now holds {{treasury}} gold, a sum worth noting on this page."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  }
+]

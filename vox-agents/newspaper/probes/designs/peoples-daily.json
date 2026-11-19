@@ -1,0 +1,45 @@
+[
+  {
+    "id": "probe-communist-press",
+    "version": "1",
+    "title": "The People's Daily",
+    "when": "self.name === 'Probe Republic'",
+    "weight": {
+      "base": 20
+    },
+    "presentation": {
+      "schemaVersion": 1,
+      "rendererFamily": "victorian",
+      "tokens": {
+        "paperColor": "#f2ead7",
+        "inkColor": "#241d18",
+        "accentColor": "#7a1f1f",
+        "bodyFontAssetId": "font-libre-caslon-400",
+        "headingFontAssetId": "font-bodoni-moda-700",
+        "mastheadFontAssetId": "font-unifrakturmaguntia-400"
+      },
+      "assets": {
+        "ornamentAssetId": "victorian-ornament"
+      }
+    },
+    "layouts": [
+      {
+        "id": "daily-ordinary",
+        "variant": "ordinary",
+        "weight": {
+          "base": 10
+        }
+      },
+      {
+        "id": "daily-breaking",
+        "variant": "breaking",
+        "weight": {
+          "base": 10
+        }
+      }
+    ],
+    "pageLabels": {
+      "front": "Front Page"
+    }
+  }
+]

@@ -171,6 +171,7 @@ A template names one or more triggers in `triggers`. Every named trigger must fi
 | `vox-agents/newspaper/triggers/` | Trigger entries |
 | `vox-agents/newspaper/constants.json` | Named constants, type lists and shortcuts |
 | `vox-agents/newspaper/templates/` | Authored headlines, paragraphs, placeholders, typed links and weights, grouped by topic like triggers |
+| `vox-agents/newspaper/probes/` | Optional catalogue of synthetic story and design probes |
 | `vox-agents/src/newspaper/editorial/config/` | Catalogue schema and validation in `schema.ts`, constant validation and span scaling in `constants.ts`; file loading, overlays and catalogue compilation in `load.ts` and `expressions.ts` |
 | `vox-agents/src/newspaper/editorial/facts/` | Builds the fact model, including distance and inferred facts |
 | `vox-agents/src/newspaper/editorial/diplomacy/` | War and peace inference; its incident and pair facts reach rules through the fact model |
@@ -207,6 +208,12 @@ Use an overlay directory to compare alternatives without editing the built-in ca
 | Switch a trigger off | An entry with the same `id` and `enabled: false` |
 
 Constants in an overlay merge group by group and name by name. A type list is one value, so the overlay list replaces the built-in list instead of adding names to it. Shortcut sources merge by subject and name. Trigger entries merge by `id` across files. In a trigger entry, a list such as `when` or `tags` replaces the inherited list. Resuming a saved run restores its saved catalogue, so start a fresh run with a new `--output` directory to see the effect of an overlay.
+
+## Probe catalogue behavior
+
+The developer overlay in `vox-agents/newspaper/probes/` mirrors the catalogue paths for constants, triggers, templates, designs and pages. Its empty `pages.json` leaves the stock pages in place. To try it in a fresh CLI replay, pass `--config vox-agents/newspaper/probes` from the repository root. The stock catalogue and installer omit these probes.
+
+`vox-agents/tests/mock/newspaper/editorial/probes.test.ts` loads the overlay and runs the editor on synthetic evidence. Story probes check for the template ID in the published records when the rule matches and check that it is absent otherwise. Design probes offer only the design under test and check `issue.publication` when it qualifies. For example, the treasury story appears at 100 gold and stays out at 99. The People's Daily design qualifies for the synthetic receiver named Probe Republic.
 
 ## Verify changes
 

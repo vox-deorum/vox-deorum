@@ -50,7 +50,7 @@ The normal VD server hosts the reader, export service, and replay routes; the De
 
 Manual testing confirmed the demo's links, scrolling, and general newspaper UI in Civilization V. The viewer checks cache confinement and DDS validity through `Game.IsNewspaperTextureAvailable`, and uses native text when textures are unavailable. [Plan 1](implementation/01-renderer.md) retains delivery controls and broader layout, interaction, cache-loss, and installation checks. The [renderer guide](../../developers/vox-agents/newspaper/renderer.md) records the implemented behavior, demo acceptance, and local measurements.
 
-MCP owns historical evidence queries and recorded-access filtering under `mcp-server/src/newspaper/`, with shared history reads under `src/knowledge/`. Vox Agents reuses those queries for cutoff controls, source inspection, and heuristic publication. A historical Netherlands replay verified 89 checks, 81 saved issues, feedback, resume, and browser reading. Plan 6 replaced that run's catalogue with 14 rules and 15 authored templates. The owner accepted the mechanics of the stock reading set; Plan 4 takes up editorial tuning and voice.
+MCP owns historical evidence queries and recorded-access filtering under `mcp-server/src/newspaper/`, with shared history reads under `src/knowledge/`. A historical Netherlands replay verified Vox Agents' cutoff controls, source inspection, heuristic publication, feedback, resume, and browser reading across 89 checks and 81 issues. The current stock catalogue has 14 rules and 15 authored templates. The owner accepted the mechanics; Plan 4 takes up editorial tuning and voice. Further rule and design capabilities use the optional [probe catalogue](../../developers/vox-agents/newspaper/triggers/overview.md#probe-catalogue-behavior) and synthetic evidence tests.
 
 ## Keeping plans current
 
@@ -107,6 +107,7 @@ Each folder groups a sustained responsibility. Move existing files and all consu
 | `vox-agents/src/newspaper/{application,game-delivery}.ts` | Lazy shared renderer, sample orchestration and acknowledged MCP delivery. The VD server owns startup and shutdown. |
 | `vox-agents/newspaper/src/reader/` and `src/app/` | Reader DOM/layout and the browser application respectively, including replay controls and source inspection. Plan 4 completes archive navigation. The export entry stays at `src/export-bridge.ts`. |
 | `vox-agents/newspaper/` | `constants.json`, `defaults.json`, `pages.json`, and files in `designs/`, `templates/`, and `triggers/` supply runtime editorial choices. Plan 4 adds the shared language styles to this catalogue and the installer. |
+| `vox-agents/newspaper/probes/` | Optional overlay for validating new catalogue capabilities with synthetic evidence in Vox Agents' mock tests. |
 | `mcp-server/src/newspaper/` | Evidence contracts, queries and field projection in Plan 2; archive protocol types in Plan 3; authoritative live store and transport in Plan 5. `projection.ts` remains the single reporting-policy owner. |
 | `mcp-server/src/knowledge/` | Shared pure history reads in `history.ts`; Plan 5 collection in `newspaper-collection.ts` and database definitions in `schema/newspaper.ts`. |
 | `civ5-mod/UI/Newspaper/` | Viewer, XML, data helpers and mock. Plan 5 adds save-reference handling and transport here. |
