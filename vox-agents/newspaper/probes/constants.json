@@ -2,6 +2,9 @@
   "sizes": {
     "probeTreasury": 100
   },
+  "types": {
+    "probeNavalTypes": ["Trireme", "Caravel", "Galleass", "Frigate", "Privateer", "Ironclad", "Cruiser", "Destroyer", "Battleship", "Submarine"]
+  },
   "terms": {
     "capital": "self.capital.name",
     "ruler": "self.ideology == 'Order' ? 'the Party' : 'the Crown'",

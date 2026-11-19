@@ -109,7 +109,7 @@ A city projected to fall even with the unit inside loses the frontline bonus and
 
 ### Operational rows
 
-The [operational loop](../commands/overview.md) maps the same five flavors into separate priority and search weights. Its posture rows and command-kind rows, including Withdraw, are listed in the [command reference](../commands/reference.md#posture-rows-and-kind-rows). A Withdraw command uses the Withdraw kind row; a Withdraw posture zone applies its posture row to every search there.
+The [operational loop](../commands/overview.md) resolves two things from the same five flavors: priority weights through `FlavorWeight`, and search flavor values through the geographic blend. Posture and kind rows offset search preferences; priority weights resolve separately. A Withdraw command uses the Withdraw kind row. The [command reference](../commands/reference.md#posture-rows-and-kind-rows) lists the rows.
 
 ## RISK thresholds
 

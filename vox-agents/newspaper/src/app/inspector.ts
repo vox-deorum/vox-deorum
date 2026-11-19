@@ -3,7 +3,7 @@ import { newspaperScreenLabels, type IssueDocument, type LinkTarget } from "../.
 import type { ReaderAction, ReaderState } from "../../../src/newspaper/contracts/reader.js";
 import {
   eventReportTurn, type NewspaperEvidence, type NewspaperSnapshot, type NewspaperEvent,
-  type NewspaperDiplomacySnapshot, type NewspaperDiplomacyGap,
+  type NewspaperDiplomacySnapshot, type NewspaperDiplomacyGap, type NewspaperTacticalZone,
 } from "../../../../mcp-server/dist/newspaper/evidence.js";
 import type { z } from "zod";
 import type { replayCheckSchema } from "../../../src/newspaper/contracts/replay.js";
@@ -207,8 +207,10 @@ export function renderEvidence(evidence: NewspaperEvidence | null): void {
     }
     root.append(heading, limitations);
   }
-  const groups: [string, (NewspaperSnapshot | NewspaperEvent | NewspaperDiplomacySnapshot | NewspaperDiplomacyGap)[]][] = [
+  type EvidenceRow = NewspaperSnapshot | NewspaperEvent | NewspaperDiplomacySnapshot | NewspaperDiplomacyGap | NewspaperTacticalZone;
+  const groups: [string, EvidenceRow[]][] = [
     ["Players", evidence.players], ["Cities", evidence.cities],
+    ["Tactical zones", evidence.tacticalZones ?? []],
     ["Earlier players", evidence.comparisons.players], ["Earlier cities", evidence.comparisons.cities],
     ["Events", evidence.events],
     ["Earlier diplomacy", evidence.diplomacy?.baseline ?? []], ["Diplomacy history", evidence.diplomacy?.history ?? []],
@@ -221,7 +223,8 @@ export function renderEvidence(evidence: NewspaperEvidence | null): void {
     for (const row of rows) {
       const button = document.createElement("button");
       button.type = "button";
-      const identity = "subjectID" in row ? `subject ${row.subjectID}` : row.type;
+      const identity = "zoneID" in row ? `zone ${row.zoneID}${row.city ? ` (${row.city})` : ""}`
+        : "subjectID" in row ? `subject ${row.subjectID}` : row.type;
       const turn = "type" in row ? eventReportTurn(row) : row.source.turn;
       const sourceTurn = turn === row.source.turn ? "" : `, source turn ${row.source.turn}`;
       button.textContent = `${identity}, turn ${turn}${sourceTurn}, row ${row.source.id}`;

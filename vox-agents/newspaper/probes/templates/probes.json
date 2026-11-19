@@ -252,5 +252,33 @@
         "weight": { "base": 1 }
       }
     ]
+  },
+  {
+    "id": "probe-front-zone-account",
+    "triggers": ["probe-front-zone"],
+    "tags": ["international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "probe-front-zone-report",
+        "headline": "{{posture}} assessment near {{frontCity}}",
+        "body": ["On turn {{observedTurn}}, observers sighted these units in the {{domain}} zone: {{counts}}."],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "probe-ship-launch-account",
+    "triggers": ["probe-ship-launch"],
+    "tags": ["military"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "probe-ship-launch-report",
+        "headline": "A new {{ship}} at {{port}}",
+        "body": ["A {{ship}} has joined the fleet at {{port}}."],
+        "weight": { "base": 1 }
+      }
+    ]
   }
 ]

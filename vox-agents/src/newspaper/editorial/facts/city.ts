@@ -91,8 +91,8 @@ function dated(turn: number, fields: FactObject, sources: NewspaperSourceReferen
   return { turn, field: fact({ turn: fact(turn, sources), ...fields }, sources) };
 }
 
-/** Keep a visible training completion even if the unit name or purchase flags are hidden. */
-function trained(event: NewspaperEvent): DatedFact {
+/** Keep a visible training completion, adding a dated port only for the receiver's own training. */
+function trained(event: NewspaperEvent, receiverId: number): DatedFact {
   const sources = rowSources(event);
   const fields: Record<string, FactField> = {};
   if (typeof event.values.Unit === 'string' && event.values.Unit.trim()) fields.unit = fact(event.values.Unit, sources);
@@ -100,6 +100,10 @@ function trained(event: NewspaperEvent): DatedFact {
     const value = recordedBoolean(event.values[key]);
     if (value !== undefined) fields[key === 'WithGold' ? 'withGold' : 'withFaith'] = fact(value, sources);
   }
+  // Generic event visibility can come from another owner's unit or city, so the port stays private.
+  const port = event.values.Port;
+  if (event.values.PlayerID === receiverId && typeof port === 'string' && port.trim())
+    fields.port = fact(port, sources);
   return dated(event.source.turn, fields, sources);
 }
 
@@ -246,7 +250,8 @@ export function buildCityFacts(row: NewspaperSnapshot, context: FactBuildContext
     field: fact(reference('event', event.source.id), [...sources, ...rowSources(event)]) }))
     .sort((a, b) => a.turn - b.turn);
   fields.events = windowFacts(eventEntries, sources);
-  fields.trained = windowFacts(events.filter(event => event.type === 'CityTrained').map(trained), sources);
+  fields.trained = windowFacts(events.filter(event => event.type === 'CityTrained')
+    .map(event => trained(event, context.receiverId)), sources);
   fields.built = windowFacts(built, sources);
   fields.conversions = windowFacts(conversions, sources);
   return fields;

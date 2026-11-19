@@ -215,5 +215,38 @@
     },
     "tags": ["international"],
     "importance": 55
+  },
+  {
+    "id": "probe-front-zone",
+    "subject": "player",
+    "when": [
+      "player.self",
+      "player.knows('tacticalZones')",
+      "player.tacticalZones.some(z => z.knows('city') && Object.values(z.units).some(types => Object.values(types).some(count => count > 0)))"
+    ],
+    "values": {
+      "frontIndex": "player.tacticalZones.findIndex(z => z.knows('city') && Object.values(z.units).some(types => Object.values(types).some(count => count > 0)))",
+      "observedTurn": "turn",
+      "frontCity": "player.tacticalZones[frontIndex].city",
+      "domain": "player.tacticalZones[frontIndex].domain.toLowerCase()",
+      "posture": "player.tacticalZones[frontIndex].posture",
+      "counts": "Object.entries(player.tacticalZones[frontIndex].units).flatMap(([civilization, types]) => Object.entries(types).filter(([, count]) => count > 0).map(([type, count]) => civilization + ' ' + type + ': ' + count)).join('; ')"
+    },
+    "tags": ["international"],
+    "importance": 80
+  },
+  {
+    "id": "probe-ship-launch",
+    "subject": "city",
+    "when": [
+      "city.trained.some(t => t.knows('port') && t.knows('unit') && probeNavalTypes.includes(t.unit) && t.knows('withGold') && t.withGold === false && t.knows('withFaith') && t.withFaith === false)"
+    ],
+    "values": {
+      "launchIndex": "city.trained.findIndex(t => t.knows('port') && t.knows('unit') && probeNavalTypes.includes(t.unit) && t.knows('withGold') && t.withGold === false && t.knows('withFaith') && t.withFaith === false)",
+      "ship": "city.trained[launchIndex].unit",
+      "port": "city.trained[launchIndex].port"
+    },
+    "tags": ["military"],
+    "importance": 70
   }
 ]

@@ -491,6 +491,7 @@ export interface VictoryProgress extends MutableKnowledge {
  * Saved per turn with all zone properties including unit assignments
  */
 export interface TacticalZones extends TimedKnowledge {
+  PlayerID: number; // Player whose tactical analysis was recorded
   ZoneID: number; // Unique zone identifier
   Territory: string; // Territory type: "None", "Friendly", "Enemy", "Neutral"
   Dominance: string; // Dominance status: "NoUnits", "Friendly", "Enemy", "Even"

@@ -3,7 +3,7 @@ import {
 } from '../../../../../mcp-server/dist/diplomacy/relationships.js';
 import {
   eventReportTurn, type NewspaperDiplomacyGap, type NewspaperDiplomacySnapshot, type NewspaperEvent,
-  type NewspaperEvidence, type NewspaperSnapshot
+  type NewspaperEvidence, type NewspaperSnapshot, type NewspaperTacticalZone
 } from '../../../../../mcp-server/dist/newspaper/evidence.js';
 import { matchesSubjects } from '../../../../../mcp-server/dist/knowledge/helpers/event-subjects.js';
 import { isRecord } from '../../../utils/guards.js';
@@ -196,6 +196,20 @@ export function buildPlayerSnapshotFacts(row: NewspaperSnapshot, context: FactBu
   return fields;
 }
 
+/** Build one receiver front observation whose fields cite the recorded row they came from. */
+function tacticalZoneFacts(zone: NewspaperTacticalZone): FactObject {
+  const sources = [zone.source];
+  const fields: PlayerFields = {
+    zoneID: fact(zone.zoneID, sources),
+    domain: fact(zone.domain, sources),
+    posture: fact(zone.posture, sources)
+  };
+  if (typeof zone.city === 'string' && zone.city.trim()) fields.city = fact(zone.city, sources);
+  const units = recordedFact(zone.units, sources);
+  if (units) fields.units = units;
+  return fields;
+}
+
 /** Build cutoff player facts from permitted cities, public diplomacy, and dated events. */
 export function buildPlayerFacts(row: NewspaperSnapshot, context: FactBuildContext): FactObject {
   const id = row.subjectID;
@@ -208,6 +222,13 @@ export function buildPlayerFacts(row: NewspaperSnapshot, context: FactBuildConte
   if (capitals.length === 1) fields.capital = fact(reference('city', capitals[0].subjectID), rowSources(capitals[0]));
   const distance = id === context.receiverId ? fact(0, sources) : context.playerDistance(ownCities);
   if (distance) fields.distance = distance;
+  // Front observations are private and current only, with each row carrying its own citation.
+  if (id === context.receiverId) {
+    const zones = (context.evidence.tacticalZones ?? [])
+      .filter(zone => zone.source.turn === context.turn)
+      .map(tacticalZoneFacts);
+    if (zones.length) fields.tacticalZones = fact(zones);
+  }
 
   const index = diplomacyIndex(context.evidence);
   const diplomacy = diplomacyFor(row, index);

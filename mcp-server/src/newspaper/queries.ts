@@ -10,7 +10,8 @@ import {
 } from './evidence.js';
 import {
   newspaperEventConfigs, newspaperWorldNewsTypes, projectNewspaperCity, projectNewspaperDiplomacy,
-  projectNewspaperEvent, projectNewspaperPlayer, type NewspaperCityProjectionContext, type NewspaperProjectionContext
+  projectNewspaperEvent, projectNewspaperPlayer, projectTacticalZones,
+  type NewspaperCityProjectionContext, type NewspaperProjectionContext
 } from './projection.js';
 import { projectEspionageEvidence } from './espionage-operations.js';
 
@@ -30,7 +31,7 @@ export async function queryNewspaperEvidence(
   const fromTurn = Math.min(eventFromTurn, comparisonRange?.fromTurn ?? cutoffTurn, cutoffTurn);
   const visibilityField = `Player${receiverPlayerID}` as ReceiverField;
   const [players, baseSummaries, summaryHistory, cities, events, uncheckedEvents, earlierCities, baselineCities, historyCities,
-    cityLifecycle, espionageRows] = await Promise.all([
+    cityLifecycle, espionageRows, tacticalZones] = await Promise.all([
     db.selectFrom('PlayerInformations').selectAll().execute(),
     readSnapshotsAtCutoff(db, 'PlayerSummaries', fromTurn - 1),
     readSnapshotRange(db, 'PlayerSummaries', fromTurn, cutoffTurn),
@@ -48,7 +49,8 @@ export async function queryNewspaperEvidence(
     db.selectFrom('GameEvents').selectAll()
       .where('Type', 'in', ['EspionageResult', 'ElectionResultSuccess', 'ElectionResultFailure'])
       .where('Turn', '>=', operationFromTurn).where('Turn', '<=', cutoffTurn)
-      .orderBy('Turn').orderBy('ID').execute()
+      .orderBy('Turn').orderBy('ID').execute(),
+    readTacticalZones(db, cutoffTurn, receiverPlayerID, visibilityField)
   ]);
   const operationTurns = [...new Set(espionageRows.filter(row => row.Type === 'EspionageResult').map(row => row.Turn))]
     .sort((a, b) => a - b);
@@ -204,6 +206,7 @@ export async function queryNewspaperEvidence(
       if (projected) target.push(projected);
     }
   }
+  if (tacticalZones) result.tacticalZones = projectTacticalZones(tacticalZones, result.cities, result.players, cutoffContext);
   const projectedEvents = projectEspionageEvidence({
     receiverPlayerID, players, rows: espionageRows, playerTurns, techGains, cityLosses
   });
@@ -251,6 +254,22 @@ async function readCityContacts(db: Kysely<KnowledgeDatabase>, turns: ReadonlySe
     contacts.set(turn, [...latest.values()]);
   }
   return contacts;
+}
+
+/** Read the receiver's own full-access front rows at the cutoff, keeping the latest insertion per nonzero zone. */
+async function readTacticalZones(
+  db: Kysely<KnowledgeDatabase>, turn: number, receiver: number, field: ReceiverField
+) {
+  const table = await sql<{ name: string }>`select name from sqlite_master where type = 'table' and name = 'TacticalZones'`.execute(db);
+  if (!table.rows.length) return undefined;
+  const rows = await db.selectFrom('TacticalZones')
+    .select(['ID', 'Turn', 'CreatedAt', 'ZoneID', 'City', 'Domain', 'Posture', 'Units'])
+    .where('Turn', '=', turn).where('PlayerID', '=', receiver).where(field, '=', 2).where('ZoneID', '!=', 0)
+    .orderBy('ZoneID').orderBy('ID').execute();
+  const latest = new Map<number, (typeof rows)[number]>();
+  // The recorder omits empty zones and does not mark batches. Each retained row is a sighting during this turn.
+  for (const row of rows) latest.set(row.ZoneID, row);
+  return [...latest.values()];
 }
 
 /** Apply the lifecycle events' dated subject policy, without reading full national rows for old events. */

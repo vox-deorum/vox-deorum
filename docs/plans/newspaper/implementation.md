@@ -118,7 +118,7 @@ Replay supplies evidence and state to the editorial check and persists its resul
 - Installed browsers can be absent, blocked by local policy, or updated independently. Detect capability when rendering is requested and preserve reading when export cannot run.
 - Historical records may be incomplete. Initial evaluation uses a suitable recording and skips comparisons whose required data is unreliable.
 - Measure texture-cache retention with generated issues. Regenerated images use the stored design and layout choices and may differ slightly from the originals.
-- Live and replay use the same visibility rules. Stage 4c will use private tactical observations and match training events to ship types and ports.
+- MCP and replay share the visibility rules for private tactical observations and ship launches. Verify those rules in the human seat when [in-game delivery](implementation/05-live-integration.md) is ready.
 
 ## Verification and scope
 

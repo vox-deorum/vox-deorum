@@ -21,7 +21,7 @@ export const newspaperEvidenceRequestSchema = z.object({
 
 /** Direct reference to a recorded row, captured before field projection. */
 export const newspaperSourceReferenceSchema = z.object({
-  table: z.enum(['PlayerSummaries', 'CityInformations', 'GameEvents']).describe('Source table'),
+  table: z.enum(['PlayerSummaries', 'CityInformations', 'GameEvents', 'TacticalZones']).describe('Source table'),
   id: z.number().int().describe('Original insertion or event ID'),
   turn: z.number().int().describe('Original recorded game turn'),
   createdAt: z.number().describe('Original recorded Unix timestamp in seconds')
@@ -66,6 +66,18 @@ export const newspaperDiplomacySnapshotSchema = z.object({
   majorAllyPlayerID: z.number().int().nullable().optional().describe('Visible resolved city-state ally; null means explicitly no ally')
 });
 
+/** One private front observation recorded for the receiving player. */
+export const newspaperTacticalZoneSchema = z.object({
+  source: newspaperSourceReferenceSchema.extend({ table: z.literal('TacticalZones') })
+    .describe('Latest recorded zone row and its observation date'),
+  zoneID: z.number().int().describe('Recorded tactical zone ID; negative IDs are valid and zero is excluded'),
+  city: z.string().optional().describe('Recorded city label when the zone names a city'),
+  domain: z.string().describe('Recorded zone domain label'),
+  posture: z.string().describe('Recorded tactical posture assessment'),
+  units: z.record(z.string(), z.record(z.string(), z.number()))
+    .describe('Visible unit counts by civilization label and recorded unit type')
+});
+
 /** Incomplete diplomatic observations stay separate from city lifecycle limitations. */
 export const newspaperDiplomacyGapSchema = z.object({
   source: newspaperSourceReferenceSchema.describe('Original national summary row containing the incomplete observation'),
@@ -101,6 +113,8 @@ export const newspaperEvidenceSchema = z.object({
   cities: z.array(newspaperSnapshotSchema).describe('Latest permitted city snapshots at cutoff'),
   comparisons: newspaperSnapshotSetSchema.describe('Final insertion per subject and turn within the requested comparison range'),
   events: z.array(newspaperEventSchema).describe('Permitted events after previous check through cutoff'),
+  tacticalZones: z.array(newspaperTacticalZoneSchema).optional()
+    .describe('Latest permitted observation per zone during the cutoff turn, ordered by zone ID; absent when the table is unavailable'),
   history: newspaperHistorySchema.optional().describe('Trigger history when a start turn is requested'),
   diplomacy: z.object({
     fromTurn: z.number().int().describe('Inclusive first observation turn'),
@@ -114,6 +128,7 @@ export type NewspaperEvidenceRequest = z.infer<typeof newspaperEvidenceRequestSc
 export type NewspaperSourceReference = z.infer<typeof newspaperSourceReferenceSchema>;
 export type NewspaperSnapshot = z.infer<typeof newspaperSnapshotSchema>;
 export type NewspaperEvent = z.infer<typeof newspaperEventSchema>;
+export type NewspaperTacticalZone = z.infer<typeof newspaperTacticalZoneSchema>;
 export type NewspaperHistory = z.infer<typeof newspaperHistorySchema>;
 export type NewspaperEvidence = z.infer<typeof newspaperEvidenceSchema>;
 export type NewspaperDiplomacySnapshot = z.infer<typeof newspaperDiplomacySnapshotSchema>;

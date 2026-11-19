@@ -159,6 +159,18 @@ Local verification artifacts are under `.tmp/newspaper-plan3/`: `acceptance.json
 
 Use the Netherlands recording below with the `vox-agents/newspaper/probes` overlay. Replay turn 216 for India (player 1) and the Ottomans (player 5). India's operation at Istanbul (row `216000196`) is followed by the team's Civil Service gain (`216000197`). The Ottoman report names India and cites the operation and its next recorded turn (`216000654`); the technology inference is private to India. The source inspector shows the original date and the report date when they differ. See [event facts](triggers/facts.md#event) for what these records can establish.
 
+## Replaying front reports and ship launches
+
+Use the same recording and the `vox-agents/newspaper/probes` overlay for the Netherlands (player 7). Replay each cutoff separately to isolate these observations:
+
+| Cutoff | Expected result | Source rows |
+| --- | --- | --- |
+| 179 | No launch for the Trireme bought with gold at Amsterdam. | Training `179000692`, creation `179000691` |
+| 235 | The Stuttgart sea zone records a Withdraw assessment and sightings, including a German Galleass. | Tactical zone `2426` |
+| 282 | The Rotterdam report names a newly trained Frigate. | Training `282001079`, creation `282001078`, city `14913` |
+
+The evidence inspector lists tactical zones from the cutoff turn and shows the recorded counts and posture. See [tactical observations](triggers/facts.md#tactical-observations) and [inferred city facts](triggers/facts.md#inferred-city-facts) for the limits of the reports.
+
 ## Historical evidence-query verification
 
 This historical run measures recorded evidence retrieval and replay behavior.

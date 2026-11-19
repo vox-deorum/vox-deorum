@@ -21,7 +21,7 @@ The diagram shows the common path. City fire can end a fight before admission; e
 
 ## Readiness checks
 
-`CheckFight` checks the target, recruits and damage without issuing orders; Reinforce and Withdraw check [reach](#reinforce-readiness) and [destinations](#withdraw-readiness) instead.
+`CheckFight` checks the target, recruits and damage without issuing orders; Reinforce checks [reach](#reinforce-readiness) and Withdraw checks [destinations](#withdraw-readiness) instead.
 
 | Offer | Passing rule | Reason or exception |
 | --- | --- | --- |
@@ -31,7 +31,7 @@ The diagram shows the common path. City fire can end a fight before admission; e
 
 **Native recruits** come from `FindUnitsWithinStrikingDistance`. The **damage test**, used again during [execution](#fight-execution), requires positive damage from `ComputeTotalExpectedDamage`; a city fight also accepts its separately reported garrison damage from counted attacks.
 
-Each check records `passed`, or the first failed condition in this order. The Reinforce and Withdraw results come from their [readiness checks](#reinforce-readiness):
+Each check records `passed`, or a failed condition. Fight checks stop at the first condition below that applies. Reinforce readiness [adds its own results](#reinforce-readiness); the Withdraw results are in [Withdrawal readiness and execution](withdrawal.md#readiness-and-execution).
 
 | Result | Condition |
 | --- | --- |
@@ -41,8 +41,8 @@ Each check records `passed`, or the first failed condition in this order. The Re
 | No capturer | A city at 1 HP or less has neither positive expected garrison damage nor a recruited combat unit that is melee, has moves and an attack left, and has no capture prohibition. |
 | No defenders | Our city has no defender and no endangered recruit. |
 | No nearby enemy | Our city has defenders but no endangered recruit, and no visible enemy combat unit within 5 plots. |
-| No reachable | Reinforce: no selected unit is left after the reach checks, so the offer turns inactive. Withdraw: no endangered recruit can take a first step toward its destination, so the offer turns inactive or skipped. |
-| Reduced | Reinforce: a reach check shrank the selection and lowered its estimate; the offer returns at that estimate. Withdraw: recruits in a domain without a destination leave the estimate, and a lower estimate returns to the queue. |
+| Reduced | Reinforce: a reach check replaced rejected units with the remaining selection, and its estimate is strictly lower. The replacement can be weaker or farther, since the result compares estimates, not head count. The offer returns at that estimate, or inactive at 0. |
+| No reachable | Reinforce: no selected unit is left after the reach checks, so the offer turns inactive. |
 | Passed | The applicable checks pass, including the immediate city-strike pass for a unit fight. |
 
 Native recruitment reads the current tactical roster and its eligibility rules. **Available** means the unit passes `canUseNow`: moves left, unprocessed and not dying. Recruitment can include ranged units that can reach a firing position but only shoot next turn, and nearby units within 2 plots even when blocked. A pass can therefore lead to positioning. Support recruits such as generals contribute no damage. Endangered units added only during execution cannot make readiness pass; an endangered unit already in offensive recruitment contributes normally.
@@ -73,7 +73,7 @@ Only hosts with admission capability expand candidates and build preliminary sea
 
 Reinforce admission precedes its single spotter pass and path moves. Additional candidates must pass the same flood, alternative-target, safe embark and first-stop danger checks as the checked proposal. Failed additions are excluded. Admitted strength, discounted help, swing and missing capture role are recomputed without reranking the chosen offer. Native, requested and effective selections remain available for later records.
 
-Withdraw admission uses the gathered recruits with their processed flags cleared, so a unit an earlier command spent is still eligible. A refusal restores every flag and leaves the other offers open.
+Withdraw admission uses the gathered recruits in domains that have a destination, with their processed flags cleared, so a unit an earlier command spent is still eligible. A refusal restores the processed flag of each recruit that had one, when it still exists and is not dying, and leaves the other offers open. Processing gained during execution remains.
 
 ## Fight execution
 
@@ -115,34 +115,11 @@ A [held garrison](recruitment.md#candidates-and-selection) takes no path move, s
 - `CanMarch` finds a path with `MarchFlags` within recruit range, with safe embark for land units.
 - Danger at the path's first-turn stop stays within native's limit: half the unit's remaining HP for attackers that are not siege units, otherwise 0.
 
-A failing unit is excluded from this offer's selection for the rest of the turn. Selection and scoring repeat until every selected unit passes. If none remain, the result is `NO_REACHABLE` (no reachable recruits) and the offer becomes inactive. A lower estimate returns `REDUCED` (priority lowered by reach checks), and the offer returns to the queue at that estimate, becoming inactive if it is 0. Otherwise the check passes. Check flags clear after every command.
+A failing unit is excluded from this offer's selection for the rest of the turn. Selection and scoring repeat until every selected unit passes, so the replacement selection can be weaker or farther than the first; the result compares estimates, not head count. If none remain, the result is `NO_REACHABLE` (no reachable recruits) and the offer becomes inactive. A strictly lower estimate returns `REDUCED` (priority lowered by reach checks), and the offer returns to the queue at that estimate, becoming inactive if it is 0. A missing target plot returns `TARGET_GONE` before any reach work and makes the offer inactive without counting a failure. Otherwise the check passes. Check flags clear after every command.
 
 ## Withdraw readiness
 
-`CheckWithdraw` finds one destination per recruit domain and accepts the offer when one endangered recruit can take a first step toward it. It issues no orders.
-
-| Result | Condition |
-| --- | --- |
-| Target gone | The target plot is missing. |
-| No recruits | No recruit, or no recruit's domain has a destination. |
-| No reachable | No endangered recruit with a destination passes the Withdraw march rule, or its path's first stop is its own plot. |
-| Reduced | Recruits in a domain without a destination leave the estimate, and a lower estimate returns to the queue. |
-| Passed | At least one endangered recruit can march toward its destination. |
-
-`WithdrawDestination` floods from the battlefield with the recruit range as limit, in one domain, and takes the friendly city with the shortest path. When the battlefield plot does not suit the domain, the flood starts from that domain's first endangered recruit, or its first recruit when none is endangered. A sea destination must be coastal. The two plot indexes are stored on the battlefield as `aiWithdrawDestination`, land first.
-
-The **Withdraw march rule** accepts a path whose first-turn stop stays within native's danger limit, or whose first-turn stop has danger below both the current plot's danger and the unit's hit points. A lethal stop is still refused.
-
-`ExecuteWithdraw` reuses the Reinforce path with the destination:
-
-1. Gather the recruits exactly as the check did and keep each unit's starting plot.
-2. Clear the processed flag of every spent recruit.
-3. Admit participants. A refusal restores the flags and ends the command.
-4. Split the admitted units by domain and call `PositionUnitsAroundTarget` once per domain with a destination, land first.
-5. Restore the processed flags by ID on every exit.
-6. Record the selected units and those that changed plot or died, then mark search dispositions.
-
-The [withdrawal guide](withdrawal.md#readiness-and-execution) lists the five execution deviations: cleared flags, no spotter, every recruit that can still move, damaged units first, and the march rule.
+`CheckWithdraw` finds one destination per recruit domain and accepts the offer when one endangered recruit can take a first step toward it, without issuing orders. The [withdrawal guide](withdrawal.md#readiness-and-execution) holds the result table, failure accounting, destination rules, march rule and execution deviations.
 
 ## Marching execution
 
@@ -152,7 +129,7 @@ The [withdrawal guide](withdrawal.md#readiness-and-execution) lists the five exe
 2. Run `ExecuteEngagement` for the units still available. Gather search geometry and resolve search preferences and aggression after the spotter move. Keep target distance relevant to search scoring, and use the target's owner as the counterpart (the player used for civilization modifiers), or none at our city.
 3. After a successful search, leave units within four path steps of the target for later work, as native does (see [movement](../tactics/movement.md#execution)). Move every other unprocessed unit along a path through `CanMarch` and `MarchFlags`, then run the safety pass for army members.
 
-The command record keeps the selection, whether the search ran, and whether a selected unit moved, meaning it changed plot or died. A Withdraw uses the label `AI_TACTICAL_WITHDRAW` and the destination in place of the target, with no spotter and the [deviations above](#withdraw-readiness).
+The command record keeps the selection, whether the search ran, the units that moved or died for Reinforce and Withdraw alike, and whether any of them did. A Withdraw uses the label `AI_TACTICAL_WITHDRAW` and the destination in place of the target. It skips the spotter move and the four-step hold, then follows the [Withdraw execution rules](withdrawal.md#readiness-and-execution).
 
 ## Flavors and aggression
 
@@ -206,11 +183,11 @@ With default rows and no modifiers, single-zone unit fights resolve to Low for A
 | 60 to 89 | High |
 | 90 and above | Braveheart |
 
-Final search geometry is rebuilt after spotting and greedy air from the units still able to act. The search-flavor callback receives that geometry and the native geographic blend with the command-kind row already included. Its reply replaces the five search preferences directly. Aggression keeps the separate neutral-RISK calculation, including tactical modifiers, posture and kind offsets once each. No posture offset is reapplied to the reply.
+Final search geometry is rebuilt after spotting and greedy air from the units still able to act. A Withdraw builds separate geometry for each domain it searches, from that domain's admitted recruits, with no spotting or greedy air. The search-flavor callback receives that geometry and the native geographic blend with the command-kind row already included. Its reply replaces the five search preferences only when every value is between 0 and 100; otherwise the blend stays. Aggression keeps the separate neutral-RISK calculation, including tactical modifiers, posture and kind offsets once each. No posture offset is reapplied to the reply.
 
 ## Search dispositions
 
-Each recruit of a fight or Withdraw command receives a **disposition** from the rows counted as run across search attempts. `MarkDispositions` applies the same rule to every command that lists recruits; a Withdraw lists every recruit, endangered or not.
+`MarkDispositions` gives each unit on the command's endangered-unit list a **disposition** from the rows counted as run across search attempts. A fight lists the endangered recruits it added. A Withdraw lists every gathered recruit whose domain has a destination, including recruits excluded by admission.
 
 | Disposition | Rule |
 | --- | --- |

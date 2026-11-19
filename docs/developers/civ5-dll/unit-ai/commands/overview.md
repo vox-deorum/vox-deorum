@@ -68,7 +68,7 @@ Battlefield reinforcement replaces the regular zone reinforcement pass. The loop
 | Build | Resolve settings, **mapped flavors** (player preferences on military scales), **weights** (relative importance of benefits) and **reference scales** (normalization values). Build battlefields and threat maps, which attribute damage to enemy units and cities. |
 | Estimate | A [battlefield estimate](recruitment.md#battlefield-estimate) shares the local scan, theater and **stake** (combined fight benefits) needed by open offers. Closed cities still refresh theater. Positive estimates become ready, nonpositive estimates inactive; waiting fights also need a helpful change. Invalid targets drop every open offer. |
 | Select | Highest ready estimate first. Ties favor own-city fights, enemy-city fights, enemy-unit fights, then Reinforce, then Withdraw; further ties favor lower plot index, then build order. Stop with no ready offer or at the command cap. |
-| Check | Check only the selected offer. A failed fight check adds one failure and makes it waiting or skipped at the failure limit. A failed Reinforce check makes it inactive or returns it at a reduced estimate. A failed Withdraw check makes it inactive or skipped at the failure limit. Resume selection after a failure; a pass executes at its checked estimate. |
+| Check | Check only the selected offer. A failed fight check adds one failure and makes it waiting or skipped at the failure limit. A Reinforce check returns no reachable when its selection empties, reduced when the nonempty selection scores strictly lower, and passed otherwise. Any reduced Reinforce or Withdraw turns inactive at estimate 0. Target gone comes before reach work and makes a Reinforce inactive without a reach failure. A Withdraw check that drops recruits without a destination returns it ready at the lower estimate on a strict decrease, without a failure; other failures make it inactive or skipped at the failure limit. Resume selection after a failure; a pass executes at its checked estimate. |
 | Record and retire | Close the offer even if it ended before search or found no action. Explicit refusal consumes the slot without retiring other offers. Rebuild threats, then apply the [overlap rules](#overlapping-offers). |
 | Refresh | Compare the board before and after the command, add newly captured own-city battlefields, re-estimate open offers and apply the [wake rule](#wake-rule). Resume selection. |
 
@@ -114,14 +114,14 @@ A Withdraw offer uses these states:
 | State | Enters when | Leaves when |
 | --- | --- | --- |
 | Ready | An opening, later or reduced check estimate is positive, which requires an endangered recruit | It reaches the top and is checked: executes, is refused, turns inactive, or returns ready at a reduced estimate. |
-| Inactive | Its estimate is nonpositive, including when no recruit is endangered | A later estimate is positive. |
-| Skipped | It reaches `readiness.maxFailures` failures, default 3 | The turn ends. |
-| Retired | An executed Reinforce that moved a unit at the same battlefield | The turn ends. |
+| Inactive | Its estimate is nonpositive, including when no recruit is endangered, when `withdraw.enabled` is 0, or at our city, or a failed check below the limit. A failed check keeps the estimate, which can still be positive. | The next re-estimation makes it ready when its estimate is positive. |
+| Skipped | A failed check reaches `readiness.maxFailures` failures, default 3 | The turn ends. |
+| Retired | An executed Reinforce that moved a unit at the same battlefield while the Withdraw is open | The turn ends. |
 | Executed | It runs as a command without provider refusal, whether or not a unit moved | The turn ends. |
 | Refused | A provider chooses an empty subset from nonempty eligibility | The turn ends; the command slot is consumed and no other offer is retired. |
 | Dropped | Re-estimation finds the target unit gone, or its city lost by its recorded owner or no longer ours | The turn ends. |
 
-The offer exists only at enemy battlefields. Our cities keep an inactive Withdraw slot with estimate 0, so every battlefield records three offers.
+The offer exists only at enemy battlefields with `withdraw.enabled` nonzero. Our cities and a disabled switch keep an inactive Withdraw slot with estimate 0 all turn, so every battlefield records three offers.
 
 A waiting fight keeps its refreshed estimate and cumulative failure count. Waking it preserves the count and applies no priority discount. Readiness determines whether the fight can execute; the current estimate determines its priority. A reinforcement or Withdraw offer never waits, so it is never woken; a Reinforce offer also never counts failures. When `EstimateFight` finds a target gone, every open offer at that battlefield drops together.
 
@@ -157,11 +157,11 @@ These offers are exempt:
 - A fight marked near our city at build time, using the [native city-distance rule](#battlefields).
 - Every enemy-city and own-city fight. These commands also retire no unit fights.
 
-The loop rebuilds threats after execution and before retirement, so a unit moved into danger by the command can protect its attacker's offer. Ready, inactive and waiting offers can be retired; executed, refused, retired, skipped and dropped offers are closed. Retirement requires search with a nonempty group, regardless of whether it found or completed a plan. Commands ending after city fire, visibility failure or greedy air retire nothing.
+The loop rebuilds threats after execution, before the overlap pass, so a unit moved into danger by the command can protect its attacker's offer. A Withdraw's local peer closure runs earlier, immediately after the command, and reads only whether a selected unit moved or died. Ready, inactive and waiting offers can be retired; executed, refused, retired, skipped and dropped offers are closed. A fight retires other fights only after a search with a nonempty group, whether or not the search found or completed a plan; a Reinforce retires on movement, and a Withdraw closes its own peers on movement. Commands ending after city fire, visibility failure or greedy air retire no fights.
 
 **Reinforce retirement** uses the enemies counted in the executed offer's last estimate. If at least one selected unit changed plot or died, retire the open reinforcement offer of every other enemy battlefield whose target contributed to `T` (enemy strength). Ready and inactive offers can be retired. Our cities' reinforcement offers are exempt; a command with no such unit change retires nothing.
 
-**Withdraw closure** is local. After a non-refused Withdraw, its selected units that moved or died join `turn.withdrawnUnits`. If at least one selected unit moved or died, that battlefield's own open fight and Reinforce retire; other battlefields keep their offers. A Withdraw that moved nobody leaves its fight and Reinforce open. An executed Reinforce that moved a unit retires its battlefield's open Withdraw.
+**Withdraw closure** is local: a Withdraw and a Reinforce close each other at their battlefield only when one moves a unit, with the own-city and disabled-switch exemptions in the [Withdraw closing rules](withdrawal.md#closing-the-battlefield). Other battlefields are not retired directly, but their offers can change when the loop re-estimates them.
 
 Apart from that peer rule, retiring an offer leaves its battlefield's other offers intact. Reinforcement commands retire only reinforcement offers, and fights retire only fights.
 

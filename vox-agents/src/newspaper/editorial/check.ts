@@ -108,6 +108,7 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
       ...(evidence.diplomacy?.baseline ?? []),
       ...(evidence.diplomacy?.history ?? []),
       ...(evidence.diplomacy?.gaps ?? []),
+      ...(evidence.tacticalZones ?? []),
     ].some((record) => record.source.turn > turn)
   )
     throw new Error('Evidence includes observations after the cutoff.');

@@ -174,7 +174,7 @@ flowchart LR
 | Term | Formula | Reads as |
 | --- | --- | --- |
 | **Destruction** | `w_A × K_t / Z_T` | Enemy value local units and city fire can remove from the target ([destroyed value](#destroyed-value) `K_t`) × attrition weight. |
-| **Exposure** | `w_R × E_t × s / Z_T` | Value of our units the target can hurt before our next turn ([exposure](#exposure) `E_t`) × risk weight × the [strength share](#strength-share) fighting here can protect. The rest belongs to a possible Withdraw. |
+| **Exposure** | `w_R × E_t × s / Z_T` | Value of our units the target can hurt before our next turn ([exposure](#exposure) `E_t`) × risk weight × the [strength share](#strength-share) fighting here can protect. A Withdraw counts a separate pool over all recruits. |
 | **Ground** | `k_t × w_G × ΔG(t)` | Territory recovered if the target is removed ([ground](#ground-value) `ΔG(t)`) × hold-ground weight × damage share, since it pays off only on removal. |
 | **City relief** | `k_t × w_C × C × f_def × a_t` | Target's part `a_t` ([relief share](#city-relief)) of our city's danger `C × f_def` × hold-city weight × damage share. 0 away from our cities. |
 
@@ -214,16 +214,16 @@ flowchart LR
 
 ## Strength share
 
-`s` (**strength share**) is our share of the fighting power at a battlefield. Every fight counts exposure at `s`, the part local strength can protect, and a [Withdraw](withdrawal.md) competes for the rest.
+`s` (**strength share**) is our share of the fighting power at a battlefield. A fight counts its target's exposure at `s`, the part its own strength can protect. A [Withdraw](withdrawal.md) counts a separate removable exposure over all recruits and scales it by `1 − s⁺`.
 
 `s = L^k / (L^k + T^k)`
 
 | Part | Reads as |
 | --- | --- |
 | `L`, `T` | Local and enemy strength from the [strength tallies](recruitment.md#strength-tallies). At a unit target they are centered on the target; at a city they are the theater inputs. |
-| `k` (**steepness**) | Exponent from setting `theater.steepness` (2), squared per Lanchester's square law. It equals the theater's [pressure](#theater-multiplier) at an enemy city and `1 − pressure` at ours. |
+| `k` (**steepness**) | Exponent from setting `theater.steepness` (2), squared per Lanchester's square law. At an enemy city, `s` matches the theater's [pressure](#theater-multiplier); at ours, it is `1 − pressure`. |
 | No enemy strength | At our city `s = 1`, since nothing threatens the exposure. At an enemy center `s = 0`: the local force cannot answer the danger, for example ships shelling land units. |
-| `s⁺` | The share once Reinforce help joins: `reinforce.fShareWithHelp` while a positive Reinforce selection is ready, otherwise `s`. Used by Withdraw. |
+| `s⁺` | The larger of `s` and the Reinforce's projected share `reinforce.fShareWithHelp` while a positive Reinforce selection is ready; `s` otherwise. Used by Withdraw, so ready help never raises its priority. |
 
 | `L` / `T` | `s` at exponent 2 |
 | --- | --- |
@@ -233,7 +233,7 @@ flowchart LR
 | Double | 0.80 |
 | Triple | 0.90 |
 
-`EstimateTheater` saves the share before Reinforce bookkeeping can rewrite `L`, and `EstimateFight` multiplies each exposure term by it. Only exposure is split this way; destruction, city progress, city danger and relief keep their full value. Setting `exposure.split` (1) to 0 turns the split off.
+`EstimateTheater` saves the share before Reinforce bookkeeping can rewrite `L`, and `EstimateFight` multiplies each exposure term by it. Only exposure is split this way; destruction, city progress, city danger and relief keep their full value. Setting `exposure.split` (1) to 0 gives fights full exposure; Withdraw keeps its own removable exposure and the stored strength share.
 
 ## City allowance and fall share
 
@@ -341,7 +341,7 @@ With forecast readiness enabled, a checked fight scores **realizable damage + �
 | Each archer faces 25 from the swordsman and 5 from a scout | 48 each (`d` = 30) | Swordsman `48 × 25/30 = 40`; scout `48 × 5/30 = 8` | 0.10; 0.02 |
 | One archer faces 10 enemy plus 30 unattributed damage | `400 × 0.4 × 40/100 (d / M) = 64` | `64 × 10/40 (d_t / d) = 16` | 0.04 |
 | An archer at 40 HP faces 40 or more from one enemy | Lethal: `400 × (0.6 (retained share) + 0.4 × 40/100 (R_u / M)) = 304` | 304 | 0.76 |
-| A 1-attack knight can kill that archer or deal 30 to a full-health spearman worth 400 | 304 and 48 | 304 (keeps the larger) | 0.76 |
+| A 1-attack knight can kill that archer or deal 30 to a full-health spearman worth 400 that has no movement left | 304 and 48 | 304 (keeps the larger) | 0.76 |
 
 **Destruction and exposure together.** That knight is worth 700 at full health and local units can deal it 45. At equal strength, `s = 0.5`.
 
@@ -352,7 +352,7 @@ With forecast readiness enabled, a checked fight scores **realizable damage + �
 | Stake | `0.315 + 0.380` | 0.695 |
 | Priority | `0.2 (cityless θ) × 0.695`; the fight protects the archer only while it holds the field | 0.139 |
 
-The other `0.760 − 0.380 = 0.380` is what a [Withdraw](withdrawal.md) of the archer competes for.
+A Withdraw of that archer removes less than the knight's full 0.76: the spearman has no movement left, so it is not a recruit and stays under the knight's attack cap. Removable exposure is `0.76 − 0.12 = 0.64`, or 256 worth, weighted by `1 − s⁺`. The full 0.76 applies only when the spearman can also leave. That is a separate pool from the fight's 0.380 exposure term.
 
 ## City relief
 
@@ -468,7 +468,7 @@ An own-city fight values the city and nearby endangered recruits it can protect.
 | Part | Reads as | Scale or range |
 | --- | --- | --- |
 | `f_def = min(1, city danger / R)` | [Defense fall share](#city-allowance-and-fall-share): damage due before our next turn divided by the city's remaining HP `R`. | 0 to 1. |
-| `E_def` | Value at risk of the city's [endangered recruits](recruitment.md#city-defense-recruits) under [city defense exposure](#city-defense-exposure). A garrison whose city can fall counts at its whole living value. Counts even with no city danger. | Unit value, divided by typical unit worth `Z_T` in the stake. |
+| `E_def` | Value at risk of the city's [endangered recruits](recruitment.md#city-defense-recruits) under [city defense exposure](#city-defense-exposure). A recruit in a friendly city uses a projected garrison calculation; if the city can fall, its whole danger counts as hostile, which can make the starting exposure lethal. Source caps and victim decay can still reduce its contribution. Counts even with no city danger. | Unit value; the stake divides it by `Z_T`. |
 | `w_C`, `w_R` | Hold-city and risk weights. | Preference multipliers. |
 | `C` | City allowance, setting `city.units` (3). | Typical units. |
 
@@ -476,19 +476,21 @@ Theater pressure uses the [strength tallies](recruitment.md#strength-tallies), w
 
 ### City defense exposure
 
-`E_def` is the value our endangered recruits could lose. It is discounted because one source can hit only so many victims, and the attackers choose the largest victims first.
+`E_def` is the value our endangered recruits could lose. It is discounted because one source can hit only so many victims, then the kept totals decay by rank.
 
 | Step | Rule |
 | --- | --- |
 | 1. Value at risk | `E(u, d)` of each endangered recruit from its whole danger `d`, as in [exposure](#exposure) step 1. |
-| 2. Split by source | A source keeps the share of a recruit's value matching its damage `d_t` divided by the recruit's whole danger. Fog, terrain and improvement danger belongs to no source and stays with the recruit. |
+| 2. Split by source | Outside a friendly city, a source keeps the share of a recruit's value matching its damage `d_t` divided by `max(d, sum of positive attributed damage)`. Inside a friendly city, only the hostile part of the recruit's danger is split among the projected attackers, in proportion to their positive damage, and the rest stays with the recruit as residual exposure. Fog, terrain and improvement danger belongs to no source and stays with the recruit. |
 | 3. Attack cap per source | Each source keeps its largest shares up to its attacks per turn: one for a city or a one-attack unit. |
-| 4. Sum with decay | Sort the recruits' kept totals from largest to smallest and apply weights 1, 0.8, 0.64, ... The attackers choose the largest victims first. |
+| 4. Sum with decay | Sort the recruits' kept totals from largest to smallest and apply weights 1, 0.8, 0.64, ... The decay applies to the sorted totals. |
 
 | Symbol | Meaning |
 | --- | --- |
 | `d_t` | A source's damage to the recruit, from the loop's copy of native danger (`GetDangerByThreat` or `GetCityDangerByThreat`) at the [enemy roll](#damage-rolls). A city's fire counts as one attack. |
 | `E_def` | The decayed sum of kept totals, before division by `Z_T`. |
+
+A recruit standing in a friendly city is attributed with `GetCityDangerByThreat` and the unit treated as a projected garrison. If the city can fall, all its danger is hostile. Otherwise a garrison-capable recruit counts the danger above the improvement damage, and a recruit that cannot garrison has no attacker-attributed share. Either way, the part not attributed to an attacker stays with the recruit as residual exposure and can still count in the decay.
 
 **Decay example.** Three full-health archers worth 400 stand outside our capital. Three 1-attack swordsmen each deal 30 to one archer, so each archer's value at risk is `400 (F_u) × 0.4 (health share) × 30/100 (d / M) = 48`.
 
@@ -497,7 +499,7 @@ Theater pressure uses the [strength tallies](recruitment.md#strength-tallies), w
 | First (largest) | 48 | 1 | 48 |
 | Second | 48 | 0.8 | 38.4 |
 | Third | 48 | 0.64 | 30.72 |
-| `E_def` | | | `48 + 38.4 + 30.72 = 117.12`; `117.12 / 400 (Z_T) = 0.293` typical units |
+| `E_def` | | | `48 + 38.4 + 30.72 = 117.12`; `117.12 / 400 (Z_T) = 0.2928` typical units |
 
 **Own-city example.** Our capital: `i = 40/40 = 1`; 200 of 250 HP, so `δ = 0.2`; no exposed recruits.
 

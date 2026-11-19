@@ -155,7 +155,7 @@ Counted enemies feed [Reinforce retirement](overview.md#overlapping-offers): an 
 | Eligibility | A living land or sea combat unit on the turn's starting roster, outside an army, able to move, outside a friendly city, not a held garrison and not already in `withdrawnUnits`. |
 | Order | Ascending unit ID, without duplicates. |
 
-An endangered recruit starts the offer; every other eligible recruit still travels with it. The [Withdraw page](withdrawal.md#recruits) covers how the group sets the priority and how execution moves it.
+An endangered recruit starts the offer; healthy recruits can still add removable exposure and travel with it. The [Withdraw readiness check](withdrawal.md#readiness-and-execution) drops recruits whose domain has no destination. The [Withdraw page](withdrawal.md#recruits) covers how the group sets the priority and how execution moves it.
 
 ## Candidates and selection
 

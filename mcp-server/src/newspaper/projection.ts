@@ -1,11 +1,14 @@
 import type { Selectable } from 'kysely';
 import type { PlayerInformation } from '../knowledge/schema/public.js';
-import type { CityInformation, GameEvent, PlayerSummary } from '../knowledge/schema/timed.js';
+import type { CityInformation, GameEvent, PlayerSummary, TacticalZones } from '../knowledge/schema/timed.js';
 import { projectCityReportFields, projectPlayerReportFields } from '../knowledge/helpers/report-projection.js';
 import { diplomaticEventSubjects, matchesSubjects, type EventSubjects } from '../knowledge/helpers/event-subjects.js';
 import { pickFields } from '../utils/fields.js';
 import { parseRelationship } from '../diplomacy/relationships.js';
-import type { NewspaperDiplomacyGap, NewspaperDiplomacySnapshot, NewspaperEvent, NewspaperSnapshot, NewspaperSourceReference } from './evidence.js';
+import type {
+  NewspaperDiplomacyGap, NewspaperDiplomacySnapshot, NewspaperEvent, NewspaperSnapshot,
+  NewspaperSourceReference, NewspaperTacticalZone
+} from './evidence.js';
 import { cityAtEvent, cityOwner, knowsPlayer, relatedSources, source, visibility, type NewspaperCityObservation } from './recorded-city.js';
 import { diplomatAtCapital, ownSpyAtCity, type RecordedRoster } from './espionage.js';
 export type { NewspaperCityObservation } from './recorded-city.js';
@@ -167,6 +170,33 @@ export function projectNewspaperCity(
   ]);
   return { source: reference, subjectID: row.Key, values,
     ...(related.length ? { relatedSources: related } : {}) };
+}
+
+type TacticalRow = Pick<Selectable<TacticalZones>, 'ID' | 'Turn' | 'CreatedAt' | 'ZoneID' | 'City' | 'Domain' | 'Posture' | 'Units'>;
+
+/** Keep the recorded zone labels only when the receiver already knows them at the cutoff. */
+export function projectTacticalZones(
+  rows: readonly TacticalRow[], cities: readonly NewspaperSnapshot[], players: readonly NewspaperSnapshot[],
+  context: NewspaperProjectionContext
+): NewspaperTacticalZone[] {
+  const known = new Set(players.map(player => player.subjectID));
+  const labels = new Set(['Barbarians']);
+  for (const player of context.players) {
+    // The military recorder labels city-states with GetName(), stored as Leader in PlayerInformations.
+    if (known.has(player.Key))
+      labels.add(player.IsMajor === 1 ? player.Civilization : `City-State ${player.Leader}`);
+  }
+  return rows.map(row => ({
+    source: { table: 'TacticalZones', id: row.ID, turn: row.Turn, createdAt: row.CreatedAt },
+    zoneID: row.ZoneID,
+    // Sea zones use the negative of their city's ID. A nearby visible unit does not reveal the city.
+    ...(row.City && cities.some(city => city.subjectID === Math.abs(row.ZoneID) && city.values.Name === row.City)
+      ? { city: row.City } : {}),
+    domain: row.Domain,
+    posture: row.Posture,
+    units: Object.fromEntries(Object.entries(row.Units)
+      .filter(([label]) => labels.has(label)).map(([label, counts]) => [label, { ...counts }]))
+  }));
 }
 
 /** Private deal terms, reported to a party or when the receiver has strong insight into every party. */
@@ -496,20 +526,25 @@ function witnessedEvent(row: Selectable<GameEvent>, receiverPlayerID: number): b
 function goldenAgeStarting(payload: Record<string, unknown>): boolean | undefined {
   const { Starting, TurnChange } = payload;
   const explicitStart = Starting === true || Starting === 1;
-  if (!explicitStart && Starting !== false && Starting !== 0) return undefined;
+  if (!explicitStart && !explicitlyFalse(Starting)) return undefined;
   if (typeof TurnChange !== 'number') return explicitStart ? true : undefined;
   if (!Number.isInteger(TurnChange) || TurnChange < 0) return undefined;
   if (TurnChange > 0) return true;
   return explicitStart ? undefined : false;
 }
 
-/** Join a training event to one visible creation of the same owner's unit during the same turn. */
-function trainedUnit(row: Selectable<GameEvent>, context: NewspaperProjectionContext): Selectable<GameEvent> | undefined {
+/** Find visible creations of the same owner's unit during the training turn. */
+function trainingCreations(row: Selectable<GameEvent>, context: NewspaperProjectionContext): Selectable<GameEvent>[] {
   const { PlayerID, UnitID } = row.Payload;
-  if (!knowsPlayer(PlayerID, context) || typeof UnitID !== 'number' || !Number.isInteger(UnitID) || UnitID < 0) return undefined;
-  const matches = context.turnEvents?.filter(event => event.Type === 'UnitCreated' && event.Turn === row.Turn &&
-    event.Payload.PlayerID === PlayerID && event.Payload.UnitID === UnitID && witnessedEvent(event, context.receiverPlayerID));
-  return matches?.length === 1 ? matches[0] : undefined;
+  if (!knowsPlayer(PlayerID, context) || typeof UnitID !== 'number' || !Number.isInteger(UnitID) || UnitID < 0) return [];
+  return context.turnEvents?.filter(event => event.Type === 'UnitCreated' && event.Turn === row.Turn &&
+    event.Payload.PlayerID === PlayerID && event.Payload.UnitID === UnitID &&
+    witnessedEvent(event, context.receiverPlayerID)) ?? [];
+}
+
+/** Test a flag recorded explicitly as false or zero. */
+function explicitlyFalse(value: unknown): boolean {
+  return value === false || value === 0;
 }
 
 /** Report a named great person's death once, and not when the same unit was expended in that turn. */
@@ -517,7 +552,7 @@ function reportablePrekill(row: Selectable<GameEvent>, context: NewspaperProject
   const { OwnerID, UnitID, DelayKill } = row.Payload;
   if (!nameFieldText(row.Payload, 'Person') || typeof OwnerID !== 'number' || typeof UnitID !== 'number' || UnitID < 0) return false;
   // The death hook fires twice; only the row without a delayed kill describes the death.
-  if (DelayKill !== false && DelayKill !== 0) return false;
+  if (!explicitlyFalse(DelayKill)) return false;
   return !convertedUnit(row, context) && !context.unitLifecycle?.some(event => event.Type === 'GreatPersonExpended' && event.Turn === row.Turn &&
     event.Payload.PlayerID === OwnerID && event.Payload.UnitID === UnitID);
 }
@@ -532,14 +567,16 @@ function convertedUnit(row: Selectable<GameEvent>, context: NewspaperProjectionC
     : event.Payload.OldOwnerID === OwnerID && event.Payload.OriginalUnitID === UnitID)) ?? false;
 }
 
-/** Add only positions backed by a unique dated city row and record what each join used. */
+/** Cite dated positions and return the primary city row used for the event. */
 function copyCityPositions(config: NewspaperEventConfig, row: Selectable<GameEvent>,
-  values: Record<string, unknown>, context: NewspaperProjectionContext, related: NewspaperSourceReference[]): void {
+  values: Record<string, unknown>, context: NewspaperProjectionContext, related: NewspaperSourceReference[]): NewspaperCityObservation | undefined {
+  let city: NewspaperCityObservation | undefined;
   const fields = Object.entries(config.cityIDs ?? {});
   for (const [idField, ownerField] of fields) {
     const position = cityAtEvent(row, row.Payload[idField], row.Payload[ownerField], context);
     if (!position) continue;
     if (fields.length === 1 || idField === config.mainCityID) {
+      city = position.row;
       values.CityX = position.row.X;
       values.CityY = position.row.Y;
     }
@@ -551,6 +588,7 @@ function copyCityPositions(config: NewspaperEventConfig, row: Selectable<GameEve
     related.push(source('CityInformations', position.row));
     if (position.ownerEvent) related.push(source('GameEvents', position.ownerEvent));
   }
+  return city;
 }
 
 /** Publish only the owner and recorded names of an unwitnessed world-news event. */
@@ -610,12 +648,19 @@ export function projectNewspaperEvent(row: Selectable<GameEvent>, context: Newsp
   if (row.Type === 'MinorAlliesChanged' && (typeof values.IsNowAlly === 'boolean' || typeof values.IsNowAlly === 'number')) {
     values.IsNowAlly = values.IsNowAlly !== false && values.IsNowAlly !== 0;
   }
-  if (config.cityIDs) copyCityPositions(config, row, values, context, related);
+  const mainCity = config.cityIDs ? copyCityPositions(config, row, values, context, related) : undefined;
   if (row.Type === 'CityTrained') {
-    const created = trainedUnit(row, context);
+    // Generic visibility may reflect another owner's unit or city with the same local ID.
+    const port = payload.PlayerID === context.receiverPlayerID &&
+      explicitlyFalse(payload.WithGold) && explicitlyFalse(payload.WithFaith) ? recordedName(mainCity?.Name) : undefined;
+    const matches = trainingCreations(row, context);
+    const preceding = port ? matches.filter(event => event.ID < row.ID) : [];
+    const launchCreation = preceding.length === 1 ? preceding[0] : undefined;
+    const created = launchCreation ?? (matches.length === 1 ? matches[0] : undefined);
     const unit = recordedName(created?.Payload.UnitType);
     if (created && unit) {
       values.Unit = unit;
+      if (launchCreation) values.Port = port;
       related.push(source('GameEvents', created));
     }
   }

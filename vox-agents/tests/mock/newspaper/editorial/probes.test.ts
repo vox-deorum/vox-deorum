@@ -2,14 +2,14 @@
 import { fileURLToPath } from 'node:url';
 import { beforeAll, describe, expect, it } from 'vitest';
 import type {
-  NewspaperEvent, NewspaperEvidence, NewspaperSnapshot,
+  NewspaperEvent, NewspaperEvidence, NewspaperSnapshot, NewspaperTacticalZone,
 } from '../../../../../mcp-server/dist/newspaper/evidence.js';
 import { createInitialPublicationState, type PublicationState } from '../../../../src/newspaper/contracts/publication.js';
 import { runEditorialCheck } from '../../../../src/newspaper/editorial/check.js';
 import { loadEditorialConfig } from '../../../../src/newspaper/editorial/config/load.js';
 import { editorialConfigSchema, type EditorialConfig } from '../../../../src/newspaper/editorial/config/schema.js';
 import { buildNewspaperFacts } from '../../../../src/newspaper/editorial/facts/index.js';
-import type { FactWindow } from '../../../../src/newspaper/editorial/facts/model.js';
+import type { FactObject, FactWindow } from '../../../../src/newspaper/editorial/facts/model.js';
 import { evidence as buildEvidence, relationship, snapshot } from '../../../helpers/newspaper-diplomacy.js';
 
 const probeDirectory = fileURLToPath(new URL('../../../../newspaper/probes/', import.meta.url));
@@ -33,11 +33,13 @@ let spyConfig: EditorialConfig;
 let diplomatConfig: EditorialConfig;
 let foreignPolicyConfig: EditorialConfig;
 let espionageConfig: EditorialConfig;
+let frontConfig: EditorialConfig;
+let shipConfig: EditorialConfig;
 
 /** Supply dated contact and cover the stock rules' lookback windows. */
 function probeEvidence({
   gold = 0, branch = 'Tradition', events = [], riderX = 10, turn = 10, previous = 5,
-  ownCities = [], relationships = [], foreignCityValues = {}, playerValues = {},
+  ownCities = [], relationships = [], foreignCityValues = {}, playerValues = {}, tacticalZones,
 }: {
   gold?: number; branch?: string; events?: NewspaperEvent[]; riderX?: number;
   turn?: number; previous?: number;
@@ -45,6 +47,7 @@ function probeEvidence({
   relationships?: ReturnType<typeof relationship>[];
   foreignCityValues?: NewspaperSnapshot['values'];
   playerValues?: Record<number, NewspaperSnapshot['values']>;
+  tacticalZones?: NewspaperTacticalZone[];
 } = {}): NewspaperEvidence {
   const history = [0, 1, 2].map((id) =>
     snapshot(id, relationships.length ? turn : previous, id === 0 ? relationships : []));
@@ -75,6 +78,7 @@ function probeEvidence({
     events,
     gaps: [],
   };
+  if (tacticalZones !== undefined) projected.tacticalZones = tacticalZones;
   return projected;
 }
 
@@ -123,6 +127,46 @@ function probeEvent(
     source: { table: 'GameEvents', id, turn, createdAt: 8000 },
     ...(reportTurn === undefined ? {} : { reportTurn }),
   };
+}
+
+/** Build one private front observation with a stable source identity. */
+function tacticalZone(overrides: Partial<NewspaperTacticalZone> = {}): NewspaperTacticalZone {
+  return {
+    source: { table: 'TacticalZones', id: 901, turn: 10, createdAt: 10000 },
+    zoneID: 4,
+    city: 'Rotterdam',
+    domain: 'Sea',
+    posture: 'Withdraw',
+    units: { Netherlands: { Frigate: 2, Trireme: 1 } },
+    ...overrides,
+  };
+}
+
+/** Build one training row joined to a recorded creation and dated city observation. */
+function shipEvidence({
+  unit = 'Frigate', port = 'Rotterdam', withGold = false, withFaith = false,
+  omitGold = false, omitFaith = false, playerId = 0, cityId = 100, x = 0, turn = 8,
+}: {
+  unit?: string; port?: string | null; withGold?: boolean; withFaith?: boolean;
+  omitGold?: boolean; omitFaith?: boolean; playerId?: number; cityId?: number; x?: number; turn?: number;
+} = {}) {
+  const projected = probeEvidence({ ownCities: [{ name: 'Rotterdam', capital: true }] });
+  const city = projected.cities.find((row) => row.subjectID === cityId)!;
+  const created = probeEvent('UnitCreated', { PlayerID: playerId, UnitID: 42, UnitType: unit }, 200, turn);
+  const training: NewspaperEvent = {
+    type: 'CityTrained',
+    values: {
+      PlayerID: playerId, CityID: cityId, UnitID: 42, Unit: unit, CityX: x, CityY: 0,
+      ...(omitGold ? {} : { WithGold: withGold }),
+      ...(omitFaith ? {} : { WithFaith: withFaith }),
+      ...(port === null ? {} : { Port: port }),
+    },
+    source: { table: 'GameEvents', id: 201, turn, createdAt: turn * 1000 },
+    relatedSources: [created.source, city.source],
+  };
+  projected.events = [training];
+  projected.history!.events = [training];
+  return { projected, training, created, city };
 }
 
 /** Build a validated catalogue variant with only the named probe rules and templates. */
@@ -250,6 +294,12 @@ describe('probe overlay', () => {
       ['probe-espionage-tech-account', 'probe-spy-loss-account', 'probe-defender-report-account',
         'probe-election-influence-account'],
       { maxItems: 1 },
+    );
+    frontConfig = probeCatalogue(
+      ['probe-front-zone'], ['probe-front-zone-account'], { maxItems: 1 },
+    );
+    shipConfig = probeCatalogue(
+      ['probe-ship-launch'], ['probe-ship-launch-account'], { maxItems: 1 },
     );
   });
 
@@ -809,6 +859,110 @@ describe('probe overlay', () => {
         expect(playerEvents.entries).toEqual(expect.arrayContaining([expect.objectContaining({ turn: 9 })]));
         expect(cityEvents.entries).toEqual(expect.arrayContaining([expect.objectContaining({ turn: 9 })]));
       });
+    });
+  });
+
+  describe('front zone probes', () => {
+    it('should publish a named city front with recorded posture and observed counts', async () => {
+      const zone = tacticalZone();
+      const result = await check(probeEvidence({ tacticalZones: [zone] }), frontConfig);
+      const record = publishedItem(result.state, 'probe-front-zone-account');
+
+      expect(record).toBeDefined();
+      expect(record!.ruleIds).toContain('probe-front-zone');
+      expect(record!.subject).toBe('player/0');
+      expect(record!.sources).toContainEqual(zone.source);
+      expect(auditValue(result, 'probe-front-zone', 'player/0', 'values.frontCity')?.value).toBe('Rotterdam');
+      expect(auditValue(result, 'probe-front-zone', 'player/0', 'values.posture')?.value).toBe('Withdraw');
+      expect(String(auditValue(result, 'probe-front-zone', 'player/0', 'values.counts')?.value))
+        .toContain('Frigate');
+      const front = result.status === 'published'
+        ? result.issue.pages.find((page) => page.id === 'front') : undefined;
+      expect(front?.itemIds).toContain(record!.id);
+    });
+
+    it('should cite only the selected zone row', async () => {
+      const selected = tacticalZone({
+        city: 'Stuttgart',
+        source: { table: 'TacticalZones', id: 902, turn: 10, createdAt: 10000 },
+      });
+      const other = tacticalZone({
+        city: 'Utrecht', posture: 'Advance',
+        source: { table: 'TacticalZones', id: 903, turn: 10, createdAt: 10000 },
+      });
+      const result = await check(probeEvidence({ tacticalZones: [selected, other] }), frontConfig);
+      const record = publishedItem(result.state, 'probe-front-zone-account');
+
+      expect(record).toBeDefined();
+      expect(record!.sources).toContainEqual(selected.source);
+      expect(record!.sources).not.toContainEqual(other.source);
+    });
+
+    it.each([
+      { label: 'no zone rows', zones: undefined },
+      { label: 'an older observation', zones: [tacticalZone({
+        source: { table: 'TacticalZones', id: 904, turn: 9, createdAt: 9000 },
+      })] },
+      { label: 'a zone without a city', zones: [tacticalZone({ city: undefined })] },
+      { label: 'a named zone without visible counts', zones: [tacticalZone({ units: {} })] },
+    ])('should leave the front unknown with $label', async ({ zones }) => {
+      const result = await check(probeEvidence({ tacticalZones: zones }), frontConfig);
+
+      expect(publishedItem(result.state, 'probe-front-zone-account')).toBeUndefined();
+      expect(auditSubject(result, 'probe-front-zone', 'player/0')?.outcome).toBe('false');
+    });
+  });
+
+  describe('ship launch probes', () => {
+    it.each(['Frigate', 'Trireme'])('should publish a non-purchased %s with its joined citations', async (unit) => {
+      const { projected, training, created, city } = shipEvidence({ unit });
+      const result = await check(projected, shipConfig);
+      const record = publishedItem(result.state, 'probe-ship-launch-account');
+
+      expect(record).toBeDefined();
+      expect(record!.ruleIds).toContain('probe-ship-launch');
+      expect(record!.subject).toBe('city/100');
+      expect(record!.sources).toEqual(expect.arrayContaining([
+        training.source, created.source, city.source,
+      ]));
+      expect(auditValue(result, 'probe-ship-launch', 'city/100', 'values.ship')?.value).toBe(unit);
+      expect(auditValue(result, 'probe-ship-launch', 'city/100', 'values.port')?.value).toBe('Rotterdam');
+    });
+
+    it('should use the recorded port instead of a renamed current city', async () => {
+      const { projected } = shipEvidence();
+      projected.cities.find((row) => row.subjectID === 100)!.values.Name = 'Rotterdam Reborn';
+      const result = await check(projected, shipConfig);
+
+      expect(auditValue(result, 'probe-ship-launch', 'city/100', 'values.port')?.value).toBe('Rotterdam');
+    });
+
+    it.each([
+      { label: 'a non-naval unit', options: { unit: 'Warrior' } },
+      { label: 'a gold purchase', options: { withGold: true } },
+      { label: 'a faith purchase', options: { withFaith: true } },
+      { label: 'a missing gold flag', options: { omitGold: true } },
+      { label: 'a missing faith flag', options: { omitFaith: true } },
+      { label: 'no recorded port', options: { port: null } },
+    ])('should withhold the launch report with $label', async ({ options }) => {
+      const { projected } = shipEvidence(options);
+      const result = await check(projected, shipConfig);
+
+      expect(publishedItem(result.state, 'probe-ship-launch-account')).toBeUndefined();
+      expect(auditSubject(result, 'probe-ship-launch', 'city/100')?.outcome).toBe('false');
+    });
+
+    it('should keep the port private to the training player', async () => {
+      const { projected } = shipEvidence({ playerId: 1, cityId: 11, x: 10 });
+      const model = buildFacts(projected, shipConfig);
+      const trained = model.cities[11].current!.trained.value as FactWindow;
+
+      expect(trained.entries).toHaveLength(1);
+      const fields = trained.entries[0].field.value as FactObject;
+      expect(fields).not.toHaveProperty('port');
+      const result = await check(projected, shipConfig);
+      expect(publishedItem(result.state, 'probe-ship-launch-account')).toBeUndefined();
+      expect(auditSubject(result, 'probe-ship-launch', 'city/11')?.outcome).toBe('false');
     });
   });
 

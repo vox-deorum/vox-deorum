@@ -103,7 +103,7 @@ Compare these readings with each other and against small thresholds. The list om
 | `founded` | Recorded founding turn, or an estimate from first sighting | A `PlayerCityFounded` or `UnitCityFounded` event at its plot; otherwise the first observation after the recording began, when the city's history is continuous |
 | `captured` | The latest capture: `turn`, `from` (player), `by` (player), `conquest` (true or false) | `CityCaptureComplete` and `CityFlipped` events at its plot |
 | `formerOwner` | The `player` who owned it before the current owner | `captured.from`; otherwise the most recent different owner in the same city's continuous observations |
-| `trained` | Units completed inside the window, each with `turn`, `unit` (the unit name), `withGold`, `withFaith` | `CityTrained` events. Each is matched by unit ID to the `UnitCreated` event of the same turn, which carries the unit type, and the type is resolved to its name. |
+| `trained` | Units completed inside the window, with `turn`, `unit` (the unit type), `withGold`, `withFaith`, and sometimes `port` | `CityTrained` and same-turn `UnitCreated` events, joined by owner and unit ID. |
 | `built` | Buildings and wonders completed inside the window, each with `turn` and `building` | `CityConstructed` events and additions to `wonders` |
 | `conversions` | Religion changes inside the window, each with `turn` and `religion` | `CityConvertsReligion` events at its plot and changes to `majorityReligion` |
 | `events` | Every permitted event inside the window that names this city or its plot | Event city IDs and coordinates |
@@ -111,6 +111,8 @@ Compare these readings with each other and against small thresholds. The list om
 | `is.<name>` | A [shortcut](constants.md#shortcuts), such as `city.is.neighbor` | The catalogue |
 
 Annexation has no recorded event. A rule reads it from the stored flags: `city.before.isPuppet && !city.isPuppet && city.isOccupied`. The shipped `neighbor-puppet-annexed` rule combines them with `city.is.neighbor` and an unchanged owner.
+
+For the receiver's own training events, `port` gives the city name from a dated observation. It requires a unique earlier creation of the same owner's unit on the same turn and both purchase flags to be explicitly false. The launch probe also checks the unit type against a short list of naval types. The report cites the training, creation and city records. Foreign training, purchases and custom ship names are outside the launch probe.
 
 ## Player
 
@@ -132,6 +134,14 @@ Annexation has no recorded event. A rule reads it from the stored flags: `city.b
 The stored column `Cities` is exposed as `cityCount`, because `player.cities` is the list of that player's visible cities. The table lists possible fields. A receiver with full access to its own national summary can read its votes, resources, unit count, supply and deals. Foreign summaries use a smaller field list. City-states may have identity, ally, city count, population, gold, income, technologies, resources and relationships, subject to the same projection. A dated national observation establishes which identities are visible, including a known city-state with no readable national values.
 
 Read `self.happinessPercentage` for the receiver's national happiness. Vox Populi records it as a whole number on a 0–100 scale, with 50 corresponding to parity between happy and unhappy citizens. It can be missing from the evidence. This national measure and the net local value `city.happinessDelta` are both used by the [stock examples](examples.md) to choose a story's tone.
+
+### Tactical observations
+
+`self.tacticalZones` lists the receiver's private observations from the cutoff turn. Each entry has a `zoneID`, a `city` label when recorded, `domain`, `posture`, and `units` counted by civilization and unit type. It cites the latest insertion for that zone. Zone zero holds unassigned units and is omitted. If the recording has no eligible rows, the fact is unknown. Spy and vassal access do not expose another seat's zones.
+
+The newspaper names the city only if it has a matching readable city observation. It lists counts for known civilizations, known city-states and barbarians. These checks control which labels can be shown; the labels and counts themselves come from the zone record.
+
+A `Withdraw` posture is the AI's assessment during that turn. The recorder can read zones several times in one turn and only saves occupied zones, so an earlier sighting can remain after its units leave. A sea zone can include land units. Use `militaryStrength` or `militaryUnits` for available national context.
 
 ### Inferred player facts
 
@@ -292,7 +302,7 @@ A first observation therefore establishes a baseline. A city seen for the first 
 
 ## Evidence the facts rely on
 
-The shared evidence query reads recorded rows for one receiver. It returns cutoff snapshots, optional comparison snapshots, derived diplomacy and events after `previousCheckTurn` through the cutoff. Projection applies recorded visibility and each event's contact and insight rules. Espionage operations and elections use the recorded participant IDs for access. City snapshots include the recorded `IsCapital`. A readable player row includes recorded `MilitaryStrength` for the receiver or at access level 2.
+The shared evidence query reads recorded rows for one receiver. It returns cutoff snapshots, optional comparison snapshots, private [tactical observations](#tactical-observations), derived diplomacy and events after `previousCheckTurn` through the cutoff. Projection applies recorded visibility and each event's contact and insight rules. Espionage operations and elections use the recorded participant IDs for access. City snapshots include the recorded `IsCapital`. A readable player row includes recorded `MilitaryStrength` for the receiver or at access level 2.
 
 World news can report a technology gain or a named great person's birth without a witness. The receiver must have met the owner by the event turn, including every member of a team that gained a technology. The unwitnessed record carries only the owner ID and name of the technology or person. For example, a paper can report that Hypatia appeared in Persia without revealing her city or unit type.
 
@@ -304,7 +314,7 @@ Optional `historyFromTurn` sets the baseline to the earlier of that turn and `pr
 | --- | --- |
 | City owner | A unique recorded civilization match, the barbarian slot, or for city-states a readable founding or capture at the plot or a unique city-state name match. Conflicting or ambiguous ownership remains unknown. |
 | Event position | A unique earlier readable city row matching the event's city ID and owner, with no intervening change that invalidates it. Trade routes keep separate endpoints; `CapitalChanged` uses the new capital for `CityX` and `CityY`. |
-| Trained unit | One visible same-turn `UnitCreated` with matching player and unit IDs and a recorded text unit name. |
+| Trained unit | One visible same-turn `UnitCreated` with matching player and unit IDs and a recorded unit type name. A launch uses a unique creation before the training. |
 
 Each item cites its recorded source; `relatedSources` cites the readable rows used in joins. The expression result collects the rows behind the facts it reads. For example, a trained unit name can cite the training event, the unit creation and the city observation that locates it. A player's static name is tied to the dated national observation that made the player visible. Public game settings have no dated observation. Hidden records can block a join. Map dimensions and wrapping stay private.
 
