@@ -1,61 +1,58 @@
-# Plan 4b: story mining from saved games
+# Plan 4b: story mining through the archivist
 
 **Status: draft.** Second of three streams. It starts from interesting stories and works backwards to triggers. [Plan 4a](04a-styles.md) settles styles in parallel, and [Plan 4c](04c-variant-drafting.md) writes the variants for the stories accepted here.
 
 ## Goal and success criteria
 
-Have several LLMs read random moments from saved games as if they edited that civilization's paper, and collect every story they would run. Cluster the pitches, remove duplicates, and sort what remains into story types the catalogue can support.
+Have LLMs read random moments from saved games as if they edited that civilization's paper, and collect every story they would run. Cluster the pitches, remove duplicates, and sort what remains into story types the catalogue can support.
 
 This stream wants many ideas. A pitch that misreads the data is still useful if the story type is good, so nothing checks pitches against the evidence.
 
 Done means:
 
-- One command produces pitches, clusters and a sorted backlog from the saved games in `mcp-server/archive/`.
+- One [archivist](../../../developers/vox-agents/agents/archivist.md) command writes pitches from the saved games in `mcp-server/archive/`, and a second step clusters them and writes a sorted backlog.
 - The owner has reviewed the backlog and marked the story types to build.
 - Each accepted story type that existing facts can support has a trigger rule and a template stub in the catalogue. The others are listed with the fact they need.
 
 ```mermaid
 flowchart LR
-    A[Saved games] --> B[Random turns per player]
-    B --> C[Reading packet: that civilization's view]
-    C --> D[Several LLMs pitch stories]
-    D --> E[Embed, cluster, de-duplicate]
-    E --> F[Sort into a backlog]
-    F --> G[Owner picks story types]
-    G --> H[Trigger rules and template stubs]
+    A[Saved games] --> B[Archivist scanner: LLM-controlled players]
+    B --> C[Random turns per player]
+    C --> D[Reading material from telemetry]
+    D --> E[Story scout, the run's model]
+    E --> F[story_pitches table]
+    F --> G[Cluster and sort]
+    G --> H[Owner picks story types]
+    H --> I[Trigger rules and template stubs]
 ```
 
 ## Current state
 
 | Need | What exists | Source |
 | --- | --- | --- |
-| Find games and players in an archive | `scanArchive` classifies each game's knowledge and telemetry databases and lists players. | `archivist/pipeline/scanner.ts` |
-| One civilization's view at a turn | Replay's evidence query returns what a receiving player may see at a cutoff: national and city snapshots, comparison history and events. It works for any player and needs no telemetry. | `newspaper/replay/database.ts`, MCP `newspaper/queries.ts` |
-| Facts over that evidence | The fact model that trigger rules read. | `newspaper/editorial/facts/` |
-| Run an agent offline with a chosen model | The archivist builds a bare `VoxContext` with a model override and accepts a comma-separated model list. | `archivist/pipeline/telepathist-prep.ts`, `archivist/console.ts` |
+| Find games and players | `scanArchive` lists each game's knowledge and telemetry databases and its LLM-controlled players. | `archivist/pipeline/scanner.ts` |
+| What a civilization saw on a turn | `GetSituationTool` rebuilds the game state the LLM player was shown from telemetry, by category: players, victory progress, military, cities, events, and the strategist's options. | `telepathist/tools/get-situation.ts` |
+| Era and civilization per turn | Phase A writes an episode row per player and turn, with no LLM. | `archivist/pipeline/extractor.ts`, `writer.ts` |
+| Run with a chosen model | `-m` picks the model; each game is processed by one model. | `archivist/console.ts` |
 | Embeddings and similarity | `generateEmbeddings` and `cosineSimilarity`. | `archivist/pipeline/embeddings.ts`, `archivist/utils/similarity.ts` |
-| Clustering | Nothing. The archivist only has diversity selection. | |
-| Story pitches | Nothing. | |
+| Story pitches and clustering | Nothing. | |
 
-The archivist's own turn summaries are a poor fit as input: they exist only for LLM-controlled players, are keyed by turn so two models cannot read the same turn, and describe the strategist's decisions more than the world. This plan reuses the archivist's scanning, model handling and embedding code, and takes the reading material from the newspaper's evidence path. Paths are relative to `vox-agents/src/`.
-
-The `self-play` archive folder currently holds 38 database files, counting telemetry siblings. The other experiment folders have none at the top level.
+Paths are relative to `vox-agents/src/`. Only LLM-controlled players have telemetry, so only they are read. That is enough: the `self-play` folder alone holds 19 games with one LLM player each.
 
 ## Approach
 
-Add a mining command beside the replay command, with its code in `newspaper/mining/`. Each (game, player) pair gets a few random turns, and each sampled turn goes to one model from the list in rotation. So a player in a game is read by different models at different moments, and no moment is read twice.
+Add a **stories mode** to the archivist (`--stories`). It runs Phase A as today, then a stories step in place of landmark selection, turn summaries and episode embeddings, none of which stories need. The strategist plays no part: stories read only the game state the player was shown. Each run uses one model, chosen with `-m`. Running again with another model adds that model's pitches beside the first.
 
 | Alternative | Why this plan does not use it |
 | --- | --- |
-| Whole-world input from the archivist extractor | The owner chose the civilization's own view, which keeps pitches close to what a paper could print. |
-| Diversity-sampled turns, like archivist landmarks | Random turns are simpler and avoid favoring unusual game states over ordinary ones, where everyday stories live. |
-| Every model reads every sample | Multiplies cost for mostly repeated ideas. Rotation already mixes models across eras and civilizations. |
+| Read landmark turns | Landmarks favor unusual game states. Random turns also cover ordinary ones, where everyday stories live. |
+| Read turn summaries | They compress away the small details that odd and funny stories come from, and stories do not need them. |
 
 ## Steps
 
-1. **Sample.** Walk the archive with `scanArchive`. For each major civilization in each game, pick `--turns-per-player` random turns (default 3) from a seeded generator, spread across the game's length so early and late play both appear. Skip a player after its last recorded summary, since recordings keep stale summaries after elimination. Assign models in rotation.
-2. **Build the reading packet.** For each sample, open the recording read-only and query evidence for that player at that cutoff, with events from the last five Standard turns and the ten-turn comparison history that replay uses. Render it as compact text: the civilization and its era, its cities, the civilizations it knows and its relations with them, notable changes over the window, and the event list. Reuse the fact model for derived values instead of recomputing them.
-3. **Ask for pitches.** Add a `story-scout` agent with a prompt in `prompts/`. It tells the model it edits this civilization's paper and asks for 5 to 10 stories of any kind it would want to run, including small, odd and funny ones. Each pitch has:
+1. **Build the reading material.** Call `GetSituationTool` in detailed mode for the sampled turn with every category except the strategist's options. Stories take the game state at face value: no options, decisions or reasoning from the strategist.
+2. **Sample.** For each player, pick `--story-turns` random turns (default 6) from a seeded generator (`--seed`), one from each equal slice of the player's recorded turns, so early and late play both appear.
+3. **Ask for pitches.** Add a `story-scout` agent with a prompt in `prompts/`, registered in `agentRegistry`. It tells the model it edits this civilization's paper and asks for 5 to 10 stories of any kind it would want to run, including small, odd and funny ones. Each pitch has:
 
    | Field | Content |
    | --- | --- |
@@ -63,12 +60,13 @@ Add a mining command beside the replay command, with its code in `newspaper/mini
    | `pitch` | One or two sentences on the story and why a reader would care. |
    | `genre`, `stance` | Free text. These feed Plan 4a's brainstorm. |
    | `subject` | City, civilization, pair of civilizations, event, or the whole world. |
-   | `basis` | What in the packet prompted it. |
+   | `basis` | What in the reading material prompted it. |
    | `wants` | Anything the model wished it knew to write the story. This points at missing facts. |
 
-4. **Store pitches.** Write one JSON file per sample under `.tmp/newspaper-mining/<run>/pitches/`, with the game, player, civilization, turn, era and model. A rerun skips samples whose file exists, so an interrupted run resumes.
-5. **Cluster and de-duplicate.** Embed `headline` plus `pitch`. Group greedily: a pitch joins the first cluster whose center is at least 0.8 similar (a starting value, tuned by reading the output), otherwise it starts a new one. Write `clusters.json` and a readable `clusters.md` with each cluster's size, how many models and eras produced it, and three sample pitches. Size and spread show which ideas are common and which are one model's quirk; both kinds are worth reading.
-6. **Sort into a backlog.** A stronger model reads each cluster with the [trigger overview](../../../developers/vox-agents/newspaper/triggers/overview.md), the [facts reference](../../../developers/vox-agents/newspaper/triggers/facts.md) and the current catalogue IDs, names the story type and puts it in one bucket:
+4. **Store pitches.** Add a `story_pitches` table to the episode database, keyed by game, player, turn and model, with the civilization, era, pitch fields and an embedding of headline plus pitch. A rerun skips samples that already have rows for the run's model, so an interrupted run resumes; `--force` redoes them. Pitches can be browsed in the DuckDB UI the archivist already opens.
+5. **Cluster and sort.** A separate step reads every model's pitches from the table. Group greedily: a pitch joins the first cluster whose center is at least 0.8 similar (a starting value, tuned by reading the output), otherwise it starts a new one. Write `clusters.md` to `.tmp/newspaper-mining/` with each cluster's size, how many models and eras produced it, and three sample pitches. Size and spread show which ideas are common and which are one model's quirk; both kinds are worth reading.
+
+   Then a stronger model (`--sort-model`) reads each cluster with the [trigger overview](../../../developers/vox-agents/newspaper/triggers/overview.md), the [facts reference](../../../developers/vox-agents/newspaper/triggers/facts.md) and the current catalogue IDs, names the story type and puts it in one bucket:
 
    | Bucket | Meaning | Next step |
    | --- | --- | --- |
@@ -79,24 +77,24 @@ Add a mining command beside the replay command, with its code in `newspaper/mini
    | Style idea | The pitch is about tone or format. | Hand to Plan 4a. |
    | Drop | Not a newspaper story, or impossible to observe. | None. |
 
-   Write `backlog.md` as one table sorted by cluster size. Expect mistakes in bucketing; the owner's review corrects them.
-7. **Owner picks.** The owner marks story types to build and can merge or rename them. List the existing probe stories from `vox-agents/newspaper/probes/` in the same backlog, so the owner decides in one pass which of them become stock stories.
-8. **Work backwards to triggers.** For each accepted story type in the "new angle" and "new rule" buckets, add the trigger rule and a template stub to the catalogue: the angle in one sentence, the named values the prose may use, tags, and one neutral report variant. Follow the [rule authoring guide](../../../developers/vox-agents/newspaper/triggers/overview.md) and check each rule in replay against a recording where the mined pitch came from. Record "needs a fact" story types in the roadmap as follow-up work. Plan 4c takes the stubs from here.
+   Write `backlog.md` beside `clusters.md` as one table sorted by cluster size. Expect mistakes in bucketing; the owner's review corrects them.
+6. **Owner picks.** The owner marks story types to build and can merge or rename them. List the existing probe stories from `vox-agents/newspaper/probes/` in the same backlog, so the owner decides in one pass which of them become stock stories.
+7. **Work backwards to triggers.** For each accepted story type in the "new angle" and "new rule" buckets, add the trigger rule and a template stub to the catalogue: the angle in one sentence, the named values the prose may use, tags, and one neutral report variant. Follow the [rule authoring guide](../../../developers/vox-agents/newspaper/triggers/overview.md) and check each rule in replay against the recording the mined pitch came from. Record "needs a fact" story types in the roadmap as follow-up work. Plan 4c takes the stubs from here.
 
 ## Risks and open questions
 
-- **Cost.** Samples ≈ games × major civilizations × turns per player. Run one game first to measure tokens per packet before the full archive.
-- **Packet size.** A late-game packet can be large. Trim to the receiver's cities, known civilizations and the event window; drop comparison rows that did not change.
-- **Sameness.** Models may converge on war and wonders. If clusters are narrow, add prompt variants that ask for a section, such as city life or trade, and rotate them like the models.
-- **Which models.** The owner supplies the list. Any model reference the Vox Agents configuration accepts will work.
-- **Embedder.** Clustering needs the configured `embedder` model. Without one, the run stops after step 4 and the pitches remain usable.
+- **Cost.** Samples ≈ games × LLM players × story turns, per model. Run one game first to measure tokens per sample before the full archive.
+- **Reading material size.** A late-game turn can be large. On context overflow, skip the sample and log it, as turn summaries already do.
+- **Sameness.** Models may converge on war and wonders. If clusters are narrow, add prompt variants that ask for a section, such as city life or trade.
+- **Which models.** The owner picks one per run. Any model reference the Vox Agents configuration accepts will work.
+- **Embedder.** Pitch embeddings need the configured `embedder` model. Without one, pitches are stored without embeddings and clustering waits until they are added.
 
 ## Verification
 
-- Mock tests under `tests/mock/newspaper/mining/`: the same seed gives the same samples; a small fixture recording produces a packet containing only that player's permitted evidence; controlled vectors cluster as expected; a rerun skips finished samples.
-- Run `npm run build -w vox-agents` and `npm run test:mock -w vox-agents -- tests/mock/newspaper`.
-- Run the command on one `self-play` game with two models and read the pitches, clusters and backlog by hand.
+- Mock tests under `tests/mock/archivist/`: the same seed gives the same turns; pitches round-trip through `story_pitches` and a rerun skips them; a second model's pitches sit beside the first's; controlled vectors cluster as expected; an archivist run without `--stories` is unchanged.
+- Run `npm run build -w vox-agents` and `npm run test:mock -w vox-agents -- tests/mock/archivist`.
+- Run stories mode on one `self-play` game and read the pitches, clusters and backlog by hand.
 
 ## Out of scope
 
-Checking pitches for accuracy, writing finished prose (Plan 4c), new facts that need recording changes, and any change to the archivist's episode database.
+Checking pitches for accuracy, writing finished prose (Plan 4c), players without telemetry, and new facts that need recording changes.
