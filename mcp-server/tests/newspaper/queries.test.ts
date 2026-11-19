@@ -12,6 +12,43 @@ beforeEach(async () => { db = await createEvidenceDatabase(); await seedEvidence
 afterEach(async () => { await db.destroy(); });
 
 describe('historical evidence queries', () => {
+  it('should publish a met civilization’s named birth and use only visible events as stories about its deaths', async () => {
+    const unit = { GreatPerson: 'Hypatia' };
+    // An unrelated unit with the same local ID can extend the common event visibility.
+    const unwitnessed = { GreatPerson: 'Hypatia', GreatPersonVisibility: [0, 2] };
+    await event(db, 201, 8, 'UnitCreated', { PlayerID: 1, UnitID: 11, Unit: unwitnessed, PlotX: 2, PlotY: 3 });
+    await event(db, 202, 8, 'GreatPersonExpended', { PlayerID: 1, UnitID: 11, Unit: unit, CityX: 2, CityY: 3 }, 0);
+    await event(db, 203, 8, 'UnitPrekill', { OwnerID: 1, UnitID: 11, Unit: unit, DelayKill: false });
+    await event(db, 204, 9, 'UnitPrekill', { OwnerID: 1, UnitID: 12,
+      Unit: { GreatPerson: 'Homer', GreatPersonVisibility: [0, 2] }, DelayKill: false });
+    await event(db, 205, 9, 'UnitPrekill', { OwnerID: 1, UnitID: 13,
+      Unit: { GreatPerson: 'Euclid', GreatPersonVisibility: [2, 2] }, DelayKill: false });
+
+    const result = await queryNewspaperEvidence(db, { ...request, historyFromTurn: 5 });
+    const lifeEvents = result.events.filter(row => row.source.id >= 201);
+    expect(lifeEvents.map(row => row.source.id)).toEqual([201, 205]);
+    expect(lifeEvents[0].values).toEqual({ PlayerID: 1, Person: 'Hypatia' });
+    expect(lifeEvents[1].values).toMatchObject({ OwnerID: 1, Person: 'Euclid' });
+    expect(result.history?.events.filter(row => row.source.id >= 201)).toEqual(lifeEvents);
+  });
+
+  it('should leave a gifted great person out of birth and death news', async () => {
+    await event(db, 201, 8, 'UnitCreated', {
+      PlayerID: 0, UnitID: 12, UnitType: 'Great Scientist', Unit: { GreatPerson: 'Temporary Name' },
+    });
+    await event(db, 202, 8, 'UnitCreated', { PlayerID: 1, UnitID: 11, Unit: { GreatPerson: 'Other Name' } }, 0);
+    await event(db, 203, 8, 'UnitConverted', { OldOwnerID: 1, OriginalUnitID: 12, NewOwnerID: 0, ConvertingUnitID: 12 }, 0);
+    await event(db, 204, 8, 'UnitConverted', { OldOwnerID: 0, OriginalUnitID: 11, NewOwnerID: 1, ConvertingUnitID: 11 }, 0);
+    await event(db, 205, 8, 'UnitPrekill', { OwnerID: 1, UnitID: 12, DelayKill: false, Unit: { GreatPerson: 'Hypatia' } });
+    await event(db, 206, 8, 'UnitCreated', { PlayerID: 1, UnitID: 12, Unit: { GreatPerson: 'Euclid' } }, 0);
+
+    const lifeEvents = (await queryNewspaperEvidence(db, request)).events.filter(row => row.source.id >= 201);
+    expect(lifeEvents.map(row => row.source.id)).toEqual([201, 206]);
+    expect(lifeEvents[0].values).toMatchObject({ Unit: 'Great Scientist' });
+    expect(lifeEvents[0].values).not.toHaveProperty('Person');
+    expect(lifeEvents[1].values).toEqual({ PlayerID: 1, Person: 'Euclid' });
+  });
+
   it('should use the turn index for event windows and lifecycle reads and support recordings without it', async () => {
     const window = await sql<{ detail: string }>`explain query plan select * from GameEvents
       where Turn >= ${6} and Turn <= ${10} and Player0 >= ${1} order by ID`.execute(db);

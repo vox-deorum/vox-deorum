@@ -109,4 +109,73 @@ describe('newspaper event facts', () => {
       expect(fields).not.toHaveProperty('players');
     });
   });
+
+  describe('great people', () => {
+    it('should keep a recorded great person name and mark a birth', () => {
+      const birth = event(100, 8, 'UnitCreated', { PlayerID: 1, Person: 'Ptolemy' });
+      const fields = facts([birth], [player(0), player(1)], {
+        0: { teamId: 4 }, 1: { teamId: 5 },
+      }).events[0].fields;
+
+      expect(fields.person).toEqual({ value: 'Ptolemy', sources: [birth.source] });
+      expect(fields.kind).toEqual({ value: 'born', sources: [birth.source] });
+      expect(fields.player).toMatchObject({ value: reference('player', 1) });
+    });
+
+    it('should leave an ordinary unit creation without a person or kind', () => {
+      const creation = event(100, 8, 'UnitCreated', { PlayerID: 1, Unit: 'Warrior' });
+      const fields = facts([creation], [player(0), player(1)], {
+        0: { teamId: 4 }, 1: { teamId: 5 },
+      }).events[0].fields;
+
+      expect(fields).not.toHaveProperty('person');
+      expect(fields).not.toHaveProperty('kind');
+    });
+
+    it('should drop a blank recorded name instead of reporting a named event', () => {
+      const creation = event(100, 8, 'UnitCreated', { PlayerID: 1, Person: '   ' });
+      const fields = facts([creation], [player(0), player(1)], {
+        0: { teamId: 4 }, 1: { teamId: 5 },
+      }).events[0].fields;
+
+      expect(fields).not.toHaveProperty('person');
+      expect(fields).not.toHaveProperty('kind');
+    });
+
+    it('should mark a named expenditure', () => {
+      const spent = event(100, 8, 'GreatPersonExpended', { PlayerID: 1, Person: 'Ptolemy' });
+      const fields = facts([spent], [player(0), player(1)], {
+        0: { teamId: 4 }, 1: { teamId: 5 },
+      }).events[0].fields;
+
+      expect(fields.person).toEqual({ value: 'Ptolemy', sources: [spent.source] });
+      expect(fields.kind).toEqual({ value: 'expended', sources: [spent.source] });
+    });
+
+    it('should mark a named death and use the dying unit owner as the acting subject', () => {
+      const death = event(100, 8, 'UnitPrekill', { OwnerID: 1, AttackingPlayerID: 2, Person: 'Ptolemy' });
+      const fields = facts([death], [player(0), player(1), player(2)], {
+        0: { teamId: 4 }, 1: { teamId: 5 }, 2: { teamId: 6 },
+      }).events[0].fields;
+
+      expect(fields.person).toEqual({ value: 'Ptolemy', sources: [death.source] });
+      expect(fields.kind).toEqual({ value: 'died', sources: [death.source] });
+      expect(fields.player).toEqual({
+        value: reference('player', 1), sources: [death.source, player(1).source],
+      });
+      expect(fields.attackingPlayer).toMatchObject({ value: reference('player', 2) });
+    });
+
+    it('should leave the no-attacker sentinel without a linked attacker', () => {
+      const death = event(100, 8, 'UnitPrekill', { OwnerID: 1, AttackingPlayerID: -1, Person: 'Ptolemy' });
+      const fields = facts([death], [player(0), player(1)], {
+        0: { teamId: 4 }, 1: { teamId: 5 },
+      }).events[0].fields;
+
+      expect(fields.player).toEqual({
+        value: reference('player', 1), sources: [death.source, player(1).source],
+      });
+      expect(fields).not.toHaveProperty('attackingPlayer');
+    });
+  });
 });

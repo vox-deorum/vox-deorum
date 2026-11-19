@@ -31,5 +31,32 @@
     "when": ["ideologies.includes(event.branch)"],
     "values": { "civilization": "event.player.name", "ideology": "event.branch" },
     "importance": 65
+  },
+  {
+    "id": "probe-foreign-birth",
+    "subject": "event",
+    "event": "UnitCreated",
+    "when": [
+      "event.knows('person')",
+      "event.kind == 'born'",
+      "event.knows('player') && event.player.knows('name') && !event.player.self"
+    ],
+    "values": {
+      "person": "event.person",
+      "civilization": "event.player.name"
+    },
+    "importance": 70
+  },
+  {
+    "id": "probe-obituary",
+    "subject": "event",
+    "event": ["GreatPersonExpended", "UnitPrekill"],
+    "when": ["event.knows('person')", "event.kind == 'expended' || event.kind == 'died'"],
+    "values": {
+      "person": "event.person",
+      "kind": "event.kind",
+      "civilization": "event.knows('player') && event.player.knows('name') ? event.player.name : 'their people'"
+    },
+    "importance": 75
   }
 ]

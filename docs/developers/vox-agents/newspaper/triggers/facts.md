@@ -143,6 +143,7 @@ Read `self.happinessPercentage` for the receiver's national happiness. Vox Popul
 | `turn` | The turn it was recorded |
 | Payload fields | Each permitted field in camelCase. An ID may also offer a link: `oldOwnerId` comes with `oldOwner` when the player can be resolved. |
 | Recorded names | `tech`, `policy`, `branch`, `oldBranch`, `newBranch`, `religion`, `unit` and `building` hold the names as recorded. A numeric ID alone does not supply a name. |
+| `person`, `kind` | A named great person's own name and what happened: `born`, `expended` (used for an action) or `died` |
 | `player` | The main acting player, or the only linked member of an acting team |
 | `players` | Linked members of an acting team (`teamId`), known at the event date and the cutoff |
 | `city` | The city the event concerns, matched by city ID or by plot |
@@ -159,7 +160,9 @@ A player ID of -1 means "nobody", and the matching player fact is then missing. 
 | `PlayerGoldenAge` | `player`, `starting` |
 | `TeamTechResearched` | `teamId`, `players`, `player` for a single linked member, `tech`. A witnessed event also carries `changeAmount`; a negative value means the team lost the technology. A gain can come from research, a grant or theft. |
 | `PlayerAdoptPolicyBranch` | `player`, `branch` |
-| `GreatPersonExpended` | `player`, `unit`, `plot` |
+| `UnitCreated` | `player`, `unit`, `plot`. A named great person adds `person` and `kind: 'born'`. Unwitnessed births supply only the owner and name. |
+| `GreatPersonExpended` | `player`, `unit`, `plot`. A named great person adds `person` and `kind: 'expended'`. |
+| `UnitPrekill` | `player` (the owner), `unit`, `plot`, `person`, `kind: 'died'` and `attackingPlayer` when the final removal records a known attacker |
 
 The event types a rule may name are the ones in `newspaperEventConfigs` in `mcp-server/src/newspaper/projection.ts`. [Evidence the facts rely on](#evidence-the-facts-rely-on) describes how those rows are projected.
 
@@ -252,7 +255,9 @@ A first observation therefore establishes a baseline. A city seen for the first 
 
 `get-newspaper-evidence` reads recorded rows for one receiver. It returns cutoff snapshots, optional comparison snapshots, derived diplomacy and events after `previousCheckTurn` through the cutoff. Projection applies recorded visibility and each event's contact and insight rules. City snapshots include the recorded `IsCapital`. A readable player row includes recorded `MilitaryStrength` for the receiver or at access level 2.
 
-World news can report a `TeamTechResearched` gain the receiver did not witness if it had met every member of the team by that turn. The unwitnessed record carries only the team ID and technology name. For example, a paper can report that Persia gained Printing Press without an embassy there. This applies only to newspaper evidence; the strategist's `get-events` still uses recorded visibility.
+World news can report a technology gain or a named great person's birth without a witness. The receiver must have met the owner by the event turn, including every member of a team that gained a technology. The unwitnessed record carries only the owner ID and name of the technology or person. For example, a paper can report that Hypatia appeared in Persia without revealing her city or unit type.
+
+Uses and deaths require recorded visibility. Only the final removal can report a death, and a use that turn suppresses that death so an expenditure yields one story. Recorded same-turn conversions, including gifts, do not count as births or deaths. Named stories require the game to have supplied a personal name when it recorded the event. The strategist's `get-events` omits personal names.
 
 Optional `historyFromTurn` sets the baseline to the earlier of that turn and `previousCheckTurn`. Use `-1` to include turn 0. History contains readable baseline rows, visible final observations per subject and turn after the baseline, and permitted events through the cutoff, including the reporting period. Gaps mark when an established observation becomes unavailable. A capture or razing the receiver witnessed ends a city observation when its plot and date establish removal. The gap can be visible even when the identity of a party is hidden. Missing coordinates or tied timestamps can leave a stale snapshot and are reported as lifecycle limitations.
 

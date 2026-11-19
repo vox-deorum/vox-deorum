@@ -139,6 +139,13 @@ class GetEventsTool extends ToolBase {
     const trackedResources = player?.Resources ? await getTrackedResourceNames() : undefined;
     const formattedEvents = events.map((event) => {
       const processedPayload = redactEventResources(event.Payload, player, trackedResources);
+      // The recorder keeps personal names for the newspaper. The strategist gets the existing unit details.
+      const unit = processedPayload.Unit;
+      if (unit && typeof unit === 'object') {
+        const metadata = unit as Record<string, unknown>;
+        delete metadata.GreatPerson;
+        delete metadata.GreatPersonVisibility;
+      }
       const toolPayload = event.Type === "DealMade"
         ? hideDealMadeTradeItems(processedPayload)
         : processedPayload;

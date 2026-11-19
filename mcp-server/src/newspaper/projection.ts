@@ -30,6 +30,8 @@ export interface NewspaperProjectionContext extends NewspaperCityProjectionConte
   summaries: Selectable<PlayerSummary>[];
   /** Recorded events of the same turn that the receiver may read. */
   turnEvents?: readonly Selectable<GameEvent>[];
+  /** Same-turn uses and conversions, used only to classify unit life events. */
+  unitLifecycle?: readonly Selectable<GameEvent>[];
 }
 
 const ownPlayerFields = [
@@ -267,9 +269,17 @@ export const newspaperEventConfigs: Record<string, NewspaperEventConfig> = {
     fields: ['KillerPlayerID', 'KilledPlayerID', 'KilledUnitType', 'KillingUnitID'],
     subjects: { playerIdFields: ['KillerPlayerID', 'KilledPlayerID'] }
   },
-  UnitCreated: { fields: ['PlayerID', 'UnitID', 'UnitType', 'PlotX', 'PlotY'], subjects: playerSubject },
+  UnitCreated: {
+    fields: ['PlayerID', 'UnitID', 'UnitType', 'PlotX', 'PlotY', 'Person'], subjects: playerSubject,
+    worldNews: { nameFields: ['Person'] }
+  },
   GreatPersonExpended: {
-    fields: ['PlayerID', 'UnitID', 'GreatPersonType', 'CityX', 'CityY'], subjects: playerSubject
+    fields: ['PlayerID', 'UnitID', 'GreatPersonType', 'CityX', 'CityY', 'Person'], subjects: playerSubject
+  },
+  UnitPrekill: {
+    fields: ['OwnerID', 'UnitID', 'UnitType', 'PlotX', 'PlotY', 'AttackingPlayerID', 'DelayKill', 'Person'],
+    subjects: { playerIdFields: ['OwnerID', 'AttackingPlayerID'] },
+    optionalPlayers: ['AttackingPlayerID']
   },
   PlayerGoldenAge: { fields: ['PlayerID', 'TurnChange'], subjects: playerSubject },
   // The liberated city's recorded owner at event time is unknown, so its label is not kept.
@@ -329,7 +339,9 @@ export const newspaperEventConfigs: Record<string, NewspaperEventConfig> = {
 /** Recorded name fields and the evidence key each becomes. Unlisted values stay private. */
 const eventNameFields = {
   TechID: 'Tech', PolicyID: 'Policy', BranchType: 'Branch', OldBranchType: 'OldBranch', NewBranchType: 'NewBranch',
-  ReligionID: 'Religion', UnitType: 'Unit', KilledUnitType: 'Unit', GreatPersonType: 'Unit', BuildingType: 'Building'
+  ReligionID: 'Religion', UnitType: 'Unit', KilledUnitType: 'Unit', GreatPersonType: 'Unit', BuildingType: 'Building',
+  // A great person's own name is recorded in the unit metadata rather than as a payload field.
+  Person: 'Person'
 } as const;
 
 /** World-news types, read without receiver visibility and published only when every subject is known. */
@@ -415,6 +427,20 @@ function recordedName(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim() ? value : undefined;
 }
 
+/** Read one configured name field, deriving a great person's own name from recorded unit metadata. */
+function nameFieldText(payload: Record<string, unknown>, field: keyof typeof eventNameFields): string | undefined {
+  const unit = payload.Unit as Record<string, unknown> | undefined;
+  return recordedName(field === 'Person' ? unit?.GreatPerson : payload[field]);
+}
+
+/** Use the named event's visibility before other units with the same local ID could extend it. */
+function witnessedEvent(row: Selectable<GameEvent>, receiverPlayerID: number): boolean {
+  const unit = row.Payload.Unit as Record<string, unknown> | undefined;
+  const flags = unit?.GreatPersonVisibility;
+  const level = Array.isArray(flags) ? flags[receiverPlayerID] : visibility(row, receiverPlayerID);
+  return typeof level === 'number' && level >= 1;
+}
+
 /** Disambiguate historic false statuses using the hook's positive award or zero-turn ending. */
 function goldenAgeStarting(payload: Record<string, unknown>): boolean | undefined {
   const { Starting, TurnChange } = payload;
@@ -431,8 +457,28 @@ function trainedUnit(row: Selectable<GameEvent>, context: NewspaperProjectionCon
   const { PlayerID, UnitID } = row.Payload;
   if (!knowsPlayer(PlayerID, context) || typeof UnitID !== 'number' || !Number.isInteger(UnitID) || UnitID < 0) return undefined;
   const matches = context.turnEvents?.filter(event => event.Type === 'UnitCreated' && event.Turn === row.Turn &&
-    event.Payload.PlayerID === PlayerID && event.Payload.UnitID === UnitID && (visibility(event, context.receiverPlayerID) ?? 0) > 0);
+    event.Payload.PlayerID === PlayerID && event.Payload.UnitID === UnitID && witnessedEvent(event, context.receiverPlayerID));
   return matches?.length === 1 ? matches[0] : undefined;
+}
+
+/** Report a named great person's death once, and not when the same unit was expended in that turn. */
+function reportablePrekill(row: Selectable<GameEvent>, context: NewspaperProjectionContext): boolean {
+  const { OwnerID, UnitID, DelayKill } = row.Payload;
+  if (!nameFieldText(row.Payload, 'Person') || typeof OwnerID !== 'number' || typeof UnitID !== 'number' || UnitID < 0) return false;
+  // The death hook fires twice; only the row without a delayed kill describes the death.
+  if (DelayKill !== false && DelayKill !== 0) return false;
+  return !convertedUnit(row, context) && !context.unitLifecycle?.some(event => event.Type === 'GreatPersonExpended' && event.Turn === row.Turn &&
+    event.Payload.PlayerID === OwnerID && event.Payload.UnitID === UnitID);
+}
+
+/** A gift or upgrade can create a replacement and remove the old unit in the same turn. */
+function convertedUnit(row: Selectable<GameEvent>, context: NewspaperProjectionContext): boolean {
+  const { PlayerID, OwnerID, UnitID } = row.Payload;
+  if (typeof UnitID !== 'number' || UnitID < 0) return false;
+  const creation = row.Type === 'UnitCreated';
+  return context.unitLifecycle?.some(event => event.Type === 'UnitConverted' && event.Turn === row.Turn && (creation
+    ? event.Payload.NewOwnerID === PlayerID && event.Payload.ConvertingUnitID === UnitID
+    : event.Payload.OldOwnerID === OwnerID && event.Payload.OriginalUnitID === UnitID)) ?? false;
 }
 
 /** Add only positions backed by a unique dated city row and record what each join used. */
@@ -475,7 +521,7 @@ function projectWorldNewsEvent(row: Selectable<GameEvent>, config: NewspaperEven
     (barbarian && teamFields.some(field => values[field] === barbarian.TeamID)) ||
     !knowsSubjects(subjects, payload, context)) return undefined;
   for (const field of worldNews.nameFields) {
-    const text = recordedName(payload[field]);
+    const text = nameFieldText(payload, field);
     if (!text) return undefined;
     values[eventNameFields[field]] = text;
   }
@@ -486,8 +532,15 @@ function projectWorldNewsEvent(row: Selectable<GameEvent>, config: NewspaperEven
 export function projectNewspaperEvent(row: Selectable<GameEvent>, context: NewspaperProjectionContext): NewspaperEvent | undefined {
   const config = newspaperEventConfigs[row.Type];
   if (!config) return undefined;
-  if ((visibility(row, context.receiverPlayerID) ?? 0) < 1) return projectWorldNewsEvent(row, config, context);
-  const payload = row.Payload;
+  const replacement = row.Type === 'UnitCreated' && !!nameFieldText(row.Payload, 'Person') && convertedUnit(row, context);
+  if (!witnessedEvent(row, context.receiverPlayerID)) return replacement ? undefined : projectWorldNewsEvent(row, config, context);
+  if (row.Type === 'UnitPrekill' && !reportablePrekill(row, context)) return undefined;
+  let payload = row.Payload;
+  // A named death can be reported even when the attacker's identity is private.
+  if (row.Type === 'UnitPrekill' && payload.AttackingPlayerID !== -1 && !knowsPlayer(payload.AttackingPlayerID, context)) {
+    const { AttackingPlayerID: _id, AttackingPlayer: _identity, ...permitted } = payload;
+    payload = permitted;
+  }
   const receiverTeam = context.players.find(player => player.Key === context.receiverPlayerID)?.TeamID;
   const involved = config.reportWhenInvolved === true && matchesSubjects(config.subjects, payload, context.receiverPlayerID, receiverTeam);
   if (!involved && !knowsSubjects(config.subjects, payload, context, config.optionalPlayers)) return undefined;
@@ -495,8 +548,9 @@ export function projectNewspaperEvent(row: Selectable<GameEvent>, context: Newsp
 
   const values: Record<string, unknown> = {};
   for (const field of config.fields) {
+    if (field === 'Person' && replacement) continue;
     if (Object.hasOwn(eventNameFields, field)) {
-      const text = recordedName(payload[field]);
+      const text = nameFieldText(payload, field as keyof typeof eventNameFields);
       if (text) values[eventNameFields[field as keyof typeof eventNameFields]] = text;
     } else if (Object.hasOwn(payload, field)) values[field] = payload[field];
   }

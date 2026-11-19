@@ -359,6 +359,112 @@ describe('newspaper field projection', () => {
     expect(values).toEqual({ TeamID: 1, Tech: 'Printing Press' });
   });
 
+  it('reduces an unwitnessed named great person birth to owner and name', () => {
+    const base = { ID: 98, Turn: 10, CreatedAt: 3010, Type: 'UnitCreated', Player0: 0 };
+    /** Project an unwitnessed unit creation around one recorded great person name. */
+    const project = (GreatPerson: unknown) => projectNewspaperEvent({ ...base, Payload: {
+      PlayerID: 1, UnitID: 8, UnitType: 'Great Scientist', PlotX: 3, PlotY: 4,
+      Unit: { UnitType: 'Great Scientist', GreatPerson }, Secret: 'reader' }
+    } as any, context());
+    expect(project('Hypatia')?.values).toEqual({ PlayerID: 1, Person: 'Hypatia' });
+    for (const GreatPerson of [0, -1, null, '   ']) expect(project(GreatPerson)).toBeUndefined();
+    expect(projectNewspaperEvent({ ...base, Payload: {
+      PlayerID: 1, UnitID: 8, UnitType: 'Warrior', PlotX: 3, PlotY: 4 }
+    } as any, context())).toBeUndefined();
+    expect(projectNewspaperEvent({ ...base, Player0: 1, Payload: {
+      PlayerID: 1, UnitID: 8, UnitType: 'Warrior', PlotX: 3, PlotY: 4 }
+    } as any, context())?.values).not.toHaveProperty('Person');
+  });
+
+  it.each([
+    ['UnitCreated', { PlayerID: 1, UnitID: 8, UnitType: 'Great Scientist', PlotX: 3, PlotY: 4 },
+      { Person: 'Hypatia', Unit: 'Great Scientist', PlotX: 3, PlotY: 4 }],
+    ['GreatPersonExpended', { PlayerID: 1, UnitID: 8, GreatPersonType: 'Great Scientist', CityX: 0, CityY: 4 },
+      { Person: 'Hypatia', Unit: 'Great Scientist', CityX: 0, CityY: 4 }],
+    ['UnitPrekill', { OwnerID: 1, UnitID: 8, UnitType: 'Great Scientist', PlotX: 3, PlotY: 4,
+      AttackingPlayerID: -1, DelayKill: false },
+      { Person: 'Hypatia', Unit: 'Great Scientist', PlotX: 3, PlotY: 4, AttackingPlayerID: -1, DelayKill: false }]
+  ])('publishes a recorded great person name for %s without changing unit naming', (Type, Payload, expected) => {
+    const row = { ID: 99, Turn: 10, CreatedAt: 3010, Type, Player0: 1,
+      Payload: { ...Payload, Unit: { UnitType: 'Great Scientist', GreatPerson: 'Hypatia' } } } as any;
+    const values = projectNewspaperEvent(row, context())!.values;
+    expect(values).toMatchObject(expected);
+    expect(values).not.toHaveProperty('GreatPerson');
+    expect(values).not.toHaveProperty('GreatPersonType');
+  });
+
+  it('does not publish a nested great person name for other unit events', () => {
+    const row = { ID: 100, Turn: 10, CreatedAt: 3010, Type: 'UnitCityFounded', Player0: 1,
+      Payload: { PlayerID: 1, UnitID: 8, UnitType: 'Great General', PlotX: 3, PlotY: 4,
+        Unit: { UnitType: 'Great General', GreatPerson: 'Hypatia' } } } as any;
+    const values = projectNewspaperEvent(row, context())!.values;
+    expect(values).toMatchObject({ Unit: 'Great General' });
+    expect(values).not.toHaveProperty('Person');
+  });
+
+  it('reports only the final removal of a named great person', () => {
+    /** Build a witnessed death row around one recorded name and kill flag. */
+    const row = (Payload: Record<string, unknown>, Player0 = 1) => ({ ID: 101, Turn: 10, CreatedAt: 3010,
+      Type: 'UnitPrekill', Player0, Payload }) as any;
+    const death = { OwnerID: 1, UnitID: 8, UnitType: 'Great Scientist', PlotX: 3, PlotY: 4,
+      AttackingPlayerID: -1, Unit: { GreatPerson: 'Hypatia' } };
+    expect(projectNewspaperEvent(row({ ...death, DelayKill: false }), context())?.values)
+      .toMatchObject({ OwnerID: 1, Unit: 'Great Scientist', Person: 'Hypatia', DelayKill: false });
+    expect(projectNewspaperEvent(row({ ...death, DelayKill: 0 }), context())?.values).toHaveProperty('DelayKill', 0);
+    for (const DelayKill of [true, 1, undefined, 'false']) {
+      expect(projectNewspaperEvent(row({ ...death, DelayKill }), context())).toBeUndefined();
+    }
+    for (const Unit of [undefined, { GreatPerson: 0 }, { GreatPerson: '   ' }]) {
+      expect(projectNewspaperEvent(row({ ...death, Unit, DelayKill: false }), context())).toBeUndefined();
+    }
+    expect(projectNewspaperEvent(row({ ...death, DelayKill: false }, 0), context())).toBeUndefined();
+  });
+
+  it('suppresses a death when the same unit was expended in the same turn', () => {
+    const row = { ID: 102, Turn: 10, CreatedAt: 3010, Type: 'UnitPrekill', Player0: 1,
+      Payload: { OwnerID: 1, UnitID: 8, UnitType: 'Great Scientist', PlotX: 3, PlotY: 4,
+        AttackingPlayerID: -1, DelayKill: false, Unit: { GreatPerson: 'Hypatia' } } } as any;
+    /** Build an expenditure row and vary the fields that tie it to the death. */
+    const expended = (Turn = 10, PlayerID = 1, UnitID = 8, Player0 = 1) => ({ ID: 103, Turn, CreatedAt: 3010,
+      Type: 'GreatPersonExpended', Player0, Payload: { PlayerID, UnitID, GreatPersonType: 'Great Scientist' } }) as any;
+    for (const event of [expended(9), expended(10, 2), expended(10, 1, 9)]) {
+      expect(projectNewspaperEvent(row, { ...context(), unitLifecycle: [event] })).toBeDefined();
+    }
+    expect(projectNewspaperEvent(row, { ...context(), unitLifecycle: [expended()] })).toBeUndefined();
+    // The query owns visibility; a matching expenditure hides the death even when unwitnessed.
+    expect(projectNewspaperEvent(row, { ...context(), unitLifecycle: [expended(10, 1, 8, 0)] })).toBeUndefined();
+  });
+
+  it('reports a named death without an unmet attacker and hides it without the owner', () => {
+    const base = { ID: 104, Turn: 10, CreatedAt: 3010, Type: 'UnitPrekill', Player0: 1,
+      Payload: { OwnerID: 1, UnitID: 8, UnitType: 'Great Scientist', PlotX: 3, PlotY: 4,
+        AttackingPlayerID: 3, AttackingPlayer: { Name: 'Leader3', Civilization: 'Civ3' },
+        DelayKill: false, Unit: { GreatPerson: 'Hypatia' } } } as any;
+    const unmet = projectNewspaperEvent(base, context())!;
+    expect(unmet.values).toMatchObject({ OwnerID: 1, Person: 'Hypatia' });
+    expect(unmet.values).not.toHaveProperty('AttackingPlayerID');
+    expect(unmet.values).not.toHaveProperty('AttackingPlayer');
+    const met = context();
+    met.summaries[3].Player0 = 1;
+    expect(projectNewspaperEvent(base, met)!.values).toMatchObject({
+      AttackingPlayerID: 3, AttackingPlayer: { Name: 'Leader3', Civilization: 'Civ3' }
+    });
+    const unmetOwner = context();
+    unmetOwner.summaries[1].Player0 = 0;
+    expect(projectNewspaperEvent(base, unmetOwner)).toBeUndefined();
+  });
+
+  it('keeps unwitnessed great person uses and deaths private', () => {
+    const expended = { ID: 105, Turn: 10, CreatedAt: 3010, Type: 'GreatPersonExpended', Player0: 0,
+      Payload: { PlayerID: 1, UnitID: 8, GreatPersonType: 'Great Scientist', CityX: 0, CityY: 4,
+        Unit: { GreatPerson: 'Hypatia' } } } as any;
+    expect(projectNewspaperEvent(expended, context())).toBeUndefined();
+    const death = { ...expended, ID: 106, Type: 'UnitPrekill', Payload: {
+      OwnerID: 1, UnitID: 8, UnitType: 'Great Scientist', PlotX: 3, PlotY: 4,
+      AttackingPlayerID: -1, DelayKill: false, Unit: { GreatPerson: 'Hypatia' } } } as any;
+    expect(projectNewspaperEvent(death, context())).toBeUndefined();
+  });
+
   it('withholds unwitnessed world news without a valid owner, name or fully known team', () => {
     const base = { ID: 95, Turn: 10, CreatedAt: 3010, Type: 'TeamTechResearched', Player0: 0 };
     /** Project an unwitnessed research payload for a chosen contact context. */

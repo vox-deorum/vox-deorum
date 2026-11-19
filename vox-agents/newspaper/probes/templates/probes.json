@@ -42,5 +42,41 @@
         "weight": { "base": 1 }
       }
     ]
+  },
+  {
+    "id": "probe-foreign-birth-account",
+    "triggers": ["probe-foreign-birth"],
+    "tags": ["foreign"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "probe-foreign-birth-report",
+        "headline": "{{civilization}} welcomes {{person}}",
+        "body": ["Word has reached us of a new great person, {{person}}."],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "probe-obituary-account",
+    "triggers": ["probe-obituary"],
+    "tags": ["culture"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "probe-obituary-expended",
+        "when": "kind == 'expended'",
+        "headline": "The last act of {{person}}",
+        "body": ["The act marks the end of {{person}}'s service to {{civilization}}."],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "probe-obituary-died",
+        "when": "kind == 'died'",
+        "headline": "{{person}} has died",
+        "body": ["We remember {{person}} for their service to {{civilization}}."],
+        "weight": { "base": 1 }
+      }
+    ]
   }
 ]

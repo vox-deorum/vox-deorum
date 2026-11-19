@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import Database from 'better-sqlite3';
 import { queryNewspaperEvidence } from '../../../../../mcp-server/dist/newspaper/queries.js';
 import { ReplaySession } from '../../../../src/newspaper/replay/session.js';
@@ -53,6 +54,31 @@ describe('durable replay publication', () => {
     const { articles } = await session.getIssue(result.check!.issue!.issueId);
     const article = articles.find(item => item.templateIds.includes('fixture-research-article'));
     expect(article?.sources).toContainEqual(expect.objectContaining({ table: 'GameEvents', id: 104 }));
+  });
+
+  it('should print a foreign birth without its location and one obituary when a great person is used', async () => {
+    const sqlite = new Database(recording.filename);
+    try {
+      const insert = sqlite.prepare('INSERT INTO GameEvents (ID, Turn, CreatedAt, Player0, Type, Payload) VALUES (?, ?, ?, ?, ?, ?)');
+      const unit = { GreatPerson: 'Hypatia' };
+      insert.run(104, 6, 2007, 0, 'UnitCreated', JSON.stringify({ PlayerID: 1, UnitID: 19, Unit: unit, PlotX: 4, PlotY: 5 }));
+      insert.run(105, 6, 2008, 1, 'GreatPersonExpended', JSON.stringify({ PlayerID: 1, UnitID: 19, Unit: unit, CityX: 4, CityY: 5 }));
+      insert.run(106, 6, 2009, 1, 'UnitPrekill', JSON.stringify({ OwnerID: 1, UnitID: 19, Unit: unit, DelayKill: true }));
+      insert.run(107, 6, 2010, 1, 'UnitPrekill', JSON.stringify({ OwnerID: 1, UnitID: 19, Unit: unit, DelayKill: false }));
+    } finally { sqlite.close(); }
+    const probes = fileURLToPath(new URL('../../../../newspaper/probes/', import.meta.url));
+    await session.configure({ ...settings(), editorialConfigDirectory: probes });
+    const result = await session.advance();
+    expect(result.check?.status).toBe('published');
+    expect(result.evidence.events.find(event => event.source.id === 104)?.values).toEqual({ PlayerID: 1, Person: 'Hypatia' });
+    expect(result.evidence.events.filter(event => event.type === 'UnitPrekill')).toEqual([]);
+    const { articles } = await session.getIssue(result.check!.issue!.issueId);
+    const births = articles.filter(article => article.templateIds.some(id => id.startsWith('probe-foreign-birth')));
+    const obituaries = articles.filter(article => article.templateIds.some(id => id.startsWith('probe-obituary')));
+    expect(births).toHaveLength(1);
+    expect(births[0].sources).toContainEqual(expect.objectContaining({ table: 'GameEvents', id: 104 }));
+    expect(obituaries).toHaveLength(1);
+    expect(obituaries[0].sources).toContainEqual(expect.objectContaining({ table: 'GameEvents', id: 105 }));
   });
 
   it('should replace votes, reject stale scopes, reschedule frequency and resume immutable history', async () => {

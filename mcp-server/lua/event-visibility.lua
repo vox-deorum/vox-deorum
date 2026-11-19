@@ -317,10 +317,23 @@ local function addPlotVisibility(plotX, plotY, value, key)
   end
 end
 
--- Helper function to add unit-based visibility
-local function addUnit(unitID, value, key)
+-- Helper function to add unit-based visibility and record names on great person life events
+local function addUnit(unitID, value, key, nameOwnerID)
   -- Check if the unit exists
   if unitID < 0 then return end
+
+  -- Unit IDs are local to a player. Get the name and the event's visibility before
+  -- the generic unit lookup can add visibility from a different owner's unit.
+  local greatPerson, greatPersonVisibility
+  local owner = nameOwnerID ~= nil and Players[nameOwnerID]
+  local namedUnit = owner and owner:GetUnitByID(unitID)
+  if namedUnit and namedUnit:IsGreatPerson() and namedUnit:HasName() then
+    greatPerson = namedUnit:GetNameNoDesc()
+    greatPersonVisibility = {}
+    for i, level in ipairs(visibilityFlags) do
+      greatPersonVisibility[i] = level
+    end
+  end
 
   -- Find the unit's owner by checking all players
   local unit = nil
@@ -349,6 +362,9 @@ local function addUnit(unitID, value, key)
       metadata["Health"] = math.floor(unit:GetCurrHitPoints() / unit:GetMaxHitPoints() * 100) .. "%"
     end
     metadata["Level"] = unit:GetLevel()
+
+    metadata["GreatPerson"] = greatPerson
+    metadata["GreatPersonVisibility"] = greatPersonVisibility
     addPayload(key, metadata)
   end
 end
@@ -419,11 +435,19 @@ Game.RegisterFunction("${Name}", function(${Arguments})
     end
   end
 
+  -- Names for the paper belong to the unit that was born, used or killed.
+  local nameOwnerID = nil
+  if eventType == "UnitCreated" or eventType == "GreatPersonExpended" then
+    nameOwnerID = payload.PlayerID
+  elseif eventType == "UnitPrekill" then
+    nameOwnerID = payload.OwnerID
+  end
+
   -- A second round for units/cities
   for key, value in pairs(payload) do
     -- Check for unit-related fields in payload
     if string.match(key, "UnitID$") then
-      addUnit(value, 2, key)
+      addUnit(value, 2, key, key == "UnitID" and nameOwnerID or nil)
     end
     
     -- Check for city-related fields in payload

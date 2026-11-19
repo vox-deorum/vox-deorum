@@ -1,4 +1,4 @@
-import { sql, type Kysely, type Selectable } from 'kysely';
+import { sql, type Kysely, type Selectable, type SqlBool } from 'kysely';
 import type { KnowledgeDatabase } from '../knowledge/schema/base.js';
 import type { CityInformation, GameEvent } from '../knowledge/schema/timed.js';
 import { isVisible } from '../knowledge/expressions.js';
@@ -24,13 +24,14 @@ export async function queryNewspaperEvidence(
   const eventFromTurn = (historyFromTurn ?? previousCheckTurn) + 1;
   const fromTurn = Math.min(eventFromTurn, comparisonRange?.fromTurn ?? cutoffTurn, cutoffTurn);
   const visibilityField = `Player${receiverPlayerID}` as ReceiverField;
-  const [players, baseSummaries, summaryHistory, cities, events, worldEvents, earlierCities, baselineCities, historyCities, cityLifecycle] = await Promise.all([
+  const [players, baseSummaries, summaryHistory, cities, events, uncheckedEvents, earlierCities, baselineCities, historyCities, cityLifecycle] = await Promise.all([
     db.selectFrom('PlayerInformations').selectAll().execute(),
     readSnapshotsAtCutoff(db, 'PlayerSummaries', fromTurn - 1),
     readSnapshotRange(db, 'PlayerSummaries', fromTurn, cutoffTurn),
     readSnapshotsAtCutoff(db, 'CityInformations', cutoffTurn),
     readEvents(db, { PlayerID: receiverPlayerID, FromTurn: eventFromTurn, ToTurn: cutoffTurn }),
-    db.selectFrom('GameEvents').selectAll().where('Type', 'in', newspaperWorldNewsTypes)
+    db.selectFrom('GameEvents').selectAll().where('Type', 'in', [...newspaperWorldNewsTypes, 'GreatPersonExpended', 'UnitConverted'])
+      .where(eb => eb.or([eb('Type', '!=', 'UnitCreated'), sql<SqlBool>`json_type(Payload, '$.Unit.GreatPerson') = 'text'`]))
       .where('Turn', '>=', eventFromTurn).where('Turn', '<=', cutoffTurn).execute(),
     comparisonRange ? readSnapshotRange(db, 'CityInformations', comparisonRange.fromTurn, comparisonRange.toTurn) : [],
     historyFromTurn === undefined ? [] : readSnapshotsAtCutoff(db, 'CityInformations', historyFromTurn),
@@ -61,7 +62,16 @@ export async function queryNewspaperEvidence(
   const projectedCities = [currentCities, comparisonCities, activeBaselineCities, visibleHistoryCities];
 
   const seenEventIDs = new Set(events.map(row => row.ID));
-  const unwitnessedEvents = worldEvents.filter(row => !seenEventIDs.has(row.ID));
+  const unwitnessedEvents: Selectable<GameEvent>[] = [];
+  const unitLifecycle = new Map<number, Selectable<GameEvent>[]>();
+  for (const row of uncheckedEvents) {
+    // These rows classify births and deaths, including when only the creation or removal was witnessed.
+    if (row.Type === 'GreatPersonExpended' || row.Type === 'UnitConverted') {
+      const changes = unitLifecycle.get(row.Turn);
+      if (changes) changes.push(row);
+      else unitLifecycle.set(row.Turn, [row]);
+    } else if (!seenEventIDs.has(row.ID)) unwitnessedEvents.push(row);
+  }
   const boundedEvents = [...events, ...unwitnessedEvents].sort((a, b) => a.ID - b.ID);
   const eventTurns = new Map<number, Selectable<GameEvent>[]>();
   let firstCityJoin = cutoffTurn + 1;
@@ -102,7 +112,9 @@ export async function queryNewspaperEvidence(
   const cityContext = { receiverPlayerID, players, cityHistory, cityLifecycle, knowsLifecyclePlayer };
   /** Share the dated context for snapshots and events recorded on the same turn. */
   function setContext(turn: number, summaries: NewspaperProjectionContext['summaries']): void {
-    contexts.set(turn, { ...cityContext, summaries, turnEvents: eventTurns.get(turn) });
+    contexts.set(turn, {
+      ...cityContext, summaries, turnEvents: eventTurns.get(turn), unitLifecycle: unitLifecycle.get(turn)
+    });
   }
   let position = 0;
   for (const turn of orderedTurns) {

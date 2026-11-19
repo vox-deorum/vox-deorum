@@ -72,6 +72,16 @@ function publishedTemplates(state: PublicationState) {
   return state.issues.flatMap((issue) => issue.items.flatMap((item) => item.templateIds));
 }
 
+/** Find the published record for one template. */
+function publishedItem(state: PublicationState, templateId: string) {
+  return state.issues.flatMap((issue) => issue.items).find((item) => item.templateIds.includes(templateId));
+}
+
+/** Read one headline as plain text. */
+function headlineText(headline: PublicationState['issues'][number]['items'][number]['headline']) {
+  return headline.map((node) => 'text' in node ? node.text : '').join('');
+}
+
 describe('probe overlay', () => {
   beforeAll(async () => {
     defaultConfig = await loadEditorialConfig();
@@ -120,6 +130,54 @@ describe('probe overlay', () => {
       const events = [probeEvent('PlayerAdoptPolicyBranch', { PlayerID: 1, Branch: branch })];
       const result = await check(probeEvidence({ events }));
       expect(publishedTemplates(result.state).includes('probe-ideology-adopted-account')).toBe(published);
+    });
+  });
+
+  describe('great people probes', () => {
+    it('should report a named birth abroad from only a player and a name', async () => {
+      const birth = probeEvent('UnitCreated', { PlayerID: 1, Person: 'Ptolemy' });
+      const result = await check(probeEvidence({ events: [birth] }));
+      const item = publishedItem(result.state, 'probe-foreign-birth-account');
+
+      expect(item).toBeDefined();
+      expect(headlineText(item!.headline)).toContain('Ptolemy');
+      expect(item!.sources).toEqual(expect.arrayContaining([birth.source, snapshot(1, 5, []).source]));
+    });
+
+    it.each([
+      { label: 'an unnamed creation abroad', values: { PlayerID: 1, Unit: 'Warrior' } },
+      { label: 'a named birth at home', values: { PlayerID: 0, Person: 'Ptolemy' } },
+    ])('should not report $label as a foreign birth', async ({ values }) => {
+      const result = await check(probeEvidence({ events: [probeEvent('UnitCreated', values)] }));
+      expect(publishedItem(result.state, 'probe-foreign-birth-account')).toBeUndefined();
+    });
+
+    it.each([
+      { kind: 'expenditure abroad', type: 'GreatPersonExpended', owner: 1,
+        values: { PlayerID: 1, Person: 'Hypatia' }, variant: 'probe-obituary-expended' },
+      { kind: 'expenditure at home', type: 'GreatPersonExpended', owner: 0,
+        values: { PlayerID: 0, Person: 'Hypatia' }, variant: 'probe-obituary-expended' },
+      { kind: 'death abroad', type: 'UnitPrekill', owner: 1,
+        values: { OwnerID: 1, AttackingPlayerID: -1, Person: 'Hypatia' }, variant: 'probe-obituary-died' },
+      { kind: 'death at home', type: 'UnitPrekill', owner: 0,
+        values: { OwnerID: 0, AttackingPlayerID: -1, Person: 'Hypatia' }, variant: 'probe-obituary-died' },
+    ])('should report a named $kind as one obituary without coordinates', async ({ type, owner, values, variant }) => {
+      const obituary = probeEvent(type, values);
+      const result = await check(probeEvidence({ events: [obituary] }));
+      const item = publishedItem(result.state, 'probe-obituary-account');
+
+      expect(item).toBeDefined();
+      expect(headlineText(item!.headline)).toContain('Hypatia');
+      expect(result.decision.selectedVariants[item!.id]).toBe(variant);
+      expect(item!.sources).toEqual(expect.arrayContaining([obituary.source, snapshot(owner, 5, []).source]));
+    });
+
+    it.each([
+      { type: 'GreatPersonExpended', values: { PlayerID: 1 } },
+      { type: 'UnitPrekill', values: { OwnerID: 1, AttackingPlayerID: -1 } },
+    ])('should not report an unnamed $type', async ({ type, values }) => {
+      const result = await check(probeEvidence({ events: [probeEvent(type, values)] }));
+      expect(publishedItem(result.state, 'probe-obituary-account')).toBeUndefined();
     });
   });
 

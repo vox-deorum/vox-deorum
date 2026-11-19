@@ -37,6 +37,23 @@ describe('get-events filtered original results', () => {
     expect((await store.getDatabase().selectFrom('GameEvents').selectAll().executeTakeFirstOrThrow()).Payload).toEqual(payload);
   });
 
+  it('keeps personal names in the recording and preserves the unit details in both event reports', async () => {
+    store = await setupStore(9);
+    vi.spyOn(gameDatabase, 'localizeObject').mockImplementation(async value => value);
+    const payload = { PlayerID: 0, UnitID: 8, GreatPersonType: 5, CityX: 2, CityY: 3 };
+    await store.handleGameEvent(9_000_001, 'GreatPersonExpended', payload, undefined, {
+      Unit: { GreatPerson: 'Hypatia', GreatPersonVisibility: [2, 0], Level: 2 },
+    });
+    client = await connectToolClient(createGetEventsTool());
+
+    const raw = await client.call({ Original: true });
+    const grouped = await client.call({});
+    expect(raw.events[0].Unit).toEqual({ Level: 2 });
+    expect(grouped['9'][0].Unit).toEqual({ Level: 2, ID: 8 });
+    const row = await store.getDatabase().selectFrom('GameEvents').select('Payload').executeTakeFirstOrThrow();
+    expect(row.Payload.Unit).toMatchObject({ GreatPerson: 'Hypatia' });
+  });
+
   it('hides only unrevealed strategic and luxury resources, keeping bonus resources readable', async () => {
     store = await setupStore(9);
     const rules = new Database(':memory:');

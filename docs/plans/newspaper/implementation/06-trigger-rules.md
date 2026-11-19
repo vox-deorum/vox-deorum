@@ -1,12 +1,12 @@
 # Plan 6: trigger rules
 
-**Status: open.** The rule engine, 14 stock rules and 15 authored templates are in place, and the owner accepted their mechanics. Stage 2 added [recorded names, ideology, team links and world news](../../../developers/vox-agents/newspaper/triggers/facts.md). Stage 3 is next.
+**Status: open.** The rule engine, 14 stock rules and 15 authored templates are in place, and the owner accepted their mechanics. The [event facts and reporting rules](../../../developers/vox-agents/newspaper/triggers/facts.md#event) include named great people and world news. Stage 4 is next.
 
 [Plan 4](04-triggers-templates-and-styles.md) owns trigger tuning, template writing and language styles, and decides which of the new capabilities become stock stories. [Plan 7](07-llm-editors.md) uses that baseline for LLM editing and comparison.
 
 ## Goal and success criteria
 
-The remaining stages let a catalogue author write an opinion piece on a city's boredom, report the birth of a named great person abroad or the theft of a technology, and give a paper a masthead that follows the game.
+The remaining stages let a catalogue author write an opinion piece on a city's boredom, report the theft of a technology, and give a paper a masthead that follows the game.
 
 Each remaining stage adds a group of capabilities and verifies it with [catalogue probes](../../../developers/vox-agents/newspaper/triggers/overview.md#probe-catalogue-behavior).
 
@@ -16,7 +16,6 @@ One rule holds throughout: the strategist's tools (`get-cities`, `get-players`, 
 
 | Wanted | Gap |
 | --- | --- |
-| Great people by their own name, at birth, use and death | Only the unit type is recorded ("Great Scientist"). The paper cannot report an unwitnessed birth or any death (`UnitPrekill`). |
 | Espionage stories | Both espionage hooks are stored as `EspionageResult` (two payload shapes), and election rigging as `ElectionResultSuccess` and `ElectionResultFailure`. None is projected. The stolen technology never reaches the recorder, because the DLL adds it to the notification after the hook has fired. |
 | Unhappiness by cause | Only net `HappinessDelta` is captured. The DLL exposes each cause to Lua. |
 | Masthead that follows the game; shared vocabulary | `design.title` is copied raw. No motto. No way to define a word once and print it in many templates. |
@@ -25,17 +24,7 @@ One rule holds throughout: the strategist's tools (`get-cities`, `get-players`, 
 
 ## Stages
 
-Extend the existing [probe overlay and tests](../../../developers/vox-agents/newspaper/triggers/overview.md#probe-catalogue-behavior) with each stage. Stages 3 to 5 change the MCP server projection and the fact builders. Stage 4 also changes the DLL. Stages 6 and 7 change only the editor. Each stage rewrites the affected sections of the documentation pages named in its last bullet.
-
-### Stage 3: great people by name
-
-- `mcp-server/lua/event-visibility.lua`, `addUnit`: when `unit:IsGreatPerson()` and `unit:HasName()`, add `GreatPerson = unit:GetNameNoDesc()` to the unit metadata. The unit still exists when `UnitCreated`, `GreatPersonExpended` and `UnitPrekill` fire.
-- `mcp-server/src/tools/knowledge/get-events.ts`: remove the `GreatPerson` key from unit metadata in both output paths, including `Original`, so the strategist's output is unchanged.
-- `projection.ts`: publish the name as `Person`. Add `UnitPrekill` to `newspaperEventConfigs` (`OwnerID`, `UnitID`, `UnitType`, `PlotX`, `PlotY`, `AttackingPlayerID`, `DelayKill`), projected only for a named great person, only for the row with `DelayKill` false (the hook fires twice per death), and skipped when the same unit has a `GreatPersonExpended` event in the same turn (using an expended great person also kills the unit).
-- World news: add `UnitCreated` with a `Person` to the existing world news list. Births abroad are news; uses and deaths abroad are reported only when the receiver witnessed them.
-- `facts/event.ts`: `event.person`, and `event.kind` with the values `born`, `expended`, `died` for these three events.
-- Probes: `probe-foreign-birth` (a named birth by a met civilization, unseen city), `probe-obituary` (a named great person is expended or dies; one expenditure yields one story).
-- Docs: `triggers/facts.md`, `mcp-server/docs/knowledge.md`.
+Extend the existing [probe overlay and tests](../../../developers/vox-agents/newspaper/triggers/overview.md#probe-catalogue-behavior) with each stage. Stages 4 and 5 change the MCP server projection and the fact builders. Stage 4 also changes the DLL. Stages 6 and 7 change only the editor. Each stage rewrites the affected sections of the documentation pages named in its last bullet.
 
 ### Stage 4: espionage
 
@@ -104,7 +93,7 @@ Espionage is private to its two parties. The Lua visibility also marks players w
 
 After each stage, run from the repository root, in this order: `npm run build -w mcp-server`, `npm run test:mock -w mcp-server`, `npm run test:mock -w vox-agents -- tests/mock/newspaper`, `npm run type-check -w vox-agents` and `npm run build:newspaper -w vox-agents`. The MCP server is built first because the newspaper replay loads its compiled output.
 
-Test new projection fields and gates under `mcp-server/tests/newspaper/` and new facts under `vox-agents/tests/mock/newspaper/editorial/facts/`. Examples: a third player who sees the city gets no espionage event; an unwitnessed foreign birth carries no coordinates; `get-events` returns a great person event without the `GreatPerson` key.
+Test new projection fields and gates under `mcp-server/tests/newspaper/` and new facts under `vox-agents/tests/mock/newspaper/editorial/facts/`. For example, a third player who sees the city gets no espionage event.
 
 After stage 5, build the DLL, play a short game and replay it with `--config vox-agents/newspaper/probes`. A named great person, a stolen technology and `UnhappinessSources` appear in the newspaper evidence, and `get-events` and `get-cities` return the same fields as before.
 

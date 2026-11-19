@@ -115,12 +115,14 @@ Visibility is set when data is stored. Query helpers in expressions.ts:
 2. KnowledgeManager receives event, forwards to KnowledgeStore
 3. KnowledgeStore validates against Zod schema (eventSchemas map)
 4. Event name is remapped if applicable
-5. Visibility flags are applied
+5. Recorded visibility and additional context from `event-visibility.lua` are attached
 6. Event stored in GameEvents table
 7. Special event handling:
    - **PlayerDoneTurn**: Triggers Lua getters for player summaries, opinions, strategies, personas, city info
    - **Victory events**: Saves the replay in the game's own Replays folder, then archives game data
    - **PlayerDoTurn**: Updates active player
+
+For unit creation, great person expenditure and unit removal, the recorder keeps the great person's name and the visibility from the event's plot and participants. Unit IDs belong to individual players, so an unrelated unit with the same ID cannot establish visibility for a newspaper story. The newspaper can report a birth by a met player without disclosing the location. It requires recorded visibility for use and death, and checks same-turn expenditures and conversions to distinguish deaths from cleanup. Both formats of `get-events` omit the personal name and its visibility metadata.
 
 ## Getter Pattern (knowledge/getters/)
 

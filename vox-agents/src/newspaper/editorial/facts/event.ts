@@ -10,6 +10,12 @@ const actingPlayerFields: Readonly<Record<string, string>> = {
   CityCaptureComplete: 'NewOwnerID', CityFlipped: 'NewOwnerID', PlayerLiberated: 'LiberatingPlayerID',
   CombatResult: 'AttackingPlayerID', UnitKilledInCombat: 'KillerPlayerID',
   PlayerTradeRouteCompleted: 'OriginPlayerID', PlayerPlunderedTradeRoute: 'PlunderingPlayerID',
+  UnitPrekill: 'OwnerID',
+};
+
+/** Named great person events and the development their recorded name reports. */
+const namedPersonKinds: Readonly<Record<string, string>> = {
+  UnitCreated: 'born', GreatPersonExpended: 'expended', UnitPrekill: 'died',
 };
 
 type SubjectSources = Map<string, readonly NewspaperSourceReference[]>;
@@ -32,6 +38,7 @@ export function recordedBoolean(value: unknown): boolean | undefined {
 
 /** Keep structured permitted deal terms available under the same naming convention. */
 function payloadValue(field: string, value: unknown): unknown {
+  if (field === 'Person') return typeof value === 'string' && value.trim() ? value : undefined;
   if (/^Is[A-Z]/.test(field) || ['Starting', 'HasTech', 'WithGold', 'WithFaith'].includes(field)) {
     return value === null ? null : recordedBoolean(value);
   }
@@ -134,6 +141,8 @@ export function buildEventFacts(event: NewspaperEvent, context: FactBuildContext
     const value = recordedFact(payloadValue(key, raw), subjectSources.length ? [...sources, ...subjectSources] : sources);
     if (value) fields[camelCase(key)] = value;
   }
+  const namedKind = namedPersonKinds[type];
+  if (fields.person && namedKind) fields.kind = fact(namedKind, sources);
   const actingField = actingPlayerFields[type] ?? (playerFields.length === 1 ? playerFields[0] : undefined);
   for (const field of playerFields) {
     const player = eventPlayerFact(values[field], event, context, sources);
