@@ -106,13 +106,12 @@ function mergeChanges(events: Change[], snapshots: SnapshotChange[], field: 'bui
     let observed = candidates.filter(entry => entry.value === snapshot.value).at(-1);
     const lastReport = snapshot.lastReligionReport;
     if (lastReport) {
-      const lastReligion = religion(lastReport.values.ReligionID);
+      const lastReligion = religion(lastReport.values.Religion);
       if (religionChanged(lastReligion, snapshot.value) && compareFactDates(lastReport, snapshot.row) < 0) {
         // A later contradictory report establishes a real return to the snapshot's majority.
         observed = undefined;
       } else if (!observed && lastReligion !== undefined && !religionChanged(lastReligion, snapshot.value)) {
-        // A localized snapshot cannot identify a numeric religion, but may confirm an interval
-        // that already contains a dated change. Keep the dated religion as recorded.
+        // A localized snapshot may confirm an interval that already contains a dated change.
         observed = candidates.filter(entry => entry.value === lastReligion).at(-1);
       }
     }
@@ -140,8 +139,8 @@ function cityChanges(events: NewspaperEvent[], rows: NewspaperSnapshot[]) {
       const lastReligionEvent = religionReports.at(-1);
       const previousEvent = lastReligionEvent?.values.OwnerID === event.values.OwnerID ? lastReligionEvent : undefined;
       const useEvent = previousEvent && (!previous || compareFactDates(previousEvent, previous) >= 0);
-      const before = useEvent ? religion(previousEvent.values.ReligionID) : religion(previous?.values.MajorityReligion);
-      const after = religion(event.values.ReligionID);
+      const before = useEvent ? religion(previousEvent.values.Religion) : religion(previous?.values.MajorityReligion);
+      const after = religion(event.values.Religion);
       const comparison = useEvent ? previousEvent : previous;
       // This hook also fires when only follower counts change. Its first report establishes a baseline.
       if (comparison && religionChanged(before, after)) conversions.push({ row: event, value: after,
@@ -163,8 +162,8 @@ function cityChanges(events: NewspaperEvent[], rows: NewspaperSnapshot[]) {
     const newReligion = religion(now.values.MajorityReligion);
     if (newReligion === undefined) continue;
     const snapshot = { row: now, before, value: newReligion, sources };
-    const lastReport = religionReports.filter(row => insideInterval(row, snapshot) && religion(row.values.ReligionID) !== undefined).at(-1);
-    const returned = lastReport && compareFactDates(lastReport, now) < 0 && religionChanged(religion(lastReport.values.ReligionID), newReligion);
+    const lastReport = religionReports.filter(row => insideInterval(row, snapshot) && religion(row.values.Religion) !== undefined).at(-1);
+    const returned = lastReport && compareFactDates(lastReport, now) < 0 && religionChanged(religion(lastReport.values.Religion), newReligion);
     if (religionChanged(oldReligion, newReligion) || returned) majorities.push({ ...snapshot, lastReligionReport: lastReport,
       sources: returned ? [...rowSources(lastReport), ...sources] : sources });
   }

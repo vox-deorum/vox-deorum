@@ -1,10 +1,11 @@
 /** Trusted QuickJS program for materializing editor facts inside a single check. */
-import { hexDistance, plot } from './distance.js';
+import { hexDistance, nearestPlotPair, plot } from './distance.js';
 
-// The two pure functions are also used by the host builders. They have no closure dependencies.
+// Share the geometry code with the host. The nearest-pair helper calls hexDistance below.
 export const factGuestSource = `
 const hexDistance = (${hexDistance.toString()});
 const plot = (${plot.toString()});
+const nearestPlotPair = (${nearestPlotPair.toString()});
 
 // Keep data, source rows and wrapping in this closure. Rules receive only public views.
 function factRuntime(model, wrap, constants, shortcuts) {
@@ -398,6 +399,23 @@ function factRuntime(model, wrap, constants, shortcuts) {
       return source == null ? undefined : plot(source.x, source.y);
     }
 
+    // A player contributes every visible city at the cutoff, with the rows that prove ownership.
+    function distanceOperand(value) {
+      const info = subjectInfo.get(value);
+      if (info?.kind === 'player') {
+        const cities = model.players[info.id]?.current?.cities?.value ?? [];
+        const positions = [];
+        for (const city of cities) {
+          const { x, y } = model.cities[city.id]?.current ?? {};
+          const position = plot(x?.value, y?.value);
+          if (position) positions.push({ ...position, sources: x.sources });
+        }
+        return positions;
+      }
+      const position = point(value);
+      return position ? [position] : [];
+    }
+
     const globals = Object.create(null);
     Object.defineProperties(globals, {
       self: { get: Object.freeze(() => resolve({ kind: 'player', id: model.receiverId }, 'self', model.turn)) },
@@ -408,8 +426,12 @@ function factRuntime(model, wrap, constants, shortcuts) {
       turn: { value: model.turn },
       game: { value: record(model.game, 'game', model.turn) },
       distance: { value: Object.freeze((a, b) => {
-        const first = point(a), second = point(b);
-        return first && second ? hexDistance(first, second, wrap) : missing('distance');
+        const first = distanceOperand(a), second = distanceOperand(b);
+        const nearest = nearestPlotPair(first, second, wrap);
+        if (!nearest) return missing('distance');
+        cite(nearest.from.sources);
+        cite(nearest.to.sources);
+        return nearest.distance;
       }) },
       held: { value: Object.freeze((subject, test, span) => held(subject, test, span)) },
       crossed: { value: Object.freeze((now, before, boundary) => before < boundary && now >= boundary) },

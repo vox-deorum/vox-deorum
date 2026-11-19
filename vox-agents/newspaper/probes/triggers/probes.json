@@ -10,5 +10,26 @@
       "treasury": "player.gold"
     },
     "importance": 65
+  },
+  {
+    "id": "probe-huns-riding",
+    "subject": "event",
+    "event": "TeamTechResearched",
+    "when": [
+      "event.tech == 'Horseback Riding'",
+      "!event.knows('changeAmount') || event.changeAmount > 0",
+      "event.knows('player') && !['The Huns', 'Huns'].includes(event.player.name)",
+      "players.some(p => ['The Huns', 'Huns'].includes(p.name) && distance(event.player, p) <= neighboring)"
+    ],
+    "values": { "civilization": "event.player.name", "technology": "event.tech" },
+    "importance": 65
+  },
+  {
+    "id": "probe-ideology-adopted",
+    "subject": "event",
+    "event": "PlayerAdoptPolicyBranch",
+    "when": ["ideologies.includes(event.branch)"],
+    "values": { "civilization": "event.player.name", "ideology": "event.branch" },
+    "importance": 65
   }
 ]

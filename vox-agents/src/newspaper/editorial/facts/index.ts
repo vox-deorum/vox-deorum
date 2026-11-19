@@ -93,7 +93,7 @@ function gameFacts(metadata: FactMetadata, speedMultiplier: number | undefined):
 export function buildNewspaperFacts(
   evidence: NewspaperEvidence,
   metadata: FactMetadata = {},
-  options: { longTurns?: number } = {}
+  options: { longTurns?: number; ideologies?: readonly string[] } = {}
 ): NewspaperFactModel {
   const { cutoffTurn, previousCheckTurn, receiverPlayerID } = evidence.request;
   const speed = resolveGameSpeedMultiplier({ GameSpeed: metadata.gameSpeed, GameSpeedMultiplier: metadata.speedMultiplier });
@@ -129,7 +129,7 @@ export function buildNewspaperFacts(
       return distances ??= distanceContext(cityRows ??= rowsAt(cities, turn), receiverPlayerID, wrap);
     }
     const context: FactBuildContext = {
-      evidence, metadata, receiverId: receiverPlayerID, turn,
+      evidence, metadata, receiverId: receiverPlayerID, turn, ideologies: options.ideologies,
       get players() { return playerRows ??= rowsAt(players, turn); },
       get cities() { return cityRows ??= rowsAt(cities, turn); },
       get events() { return eventRows ??= events.filter(event => event.source.turn <= turn); },

@@ -115,6 +115,8 @@ export interface FactBuildContext {
   readonly metadata: FactMetadata;
   readonly receiverId: number;
   readonly turn: number;
+  /** Effective ideology branch names from the catalogue constants. */
+  readonly ideologies?: readonly string[];
   readonly players: readonly NewspaperSnapshot[];
   readonly cities: readonly NewspaperSnapshot[];
   readonly events: readonly NewspaperEvent[];

@@ -29,7 +29,8 @@
       "Great Admiral", "Great Artist", "Great Diplomat", "Great Engineer", "Great General",
       "Great Merchant", "Great Musician", "Great Prophet", "Great Scientist", "Great Writer"
     ],
-    "defenses": ["Walls", "Castle", "Arsenal", "Military Base", "Walls of Babylon", "Qila", "Bastion Fort"]
+    "defenses": ["Walls", "Castle", "Arsenal", "Military Base", "Walls of Babylon", "Qila", "Bastion Fort"],
+    "ideologies": ["Order", "Freedom", "Autocracy"]
   },
   "shortcuts": {
     "city": {

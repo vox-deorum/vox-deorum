@@ -213,7 +213,7 @@ Constants in an overlay merge group by group and name by name. A type list is on
 
 The developer overlay in `vox-agents/newspaper/probes/` mirrors the catalogue paths for constants, triggers, templates, designs and pages. Its empty `pages.json` leaves the stock pages in place. To try it in a fresh CLI replay, pass `--config vox-agents/newspaper/probes` from the repository root. The stock catalogue and installer omit these probes.
 
-`vox-agents/tests/mock/newspaper/editorial/probes.test.ts` loads the overlay and runs the editor on synthetic evidence. Story probes check for the template ID in the published records when the rule matches and check that it is absent otherwise. Design probes offer only the design under test and check `issue.publication` when it qualifies. For example, the treasury story appears at 100 gold and stays out at 99. The People's Daily design qualifies for the synthetic receiver named Probe Republic.
+`vox-agents/tests/mock/newspaper/editorial/probes.test.ts` loads the overlay and runs the editor on synthetic evidence. The treasury story appears at 100 gold and stays out at 99. The Huns story runs when a neighboring civilization gains Horseback Riding, and the ideology story runs when a recorded policy branch matches the `ideologies` list. The People's Daily design qualifies when the receiver follows Order. The tests check which story templates made it into print and which design the issue used.
 
 ## Verify changes
 

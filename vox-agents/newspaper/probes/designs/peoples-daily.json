@@ -3,7 +3,7 @@
     "id": "probe-communist-press",
     "version": "1",
     "title": "The People's Daily",
-    "when": "self.name === 'Probe Republic'",
+    "when": "self.ideology == 'Order'",
     "weight": {
       "base": 20
     },

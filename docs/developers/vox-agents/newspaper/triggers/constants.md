@@ -10,12 +10,12 @@ The built-in `vox-agents/newspaper/constants.json` supplies the names used by th
 | `spans` | Spans in Standard turns | A plain name, scaled to recorded turns | `recent` |
 | `sizes` | Population counts | A plain name | `largeCity` |
 | `shares` | Fractions from 0 to 1 | A plain name | `majority` |
-| `types` | Lists of recorded unit or building names | A plain name holding a list | `settlers` |
+| `types` | Lists of recorded names | A plain name holding a list | `settlers` |
 | `shortcuts` | Expressions grouped by subject | `<subject>.is.<name>` | `city.is.neighbor` |
 
 ## Distance
 
-Distance is measured in hex tiles between two map positions, using the stored `x` and `y` of cities and event plots. Adjacent tiles are 1 apart. Positions are stored in offset rows, so the builder converts them to hex coordinates before counting steps. When the recording has valid map dimensions and wrap flags, the count follows the shortest permitted wrapping route across each map edge. The recorded geometry stays private and never becomes a fact. The `distances` group holds the named distances below.
+Distance counts hex steps between recorded plots. Adjacent tiles are 1 apart. For a player, `distance` uses its cities visible at the cutoff and takes the shortest reading across those cities. If either side has no usable plot, the distance is unavailable. With valid recorded map dimensions and wrap flags, the count follows the shortest permitted route across map edges.
 
 | Reading | Meaning |
 | --- | --- |
@@ -23,7 +23,7 @@ Distance is measured in hex tiles between two map positions, using the stored `x
 | `city.distance.capital` | From a city to the receiver's capital |
 | `player.distance` | Between the closest pair of cities, one of the player's and one of the receiver's |
 | `event.distance.own` | From an event's plot to the receiver's nearest city |
-| `distance(a, b)` | Between any two cities, plots or events |
+| `distance(a, b)` | Between any two players, cities, plots or events with usable coordinates |
 
 Recordings without valid geometry, including older ones that predate it, use unwrapped distance. Two cities on opposite edges of a wrapping map then read as far apart.
 
@@ -60,7 +60,7 @@ A trigger's `window` and `repeat` accept these names or a bare number of Standar
 
 ## Type lists
 
-Type lists hold the recorded names of units and buildings, so a rule can ask about a category. The built-in `types` group is based on names confirmed in the Netherlands recording's `UnitCreated` and `CityConstructed` events.
+Type lists group recorded names so rules can check a category. The `ideologies` list also determines which branches count toward `player.ideology`.
 
 | List | Contains | Example |
 | --- | --- | --- |
@@ -69,6 +69,7 @@ Type lists hold the recorded names of units and buildings, so a rule can ask abo
 | `missionaries` | Missionary, Inquisitor, Great Prophet | `city.trained.some(t => missionaries.includes(t.unit))` |
 | `greatPeople` | The Great Person unit names | `greatPeople.includes(event.unit)` on a `GreatPersonExpended` event |
 | `defenses` | Walls, Castle, Arsenal, Military Base, and unique replacements | `city.built.some(b => defenses.includes(b.building))` |
+| `ideologies` | Order, Freedom, Autocracy | `ideologies.includes(event.branch)` on a `PlayerAdoptPolicyBranch` event |
 
 Names must match the recording's text. Recordings store localized names, so a catalogue for another language needs its own lists.
 

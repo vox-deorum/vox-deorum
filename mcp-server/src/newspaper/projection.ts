@@ -157,7 +157,7 @@ export interface DealTermsConfig {
 
 /** How one supported event type becomes newspaper evidence. Event types without a config are never reported. */
 export interface NewspaperEventConfig {
-  /** Payload fields copied into evidence. Unlisted payload fields never enter editorial input. */
+  /** Payload fields copied into evidence. Name fields publish under their name key; unlisted payload fields never enter editorial input. */
   fields: string[];
   /** Player and team ID fields naming the event's subjects, which the receiver must have met. */
   subjects: EventSubjects;
@@ -175,6 +175,11 @@ export interface NewspaperEventConfig {
   mainCityID?: string;
   /** Private terms, copied only when the deal policy allows. */
   dealTerms?: DealTermsConfig;
+  /** Report only the named owners and recorded names when the receiver did not witness this event. */
+  worldNews?: {
+    nameFields: readonly (keyof typeof eventNameFields)[];
+    allows?: (payload: Record<string, unknown>) => boolean;
+  };
 }
 
 /** Subjects for events naming a single player. */
@@ -284,7 +289,14 @@ export const newspaperEventConfigs: Record<string, NewspaperEventConfig> = {
     cities: { OriginCity: 'OriginOwnerID', DestinationCity: 'DestinationOwnerID' }
   },
   TeamSetEra: { fields: ['TeamID', 'NewEra'], subjects: teamSubject },
-  TeamTechResearched: { fields: ['TeamID', 'TechID', 'ChangeAmount'], subjects: teamSubject },
+  TeamTechResearched: {
+    fields: ['TeamID', 'TechID', 'ChangeAmount'], subjects: teamSubject,
+    worldNews: {
+      nameFields: ['TechID'],
+      /** The same hook also runs when a team loses a technology. */
+      allows: ({ ChangeAmount }) => typeof ChangeAmount === 'number' && ChangeAmount > 0,
+    }
+  },
   TeamSetHasTech: { fields: ['TeamID', 'TechID', 'HasTech'], subjects: teamSubject },
   PlayerAdoptPolicy: {
     fields: ['PlayerID', 'PolicyID'],
@@ -313,6 +325,15 @@ export const newspaperEventConfigs: Record<string, NewspaperEventConfig> = {
     cities: { City: 'OwnerID' }
   }
 };
+
+/** Recorded name fields and the evidence key each becomes. Unlisted values stay private. */
+const eventNameFields = {
+  TechID: 'Tech', PolicyID: 'Policy', BranchType: 'Branch', OldBranchType: 'OldBranch', NewBranchType: 'NewBranch',
+  ReligionID: 'Religion', UnitType: 'Unit', KilledUnitType: 'Unit', GreatPersonType: 'Unit', BuildingType: 'Building'
+} as const;
+
+/** World-news types, read without receiver visibility and published only when every subject is known. */
+export const newspaperWorldNewsTypes = Object.keys(newspaperEventConfigs).filter(type => newspaperEventConfigs[type].worldNews);
 
 /** Require historical contact with every member before treating a team as known. */
 function knowsTeam(id: unknown, context: NewspaperProjectionContext): boolean {
@@ -435,17 +456,50 @@ function copyCityPositions(config: NewspaperEventConfig, row: Selectable<GameEve
   }
 }
 
+/** Publish only the owner and recorded names of an unwitnessed world-news event. */
+function projectWorldNewsEvent(row: Selectable<GameEvent>, config: NewspaperEventConfig,
+  context: NewspaperProjectionContext): NewspaperEvent | undefined {
+  const payload = row.Payload;
+  const { worldNews, subjects } = config;
+  if (!worldNews || worldNews.allows?.(payload) === false) return undefined;
+  const teamFields = subjects.teamIdFields ?? [];
+  const values: Record<string, unknown> = {};
+  for (const field of [...subjects.playerIdFields, ...teamFields]) {
+    const id = payload[field];
+    if (typeof id !== 'number' || !Number.isInteger(id) || id < 0) return undefined;
+    values[field] = id;
+  }
+  // The barbarian slot is a known label for witnessed events, but does not establish contact.
+  const barbarian = context.players.find(player => player.Key === 63);
+  if (subjects.playerIdFields.some(field => values[field] === 63) ||
+    (barbarian && teamFields.some(field => values[field] === barbarian.TeamID)) ||
+    !knowsSubjects(subjects, payload, context)) return undefined;
+  for (const field of worldNews.nameFields) {
+    const text = recordedName(payload[field]);
+    if (!text) return undefined;
+    values[eventNameFields[field]] = text;
+  }
+  return { source: source('GameEvents', row), type: row.Type, values };
+}
+
 /** Project a supported event under its configured policy, using dated contact and recorded access. */
 export function projectNewspaperEvent(row: Selectable<GameEvent>, context: NewspaperProjectionContext): NewspaperEvent | undefined {
   const config = newspaperEventConfigs[row.Type];
-  if (!config || (visibility(row, context.receiverPlayerID) ?? 0) < 1) return undefined;
+  if (!config) return undefined;
+  if ((visibility(row, context.receiverPlayerID) ?? 0) < 1) return projectWorldNewsEvent(row, config, context);
   const payload = row.Payload;
   const receiverTeam = context.players.find(player => player.Key === context.receiverPlayerID)?.TeamID;
   const involved = config.reportWhenInvolved === true && matchesSubjects(config.subjects, payload, context.receiverPlayerID, receiverTeam);
   if (!involved && !knowsSubjects(config.subjects, payload, context, config.optionalPlayers)) return undefined;
   if (config.insight && !hasInsight(config.insight, payload, context)) return undefined;
 
-  const values: Record<string, unknown> = pickFields(payload, config.fields);
+  const values: Record<string, unknown> = {};
+  for (const field of config.fields) {
+    if (Object.hasOwn(eventNameFields, field)) {
+      const text = recordedName(payload[field]);
+      if (text) values[eventNameFields[field as keyof typeof eventNameFields]] = text;
+    } else if (Object.hasOwn(payload, field)) values[field] = payload[field];
+  }
   if (row.Type === 'MinorAlliesChanged' && (typeof values.IsNowAlly === 'boolean' || typeof values.IsNowAlly === 'number')) {
     values.IsNowAlly = values.IsNowAlly !== false && values.IsNowAlly !== 0;
   }
@@ -458,10 +512,6 @@ export function projectNewspaperEvent(row: Selectable<GameEvent>, context: Newsp
       values.Unit = unit;
       related.push(source('GameEvents', created));
     }
-  }
-  for (const [field, name] of [['UnitType', 'Unit'], ['KilledUnitType', 'Unit'], ['GreatPersonType', 'Unit'], ['BuildingType', 'Building']]) {
-    const text = recordedName(values[field]);
-    if (text) values[name] = text;
   }
   if (row.Type === 'PlayerGoldenAge') {
     const starting = goldenAgeStarting(payload);

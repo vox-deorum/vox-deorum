@@ -165,7 +165,10 @@ describe('newspaper field projection', () => {
     const religion = { ...row, Type: 'ReligionFounded', Payload: {
       PlayerID: 1, HolyCityID: 99, ReligionID: 2, HolyCity: { Name: 'Harbor', Population: 3, Health: '50%' }
     } };
-    expect(projectNewspaperEvent(religion as any, context())?.values.HolyCity).toEqual({ Name: 'Harbor' });
+    const founded = projectNewspaperEvent(religion as any, context())!.values;
+    expect(founded.HolyCity).toEqual({ Name: 'Harbor' });
+    expect(founded).not.toHaveProperty('ReligionID');
+    expect(founded).not.toHaveProperty('Religion');
     const pantheon = { ...row, Type: 'PantheonFounded', Payload: {
       PlayerID: 1, CityID: 99, ReligionType: 0, BeliefType: 7, City: { Name: 'Harbor', Population: 3 }
     } };
@@ -236,9 +239,11 @@ describe('newspaper field projection', () => {
     expect(projectNewspaperPlayer({ Key: 1, CulturePerTurn: 5 } as any, context())).toBeUndefined();
     expect(projectNewspaperEvent({ ...deal(), Player0: undefined } as any, context(800))).toBeUndefined();
     expect(projectNewspaperEvent({ ...deal(), Type: 'RelayedMessage' } as any, context(800))).toBeUndefined();
-    const policy = { ...deal(), Type: 'PlayerAdoptPolicy', Payload: { PlayerID: 1, PolicyID: 7 } };
+    const policy = { ...deal(), Type: 'PlayerAdoptPolicy', Payload: { PlayerID: 1, PolicyID: 'Aristocracy' } };
     expect(projectNewspaperEvent(policy as any, context(199))).toBeUndefined();
-    expect(projectNewspaperEvent(policy as any, context(200))?.values.PolicyID).toBe(7);
+    const permitted = projectNewspaperEvent(policy as any, context(200))!;
+    expect(permitted.values.Policy).toBe('Aristocracy');
+    expect(permitted.values).not.toHaveProperty('PolicyID');
   });
 
   it('exposes recorded military strength only for self and full national access', () => {
@@ -314,5 +319,72 @@ describe('newspaper field projection', () => {
     const projected = projectNewspaperEvent(row, context())!;
     if (expected === undefined) expect(projected.values).not.toHaveProperty('Starting');
     else expect(projected.values.Starting).toBe(expected);
+  });
+
+  it.each([
+    ['TeamTechResearched', { TeamID: 1, TechID: 'Pottery', ChangeAmount: 4 }, { Tech: 'Pottery' }],
+    ['PlayerAdoptPolicy', { PlayerID: 1, PolicyID: 'Aristocracy' }, { Policy: 'Aristocracy' }],
+    ['PlayerAdoptPolicyBranch', { PlayerID: 1, BranchType: 'Tradition' }, { Branch: 'Tradition' }],
+    ['IdeologySwitched', { PlayerID: 1, OldBranchType: 'Freedom', NewBranchType: 'Order' },
+      { OldBranch: 'Freedom', NewBranch: 'Order' }],
+    ['ReligionFounded', { PlayerID: 1, HolyCityID: 99, ReligionID: 'Buddhism' }, { Religion: 'Buddhism' }],
+    ['UnitCityFounded', { PlayerID: 1, UnitID: 8, UnitType: 'Settler' }, { Unit: 'Settler' }],
+    ['UnitKilledInCombat', { KillerPlayerID: 1, KilledPlayerID: 2, KilledUnitType: 'Galleass' }, { Unit: 'Galleass' }],
+    ['GreatPersonExpended', { PlayerID: 1, GreatPersonType: 'Great Scientist' }, { Unit: 'Great Scientist' }],
+    ['CityConstructed', { OwnerID: 1, CityID: 8, BuildingType: 'Granary' }, { Building: 'Granary' }]
+  ])('publishes %s names under name keys and drops the raw field', (Type, Payload, expected) => {
+    const row = { ID: 92, Turn: 10, CreatedAt: 3010, Type, Payload, Player0: 1 } as any;
+    const values = projectNewspaperEvent(row, context(200))!.values;
+    expect(values).toMatchObject(expected);
+    for (const field of ['TechID', 'PolicyID', 'BranchType', 'OldBranchType', 'NewBranchType', 'ReligionID',
+      'UnitType', 'KilledUnitType', 'GreatPersonType', 'BuildingType']) expect(values).not.toHaveProperty(field);
+  });
+
+  it('keeps only nonblank name strings and drops numeric or blank recordings', () => {
+    /** Build a witnessed research row around one recorded technology value. */
+    const row = (Payload: Record<string, unknown>) => ({ ID: 93, Turn: 10, CreatedAt: 3010,
+      Type: 'TeamTechResearched', Player0: 1, Payload }) as any;
+    expect(projectNewspaperEvent(row({ TeamID: 1, TechID: 'Pottery', ChangeAmount: 4 }), context())!.values)
+      .toEqual({ TeamID: 1, ChangeAmount: 4, Tech: 'Pottery' });
+    for (const TechID of [0, -1, null, '   ']) {
+      expect(projectNewspaperEvent(row({ TeamID: 1, TechID, ChangeAmount: 4 }), context())!.values)
+        .toEqual({ TeamID: 1, ChangeAmount: 4 });
+    }
+  });
+
+  it('publishes an unwitnessed researched technology for a met team in reduced form', () => {
+    const row = { ID: 94, Turn: 10, CreatedAt: 3010, Type: 'TeamTechResearched', Player0: 0,
+      Payload: { TeamID: 1, TechID: 'Printing Press', ChangeAmount: 4, Reader: 'secret' } } as any;
+    const values = projectNewspaperEvent(row, context())!.values;
+    expect(values).toEqual({ TeamID: 1, Tech: 'Printing Press' });
+  });
+
+  it('withholds unwitnessed world news without a valid owner, name or fully known team', () => {
+    const base = { ID: 95, Turn: 10, CreatedAt: 3010, Type: 'TeamTechResearched', Player0: 0 };
+    /** Project an unwitnessed research payload for a chosen contact context. */
+    const project = (Payload: Record<string, unknown>, ctx = context()) =>
+      projectNewspaperEvent({ ...base, Payload: { ChangeAmount: 1, ...Payload } } as any, ctx);
+    expect(project({ TechID: 'Pottery' })).toBeUndefined();
+    expect(project({ TeamID: 7, TechID: 'Pottery' })).toBeUndefined();
+    expect(project({ TeamID: 1, TechID: 0 })).toBeUndefined();
+    expect(project({ TeamID: 1, TechID: '  ' })).toBeUndefined();
+    const partial = context();
+    partial.players = [...partial.players,
+      { Key: 4, TeamID: 9, IsMajor: 1, Civilization: 'Civ4' }, { Key: 5, TeamID: 9, IsMajor: 1, Civilization: 'Civ5' }] as any;
+    partial.summaries = [...partial.summaries, { Key: 4, Player0: 1 } as any, { Key: 5, Player0: 0 } as any];
+    expect(project({ TeamID: 9, TechID: 'Pottery' }, partial)).toBeUndefined();
+    partial.summaries[5].Player0 = 1;
+    expect(project({ TeamID: 9, TechID: 'Pottery' }, partial)).toBeDefined();
+
+    const barbarians = context();
+    barbarians.players = [...barbarians.players, { Key: 63, TeamID: 63 } as any];
+    expect(project({ TeamID: 63, TechID: 'Pottery' }, barbarians)).toBeUndefined();
+  });
+
+  it('keeps unrelated events private when the receiver did not witness them', () => {
+    expect(projectNewspaperEvent({ ID: 96, Turn: 10, CreatedAt: 3010, Type: 'TeamSetHasTech', Player0: 0,
+      Payload: { TeamID: 1, TechID: 'Pottery', HasTech: true } } as any, context())).toBeUndefined();
+    expect(projectNewspaperEvent({ ID: 97, Turn: 10, CreatedAt: 3010, Type: 'ReligionFounded', Player0: 0,
+      Payload: { PlayerID: 1, ReligionID: 'Buddhism' } } as any, context())).toBeUndefined();
   });
 });

@@ -4,12 +4,12 @@ import type { NewspaperEvidenceRequest } from '../../../../mcp-server/dist/newsp
 import { queryNewspaperEvidence } from '../../../../mcp-server/dist/newspaper/queries.js';
 import { buildNewspaperFacts } from '../editorial/facts/index.js';
 
-type ReplayFactSpans = { longTurns: number; historyTurns?: number; speedMultiplier?: number };
+type ReplayFactOptions = { longTurns: number; historyTurns?: number; speedMultiplier?: number; ideologies?: readonly string[] };
 
 /** Select the same permitted history for publication and evidence inspection. */
 export function replayFactRequest(
   request: Omit<NewspaperEvidenceRequest, 'historyFromTurn'>,
-  { longTurns, historyTurns = longTurns }: ReplayFactSpans,
+  { longTurns, historyTurns = longTurns }: ReplayFactOptions,
 ): NewspaperEvidenceRequest {
   if (!Number.isSafeInteger(longTurns) || longTurns < 1 || !Number.isSafeInteger(historyTurns) || historyTurns < longTurns)
     throw new RangeError('Fact history must cover the long span in whole recorded turns.');
@@ -22,10 +22,10 @@ export function replayFactRequest(
 export async function readReplayFacts(
   db: Kysely<KnowledgeDatabase>,
   request: Omit<NewspaperEvidenceRequest, 'historyFromTurn'>,
-  spans: ReplayFactSpans,
+  options: ReplayFactOptions,
   query = queryNewspaperEvidence,
 ) {
-  const evidence = await query(db, replayFactRequest(request, spans));
+  const evidence = await query(db, replayFactRequest(request, options));
   // Static identities may label a dated observation, but cannot establish contact on their own.
   const ids = [...new Set([...evidence.players, ...evidence.history!.baseline.players,
     ...evidence.history!.snapshots.players].map(row => row.subjectID))];
@@ -50,11 +50,11 @@ export async function readReplayFacts(
     }])),
     recordingStartTurn: Number.isFinite(recordingStartTurn) ? recordingStartTurn : undefined,
     gameSpeed: metadata.get('gameSpeed'),
-    speedMultiplier: spans.speedMultiplier,
+    speedMultiplier: options.speedMultiplier,
     mapSize: metadata.get('mapSize'), startEra: metadata.get('startEra'), maxTurns: recordedNumber(metadata.get('maxTurns')),
     mapWidth: metadata.get('mapWidth'), mapHeight: metadata.get('mapHeight'),
     mapWrapX: metadata.get('mapWrapX'), mapWrapY: metadata.get('mapWrapY'),
-  }, { longTurns: spans.longTurns });
+  }, { longTurns: options.longTurns, ideologies: options.ideologies });
   return { evidence, facts };
 }
 

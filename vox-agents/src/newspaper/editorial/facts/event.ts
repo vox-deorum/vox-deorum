@@ -1,5 +1,6 @@
 import type { NewspaperEvent, NewspaperSnapshot, NewspaperSourceReference } from '../../../../../mcp-server/dist/newspaper/evidence.js';
 import { isRecord } from '../../../utils/guards.js';
+import { uniqueSources } from '../shared/sources.js';
 import { eventCityTargets, eventConfig, eventPlot, recordedId, resolveEventCity } from './event-city.js';
 import { fact, recordedFact, reference, rowSources, type FactBuildContext, type FactField, type FactObject } from './model.js';
 
@@ -139,6 +140,24 @@ export function buildEventFacts(event: NewspaperEvent, context: FactBuildContext
     if (!player) continue;
     fields[camelCase(field.slice(0, -2))] = player;
     if (field === actingField) fields.player = player;
+  }
+  // A single projected TeamID names the team that owns the event. Diplomatic events with
+  // separately named team roles keep their own acting player above.
+  const teamFields = config?.subjects.teamIdFields ?? [];
+  if (teamFields.length === 1 && teamFields[0] === 'TeamID') {
+    const teamId = recordedId(values.TeamID);
+    if (teamId !== undefined) {
+      const members = context.players.flatMap(({ subjectID }) => {
+        const observed = context.playerAt(subjectID, event.source.turn);
+        return observed && observedTeamId(observed, context) === teamId ? [observed] : [];
+      });
+      if (members.length) {
+        const proof = uniqueSources([...sources, ...members.flatMap(rowSources)]);
+        const links = members.map(member => reference('player', member.subjectID));
+        fields.players = fact(links, proof);
+        if (links.length === 1 && !fields.player) fields.player = fact(links[0], proof);
+      }
+    }
   }
 
   const { main, named } = eventCityTargets(event);

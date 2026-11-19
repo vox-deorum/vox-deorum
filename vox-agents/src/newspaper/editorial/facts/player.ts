@@ -5,6 +5,7 @@ import type {
   NewspaperDiplomacyGap, NewspaperDiplomacySnapshot, NewspaperEvent, NewspaperEvidence, NewspaperSnapshot
 } from '../../../../../mcp-server/dist/newspaper/evidence.js';
 import { matchesSubjects } from '../../../../../mcp-server/dist/knowledge/helpers/event-subjects.js';
+import { isRecord } from '../../../utils/guards.js';
 import { eventConfig } from './event-city.js';
 import { involvedSubjectSources, observedTeamId } from './event.js';
 import {
@@ -107,6 +108,16 @@ function listedRelationship(entry: Relationship, row: NewspaperDiplomacySnapshot
   return result;
 }
 
+/** Read an ideology branch from the keys of a readable policy-branch map. */
+function policyIdeology(value: unknown, ideologies: readonly string[]): string | null | undefined {
+  if (value === null) return null;
+  // The Lua serializer may store an empty map as an empty array.
+  if (Array.isArray(value)) return value.length ? undefined : null;
+  if (!isRecord(value)) return undefined;
+  for (const branch of Object.keys(value)) if (ideologies.includes(branch)) return branch;
+  return null;
+}
+
 /** Match the event's allowlisted player or team subjects against identity known on its date. */
 function namesPlayer(event: NewspaperEvent, row: NewspaperSnapshot, context: FactBuildContext): boolean {
   const subjects = eventConfig(event.type)?.subjects;
@@ -145,6 +156,11 @@ export function buildPlayerSnapshotFacts(row: NewspaperSnapshot, context: FactBu
     if (major === false && !cityStateFields.has(key)) continue;
     const field = recordedFact(row.values[key], sources);
     if (field) fields[key === 'Cities' ? 'cityCount' : key[0].toLowerCase() + key.slice(1)] = field;
+  }
+  const branches = fields.policyBranches;
+  if (branches && context.ideologies) {
+    const ideology = policyIdeology(branches.value, context.ideologies);
+    if (ideology !== undefined) fields.ideology = fact(ideology, branches.sources);
   }
   if (diplomacy && !gaps?.has('missingRelationships')) {
     const entries = diplomacy.relationships.filter(entry => context.playerAt(entry.targetPlayerID, context.turn));

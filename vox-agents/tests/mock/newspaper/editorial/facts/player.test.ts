@@ -75,6 +75,7 @@ function context(turn: number, changes: Partial<NewspaperEvidence> = {}): FactBu
   const cities = rowsAt(cityTimeline, turn);
   return {
     evidence, turn, receiverId: 0, players, cities, events: events.filter(record => record.source.turn <= turn),
+    ideologies: ['Order', 'Freedom', 'Autocracy'],
     metadata: { playerIdentities: {
       0: { name: 'Egypt', leader: 'Ramesses', major: true, human: true, teamId: 4 },
       1: { name: 'The Netherlands', leader: 'William', major: true, human: false, teamId: 5 },
@@ -121,6 +122,37 @@ describe('newspaper player facts', () => {
       const facts = buildPlayerFacts(latestRival, at);
       expect(facts.technologies.value).toBe(15);
       expect(facts.sciencePerTurn).toBeUndefined();
+    });
+  });
+
+  describe('ideology', () => {
+    /** Record a player row with the same readable values and a chosen policy-branch map. */
+    function policyRow(branches: unknown, id: number, turn = 6): NewspaperSnapshot {
+      return snapshot(0, id, turn, branches === undefined ? own.values : { ...own.values, PolicyBranches: branches });
+    }
+
+    it('should derive the readable ideology branch from policy-branch keys', () => {
+      const row = policyRow({ Freedom: ['Constitution'] }, 14);
+      expect(buildPlayerFacts(row, context(6)).ideology).toEqual({ value: 'Freedom', sources: [row.source] });
+    });
+
+    it('should record null when the player has no recorded ideology', () => {
+      for (const [index, branches] of [{ Tradition: [] }, {}, [], null].entries()) {
+        const row = policyRow(branches, 20 + index);
+        expect(buildPlayerFacts(row, context(6)).ideology).toEqual({ value: null, sources: [row.source] });
+      }
+    });
+
+    it('should omit ideology when policy data is withheld or unreadable', () => {
+      for (const [index, branches] of [undefined, 'withheld'].entries()) {
+        const row = policyRow(branches, 30 + index);
+        expect(buildPlayerFacts(row, context(6))).not.toHaveProperty('ideology');
+      }
+    });
+
+    it('should derive ideology on a dated snapshot as well as the cutoff', () => {
+      const row = policyRow({ Order: ['Autocracy'] }, 40, 3);
+      expect(buildPlayerSnapshotFacts(row, context(3)).ideology).toEqual({ value: 'Order', sources: [row.source] });
     });
   });
 

@@ -53,7 +53,7 @@ Every expression can read these, whatever its subject.
 | `events` | Every permitted event in the trigger's window, oldest first |
 | `turn` | The cutoff turn of this check |
 | `game` | `speed` (the recorded game speed name), `speedMultiplier`, `mapSize`, `startEra`, `maxTurns` |
-| `distance(a, b)` | Hex distance between two cities, plots or events. See [distance](constants.md#distance). |
+| `distance(a, b)` | Hex distance between players, cities, plots or events. See [distance](constants.md#distance). |
 
 The **reporting period** runs from the previous newspaper check to the cutoff turn. A trigger's **window** is its `window` field, or the reporting period when the field is omitted. Inferred facts such as `owner` and `distance` describe the cutoff turn, including when an `event` rule reads them.
 
@@ -120,6 +120,7 @@ Read `self.happinessPercentage` for the receiver's national happiness. Vox Popul
 | `cities` | The player's cities that the receiver can see | `city.owner` |
 | `capital` | The player's capital `city` | The city with `isCapital` among `cities` |
 | `distance` | Smallest hex distance between any city of this player and any city of the receiver; 0 for the receiver | City coordinates |
+| `ideology` | The player's ideology name, or `null` when the record shows no matching branch. Hidden when branch data is unavailable. | Keys of `policyBranches` and the catalogue's `ideologies` list |
 | `atWar` | In at least one known war | `relationships` |
 | `wars` | The players it is known to be at war with | `relationships` |
 | `enemy` | At war with the receiver | `relationships` |
@@ -140,8 +141,10 @@ Read `self.happinessPercentage` for the receiver's national happiness. Vox Popul
 | `type` | The recorded event type, such as `CityCaptureComplete` |
 | `id` | The recorded event's row ID |
 | `turn` | The turn it was recorded |
-| Payload fields | Each permitted payload field in camelCase. A player ID field also offers the player: `oldOwnerId` comes with `oldOwner`. A city ID field comes with the `city`, a unit type with `unit` (the unit name), and a building type with `building` (the building name). |
-| `player` | The main acting player, when the event has one |
+| Payload fields | Each permitted field in camelCase. An ID may also offer a link: `oldOwnerId` comes with `oldOwner` when the player can be resolved. |
+| Recorded names | `tech`, `policy`, `branch`, `oldBranch`, `newBranch`, `religion`, `unit` and `building` hold the names as recorded. A numeric ID alone does not supply a name. |
+| `player` | The main acting player, or the only linked member of an acting team |
+| `players` | Linked members of an acting team (`teamId`), known at the event date and the cutoff |
 | `city` | The city the event concerns, matched by city ID or by plot |
 | `plot` | `x` and `y`, when the event has a location |
 | `distance.own` | Hex distance from `plot` to the nearest city of the receiver |
@@ -154,7 +157,9 @@ A player ID of -1 means "nobody", and the matching player fact is then missing. 
 | `PlayerCityFounded` | `player`, `plot`, `city` (the city now at that plot) |
 | `SetAlly` | `minorPlayer`, `oldAllyPlayer`, `newAllyPlayer` |
 | `PlayerGoldenAge` | `player`, `starting` |
-| `GreatPersonExpended` | `player`, `unit` (from `GreatPersonType`), `plot` |
+| `TeamTechResearched` | `teamId`, `players`, `player` for a single linked member, `tech`. A witnessed event also carries `changeAmount`; a negative value means the team lost the technology. A gain can come from research, a grant or theft. |
+| `PlayerAdoptPolicyBranch` | `player`, `branch` |
+| `GreatPersonExpended` | `player`, `unit`, `plot` |
 
 The event types a rule may name are the ones in `newspaperEventConfigs` in `mcp-server/src/newspaper/projection.ts`. [Evidence the facts rely on](#evidence-the-facts-rely-on) describes how those rows are projected.
 
@@ -246,6 +251,8 @@ A first observation therefore establishes a baseline. A city seen for the first 
 ## Evidence the facts rely on
 
 `get-newspaper-evidence` reads recorded rows for one receiver. It returns cutoff snapshots, optional comparison snapshots, derived diplomacy and events after `previousCheckTurn` through the cutoff. Projection applies recorded visibility and each event's contact and insight rules. City snapshots include the recorded `IsCapital`. A readable player row includes recorded `MilitaryStrength` for the receiver or at access level 2.
+
+World news can report a `TeamTechResearched` gain the receiver did not witness if it had met every member of the team by that turn. The unwitnessed record carries only the team ID and technology name. For example, a paper can report that Persia gained Printing Press without an embassy there. This applies only to newspaper evidence; the strategist's `get-events` still uses recorded visibility.
 
 Optional `historyFromTurn` sets the baseline to the earlier of that turn and `previousCheckTurn`. Use `-1` to include turn 0. History contains readable baseline rows, visible final observations per subject and turn after the baseline, and permitted events through the cutoff, including the reporting period. Gaps mark when an established observation becomes unavailable. A capture or razing the receiver witnessed ends a city observation when its plot and date establish removal. The gap can be visible even when the identity of a party is hidden. Missing coordinates or tied timestamps can leave a stale snapshot and are reported as lifecycle limitations.
 

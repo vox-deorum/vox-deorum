@@ -14,5 +14,33 @@
         "weight": { "base": 1 }
       }
     ]
+  },
+  {
+    "id": "probe-huns-riding-account",
+    "triggers": ["probe-huns-riding"],
+    "tags": ["foreign"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "probe-huns-riding-report",
+        "headline": "{{civilization}} gains {{technology}}",
+        "body": ["News of cavalry drills has reached the borders of the Huns."],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "probe-ideology-adopted-account",
+    "triggers": ["probe-ideology-adopted"],
+    "tags": ["politics"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "probe-ideology-adopted-report",
+        "headline": "{{civilization}} adopts {{ideology}}",
+        "body": ["The government has declared its allegiance to {{ideology}}."],
+        "weight": { "base": 1 }
+      }
+    ]
   }
 ]

@@ -151,7 +151,7 @@ describe('newspaper city facts', () => {
     it('should keep training details and visible support without inferring a hidden unit name', () => {
       const current = city(10, 3, 3, 0);
       const known = event(100, 5, 'CityTrained', { PlayerID: 0, CityID: 10, CityX: 3, CityY: 2, Unit: 'Pioneer', WithGold: 0, WithFaith: 1 });
-      const created = event(101, 5, 'UnitCreated', { PlayerID: 0, UnitID: 5, UnitType: 'Pioneer' });
+      const created = event(101, 5, 'UnitCreated', { PlayerID: 0, UnitID: 5, Unit: 'Pioneer' });
       known.relatedSources = [current.source, created.source];
       const noUnit = event(102, 6, 'CityTrained', { PlayerID: 0, CityID: 10, CityX: 3, CityY: 2, UnitID: 5 });
       const noPosition = event(103, 7, 'CityTrained', { PlayerID: 0, CityID: 10, Unit: 'Spearman' });
@@ -170,8 +170,8 @@ describe('newspaper city facts', () => {
       const old = city(10, 3, 3, 0, { Wonders: ['Pyramids'], MajorityReligion: 'Taoism' });
       const current = city(11, 9, 3, 0, { Wonders: ['Pyramids', 'Petra'], MajorityReligion: 'Buddhism' }, 10);
       const construction = event(100, 7, 'CityConstructed', { CityID: 10, OwnerID: 0, CityX: 3, CityY: 2, Building: 'Petra' });
-      const followers = event(101, 6, 'CityConvertsReligion', { OwnerID: 0, CityX: 3, CityY: 2, ReligionID: 'Taoism' });
-      const conversion = event(102, 8, 'CityConvertsReligion', { OwnerID: 0, CityX: 3, CityY: 2, ReligionID: 'Buddhism' });
+      const followers = event(101, 6, 'CityConvertsReligion', { OwnerID: 0, CityX: 3, CityY: 2, Religion: 'Taoism' });
+      const conversion = event(102, 8, 'CityConvertsReligion', { OwnerID: 0, CityX: 3, CityY: 2, Religion: 'Buddhism' });
       const row = facts([current], [old, current], [construction, followers, conversion]).cities[10].current!;
       expect(entries(row.built)).toMatchObject([{ turn: { value: 7 }, building: { value: 'Petra',
         sources: [construction.source, old.source, current.source] } }]);
@@ -197,19 +197,21 @@ describe('newspaper city facts', () => {
       ]);
     });
 
-    it('should confirm numeric religion transitions without guessing localized names or backdating an unproved change', () => {
+    it('should confirm religion transitions from readable names and not backdate a report without one', () => {
       const old = city(10, 3, 3, 0, { MajorityReligion: 'Taoism' });
       const now = city(11, 9, 3, 0, { MajorityReligion: 'Buddhism' }, 10);
       const payload = { OwnerID: 0, CityX: 3, CityY: 2 };
-      const baseline = event(100, 4, 'CityConvertsReligion', { ...payload, ReligionID: 1 });
-      const transition = event(101, 6, 'CityConvertsReligion', { ...payload, ReligionID: 2 });
-      const followerChange = event(102, 7, 'CityConvertsReligion', { ...payload, ReligionID: 2 });
+      const baseline = event(100, 4, 'CityConvertsReligion', { ...payload, Religion: 'Taoism' });
+      const transition = event(101, 6, 'CityConvertsReligion', { ...payload, Religion: 'Buddhism' });
+      const followerChange = event(102, 7, 'CityConvertsReligion', { ...payload, Religion: 'Buddhism' });
       const proved = facts([now], [old, now], [baseline, transition, followerChange]).cities[10].current!;
       expect(entries(proved.conversions)).toMatchObject([
-        { turn: { value: 6 }, religion: { value: 2, sources: [baseline.source, transition.source, followerChange.source, old.source, now.source] } },
+        { turn: { value: 6 }, religion: { value: 'Buddhism',
+          sources: [baseline.source, transition.source, followerChange.source, old.source, now.source] } },
       ]);
-      const uncertain = facts([now], [old, now], [transition]).cities[10].current!;
-      expect(entries(uncertain.conversions)).toMatchObject([
+      const unnamed = event(103, 6, 'CityConvertsReligion', payload);
+      const inferred = facts([now], [old, now], [unnamed]).cities[10].current!;
+      expect(entries(inferred.conversions)).toMatchObject([
         { turn: { value: 9 }, religion: { value: 'Buddhism', sources: [old.source, now.source] } },
       ]);
     });
@@ -218,8 +220,8 @@ describe('newspaper city facts', () => {
       const old = city(10, 3, 3, 0, { MajorityReligion: 'Taoism' });
       const now = city(11, 9, 3, 0, { MajorityReligion: 'Buddhism' }, 10);
       const payload = { OwnerID: 0, CityX: 3, CityY: 2 };
-      const first = event(100, 5, 'CityConvertsReligion', { ...payload, ReligionID: 'Buddhism' });
-      const second = event(101, 7, 'CityConvertsReligion', { ...payload, ReligionID: 'Islam' });
+      const first = event(100, 5, 'CityConvertsReligion', { ...payload, Religion: 'Buddhism' });
+      const second = event(101, 7, 'CityConvertsReligion', { ...payload, Religion: 'Islam' });
       const observed = facts([now], [old, now], [first, second]).cities[10].current!;
       expect(entries(observed.conversions)).toMatchObject([
         { turn: { value: 5 }, religion: { value: 'Buddhism' } },
@@ -319,15 +321,14 @@ describe('newspaper event facts', () => {
     const home = city(10, 3, 0, 0, { IsCapital: 1 });
     const foreign = city(20, 8, 3, 1);
     const founded = event(100, 8, 'PlayerCityFounded', { PlayerID: 1, PlotX: 3, PlotY: 2 }, 3);
-    const great = event(101, 9, 'GreatPersonExpended', { PlayerID: 1, GreatPersonType: 'Great Scientist',
-      Unit: 'Great Scientist', CityX: 2, CityY: 2 });
+    const great = event(101, 9, 'GreatPersonExpended', { PlayerID: 1, Unit: 'Great Scientist', CityX: 2, CityY: 2 });
     const missing = event(102, 9, 'CityTrained', { PlayerID: 1, CityID: 20, UnitID: 2 });
     const rows = facts([home, foreign], [home, foreign], [founded, great, missing]).events;
     expect(rows[0].fields).toMatchObject({
       player: { value: { kind: 'player', id: 1 } }, city: { value: { kind: 'city', id: 20 } },
       plot: { value: { x: { value: 3 }, y: { value: 2 } } }, distance: { value: { own: { value: 3, sources: [founded.source, home.source] } } },
     });
-    expect(rows[1].fields).toMatchObject({ greatPersonType: { value: 'Great Scientist' }, unit: { value: 'Great Scientist' },
+    expect(rows[1].fields).toMatchObject({ unit: { value: 'Great Scientist' },
       distance: { value: { own: { value: 2 } } } });
     expect(rows[1].fields).not.toHaveProperty('city');
     for (const unavailable of ['city', 'unit', 'plot', 'distance']) expect(rows[2].fields).not.toHaveProperty(unavailable);

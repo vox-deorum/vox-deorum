@@ -7,8 +7,8 @@ import {
   newspaperEvidenceRequestSchema, type NewspaperEvent, type NewspaperEvidence, type NewspaperEvidenceRequest, type NewspaperHistory, type NewspaperSnapshot
 } from './evidence.js';
 import {
-  newspaperEventConfigs, projectNewspaperCity, projectNewspaperDiplomacy, projectNewspaperEvent,
-  projectNewspaperPlayer, type NewspaperCityProjectionContext, type NewspaperProjectionContext
+  newspaperEventConfigs, newspaperWorldNewsTypes, projectNewspaperCity, projectNewspaperDiplomacy,
+  projectNewspaperEvent, projectNewspaperPlayer, type NewspaperCityProjectionContext, type NewspaperProjectionContext
 } from './projection.js';
 
 type ReceiverField = keyof KnowledgeDatabase['PlayerSummaries'] & `Player${number}`;
@@ -24,12 +24,14 @@ export async function queryNewspaperEvidence(
   const eventFromTurn = (historyFromTurn ?? previousCheckTurn) + 1;
   const fromTurn = Math.min(eventFromTurn, comparisonRange?.fromTurn ?? cutoffTurn, cutoffTurn);
   const visibilityField = `Player${receiverPlayerID}` as ReceiverField;
-  const [players, baseSummaries, summaryHistory, cities, events, earlierCities, baselineCities, historyCities, cityLifecycle] = await Promise.all([
+  const [players, baseSummaries, summaryHistory, cities, events, worldEvents, earlierCities, baselineCities, historyCities, cityLifecycle] = await Promise.all([
     db.selectFrom('PlayerInformations').selectAll().execute(),
     readSnapshotsAtCutoff(db, 'PlayerSummaries', fromTurn - 1),
     readSnapshotRange(db, 'PlayerSummaries', fromTurn, cutoffTurn),
     readSnapshotsAtCutoff(db, 'CityInformations', cutoffTurn),
     readEvents(db, { PlayerID: receiverPlayerID, FromTurn: eventFromTurn, ToTurn: cutoffTurn }),
+    db.selectFrom('GameEvents').selectAll().where('Type', 'in', newspaperWorldNewsTypes)
+      .where('Turn', '>=', eventFromTurn).where('Turn', '<=', cutoffTurn).execute(),
     comparisonRange ? readSnapshotRange(db, 'CityInformations', comparisonRange.fromTurn, comparisonRange.toTurn) : [],
     historyFromTurn === undefined ? [] : readSnapshotsAtCutoff(db, 'CityInformations', historyFromTurn),
     historyFromTurn === undefined ? [] : readSnapshotRange(db, 'CityInformations', historyFromTurn + 1, cutoffTurn),
@@ -58,6 +60,9 @@ export async function queryNewspaperEvidence(
   const visibleHistoryCities = historyCities.filter(visible);
   const projectedCities = [currentCities, comparisonCities, activeBaselineCities, visibleHistoryCities];
 
+  const seenEventIDs = new Set(events.map(row => row.ID));
+  const unwitnessedEvents = worldEvents.filter(row => !seenEventIDs.has(row.ID));
+  const boundedEvents = [...events, ...unwitnessedEvents].sort((a, b) => a.ID - b.ID);
   const eventTurns = new Map<number, Selectable<GameEvent>[]>();
   let firstCityJoin = cutoffTurn + 1;
   for (const row of events) {
@@ -66,7 +71,8 @@ export async function queryNewspaperEvidence(
     else eventTurns.set(row.Turn, [row]);
     if (newspaperEventConfigs[row.Type]?.cityIDs) firstCityJoin = Math.min(firstCityJoin, row.Turn);
   }
-  const turns = new Set([cutoffTurn, ...eventTurns.keys()]);
+  // World news needs its own summary context but never joins the turn's witnessed events.
+  const turns = new Set([cutoffTurn, ...eventTurns.keys(), ...unwitnessedEvents.map(row => row.Turn)]);
   if (historyFromTurn !== undefined) turns.add(historyFromTurn);
   for (const rows of [summaryHistory, baseSummaries]) {
     for (const row of rows) if (visible(row)) turns.add(row.Turn);
@@ -142,7 +148,7 @@ export async function queryNewspaperEvidence(
     }
   }
   const windowEvents: NewspaperEvent[] = [];
-  for (const row of events) {
+  for (const row of boundedEvents) {
     const projected = projectNewspaperEvent(row, contexts.get(row.Turn)!);
     if (!projected) continue;
     if (row.Turn > previousCheckTurn) result.events.push(projected);

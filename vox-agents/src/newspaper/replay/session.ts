@@ -243,17 +243,18 @@ export class ReplaySession {
     };
     const query = this.dependencies.query ?? queryNewspaperEvidence;
     const { multiplier: speedMultiplier } = state.speed;
-    const spans = this.config && {
+    const factOptions = this.config && {
       longTurns: resolveEditorialSpan('long', this.config.constants, speedMultiplier),
       historyTurns: ruleHistoryTurns(this.config.triggers, this.config.constants, speedMultiplier),
       speedMultiplier,
+      ideologies: this.config.constants.types.ideologies,
     };
     if (advance) {
       state.cursor = { cutoffTurn, previousCheckTurn, finished: cutoffTurn === state.settings.toTurn };
-      if (this.store && this.publication && this.config && spans) {
+      if (this.store && this.publication && this.config && factOptions) {
         const existing = this.store.getCheck(state.runId!, state.settings.receiverPlayerID, cutoffTurn);
         if (existing) throw new ReplaySessionError('This cutoff is already completed; resume the saved run.', 409);
-        const { evidence, facts } = await readReplayFacts(this.db!, request, spans, query);
+        const { evidence, facts } = await readReplayFacts(this.db!, request, factOptions, query);
         const visiblePlayers = new Set(evidence.players.map(player => String(player.subjectID)));
         visiblePlayers.add(String(state.settings.receiverPlayerID));
         const context = this.context ? {
@@ -274,7 +275,7 @@ export class ReplaySession {
         return { session: this.snapshot(), evidence: inspectorEvidence(evidence), check };
       }
     }
-    const evidence = await query(this.db!, spans ? replayFactRequest(request, spans) : request);
+    const evidence = await query(this.db!, factOptions ? replayFactRequest(request, factOptions) : request);
     if (advance) this.state = state;
     return { session: this.snapshot(), evidence: inspectorEvidence(evidence) };
   }

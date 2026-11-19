@@ -52,6 +52,24 @@ export function hexDistance(a: Plot, b: Plot, wrap: MapWrap): number {
   return closest;
 }
 
+/** Find the closest pair between two plot sets, retaining each selected entry. */
+export function nearestPlotPair<A extends Plot, B extends Plot>(a: readonly A[], b: readonly B[], wrap: MapWrap) {
+  let best: { distance: number; from: A; to: B } | undefined;
+  for (const from of a) for (const to of b) {
+    const distance = hexDistance(from, to, wrap);
+    if (!best || distance < best.distance) best = { distance, from, to };
+  }
+  return best;
+}
+
+/** Pair each usable city plot with the recorded row that supplies it. */
+function cityPlots(rows: readonly NewspaperSnapshot[]) {
+  return rows.flatMap(row => {
+    const point = plot(row.values.X, row.values.Y);
+    return point ? [{ ...point, row }] : [];
+  });
+}
+
 /** Index the receiver's readable coordinates for cutoff or dated inference. */
 export function distanceContext(
   cities: readonly NewspaperSnapshot[],
@@ -62,19 +80,12 @@ export function distanceContext(
   const capitals = owned.filter(row => row.values.IsCapital === true || row.values.IsCapital === 1);
   const capital = capitals.length === 1 ? capitals[0] : undefined;
   const capitalPlot = plot(capital?.values.X, capital?.values.Y);
-  const located = owned.flatMap(row => {
-    const point = plot(row.values.X, row.values.Y);
-    return point ? [{ row, point }] : [];
-  });
+  const located = cityPlots(owned);
 
   /** Identify the closest readable city, with city ID breaking ties. */
   function closest(point: Plot) {
-    let nearest: { row: NewspaperSnapshot; distance: number } | undefined;
-    for (const candidate of located) {
-      const distance = hexDistance(point, candidate.point, wrap);
-      if (!nearest || distance < nearest.distance) nearest = { row: candidate.row, distance };
-    }
-    return nearest;
+    const nearest = nearestPlotPair([point], located, wrap);
+    return nearest && { row: nearest.to.row, distance: nearest.distance };
   }
 
   /** Compute a plot's distances and cite the actual cities used in the calculation. */
@@ -103,15 +114,8 @@ export function distanceContext(
 
   /** Find the closest readable pair for another player's distance to the receiver. */
   function playerDistance(rows: readonly NewspaperSnapshot[]) {
-    let best: { other: NewspaperSnapshot; own: NewspaperSnapshot; distance: number } | undefined;
-    for (const other of rows) {
-      const point = plot(other.values.X, other.values.Y);
-      if (!point) continue;
-      const nearest = closest(point);
-      if (nearest && (!best || nearest.distance < best.distance))
-        best = { other, own: nearest.row, distance: nearest.distance };
-    }
-    return best && fact(best.distance, [...rowSources(best.other), ...rowSources(best.own)]);
+    const nearest = nearestPlotPair(cityPlots(rows), located, wrap);
+    return nearest && fact(nearest.distance, [...rowSources(nearest.from.row), ...rowSources(nearest.to.row)]);
   }
 
   return { distanceFromPlot, cityDistance, playerDistance };

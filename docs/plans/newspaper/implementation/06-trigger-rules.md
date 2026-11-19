@@ -1,12 +1,12 @@
 # Plan 6: trigger rules
 
-**Status: open.** The rule engine, 14 stock rules and 15 authored templates are in place, and the owner accepted their mechanics. This plan now widens what a catalogue author can express. The [trigger guide](../../../developers/vox-agents/newspaper/triggers/overview.md) explains rule evaluation, facts and audits as they stand today.
+**Status: open.** The rule engine, 14 stock rules and 15 authored templates are in place, and the owner accepted their mechanics. Stage 2 added [recorded names, ideology, team links and world news](../../../developers/vox-agents/newspaper/triggers/facts.md). Stage 3 is next.
 
 [Plan 4](04-triggers-templates-and-styles.md) owns trigger tuning, template writing and language styles, and decides which of the new capabilities become stock stories. [Plan 7](07-llm-editors.md) uses that baseline for LLM editing and comparison.
 
 ## Goal and success criteria
 
-The newspaper's trigger rules and templates express 14 stock stories. Many stories an author would want are out of reach: a communist paper with its own masthead, an opinion piece on a city's boredom, a notice that Isaac Newton was born in a distant land, a report that a spy stole a technology, an easter egg when a neighbor of the Huns learns Horseback Riding.
+The remaining stages let a catalogue author write an opinion piece on a city's boredom, report the birth of a named great person abroad or the theft of a technology, and give a paper a masthead that follows the game.
 
 Each remaining stage adds a group of capabilities and verifies it with [catalogue probes](../../../developers/vox-agents/newspaper/triggers/overview.md#probe-catalogue-behavior).
 
@@ -16,10 +16,7 @@ One rule holds throughout: the strategist's tools (`get-cities`, `get-players`, 
 
 | Wanted | Gap |
 | --- | --- |
-| Rules read technology, policy, ideology and religion by name | Names are stored at capture, but the newspaper projection publishes them under ID-style fields (`TechID`, `BranchType`, `PolicyID`, `ReligionID`). Players have no ideology fact. |
-| News from abroad: a met team gains a technology, a great person is born in a foreign land | The evidence query reads only events the receiver witnessed. Research by another team and births in unseen cities never reach the projection. |
-| A team's event linked to its players; distance between two players | Team events carry no player link. `distance` measures cities and plots only. |
-| Great people by their own name, at birth, use and death | Only the unit type is recorded ("Great Scientist"). Deaths (`UnitPrekill`) are recorded but not projected. |
+| Great people by their own name, at birth, use and death | Only the unit type is recorded ("Great Scientist"). The paper cannot report an unwitnessed birth or any death (`UnitPrekill`). |
 | Espionage stories | Both espionage hooks are stored as `EspionageResult` (two payload shapes), and election rigging as `ElectionResultSuccess` and `ElectionResultFailure`. None is projected. The stolen technology never reaches the recorder, because the DLL adds it to the notification after the hook has fired. |
 | Unhappiness by cause | Only net `HappinessDelta` is captured. The DLL exposes each cause to Lua. |
 | Masthead that follows the game; shared vocabulary | `design.title` is copied raw. No motto. No way to define a word once and print it in many templates. |
@@ -28,32 +25,14 @@ One rule holds throughout: the strategist's tools (`get-cities`, `get-players`, 
 
 ## Stages
 
-Extend the existing [probe overlay and tests](../../../developers/vox-agents/newspaper/triggers/overview.md#probe-catalogue-behavior) with each stage. Stages 2 to 5 change the MCP server projection and the fact builders. Stage 4 also changes the DLL. Stages 6 and 7 change only the editor. Each stage rewrites the affected sections of the documentation pages named in its last bullet.
-
-### Stage 2: names and world news
-
-- **Names.** `projectNewspaperEvent` in `mcp-server/src/newspaper/projection.ts` publishes each recorded name under a name key and drops the ID-style field. `Unit` and `Building` keep working as they do today, including the `CityTrained` join to `UnitCreated`; their source fields `UnitType`, `KilledUnitType`, `GreatPersonType` and `BuildingType` are dropped the same way.
-
-  | Recorded field | Evidence key | Rules read |
-  | --- | --- | --- |
-  | `TechID` | `Tech` | `event.tech` |
-  | `PolicyID` | `Policy` | `event.policy` |
-  | `BranchType`, `OldBranchType`, `NewBranchType` | `Branch`, `OldBranch`, `NewBranch` | `event.branch`, `event.oldBranch`, `event.newBranch` |
-  | `ReligionID` | `Religion` | `event.religion` |
-
-- **World news.** `queryNewspaperEvidence` in `mcp-server/src/newspaper/queries.ts` adds a second event read for a short list of world-news types, without the receiver's visibility filter. `projectNewspaperEvent` handles a row the receiver did not witness in a reduced form: it is published only when the receiver has met the owner (for a team event, every member), and it carries only the owner and the name fields, with no coordinates and no unit ID. Stage 2 lists `TeamTechResearched`; stage 3 adds named great person births. Example: Persia, whom we have met, gains Printing Press; the paper can say so even though we have no embassy there. `get-events` is untouched, since it has its own read.
-- `vox-agents/src/newspaper/editorial/facts/player.ts`: new fact `player.ideology`, the name of the ideology branch found among the keys of `policyBranches`, or `null`. The stock `constants.json` gains the type list `ideologies` (Order, Freedom, Autocracy), which the fact builder reads.
-- `facts/event.ts`: team events gain `event.players`, the known members of the team, and `event.player` when there is exactly one. The hook fires for research, grants and thefts alike, so templates say a civilization "gained" a technology.
-- `facts/distance.ts` and `facts/guest.ts`: `distance(a, b)` accepts players and returns the smallest distance between their visible cities.
-- Probes: `probe-huns-riding` (`event.tech == 'Horseback Riding'` and `distance(event.player, huns) <= neighboring`, with `huns` found by civilization name), `probe-ideology-adopted` (`ideologies.includes(event.branch)`), `probe-communist-press` (design `when: self.ideology == 'Order'`).
-- Docs: `triggers/facts.md`, `triggers/constants.md`.
+Extend the existing [probe overlay and tests](../../../developers/vox-agents/newspaper/triggers/overview.md#probe-catalogue-behavior) with each stage. Stages 3 to 5 change the MCP server projection and the fact builders. Stage 4 also changes the DLL. Stages 6 and 7 change only the editor. Each stage rewrites the affected sections of the documentation pages named in its last bullet.
 
 ### Stage 3: great people by name
 
 - `mcp-server/lua/event-visibility.lua`, `addUnit`: when `unit:IsGreatPerson()` and `unit:HasName()`, add `GreatPerson = unit:GetNameNoDesc()` to the unit metadata. The unit still exists when `UnitCreated`, `GreatPersonExpended` and `UnitPrekill` fire.
 - `mcp-server/src/tools/knowledge/get-events.ts`: remove the `GreatPerson` key from unit metadata in both output paths, including `Original`, so the strategist's output is unchanged.
 - `projection.ts`: publish the name as `Person`. Add `UnitPrekill` to `newspaperEventConfigs` (`OwnerID`, `UnitID`, `UnitType`, `PlotX`, `PlotY`, `AttackingPlayerID`, `DelayKill`), projected only for a named great person, only for the row with `DelayKill` false (the hook fires twice per death), and skipped when the same unit has a `GreatPersonExpended` event in the same turn (using an expended great person also kills the unit).
-- World news: add `UnitCreated` with a `Person` to the world-news list from stage 2. Births abroad are news; uses and deaths abroad are reported only when the receiver witnessed them.
+- World news: add `UnitCreated` with a `Person` to the existing world news list. Births abroad are news; uses and deaths abroad are reported only when the receiver witnessed them.
 - `facts/event.ts`: `event.person`, and `event.kind` with the values `born`, `expended`, `died` for these three events.
 - Probes: `probe-foreign-birth` (a named birth by a met civilization, unseen city), `probe-obituary` (a named great person is expended or dies; one expenditure yields one story).
 - Docs: `triggers/facts.md`, `mcp-server/docs/knowledge.md`.

@@ -28,6 +28,33 @@ describe('durable replay publication', () => {
     return { ...replaySettings(recording.filename), fromTurn: 6, toTurn: 40, outputPath, runId: 'main', editorialConfigDirectory: catalogue };
   }
 
+  it('should publish unwitnessed research by a met civilization using the configured ideology names', async () => {
+    const sqlite = new Database(recording.filename);
+    try {
+      sqlite.prepare('UPDATE PlayerSummaries SET PolicyBranches = ? WHERE ID = 1').run('{"Ordre":[]}');
+      sqlite.prepare('INSERT INTO GameEvents (ID, Turn, CreatedAt, Player0, Type, Payload) VALUES (?, ?, ?, ?, ?, ?)')
+        .run(104, 6, 2007, 0, 'TeamTechResearched', '{"TeamID":1,"TechID":"Printing Press","ChangeAmount":1}');
+    } finally { sqlite.close(); }
+    await Promise.all([
+      writeFile(path.join(catalogue, 'constants.json'), JSON.stringify({ types: { ideologies: ['Ordre'] } })),
+      writeFile(path.join(catalogue, 'triggers.json'), JSON.stringify([{
+        id: 'fixture-research', subject: 'event', event: 'TeamTechResearched',
+        when: "self.ideology === 'Ordre' && event.tech === 'Printing Press'",
+        values: { technology: 'event.tech', civilization: 'event.player.name' },
+      }])),
+      writeFile(path.join(catalogue, 'templates.json'), JSON.stringify([{
+        id: 'fixture-research-article', triggers: ['fixture-research'], tags: ['foreign'], weight: { base: 1 },
+        variants: [{ id: 'notice', headline: '{{civilization}} gains a technology', body: ['{{technology}}'], weight: { base: 1 } }],
+      }])),
+    ]);
+    await session.configure(settings());
+    const result = await session.advance();
+    expect(result.check?.status).toBe('published');
+    const { articles } = await session.getIssue(result.check!.issue!.issueId);
+    const article = articles.find(item => item.templateIds.includes('fixture-research-article'));
+    expect(article?.sources).toContainEqual(expect.objectContaining({ table: 'GameEvents', id: 104 }));
+  });
+
   it('should replace votes, reject stale scopes, reschedule frequency and resume immutable history', async () => {
     const state = await session.configure(settings());
     expect(state).toMatchObject({ runId: 'main', preferences: { frequencyStandardTurns: 5, llmEnabled: false }, publicationIntervalTurns: 8 });

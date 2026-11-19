@@ -131,9 +131,9 @@ describe('historical evidence queries', () => {
     const result = await queryNewspaperEvidence(db, request);
     expect(result.events.map(row => row.source.id)).toEqual([102, 103, 106]);
     expect(result.events[0].values.IsAggressor).toBe(false);
-    expect(result.events[1].values).toMatchObject({ TechID: 0, HasTech: false });
+    expect(result.events[1].values).toEqual({ TeamID: 0, HasTech: false });
     expect(result.events[1].source.createdAt).toBe(2010);
-    expect(result.events[2].values.ReligionID).toBe(2);
+    expect(result.events[2].values).toEqual({ PlayerID: 0, HolyCityID: 42 });
     expect((await queryNewspaperEvidence(db, { ...request, previousCheckTurn: 10 })).events).toEqual([]);
   });
 
@@ -218,5 +218,51 @@ describe('historical evidence queries', () => {
       { ...request, comparisonRange: { fromTurn: 9, toTurn: 8 } },
       { ...request, comparisonRange: { fromTurn: 0, toTurn: 11 } }
     ]) expect(newspaperEvidenceRequestSchema.safeParse(invalid).success).toBe(false);
+  });
+
+  it('should publish an unwitnessed researched technology for a met team in reduced form', async () => {
+    await event(db, 120, 10, 'TeamTechResearched', { TeamID: 1, TechID: 'Printing Press', ChangeAmount: 3 }, 0);
+    const projected = (await queryNewspaperEvidence(db, request)).events.find(row => row.source.id === 120)!;
+    expect(projected.values).toEqual({ TeamID: 1, Tech: 'Printing Press' });
+  });
+
+  it('should withhold world news for unknown or partially known teams and use contact at the event turn', async () => {
+    await event(db, 120, 10, 'TeamTechResearched', { TeamID: 7, TechID: 'Pottery', ChangeAmount: 1 }, 0);
+    await db.insertInto('PlayerInformations').values([
+      { Key: 4, TeamID: 9, Civilization: 'Civ4', Leader: 'Leader4', IsMajor: 1, IsHuman: 0, Data: {} },
+      { Key: 5, TeamID: 9, Civilization: 'Civ5', Leader: 'Leader5', IsMajor: 1, IsHuman: 0, Data: {} }
+    ] as any).execute();
+    await summary(db, 20, 4, 10, 1);
+    await summary(db, 21, 5, 10, 0);
+    await event(db, 121, 10, 'TeamTechResearched', { TeamID: 9, TechID: 'Pottery', ChangeAmount: 1 }, 0);
+    await summary(db, 22, 2, 9, 1);
+    await event(db, 122, 8, 'TeamTechResearched', { TeamID: 2, TechID: 'Pottery', ChangeAmount: 1 }, 0);
+    await event(db, 123, 10, 'TeamTechResearched', { TeamID: 2, TechID: 'Writing', ChangeAmount: 1 }, 0);
+
+    const ids = (await queryNewspaperEvidence(db, request)).events.map(row => row.source.id);
+    expect(ids).not.toContain(120);
+    expect(ids).not.toContain(121);
+    expect(ids).not.toContain(122);
+    expect(ids).toContain(123);
+  });
+
+  it('should deduplicate witnessed world news, respect the window and withhold private events and losses', async () => {
+    await event(db, 120, 10, 'TeamTechResearched', { TeamID: 1, TechID: 'Pottery', ChangeAmount: 4 }, 1);
+    await event(db, 121, 10, 'TeamSetHasTech', { TeamID: 1, TechID: 'Writing', HasTech: true }, 0);
+    await event(db, 122, 10, 'ReligionFounded', { PlayerID: 1, ReligionID: 'Buddhism' }, 0);
+    await event(db, 123, 9, 'TeamTechResearched', { TeamID: 1, TechID: 'Writing', ChangeAmount: 1 }, 0);
+    await event(db, 124, 10, 'TeamTechResearched', { TeamID: 1, TechID: 'Writing', ChangeAmount: -1 }, 0);
+
+    const result = await queryNewspaperEvidence(db, { ...request, previousCheckTurn: 9, historyFromTurn: 5 });
+    expect(result.events.filter(row => row.source.id === 120)).toHaveLength(1);
+    expect(result.events.find(row => row.source.id === 120)?.values)
+      .toEqual({ TeamID: 1, Tech: 'Pottery', ChangeAmount: 4 });
+    expect(result.events.map(row => row.source.id)).not.toContain(121);
+    expect(result.events.map(row => row.source.id)).not.toContain(122);
+    expect(result.events.map(row => row.source.id)).not.toContain(123);
+    expect(result.events.map(row => row.source.id)).not.toContain(124);
+    expect(result.history?.events.find(row => row.source.id === 123)?.values).toEqual({ TeamID: 1, Tech: 'Writing' });
+    const ids = result.events.map(row => row.source.id);
+    expect([...ids].sort((a, b) => a - b)).toEqual(ids);
   });
 });
