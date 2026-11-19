@@ -11,6 +11,7 @@ import {
   buildGameStateVector,
   NEUTRAL_PAD,
 } from '../../../src/archivist/utils/vectors.js';
+import { parseDiplomatics } from '../../../src/archivist/utils/game-data.js';
 import type { Episode, TurnContext } from '../../../src/archivist/types.js';
 
 // ---------------------------------------------------------------------------
@@ -157,6 +158,7 @@ describe('parseStance', () => {
 
   it('should raise hostility to 3 for denouncements / being a vassal master', () => {
     expect(parseStance(['Denounced Them'])).toBe(3);
+    expect(parseStance(['They Denounced Us'])).toBe(2);
     expect(parseStance(['Our Master (Voluntary)'])).toBe(3);
   });
 
@@ -172,6 +174,26 @@ describe('parseStance', () => {
   it('should let war override everything', () => {
     expect(parseStance(['Defensive Pact', 'War (Our Score: 1%; Our War Weariness: 0%)'])).toBe(4);
   });
+});
+
+// ---------------------------------------------------------------------------
+// parseDiplomatics
+// ---------------------------------------------------------------------------
+
+describe('parseDiplomatics', () => {
+  const majors = new Set(['Rome', 'Greece']);
+
+  it('should count outgoing denouncements without changing the meaning of the retrieval feature', () => {
+    const counts = parseDiplomatics({
+      Rome: ['Distance: Close', 'War (Our Score: -20%; Our War Weariness: 45%)', 'Denounced Them'],
+      Greece: ['They Denounced Us'],
+      Geneva: ['They Denounced Us'],
+    }, majors);
+    expect(counts.activeWars).toBe(1);
+    expect(counts.warWeariness).toBe(45);
+    expect(counts.denouncements).toBe(1);
+  });
+
 });
 
 // ---------------------------------------------------------------------------

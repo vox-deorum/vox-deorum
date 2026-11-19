@@ -34,7 +34,7 @@ export function parseStance(statuses: string[]): number {
   let stance = 2; // default: neutral
   for (const s of statuses) {
     if (isAtWar(s)) return 4;
-    if (s.includes('Denounced') || isVassalOf(s)) {
+    if (s === 'Denounced Them' || isVassalOf(s)) {
       if (stance < 3) stance = 3;
     }
     if (isFriend(s) || isMasterOf(s)) {

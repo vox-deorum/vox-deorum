@@ -453,8 +453,8 @@ Game.RegisterFunction("${Name}", function(${Arguments})
               relationshipList[#relationshipList + 1] = "Denounced Them"
             end
 
-            if player:IsDenouncingPlayer(otherPlayerID) then
-              relationshipList[#relationshipList + 1] = "Denounced By Them"
+            if otherPlayer:IsDenouncedPlayer(playerID) then
+              relationshipList[#relationshipList + 1] = "They Denounced Us"
             end
 
             -- Only add if there are relationships

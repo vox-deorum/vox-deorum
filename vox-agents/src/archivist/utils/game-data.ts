@@ -96,9 +96,8 @@ export function parseDiplomatics(
       if (hasPeaceTreaty(status)) result.truces++;
       if (hasDefensivePact(status)) result.defensivePacts++;
       if (isFriend(status)) result.friends++;
-      if (status.includes('Denounced Them') || status.includes('Denounced By Them')) {
-        result.denouncements++;
-      }
+      // Keep the retrieval feature focused on denouncements issued by this player.
+      if (status === 'Denounced Them') result.denouncements++;
       if (isMasterOf(status)) result.vassals++;
       if (isVassalOf(status)) result.isVassal = 1;
     }

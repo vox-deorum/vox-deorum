@@ -158,7 +158,7 @@ A `Withdraw` posture is the AI's assessment during that turn. The recorder can r
 | `friend` | Declared friendship with the receiver | `relationships` |
 | `ally` | Defensive pact with the receiver, or a city-state allied to the receiver | `relationships`, `majorAlly` |
 | `vassal`, `master` | The receiver's vassal, or the receiver's master | `relationships` |
-| `relation(other)` | The relationship with any other player: `war`, `friend`, `pact`, `vassalOf`, `masterOf`, `warScore` | `relationships`, through the helpers in `mcp-server/src/diplomacy/relationships.ts` |
+| `relation(other)` | The relationship with any other player: `war`, `friend`, `pact`, `vassalOf`, `masterOf`, `warScore`, `denouncedThem`, `denouncedByThem`, `openBordersTo`, `openBordersFrom`, `proximity`, `warWeariness`, `influence`, `protected` | `relationships`, through the helpers in `mcp-server/src/diplomacy/relationships.ts` |
 | `rank(field)` | Position among known majors with a visible number on that date. Equal numbers share a position. If only our score is visible, our score ranks 1 in a comparison of one. For a world-leader story, check how many rivals have readable scores. | The named fact across `players` |
 | `events` | Every permitted event inside the window that names this player or its team | Event player and team IDs |
 | `ourDiplomatThere` | The receiver has a diplomat posted to this foreign major's capital | The receiver's spy roster, counting diplomats and vassal diplomats schmoozing at the recorded capital. A readable roster that shows none gives `false`; missing or ambiguous evidence is hidden. |
@@ -166,6 +166,16 @@ A `Withdraw` posture is the AI's assessment during that turn. The recorder can r
 | `is.<name>` | A [shortcut](constants.md#shortcuts), such as `player.is.rival` | The catalogue |
 
 The two diplomat facts apply to known foreign majors. Policy and deal insight comes from the receiver's outgoing diplomat.
+
+### Relationship direction and access
+
+`denouncedThem` and `openBordersTo` describe what the subject did toward the other player. `denouncedByThem` and `openBordersFrom` describe what the other player did toward the subject. A positive observation from either side of a same-turn pair wins a disagreement. A `false` reading requires the full major entry of the player who took the action, so a missing direction stays unknown.
+
+`proximity` reads the subject's observation first and gives the game's label, such as `Close`. `warWeariness` is the subject's own reading and appears only under full access to a major at war with another major. For a major and a city-state, `influence` and `protected` describe the major's influence and whether it is protecting the city-state. Each entry in `relationships` shows what its own summary recorded. Use `relation(other)` to combine those observations and `relation(other).knows('openBordersFrom')` to check whether the reverse grant is known.
+
+### Policy names
+
+`player.hasPolicy('Secularism')` checks the recorded names in `player.policyBranches`. It returns `true` on an exact name match and cites the national row that supplied the branch map. It returns `undefined` for a miss, a numeric branch count, an empty map or unreadable branch data, so a missing name proves nothing. Read it with `player.hasPolicy('Secularism') === true` when the rule needs a definite answer.
 
 ### Technology milestones
 

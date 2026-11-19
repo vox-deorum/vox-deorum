@@ -94,13 +94,25 @@ function relationFacts(observations: Observation[]): FactObject {
   return result;
 }
 
-/** Expose one directed entry without raw labels, weariness, or influence. */
+/** Build one directed observation for the relationship list and the runner. */
+function directedRelationship(entry: Relationship, row: NewspaperDiplomacySnapshot): FactObject {
+  const result: PlayerFields = {
+    ...relationFacts([{ entry, row }]),
+    state: fact(entry.state, [row.source])
+  };
+  for (const key of ['denouncedThem', 'denouncedByThem', 'openBordersTo', 'proximity',
+    'warWeariness', 'influence', 'protected'] as const) {
+    if (entry[key] !== undefined) result[key] = fact(entry[key], [row.source]);
+  }
+  return result;
+}
+
+/** Add the target and optional standing flags to a listed directed observation. */
 function listedRelationship(entry: Relationship, row: NewspaperDiplomacySnapshot): FactObject {
   const sources = [row.source];
   const result: PlayerFields = {
-    ...relationFacts([{ entry, row }]),
-    player: fact(reference('player', entry.targetPlayerID), sources),
-    state: fact(entry.state, sources)
+    ...directedRelationship(entry, row),
+    player: fact(reference('player', entry.targetPlayerID), sources)
   };
   if (entry.peaceTreaty === true) result.peaceTreaty = fact(true, sources);
   if (entry.ally === true) result.ally = fact(true, sources);
@@ -183,11 +195,7 @@ export function buildPlayerSnapshotFacts(row: NewspaperSnapshot, context: FactBu
   const relations: PlayerFields = {};
   // The runner can reconcile either direction at any snapshot date without duplicating rows in history.
   if (diplomacy) for (const entry of diplomacy.relationships) {
-    const proof = [diplomacy.source];
-    relations[entry.targetPlayerID] = fact({
-      ...relationFacts([{ entry, row: diplomacy }]),
-      state: fact(entry.state, proof)
-    }, proof);
+    relations[entry.targetPlayerID] = fact(directedRelationship(entry, diplomacy), [diplomacy.source]);
   }
   // A withheld entry cannot establish any particular pair's war state by its absence.
   if (!diplomacy || [...gaps ?? []].some(kind => kind !== 'unknownRelationship'))

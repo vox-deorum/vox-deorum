@@ -63,13 +63,22 @@ export const newspaperDiplomacySnapshotSchema = z.object({
     targetTeamID: z.number().int().describe('Resolved player team'),
     state: z.enum(['war', 'peace', 'unknown']).describe('Explicit relationship observation; missing entries never imply peace'),
     warScore: z.number().optional().describe('Directional score reported by the observing major'),
+    warWeariness: z.number().int().min(0).max(100).optional()
+      .describe('Weariness reported by the observing major only under recorded full access during an active war'),
+    proximity: z.enum(['Neighbors', 'Close', 'Far', 'Distant']).optional()
+      .describe('Raw distance label from the observation, excluding the Unknown placeholder'),
+    influence: z.number().int().optional().describe('Signed city-state influence held by the resolved major'),
+    protected: z.boolean().optional().describe('Whether the resolved major protects the city-state, when the summary syntax is valid'),
     defensivePact: z.literal(true).optional().describe('An observed defensive pact with the target'),
     peaceTreaty: z.literal(true).optional().describe('An observed active peace treaty with the target'),
     friendship: z.literal(true).optional().describe('An observed declaration of friendship or city-state friendship'),
     ally: z.literal(true).optional().describe('An observed city-state alliance with the target'),
     vassal: z.enum(['voluntary', 'capitulated']).optional().describe('The target is the observing player\'s vassal'),
-    master: z.enum(['voluntary', 'capitulated']).optional().describe('The target is the observing player\'s master')
-  })).describe('Public relationship facts with private suffixes removed'),
+    master: z.enum(['voluntary', 'capitulated']).optional().describe('The target is the observing player\'s master'),
+    denouncedThem: z.boolean().optional().describe('The observing player denounced the target; false is explicit for a full major entry'),
+    denouncedByThem: z.literal(true).optional().describe('The target denounced the observing player'),
+    openBordersTo: z.boolean().optional().describe('The observing player granted the target open borders; false is explicit for a full major entry')
+  })).describe('Directed relationship facts permitted by dated summary access'),
   majorAllyPlayerID: z.number().int().nullable().optional().describe('Visible resolved city-state ally; null means explicitly no ally')
 });
 

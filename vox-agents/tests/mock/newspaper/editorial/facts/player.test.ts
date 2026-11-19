@@ -4,7 +4,7 @@ import type {
 } from '../../../../../../mcp-server/dist/newspaper/evidence.js';
 import { distanceContext } from '../../../../../src/newspaper/editorial/facts/distance.js';
 import { buildNewspaperFacts } from '../../../../../src/newspaper/editorial/facts/index.js';
-import { reference, type FactBuildContext, type FactWindow } from '../../../../../src/newspaper/editorial/facts/model.js';
+import { reference, type FactBuildContext, type FactObject, type FactWindow } from '../../../../../src/newspaper/editorial/facts/model.js';
 import { buildPlayerFacts, buildPlayerSnapshotFacts } from '../../../../../src/newspaper/editorial/facts/player.js';
 import { buildTimeline, observedAt, rowsAt } from '../../../../../src/newspaper/editorial/facts/timeline.js';
 import { compileEditorialExpressions } from '../../../../../src/newspaper/editorial/shared/expressions.js';
@@ -291,6 +291,183 @@ describe('newspaper player facts', () => {
     });
   });
 
+  describe('directed relationship facts and policies', () => {
+    /** Replace the default player rows and diplomacy history with the supplied observations. */
+    function relationshipContext(
+      rows: Array<[NewspaperSnapshot, boolean, NewspaperDiplomacySnapshot['relationships']]>
+    ): FactBuildContext {
+      const base = context(6);
+      const named = new Set(rows.map(([row]) => row.subjectID));
+      return context(6, {
+        players: [...base.players.filter(row => !named.has(row.subjectID)), ...rows.map(([row]) => row)],
+        history: {
+          ...base.evidence.history!,
+          snapshots: {
+            players: [...base.evidence.history!.snapshots.players.filter(row => !named.has(row.subjectID)),
+              ...rows.map(([row]) => row)],
+            cities: base.evidence.history!.snapshots.cities
+          }
+        },
+        diplomacy: {
+          fromTurn: 2,
+          baseline: [],
+          history: rows.map(([row, isMajor, relationships]) => diplomatic(row, isMajor, relationships)),
+          gaps: []
+        }
+      });
+    }
+
+    /** Evaluate expressions against one subject set and return the per-expression results. */
+    async function evaluate(sources: string[], at: FactBuildContext, subjects: Record<string, ReturnType<typeof reference>> = {}) {
+      const runner = await compileEditorialExpressions(sources.map((source, index) => ({
+        rule: 'relationship', field: `values.${index}`, source
+      })));
+      const [[results]] = await runner.evaluate({
+        facts: buildNewspaperFacts(at.evidence, at.metadata),
+        groups: [{ expressions: sources.map((_, index) => index), subjects: [subjects] }]
+      });
+      return results;
+    }
+
+    it('should orient denouncements and open borders between same-turn observations', async () => {
+      const ownRow = snapshot(0, 50, 6, {});
+      const rivalRow = snapshot(1, 51, 6, {});
+      const at = relationshipContext([
+        [ownRow, true, [{ targetPlayerID: 1, targetTeamID: 5, state: 'peace', denouncedThem: true, openBordersTo: true }]],
+        [rivalRow, true, [{ targetPlayerID: 0, targetTeamID: 4, state: 'peace', denouncedThem: true, openBordersTo: false }]]
+      ]);
+      const listed = buildPlayerSnapshotFacts(ownRow, at).relationships.value as FactObject[];
+      expect(listed[0]).toMatchObject({
+        denouncedThem: { value: true, sources: [ownRow.source] },
+        openBordersTo: { value: true, sources: [ownRow.source] }
+      });
+      expect(listed[0]).not.toHaveProperty('openBordersFrom');
+      const results = await evaluate([
+        'player.relation(rival).denouncedThem',
+        'player.relation(rival).denouncedByThem',
+        'player.relation(rival).openBordersTo',
+        'player.relation(rival).openBordersFrom'
+      ], at, { player: reference('player', 0), rival: reference('player', 1) });
+      expect(results).toEqual([
+        { value: true, sources: [ownRow.source] },
+        { value: true, sources: [rivalRow.source] },
+        { value: true, sources: [ownRow.source] },
+        { value: false, sources: [rivalRow.source] }
+      ]);
+    });
+
+    it('should prefer positive denouncement evidence and leave absent directions unset', async () => {
+      const ownRow = snapshot(0, 52, 6, {});
+      const rivalRow = snapshot(1, 53, 6, {});
+      const at = relationshipContext([
+        [ownRow, true, [{ targetPlayerID: 1, targetTeamID: 5, state: 'peace', denouncedThem: false }]],
+        [rivalRow, true, [{
+          targetPlayerID: 0, targetTeamID: 4, state: 'peace', denouncedThem: true, denouncedByThem: true
+        }]]
+      ]);
+      const listed = buildPlayerSnapshotFacts(ownRow, at).relationships.value as FactObject[];
+      expect(listed[0].denouncedThem).toEqual({ value: false, sources: [ownRow.source] });
+      expect(listed[0]).not.toHaveProperty('denouncedByThem');
+      const results = await evaluate([
+        'player.relation(rival).denouncedThem',
+        'player.relation(rival).denouncedByThem',
+        "player.relation(rival).knows('openBordersFrom')"
+      ], at, { player: reference('player', 0), rival: reference('player', 1) });
+      expect(results).toEqual([
+        { value: true, sources: [rivalRow.source] },
+        { value: true, sources: [rivalRow.source] },
+        { value: false }
+      ]);
+    });
+
+    it('should not borrow a direction from a reciprocal row on another turn', async () => {
+      const ownRow = snapshot(0, 58, 6, {});
+      const rivalRow = snapshot(1, 59, 5, {});
+      const at = relationshipContext([
+        [ownRow, true, [{
+          targetPlayerID: 1, targetTeamID: 5, state: 'peace', denouncedThem: false, openBordersTo: false
+        }]],
+        [rivalRow, true, [{
+          targetPlayerID: 0, targetTeamID: 4, state: 'peace', denouncedThem: true, openBordersTo: true
+        }]]
+      ]);
+      const listed = buildPlayerSnapshotFacts(ownRow, at).relationships.value as FactObject[];
+      expect(listed[0].denouncedThem).toEqual({ value: false, sources: [ownRow.source] });
+      expect(listed[0].openBordersTo).toEqual({ value: false, sources: [ownRow.source] });
+      expect(listed[0]).not.toHaveProperty('denouncedByThem');
+      expect(listed[0]).not.toHaveProperty('openBordersFrom');
+      const results = await evaluate([
+        'player.relation(rival).denouncedThem',
+        "player.relation(rival).knows('denouncedByThem')",
+        "player.relation(rival).knows('openBordersFrom')"
+      ], at, { player: reference('player', 0), rival: reference('player', 1) });
+      expect(results).toEqual([
+        { value: false, sources: [ownRow.source] },
+        { value: false },
+        { value: false }
+      ]);
+    });
+
+    it('should take the subject proximity and weariness while reading city-state standing from either side', async () => {
+      const ownRow = snapshot(0, 54, 6, {});
+      const rivalRow = snapshot(1, 55, 6, {});
+      const minorRow = snapshot(22, 56, 6, {});
+      const at = relationshipContext([
+        [ownRow, true, [{ targetPlayerID: 1, targetTeamID: 5, state: 'war', warScore: 20, warWeariness: 40, proximity: 'Far' }]],
+        [rivalRow, true, [{ targetPlayerID: 0, targetTeamID: 4, state: 'war', warScore: -20, proximity: 'Close' }]],
+        [minorRow, false, [{
+          targetPlayerID: 1, targetTeamID: 5, state: 'peace', ally: true,
+          influence: 155, protected: false, proximity: 'Neighbors', warWeariness: 15
+        }]]
+      ]);
+      const results = await evaluate([
+        'player.relation(rival).proximity',
+        'player.relation(rival).warWeariness',
+        "rival.relation(player).knows('warWeariness')",
+        'player.relation(rival).warScore',
+        'rival.relation(minor).influence',
+        'rival.relation(minor).protected',
+        'rival.relation(minor).proximity',
+        "rival.relation(minor).knows('warWeariness')"
+      ], at, { player: reference('player', 0), rival: reference('player', 1), minor: reference('player', 22) });
+      expect(results).toEqual([
+        { value: 'Far', sources: [ownRow.source] },
+        { value: 40, sources: [ownRow.source] },
+        { value: false },
+        { value: 20, sources: [ownRow.source] },
+        { value: 155, sources: [minorRow.source] },
+        { value: false, sources: [minorRow.source] },
+        { value: 'Neighbors', sources: [minorRow.source] },
+        { value: false }
+      ]);
+    });
+
+    it('should answer hasPolicy only from recorded policy names and cite the branch row', async () => {
+      const previous = snapshot(0, 56, 4, { PolicyBranches: { Tradition: ['A'] } });
+      const row = snapshot(0, 57, 6, { PolicyBranches: { Tradition: ['A', 'B'], Freedom: ['Constitution'] } });
+      const results = await evaluate([
+        "self.hasPolicy('A')",
+        "self.hasPolicy('Constitution')",
+        "self.before.hasPolicy('A')",
+        "self.before.hasPolicy('Constitution') === undefined",
+        "self.hasPolicy('Missing') === undefined"
+      ], relationshipContext([[previous, true, []], [row, true, []]]));
+      expect(results).toEqual([
+        { value: true, sources: [row.source] },
+        { value: true, sources: [row.source] },
+        { value: true, sources: [previous.source] },
+        { value: true, sources: [previous.source] },
+        { value: true }
+      ]);
+
+      for (const [index, branches] of [{ Tradition: 3 }, { Tradition: {} }, { Tradition: [] }, null].entries()) {
+        const unreadable = snapshot(0, 60 + index, 6, { PolicyBranches: branches });
+        const [result] = await evaluate(["self.hasPolicy('A') === undefined"], relationshipContext([[unreadable, true, []]]));
+        expect(result).toEqual({ value: true });
+      }
+    });
+  });
+
   describe('player expressions', () => {
     it('should resolve named gains and losses with their sources and leave unrecorded technologies unknown', async () => {
       const printing = { table: 'GameEvents', id: 110, turn: 1, createdAt: 1 } as const;
@@ -328,11 +505,13 @@ describe('newspaper player facts', () => {
         "rival.rank('sciencePerTurn')",
         "minor.knows('before')",
         '!player.before.relation(minor).war',
+        'player.before.relation(rival).masterOf',
+        'rival.before.relation(player).vassalOf',
       ];
       const runner = await compileEditorialExpressions(sources.map((source, index) => ({
         rule: 'player-observation', field: `values.${index}`, source
       })));
-      const [[[beforeWarScore, currentWar, beforeRank, currentRank, hiddenRank, minorBefore, unmetRelation]]] =
+      const [[[beforeWarScore, currentWar, beforeRank, currentRank, hiddenRank, minorBefore, unmetRelation, master, vassal]]] =
         await runner.evaluate({
           facts: buildNewspaperFacts(at.evidence, at.metadata),
           groups: [{
@@ -347,6 +526,8 @@ describe('newspaper player facts', () => {
       expect(hiddenRank).toMatchObject({ error: { hidden: 'player.rank' } });
       expect(minorBefore).toEqual({ value: false });
       expect(unmetRelation).toMatchObject({ error: { hidden: 'player.relation' }, sources: [own.source] });
+      expect(master).toEqual({ value: true, sources: [own.source, rival.source] });
+      expect(vassal).toEqual({ value: true, sources: [rival.source] });
     });
 
     it('should keep an unrecorded pair distinct from a conflicting war observation', async () => {

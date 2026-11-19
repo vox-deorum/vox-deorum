@@ -29,13 +29,9 @@ Done means:
 | Genre | Opinion, obituary and satire exist only as probes, which do not ship. | `newspaper/probes/` |
 | Designs | `oral-accounts`, `victorian`, `modern`, chosen per issue by `when` and `weight` with stickiness. | `editorial/presentation/issue.ts` |
 | Civilization facts | `self.name`, `self.leader`, `self.era`, `self.ideology`, policy branches, religion. | `editorial/facts/player.ts` |
-| Relationship facts | `relation(other)` gives war, friendship, defensive pact, vassalage and war score. | `editorial/facts/guest.ts` |
+| Relationship facts | `relation(other)` gives war, friendship, pacts, vassalage and the recorded direction of denouncements and open borders. | `editorial/facts/guest.ts` |
 
-Two gaps the axes want to close:
-
-| Gap | Effect | Handling in this plan |
-| --- | --- | --- |
-| Denouncement. MCP recognizes the relationship text but builds no fact. | Anti-foreign stance can only follow war, never a denouncement. | Start with war and friendship. Add the fact if the sample sheet shows the gap matters. |
+Stance rules can already read relationship direction from the [player facts](../../../developers/vox-agents/newspaper/triggers/facts.md#player), including denouncements, open borders, war weariness and city-state standing. Add a variant for an angle only when the sample sheet shows it matters.
 
 Paths in this plan are relative to `vox-agents/src/newspaper/` for code and `vox-agents/` for the runtime catalogue.
 

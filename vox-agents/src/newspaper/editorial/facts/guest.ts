@@ -233,6 +233,20 @@ function factRuntime(model, wrap, constants, shortcuts) {
           if (typeof name !== 'string' || !changes || !has(changes, name)) return undefined;
           return read(changes[name], 'player.hasTechnology', date);
         }));
+        // Exact recorded policy names only. Counts, empty maps and null give no positive evidence.
+        method('hasPolicy', Object.freeze(name => {
+          const branches = fields.policyBranches;
+          const map = branches?.value;
+          if (typeof name !== 'string' || !map || typeof map !== 'object' || Array.isArray(map)) return undefined;
+          for (const key of Object.keys(map)) {
+            const policies = map[key]?.value;
+            if (Array.isArray(policies) && policies.includes(name)) {
+              cite(branches.sources);
+              return true;
+            }
+          }
+          return undefined;
+        }));
       }
       if (timelines[kind] && current) {
         relative('before', from);
@@ -388,6 +402,29 @@ function factRuntime(model, wrap, constants, shortcuts) {
       else if (atWar && forward?.warScore) available.warScore = forward.warScore;
       else if (atWar && backward?.warScore)
         available.warScore = { value: -backward.warScore.value, sources: backward.warScore.sources };
+      // A positive observation on either side proves a denouncement; only the outgoing row can prove absence.
+      const positive = (...fields) => {
+        const present = fields.filter(field => field && field.value === true);
+        if (present.length) return { value: true, sources: present.flatMap(field => field.sources ?? []) };
+        return undefined;
+      };
+      const denouncedThem = positive(forward?.denouncedThem, backward?.denouncedByThem);
+      if (denouncedThem) available.denouncedThem = denouncedThem;
+      else if (forward?.denouncedThem?.value === false)
+        available.denouncedThem = { value: false, sources: forward.denouncedThem.sources };
+      const denouncedByThem = positive(forward?.denouncedByThem, backward?.denouncedThem);
+      if (denouncedByThem) available.denouncedByThem = denouncedByThem;
+      else if (backward?.denouncedThem?.value === false)
+        available.denouncedByThem = { value: false, sources: backward.denouncedThem.sources };
+      if (forward?.openBordersTo) available.openBordersTo = forward.openBordersTo;
+      if (backward?.openBordersTo) available.openBordersFrom = backward.openBordersTo;
+      const proximity = forward?.proximity ?? backward?.proximity;
+      if (proximity) available.proximity = proximity;
+      if (atWar && !atPeace && forward?.warWeariness) available.warWeariness = forward.warWeariness;
+      const influence = forward?.influence ?? backward?.influence;
+      if (influence) available.influence = influence;
+      const protection = forward?.protected ?? backward?.protected;
+      if (protection) available.protected = protection;
       return record(available, 'player.relation', date);
     }
 

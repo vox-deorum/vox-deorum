@@ -92,13 +92,18 @@ Peace and renewed war reset `warTurns`, `peaceTurns` and the score history, so a
 
 `mcp-server/src/diplomacy/relationships.ts` owns the relationship parser and the checks for war, friendship, alliances and defensive pacts. `player.relation(other)`, the player flags such as `enemy` and `friend`, and every `pair` fact are built on it. Use these helpers when adding a relationship fact, so every rule reads relationships the same way.
 
-Major summaries record lists of relationship labels; city-state summaries record a relationship string with additional measurements. Newspaper projection resolves names to unique, dated, visible player identities and drops private measurements such as war weariness and city-state influence.
+Major summaries record lists of relationship labels; city-state summaries record a relationship string with additional measurements. Newspaper projection resolves names to unique, dated, visible player identities. It keeps city-state standing and exposes war weariness only under full access to a major at war with another major. In `relation(other)`, a positive denouncement from either side wins a same-turn disagreement. Open borders and negative denouncement facts come from the acting player's own entry.
 
 | Observation | Becomes |
 | --- | --- |
 | Explicit war label | `atWar` true, with `warScore` when recorded |
+| War weariness under full access between two majors | `warWeariness` from the subject's own observation |
 | Friendship or city-state ally label | `friend`, `ally` |
 | Master or vassal label | `vassal`, `master`, and whether it is voluntary or capitulated |
+| `Denounced Them` or `They Denounced Us` | `denouncedThem` when the subject denounced the other player, `denouncedByThem` when the other player denounced the subject |
+| Open borders label | `openBordersTo` when the subject granted them, `openBordersFrom` when the other player did |
+| City-state influence or protection | Signed `influence` and `protected` from whichever side recorded them |
+| Distance label | `proximity`, excluding the recorder's `Unknown` placeholder |
 | Missing or empty relationship entry | Nothing is set; the pair's state is hidden |
 | Ambiguous name | The identity stays unresolved and the entry is dropped |
 | Unmet player named in a city-state row | Omitted from the receiver's facts |

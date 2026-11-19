@@ -82,7 +82,7 @@ function resolveRelationshipIdentity(label: string, context: NewspaperProjection
     player.Civilization === label || (player.IsMajor !== 1 && `City-State ${player.Civilization}` === label));
 }
 
-/** Project public relationship facts independently of raw national values and private summary strings. */
+/** Project permitted relationship facts separately from the raw national summary. */
 export function projectNewspaperDiplomacy(
   row: Selectable<PlayerSummary>, context: NewspaperProjectionContext, gaps: NewspaperDiplomacyGap[]
 ): NewspaperDiplomacySnapshot | undefined {
@@ -121,7 +121,14 @@ export function projectNewspaperDiplomacy(
     if (!target || target.Key === row.Key) continue;
     const facts = parseRelationship(value);
     if (facts.state === 'unknown') gap('unknownRelationship');
-    result.relationships.push({ targetPlayerID: target.Key, targetTeamID: target.TeamID, ...facts });
+    // Weariness is the observing major's own and only leaves the summary under full recorded access at war.
+    const { warWeariness, ...published } = facts;
+    const releaseWeariness = warWeariness !== undefined && level === 2 && result.isMajor && target.IsMajor === 1 &&
+      facts.state === 'war';
+    result.relationships.push({
+      targetPlayerID: target.Key, targetTeamID: target.TeamID, ...published,
+      ...(releaseWeariness ? { warWeariness } : {})
+    });
   }
   if (info.IsMajor !== 1) {
     if (row.MajorAlly === null) result.majorAllyPlayerID = null;

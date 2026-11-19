@@ -43,11 +43,14 @@ describe('dated public diplomacy evidence', () => {
     const baseline = result.diplomacy!.baseline.find(row => row.subjectID === 22)!;
     expect(baseline.majorAllyPlayerID).toBe(1);
     expect(baseline.relationships.map(row => row.targetPlayerID)).toEqual([0, 1]);
-    expect(baseline.relationships[1]).toMatchObject({ ally: true, state: 'peace' });
+    expect(baseline.relationships[1]).toMatchObject({
+      ally: true, state: 'peace', influence: 155, proximity: 'Close', protected: false
+    });
     expect(result.diplomacy!.history.find(row => row.subjectID === 22)).toMatchObject({
       majorAllyPlayerID: 2, relationships: [{ targetPlayerID: 2, state: 'war' }]
     });
-    expect(JSON.stringify(result.diplomacy)).not.toMatch(/Influence|155|-100/);
+    expect(JSON.stringify(result.diplomacy)).not.toContain('Influence:');
+    expect(JSON.stringify(result.diplomacy)).not.toContain('-100');
     expect(result.limitations).toBeUndefined();
     expect(result.diplomacy!.gaps).toContainEqual(expect.objectContaining({ subjectID: 22, kind: 'unresolvedIdentity', source: expect.objectContaining({ turn: 5 }) }));
   });
@@ -103,5 +106,63 @@ describe('dated public diplomacy evidence', () => {
     expect(result.diplomacy!.gaps).toContainEqual({
       source: { table: 'PlayerSummaries', id: 6, turn: 10, createdAt: 1010 }, subjectID: 1, kind: 'unresolvedIdentity'
     });
+  });
+
+  it('releases war weariness only under full recorded access between two majors at war', async () => {
+    await summary(db, 30, 0, 8, 1, { Relationships: {
+      Civ1: ['Distance: Close', 'War (Our Score: -25%; Our War Weariness: 42%)']
+    } });
+    await summary(db, 31, 0, 9, 2, { Relationships: {
+      Civ1: ['Distance: Close', 'War (Our Score: -20%; Our War Weariness: 37%)']
+    } });
+    const result = await queryNewspaperEvidence(db, request);
+    expect(result.diplomacy!.history.find(row => row.source.id === 30)!.relationships).toEqual([
+      { targetPlayerID: 1, targetTeamID: 1, state: 'war', warScore: -25, proximity: 'Close', denouncedThem: false, openBordersTo: false }
+    ]);
+    expect(result.diplomacy!.history.find(row => row.source.id === 31)!.relationships).toEqual([
+      { targetPlayerID: 1, targetTeamID: 1, state: 'war', warScore: -20, warWeariness: 37, proximity: 'Close', denouncedThem: false, openBordersTo: false }
+    ]);
+    expect(result.diplomacy!.history.find(row => row.source.id === 30)!.relationships[0]).not.toHaveProperty('warWeariness');
+    expect(newspaperEvidenceSchema.parse(result)).toEqual(result);
+  });
+
+  it('keeps city-state influence, protection and proximity while withholding a non-major weariness reading', async () => {
+    await db.insertInto('PlayerInformations').values({
+      Key: 22, TeamID: 22, Civilization: 'Geneva', Leader: 'Geneva', IsMajor: 0, IsHuman: 0, Data: {}
+    } as any).execute();
+    await summary(db, 32, 22, 6, 1);
+    await summary(db, 33, 0, 8, 2, { Relationships: {
+      Geneva: ['Distance: Close', 'War (Our Score: 0%; Our War Weariness: 60%)']
+    } });
+    await summary(db, 34, 22, 9, 1, { Relationships: {
+      Civ0: 'Neutral (Influence: -12, Distance: Far)'
+    } });
+    const result = await queryNewspaperEvidence(db, request);
+    expect(result.diplomacy!.history.find(row => row.source.id === 33)!.relationships).toEqual([
+      { targetPlayerID: 22, targetTeamID: 22, state: 'war', warScore: 0, proximity: 'Close', denouncedThem: false, openBordersTo: false }
+    ]);
+    expect(result.diplomacy!.history.find(row => row.source.id === 34)!.relationships).toEqual([
+      { targetPlayerID: 0, targetTeamID: 0, state: 'peace', influence: -12, proximity: 'Far', protected: false }
+    ]);
+  });
+
+  it('labels incoming and outgoing denouncements without reviving the retired token', async () => {
+    await summary(db, 35, 2, 6, 1);
+    await summary(db, 36, 0, 8, 2, { Relationships: {
+      Civ1: ['Distance: Close', 'They Denounced Us'],
+      Civ2: ['Distance: Far', 'Denounced Them']
+    } });
+    await summary(db, 37, 0, 9, 2, { Relationships: {
+      Civ1: ['Distance: Close', 'Denounced By Them']
+    } });
+    const result = await queryNewspaperEvidence(db, request);
+    expect(result.diplomacy!.history.find(row => row.source.id === 36)!.relationships).toEqual([
+      { targetPlayerID: 1, targetTeamID: 1, state: 'peace', proximity: 'Close', denouncedThem: false, denouncedByThem: true, openBordersTo: false },
+      { targetPlayerID: 2, targetTeamID: 2, state: 'peace', proximity: 'Far', denouncedThem: true, openBordersTo: false }
+    ]);
+    expect(result.diplomacy!.history.find(row => row.source.id === 37)!.relationships).toEqual([
+      { targetPlayerID: 1, targetTeamID: 1, state: 'peace', proximity: 'Close', denouncedThem: false, openBordersTo: false }
+    ]);
+    expect(JSON.stringify(result.diplomacy)).not.toContain('Denounced By Them');
   });
 });
