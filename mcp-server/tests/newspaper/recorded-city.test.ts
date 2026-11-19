@@ -134,10 +134,10 @@ describe('dated newspaper joins', () => {
 
 describe('newspaper city unhappiness', () => {
   it('reports recorded causes only at full access and keeps an observed empty reading', async () => {
-    await city({ ID: 22, Key: 43, Turn: 12, Player0: 2, UnhappinessSources: { Culture: 3, Distress: 1 } });
+    await city({ ID: 22, Key: 43, Turn: 12, Owner: 'Civ0', Player0: 2, UnhappinessSources: { Culture: 3, Distress: 1 } });
     await city({ ID: 23, Key: 44, Turn: 12, Player0: 1, UnhappinessSources: { Culture: 2 } });
-    await city({ ID: 24, Key: 45, Turn: 12, Player0: 2, UnhappinessSources: {} });
-    await city({ ID: 25, Key: 46, Turn: 12, Player0: 2, UnhappinessSources: null });
+    await city({ ID: 24, Key: 45, Turn: 12, Owner: 'Civ0', Player0: 2, UnhappinessSources: {} });
+    await city({ ID: 25, Key: 46, Turn: 12, Owner: 'Civ0', Player0: 2, UnhappinessSources: null });
 
     const evidence = await queryNewspaperEvidence(db, request);
 
@@ -152,7 +152,7 @@ describe('newspaper city unhappiness', () => {
   });
 
   it('reads old recordings without the causes column', async () => {
-    await db.updateTable('CityInformations').set({ Player0: 2 }).where('ID', '=', 21).execute();
+    await db.updateTable('CityInformations').set({ Player0: 2, Owner: 'Civ0' }).where('ID', '=', 21).execute();
     await db.schema.alterTable('CityInformations').dropColumn('UnhappinessSources').execute();
 
     const evidence = await queryNewspaperEvidence(db, request);

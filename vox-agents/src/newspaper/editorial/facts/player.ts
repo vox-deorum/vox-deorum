@@ -7,7 +7,7 @@ import type {
 import { matchesSubjects } from '../../../../../mcp-server/dist/knowledge/helpers/event-subjects.js';
 import { isRecord } from '../../../utils/guards.js';
 import { eventConfig } from './event-city.js';
-import { involvedSubjectSources, observedTeamId } from './event.js';
+import { involvedSubjectSources, observedTeamId, recordedBoolean } from './event.js';
 import {
   fact, recordedFact, reference, rowSources, windowFacts, type FactBuildContext, type FactObject
 } from './model.js';
@@ -156,6 +156,15 @@ export function buildPlayerSnapshotFacts(row: NewspaperSnapshot, context: FactBu
     if (major === false && !cityStateFields.has(key)) continue;
     const field = recordedFact(row.values[key], sources);
     if (field) fields[key === 'Cities' ? 'cityCount' : key[0].toLowerCase() + key.slice(1)] = field;
+  }
+  // Covert presence is projected only for known foreign majors. Keep a false reading distinct from absence.
+  if (id !== context.receiverId && major === true) {
+    for (const [stored, name] of [
+      ['OurDiplomatThere', 'ourDiplomatThere'], ['TheirDiplomatHere', 'theirDiplomatHere'],
+    ] as const) {
+      const value = recordedBoolean(row.values[stored]);
+      if (value !== undefined) fields[name] = fact(value, sources);
+    }
   }
   const branches = fields.policyBranches;
   if (branches && context.ideologies) {

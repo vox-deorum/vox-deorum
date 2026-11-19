@@ -6,13 +6,14 @@ import { diplomaticEventSubjects, matchesSubjects, type EventSubjects } from '..
 import { pickFields } from '../utils/fields.js';
 import { parseRelationship } from '../diplomacy/relationships.js';
 import type { NewspaperDiplomacyGap, NewspaperDiplomacySnapshot, NewspaperEvent, NewspaperSnapshot, NewspaperSourceReference } from './evidence.js';
-import { cityAtEvent, cityOwner, knowsPlayer, source, visibility, type NewspaperCityObservation } from './recorded-city.js';
+import { cityAtEvent, cityOwner, knowsPlayer, relatedSources, source, visibility, type NewspaperCityObservation } from './recorded-city.js';
+import { diplomatAtCapital, ownSpyAtCity, type RecordedRoster } from './espionage.js';
 export type { NewspaperCityObservation } from './recorded-city.js';
 
 type PlayerContact = Pick<Selectable<PlayerSummary>, 'Key'> &
   Partial<Pick<Selectable<PlayerSummary>, keyof PlayerSummary & `Player${number}`>>;
 
-/** City projection needs dated contact, without reading national facts or diplomat strength. */
+/** City projection needs dated contact and may use a narrow private roster observation. */
 export interface NewspaperCityProjectionContext {
   receiverPlayerID: number;
   summaries: readonly PlayerContact[];
@@ -23,6 +24,13 @@ export interface NewspaperCityProjectionContext {
   cityLifecycle?: readonly Selectable<GameEvent>[];
   /** Dated contact for ownership anchors from earlier turns. */
   knowsLifecyclePlayer?: (event: Selectable<GameEvent>, playerID: number) => boolean;
+  /** Roster observations held internally for the newspaper's dated checks. */
+  espionage?: {
+    turn: number;
+    receiverRoster?: RecordedRoster;
+    earlierRoster?: RecordedRoster;
+    rosters: ReadonlyMap<number, RecordedRoster>;
+  };
 }
 
 /** Historical access context supplied by the query, never by live getters. */
@@ -45,13 +53,6 @@ const foreignPlayerFields = ['Era', 'Cities', 'Population', 'CulturePerTurn', 'T
 /** City fields reported only by the newspaper, outside the strategist's city list and its schema. */
 const newspaperCityOnlyFields = ['UnhappinessSources'] as const;
 
-/** Get recorded diplomat strength only from a fully accessible receiver snapshot. */
-function diplomatPoints(target: number, context: NewspaperProjectionContext): number {
-  const receiver = context.summaries.find(row => row.Key === context.receiverPlayerID);
-  if (visibility(receiver, context.receiverPlayerID) !== 2) return 0;
-  return receiver?.DiplomatPoints?.[`Player${target}`] ?? 0;
-}
-
 /** Select national facts under recorded access, keeping a known visible identity with empty values. */
 export function projectNewspaperPlayer(row: Selectable<PlayerSummary>, context: NewspaperProjectionContext): NewspaperSnapshot | undefined {
   const reference = source('PlayerSummaries', row);
@@ -59,13 +60,17 @@ export function projectNewspaperPlayer(row: Selectable<PlayerSummary>, context: 
   if (level !== 1 && level !== 2) return undefined;
   const own = row.Key === context.receiverPlayerID;
   const info = context.players.find(player => player.Key === row.Key);
-  const points = diplomatPoints(row.Key, context);
+  const outgoing = diplomatAtCapital(context.receiverPlayerID, row.Key, context);
+  const incoming = diplomatAtCapital(row.Key, context.receiverPlayerID, context);
   const selected = pickFields(row, own ? ownPlayerFields : foreignPlayerFields);
-  const values: Record<string, unknown> = projectPlayerReportFields(selected, level, points, info?.IsMajor === 1);
+  const values: Record<string, unknown> = projectPlayerReportFields(selected, level, outgoing?.points, info?.IsMajor === 1);
+  if (outgoing) values.OurDiplomatThere = outgoing.present;
+  if (incoming) values.TheirDiplomatHere = incoming.present;
   if (own && level === 2) Object.assign(values, pickFields(row, ['Votes', 'Resources', 'MilitaryUnits', 'MilitarySupply', 'DiplomaticDeals']));
   if ((own || level === 2) && 'MilitaryStrength' in row) values.MilitaryStrength = row.MilitaryStrength;
   if (!info && !Object.keys(values).length) return undefined;
-  return { source: reference, subjectID: row.Key, values };
+  const related = relatedSources(reference, [...outgoing?.sources ?? [], ...incoming?.sources ?? []]);
+  return { source: reference, subjectID: row.Key, values, ...(related.length ? { relatedSources: related } : {}) };
 }
 
 /** Find every recorded identity matching a summary label before applying dated contact. */
@@ -125,22 +130,43 @@ export function projectNewspaperDiplomacy(
   return result;
 }
 
-/** Select raw city facts under recorded basic or full access, preserving sentinel and boolean values. */
-export function projectNewspaperCity(row: Selectable<CityInformation>, context: NewspaperCityProjectionContext): NewspaperSnapshot | undefined {
+/** Retain access granted by the city owner or their team. */
+function hasTeamCityAccess(row: NewspaperCityObservation, context: NewspaperCityProjectionContext): boolean {
+  const receiver = context.players.find(player => player.Key === context.receiverPlayerID);
+  return context.players.some(player => player.IsMajor === 1 && player.Civilization === row.Owner &&
+    (player.Key === context.receiverPlayerID || (typeof receiver?.TeamID === 'number' && receiver.TeamID === player.TeamID)));
+}
+
+/** Select city facts, checking the proxy at observation and cutoff before showing foreign detail. */
+export function projectNewspaperCity(
+  row: Selectable<CityInformation>, context: NewspaperCityProjectionContext, cutoff = context, current = false
+): NewspaperSnapshot | undefined {
   const reference = source('CityInformations', row);
   const level = visibility(row, context.receiverPlayerID);
   if (level !== 1 && level !== 2) return undefined;
-  const { Key: _key, ...fields } = projectCityReportFields(row, level);
+  const owner = cityOwner(row, context);
+  const observed = ownSpyAtCity(row, context);
+  const atCutoff = cutoff === context ? observed : ownSpyAtCity(row, cutoff);
+  const presence = current ? atCutoff : observed;
+  const spyAccess = context.players.some(player => player.Key === owner?.id && player.IsMajor === 1) &&
+    (observed?.points ?? 0) >= 500 && (atCutoff?.points ?? 0) >= 500;
+  const full = spyAccess || (level === 2 && hasTeamCityAccess(row, context));
+  const { Key: _key, ...fields } = projectCityReportFields(row, full ? 2 : 1);
   const values: Record<string, unknown> = { ...fields, ...pickFields(row, ['IsCapital']) };
+  if (presence) values.OurSpyPresent = presence.present;
   // Unhappiness causes are newspaper-only. Omit an unrecorded reading and keep an observed empty object.
-  if (level === 2) {
+  if (full) {
     const unhappiness = pickFields(row, newspaperCityOnlyFields).UnhappinessSources;
     if (unhappiness !== undefined && unhappiness !== null) values.UnhappinessSources = structuredClone(unhappiness);
   }
-  const owner = cityOwner(row, context);
   if (owner) values.OwnerID = owner.id;
+  const related = relatedSources(reference, [
+    ...owner?.event ? [source('GameEvents', owner.event)] : [],
+    ...presence?.sources ?? [],
+    ...spyAccess ? [...observed?.sources ?? [], ...atCutoff?.sources ?? []] : []
+  ]);
   return { source: reference, subjectID: row.Key, values,
-    ...(owner?.event ? { relatedSources: [source('GameEvents', owner.event)] } : {}) };
+    ...(related.length ? { relatedSources: related } : {}) };
 }
 
 /** Private deal terms, reported to a party or when the receiver has strong insight into every party. */
@@ -378,11 +404,15 @@ function knowsSubjects(subjects: EventSubjects, payload: Record<string, unknown>
 }
 
 /** Check the insight gate: full recorded access to the subject player, or enough dated diplomat points. */
-function hasInsight(insight: NonNullable<NewspaperEventConfig['insight']>, payload: Record<string, unknown>, context: NewspaperProjectionContext): boolean {
+function hasInsight(insight: NonNullable<NewspaperEventConfig['insight']>, payload: Record<string, unknown>,
+  context: NewspaperProjectionContext, related: NewspaperSourceReference[]): boolean {
   const subject = payload[insight.playerField];
   if (typeof subject !== 'number') return true;
-  return visibility(context.summaries.find(summary => summary.Key === subject), context.receiverPlayerID) === 2 ||
-    diplomatPoints(subject, context) >= insight.diplomatPoints;
+  if (visibility(context.summaries.find(summary => summary.Key === subject), context.receiverPlayerID) === 2) return true;
+  const proof = diplomatAtCapital(context.receiverPlayerID, subject, context, true);
+  if (!proof || proof.points < insight.diplomatPoints) return false;
+  related.push(...proof.sources);
+  return true;
 }
 
 /** Check that every structured item names a known player and, for third-party items, a known team. */
@@ -407,12 +437,15 @@ function copyItems(value: unknown, fields: string[]): unknown {
 }
 
 /** Copy every representation of private terms together, or none of them, under the configured deal policy. */
-function copyDealTerms(terms: DealTermsConfig, payload: Record<string, unknown>, values: Record<string, unknown>, context: NewspaperProjectionContext): void {
+function copyDealTerms(terms: DealTermsConfig, payload: Record<string, unknown>, values: Record<string, unknown>,
+  context: NewspaperProjectionContext, related: NewspaperSourceReference[]): void {
   const parties = terms.partyFields.map(field => payload[field]);
-  const permitted = knownItemSubjects(terms.items, payload, context) && parties.every(id => knowsPlayer(id, context)) && (
-    parties.includes(context.receiverPlayerID) || parties.every(id => diplomatPoints(id as number, context) >= terms.diplomatPoints)
-  );
-  if (!permitted) return;
+  if (!knownItemSubjects(terms.items, payload, context) || !parties.every((id): id is number => typeof id === 'number' && knowsPlayer(id, context))) return;
+  if (!parties.includes(context.receiverPlayerID)) {
+    const proofs = parties.map(id => diplomatAtCapital(context.receiverPlayerID, id, context, true));
+    if (!proofs.every(proof => proof && proof.points >= terms.diplomatPoints)) return;
+    related.push(...proofs.flatMap(proof => proof?.sources ?? []));
+  }
   for (const key of terms.textFields) {
     const list = payload[key];
     if (list === null) values[key] = null;
@@ -551,7 +584,8 @@ export function projectNewspaperEvent(row: Selectable<GameEvent>, context: Newsp
   const receiverTeam = context.players.find(player => player.Key === context.receiverPlayerID)?.TeamID;
   const involved = config.reportWhenInvolved === true && matchesSubjects(config.subjects, payload, context.receiverPlayerID, receiverTeam);
   if (!involved && !knowsSubjects(config.subjects, payload, context, config.optionalPlayers)) return undefined;
-  if (config.insight && !hasInsight(config.insight, payload, context)) return undefined;
+  const related: NewspaperSourceReference[] = [];
+  if (config.insight && !hasInsight(config.insight, payload, context, related)) return undefined;
 
   const values: Record<string, unknown> = {};
   for (const field of config.fields) {
@@ -564,7 +598,6 @@ export function projectNewspaperEvent(row: Selectable<GameEvent>, context: Newsp
   if (row.Type === 'MinorAlliesChanged' && (typeof values.IsNowAlly === 'boolean' || typeof values.IsNowAlly === 'number')) {
     values.IsNowAlly = values.IsNowAlly !== false && values.IsNowAlly !== 0;
   }
-  const related: NewspaperSourceReference[] = [];
   if (config.cityIDs) copyCityPositions(config, row, values, context, related);
   if (row.Type === 'CityTrained') {
     const created = trainedUnit(row, context);
@@ -589,7 +622,8 @@ export function projectNewspaperEvent(row: Selectable<GameEvent>, context: Newsp
     const city = payload[key] as Record<string, unknown> | null;
     if (city && typeof city === 'object' && knowsPlayer(payload[ownerField], context)) values[key] = pickFields(city, ['Name', 'City']);
   }
-  if (config.dealTerms) copyDealTerms(config.dealTerms, payload, values, context);
-  return { source: source('GameEvents', row), type: row.Type, values,
-    ...(related.length ? { relatedSources: [...new Map(related.map(ref => [`${ref.table}/${ref.id}`, ref])).values()] } : {}) };
+  if (config.dealTerms) copyDealTerms(config.dealTerms, payload, values, context, related);
+  const reference = source('GameEvents', row);
+  return { source: reference, type: row.Type, values,
+    ...(related.length ? { relatedSources: relatedSources(reference, related) } : {}) };
 }

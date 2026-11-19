@@ -121,7 +121,7 @@ A failing unit is excluded from this offer's selection for the rest of the turn.
 
 1. Move a spotter (a unit used to improve visibility), excluding held garrisons.
 2. Run `ExecuteEngagement` for the units still available. Gather search geometry and resolve search preferences and aggression after the spotter move. Keep target distance relevant to search scoring, and use the target's owner as the counterpart (the player used for civilization modifiers), or none at our city.
-3. Move distant units along paths through `CanMarch` and `MarchFlags`, then run the safety pass for army members.
+3. After a successful search, leave units within four path steps of the target for later work, as native does (see [movement](../tactics/movement.md#execution)). Move every other unprocessed unit along a path through `CanMarch` and `MarchFlags`, then run the safety pass for army members.
 
 The command record keeps the selection, whether the search ran, and whether a selected unit moved, meaning it changed plot or died.
 

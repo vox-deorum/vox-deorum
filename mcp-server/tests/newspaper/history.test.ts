@@ -86,7 +86,7 @@ describe('trigger evidence windows', () => {
       { table: 'CityInformations', subjectID: 42, turn: 7 }
     ]);
     expect(denied.snapshots.players.map(row => row.source.id)).toEqual([5, 13]);
-    expect(denied.baseline.cities[0].values.FoodPerTurn).toBe(5);
+    expect(denied.baseline.cities[0].values).not.toHaveProperty('FoodPerTurn');
     expect(denied.snapshots.cities.map(row => row.source.id)).toEqual([25]);
     expect(denied.snapshots.cities[0].values).not.toHaveProperty('FoodPerTurn');
     expect(denied.events.map(row => row.source.id)).not.toContain(108);

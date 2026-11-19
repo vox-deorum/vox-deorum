@@ -70,9 +70,12 @@ export function buildTimeline(evidence: NewspaperEvidence, subject: Subject, eve
   const cutoffRows = new Map(evidence[subject].map(row => [row.subjectID, row]));
   for (const id of new Set([...rows.keys(), ...cutoffRows.keys()])) {
     const row = cutoffRows.get(id);
-    if (row && latest(rows.get(id), request.cutoffTurn) !== row.source.id)
+    const prior = latest(rows.get(id), request.cutoffTurn);
+    // A dated grant can change the projection while the underlying observation stays the same.
+    if (row && (!prior || prior.source.id !== row.source.id ||
+      JSON.stringify([prior.values, prior.relatedSources]) !== JSON.stringify([row.values, row.relatedSources])))
       record(id, request.cutoffTurn, row);
-    else if (!row && latest(rows.get(id), request.cutoffTurn) !== undefined)
+    else if (!row && prior)
       record(id, request.cutoffTurn);
   }
   if (subject === 'players') rows.delete(63);
@@ -93,17 +96,17 @@ export function buildTimeline(evidence: NewspaperEvidence, subject: Subject, eve
   return result;
 }
 
-/** Identify the most recent projected row before finalizing the cutoff boundary. */
-function latest(rows: ReadonlyMap<number, NewspaperSnapshot | undefined> | undefined, turn: number): number | undefined {
+/** Find the most recent projection, leaving a visibility gap undefined. */
+function latest(rows: ReadonlyMap<number, NewspaperSnapshot | undefined> | undefined, turn: number): NewspaperSnapshot | undefined {
   let date = -Infinity;
-  let source: number | undefined;
+  let latestRow: NewspaperSnapshot | undefined;
   for (const [candidate, row] of rows ?? []) {
     if (candidate <= turn && candidate > date) {
       date = candidate;
-      source = row?.source.id;
+      latestRow = row;
     }
   }
-  return source;
+  return latestRow;
 }
 
 /** Resolve a subject's latest observation or gap at a recorded turn. */

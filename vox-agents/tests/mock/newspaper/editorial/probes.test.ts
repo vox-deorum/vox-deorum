@@ -1,7 +1,9 @@
 /** Probe overlay stories and the People's Daily design, loaded from the on-disk folder. */
 import { fileURLToPath } from 'node:url';
 import { beforeAll, describe, expect, it } from 'vitest';
-import type { NewspaperEvent, NewspaperEvidence } from '../../../../../mcp-server/dist/newspaper/evidence.js';
+import type {
+  NewspaperEvent, NewspaperEvidence, NewspaperSnapshot,
+} from '../../../../../mcp-server/dist/newspaper/evidence.js';
 import { createInitialPublicationState, type PublicationState } from '../../../../src/newspaper/contracts/publication.js';
 import { runEditorialCheck } from '../../../../src/newspaper/editorial/check.js';
 import { loadEditorialConfig } from '../../../../src/newspaper/editorial/config/load.js';
@@ -26,22 +28,29 @@ let opinionOnlyConfig: EditorialConfig;
 let peaceConfig: EditorialConfig;
 let milestoneConfig: EditorialConfig;
 let quietConfig: EditorialConfig;
+let spyConfig: EditorialConfig;
+let diplomatConfig: EditorialConfig;
+let foreignPolicyConfig: EditorialConfig;
 
 /** Supply dated contact and cover the stock rules' lookback windows. */
 function probeEvidence({
   gold = 0, branch = 'Tradition', events = [], riderX = 10, turn = 10, previous = 5,
-  ownCities = [], relationships = [],
+  ownCities = [], relationships = [], foreignCityValues = {}, playerValues = {},
 }: {
   gold?: number; branch?: string; events?: NewspaperEvent[]; riderX?: number;
   turn?: number; previous?: number;
   ownCities?: { name: string; capital?: boolean; unhappiness?: unknown }[];
   relationships?: ReturnType<typeof relationship>[];
+  foreignCityValues?: NewspaperSnapshot['values'];
+  playerValues?: Record<number, NewspaperSnapshot['values']>;
 } = {}): NewspaperEvidence {
   const history = [0, 1, 2].map((id) =>
     snapshot(id, relationships.length ? turn : previous, id === 0 ? relationships : []));
   const projected = buildEvidence(events, history, turn, previous);
   for (const row of projected.players) row.source = history.find((entry) => entry.subjectID === row.subjectID)!.source;
   projected.players[0].values = { Gold: gold, PolicyBranches: { [branch]: [] } };
+  for (const [id, values] of Object.entries(playerValues))
+    Object.assign(projected.players.find((row) => row.subjectID === Number(id))!.values, values);
   projected.cities = [
     ...ownCities.map((city, index) => ({
       subjectID: 100 + index,
@@ -52,7 +61,7 @@ function probeEvidence({
       },
     })),
     { subjectID: 11, source: { table: 'CityInformations', id: 201, turn, createdAt: turn * 1000 },
-      values: { OwnerID: 1, Name: 'Persepolis', X: riderX, Y: 0 } },
+      values: { OwnerID: 1, Name: 'Persepolis', X: riderX, Y: 0, ...foreignCityValues } },
     { subjectID: 12, source: { table: 'CityInformations', id: 202, turn, createdAt: turn * 1000 },
       values: { OwnerID: 2, Name: 'Attila’s Court', X: 3, Y: 0 } },
   ];
@@ -198,6 +207,15 @@ describe('probe overlay', () => {
     );
     quietConfig = probeCatalogue(
       ['probe-quiet-spell'], ['probe-quiet-spell-account'],
+    );
+    spyConfig = probeCatalogue(
+      ['probe-spy-city-profile'], ['probe-spy-city-profile-account'],
+    );
+    diplomatConfig = probeCatalogue(
+      ['probe-inbound-diplomat'], ['probe-inbound-diplomat-account'],
+    );
+    foreignPolicyConfig = probeCatalogue(
+      ['probe-foreign-policies'], ['probe-foreign-policies-account'],
     );
   });
 
@@ -449,6 +467,109 @@ describe('probe overlay', () => {
       const printed = issueItem(passed!, record!.id);
       expect(printed).toBeDefined();
       expect(headlineText(printed!.body[0])).toContain('25');
+    });
+  });
+
+  describe('covert presence probes', () => {
+    it('should report boredom in a foreign city only while our spy is stationed there', async () => {
+      const projected = probeEvidence({
+        foreignCityValues: { OurSpyPresent: true, UnhappinessSources: { Culture: 3, Distress: 1 } },
+      });
+      const result = await check(projected, spyConfig);
+      const record = publishedItem(result.state, 'probe-spy-city-profile-account');
+
+      expect(record).toBeDefined();
+      expect(record!.ruleIds).toContain('probe-spy-city-profile');
+      expect(record!.subject).toBe('city/11');
+      expect(record!.sources).toContainEqual(
+        projected.cities.find((city) => city.subjectID === 11)!.source);
+      const printed = issueItem(result, record!.id);
+      expect(headlineText(printed!.headline)).toContain('Persepolis');
+    });
+
+    it.each([
+      { label: 'an observed absence', values: { OurSpyPresent: false, UnhappinessSources: { Culture: 3 } }, outcome: 'false' },
+      { label: 'no presence observation', values: { UnhappinessSources: { Culture: 3 } }, outcome: 'hidden' },
+      { label: 'detail without boredom', values: { OurSpyPresent: true, UnhappinessSources: { Distress: 3 } }, outcome: 'false' },
+    ])('should withhold the spy profile with $label', async ({ values, outcome }) => {
+      const result = await check(probeEvidence({ foreignCityValues: values }), spyConfig);
+
+      expect(publishedItem(result.state, 'probe-spy-city-profile-account')).toBeUndefined();
+      expect(auditSubject(result, 'probe-spy-city-profile', 'city/11')?.outcome).toBe(outcome);
+    });
+
+    it('should report an inbound diplomat only with an explicit empty post of ours', async () => {
+      const projected = probeEvidence({
+        playerValues: { 1: { TheirDiplomatHere: true, OurDiplomatThere: false } },
+      });
+      const result = await check(projected, diplomatConfig);
+      const record = publishedItem(result.state, 'probe-inbound-diplomat-account');
+
+      expect(record).toBeDefined();
+      expect(record!.ruleIds).toContain('probe-inbound-diplomat');
+      expect(record!.subject).toBe('player/1');
+      expect(record!.sources).toContainEqual(
+        projected.players.find((player) => player.subjectID === 1)!.source);
+    });
+
+    it.each([
+      { label: 'our own post there', values: { TheirDiplomatHere: true, OurDiplomatThere: true }, outcome: 'false' },
+      { label: 'their post absent', values: { TheirDiplomatHere: false, OurDiplomatThere: false }, outcome: 'false' },
+      { label: 'no inbound observation', values: { OurDiplomatThere: false }, outcome: 'hidden' },
+      { label: 'no outgoing observation', values: { TheirDiplomatHere: true }, outcome: 'hidden' },
+    ])('should withhold the inbound story with $label', async ({ values, outcome }) => {
+      const result = await check(probeEvidence({ playerValues: { 1: values } }), diplomatConfig);
+
+      expect(publishedItem(result.state, 'probe-inbound-diplomat-account')).toBeUndefined();
+      expect(auditSubject(result, 'probe-inbound-diplomat', 'player/1')?.outcome).toBe(outcome);
+    });
+
+    it('should brief one readable branch from the latest tier, including an ideology', async () => {
+      const projected = probeEvidence({
+        playerValues: { 1: {
+          OurDiplomatThere: true,
+          PolicyBranches: { Tradition: ['Aristocracy'], Industry: ['Free Trade'], Order: ['Workers’ Faculties'], Freedom: [] },
+        } },
+      });
+      const result = await check(projected, foreignPolicyConfig);
+      const record = publishedItem(result.state, 'probe-foreign-policies-account');
+
+      expect(record).toBeDefined();
+      expect(record!.ruleIds).toContain('probe-foreign-policies');
+      expect(record!.subject).toBe('player/1');
+      const printed = issueItem(result, record!.id);
+      expect(headlineText(printed!.body[0])).toContain('Workers’ Faculties');
+      expect(headlineText(printed!.body[0])).not.toMatch(/Aristocracy|Free Trade/);
+    });
+
+    it('should vary among readable branches in the latest tier without joining their lists', async () => {
+      const playerValues = { 1: {
+        OurDiplomatThere: true,
+        PolicyBranches: { Tradition: ['Aristocracy'], Industry: ['Free Trade'], Rationalism: ['Scientific Revolution'] },
+      } };
+      const stories = [];
+      for (const turn of [10, 11]) {
+        const result = await check(probeEvidence({ turn, playerValues }), foreignPolicyConfig);
+        const record = publishedItem(result.state, 'probe-foreign-policies-account');
+        const body = headlineText(issueItem(result, record!.id)?.body[0]);
+        const named = body.match(/Free Trade|Scientific Revolution/g);
+        expect(named).toHaveLength(1);
+        expect(body).not.toContain('Aristocracy');
+        stories.push(named?.[0]);
+      }
+      expect(new Set(stories).size).toBe(2);
+    });
+
+    it.each([
+      { label: 'policy branch counts', values: { OurDiplomatThere: true, PolicyBranches: { Tradition: 3, Liberty: 2 } }, outcome: 'false' },
+      { label: 'empty policy lists', values: { OurDiplomatThere: true, PolicyBranches: { Tradition: [] } }, outcome: 'false' },
+      { label: 'an inbound visit without our diplomat', values: { TheirDiplomatHere: true, OurDiplomatThere: false, PolicyBranches: { Tradition: ['Liberty'] } }, outcome: 'false' },
+      { label: 'no outgoing observation', values: { PolicyBranches: { Tradition: ['Liberty'] } }, outcome: 'hidden' },
+    ])('should withhold the policy briefing with $label', async ({ values, outcome }) => {
+      const result = await check(probeEvidence({ playerValues: { 1: values } }), foreignPolicyConfig);
+
+      expect(publishedItem(result.state, 'probe-foreign-policies-account')).toBeUndefined();
+      expect(auditSubject(result, 'probe-foreign-policies', 'player/1')?.outcome).toBe(outcome);
     });
   });
 

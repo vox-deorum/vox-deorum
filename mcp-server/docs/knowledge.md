@@ -75,7 +75,7 @@ Schema: ID (auto), Turn, Payload (JSON), CreatedAt, PlayerVisibility (Player0-Pl
 
 Versioned data with change tracking. Used for:
 
-- **PlayerSummaries**: Score, economy, military, diplomacy (~30 fields)
+- **PlayerSummaries**: Score, economy, military, diplomacy (~30 fields). `Spies` holds each agent's role, location, localized state and current network points. The newspaper matches those rosters to known players and cities and uses current points as access proxies: 500 for another major's city-screen detail, 200 for policy text and 800 for deal terms. Spending can hide a bonus the game still grants, and missing or ambiguous matches stay unknown.
 - **PlayerOpinions**: Diplomatic opinions to/from each player
 - **CityInformations**: Population, production, buildings, wonders, and local happiness. `UnhappinessSources` records nonzero city cause readings as JSON for detailed newspaper evidence. An empty object records zero for every cause; `NULL` means it was not recorded. `get-cities` keeps the existing `HappinessDelta` field.
 - **StrategyChanges**: Grand/economic/military strategy selections

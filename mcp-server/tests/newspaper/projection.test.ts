@@ -5,15 +5,21 @@ import { redactEventResources } from '../../src/knowledge/helpers/event-redactio
 import { matchesEventSubject } from '../../src/knowledge/helpers/event-subjects.js';
 import { pickFields, omitFields } from '../../src/utils/fields.js';
 
-/** Supply historical contact and dated diplomat points for a controlled receiver. */
+/** Supply historical contact and two dated diplomat assignments for a controlled receiver. */
 function context(points = 0): NewspaperProjectionContext {
+  const earlierRoster = { ID: 1, Key: 0, Turn: 9, CreatedAt: 1009, Spies: Object.fromEntries([1, 2].map(id => [
+    `Agent${id}`, { Role: 'Diplomat', State: 'Schmoozing', Location: `Capital${id} (Civ${id})`, Network: points, NetworkPerTurn: 0 }
+  ])) };
   return {
     receiverPlayerID: 0,
     summaries: [
-      { Key: 0, Player0: 2, DiplomatPoints: { Player1: points, Player2: points }, Resources: { Iron: '1 / 1' } },
+      { Key: 0, Player0: 2, Resources: { Iron: '1 / 1' } },
       { Key: 1, Player0: 1 }, { Key: 2, Player0: 1 }, { Key: 3, Player0: 0 }
     ] as any,
-    players: [0, 1, 2, 3].map(Key => ({ Key, TeamID: Key, IsMajor: 1, Civilization: `Civ${Key}` })) as any
+    players: [0, 1, 2, 3].map(Key => ({ Key, TeamID: Key, IsMajor: 1, Civilization: `Civ${Key}` })) as any,
+    cityHistory: [1, 2].map(id => ({ Key: id, ID: id, Turn: 9, CreatedAt: 1009, Name: `Capital${id}`,
+      Owner: `Civ${id}`, X: id, Y: 0, IsCapital: 1, Player0: 1 })),
+    espionage: { turn: 10, earlierRoster, rosters: new Map() }
   };
 }
 
@@ -91,12 +97,13 @@ describe('newspaper field projection', () => {
     expect(projectNewspaperEvent(deal(0, 1) as any, context(0))?.values).toHaveProperty('TradedItems');
   });
 
-  it('should require strength for both foreign parties from a fully accessible receiver row', () => {
+  it('should require adequate earlier diplomat strength for both foreign parties', () => {
     const ctx = context(800);
-    ctx.summaries[0].DiplomatPoints = { Player1: 800, Player2: 799 };
+    ctx.espionage!.earlierRoster!.Spies!.Agent2.Network = 799;
     expect(projectNewspaperEvent(deal() as any, ctx)?.values).not.toHaveProperty('FromGives');
-    ctx.summaries[0].DiplomatPoints.Player2 = 800;
-    ctx.summaries[0].Player0 = 1;
+    ctx.espionage!.earlierRoster!.Spies!.Agent2.Network = 800;
+    expect(projectNewspaperEvent(deal() as any, ctx)?.values).toHaveProperty('FromGives');
+    ctx.espionage!.earlierRoster = undefined;
     expect(projectNewspaperEvent(deal() as any, ctx)?.values).not.toHaveProperty('FromGives');
   });
 

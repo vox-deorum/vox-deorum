@@ -3,6 +3,7 @@ import type { KnowledgeDatabase } from '../knowledge/schema/base.js';
 import type { CityInformation, GameEvent } from '../knowledge/schema/timed.js';
 import { isVisible } from '../knowledge/expressions.js';
 import { readEvents, readSnapshotRange, readSnapshotsAtCutoff } from '../knowledge/history.js';
+import type { RecordedRoster } from './espionage.js';
 import {
   newspaperEvidenceRequestSchema, type NewspaperEvent, type NewspaperEvidence, type NewspaperEvidenceRequest, type NewspaperHistory, type NewspaperSnapshot
 } from './evidence.js';
@@ -74,31 +75,33 @@ export async function queryNewspaperEvidence(
   }
   const boundedEvents = [...events, ...unwitnessedEvents].sort((a, b) => a.ID - b.ID);
   const eventTurns = new Map<number, Selectable<GameEvent>[]>();
-  let firstCityJoin = cutoffTurn + 1;
   for (const row of events) {
     const sameTurn = eventTurns.get(row.Turn);
     if (sameTurn) sameTurn.push(row);
     else eventTurns.set(row.Turn, [row]);
-    if (newspaperEventConfigs[row.Type]?.cityIDs) firstCityJoin = Math.min(firstCityJoin, row.Turn);
   }
   // World news needs its own summary context but never joins the turn's witnessed events.
   const turns = new Set([cutoffTurn, ...eventTurns.keys(), ...unwitnessedEvents.map(row => row.Turn)]);
+  // Diplomatic events use the preceding turn; snapshots use their observation or the cutoff.
+  let firstCityJoin = fromTurn - 1;
   if (historyFromTurn !== undefined) turns.add(historyFromTurn);
   for (const rows of [summaryHistory, baseSummaries]) {
     for (const row of rows) if (visible(row)) turns.add(row.Turn);
   }
+  const oldCityDates = new Set<number>();
   const staleCityTurns = new Set<number>();
   for (const rows of projectedCities) {
     for (const row of rows) {
       if (row.Owner === 'City-States') firstCityJoin = Math.min(firstCityJoin, row.Turn);
+      if (row.Turn < fromTurn - 1) oldCityDates.add(row.Turn);
       if (row.Turn >= fromTurn - 1) turns.add(row.Turn);
       else if (!turns.has(row.Turn)) staleCityTurns.add(row.Turn);
     }
   }
   const [permittedLifecycle, cityHistory, cityContacts] = await Promise.all([
     readPermittedLifecycle(db, cityLifecycle, visibilityField),
-    firstCityJoin <= cutoffTurn ? readCityJoinHistory(db, firstCityJoin, cutoffTurn, visibilityField) : [],
-    readCityContacts(db, staleCityTurns, visibilityField)
+    readCityJoinHistory(db, firstCityJoin, cutoffTurn, visibilityField, [...oldCityDates].filter(turn => turn < firstCityJoin)),
+    readCityContacts(db, staleCityTurns, visibilityField, receiverPlayerID)
   ]);
   const permittedLifecycleIDs = new Set(permittedLifecycle.map(event => event.ID));
   const contexts = new Map<number, NewspaperProjectionContext>();
@@ -110,32 +113,46 @@ export async function queryNewspaperEvidence(
       (event.Type === 'CityCaptureComplete' ? event.Payload.NewOwnerID : event.Payload.PlayerID) === playerID;
   }
   const cityContext = { receiverPlayerID, players, cityHistory, cityLifecycle, knowsLifecyclePlayer };
+  /** Accept a private receiver roster only at full recorded receiver access. */
+  function ownRoster(row: (RecordedRoster & Partial<Pick<CityRow, ReceiverField>>) | undefined): RecordedRoster | undefined {
+    return row?.[visibilityField] === 2 ? row : undefined;
+  }
   /** Share the dated context for snapshots and events recorded on the same turn. */
-  function setContext(turn: number, summaries: NewspaperProjectionContext['summaries']): void {
+  function setContext(turn: number, summaries: NewspaperProjectionContext['summaries'], earlierRoster?: RecordedRoster): void {
+    const rosters = new Map(summaries.filter(row => row.Spies != null).map(row => [row.Key, row]));
     contexts.set(turn, {
-      ...cityContext, summaries, turnEvents: eventTurns.get(turn), unitLifecycle: unitLifecycle.get(turn)
+      ...cityContext, summaries, turnEvents: eventTurns.get(turn), unitLifecycle: unitLifecycle.get(turn),
+      espionage: { turn, receiverRoster: ownRoster(rosters.get(receiverPlayerID)), earlierRoster, rosters }
     });
   }
   let position = 0;
   for (const turn of orderedTurns) {
     if (turn < fromTurn - 1) continue;
+    let earlier = latest.get(receiverPlayerID);
     while (position < summaryHistory.length && summaryHistory[position].Turn <= turn) {
       const row = summaryHistory[position++];
       latest.set(row.Key, row);
+      if (row.Key === receiverPlayerID && row.Turn < turn) earlier = row;
     }
-    setContext(turn, [...latest.values()].sort((a, b) => a.Key - b.Key));
+    setContext(turn, [...latest.values()].sort((a, b) => a.Key - b.Key),
+      earlier && earlier.Turn < turn ? ownRoster(earlier) : undefined);
   }
   // Stale facts use the contact and permissions recorded on their own observation turn.
   await Promise.all(orderedTurns.filter(turn => turn < fromTurn - 1).map(
     /** Resolve the original permission context for an observation predating the window. */
     async turn => setContext(turn, await readSnapshotsAtCutoff(db, 'PlayerSummaries', turn))));
 
+  const cutoffContext = contexts.get(cutoffTurn)!;
   /** Use the narrow dated contact read when no national projection needs this observation turn. */
-  function projectCity(row: CityRow): NewspaperSnapshot | undefined {
+  function projectCity(row: CityRow, current = false): NewspaperSnapshot | undefined {
     if (!visible(row)) return undefined;
-    return projectNewspaperCity(row, contexts.get(row.Turn) ?? { ...cityContext, summaries: cityContacts.get(row.Turn)! });
+    const contacts = cityContacts.get(row.Turn);
+    const context: NewspaperCityProjectionContext = contexts.get(row.Turn) ?? { ...cityContext, summaries: contacts ?? [], espionage: {
+      turn: row.Turn, receiverRoster: ownRoster(contacts?.find(contact => contact.Key === receiverPlayerID)), rosters: new Map()
+    } };
+    return projectNewspaperCity(row, context, cutoffContext, current);
   }
-  const summaries = contexts.get(cutoffTurn)!.summaries;
+  const summaries = cutoffContext.summaries;
   const earlierPlayers = comparisonRange ? summaryHistory.filter(row =>
     row.Turn >= comparisonRange.fromTurn && row.Turn <= comparisonRange.toTurn) : [];
 
@@ -146,16 +163,16 @@ export async function queryNewspaperEvidence(
       if (projected) target.push(projected);
     }
   }
-  for (const [rows, target] of [[summaries, result.players], [earlierPlayers, result.comparisons.players]] as const) {
+  for (const [rows, target, current] of [[summaries, result.players, true], [earlierPlayers, result.comparisons.players, false]] as const) {
     for (const row of rows) {
       if (!visible(row)) continue;
-      const projected = projectNewspaperPlayer(row, contexts.get(row.Turn)!);
+      const projected = projectNewspaperPlayer(row, current ? cutoffContext : contexts.get(row.Turn)!);
       if (projected) target.push(projected);
     }
   }
-  for (const [rows, target] of [[currentCities, result.cities], [comparisonCities, result.comparisons.cities]] as const) {
+  for (const [rows, target, current] of [[currentCities, result.cities, true], [comparisonCities, result.comparisons.cities, false]] as const) {
     for (const row of rows) {
-      const projected = projectCity(row);
+      const projected = projectCity(row, current);
       if (projected) target.push(projected);
     }
   }
@@ -172,21 +189,23 @@ export async function queryNewspaperEvidence(
       events: windowEvents.sort((a, b) => a.source.turn - b.source.turn || a.source.id - b.source.id) };
     appendHistory(history, 'players', contexts.get(historyFromTurn)!.summaries,
       summaryHistory.filter(row => row.Turn > historyFromTurn),
-      /** Project national fields with the historical diplomatic context. */
-      row => visible(row) ? projectNewspaperPlayer(row, contexts.get(row.Turn)!) : undefined);
-    appendHistory(history, 'cities', activeBaselineCities, historyCities, projectCity, removalTurn);
+      /** Use the baseline date for its as-of view and the recorded date for each following observation. */
+      row => visible(row) ? projectNewspaperPlayer(row, contexts.get(Math.max(row.Turn, historyFromTurn))!) : undefined);
+    appendHistory(history, 'cities', activeBaselineCities, historyCities, row => projectCity(row), removalTurn);
     history.gaps.sort((a, b) => a.turn - b.turn || a.subjectID - b.subjectID);
     result.history = history;
   }
   return result;
 }
 
-/** Read only the receiver's contact columns for all old city dates in one pass. */
-async function readCityContacts(db: Kysely<KnowledgeDatabase>, turns: ReadonlySet<number>, field: ReceiverField) {
-  const contacts = new Map<number, NewspaperCityProjectionContext['summaries']>();
+/** Read dated contact and only the receiver's own roster for old city dates in one pass. */
+async function readCityContacts(db: Kysely<KnowledgeDatabase>, turns: ReadonlySet<number>, field: ReceiverField, receiver: number) {
+  type Contact = RecordedRoster & Pick<CityRow, ReceiverField>;
+  const contacts = new Map<number, Contact[]>();
   if (!turns.size) return contacts;
   const dates = [...turns].sort((a, b) => a - b);
-  const rows = await db.selectFrom('PlayerSummaries').select(['Key', 'Turn', field])
+  const rows = await db.selectFrom('PlayerSummaries').select(['ID', 'Key', 'Turn', 'CreatedAt', field])
+    .select(sql<RecordedRoster['Spies']>`case when "Key" = ${receiver} then Spies end`.as('Spies'))
     .where('Turn', '<=', dates[dates.length - 1]).orderBy('Turn').orderBy('ID').execute();
   const latest = new Map<number, (typeof rows)[number]>();
   let index = 0;
@@ -244,19 +263,25 @@ async function readPermittedLifecycle(
 /** Keep narrow city join inputs, including hidden and different-owner rows that can end an older observation. */
 function readCityJoinHistory(
   db: Kysely<KnowledgeDatabase>, fromTurn: number, cutoffTurn: number,
-  field: ReceiverField
+  field: ReceiverField, oldDates: number[]
 ) {
   const before = sql<number>`(select ID from (
-    select ID, row_number() over (partition by "Key", X, Y order by Turn desc, CreatedAt desc, ID desc) as position
+    select ID, row_number() over (partition by "Key", X, Y order by Turn desc, ID desc) as position
     from CityInformations where Turn < ${fromTurn}
   ) where position = 1)`;
   const barriers = sql<number>`(select ID from (
     select ID, row_number() over (partition by X, Y order by Turn desc, CreatedAt desc, ID desc) as position
     from CityInformations where Turn < ${fromTurn} and (Owner != 'City-States' or ${sql.ref(field)} not in (1, 2))
   ) where position = 1)`;
-  return db.selectFrom('CityInformations').select(['ID', 'Key', 'Turn', 'CreatedAt', 'Owner', 'Name', 'X', 'Y', field])
+  // A stale city needs a dated roster join at its own observation, without loading the intervening turns.
+  const anchors = sql<number>`(select ID from (
+    select CityInformations.ID, row_number() over (partition by dates.value, X, Y order by Turn desc, CityInformations.ID desc) as position
+    from CityInformations join json_each(${JSON.stringify(oldDates)}) as dates on Turn <= dates.value
+  ) where position = 1)`;
+  return db.selectFrom('CityInformations').select(['ID', 'Key', 'Turn', 'CreatedAt', 'Owner', 'Name', 'X', 'Y', 'IsCapital', field])
     .where(eb => eb.or([
-      eb('ID', 'in', before), eb('ID', 'in', barriers), eb.and([eb('Turn', '>=', fromTurn), eb('Turn', '<=', cutoffTurn)])
+      eb('ID', 'in', before), eb('ID', 'in', barriers), ...(oldDates.length ? [eb('ID', 'in', anchors)] : []),
+      eb.and([eb('Turn', '>=', fromTurn), eb('Turn', '<=', cutoffTurn)])
     ]))
     .orderBy('Turn').orderBy('ID').execute();
 }

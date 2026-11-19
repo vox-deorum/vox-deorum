@@ -180,6 +180,9 @@ describe('historical evidence queries', () => {
   });
 
   it('should return own trade values, public culture, basic city facts and original source IDs', async () => {
+    await db.updateTable('PlayerSummaries').set({ Spies: JSON.stringify({
+      Envoy: { Role: 'Diplomat', State: 'Schmoozing', Location: 'Port (Civ1)', Network: 200 }
+    }) }).where('ID', '=', 5).execute();
     const result = await queryNewspaperEvidence(db, request);
     expect(result.players.map(row => row.subjectID)).toEqual([0, 1]);
     expect(result.players[0].values.OutgoingTradeRoutes).toEqual({ 'Home => Port (Civ1)': { FromGold: 0, ToFood: -1 } });
@@ -230,7 +233,12 @@ describe('historical evidence queries', () => {
 
   it('should use dated diplomat points for private event terms and avoid later strength granting older facts', async () => {
     await summary(db, 8, 2, 5, 1);
-    await summary(db, 9, 0, 11, 2, { DiplomatPoints: { Player1: 800, Player2: 800 } });
+    await summary(db, 9, 0, 10, 2, { Spies: {
+      Envoy1: { Role: 'Diplomat', State: 'Schmoozing', Location: 'Port (Civ1)', Network: 800 },
+      Envoy2: { Role: 'Diplomat', State: 'Schmoozing', Location: 'Capital (Civ2)', Network: 800 }
+    } });
+    const city = await db.selectFrom('CityInformations').selectAll().executeTakeFirstOrThrow();
+    await db.insertInto('CityInformations').values({ ...city, ID: 22, Key: 43, Owner: 'Civ2', Name: 'Capital', X: 1 } as any).execute();
     const payload = { FromPlayerID: 1, ToPlayerID: 2, StartTurn: 10, PeaceTreatyType: 0,
       FromPlayer: { Name: 'Leader1', Civilization: 'Civ1' }, ToPlayer: { Name: 'Leader2', Civilization: 'Civ2' },
       FromGives: ['40 Gold'], ToGives: {},

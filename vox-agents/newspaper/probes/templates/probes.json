@@ -154,5 +154,47 @@
         "weight": { "base": 1 }
       }
     ]
+  },
+  {
+    "id": "probe-spy-city-profile-account",
+    "triggers": ["probe-spy-city-profile"],
+    "tags": ["international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "probe-spy-city-profile-report",
+        "headline": "Boredom stirs in {{city}}",
+        "body": ["Our agent in {{city}} reports {{boredom}} points of cultural neglect."],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "probe-inbound-diplomat-account",
+    "triggers": ["probe-inbound-diplomat"],
+    "tags": ["international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "probe-inbound-diplomat-report",
+        "headline": "{{civilization}} posts a diplomat at our court",
+        "body": ["Their envoy is here, while ours is not stationed there."],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "probe-foreign-policies-account",
+    "triggers": ["probe-foreign-policies"],
+    "tags": ["politics"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "probe-foreign-policies-report",
+        "headline": "{{civilization}}: policies in {{policyBranch}}",
+        "body": ["Our envoy reports these policies: {{policies}}."],
+        "weight": { "base": 1 }
+      }
+    ]
   }
 ]

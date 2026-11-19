@@ -107,6 +107,7 @@ Compare these readings with each other and against small thresholds. The list om
 | `built` | Buildings and wonders completed inside the window, each with `turn` and `building` | `CityConstructed` events and additions to `wonders` |
 | `conversions` | Religion changes inside the window, each with `turn` and `religion` | `CityConvertsReligion` events at its plot and changes to `majorityReligion` |
 | `events` | Every permitted event inside the window that names this city or its plot | Event city IDs and coordinates |
+| `ourSpyPresent` | The receiver's spy is stationed in this city | The receiver's `PlayerSummaries.Spies` roster, matched by location to a unique recorded city and owner. A readable roster that shows no spy gives `false`; missing or ambiguous evidence is hidden. |
 | `is.<name>` | A [shortcut](constants.md#shortcuts), such as `city.is.neighbor` | The catalogue |
 
 Annexation has no recorded event. A rule reads it from the stored flags: `city.before.isPuppet && !city.isPuppet && city.isOccupied`. The shipped `neighbor-puppet-annexed` rule combines them with `city.is.neighbor` and an unchanged owner.
@@ -150,7 +151,19 @@ Read `self.happinessPercentage` for the receiver's national happiness. Vox Popul
 | `relation(other)` | The relationship with any other player: `war`, `friend`, `pact`, `vassalOf`, `masterOf`, `warScore` | `relationships`, through the helpers in `mcp-server/src/diplomacy/relationships.ts` |
 | `rank(field)` | Position among known majors with a visible number on that date. Equal numbers share a position. If only our score is visible, our score ranks 1 in a comparison of one. For a world-leader story, check how many rivals have readable scores. | The named fact across `players` |
 | `events` | Every permitted event inside the window that names this player or its team | Event player and team IDs |
+| `ourDiplomatThere` | The receiver has a diplomat posted to this foreign major's capital | The receiver's spy roster, counting diplomats and vassal diplomats schmoozing at the recorded capital. A readable roster that shows none gives `false`; missing or ambiguous evidence is hidden. |
+| `theirDiplomatHere` | This foreign major has a diplomat at the receiver's capital | That player's spy roster, read separately from our own. A readable roster that shows none gives `false`; missing or ambiguous evidence is hidden. |
 | `is.<name>` | A [shortcut](constants.md#shortcuts), such as `player.is.rival` | The catalogue |
+
+The two diplomat facts apply to known foreign majors. Policy and deal insight comes from the receiver's outgoing diplomat.
+
+### Covert presence and roster points
+
+The newspaper matches roles and locations in the recorded spy rosters. It reads supported state labels and can also recognize a spy gathering intelligence or a diplomat schmoozing across game languages: Vox Populi only records a nonnegative network balance for those two states. An empty roster or a clear miss establishes absence. A missing roster, ambiguous match or unrecognized state without that balance leaves presence unknown.
+
+Access to recorded detail also uses roster points as a proxy. Another major's city detail needs a matching stationed spy with at least **500** current points at both the city observation and the cutoff. Foreign policy text needs the receiver's outgoing diplomat at the target capital with at least **200** points. Deal terms need **800** points. Spending points can lower the recorded balance while the game still grants its bonus, so a story can be withheld when the game would allow it.
+
+The cutoff roster supplies the current view. An event reads the latest roster from an earlier turn, so an arrival after the event cannot open its details. Older events do not become readable later.
 
 ## Event
 

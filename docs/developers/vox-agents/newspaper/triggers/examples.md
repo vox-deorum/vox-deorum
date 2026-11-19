@@ -76,6 +76,18 @@ Load the [probe overlay](../../../../../vox-agents/newspaper/probes/) with `--co
 
 `probe-culture-opinion` fires for one of our cities when boredom is its largest recorded [unhappiness cause](facts.md#city) and reads at least 2. The subheadline prints the reading as `{{culture}}`, and the byline credits a correspondent in `{{city}}`. The Opinion page appears when at least one story tagged `opinion` falls outside the front page.
 
+### A spy's view of a foreign city
+
+`probe-spy-city-profile` requires `city.foreign`, `city.ourSpyPresent` and a positive boredom reading from the city's [unhappiness causes](facts.md#city). Presence is matched from the spy roster, while the cause reading appears only when projection grants city-screen detail through the 500-point proxy. A recalled spy or a city without a readable roster leaves the story out. The story cites the city observation that supplied the cause reading.
+
+### An inbound diplomat
+
+`probe-inbound-diplomat` fires for a foreign major when `player.theirDiplomatHere == true` and `player.ourDiplomatThere == false`. The two facts come from different rosters. A missing or ambiguous roster leaves the fact hidden, so an unobserved visit cannot produce the story. The explicit `false` is what distinguishes an empty post from an unobserved one.
+
+### A foreign policy briefing
+
+`probe-foreign-policies` requires `player.ourDiplomatThere == true` and readable policy names. It covers one branch from the latest tier with names, preferring an ideology if one is available. When there are several branches in the tier, the turn and player ID select one consistently in replay. Basic access shows only branch counts. Reporting a specific policy adoption still needs a readable `PlayerAdoptPolicy` event.
+
 ### A retraction after a printed peace
 
 `probe-peace` reports when the receiver is at peace with another player. If war breaks out, `probe-retraction` looks up the last report with `printed('probe-peace', pair)` and checks that it was published within `short` turns. The guard checks for a result before reading its turn, so a peace story that never made it into print cannot trigger the follow-up.

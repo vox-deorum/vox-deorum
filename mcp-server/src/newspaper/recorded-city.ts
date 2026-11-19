@@ -5,7 +5,7 @@ import type { NewspaperCityProjectionContext } from './projection.js';
 
 type CityRecord = Selectable<CityInformation>;
 /** Fields a city join needs, allowing the query to omit full snapshots and other receivers' access flags. */
-export type NewspaperCityObservation = Pick<CityRecord, 'ID' | 'Key' | 'Turn' | 'CreatedAt' | 'Owner' | 'Name' | 'X' | 'Y'> &
+export type NewspaperCityObservation = Pick<CityRecord, 'ID' | 'Key' | 'Turn' | 'CreatedAt' | 'Owner' | 'Name' | 'X' | 'Y' | 'IsCapital'> &
   Partial<Pick<CityRecord, keyof CityRecord & `Player${number}`>>;
 type CityRow = NewspaperCityObservation;
 type EventRow = Selectable<GameEvent>;
@@ -14,6 +14,12 @@ type DatedRow = Pick<CityRow, 'Turn' | 'CreatedAt'>;
 /** Capture original row identity and dates before metadata is discarded. */
 export function source(table: NewspaperSourceReference['table'], row: DatedRow & { ID: number }): NewspaperSourceReference {
   return { table, id: row.ID, turn: row.Turn, createdAt: row.CreatedAt };
+}
+
+/** Join supporting rows without duplicating the primary citation or another source. */
+export function relatedSources(primary: NewspaperSourceReference, refs: NewspaperSourceReference[]): NewspaperSourceReference[] {
+  return [...new Map(refs.map(ref => [`${ref.table}/${ref.id}`, ref])).values()]
+    .filter(ref => ref.table !== primary.table || ref.id !== primary.id);
 }
 
 /** Read recorded access without the live visibility helper's missing-summary fallback. */
@@ -58,6 +64,8 @@ function indexRows<K, T extends DatedRow & { ID: number }>(rows: readonly T[], k
 
 const cityIndexes = new WeakMap<readonly CityRow[], { byID: Map<number, CityRow[]>; byPlot: Map<string, CityRow[]> }>();
 const lifecycleIndexes = new WeakMap<readonly EventRow[], { byPlot: Map<string, EventRow[]>; flips: Map<unknown, EventRow[]> }>();
+// A query gives its dated contexts one history array, receiver, and lifecycle event set.
+const activeCityIndexes = new WeakMap<readonly CityRow[], Map<number, CityRow[]>>();
 
 /** Index a query's city observations once for both kinds of joins. */
 function cityIndex(rows: readonly CityRow[] | undefined) {
@@ -92,6 +100,47 @@ function canReadCity(row: CityRow, context: NewspaperCityProjectionContext): boo
 /** An event that the receiver could not see supplies neither an ownership anchor nor a lifecycle boundary. */
 function canReadEvent(event: EventRow, context: NewspaperCityProjectionContext): boolean {
   return (visibility(event, context.receiverPlayerID) ?? 0) > 0;
+}
+
+/** Check the city key, owner and plot together; a key alone does not establish continuity. */
+export function sameRecordedCity(a: CityRow, b: CityRow): boolean {
+  return a.Key === b.Key && a.X === b.X && a.Y === b.Y && a.Owner === b.Owner;
+}
+
+/** Check whether a readable lifecycle observation breaks this city assignment. */
+export function cityStillAtPlot(row: CityRow, turn: number, context: NewspaperCityProjectionContext): boolean {
+  const plot = plotKey(row.X, row.Y);
+  if (plot === undefined) return false;
+  const lifecycle = lifecycleIndex(context.cityLifecycle);
+  const owner = context.players.find(player => player.Civilization === row.Owner)?.Key;
+  return !(lifecycle?.byPlot.get(plot)?.some(event => event.Turn <= turn && canReadEvent(event, context) &&
+    (event.Type === 'CityCaptureComplete' || event.Type === 'CityRazed' ? compareDates(event, row) >= 0 : compareDates(event, row) > 0)) ||
+    lifecycle?.flips.get(row.Key)?.some(event => event.Turn <= turn && canReadEvent(event, context) &&
+      event.Payload.OldOwnerID === owner && compareDates(event, row) >= 0));
+}
+
+/** Find the final live observation on each plot before checking visibility or city labels. */
+export function citiesAtTurn(turn: number, context: NewspaperCityProjectionContext): readonly CityRow[] {
+  const history = context.cityHistory;
+  const index = cityIndex(history);
+  if (!history || !index) return [];
+  const dates = activeCityIndexes.get(history) ?? new Map<number, CityRow[]>();
+  activeCityIndexes.set(history, dates);
+  const cached = dates.get(turn);
+  if (cached) return cached;
+  const cities: CityRow[] = [];
+  for (const rows of index.byPlot.values()) {
+    let latest: CityRow | undefined;
+    // Snapshots use the last insertion on a turn. Event joins still use recorded timestamps.
+    for (const row of rows) {
+      if (row.Turn > turn) continue;
+      if (latest && row.Turn < latest.Turn) break;
+      if (!latest || row.ID > latest.ID) latest = row;
+    }
+    if (latest && cityStillAtPlot(latest, turn, context)) cities.push(latest);
+  }
+  dates.set(turn, cities);
+  return cities;
 }
 
 /** Resolve a city-state at this observation by recorded transfers or a unique city-state name. */

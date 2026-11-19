@@ -60,8 +60,9 @@ This plot scan has no Army ID exclusion. An eligible army member left unprocesse
 `PositionUnitsAroundTarget` executes the reinforcement:
 
 1. Try to reveal the destination with a spotter, then run coordinated search at Low aggression with the Reinforce intent. Nearby combat can therefore occur during reinforcement.
-2. Move remaining distant units toward the city, aiming within two plots, with ordinary combat units before siege and civilian support. Approach moves check paths, embarkation safety, and danger at the first-turn path endpoint. Attack-capable units other than city-bombard units tolerate danger up to half their current hit points; other units require zero danger. Units sent through the approach move are marked processed, even when the move fails.
-3. Leave nearby unprocessed independent units available for later work after a successful search. Remaining army members receive safety handling and finish their turn.
+2. After a successful search, unprocessed units within four path steps of the destination stay available for later work; the rest count as distant. A unit three plots away in a straight line but ten steps around a lake is distant. The search clears its distance map before returning, so `UpdatePlotDistanceToTarget` rebuilds it for this check, and it is cleared again before any unit moves.
+3. Move the distant units and, when the search failed, every unprocessed unit toward the city, aiming within two plots, with ordinary combat units before siege and civilian support. Approach moves check paths, embarkation safety, and danger at the first-turn path endpoint. Attack-capable units other than city-bombard units tolerate danger up to half their current hit points; other units require zero danger. Units sent through the approach move are marked processed, even when the move fails.
+4. Remaining army members receive safety handling and finish their turn.
 
 Army gathering and movement use this same positioning routine with the Gather intent. [Army contact](engagements.md#army-contact) can first borrow nearby attackers for a fight without adding them to the army. These routines compete with other passes for available units and can search enemies already considered elsewhere that turn.
 

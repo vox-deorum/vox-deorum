@@ -113,5 +113,49 @@
     "chance": 0.25,
     "tags": ["domestic"],
     "importance": 30
+  },
+  {
+    "id": "probe-spy-city-profile",
+    "subject": "city",
+    "when": [
+      "city.foreign",
+      "city.ourSpyPresent",
+      "city.unhappiness.culture > 0"
+    ],
+    "values": {
+      "boredom": "city.unhappiness.culture"
+    },
+    "tags": ["international"],
+    "importance": 45
+  },
+  {
+    "id": "probe-inbound-diplomat",
+    "subject": "player",
+    "when": [
+      "!player.self",
+      "player.major",
+      "player.theirDiplomatHere == true",
+      "player.ourDiplomatThere == false"
+    ],
+    "values": { "civilization": "player.name" },
+    "tags": ["international"],
+    "importance": 55
+  },
+  {
+    "id": "probe-foreign-policies",
+    "subject": "player",
+    "when": [
+      "!player.self",
+      "player.major",
+      "player.ourDiplomatThere == true",
+      "player.knows('policyBranches') && player.policyBranches != null && Object.values(player.policyBranches).some(branch => Array.isArray(branch) && branch.length > 0)"
+    ],
+    "values": {
+      "civilization": "player.name",
+      "policyBranch": "(() => { const names = Object.entries(player.policyBranches).filter(([, policies]) => Array.isArray(policies) && policies.length > 0).map(([name]) => name).sort(); const tiers = [ideologies, ['Imperialism', 'Industry', 'Rationalism'], ['Fealty', 'Statecraft', 'Artistry'], ['Tradition', 'Progress', 'Authority']]; const latest = tiers.map(tier => names.filter(name => tier.includes(name))).find(tier => tier.length > 0) ?? names; return latest[(turn + player.id) % latest.length]; })()",
+      "policies": "player.policyBranches[policyBranch].join(', ')"
+    },
+    "tags": ["politics"],
+    "importance": 55
   }
 ]

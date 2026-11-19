@@ -125,6 +125,43 @@ describe('newspaper player facts', () => {
     });
   });
 
+  describe('covert presence', () => {
+    it('should expose projected diplomat presence only for a known foreign major and cite its rows', () => {
+      const row = snapshot(1, 40, 6, { TheirDiplomatHere: true, OurDiplomatThere: false });
+      const support = snapshot(1, 41, 5, {});
+      row.relatedSources = [support.source];
+      const facts = buildPlayerSnapshotFacts(row, context(6));
+
+      expect(facts.theirDiplomatHere).toEqual({ value: true, sources: [row.source, support.source] });
+      expect(facts.ourDiplomatThere).toEqual({ value: false, sources: [row.source, support.source] });
+    });
+
+    it('should accept recorded numeric presence while omitting absent and malformed readings', () => {
+      const numeric = snapshot(1, 42, 6, { TheirDiplomatHere: 1, OurDiplomatThere: 0 });
+      const absent = snapshot(1, 43, 6, {});
+      const malformed = snapshot(1, 44, 6, { TheirDiplomatHere: 'yes', OurDiplomatThere: null });
+
+      expect(buildPlayerSnapshotFacts(numeric, context(6))).toMatchObject({
+        theirDiplomatHere: { value: true },
+        ourDiplomatThere: { value: false },
+      });
+      for (const key of ['theirDiplomatHere', 'ourDiplomatThere'] as const) {
+        expect(buildPlayerSnapshotFacts(absent, context(6))).not.toHaveProperty(key);
+        expect(buildPlayerSnapshotFacts(malformed, context(6))).not.toHaveProperty(key);
+      }
+    });
+
+    it('should keep presence off the receiver and city-states', () => {
+      const ownRow = snapshot(0, 45, 6, { TheirDiplomatHere: true, OurDiplomatThere: true });
+      const minorRow = snapshot(22, 46, 6, { TheirDiplomatHere: true, OurDiplomatThere: true });
+
+      for (const key of ['theirDiplomatHere', 'ourDiplomatThere'] as const) {
+        expect(buildPlayerSnapshotFacts(ownRow, context(6))).not.toHaveProperty(key);
+        expect(buildPlayerSnapshotFacts(minorRow, context(6))).not.toHaveProperty(key);
+      }
+    });
+  });
+
   describe('ideology', () => {
     /** Record a player row with the same readable values and a chosen policy-branch map. */
     function policyRow(branches: unknown, id: number, turn = 6): NewspaperSnapshot {

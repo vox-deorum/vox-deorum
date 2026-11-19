@@ -236,9 +236,15 @@ function factRuntime(model, wrap, constants, shortcuts) {
           return getSnapshot(date - span, kind + '.at');
         }));
         method('history', undefined, () => {
-          const entries = series(kind, id).history.filter(candidate =>
-            candidate.segment !== undefined && candidate.segment === segment &&
-            (kind === 'pair' ? candidate.turn : candidate.sources[0].turn) > from && candidate.turn <= date);
+          const seen = new Set();
+          const entries = series(kind, id).history.filter(candidate => {
+            if (candidate.segment === undefined || candidate.segment !== segment || candidate.turn > date) return false;
+            if (kind === 'pair') return candidate.turn > from;
+            const source = candidate.sources[0];
+            if (source.turn <= from || seen.has(source.id)) return false;
+            seen.add(source.id);
+            return true;
+          });
           return list(entries, candidate => {
             cite(candidate.sources);
             return subjectView(kind, id, candidate.turn, candidate.fields, false, candidate);

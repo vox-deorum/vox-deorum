@@ -95,6 +95,8 @@ The evidence panel lists national snapshots, cities, comparison versions, and su
 
 City snapshots retire when a visible recorded capture or raze event identifies their coordinates after the latest city row and through the cutoff. Comparison rows retain their original observations. An event before the requested event window can still retire a city. Unobserved removals cannot retire snapshots. The inspector displays evidence limitations: `cityLifecycleUnresolved` for missing lifecycle coordinates and `cityLifecycleOrderUnknown` for equal same-turn timestamps. Affected snapshots may remain stale. Replay does not infer city continuity from names or nested owner labels.
 
+Replay uses the [recorded roster and network balance](triggers/facts.md#covert-presence-and-roster-points) to infer agent presence and access to detail. Event insight uses the latest roster from an earlier turn. Try the optional stories with `--config vox-agents/newspaper/probes`.
+
 Fixture selection and link destinations remain available alongside the persisted replay archive. `app/main.ts` coordinates the shell, `api.ts` validates HTTP responses, `replay.ts` owns controls, and `inspector.ts` owns fixture and evidence details. The shared publication reader remains in `reader/mount.ts`.
 
 ## Source and HTTP ownership
