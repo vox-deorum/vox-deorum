@@ -103,5 +103,89 @@
     },
     "importance": 60,
     "tags": ["politics", "international"]
+  },
+  {
+    "id": "defensive-pact-ends",
+    "subject": "pair",
+    "when": [
+      "pair.involvesSelf && pair.majors && pair.knows('atWar') && !pair.atWar && pair.knows('pact') && pair.pact === false",
+      "pair.knows('before') && pair.before.knows('pact') && pair.before.pact === true"
+    ],
+    "values": {
+      "ally": "pair.other.knows('name') ? pair.other.name : null"
+    },
+    "importance": 65,
+    "tags": ["politics", "international"]
+  },
+  {
+    "id": "open-borders-granted",
+    "subject": "player",
+    "window": "recent",
+    "when": [
+      "!player.self && player.knows('major') && player.major === true",
+      "self.knows('before')",
+      "self.relation(player).knows('openBordersTo') && self.relation(player).openBordersTo === true",
+      "self.before.relation(player).knows('openBordersTo') && self.before.relation(player).openBordersTo === false"
+    ],
+    "values": {
+      "civilization": "player.knows('name') ? player.name : null",
+      "capital": "player.knows('capital') && player.capital.knows('name') ? player.capital.name : null"
+    },
+    "importance": 45,
+    "tags": ["politics", "international"]
+  },
+  {
+    "id": "first-contact",
+    "subject": "event",
+    "event": "TeamMeet",
+    "when": [
+      "event.knows('currentTeamId') && event.knows('otherTeamId')",
+      "event.currentTeamId != event.otherTeamId",
+      "self.knows('teamId')",
+      "event.currentTeamId == self.teamId || event.otherTeamId == self.teamId",
+      "players.some(p => !p.self && p.knows('teamId') && p.teamId === (event.currentTeamId === self.teamId ? event.otherTeamId : event.currentTeamId) && p.knows('name'))"
+    ],
+    "values": {
+      "otherTeam": "event.currentTeamId == self.teamId ? event.otherTeamId : event.currentTeamId",
+      "stranger": "players.filter(p => !p.self && p.knows('teamId') && p.teamId === otherTeam && p.knows('name')).map(p => p.name).join(' and ')",
+      "major": "players.some(p => !p.self && p.knows('teamId') && p.teamId == otherTeam && p.knows('major') && p.major === true)"
+    },
+    "importance": "major ? 70 : 45",
+    "tags": ["politics", "international"]
+  },
+  {
+    "id": "foreign-defensive-pact",
+    "subject": "pair",
+    "when": [
+      "!pair.involvesSelf && pair.majors && pair.knows('pact') && pair.pact === true",
+      "pair.knows('before') && pair.before.knows('pact') && pair.before.pact === false"
+    ],
+    "values": {
+      "first": "pair.a.knows('name') ? pair.a.name : null",
+      "second": "pair.b.knows('name') ? pair.b.name : null",
+      "withFriend": "(pair.a.knows('friend') && pair.a.friend === true) || (pair.b.knows('friend') && pair.b.friend === true)",
+      "withEnemy": "(pair.a.knows('enemy') && pair.a.enemy === true) || (pair.b.knows('enemy') && pair.b.enemy === true)"
+    },
+    "importance": "withEnemy ? 70 : withFriend ? 60 : 50",
+    "tags": ["politics", "international"]
+  },
+  {
+    "id": "third-party-war-deal",
+    "subject": "event",
+    "event": "DealMade",
+    "when": [
+      "event.knows('fromPlayer') && event.knows('toPlayer')",
+      "event.knows('tradedItems') && Array.isArray(event.tradedItems)",
+      "event.tradedItems.some(item => item.knows('itemType') && item.itemType === 'ThirdPartyWar')"
+    ],
+    "values": {
+      "from": "event.fromPlayer.knows('name') ? event.fromPlayer.name : null",
+      "to": "event.toPlayer.knows('name') ? event.toPlayer.name : null",
+      "fromGives": "event.knows('fromGives') && Array.isArray(event.fromGives) ? event.fromGives.join(', ') : null",
+      "toGives": "event.knows('toGives') && Array.isArray(event.toGives) ? event.toGives.join(', ') : null",
+      "ours": "event.fromPlayer.self || event.toPlayer.self"
+    },
+    "importance": "ours ? 70 : 55",
+    "tags": ["politics", "military", "international"]
   }
 ]

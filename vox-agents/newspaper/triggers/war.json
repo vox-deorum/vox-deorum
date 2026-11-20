@@ -288,5 +288,63 @@
     },
     "importance": "Math.min(80, 45 + 10 * count)",
     "tags": ["politics", "military"]
+  },
+  {
+    "id": "foreign-capital-falls",
+    "subject": "event",
+    "event": "CityCaptureComplete",
+    "when": [
+      "event.knows('isCapital') && event.isCapital === true",
+      "event.knows('isConquest') && event.isConquest === true",
+      "event.knows('oldOwner') && event.knows('newOwner')",
+      "event.oldOwner.self === false && event.newOwner.self === false",
+      "event.oldOwner.knows('major') && event.oldOwner.major === true",
+      "event.newOwner.knows('major') && event.newOwner.major === true",
+      "event.knows('distance') && event.distance.own > nearby"
+    ],
+    "values": {
+      "cityName": "event.knows('city') && event.city.knows('name') ? event.city.name : null",
+      "loser": "event.oldOwner.knows('name') ? event.oldOwner.name : null",
+      "winner": "event.newOwner.knows('name') ? event.newOwner.name : null",
+      "distance": "event.distance.own"
+    },
+    "importance": "Math.max(50, 70 - distance)",
+    "tags": ["politics", "military", "international"]
+  },
+  {
+    "id": "barbarians-at-the-gates",
+    "subject": "city",
+    "when": [
+      "city.knows('own') && city.own === true",
+      "city.knows('name')",
+      "self.knows('tacticalZones') && Array.isArray(self.tacticalZones)",
+      "self.tacticalZones.some(z => z.knows('city') && z.city === city.name && Math.abs(z.zoneID) === city.id && z.knows('units') && Object.hasOwn(z.units, 'Barbarians') && Object.values(z.units.Barbarians).some(n => Number.isFinite(n) && n > 0))"
+    ],
+    "values": {
+      "cityName": "city.name",
+      "barbarians": "self.tacticalZones.filter(z => z.knows('city') && z.city === city.name && Math.abs(z.zoneID) === city.id && z.knows('units') && Object.hasOwn(z.units, 'Barbarians')).flatMap(z => Object.values(z.units.Barbarians)).filter(n => Number.isFinite(n) && n > 0).reduce((sum, n) => sum + n, 0)",
+      "posture": "(() => { const zone = self.tacticalZones.find(z => z.knows('city') && z.city === city.name && Math.abs(z.zoneID) === city.id && z.knows('posture')); return zone ? zone.posture : null; })()"
+    },
+    "importance": "50 + Math.min(30, 5 * barbarians)",
+    "urgent": "barbarians >= 4",
+    "tags": ["cities", "military"]
+  },
+  {
+    "id": "our-city-takes-heavy-damage",
+    "subject": "city",
+    "when": [
+      "city.knows('own') && city.own",
+      "city.knows('hitPoints') && city.knows('maxHitPoints') && city.maxHitPoints > 0",
+      "(city.maxHitPoints - city.hitPoints) / city.maxHitPoints >= 0.25",
+      "city.knows('before') && city.before.knows('hitPoints') && city.before.hitPoints > city.hitPoints && city.before.knows('owner') && city.before.owner.self"
+    ],
+    "values": {
+      "damage": "(city.maxHitPoints - city.hitPoints) / city.maxHitPoints",
+      "hitPoints": "city.hitPoints",
+      "maxHitPoints": "city.maxHitPoints"
+    },
+    "importance": "50 + 40 * damage",
+    "urgent": "damage >= 0.5",
+    "tags": ["cities", "military", "domestic"]
   }
 ]

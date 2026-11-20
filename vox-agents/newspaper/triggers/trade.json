@@ -66,5 +66,26 @@
     },
     "importance": 55,
     "tags": ["economy", "trade"]
+  },
+  {
+    "id": "long-trade-route-completed",
+    "subject": "event",
+    "event": "PlayerTradeRouteCompleted",
+    "when": [
+      "event.knows('originPlayer') && event.knows('destinationPlayer')",
+      "(event.originPlayer.self === true) !== (event.destinationPlayer.self === true)",
+      "event.knows('originCity') && event.knows('destinationCity')",
+      "event.originCity.knows('name') && event.destinationCity.knows('name')",
+      "distance(event.originCity, event.destinationCity) >= regional"
+    ],
+    "values": {
+      "partner": "(() => { const other = event.originPlayer.self === true ? event.destinationPlayer : event.originPlayer; return other.knows('name') ? other.name : null; })()",
+      "ourCity": "event.originPlayer.self === true ? event.originCity.name : event.destinationCity.name",
+      "theirCity": "event.originPlayer.self === true ? event.destinationCity.name : event.originCity.name",
+      "routeDistance": "distance(event.originCity, event.destinationCity)",
+      "outgoing": "event.originPlayer.self === true"
+    },
+    "importance": "outgoing ? 50 : 45",
+    "tags": ["economy", "trade", "international"]
   }
 ]

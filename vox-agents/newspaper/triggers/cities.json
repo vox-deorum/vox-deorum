@@ -171,5 +171,108 @@
     },
     "importance": "gained ? 75 : 90",
     "tags": ["cities", "politics"]
+  },
+  {
+    "id": "city-being-razed",
+    "subject": "city",
+    "when": [
+      "city.knows('razingTurns') && city.razingTurns > 0 && city.knows('foreign') && city.foreign",
+      "city.knows('owner') && city.owner.knows('name')"
+    ],
+    "values": {
+      "cityName": "city.knows('name') ? city.name : null",
+      "civilization": "city.owner.name",
+      "population": "city.knows('population') ? city.population : null",
+      "turns": "city.razingTurns",
+      "distance": "city.knows('distance') && city.distance.knows('own') ? city.distance.own : null"
+    },
+    "importance": "distance === null ? 55 : Math.max(45, 75 - 2 * distance)",
+    "tags": ["cities", "military", "international"]
+  },
+  {
+    "id": "city-defense-completed",
+    "subject": "event",
+    "event": "CityConstructed",
+    "when": [
+      "event.knows('building') && defenses.includes(event.building)",
+      "event.knows('player') && event.player.self === true",
+      "event.knows('city') && event.city.knows('name') && event.city.own === true"
+    ],
+    "values": {
+      "building": "event.building",
+      "cityName": "event.city.name"
+    },
+    "importance": "self.knows('atWar') && self.atWar === true ? 60 : 45",
+    "tags": ["cities", "military", "domestic"]
+  },
+  {
+    "id": "city-growth-milestone",
+    "subject": "city",
+    "window": "recent",
+    "when": [
+      "city.knows('population') && city.population >= largeCity && city.knows('own') && city.own",
+      "city.knows('before') && city.before.knows('population') && Number.isFinite(city.before.population)",
+      "city.before.knows('owner') && city.before.owner.self",
+      "crossed(city.population, city.before.population, largeCity) || crossed(city.population, city.before.population, metropolis)"
+    ],
+    "values": {
+      "milestone": "crossed(city.population, city.before.population, metropolis) ? 'metropolis' : 'large city'",
+      "population": "city.population",
+      "cityName": "city.name"
+    },
+    "importance": "milestone === 'metropolis' ? 55 : 40",
+    "tags": ["cities", "domestic"]
+  },
+  {
+    "id": "distant-colony-founded",
+    "subject": "event",
+    "event": "PlayerCityFounded",
+    "when": [
+      "event.knows('player') && event.player.self === true",
+      "event.knows('city')",
+      "event.city.knows('distance') && event.city.distance.knows('capital')",
+      "event.city.distance.capital >= nearby"
+    ],
+    "values": {
+      "cityName": "event.city.knows('name') ? event.city.name : null",
+      "distance": "event.city.distance.capital"
+    },
+    "importance": "50 + Math.min(20, event.city.distance.capital - nearby)",
+    "tags": ["cities", "domestic"]
+  },
+  {
+    "id": "city-liberated",
+    "subject": "event",
+    "event": "PlayerLiberated",
+    "when": [
+      "event.knows('player') && event.knows('liberatedPlayer')",
+      "event.player.self || event.liberatedPlayer.self"
+    ],
+    "values": {
+      "liberator": "event.player.knows('name') ? event.player.name : null",
+      "liberated": "event.liberatedPlayer.knows('name') ? event.liberatedPlayer.name : null",
+      "returned": "event.liberatedPlayer.self"
+    },
+    "importance": "returned ? 85 : 75",
+    "urgent": "returned",
+    "tags": ["politics", "military", "international"]
+  },
+  {
+    "id": "occupied-city-resists",
+    "subject": "city",
+    "when": [
+      "city.knows('own') && city.own === true",
+      "city.knows('isOccupied') && city.isOccupied === true",
+      "city.knows('resistanceTurns') && Number.isFinite(city.resistanceTurns) && city.resistanceTurns > 0"
+    ],
+    "values": {
+      "cityName": "city.knows('name') ? city.name : null",
+      "turns": "city.resistanceTurns",
+      "population": "city.knows('population') && Number.isFinite(city.population) ? city.population : null",
+      "formerOwner": "city.knows('formerOwner') && city.formerOwner.knows('name') ? city.formerOwner.name : null",
+      "unrest": "city.knows('happinessDelta') && Number.isFinite(city.happinessDelta) ? city.happinessDelta : null"
+    },
+    "importance": "Math.min(70, 45 + 5 * turns)",
+    "tags": ["cities", "domestic"]
   }
 ]

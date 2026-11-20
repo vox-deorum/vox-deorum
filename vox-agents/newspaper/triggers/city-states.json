@@ -72,5 +72,26 @@
     },
     "importance": "distance <= adjacent ? 75 : 62",
     "tags": ["politics", "international"]
+  },
+  {
+    "id": "ally-city-state-captured",
+    "subject": "event",
+    "event": "CityCaptureComplete",
+    "when": [
+      "event.knows('oldOwner') && event.knows('newOwner')",
+      "event.oldOwner.knows('cityState') && event.oldOwner.cityState === true",
+      "event.newOwner.knows('major') && event.newOwner.major === true && event.newOwner.self === false",
+      "event.knows('isConquest') && event.isConquest === true",
+      "(() => { const ago = turn - event.turn + 1; if (ago < 1 || ago > long) return false; const target = event.oldOwner.at(ago); return target.knows('majorAlly') && target.majorAlly !== null && target.majorAlly.self; })()"
+    ],
+    "values": {
+      "cityState": "event.oldOwner.knows('name') ? event.oldOwner.name : null",
+      "captor": "event.newOwner.knows('name') ? event.newOwner.name : null",
+      "cityName": "event.knows('city') && event.city.knows('name') ? event.city.name : null",
+      "distance": "event.knows('distance') ? event.distance.own : null"
+    },
+    "importance": 85,
+    "urgent": "event.knows('distance') && event.distance.own <= neighboring",
+    "tags": ["politics", "military", "international"]
   }
 ]

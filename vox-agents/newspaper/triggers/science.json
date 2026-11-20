@@ -30,5 +30,41 @@
     },
     "importance": 70,
     "tags": ["politics", "domestic"]
+  },
+  {
+    "id": "rival-enters-new-era",
+    "subject": "player",
+    "window": "recent",
+    "when": [
+      "!player.self",
+      "player.knows('major') && player.major === true",
+      "player.knows('era') && typeof player.era === 'string'",
+      "player.knows('before') && player.before.knows('era') && typeof player.before.era === 'string'",
+      "changed(player, 'era')"
+    ],
+    "values": {
+      "civilization": "player.knows('name') ? player.name : null",
+      "era": "player.era",
+      "former": "player.before.era",
+      "distance": "player.knows('distance') ? player.distance : null"
+    },
+    "importance": "distance !== null && distance <= neighboring ? 65 : 50",
+    "tags": ["politics", "international"]
+  },
+  {
+    "id": "our-team-gains-technology",
+    "subject": "event",
+    "event": "TeamTechResearched",
+    "when": [
+      "event.knows('tech') && typeof event.tech === 'string' && event.tech.length > 0",
+      "!event.knows('changeAmount') || event.changeAmount > 0",
+      "event.knows('players') && event.players.some(p => p.self === true)"
+    ],
+    "values": {
+      "tech": "event.tech",
+      "era": "self.knows('era') ? self.era : null"
+    },
+    "importance": 55,
+    "tags": ["science", "domestic"]
   }
 ]

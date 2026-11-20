@@ -147,5 +147,80 @@
     },
     "importance": 60,
     "tags": ["politics", "international", "religion"]
+  },
+  {
+    "id": "pantheon-founded",
+    "subject": "event",
+    "event": "PantheonFounded",
+    "when": [
+      "event.knows('player') && event.player.knows('name')",
+      "event.player.knows('major') && event.player.major === true"
+    ],
+    "values": {
+      "civilization": "event.player.name",
+      "ours": "event.player.self === true",
+      "cityName": "event.knows('city') && event.city.knows('name') ? event.city.name : null",
+      "belief": "event.knows('beliefType') && typeof event.beliefType === 'string' ? event.beliefType : null"
+    },
+    "importance": "ours ? 60 : 45",
+    "tags": ["religion", "international"]
+  },
+  {
+    "id": "our-faith-deepens",
+    "subject": "event",
+    "event": [
+      "ReligionEnhanced",
+      "ReligionReformed"
+    ],
+    "when": [
+      "event.knows('player') && event.player.self === true",
+      "event.knows('religion') && typeof event.religion === 'string' && event.religion.length > 0"
+    ],
+    "values": {
+      "religion": "event.religion",
+      "stage": "event.type === 'ReligionReformed' ? 'reformed' : 'enhanced'"
+    },
+    "importance": "stage === 'reformed' ? 70 : 60",
+    "tags": ["religion", "domestic"]
+  },
+  {
+    "id": "faith-reaches-distant-city",
+    "subject": "city",
+    "window": "recent",
+    "when": [
+      "city.knows('foreign') && city.foreign === true",
+      "city.knows('owner') && city.owner.major === true",
+      "self.knows('foundedReligion') && typeof self.foundedReligion === 'string' && self.foundedReligion.length > 0",
+      "city.knows('majorityReligion') && city.majorityReligion === self.foundedReligion",
+      "city.knows('before') && city.before.knows('majorityReligion')",
+      "changed(city, 'majorityReligion')",
+      "city.knows('distance') && city.distance.knows('own') && city.distance.own > neighboring",
+      "city.conversions.some(c => c.knows('religion') && c.religion === city.majorityReligion)"
+    ],
+    "values": {
+      "cityName": "city.knows('name') ? city.name : null",
+      "civilization": "city.owner.knows('name') ? city.owner.name : null",
+      "religion": "city.majorityReligion",
+      "distance": "city.distance.own"
+    },
+    "importance": 55,
+    "tags": ["religion", "international"]
+  },
+  {
+    "id": "own-cities-divided-by-faith",
+    "subject": "world",
+    "when": [
+      "self.knows('foundedReligion') && typeof self.foundedReligion === 'string' && self.foundedReligion.length > 0",
+      "self.cities.some(c => c.own && c.knows('majorityReligion') && c.majorityReligion === self.foundedReligion)",
+      "self.cities.filter(c => c.own && c.knows('majorityReligion') && typeof c.majorityReligion === 'string' && c.majorityReligion.length > 0 && c.majorityReligion !== self.foundedReligion).length >= 2"
+    ],
+    "values": {
+      "founded": "self.foundedReligion",
+      "divided": "self.cities.filter(c => c.own && c.knows('majorityReligion') && typeof c.majorityReligion === 'string' && c.majorityReligion.length > 0 && c.majorityReligion !== self.foundedReligion).length",
+      "faithful": "self.cities.filter(c => c.own && c.knows('majorityReligion') && c.majorityReligion === self.foundedReligion).length",
+      "others": "self.cities.filter(c => c.own && c.knows('majorityReligion') && typeof c.majorityReligion === 'string' && c.majorityReligion.length > 0 && c.majorityReligion !== self.foundedReligion).map(c => c.majorityReligion).filter((r, i, all) => all.indexOf(r) === i).join(', ')"
+    },
+    "importance": "45 + Math.min(25, 5 * divided)",
+    "tags": ["politics", "domestic", "religion"]
   }
 ]

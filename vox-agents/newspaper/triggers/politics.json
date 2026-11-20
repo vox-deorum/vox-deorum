@@ -206,5 +206,19 @@
     "importance": "ours ? 85 : 65",
     "urgent": "ours",
     "tags": ["politics", "international"]
+  },
+  {
+    "id": "policy-adopted",
+    "subject": "event",
+    "event": "PlayerAdoptPolicy",
+    "when": [
+      "event.knows('player') && event.player.self === true",
+      "event.knows('policy') && typeof event.policy === 'string' && event.policy.length > 0"
+    ],
+    "values": {
+      "policy": "event.policy"
+    },
+    "importance": 45,
+    "tags": ["politics", "domestic"]
   }
 ]
