@@ -75,7 +75,9 @@ Guard subject-specific facts in shared rules. For example, check `subject.kind =
 
 The editor makes one weighted draw per article and slightly discounts genres already drawn in the same issue, including draws for articles later omitted from the pages. Voices can mix. Saved catalogues without `styles` keep their original draw behavior.
 
-The stock catalogue supplies the three default tags. To add tags, guidance or rules, put just the files you need under your overlay's `styles/` folder. Entries merge by ID. If the overlay also has an older flat `styles.json`, its entries are applied before the split files.
+Genre describes the shape of the piece. The same change in population could lead a report, appear as figures in a ledger, or become the setup for a joke. The stock `styles/genre.json` lists the available forms and gives guidance for drafting each one.
+
+To add tags, guidance or rules, put just the files you need under your overlay's `styles/` folder. Entries merge by ID. If the overlay also has an older flat `styles.json`, its entries are applied before the split files.
 
 ### Placeholders and facts
 

@@ -29,7 +29,7 @@ Paths are relative to `vox-agents/src/newspaper/` for code and `vox-agents/` for
 
 Draft per template, one style combination at a time, into an overlay under `.tmp/newspaper-drafts/<run>/templates/`. The overlay format means a draft run can be replayed and read before anything touches the stock catalogue.
 
-Do not fill every combination. With 8 voices, 5 stances and 6 genres, one template has 240 possible cells. Use tiers:
+Fill a few combinations per template. Even a modest catalogue gives each template hundreds of possible cells. Use tiers:
 
 | Tier | Templates | Cells to fill |
 | --- | --- | --- |

@@ -39,7 +39,7 @@ describe('editorial catalogue files', () => {
     const base = await loadEditorialConfig();
     const template = base.templates[0];
     const variant = template.variants[0];
-    const match = { voice: 'resident', stance: 'supportive', genre: 'letter' };
+    const match = { voice: 'resident', stance: 'supportive', genre: 'reader-mail' };
     const rules = [{ id: 'letters', match, when: 'true', multiplier: 2 }];
     /** Apply a style change without repeating the stock prose. */
     async function writeTags(tags: Record<string, string>) {
@@ -47,19 +47,19 @@ describe('editorial catalogue files', () => {
     }
     await writeDocument('styles/voice.json', [{ id: 'resident' }]);
     await writeDocument('styles/stance.json', [{ id: 'supportive' }]);
-    await writeDocument('styles/genre.json', [{ id: 'letter' }]);
+    await writeDocument('styles/genre.json', [{ id: match.genre }]);
     await writeDocument('styles/rules.json', rules);
     await writeTags(match);
     const loaded = await loadEditorialConfig(directory);
-    expect(loaded.styles?.genre.map(genre => genre.id)).toEqual(['report', 'letter']);
+    expect(loaded.styles?.genre).toEqual([...base.styles!.genre, { id: match.genre }]);
     expect(loaded.styles?.rules).toEqual(rules);
     expect(loaded.templates[0].variants[0]).toMatchObject(match);
     await writeTags({ voice: 'general' });
     await expect(loadEditorialConfig(directory)).rejects.toThrow('Set voice, stance and genre together');
-    await writeTags({ voice: 'general', stance: 'letter', genre: 'letter' });
+    await writeTags({ ...match, stance: match.genre });
     await expect(loadEditorialConfig(directory)).rejects.toThrow('Unknown stance tag');
-    await writeTags({ voice: 'general', stance: 'neutral', genre: 'letter' });
-    await writeDocument('styles/rules.json', [{ ...rules[0], match: { voice: 'letter' } }]);
+    await writeTags(match);
+    await writeDocument('styles/rules.json', [{ ...rules[0], match: { voice: match.genre } }]);
     await expect(loadEditorialConfig(directory)).rejects.toThrow('Unknown voice tag');
     await writeDocument('styles/rules.json', [{ ...rules[0], multiplier: 0 }]);
     await expect(loadEditorialConfig(directory)).rejects.toMatchObject({
@@ -68,11 +68,11 @@ describe('editorial catalogue files', () => {
   });
 
   it('should apply split style overrides after legacy flat overrides', async () => {
-    const rule = { id: 'letters', match: { genre: 'letter' }, when: 'true', multiplier: 2 };
-    await writeDocument('styles.json', { genre: [{ id: 'letter' }], rules: [rule] });
+    const rule = { id: 'letters', match: { genre: 'reader-mail' }, when: 'true', multiplier: 2 };
+    await writeDocument('styles.json', { genre: [{ id: rule.match.genre }], rules: [rule] });
     await writeDocument('styles/rules.json', [{ id: rule.id, multiplier: 3 }]);
     const loaded = await loadEditorialConfig(directory);
-    expect(loaded.styles?.genre.map(genre => genre.id)).toContain('letter');
+    expect(loaded.styles?.genre.map(genre => genre.id)).toContain(rule.match.genre);
     expect(loaded.styles?.rules).toContainEqual({ ...rule, multiplier: 3 });
   });
 

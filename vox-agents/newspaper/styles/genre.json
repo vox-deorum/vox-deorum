@@ -1,3 +1,46 @@
 [
-  { "id": "report" }
+  {
+    "id": "report",
+    "guidance": "Lead with what changed and who or where it affects. Use the rest of the piece for the facts that qualify the news or put it in context. Aim for 15 to 80 body words."
+  },
+  {
+    "id": "analysis",
+    "guidance": "Look closely at one question the news raises, or at one city, leader or institution in the news. Open with the question or a telling fact, set it beside a fact that complicates the picture, and close on what it means for the wider world. A population lead tells us where people live; the seat of government tells us where power sits. Aim for 35 to 90 body words."
+  },
+  {
+    "id": "chronicle",
+    "guidance": "Tell the story in two or more short entries in time order. Date the entries when dates are known, and use relative markers such as 'at the last count' and 'now' otherwise. Give each entry a change of its own and let the last one show how far things have come. Aim for 25 to 75 body words."
+  },
+  {
+    "id": "ledger",
+    "guidance": "Put the figures or terms on separate lines with plain labels, like entries in a book of accounts. End with the comparison that makes the tally news. Good for treaty terms, rival tallies, city stores and changes in rank. Aim for 10 to 45 body words."
+  },
+  {
+    "id": "notice",
+    "guidance": "Write a short bulletin for the people affected. Name them in the heading if useful, then say what has changed, where it applies and when it takes effect if the date is known. Think 'Notice to merchants' for a change in border access. Aim for 10 to 45 body words."
+  },
+  {
+    "id": "editorial",
+    "guidance": "Speak for the paper. Take a position on a public choice, give a concrete reason, and end with what the paper wants done or judged differently. Build around one clear argument. An editorial always takes a side, and the stance says which one. Aim for 25 to 75 body words."
+  },
+  {
+    "id": "letter",
+    "guidance": "Write as a reader addressing the editor or someone answerable for the news. Invent the writer freely from what the news makes likely: a trade, a street, a grievance, a short signature such as 'A Neighbor'. Give them one personal stake and one point, and let the address and the appeal do the work: 'Madam, how near must a new town be before its affairs become ours?' Aim for 20 to 65 body words."
+  },
+  {
+    "id": "anecdote",
+    "guidance": "Imagine a small moment the news could have caused and tell it so the reader can picture it. Start from a known fact and invent the people and details around it; the piece is there to give the news a human face, and the reader takes it as a story. A party of settlers leaving town can be told through one fewer place to set at supper. Stay with the moment and let the final image carry it. Aim for 15 to 55 body words."
+  },
+  {
+    "id": "obituary",
+    "guidance": "Look back on something that has ended: a city lost, a nation fallen, a treaty expired, an age passed. Open with what it was at its height, recall one or two moments from its history, and close on what remains or who inherits. Write with the respect owed to the departed, friend or rival. Aim for 20 to 60 body words."
+  },
+  {
+    "id": "joke",
+    "guidance": "Use one fact as the setup and let the last line turn it. Keep the joke short enough for a spare corner of the page. A capital overtaken in population might console itself with first place in capitals. Aim for 5 to 30 body words."
+  },
+  {
+    "id": "proverb",
+    "guidance": "Distill the news into a saying people might repeat at the well or the market. One or two lines, with an everyday image and a rhythm that is easy to remember; a rhyme is welcome. A city that sent out its settlers might hear 'The tree that seeds the valley stands thinner on the hill.' Aim for 5 to 25 body words."
+  }
 ]
