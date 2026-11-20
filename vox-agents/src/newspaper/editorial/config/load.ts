@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
 import { isRecord } from '../../../utils/guards.js';
+import { variantStyleAxes } from '../../contracts/style.js';
 import { prepareEditorialExpressions, type CompiledEditorialExpressions } from './expressions.js';
 import { editorialConfigSchema, type EditorialConfig } from './schema.js';
 
@@ -76,6 +77,18 @@ function overlay(base: unknown, custom: unknown): unknown {
   return custom;
 }
 
+/** Assemble the style catalogue, applying split overrides after any legacy flat overlay. */
+async function readStyleCatalogue(directory: string, optional = false): Promise<unknown> {
+  const folder = path.join(directory, 'styles');
+  const files = await Promise.all([...variantStyleAxes, 'rules'].map(async name =>
+    [name, await readCatalogueFile(folder, name, optional)] as const
+  ));
+  const split = Object.fromEntries(files.filter(([, value]) => value !== undefined));
+  if (!optional) return split;
+  const legacy = await readCatalogueFile(directory, 'styles', true);
+  return legacy === undefined || isRecord(legacy) ? overlay(legacy, split) : legacy;
+}
+
 const compiledCatalogues = new WeakMap<EditorialConfig, Promise<CompiledEditorialExpressions>>();
 
 /** Compile a catalogue only once; bytecode and expression slots stay out of saved runs. */
@@ -90,17 +103,22 @@ export function getEditorialExpressions(config: EditorialConfig): Promise<Compil
 
 /** Load grouped built-ins and optional flat or grouped overrides, then validate together. */
 export async function loadEditorialConfig(directory?: string): Promise<EditorialConfig> {
+  const builtIn = builtInCatalogueDirectory();
   const result: Record<string, unknown> = { version: 1 };
-  for (const name of ['defaults', 'constants', 'triggers', 'templates', 'pages', 'designs', 'styles']) {
+  for (const name of ['defaults', 'constants', 'triggers', 'templates', 'pages', 'designs']) {
     const grouped = name === 'triggers' || name === 'templates' || name === 'designs';
     const base = grouped
-      ? await readCatalogueSection(builtInCatalogueDirectory(), name)
-      : await readCatalogueFile(builtInCatalogueDirectory(), name);
+      ? await readCatalogueSection(builtIn, name)
+      : await readCatalogueFile(builtIn, name);
     let custom = directory ? await readCatalogueFile(directory, name, true) : undefined;
     if (directory && grouped)
       custom = overlay(custom, await readCatalogueSection(directory, name, true));
     result[name] = overlay(base, custom);
   }
+  result.styles = overlay(
+    await readStyleCatalogue(builtIn),
+    directory ? await readStyleCatalogue(directory, true) : undefined
+  );
   return parseEditorialConfig(result);
 }
 

@@ -86,7 +86,7 @@ Keep contracts in the existing workspaces: MCP owns evidence and browser-safe ar
 | Trigger catalogue, developments and decisions | Vox Agents `editorial/config/`, `editorial/rules/`, `contracts/triggers.ts` and `editorial/check.ts` | Plan 6 evaluates rules; Plan 3's selection and presentation consume their developments. |
 | Editorial state, series, preferences and decisions; stored presentation | Vox Agents `contracts/publication.ts` and `contracts/design.ts` | Plan 3 implements offline storage. Plan 5 reuses editorial state during play. |
 | Archive indexes and queries; responses containing issue documents | MCP `newspaper/protocol.ts`; Vox Agents `contracts/archive.ts` respectively | Plan 3. |
-| Variant styles and preferences | Vox Agents `editorial/config/` and the runtime `styles.json` | The owner supplies tag IDs, guidance and tuning. The heuristic editor weights matching variants and records selected tags. Plan 7 validates the same IDs in model proposals. |
+| Variant styles and preferences | Vox Agents `editorial/config/` and the runtime `newspaper/styles/` | The owner supplies tag IDs, guidance and tuning. The heuristic editor weights matching variants and records selected tags. Plan 7 validates the same IDs in model proposals. |
 | Story pitches, clusters and backlog | The archivist's `story_pitches` table in the episode database; cluster and backlog reports in `.tmp/newspaper-mining/` | Plan 4b. Development output, never shipped. |
 | LLM proposals, editor decisions, and comparison records | Vox Agents `editorial/proposal.ts`, `contracts/publication.ts`, and `replay/evaluation.ts` | Plan 7. |
 
@@ -106,7 +106,7 @@ Each folder groups a sustained responsibility. Move existing files and all consu
 | `vox-agents/src/newspaper/live/` | Periodic checks and the latest issue for the current game and seat in Plan 5. |
 | `vox-agents/src/newspaper/{application,game-delivery}.ts` | Lazy shared renderer, sample orchestration and acknowledged MCP delivery. The VD server owns startup and shutdown. |
 | `vox-agents/newspaper/src/reader/` and `src/app/` | Reader DOM/layout and the browser application respectively, including replay controls and source inspection. Plan 3 completes archive navigation. The export entry stays at `src/export-bridge.ts`. |
-| `vox-agents/newspaper/` | `constants.json`, `defaults.json`, `pages.json`, `styles.json`, and files in `designs/`, `templates/`, and `triggers/` supply runtime editorial choices. |
+| `vox-agents/newspaper/` | `constants.json`, `defaults.json`, `pages.json`, and files in `designs/`, `styles/`, `templates/`, and `triggers/` supply runtime editorial choices. |
 | `vox-agents/src/archivist/` | Plan 4b adds the stories mode: turn sampling, pitch storage, clustering and backlog. A development tool, never shipped. |
 | `vox-agents/newspaper/probes/` | Optional overlay for validating new catalogue capabilities with synthetic evidence in Vox Agents' mock tests. |
 | `mcp-server/src/newspaper/` | Evidence contracts, queries and field projection in Plan 2; archive protocol types in Plan 3. `projection.ts` owns reporting policy. |

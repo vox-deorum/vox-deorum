@@ -35,7 +35,7 @@ The built-in catalogue lives under `vox-agents/newspaper/`. Rules and matching t
 | `constants.json` | Named distances, spans, sizes, type lists and shortcuts, plus printable terms used by prose and mastheads. See [constants and shortcuts](triggers/constants.md). |
 | `triggers/*.json` | Trigger rules: subject, `when`, `values`, importance, repeat, grouping and tags. See the [trigger overview](triggers/overview.md). |
 | `templates/*.json` | Authored variants, typed links and short pieces, grouped by topic like triggers |
-| `styles.json` | Registered voice, stance and genre tags, optional writing guidance, and rules that prefer matching variants |
+| `styles/` | Tag IDs and optional writing guidance in `voice.json`, `stance.json` and `genre.json`; preferences in `rules.json` |
 | `pages.json` | Front page, section membership, and section minimums |
 | `designs/*.json` | Design identities, fixed renderer families, saved tokens/assets, masthead title and motto, layouts, and eligibility |
 
@@ -67,13 +67,15 @@ A template names one or more rules in `triggers`. They must all fire for the sam
 
 ### Variant styles
 
-Set `voice`, `stance` and `genre` together. Each ID must be registered for its axis in `styles.json`. An untagged variant uses `general`, `neutral` and `report`. These tags describe the prose and do not change the template's topic tags, page placement or layout.
+Set `voice`, `stance` and `genre` together. Each ID must be registered in the matching file under `styles/`. An untagged variant uses `general`, `neutral` and `report`. These tags describe the prose and do not change the template's topic tags, page placement or layout.
 
-Each preference rule has an `id`, a `match` with at least one tag, a `when` expression, and a positive `multiplier`. All named tags must match. For example, a rule matching both `pro-government` and `letter` can double the weight of a supportive letter when `self.happinessPercentage > 50`. A supportive report does not receive that bonus. Use the variant's own `when` for evidence required by its wording.
+Each preference in `styles/rules.json` has an `id`, a `match` with at least one tag, a `when` expression, and a positive `multiplier`. All named tags must match. For example, a rule matching both `pro-government` and `letter` can double the weight of a supportive letter when `self.happinessPercentage > 50`. A supportive report does not receive that bonus. Use the variant's own `when` for evidence required by its wording.
 
 Guard subject-specific facts in shared rules. For example, check `subject.kind === 'city'` before reading `city.happinessDelta`. The editor applies rules after choosing stories. A false condition, an error, or unavailable evidence leaves the weight unchanged. For displayed stories, facts read by applied preferences join the decision audit without becoming evidence for the article's claims.
 
-The editor makes one weighted draw per article and slightly discounts genres already drawn in the same issue, including draws for articles later omitted from the pages. Voices can mix. Saved catalogues without `styles` keep their original draw behavior. The stock catalogue supplies the three default tags; add other tags, guidance and rules through an overlay.
+The editor makes one weighted draw per article and slightly discounts genres already drawn in the same issue, including draws for articles later omitted from the pages. Voices can mix. Saved catalogues without `styles` keep their original draw behavior.
+
+The stock catalogue supplies the three default tags. To add tags, guidance or rules, put just the files you need under your overlay's `styles/` folder. Entries merge by ID. If the overlay also has an older flat `styles.json`, its entries are applied before the split files.
 
 ### Placeholders and facts
 
