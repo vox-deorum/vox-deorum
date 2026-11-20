@@ -4,7 +4,7 @@ Trigger rules test visible facts, keep repeat memory, and record an audit for ea
 
 A **trigger** is a rule that spots one kind of development in the recorded game, such as "a neighboring foreign city changed from puppet to occupied". This page is for developers who add or tune newspaper coverage. It explains what a trigger entry contains, how a check evaluates it, and how to add one.
 
-A rule is a JavaScript expression over a **fact model**: cities, players, events, pairs, incidents and relationships built from the MCP server databases. Code supplies the facts, including inferred ones such as distance or a city's former owner. The catalogue supplies the rules. A new rule therefore needs a new catalogue entry and no new code, as long as the facts exist. Authored templates turn its developments into stories; the stock catalogue pairs each rule with one.
+A rule is a JavaScript expression over a **fact model**: cities, players, events, pairs, incidents and relationships built from the MCP server databases. Code supplies the facts, including inferred ones such as distance or a city's former owner. The catalogue supplies the rules. A new rule therefore needs a new catalogue entry and no new code, as long as the facts exist. A rule can record a development on its own; a story needs an authored template that uses it.
 
 ```mermaid
 flowchart LR
@@ -212,6 +212,8 @@ A template names one or more triggers in `triggers`. Every named trigger must fi
 | `mcp-server/src/newspaper/queries.ts` | Recorded snapshots, comparison history and event windows |
 
 The legacy detectors are retired; new coverage belongs in `rules/`.
+
+To list the stock trigger IDs, run `npm run --silent newspaper:triggers` from the repository root or `vox-agents/`. The command prints one ID per line in catalogue order and needs no build or recording. Append `> trigger-names.txt` to save the list in the current directory. The list includes rules without templates and excludes custom overlays.
 
 ## Add a trigger
 

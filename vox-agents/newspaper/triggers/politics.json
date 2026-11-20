@@ -333,5 +333,121 @@
     ],
     "importance": 70,
     "tags": ["politics", "military"]
+  },
+  {
+    "id": "national-majority-faith-changed",
+    "subject": "world",
+    "window": "recent",
+    "when": [
+      "self.knows('majorityReligion') && typeof self.majorityReligion === 'string' && self.majorityReligion.length > 0",
+      "self.knows('before') && self.before.knows('majorityReligion')",
+      "(typeof self.before.majorityReligion === 'string' && self.before.majorityReligion.length > 0) || self.before.majorityReligion === null || self.before.majorityReligion === -1 || self.before.majorityReligion === ''",
+      "self.majorityReligion !== self.before.majorityReligion"
+    ],
+    "values": {
+      "religion": "self.majorityReligion",
+      "former": "typeof self.before.majorityReligion === 'string' && self.before.majorityReligion.length > 0 ? self.before.majorityReligion : null",
+      "founded": "self.knows('foundedReligion') && typeof self.foundedReligion === 'string' && self.foundedReligion.length > 0 ? self.foundedReligion : null"
+    },
+    "importance": 70,
+    "tags": ["politics", "domestic", "religion"]
+  },
+  {
+    "id": "friendship-begins",
+    "subject": "pair",
+    "window": "recent",
+    "when": [
+      "pair.involvesSelf",
+      "pair.majors",
+      "pair.knows('friends') && pair.friends === true",
+      "pair.knows('before') && pair.before.knows('friends') && pair.before.friends === false",
+      "!(pair.knows('pact') && pair.pact === true && pair.before.knows('pact') && pair.before.pact === false)"
+    ],
+    "values": {
+      "friend": "pair.other.knows('name') ? pair.other.name : null"
+    },
+    "importance": 55,
+    "tags": ["politics", "international"]
+  },
+  {
+    "id": "defensive-pact-signed",
+    "subject": "pair",
+    "when": [
+      "pair.involvesSelf",
+      "pair.knows('majors') && pair.majors === true",
+      "pair.knows('pact') && pair.pact === true",
+      "pair.knows('before') && pair.before.knows('pact') && pair.before.pact === false"
+    ],
+    "values": {
+      "ally": "pair.other.knows('name') ? pair.other.name : null"
+    },
+    "importance": 65,
+    "tags": ["politics", "international"]
+  },
+  {
+    "id": "spy-caught-at-home",
+    "subject": "event",
+    "event": "EspionageResult",
+    "when": [
+      "event.knows('perspective') && event.perspective === 'target'",
+      "event.knows('spyResult') && (event.spyResult === 'Identified' || event.spyResult === 'Killed')"
+    ],
+    "values": {
+      "result": "event.spyResult",
+      "cityName": "event.knows('cityName') ? event.cityName : null"
+    },
+    "importance": "event.spyResult === 'Killed' ? 70 : 60",
+    "tags": ["politics", "international"]
+  },
+  {
+    "id": "election-operation",
+    "subject": "event",
+    "event": ["ElectionResultSuccess", "ElectionResultFailure"],
+    "when": [
+      "event.knows('player') && event.player.self === true"
+    ],
+    "values": {
+      "success": "event.type === 'ElectionResultSuccess'",
+      "cityState": "event.knows('cityState') && typeof event.cityState === 'string' ? event.cityState : null",
+      "influence": "event.knows('influenceChange') ? event.influenceChange : null"
+    },
+    "importance": "success ? 55 : 45",
+    "tags": ["politics", "international"]
+  },
+  {
+    "id": "major-reduced-to-single-city",
+    "subject": "player",
+    "window": "medium",
+    "when": [
+      "!player.self && player.knows('major') && player.major === true",
+      "player.knows('cityCount') && Number.isFinite(player.cityCount)",
+      "player.knows('before') && player.before.knows('cityCount') && Number.isFinite(player.before.cityCount)",
+      "player.cityCount === 1",
+      "player.before.cityCount > 1"
+    ],
+    "values": {
+      "civilization": "player.knows('name') ? player.name : null",
+      "lost": "player.before.cityCount - player.cityCount"
+    },
+    "importance": "60 + 5 * lost",
+    "tags": ["politics", "international"]
+  },
+  {
+    "id": "foreign-major-adopts-our-faith",
+    "subject": "player",
+    "window": "medium",
+    "when": [
+      "!player.self && player.knows('major') && player.major === true",
+      "player.knows('majorityReligion') && typeof player.majorityReligion === 'string' && player.majorityReligion.length > 0",
+      "player.knows('before') && player.before.knows('majorityReligion')",
+      "(player.before.majorityReligion === null || player.before.majorityReligion === -1 || player.before.majorityReligion === '' || (typeof player.before.majorityReligion === 'string' && player.before.majorityReligion.length > 0 && player.before.majorityReligion !== player.majorityReligion))",
+      "self.knows('foundedReligion') && typeof self.foundedReligion === 'string' && self.foundedReligion === player.majorityReligion"
+    ],
+    "values": {
+      "civilization": "player.knows('name') ? player.name : null",
+      "religion": "player.majorityReligion"
+    },
+    "importance": 65,
+    "tags": ["politics", "international", "religion"]
   }
 ]

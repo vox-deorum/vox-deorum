@@ -135,5 +135,24 @@
     },
     "importance": 55,
     "tags": ["international", "congress"]
+  },
+  {
+    "id": "congress-votes-changed",
+    "subject": "world",
+    "window": "recent",
+    "when": [
+      "game.knows('congress')",
+      "game.congress.available === true",
+      "self.knows('votes') && Number.isFinite(self.votes)",
+      "self.knows('before') && self.before.knows('votes') && Number.isFinite(self.before.votes)",
+      "self.votes !== self.before.votes"
+    ],
+    "values": {
+      "votes": "self.votes",
+      "previous": "self.before.votes",
+      "change": "self.votes - self.before.votes"
+    },
+    "importance": "Math.abs(change) >= 2 ? 65 : 55",
+    "tags": ["international", "congress"]
   }
 ]

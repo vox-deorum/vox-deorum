@@ -61,5 +61,71 @@
       "enemies": "(() => { const names = self.wars.filter(p => p.knows('name')).map(p => p.name); return names.length <= 2 ? names.join(' and ') || 'our adversaries' : names.slice(0, -1).join(', ') + ', and ' + names[names.length - 1]; })()"
     },
     "importance": 60
+  },
+  {
+    "id": "treasury-milestone",
+    "subject": "world",
+    "window": "recent",
+    "when": [
+      "self.knows('gold') && Number.isFinite(self.gold)",
+      "self.knows('before') && self.before.knows('gold') && Number.isFinite(self.before.gold)",
+      "crossed(self.gold, self.before.gold, 1000)"
+    ],
+    "values": {
+      "gold": "self.gold",
+      "gain": "self.gold - self.before.gold"
+    },
+    "importance": 50,
+    "repeat": "once",
+    "tags": ["politics", "domestic"]
+  },
+  {
+    "id": "great-person-born",
+    "subject": "event",
+    "event": "UnitCreated",
+    "when": [
+      "event.knows('person')",
+      "event.knows('kind') && event.kind === 'born'"
+    ],
+    "values": {
+      "person": "event.person",
+      "unit": "event.knows('unit') ? event.unit : null",
+      "civilization": "event.knows('player') && event.player.knows('name') ? event.player.name : null",
+      "ours": "event.knows('player') && event.player.self === true"
+    },
+    "importance": "ours ? 60 : 50",
+    "tags": ["politics", "domestic"]
+  },
+  {
+    "id": "war-on-three-fronts",
+    "subject": "world",
+    "when": [
+      "self.knows('atWar') && self.atWar === true",
+      "self.knows('wars') && Array.isArray(self.wars)",
+      "self.wars.filter(p => !p.self && p.knows('major') && p.major === true).length >= 3"
+    ],
+    "values": {
+      "count": "self.wars.filter(p => !p.self && p.knows('major') && p.major === true).length",
+      "enemies": "(() => { const names = self.wars.filter(p => !p.self && p.knows('major') && p.major === true && p.knows('name')).map(p => p.name); return names.length <= 2 ? names.join(' and ') : names.slice(0, -1).join(', ') + ', and ' + names[names.length - 1]; })()"
+    },
+    "importance": 80,
+    "repeat": "medium",
+    "tags": ["politics", "military"]
+  },
+  {
+    "id": "last-trade-route-ends",
+    "subject": "world",
+    "window": "recent",
+    "when": [
+      "self.knows('outgoingTradeRoutes') && self.outgoingTradeRoutes !== null && typeof self.outgoingTradeRoutes === 'object' && !Array.isArray(self.outgoingTradeRoutes)",
+      "self.knows('before') && self.before.knows('outgoingTradeRoutes') && self.before.outgoingTradeRoutes !== null && typeof self.before.outgoingTradeRoutes === 'object' && !Array.isArray(self.before.outgoingTradeRoutes)",
+      "Object.values(self.before.outgoingTradeRoutes).filter(route => route !== null && typeof route === 'object' && !Array.isArray(route)).length > 0",
+      "Object.values(self.outgoingTradeRoutes).filter(route => route !== null && typeof route === 'object' && !Array.isArray(route)).length === 0"
+    ],
+    "values": {
+      "routes": "Object.values(self.before.outgoingTradeRoutes).filter(route => route !== null && typeof route === 'object' && !Array.isArray(route)).length"
+    },
+    "importance": "55 + 5 * routes",
+    "tags": ["politics", "domestic"]
   }
 ]
