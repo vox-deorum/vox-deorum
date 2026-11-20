@@ -51,6 +51,7 @@
       "nearby": "!player.self && player.distance <= nearby",
       "rival": "player.major && !player.self && !player.friend && !player.ally",
       "alliedCityState": "player.knows('majorAlly') && player.majorAlly !== null && player.majorAlly.self === true",
+      "friendlyCityState": "player.knows('cityState') && player.cityState === true && player.knows('majorAlly') && !player.is.alliedCityState && player.relation(self).friend === true",
       "hasFoundedReligion": "player.knows('foundedReligion') && typeof player.foundedReligion === 'string' && player.foundedReligion.length > 0",
       "hasMajorityReligion": "player.knows('majorityReligion') && typeof player.majorityReligion === 'string' && player.majorityReligion.length > 0"
     },

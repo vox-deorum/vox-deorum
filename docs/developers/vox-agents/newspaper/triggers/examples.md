@@ -61,6 +61,8 @@ These examples pair [foreign templates](../../../../../vox-agents/newspaper/temp
 | `nearby-capital-falls` | A `CityCaptureComplete` event records the conquest of a nearby capital by a third party. | Check the capital and conquest flags and both owners. The template has separate coverage for an unnamed capital. |
 | `enemy-wonder-nearby` | An enemy finishes a wonder in a city within `nearby` during the `recent` window. | Match the city's completed buildings to its recorded wonders. |
 | `city-state-ally-defects` | A nearby city-state switches its alliance from us to a rival. | Check both allies named by `SetAlly`. Losing an ally without a replacement does not qualify. |
+| `city-state-ally-lost` | Our city-state ally becomes unallied. | Check the explicit no-ally ID in `SetAlly`; a hidden new ally is not enough. |
+| `friendly-city-state-attacked`, `friendly-city-state-captured` | A city-state that was our friend is attacked or conquered. | Use the relationship just before the event. These rules have lower importance than the corresponding rules for allies. |
 | [`vassals-join-war`](#vassals-follow-their-master-to-war) | A declaration of war brings in vassals on either side. | Read the participants of a war incident and select those that joined as vassals. |
 | `war-advantage-stalls` | Our war score reached at least 25 in the `long` window and stayed within five points of its current value for `short`. | Read the history of a pair's current war. `held` requires a continuous record. While the conditions hold, `repeat: medium` permits a follow-up after 20 Standard turns. |
 
@@ -77,6 +79,7 @@ The [Congress rules](../../../../../vox-agents/newspaper/triggers/congress.json)
 | `congress-session-imminent` | A session is expected next turn. | Check `game.congress.knows('expectedSessionTurn')` and `game.congress.expectedSessionTurn === turn + 1`. |
 | `congress-voting-opens` | Voting is open now. | Require `game.congress.votingNow === true`. |
 | `congress-new-proposals` | The agenda gained a proposal. | Read `game.congress.newProposals`; rank our own proposal higher with the `ours` value. |
+| `sanction-repeal-proposed`, `travel-ban-repeal-proposed` | A new proposal would lift an existing sanction or travel ban. | Read `isEnact === false` on the proposal. Passed and defeated votes already cover both enactment and repeal. |
 | `congress-resolution-passed` | A `ResolutionResult` event records a passed vote. | Use the event's `passed`, `isEnact`, `resolutionType` and `proposerName`. `event.player` is the proposer when that player is visible. |
 | `congress-resolution-defeated` | A `ResolutionResult` event records a failed vote. | Match the passed rule with `event.passed === false`. |
 | `congress-sanctions-on-us` | An active resolution sanctions our civilization. | The resolution name starts with `Sanction` and includes our civilization name. |

@@ -18,6 +18,36 @@
     "tags": ["politics", "international"]
   },
   {
+    "id": "foreign-golden-age-begins",
+    "subject": "event",
+    "event": "PlayerGoldenAge",
+    "when": [
+      "event.knows('player') && !event.player.self && event.player.knows('major') && event.player.major === true",
+      "event.knows('starting') && event.starting === true",
+      "event.player.knows('name')"
+    ],
+    "values": {
+      "civilization": "event.player.name"
+    },
+    "importance": 55,
+    "tags": ["politics", "international"]
+  },
+  {
+    "id": "foreign-golden-age-ends",
+    "subject": "event",
+    "event": "PlayerGoldenAge",
+    "when": [
+      "event.knows('player') && !event.player.self && event.player.knows('major') && event.player.major === true",
+      "event.knows('starting') && event.starting === false",
+      "event.player.knows('name')"
+    ],
+    "values": {
+      "civilization": "event.player.name"
+    },
+    "importance": 40,
+    "tags": ["politics", "international"]
+  },
+  {
     "id": "golden-age-begins",
     "subject": "event",
     "event": "PlayerGoldenAge",
@@ -151,6 +181,22 @@
       "count": "Object.keys(self.policyBranches).length"
     },
     "importance": 60,
+    "tags": ["politics", "domestic"]
+  },
+  {
+    "id": "revolt-threshold-cleared",
+    "subject": "world",
+    "window": "recent",
+    "when": [
+      "self.knows('happinessPercentage') && Number.isFinite(self.happinessPercentage)",
+      "self.before.knows('happinessPercentage') && Number.isFinite(self.before.happinessPercentage)",
+      "crossed(self.happinessPercentage, self.before.happinessPercentage, 35)",
+      "self.happinessPercentage < 50"
+    ],
+    "values": {
+      "happinessPercentage": "self.happinessPercentage"
+    },
+    "importance": 55,
     "tags": ["politics", "domestic"]
   },
   {

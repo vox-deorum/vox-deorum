@@ -27,8 +27,14 @@ async function publish(input: NewspaperEvidence, cities: NewspaperSnapshot[] = [
     ...input, cities, players: input.players.map(row => ({ ...row, source: current.get(row.subjectID) ?? row.source })),
     history: {
       fromTurn: -1, baseline: { players: [], cities: [] },
-      snapshots: { cities: [...earlierCities, ...cities], players: input.players.map(row =>
-        ({ ...row, source: { ...row.source, turn: 0, createdAt: 0 } })) },
+      snapshots: {
+        cities: [...earlierCities, ...cities],
+        players: [
+          ...input.players.map(row => ({ ...row, source: { ...row.source, turn: 0, createdAt: 0 } })),
+          ...(input.diplomacy?.history.filter(row => row.source.turn < input.request.cutoffTurn)
+            .map(row => ({ subjectID: row.subjectID, source: row.source, values: {} })) ?? []),
+        ],
+      },
       events: input.events, gaps: [],
     },
   };
@@ -110,6 +116,67 @@ describe('stock foreign desk', () => {
     ]);
     expect(fired(result, 'city-state-ally-defects')).toEqual(['event/1']);
     expectStory(result, 'city-state-ally-defects', ['Geneva', 'Brazil']);
+  });
+
+  it('should report a city-state alliance ending when the game explicitly records no successor', async () => {
+    const result = await publish(evidence([
+      event('SetAlly', 1, 9, 10, 0, { MinorPlayerID: 10, OldAllyPlayerID: 0, NewAllyPlayerID: -1 }),
+      event('SetAlly', 2, 9, 11, 0, { MinorPlayerID: 11, OldAllyPlayerID: 0 }),
+      event('SetAlly', 3, 9, 12, 1, { MinorPlayerID: 12, OldAllyPlayerID: 0, NewAllyPlayerID: 1 }),
+    ], [snapshot(0, 10, [relationship(1), relationship(10), relationship(11), relationship(12)])]));
+    expect(fired(result, 'city-state-ally-lost')).toEqual(['event/1']);
+  });
+
+  it('should use the prewar relationships for attacks on friends, allies and city-state captures', async () => {
+    const result = await publish(evidence([
+      ...[10, 11, 12, 13].map((target, index) => event('DeclareWar', index + 1, 9, 1, target, { IsAggressor: true })),
+      ...[10, 11, 12, 13].map((target, index) => event('CityCaptureComplete', index + 5, 9, 1, target, {
+        OldOwnerID: target, NewOwnerID: 1, IsConquest: true, IsCapital: true,
+      })),
+      event('DeclareWar', 9, 9, 2, 3, { IsAggressor: true }),
+    ], [
+      snapshot(0, 8, [
+        relationship(1), relationship(2, 'peace', { friendship: true }), relationship(3, 'peace', { friendship: true }),
+        relationship(10, 'peace', { friendship: true, ally: true }),
+        relationship(11, 'peace', { friendship: true }), relationship(12), relationship(13, 'peace', { friendship: true }),
+      ]),
+      snapshot(10, 8, [], { majorAllyPlayerID: 0 }),
+      snapshot(11, 8, [], { majorAllyPlayerID: 1 }),
+      snapshot(12, 8, [], { majorAllyPlayerID: null }),
+      snapshot(13, 8, []),
+      snapshot(0, 10, [relationship(1), relationship(2), relationship(3), relationship(10), relationship(11), relationship(12), relationship(13)]),
+    ]));
+    expect(fired(result, 'ally-city-state-attacked')).toEqual(['incident/war/9/1']);
+    expect(fired(result, 'friendly-city-state-attacked')).toEqual(['incident/war/9/2']);
+    expect(fired(result, 'ally-city-state-captured')).toEqual(['event/5']);
+    expect(fired(result, 'friendly-city-state-captured')).toEqual(['event/6']);
+    expect(fired(result, 'war-between-friends')).toEqual(['incident/war/9/9']);
+  });
+
+  it('should distinguish outgoing and incoming trade losses from our own plunder', async () => {
+    const plunders = [[1, 0, 2], [1, 2, 0], [0, 2, 0], [1, 2, 3]];
+    const result = await publish(evidence(plunders.map(([plunderer, origin, destination], index) =>
+      event('PlayerPlunderedTradeRoute', index + 1, 9, plunderer, origin, {
+        PlunderingPlayerID: plunderer, OriginOwnerID: origin, DestinationOwnerID: destination,
+      })), [snapshot(0, 10, [relationship(1), relationship(2), relationship(3)])]));
+    expect(fired(result, 'our-trade-route-plundered')).toEqual(['event/1']);
+    expect(fired(result, 'incoming-trade-route-plundered')).toEqual(['event/2']);
+    expect(fired(result, 'we-plunder-foreign-trade-route')).toEqual(['event/3']);
+  });
+
+  it('should report incoming open borders separately except when both grants are new', async () => {
+    /** Represent one side granting or withholding access across its border. */
+    const borders = (target: number, openBordersTo: boolean) => relationship(target, 'peace', { openBordersTo });
+    const result = await publish(evidence([], [
+      snapshot(0, 5, [borders(1, false), borders(2, false)]),
+      snapshot(1, 5, [borders(0, false)]),
+      snapshot(2, 5, [borders(0, false)]),
+      snapshot(0, 10, [borders(1, false), borders(2, true)]),
+      snapshot(1, 10, [borders(0, true)]),
+      snapshot(2, 10, [borders(0, true)]),
+    ]));
+    expect(fired(result, 'open-borders-granted')).toEqual(['player/2']);
+    expect(fired(result, 'open-borders-received')).toEqual(['player/1']);
   });
 
   it('should give a declaration and its vassal response one account, separate from an unrelated war', async () => {

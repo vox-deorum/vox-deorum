@@ -33,6 +33,25 @@
     "tags": ["politics", "domestic"]
   },
   {
+    "id": "treasury-reserve-recovers",
+    "subject": "world",
+    "when": [
+      "Number.isFinite(self.gold) && self.gold >= 0",
+      "Number.isFinite(self.goldPerTurn) && self.goldPerTurn < 0",
+      "self.gold / -self.goldPerTurn > short",
+      "self.knows('before') && Number.isFinite(self.before.goldPerTurn) && self.before.goldPerTurn < 0",
+      "self.before.knows('gold') && Number.isFinite(self.before.gold) && self.before.gold >= 0",
+      "self.before.gold / -self.before.goldPerTurn <= short"
+    ],
+    "values": {
+      "gold": "self.gold",
+      "deficit": "-self.goldPerTurn",
+      "turnsLeft": "Math.floor(self.gold / -self.goldPerTurn)"
+    },
+    "importance": 50,
+    "tags": ["economy", "domestic"]
+  },
+  {
     "id": "treasury-reserve-runs-short",
     "subject": "world",
     "when": [

@@ -47,6 +47,25 @@
     "tags": ["politics", "domestic"]
   },
   {
+    "id": "great-person-died",
+    "subject": "event",
+    "event": "UnitPrekill",
+    "when": [
+      "event.knows('person') && typeof event.person === 'string' && event.person.length > 0",
+      "event.knows('kind') && event.kind === 'died'",
+      "event.knows('player') && event.player.knows('name')"
+    ],
+    "values": {
+      "person": "event.person",
+      "unit": "event.knows('unit') && typeof event.unit === 'string' ? event.unit : null",
+      "civilization": "event.player.name",
+      "ours": "event.player.self === true",
+      "killer": "event.knows('attackingPlayer') && event.attackingPlayer.knows('name') ? event.attackingPlayer.name : null"
+    },
+    "importance": "ours ? 60 : 50",
+    "tags": ["politics", "military", "international"]
+  },
+  {
     "id": "great-person-expended",
     "subject": "event",
     "event": "GreatPersonExpended",
@@ -79,6 +98,24 @@
       "total": "city.greatWorkCount"
     },
     "importance": "40 + 10 * added",
+    "tags": ["cities", "domestic"]
+  },
+  {
+    "id": "great-works-lost",
+    "subject": "city",
+    "window": "recent",
+    "when": [
+      "city.own",
+      "city.knows('greatWorkCount') && Number.isFinite(city.greatWorkCount)",
+      "city.knows('before') && city.before.knows('greatWorkCount') && Number.isFinite(city.before.greatWorkCount)",
+      "city.before.knows('owner') && city.before.owner.self === true",
+      "city.greatWorkCount < city.before.greatWorkCount"
+    ],
+    "values": {
+      "lost": "city.before.greatWorkCount - city.greatWorkCount",
+      "total": "city.greatWorkCount"
+    },
+    "importance": "45 + 10 * lost",
     "tags": ["cities", "domestic"]
   },
   {

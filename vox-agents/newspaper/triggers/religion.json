@@ -57,6 +57,22 @@
     "tags": ["religion", "international"]
   },
   {
+    "id": "foreign-faith-deepens",
+    "subject": "event",
+    "event": ["ReligionEnhanced", "ReligionReformed"],
+    "when": [
+      "event.knows('player') && event.player.self === false && event.player.knows('major') && event.player.major === true",
+      "event.knows('religion') && typeof event.religion === 'string' && event.religion.length > 0"
+    ],
+    "values": {
+      "civilization": "event.player.knows('name') ? event.player.name : null",
+      "religion": "event.religion",
+      "stage": "event.type === 'ReligionReformed' ? 'reformed' : 'enhanced'"
+    },
+    "importance": "stage === 'reformed' ? 55 : 45",
+    "tags": ["religion", "international"]
+  },
+  {
     "id": "foreign-major-adopts-our-faith",
     "subject": "player",
     "window": "medium",

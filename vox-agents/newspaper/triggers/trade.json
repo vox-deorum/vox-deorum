@@ -20,6 +20,23 @@
     "tags": ["economy", "trade", "international"]
   },
   {
+    "id": "incoming-trade-route-plundered",
+    "subject": "event",
+    "event": "PlayerPlunderedTradeRoute",
+    "when": [
+      "event.knows('destinationOwner') && event.destinationOwner.self === true",
+      "event.knows('originOwner') && event.originOwner.self === false",
+      "event.knows('plunderingPlayerId') && event.plunderingPlayerId !== self.id"
+    ],
+    "values": {
+      "origin": "event.originOwner.knows('name') ? event.originOwner.name : null",
+      "plunderer": "event.knows('plunderingPlayer') && event.plunderingPlayer.knows('name') ? event.plunderingPlayer.name : null",
+      "gold": "event.knows('plunderGoldValue') && Number.isFinite(event.plunderGoldValue) ? event.plunderGoldValue : null"
+    },
+    "importance": 55,
+    "tags": ["economy", "trade"]
+  },
+  {
     "id": "last-trade-route-ends",
     "subject": "world",
     "window": "recent",
@@ -83,6 +100,22 @@
     ],
     "values": {
       "routes": "self.outgoingTradeRouteCount"
+    },
+    "importance": 55,
+    "tags": ["economy", "trade"]
+  },
+  {
+    "id": "we-plunder-foreign-trade-route",
+    "subject": "event",
+    "event": "PlayerPlunderedTradeRoute",
+    "when": [
+      "event.knows('plunderingPlayerId') && event.plunderingPlayerId === self.id",
+      "event.knows('originOwner') && event.originOwner.self === false"
+    ],
+    "values": {
+      "origin": "event.originOwner.knows('name') ? event.originOwner.name : null",
+      "gold": "event.knows('plunderGoldValue') && Number.isFinite(event.plunderGoldValue) ? event.plunderGoldValue : null",
+      "destination": "event.knows('destinationOwner') && event.destinationOwner.knows('name') ? event.destinationOwner.name : null"
     },
     "importance": 55,
     "tags": ["economy", "trade"]

@@ -45,6 +45,38 @@
     "tags": ["politics", "international"]
   },
   {
+    "id": "spy-detected-abroad",
+    "subject": "event",
+    "event": "EspionageResult",
+    "when": [
+      "event.knows('perspective') && event.perspective === 'source'",
+      "event.knows('spyResult') && event.spyResult === 'Detected'"
+    ],
+    "values": {
+      "result": "event.spyResult",
+      "cityName": "event.knows('cityName') && typeof event.cityName === 'string' ? event.cityName : null",
+      "target": "event.knows('targetPlayer') && event.targetPlayer.knows('name') ? event.targetPlayer.name : null",
+      "possibleTechnology": "event.knows('tech') && typeof event.tech === 'string' ? event.tech : null"
+    },
+    "importance": "possibleTechnology ? 55 : 45",
+    "tags": ["politics", "international"]
+  },
+  {
+    "id": "spy-detected-at-home",
+    "subject": "event",
+    "event": "EspionageResult",
+    "when": [
+      "event.knows('perspective') && event.perspective === 'target'",
+      "event.knows('spyResult') && ['Detected', 'KilledNotIdentified'].includes(event.spyResult)"
+    ],
+    "values": {
+      "result": "event.spyResult",
+      "cityName": "event.knows('cityName') ? event.cityName : null"
+    },
+    "importance": "result === 'KilledNotIdentified' ? 60 : 50",
+    "tags": ["politics", "international"]
+  },
+  {
     "id": "spy-exposed-abroad",
     "subject": "event",
     "event": "EspionageResult",
@@ -76,6 +108,36 @@
       "target": "event.knows('targetPlayer') && event.targetPlayer.knows('name') ? event.targetPlayer.name : null"
     },
     "importance": 65,
+    "tags": ["politics", "international"]
+  },
+  {
+    "id": "spy-posted-abroad",
+    "subject": "city",
+    "when": [
+      "city.foreign && city.knows('name')",
+      "city.knows('ourSpyPresent') && city.ourSpyPresent === true",
+      "city.knows('before') && city.before.knows('ourSpyPresent') && city.before.ourSpyPresent === false",
+      "city.knows('owner') && city.owner.major && city.owner.knows('name') && city.before.knows('owner') && city.before.owner.id === city.owner.id"
+    ],
+    "values": {
+      "cityName": "city.name",
+      "civilization": "city.owner.name"
+    },
+    "importance": 45,
+    "tags": ["politics", "international"]
+  },
+  {
+    "id": "their-diplomat-arrives",
+    "subject": "player",
+    "when": [
+      "!player.self && player.major",
+      "player.knows('theirDiplomatHere') && player.theirDiplomatHere === true",
+      "player.knows('before') && player.before.knows('theirDiplomatHere') && player.before.theirDiplomatHere === false"
+    ],
+    "values": {
+      "civilization": "player.knows('name') ? player.name : null"
+    },
+    "importance": 45,
     "tags": ["politics", "international"]
   }
 ]

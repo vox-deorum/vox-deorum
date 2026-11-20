@@ -74,7 +74,7 @@
       "game.congress.knows('expectedSessionTurn')",
       "Number.isFinite(game.congress.expectedSessionTurn)",
       "game.congress.expectedSessionTurn <= turn + recent",
-      "game.congress.expectedSessionTurn <= turn + medium",
+      "game.congress.expectedSessionTurn !== turn + 1",
       "!game.congress.votingNow"
     ],
     "values": {
@@ -190,6 +190,20 @@
     "tags": ["international", "congress"]
   },
   {
+    "id": "sanction-repeal-proposed",
+    "subject": "world",
+    "when": [
+      "game.knows('congress') && game.congress.available === true",
+      "game.congress.knows('newProposals')",
+      "game.congress.newProposals.some(p => p.isEnact === false && p.name.startsWith('Sanction'))"
+    ],
+    "values": {
+      "resolution": "game.congress.newProposals.find(p => p.isEnact === false && p.name.startsWith('Sanction')).name"
+    },
+    "importance": 60,
+    "tags": ["international", "congress"]
+  },
+  {
     "id": "travel-ban-proposed",
     "subject": "world",
     "when": [
@@ -201,6 +215,20 @@
       "proposer": "(() => { const p = game.congress.newProposals.find(p => p.isEnact && p.name.startsWith('Travel Ban')); return p.knows('proposer') ? p.proposer : null; })()"
     },
     "importance": 65,
+    "tags": ["international", "congress", "culture"]
+  },
+  {
+    "id": "travel-ban-repeal-proposed",
+    "subject": "world",
+    "when": [
+      "game.knows('congress') && game.congress.available === true",
+      "game.congress.knows('newProposals') && game.congress.newProposals.some(p => p.isEnact === false && p.name.startsWith('Travel Ban'))"
+    ],
+    "values": {
+      "resolution": "game.congress.newProposals.find(p => p.isEnact === false && p.name.startsWith('Travel Ban')).name",
+      "proposer": "(() => { const p = game.congress.newProposals.find(p => p.isEnact === false && p.name.startsWith('Travel Ban')); return p.knows('proposer') ? p.proposer : null; })()"
+    },
+    "importance": 55,
     "tags": ["international", "congress", "culture"]
   }
 ]

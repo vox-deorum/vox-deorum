@@ -92,6 +92,22 @@
     "tags": ["politics", "international"]
   },
   {
+    "id": "foreign-defensive-pact-ends",
+    "subject": "pair",
+    "when": [
+      "!pair.involvesSelf && pair.majors && pair.knows('atWar') && !pair.atWar && pair.knows('pact') && pair.pact === false",
+      "pair.knows('before') && pair.before.knows('pact') && pair.before.pact === true"
+    ],
+    "values": {
+      "first": "pair.a.knows('name') ? pair.a.name : null",
+      "second": "pair.b.knows('name') ? pair.b.name : null",
+      "withFriend": "(pair.a.knows('friend') && pair.a.friend === true) || (pair.b.knows('friend') && pair.b.friend === true)",
+      "withEnemy": "(pair.a.knows('enemy') && pair.a.enemy === true) || (pair.b.knows('enemy') && pair.b.enemy === true)"
+    },
+    "importance": "withEnemy ? 60 : withFriend ? 55 : 45",
+    "tags": ["politics", "international"]
+  },
+  {
     "id": "friendship-begins",
     "subject": "pair",
     "window": "recent",
@@ -137,6 +153,39 @@
     "tags": ["politics", "international"]
   },
   {
+    "id": "loses-vassal",
+    "subject": "player",
+    "when": [
+      "!player.self && player.knows('major') && player.major === true",
+      "player.knows('friend') && self.knows('before')",
+      "(() => { const now = self.relation(player); const before = self.before.relation(player); return now.vassalOf === false && now.masterOf === false && before.masterOf === true; })()"
+    ],
+    "values": {
+      "vassal": "player.knows('name') ? player.name : null"
+    },
+    "importance": 75,
+    "tags": ["politics", "international"]
+  },
+  {
+    "id": "mutual-denunciation",
+    "subject": "player",
+    "window": "recent",
+    "when": [
+      "!player.self && player.knows('major') && player.major === true",
+      "player.knows('name')",
+      "self.relation(player).knows('denouncedThem') && self.relation(player).denouncedThem === true",
+      "self.relation(player).knows('denouncedByThem') && self.relation(player).denouncedByThem === true",
+      "self.knows('before') && player.knows('before')",
+      "self.before.relation(player.before).knows('denouncedThem') && self.before.relation(player.before).knows('denouncedByThem')",
+      "!(self.before.relation(player.before).denouncedThem && self.before.relation(player.before).denouncedByThem)"
+    ],
+    "values": {
+      "civilization": "player.name"
+    },
+    "importance": 60,
+    "tags": ["politics", "international"]
+  },
+  {
     "id": "open-borders-granted",
     "subject": "player",
     "window": "recent",
@@ -152,6 +201,44 @@
     },
     "importance": 45,
     "tags": ["politics", "international"]
+  },
+  {
+    "id": "open-borders-received",
+    "subject": "player",
+    "window": "recent",
+    "when": [
+      "!player.self && player.knows('major') && player.major === true",
+      "self.knows('before')",
+      "self.relation(player).knows('openBordersFrom') && self.relation(player).openBordersFrom === true",
+      "self.before.relation(player).knows('openBordersFrom') && self.before.relation(player).openBordersFrom === false",
+      "!(self.relation(player).knows('openBordersTo') && self.relation(player).openBordersTo === true && self.before.relation(player).knows('openBordersTo') && self.before.relation(player).openBordersTo === false)"
+    ],
+    "values": {
+      "civilization": "player.knows('name') ? player.name : null",
+      "capital": "player.knows('capital') && player.capital.knows('name') ? player.capital.name : null"
+    },
+    "importance": 45,
+    "tags": ["politics", "international"]
+  },
+  {
+    "id": "third-party-peace-deal",
+    "subject": "event",
+    "event": "DealMade",
+    "when": [
+      "event.knows('fromPlayer') && event.knows('toPlayer')",
+      "event.knows('tradedItems') && Array.isArray(event.tradedItems)",
+      "event.tradedItems.some(item => item.knows('itemType') && item.itemType === 'ThirdPartyPeace')",
+      "!event.tradedItems.some(item => item.knows('itemType') && item.itemType === 'ThirdPartyWar')"
+    ],
+    "values": {
+      "from": "event.fromPlayer.knows('name') ? event.fromPlayer.name : null",
+      "to": "event.toPlayer.knows('name') ? event.toPlayer.name : null",
+      "fromGives": "event.knows('fromGives') && Array.isArray(event.fromGives) ? event.fromGives.join(', ') : null",
+      "toGives": "event.knows('toGives') && Array.isArray(event.toGives) ? event.toGives.join(', ') : null",
+      "ours": "event.fromPlayer.self || event.toPlayer.self"
+    },
+    "importance": "ours ? 65 : 50",
+    "tags": ["politics", "military", "international"]
   },
   {
     "id": "third-party-war-deal",
@@ -171,6 +258,20 @@
     },
     "importance": "ours ? 70 : 55",
     "tags": ["politics", "military", "international"]
+  },
+  {
+    "id": "vassalage-ends",
+    "subject": "player",
+    "when": [
+      "!player.self && player.knows('major') && player.major === true",
+      "player.knows('friend') && self.knows('before')",
+      "(() => { const now = self.relation(player); const before = self.before.relation(player); return now.vassalOf === false && now.masterOf === false && before.vassalOf === true; })()"
+    ],
+    "values": {
+      "master": "player.knows('name') ? player.name : null"
+    },
+    "importance": 85,
+    "tags": ["politics", "international"]
   },
   {
     "id": "we-denounce-major",

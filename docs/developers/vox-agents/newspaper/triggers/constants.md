@@ -94,6 +94,7 @@ A shortcut is a named expression for one subject. It reads like a fact and can u
 | `player.is.hasFoundedReligion` | Checks for a readable, nonempty religion name | The player founded a recorded religion |
 | `player.is.hasMajorityReligion` | Checks for a readable, nonempty majority religion name | A recorded religion has a majority in the player's empire |
 | `player.is.alliedCityState` | Tests whether the recorded major ally is the receiver | Use on a city-state, including its snapshot just before a capture or attack |
+| `player.is.friendlyCityState` | Checks for friendship and a known alliance status | A city-state that is our friend and is either unallied or allied to another major |
 | `pair.is.foreignWar` | `pair.atWar && !pair.involvesSelf && pair.majors` | A war between two other major civilizations |
 
 The `pair.is.foreignWar` source is authored in the built-in file and reads pair facts in pair rules.

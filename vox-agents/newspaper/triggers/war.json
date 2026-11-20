@@ -48,6 +48,29 @@
     "urgent": "damage >= 0.5"
   },
   {
+    "id": "enemy-city-takes-heavy-damage",
+    "subject": "city",
+    "window": "recent",
+    "when": [
+      "city.foreign && city.knows('name')",
+      "city.knows('owner') && city.owner.major && city.owner.knows('enemy') && city.owner.enemy",
+      "city.knows('hitPoints') && Number.isFinite(city.hitPoints) && city.knows('maxHitPoints') && Number.isFinite(city.maxHitPoints) && city.maxHitPoints > 0",
+      "city.knows('before') && city.before.knows('owner') && city.before.owner.id === city.owner.id",
+      "city.before.knows('hitPoints') && Number.isFinite(city.before.hitPoints) && city.before.hitPoints > city.hitPoints",
+      "city.before.knows('maxHitPoints') && Number.isFinite(city.before.maxHitPoints) && city.before.maxHitPoints > 0",
+      "crossed(1 - city.hitPoints / city.maxHitPoints, 1 - city.before.hitPoints / city.before.maxHitPoints, majority)"
+    ],
+    "values": {
+      "cityName": "city.name",
+      "civilization": "city.owner.knows('name') ? city.owner.name : null",
+      "damage": "(city.maxHitPoints - city.hitPoints) / city.maxHitPoints",
+      "hitPoints": "city.hitPoints",
+      "maxHitPoints": "city.maxHitPoints"
+    },
+    "importance": "50 + 30 * damage",
+    "tags": ["cities", "military", "international"]
+  },
+  {
     "id": "enemy-troops-sighted-near-city",
     "subject": "city",
     "when": [
@@ -61,6 +84,28 @@
     },
     "importance": 65,
     "tags": ["cities", "military", "domestic"]
+  },
+  {
+    "id": "enemy-units-lost-in-combat",
+    "subject": "event",
+    "event": "UnitKilledInCombat",
+    "when": [
+      "event.knows('killerPlayer') && event.killerPlayer.self === true",
+      "event.knows('killedPlayer') && event.killedPlayer.self === false",
+      "event.killedPlayer.knows('major') && event.killedPlayer.major === true",
+      "event.killedPlayer.knows('name')",
+      "event.knows('unit') && typeof event.unit === 'string' && event.unit.length > 0"
+    ],
+    "values": {
+      "unit": "event.unit",
+      "victim": "event.killedPlayer.name"
+    },
+    "group": {
+      "by": "event.killedPlayer.id",
+      "min": 3
+    },
+    "importance": "Math.min(75, 40 + 10 * count)",
+    "tags": ["politics", "military"]
   },
   {
     "id": "foreign-capital-falls",
@@ -82,6 +127,24 @@
       "distance": "event.distance.own"
     },
     "importance": "Math.max(50, 70 - distance)",
+    "tags": ["politics", "military", "international"]
+  },
+  {
+    "id": "foreign-peace-nearby",
+    "subject": "incident",
+    "when": [
+      "incident.kind === 'peace' && incident.knows('role') && incident.role === 'none'",
+      "incident.knows('initiator') && incident.initiator.major && incident.initiator.knows('name')",
+      "incident.knows('target') && incident.target.major && incident.target.knows('name')",
+      "(incident.initiator.knows('distance') && incident.initiator.distance <= nearby) || (incident.target.knows('distance') && incident.target.distance <= nearby)",
+      "incident.capitulation === false && incident.concessions.length === 0"
+    ],
+    "values": {
+      "initiator": "incident.initiator.knows('name') ? incident.initiator.name : null",
+      "target": "incident.target.knows('name') ? incident.target.name : null",
+      "nearest": "Math.min(incident.initiator.knows('distance') ? incident.initiator.distance : Infinity, incident.target.knows('distance') ? incident.target.distance : Infinity)"
+    },
+    "importance": "45 + nearby - nearest",
     "tags": ["politics", "military", "international"]
   },
   {
@@ -150,6 +213,24 @@
     "importance": "ourStrength > 0 ? 40 + 40 * (theirStrength / ourStrength - 1) : 80"
   },
   {
+    "id": "our-army-overtakes-neighbor",
+    "subject": "player",
+    "window": "medium",
+    "when": [
+      "!player.self && player.major && player.is.neighbor",
+      "[player.militaryStrength, self.militaryStrength, player.before.militaryStrength, self.before.militaryStrength].every(n => Number.isFinite(n) && n >= 0)",
+      "self.militaryStrength > player.militaryStrength",
+      "self.before.militaryStrength <= player.before.militaryStrength"
+    ],
+    "values": {
+      "neighbor": "player.name",
+      "ourStrength": "self.militaryStrength",
+      "theirStrength": "player.militaryStrength"
+    },
+    "importance": "theirStrength > 0 ? 40 + Math.min(25, 25 * (ourStrength / theirStrength - 1)) : 65",
+    "tags": ["politics", "military", "international"]
+  },
+  {
     "id": "our-city-takes-heavy-damage",
     "subject": "city",
     "when": [
@@ -166,6 +247,24 @@
     "importance": "50 + 40 * damage",
     "urgent": "damage >= 0.5",
     "tags": ["cities", "military", "domestic"]
+  },
+  {
+    "id": "peace-capitulation",
+    "subject": "incident",
+    "when": [
+      "incident.kind === 'peace'",
+      "incident.knows('capitulation') && incident.capitulation === true",
+      "incident.knows('initiator') && incident.initiator.knows('name')",
+      "incident.knows('target') && incident.target.knows('name')",
+      "incident.initiator.major && incident.target.major"
+    ],
+    "values": {
+      "initiator": "incident.initiator.name",
+      "target": "incident.target.name",
+      "role": "incident.knows('role') ? incident.role : null"
+    },
+    "importance": "incident.knows('role') && incident.role !== 'none' ? 75 : 60",
+    "tags": ["politics", "military", "international"]
   },
   {
     "id": "peace-concessions",
@@ -256,6 +355,25 @@
     "repeat": "medium"
   },
   {
+    "id": "war-between-friends",
+    "subject": "incident",
+    "when": [
+      "incident.kind === 'war'",
+      "incident.knows('role') && incident.role === 'none'",
+      "incident.knows('initiator') && incident.initiator.knows('major') && incident.initiator.major === true",
+      "incident.knows('target') && incident.target.knows('major') && incident.target.major === true",
+      "incident.initiator.knows('name') && incident.target.knows('name')",
+      "incident.initiator.knows('at') && incident.target.knows('at') && turn - incident.turn < long",
+      "incident.initiator.at(turn - incident.turn + 1).relation(self).friend === true && incident.target.at(turn - incident.turn + 1).relation(self).friend === true"
+    ],
+    "values": {
+      "first": "incident.initiator.name",
+      "second": "incident.target.name"
+    },
+    "importance": 60,
+    "tags": ["politics", "military", "international"]
+  },
+  {
     "id": "war-duration-milestone",
     "subject": "pair",
     "when": [
@@ -328,6 +446,23 @@
       "score": "pair.warScore"
     },
     "importance": 60,
+    "tags": ["politics", "military"]
+  },
+  {
+    "id": "war-weariness-eases",
+    "subject": "pair",
+    "window": "recent",
+    "when": [
+      "pair.involvesSelf && pair.majors && pair.atWar === true",
+      "pair.knows('warTurns') && pair.warTurns >= recent",
+      "self.relation(pair.other).knows('warWeariness') && self.relation(pair.other).warWeariness < 50",
+      "self.knows('before') && self.before.relation(pair.other).knows('warWeariness') && self.before.relation(pair.other).warWeariness >= 50"
+    ],
+    "values": {
+      "opponent": "pair.other.knows('name') ? pair.other.name : null",
+      "weariness": "self.relation(pair.other).warWeariness"
+    },
+    "importance": 50,
     "tags": ["politics", "military"]
   },
   {

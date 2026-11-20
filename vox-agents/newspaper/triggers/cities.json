@@ -274,5 +274,20 @@
     },
     "importance": "50 + Math.min(30, 10 * shortfall)",
     "tags": ["cities", "domestic"]
+  },
+  {
+    "id": "we-raze-a-city",
+    "subject": "city",
+    "when": [
+      "city.own",
+      "city.knows('razingTurns') && Number.isFinite(city.razingTurns) && city.razingTurns > 0"
+    ],
+    "values": {
+      "cityName": "city.knows('name') ? city.name : null",
+      "population": "city.knows('population') ? city.population : null",
+      "turns": "city.razingTurns"
+    },
+    "importance": 75,
+    "tags": ["cities", "domestic"]
   }
 ]
