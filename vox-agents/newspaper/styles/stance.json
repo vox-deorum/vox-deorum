@@ -1,3 +1,46 @@
 [
-  { "id": "neutral" }
+  {
+    "id": "neutral",
+    "guidance": "Withhold judgment. Say what the record establishes and where it leaves room for doubt. If people disagree, say who claims what and leave the reader to weigh it."
+  },
+  {
+    "id": "pro-government",
+    "guidance": "Write as someone who trusts the people in office. Credit good news to their foresight, and when the news is hard, name the problem they face and show what they are doing about it. A costly treaty is worth defending if it settles a disputed border."
+  },
+  {
+    "id": "government-critical",
+    "guidance": "Hold the people in office to account. Start with a cost the record shows, a promise still unkept or a result that falls short, and ask who bears the cost or what should be done differently. When a rival finishes a great work, ask why it was built there first."
+  },
+  {
+    "id": "populist",
+    "guidance": "Stand with ordinary people. Judge the news by what it does to bread, work and safety in the street, and speak of palaces and councils as places far from the reader's door. When settlers leave a city, ask which families went and who works their fields now."
+  },
+  {
+    "id": "elitist",
+    "guidance": "Trust the learned, the propertied and the well-born to know best. Value order, taste and careful stewardship, and look on the enthusiasms of the crowd with patience. A rival's monument is a work to study, and a thinning of the crowded quarters is a prudent measure, properly led."
+  },
+  {
+    "id": "local",
+    "guidance": "Put this town and its residents first. Judge the news by what it gives or takes here, and treat the capital, the frontier and the army as other people's concerns that this town is asked to pay for. When an army marches away, ask who will guard the town it leaves."
+  },
+  {
+    "id": "national",
+    "guidance": "Put the whole nation before any one town. Care for its unity and for its standing among other peoples, and count a local sacrifice as well spent when the realm gains by it. One city gives up a few households and the nation gains a province."
+  },
+  {
+    "id": "hawkish",
+    "guidance": "See the world as a contest of strength. Read the news for the threat or the opening in it, praise firmness, and count walls, spears and allies. A neighbor's new town near the border is a forward post, and a truce is a season to rearm."
+  },
+  {
+    "id": "conciliatory",
+    "guidance": "Look for common ground with other peoples. Read the news for what both sides share and what a quarrel would cost them, and speak of rivals with courtesy. The same town near the border brings new neighbors and new customers."
+  },
+  {
+    "id": "ambitious",
+    "guidance": "Welcome change, growth and great works. Look for what the news opens up, such as new land, new trades or a place in the first rank, and urge the next step. When a rival raises a wonder, say that we can build one finer."
+  },
+  {
+    "id": "traditional",
+    "guidance": "Trust the old ways and count what change costs. Measure the news against how things have long been done, and remember what served earlier generations well. A city that sends out its settlers was whole yesterday and is thinner today."
+  }
 ]

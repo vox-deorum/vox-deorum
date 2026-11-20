@@ -69,13 +69,13 @@ A template names one or more rules in `triggers`. They must all fire for the sam
 
 Set `voice`, `stance` and `genre` together. Each ID must be registered in the matching file under `styles/`. An untagged variant uses `general`, `neutral` and `report`. These tags describe the prose and do not change the template's topic tags, page placement or layout.
 
+Voice sets how the piece sounds, genre sets its form, and stance sets the position it takes. A peace treaty can be covered in a report or a letter. A neutral account explains the terms; a pro-government account makes the case for signing. See `styles/genre.json` and `styles/stance.json` for drafting guidance.
+
 Each preference in `styles/rules.json` has an `id`, a `match` with at least one tag, a `when` expression, and a positive `multiplier`. All named tags must match. For example, a rule matching both `pro-government` and `letter` can double the weight of a supportive letter when `self.happinessPercentage > 50`. A supportive report does not receive that bonus. Use the variant's own `when` for evidence required by its wording.
 
 Guard subject-specific facts in shared rules. For example, check `subject.kind === 'city'` before reading `city.happinessDelta`. The editor applies rules after choosing stories. A false condition, an error, or unavailable evidence leaves the weight unchanged. For displayed stories, facts read by applied preferences join the decision audit without becoming evidence for the article's claims.
 
 The editor makes one weighted draw per article and slightly discounts genres already drawn in the same issue, including draws for articles later omitted from the pages. Voices can mix. Saved catalogues without `styles` keep their original draw behavior.
-
-Genre describes the shape of the piece. The same change in population could lead a report, appear as figures in a ledger, or become the setup for a joke. The stock `styles/genre.json` lists the available forms and gives guidance for drafting each one.
 
 To add tags, guidance or rules, put just the files you need under your overlay's `styles/` folder. Entries merge by ID. If the overlay also has an older flat `styles.json`, its entries are applied before the split files.
 
