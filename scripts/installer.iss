@@ -109,25 +109,6 @@ Name: "{app}\node"
 [InstallDelete]
 ; Replace dependencies so obsolete nested packages cannot override bundled versions.
 Type: filesandordirs; Name: "{app}\node_modules"
-; Remove the retired bundled catalogues on upgrade.
-Type: files; Name: "{app}\vox-agents\newspaper\triggers\culture.json"
-Type: files; Name: "{app}\vox-agents\newspaper\triggers\diplomacy.json"
-Type: files; Name: "{app}\vox-agents\newspaper\triggers\economy.json"
-Type: files; Name: "{app}\vox-agents\newspaper\triggers\peace.json"
-Type: files; Name: "{app}\vox-agents\newspaper\triggers\recovery.json"
-Type: files; Name: "{app}\vox-agents\newspaper\triggers\religion.json"
-Type: files; Name: "{app}\vox-agents\newspaper\triggers\science.json"
-Type: files; Name: "{app}\vox-agents\newspaper\triggers\trade.json"
-Type: files; Name: "{app}\vox-agents\newspaper\triggers\war.json"
-Type: files; Name: "{app}\vox-agents\newspaper\templates\culture.json"
-Type: files; Name: "{app}\vox-agents\newspaper\templates\diplomacy.json"
-Type: files; Name: "{app}\vox-agents\newspaper\templates\economy.json"
-Type: files; Name: "{app}\vox-agents\newspaper\templates\peace.json"
-Type: files; Name: "{app}\vox-agents\newspaper\templates\recovery.json"
-Type: files; Name: "{app}\vox-agents\newspaper\templates\religion.json"
-Type: files; Name: "{app}\vox-agents\newspaper\templates\science.json"
-Type: files; Name: "{app}\vox-agents\newspaper\templates\trade.json"
-Type: files; Name: "{app}\vox-agents\newspaper\templates\war.json"
 ; Delete civ5-dll directory on reinstall to ensure clean installation
 Type: filesandordirs; Name: "{app}\civ5-dll"
 

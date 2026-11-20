@@ -1,0 +1,50 @@
+[
+  {
+    "id": "treasury-milestone",
+    "subject": "world",
+    "window": "recent",
+    "when": [
+      "self.knows('gold') && Number.isFinite(self.gold)",
+      "self.knows('before') && self.before.knows('gold') && Number.isFinite(self.before.gold)",
+      "crossed(self.gold, self.before.gold, 1000)"
+    ],
+    "values": {
+      "gold": "self.gold",
+      "gain": "self.gold - self.before.gold"
+    },
+    "importance": 50,
+    "repeat": "once",
+    "tags": ["politics", "domestic"]
+  },
+  {
+    "id": "treasury-falls-into-deficit",
+    "subject": "world",
+    "window": "recent",
+    "when": [
+      "self.knows('goldPerTurn') && Number.isFinite(self.goldPerTurn)",
+      "self.before.knows('goldPerTurn') && Number.isFinite(self.before.goldPerTurn)",
+      "self.goldPerTurn < 0",
+      "self.before.goldPerTurn >= 0"
+    ],
+    "values": {
+      "deficit": "-self.goldPerTurn"
+    },
+    "importance": 55,
+    "tags": ["politics", "domestic"]
+  },
+  {
+    "id": "treasury-returns-to-surplus",
+    "subject": "world",
+    "window": "recent",
+    "when": [
+      "self.knows('goldPerTurn') && Number.isFinite(self.goldPerTurn)",
+      "self.before.knows('goldPerTurn') && Number.isFinite(self.before.goldPerTurn)",
+      "crossed(self.goldPerTurn, self.before.goldPerTurn, 0)"
+    ],
+    "values": {
+      "goldPerTurn": "self.goldPerTurn"
+    },
+    "importance": 45,
+    "tags": ["politics", "domestic"]
+  }
+]

@@ -1,0 +1,41 @@
+[
+  {
+    "id": "city-state-ally-defects",
+    "subject": "event",
+    "event": "SetAlly",
+    "when": [
+      "event.oldAllyPlayer.self",
+      "event.newAllyPlayer.is.rival",
+      "event.minorPlayer.distance <= nearby"
+    ],
+    "values": { "cityState": "event.minorPlayer.name", "rival": "event.newAllyPlayer.name" },
+    "importance": "65"
+  },
+  {
+    "id": "city-state-ally-gained",
+    "subject": "event",
+    "event": "SetAlly",
+    "when": [
+      "event.knows('newAllyPlayer') && event.newAllyPlayer.self === true",
+      "event.knows('minorPlayer')",
+      "!(event.knows('oldAllyPlayer') && event.oldAllyPlayer.self)"
+    ],
+    "values": { "cityState": "event.minorPlayer.knows('name') ? event.minorPlayer.name : null", "distance": "event.minorPlayer.knows('distance') ? event.minorPlayer.distance : null", "replaced": "event.knows('oldAllyPlayer') && event.oldAllyPlayer.knows('name') ? event.oldAllyPlayer.name : null" },
+    "importance": "distance !== null && distance <= nearby ? 70 : 60",
+    "tags": ["politics", "international"]
+  },
+  {
+    "id": "ally-city-state-attacked",
+    "subject": "incident",
+    "when": [
+      "incident.kind == 'war'",
+      "incident.knows('role') && incident.role === 'none'",
+      "incident.knows('target') && incident.target.knows('cityState') && incident.target.cityState === true",
+      "incident.target.knows('at') && turn - incident.turn < long",
+      "(() => { const target = incident.target.at(turn - incident.turn + 1); return target.knows('majorAlly') && target.majorAlly !== null && target.majorAlly.self === true; })()"
+    ],
+    "values": { "ally": "incident.knows('target') && incident.target.knows('name') ? incident.target.name : null", "aggressor": "incident.knows('initiator') && incident.initiator.knows('name') ? incident.initiator.name : null" },
+    "importance": 80,
+    "tags": ["politics", "military"]
+  }
+]

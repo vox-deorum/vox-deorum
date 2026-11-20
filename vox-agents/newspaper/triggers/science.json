@@ -1,0 +1,34 @@
+[
+  {
+    "id": "technology-leader-changes",
+    "subject": "player",
+    "window": "short",
+    "when": [
+      "player.major",
+      "player.rank('technologies') === 1",
+      "player.before.rank('technologies') > 1",
+      "players.some(p => p.id !== player.id && p.knows('major') && p.major && p.knows('technologies') && Number.isFinite(p.technologies))"
+    ],
+    "values": {
+      "civilization": "player.name",
+      "count": "player.technologies",
+      "tied": "players.some(p => p.id !== player.id && p.knows('major') && p.major && p.knows('technologies') && p.technologies === player.technologies)"
+    },
+    "importance": "player.self ? 70 : 50"
+  },
+  {
+    "id": "new-era",
+    "subject": "world",
+    "window": "recent",
+    "when": [
+      "self.knows('era') && typeof self.era === 'string'",
+      "self.before.knows('era') && typeof self.before.era === 'string'",
+      "changed(self, 'era')"
+    ],
+    "values": {
+      "era": "self.era"
+    },
+    "importance": 70,
+    "tags": ["politics", "domestic"]
+  }
+]

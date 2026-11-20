@@ -1,0 +1,18 @@
+[
+  {
+    "id": "last-trade-route-ends",
+    "subject": "world",
+    "window": "recent",
+    "when": [
+      "self.knows('outgoingTradeRoutes') && self.outgoingTradeRoutes !== null && typeof self.outgoingTradeRoutes === 'object' && !Array.isArray(self.outgoingTradeRoutes)",
+      "self.knows('before') && self.before.knows('outgoingTradeRoutes') && self.before.outgoingTradeRoutes !== null && typeof self.before.outgoingTradeRoutes === 'object' && !Array.isArray(self.before.outgoingTradeRoutes)",
+      "Object.values(self.before.outgoingTradeRoutes).filter(route => route !== null && typeof route === 'object' && !Array.isArray(route)).length > 0",
+      "Object.values(self.outgoingTradeRoutes).filter(route => route !== null && typeof route === 'object' && !Array.isArray(route)).length === 0"
+    ],
+    "values": {
+      "routes": "Object.values(self.before.outgoingTradeRoutes).filter(route => route !== null && typeof route === 'object' && !Array.isArray(route)).length"
+    },
+    "importance": "55 + 5 * routes",
+    "tags": ["politics", "domestic"]
+  }
+]

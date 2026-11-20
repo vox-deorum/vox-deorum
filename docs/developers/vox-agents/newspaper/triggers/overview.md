@@ -46,7 +46,7 @@ The shipped `settler-departure` rule reports when one of our cities has shrunk, 
 
 ## Trigger entries
 
-Entries live in JSON files under `vox-agents/newspaper/triggers/`. Files group entries by topic, such as `cities`, `nation`, and `foreign`, for editing convenience; the file name has no effect on behavior.
+Entries live in JSON files under `vox-agents/newspaper/triggers/`. Files group rules by topic, such as cities, diplomacy, and trade. A rule keeps its identity when it moves between files.
 
 | Field | Required | Meaning | Example |
 | --- | --- | --- | --- |

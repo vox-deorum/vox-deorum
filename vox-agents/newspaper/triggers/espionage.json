@@ -1,0 +1,32 @@
+[
+  {
+    "id": "spy-caught-at-home",
+    "subject": "event",
+    "event": "EspionageResult",
+    "when": [
+      "event.knows('perspective') && event.perspective === 'target'",
+      "event.knows('spyResult') && (event.spyResult === 'Identified' || event.spyResult === 'Killed')"
+    ],
+    "values": {
+      "result": "event.spyResult",
+      "cityName": "event.knows('cityName') ? event.cityName : null"
+    },
+    "importance": "event.spyResult === 'Killed' ? 70 : 60",
+    "tags": ["politics", "international"]
+  },
+  {
+    "id": "election-operation",
+    "subject": "event",
+    "event": ["ElectionResultSuccess", "ElectionResultFailure"],
+    "when": [
+      "event.knows('player') && event.player.self === true"
+    ],
+    "values": {
+      "success": "event.type === 'ElectionResultSuccess'",
+      "cityState": "event.knows('cityState') && typeof event.cityState === 'string' ? event.cityState : null",
+      "influence": "event.knows('influenceChange') ? event.influenceChange : null"
+    },
+    "importance": "success ? 55 : 45",
+    "tags": ["politics", "international"]
+  }
+]

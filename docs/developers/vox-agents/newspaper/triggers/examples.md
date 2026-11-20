@@ -6,7 +6,7 @@ A trigger tests the evidence and supplies values such as `lost`. A template choo
 
 ## Cities and borders
 
-[City rules](../../../../../vox-agents/newspaper/triggers/cities.json) and [city templates](../../../../../vox-agents/newspaper/templates/cities.json).
+These examples pair [city templates](../../../../../vox-agents/newspaper/templates/cities.json) with rules from [cities](../../../../../vox-agents/newspaper/triggers/cities.json), [war](../../../../../vox-agents/newspaper/triggers/war.json), and [religion](../../../../../vox-agents/newspaper/triggers/religion.json).
 
 | Rule | What makes news | Authoring pattern |
 | --- | --- | --- |
@@ -41,7 +41,7 @@ Save the following as `<overlay>/templates/settler.json` and select the overlay 
 
 ## National affairs
 
-[National rules](../../../../../vox-agents/newspaper/triggers/nation.json) and [national templates](../../../../../vox-agents/newspaper/templates/nation.json).
+These examples pair [national templates](../../../../../vox-agents/newspaper/templates/nation.json) with rules from [cities](../../../../../vox-agents/newspaper/triggers/cities.json), [war](../../../../../vox-agents/newspaper/triggers/war.json), [science](../../../../../vox-agents/newspaper/triggers/science.json), and [politics](../../../../../vox-agents/newspaper/triggers/politics.json).
 
 | Rule | What makes news | Authoring pattern |
 | --- | --- | --- |
@@ -54,7 +54,7 @@ The `golden-age-in-wartime-account` template uses `self.happinessPercentage`, th
 
 ## Foreign affairs and war
 
-[Foreign rules](../../../../../vox-agents/newspaper/triggers/foreign.json) and [foreign templates](../../../../../vox-agents/newspaper/templates/foreign.json).
+These examples pair [foreign templates](../../../../../vox-agents/newspaper/templates/foreign.json) with rules from [war](../../../../../vox-agents/newspaper/triggers/war.json), [culture](../../../../../vox-agents/newspaper/triggers/culture.json), and [city-states](../../../../../vox-agents/newspaper/triggers/city-states.json).
 
 | Rule | What makes news | Authoring pattern |
 | --- | --- | --- |

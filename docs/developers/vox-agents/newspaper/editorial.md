@@ -27,7 +27,7 @@ MCP owns evidence schemas and reporting policy. Rules use the projected observat
 
 ## Catalogue and eligibility
 
-The built-in catalogue lives under `vox-agents/newspaper/`. Rules and matching templates are grouped into `cities.json`, `nation.json`, and `foreign.json` in their respective directories. Each design has its own file. An overlay adds or tunes entries without replacing the stock catalogue.
+The built-in catalogue lives under `vox-agents/newspaper/`. Trigger files group rules by topic, such as war, trade, or religion. Templates have their own files and refer to triggers by ID. Each design has its own file. An overlay adds or tunes entries without replacing the stock catalogue.
 
 | File | Controls |
 | --- | --- |

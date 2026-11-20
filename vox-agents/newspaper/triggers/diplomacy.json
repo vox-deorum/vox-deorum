@@ -1,0 +1,77 @@
+[
+  {
+    "id": "denounced-by-major",
+    "subject": "player",
+    "when": [
+      "!player.self && player.knows('major') && player.major === true",
+      "self.relation(player).knows('denouncedByThem')",
+      "self.relation(player).denouncedByThem === true"
+    ],
+    "values": {
+      "civilization": "player.name"
+    },
+    "importance": 60,
+    "tags": ["politics", "international"]
+  },
+  {
+    "id": "becomes-vassal",
+    "subject": "player",
+    "when": [
+      "!player.self && player.knows('major') && player.major === true",
+      "self.relation(player).knows('vassalOf')",
+      "self.relation(player).vassalOf === true"
+    ],
+    "values": {
+      "master": "player.name"
+    },
+    "importance": 90,
+    "urgent": "true",
+    "tags": ["politics", "international"]
+  },
+  {
+    "id": "gains-vassal",
+    "subject": "player",
+    "when": [
+      "!player.self && player.knows('major') && player.major === true",
+      "self.relation(player).knows('masterOf')",
+      "self.relation(player).masterOf === true"
+    ],
+    "values": {
+      "vassal": "player.name"
+    },
+    "importance": 75,
+    "tags": ["politics", "international"]
+  },
+  {
+    "id": "friendship-begins",
+    "subject": "pair",
+    "window": "recent",
+    "when": [
+      "pair.involvesSelf",
+      "pair.majors",
+      "pair.knows('friends') && pair.friends === true",
+      "pair.knows('before') && pair.before.knows('friends') && pair.before.friends === false",
+      "!(pair.knows('pact') && pair.pact === true && pair.before.knows('pact') && pair.before.pact === false)"
+    ],
+    "values": {
+      "friend": "pair.other.knows('name') ? pair.other.name : null"
+    },
+    "importance": 55,
+    "tags": ["politics", "international"]
+  },
+  {
+    "id": "defensive-pact-signed",
+    "subject": "pair",
+    "when": [
+      "pair.involvesSelf",
+      "pair.knows('majors') && pair.majors === true",
+      "pair.knows('pact') && pair.pact === true",
+      "pair.knows('before') && pair.before.knows('pact') && pair.before.pact === false"
+    ],
+    "values": {
+      "ally": "pair.other.knows('name') ? pair.other.name : null"
+    },
+    "importance": 65,
+    "tags": ["politics", "international"]
+  }
+]

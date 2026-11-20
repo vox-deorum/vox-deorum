@@ -1,0 +1,172 @@
+[
+  {
+    "id": "besieged-and-starving",
+    "subject": "city",
+    "when": [
+      "city.own",
+      "city.is.besieged",
+      "city.is.starving"
+    ],
+    "values": {
+      "damage": "(city.maxHitPoints - city.hitPoints) / city.maxHitPoints"
+    },
+    "importance": "60 + 40 * damage",
+    "urgent": "damage >= 0.5"
+  },
+  {
+    "id": "nearby-capital-falls",
+    "subject": "event",
+    "event": "CityCaptureComplete",
+    "when": [
+      "event.isCapital && event.isConquest",
+      "!event.oldOwner.self && !event.newOwner.self",
+      "event.distance.own <= nearby"
+    ],
+    "values": { "loser": "event.oldOwner.name", "winner": "event.newOwner.name" },
+    "importance": "75"
+  },
+  {
+    "id": "vassals-join-war",
+    "subject": "incident",
+    "when": [
+      "incident.kind == 'war'",
+      "incident.participants.some(p => p.reason == 'vassal')"
+    ],
+    "values": {
+      "vassals": "incident.participants.filter(p => p.reason == 'vassal').map(p => p.player.name).join(', ')",
+      "initiator": "incident.initiator.name",
+      "target": "incident.target.name"
+    },
+    "importance": "incident.role == 'none' ? 45 : 80",
+    "urgent": "incident.role == 'target'"
+  },
+  {
+    "id": "war-advantage-stalls",
+    "subject": "pair",
+    "window": "long",
+    "when": [
+      "pair.involvesSelf && pair.atWar",
+      "pair.history.some(s => s.warScore >= 25)",
+      "held(pair, s => Math.abs(s.warScore - pair.warScore) <= 5, short)"
+    ],
+    "values": { "opponent": "pair.other.name" },
+    "importance": "50",
+    "repeat": "medium"
+  },
+  {
+    "id": "war-involving-us",
+    "subject": "incident",
+    "when": [
+      "incident.kind == 'war'",
+      "incident.knows('role') && incident.role != 'none'"
+    ],
+    "values": { "role": "incident.role", "reason": "incident.knows('reason') ? incident.reason : null", "initiator": "incident.knows('initiator') && incident.initiator.knows('name') ? incident.initiator.name : null", "target": "incident.knows('target') && incident.target.knows('name') ? incident.target.name : null" },
+    "importance": "role == 'target' ? 95 : role == 'initiator' ? 85 : 75",
+    "urgent": "role == 'target'",
+    "tags": ["politics", "military"]
+  },
+  {
+    "id": "peace-concessions",
+    "subject": "incident",
+    "when": [
+      "incident.kind === 'peace'",
+      "incident.knows('concessions') && Array.isArray(incident.concessions) && incident.concessions.length > 0"
+    ],
+    "values": { "concessions": "incident.concessions.join(', ')", "count": "incident.concessions.length", "role": "incident.knows('role') ? incident.role : null", "initiator": "incident.knows('initiator') && incident.initiator.knows('name') ? incident.initiator.name : null", "target": "incident.knows('target') && incident.target.knows('name') ? incident.target.name : null" },
+    "importance": "role !== null && role !== 'none' ? 75 : 50",
+    "tags": ["politics", "military", "international"]
+  },
+  {
+    "id": "neighbor-army-overtakes",
+    "subject": "player",
+    "window": "medium",
+    "when": [
+      "!player.self && player.major && player.is.neighbor",
+      "[player.militaryStrength, self.militaryStrength, player.before.militaryStrength, self.before.militaryStrength].every(n => Number.isFinite(n) && n >= 0)",
+      "player.militaryStrength > self.militaryStrength",
+      "player.before.militaryStrength <= self.before.militaryStrength"
+    ],
+    "values": {
+      "neighbor": "player.name",
+      "ourStrength": "self.militaryStrength",
+      "theirStrength": "player.militaryStrength"
+    },
+    "importance": "ourStrength > 0 ? 40 + 40 * (theirStrength / ourStrength - 1) : 80"
+  },
+  {
+    "id": "war-on-three-fronts",
+    "subject": "world",
+    "when": [
+      "self.knows('atWar') && self.atWar === true",
+      "self.knows('wars') && Array.isArray(self.wars)",
+      "self.wars.filter(p => !p.self && p.knows('major') && p.major === true).length >= 3"
+    ],
+    "values": {
+      "count": "self.wars.filter(p => !p.self && p.knows('major') && p.major === true).length",
+      "enemies": "(() => { const names = self.wars.filter(p => !p.self && p.knows('major') && p.major === true && p.knows('name')).map(p => p.name); return names.length <= 2 ? names.join(' and ') : names.slice(0, -1).join(', ') + ', and ' + names[names.length - 1]; })()"
+    },
+    "importance": 80,
+    "repeat": "medium",
+    "tags": ["politics", "military"]
+  },
+  {
+    "id": "war-weariness-sets-in",
+    "subject": "pair",
+    "when": [
+      "pair.involvesSelf && pair.atWar === true",
+      "self.relation(pair.other).knows('warWeariness')",
+      "Number.isFinite(self.relation(pair.other).warWeariness)",
+      "self.relation(pair.other).warWeariness >= 50"
+    ],
+    "values": {
+      "opponent": "pair.other.name",
+      "weariness": "self.relation(pair.other).warWeariness"
+    },
+    "importance": 65,
+    "tags": ["politics", "military"]
+  },
+  {
+    "id": "war-turns-against-us",
+    "subject": "pair",
+    "when": [
+      "pair.involvesSelf && pair.atWar === true",
+      "pair.knows('warScore')",
+      "Number.isFinite(pair.warScore)",
+      "pair.warScore <= -25"
+    ],
+    "values": {
+      "opponent": "pair.other.name",
+      "score": "pair.warScore"
+    },
+    "importance": 70,
+    "tags": ["politics", "military"]
+  },
+  {
+    "id": "war-turns-our-way",
+    "subject": "pair",
+    "when": [
+      "pair.involvesSelf && pair.atWar === true",
+      "pair.knows('warScore')",
+      "Number.isFinite(pair.warScore)",
+      "pair.warScore >= 25"
+    ],
+    "values": {
+      "opponent": "pair.other.name",
+      "score": "pair.warScore"
+    },
+    "importance": 60,
+    "tags": ["politics", "military"]
+  },
+  {
+    "id": "peace-returns",
+    "subject": "world",
+    "window": "recent",
+    "when": [
+      "self.knows('atWar') && self.atWar === false",
+      "self.knows('before')",
+      "players.some(rival => !rival.self && rival.knows('major') && rival.major === true && rival.knows('before') && self.before.relation(rival).knows('war') && self.before.relation(rival).war === true)"
+    ],
+    "importance": 70,
+    "tags": ["politics", "military"]
+  }
+]

@@ -1,0 +1,116 @@
+[
+  {
+    "id": "neighbors-convert",
+    "subject": "city",
+    "window": "recent",
+    "when": [
+      "city.is.neighbor",
+      "city.majorityReligion && changed(city, 'majorityReligion')"
+    ],
+    "group": {
+      "by": "city.majorityReligion",
+      "min": 3
+    },
+    "importance": "40 + 10 * count"
+  },
+  {
+    "id": "own-city-converts",
+    "subject": "city",
+    "window": "recent",
+    "when": [
+      "city.own",
+      "city.knows('majorityReligion') && typeof city.majorityReligion === 'string'",
+      "city.conversions.some(c => c.knows('religion') && c.religion === city.majorityReligion)"
+    ],
+    "values": {
+      "religion": "city.majorityReligion",
+      "ours": "self.knows('foundedReligion') && typeof self.foundedReligion === 'string' && city.majorityReligion === self.foundedReligion"
+    },
+    "importance": "ours ? 55 : 65",
+    "tags": ["cities", "domestic"]
+  },
+  {
+    "id": "faith-reaches-city-state",
+    "subject": "city",
+    "window": "recent",
+    "when": [
+      "city.foreign",
+      "city.knows('owner') && city.owner.knows('cityState') && city.owner.cityState === true",
+      "city.knows('distance') && city.distance.knows('own') && city.distance.own > neighboring",
+      "city.knows('majorityReligion') && typeof city.majorityReligion === 'string' && city.majorityReligion.length > 0",
+      "city.knows('before') && city.before.knows('majorityReligion')",
+      "changed(city, 'majorityReligion')",
+      "self.knows('foundedReligion') && typeof self.foundedReligion === 'string' && self.foundedReligion === city.majorityReligion",
+      "city.conversions.some(c => c.knows('religion') && c.religion === city.majorityReligion)"
+    ],
+    "values": { "cityState": "city.knows('owner') && city.owner.knows('name') ? city.owner.name : null", "religion": "city.majorityReligion" },
+    "importance": 55,
+    "tags": ["politics", "international"]
+  },
+  {
+    "id": "faith-drifts",
+    "subject": "world",
+    "when": [
+      "self.knows('foundedReligion') && typeof self.foundedReligion === 'string'",
+      "self.knows('majorityReligion') && typeof self.majorityReligion === 'string'",
+      "self.foundedReligion.length > 0",
+      "self.majorityReligion.length > 0",
+      "self.foundedReligion !== self.majorityReligion"
+    ],
+    "values": {
+      "founded": "self.foundedReligion",
+      "majorityFaith": "self.majorityReligion"
+    },
+    "importance": 60,
+    "tags": ["politics", "domestic"]
+  },
+  {
+    "id": "religion-founded",
+    "subject": "world",
+    "when": [
+      "self.knows('foundedReligion') && typeof self.foundedReligion === 'string'",
+      "!self.before.knows('foundedReligion') || self.before.foundedReligion === null"
+    ],
+    "values": {
+      "religion": "self.foundedReligion"
+    },
+    "importance": 75,
+    "tags": ["politics", "domestic"]
+  },
+  {
+    "id": "national-majority-faith-changed",
+    "subject": "world",
+    "window": "recent",
+    "when": [
+      "self.knows('majorityReligion') && typeof self.majorityReligion === 'string' && self.majorityReligion.length > 0",
+      "self.knows('before') && self.before.knows('majorityReligion')",
+      "(typeof self.before.majorityReligion === 'string' && self.before.majorityReligion.length > 0) || self.before.majorityReligion === null || self.before.majorityReligion === -1 || self.before.majorityReligion === ''",
+      "self.majorityReligion !== self.before.majorityReligion"
+    ],
+    "values": {
+      "religion": "self.majorityReligion",
+      "former": "typeof self.before.majorityReligion === 'string' && self.before.majorityReligion.length > 0 ? self.before.majorityReligion : null",
+      "founded": "self.knows('foundedReligion') && typeof self.foundedReligion === 'string' && self.foundedReligion.length > 0 ? self.foundedReligion : null"
+    },
+    "importance": 70,
+    "tags": ["politics", "domestic", "religion"]
+  },
+  {
+    "id": "foreign-major-adopts-our-faith",
+    "subject": "player",
+    "window": "medium",
+    "when": [
+      "!player.self && player.knows('major') && player.major === true",
+      "player.knows('majorityReligion') && typeof player.majorityReligion === 'string' && player.majorityReligion.length > 0",
+      "player.knows('before') && player.before.knows('majorityReligion')",
+      "(player.before.majorityReligion === null || player.before.majorityReligion === -1 || player.before.majorityReligion === '' || (typeof player.before.majorityReligion === 'string' && player.before.majorityReligion.length > 0 && player.before.majorityReligion !== player.majorityReligion))",
+      "self.knows('foundedReligion') && typeof self.foundedReligion === 'string' && self.foundedReligion === player.majorityReligion"
+    ],
+    "values": {
+      "civilization": "player.knows('name') ? player.name : null",
+      "religion": "player.majorityReligion"
+    },
+    "importance": 65,
+    "tags": ["politics", "international", "religion"]
+  }
+]
