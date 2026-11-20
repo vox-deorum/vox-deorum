@@ -1,5 +1,79 @@
 [
   {
+    "id": "cultural-influence-becomes-influential-incoming",
+    "subject": "player",
+    "when": [
+      "player.knows('culturalInfluenceChanges') && player.culturalInfluenceChanges.some(c => c.direction === 'incoming' && c.reachedInfluential === true)"
+    ],
+    "values": {
+      "rival": "(() => { const c = player.knows('culturalInfluenceChanges') ? player.culturalInfluenceChanges.find(c => c.direction === 'incoming' && c.reachedInfluential === true) : undefined; return c && c.knows('rival') && c.rival.knows('name') ? c.rival.name : null; })()",
+      "direction": "(() => { const c = player.knows('culturalInfluenceChanges') ? player.culturalInfluenceChanges.find(c => c.direction === 'incoming' && c.reachedInfluential === true) : undefined; return c ? c.direction : null; })()",
+      "level": "(() => { const c = player.knows('culturalInfluenceChanges') ? player.culturalInfluenceChanges.find(c => c.direction === 'incoming' && c.reachedInfluential === true) : undefined; return c ? c.level : null; })()",
+      "previousLevel": "(() => { const c = player.knows('culturalInfluenceChanges') ? player.culturalInfluenceChanges.find(c => c.direction === 'incoming' && c.reachedInfluential === true) : undefined; return c ? c.previousLevel : null; })()",
+      "percentage": "(() => { const c = player.knows('culturalInfluenceChanges') ? player.culturalInfluenceChanges.find(c => c.direction === 'incoming' && c.reachedInfluential === true) : undefined; return c ? c.percentage : null; })()",
+      "turnsToInfluential": "(() => { const c = player.knows('culturalInfluenceChanges') ? player.culturalInfluenceChanges.find(c => c.direction === 'incoming' && c.reachedInfluential === true) : undefined; return c && c.knows('turnsToInfluential') ? c.turnsToInfluential : null; })()",
+      "tourismCultureRatio": "(() => { const c = player.knows('culturalInfluenceChanges') ? player.culturalInfluenceChanges.find(c => c.direction === 'incoming' && c.reachedInfluential === true) : undefined; return c && c.knows('tourismCultureRatio') ? c.tourismCultureRatio : null; })()"
+    },
+    "importance": 80,
+    "tags": ["culture", "international"]
+  },
+  {
+    "id": "cultural-influence-becomes-influential-outgoing",
+    "subject": "player",
+    "when": [
+      "player.knows('culturalInfluenceChanges') && player.culturalInfluenceChanges.some(c => c.direction === 'outgoing' && c.reachedInfluential === true)"
+    ],
+    "values": {
+      "rival": "(() => { const c = player.knows('culturalInfluenceChanges') ? player.culturalInfluenceChanges.find(c => c.direction === 'outgoing' && c.reachedInfluential === true) : undefined; return c && c.knows('rival') && c.rival.knows('name') ? c.rival.name : null; })()",
+      "direction": "(() => { const c = player.knows('culturalInfluenceChanges') ? player.culturalInfluenceChanges.find(c => c.direction === 'outgoing' && c.reachedInfluential === true) : undefined; return c ? c.direction : null; })()",
+      "level": "(() => { const c = player.knows('culturalInfluenceChanges') ? player.culturalInfluenceChanges.find(c => c.direction === 'outgoing' && c.reachedInfluential === true) : undefined; return c ? c.level : null; })()",
+      "previousLevel": "(() => { const c = player.knows('culturalInfluenceChanges') ? player.culturalInfluenceChanges.find(c => c.direction === 'outgoing' && c.reachedInfluential === true) : undefined; return c ? c.previousLevel : null; })()",
+      "percentage": "(() => { const c = player.knows('culturalInfluenceChanges') ? player.culturalInfluenceChanges.find(c => c.direction === 'outgoing' && c.reachedInfluential === true) : undefined; return c ? c.percentage : null; })()",
+      "turnsToInfluential": "(() => { const c = player.knows('culturalInfluenceChanges') ? player.culturalInfluenceChanges.find(c => c.direction === 'outgoing' && c.reachedInfluential === true) : undefined; return c && c.knows('turnsToInfluential') ? c.turnsToInfluential : null; })()",
+      "tourismCultureRatio": "(() => { const c = player.knows('culturalInfluenceChanges') ? player.culturalInfluenceChanges.find(c => c.direction === 'outgoing' && c.reachedInfluential === true) : undefined; return c && c.knows('tourismCultureRatio') ? c.tourismCultureRatio : null; })()"
+    },
+    "importance": 75,
+    "tags": ["culture", "international"]
+  },
+  {
+    "id": "cultural-influence-trend-turns-incoming",
+    "subject": "player",
+    "when": [
+      "player.knows('culturalInfluenceChanges') && player.culturalInfluenceChanges.some(c => c.direction === 'incoming' && c.trendChanged === true && (c.trend === 'Rising' || c.trend === 'Falling')) && !player.culturalInfluenceChanges.some(c => c.direction === 'incoming' && c.reachedInfluential === true)"
+    ],
+    "values": {
+      "rival": "(() => { const c = player.knows('culturalInfluenceChanges') ? player.culturalInfluenceChanges.find(c => c.direction === 'incoming' && c.trendChanged === true && (c.trend === 'Rising' || c.trend === 'Falling')) : undefined; return c && c.knows('rival') && c.rival.knows('name') ? c.rival.name : null; })()",
+      "direction": "(() => { const c = player.knows('culturalInfluenceChanges') ? player.culturalInfluenceChanges.find(c => c.direction === 'incoming' && c.trendChanged === true && (c.trend === 'Rising' || c.trend === 'Falling')) : undefined; return c ? c.direction : null; })()",
+      "level": "(() => { const c = player.knows('culturalInfluenceChanges') ? player.culturalInfluenceChanges.find(c => c.direction === 'incoming' && c.trendChanged === true && (c.trend === 'Rising' || c.trend === 'Falling')) : undefined; return c ? c.level : null; })()",
+      "percentage": "(() => { const c = player.knows('culturalInfluenceChanges') ? player.culturalInfluenceChanges.find(c => c.direction === 'incoming' && c.trendChanged === true && (c.trend === 'Rising' || c.trend === 'Falling')) : undefined; return c ? c.percentage : null; })()",
+      "trend": "(() => { const c = player.knows('culturalInfluenceChanges') ? player.culturalInfluenceChanges.find(c => c.direction === 'incoming' && c.trendChanged === true && (c.trend === 'Rising' || c.trend === 'Falling')) : undefined; return c ? c.trend : null; })()",
+      "previousTrend": "(() => { const c = player.knows('culturalInfluenceChanges') ? player.culturalInfluenceChanges.find(c => c.direction === 'incoming' && c.trendChanged === true && (c.trend === 'Rising' || c.trend === 'Falling')) : undefined; return c ? c.previousTrend : null; })()",
+      "turnsToInfluential": "(() => { const c = player.knows('culturalInfluenceChanges') ? player.culturalInfluenceChanges.find(c => c.direction === 'incoming' && c.trendChanged === true && (c.trend === 'Rising' || c.trend === 'Falling')) : undefined; return c && c.knows('turnsToInfluential') ? c.turnsToInfluential : null; })()",
+      "tourismCultureRatio": "(() => { const c = player.knows('culturalInfluenceChanges') ? player.culturalInfluenceChanges.find(c => c.direction === 'incoming' && c.trendChanged === true && (c.trend === 'Rising' || c.trend === 'Falling')) : undefined; return c && c.knows('tourismCultureRatio') ? c.tourismCultureRatio : null; })()"
+    },
+    "importance": 50,
+    "tags": ["culture", "international"]
+  },
+  {
+    "id": "cultural-influence-trend-turns-outgoing",
+    "subject": "player",
+    "when": [
+      "player.knows('culturalInfluenceChanges') && player.culturalInfluenceChanges.some(c => c.direction === 'outgoing' && c.trendChanged === true && (c.trend === 'Rising' || c.trend === 'Falling')) && !player.culturalInfluenceChanges.some(c => c.direction === 'outgoing' && c.reachedInfluential === true)"
+    ],
+    "values": {
+      "rival": "(() => { const c = player.knows('culturalInfluenceChanges') ? player.culturalInfluenceChanges.find(c => c.direction === 'outgoing' && c.trendChanged === true && (c.trend === 'Rising' || c.trend === 'Falling')) : undefined; return c && c.knows('rival') && c.rival.knows('name') ? c.rival.name : null; })()",
+      "direction": "(() => { const c = player.knows('culturalInfluenceChanges') ? player.culturalInfluenceChanges.find(c => c.direction === 'outgoing' && c.trendChanged === true && (c.trend === 'Rising' || c.trend === 'Falling')) : undefined; return c ? c.direction : null; })()",
+      "level": "(() => { const c = player.knows('culturalInfluenceChanges') ? player.culturalInfluenceChanges.find(c => c.direction === 'outgoing' && c.trendChanged === true && (c.trend === 'Rising' || c.trend === 'Falling')) : undefined; return c ? c.level : null; })()",
+      "percentage": "(() => { const c = player.knows('culturalInfluenceChanges') ? player.culturalInfluenceChanges.find(c => c.direction === 'outgoing' && c.trendChanged === true && (c.trend === 'Rising' || c.trend === 'Falling')) : undefined; return c ? c.percentage : null; })()",
+      "trend": "(() => { const c = player.knows('culturalInfluenceChanges') ? player.culturalInfluenceChanges.find(c => c.direction === 'outgoing' && c.trendChanged === true && (c.trend === 'Rising' || c.trend === 'Falling')) : undefined; return c ? c.trend : null; })()",
+      "previousTrend": "(() => { const c = player.knows('culturalInfluenceChanges') ? player.culturalInfluenceChanges.find(c => c.direction === 'outgoing' && c.trendChanged === true && (c.trend === 'Rising' || c.trend === 'Falling')) : undefined; return c ? c.previousTrend : null; })()",
+      "turnsToInfluential": "(() => { const c = player.knows('culturalInfluenceChanges') ? player.culturalInfluenceChanges.find(c => c.direction === 'outgoing' && c.trendChanged === true && (c.trend === 'Rising' || c.trend === 'Falling')) : undefined; return c && c.knows('turnsToInfluential') ? c.turnsToInfluential : null; })()",
+      "tourismCultureRatio": "(() => { const c = player.knows('culturalInfluenceChanges') ? player.culturalInfluenceChanges.find(c => c.direction === 'outgoing' && c.trendChanged === true && (c.trend === 'Rising' || c.trend === 'Falling')) : undefined; return c && c.knows('tourismCultureRatio') ? c.tourismCultureRatio : null; })()"
+    },
+    "importance": 50,
+    "tags": ["culture", "international"]
+  },
+  {
     "id": "enemy-wonder-nearby",
     "subject": "city",
     "window": "recent",

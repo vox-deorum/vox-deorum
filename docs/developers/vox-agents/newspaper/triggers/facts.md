@@ -143,9 +143,15 @@ Read `self.happinessPercentage` for the receiver's national happiness. Vox Popul
 
 The newspaper names the city only if it has a matching readable city observation. It lists counts for known civilizations, known city-states and barbarians. These checks control which labels can be shown; the labels and counts themselves come from the zone record.
 
-A `Withdraw` posture is the AI's assessment during that turn. The recorder can read zones several times in one turn and only saves occupied zones, so an earlier sighting can remain after its units leave. A sea zone can include land units. Use `militaryStrength` or `militaryUnits` for available national context.
+A posture such as `Withdraw` is the receiver AI's assessment during the observed turn. The recorder can read zones several times in one turn and only saves occupied zones, so an earlier sighting can remain after its units leave. If the same visible city and zone also had a receiver observation on the previous check turn, `previousPosture` carries that reading and cites its row. A missing zone does not establish a retreat. A sea zone can include land units.
 
 To read the zones for a city at the cutoff, use `city.tacticalZones()`. It matches both the city name and the absolute zone ID, so land and sea zones can match the same city. It returns an empty list if the known zones do not match, or `undefined` if the city's identity or the receiver's observations are unavailable.
+
+### Quest deadlines and cultural influence
+
+On a city-state, `player.questDeadlines` contains estimated deadline turns from the receiver's recorded quest tooltip. `player.questObservationTurn` dates the tooltip. The newspaper uses recognizable English countdowns and omits rows where it cannot distinguish per-player text from a copy of the active player's tooltip. Use the dates for reminders. The evidence cannot establish when a quest was originally offered or why it disappeared.
+
+On a foreign major, `player.culturalInfluenceChanges` describes changes in recorded influence between that civilization and the receiver. `outgoing` measures our influence over them; `incoming` measures theirs over us. The dates and readings come from `VictoryProgress`. A missing direction is unknown, and the ratio compares tourism with the target's culture rather than reporting an amount of tourism. Both civilizations must be identifiable and known to the receiver.
 
 ### Inferred player facts
 

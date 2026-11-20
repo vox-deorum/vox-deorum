@@ -112,6 +112,42 @@
     "tags": ["politics", "international"]
   },
   {
+    "id": "city-state-quest-deadline-approaching",
+    "subject": "player",
+    "when": [
+      "player.knows('cityState') && player.cityState === true",
+      "player.knows('questDeadlines') && Array.isArray(player.questDeadlines)",
+      "player.knows('questObservationTurn') && Number.isSafeInteger(player.questObservationTurn)",
+      "player.questObservationTurn <= turn && turn - player.questObservationTurn <= 1",
+      "player.questDeadlines.some(deadline => Number.isSafeInteger(deadline) && deadline >= turn && deadline <= turn + 3)"
+    ],
+    "values": {
+      "turnsLeft": "(() => { const next = Math.min(...player.questDeadlines.filter(deadline => Number.isSafeInteger(deadline) && deadline >= turn && deadline <= turn + 3)); return next - turn; })()",
+      "cityState": "player.knows('name') ? player.name : null"
+    },
+    "importance": 45,
+    "tags": ["politics", "international"]
+  },
+  {
+    "id": "city-state-timed-quest-observed",
+    "subject": "player",
+    "when": [
+      "player.knows('cityState') && player.cityState === true",
+      "player.knows('questDeadlines') && Array.isArray(player.questDeadlines)",
+      "player.knows('questObservationTurn') && Number.isSafeInteger(player.questObservationTurn)",
+      "player.questObservationTurn <= turn && turn - player.questObservationTurn <= 1",
+      "player.knows('before')",
+      "player.before.knows('questDeadlines') && Array.isArray(player.before.questDeadlines)",
+      "player.questDeadlines.some(deadline => deadline > turn + 3 && !player.before.questDeadlines.includes(deadline))"
+    ],
+    "values": {
+      "turnsLeft": "Math.min(...player.questDeadlines.filter(deadline => deadline > turn + 3 && !player.before.questDeadlines.includes(deadline))) - turn",
+      "cityState": "player.knows('name') ? player.name : null"
+    },
+    "importance": 35,
+    "tags": ["politics", "international"]
+  },
+  {
     "id": "foreign-major-wins-city-state",
     "subject": "event",
     "event": "SetAlly",

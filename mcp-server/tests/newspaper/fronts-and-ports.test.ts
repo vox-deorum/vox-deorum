@@ -94,6 +94,26 @@ describe('newspaper tactical zones', () => {
     expect(front.units).toEqual({ Civ1: { Trireme: 1 }, Barbarians: { Caravel: 1 } });
   });
 
+  it('should compare only receiver sightings of the same readable city and zone', async () => {
+    await city({ ID: 22, Turn: 9 });
+    await city({ ID: 23, Key: 43, Name: 'Cape', X: 5, Turn: 9, Player0: 0 });
+    await city({ ID: 24, Key: 43, Name: 'Cape', X: 5, Turn: 12 });
+    await zone(610, 9, 0, 2, { zoneID: 42, city: 'Port', posture: 'Attrition' });
+    await zone(611, 9, 1, 2, { zoneID: 42, city: 'Port', posture: 'Counterattack' });
+    await zone(612, 10, 0, 2, { zoneID: -42, city: 'Port', domain: 'Sea', posture: 'Withdraw' });
+    await zone(613, 9, 0, 2, { zoneID: 43, city: 'Cape', posture: 'Attrition' });
+    await zone(614, 12, 0, 2, { zoneID: 42, city: 'Port', posture: 'Steamroll' });
+    await zone(615, 12, 0, 2, { zoneID: -42, city: 'Port', domain: 'Sea', posture: 'Steamroll' });
+    await zone(616, 12, 0, 2, { zoneID: 43, city: 'Cape', posture: 'Steamroll' });
+
+    const { tacticalZones } = newspaperEvidenceSchema.parse(await queryNewspaperEvidence(db, request));
+    const previous = (zoneID: number) => tacticalZones?.find(zone => zone.zoneID === zoneID)?.previousPosture;
+    expect(previous(42)).toEqual({ posture: 'Attrition',
+      source: { table: 'TacticalZones', id: 610, turn: 9, createdAt: 5610 } });
+    expect(previous(-42)).toBeUndefined();
+    expect(previous(43)).toBeUndefined();
+  });
+
   it('keeps an empty front list and leaves fronts unknown without the table', async () => {
     expect((await queryNewspaperEvidence(db, request)).tacticalZones).toEqual([]);
     await db.schema.dropTable('TacticalZones').execute();

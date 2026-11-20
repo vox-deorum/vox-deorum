@@ -84,15 +84,33 @@ export const newspaperDiplomacySnapshotSchema = z.object({
 });
 
 /** One private front observation recorded for the receiving player. */
+const tacticalZoneSourceSchema = newspaperSourceReferenceSchema.extend({ table: z.literal('TacticalZones') });
+
 export const newspaperTacticalZoneSchema = z.object({
-  source: newspaperSourceReferenceSchema.extend({ table: z.literal('TacticalZones') })
+  source: tacticalZoneSourceSchema
     .describe('Latest recorded zone row and its observation date'),
   zoneID: z.number().int().describe('Recorded tactical zone ID; negative IDs are valid and zero is excluded'),
   city: z.string().optional().describe('Recorded city label when the zone names a city'),
   domain: z.string().describe('Recorded zone domain label'),
   posture: z.string().describe('Recorded tactical posture assessment'),
+  previousPosture: z.object({ posture: z.string(), source: tacticalZoneSourceSchema }).optional()
+    .describe('Receiver posture for the matching city and zone on the previous check turn'),
   units: z.record(z.string(), z.record(z.string(), z.number()))
     .describe('Visible unit counts by civilization label and recorded unit type')
+});
+
+/** One public cultural victory observation, limited to directions between the receiver and known majors. */
+export const newspaperCulturalInfluenceObservationSchema = z.object({
+  source: newspaperSourceReferenceSchema.extend({ table: z.literal('VictoryProgress') }),
+  readings: z.array(z.object({
+    otherPlayerID: z.number().int(),
+    direction: z.enum(['outgoing', 'incoming']),
+    level: z.enum(['Exotic', 'Familiar', 'Popular', 'Influential', 'Dominant']),
+    percentage: z.number().int().nonnegative(),
+    trend: z.enum(['Falling', 'Static', 'Rising', 'Rising Slowly']).optional(),
+    tourismCultureRatio: z.number().int().optional(),
+    turnsToInfluential: z.number().int().nonnegative().optional()
+  }))
 });
 
 /** One recorded World Congress proposal. */
@@ -175,6 +193,10 @@ export const newspaperEvidenceSchema = z.object({
     .describe('Last recorded change per named technology on the receiving team through the cutoff'),
   tacticalZones: z.array(newspaperTacticalZoneSchema).optional()
     .describe('Latest permitted observation per zone during the cutoff turn, ordered by zone ID; absent when the table is unavailable'),
+  culturalInfluence: z.object({
+    baseline: newspaperCulturalInfluenceObservationSchema.optional(),
+    observations: z.array(newspaperCulturalInfluenceObservationSchema)
+  }).optional().describe('Public cultural influence readings before and during the reporting window'),
   history: newspaperHistorySchema.optional().describe('Trigger history when a start turn is requested'),
   diplomacy: z.object({
     fromTurn: z.number().int().describe('Inclusive first observation turn'),
@@ -192,6 +214,7 @@ export type NewspaperSnapshot = z.infer<typeof newspaperSnapshotSchema>;
 export type NewspaperEvent = z.infer<typeof newspaperEventSchema>;
 export type NewspaperTechnology = z.infer<typeof newspaperTechnologySchema>;
 export type NewspaperTacticalZone = z.infer<typeof newspaperTacticalZoneSchema>;
+export type NewspaperCulturalInfluenceObservation = z.infer<typeof newspaperCulturalInfluenceObservationSchema>;
 export type NewspaperHistory = z.infer<typeof newspaperHistorySchema>;
 export type NewspaperEvidence = z.infer<typeof newspaperEvidenceSchema>;
 export type NewspaperDiplomacySnapshot = z.infer<typeof newspaperDiplomacySnapshotSchema>;

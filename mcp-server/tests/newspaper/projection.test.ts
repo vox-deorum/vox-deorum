@@ -68,6 +68,18 @@ describe('newspaper field projection', () => {
     expect(row).toEqual(original);
   });
 
+  it('should expose only derived quest dates for the receiver and a visible city-state', () => {
+    const ctx = context();
+    ctx.players[2].IsMajor = 0;
+    const summary = { ID: 12, Turn: 10, CreatedAt: 3010, Key: 2, Player0: 1,
+      Quests: { Player0: ['They want you to build Pyramids. (Turns remaining: 3)'],
+        Player1: ['They want you to connect a resource. (Turns remaining: 1)'] } };
+    const projected = projectNewspaperPlayer(summary as any, ctx);
+    expect(projected?.values).toEqual({ QuestDeadlines: [13] });
+    expect(projectNewspaperPlayer({ ...summary, Player0: 0 } as any, ctx)).toBeUndefined();
+    expect(projectNewspaperPlayer({ ...summary, Key: 1 } as any, ctx)?.values).toEqual({});
+  });
+
   it('should require recorded city access and return raw basic or full values without mutation', () => {
     const row = { ID: 12, Key: 8, Turn: 10, CreatedAt: 3010, Player0: 1, Name: 'Harbor',
       HitPoints: 50, MaxHitPoints: 100, Population: 0, IsOccupied: false, IsCapital: 1, RazingTurns: 0,

@@ -11,6 +11,8 @@ These examples pair [city templates](../../../../../vox-agents/newspaper/templat
 | Rule | What makes news | Authoring pattern |
 | --- | --- | --- |
 | `neighbor-puppet-annexed` | A foreign city within `neighboring` distance ceases to be a puppet and is now occupied. | Compare the occupation flags across two snapshots. Require the same owner to leave captures out of the story. |
+| `building-completed`, `building-purchased` | A witnessed event records the construction or purchase of an ordinary building. | Confirm the building in the city's readable building list and use the event's purchase flags to tell construction from gold or faith spending. Wonders and defenses have their own rules. |
+| `building-investment-made` | One of our cities invests in a named building class. | Use `CityInvestedBuilding` with an active investment. The game can record an investment before the city begins producing the building. |
 | [`settler-departure`](#a-city-shrinks-after-sending-settlers) | One of our cities shrinks, trains a settler in the `recent` window, and still has positive food income. | Use events and snapshots together. The local happiness at the cutoff shapes the story's tone. |
 | `forward-settle` | A rival founds within `adjacent` distance of our cities, with urgent coverage at two tiles or less. | Listen to `PlayerCityFounded` alone to avoid reporting the same founding from the unit event. Name the nearest city of ours when the join is readable; otherwise leave the nearby city unnamed. |
 | `besieged-and-starving` | One of our cities is damaged in wartime and is using up its food reserves. At the current rate it has less than `recent` turns of food left. | Use the `besieged` and `starving` shortcuts. At half damage or more the story is urgent. The default `rearm` waits for a check where the conditions no longer hold before the story can run again. |
@@ -63,8 +65,11 @@ These examples pair [foreign templates](../../../../../vox-agents/newspaper/temp
 | `city-state-ally-defects` | A nearby city-state switches its alliance from us to a rival. | Check both allies named by `SetAlly`. Losing an ally without a replacement does not qualify. |
 | `city-state-ally-lost` | Our city-state ally becomes unallied. | Check the explicit no-ally ID in `SetAlly`; a hidden new ally is not enough. |
 | `friendly-city-state-attacked`, `friendly-city-state-captured` | A city-state that was our friend is attacked or conquered. | Use the relationship just before the event. These rules have lower importance than the corresponding rules for allies. |
+| `city-state-quest-deadline-approaching`, `city-state-timed-quest-observed` | The reader's city-state tooltip shows a timed quest nearly due or a deadline absent from the previous observation. | Report the estimated turns left from a fresh quest reading. The end of a countdown does not establish whether the quest succeeded. |
 | [`vassals-join-war`](#vassals-follow-their-master-to-war) | A declaration of war brings in vassals on either side. | Read the participants of a war incident and select those that joined as vassals. |
 | `war-advantage-stalls` | Our war score reached at least 25 in the `long` window and stayed within five points of its current value for `short`. | Read the history of a pair's current war. `held` requires a continuous record. While the conditions hold, `repeat: medium` permits a follow-up after 20 Standard turns. |
+
+The culture rules compare recorded influence in each direction, including a civilization becoming influential and changes in whether influence is rising or falling. The zone rules compare two observations of the same city and domain from the receiver's tactical map. See [quest deadlines and cultural influence](facts.md#quest-deadlines-and-cultural-influence) and [tactical observations](facts.md#tactical-observations) for what those readings support.
 
 ### Vassals follow their master to war
 

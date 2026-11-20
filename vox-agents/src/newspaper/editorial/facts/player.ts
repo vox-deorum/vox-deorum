@@ -7,6 +7,7 @@ import {
 } from '../../../../../mcp-server/dist/newspaper/evidence.js';
 import { matchesSubjects } from '../../../../../mcp-server/dist/knowledge/helpers/event-subjects.js';
 import { isRecord } from '../../../utils/guards.js';
+import { buildCulturalInfluenceChanges } from './cultural-influence.js';
 import { eventConfig } from './event-city.js';
 import { involvedSubjectSources, observedTeamId, recordedBoolean } from './event.js';
 import {
@@ -175,6 +176,11 @@ export function buildPlayerSnapshotFacts(row: NewspaperSnapshot, context: FactBu
     const field = recordedFact(row.values[key], sources);
     if (field) fields[key === 'Cities' ? 'cityCount' : key[0].toLowerCase() + key.slice(1)] = field;
   }
+  if (major === false && Array.isArray(row.values.QuestDeadlines) &&
+      row.values.QuestDeadlines.every(turn => Number.isSafeInteger(turn) && turn >= row.source.turn)) {
+    fields.questDeadlines = fact(row.values.QuestDeadlines, sources);
+    fields.questObservationTurn = fact(row.source.turn, sources);
+  }
   // Keep the raw route map and infer its readable count from the same row.
   const outgoingRoutes = fields.outgoingTradeRoutes;
   const routeCount = outgoingTradeRouteCount(row.values.OutgoingTradeRoutes);
@@ -223,6 +229,7 @@ function tacticalZoneFacts(zone: NewspaperTacticalZone): FactObject {
     posture: fact(zone.posture, sources)
   };
   if (typeof zone.city === 'string' && zone.city.trim()) fields.city = fact(zone.city, sources);
+  if (zone.previousPosture) fields.previousPosture = fact(zone.previousPosture.posture, [zone.previousPosture.source]);
   const units = recordedFact(zone.units, sources);
   if (units) fields.units = units;
   return fields;
@@ -249,6 +256,10 @@ export function buildPlayerFacts(row: NewspaperSnapshot, context: FactBuildConte
       .filter(zone => zone.source.turn === context.turn)
       .map(tacticalZoneFacts);
     if (zones.length) fields.tacticalZones = fact(zones);
+  }
+  if (id !== context.receiverId && fields.major?.value === true) {
+    const changes = buildCulturalInfluenceChanges(context.evidence, id);
+    if (changes) fields.culturalInfluenceChanges = changes;
   }
 
   const index = diplomacyIndex(context.evidence);

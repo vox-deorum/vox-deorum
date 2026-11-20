@@ -12,6 +12,7 @@ import type {
 } from './evidence.js';
 import { cityAtEvent, cityOwner, knowsPlayer, relatedSources, source, visibility, type NewspaperCityObservation } from './recorded-city.js';
 import { diplomatAtCapital, ownSpyAtCity, type RecordedRoster } from './espionage.js';
+import { projectReceiverQuestDeadlines } from './quest-deadlines.js';
 export type { NewspaperCityObservation } from './recorded-city.js';
 
 type PlayerContact = Pick<Selectable<PlayerSummary>, 'Key'> &
@@ -68,6 +69,10 @@ export function projectNewspaperPlayer(row: Selectable<PlayerSummary>, context: 
   const incoming = diplomatAtCapital(row.Key, context.receiverPlayerID, context);
   const selected = pickFields(row, own ? ownPlayerFields : foreignPlayerFields);
   const values: Record<string, unknown> = projectPlayerReportFields(selected, level, outgoing?.points, info?.IsMajor === 1);
+  if (info?.IsMajor === 0) {
+    const deadlines = projectReceiverQuestDeadlines(row.Quests, context.receiverPlayerID, row.Turn);
+    if (deadlines !== undefined) values.QuestDeadlines = deadlines;
+  }
   if (outgoing) values.OurDiplomatThere = outgoing.present;
   if (incoming) values.TheirDiplomatHere = incoming.present;
   if (own && level === 2) Object.assign(values, pickFields(row, ['Votes', 'Resources', 'MilitaryUnits', 'MilitarySupply', 'DiplomaticDeals']));
@@ -328,6 +333,10 @@ export const newspaperEventConfigs: Record<string, NewspaperEventConfig> = {
     fields: ['OwnerID', 'CityID', 'BuildingType', 'IsGoldPurchase', 'IsFaithPurchase'],
     subjects: { playerIdFields: ['OwnerID'] }, cityIDs: { CityID: 'OwnerID' }
   },
+  CityInvestedBuilding: {
+    fields: ['PlayerID', 'CityID', 'BuildingClass', 'Invested'],
+    subjects: playerSubject, cityIDs: { CityID: 'PlayerID' }
+  },
   PlayerCityFounded: { fields: ['PlayerID', 'PlotX', 'PlotY'], subjects: playerSubject },
   UnitCityFounded: { fields: ['PlayerID', 'UnitID', 'UnitType', 'PlotX', 'PlotY'], subjects: playerSubject },
   CityPuppeted: { fields: ['PlayerID', 'CityID'], subjects: playerSubject, cityIDs: { CityID: 'PlayerID' } },
@@ -426,6 +435,8 @@ export const newspaperEventConfigs: Record<string, NewspaperEventConfig> = {
 const eventNameFields = {
   TechID: 'Tech', PolicyID: 'Policy', BranchType: 'Branch', OldBranchType: 'OldBranch', NewBranchType: 'NewBranch',
   ReligionID: 'Religion', UnitType: 'Unit', KilledUnitType: 'Unit', GreatPersonType: 'Unit', BuildingType: 'Building',
+  // Building investment records a readable building class under the same reported name.
+  BuildingClass: 'Building',
   // A great person's own name is recorded in the unit metadata rather than as a payload field.
   Person: 'Person'
 } as const;
