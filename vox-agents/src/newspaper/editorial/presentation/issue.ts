@@ -8,7 +8,7 @@ import {
   type IssueReceiver,
 } from '../../contracts/issue.js';
 import type { PublicationState } from '../../contracts/publication.js';
-import type { VariantStyle } from '../../contracts/style.js';
+import { variantStyleKinds, type VariantStyle } from '../../contracts/style.js';
 import type { EditorialConfig, EditorialDesign, AuthoredVariant } from '../config/schema.js';
 import type { EditorialTerms } from '../config/expressions.js';
 import { resolveVariantStyle } from '../config/styles.js';
@@ -147,7 +147,7 @@ export function presentIssue(input: {
   if (!masthead) return undefined;
   const variants: Record<string, string> = {};
   const styles: Record<string, VariantStyle> = {};
-  const genreCounts = new Map<string, number>();
+  const styleCounts = new Map(variantStyleKinds.map(kind => [kind, new Map<string, number>()] as const));
   const itemCandidates = new Map<string, EditorialCandidate>();
   const items: IssueItem[] = [];
   for (const [index, candidate] of input.selected.entries()) {
@@ -156,8 +156,13 @@ export function presentIssue(input: {
       (choice) => {
         const weight = candidate.variantWeights[choice.id] ?? 0;
         if (!config.styles) return weight;
-        const count = genreCounts.get(resolveVariantStyle(choice).genre) ?? 0;
-        return weight / (1 + 0.25 * count);
+        const style = resolveVariantStyle(choice);
+        const adjusted = variantStyleKinds.reduce((product, kind) => {
+          const count = styleCounts.get(kind)!.get(style[kind]) ?? 0;
+          return product * config.defaults.styleRepeat[kind] ** count;
+        }, weight);
+        // An extreme factor must not remove an eligible variant or break the draw.
+        return weight > 0 && (adjusted <= 0 || !Number.isFinite(adjusted)) ? weight : adjusted;
       },
       input.proseRandom
     );
@@ -166,7 +171,10 @@ export function presentIssue(input: {
     variants[id] = variant.id;
     const style = resolveVariantStyle(variant);
     styles[id] = style;
-    genreCounts.set(style.genre, (genreCounts.get(style.genre) ?? 0) + 1);
+    for (const kind of variantStyleKinds) {
+      const counts = styleCounts.get(kind)!;
+      counts.set(style[kind], (counts.get(style[kind]) ?? 0) + 1);
+    }
     itemCandidates.set(id, {
       ...candidate,
       sources: uniqueSources([...candidate.sources, ...(candidate.variantSources[variant.id] ?? [])]),

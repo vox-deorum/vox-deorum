@@ -67,6 +67,34 @@ describe('editorial catalogue files', () => {
     });
   });
 
+  it('should load a style rule that matches a list of tags', async () => {
+    const rule = { id: 'listed', match: { stance: ['neutral', 'pro-government'] }, when: 'true', multiplier: 2 };
+    await writeDocument('styles/rules.json', [rule]);
+    const loaded = await loadEditorialConfig(directory);
+    expect(loaded.styles?.rules).toEqual([rule]);
+  });
+
+  it('should reject an unknown or empty style tag list', async () => {
+    const rule = { id: 'listed', match: { stance: ['neutral', 'absent-stance'] }, when: 'true', multiplier: 2 };
+    const matchPath = ['styles', 'rules', 0, 'match', 'stance'];
+    await writeDocument('styles/rules.json', [rule]);
+    await expect(loadEditorialConfig(directory)).rejects.toMatchObject({
+      issues: expect.arrayContaining([expect.objectContaining({ path: matchPath })]),
+    });
+    await writeDocument('styles/rules.json', [{ ...rule, match: { stance: [] } }]);
+    await expect(loadEditorialConfig(directory)).rejects.toMatchObject({
+      issues: expect.arrayContaining([expect.objectContaining({ path: matchPath })]),
+    });
+  });
+
+  it('should supply repeat factors when a catalogue omits styleRepeat', async () => {
+    const base = await loadEditorialConfig();
+    const defaults: Record<string, unknown> = { ...base.defaults };
+    delete defaults.styleRepeat;
+    const loaded = await parseEditorialConfig({ ...base, defaults });
+    expect(loaded.defaults.styleRepeat).toEqual({ voice: 1, stance: 1, genre: 0.8 });
+  });
+
   it('should apply split style overrides after legacy flat overrides', async () => {
     const rule = { id: 'letters', match: { genre: 'reader-mail' }, when: 'true', multiplier: 2 };
     await writeDocument('styles.json', { genre: [{ id: rule.match.genre }], rules: [rule] });
@@ -79,13 +107,14 @@ describe('editorial catalogue files', () => {
   it('should merge trigger overrides by identity and replace primitive arrays', async () => {
     const base = await loadEditorialConfig();
     const [trigger, ...others] = base.triggers;
-    await writeDocument('defaults.json', { feedback: { tag: 0.25 } });
+    await writeDocument('defaults.json', { feedback: { tag: 0.25 }, styleRepeat: { genre: 0.5 } });
     await writeDocument('triggers.json', [{ id: trigger.id, tags: ['cities'], enabled: false }]);
     await writeDocument('triggers/local.json', [{ id: trigger.id, when: ['city.own', 'true'] }]);
     await writeDocument('pages.json', [{ id: 'additional', label: 'Extra', tags: ['extra'], minimum: 1, order: 20 }]);
 
     const loaded = await loadEditorialConfig(directory);
     expect(loaded.defaults.feedback).toEqual({ ...base.defaults.feedback, tag: 0.25 });
+    expect(loaded.defaults.styleRepeat).toEqual({ ...base.defaults.styleRepeat, genre: 0.5 });
     expect(loaded.triggers[0]).toEqual({ ...trigger, tags: ['cities'], enabled: false, when: ['city.own', 'true'] });
     expect(loaded.triggers.slice(1)).toEqual(others);
     expect(loaded.pages.map(page => page.id)).toEqual([...base.pages.map(page => page.id), 'additional']);
@@ -142,7 +171,7 @@ describe('editorial catalogue files', () => {
       { subject: 'event', event: [] }, { window: 'unknown' }, { repeat: 'unknown' },
       { repeat: 0 }, { when: [] }, { group: { by: 'city.owner.id', min: 0 } },
       { values: { city: 'true' } }, { values: { neighboring: 'true' } },
-      ...['values', 'triggerValues', 'group', 'subject', 'period', '$kind'].map(name => ({ values: { [name]: '1' } })),
+      ...['values', 'triggerValues', 'group', 'subject', 'period', '$kind', 'story'].map(name => ({ values: { [name]: '1' } })),
       ...['Math', 'undefined', 'NaN', 'JSON'].map(name => ({ values: { [name]: '1' } })),
     ])
       expect(editorialConfigSchema.safeParse({ ...base, triggers: [{ ...rule, ...change }], templates: [] }).success).toBe(false);

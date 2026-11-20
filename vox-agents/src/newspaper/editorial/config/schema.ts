@@ -1,10 +1,10 @@
 import { z } from 'zod';
 import { presentationSchema } from '../../contracts/design.js';
 import { newspaperLayoutVariantSchema, linkTargetSchema } from '../../contracts/issue.js';
-import { variantStyleAxes, variantStyleSchema } from '../../contracts/style.js';
+import { variantStyleKinds, variantStyleSchema } from '../../contracts/style.js';
 import { getNewspaperAsset } from '../../renderer/assets.js';
 import { editorialConstantsSchema, editorialValueNameSchema } from './constants.js';
-import { defaultVariantStyle, styleCatalogueSchema } from './styles.js';
+import { defaultVariantStyle, styleCatalogueSchema, styleMatchTags } from './styles.js';
 
 const expressionSchema = z.string().refine((source) => source.trim().length > 0, 'Expected an expression.');
 const weightSchema = z.strictObject({
@@ -30,8 +30,8 @@ export const authoredVariantSchema = eligibleSchema.extend({
     )
     .default([]),
 }).refine(
-  (variant) => variantStyleAxes.every((axis) => variant[axis] === undefined) ||
-    variantStyleAxes.every((axis) => variant[axis] !== undefined),
+  (variant) => variantStyleKinds.every((kind) => variant[kind] === undefined) ||
+    variantStyleKinds.every((kind) => variant[kind] !== undefined),
   'Set voice, stance and genre together.',
 );
 export type AuthoredVariant = z.infer<typeof authoredVariantSchema>;
@@ -101,6 +101,11 @@ export const editorialConfigSchema = z
       noveltyBonus: z.number().nonnegative(),
       varietyBonus: z.number().nonnegative(),
       designStickiness: z.number().min(0).max(1),
+      styleRepeat: z.strictObject({
+        voice: z.number().finite().positive(),
+        stance: z.number().finite().positive(),
+        genre: z.number().finite().positive(),
+      }).default({ voice: 1, stance: 1, genre: 0.8 }),
       feedback: z.object({
         window: z.number().int().positive(),
         series: z.number().nonnegative(),
@@ -150,23 +155,36 @@ export const editorialConfigSchema = z
       }
       return ids;
     }
-    const styleIds = new Map(variantStyleAxes.map(axis => {
-      const ids = config.styles ? indexStyleIds(axis, config.styles[axis]) : new Set<string>([defaultVariantStyle[axis]]);
-      if (!ids.has(defaultVariantStyle[axis]))
-        ctx.addIssue({ code: 'custom', path: ['styles', axis], message: `Register the default ${axis} tag "${defaultVariantStyle[axis]}".` });
-      return [axis, ids] as const;
+    const styleIds = new Map(variantStyleKinds.map(kind => {
+      const ids = config.styles ? indexStyleIds(kind, config.styles[kind]) : new Set<string>([defaultVariantStyle[kind]]);
+      if (!ids.has(defaultVariantStyle[kind]))
+        ctx.addIssue({ code: 'custom', path: ['styles', kind], message: `Register the default ${kind} tag "${defaultVariantStyle[kind]}".` });
+      return [kind, ids] as const;
     }));
-    /** Check each explicit tag against its axis in the same effective catalogue. */
+    /** Check each explicit tag against its kind in the same effective catalogue. */
     function checkStyleTags(tags: Partial<z.infer<typeof variantStyleSchema>>, path: (string | number)[]): void {
-      for (const axis of variantStyleAxes) {
-        const id = tags[axis];
-        if (id !== undefined && !styleIds.get(axis)?.has(id))
-          ctx.addIssue({ code: 'custom', path: [...path, axis], message: `Unknown ${axis} tag "${id}".` });
+      for (const kind of variantStyleKinds) {
+        const id = tags[kind];
+        if (id !== undefined && !styleIds.get(kind)?.has(id))
+          ctx.addIssue({ code: 'custom', path: [...path, kind], message: `Unknown ${kind} tag "${id}".` });
       }
     }
     if (config.styles) {
       indexStyleIds('rules', config.styles.rules);
-      config.styles.rules.forEach((rule, index) => checkStyleTags(rule.match, ['styles', 'rules', index, 'match']));
+      config.styles.rules.forEach((rule, index) => {
+        for (const kind of variantStyleKinds) {
+          const tags = styleMatchTags(rule.match[kind]);
+          if (!tags) continue;
+          const seen = new Set<string>();
+          for (const id of tags) {
+            if (seen.has(id))
+              ctx.addIssue({ code: 'custom', path: ['styles', 'rules', index, 'match', kind], message: `Duplicate ${kind} tag "${id}".` });
+            else if (!styleIds.get(kind)?.has(id))
+              ctx.addIssue({ code: 'custom', path: ['styles', 'rules', index, 'match', kind], message: `Unknown ${kind} tag "${id}".` });
+            seen.add(id);
+          }
+        }
+      });
     }
     const rulesById = new Map(config.triggers.map((rule) => [rule.id, rule]));
     config.triggers.forEach((rule, index) => {

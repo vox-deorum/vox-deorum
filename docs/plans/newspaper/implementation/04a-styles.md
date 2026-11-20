@@ -12,7 +12,7 @@ A preference in `styles/rules.json` matches all the tags it names and applies a 
 
 After selecting stories and evaluating page and design eligibility, the editor applies style preferences to the eligible variants for each story. Existing conditions still protect claims that require specific evidence. Each article uses one seeded weighted draw, so several voices can appear in an issue.
 
-Scale each variant's weight by `1 / (1 + 0.25 × prior draws of its genre)`. Count in draw order, including articles later omitted from the pages, and reset each issue. Every eligible variant stays in the draw.
+Scale each variant's weight by the repeat factor for each kind under `defaults.styleRepeat`: each earlier article in the issue with the same voice, stance or genre tag multiplies the weight by that kind's factor, with stock values voice 1.25, stance 1 and genre 0.8. Count in draw order, including articles later omitted from the pages, and reset each issue. Every eligible variant stays in the draw.
 
 The audit records tags beside variant IDs for displayed articles. Applied preference reads join the decision's evidence. Older saved catalogues keep their original draws and older decisions remain readable.
 

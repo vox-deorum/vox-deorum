@@ -1,6 +1,6 @@
 /** Catalogue definitions and defaults for variant style preferences. */
 import { z } from 'zod';
-import { variantStyleAxes, variantStyleSchema, type VariantStyle } from '../../contracts/style.js';
+import { variantStyleKinds, type VariantStyle } from '../../contracts/style.js';
 
 export const defaultVariantStyle = {
   voice: 'general', stance: 'neutral', genre: 'report',
@@ -10,6 +10,26 @@ const styleEntrySchema = z.strictObject({
   id: z.string().min(1),
   guidance: z.string().optional(),
 });
+const styleTagListSchema = z.union([
+  z.string().min(1),
+  z.array(z.string().min(1)).min(1),
+]);
+
+export const styleMatchSchema = z.strictObject({
+  voice: styleTagListSchema.optional(),
+  stance: styleTagListSchema.optional(),
+  genre: styleTagListSchema.optional(),
+}).refine(
+  (match) => variantStyleKinds.some((kind) => match[kind] !== undefined),
+  'Match at least one style tag.',
+);
+export type StyleMatch = z.infer<typeof styleMatchSchema>;
+
+/** Normalize an authored single tag or tag list to a list. */
+export function styleMatchTags(value: string | string[] | undefined): string[] | undefined {
+  if (value === undefined) return undefined;
+  return Array.isArray(value) ? value : [value];
+}
 
 export const styleCatalogueSchema = z.strictObject({
   voice: z.array(styleEntrySchema),
@@ -17,10 +37,7 @@ export const styleCatalogueSchema = z.strictObject({
   genre: z.array(styleEntrySchema),
   rules: z.array(z.strictObject({
     id: z.string().min(1),
-    match: variantStyleSchema.partial().refine(
-      (match) => variantStyleAxes.some((axis) => match[axis] !== undefined),
-      'Match at least one style tag.',
-    ),
+    match: styleMatchSchema,
     when: z.string().regex(/\S/, 'Expected an expression.'),
     multiplier: z.number().finite().positive(),
   })),

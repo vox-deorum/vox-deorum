@@ -7,4 +7,4 @@ export const variantStyleSchema = z.strictObject({
   genre: z.string().min(1),
 });
 export type VariantStyle = z.infer<typeof variantStyleSchema>;
-export const variantStyleAxes = ['voice', 'stance', 'genre'] as const;
+export const variantStyleKinds = ['voice', 'stance', 'genre'] as const;

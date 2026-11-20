@@ -6,7 +6,8 @@ import type { RuleDevelopment } from '../../../../src/newspaper/contracts/trigge
 import { getEditorialExpressions, loadEditorialConfig } from '../../../../src/newspaper/editorial/config/load.js';
 import { editorialConfigSchema, type EditorialConfig } from '../../../../src/newspaper/editorial/config/schema.js';
 import { buildNewspaperFacts } from '../../../../src/newspaper/editorial/facts/index.js';
-import { matchTemplates } from '../../../../src/newspaper/editorial/selection/templates.js';
+import { matchTemplates, type EditorialCandidate } from '../../../../src/newspaper/editorial/selection/templates.js';
+import { applyStylePreferences } from '../../../../src/newspaper/editorial/selection/styles.js';
 import { computeFeedback, candidateFeedback } from '../../../../src/newspaper/editorial/selection/feedback.js';
 import { decaySeries } from '../../../../src/newspaper/editorial/selection/series.js';
 import { selectHeuristic } from '../../../../src/newspaper/editorial/selection/heuristic.js';
@@ -48,6 +49,51 @@ function development(definitionId: string, subject: string, importance = 50): Ru
   const id = `${definitionId}/${subject}`;
   return { id, definitionId, subject, period: { from: 5, to: 10 }, seriesKeys: [id], importance, urgent: false,
     tags: [definitionId], values: { amount: 20, $balance: 20 }, sources: [snapshot(0, 10, {}).source], fingerprint: id };
+}
+
+/** Build a selected candidate with explicit style variants for preference tests. */
+function styleCandidate(
+  id: string, variants: EditorialCandidate['variants'],
+  facts: Partial<Pick<EditorialCandidate, 'importance' | 'urgent' | 'short' | 'tags'>> = {},
+): EditorialCandidate {
+  return {
+    id, subject: `player/${id}`, period: { from: 5, to: 10 }, triggerIds: [], ruleIds: [], templateIds: [],
+    seriesKeys: [], tags: facts.tags ?? [], importance: facts.importance ?? 50, urgent: facts.urgent ?? false,
+    short: facts.short ?? false, weight: 1, variants,
+    variantWeights: Object.fromEntries(variants.map(variant => [variant.id, 1])),
+    variantSources: {}, variantBindings: {}, values: {}, sources: [], fingerprint: id,
+  };
+}
+
+/** Build a small style catalogue with the supplied rules and variant styles. */
+function styleCatalogue(
+  rules: NonNullable<EditorialConfig['styles']>['rules'],
+  variants: { id: string; stance: string; genre: string }[] = [
+    { id: 'letter', stance: 'neutral', genre: 'letter' },
+    { id: 'report', stance: 'neutral', genre: 'report' },
+  ],
+): EditorialConfig {
+  return editorialConfigSchema.parse({
+    ...config,
+    styles: {
+      voice: [{ id: 'general' }],
+      stance: [{ id: 'neutral' }, { id: 'pro-government' }, { id: 'government-critical' }],
+      genre: [{ id: 'report' }, { id: 'letter' }], rules,
+    },
+    templates: [{
+      id: 'styled', triggers: [config.triggers[0].id], tags: [], weight: { base: 1 },
+      variants: variants.map(variant => ({
+        ...variant, headline: variant.id, body: [variant.id], voice: 'general', weight: { base: 1 },
+      })),
+    }],
+  });
+}
+
+/** Apply style rules to selected candidates without running the rest of a check. */
+async function applyRules(catalogue: EditorialConfig, candidates: EditorialCandidate[]) {
+  const compiled = await getEditorialExpressions(catalogue);
+  return applyStylePreferences(candidates, compiled,
+    { constants: {}, facts: buildNewspaperFacts(fixture()) }, { interruptedSlots: new Set() });
 }
 
 describe('editorial engine', () => {
@@ -532,6 +578,49 @@ describe('editorial engine', () => {
       }
     });
 
+  });
+
+  describe('style preferences', () => {
+    it('should raise both stances named in a match list and leave another unchanged', async () => {
+      const catalogue = styleCatalogue(
+        [{ id: 'listed', match: { stance: ['neutral', 'pro-government'] }, when: 'true', multiplier: 2 }],
+        [
+          { id: 'neutral', stance: 'neutral', genre: 'letter' },
+          { id: 'supportive', stance: 'pro-government', genre: 'letter' },
+          { id: 'critical', stance: 'government-critical', genre: 'letter' },
+        ],
+      );
+      const { selected } = await applyRules(catalogue, [
+        styleCandidate('story', catalogue.templates[0].variants),
+      ]);
+      expect(selected[0].variantWeights).toEqual({ neutral: 2, supportive: 2, critical: 1 });
+    });
+
+    it('should read the short and importance facts of each selected story', async () => {
+      const catalogue = styleCatalogue([
+        { id: 'short', match: { genre: 'letter' }, when: 'story.short', multiplier: 2 },
+        { id: 'important', match: { genre: 'letter' }, when: 'story.importance > 60', multiplier: 3 },
+      ]);
+      const variants = catalogue.templates[0].variants;
+      const { selected } = await applyRules(catalogue, [
+        styleCandidate('short', variants, { short: true, importance: 10 }),
+        styleCandidate('important', variants, { importance: 70 }),
+        styleCandidate('ordinary', variants, { importance: 10 }),
+      ]);
+      expect(selected.map(candidate => candidate.variantWeights.letter)).toEqual([2, 3, 1]);
+    });
+
+    it('should read story tags in a preference condition', async () => {
+      const catalogue = styleCatalogue([
+        { id: 'military', match: { genre: 'letter' }, when: "story.tags.includes('military')", multiplier: 4 },
+      ]);
+      const variants = catalogue.templates[0].variants;
+      const { selected } = await applyRules(catalogue, [
+        styleCandidate('military', variants, { tags: ['military'] }),
+        styleCandidate('economy', variants, { tags: ['economy'] }),
+      ]);
+      expect(selected.map(candidate => candidate.variantWeights.letter)).toEqual([4, 1]);
+    });
   });
 
   describe('current-vote feedback', () => {

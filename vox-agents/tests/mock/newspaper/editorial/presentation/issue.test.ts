@@ -152,14 +152,15 @@ describe('editorial presentation', () => {
     const config = createConfig();
     config.styles = { voice: [{ id: 'general' }, { id: 'wire' }], stance: [{ id: 'neutral' }],
       genre: [{ id: 'report' }, { id: 'letter' }], rules: [] };
+    config.defaults.styleRepeat = { voice: 1, stance: 1, genre: 0.5 };
     Object.assign(config.templates[0].variants[1], { voice: 'wire', stance: 'neutral', genre: 'letter' });
     const candidates = ['first', 'second', 'third'].map(id => createCandidate(config, id));
     candidates[0].variantWeights = { first: 1, second: 0 };
     candidates[1].variantWeights = candidates[2].variantWeights = { first: 1, second: 1 };
     const weights = await choices(config);
-    /** Supply draws near the tie and near the lower bound to distinguish a nudge from a ban. */
+    /** Supply a draw between the adjusted and unadjusted thresholds to show the configured factor applies. */
     function publish() {
-      const draws = [0.5, 0.45, 0.1];
+      const draws = [0.5, 0.4, 0.1];
       return presentIssue({
         issueId: 'issue/5', campaignId: 'campaign', timelineId: 'branch', receiver: { playerId: 0, label: 'Receiver' }, turn: 5,
         selected: candidates, state: createInitialPublicationState(), config, weights,
@@ -173,6 +174,52 @@ describe('editorial presentation', () => {
     ];
     expect(Object.values(publish().styles)).toEqual(styles);
     expect(Object.values(publish().styles)).toEqual(styles);
+  });
+
+  it('should favor a voice already drawn when its repeat factor is above one', async () => {
+    const config = createConfig();
+    config.styles = { voice: [{ id: 'general' }, { id: 'wire' }], stance: [{ id: 'neutral' }],
+      genre: [{ id: 'report' }, { id: 'letter' }], rules: [] };
+    config.defaults.styleRepeat = { voice: 2, stance: 1, genre: 1 };
+    Object.assign(config.templates[0].variants[1], { voice: 'wire', stance: 'neutral', genre: 'letter' });
+    const candidates = ['first', 'second'].map(id => createCandidate(config, id));
+    candidates[0].variantWeights = { first: 1, second: 0 };
+    candidates[1].variantWeights = { first: 1, second: 1 };
+    const weights = await choices(config);
+    /** A draw at the midpoint selects the repeated voice once its weight is doubled. */
+    const draws = [0.5, 0.5];
+    const result = presentIssue({
+      issueId: 'issue/5', campaignId: 'campaign', timelineId: 'branch', receiver: { playerId: 0, label: 'Receiver' }, turn: 5,
+      selected: candidates, state: createInitialPublicationState(), config, weights,
+      proseRandom: () => draws.shift()!, presentationRandom: () => 0,
+    })!;
+    expect(Object.values(result.styles)).toEqual([
+      { voice: 'general', stance: 'neutral', genre: 'report' },
+      { voice: 'general', stance: 'neutral', genre: 'report' },
+    ]);
+  });
+
+  it('should follow unadjusted weights when every repeat factor is one', async () => {
+    const config = createConfig();
+    config.styles = { voice: [{ id: 'general' }, { id: 'wire' }], stance: [{ id: 'neutral' }],
+      genre: [{ id: 'report' }, { id: 'letter' }], rules: [] };
+    config.defaults.styleRepeat = { voice: 1, stance: 1, genre: 1 };
+    Object.assign(config.templates[0].variants[1], { voice: 'wire', stance: 'neutral', genre: 'letter' });
+    const candidates = ['first', 'second'].map(id => createCandidate(config, id));
+    candidates[0].variantWeights = { first: 1, second: 0 };
+    candidates[1].variantWeights = { first: 1, second: 1 };
+    const weights = await choices(config);
+    /** The second draw sits just under the even split, so any discount on the repeated style would flip it. */
+    const draws = [0.5, 0.45];
+    const result = presentIssue({
+      issueId: 'issue/5', campaignId: 'campaign', timelineId: 'branch', receiver: { playerId: 0, label: 'Receiver' }, turn: 5,
+      selected: candidates, state: createInitialPublicationState(), config, weights,
+      proseRandom: () => draws.shift()!, presentationRandom: () => 0,
+    })!;
+    expect(Object.values(result.styles)).toEqual([
+      { voice: 'general', stance: 'neutral', genre: 'report' },
+      { voice: 'general', stance: 'neutral', genre: 'report' },
+    ]);
   });
 
   it('should omit sections fully covered by the front page and retain sections with additional stories', async () => {

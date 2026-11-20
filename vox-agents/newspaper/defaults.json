@@ -10,6 +10,11 @@
   "noveltyBonus": 6,
   "varietyBonus": 8,
   "designStickiness": 0.6,
+  "styleRepeat": {
+    "voice": 1.25,
+    "stance": 1,
+    "genre": 0.8
+  },
   "feedback": {
     "window": 50,
     "series": 10,

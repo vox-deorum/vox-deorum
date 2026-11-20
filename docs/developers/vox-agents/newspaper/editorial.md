@@ -31,7 +31,7 @@ The built-in catalogue lives under `vox-agents/newspaper/`. Rules and matching t
 
 | File | Controls |
 | --- | --- |
-| `defaults.json` | Frequency, selection limits, decay, novelty, variety, stickiness, and feedback coefficients |
+| `defaults.json` | Frequency, selection limits, decay, novelty, variety, stickiness, style repeat factors, and feedback coefficients |
 | `constants.json` | Named distances, spans, sizes, type lists and shortcuts, plus printable terms used by prose and mastheads. See [constants and shortcuts](triggers/constants.md). |
 | `triggers/*.json` | Trigger rules: subject, `when`, `values`, importance, repeat, grouping and tags. See the [trigger overview](triggers/overview.md). |
 | `templates/*.json` | Authored variants, typed links and short pieces, grouped by topic like triggers |
@@ -67,15 +67,24 @@ A template names one or more rules in `triggers`. They must all fire for the sam
 
 ### Variant styles
 
-Set `voice`, `stance` and `genre` together. Each ID must be registered in the matching file under `styles/`. An untagged variant uses `general`, `neutral` and `report`. These tags describe the prose and do not change the template's topic tags, page placement or layout.
+Each variant can carry three style tags: voice, stance and genre. Set all three together. Each ID must be registered in the matching file under `styles/`. An untagged variant uses `general`, `neutral` and `report`. These tags describe the prose and do not change the template's topic tags, page placement or layout.
 
-Voice sets how the piece sounds, genre sets its form, and stance sets the position it takes. A peace treaty can be covered in a report or a letter. A neutral account explains the terms; a pro-government account makes the case for signing. See `styles/genre.json` and `styles/stance.json` for drafting guidance.
+Voice sets how the piece sounds, stance sets the position it takes, and genre sets its form. A peace treaty can be covered in a report or a letter. A neutral account explains the terms; a pro-government account makes the case for signing. See `styles/genre.json` and `styles/stance.json` for drafting guidance.
 
-Each preference in `styles/rules.json` has an `id`, a `match` with at least one tag, a `when` expression, and a positive `multiplier`. All named tags must match. For example, a rule matching both `pro-government` and `letter` can double the weight of a supportive letter when `self.happinessPercentage > 50`. A supportive report does not receive that bonus. Use the variant's own `when` for evidence required by its wording.
+Each preference in `styles/rules.json` has an `id`, a `match`, a `when` expression, and a positive `multiplier`. A match names at least one kind. Each kind takes one style tag or a list of style tags; a list matches when the variant's tag is in it. Every named kind must match. For example, a rule matching the stance list `pro-government` or `government-critical` and the genre `letter` can double the weight of an opinionated letter when `self.happinessPercentage > 50`. A report does not receive that bonus. Use the variant's own `when` for evidence required by its wording.
 
-Guard subject-specific facts in shared rules. For example, check `subject.kind === 'city'` before reading `city.happinessDelta`. The editor applies rules after choosing stories. A false condition, an error, or unavailable evidence leaves the weight unchanged. For displayed stories, facts read by applied preferences join the decision audit without becoming evidence for the article's claims.
+A style rule's `when` can also read facts about the selected story:
 
-The editor makes one weighted draw per article and slightly discounts genres already drawn in the same issue, including draws for articles later omitted from the pages. Voices can mix. Saved catalogues without `styles` keep their original draw behavior.
+| Story fact | Meaning |
+| --- | --- |
+| `story.importance` | The candidate's importance on the same scale as trigger importance |
+| `story.urgent` | Whether the candidate is marked urgent |
+| `story.short` | Whether the candidate is a short filler story |
+| `story.tags` | The candidate's topic and scope tags |
+
+For example, `story.tags.includes('military')` applies a preference only to stories tagged military. Guard subject-specific facts in shared rules. For example, check `subject.kind === 'city'` before reading `city.happinessDelta`. The editor applies rules after choosing stories. A false condition, an error, or unavailable evidence leaves the weight unchanged. For displayed stories, facts read by applied preferences join the decision audit without becoming evidence for the article's claims.
+
+The editor makes one weighted draw per article. Each earlier article in the issue whose chosen variant has the same style tag multiplies the weight by that kind's factor in `defaults.styleRepeat`. A factor below 1 discourages repeats, and a factor above 1 encourages them. The stock factors are voice 1.25, stance 1 and genre 0.8, so a repeated genre is slightly discouraged while a repeated voice is favored. Counts follow draw order and include articles later omitted from the pages. Saved catalogues without `styles` keep their original draw behavior.
 
 To add tags, guidance or rules, put just the files you need under your overlay's `styles/` folder. Entries merge by ID. If the overlay also has an older flat `styles.json`, its entries are applied before the split files.
 

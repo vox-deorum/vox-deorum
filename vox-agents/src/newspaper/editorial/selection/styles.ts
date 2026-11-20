@@ -1,15 +1,18 @@
 /** Apply editorial preferences only after factual eligibility and story selection. */
 import type { NewspaperSourceReference } from '../../../../../mcp-server/dist/newspaper/evidence.js';
-import { variantStyleAxes, type VariantStyle } from '../../contracts/style.js';
+import { variantStyleKinds, type VariantStyle } from '../../contracts/style.js';
 import type { CompiledEditorialExpressions } from '../config/expressions.js';
-import { resolveVariantStyle } from '../config/styles.js';
+import { resolveVariantStyle, styleMatchTags, type StyleMatch } from '../config/styles.js';
 import { recordChoiceError } from '../shared/eligibility.js';
 import type { ExpressionBatch, ExpressionCheckBudget } from '../shared/expressions.js';
 import type { EditorialCandidate } from './templates.js';
 
-/** A preference applies only when every tag it names is present on the same variant. */
-function matchesStyle(match: Partial<VariantStyle>, style: VariantStyle): boolean {
-  return variantStyleAxes.every(axis => match[axis] === undefined || match[axis] === style[axis]);
+/** A preference applies only when every kind it names includes the variant's tag. */
+function matchesStyle(match: StyleMatch, style: VariantStyle): boolean {
+  return variantStyleKinds.every(kind => {
+    const tags = styleMatchTags(match[kind]);
+    return tags === undefined || tags.includes(style[kind]);
+  });
 }
 
 /** Adjust prose weights and keep the applied rules' sources separate from the article's evidence. */
@@ -36,7 +39,15 @@ export async function applyStylePreferences(
   const groups = plans.map(({ candidate, rules, bindings }) => ({
     windowFromTurn: candidate.period.from,
     expressions: rules.map(rule => rule.slot),
-    subjects: [bindings],
+    subjects: [{
+      ...bindings,
+      story: {
+        importance: candidate.importance,
+        urgent: candidate.urgent,
+        short: candidate.short ?? false,
+        tags: [...candidate.tags],
+      },
+    }],
   }));
   const results = await compiled.runner.evaluate({ ...batch, groups }, budget);
   const adjusted = selected.slice();

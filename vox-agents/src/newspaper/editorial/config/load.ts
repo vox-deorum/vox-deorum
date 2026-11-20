@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
 import { isRecord } from '../../../utils/guards.js';
-import { variantStyleAxes } from '../../contracts/style.js';
+import { variantStyleKinds } from '../../contracts/style.js';
 import { prepareEditorialExpressions, type CompiledEditorialExpressions } from './expressions.js';
 import { editorialConfigSchema, type EditorialConfig } from './schema.js';
 
@@ -80,7 +80,7 @@ function overlay(base: unknown, custom: unknown): unknown {
 /** Assemble the style catalogue, applying split overrides after any legacy flat overlay. */
 async function readStyleCatalogue(directory: string, optional = false): Promise<unknown> {
   const folder = path.join(directory, 'styles');
-  const files = await Promise.all([...variantStyleAxes, 'rules'].map(async name =>
+  const files = await Promise.all([...variantStyleKinds, 'rules'].map(async name =>
     [name, await readCatalogueFile(folder, name, optional)] as const
   ));
   const split = Object.fromEntries(files.filter(([, value]) => value !== undefined));
