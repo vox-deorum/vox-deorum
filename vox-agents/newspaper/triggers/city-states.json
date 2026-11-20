@@ -32,7 +32,7 @@
       "incident.knows('role') && incident.role === 'none'",
       "incident.knows('target') && incident.target.knows('cityState') && incident.target.cityState === true",
       "incident.target.knows('at') && turn - incident.turn < long",
-      "(() => { const target = incident.target.at(turn - incident.turn + 1); return target.knows('majorAlly') && target.majorAlly !== null && target.majorAlly.self === true; })()"
+      "incident.target.at(turn - incident.turn + 1).is.alliedCityState"
     ],
     "values": { "ally": "incident.knows('target') && incident.target.knows('name') ? incident.target.name : null", "aggressor": "incident.knows('initiator') && incident.initiator.knows('name') ? incident.initiator.name : null" },
     "importance": 80,
@@ -82,7 +82,8 @@
       "event.oldOwner.knows('cityState') && event.oldOwner.cityState === true",
       "event.newOwner.knows('major') && event.newOwner.major === true && event.newOwner.self === false",
       "event.knows('isConquest') && event.isConquest === true",
-      "(() => { const ago = turn - event.turn + 1; if (ago < 1 || ago > long) return false; const target = event.oldOwner.at(ago); return target.knows('majorAlly') && target.majorAlly !== null && target.majorAlly.self; })()"
+      "event.turn <= turn && turn - event.turn < long",
+      "event.oldOwner.at(turn - event.turn + 1).is.alliedCityState"
     ],
     "values": {
       "cityState": "event.oldOwner.knows('name') ? event.oldOwner.name : null",

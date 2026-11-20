@@ -71,6 +71,7 @@ Type lists group recorded names so rules can check a category. The `ideologies` 
 | `greatPeople` | The Great Person unit names | `greatPeople.includes(event.unit)` on a `GreatPersonExpended` event |
 | `defenses` | Walls, Castle, Arsenal, Military Base, and unique replacements | `city.built.some(b => defenses.includes(b.building))` |
 | `ideologies` | Order, Freedom, Autocracy | `ideologies.includes(event.branch)` on a `PlayerAdoptPolicyBranch` event |
+| `worldProjects` | Recorded names of World Congress projects | `worldProjects.includes(proposal.name)` |
 
 Names must match the recording's text. Recordings store localized names, so a catalogue for another language needs its own lists.
 
@@ -86,9 +87,13 @@ A shortcut is a named expression for one subject. It reads like a fact and can u
 | `city.is.starving` | `city.foodPerTurn < 0 && city.foodStored < -city.foodPerTurn * recent` | Losing food, with a reserve that runs out in fewer than `recent` turns |
 | `city.is.besieged` | `city.owner.atWar && city.hitPoints < city.maxHitPoints` | Damaged while its owner is at war |
 | `city.is.conquered` | `city.isOccupied \|\| city.isPuppet` | Held after a capture |
+| `city.is.followsAnotherReligion` | Reads our founded religion and the city's majority | One of our cities follows a different named religion |
 | `player.is.neighbor` | `!player.self && player.distance <= neighboring` | A civilization or city-state next door |
 | `player.is.nearby` | `!player.self && player.distance <= nearby` | A civilization or city-state in our region |
 | `player.is.rival` | `player.major && !player.self && !player.friend && !player.ally` | A major civilization we have no friendship or pact with |
+| `player.is.hasFoundedReligion` | Checks for a readable, nonempty religion name | The player founded a recorded religion |
+| `player.is.hasMajorityReligion` | Checks for a readable, nonempty majority religion name | A recorded religion has a majority in the player's empire |
+| `player.is.alliedCityState` | Tests whether the recorded major ally is the receiver | Use on a city-state, including its snapshot just before a capture or attack |
 | `pair.is.foreignWar` | `pair.atWar && !pair.involvesSelf && pair.majors` | A war between two other major civilizations |
 
 The `pair.is.foreignWar` source is authored in the built-in file and reads pair facts in pair rules.
@@ -105,6 +110,8 @@ A worked check of `city.is.starving`, with `recent` at 5 turns on Standard speed
 A shortcut that reads a [hidden fact](facts.md#hidden-and-missing-facts) is hidden too. Use `city.is.knows('starving')` to check whether the receiver can evaluate it for that city.
 
 Shortcuts follow the subject they are read on: `city.before.is.conquered` tests the earlier city flags, and `city.owner.is.rival` tests the city's linked owner. Globals such as `cities` and `turn` still describe the current check. A historical shortcut can use only the facts available on that snapshot. For example, `city.before.is.frontier` is hidden because `city.own` is available only at the cutoff.
+
+Style rules can use the same shortcuts. A named religion can inform the newspaper's tone, while an unknown reading does not establish that the player lacks a founded religion.
 
 ## Terms
 

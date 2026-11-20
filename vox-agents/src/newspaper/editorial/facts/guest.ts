@@ -280,6 +280,9 @@ function factRuntime(model, wrap, constants, shortcuts) {
           return readable ? matching / readable : 0;
         }));
       }
+      // Current cities expose the receiver's matching tactical zones from the same cutoff observation.
+      if (kind === 'city' && current)
+        method('tacticalZones', Object.freeze(() => tacticalZonesForCity(result)));
       if (timelines[kind] && current) {
         relative('before', from);
         relative('previous', model.previous);
@@ -343,6 +346,19 @@ function factRuntime(model, wrap, constants, shortcuts) {
         if (date < model.earliestSnapshotTurn) return undefined;
         const prior = observation(series(kind, id), date);
         return prior?.segment === undefined ? undefined : prior;
+      }
+      // Match a zone only when the readable city name and the absolute zone ID both agree.
+      function tacticalZonesForCity(city) {
+        if (!city.knows('id') || !city.knows('name')) return undefined;
+        if (!currentIds.player.has(model.receiverId)) return undefined;
+        const self = resolve({ kind: 'player', id: model.receiverId }, 'self', model.turn);
+        if (!self.knows('tacticalZones')) return undefined;
+        const zones = self.tacticalZones;
+        if (!Array.isArray(zones)) return undefined;
+        const id = city.id, name = city.name;
+        if (typeof id !== 'number' || !Number.isSafeInteger(id) || typeof name !== 'string') return undefined;
+        return zones.filter(zone => zone.knows('city') && zone.knows('zoneID') &&
+          zone.city === name && Math.abs(zone.zoneID) === id);
       }
     }
 

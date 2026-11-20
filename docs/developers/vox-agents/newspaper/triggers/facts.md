@@ -145,6 +145,8 @@ The newspaper names the city only if it has a matching readable city observation
 
 A `Withdraw` posture is the AI's assessment during that turn. The recorder can read zones several times in one turn and only saves occupied zones, so an earlier sighting can remain after its units leave. A sea zone can include land units. Use `militaryStrength` or `militaryUnits` for available national context.
 
+To read the zones for a city at the cutoff, use `city.tacticalZones()`. It matches both the city name and the absolute zone ID, so land and sea zones can match the same city. It returns an empty list if the known zones do not match, or `undefined` if the city's identity or the receiver's observations are unavailable.
+
 ### Inferred player facts
 
 | Fact | Meaning | Inferred from |
@@ -153,6 +155,7 @@ A `Withdraw` posture is the AI's assessment during that turn. The recorder can r
 | `cities` | The player's cities that the receiver can see | `city.owner` |
 | `capital` | The player's capital `city` | The city with `isCapital` among `cities` |
 | `distance` | Smallest hex distance between any city of this player and any city of the receiver; 0 for the receiver | City coordinates |
+| `outgoingTradeRouteCount` | Number of route records at this snapshot. An empty map gives 0; a missing or malformed map is hidden. | `outgoingTradeRoutes` |
 | `ideology` | The player's ideology name, or `null` when the record shows no matching branch. Hidden when branch data is unavailable. | Keys of `policyBranches` and the catalogue's `ideologies` list |
 | `atWar` | In at least one known war | `relationships` |
 | `wars` | The players it is known to be at war with | `relationships` |

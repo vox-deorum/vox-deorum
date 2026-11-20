@@ -94,6 +94,11 @@ function relationFacts(observations: Observation[]): FactObject {
   return result;
 }
 
+/** Count recorded route entries from a route map; unsupported top-level values stay unknown. */
+function outgoingTradeRouteCount(value: unknown): number | undefined {
+  return isRecord(value) ? Object.values(value).filter(route => isRecord(route)).length : undefined;
+}
+
 /** Build one directed observation for the relationship list and the runner. */
 function directedRelationship(entry: Relationship, row: NewspaperDiplomacySnapshot): FactObject {
   const result: PlayerFields = {
@@ -170,6 +175,11 @@ export function buildPlayerSnapshotFacts(row: NewspaperSnapshot, context: FactBu
     const field = recordedFact(row.values[key], sources);
     if (field) fields[key === 'Cities' ? 'cityCount' : key[0].toLowerCase() + key.slice(1)] = field;
   }
+  // Keep the raw route map and infer its readable count from the same row.
+  const outgoingRoutes = fields.outgoingTradeRoutes;
+  const routeCount = outgoingTradeRouteCount(row.values.OutgoingTradeRoutes);
+  if (outgoingRoutes && routeCount !== undefined)
+    fields.outgoingTradeRouteCount = fact(routeCount, outgoingRoutes.sources);
   // Covert presence is projected only for known foreign majors. Keep a false reading distinct from absence.
   if (id !== context.receiverId && major === true) {
     for (const [stored, name] of [

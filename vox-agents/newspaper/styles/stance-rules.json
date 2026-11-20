@@ -224,13 +224,13 @@
   {
     "id": "stance-founded-devout-up",
     "match": { "stance": "devout" },
-    "when": "self.knows('foundedReligion') && self.foundedReligion !== null",
+    "when": "self.is.hasFoundedReligion",
     "multiplier": 1.4
   },
   {
     "id": "stance-founded-pluralist-down",
     "match": { "stance": "pluralist" },
-    "when": "self.knows('foundedReligion') && self.foundedReligion !== null",
+    "when": "self.is.hasFoundedReligion",
     "multiplier": 0.75
   },
   {
@@ -332,7 +332,7 @@
   {
     "id": "stance-faith-under-pressure",
     "match": { "stance": ["devout", "traditional"] },
-    "when": "self.knows('foundedReligion') && self.foundedReligion !== null && self.knows('majorityReligion') && self.majorityReligion !== null && self.majorityReligion !== self.foundedReligion",
+    "when": "self.is.hasFoundedReligion && self.is.hasMajorityReligion && self.majorityReligion !== self.foundedReligion",
     "multiplier": 1.3
   },
   {

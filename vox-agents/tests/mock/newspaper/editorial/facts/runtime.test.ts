@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type {
-  NewspaperCongressObservation, NewspaperEvent, NewspaperEvidence, NewspaperSnapshot,
+  NewspaperCongressObservation, NewspaperEvent, NewspaperEvidence, NewspaperSnapshot, NewspaperTacticalZone,
 } from '../../../../../../mcp-server/dist/newspaper/evidence.js';
 import { buildNewspaperFacts } from '../../../../../src/newspaper/editorial/facts/index.js';
 import { reference } from '../../../../../src/newspaper/editorial/facts/model.js';
@@ -68,6 +68,67 @@ function compile(sources: string[], shortcuts?: EditorialShortcutDefinitions) {
 
 describe('newspaper fact runtime', () => {
   describe('condition helpers', () => {
+    it('should distinguish a recorded empty trade network from an unknown one at either date', async () => {
+      const current = {
+        ...own,
+        source: { ...own.source, id: 200, turn: 20, createdAt: 200 },
+        values: { OutgoingTradeRoutes: { Rome: { Gold: 3 }, Ostia: { Production: 2 }, Missing: null, Notes: [] } },
+      };
+      const previous = {
+        ...own,
+        source: { ...own.source, id: 190, turn: 18, createdAt: 180 },
+        values: { OutgoingTradeRoutes: {} },
+      };
+      const runner = await compile([
+        'self.outgoingTradeRouteCount',
+        'self.previous.outgoingTradeRouteCount',
+        "self.previous.knows('outgoingTradeRouteCount')",
+      ]);
+      const input = evidence([]);
+      input.players = [current, foreign];
+      input.history.snapshots.players = [previous, current];
+      const groups = [{ expressions: [0, 1, 2], subjects: [{}] }];
+      const [[[count, baseline, known]]] = await runner.evaluate({ facts: buildNewspaperFacts(input, identity), groups });
+      expect(count).toMatchObject({ value: 2, sources: expect.arrayContaining([current.source]) });
+      expect(baseline).toMatchObject({ value: 0, sources: expect.arrayContaining([previous.source]) });
+      expect(known).toHaveProperty('value', true);
+
+      input.history.snapshots.players[0] = { ...previous, values: { OutgoingTradeRoutes: null } };
+      const [[[unchanged, missing, unknown]]] = await runner.evaluate({ facts: buildNewspaperFacts(input, identity), groups });
+      expect(unchanged).toHaveProperty('value', 2);
+      expect(missing).toHaveProperty('error.hidden', 'player.outgoingTradeRouteCount');
+      expect(unknown).toHaveProperty('value', false);
+    });
+
+    it('should match tactical zones by both city ID and name and cite the zone that supplies a count', async () => {
+      const home = city(7, 20, 11, { Name: 'Rome' });
+      const away = city(9, 20, 12, { Name: 'Ravenna' });
+      const sea: NewspaperTacticalZone = {
+        zoneID: -7, city: 'Rome', domain: 'Sea', posture: 'Withdraw', units: { Barbarians: { Galley: 2 } },
+        source: { table: 'TacticalZones', id: 301, turn: 20, createdAt: 201 },
+      };
+      const zones = [
+        sea,
+        { ...sea, zoneID: 7, city: 'Antium', source: { ...sea.source, id: 302 } },
+        { ...sea, zoneID: 8, source: { ...sea.source, id: 303 } },
+      ];
+      const input = evidence([home, away]);
+      const runner = await compile([
+        'city.tacticalZones()?.length',
+        'city.tacticalZones()?.[0]?.units.Barbarians.Galley',
+      ]);
+      const groups = [{ expressions: [0, 1], subjects: [{ city: reference('city', 7) }, { city: reference('city', 9) }] }];
+      const [[matched, unmatched]] = await runner.evaluate({
+        facts: buildNewspaperFacts({ ...input, tacticalZones: zones }, identity), groups,
+      });
+      expect(matched[0]).toHaveProperty('value', 1);
+      expect(matched[1]).toMatchObject({ value: 2, sources: expect.arrayContaining([sea.source]) });
+      expect(unmatched[0]).toHaveProperty('value', 0);
+
+      const [[[unknown]]] = await runner.evaluate({ facts: buildNewspaperFacts(input, identity), groups });
+      expect(unknown).toMatchObject({ value: undefined });
+    });
+
     it('should match readable branch keys and leave hidden or missing branches unknown', async () => {
       const row = { ...own, values: { ...own.values, PolicyBranches: { Fealty: 3 } } };
       const facts = buildNewspaperFacts({ ...evidence([]), players: [row, foreign] }, identity);

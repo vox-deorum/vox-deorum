@@ -4,13 +4,13 @@
     "subject": "world",
     "window": "recent",
     "when": [
-      "self.knows('outgoingTradeRoutes') && self.outgoingTradeRoutes !== null && typeof self.outgoingTradeRoutes === 'object' && !Array.isArray(self.outgoingTradeRoutes)",
-      "self.knows('before') && self.before.knows('outgoingTradeRoutes') && self.before.outgoingTradeRoutes !== null && typeof self.before.outgoingTradeRoutes === 'object' && !Array.isArray(self.before.outgoingTradeRoutes)",
-      "Object.values(self.before.outgoingTradeRoutes).filter(route => route !== null && typeof route === 'object' && !Array.isArray(route)).length > 0",
-      "Object.values(self.outgoingTradeRoutes).filter(route => route !== null && typeof route === 'object' && !Array.isArray(route)).length === 0"
+      "self.knows('outgoingTradeRouteCount')",
+      "self.knows('before') && self.before.knows('outgoingTradeRouteCount')",
+      "self.before.outgoingTradeRouteCount > 0",
+      "self.outgoingTradeRouteCount === 0"
     ],
     "values": {
-      "routes": "Object.values(self.before.outgoingTradeRoutes).filter(route => route !== null && typeof route === 'object' && !Array.isArray(route)).length"
+      "routes": "self.before.outgoingTradeRouteCount"
     },
     "importance": "55 + 5 * routes",
     "tags": ["politics", "domestic"]
@@ -56,13 +56,12 @@
     "subject": "world",
     "when": [
       "self.knows('before')",
-      "self.outgoingTradeRoutes !== null && typeof self.outgoingTradeRoutes === 'object' && !Array.isArray(self.outgoingTradeRoutes)",
-      "self.before.outgoingTradeRoutes !== null && typeof self.before.outgoingTradeRoutes === 'object' && (!Array.isArray(self.before.outgoingTradeRoutes) || self.before.outgoingTradeRoutes.length === 0)",
-      "!Object.values(self.before.outgoingTradeRoutes).some(route => route !== null && typeof route === 'object' && !Array.isArray(route))",
-      "Object.values(self.outgoingTradeRoutes).some(route => route !== null && typeof route === 'object' && !Array.isArray(route))"
+      "self.knows('outgoingTradeRouteCount')",
+      "(self.before.knows('outgoingTradeRouteCount') && self.before.outgoingTradeRouteCount === 0) || (self.before.knows('outgoingTradeRoutes') && Array.isArray(self.before.outgoingTradeRoutes) && self.before.outgoingTradeRoutes.length === 0)",
+      "self.outgoingTradeRouteCount > 0"
     ],
     "values": {
-      "routes": "Object.values(self.outgoingTradeRoutes).filter(route => route !== null && typeof route === 'object' && !Array.isArray(route)).length"
+      "routes": "self.outgoingTradeRouteCount"
     },
     "importance": 55,
     "tags": ["economy", "trade"]

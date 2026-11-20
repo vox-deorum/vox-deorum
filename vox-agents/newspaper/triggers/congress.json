@@ -128,10 +128,10 @@
     "when": [
       "game.knows('congress')",
       "game.congress.available === true",
-      "(game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => ['World\\'s Fair', 'International Games', 'International Space Station', 'Global Wargames', 'Treasure Fleet', 'United Nations'].includes(r.name))) || (game.congress.knows('proposals') && game.congress.proposals.some(p => ['World\\'s Fair', 'International Games', 'International Space Station', 'Global Wargames', 'Treasure Fleet', 'United Nations'].includes(p.name)))"
+      "(game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => worldProjects.includes(r.name))) || (game.congress.knows('proposals') && game.congress.proposals.some(p => worldProjects.includes(p.name)))"
     ],
     "values": {
-      "project": "(() => { const names = ['World\\'s Fair', 'International Games', 'International Space Station', 'Global Wargames', 'Treasure Fleet', 'United Nations']; const active = game.congress.knows('activeResolutions') ? game.congress.activeResolutions.find(r => names.includes(r.name)) : undefined; const proposal = game.congress.knows('proposals') ? game.congress.proposals.find(p => names.includes(p.name)) : undefined; return active ? active.name : proposal.name; })()"
+      "project": "(() => { const active = game.congress.knows('activeResolutions') ? game.congress.activeResolutions.find(r => worldProjects.includes(r.name)) : undefined; const proposal = game.congress.knows('proposals') ? game.congress.proposals.find(p => worldProjects.includes(p.name)) : undefined; return active ? active.name : proposal.name; })()"
     },
     "importance": 55,
     "tags": ["international", "congress"]

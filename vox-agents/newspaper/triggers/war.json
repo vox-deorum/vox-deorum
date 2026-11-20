@@ -244,12 +244,12 @@
     "subject": "city",
     "when": [
       "city.own && city.knows('name')",
-      "self.knows('tacticalZones') && self.knows('wars')",
-      "self.tacticalZones.some(z => z.knows('city') && z.city === city.name && Math.abs(z.zoneID) === city.id && self.wars.some(p => p.major && p.knows('name') && Object.hasOwn(z.units, p.name)))"
+      "self.knows('wars')",
+      "city.tacticalZones()?.some(z => z.knows('units') && self.wars.some(p => p.major && p.knows('name') && Object.hasOwn(z.units, p.name)))"
     ],
     "values": {
       "cityName": "city.name",
-      "enemies": "self.wars.filter(p => p.major && p.knows('name') && self.tacticalZones.some(z => z.knows('city') && z.city === city.name && Math.abs(z.zoneID) === city.id && Object.hasOwn(z.units, p.name))).map(p => p.name).join(', ')"
+      "enemies": "(() => { const zones = city.tacticalZones()?.filter(z => z.knows('units')) ?? []; return self.wars.filter(p => p.major && p.knows('name') && zones.some(z => Object.hasOwn(z.units, p.name))).map(p => p.name).join(', '); })()"
     },
     "importance": 65,
     "tags": ["cities", "military", "domestic"]
@@ -317,13 +317,12 @@
     "when": [
       "city.knows('own') && city.own === true",
       "city.knows('name')",
-      "self.knows('tacticalZones') && Array.isArray(self.tacticalZones)",
-      "self.tacticalZones.some(z => z.knows('city') && z.city === city.name && Math.abs(z.zoneID) === city.id && z.knows('units') && Object.hasOwn(z.units, 'Barbarians') && Object.values(z.units.Barbarians).some(n => Number.isFinite(n) && n > 0))"
+      "city.tacticalZones()?.some(z => z.knows('units') && Object.hasOwn(z.units, 'Barbarians') && Object.values(z.units.Barbarians).some(n => Number.isFinite(n) && n > 0))"
     ],
     "values": {
       "cityName": "city.name",
-      "barbarians": "self.tacticalZones.filter(z => z.knows('city') && z.city === city.name && Math.abs(z.zoneID) === city.id && z.knows('units') && Object.hasOwn(z.units, 'Barbarians')).flatMap(z => Object.values(z.units.Barbarians)).filter(n => Number.isFinite(n) && n > 0).reduce((sum, n) => sum + n, 0)",
-      "posture": "(() => { const zone = self.tacticalZones.find(z => z.knows('city') && z.city === city.name && Math.abs(z.zoneID) === city.id && z.knows('posture')); return zone ? zone.posture : null; })()"
+      "barbarians": "city.tacticalZones()?.filter(z => z.knows('units') && Object.hasOwn(z.units, 'Barbarians')).flatMap(z => Object.values(z.units.Barbarians)).filter(n => Number.isFinite(n) && n > 0).reduce((sum, n) => sum + n, 0) ?? 0",
+      "posture": "city.tacticalZones()?.find(z => z.knows('posture'))?.posture ?? null"
     },
     "importance": "50 + Math.min(30, 5 * barbarians)",
     "urgent": "barbarians >= 4",

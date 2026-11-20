@@ -350,6 +350,20 @@ describe('stock newspaper styles', () => {
       expect(none.selected[0].variantWeights.pluralist).toBeGreaterThan(none.selected[0].variantWeights.neutral);
     });
 
+    it('should ignore unreadable or non-name founded religion readings', async () => {
+      const candidate = styleCandidate('religion-unreadable', [
+        variant('devout', { stance: 'devout' }),
+        variant('pluralist', { stance: 'pluralist' }),
+        variant('neutral'),
+      ]);
+      for (const founded of [-1, '', {}, undefined]) {
+        const { selected } = await applyStock([candidate], 'Modern Era', { FoundedReligion: founded });
+        const weights = selected[0].variantWeights;
+        expect(weights.devout).toEqual(weights.neutral);
+        expect(weights.pluralist).toEqual(weights.neutral);
+      }
+    });
+
     it('should lift traditional only when the majority faith differs from the founded one', async () => {
       const candidate = styleCandidate('faith-pressure', [
         variant('traditional', { stance: 'traditional' }),
@@ -365,6 +379,25 @@ describe('stock newspaper styles', () => {
       });
       expect(settled.selected[0].variantWeights.traditional)
         .toEqual(settled.selected[0].variantWeights.neutral);
+    });
+
+    it('should ignore unreadable or non-name majority faith readings', async () => {
+      const candidate = styleCandidate('faith-pressure-unreadable', [
+        variant('traditional', { stance: 'traditional' }),
+        variant('neutral'),
+      ]);
+      for (const majority of [-1, '', {}, undefined]) {
+        const { selected } = await applyStock([candidate], 'Modern Era', {
+          FoundedReligion: 'X', MajorityReligion: majority,
+        });
+        expect(selected[0].variantWeights.traditional)
+          .toEqual(selected[0].variantWeights.neutral);
+      }
+      const unfounded = await applyStock([candidate], 'Modern Era', {
+        FoundedReligion: -1, MajorityReligion: 'Y',
+      });
+      expect(unfounded.selected[0].variantWeights.traditional)
+        .toEqual(unfounded.selected[0].variantWeights.neutral);
     });
 
     it('should lift pro-government and artistic only for an active golden age', async () => {
