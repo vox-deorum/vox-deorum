@@ -121,11 +121,13 @@ CREATE TABLE IF NOT EXISTS story_pitches (
   pitch_index   INTEGER NOT NULL,
   civilization  VARCHAR NOT NULL,
   era           VARCHAR NOT NULL,
-  headline      VARCHAR NOT NULL,
-  pitch         VARCHAR NOT NULL,
+  subject       VARCHAR NOT NULL,
   genre         VARCHAR NOT NULL,
   stance        VARCHAR NOT NULL,
-  subject       VARCHAR NOT NULL,
+  voice         VARCHAR,
+  pitch         VARCHAR NOT NULL,
+  headline      VARCHAR NOT NULL,
+  content       VARCHAR,
   basis         VARCHAR NOT NULL,
   wants         VARCHAR NOT NULL,
   embedding     REAL[],
@@ -161,8 +163,26 @@ export class EpisodeWriter {
   private async ensureTable(): Promise<void> {
     await sql.raw(TABLE_DDL).execute(this.db);
     await sql.raw(GAME_OUTCOMES_DDL).execute(this.db);
-    await sql.raw(storyPitchesDdl).execute(this.db);
+    await this.ensureStoryPitchesTable();
     this.logger.info('Episode database tables ensured');
+  }
+
+  /** Create the pitch table or move saved pitches into the new column order. */
+  private async ensureStoryPitchesTable(): Promise<void> {
+    await this.db.transaction().execute(async tx => {
+      await sql.raw(storyPitchesDdl).execute(tx);
+      const { rows } = await sql`SELECT 1 FROM pragma_table_info('story_pitches') WHERE name = 'voice'`.execute(tx);
+      if (rows.length) return;
+
+      await sql`ALTER TABLE story_pitches RENAME TO story_pitches_legacy`.execute(tx);
+      await sql.raw(storyPitchesDdl).execute(tx);
+      await sql`INSERT INTO story_pitches (game_id, player_id, turn, model, pitch_index, civilization, era,
+        subject, genre, stance, pitch, headline, basis, wants, embedding, created_at)
+        SELECT game_id, player_id, turn, model, pitch_index, civilization, era,
+          subject, genre, stance, pitch, headline, basis, wants, embedding, created_at
+        FROM story_pitches_legacy`.execute(tx);
+      await sql`DROP TABLE story_pitches_legacy`.execute(tx);
+    });
   }
 
   /** Read the civilization and era Phase A recorded for a sampled player turn. */
@@ -198,7 +218,7 @@ export class EpisodeWriter {
 
     const rows = pitches.map((p, index) => [
       gameId, playerId, turn, model, index, civilization, era,
-      p.headline, p.pitch, p.genre, p.stance, p.subject, p.basis, p.wants, p.embedding,
+      p.subject, p.genre, p.stance, p.voice, p.pitch, p.headline, p.content, p.basis, p.wants, p.embedding,
     ]);
     const placeholders = rows.map(row => `(${row.map(() => '?').join(', ')})`).join(', ');
     const conn = await this.instance.connect();
@@ -211,7 +231,7 @@ export class EpisodeWriter {
         }
         const stmt = await conn.prepare(
           `INSERT INTO story_pitches (game_id, player_id, turn, model, pitch_index, civilization, era,
-             headline, pitch, genre, stance, subject, basis, wants, embedding) VALUES ${placeholders}`,
+             subject, genre, stance, voice, pitch, headline, content, basis, wants, embedding) VALUES ${placeholders}`,
         );
         let param = 1;
         for (const value of rows.flat()) {

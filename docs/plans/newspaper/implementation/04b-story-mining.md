@@ -56,10 +56,13 @@ Add a **stories mode** to the archivist (`--stories`). It runs Phase A as today,
 
    | Field | Content |
    | --- | --- |
-   | `headline` | A working headline. |
-   | `pitch` | One or two sentences on the story and why a reader would care. |
-   | `genre`, `stance` | Free text the owner can consider when directing the variant drafts. |
    | `subject` | City, civilization, pair of civilizations, event, or the whole world. |
+   | `genre` | The kind of story. |
+   | `stance` | The editorial position it takes. |
+   | `voice` | How the story sounds. |
+   | `pitch` | One or two sentences on the story and why a reader would care. |
+   | `headline` | A working headline. |
+   | `content` | A short draft in the chosen voice. |
    | `basis` | What in the reading material prompted it. |
    | `wants` | Anything the model wished it knew to write the story. This points at missing facts. |
 

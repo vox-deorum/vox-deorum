@@ -18,7 +18,9 @@ The scanner accepts a flat archive or experiment subfolders. Each eligible playe
 
 The archivist creates `story_pitches` in every episode database and fills it in [stories mode](archivist.md#story-mining). Each pitch has a zero-based index within its turn sample. `model` stores the resolved provider and model name, including any reasoning effort suffix, so an alias and its target share a resume key. `civilization` and `era` come from the matching episode.
 
-The model supplies `headline`, `pitch`, `genre`, `stance`, `subject`, `basis`, and `wants`. The optional `embedding` encodes the headline and pitch as a `REAL[]`, using the embedder's configured dimensions. `created_at` records when the pitch was inserted.
+The pitch columns are `subject`, `genre`, `stance`, `voice`, `pitch`, `headline`, `content`, `basis`, and `wants`, in that order. New pitches include a voice and a short draft in `content`. Older pitches keep their original data and have null values for these two fields; use `--stories --force` to regenerate them.
+
+The optional `embedding` encodes the headline and pitch as a `REAL[]`, using the embedder's configured dimensions. `created_at` records when the pitch was inserted.
 
 ## Metrics
 

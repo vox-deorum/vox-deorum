@@ -163,10 +163,12 @@ async function readEpisode(dbPath: string) {
   });
 }
 
-/** Read the saved pitch identities across games and models. */
+/** Read saved pitches across games and models, including fields missing from old pitches. */
 async function readStoryPitches(dbPath: string) {
   return withEpisodeDatabase(dbPath, async connection => {
-    const result = await connection.runAndReadAll('SELECT game_id, model, headline FROM story_pitches ORDER BY game_id, model');
+    const result = await connection.runAndReadAll(
+      'SELECT game_id, model, headline, voice, content FROM story_pitches ORDER BY game_id, model',
+    );
     return result.getRowObjectsJS();
   });
 }
@@ -182,7 +184,7 @@ afterEach(async () => {
 });
 
 describe('Archivist source CLI', () => {
-  it('should preserve saved pitches on a forced rebuild and keep episodes, landmarks and other models’ pitches with stories force', async () => {
+  it('should migrate saved pitches and preserve them on forced runs without new pitches', async () => {
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'archivist-console-'));
     const archiveDir = path.join(tempDir, 'archive');
     const workDir = path.join(tempDir, 'work');
@@ -227,8 +229,16 @@ describe('Archivist source CLI', () => {
       { game_id: 'fixture-game', model: 'archived-scout-a', headline: 'First archived pitch' },
       { game_id: 'fixture-game', model: 'archived-scout-b', headline: 'Second archived pitch' },
       otherGamePitch,
-    ];
+    ].map(pitch => ({ ...pitch, voice: null, content: null }));
     await withEpisodeDatabase(outputPath, async connection => {
+      await connection.run(`CREATE OR REPLACE TABLE story_pitches (
+        game_id VARCHAR NOT NULL, player_id INTEGER NOT NULL, turn INTEGER NOT NULL,
+        model VARCHAR NOT NULL, pitch_index INTEGER NOT NULL, civilization VARCHAR NOT NULL, era VARCHAR NOT NULL,
+        headline VARCHAR NOT NULL, pitch VARCHAR NOT NULL, genre VARCHAR NOT NULL, stance VARCHAR NOT NULL,
+        subject VARCHAR NOT NULL, basis VARCHAR NOT NULL, wants VARCHAR NOT NULL, embedding REAL[],
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (game_id, player_id, turn, model, pitch_index)
+      )`);
       for (const { game_id, model, headline } of savedPitches) {
         await connection.run(`INSERT INTO story_pitches
           (game_id, player_id, turn, model, pitch_index, civilization, era, headline, pitch, genre, stance, subject, basis, wants)
@@ -240,6 +250,7 @@ describe('Archivist source CLI', () => {
     updateFixtureScore(202);
     await runArchivist(args, workDir, env);
     expect(await readEpisode(outputPath)).toMatchObject({ score: 101 });
+    expect(await readStoryPitches(outputPath)).toEqual(savedPitches);
 
     const storyArgs = [...args, '--stories', '--story-turns', '1', '--seed', 'fixture', '--force'];
     await runArchivist(storyArgs, workDir, env);

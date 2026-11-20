@@ -32,11 +32,13 @@ const options = { turnCount: 1, seed: defaultStorySeed, force: false, skipEmbedd
 /** Produce a complete set of pitches with a distinguishable revision. */
 function samplePitches(label: string, count = 5) {
   return Array.from({ length: count }, (_, i) => ({
-    headline: `${label} ${i + 1}`,
-    pitch: 'A new granary changes where the market meets.',
+    subject: 'Nineveh',
     genre: 'City life',
     stance: 'Curious',
-    subject: 'Nineveh',
+    voice: 'Wry local columnist',
+    pitch: 'A new granary changes where the market meets.',
+    headline: `${label} ${i + 1}`,
+    content: 'The new granary has made the market square a little quieter and its own front steps a good deal louder.',
     basis: 'Granary recorded in Nineveh',
     wants: i === 0 ? '' : 'Who can use the granary?',
   }));
@@ -161,7 +163,11 @@ describe('archivist story mining', () => {
     expect(scout.doStreamCalls).toHaveLength(1);
     expect(JSON.stringify(scout.doStreamCalls[0].prompt)).toContain('Nineveh built a granary');
     expect(embedder.doEmbedCalls[0].values).toEqual(pitches.map(p => `${p.headline}\n${p.pitch}`));
-    expect(await readRows()).toMatchObject(pitches.map((pitch, pitchIndex) => ({
+    const rows = await readRows();
+    expect(Object.keys(rows[0]).slice(7, -2)).toEqual([
+      'subject', 'genre', 'stance', 'voice', 'pitch', 'headline', 'content', 'basis', 'wants',
+    ]);
+    expect(rows).toMatchObject(pitches.map((pitch, pitchIndex) => ({
       game_id: gameId, player_id: playerId, turn: 10, model: defaultModel, pitch_index: pitchIndex,
       civilization: 'Babylon', era: 'Classical Era', ...pitch, embedding: [pitchIndex, 0.25],
     })));

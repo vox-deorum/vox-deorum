@@ -141,11 +141,13 @@ export interface Episode extends RawEpisode {
 
 /** Fields the scout provides for each newspaper pitch. */
 const storyPitchSchema = z.object({
-  headline: z.string().trim().min(1),
-  pitch: z.string().trim().min(1),
+  subject: z.string().trim().min(1),
   genre: z.string().trim().min(1),
   stance: z.string().trim().min(1),
-  subject: z.string().trim().min(1),
+  voice: z.string().trim().min(1),
+  pitch: z.string().trim().min(1),
+  headline: z.string().trim().min(1),
+  content: z.string().trim().min(1),
   basis: z.string().trim().min(1),
   wants: z.string().trim(),
 });
@@ -164,8 +166,10 @@ export type StorySampleKey = Pick<Episode, 'gameId' | 'playerId' | 'turn'> & { m
 /** Kysely database interface for the episode and story tables. */
 export interface EpisodesDatabase {
   episodes: Episode;
-  storyPitches: StorySampleKey & Pick<Episode, 'civilization' | 'era'> & StoryPitch & {
+  storyPitches: StorySampleKey & Pick<Episode, 'civilization' | 'era'> & Omit<StoryPitch, 'voice' | 'content'> & {
     pitchIndex: number;
+    voice: string | null;
+    content: string | null;
     embedding: number[] | null;
     createdAt: Date;
   };
