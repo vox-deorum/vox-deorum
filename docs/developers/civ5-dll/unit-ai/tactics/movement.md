@@ -1,6 +1,6 @@
 # Unit AI: Tactical Movement
 
-Tactical AI moves operation armies, redistributes available units around city zones, and pulls units out of Withdraw zones. Army movement and reinforcement use `PositionUnitsAroundTarget` in `civ5-dll/CvGameCoreDLL_Expansion2/CvTacticalAI.cpp`; withdrawal uses plain path moves. See the [tactics overview](overview.md) for their place in the turn and [operation stages](../operations/stages.md) for persistent army progress.
+Tactical AI moves operation armies, redistributes available units around city zones, and pulls units out of Withdraw zones. Army movement and reinforcement use `PositionUnitsAroundTarget` in `civ5-dll/CvGameCoreDLL_Expansion2/CvTacticalAI.cpp`; zone withdrawal uses plain path moves, while the operational [Withdraw](../commands/withdrawal.md) command uses the loop's copy of the same routine. See the [tactics overview](overview.md) for their place in the turn and [operation stages](../operations/stages.md) for persistent army progress.
 
 ## Operation army movement
 
@@ -69,6 +69,8 @@ Army gathering and movement use this same positioning routine with the Gather in
 ## Tactical withdrawal
 
 `PlotWithdrawMoves` runs during the zone loop for each Withdraw zone that extracted a target. It does not search: each unit takes its own path move.
+
+The operational [Withdraw command](../commands/withdrawal.md#withdraw-search) is separate. It runs the loop's `PositionUnitsAroundTarget` with the `Withdraw` purpose and retreat scoring, then adds path moves for exposed recruits.
 
 | Step | Rule |
 | --- | --- |

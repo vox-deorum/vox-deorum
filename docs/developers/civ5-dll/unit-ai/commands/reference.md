@@ -160,7 +160,8 @@ A search request's **purpose** labels its command and territory; retries keep th
 | --- | --- |
 | `CityAttack` | Enemy-city fight. |
 | `CityDefense` | Own-city fight. |
-| `Reinforce` | Reinforcement and withdrawal. |
+| `Reinforce` | Reinforcement. |
+| `Withdraw` | Withdrawal. |
 | `BattleFriendly` | Enemy-unit fight in our team's zone. |
 | `BattleNeutral` | Enemy-unit fight in unowned territory, or another team's zone whose owner is not at war with us. |
 | `BattleEnemy` | Enemy-unit fight in enemy territory. |
@@ -210,7 +211,7 @@ The simulator extracts the loop, weights and value source from the DLL and suppl
 | `BeginCommand`, `EndCommand` | Empty in the DLL; simulator work boundaries for each command in its battlefield's zone. |
 | `ClockNs`, `IsHostStopped` | Monotonic host clock and retained stop status: game over in the DLL, any execution failure in the simulator. |
 | Provider routing callbacks | Command choice, optional admission and final search flavors. See [shared callbacks](overview.md#shared-callbacks). |
-| `SearchAndExecute` | DLL native search or simulator provider, with resolved flavors, aggression and target-distance flag. |
+| `SearchAndExecute` | DLL native search or simulator provider, with resolved flavors, aggression, the target-distance flag and the withdraw flag derived from the purpose. |
 
 ## Copies of native functions
 
@@ -219,7 +220,7 @@ Each copy's source comment names its native original or the copy it follows, so 
 | Copy | Native original | Change |
 | --- | --- | --- |
 | `ProcessDominanceZones` | `CvTacticalAI::ProcessDominanceZones` | The [turn integration order](overview.md#turn-integration). |
-| `ExecuteEngagement` and `SearchAndExecute` | `TacticalAIHelpers::FindAndExecuteBestUnitAssignments` | Gather geometry, blend flavors and derive aggression before calling native `FindBestUnitAssignments`. Pass the caller's target distance flag. Keep flavors across up to four attempts and report rows counted as run. |
+| `ExecuteEngagement` and `SearchAndExecute` | `TacticalAIHelpers::FindAndExecuteBestUnitAssignments` | Gather geometry, blend flavors and derive aggression before calling native `FindBestUnitAssignments`. Pass the caller's target distance flag and derive the withdraw flag from the purpose, and cap the aggression of a Withdraw at Low. Keep flavors across up to four attempts and report rows counted as run. |
 | `GatherSearchPlotZones` | Plot gathering in `FindBestUnitAssignments` | Count geometry by zone, leaving out remote air bases and zone IDs 0 and −1. Take the caller's target distance flag. |
 | `ExecuteFight` | `ExecuteDestroyEnemyUnits`, `ExecuteAttackWithUnits`, and the capture follow-up of `ExecuteCaptureCityMoves` | Add endangered recruits, exclude held garrisons from spotting and use the loop's engagement flavors. City fights use the shared offensive readiness rules. Own-city fights branch to `ExecuteCityDefense` after the move label. |
 | `RetiresFight` | Suppression geometry in `SortTargetListAndDropUselessTargets` | Apply distance and zone compatibility after execution, with exposure and near-city exemptions. |
@@ -235,4 +236,4 @@ Each copy's source comment names its native original or the copy it follows, so 
 | `CanMarch` and `MarchFlags` | Far-out path flags and danger limit in `CvTacticalAI::PositionUnitsAroundTarget` | Safe embark for land units in place of native's two no-embark rules; first-stop danger at half remaining HP for attacking non-siege units, otherwise 0. The Withdraw call sets its `bWithdraw` flag to accept the [wider first-stop test](withdrawal.md#readiness-and-execution). |
 | `SearchReachPlots` | One domain of `TacticalAIHelpers::UpdatePlotDistanceToTarget` | The flood stops at 4 steps. |
 | `WithdrawDestination` | The `SearchReachPlots` flood of one domain of `TacticalAIHelpers::UpdatePlotDistanceToTarget` | Flood from the battlefield or the first endangered recruit, stop at the recruit range, and pick the closest friendly city, which must be coastal for a sea domain. Ties go to the lower plot index. |
-| `PositionUnitsAroundTarget` | `CvTacticalAI::PositionUnitsAroundTarget` | Called by `ExecuteReinforce` and `ExecuteWithdraw`. Reinforce runs the search through `ExecuteEngagement` after the spotter move; Withdraw skips spotting and follows the [Withdraw execution rules](withdrawal.md#readiness-and-execution). Exclude held garrisons from spotting and path moves, and send path moves through `CanMarch` and `MarchFlags`. |
+| `PositionUnitsAroundTarget` | `CvTacticalAI::PositionUnitsAroundTarget` | Called by `ExecuteReinforce` and `ExecuteWithdraw`. Reinforce runs the search through `ExecuteEngagement` after the spotter move; Withdraw skips spotting and follows the [Withdraw execution rules](withdrawal.md#readiness-and-execution). A Withdraw search uses the `Withdraw` purpose with the destination as its target, target distance off and aggression capped at Low, and only exposed recruits march after a successful search. Exclude held garrisons from spotting and path moves, and send path moves through `CanMarch` and `MarchFlags`. |

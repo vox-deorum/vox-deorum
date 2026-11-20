@@ -22,6 +22,7 @@ flowchart TD
 | --- | --- | --- |
 | Recruit | The target's victims, the local strength set and each recruit's danger. | [Withdraw recruits](recruitment.md#withdraw-recruits) |
 | Score | `X`, `s⁺` and priority. Rescored after every command and whenever Reinforce changes. | `EstimateWithdraw` in `civ5-dll/CvGameCoreDLL_Expansion2/CvTacticalOperationalLoop.cpp`. |
+| Search | The retreat weights in the plot score, the search purpose and the path step. | [Withdraw search](#withdraw-search) |
 | Check and execute | Destinations, the march rule, admission and path moves. | [Readiness and execution](#readiness-and-execution) |
 
 | Part | Fight | Reinforce | Withdraw |
@@ -128,7 +129,74 @@ A recruit's value at risk is its contribution to `X` only when no staying victim
 | Ties | Lower plot index. |
 | Missing | A domain with no reached friendly city gets −1. |
 
-**Example.** A battlefield 5 plots inside enemy land has our border city 7 path steps away and a city-state with open borders 4 steps away, both within the recruit range. The land flood reaches the city-state, so the Withdraw heads there.
+**Example.** A battlefield 5 plots inside enemy land has our border city 7 path steps away and a city-state with open borders 4 steps away, both within the recruit range. The land flood reaches the city-state, so the Withdraw heads there. That city is also the target of the domain's search.
+
+## Withdraw search
+
+Each domain search runs with the purpose `Withdraw` and its own plot scoring. The retreat objective sits in the plot score, the value that orders candidate moves and replaces each unit's provisional score in a completed plan. The search therefore passes `bTargetDistanceRelevant = false`: the exploration-only pull toward the target and its "never move farther away" rule are off, and the pull home becomes a scored term. The constants are named `TACTICAL_WITHDRAW_*` in `CvTacticalAI.cpp`.
+
+The search covers plots within 5 steps of the destination, within 2 of enemies found there and within 1 of each unit. A candidate plot more than 6 path steps from the destination, or outside that set, is skipped, so a unit with no candidate left gets no search move and is left to the path step.
+
+### Weights
+
+Score points, with the tenfold weight on damage and bonuses applied.
+
+| Term | Fight search | Withdraw search | Why |
+| --- | --- | --- | --- |
+| Enemy distance at 1 / 2 / 3 / 4 or more plots | Peaks at 120 on the unit's own line. | First line `0 / 80 / 120 / 120`; every other line `0 / 30 / 80 / 120`. Plain distance for land and sea, with no line-of-sight filter. | The first line gains most from breaking contact and nothing beyond three plots. Other units, which the search treats as the third line here, keep gaining out to four plots. |
+| Destination distance | Exploration only, 40 per step beyond four plots. | `−w × min(max(steps − 2, 0), 12)` in the plot score, at most 360 for the first line and 480 for other lines. An unreachable plot or a missing target counts as 12. | The pull counts in the final ranking, lets a unit step sideways out of danger, and stops pulling within two plots. The weaker first-line pull keeps the first line behind the others, on the enemy side. |
+| Flat 120 below minimum HP and for explorers | Applies. | Off. | It removes any reason for a wounded unit to move away. |
+| Flat 120 inside a friendly city | Applies. | Applies while the position has visible enemies. Without enemies the native escort table scores the plot as in a fight search. | The city is the sanctuary. |
+| Skirmisher +30 at one plot, melee +50 beside a nearly dead city | Applies. | Off. | Both pull units back in. |
+| An attack that does not kill or capture | 10 per HP dealt, focus bonus up to 250. | `3/10` of the damage and of the focus bonus separately, each rounded down before the tenfold scale: 25 damage is 7, or 70 points; 25 damage plus a 25 focus bonus is 7 + 7, or 140 points. | A parting shot is worth less than two steps of retreat. |
+| An attack that kills or captures | Full. | Full. | A kill removes a threat. |
+| Damage taken | −10 per HP. | −10 per HP. | A melee trade now needs better than three to one. |
+| Healing in place | 10 per HP. | 10 per HP on a plot with zero danger; on a plot with danger, half that, rounded down. | A unit that reached safety may stop and heal. A threatened unit gets too little to beat a real retreat. |
+| Aggression level | From RISK. | Capped at Low. | No risky melee. |
+| Progress test | Units reached their line distance. | A kill, a ranged or melee attack, a heal, or a positive sum of the units' placement gains (end plot score minus start plot score). | The gains hold danger, enemy distance and the pull home, so any real retreat counts. |
+| Turn-end danger, isolation doubling, cover, adjacent friend, terrain, frontline city, home ground, moves left, trade, captures, camps, citadels, pillage | As today. | Unchanged. | Kept out to limit the change. |
+
+In a Withdraw, a unit with a legal shot still gets the staying and healing candidates, so it may fire or stay and heal.
+
+### Enemy distance
+
+Distance 0 reads as 1, so a plot with an enemy on it scores as 1. The first row applies to a unit whose assigned movement strategy is the first line (`MS_FIRSTLINE`). Every other unit uses the other row, including ranged, siege and wounded melee units and a skirmisher the fight search would call first line.
+
+| Line | 1 plot | 2 plots | 3 plots | 4 or more |
+| --- | --- | --- | --- | --- |
+| First line | 0 | 80 | 120 | 120 |
+| Other lines | 0 | 30 | 80 | 120 |
+
+### Destination term
+
+`penalty = w × min(max(steps − 2, 0), 12)`
+
+| Part | Reads as |
+| --- | --- |
+| `steps` | Path length to the destination from `GetPlotDistanceToTarget`. An unreachable plot or a missing target reads as 12. |
+| `steps − 2` | The first two steps are free, which matches the ring-2 arrival of the path step. |
+| `w` | 30 for the first line, 40 for other lines, so the 12-step cap is worth 360 or 480. |
+
+The penalty is subtracted, so a plot closer to the city ranks higher.
+
+### Worked examples
+
+Units are not alone, RISK is 20 after the Withdraw row, so the danger penalty is about 1.52 times the scaled danger. Smaller terms are ignored.
+
+| Case | Stay | Retreat | Chosen |
+| --- | --- | --- | --- |
+| Archer at 60 HP, danger 30 (penalty 76), enemy adjacent, healthy target | Shoot 25: `25 × 3/10 = 7` HP, 70 points | 2 steps to zero danger, enemy distance 1 to 3: `76 danger removed + 80 destination + 80 distance = 236` | Retreat |
+| Same, target at 30 HP | `25 × 3/10 = 7` damage and `25 × 3/10 = 7` focus, 140 points | 236 | Retreat |
+| Same, target at 25 HP, the shot kills | `250 damage + 250 focus + 150 kill = 650` | 236 | Kill |
+| Swordsman at 100 HP, danger 20 (penalty 30), adjacent | Deal 30, take 20: `90 − 200 = −110` | 2 steps, enemy distance 1 to 3: `30 danger removed + 60 destination + 120 distance = 210` | Retreat |
+| Same swordsman already 3 plots from the enemy, no danger | 0 | 2 more steps: `60`; the archer beside it gains `80 destination + 40 distance = 120` | Both move; the archer goes first when plots or movement are short |
+| Spearman at 70 HP on a zero-danger plot, 6 steps from the city, no enemy within 4 plots | Heal 10: `100` | Walk 2 steps: `60` | Heal |
+| Wounded archer at 40 HP, danger 30, every other plot unreachable or more dangerous | Heal 10 with danger: `50` | None available | Heal in place |
+| Same archer with a route to zero danger | Heal 10 with danger: `50` | `114 danger removed + 80 destination + 80 distance = 274` | Retreat |
+
+### Path step after the search
+
+After a successful search, a recruit the search used stays where it is when its plot has no danger, which keeps a chosen safe heal. The path step marches the rest: recruits the search did not use, and used recruits still on a plot with danger. After a failed search it marches every eligible recruit, as before.
 
 ## Readiness and execution
 
@@ -152,11 +220,11 @@ A failed check adds one failure and makes the offer inactive, or skipped at `rea
 | --- | --- | --- |
 | 1 | Before admission, drop recruits whose domain has no destination, then clear the processed flag of every spent recruit. On every exit, restore the processed flag of each recruit that had one, when it still exists and is not dying. | A recruit without a destination stays out of admission and dispositions. A unit an earlier command spent is skipped by admission, the search and the path step, yet it may still have movement left. Processing gained during execution stays. |
 | 2 | No spotter move. | The destination is friendly territory. |
-| 3 | After the search, send every recruit that was not processed, or is still on its starting plot with movement left. | The search has no retreat objective and may finish a unit in place. |
+| 3 | After the search, send every recruit that was not processed, or is still on its starting plot with movement left, but after a successful search leave a recruit the search used on a plot with no danger where it is. | The search now plans the retreat. The path step still moves recruits the search did not reach and rescues anyone it left exposed, and a chosen heal in safety stands. |
 | 4 | Order path moves by lowest health share first, civilians last. | Damaged units get the first chance to march within their domain. The search keeps its own order. |
 | 5 | Use the [march rule](#readiness-and-execution). | A retreat may accept a stop that native refuses while staying is worse. |
 
-The admitted units split by domain, land first. Each nonempty domain with a destination runs one `PositionUnitsAroundTarget` call, so a command can run two searches, each with up to four attempts. The command merges both searches' attempts, timing and success, and keeps the first search's flavors, zones, provider request and validation result unless a later search's flavors were invalid; that search's details then replace them, and when both replies are invalid the first reply's details stay. A search that stops still merges what it recorded. `bSearchRan` is set before each search starts. The [records reference](reference.md#records) lists the command fields, including the units that moved or died.
+The admitted units split by domain, land first. Each nonempty domain with a destination runs one `PositionUnitsAroundTarget` call, so a command can run two searches, each with up to four attempts. Each search uses the `Withdraw` purpose with the destination as its target, turns target distance off because the retreat terms are in the plot score, and caps aggression at Low. The command merges both searches' attempts, timing and success, and keeps the first search's flavors, zones, provider request and validation result unless a later search's flavors were invalid; that search's details then replace them, and when both replies are invalid the first reply's details stay. A search that stops still merges what it recorded. `bSearchRan` is set before each search starts. The [records reference](reference.md#records) lists the command fields, including the units that moved or died.
 
 ## Closing the battlefield
 

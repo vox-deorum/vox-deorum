@@ -129,7 +129,7 @@ A failing unit is excluded from this offer's selection for the rest of the turn.
 2. Run `ExecuteEngagement` for the units still available. Gather search geometry and resolve search preferences and aggression after the spotter move. Keep target distance relevant to search scoring, and use the target's owner as the counterpart (the player used for civilization modifiers), or none at our city.
 3. After a successful search, leave units within four path steps of the target for later work, as native does (see [movement](../tactics/movement.md#execution)). Move every other unprocessed unit along a path through `CanMarch` and `MarchFlags`, then run the safety pass for army members.
 
-The command record keeps the selection, whether the search ran, the units that moved or died for Reinforce and Withdraw alike, and whether any of them did. A Withdraw uses the label `AI_TACTICAL_WITHDRAW` and the destination in place of the target. It skips the spotter move and the four-step hold, then follows the [Withdraw execution rules](withdrawal.md#readiness-and-execution).
+The command record keeps the selection, whether the search ran, the units that moved or died for Reinforce and Withdraw alike, and whether any of them did. A Withdraw uses the label `AI_TACTICAL_WITHDRAW` and the destination in place of the target. It skips the spotter move and the four-step hold, searches with the `Withdraw` purpose and [retreat scoring](withdrawal.md#withdraw-search) with target distance off and aggression capped at Low, then follows the [Withdraw execution rules](withdrawal.md#readiness-and-execution).
 
 ## Flavors and aggression
 
@@ -174,7 +174,7 @@ RISK always counts as set for danger scoring. **Aggression examples** use suppli
 
 `AggressionFromRisk` maps aggression RISK (the posture-based score for search aggression) to a search level using the thresholds below. Retries keep that level and the original search flavors (preferences used to score tactical plans).
 
-With default rows and no modifiers, single-zone unit fights resolve to Low for Attrition and Hedgehog, Medium for Exploit Flanks and Counterattack, and High for Steamroll. City fights and Reinforce still receive their kind offsets. Native city assaults choose aggression by melee count, and native positioning searches always use Low. The loop uses the same posture and kind calculation for these searches.
+With default rows and no modifiers, single-zone unit fights resolve to Low for Attrition and Hedgehog, Medium for Exploit Flanks and Counterattack, and High for Steamroll. City fights and Reinforce still receive their kind offsets. A Withdraw applies its kind row and then caps the level at Low. Native city assaults choose aggression by melee count, and native positioning searches always use Low. The loop uses the same posture and kind calculation for these searches.
 
 | Aggression RISK (score used to select search aggression) | Level with default thresholds |
 | --- | --- |

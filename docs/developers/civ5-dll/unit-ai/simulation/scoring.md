@@ -43,7 +43,7 @@ For example, an attack that deals 30 damage, takes 10, earns a kill and improves
 | Hold in place (`A_FINISH_TEMP`) | Current tile, with provisional danger and any frontline fortification credit. | Expected damage from an adjacent enemy citadel, if any. | Potential damage to adjacent enemies from a fortification ability. |
 | Release the unit (`A_BLOCKED`) | Keeps the provisional value until the plan is complete. | Adds none. | Adds none. Remaining moves stay available for later tasks. |
 
-The search offers a ranged unit a hold or heal only if no shot qualifies in the local search. The starting assignment (`A_INITIAL`) supplies a plot reference for comparing candidates without adding points.
+The search offers a ranged unit a hold or heal only if no shot qualifies in the local search. A Withdraw search also offers the hold or heal alongside a qualifying shot, so staying still competes with a parting shot. The starting assignment (`A_INITIAL`) supplies a plot reference for comparing candidates without adding points.
 
 ### Why a hold has an interim score
 
@@ -85,6 +85,8 @@ With enemies present, the land desirability table peaks at 12:
 | Third line        | 3 plots                                            |
 
 Naval units use a separate table. Without enemies, desirability follows distance to the tactical target. When target distance matters, a unit more than four steps away earns 40 interim points per step closer, up to that four-step boundary, and cannot move farther away. `UpdatePlotDistanceToTarget` builds these distances for both combat and positioning tasks.
+
+A Withdraw search replaces the enemy-distance table with its own two rows, uses plain enemy distance for every unit and scores the pull home in the plot score, so its target distance is off. See [Withdraw search](../commands/withdrawal.md#withdraw-search).
 
 Intermediate moves receive provisional danger penalties. `ScoreCombatUnitTurnEnd` checks final positions against remaining HP, adjusts for experience, and penalizes isolation more heavily. Nearby friendlies, terrain, air cover, and citadels can improve the result. Unsafe plots can be rejected outright.
 
