@@ -136,5 +136,17 @@
     "match": { "genre": "analysis" },
     "when": "(() => { const readable = self.cities.filter(c => c.knows('unhappiness') && c.unhappiness.knows('top') && c.unhappiness.top !== null); const matching = readable.filter(c => ['science'].includes(c.unhappiness.top)); return matching.length > 0 && matching.length * 3 >= readable.length; })()",
     "multiplier": 1.3
+  },
+  {
+    "id": "genre-world-ideology-letter",
+    "match": { "genre": "letter" },
+    "when": "game.knows('congress') && game.congress.available === true && self.knows('ideology') && typeof self.ideology === 'string' && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && r.name.startsWith('World Ideology') && !r.name.includes(self.ideology))",
+    "multiplier": 1.3
+  },
+  {
+    "id": "genre-session-mood-analysis-editorial",
+    "match": { "genre": ["analysis", "editorial"] },
+    "when": "game.knows('congress') && game.congress.available === true && (game.congress.votingNow === true || (game.congress.knows('expectedSessionTurn') && typeof game.congress.expectedSessionTurn === 'number' && game.congress.expectedSessionTurn <= turn + 3)) && (story.tags.includes('international') || story.tags.includes('diplomacy'))",
+    "multiplier": 1.3
   }
 ]

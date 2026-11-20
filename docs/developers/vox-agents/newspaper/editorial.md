@@ -92,7 +92,7 @@ To add style tags, guidance or rules, include just the files you need under your
 
 #### Stock rule groups
 
-The stock rules are easiest to read by the evidence each group uses.
+The stock rules are easiest to read by the evidence each group uses. Style rules read lasting conditions of the nation, and single events are covered by [triggers](triggers/overview.md).
 
 | Group | What it reads | Example effect |
 | --- | --- | --- |
@@ -106,6 +106,7 @@ The stock rules are easiest to read by the evidence each group uses.
 | War | War state, score, weariness, vassalage and denouncements from relationships | A winning war lifts hawkish and national; war weariness lifts conciliatory. |
 | Treasury | Gold per turn | A deficit lifts government-critical and populist. |
 | Standing | Score rank and city count | A small nation lifts local; last place lifts government-critical. |
+| World Congress | `game.congress` active resolutions and session timing | An active Global Peace Accords lifts conciliatory and lowers hawkish. |
 
 ### Placeholders and facts
 

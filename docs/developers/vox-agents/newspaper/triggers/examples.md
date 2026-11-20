@@ -70,11 +70,21 @@ The `golden-age-in-wartime-account` template uses `self.happinessPercentage`, th
 
 ## Congress
 
-Use the [Congress facts](facts.md#congress) in an overlay rule:
+The [Congress rules](../../../../../vox-agents/newspaper/triggers/congress.json) are stock triggers without story templates. Add a template that names one of them when you want to print the story. Every rule starts with `game.knows('congress')` and `game.congress.available === true`, then reads the [Congress facts](facts.md#congress).
 
-- For a session expected next turn, use a world rule that checks `game.knows('congress')`, `game.congress.knows('expectedSessionTurn')`, and `game.congress.expectedSessionTurn === turn + 1`.
-- For a new proposal, check `game.knows('congress')` and `game.congress.newProposals.length > 0`. Use the proposal's `name` and `isEnact` in the story, and its `observedTurn` if you need an approximate date.
-- For a defeated proposal, use an event rule for `ResolutionResult` with `event.passed === false`. Add `event.isEnact` to limit the rule to enactment votes. Use the recorded `proposerName` when present.
+| Rule | What makes news | Authoring pattern |
+| --- | --- | --- |
+| `congress-session-imminent` | A session is expected next turn. | Check `game.congress.knows('expectedSessionTurn')` and `game.congress.expectedSessionTurn === turn + 1`. |
+| `congress-voting-opens` | Voting is open now. | Require `game.congress.votingNow === true`. |
+| `congress-new-proposals` | The agenda gained a proposal. | Read `game.congress.newProposals`; rank our own proposal higher with the `ours` value. |
+| `congress-resolution-passed` | A `ResolutionResult` event records a passed vote. | Use the event's `passed`, `isEnact`, `resolutionType` and `proposerName`. `event.player` is the proposer when that player is visible. |
+| `congress-resolution-defeated` | A `ResolutionResult` event records a failed vote. | Match the passed rule with `event.passed === false`. |
+| `congress-sanctions-on-us` | An active resolution sanctions our civilization. | The resolution name starts with `Sanction` and includes our civilization name. |
+| `congress-world-ideology` | An active resolution imposes a world ideology. | The resolution name starts with `World Ideology`; the `ours` value checks whether it names our ideology. |
+| `congress-world-religion` | An active resolution imposes a world religion. | The resolution name starts with `World Religion`; the `ours` value checks our founded or majority religion. |
+| `congress-world-project` | The league starts a project such as the World's Fair or Global Wargames. | Match a known project name in the active resolutions or the current proposals. |
+
+`ResolutionResult` records a numeric type in `resolutionType`, so use it for conditions instead of prose. A resolution name is available only in the Congress facts, not in the event.
 
 ## Probe catalogue examples
 

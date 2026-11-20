@@ -71,5 +71,48 @@
       "min": 3
     },
     "importance": "40 + 10 * count"
+  },
+  {
+    "id": "cities-share-grievance",
+    "subject": "city",
+    "when": [
+      "city.own",
+      "city.knows('unhappiness')",
+      "city.unhappiness.top !== null"
+    ],
+    "group": {
+      "by": "city.unhappiness.top",
+      "min": 3
+    },
+    "importance": "40 + 10 * count",
+    "tags": ["cities", "domestic"]
+  },
+  {
+    "id": "city-pillaged-unrest",
+    "subject": "city",
+    "when": [
+      "city.own",
+      "city.knows('unhappiness')",
+      "city.unhappiness.top === 'pillaged'"
+    ],
+    "values": {
+      "pillaged": "city.unhappiness.pillaged"
+    },
+    "importance": 60,
+    "tags": ["cities", "domestic"]
+  },
+  {
+    "id": "city-famine-unrest",
+    "subject": "city",
+    "when": [
+      "city.own",
+      "city.knows('unhappiness')",
+      "city.unhappiness.top === 'famine'"
+    ],
+    "values": {
+      "famine": "city.unhappiness.famine"
+    },
+    "importance": 60,
+    "tags": ["cities", "domestic"]
   }
 ]

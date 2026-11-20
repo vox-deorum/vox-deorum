@@ -342,7 +342,7 @@
     "multiplier": 1.3
   },
   {
-    "id": "stance-last-place-pro-government-down",
+    "id": "stance-last-pro-government-down",
     "match": { "stance": "pro-government" },
     "when": "self.knows('major') && self.major === true && self.knows('score') && players.filter(p => p.knows('major') && p.major === true && p.knows('score')).length >= 3 && players.every(p => p.knows('major') && p.major === true && p.knows('score') ? p.rank('score') <= self.rank('score') : true)",
     "multiplier": 0.75
@@ -456,12 +456,6 @@
     "multiplier": 0.75
   },
   {
-    "id": "stance-pillaged-hawkish-critical-up",
-    "match": { "stance": ["hawkish", "government-critical"] },
-    "when": "(() => { const readable = self.cities.filter(c => c.knows('unhappiness') && c.unhappiness.knows('top') && c.unhappiness.top !== null); const matching = readable.filter(c => ['pillaged'].includes(c.unhappiness.top)); return matching.length > 0 && matching.length * 3 >= readable.length; })()",
-    "multiplier": 1.3
-  },
-  {
     "id": "stance-crowding-environmentalist-traditional-up",
     "match": { "stance": ["environmentalist", "traditional"] },
     "when": "(() => { const readable = self.cities.filter(c => c.knows('unhappiness') && c.unhappiness.knows('top') && c.unhappiness.top !== null); const matching = readable.filter(c => ['specialists'].includes(c.unhappiness.top)); return matching.length > 0 && matching.length * 3 >= readable.length; })()",
@@ -472,5 +466,149 @@
     "match": { "stance": "industrialist" },
     "when": "(() => { const readable = self.cities.filter(c => c.knows('unhappiness') && c.unhappiness.knows('top') && c.unhappiness.top !== null); const matching = readable.filter(c => ['specialists'].includes(c.unhappiness.top)); return matching.length > 0 && matching.length * 3 >= readable.length; })()",
     "multiplier": 0.75
+  },
+  {
+    "id": "stance-arts-funding-artistic",
+    "match": { "stance": "artistic" },
+    "when": "game.knows('congress') && game.congress.available === true && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && r.name.startsWith('Endowment for the Arts'))",
+    "multiplier": 1.3
+  },
+  {
+    "id": "stance-arts-funding-rationalist-down",
+    "match": { "stance": "rationalist" },
+    "when": "game.knows('congress') && game.congress.available === true && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && r.name.startsWith('Endowment for the Arts'))",
+    "multiplier": 0.75
+  },
+  {
+    "id": "stance-science-funding-rationalist",
+    "match": { "stance": "rationalist" },
+    "when": "game.knows('congress') && game.congress.available === true && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && r.name.startsWith('World Science Initiative'))",
+    "multiplier": 1.3
+  },
+  {
+    "id": "stance-science-funding-artistic-down",
+    "match": { "stance": "artistic" },
+    "when": "game.knows('congress') && game.congress.available === true && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && r.name.startsWith('World Science Initiative'))",
+    "multiplier": 0.75
+  },
+  {
+    "id": "stance-world-religion-devout",
+    "match": { "stance": "devout" },
+    "when": "game.knows('congress') && game.congress.available === true && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && r.name.startsWith('World Religion'))",
+    "multiplier": 1.3
+  },
+  {
+    "id": "stance-world-religion-pluralist-down",
+    "match": { "stance": "pluralist" },
+    "when": "game.knows('congress') && game.congress.available === true && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && r.name.startsWith('World Religion'))",
+    "multiplier": 0.75
+  },
+  {
+    "id": "stance-peace-accords-conciliatory",
+    "match": { "stance": "conciliatory" },
+    "when": "game.knows('congress') && game.congress.available === true && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && r.name.startsWith('Global Peace Accords'))",
+    "multiplier": 1.3
+  },
+  {
+    "id": "stance-peace-accords-hawkish-down",
+    "match": { "stance": "hawkish" },
+    "when": "game.knows('congress') && game.congress.available === true && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && r.name.startsWith('Global Peace Accords'))",
+    "multiplier": 0.75
+  },
+  {
+    "id": "stance-casus-belli-hawkish",
+    "match": { "stance": "hawkish" },
+    "when": "game.knows('congress') && game.congress.available === true && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && r.name.startsWith('Casus Belli'))",
+    "multiplier": 1.3
+  },
+  {
+    "id": "stance-casus-belli-conciliatory-down",
+    "match": { "stance": "conciliatory" },
+    "when": "game.knows('congress') && game.congress.available === true && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && r.name.startsWith('Casus Belli'))",
+    "multiplier": 0.75
+  },
+  {
+    "id": "stance-cold-war-national",
+    "match": { "stance": "national" },
+    "when": "game.knows('congress') && game.congress.available === true && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && r.name.startsWith('Cold War'))",
+    "multiplier": 1.3
+  },
+  {
+    "id": "stance-cold-war-hawkish",
+    "match": { "stance": "hawkish" },
+    "when": "game.knows('congress') && game.congress.available === true && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && r.name.startsWith('Cold War'))",
+    "multiplier": 1.2
+  },
+  {
+    "id": "stance-cold-war-pluralist-down",
+    "match": { "stance": "pluralist" },
+    "when": "game.knows('congress') && game.congress.available === true && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && r.name.startsWith('Cold War'))",
+    "multiplier": 0.75
+  },
+  {
+    "id": "stance-cultural-heritage-traditional-artistic",
+    "match": { "stance": ["traditional", "artistic"] },
+    "when": "game.knows('congress') && game.congress.available === true && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && (r.name.startsWith('Cultural Heritage Sites') || r.name.startsWith('Historical Landmarks')))",
+    "multiplier": 1.3
+  },
+  {
+    "id": "stance-natural-heritage-environmentalist",
+    "match": { "stance": "environmentalist" },
+    "when": "game.knows('congress') && game.congress.available === true && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && r.name.startsWith('Natural Heritage Sites'))",
+    "multiplier": 1.3
+  },
+  {
+    "id": "stance-scholars-residence-rationalist",
+    "match": { "stance": "rationalist" },
+    "when": "game.knows('congress') && game.congress.available === true && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && r.name.startsWith('Scholars in Residence'))",
+    "multiplier": 1.3
+  },
+  {
+    "id": "stance-passport-system-pluralist",
+    "match": { "stance": "pluralist" },
+    "when": "game.knows('congress') && game.congress.available === true && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && r.name.startsWith('Passport System'))",
+    "multiplier": 1.3
+  },
+  {
+    "id": "stance-travel-ban-national",
+    "match": { "stance": "national" },
+    "when": "game.knows('congress') && game.congress.available === true && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && r.name.startsWith('Travel Ban'))",
+    "multiplier": 1.3
+  },
+  {
+    "id": "stance-travel-ban-pluralist-down",
+    "match": { "stance": "pluralist" },
+    "when": "game.knows('congress') && game.congress.available === true && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && r.name.startsWith('Travel Ban'))",
+    "multiplier": 0.75
+  },
+  {
+    "id": "stance-decolonization-populist-local",
+    "match": { "stance": ["populist", "local"] },
+    "when": "game.knows('congress') && game.congress.available === true && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && (r.name.startsWith('Decolonization') || r.name.startsWith('Global Liberation')))",
+    "multiplier": 1.3
+  },
+  {
+    "id": "stance-decolonization-elitist-down",
+    "match": { "stance": "elitist" },
+    "when": "game.knows('congress') && game.congress.available === true && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && (r.name.startsWith('Decolonization') || r.name.startsWith('Global Liberation')))",
+    "multiplier": 0.75
+  },
+  {
+    "id": "stance-world-ideology-pro-government",
+    "match": { "stance": "pro-government" },
+    "when": "game.knows('congress') && game.congress.available === true && self.knows('ideology') && typeof self.ideology === 'string' && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && r.name.startsWith('World Ideology') && r.name.includes(self.ideology))",
+    "multiplier": 1.3
+  },
+  {
+    "id": "stance-world-ideology-critical",
+    "match": { "stance": "government-critical" },
+    "when": "game.knows('congress') && game.congress.available === true && self.knows('ideology') && typeof self.ideology === 'string' && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && r.name.startsWith('World Ideology') && !r.name.includes(self.ideology))",
+    "multiplier": 1.3
+  },
+  {
+    "id": "stance-session-mood-conciliatory",
+    "match": { "stance": "conciliatory" },
+    "when": "game.knows('congress') && game.congress.available === true && (game.congress.votingNow === true || (game.congress.knows('expectedSessionTurn') && typeof game.congress.expectedSessionTurn === 'number' && game.congress.expectedSessionTurn <= turn + 3)) && (story.tags.includes('international') || story.tags.includes('diplomacy'))",
+    "multiplier": 1.2
   }
 ]

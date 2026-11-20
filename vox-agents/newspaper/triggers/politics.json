@@ -1,0 +1,209 @@
+[
+  {
+    "id": "denounced-by-major",
+    "subject": "player",
+    "when": [
+      "!player.self && player.knows('major') && player.major === true",
+      "self.relation(player).knows('denouncedByThem')",
+      "self.relation(player).denouncedByThem === true"
+    ],
+    "values": {
+      "civilization": "player.name"
+    },
+    "importance": 60,
+    "tags": ["politics", "international"]
+  },
+  {
+    "id": "becomes-vassal",
+    "subject": "player",
+    "when": [
+      "!player.self && player.knows('major') && player.major === true",
+      "self.relation(player).knows('vassalOf')",
+      "self.relation(player).vassalOf === true"
+    ],
+    "values": {
+      "master": "player.name"
+    },
+    "importance": 90,
+    "urgent": "true",
+    "tags": ["politics", "international"]
+  },
+  {
+    "id": "gains-vassal",
+    "subject": "player",
+    "when": [
+      "!player.self && player.knows('major') && player.major === true",
+      "self.relation(player).knows('masterOf')",
+      "self.relation(player).masterOf === true"
+    ],
+    "values": {
+      "vassal": "player.name"
+    },
+    "importance": 75,
+    "tags": ["politics", "international"]
+  },
+  {
+    "id": "score-leader-changes",
+    "subject": "player",
+    "window": "short",
+    "when": [
+      "player.knows('major') && player.major === true",
+      "player.knows('score') && Number.isFinite(player.score)",
+      "player.before.knows('score')",
+      "player.rank('score') === 1",
+      "player.before.rank('score') > 1"
+    ],
+    "values": {
+      "civilization": "player.name",
+      "tied": "players.some(p => p.id !== player.id && p.knows('major') && p.major === true && p.knows('score') && p.score === player.score)"
+    },
+    "importance": "player.self ? 75 : 55",
+    "tags": ["politics", "international"]
+  },
+  {
+    "id": "falls-to-last-place",
+    "subject": "world",
+    "window": "short",
+    "when": [
+      "self.knows('major') && self.major === true",
+      "self.knows('score') && Number.isFinite(self.score)",
+      "self.before.knows('score') && Number.isFinite(self.before.score)",
+      "players.filter(p => p.knows('major') && p.major === true && p.knows('score') && Number.isFinite(p.score)).length >= 3",
+      "self.rank('score') === players.filter(p => p.knows('major') && p.major === true && p.knows('score') && Number.isFinite(p.score)).length",
+      "self.before.rank('score') < players.filter(p => p.before.knows('score') && p.before.knows('major') && p.before.major === true).length"
+    ],
+    "values": {
+      "count": "players.filter(p => p.knows('major') && p.major === true && p.knows('score') && Number.isFinite(p.score)).length"
+    },
+    "importance": 65,
+    "tags": ["politics", "international"]
+  },
+  {
+    "id": "golden-age-begins",
+    "subject": "event",
+    "event": "PlayerGoldenAge",
+    "when": [
+      "event.starting === true",
+      "event.player.self === true",
+      "self.knows('atWar')",
+      "self.atWar === false"
+    ],
+    "importance": 55,
+    "tags": ["politics", "domestic"]
+  },
+  {
+    "id": "faith-drifts",
+    "subject": "world",
+    "when": [
+      "self.knows('foundedReligion') && typeof self.foundedReligion === 'string'",
+      "self.knows('majorityReligion') && typeof self.majorityReligion === 'string'",
+      "self.foundedReligion.length > 0",
+      "self.majorityReligion.length > 0",
+      "self.foundedReligion !== self.majorityReligion"
+    ],
+    "values": {
+      "founded": "self.foundedReligion",
+      "majority": "self.majorityReligion"
+    },
+    "importance": 60,
+    "tags": ["politics", "domestic"]
+  },
+  {
+    "id": "treasury-falls-into-deficit",
+    "subject": "world",
+    "window": "recent",
+    "when": [
+      "self.knows('goldPerTurn') && Number.isFinite(self.goldPerTurn)",
+      "self.before.knows('goldPerTurn') && Number.isFinite(self.before.goldPerTurn)",
+      "self.goldPerTurn < 0",
+      "self.before.goldPerTurn >= 0"
+    ],
+    "values": {
+      "deficit": "-self.goldPerTurn"
+    },
+    "importance": 55,
+    "tags": ["politics", "domestic"]
+  },
+  {
+    "id": "unhappiness-sets-in",
+    "subject": "world",
+    "window": "recent",
+    "when": [
+      "self.knows('happinessPercentage') && Number.isFinite(self.happinessPercentage)",
+      "self.before.knows('happinessPercentage') && Number.isFinite(self.before.happinessPercentage)",
+      "self.happinessPercentage < 50",
+      "self.before.happinessPercentage >= 50"
+    ],
+    "values": {
+      "happiness": "self.happinessPercentage",
+      "drop": "self.before.happinessPercentage - self.happinessPercentage"
+    },
+    "importance": 60,
+    "tags": ["politics", "domestic"]
+  },
+  {
+    "id": "revolt-threshold-crossed",
+    "subject": "world",
+    "window": "recent",
+    "when": [
+      "self.knows('happinessPercentage') && Number.isFinite(self.happinessPercentage)",
+      "self.before.knows('happinessPercentage') && Number.isFinite(self.before.happinessPercentage)",
+      "self.happinessPercentage < 35",
+      "self.before.happinessPercentage >= 35"
+    ],
+    "values": {
+      "happiness": "self.happinessPercentage"
+    },
+    "importance": 80,
+    "urgent": "true",
+    "tags": ["politics", "domestic"]
+  },
+  {
+    "id": "war-weariness-sets-in",
+    "subject": "pair",
+    "when": [
+      "pair.involvesSelf && pair.atWar === true",
+      "self.relation(pair.other).knows('warWeariness')",
+      "Number.isFinite(self.relation(pair.other).warWeariness)",
+      "self.relation(pair.other).warWeariness >= 50"
+    ],
+    "values": {
+      "opponent": "pair.other.name",
+      "weariness": "self.relation(pair.other).warWeariness"
+    },
+    "importance": 65,
+    "tags": ["politics", "military"]
+  },
+  {
+    "id": "war-turns-against-us",
+    "subject": "pair",
+    "when": [
+      "pair.involvesSelf && pair.atWar === true",
+      "pair.knows('warScore')",
+      "Number.isFinite(pair.warScore)",
+      "pair.warScore <= -25"
+    ],
+    "values": {
+      "opponent": "pair.other.name",
+      "score": "pair.warScore"
+    },
+    "importance": 70,
+    "tags": ["politics", "military"]
+  },
+  {
+    "id": "war-turns-our-way",
+    "subject": "pair",
+    "when": [
+      "pair.involvesSelf && pair.atWar === true",
+      "pair.knows('warScore')",
+      "Number.isFinite(pair.warScore)",
+      "pair.warScore >= 25"
+    ],
+    "values": {
+      "opponent": "pair.other.name",
+      "score": "pair.warScore"
+    },
+    "importance": 60,
+    "tags": ["politics", "military"]
+  }
+]

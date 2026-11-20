@@ -1,7 +1,7 @@
 /** Behavioral checks for the stock newspaper style preferences. */
 import { beforeAll, describe, expect, it } from 'vitest';
 import type {
-  NewspaperDiplomacySnapshot, NewspaperEvidence, NewspaperSnapshot,
+  NewspaperCongressObservation, NewspaperDiplomacySnapshot, NewspaperEvidence, NewspaperSnapshot,
 } from '../../../../../mcp-server/dist/newspaper/evidence.js';
 import { getEditorialExpressions, loadEditorialConfig } from '../../../../src/newspaper/editorial/config/load.js';
 import type { AuthoredVariant, EditorialConfig } from '../../../../src/newspaper/editorial/config/schema.js';
@@ -27,11 +27,13 @@ interface FixtureCity {
   unhappiness?: unknown;
 }
 
-/** Optional players and relationships a style test can add to the receiver fixture. */
+/** Optional players, relationships, cities, Congress record and receiver name a style test can add. */
 interface FixtureExtra {
   others?: OtherPlayer[];
   relationships?: Relationship[];
   cities?: FixtureCity[];
+  congress?: NewspaperEvidence['congress'];
+  name?: string;
 }
 
 let config: EditorialConfig;
@@ -70,7 +72,24 @@ function fixture(era: string, values: Record<string, unknown> = {}, extra: Fixtu
     request: { receiverPlayerID: 0, previousCheckTurn: 5, cutoffTurn: 10 },
     players: [receiver, ...others],
     cities, comparisons: { players: [], cities: [] }, events: [],
+    ...(extra.congress ? { congress: extra.congress } : {}),
     diplomacy: { fromTurn: 5, baseline: [], history: observations, gaps: [] },
+  };
+}
+
+/** Build one public Congress observation at the fixture cutoff turn. */
+function congressEvidence(
+  fields: Partial<NewspaperCongressObservation> = {},
+): NewspaperEvidence['congress'] {
+  return {
+    observations: [{
+      source: { table: 'VictoryProgress', id: 900, turn: 10, createdAt: 10_000 },
+      available: true,
+      votingNow: false,
+      activeResolutions: [],
+      proposals: [],
+      ...fields,
+    }],
   };
 }
 
@@ -106,9 +125,12 @@ async function applyStock(
 ) {
   const compiled = await getEditorialExpressions(config);
   const budget: ExpressionCheckBudget = { interruptedSlots: new Set(), choiceErrors: new Map() };
+  const metadata = extra.name ? { playerIdentities: { 0: { name: extra.name } } } : {};
   const result = await applyStylePreferences(candidates, compiled, {
     constants: {},
-    facts: buildNewspaperFacts(fixture(era, values, extra), {}, { ideologies: config.constants.types.ideologies }),
+    facts: buildNewspaperFacts(fixture(era, values, extra), metadata, {
+      ideologies: config.constants.types.ideologies,
+    }),
   }, budget);
   return { ...result, budget };
 }
@@ -388,6 +410,106 @@ describe('stock newspaper styles', () => {
       const { selected } = await applyStock([candidate], 'Modern Era');
       expect(selected[0].variantWeights.populist).toEqual(selected[0].variantWeights.neutral);
     });
+
+    it('should raise local and lower national when isolation is the most common top cause', async () => {
+      const candidate = styleCandidate('isolation', [
+        variant('local', { stance: 'local' }),
+        variant('national', { stance: 'national' }),
+        variant('neutral'),
+      ]);
+      const { selected } = await applyStock([candidate], 'Modern Era', {}, {
+        cities: [
+          { name: 'Paris', unhappiness: { Isolation: 3 } },
+          { name: 'Orleans', unhappiness: { Isolation: 2 } },
+          { name: 'Lyon', unhappiness: { Culture: 1 } },
+        ],
+      });
+      const weights = selected[0].variantWeights;
+      expect(weights.local).toBeGreaterThan(weights.neutral);
+      expect(weights.national).toBeLessThan(weights.neutral);
+    });
+
+    it('should raise environmentalist and lower industrialist when specialists are the most common top cause', async () => {
+      const candidate = styleCandidate('crowding', [
+        variant('environmentalist', { stance: 'environmentalist' }),
+        variant('industrialist', { stance: 'industrialist' }),
+        variant('neutral'),
+      ]);
+      const { selected } = await applyStock([candidate], 'Modern Era', {}, {
+        cities: [
+          { name: 'Paris', unhappiness: { Specialists: 3 } },
+          { name: 'Orleans', unhappiness: { Specialists: 2 } },
+          { name: 'Lyon', unhappiness: { Culture: 1 } },
+        ],
+      });
+      const weights = selected[0].variantWeights;
+      expect(weights.environmentalist).toBeGreaterThan(weights.neutral);
+      expect(weights.industrialist).toBeLessThan(weights.neutral);
+    });
+
+    it('should raise genre letter above report and lower elitist when poverty is the most common top cause', async () => {
+      const candidate = styleCandidate('poverty-genre', [
+        variant('letter', { genre: 'letter' }),
+        variant('report'),
+        variant('elitist', { stance: 'elitist' }),
+        variant('neutral'),
+      ]);
+      const { selected } = await applyStock([candidate], 'Modern Era', {}, {
+        cities: [
+          { name: 'Paris', unhappiness: { Gold: 5 } },
+          { name: 'Orleans', unhappiness: { Gold: 4 } },
+          { name: 'Lyon', unhappiness: { Culture: 2 } },
+        ],
+      });
+      const weights = selected[0].variantWeights;
+      expect(weights.letter).toBeGreaterThan(weights.report);
+      expect(weights.elitist).toBeLessThan(weights.neutral);
+    });
+
+    it('should raise genre anecdote when boredom is the most common top cause', async () => {
+      const candidate = styleCandidate('boredom-genre', [
+        variant('anecdote', { genre: 'anecdote' }),
+        variant('report'),
+      ]);
+      const { selected } = await applyStock([candidate], 'Modern Era', {}, {
+        cities: [
+          { name: 'Paris', unhappiness: { Culture: 4 } },
+          { name: 'Orleans', unhappiness: { Culture: 3 } },
+          { name: 'Lyon', unhappiness: { Gold: 2 } },
+        ],
+      });
+      expect(selected[0].variantWeights.anecdote).toBeGreaterThan(selected[0].variantWeights.report);
+    });
+
+    it('should raise genre analysis when illiteracy is the most common top cause', async () => {
+      const candidate = styleCandidate('illiteracy-genre', [
+        variant('analysis', { genre: 'analysis' }),
+        variant('report'),
+      ]);
+      const { selected } = await applyStock([candidate], 'Modern Era', {}, {
+        cities: [
+          { name: 'Paris', unhappiness: { Science: 4 } },
+          { name: 'Orleans', unhappiness: { Science: 2 } },
+          { name: 'Lyon', unhappiness: { Gold: 2 } },
+        ],
+      });
+      expect(selected[0].variantWeights.analysis).toBeGreaterThan(selected[0].variantWeights.report);
+    });
+
+    it('should put neutral below devout when religious unrest is the most common top cause', async () => {
+      const candidate = styleCandidate('unrest-down', [
+        variant('devout', { stance: 'devout' }),
+        variant('neutral'),
+      ]);
+      const { selected } = await applyStock([candidate], 'Modern Era', {}, {
+        cities: [
+          { name: 'Paris', unhappiness: { Religion: 4 } },
+          { name: 'Orleans', unhappiness: { Religion: 2 } },
+          { name: 'Lyon', unhappiness: { Gold: 2 } },
+        ],
+      });
+      expect(selected[0].variantWeights.neutral).toBeLessThan(selected[0].variantWeights.devout);
+    });
   });
 
   describe('era fit', () => {
@@ -553,6 +675,109 @@ describe('stock newspaper styles', () => {
     });
   });
 
+  describe('world congress', () => {
+    it('should raise artistic and lower rationalist while the arts resolution is active', async () => {
+      const candidate = styleCandidate('arts-funding', [
+        variant('artistic', { stance: 'artistic' }),
+        variant('rationalist', { stance: 'rationalist' }),
+        variant('neutral'),
+      ]);
+      const { selected } = await applyStock([candidate], 'Modern Era', {}, {
+        congress: congressEvidence({ activeResolutions: [{ name: 'Endowment for the Arts' }] }),
+      });
+      const weights = selected[0].variantWeights;
+      expect(weights.artistic).toBeGreaterThan(weights.neutral);
+      expect(weights.rationalist).toBeLessThan(weights.neutral);
+    });
+
+    it('should raise conciliatory above hawkish for Global Peace Accords', async () => {
+      const candidate = styleCandidate('peace-accords', [
+        variant('conciliatory', { stance: 'conciliatory' }),
+        variant('hawkish', { stance: 'hawkish' }),
+      ]);
+      const quiet = await applyStock([candidate], 'Modern Era');
+      const accords = await applyStock([candidate], 'Modern Era', {}, {
+        congress: congressEvidence({ activeResolutions: [{ name: 'Global Peace Accords' }] }),
+      });
+      expect(accords.selected[0].variantWeights.conciliatory)
+        .toBeGreaterThan(quiet.selected[0].variantWeights.conciliatory);
+      expect(accords.selected[0].variantWeights.hawkish)
+        .toBeLessThan(quiet.selected[0].variantWeights.hawkish);
+    });
+
+    it('should favor a matching World Ideology and oppose a different one', async () => {
+      const candidate = styleCandidate('world-ideology', [
+        variant('pro-government', { stance: 'pro-government' }),
+        variant('critical', { stance: 'government-critical' }),
+        variant('neutral'),
+      ]);
+      const values = { PolicyBranches: { Freedom: ['A'] } };
+      const aligned = await applyStock([candidate], 'Modern Era', values, {
+        congress: congressEvidence({ activeResolutions: [{ name: 'World Ideology: Freedom' }] }),
+      });
+      expect(aligned.selected[0].variantWeights['pro-government'])
+        .toBeGreaterThan(aligned.selected[0].variantWeights.neutral);
+      expect(aligned.selected[0].variantWeights.critical)
+        .toEqual(aligned.selected[0].variantWeights.neutral);
+
+      const opposed = await applyStock([candidate], 'Modern Era', values, {
+        congress: congressEvidence({ activeResolutions: [{ name: 'World Ideology: Order' }] }),
+      });
+      expect(opposed.selected[0].variantWeights.critical)
+        .toBeGreaterThan(opposed.selected[0].variantWeights.neutral);
+      expect(opposed.selected[0].variantWeights['pro-government'])
+        .toEqual(opposed.selected[0].variantWeights.neutral);
+    });
+
+    it('should lift analysis during a voting session on an international story only', async () => {
+      const styles = [variant('analysis', { genre: 'analysis' }), variant('report')];
+      const international = styleCandidate('session-international', styles, { tags: ['international'] });
+      const cities = styleCandidate('session-cities', styles, { tags: ['cities'] });
+      const congress = congressEvidence({ votingNow: true });
+      const abroad = await applyStock([international], 'Modern Era', {}, { congress });
+      expect(abroad.selected[0].variantWeights.analysis)
+        .toBeGreaterThan(abroad.selected[0].variantWeights.report);
+
+      const domestic = await applyStock([cities], 'Modern Era', {}, { congress });
+      expect(domestic.selected[0].variantWeights.analysis)
+        .toEqual(domestic.selected[0].variantWeights.report);
+    });
+
+    it('should leave artistic equal to neutral without a congress fact', async () => {
+      const candidate = styleCandidate('no-congress', [
+        variant('artistic', { stance: 'artistic' }),
+        variant('neutral'),
+      ]);
+      const { selected } = await applyStock([candidate], 'Modern Era');
+      expect(selected[0].variantWeights.artistic).toEqual(selected[0].variantWeights.neutral);
+    });
+
+    it('should leave artistic equal to neutral for an unavailable league', async () => {
+      const candidate = styleCandidate('locked-league', [
+        variant('artistic', { stance: 'artistic' }),
+        variant('neutral'),
+      ]);
+      const { selected } = await applyStock([candidate], 'Modern Era', {}, {
+        congress: congressEvidence({
+          available: false,
+          activeResolutions: [{ name: 'Endowment for the Arts' }],
+        }),
+      });
+      expect(selected[0].variantWeights.artistic).toEqual(selected[0].variantWeights.neutral);
+    });
+
+    it('should leave artistic equal to neutral without an active resolutions field', async () => {
+      const candidate = styleCandidate('bare-league', [
+        variant('artistic', { stance: 'artistic' }),
+        variant('neutral'),
+      ]);
+      const { selected } = await applyStock([candidate], 'Modern Era', {}, {
+        congress: congressEvidence({ activeResolutions: undefined }),
+      });
+      expect(selected[0].variantWeights.artistic).toEqual(selected[0].variantWeights.neutral);
+    });
+  });
+
   describe('rule evaluation', () => {
     it('should record no choice error when every stock style is in play', async () => {
       const styles = config.styles;
@@ -611,6 +836,66 @@ describe('stock newspaper styles', () => {
       });
       expect(conflict.budget.choiceErrors?.size ?? 0).toBe(0);
       expect(conflict.budget.choiceEvaluationIncomplete).toBeUndefined();
+
+      // A recorded Congress exercises every resolution, proposal, session and project rule.
+      const agenda = congressEvidence({
+        votingNow: true,
+        activeResolutions: [
+          { name: 'Endowment for the Arts' },
+          { name: 'World Science Initiative' },
+          { name: 'World Religion: X' },
+          { name: 'Global Peace Accords' },
+          { name: 'Casus Belli' },
+          { name: 'Cold War' },
+          { name: 'Cultural Heritage Sites' },
+          { name: 'Historical Landmarks' },
+          { name: 'Natural Heritage Sites' },
+          { name: 'Scholars in Residence' },
+          { name: 'Passport System' },
+          { name: 'Travel Ban' },
+          { name: 'Decolonization' },
+          { name: 'Global Liberation' },
+          { name: 'World Ideology: Order' },
+          { name: 'World Ideology: Freedom' },
+          { name: 'Sanction: Receiver' },
+          { name: "World's Fair" },
+          { name: 'Treasure Fleet' },
+        ],
+        proposals: [
+          { name: 'World Science Initiative', isEnact: true, proposer: 'Receiver' },
+          { name: 'International Games', isEnact: true },
+          { name: 'Global Wargames', isEnact: true },
+          { name: 'International Space Station', isEnact: true },
+        ],
+      });
+      const congress = await applyStock([voices, stances, genres], 'Ancient Era', values, {
+        name: 'Receiver', congress: agenda,
+      });
+      expect(congress.budget.choiceErrors?.size ?? 0).toBe(0);
+      expect(congress.budget.choiceEvaluationIncomplete).toBeUndefined();
+
+      // An unavailable league keeps its recorded agenda out of every Congress rule.
+      const locked = await applyStock([voices, stances, genres], 'Ancient Era', values, {
+        congress: congressEvidence({
+          available: false,
+          activeResolutions: [{ name: 'Endowment for the Arts' }],
+          proposals: [{ name: 'Endowment for the Arts', isEnact: true, proposer: 'Receiver' }],
+        }),
+      });
+      expect(locked.budget.choiceErrors?.size ?? 0).toBe(0);
+      expect(locked.budget.choiceEvaluationIncomplete).toBeUndefined();
+
+      // An available league without an agenda field exercises the guarded session rules.
+      const bare = await applyStock([voices, stances, genres], 'Ancient Era', values, {
+        congress: congressEvidence({
+          votingNow: false,
+          expectedSessionTurn: 10,
+          activeResolutions: undefined,
+          proposals: undefined,
+        }),
+      });
+      expect(bare.budget.choiceErrors?.size ?? 0).toBe(0);
+      expect(bare.budget.choiceEvaluationIncomplete).toBeUndefined();
     });
   });
 });

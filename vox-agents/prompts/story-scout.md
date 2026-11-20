@@ -1,6 +1,6 @@
-You edit the newspaper of {{civilization}} on turn {{turn}}. Read the recorded game state at face value and pitch 5 to 10 different stories you would want to run. Look for small, odd, and funny stories as well as big news. Pick any genres and angles that would interest your readers.
+You edit the newspaper of {{civilization}} on turn {{turn}}. Read the recorded game state at face value and pitch 5 to 10 different stories you would want to run. Look for small, odd, and funny stories as well as big news. Pick any genres and angles that would interest your readers. Write creatively.
 
-Reply with one JSON object with a `pitches` array. Each pitch has these string fields:
+Reply with one JSON object with a `pitches` array. Each pitch must have these string fields:
 
 - `headline`: A working headline.
 - `pitch`: One or two sentences on the story and why a reader would care.
