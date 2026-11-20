@@ -40,7 +40,8 @@ describe('editorial catalogue files', () => {
     const template = base.templates[0];
     const variant = template.variants[0];
     const match = { voice: 'resident', stance: 'supportive', genre: 'reader-mail' };
-    const rules = [{ id: 'letters', match, when: 'true', multiplier: 2 }];
+    const rule = { id: 'letters', match, when: 'true', multiplier: 2 };
+    const variantPath = ['templates', 0, 'variants', 0];
     /** Apply a style change without repeating the stock prose. */
     async function writeTags(tags: Record<string, string>) {
       await writeDocument('templates.json', [{ id: template.id, variants: [{ id: variant.id, ...tags }] }]);
@@ -48,43 +49,94 @@ describe('editorial catalogue files', () => {
     await writeDocument('styles/voice.json', [{ id: 'resident' }]);
     await writeDocument('styles/stance.json', [{ id: 'supportive' }]);
     await writeDocument('styles/genre.json', [{ id: match.genre }]);
-    await writeDocument('styles/rules.json', rules);
+    await writeDocument('styles/mixed-rules.json', [rule]);
     await writeTags(match);
     const loaded = await loadEditorialConfig(directory);
     expect(loaded.styles?.genre).toEqual([...base.styles!.genre, { id: match.genre }]);
-    expect(loaded.styles?.rules).toEqual(rules);
+    expect(loaded.styles?.rules).toEqual([...base.styles!.rules, rule]);
     expect(loaded.templates[0].variants[0]).toMatchObject(match);
     await writeTags({ voice: 'general' });
-    await expect(loadEditorialConfig(directory)).rejects.toThrow('Set voice, stance and genre together');
-    await writeTags({ ...match, stance: match.genre });
-    await expect(loadEditorialConfig(directory)).rejects.toThrow('Unknown stance tag');
-    await writeTags(match);
-    await writeDocument('styles/rules.json', [{ ...rules[0], match: { voice: match.genre } }]);
-    await expect(loadEditorialConfig(directory)).rejects.toThrow('Unknown voice tag');
-    await writeDocument('styles/rules.json', [{ ...rules[0], multiplier: 0 }]);
     await expect(loadEditorialConfig(directory)).rejects.toMatchObject({
-      issues: expect.arrayContaining([expect.objectContaining({ path: ['styles', 'rules', 0, 'multiplier'] })]),
+      issues: expect.arrayContaining([expect.objectContaining({ path: variantPath })]),
+    });
+    await writeTags({ ...match, stance: match.genre });
+    await expect(loadEditorialConfig(directory)).rejects.toMatchObject({
+      issues: expect.arrayContaining([expect.objectContaining({ path: [...variantPath, 'stance'] })]),
+    });
+    await writeTags(match);
+    await writeDocument('styles/mixed-rules.json', [{ ...rule, multiplier: 0 }]);
+    await expect(loadEditorialConfig(directory)).rejects.toMatchObject({
+      issues: expect.arrayContaining([expect.objectContaining({
+        path: ['styles', 'mixed-rules.json', 0, 'multiplier'],
+      })]),
     });
   });
 
   it('should load a style rule that matches a list of tags', async () => {
     const rule = { id: 'listed', match: { stance: ['neutral', 'pro-government'] }, when: 'true', multiplier: 2 };
-    await writeDocument('styles/rules.json', [rule]);
+    await writeDocument('styles/stance-rules.json', [rule]);
     const loaded = await loadEditorialConfig(directory);
-    expect(loaded.styles?.rules).toEqual([rule]);
+    expect(loaded.styles?.rules).toContainEqual(rule);
   });
 
   it('should reject an unknown or empty style tag list', async () => {
     const rule = { id: 'listed', match: { stance: ['neutral', 'absent-stance'] }, when: 'true', multiplier: 2 };
-    const matchPath = ['styles', 'rules', 0, 'match', 'stance'];
-    await writeDocument('styles/rules.json', [rule]);
+    const matchPath = ['styles', 'stance-rules.json', 0, 'match', 'stance'];
+    await writeDocument('styles/stance-rules.json', [rule]);
     await expect(loadEditorialConfig(directory)).rejects.toMatchObject({
       issues: expect.arrayContaining([expect.objectContaining({ path: matchPath })]),
     });
-    await writeDocument('styles/rules.json', [{ ...rule, match: { stance: [] } }]);
+    await writeDocument('styles/stance-rules.json', [{ ...rule, match: { stance: [] } }]);
     await expect(loadEditorialConfig(directory)).rejects.toMatchObject({
       issues: expect.arrayContaining([expect.objectContaining({ path: matchPath })]),
     });
+  });
+
+  it('should load voice, stance, genre and mixed rules in that order after stock rules', async () => {
+    const base = await loadEditorialConfig();
+    const fields = { when: 'true', multiplier: 2 };
+    const voice = [
+      { ...fields, id: 'voice-z', match: { voice: 'general' } },
+      { ...fields, id: 'voice-a', match: { voice: 'general' } },
+    ];
+    const stance = { ...fields, id: 'stance-pref', match: { stance: 'neutral' } };
+    const genre = { ...fields, id: 'genre-pref', match: { genre: 'report' } };
+    const mixed = { ...fields, id: 'mixed-pref', match: { voice: 'general', genre: 'report' } };
+    await writeDocument('styles/mixed-rules.json', [mixed]);
+    await writeDocument('styles/genre-rules.json', [genre]);
+    await writeDocument('styles/stance-rules.json', [stance]);
+    await writeDocument('styles/voice-rules.json', voice);
+    const loaded = await loadEditorialConfig(directory);
+    expect(loaded.styles?.rules).toEqual([...base.styles!.rules, ...voice, stance, genre, mixed]);
+  });
+
+  it.each([
+    { file: 'voice-rules.json', match: { stance: 'neutral' } },
+    { file: 'voice-rules.json', match: { voice: 'general', stance: 'neutral' } },
+    { file: 'mixed-rules.json', match: { stance: ['neutral', 'pro-government'] } },
+    { file: 'mixed-rules.json', match: {} },
+  ])('should reject misplaced style rule matches in $file: $match', async ({ file, match }) => {
+    await writeDocument(`styles/${file}`, [{ id: 'misplaced', match, when: 'true', multiplier: 2 }]);
+    await expect(loadEditorialConfig(directory)).rejects.toMatchObject({
+      issues: expect.arrayContaining([expect.objectContaining({ path: ['styles', file, 0, 'match'] })]),
+    });
+  });
+
+  it('should reject duplicate style rule IDs across files', async () => {
+    const rule = { id: 'duplicate', when: 'true', multiplier: 2 };
+    await writeDocument('styles/voice-rules.json', [{ ...rule, match: { voice: 'general' } }]);
+    await writeDocument('styles/genre-rules.json', [{ ...rule, match: { genre: 'report' } }]);
+    await expect(loadEditorialConfig(directory)).rejects.toMatchObject({
+      issues: expect.arrayContaining([expect.objectContaining({ path: ['styles', 'genre-rules.json', 0, 'id'] })]),
+    });
+  });
+
+  it('should ignore a leftover combined rule file among overlay style files', async () => {
+    const base = await loadEditorialConfig();
+    await mkdir(path.join(directory, 'styles'));
+    await writeFile(path.join(directory, 'styles/rules.json'), '{');
+    const loaded = await loadEditorialConfig(directory);
+    expect(loaded.styles).toEqual(base.styles);
   });
 
   it('should supply repeat factors when a catalogue omits styleRepeat', async () => {
@@ -98,7 +150,7 @@ describe('editorial catalogue files', () => {
   it('should apply split style overrides after legacy flat overrides', async () => {
     const rule = { id: 'letters', match: { genre: 'reader-mail' }, when: 'true', multiplier: 2 };
     await writeDocument('styles.json', { genre: [{ id: rule.match.genre }], rules: [rule] });
-    await writeDocument('styles/rules.json', [{ id: rule.id, multiplier: 3 }]);
+    await writeDocument('styles/genre-rules.json', [{ id: rule.id, multiplier: 3 }]);
     const loaded = await loadEditorialConfig(directory);
     expect(loaded.styles?.genre.map(genre => genre.id)).toContain(rule.match.genre);
     expect(loaded.styles?.rules).toContainEqual({ ...rule, multiplier: 3 });

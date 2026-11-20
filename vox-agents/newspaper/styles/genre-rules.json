@@ -1,0 +1,50 @@
+[
+  {
+    "id": "genre-jokes-off-urgent-important-news",
+    "match": { "genre": ["joke", "proverb"] },
+    "when": "story.urgent || story.importance >= 80",
+    "multiplier": 0.25
+  },
+  {
+    "id": "genre-short-fillers-rise",
+    "match": { "genre": ["joke", "proverb", "notice", "ledger"] },
+    "when": "story.short",
+    "multiplier": 2
+  },
+  {
+    "id": "genre-analysis-editorial-important-news",
+    "match": { "genre": ["analysis", "editorial"] },
+    "when": "story.importance >= 70",
+    "multiplier": 1.6
+  },
+  {
+    "id": "genre-analysis-editorial-not-short",
+    "match": { "genre": ["analysis", "editorial"] },
+    "when": "story.short",
+    "multiplier": 0.5
+  },
+  {
+    "id": "genre-report-for-urgent-news",
+    "match": { "genre": "report" },
+    "when": "story.urgent",
+    "multiplier": 1.5
+  },
+  {
+    "id": "genre-anecdote-on-city-news",
+    "match": { "genre": "anecdote" },
+    "when": "story.tags.includes('cities')",
+    "multiplier": 1.5
+  },
+  {
+    "id": "genre-letter-low-happiness",
+    "match": { "genre": "letter" },
+    "when": "self.knows('happinessPercentage') && self.happinessPercentage < 50",
+    "multiplier": 1.5
+  },
+  {
+    "id": "genre-anecdote-off-urgent",
+    "match": { "genre": "anecdote" },
+    "when": "story.urgent",
+    "multiplier": 0.5
+  }
+]

@@ -77,16 +77,80 @@ function overlay(base: unknown, custom: unknown): unknown {
   return custom;
 }
 
-/** Assemble the style catalogue, applying split overrides after any legacy flat overlay. */
-async function readStyleCatalogue(directory: string, optional = false): Promise<unknown> {
+const styleRuleKinds = [...variantStyleKinds, 'mixed'] as const;
+type StyleRuleKind = typeof styleRuleKinds[number];
+interface StyleRuleSource {
+  rule: unknown;
+  path: (string | number)[];
+  kind?: StyleRuleKind;
+}
+
+/** Read rule entries with their file and local index for load diagnostics. */
+function styleRuleEntries(value: unknown, file: string[], kind?: StyleRuleKind): StyleRuleSource[] {
+  const result = z.array(z.unknown()).safeParse(value);
+  if (!result.success)
+    throw new z.ZodError(result.error.issues.map(issue => ({ ...issue, path: [...file, ...issue.path] })));
+  return result.data.map((rule, index) => ({ rule, path: [...file, index], kind }));
+}
+
+/** Read style tags and ordered rule files, applying split entries after the flat overlay. */
+async function readStyleCatalogue(directory: string, optional = false) {
   const folder = path.join(directory, 'styles');
-  const files = await Promise.all([...variantStyleKinds, 'rules'].map(async name =>
+  const legacy = optional ? await readCatalogueFile(directory, 'styles', true) : undefined;
+  if (legacy !== undefined && !isRecord(legacy)) return { tags: legacy, rules: [] };
+  const { rules: flatDocument, ...flatTags } = legacy ?? {};
+  const tags = await Promise.all(variantStyleKinds.map(async name =>
     [name, await readCatalogueFile(folder, name, optional)] as const
   ));
-  const split = Object.fromEntries(files.filter(([, value]) => value !== undefined));
-  if (!optional) return split;
-  const legacy = await readCatalogueFile(directory, 'styles', true);
-  return legacy === undefined || isRecord(legacy) ? overlay(legacy, split) : legacy;
+  const splitRules = (await Promise.all(styleRuleKinds.map(async kind => {
+    const name = `${kind}-rules`;
+    const value = await readCatalogueFile(folder, name, optional);
+    return value === undefined ? [] : styleRuleEntries(value, ['styles', `${name}.json`], kind);
+  }))).flat();
+  const flatRules = flatDocument === undefined ? [] : styleRuleEntries(flatDocument, ['styles.json', 'rules']);
+  const replaced = new Set<StyleRuleSource>();
+  for (const entry of splitRules) {
+    const rule = entry.rule;
+    if (!isRecord(rule) || typeof rule.id !== 'string') continue;
+    const flat = flatRules.find(({ rule: base }) => isRecord(base) && base.id === rule.id);
+    if (!flat) continue;
+    entry.rule = overlay(flat.rule, rule);
+    replaced.add(flat);
+  }
+  return {
+    tags: overlay(flatTags, Object.fromEntries(tags.filter(([, value]) => value !== undefined))),
+    rules: [...flatRules.filter(entry => !replaced.has(entry)), ...splitRules],
+  };
+}
+
+/** Validate rule placement and report catalogue issues at the authored rule index. */
+function parseLoadedCatalogue(input: unknown, sources: StyleRuleSource[]): EditorialConfig {
+  const parsed = editorialConfigSchema.safeParse(input);
+  if (!parsed.success) {
+    throw new z.ZodError(parsed.error.issues.map(issue => {
+      const [section, list, index, ...fields] = issue.path;
+      const source = typeof index === 'number' ? sources[index] : undefined;
+      return section === 'styles' && list === 'rules' && source
+        ? { ...issue, path: [...source.path, ...fields] }
+        : issue;
+    }));
+  }
+  const issues: z.ZodIssue[] = [];
+  parsed.data.styles?.rules.forEach(({ match }, index) => {
+    const { kind, path } = sources[index];
+    if (!kind) return;
+    const kinds = variantStyleKinds.filter(key => match[key] !== undefined);
+    if (kind === 'mixed' ? kinds.length >= 2 : kinds.length === 1 && kinds[0] === kind) return;
+    issues.push({
+      code: 'custom',
+      path: [...path, 'match'],
+      message: kind === 'mixed'
+        ? 'Match at least two kinds of style tag.'
+        : `Match only the ${kind} kind of style tag.`,
+    });
+  });
+  if (issues.length > 0) throw new z.ZodError(issues);
+  return parsed.data;
 }
 
 const compiledCatalogues = new WeakMap<EditorialConfig, Promise<CompiledEditorialExpressions>>();
@@ -115,11 +179,14 @@ export async function loadEditorialConfig(directory?: string): Promise<Editorial
       custom = overlay(custom, await readCatalogueSection(directory, name, true));
     result[name] = overlay(base, custom);
   }
-  result.styles = overlay(
-    await readStyleCatalogue(builtIn),
-    directory ? await readStyleCatalogue(directory, true) : undefined
-  );
-  return parseEditorialConfig(result);
+  const stock = await readStyleCatalogue(builtIn);
+  const custom = directory ? await readStyleCatalogue(directory, true) : undefined;
+  const tags = overlay(stock.tags, custom?.tags);
+  const rules = [...stock.rules, ...(custom?.rules ?? [])];
+  result.styles = isRecord(tags) ? { ...tags, rules: rules.map(({ rule }) => rule) } : tags;
+  const config = parseLoadedCatalogue(result, rules);
+  await getEditorialExpressions(config);
+  return config;
 }
 
 /** Apply the same validation to merged files and serialized replay configurations. */

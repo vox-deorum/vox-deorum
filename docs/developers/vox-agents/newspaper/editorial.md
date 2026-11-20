@@ -35,7 +35,7 @@ The built-in catalogue lives under `vox-agents/newspaper/`. Rules and matching t
 | `constants.json` | Named distances, spans, sizes, type lists and shortcuts, plus printable terms used by prose and mastheads. See [constants and shortcuts](triggers/constants.md). |
 | `triggers/*.json` | Trigger rules: subject, `when`, `values`, importance, repeat, grouping and tags. See the [trigger overview](triggers/overview.md). |
 | `templates/*.json` | Authored variants, typed links and short pieces, grouped by topic like triggers |
-| `styles/` | Tag IDs and optional writing guidance in `voice.json`, `stance.json` and `genre.json`; preferences in `rules.json` |
+| `styles/` | Style tag IDs, optional writing guidance, and rules that adjust variant weights |
 | `pages.json` | Front page, section membership, and section minimums |
 | `designs/*.json` | Design identities, fixed renderer families, saved tokens/assets, masthead title and motto, layouts, and eligibility |
 
@@ -67,11 +67,13 @@ A template names one or more rules in `triggers`. They must all fire for the sam
 
 ### Variant styles
 
-Each variant can carry three style tags: voice, stance and genre. Set all three together. Each ID must be registered in the matching file under `styles/`. An untagged variant uses `general`, `neutral` and `report`. These tags describe the prose and do not change the template's topic tags, page placement or layout.
+Each variant can carry one style tag of each kind: voice, stance and genre. Set all three together and register each ID in `voice.json`, `stance.json` or `genre.json` under `styles/`. An untagged variant uses `general`, `neutral` and `report`. Style tags describe the prose and do not change the template's topic tags, page placement or layout.
 
 Voice sets how the piece sounds, stance sets the position it takes, and genre sets its form. A peace treaty can be covered in a report or a letter. A neutral account explains the terms; a pro-government account makes the case for signing. See `styles/genre.json` and `styles/stance.json` for drafting guidance.
 
-Each preference in `styles/rules.json` has an `id`, a `match`, a `when` expression, and a positive `multiplier`. A match names at least one kind. Each kind takes one style tag or a list of style tags; a list matches when the variant's tag is in it. Every named kind must match. For example, a rule matching the stance list `pro-government` or `government-critical` and the genre `letter` can double the weight of an opinionated letter when `self.happinessPercentage > 50`. A report does not receive that bonus. Use the variant's own `when` for evidence required by its wording.
+Put a rule that matches only one kind of style tag in `voice-rules.json`, `stance-rules.json` or `genre-rules.json` under `styles/`. Put a rule that matches two or more kinds in `mixed-rules.json`. The loader reads the four files in that order, with all stock rules before overlay rules. Rule IDs must be unique across the files.
+
+Every style rule has an `id`, a `match`, a `when` expression, and a positive `multiplier`. A variant must match an allowed style tag for every kind named in `match`. For example, a mixed rule can double the weight of letters with a `pro-government` or `government-critical` stance when `self.happinessPercentage > 50`. Use the variant's own `when` for evidence required by its wording.
 
 A style rule's `when` can also read facts about the selected story:
 
@@ -86,7 +88,7 @@ For example, `story.tags.includes('military')` applies a preference only to stor
 
 The editor makes one weighted draw per article. Each earlier article in the issue whose chosen variant has the same style tag multiplies the weight by that kind's factor in `defaults.styleRepeat`. A factor below 1 discourages repeats, and a factor above 1 encourages them. The stock factors are voice 1.25, stance 1 and genre 0.8, so a repeated genre is slightly discouraged while a repeated voice is favored. Counts follow draw order and include articles later omitted from the pages. Saved catalogues without `styles` keep their original draw behavior.
 
-To add tags, guidance or rules, put just the files you need under your overlay's `styles/` folder. Entries merge by ID. If the overlay also has an older flat `styles.json`, its entries are applied before the split files.
+To add style tags, guidance or rules, include just the files you need under your overlay's `styles/` folder. Style tag definitions merge by ID. If the overlay also has an older flat `styles.json`, the files in `styles/` take precedence over entries with the same ID in that flat file.
 
 ### Placeholders and facts
 

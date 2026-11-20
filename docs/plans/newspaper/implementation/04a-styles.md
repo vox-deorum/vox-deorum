@@ -6,7 +6,7 @@
 
 Authored variants carry one voice, one stance, and one genre. Set all three together. Untagged legacy variants resolve to `general`, `neutral`, and `report` when selected. Under `newspaper/styles/`, the files `voice.json`, `stance.json`, and `genre.json` register tag IDs and store optional writing guidance. The loader validates variant and rule tags against the effective catalogue.
 
-A preference in `styles/rules.json` matches all the tags it names and applies a positive weight multiplier when its condition holds. For example, high national happiness or positive net happiness in the story's home city can favor a pro-government letter. The rule leaves a pro-government report at its original weight. Missing evidence leaves the preference inactive.
+A rule that matches a single kind of style tag goes in `voice-rules.json`, `stance-rules.json`, or `genre-rules.json`. Rules that match several kinds go in `mixed-rules.json`. A preference applies a positive weight multiplier when the style tags match and its condition holds. For example, a mixed rule can favor a pro-government letter when national or local happiness is high. Missing evidence leaves the preference inactive.
 
 ## Heuristic selection
 

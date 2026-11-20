@@ -1,0 +1,86 @@
+[
+  {
+    "id": "voice-spoken-out-of-era",
+    "match": { "voice": "spoken" },
+    "when": "self.knows('era') && !['Ancient', 'Classical'].includes(self.era?.replace(' Era', ''))",
+    "multiplier": 0.05
+  },
+  {
+    "id": "voice-crier-out-of-era",
+    "match": { "voice": "crier" },
+    "when": "self.knows('era') && !['Ancient', 'Classical', 'Medieval', 'Renaissance'].includes(self.era?.replace(' Era', ''))",
+    "multiplier": 0.05
+  },
+  {
+    "id": "voice-chronicle-out-of-era",
+    "match": { "voice": "chronicle" },
+    "when": "self.knows('era') && !['Classical', 'Medieval'].includes(self.era?.replace(' Era', ''))",
+    "multiplier": 0.05
+  },
+  {
+    "id": "voice-gazette-out-of-era",
+    "match": { "voice": "gazette" },
+    "when": "self.knows('era') && !['Renaissance', 'Industrial'].includes(self.era?.replace(' Era', ''))",
+    "multiplier": 0.05
+  },
+  {
+    "id": "voice-pamphlet-out-of-era",
+    "match": { "voice": "pamphlet" },
+    "when": "self.knows('era') && !['Renaissance', 'Industrial'].includes(self.era?.replace(' Era', ''))",
+    "multiplier": 0.05
+  },
+  {
+    "id": "voice-press-out-of-era",
+    "match": { "voice": "press" },
+    "when": "self.knows('era') && !['Industrial', 'Modern', 'Atomic'].includes(self.era?.replace(' Era', ''))",
+    "multiplier": 0.05
+  },
+  {
+    "id": "voice-tabloid-out-of-era",
+    "match": { "voice": "tabloid" },
+    "when": "self.knows('era') && !['Industrial', 'Modern', 'Atomic', 'Information', 'Future'].includes(self.era?.replace(' Era', ''))",
+    "multiplier": 0.05
+  },
+  {
+    "id": "voice-broadcast-out-of-era",
+    "match": { "voice": "broadcast" },
+    "when": "self.knows('era') && !['Modern', 'Atomic', 'Information', 'Future'].includes(self.era?.replace(' Era', ''))",
+    "multiplier": 0.05
+  },
+  {
+    "id": "voice-feed-out-of-era",
+    "match": { "voice": "feed" },
+    "when": "self.knows('era') && !['Information', 'Future'].includes(self.era?.replace(' Era', ''))",
+    "multiplier": 0.05
+  },
+  {
+    "id": "voice-crier-broadcast-urgent",
+    "match": { "voice": ["crier", "broadcast"] },
+    "when": "story.urgent",
+    "multiplier": 1.5
+  },
+  {
+    "id": "voice-feed-short-fillers",
+    "match": { "voice": "feed" },
+    "when": "story.short",
+    "multiplier": 1.5
+  },
+  {
+    "id": "voice-tabloid-cities-domestic",
+    "match": { "voice": "tabloid" },
+    "when": "story.tags.includes('cities') && story.tags.includes('domestic')",
+    "multiplier": 1.5
+  },
+  {
+    "id": "voice-pamphlet-low-happiness",
+    "match": { "voice": "pamphlet" },
+    "when": "self.knows('happinessPercentage') && self.happinessPercentage < 50",
+    "multiplier": 1.5
+  },
+  {
+    "id": "voice-gazette-press-international",
+    "match": { "voice": ["gazette", "press"] },
+    "when": "story.tags.includes('international')",
+    "multiplier": 1.5
+  }
+]

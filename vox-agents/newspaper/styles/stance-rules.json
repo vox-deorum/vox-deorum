@@ -1,0 +1,74 @@
+[
+  {
+    "id": "stance-wartime-hawkish-national",
+    "match": { "stance": ["hawkish", "national"] },
+    "when": "self.knows('atWar') && self.atWar && story.tags.includes('military')",
+    "multiplier": 1.75
+  },
+  {
+    "id": "stance-peacetime-conciliatory",
+    "match": { "stance": "conciliatory" },
+    "when": "self.knows('atWar') && self.atWar === false && story.tags.includes('diplomacy')",
+    "multiplier": 1.75
+  },
+  {
+    "id": "stance-low-happiness-government-critical-populist",
+    "match": { "stance": ["government-critical", "populist"] },
+    "when": "self.knows('happinessPercentage') && self.happinessPercentage < 50",
+    "multiplier": 1.5
+  },
+  {
+    "id": "stance-golden-age-or-high-happiness",
+    "match": { "stance": "pro-government" },
+    "when": "(self.knows('goldenAge') && self.goldenAge) || (self.knows('happinessPercentage') && self.happinessPercentage >= 60)",
+    "multiplier": 1.5
+  },
+  {
+    "id": "stance-domestic-cities-local",
+    "match": { "stance": "local" },
+    "when": "story.tags.includes('cities') && story.tags.includes('domestic')",
+    "multiplier": 1.75
+  },
+  {
+    "id": "stance-international-national",
+    "match": { "stance": "national" },
+    "when": "story.tags.includes('international')",
+    "multiplier": 1.5
+  },
+  {
+    "id": "stance-wonders-science-ambitious",
+    "match": { "stance": "ambitious" },
+    "when": "story.tags.includes('wonders') || story.tags.includes('science')",
+    "multiplier": 1.6
+  },
+  {
+    "id": "stance-international-wonders-government-critical",
+    "match": { "stance": "government-critical" },
+    "when": "story.tags.includes('wonders') && story.tags.includes('international')",
+    "multiplier": 1.5
+  },
+  {
+    "id": "stance-domestic-cities-populist",
+    "match": { "stance": "populist" },
+    "when": "story.tags.includes('cities') && story.tags.includes('domestic')",
+    "multiplier": 1.5
+  },
+  {
+    "id": "stance-neutral-on-urgent",
+    "match": { "stance": "neutral" },
+    "when": "story.urgent",
+    "multiplier": 1.5
+  },
+  {
+    "id": "stance-traditional-religion",
+    "match": { "stance": "traditional" },
+    "when": "story.tags.includes('religion')",
+    "multiplier": 1.5
+  },
+  {
+    "id": "stance-elitist-wonders",
+    "match": { "stance": "elitist" },
+    "when": "story.tags.includes('wonders')",
+    "multiplier": 1.5
+  }
+]
