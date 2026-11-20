@@ -36,10 +36,44 @@
     "tags": ["culture", "international"]
   },
   {
+    "id": "cultural-influence-loses-influential-incoming",
+    "subject": "player",
+    "when": [
+      "player.knows('culturalInfluenceChanges') && player.culturalInfluenceChanges.some(c => c.direction === 'incoming' && (c.previousLevel === 'Influential' || c.previousLevel === 'Dominant') && (c.level === 'Popular' || c.level === 'Familiar' || c.level === 'Exotic'))"
+    ],
+    "values": {
+      "changeIndex": "player.culturalInfluenceChanges.findIndex(c => c.direction === 'incoming' && (c.previousLevel === 'Influential' || c.previousLevel === 'Dominant') && (c.level === 'Popular' || c.level === 'Familiar' || c.level === 'Exotic'))",
+      "rival": "(() => { const c = player.culturalInfluenceChanges[changeIndex]; return c && c.knows('rival') && c.rival.knows('name') ? c.rival.name : null; })()",
+      "direction": "(() => { const c = player.culturalInfluenceChanges[changeIndex]; return c ? c.direction : null; })()",
+      "level": "(() => { const c = player.culturalInfluenceChanges[changeIndex]; return c ? c.level : null; })()",
+      "previousLevel": "(() => { const c = player.culturalInfluenceChanges[changeIndex]; return c ? c.previousLevel : null; })()",
+      "percentage": "(() => { const c = player.culturalInfluenceChanges[changeIndex]; return c ? c.percentage : null; })()"
+    },
+    "importance": 70,
+    "tags": ["culture", "international"]
+  },
+  {
+    "id": "cultural-influence-loses-influential-outgoing",
+    "subject": "player",
+    "when": [
+      "player.knows('culturalInfluenceChanges') && player.culturalInfluenceChanges.some(c => c.direction === 'outgoing' && (c.previousLevel === 'Influential' || c.previousLevel === 'Dominant') && (c.level === 'Popular' || c.level === 'Familiar' || c.level === 'Exotic'))"
+    ],
+    "values": {
+      "changeIndex": "player.culturalInfluenceChanges.findIndex(c => c.direction === 'outgoing' && (c.previousLevel === 'Influential' || c.previousLevel === 'Dominant') && (c.level === 'Popular' || c.level === 'Familiar' || c.level === 'Exotic'))",
+      "rival": "(() => { const c = player.culturalInfluenceChanges[changeIndex]; return c && c.knows('rival') && c.rival.knows('name') ? c.rival.name : null; })()",
+      "direction": "(() => { const c = player.culturalInfluenceChanges[changeIndex]; return c ? c.direction : null; })()",
+      "level": "(() => { const c = player.culturalInfluenceChanges[changeIndex]; return c ? c.level : null; })()",
+      "previousLevel": "(() => { const c = player.culturalInfluenceChanges[changeIndex]; return c ? c.previousLevel : null; })()",
+      "percentage": "(() => { const c = player.culturalInfluenceChanges[changeIndex]; return c ? c.percentage : null; })()"
+    },
+    "importance": 65,
+    "tags": ["culture", "international"]
+  },
+  {
     "id": "cultural-influence-trend-turns-incoming",
     "subject": "player",
     "when": [
-      "player.knows('culturalInfluenceChanges') && player.culturalInfluenceChanges.some(c => c.direction === 'incoming' && c.trendChanged === true && (c.trend === 'Rising' || c.trend === 'Falling')) && !player.culturalInfluenceChanges.some(c => c.direction === 'incoming' && c.reachedInfluential === true)"
+      "player.knows('culturalInfluenceChanges') && player.culturalInfluenceChanges.some(c => c.direction === 'incoming' && c.trendChanged === true && (c.trend === 'Rising' || c.trend === 'Falling')) && !player.culturalInfluenceChanges.some(c => c.direction === 'incoming' && (c.reachedInfluential === true || ((c.previousLevel === 'Influential' || c.previousLevel === 'Dominant') && (c.level === 'Popular' || c.level === 'Familiar' || c.level === 'Exotic'))))"
     ],
     "values": {
       "rival": "(() => { const c = player.knows('culturalInfluenceChanges') ? player.culturalInfluenceChanges.find(c => c.direction === 'incoming' && c.trendChanged === true && (c.trend === 'Rising' || c.trend === 'Falling')) : undefined; return c && c.knows('rival') && c.rival.knows('name') ? c.rival.name : null; })()",
@@ -58,7 +92,7 @@
     "id": "cultural-influence-trend-turns-outgoing",
     "subject": "player",
     "when": [
-      "player.knows('culturalInfluenceChanges') && player.culturalInfluenceChanges.some(c => c.direction === 'outgoing' && c.trendChanged === true && (c.trend === 'Rising' || c.trend === 'Falling')) && !player.culturalInfluenceChanges.some(c => c.direction === 'outgoing' && c.reachedInfluential === true)"
+      "player.knows('culturalInfluenceChanges') && player.culturalInfluenceChanges.some(c => c.direction === 'outgoing' && c.trendChanged === true && (c.trend === 'Rising' || c.trend === 'Falling')) && !player.culturalInfluenceChanges.some(c => c.direction === 'outgoing' && (c.reachedInfluential === true || ((c.previousLevel === 'Influential' || c.previousLevel === 'Dominant') && (c.level === 'Popular' || c.level === 'Familiar' || c.level === 'Exotic'))))"
     ],
     "values": {
       "rival": "(() => { const c = player.knows('culturalInfluenceChanges') ? player.culturalInfluenceChanges.find(c => c.direction === 'outgoing' && c.trendChanged === true && (c.trend === 'Rising' || c.trend === 'Falling')) : undefined; return c && c.knows('rival') && c.rival.knows('name') ? c.rival.name : null; })()",

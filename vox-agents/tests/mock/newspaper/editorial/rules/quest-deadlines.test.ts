@@ -7,6 +7,7 @@ import { evaluateTriggerRules } from '../../../../../src/newspaper/editorial/rul
 
 const approaching = 'city-state-quest-deadline-approaching';
 const observed = 'city-state-timed-quest-observed';
+const disappeared = 'city-state-quest-countdown-disappeared';
 const cityState = 10;
 
 let config: EditorialConfig;
@@ -37,7 +38,7 @@ function snapshot(player: number, turn: number, deadlines?: number[]): Newspaper
   };
 }
 
-/** Evaluate both stock city-state rules against one controlled receiver snapshot and history. */
+/** Evaluate the stock quest rules against a controlled receiver snapshot and history. */
 async function run(input: RunInput = {}): Promise<CheckResult> {
   const turn = input.turn ?? 20;
   const previous = input.previous ?? 18;
@@ -58,7 +59,7 @@ async function run(input: RunInput = {}): Promise<CheckResult> {
     },
   };
   return evaluateTriggerRules({
-    rules: config.triggers.filter(rule => rule.id === approaching || rule.id === observed),
+    rules: config.triggers.filter(rule => [approaching, observed, disappeared].includes(rule.id)),
     compiled,
     facts: buildNewspaperFacts(evidence, { playerIdentities }),
     constants: config.constants,
@@ -126,6 +127,24 @@ describe('stock city-state quest deadlines', () => {
   it('should not report a deadline that the prior snapshot already contained', async () => {
     const result = await run({ deadlines: [30], priorDeadlines: [30] });
     expect(fired(result, observed)).toEqual([]);
+  });
+
+  it('should report an estimated future deadline that a fresh tooltip no longer lists', async () => {
+    const result = await run({ deadlines: [], priorDeadlines: [25] });
+    expect(fired(result, disappeared)).toEqual(['player/10']);
+    const entry = development(result, disappeared);
+    expect(entry?.values).toMatchObject({ cityState: 'Geneva', previousDeadline: 25 });
+    expect(entry?.sources.map(source => source.turn)).toEqual(expect.arrayContaining([18, 20]));
+  });
+
+  it.each([
+    { priorDeadlines: [19, 20], deadlines: [] },
+    { priorDeadlines: [25] },
+    { priorDeadlines: [25], deadlines: [], previous: 19, observedTurn: 19 },
+    { priorDeadlines: [25], deadlines: [], observedTurn: 18 },
+    { priorDeadlines: [25], deadlines: [25] },
+  ])('should not infer a missing future countdown from $priorDeadlines and $deadlines without two fresh comparable readings', async input => {
+    expect(fired(await run(input), disappeared)).toEqual([]);
   });
 
   it('should avoid repeating an approaching deadline on the next consecutive check', async () => {

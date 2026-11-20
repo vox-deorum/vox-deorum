@@ -165,6 +165,35 @@ describe('stock zone posture triggers', () => {
     });
   });
 
+  describe('own front counterattack posture', () => {
+    it('should report a switch from Hedgehog to Counterattack with both observations', async () => {
+      const sea = zone({
+        zoneID: -10, city: 'Paris', domain: 'Sea', posture: 'Counterattack', previousPosture: 'Hedgehog',
+      });
+      const result = await check(fixture({ cities: [home], zones: [sea] }));
+      const ruleId = 'own-front-posture-counterattack';
+      const entry = audit(result, ruleId, 'city/10');
+
+      expect(entry?.outcome).toBe('fired');
+      expect(value(result, ruleId, 'city/10', 'values.domain')).toBe('Sea');
+      expect(value(result, ruleId, 'city/10', 'values.previousPosture')).toBe('Hedgehog');
+      expect(value(result, ruleId, 'city/10', 'values.posture')).toBe('Counterattack');
+      expect(entry?.sources).toEqual(expect.arrayContaining([sea.source, sea.previousPosture!.source]));
+      expect(audit(result, 'own-front-posture-defensive', 'city/10')?.outcome).toBe('false');
+    });
+
+    it('should leave an unchanged or newly observed Counterattack unreported', async () => {
+      const result = await check(fixture({
+        cities: [home],
+        zones: [
+          zone({ zoneID: 10, city: 'Paris', domain: 'Land', posture: 'Counterattack', previousPosture: 'Counterattack' }),
+          zone({ zoneID: -10, city: 'Paris', domain: 'Sea', posture: 'Counterattack' }),
+        ],
+      }));
+      expect(audit(result, 'own-front-posture-counterattack', 'city/10')?.outcome).toBe('false');
+    });
+  });
+
   describe('withdrawal assessment at an enemy city', () => {
     it('should report a recorded Withdraw after another posture', async () => {
       const land = zone({
@@ -237,6 +266,29 @@ describe('stock zone posture triggers', () => {
       const result = await check(fixture({ cities: [home, enemy], zones: [land], state: 'war' }));
 
       expect(audit(result, 'enemy-front-posture-offensive', 'city/20')?.outcome).toBe('false');
+    });
+  });
+
+  describe('enemy front after withdrawal', () => {
+    it.each(['Attrition', 'Exploit Flanks'] as const)('should report a switch from Withdraw to %s at war', async posture => {
+      const land = zone({ zoneID: 20, city: 'Persepolis', domain: 'Land', posture, previousPosture: 'Withdraw' });
+      const ruleId = 'enemy-front-posture-regroup';
+      const result = await check(fixture({ cities: [home, enemy], zones: [land], state: 'war' }));
+      expect(audit(result, ruleId, 'city/20')?.outcome).toBe('fired');
+      expect(value(result, ruleId, 'city/20', 'values.posture')).toBe(posture);
+      expect(audit(result, 'enemy-front-posture-offensive', 'city/20')?.outcome).toBe('false');
+
+      const peaceful = await check(fixture({ cities: [home, enemy], zones: [land] }));
+      expect(audit(peaceful, ruleId, 'city/20')?.outcome).toBe('false');
+    });
+
+    it('should leave a switch from Withdraw to Steamroll to the offensive rule', async () => {
+      const land = zone({
+        zoneID: 20, city: 'Persepolis', domain: 'Land', posture: 'Steamroll', previousPosture: 'Withdraw',
+      });
+      const result = await check(fixture({ cities: [home, enemy], zones: [land], state: 'war' }));
+      expect(audit(result, 'enemy-front-posture-regroup', 'city/20')?.outcome).toBe('false');
+      expect(audit(result, 'enemy-front-posture-offensive', 'city/20')?.outcome).toBe('fired');
     });
   });
 

@@ -20,6 +20,8 @@ const previous = 5;
 const ruleIds = [
   'cultural-influence-becomes-influential-incoming',
   'cultural-influence-becomes-influential-outgoing',
+  'cultural-influence-loses-influential-incoming',
+  'cultural-influence-loses-influential-outgoing',
   'cultural-influence-trend-turns-incoming',
   'cultural-influence-trend-turns-outgoing',
 ];
@@ -76,7 +78,7 @@ function changes(field: FactField | undefined): readonly FactObject[] {
   return field ? field.value as readonly FactObject[] : [];
 }
 
-/** Run the four stock cultural rules and return the trigger audit. */
+/** Run the stock cultural influence rules and return the trigger audit. */
 async function check(evidence: NewspaperEvidence): Promise<TriggerRuleAudit[]> {
   const facts = buildNewspaperFacts(evidence, { playerIdentities },
     { ideologies: config.constants.types.ideologies });
@@ -251,6 +253,46 @@ describe('cultural influence facts', () => {
       expect(subjectValue(incoming[0], 'direction')).toBe('incoming');
       expect(subjectValue(incoming[0], 'percentage')).toBe(110);
       expect(firedSubjects(rule(incomingAudit, 'cultural-influence-becomes-influential-outgoing'))).toEqual([]);
+    });
+
+    it.each(['incoming', 'outgoing'] as const)('should report lost %s influence and suppress only that direction’s trend', async direction => {
+      const other = direction === 'incoming' ? 'outgoing' : 'incoming';
+      const audit = await check(evidenceWith({
+        baseline: observation(5, 100, [
+          reading(1, direction, 'Influential', 106, 'Static'),
+          reading(1, other, 'Popular', 65, 'Static'),
+        ]),
+        observations: [observation(10, 101, [
+          reading(1, direction, 'Popular', 98, 'Falling'),
+          reading(1, other, 'Popular', 70, 'Rising'),
+        ])],
+      }));
+      const lost = firedSubjects(rule(audit, `cultural-influence-loses-influential-${direction}`));
+      expect(lost).toHaveLength(1);
+      expect(subjectValue(lost[0], 'rival')).toBe('Brazil');
+      expect(subjectValue(lost[0], 'direction')).toBe(direction);
+      expect(subjectValue(lost[0], 'previousLevel')).toBe('Influential');
+      expect(subjectValue(lost[0], 'level')).toBe('Popular');
+      expect(subjectValue(lost[0], 'percentage')).toBe(98);
+      expect(lost[0].sources.map(source => source.turn)).toEqual(expect.arrayContaining([5, 10]));
+      expect(firedSubjects(rule(audit, `cultural-influence-loses-influential-${other}`))).toEqual([]);
+      expect(firedSubjects(rule(audit, `cultural-influence-trend-turns-${direction}`))).toEqual([]);
+      expect(firedSubjects(rule(audit, `cultural-influence-trend-turns-${other}`))).toHaveLength(1);
+    });
+
+    it('should require a fall below Influential even when the previous level was Dominant', async () => {
+      const audit = await check(evidenceWith({
+        baseline: observation(5, 100, [
+          reading(1, 'incoming', 'Dominant', 210),
+          reading(1, 'outgoing', 'Dominant', 205),
+        ]),
+        observations: [observation(10, 101, [
+          reading(1, 'incoming', 'Influential', 170),
+          reading(1, 'outgoing', 'Popular', 95),
+        ])],
+      }));
+      expect(firedSubjects(rule(audit, 'cultural-influence-loses-influential-incoming'))).toEqual([]);
+      expect(firedSubjects(rule(audit, 'cultural-influence-loses-influential-outgoing'))).toHaveLength(1);
     });
 
     it('should report a trend turn with its ratio and turning point in each direction', async () => {

@@ -275,13 +275,31 @@ describe('stock building news', () => {
     expect(placeholder(completed, 'values.civilization')).toBe('Brazil');
   });
 
-  it('should keep a distant or purchased foreign completion out of the foreign report', async () => {
-    const distant = await check(foreign('Library', ['Library'], 40));
-    expect(subject(distant.audit('foreign-building-completed'))).toMatchObject({ outcome: 'false' });
+  it.each([
+    ['gold', { gold: true }],
+    ['faith', { faith: true }],
+  ] as const)('should distinguish a witnessed nearby foreign purchase with %s from construction', async (currency, purchase) => {
+    const { audit } = await check(foreign('Library', ['Library'], 12, purchase));
+    const bought = subject(audit('foreign-building-purchased'));
+    expect(bought.outcome).toBe('fired');
+    expect(placeholder(bought, 'values.cityName')).toBe('Recife');
+    expect(placeholder(bought, 'values.civilization')).toBe('Brazil');
+    expect(placeholder(bought, 'values.currency')).toBe(currency);
+    expect(subject(audit('foreign-building-completed')).outcome).toBe('false');
+    expect(subject(audit('building-purchased')).outcome).toBe('false');
+  });
 
-    const bought = await check(foreign('Library', ['Library'], 12, { gold: true }));
-    expect(subject(bought.audit('foreign-building-completed'))).toMatchObject({ outcome: 'false' });
-    expect(subject(bought.audit('building-purchased'))).toMatchObject({ outcome: 'false' });
+  it('should require proximity and a corroborated ordinary building for a foreign purchase', async () => {
+    const distantPurchase = await check(foreign('Library', ['Library'], 40, { gold: true }));
+    expect(subject(distantPurchase.audit('foreign-building-purchased')).outcome).toBe('false');
+
+    const unlistedPurchase = await check(foreign('Library', [], 12, { faith: true }));
+    expect(subject(unlistedPurchase.audit('foreign-building-purchased')).outcome).toBe('false');
+  });
+
+  it('should keep a distant foreign completion out of the foreign report', async () => {
+    const distant = await check(foreign('Library', ['Library'], 40));
+    expect(subject(distant.audit('foreign-building-completed')).outcome).toBe('false');
   });
 
   it('should not report a same-turn founding freebie as an ordinary completion', async () => {

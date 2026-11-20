@@ -112,6 +112,27 @@
     "tags": ["politics", "international"]
   },
   {
+    "id": "city-state-quest-countdown-disappeared",
+    "subject": "player",
+    "when": [
+      "player.knows('cityState') && player.cityState === true",
+      "player.knows('questDeadlines') && Array.isArray(player.questDeadlines)",
+      "player.knows('questObservationTurn') && Number.isSafeInteger(player.questObservationTurn)",
+      "player.questObservationTurn <= turn && turn - player.questObservationTurn <= 1",
+      "player.knows('before')",
+      "player.before.knows('questDeadlines') && Array.isArray(player.before.questDeadlines)",
+      "player.before.knows('questObservationTurn') && Number.isSafeInteger(player.before.questObservationTurn)",
+      "player.before.questObservationTurn < player.questObservationTurn",
+      "player.before.questDeadlines.some(deadline => Number.isSafeInteger(deadline) && deadline > turn && !player.questDeadlines.includes(deadline))"
+    ],
+    "values": {
+      "previousDeadline": "Math.min(...player.before.questDeadlines.filter(deadline => Number.isSafeInteger(deadline) && deadline > turn && !player.questDeadlines.includes(deadline)))",
+      "cityState": "player.knows('name') ? player.name : null"
+    },
+    "importance": 25,
+    "tags": ["politics", "international"]
+  },
+  {
     "id": "city-state-quest-deadline-approaching",
     "subject": "player",
     "when": [

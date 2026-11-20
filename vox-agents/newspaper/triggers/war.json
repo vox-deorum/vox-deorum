@@ -93,6 +93,28 @@
     "tags": ["cities", "military", "international"]
   },
   {
+    "id": "enemy-front-posture-regroup",
+    "subject": "city",
+    "when": [
+      "city.knows('foreign') && city.foreign === true",
+      "city.knows('name')",
+      "city.knows('owner') && city.owner.knows('major') && city.owner.major === true",
+      "city.owner.knows('name')",
+      "city.owner.knows('enemy') && city.owner.enemy === true",
+      "city.tacticalZones()?.some(z => z.knows('posture') && z.knows('previousPosture') && (z.posture === 'Attrition' || z.posture === 'Exploit Flanks') && z.previousPosture === 'Withdraw')"
+    ],
+    "values": {
+      "zoneIndex": "city.tacticalZones().findIndex(z => z.knows('posture') && z.knows('previousPosture') && (z.posture === 'Attrition' || z.posture === 'Exploit Flanks') && z.previousPosture === 'Withdraw')",
+      "cityName": "city.name",
+      "civilization": "city.owner.name",
+      "domain": "city.tacticalZones()[zoneIndex].domain",
+      "previousPosture": "city.tacticalZones()[zoneIndex].previousPosture",
+      "posture": "city.tacticalZones()[zoneIndex].posture"
+    },
+    "importance": 40,
+    "tags": ["cities", "military", "international"]
+  },
+  {
     "id": "enemy-front-posture-withdraw",
     "subject": "city",
     "when": [
@@ -287,6 +309,24 @@
     },
     "importance": "50 + 40 * damage",
     "urgent": "damage >= 0.5",
+    "tags": ["cities", "military", "domestic"]
+  },
+  {
+    "id": "own-front-posture-counterattack",
+    "subject": "city",
+    "when": [
+      "city.knows('own') && city.own === true",
+      "city.knows('name')",
+      "city.tacticalZones()?.some(z => z.posture === 'Counterattack' && z.knows('previousPosture') && z.previousPosture === 'Hedgehog')"
+    ],
+    "values": {
+      "zoneIndex": "city.tacticalZones().findIndex(z => z.posture === 'Counterattack' && z.knows('previousPosture') && z.previousPosture === 'Hedgehog')",
+      "cityName": "city.name",
+      "domain": "city.tacticalZones()[zoneIndex].domain",
+      "previousPosture": "city.tacticalZones()[zoneIndex].previousPosture",
+      "posture": "city.tacticalZones()[zoneIndex].posture"
+    },
+    "importance": 40,
     "tags": ["cities", "military", "domestic"]
   },
   {

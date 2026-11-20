@@ -264,6 +264,29 @@
     "tags": ["cities", "international"]
   },
   {
+    "id": "foreign-building-purchased",
+    "subject": "event",
+    "event": "CityConstructed",
+    "when": [
+      "event.knows('player') && event.player.knows('id') && event.player.self === false",
+      "event.knows('city') && event.city.knows('owner') && event.city.owner.knows('id') && event.city.foreign === true",
+      "event.player.id === event.city.owner.id",
+      "event.city.is.nearby",
+      "event.knows('building') && !defenses.includes(event.building)",
+      "event.city.knows('importantBuildings') && Array.isArray(event.city.importantBuildings)",
+      "event.city.importantBuildings.includes(event.building)",
+      "(event.knows('isGoldPurchase') && event.isGoldPurchase === true) || (event.knows('isFaithPurchase') && event.isFaithPurchase === true)"
+    ],
+    "values": {
+      "building": "event.building",
+      "cityName": "event.city.knows('name') ? event.city.name : null",
+      "civilization": "event.city.owner.knows('name') ? event.city.owner.name : null",
+      "currency": "event.knows('isGoldPurchase') && event.isGoldPurchase === true ? 'gold' : 'faith'"
+    },
+    "importance": 25,
+    "tags": ["cities", "international"]
+  },
+  {
     "id": "forward-settle",
     "subject": "event",
     "event": "PlayerCityFounded",
