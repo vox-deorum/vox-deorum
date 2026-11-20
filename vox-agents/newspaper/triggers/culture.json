@@ -1,39 +1,5 @@
 [
   {
-    "id": "our-wonder-completed",
-    "subject": "event",
-    "event": "CityConstructed",
-    "when": [
-      "event.knows('player') && event.player.self === true",
-      "event.knows('building') && typeof event.building === 'string'",
-      "event.knows('city') && event.city.knows('wonders') && Array.isArray(event.city.wonders)",
-      "event.city.wonders.includes(event.building)"
-    ],
-    "values": {
-      "wonder": "event.building"
-    },
-    "importance": 70,
-    "tags": ["cities", "domestic"]
-  },
-  {
-    "id": "great-works-added",
-    "subject": "city",
-    "window": "recent",
-    "when": [
-      "city.own",
-      "city.knows('greatWorkCount') && Number.isFinite(city.greatWorkCount)",
-      "city.knows('before') && city.before.knows('greatWorkCount') && Number.isFinite(city.before.greatWorkCount)",
-      "city.before.knows('owner') && city.before.owner.self === true",
-      "city.greatWorkCount > city.before.greatWorkCount"
-    ],
-    "values": {
-      "added": "city.greatWorkCount - city.before.greatWorkCount",
-      "total": "city.greatWorkCount"
-    },
-    "importance": "40 + 10 * added",
-    "tags": ["cities", "domestic"]
-  },
-  {
     "id": "enemy-wonder-nearby",
     "subject": "city",
     "window": "recent",
@@ -44,6 +10,24 @@
     ],
     "values": { "wonder": "city.built.find(b => city.wonders.includes(b.building)).building" },
     "importance": "55"
+  },
+  {
+    "id": "foreign-wonder-completed",
+    "subject": "city",
+    "window": "recent",
+    "when": [
+      "city.foreign && city.knows('owner') && city.owner.major",
+      "city.knows('wonders') && Array.isArray(city.wonders) && city.wonders.length > 0",
+      "!(city.owner.knows('enemy') && city.owner.enemy && city.knows('distance') && city.distance.own <= nearby)",
+      "city.built.some(b => b.knows('building') && city.wonders.includes(b.building))"
+    ],
+    "values": {
+      "wonder": "city.built.find(b => b.knows('building') && city.wonders.includes(b.building)).building",
+      "civilization": "city.owner.knows('name') ? city.owner.name : null",
+      "cityName": "city.knows('name') ? city.name : null"
+    },
+    "importance": 55,
+    "tags": ["culture", "international"]
   },
   {
     "id": "great-person-born",
@@ -80,6 +64,40 @@
     "tags": ["politics"]
   },
   {
+    "id": "great-works-added",
+    "subject": "city",
+    "window": "recent",
+    "when": [
+      "city.own",
+      "city.knows('greatWorkCount') && Number.isFinite(city.greatWorkCount)",
+      "city.knows('before') && city.before.knows('greatWorkCount') && Number.isFinite(city.before.greatWorkCount)",
+      "city.before.knows('owner') && city.before.owner.self === true",
+      "city.greatWorkCount > city.before.greatWorkCount"
+    ],
+    "values": {
+      "added": "city.greatWorkCount - city.before.greatWorkCount",
+      "total": "city.greatWorkCount"
+    },
+    "importance": "40 + 10 * added",
+    "tags": ["cities", "domestic"]
+  },
+  {
+    "id": "our-wonder-completed",
+    "subject": "event",
+    "event": "CityConstructed",
+    "when": [
+      "event.knows('player') && event.player.self === true",
+      "event.knows('building') && typeof event.building === 'string'",
+      "event.knows('city') && event.city.knows('wonders') && Array.isArray(event.city.wonders)",
+      "event.city.wonders.includes(event.building)"
+    ],
+    "values": {
+      "wonder": "event.building"
+    },
+    "importance": 70,
+    "tags": ["cities", "domestic"]
+  },
+  {
     "id": "tourism-output-leader-changes",
     "subject": "player",
     "window": "short",
@@ -95,24 +113,6 @@
       "tied": "players.some(p => p.id !== player.id && p.knows('major') && p.major === true && p.knows('tourismPerTurn') && p.tourismPerTurn === player.tourismPerTurn)"
     },
     "importance": "player.self ? 65 : 50",
-    "tags": ["culture", "international"]
-  },
-  {
-    "id": "foreign-wonder-completed",
-    "subject": "city",
-    "window": "recent",
-    "when": [
-      "city.foreign && city.knows('owner') && city.owner.major",
-      "city.knows('wonders') && Array.isArray(city.wonders) && city.wonders.length > 0",
-      "!(city.owner.knows('enemy') && city.owner.enemy && city.knows('distance') && city.distance.own <= nearby)",
-      "city.built.some(b => b.knows('building') && city.wonders.includes(b.building))"
-    ],
-    "values": {
-      "wonder": "city.built.find(b => b.knows('building') && city.wonders.includes(b.building)).building",
-      "civilization": "city.owner.knows('name') ? city.owner.name : null",
-      "cityName": "city.knows('name') ? city.name : null"
-    },
-    "importance": 55,
     "tags": ["culture", "international"]
   }
 ]

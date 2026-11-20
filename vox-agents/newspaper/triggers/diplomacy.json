@@ -1,19 +1,5 @@
 [
   {
-    "id": "denounced-by-major",
-    "subject": "player",
-    "when": [
-      "!player.self && player.knows('major') && player.major === true",
-      "self.relation(player).knows('denouncedByThem')",
-      "self.relation(player).denouncedByThem === true"
-    ],
-    "values": {
-      "civilization": "player.name"
-    },
-    "importance": 60,
-    "tags": ["politics", "international"]
-  },
-  {
     "id": "becomes-vassal",
     "subject": "player",
     "when": [
@@ -29,34 +15,16 @@
     "tags": ["politics", "international"]
   },
   {
-    "id": "gains-vassal",
-    "subject": "player",
-    "when": [
-      "!player.self && player.knows('major') && player.major === true",
-      "self.relation(player).knows('masterOf')",
-      "self.relation(player).masterOf === true"
-    ],
-    "values": {
-      "vassal": "player.name"
-    },
-    "importance": 75,
-    "tags": ["politics", "international"]
-  },
-  {
-    "id": "friendship-begins",
+    "id": "defensive-pact-ends",
     "subject": "pair",
-    "window": "recent",
     "when": [
-      "pair.involvesSelf",
-      "pair.majors",
-      "pair.knows('friends') && pair.friends === true",
-      "pair.knows('before') && pair.before.knows('friends') && pair.before.friends === false",
-      "!(pair.knows('pact') && pair.pact === true && pair.before.knows('pact') && pair.before.pact === false)"
+      "pair.involvesSelf && pair.majors && pair.knows('atWar') && !pair.atWar && pair.knows('pact') && pair.pact === false",
+      "pair.knows('before') && pair.before.knows('pact') && pair.before.pact === true"
     ],
     "values": {
-      "friend": "pair.other.knows('name') ? pair.other.name : null"
+      "ally": "pair.other.knows('name') ? pair.other.name : null"
     },
-    "importance": 55,
+    "importance": 65,
     "tags": ["politics", "international"]
   },
   {
@@ -75,63 +43,17 @@
     "tags": ["politics", "international"]
   },
   {
-    "id": "friendship-ends",
-    "subject": "pair",
-    "when": [
-      "pair.involvesSelf && pair.majors",
-      "pair.knows('friends') && pair.friends === false",
-      "pair.knows('before') && pair.before.knows('friends') && pair.before.friends === true"
-    ],
-    "values": {
-      "friend": "pair.other.knows('name') ? pair.other.name : null"
-    },
-    "importance": 60,
-    "tags": ["politics", "international"]
-  },
-  {
-    "id": "we-denounce-major",
+    "id": "denounced-by-major",
     "subject": "player",
     "when": [
-      "!player.self",
-      "player.knows('major') && player.major === true",
-      "self.knows('before')",
-      "self.relation(player).knows('denouncedThem') && self.relation(player).denouncedThem === true",
-      "self.before.relation(player).knows('denouncedThem') && self.before.relation(player).denouncedThem === false"
+      "!player.self && player.knows('major') && player.major === true",
+      "self.relation(player).knows('denouncedByThem')",
+      "self.relation(player).denouncedByThem === true"
     ],
     "values": {
       "civilization": "player.name"
     },
     "importance": 60,
-    "tags": ["politics", "international"]
-  },
-  {
-    "id": "defensive-pact-ends",
-    "subject": "pair",
-    "when": [
-      "pair.involvesSelf && pair.majors && pair.knows('atWar') && !pair.atWar && pair.knows('pact') && pair.pact === false",
-      "pair.knows('before') && pair.before.knows('pact') && pair.before.pact === true"
-    ],
-    "values": {
-      "ally": "pair.other.knows('name') ? pair.other.name : null"
-    },
-    "importance": 65,
-    "tags": ["politics", "international"]
-  },
-  {
-    "id": "open-borders-granted",
-    "subject": "player",
-    "window": "recent",
-    "when": [
-      "!player.self && player.knows('major') && player.major === true",
-      "self.knows('before')",
-      "self.relation(player).knows('openBordersTo') && self.relation(player).openBordersTo === true",
-      "self.before.relation(player).knows('openBordersTo') && self.before.relation(player).openBordersTo === false"
-    ],
-    "values": {
-      "civilization": "player.knows('name') ? player.name : null",
-      "capital": "player.knows('capital') && player.capital.knows('name') ? player.capital.name : null"
-    },
-    "importance": 45,
     "tags": ["politics", "international"]
   },
   {
@@ -170,6 +92,68 @@
     "tags": ["politics", "international"]
   },
   {
+    "id": "friendship-begins",
+    "subject": "pair",
+    "window": "recent",
+    "when": [
+      "pair.involvesSelf",
+      "pair.majors",
+      "pair.knows('friends') && pair.friends === true",
+      "pair.knows('before') && pair.before.knows('friends') && pair.before.friends === false",
+      "!(pair.knows('pact') && pair.pact === true && pair.before.knows('pact') && pair.before.pact === false)"
+    ],
+    "values": {
+      "friend": "pair.other.knows('name') ? pair.other.name : null"
+    },
+    "importance": 55,
+    "tags": ["politics", "international"]
+  },
+  {
+    "id": "friendship-ends",
+    "subject": "pair",
+    "when": [
+      "pair.involvesSelf && pair.majors",
+      "pair.knows('friends') && pair.friends === false",
+      "pair.knows('before') && pair.before.knows('friends') && pair.before.friends === true"
+    ],
+    "values": {
+      "friend": "pair.other.knows('name') ? pair.other.name : null"
+    },
+    "importance": 60,
+    "tags": ["politics", "international"]
+  },
+  {
+    "id": "gains-vassal",
+    "subject": "player",
+    "when": [
+      "!player.self && player.knows('major') && player.major === true",
+      "self.relation(player).knows('masterOf')",
+      "self.relation(player).masterOf === true"
+    ],
+    "values": {
+      "vassal": "player.name"
+    },
+    "importance": 75,
+    "tags": ["politics", "international"]
+  },
+  {
+    "id": "open-borders-granted",
+    "subject": "player",
+    "window": "recent",
+    "when": [
+      "!player.self && player.knows('major') && player.major === true",
+      "self.knows('before')",
+      "self.relation(player).knows('openBordersTo') && self.relation(player).openBordersTo === true",
+      "self.before.relation(player).knows('openBordersTo') && self.before.relation(player).openBordersTo === false"
+    ],
+    "values": {
+      "civilization": "player.knows('name') ? player.name : null",
+      "capital": "player.knows('capital') && player.capital.knows('name') ? player.capital.name : null"
+    },
+    "importance": 45,
+    "tags": ["politics", "international"]
+  },
+  {
     "id": "third-party-war-deal",
     "subject": "event",
     "event": "DealMade",
@@ -187,5 +171,21 @@
     },
     "importance": "ours ? 70 : 55",
     "tags": ["politics", "military", "international"]
+  },
+  {
+    "id": "we-denounce-major",
+    "subject": "player",
+    "when": [
+      "!player.self",
+      "player.knows('major') && player.major === true",
+      "self.knows('before')",
+      "self.relation(player).knows('denouncedThem') && self.relation(player).denouncedThem === true",
+      "self.before.relation(player).knows('denouncedThem') && self.before.relation(player).denouncedThem === false"
+    ],
+    "values": {
+      "civilization": "player.name"
+    },
+    "importance": 60,
+    "tags": ["politics", "international"]
   }
 ]

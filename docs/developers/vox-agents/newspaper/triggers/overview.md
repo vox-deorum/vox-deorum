@@ -213,7 +213,7 @@ A template names one or more triggers in `triggers`. Every named trigger must fi
 
 The legacy detectors are retired; new coverage belongs in `rules/`.
 
-To list the stock trigger IDs, run `npm run --silent newspaper:triggers` from the repository root or `vox-agents/`. The command prints one ID per line in catalogue order and needs no build or recording. Append `> trigger-names.txt` to save the list in the current directory. The list includes rules without templates and excludes custom overlays.
+From the repository root or `vox-agents/`, run `npm run newspaper:sort-triggers` to sort each stock trigger file alphabetically by ID. Use `npm run --silent newspaper:triggers` to print one ID per line in catalogue order, or append `> trigger-names.txt` to save the list. Both commands work without a build or recording and leave custom overlays alone.
 
 ## Add a trigger
 

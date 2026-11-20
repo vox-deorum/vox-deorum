@@ -1,37 +1,5 @@
 [
   {
-    "id": "golden-age-in-wartime",
-    "subject": "event",
-    "event": "PlayerGoldenAge",
-    "when": [
-      "event.starting",
-      "event.player.self",
-      "self.atWar"
-    ],
-    "values": {
-      "enemies": "(() => { const names = self.wars.filter(p => p.knows('name')).map(p => p.name); return names.length <= 2 ? names.join(' and ') || 'our adversaries' : names.slice(0, -1).join(', ') + ', and ' + names[names.length - 1]; })()"
-    },
-    "importance": 60
-  },
-  {
-    "id": "score-leader-changes",
-    "subject": "player",
-    "window": "short",
-    "when": [
-      "player.knows('major') && player.major === true",
-      "player.knows('score') && Number.isFinite(player.score)",
-      "player.before.knows('score')",
-      "player.rank('score') === 1",
-      "player.before.rank('score') > 1"
-    ],
-    "values": {
-      "civilization": "player.name",
-      "tied": "players.some(p => p.id !== player.id && p.knows('major') && p.major === true && p.knows('score') && p.score === player.score)"
-    },
-    "importance": "player.self ? 75 : 55",
-    "tags": ["politics", "international"]
-  },
-  {
     "id": "falls-to-last-place",
     "subject": "world",
     "window": "short",
@@ -63,85 +31,29 @@
     "tags": ["politics", "domestic"]
   },
   {
-    "id": "unhappiness-sets-in",
-    "subject": "world",
-    "window": "recent",
+    "id": "golden-age-ends",
+    "subject": "event",
+    "event": "PlayerGoldenAge",
     "when": [
-      "self.knows('happinessPercentage') && Number.isFinite(self.happinessPercentage)",
-      "self.before.knows('happinessPercentage') && Number.isFinite(self.before.happinessPercentage)",
-      "self.happinessPercentage < 50",
-      "self.before.happinessPercentage >= 50"
+      "event.starting === false",
+      "event.player.self === true"
     ],
-    "values": {
-      "happiness": "self.happinessPercentage",
-      "drop": "self.before.happinessPercentage - self.happinessPercentage"
-    },
-    "importance": 60,
+    "importance": 45,
     "tags": ["politics", "domestic"]
   },
   {
-    "id": "revolt-threshold-crossed",
-    "subject": "world",
-    "window": "recent",
+    "id": "golden-age-in-wartime",
+    "subject": "event",
+    "event": "PlayerGoldenAge",
     "when": [
-      "self.knows('happinessPercentage') && Number.isFinite(self.happinessPercentage)",
-      "self.before.knows('happinessPercentage') && Number.isFinite(self.before.happinessPercentage)",
-      "self.happinessPercentage < 35",
-      "self.before.happinessPercentage >= 35"
+      "event.starting",
+      "event.player.self",
+      "self.atWar"
     ],
     "values": {
-      "happiness": "self.happinessPercentage"
+      "enemies": "(() => { const names = self.wars.filter(p => p.knows('name')).map(p => p.name); return names.length <= 2 ? names.join(' and ') || 'our adversaries' : names.slice(0, -1).join(', ') + ', and ' + names[names.length - 1]; })()"
     },
-    "importance": 80,
-    "urgent": "true",
-    "tags": ["politics", "domestic"]
-  },
-  {
-    "id": "ideology-adopted",
-    "subject": "world",
-    "window": "recent",
-    "when": [
-      "self.knows('ideology') && typeof self.ideology === 'string'",
-      "!self.before.knows('ideology') || self.before.ideology === null"
-    ],
-    "values": {
-      "ideology": "self.ideology"
-    },
-    "importance": 85,
-    "urgent": "true",
-    "tags": ["politics", "domestic"]
-  },
-  {
-    "id": "rival-adopts-ideology",
-    "subject": "player",
-    "when": [
-      "!player.self && player.knows('major') && player.major === true",
-      "player.knows('ideology') && typeof player.ideology === 'string'",
-      "!player.before.knows('ideology') || player.before.ideology === null"
-    ],
-    "values": {
-      "name": "player.name",
-      "ideology": "player.ideology",
-      "shared": "self.knows('ideology') && typeof self.ideology === 'string' && self.ideology === player.ideology"
-    },
-    "importance": "self.knows('ideology') && typeof self.ideology === 'string' && self.ideology !== player.ideology ? 70 : 60",
-    "tags": ["politics", "international"]
-  },
-  {
-    "id": "policy-branch-opened",
-    "subject": "world",
-    "window": "recent",
-    "when": [
-      "self.knows('policyBranches') && self.policyBranches !== null && typeof self.policyBranches === 'object'",
-      "self.before.knows('policyBranches') && self.before.policyBranches !== null && typeof self.before.policyBranches === 'object'",
-      "Object.keys(self.policyBranches).some(branch => !Object.keys(self.before.policyBranches).includes(branch))"
-    ],
-    "values": {
-      "branch": "(() => { const before = Object.keys(self.before.policyBranches); const added = Object.keys(self.policyBranches).filter(branch => !before.includes(branch)); return added.length === 1 ? added[0] : null; })()",
-      "count": "Object.keys(self.policyBranches).length"
-    },
-    "importance": 60,
-    "tags": ["politics", "domestic"]
+    "importance": 60
   },
   {
     "id": "happiness-recovers",
@@ -159,33 +71,19 @@
     "tags": ["politics", "domestic"]
   },
   {
-    "id": "golden-age-ends",
-    "subject": "event",
-    "event": "PlayerGoldenAge",
+    "id": "ideology-adopted",
+    "subject": "world",
+    "window": "recent",
     "when": [
-      "event.starting === false",
-      "event.player.self === true"
-    ],
-    "importance": 45,
-    "tags": ["politics", "domestic"]
-  },
-  {
-    "id": "major-reduced-to-single-city",
-    "subject": "player",
-    "window": "medium",
-    "when": [
-      "!player.self && player.knows('major') && player.major === true",
-      "player.knows('cityCount') && Number.isFinite(player.cityCount)",
-      "player.knows('before') && player.before.knows('cityCount') && Number.isFinite(player.before.cityCount)",
-      "player.cityCount === 1",
-      "player.before.cityCount > 1"
+      "self.knows('ideology') && typeof self.ideology === 'string'",
+      "!self.before.knows('ideology') || self.before.ideology === null"
     ],
     "values": {
-      "civilization": "player.knows('name') ? player.name : null",
-      "lost": "player.before.cityCount - player.cityCount"
+      "ideology": "self.ideology"
     },
-    "importance": "60 + 5 * lost",
-    "tags": ["politics", "international"]
+    "importance": 85,
+    "urgent": "true",
+    "tags": ["politics", "domestic"]
   },
   {
     "id": "ideology-switched",
@@ -208,6 +106,24 @@
     "tags": ["politics", "international"]
   },
   {
+    "id": "major-reduced-to-single-city",
+    "subject": "player",
+    "window": "medium",
+    "when": [
+      "!player.self && player.knows('major') && player.major === true",
+      "player.knows('cityCount') && Number.isFinite(player.cityCount)",
+      "player.knows('before') && player.before.knows('cityCount') && Number.isFinite(player.before.cityCount)",
+      "player.cityCount === 1",
+      "player.before.cityCount > 1"
+    ],
+    "values": {
+      "civilization": "player.knows('name') ? player.name : null",
+      "lost": "player.before.cityCount - player.cityCount"
+    },
+    "importance": "60 + 5 * lost",
+    "tags": ["politics", "international"]
+  },
+  {
     "id": "policy-adopted",
     "subject": "event",
     "event": "PlayerAdoptPolicy",
@@ -219,6 +135,90 @@
       "policy": "event.policy"
     },
     "importance": 45,
+    "tags": ["politics", "domestic"]
+  },
+  {
+    "id": "policy-branch-opened",
+    "subject": "world",
+    "window": "recent",
+    "when": [
+      "self.knows('policyBranches') && self.policyBranches !== null && typeof self.policyBranches === 'object'",
+      "self.before.knows('policyBranches') && self.before.policyBranches !== null && typeof self.before.policyBranches === 'object'",
+      "Object.keys(self.policyBranches).some(branch => !Object.keys(self.before.policyBranches).includes(branch))"
+    ],
+    "values": {
+      "branch": "(() => { const before = Object.keys(self.before.policyBranches); const added = Object.keys(self.policyBranches).filter(branch => !before.includes(branch)); return added.length === 1 ? added[0] : null; })()",
+      "count": "Object.keys(self.policyBranches).length"
+    },
+    "importance": 60,
+    "tags": ["politics", "domestic"]
+  },
+  {
+    "id": "revolt-threshold-crossed",
+    "subject": "world",
+    "window": "recent",
+    "when": [
+      "self.knows('happinessPercentage') && Number.isFinite(self.happinessPercentage)",
+      "self.before.knows('happinessPercentage') && Number.isFinite(self.before.happinessPercentage)",
+      "self.happinessPercentage < 35",
+      "self.before.happinessPercentage >= 35"
+    ],
+    "values": {
+      "happiness": "self.happinessPercentage"
+    },
+    "importance": 80,
+    "urgent": "true",
+    "tags": ["politics", "domestic"]
+  },
+  {
+    "id": "rival-adopts-ideology",
+    "subject": "player",
+    "when": [
+      "!player.self && player.knows('major') && player.major === true",
+      "player.knows('ideology') && typeof player.ideology === 'string'",
+      "!player.before.knows('ideology') || player.before.ideology === null"
+    ],
+    "values": {
+      "name": "player.name",
+      "ideology": "player.ideology",
+      "shared": "self.knows('ideology') && typeof self.ideology === 'string' && self.ideology === player.ideology"
+    },
+    "importance": "self.knows('ideology') && typeof self.ideology === 'string' && self.ideology !== player.ideology ? 70 : 60",
+    "tags": ["politics", "international"]
+  },
+  {
+    "id": "score-leader-changes",
+    "subject": "player",
+    "window": "short",
+    "when": [
+      "player.knows('major') && player.major === true",
+      "player.knows('score') && Number.isFinite(player.score)",
+      "player.before.knows('score')",
+      "player.rank('score') === 1",
+      "player.before.rank('score') > 1"
+    ],
+    "values": {
+      "civilization": "player.name",
+      "tied": "players.some(p => p.id !== player.id && p.knows('major') && p.major === true && p.knows('score') && p.score === player.score)"
+    },
+    "importance": "player.self ? 75 : 55",
+    "tags": ["politics", "international"]
+  },
+  {
+    "id": "unhappiness-sets-in",
+    "subject": "world",
+    "window": "recent",
+    "when": [
+      "self.knows('happinessPercentage') && Number.isFinite(self.happinessPercentage)",
+      "self.before.knows('happinessPercentage') && Number.isFinite(self.before.happinessPercentage)",
+      "self.happinessPercentage < 50",
+      "self.before.happinessPercentage >= 50"
+    ],
+    "values": {
+      "happiness": "self.happinessPercentage",
+      "drop": "self.before.happinessPercentage - self.happinessPercentage"
+    },
+    "importance": 60,
     "tags": ["politics", "domestic"]
   }
 ]

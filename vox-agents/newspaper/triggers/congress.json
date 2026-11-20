@@ -1,36 +1,5 @@
 [
   {
-    "id": "congress-session-imminent",
-    "subject": "world",
-    "when": [
-      "game.knows('congress')",
-      "game.congress.available === true",
-      "game.congress.knows('expectedSessionTurn')",
-      "game.congress.expectedSessionTurn === turn + 1"
-    ],
-    "values": {
-      "league": "game.congress.knows('league') ? game.congress.league : null",
-      "count": "game.congress.knows('proposals') ? game.congress.proposals.length : 0"
-    },
-    "importance": 55,
-    "tags": ["international", "congress"]
-  },
-  {
-    "id": "congress-voting-opens",
-    "subject": "world",
-    "when": [
-      "game.knows('congress')",
-      "game.congress.available === true",
-      "game.congress.votingNow === true"
-    ],
-    "values": {
-      "league": "game.congress.knows('league') ? game.congress.league : null",
-      "count": "game.congress.knows('proposals') ? game.congress.proposals.length : 0"
-    },
-    "importance": 60,
-    "tags": ["international", "congress"]
-  },
-  {
     "id": "congress-new-proposals",
     "subject": "world",
     "when": [
@@ -48,22 +17,6 @@
     "tags": ["international", "congress"]
   },
   {
-    "id": "congress-resolution-passed",
-    "subject": "event",
-    "event": "ResolutionResult",
-    "when": [
-      "event.passed === true"
-    ],
-    "values": {
-      "resolution": "event.knows('resolutionType') && typeof event.resolutionType === 'string' ? event.resolutionType : null",
-      "isEnact": "event.knows('isEnact') ? event.isEnact : null",
-      "proposer": "event.knows('proposerName') ? event.proposerName : null",
-      "ours": "event.knows('player') && event.player.self === true"
-    },
-    "importance": "ours ? 75 : 60",
-    "tags": ["international", "congress"]
-  },
-  {
     "id": "congress-resolution-defeated",
     "subject": "event",
     "event": "ResolutionResult",
@@ -77,6 +30,22 @@
       "ours": "event.knows('player') && event.player.self === true"
     },
     "importance": "ours ? 75 : 50",
+    "tags": ["international", "congress"]
+  },
+  {
+    "id": "congress-resolution-passed",
+    "subject": "event",
+    "event": "ResolutionResult",
+    "when": [
+      "event.passed === true"
+    ],
+    "values": {
+      "resolution": "event.knows('resolutionType') && typeof event.resolutionType === 'string' ? event.resolutionType : null",
+      "isEnact": "event.knows('isEnact') ? event.isEnact : null",
+      "proposer": "event.knows('proposerName') ? event.proposerName : null",
+      "ours": "event.knows('player') && event.player.self === true"
+    },
+    "importance": "ours ? 75 : 60",
     "tags": ["international", "congress"]
   },
   {
@@ -97,41 +66,37 @@
     "tags": ["international", "congress"]
   },
   {
-    "id": "congress-world-ideology",
-    "subject": "world",
-    "when": [
-      "activeResolution('World Ideology')"
-    ],
-    "values": {
-      "resolution": "activeResolution('World Ideology')?.name",
-      "ours": "self.knows('ideology') && typeof self.ideology === 'string' && resolution.includes(self.ideology)"
-    },
-    "importance": 70,
-    "tags": ["international", "congress"]
-  },
-  {
-    "id": "congress-world-religion",
-    "subject": "world",
-    "when": [
-      "activeResolution('World Religion')"
-    ],
-    "values": {
-      "resolution": "activeResolution('World Religion')?.name",
-      "ours": "(self.knows('foundedReligion') && typeof self.foundedReligion === 'string' && resolution.includes(self.foundedReligion)) || (self.knows('majorityReligion') && typeof self.majorityReligion === 'string' && resolution.includes(self.majorityReligion))"
-    },
-    "importance": 65,
-    "tags": ["international", "congress"]
-  },
-  {
-    "id": "congress-world-project",
+    "id": "congress-session-approaching",
     "subject": "world",
     "when": [
       "game.knows('congress')",
       "game.congress.available === true",
-      "(game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => worldProjects.includes(r.name))) || (game.congress.knows('proposals') && game.congress.proposals.some(p => worldProjects.includes(p.name)))"
+      "game.congress.knows('expectedSessionTurn')",
+      "Number.isFinite(game.congress.expectedSessionTurn)",
+      "game.congress.expectedSessionTurn <= turn + recent",
+      "game.congress.expectedSessionTurn <= turn + medium",
+      "!game.congress.votingNow"
     ],
     "values": {
-      "project": "(() => { const active = game.congress.knows('activeResolutions') ? game.congress.activeResolutions.find(r => worldProjects.includes(r.name)) : undefined; const proposal = game.congress.knows('proposals') ? game.congress.proposals.find(p => worldProjects.includes(p.name)) : undefined; return active ? active.name : proposal.name; })()"
+      "league": "game.congress.knows('league') ? game.congress.league : null",
+      "turnsUntil": "game.congress.expectedSessionTurn - turn",
+      "count": "game.congress.knows('proposals') ? game.congress.proposals.length : 0"
+    },
+    "importance": "40 + Math.max(0, 15 - turnsUntil)",
+    "tags": ["international", "congress"]
+  },
+  {
+    "id": "congress-session-imminent",
+    "subject": "world",
+    "when": [
+      "game.knows('congress')",
+      "game.congress.available === true",
+      "game.congress.knows('expectedSessionTurn')",
+      "game.congress.expectedSessionTurn === turn + 1"
+    ],
+    "values": {
+      "league": "game.congress.knows('league') ? game.congress.league : null",
+      "count": "game.congress.knows('proposals') ? game.congress.proposals.length : 0"
     },
     "importance": 55,
     "tags": ["international", "congress"]
@@ -156,6 +121,61 @@
     "tags": ["international", "congress"]
   },
   {
+    "id": "congress-voting-opens",
+    "subject": "world",
+    "when": [
+      "game.knows('congress')",
+      "game.congress.available === true",
+      "game.congress.votingNow === true"
+    ],
+    "values": {
+      "league": "game.congress.knows('league') ? game.congress.league : null",
+      "count": "game.congress.knows('proposals') ? game.congress.proposals.length : 0"
+    },
+    "importance": 60,
+    "tags": ["international", "congress"]
+  },
+  {
+    "id": "congress-world-ideology",
+    "subject": "world",
+    "when": [
+      "activeResolution('World Ideology')"
+    ],
+    "values": {
+      "resolution": "activeResolution('World Ideology')?.name",
+      "ours": "self.knows('ideology') && typeof self.ideology === 'string' && resolution.includes(self.ideology)"
+    },
+    "importance": 70,
+    "tags": ["international", "congress"]
+  },
+  {
+    "id": "congress-world-project",
+    "subject": "world",
+    "when": [
+      "game.knows('congress')",
+      "game.congress.available === true",
+      "(game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => worldProjects.includes(r.name))) || (game.congress.knows('proposals') && game.congress.proposals.some(p => worldProjects.includes(p.name)))"
+    ],
+    "values": {
+      "project": "(() => { const active = game.congress.knows('activeResolutions') ? game.congress.activeResolutions.find(r => worldProjects.includes(r.name)) : undefined; const proposal = game.congress.knows('proposals') ? game.congress.proposals.find(p => worldProjects.includes(p.name)) : undefined; return active ? active.name : proposal.name; })()"
+    },
+    "importance": 55,
+    "tags": ["international", "congress"]
+  },
+  {
+    "id": "congress-world-religion",
+    "subject": "world",
+    "when": [
+      "activeResolution('World Religion')"
+    ],
+    "values": {
+      "resolution": "activeResolution('World Religion')?.name",
+      "ours": "(self.knows('foundedReligion') && typeof self.foundedReligion === 'string' && resolution.includes(self.foundedReligion)) || (self.knows('majorityReligion') && typeof self.majorityReligion === 'string' && resolution.includes(self.majorityReligion))"
+    },
+    "importance": 65,
+    "tags": ["international", "congress"]
+  },
+  {
     "id": "sanction-proposed",
     "subject": "world",
     "when": [
@@ -167,26 +187,6 @@
       "resolution": "game.congress.newProposals.find(p => p.isEnact === true && p.name.startsWith('Sanction')).name"
     },
     "importance": 72,
-    "tags": ["international", "congress"]
-  },
-  {
-    "id": "congress-session-approaching",
-    "subject": "world",
-    "when": [
-      "game.knows('congress')",
-      "game.congress.available === true",
-      "game.congress.knows('expectedSessionTurn')",
-      "Number.isFinite(game.congress.expectedSessionTurn)",
-      "game.congress.expectedSessionTurn <= turn + recent",
-      "game.congress.expectedSessionTurn <= turn + medium",
-      "!game.congress.votingNow"
-    ],
-    "values": {
-      "league": "game.congress.knows('league') ? game.congress.league : null",
-      "turnsUntil": "game.congress.expectedSessionTurn - turn",
-      "count": "game.congress.knows('proposals') ? game.congress.proposals.length : 0"
-    },
-    "importance": "40 + Math.max(0, 15 - turnsUntil)",
     "tags": ["international", "congress"]
   },
   {

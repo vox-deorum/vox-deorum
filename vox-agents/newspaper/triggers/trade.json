@@ -1,37 +1,5 @@
 [
   {
-    "id": "last-trade-route-ends",
-    "subject": "world",
-    "window": "recent",
-    "when": [
-      "self.knows('outgoingTradeRouteCount')",
-      "self.knows('before') && self.before.knows('outgoingTradeRouteCount')",
-      "self.before.outgoingTradeRouteCount > 0",
-      "self.outgoingTradeRouteCount === 0"
-    ],
-    "values": {
-      "routes": "self.before.outgoingTradeRouteCount"
-    },
-    "importance": "55 + 5 * routes",
-    "tags": ["politics", "domestic"]
-  },
-  {
-    "id": "our-trade-route-plundered",
-    "subject": "event",
-    "event": "PlayerPlunderedTradeRoute",
-    "when": [
-      "event.knows('originOwner') && event.originOwner.self === true",
-      "event.knows('plunderingPlayerId') && event.plunderingPlayerId !== self.id"
-    ],
-    "values": {
-      "plunderer": "event.knows('plunderingPlayer') && event.plunderingPlayer.knows('name') ? event.plunderingPlayer.name : null",
-      "gold": "event.knows('plunderGoldValue') && Number.isFinite(event.plunderGoldValue) ? event.plunderGoldValue : null",
-      "destination": "event.knows('destinationOwner') && event.destinationOwner.knows('name') ? event.destinationOwner.name : null"
-    },
-    "importance": 70,
-    "tags": ["economy", "trade"]
-  },
-  {
     "id": "gold-trade-deal",
     "subject": "event",
     "event": "DealMade",
@@ -52,19 +20,20 @@
     "tags": ["economy", "trade", "international"]
   },
   {
-    "id": "trade-network-opens",
+    "id": "last-trade-route-ends",
     "subject": "world",
+    "window": "recent",
     "when": [
-      "self.knows('before')",
       "self.knows('outgoingTradeRouteCount')",
-      "(self.before.knows('outgoingTradeRouteCount') && self.before.outgoingTradeRouteCount === 0) || (self.before.knows('outgoingTradeRoutes') && Array.isArray(self.before.outgoingTradeRoutes) && self.before.outgoingTradeRoutes.length === 0)",
-      "self.outgoingTradeRouteCount > 0"
+      "self.knows('before') && self.before.knows('outgoingTradeRouteCount')",
+      "self.before.outgoingTradeRouteCount > 0",
+      "self.outgoingTradeRouteCount === 0"
     ],
     "values": {
-      "routes": "self.outgoingTradeRouteCount"
+      "routes": "self.before.outgoingTradeRouteCount"
     },
-    "importance": 55,
-    "tags": ["economy", "trade"]
+    "importance": "55 + 5 * routes",
+    "tags": ["politics", "domestic"]
   },
   {
     "id": "long-trade-route-completed",
@@ -86,5 +55,36 @@
     },
     "importance": "outgoing ? 50 : 45",
     "tags": ["economy", "trade", "international"]
+  },
+  {
+    "id": "our-trade-route-plundered",
+    "subject": "event",
+    "event": "PlayerPlunderedTradeRoute",
+    "when": [
+      "event.knows('originOwner') && event.originOwner.self === true",
+      "event.knows('plunderingPlayerId') && event.plunderingPlayerId !== self.id"
+    ],
+    "values": {
+      "plunderer": "event.knows('plunderingPlayer') && event.plunderingPlayer.knows('name') ? event.plunderingPlayer.name : null",
+      "gold": "event.knows('plunderGoldValue') && Number.isFinite(event.plunderGoldValue) ? event.plunderGoldValue : null",
+      "destination": "event.knows('destinationOwner') && event.destinationOwner.knows('name') ? event.destinationOwner.name : null"
+    },
+    "importance": 70,
+    "tags": ["economy", "trade"]
+  },
+  {
+    "id": "trade-network-opens",
+    "subject": "world",
+    "when": [
+      "self.knows('before')",
+      "self.knows('outgoingTradeRouteCount')",
+      "(self.before.knows('outgoingTradeRouteCount') && self.before.outgoingTradeRouteCount === 0) || (self.before.knows('outgoingTradeRoutes') && Array.isArray(self.before.outgoingTradeRoutes) && self.before.outgoingTradeRoutes.length === 0)",
+      "self.outgoingTradeRouteCount > 0"
+    ],
+    "values": {
+      "routes": "self.outgoingTradeRouteCount"
+    },
+    "importance": 55,
+    "tags": ["economy", "trade"]
   }
 ]

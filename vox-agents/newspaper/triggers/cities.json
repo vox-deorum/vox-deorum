@@ -1,48 +1,18 @@
 [
   {
-    "id": "neighbor-puppet-annexed",
-    "subject": "city",
-    "window": "recent",
+    "id": "capital-outgrown",
+    "subject": "world",
     "when": [
-      "city.is.neighbor",
-      "city.before.isPuppet",
-      "!city.isPuppet && city.isOccupied",
-      "city.before.owner.id == city.owner.id"
+      "self.knows('capital') && Number.isFinite(self.capital.population)",
+      "self.cities.some(c => c.knows('population') && c.population > self.capital.population)"
     ],
     "values": {
-      "distance": "city.distance.own"
+      "largestPopulation": "Math.max(...self.cities.filter(c => c.knows('population') && Number.isFinite(c.population)).map(c => c.population))",
+      "largest": "(() => { const names = self.cities.filter(c => c.knows('population') && c.population === largestPopulation).map(c => c.name); return names.length <= 2 ? names.join(' and ') : names.slice(0, -1).join(', ') + ', and ' + names[names.length - 1]; })()",
+      "tied": "self.cities.filter(c => c.knows('population') && c.population === largestPopulation).length > 1",
+      "capital": "self.capital.name"
     },
-    "importance": "70 - 3 * distance"
-  },
-  {
-    "id": "settler-departure",
-    "subject": "city",
-    "window": "recent",
-    "when": [
-      "city.own",
-      "city.population < city.before.population",
-      "city.trained.some(t => settlers.includes(t.unit))",
-      "city.foodPerTurn > 0"
-    ],
-    "values": {
-      "lost": "city.before.population - city.population"
-    },
-    "importance": "30 + 10 * lost"
-  },
-  {
-    "id": "forward-settle",
-    "subject": "event",
-    "event": "PlayerCityFounded",
-    "when": [
-      "event.player.is.rival",
-      "event.distance.own <= adjacent"
-    ],
-    "values": {
-      "ours": "event.knows('city') && event.city.knows('nearestOwn') && event.city.nearestOwn.knows('name') ? event.city.nearestOwn.name : null",
-      "distance": "event.distance.own"
-    },
-    "importance": "90 - 10 * distance",
-    "urgent": "distance <= 2"
+    "importance": 45
   },
   {
     "id": "cities-share-grievance",
@@ -60,46 +30,21 @@
     "tags": ["cities", "domestic"]
   },
   {
-    "id": "city-pillaged-unrest",
+    "id": "city-being-razed",
     "subject": "city",
     "when": [
-      "city.own",
-      "city.knows('unhappiness')",
-      "city.unhappiness.top === 'pillaged'"
+      "city.knows('razingTurns') && city.razingTurns > 0 && city.knows('foreign') && city.foreign",
+      "city.knows('owner') && city.owner.knows('name')"
     ],
     "values": {
-      "pillaged": "city.unhappiness.pillaged"
+      "cityName": "city.knows('name') ? city.name : null",
+      "civilization": "city.owner.name",
+      "population": "city.knows('population') ? city.population : null",
+      "turns": "city.razingTurns",
+      "distance": "city.knows('distance') && city.distance.knows('own') ? city.distance.own : null"
     },
-    "importance": 60,
-    "tags": ["cities", "domestic"]
-  },
-  {
-    "id": "city-famine-unrest",
-    "subject": "city",
-    "when": [
-      "city.own",
-      "city.knows('unhappiness')",
-      "city.unhappiness.top === 'famine'"
-    ],
-    "values": {
-      "famine": "city.unhappiness.famine"
-    },
-    "importance": 60,
-    "tags": ["cities", "domestic"]
-  },
-  {
-    "id": "our-city-founded",
-    "subject": "event",
-    "event": ["PlayerCityFounded", "UnitCityFounded"],
-    "when": [
-      "event.knows('player') && event.player.self === true",
-      "event.type === 'PlayerCityFounded' || !event.knows('plot') || !events.some(e => e.type === 'PlayerCityFounded' && e.turn === event.turn && e.knows('player') && e.player.self && e.knows('plot') && e.plot.x === event.plot.x && e.plot.y === event.plot.y)"
-    ],
-    "values": {
-      "cityName": "event.knows('city') && event.city.knows('name') ? event.city.name : null"
-    },
-    "importance": 50,
-    "tags": ["cities", "domestic"]
+    "importance": "distance === null ? 55 : Math.max(45, 75 - 2 * distance)",
+    "tags": ["cities", "military", "international"]
   },
   {
     "id": "city-capture-involving-us",
@@ -121,38 +66,34 @@
     "tags": ["cities", "military"]
   },
   {
-    "id": "starvation-without-siege",
+    "id": "city-defense-completed",
+    "subject": "event",
+    "event": "CityConstructed",
+    "when": [
+      "event.knows('building') && defenses.includes(event.building)",
+      "event.knows('player') && event.player.self === true",
+      "event.knows('city') && event.city.knows('name') && event.city.own === true"
+    ],
+    "values": {
+      "building": "event.building",
+      "cityName": "event.city.name"
+    },
+    "importance": "self.knows('atWar') && self.atWar === true ? 60 : 45",
+    "tags": ["cities", "military", "domestic"]
+  },
+  {
+    "id": "city-famine-unrest",
     "subject": "city",
     "when": [
       "city.own",
-      "self.knows('atWar') && self.atWar === false",
-      "city.knows('unhappiness') && city.unhappiness.knows('top') && city.unhappiness.top !== 'famine'",
-      "city.knows('foodPerTurn') && Number.isFinite(city.foodPerTurn) && city.foodPerTurn < 0",
-      "city.knows('foodStored') && Number.isFinite(city.foodStored)",
-      "city.is.starving"
+      "city.knows('unhappiness')",
+      "city.unhappiness.top === 'famine'"
     ],
     "values": {
-      "foodPerTurn": "city.foodPerTurn",
-      "foodStored": "city.foodStored",
-      "shortfall": "-city.foodPerTurn"
+      "famine": "city.unhappiness.famine"
     },
-    "importance": "50 + Math.min(30, 10 * shortfall)",
+    "importance": 60,
     "tags": ["cities", "domestic"]
-  },
-  {
-    "id": "capital-outgrown",
-    "subject": "world",
-    "when": [
-      "self.knows('capital') && Number.isFinite(self.capital.population)",
-      "self.cities.some(c => c.knows('population') && c.population > self.capital.population)"
-    ],
-    "values": {
-      "largestPopulation": "Math.max(...self.cities.filter(c => c.knows('population') && Number.isFinite(c.population)).map(c => c.population))",
-      "largest": "(() => { const names = self.cities.filter(c => c.knows('population') && c.population === largestPopulation).map(c => c.name); return names.length <= 2 ? names.join(' and ') : names.slice(0, -1).join(', ') + ', and ' + names[names.length - 1]; })()",
-      "tied": "self.cities.filter(c => c.knows('population') && c.population === largestPopulation).length > 1",
-      "capital": "self.capital.name"
-    },
-    "importance": 45
   },
   {
     "id": "city-flips",
@@ -173,39 +114,6 @@
     "tags": ["cities", "politics"]
   },
   {
-    "id": "city-being-razed",
-    "subject": "city",
-    "when": [
-      "city.knows('razingTurns') && city.razingTurns > 0 && city.knows('foreign') && city.foreign",
-      "city.knows('owner') && city.owner.knows('name')"
-    ],
-    "values": {
-      "cityName": "city.knows('name') ? city.name : null",
-      "civilization": "city.owner.name",
-      "population": "city.knows('population') ? city.population : null",
-      "turns": "city.razingTurns",
-      "distance": "city.knows('distance') && city.distance.knows('own') ? city.distance.own : null"
-    },
-    "importance": "distance === null ? 55 : Math.max(45, 75 - 2 * distance)",
-    "tags": ["cities", "military", "international"]
-  },
-  {
-    "id": "city-defense-completed",
-    "subject": "event",
-    "event": "CityConstructed",
-    "when": [
-      "event.knows('building') && defenses.includes(event.building)",
-      "event.knows('player') && event.player.self === true",
-      "event.knows('city') && event.city.knows('name') && event.city.own === true"
-    ],
-    "values": {
-      "building": "event.building",
-      "cityName": "event.city.name"
-    },
-    "importance": "self.knows('atWar') && self.atWar === true ? 60 : 45",
-    "tags": ["cities", "military", "domestic"]
-  },
-  {
     "id": "city-growth-milestone",
     "subject": "city",
     "window": "recent",
@@ -221,23 +129,6 @@
       "cityName": "city.name"
     },
     "importance": "milestone === 'metropolis' ? 55 : 40",
-    "tags": ["cities", "domestic"]
-  },
-  {
-    "id": "distant-colony-founded",
-    "subject": "event",
-    "event": "PlayerCityFounded",
-    "when": [
-      "event.knows('player') && event.player.self === true",
-      "event.knows('city')",
-      "event.city.knows('distance') && event.city.distance.knows('capital')",
-      "event.city.distance.capital >= nearby"
-    ],
-    "values": {
-      "cityName": "event.city.knows('name') ? event.city.name : null",
-      "distance": "event.city.distance.capital"
-    },
-    "importance": "50 + Math.min(20, event.city.distance.capital - nearby)",
     "tags": ["cities", "domestic"]
   },
   {
@@ -258,6 +149,67 @@
     "tags": ["politics", "military", "international"]
   },
   {
+    "id": "city-pillaged-unrest",
+    "subject": "city",
+    "when": [
+      "city.own",
+      "city.knows('unhappiness')",
+      "city.unhappiness.top === 'pillaged'"
+    ],
+    "values": {
+      "pillaged": "city.unhappiness.pillaged"
+    },
+    "importance": 60,
+    "tags": ["cities", "domestic"]
+  },
+  {
+    "id": "distant-colony-founded",
+    "subject": "event",
+    "event": "PlayerCityFounded",
+    "when": [
+      "event.knows('player') && event.player.self === true",
+      "event.knows('city')",
+      "event.city.knows('distance') && event.city.distance.knows('capital')",
+      "event.city.distance.capital >= nearby"
+    ],
+    "values": {
+      "cityName": "event.city.knows('name') ? event.city.name : null",
+      "distance": "event.city.distance.capital"
+    },
+    "importance": "50 + Math.min(20, event.city.distance.capital - nearby)",
+    "tags": ["cities", "domestic"]
+  },
+  {
+    "id": "forward-settle",
+    "subject": "event",
+    "event": "PlayerCityFounded",
+    "when": [
+      "event.player.is.rival",
+      "event.distance.own <= adjacent"
+    ],
+    "values": {
+      "ours": "event.knows('city') && event.city.knows('nearestOwn') && event.city.nearestOwn.knows('name') ? event.city.nearestOwn.name : null",
+      "distance": "event.distance.own"
+    },
+    "importance": "90 - 10 * distance",
+    "urgent": "distance <= 2"
+  },
+  {
+    "id": "neighbor-puppet-annexed",
+    "subject": "city",
+    "window": "recent",
+    "when": [
+      "city.is.neighbor",
+      "city.before.isPuppet",
+      "!city.isPuppet && city.isOccupied",
+      "city.before.owner.id == city.owner.id"
+    ],
+    "values": {
+      "distance": "city.distance.own"
+    },
+    "importance": "70 - 3 * distance"
+  },
+  {
     "id": "occupied-city-resists",
     "subject": "city",
     "when": [
@@ -273,6 +225,54 @@
       "unrest": "city.knows('happinessDelta') && Number.isFinite(city.happinessDelta) ? city.happinessDelta : null"
     },
     "importance": "Math.min(70, 45 + 5 * turns)",
+    "tags": ["cities", "domestic"]
+  },
+  {
+    "id": "our-city-founded",
+    "subject": "event",
+    "event": ["PlayerCityFounded", "UnitCityFounded"],
+    "when": [
+      "event.knows('player') && event.player.self === true",
+      "event.type === 'PlayerCityFounded' || !event.knows('plot') || !events.some(e => e.type === 'PlayerCityFounded' && e.turn === event.turn && e.knows('player') && e.player.self && e.knows('plot') && e.plot.x === event.plot.x && e.plot.y === event.plot.y)"
+    ],
+    "values": {
+      "cityName": "event.knows('city') && event.city.knows('name') ? event.city.name : null"
+    },
+    "importance": 50,
+    "tags": ["cities", "domestic"]
+  },
+  {
+    "id": "settler-departure",
+    "subject": "city",
+    "window": "recent",
+    "when": [
+      "city.own",
+      "city.population < city.before.population",
+      "city.trained.some(t => settlers.includes(t.unit))",
+      "city.foodPerTurn > 0"
+    ],
+    "values": {
+      "lost": "city.before.population - city.population"
+    },
+    "importance": "30 + 10 * lost"
+  },
+  {
+    "id": "starvation-without-siege",
+    "subject": "city",
+    "when": [
+      "city.own",
+      "self.knows('atWar') && self.atWar === false",
+      "city.knows('unhappiness') && city.unhappiness.knows('top') && city.unhappiness.top !== 'famine'",
+      "city.knows('foodPerTurn') && Number.isFinite(city.foodPerTurn) && city.foodPerTurn < 0",
+      "city.knows('foodStored') && Number.isFinite(city.foodStored)",
+      "city.is.starving"
+    ],
+    "values": {
+      "foodPerTurn": "city.foodPerTurn",
+      "foodStored": "city.foodStored",
+      "shortfall": "-city.foodPerTurn"
+    },
+    "importance": "50 + Math.min(30, 10 * shortfall)",
     "tags": ["cities", "domestic"]
   }
 ]

@@ -1,5 +1,41 @@
 [
   {
+    "id": "ally-city-state-attacked",
+    "subject": "incident",
+    "when": [
+      "incident.kind == 'war'",
+      "incident.knows('role') && incident.role === 'none'",
+      "incident.knows('target') && incident.target.knows('cityState') && incident.target.cityState === true",
+      "incident.target.knows('at') && turn - incident.turn < long",
+      "incident.target.at(turn - incident.turn + 1).is.alliedCityState"
+    ],
+    "values": { "ally": "incident.knows('target') && incident.target.knows('name') ? incident.target.name : null", "aggressor": "incident.knows('initiator') && incident.initiator.knows('name') ? incident.initiator.name : null" },
+    "importance": 80,
+    "tags": ["politics", "military"]
+  },
+  {
+    "id": "ally-city-state-captured",
+    "subject": "event",
+    "event": "CityCaptureComplete",
+    "when": [
+      "event.knows('oldOwner') && event.knows('newOwner')",
+      "event.oldOwner.knows('cityState') && event.oldOwner.cityState === true",
+      "event.newOwner.knows('major') && event.newOwner.major === true && event.newOwner.self === false",
+      "event.knows('isConquest') && event.isConquest === true",
+      "event.turn <= turn && turn - event.turn < long",
+      "event.oldOwner.at(turn - event.turn + 1).is.alliedCityState"
+    ],
+    "values": {
+      "cityState": "event.oldOwner.knows('name') ? event.oldOwner.name : null",
+      "captor": "event.newOwner.knows('name') ? event.newOwner.name : null",
+      "cityName": "event.knows('city') && event.city.knows('name') ? event.city.name : null",
+      "distance": "event.knows('distance') ? event.distance.own : null"
+    },
+    "importance": 85,
+    "urgent": "event.knows('distance') && event.distance.own <= neighboring",
+    "tags": ["politics", "military", "international"]
+  },
+  {
     "id": "city-state-ally-defects",
     "subject": "event",
     "event": "SetAlly",
@@ -23,20 +59,6 @@
     "values": { "cityState": "event.minorPlayer.knows('name') ? event.minorPlayer.name : null", "distance": "event.minorPlayer.knows('distance') ? event.minorPlayer.distance : null", "replaced": "event.knows('oldAllyPlayer') && event.oldAllyPlayer.knows('name') ? event.oldAllyPlayer.name : null" },
     "importance": "distance !== null && distance <= nearby ? 70 : 60",
     "tags": ["politics", "international"]
-  },
-  {
-    "id": "ally-city-state-attacked",
-    "subject": "incident",
-    "when": [
-      "incident.kind == 'war'",
-      "incident.knows('role') && incident.role === 'none'",
-      "incident.knows('target') && incident.target.knows('cityState') && incident.target.cityState === true",
-      "incident.target.knows('at') && turn - incident.turn < long",
-      "incident.target.at(turn - incident.turn + 1).is.alliedCityState"
-    ],
-    "values": { "ally": "incident.knows('target') && incident.target.knows('name') ? incident.target.name : null", "aggressor": "incident.knows('initiator') && incident.initiator.knows('name') ? incident.initiator.name : null" },
-    "importance": 80,
-    "tags": ["politics", "military"]
   },
   {
     "id": "city-state-friendship-changes",
@@ -72,27 +94,5 @@
     },
     "importance": "distance <= adjacent ? 75 : 62",
     "tags": ["politics", "international"]
-  },
-  {
-    "id": "ally-city-state-captured",
-    "subject": "event",
-    "event": "CityCaptureComplete",
-    "when": [
-      "event.knows('oldOwner') && event.knows('newOwner')",
-      "event.oldOwner.knows('cityState') && event.oldOwner.cityState === true",
-      "event.newOwner.knows('major') && event.newOwner.major === true && event.newOwner.self === false",
-      "event.knows('isConquest') && event.isConquest === true",
-      "event.turn <= turn && turn - event.turn < long",
-      "event.oldOwner.at(turn - event.turn + 1).is.alliedCityState"
-    ],
-    "values": {
-      "cityState": "event.oldOwner.knows('name') ? event.oldOwner.name : null",
-      "captor": "event.newOwner.knows('name') ? event.newOwner.name : null",
-      "cityName": "event.knows('city') && event.city.knows('name') ? event.city.name : null",
-      "distance": "event.knows('distance') ? event.distance.own : null"
-    },
-    "importance": 85,
-    "urgent": "event.knows('distance') && event.distance.own <= neighboring",
-    "tags": ["politics", "military", "international"]
   }
 ]

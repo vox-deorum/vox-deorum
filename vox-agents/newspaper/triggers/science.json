@@ -1,22 +1,5 @@
 [
   {
-    "id": "technology-leader-changes",
-    "subject": "player",
-    "window": "short",
-    "when": [
-      "player.major",
-      "player.rank('technologies') === 1",
-      "player.before.rank('technologies') > 1",
-      "players.some(p => p.id !== player.id && p.knows('major') && p.major && p.knows('technologies') && Number.isFinite(p.technologies))"
-    ],
-    "values": {
-      "civilization": "player.name",
-      "count": "player.technologies",
-      "tied": "players.some(p => p.id !== player.id && p.knows('major') && p.major && p.knows('technologies') && p.technologies === player.technologies)"
-    },
-    "importance": "player.self ? 70 : 50"
-  },
-  {
     "id": "new-era",
     "subject": "world",
     "window": "recent",
@@ -30,6 +13,22 @@
     },
     "importance": 70,
     "tags": ["politics", "domestic"]
+  },
+  {
+    "id": "our-team-gains-technology",
+    "subject": "event",
+    "event": "TeamTechResearched",
+    "when": [
+      "event.knows('tech') && typeof event.tech === 'string' && event.tech.length > 0",
+      "!event.knows('changeAmount') || event.changeAmount > 0",
+      "event.knows('players') && event.players.some(p => p.self === true)"
+    ],
+    "values": {
+      "tech": "event.tech",
+      "era": "self.knows('era') ? self.era : null"
+    },
+    "importance": 55,
+    "tags": ["science", "domestic"]
   },
   {
     "id": "rival-enters-new-era",
@@ -52,19 +51,20 @@
     "tags": ["politics", "international"]
   },
   {
-    "id": "our-team-gains-technology",
-    "subject": "event",
-    "event": "TeamTechResearched",
+    "id": "technology-leader-changes",
+    "subject": "player",
+    "window": "short",
     "when": [
-      "event.knows('tech') && typeof event.tech === 'string' && event.tech.length > 0",
-      "!event.knows('changeAmount') || event.changeAmount > 0",
-      "event.knows('players') && event.players.some(p => p.self === true)"
+      "player.major",
+      "player.rank('technologies') === 1",
+      "player.before.rank('technologies') > 1",
+      "players.some(p => p.id !== player.id && p.knows('major') && p.major && p.knows('technologies') && Number.isFinite(p.technologies))"
     ],
     "values": {
-      "tech": "event.tech",
-      "era": "self.knows('era') ? self.era : null"
+      "civilization": "player.name",
+      "count": "player.technologies",
+      "tied": "players.some(p => p.id !== player.id && p.knows('major') && p.major && p.knows('technologies') && p.technologies === player.technologies)"
     },
-    "importance": 55,
-    "tags": ["science", "domestic"]
+    "importance": "player.self ? 70 : 50"
   }
 ]

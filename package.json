@@ -16,6 +16,7 @@
     "format:docs": "prettier --write --prose-wrap never \"**/*.md\"",
     "archive:raw": "node scripts/maintenance/archive-raw.mjs",
     "newspaper:triggers": "node scripts/utilities/list-newspaper-triggers.mjs",
+    "newspaper:sort-triggers": "node scripts/utilities/sort-newspaper-triggers.mjs",
     "models:codex": "tsx --env-file-if-exists=vox-agents/.env scripts/dependencies/list-codex-models.ts",
     "update:codex-proxy": "node scripts/dependencies/update-codex-proxy.mjs",
     "vp-pr": "node scripts/upstream/vp-pr.mjs",
