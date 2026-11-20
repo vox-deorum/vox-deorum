@@ -30,6 +30,7 @@
     "test:claude-code": "cross-env TEST_TIER=live/claude-code vitest run",
     "archivist": "npm run build && npm run archivist:dist --",
     "archivist:dist": "node --import ./dist/instrumentation.js dist/archivist/console.js",
+    "archivist:cluster": "tsx src/archivist/cluster-console.ts",
     "workspace": "npm run build && npm run workspace:dist --",
     "workspace:dist": "node dist/agents/workspace/console.js",
     "narrator": "npm run build && npm run narrator:dist --",

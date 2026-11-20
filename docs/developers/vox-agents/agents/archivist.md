@@ -51,6 +51,20 @@ Choose one model per run with `-m`. If omitted, the scout uses its configured mo
 
 Rerunning skips saved samples for the same model. Another model can add pitches alongside them. With `--force`, a successful sample replaces only the saved pitches for that turn and model. Failed samples leave saved pitches intact.
 
+### Clustering pitches
+
+Once pitches are saved, cluster them across every model with:
+
+```bash
+npm run archivist:cluster -- -i <episodes.duckdb> [-o <clusters.md>] [--threshold 0.8]
+```
+
+The command reads the database read-only and follows the primary-key order. A pitch joins the first cluster whose running center has at least the threshold cosine similarity; otherwise it starts a cluster. The center is the running sum of unit vectors, so every pitch has equal weight. The report defaults to `.tmp/newspaper-mining/clusters.md` at the repository root. It lists the totals, threshold, newest saved pitch timestamp, and each cluster by size, with the count of distinct models and eras and up to three examples. Clusters are ordered by size, then by when they first appeared.
+
+Pitches without a usable embedding are skipped and counted: null, empty, non-finite, zero vectors, and vectors with a null component. A mix of embedding lengths stops the command with the dimension counts. Storage cannot tell embedders apart when they produce the same length, so mine and cluster with one embedder. Re-run story mining with embeddings enabled if the saved pitches have none.
+
+The command refuses an output path that resolves to the input database or its WAL, including Windows case and directory aliases, and it writes through a temporary file before renaming it into place. DuckDB does not let a read-only reader open a database that another process holds for writing. Stop the archivist and its UI before clustering, or point the command at a consistent copy. The code lives in `src/archivist/pipeline/story-clustering.ts` and `src/archivist/cluster-console.ts`.
+
 ## Working on the archivist
 
 Three places cover most changes:
