@@ -233,3 +233,32 @@ describe('get-diplomatic-events: relayed report subjects', () => {
     });
   });
 });
+
+describe('get-diplomatic-events: public World Congress outcomes', () => {
+  it('returns a historic result to every player slot while keeping unrelated events private', async () => {
+    await seedEvent('ResolutionResult', 9,
+      { ResolutionType: 'World Religion', ProposerPlayerID: 1, Decision: 0, IsEnact: 1, Passed: 0 }, [0]);
+    await seedEvent('PlayerGifted', 9,
+      { GivingPlayerID: 0, ReceivingPlayerID: 1, GoldAmount: 10 }, [0]);
+
+    for (const PlayerID of [0, 1, 2]) {
+      const result = await client.call({ PlayerID });
+      expect(Object.values(result).flat().map((event: any) => event.Type)).toContain('ResolutionResult');
+    }
+    const forEgypt = await client.call({ PlayerID: 1 });
+    expect(Object.values(forEgypt).flat().map((event: any) => event.Type)).not.toContain('PlayerGifted');
+  });
+
+  it('formats recorded string and numeric resolution types without inventing a proposer', async () => {
+    await seedEvent('ResolutionResult', 9,
+      { ResolutionType: 'World Religion', ProposerPlayerID: 1, Decision: 0, IsEnact: 1, Passed: 0 }, [0]);
+    await seedEvent('ResolutionResult', 9,
+      { ResolutionType: 7, ProposerPlayerID: -1, Decision: 0, IsEnact: 0, Passed: 1 }, [0]);
+
+    const result = await client.call({ PlayerID: 2, Formatted: true });
+    const lines = Object.values(result).flat() as string[];
+    expect(lines.some(line => line.includes('World Religion') && line.includes('failed'))).toBe(true);
+    expect(lines.some(line => line.includes('Resolution 7') && line.includes('Repeal') && line.includes('passed'))).toBe(true);
+    expect(lines.every(line => !line.includes('Player -1'))).toBe(true);
+  });
+});

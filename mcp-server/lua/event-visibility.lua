@@ -455,6 +455,15 @@ Game.RegisterFunction("${Name}", function(${Arguments})
       addCity(value, 2, key)
     end
   end
+
+  -- World Congress outcomes are public records for every major civ, so mark them
+  -- after enrichment has supplied the proposer label and any other event metadata.
+  if currentEventType == "ResolutionResult" then
+    for playerID = 0, maxMajorCivs do
+      setVisible(playerID, 2)
+    end
+  end
+
   return extraPayloads, visibilityFlags
 end)
 

@@ -1,4 +1,4 @@
-import { sql, type Kysely, type Selectable } from 'kysely';
+import { expressionBuilder, sql, type Expression, type Kysely, type Selectable, type SqlBool } from 'kysely';
 import type { KnowledgeDatabase } from './schema/base.js';
 import { isAfter, isAtTurn, isBeforeOrAt, isVisible } from './expressions.js';
 
@@ -13,6 +13,15 @@ export interface EventReadOptions {
   ToTurn?: number;
 }
 
+/** World Congress outcomes are public regardless of legacy visibility flags. */
+export const resolutionResultEventType = 'ResolutionResult';
+
+/** Widen a receiver's event read to public types, so historic rows need no rewrite. */
+export function isVisibleOrPublic(playerID: number): Expression<SqlBool> {
+  const eb = expressionBuilder<KnowledgeDatabase, 'GameEvents'>();
+  return eb.or([isVisible(playerID), eb('Type', '=', resolutionResultEventType)]);
+}
+
 /** Read events without formatting, consolidation, refresh, or connection ownership. */
 export async function readEvents(db: Kysely<KnowledgeDatabase>, options: EventReadOptions = {}) {
   let query = db.selectFrom('GameEvents').selectAll();
@@ -20,7 +29,7 @@ export async function readEvents(db: Kysely<KnowledgeDatabase>, options: EventRe
   if (options.After !== undefined) query = query.where(isAfter(options.After));
   if (options.Before !== undefined) query = query.where(isBeforeOrAt(options.Before));
   if (options.Type !== undefined) query = query.where('Type', '=', options.Type);
-  if (options.PlayerID !== undefined) query = query.where(isVisible(options.PlayerID));
+  if (options.PlayerID !== undefined) query = query.where(isVisibleOrPublic(options.PlayerID));
   if (options.FromTurn !== undefined) query = query.where('Turn', '>=', options.FromTurn);
   if (options.ToTurn !== undefined) query = query.where('Turn', '<=', options.ToTurn);
   return query.orderBy('ID').execute();

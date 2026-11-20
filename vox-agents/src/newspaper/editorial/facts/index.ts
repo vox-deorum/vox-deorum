@@ -5,6 +5,7 @@ import {
 import { resolveGameSpeedMultiplier } from '../../../knowledge/game-speed.js';
 import type { DiplomacyCheck } from '../diplomacy/war-peace.js';
 import { buildCityFacts, buildCitySnapshotFacts } from './city.js';
+import { buildCongressFact } from './congress.js';
 import { buildDiplomacyFacts } from './diplomacy.js';
 import { buildEventFacts } from './event.js';
 import { buildPlayerFacts, buildPlayerSnapshotFacts } from './player.js';
@@ -101,8 +102,13 @@ function datedEvents(evidence: NewspaperEvidence): NewspaperEvent[] {
     eventReportTurn(a) - eventReportTurn(b) || a.source.id - b.source.id);
 }
 
-/** Expose the small set of public game settings used by editorial rules. */
-function gameFacts(metadata: FactMetadata, speedMultiplier: number | undefined): FactObject {
+/** Expose the small set of public game settings and the league agenda used by editorial rules. */
+function gameFacts(
+  metadata: FactMetadata,
+  speedMultiplier: number | undefined,
+  evidence: NewspaperEvidence,
+  cutoffTurn: number
+): FactObject {
   const game: Record<string, ReturnType<typeof fact>> = {};
   if (typeof metadata.gameSpeed === 'string') game.speed = fact(metadata.gameSpeed);
   if (speedMultiplier !== undefined) game.speedMultiplier = fact(speedMultiplier);
@@ -110,6 +116,8 @@ function gameFacts(metadata: FactMetadata, speedMultiplier: number | undefined):
   if (typeof metadata.startEra === 'string') game.startEra = fact(metadata.startEra);
   if (typeof metadata.maxTurns === 'number' && Number.isSafeInteger(metadata.maxTurns) && metadata.maxTurns >= 0)
     game.maxTurns = fact(metadata.maxTurns);
+  const congress = buildCongressFact(evidence, cutoffTurn);
+  if (congress) game.congress = congress;
   return game;
 }
 
@@ -214,7 +222,7 @@ export function buildNewspaperFacts(
     earliestSnapshotTurn: Math.max(0, evidence.history?.fromTurn ?? cutoffTurn),
     longTurns,
     receiverId: receiverPlayerID,
-    game: gameFacts(metadata, speed),
+    game: gameFacts(metadata, speed, evidence, cutoffTurn),
     subjects: {
       city: cutoff.cities.map(row => row.subjectID),
       player: cutoff.players.map(row => row.subjectID),

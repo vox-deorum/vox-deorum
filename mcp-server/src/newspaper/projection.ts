@@ -3,6 +3,7 @@ import type { PlayerInformation } from '../knowledge/schema/public.js';
 import type { CityInformation, GameEvent, PlayerSummary, TacticalZones } from '../knowledge/schema/timed.js';
 import { projectCityReportFields, projectPlayerReportFields } from '../knowledge/helpers/report-projection.js';
 import { diplomaticEventSubjects, matchesSubjects, type EventSubjects } from '../knowledge/helpers/event-subjects.js';
+import { resolutionResultEventType } from '../knowledge/history.js';
 import { pickFields } from '../utils/fields.js';
 import { parseRelationship } from '../diplomacy/relationships.js';
 import type {
@@ -293,6 +294,10 @@ export const newspaperEventConfigs: Record<string, NewspaperEventConfig> = {
     }
   },
   TeamMeet: { fields: ['CurrentTeamID', 'OtherTeamID'], subjects: diplomaticEventSubjects.TeamMeet },
+  [resolutionResultEventType]: {
+    fields: [], // The public projector below selects and normalizes the recorded fields.
+    subjects: diplomaticEventSubjects.ResolutionResult
+  },
   SetAlly: {
     fields: ['MinorPlayerID', 'OldAllyPlayerID', 'NewAllyPlayerID'], subjects: diplomaticEventSubjects.SetAlly,
     reportWhenInvolved: true
@@ -554,6 +559,13 @@ function explicitlyFalse(value: unknown): boolean {
   return value === false || value === 0;
 }
 
+/** Normalize a recorded boolean flag, including legacy numeric captures. */
+function recordedBoolean(value: unknown): boolean | undefined {
+  if (value === true || value === 1) return true;
+  if (value === false || value === 0) return false;
+  return undefined;
+}
+
 /** Report a named great person's death once, and not when the same unit was expended in that turn. */
 function reportablePrekill(row: Selectable<GameEvent>, context: NewspaperProjectionContext): boolean {
   const { OwnerID, UnitID, DelayKill } = row.Payload;
@@ -624,8 +636,30 @@ function projectWorldNewsEvent(row: Selectable<GameEvent>, config: NewspaperEven
   return { source: source('GameEvents', row), type: row.Type, values };
 }
 
+/** Project a public World Congress outcome from its recorded fields, without contact or participant gates. */
+function projectPublicResolution(row: Selectable<GameEvent>): NewspaperEvent {
+  const payload = row.Payload;
+  const values: Record<string, unknown> = {};
+  const enact = recordedBoolean(payload.IsEnact);
+  if (enact !== undefined) values.IsEnact = enact;
+  const passed = recordedBoolean(payload.Passed);
+  if (passed !== undefined) values.Passed = passed;
+  if (typeof payload.ResolutionType === 'string' || typeof payload.ResolutionType === 'number') {
+    values.ResolutionType = payload.ResolutionType;
+  }
+  if (typeof payload.ProposerPlayerID === 'number') values.ProposerPlayerID = payload.ProposerPlayerID;
+  if (typeof payload.Decision === 'number') values.Decision = payload.Decision;
+  const proposer = payload.ProposerPlayer;
+  const label = proposer && typeof proposer === 'object'
+    ? recordedName((proposer as Record<string, unknown>).Civilization) : undefined;
+  if (label) values.ProposerName = label;
+  return { source: source('GameEvents', row), type: row.Type, values };
+}
+
 /** Project a supported event under its configured policy, using dated contact and recorded access. */
 export function projectNewspaperEvent(row: Selectable<GameEvent>, context: NewspaperProjectionContext): NewspaperEvent | undefined {
+  // Public outcomes reach every major civ, including historic rows stored before the policy widened.
+  if (row.Type === resolutionResultEventType) return projectPublicResolution(row);
   const config = newspaperEventConfigs[row.Type];
   // Private events use their participant projection and never become generic visibility evidence.
   if (!config || config.private) return undefined;

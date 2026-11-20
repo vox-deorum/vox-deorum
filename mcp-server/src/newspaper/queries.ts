@@ -15,6 +15,7 @@ import {
 } from './projection.js';
 import { projectEspionageEvidence } from './espionage-operations.js';
 import { readReceiverTechnologies } from './technologies.js';
+import { readCongressEvidence } from './congress.js';
 
 type ReceiverField = keyof KnowledgeDatabase['PlayerSummaries'] & `Player${number}`;
 type CityRow = Selectable<CityInformation>;
@@ -33,7 +34,7 @@ export async function queryNewspaperEvidence(
   const visibilityField = `Player${receiverPlayerID}` as ReceiverField;
   const playersRead = db.selectFrom('PlayerInformations').selectAll().execute();
   const [players, baseSummaries, summaryHistory, cities, events, uncheckedEvents, earlierCities, baselineCities, historyCities,
-    cityLifecycle, espionageRows, tacticalZones, technologies] = await Promise.all([
+    cityLifecycle, espionageRows, tacticalZones, technologies, congress] = await Promise.all([
     playersRead,
     readSnapshotsAtCutoff(db, 'PlayerSummaries', fromTurn - 1),
     readSnapshotRange(db, 'PlayerSummaries', fromTurn, cutoffTurn),
@@ -53,7 +54,8 @@ export async function queryNewspaperEvidence(
       .where('Turn', '>=', operationFromTurn).where('Turn', '<=', cutoffTurn)
       .orderBy('Turn').orderBy('ID').execute(),
     readTacticalZones(db, cutoffTurn, receiverPlayerID, visibilityField),
-    playersRead.then(rows => readReceiverTechnologies(db, rows.find(player => player.Key === receiverPlayerID)?.TeamID, cutoffTurn))
+    playersRead.then(rows => readReceiverTechnologies(db, rows.find(player => player.Key === receiverPlayerID)?.TeamID, cutoffTurn)),
+    readCongressEvidence(db, previousCheckTurn, cutoffTurn)
   ]);
   const operationTurns = [...new Set(espionageRows.filter(row => row.Type === 'EspionageResult').map(row => row.Turn))]
     .sort((a, b) => a - b);
@@ -78,6 +80,7 @@ export async function queryNewspaperEvidence(
   const result: NewspaperEvidence = { request, players: [], cities: [], comparisons: { players: [], cities: [] }, events: [],
     diplomacy: { fromTurn, baseline: [], history: [], gaps: [] } };
   if (technologies.length) result.receiverTechnologies = technologies;
+  if (congress) result.congress = congress;
   /** Take a row only at an access level supported by the snapshot projection. */
   function visible(row: Pick<CityRow, ReceiverField>): boolean {
     const level = row[visibilityField];

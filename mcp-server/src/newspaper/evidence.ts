@@ -21,7 +21,8 @@ export const newspaperEvidenceRequestSchema = z.object({
 
 /** Direct reference to a recorded row, captured before field projection. */
 export const newspaperSourceReferenceSchema = z.object({
-  table: z.enum(['PlayerSummaries', 'CityInformations', 'GameEvents', 'TacticalZones']).describe('Source table'),
+  table: z.enum(['PlayerSummaries', 'CityInformations', 'GameEvents', 'TacticalZones', 'VictoryProgress'])
+    .describe('Source table'),
   id: z.number().int().describe('Original insertion or event ID'),
   turn: z.number().int().describe('Original recorded game turn'),
   createdAt: z.number().describe('Original recorded Unix timestamp in seconds')
@@ -94,6 +95,47 @@ export const newspaperTacticalZoneSchema = z.object({
     .describe('Visible unit counts by civilization label and recorded unit type')
 });
 
+/** One recorded World Congress proposal. */
+export const newspaperCongressProposalSchema = z.object({
+  name: z.string().describe('Resolution name without the recorded Enact or Repeal prefix'),
+  isEnact: z.boolean().describe('Whether the proposal would enact rather than repeal the resolution'),
+  proposer: z.string().optional().describe('Recorded proposer label when one is named'),
+  description: z.string().optional().describe('Recorded resolution help text')
+});
+
+/** One resolution already active in the league. */
+export const newspaperCongressResolutionSchema = z.object({
+  name: z.string().describe('Recorded resolution name'),
+  description: z.string().optional().describe('Recorded resolution help text'),
+  enactedTurn: z.number().int().optional()
+    .describe('Turn the resolution was enacted, which may predate this observation')
+});
+
+/** One public Congress snapshot derived from recorded victory progress. */
+export const newspaperCongressObservationSchema = z.object({
+  source: newspaperSourceReferenceSchema.extend({ table: z.literal('VictoryProgress') })
+    .describe('Recorded victory-progress row and observation date'),
+  available: z.boolean()
+    .describe('Whether a league was available; false is a known locked snapshot with an empty agenda'),
+  league: z.string().optional().describe('Recorded World Congress or United Nations label'),
+  votingNow: z.boolean().describe('Whether the snapshot observed an active voting session'),
+  expectedSessionTurn: z.number().int().optional()
+    .describe('Observation turn plus the recorded countdown'),
+  diplomaticVictoryVotesNeeded: z.number().int().optional()
+    .describe('Recorded delegate threshold for diplomatic victory'),
+  proposals: z.array(newspaperCongressProposalSchema).optional().describe('Recorded proposals, preserving an empty agenda'),
+  activeResolutions: z.array(newspaperCongressResolutionSchema).optional()
+    .describe('Recorded active resolutions, preserving an empty agenda')
+});
+
+/** Baseline and window observations for the public Congress record. */
+export const newspaperCongressEvidenceSchema = z.object({
+  baseline: newspaperCongressObservationSchema.optional()
+    .describe('Latest usable snapshot at or before the previous check'),
+  observations: z.array(newspaperCongressObservationSchema)
+    .describe('Final snapshot per turn after the previous check through the cutoff, omitted when unreadable')
+});
+
 /** Incomplete diplomatic observations stay separate from city lifecycle limitations. */
 export const newspaperDiplomacyGapSchema = z.object({
   source: newspaperSourceReferenceSchema.describe('Original national summary row containing the incomplete observation'),
@@ -139,7 +181,9 @@ export const newspaperEvidenceSchema = z.object({
     baseline: z.array(newspaperDiplomacySnapshotSchema).describe('Latest observations before the evidence window, with original source dates'),
     history: z.array(newspaperDiplomacySnapshotSchema).describe('Dated final observations per subject and turn throughout the evidence window'),
     gaps: z.array(newspaperDiplomacyGapSchema).describe('Unknown or unresolved relationship observations')
-  }).optional().describe('Derived public diplomacy evidence, separate from raw snapshots')
+  }).optional().describe('Derived public diplomacy evidence, separate from raw snapshots'),
+  congress: newspaperCongressEvidenceSchema.optional()
+    .describe('Derived public Congress evidence, read without visibility flags and separate from raw snapshots')
 });
 
 export type NewspaperEvidenceRequest = z.infer<typeof newspaperEvidenceRequestSchema>;
@@ -152,6 +196,10 @@ export type NewspaperHistory = z.infer<typeof newspaperHistorySchema>;
 export type NewspaperEvidence = z.infer<typeof newspaperEvidenceSchema>;
 export type NewspaperDiplomacySnapshot = z.infer<typeof newspaperDiplomacySnapshotSchema>;
 export type NewspaperDiplomacyGap = z.infer<typeof newspaperDiplomacyGapSchema>;
+export type NewspaperCongressProposal = z.infer<typeof newspaperCongressProposalSchema>;
+export type NewspaperCongressResolution = z.infer<typeof newspaperCongressResolutionSchema>;
+export type NewspaperCongressObservation = z.infer<typeof newspaperCongressObservationSchema>;
+export type NewspaperCongressEvidence = z.infer<typeof newspaperCongressEvidenceSchema>;
 
 /** Date a deferred report by its eligible turn while preserving its original citation date. */
 export function eventReportTurn(event: NewspaperEvent): number {

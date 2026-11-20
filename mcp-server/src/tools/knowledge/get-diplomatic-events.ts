@@ -7,13 +7,13 @@ import { knowledgeManager } from "../../server.js";
 import { ToolBase } from "../base.js";
 import * as z from "zod";
 import { diplomaticEventSubjects, matchesEventSubject, type DiplomaticEventType } from "../../knowledge/helpers/event-subjects.js";
-import { isVisible } from "../../knowledge/expressions.js";
+import { isVisibleOrPublic } from "../../knowledge/history.js";
 import { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { MaxMajorCivs } from "../../knowledge/schema/base.js";
 import { readPublicKnowledgeBatch } from "../../knowledge/helpers/cached.js";
 import { getPlayerInformations } from "../../knowledge/getters/player-information.js";
 import { getCityInformations } from "../../knowledge/getters/city-information.js";
-import { retrieveEnumName } from "../../knowledge/helpers/enum.js";
+import { enumMappings } from "../../knowledge/helpers/enum.js";
 import { cleanEventData, hideDealMadeTradeItems } from "./get-events.js";
 import { Selectable } from "kysely";
 import { PlayerInformation } from "../../knowledge/schema/public.js";
@@ -31,6 +31,19 @@ interface FormatContext {
   team: (teamId: number) => string;
   /** Resolve city coordinates to a display name */
   city: (x: number, y: number) => string;
+}
+
+/** Normalize a recorded boolean flag, including legacy numeric captures. */
+function recordedBoolean(value: unknown): boolean | undefined {
+  if (value === true || value === 1) return true;
+  if (value === false || value === 0) return false;
+  return undefined;
+}
+
+/** Render a recorded resolution name, translating a numeric type only when its enum mapping exists. */
+function resolutionName(value: unknown): string {
+  if (typeof value === 'string' && value.trim()) return value;
+  return typeof value === 'number' ? enumMappings.ResolutionType?.[value] ?? `Resolution ${value}` : "a resolution";
 }
 
 /** Extract city name from enriched payload, falling back to ctx.city coordinate lookup */
@@ -190,10 +203,15 @@ const diplomaticEvents: Record<DiplomaticEventType, DiploEventConfig> = {
 
   ResolutionResult: {
     toMarkdown: (e, ctx) => {
-      const action = e.IsEnact ? "Enact" : "Repeal";
-      const result = e.Passed ? "passed" : "failed";
-      const resolution = retrieveEnumName("ResolutionType", e.ResolutionType) ?? `Resolution ${e.ResolutionType}`;
-      return `World Congress ${action}: **${resolution}** ${result} (proposed by **${ctx.player(e.ProposerPlayerID)}**)`;
+      const enact = recordedBoolean(e.IsEnact);
+      const passed = recordedBoolean(e.Passed);
+      if (enact === undefined || passed === undefined) return null;
+      const action = enact ? "Enact" : "Repeal";
+      const result = passed ? "passed" : "failed";
+      const resolution = resolutionName(e.ResolutionType);
+      const proposer = typeof e.ProposerPlayerID === 'number' && e.ProposerPlayerID >= 0
+        ? ` (proposed by **${ctx.player(e.ProposerPlayerID)}**)` : "";
+      return `World Congress ${action}: **${resolution}** ${result}${proposer}`;
     }
   },
 
@@ -328,7 +346,7 @@ class GetDiplomaticEventsTool extends ToolBase {
     let query = db.selectFrom("GameEvents")
       .selectAll()
       .where("Type", "in", diplomaticEventTypes)
-      .where(isVisible(args.PlayerID))
+      .where(isVisibleOrPublic(args.PlayerID))
       .orderBy("ID");
 
     if (args.FromTurn !== undefined)

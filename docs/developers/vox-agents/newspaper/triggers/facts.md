@@ -52,7 +52,7 @@ Every expression can read these, whatever its subject.
 | `cities` | Every city the receiver can see |
 | `events` | Every permitted event in the trigger's window, oldest first |
 | `turn` | The cutoff turn of this check |
-| `game` | `speed` (the recorded game speed name), `speedMultiplier`, `mapSize`, `startEra`, `maxTurns` |
+| `game` | `speed` (the recorded game speed name), `speedMultiplier`, `mapSize`, `startEra`, `maxTurns`, and `congress` when league observations exist |
 | `press` | Publication memory: `issues` (published issue count) and `lastIssueTurn` (turn of the latest issue, or `null`) |
 | `printed(ruleId, subject?)` | `{turn, count}` for published articles a rule supported, or `null` when none. The optional `subject` limits the count to one city, player or pair. See [publication memory](overview.md#publication-memory). |
 | `distance(a, b)` | Hex distance between players, cities, plots or events. See [distance](constants.md#distance). |
@@ -191,6 +191,26 @@ Access to recorded detail also uses roster points as a proxy. Another major's ci
 
 The cutoff roster supplies the current view. An event reads the latest roster from an earlier turn, so an arrival after the event cannot open its details. Older events do not become readable later.
 
+## Congress
+
+`game.congress` describes the World Congress or United Nations from the newest recorded diplomatic victory observation. It is absent when the recording has no usable observation, for example when diplomatic victory was disabled. Recorded vote outcomes remain available through `ResolutionResult` events.
+
+| Fact | Meaning |
+| --- | --- |
+| `available` | The league exists in the newest observation. An observation with `available` false reads as a known empty agenda. |
+| `observedTurn` | Recorded turn of the newest observation. It can be before the cutoff. |
+| `league` | Recorded league name, when present. |
+| `votingNow` | True only when the newest observation is at the cutoff and records a vote in progress. An older record never claims current voting. |
+| `expectedSessionTurn` | Estimated next session turn from the newest recorded countdown. Omitted when that date has passed or the observation has no countdown. |
+| `diplomaticVictoryVotesNeeded` | Votes needed for diplomatic victory. |
+| `proposals` | Current proposals. Each has `name` and `isEnact`, plus `proposer` and `description` when recorded. |
+| `activeResolutions` | Current resolutions. Each has `name`, plus `description` and `enactedTurn` when recorded. |
+| `newProposals` | Proposals first seen in this reporting period. Each has the proposal fields plus `observedTurn`. |
+
+The recorder can skip turns between observations. `proposals` and `activeResolutions` come from the newest observation, which can predate the cutoff. `newProposals` compares proposal direction and name with the last known agenda, even across gaps. With no earlier agenda, it counts every proposal in the first agenda as new. A proposal leaving the agenda doesn't establish how the vote went.
+
+`newProposals[].observedTurn` is an approximate date. Each new proposal cites the `VictoryProgress` rows used to identify it.
+
 ## Event
 
 `event` is one permitted row of `GameEvents`.
@@ -224,6 +244,7 @@ A player ID of -1 means "nobody", and the matching player fact is then missing. 
 | `UnitCreated` | `player`, `unit`, `plot`. A named great person adds `person` and `kind: 'born'`. Unwitnessed births supply only the owner and name. |
 | `GreatPersonExpended` | `player`, `unit`, `plot`. A named great person adds `person` and `kind: 'expended'`. |
 | `UnitPrekill` | `player` (the owner), `unit`, `plot`, `person`, `kind: 'died'` and `attackingPlayer` when the final removal records a known attacker |
+| `ResolutionResult` | Public vote outcome: `isEnact` (true for enactment, false for repeal), `passed`, `resolutionType` (recorded name or numeric type), and the raw `decision`. The `proposerName` and `proposerPlayerId` are available when recorded. `player` links to a proposer with the usual dated contact. |
 
 The event types a rule may name are the ones in `newspaperEventConfigs` in `mcp-server/src/newspaper/projection.ts`. [Evidence the facts rely on](#evidence-the-facts-rely-on) describes how those rows are projected.
 

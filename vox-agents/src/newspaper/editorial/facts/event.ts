@@ -40,7 +40,7 @@ export function recordedBoolean(value: unknown): boolean | undefined {
 /** Keep structured permitted deal terms available under the same naming convention. */
 function payloadValue(field: string, value: unknown): unknown {
   if (field === 'Person') return typeof value === 'string' && value.trim() ? value : undefined;
-  if (/^Is[A-Z]/.test(field) || ['Starting', 'HasTech', 'WithGold', 'WithFaith'].includes(field)) {
+  if (/^Is[A-Z]/.test(field) || ['Starting', 'HasTech', 'Passed', 'WithGold', 'WithFaith'].includes(field)) {
     return value === null ? null : recordedBoolean(value);
   }
   if (['FromGives', 'ToGives'].includes(field) && isRecord(value) && !Object.keys(value).length) return [];

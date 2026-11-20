@@ -68,6 +68,14 @@ The `golden-age-in-wartime-account` template uses `self.happinessPercentage`, th
 
 `vassals-join-war` uses [incident facts](facts.md#incident) to report the declaration and name the vassals together. It counts a war involving the receiver as more important than a foreign war, and marks the story urgent if the receiver was the target. See [War and peace](war-and-peace.md) for how the incident identifies participants and their reasons for joining.
 
+## Congress
+
+Use the [Congress facts](facts.md#congress) in an overlay rule:
+
+- For a session expected next turn, use a world rule that checks `game.knows('congress')`, `game.congress.knows('expectedSessionTurn')`, and `game.congress.expectedSessionTurn === turn + 1`.
+- For a new proposal, check `game.knows('congress')` and `game.congress.newProposals.length > 0`. Use the proposal's `name` and `isEnact` in the story, and its `observedTurn` if you need an approximate date.
+- For a defeated proposal, use an event rule for `ResolutionResult` with `event.passed === false`. Add `event.isEnact` to limit the rule to enactment votes. Use the recorded `proposerName` when present.
+
 ## Probe catalogue examples
 
 Load the [probe overlay](../../../../../vox-agents/newspaper/probes/) with `--config vox-agents/newspaper/probes`. The entries are in [probe rules](../../../../../vox-agents/newspaper/probes/triggers/probes.json) and [probe templates](../../../../../vox-agents/newspaper/probes/templates/probes.json).

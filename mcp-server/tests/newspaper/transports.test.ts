@@ -33,6 +33,14 @@ describe('newspaper MCP transports', () => {
     }, 0);
     await event(writer, 109, 6, 'PlayerDoTurn', { PlayerID: 0 }, 0);
     await event(writer, 110, 3, 'TeamTechResearched', { TeamID: 0, TechID: 'Printing Press', ChangeAmount: 1 }, 0);
+    await writer.insertInto('VictoryProgress').values({
+      ID: 410, Key: 0, Turn: 9, Version: 1, IsLatest: 1, Payload: '{}', Changes: '[]',
+      DominationVictory: 'Not available', ScienceVictory: 'Not available', CulturalVictory: 'Not available',
+      DiplomaticVictory: JSON.stringify({ Status: 'World Congress - Voting in 2 turns', Proposals: {} }),
+    }).execute();
+    await event(writer, 111, 8, 'ResolutionResult', {
+      ResolutionType: 'World Religion', ProposerPlayerID: -1, Decision: 0, IsEnact: 1, Passed: 0,
+    }, 0);
     await event(writer, 107, 8, 'SetAlly', { MinorPlayerID: 1, OldAllyPlayerID: 0, NewAllyPlayerID: 3,
       NewAllyPlayer: { Name: 'Leader3', Civilization: 'Civ3' } });
     await summary(writer, 8, 0, 4, 2, { Relationships: { Civ1: ['War (Our Score: 0%; Our War Weariness: 10%)'] } });
@@ -55,6 +63,12 @@ describe('newspaper MCP transports', () => {
     expect(expected.receiverTechnologies).toMatchObject([
       { name: 'Printing Press', gained: true, source: { table: 'GameEvents', id: 110 } },
     ]);
+    expect(expected.congress?.observations).toMatchObject([
+      { source: { table: 'VictoryProgress', id: 410 }, expectedSessionTurn: 11 },
+    ]);
+    expect(expected.events.find(row => row.type === 'ResolutionResult')).toMatchObject({
+      source: { id: 111 }, values: { IsEnact: true, Passed: false },
+    });
     const defender = expected.events.find(row => row.type === 'EspionageResult');
     expect(defender).toMatchObject({ source: { id: 108, turn: 5 }, reportTurn: 6,
       values: { Perspective: 'target', SpyResult: 'Detected' } });

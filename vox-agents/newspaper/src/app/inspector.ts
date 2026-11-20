@@ -4,6 +4,7 @@ import type { ReaderAction, ReaderState } from "../../../src/newspaper/contracts
 import {
   eventReportTurn, type NewspaperEvidence, type NewspaperSnapshot, type NewspaperEvent,
   type NewspaperDiplomacySnapshot, type NewspaperDiplomacyGap, type NewspaperTacticalZone, type NewspaperTechnology,
+  type NewspaperCongressObservation,
 } from "../../../../mcp-server/dist/newspaper/evidence.js";
 import type { z } from "zod";
 import type { replayCheckSchema } from "../../../src/newspaper/contracts/replay.js";
@@ -208,7 +209,7 @@ export function renderEvidence(evidence: NewspaperEvidence | null): void {
     root.append(heading, limitations);
   }
   type EvidenceRow = NewspaperSnapshot | NewspaperEvent | NewspaperDiplomacySnapshot | NewspaperDiplomacyGap
-    | NewspaperTacticalZone | NewspaperTechnology;
+    | NewspaperTacticalZone | NewspaperTechnology | NewspaperCongressObservation;
   const groups: [string, EvidenceRow[]][] = [
     ["Players", evidence.players], ["Cities", evidence.cities],
     ["Tactical zones", evidence.tacticalZones ?? []],
@@ -217,6 +218,8 @@ export function renderEvidence(evidence: NewspaperEvidence | null): void {
     ["Events", evidence.events],
     ["Earlier diplomacy", evidence.diplomacy?.baseline ?? []], ["Diplomacy history", evidence.diplomacy?.history ?? []],
     ["Diplomacy gaps", evidence.diplomacy?.gaps ?? []],
+    ["Congress baseline", evidence.congress?.baseline ? [evidence.congress.baseline] : []],
+    ["Congress observations", evidence.congress?.observations ?? []],
   ];
   for (const [label, rows] of groups) {
     const heading = document.createElement("h3");
@@ -226,6 +229,7 @@ export function renderEvidence(evidence: NewspaperEvidence | null): void {
       const button = document.createElement("button");
       button.type = "button";
       const identity = "zoneID" in row ? `zone ${row.zoneID}${row.city ? ` (${row.city})` : ""}`
+        : "available" in row ? `congress ${row.league ?? "no league"}${row.available ? "" : " (unavailable)"}`
         : "subjectID" in row ? `subject ${row.subjectID}` : "name" in row ? row.name : row.type;
       const turn = "type" in row ? eventReportTurn(row) : row.source.turn;
       const sourceTurn = turn === row.source.turn ? "" : `, source turn ${row.source.turn}`;

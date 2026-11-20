@@ -7,6 +7,44 @@ import { readReplayFacts } from '../../../../src/newspaper/replay/facts.js';
 import { createReplayRecording } from '../../../helpers/newspaper-replay.js';
 
 describe('facts from a replay recording', () => {
+  it('should evaluate Congress rules on recorded agendas and public vote results', async () => {
+    const recording = await createReplayRecording();
+    try {
+      const sqlite = new Database(recording.filename);
+      try {
+        const snapshot = sqlite.prepare(`INSERT INTO VictoryProgress (ID, Key, Turn, Payload,
+          DominationVictory, ScienceVictory, CulturalVictory, DiplomaticVictory)
+          VALUES (?, 0, ?, '{}', 'Not available', 'Not available', 'Not available', ?)`);
+        snapshot.run(201, 5, JSON.stringify({ Status: 'World Congress - Voting in 10 turns', Proposals: {} }));
+        snapshot.run(202, 10, JSON.stringify({
+          Status: 'World Congress - Voting in 5 turns', Proposals: { 'Enact: World Religion': { Proposer: 'Civ1' } },
+        }));
+        sqlite.prepare(`INSERT INTO GameEvents (ID, Turn, Type, Payload) VALUES (?, ?, ?, ?)`)
+          .run(205, 10, 'ResolutionResult', JSON.stringify({
+            ProposerPlayerID: 1, ProposerPlayer: { Civilization: 'Civ1' },
+            ResolutionType: 'Scholars in Residence', IsEnact: true, Passed: false,
+          }));
+      } finally { sqlite.close(); }
+      const db = await openReplayDatabase(recording.filename);
+      try {
+        const { facts } = await readReplayFacts(db, { receiverPlayerID: 0, previousCheckTurn: 9, cutoffTurn: 10 },
+          { longTurns: 6, historyTurns: 8 });
+        const runner = await compileEditorialExpressions([
+          'game.congress.expectedSessionTurn === 15 && game.congress.newProposals.some(proposal => proposal.isEnact && proposal.name === "World Religion")',
+          'events.some(event => event.type === "ResolutionResult" && event.passed === false && event.proposerName === "Civ1")',
+        ].map(source => ({ rule: 'congress', field: 'when', source })));
+        const [[[agenda, result]]] = await runner.evaluate({ facts, groups: [{ expressions: [0, 1], subjects: [{}] }] });
+        expect(agenda).toMatchObject({ value: true, sources: expect.arrayContaining([
+          expect.objectContaining({ table: 'VictoryProgress', id: 201 }),
+          expect.objectContaining({ table: 'VictoryProgress', id: 202 }),
+        ]) });
+        expect(result).toMatchObject({ value: true, sources: expect.arrayContaining([
+          expect.objectContaining({ table: 'GameEvents', id: 205 }),
+        ]) });
+      } finally { await db.destroy(); }
+    } finally { await recording.cleanup(); }
+  });
+
   it('should use a new diplomat grant at cutoff even when the foreign summary has not changed', async () => {
     const recording = await createReplayRecording();
     try {
