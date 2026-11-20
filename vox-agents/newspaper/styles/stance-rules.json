@@ -80,109 +80,109 @@
   {
     "id": "stance-tradition-up",
     "match": { "stance": ["traditional", "elitist"] },
-    "when": "self.knows('policyBranches') && Object.keys(self.policyBranches ?? {}).includes('Tradition')",
+    "when": "self.hasBranch('Tradition')",
     "multiplier": 1.3
   },
   {
     "id": "stance-tradition-populist-down",
     "match": { "stance": "populist" },
-    "when": "self.knows('policyBranches') && Object.keys(self.policyBranches ?? {}).includes('Tradition')",
+    "when": "self.hasBranch('Tradition')",
     "multiplier": 0.75
   },
   {
     "id": "stance-progress-up",
     "match": { "stance": ["populist", "local", "ambitious"] },
-    "when": "self.knows('policyBranches') && Object.keys(self.policyBranches ?? {}).includes('Progress')",
+    "when": "self.hasBranch('Progress')",
     "multiplier": 1.3
   },
   {
     "id": "stance-progress-elitist-down",
     "match": { "stance": "elitist" },
-    "when": "self.knows('policyBranches') && Object.keys(self.policyBranches ?? {}).includes('Progress')",
+    "when": "self.hasBranch('Progress')",
     "multiplier": 0.75
   },
   {
     "id": "stance-authority-up",
     "match": { "stance": ["hawkish", "national"] },
-    "when": "self.knows('policyBranches') && Object.keys(self.policyBranches ?? {}).includes('Authority')",
+    "when": "self.hasBranch('Authority')",
     "multiplier": 1.3
   },
   {
     "id": "stance-authority-conciliatory-down",
     "match": { "stance": "conciliatory" },
-    "when": "self.knows('policyBranches') && Object.keys(self.policyBranches ?? {}).includes('Authority')",
+    "when": "self.hasBranch('Authority')",
     "multiplier": 0.75
   },
   {
     "id": "stance-fealty-up",
     "match": { "stance": ["devout", "traditional", "elitist"] },
-    "when": "self.knows('policyBranches') && Object.keys(self.policyBranches ?? {}).includes('Fealty')",
+    "when": "self.hasBranch('Fealty')",
     "multiplier": 1.3
   },
   {
     "id": "stance-fealty-down",
     "match": { "stance": ["pluralist", "rationalist"] },
-    "when": "self.knows('policyBranches') && Object.keys(self.policyBranches ?? {}).includes('Fealty')",
+    "when": "self.hasBranch('Fealty')",
     "multiplier": 0.75
   },
   {
     "id": "stance-statecraft-up",
     "match": { "stance": ["conciliatory", "pluralist"] },
-    "when": "self.knows('policyBranches') && Object.keys(self.policyBranches ?? {}).includes('Statecraft')",
+    "when": "self.hasBranch('Statecraft')",
     "multiplier": 1.3
   },
   {
     "id": "stance-statecraft-hawkish-down",
     "match": { "stance": "hawkish" },
-    "when": "self.knows('policyBranches') && Object.keys(self.policyBranches ?? {}).includes('Statecraft')",
+    "when": "self.hasBranch('Statecraft')",
     "multiplier": 0.75
   },
   {
     "id": "stance-artistry-up",
     "match": { "stance": "artistic" },
-    "when": "self.knows('policyBranches') && Object.keys(self.policyBranches ?? {}).includes('Artistry')",
+    "when": "self.hasBranch('Artistry')",
     "multiplier": 1.3
   },
   {
     "id": "stance-artistry-rationalist-down",
     "match": { "stance": "rationalist" },
-    "when": "self.knows('policyBranches') && Object.keys(self.policyBranches ?? {}).includes('Artistry')",
+    "when": "self.hasBranch('Artistry')",
     "multiplier": 0.75
   },
   {
     "id": "stance-industry-up",
     "match": { "stance": ["industrialist", "elitist"] },
-    "when": "self.knows('policyBranches') && Object.keys(self.policyBranches ?? {}).includes('Industry')",
+    "when": "self.hasBranch('Industry')",
     "multiplier": 1.3
   },
   {
     "id": "stance-industry-down",
     "match": { "stance": ["environmentalist", "populist"] },
-    "when": "self.knows('policyBranches') && Object.keys(self.policyBranches ?? {}).includes('Industry')",
+    "when": "self.hasBranch('Industry')",
     "multiplier": 0.75
   },
   {
     "id": "stance-imperialism-up",
     "match": { "stance": ["hawkish", "national", "ambitious"] },
-    "when": "self.knows('policyBranches') && Object.keys(self.policyBranches ?? {}).includes('Imperialism')",
+    "when": "self.hasBranch('Imperialism')",
     "multiplier": 1.3
   },
   {
     "id": "stance-imperialism-down",
     "match": { "stance": ["local", "conciliatory"] },
-    "when": "self.knows('policyBranches') && Object.keys(self.policyBranches ?? {}).includes('Imperialism')",
+    "when": "self.hasBranch('Imperialism')",
     "multiplier": 0.75
   },
   {
     "id": "stance-rationalism-up",
     "match": { "stance": ["rationalist", "pluralist"] },
-    "when": "self.knows('policyBranches') && Object.keys(self.policyBranches ?? {}).includes('Rationalism')",
+    "when": "self.hasBranch('Rationalism')",
     "multiplier": 1.3
   },
   {
     "id": "stance-rationalism-down",
     "match": { "stance": ["devout", "traditional"] },
-    "when": "self.knows('policyBranches') && Object.keys(self.policyBranches ?? {}).includes('Rationalism')",
+    "when": "self.hasBranch('Rationalism')",
     "multiplier": 0.75
   },
   {
@@ -410,187 +410,187 @@
   {
     "id": "stance-poverty-populist-critical",
     "match": { "stance": ["populist", "government-critical"] },
-    "when": "(() => { const readable = self.cities.filter(c => c.knows('unhappiness') && c.unhappiness.knows('top') && c.unhappiness.top !== null); const matching = readable.filter(c => ['gold', 'distress', 'famine'].includes(c.unhappiness.top)); return matching.length > 0 && matching.length * 3 >= readable.length; })()",
+    "when": "self.complaintShare(['gold', 'distress', 'famine']) >= 1/3",
     "multiplier": 1.3
   },
   {
     "id": "stance-poverty-elitist-down",
     "match": { "stance": "elitist" },
-    "when": "(() => { const readable = self.cities.filter(c => c.knows('unhappiness') && c.unhappiness.knows('top') && c.unhappiness.top !== null); const matching = readable.filter(c => ['gold', 'distress', 'famine'].includes(c.unhappiness.top)); return matching.length > 0 && matching.length * 3 >= readable.length; })()",
+    "when": "self.complaintShare(['gold', 'distress', 'famine']) >= 1/3",
     "multiplier": 0.75
   },
   {
     "id": "stance-boredom-artistic-up",
     "match": { "stance": "artistic" },
-    "when": "(() => { const readable = self.cities.filter(c => c.knows('unhappiness') && c.unhappiness.knows('top') && c.unhappiness.top !== null); const matching = readable.filter(c => ['culture'].includes(c.unhappiness.top)); return matching.length > 0 && matching.length * 3 >= readable.length; })()",
+    "when": "self.complaintShare(['culture']) >= 1/3",
     "multiplier": 1.3
   },
   {
     "id": "stance-illiteracy-rationalist-up",
     "match": { "stance": "rationalist" },
-    "when": "(() => { const readable = self.cities.filter(c => c.knows('unhappiness') && c.unhappiness.knows('top') && c.unhappiness.top !== null); const matching = readable.filter(c => ['science'].includes(c.unhappiness.top)); return matching.length > 0 && matching.length * 3 >= readable.length; })()",
+    "when": "self.complaintShare(['science']) >= 1/3",
     "multiplier": 1.3
   },
   {
     "id": "stance-unrest-devout-pluralist-up",
     "match": { "stance": ["devout", "pluralist"] },
-    "when": "(() => { const readable = self.cities.filter(c => c.knows('unhappiness') && c.unhappiness.knows('top') && c.unhappiness.top !== null); const matching = readable.filter(c => ['religion'].includes(c.unhappiness.top)); return matching.length > 0 && matching.length * 3 >= readable.length; })()",
+    "when": "self.complaintShare(['religion']) >= 1/3",
     "multiplier": 1.3
   },
   {
     "id": "stance-unrest-neutral-down",
     "match": { "stance": "neutral" },
-    "when": "(() => { const readable = self.cities.filter(c => c.knows('unhappiness') && c.unhappiness.knows('top') && c.unhappiness.top !== null); const matching = readable.filter(c => ['religion'].includes(c.unhappiness.top)); return matching.length > 0 && matching.length * 3 >= readable.length; })()",
+    "when": "self.complaintShare(['religion']) >= 1/3",
     "multiplier": 0.75
   },
   {
     "id": "stance-isolation-local-up",
     "match": { "stance": "local" },
-    "when": "(() => { const readable = self.cities.filter(c => c.knows('unhappiness') && c.unhappiness.knows('top') && c.unhappiness.top !== null); const matching = readable.filter(c => ['isolation'].includes(c.unhappiness.top)); return matching.length > 0 && matching.length * 3 >= readable.length; })()",
+    "when": "self.complaintShare(['isolation']) >= 1/3",
     "multiplier": 1.3
   },
   {
     "id": "stance-isolation-national-down",
     "match": { "stance": "national" },
-    "when": "(() => { const readable = self.cities.filter(c => c.knows('unhappiness') && c.unhappiness.knows('top') && c.unhappiness.top !== null); const matching = readable.filter(c => ['isolation'].includes(c.unhappiness.top)); return matching.length > 0 && matching.length * 3 >= readable.length; })()",
+    "when": "self.complaintShare(['isolation']) >= 1/3",
     "multiplier": 0.75
   },
   {
     "id": "stance-crowding-environmentalist-traditional-up",
     "match": { "stance": ["environmentalist", "traditional"] },
-    "when": "(() => { const readable = self.cities.filter(c => c.knows('unhappiness') && c.unhappiness.knows('top') && c.unhappiness.top !== null); const matching = readable.filter(c => ['specialists'].includes(c.unhappiness.top)); return matching.length > 0 && matching.length * 3 >= readable.length; })()",
+    "when": "self.complaintShare(['specialists']) >= 1/3",
     "multiplier": 1.3
   },
   {
     "id": "stance-crowding-industrialist-down",
     "match": { "stance": "industrialist" },
-    "when": "(() => { const readable = self.cities.filter(c => c.knows('unhappiness') && c.unhappiness.knows('top') && c.unhappiness.top !== null); const matching = readable.filter(c => ['specialists'].includes(c.unhappiness.top)); return matching.length > 0 && matching.length * 3 >= readable.length; })()",
+    "when": "self.complaintShare(['specialists']) >= 1/3",
     "multiplier": 0.75
   },
   {
     "id": "stance-arts-funding-artistic",
     "match": { "stance": "artistic" },
-    "when": "game.knows('congress') && game.congress.available === true && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && r.name.startsWith('Endowment for the Arts'))",
+    "when": "activeResolution('Endowment for the Arts')",
     "multiplier": 1.3
   },
   {
     "id": "stance-arts-funding-rationalist-down",
     "match": { "stance": "rationalist" },
-    "when": "game.knows('congress') && game.congress.available === true && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && r.name.startsWith('Endowment for the Arts'))",
+    "when": "activeResolution('Endowment for the Arts')",
     "multiplier": 0.75
   },
   {
     "id": "stance-science-funding-rationalist",
     "match": { "stance": "rationalist" },
-    "when": "game.knows('congress') && game.congress.available === true && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && r.name.startsWith('World Science Initiative'))",
+    "when": "activeResolution('World Science Initiative')",
     "multiplier": 1.3
   },
   {
     "id": "stance-science-funding-artistic-down",
     "match": { "stance": "artistic" },
-    "when": "game.knows('congress') && game.congress.available === true && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && r.name.startsWith('World Science Initiative'))",
+    "when": "activeResolution('World Science Initiative')",
     "multiplier": 0.75
   },
   {
     "id": "stance-world-religion-devout",
     "match": { "stance": "devout" },
-    "when": "game.knows('congress') && game.congress.available === true && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && r.name.startsWith('World Religion'))",
+    "when": "activeResolution('World Religion')",
     "multiplier": 1.3
   },
   {
     "id": "stance-world-religion-pluralist-down",
     "match": { "stance": "pluralist" },
-    "when": "game.knows('congress') && game.congress.available === true && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && r.name.startsWith('World Religion'))",
+    "when": "activeResolution('World Religion')",
     "multiplier": 0.75
   },
   {
     "id": "stance-peace-accords-conciliatory",
     "match": { "stance": "conciliatory" },
-    "when": "game.knows('congress') && game.congress.available === true && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && r.name.startsWith('Global Peace Accords'))",
+    "when": "activeResolution('Global Peace Accords')",
     "multiplier": 1.3
   },
   {
     "id": "stance-peace-accords-hawkish-down",
     "match": { "stance": "hawkish" },
-    "when": "game.knows('congress') && game.congress.available === true && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && r.name.startsWith('Global Peace Accords'))",
+    "when": "activeResolution('Global Peace Accords')",
     "multiplier": 0.75
   },
   {
     "id": "stance-casus-belli-hawkish",
     "match": { "stance": "hawkish" },
-    "when": "game.knows('congress') && game.congress.available === true && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && r.name.startsWith('Casus Belli'))",
+    "when": "activeResolution('Casus Belli')",
     "multiplier": 1.3
   },
   {
     "id": "stance-casus-belli-conciliatory-down",
     "match": { "stance": "conciliatory" },
-    "when": "game.knows('congress') && game.congress.available === true && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && r.name.startsWith('Casus Belli'))",
+    "when": "activeResolution('Casus Belli')",
     "multiplier": 0.75
   },
   {
     "id": "stance-cold-war-national",
     "match": { "stance": "national" },
-    "when": "game.knows('congress') && game.congress.available === true && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && r.name.startsWith('Cold War'))",
+    "when": "activeResolution('Cold War')",
     "multiplier": 1.3
   },
   {
     "id": "stance-cold-war-hawkish",
     "match": { "stance": "hawkish" },
-    "when": "game.knows('congress') && game.congress.available === true && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && r.name.startsWith('Cold War'))",
+    "when": "activeResolution('Cold War')",
     "multiplier": 1.2
   },
   {
     "id": "stance-cold-war-pluralist-down",
     "match": { "stance": "pluralist" },
-    "when": "game.knows('congress') && game.congress.available === true && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && r.name.startsWith('Cold War'))",
+    "when": "activeResolution('Cold War')",
     "multiplier": 0.75
   },
   {
     "id": "stance-cultural-heritage-traditional-artistic",
     "match": { "stance": ["traditional", "artistic"] },
-    "when": "game.knows('congress') && game.congress.available === true && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && (r.name.startsWith('Cultural Heritage Sites') || r.name.startsWith('Historical Landmarks')))",
+    "when": "activeResolution('Cultural Heritage Sites') || activeResolution('Historical Landmarks')",
     "multiplier": 1.3
   },
   {
     "id": "stance-natural-heritage-environmentalist",
     "match": { "stance": "environmentalist" },
-    "when": "game.knows('congress') && game.congress.available === true && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && r.name.startsWith('Natural Heritage Sites'))",
+    "when": "activeResolution('Natural Heritage Sites')",
     "multiplier": 1.3
   },
   {
     "id": "stance-scholars-residence-rationalist",
     "match": { "stance": "rationalist" },
-    "when": "game.knows('congress') && game.congress.available === true && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && r.name.startsWith('Scholars in Residence'))",
+    "when": "activeResolution('Scholars in Residence')",
     "multiplier": 1.3
   },
   {
     "id": "stance-passport-system-pluralist",
     "match": { "stance": "pluralist" },
-    "when": "game.knows('congress') && game.congress.available === true && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && r.name.startsWith('Passport System'))",
+    "when": "activeResolution('Passport System')",
     "multiplier": 1.3
   },
   {
     "id": "stance-travel-ban-national",
     "match": { "stance": "national" },
-    "when": "game.knows('congress') && game.congress.available === true && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && r.name.startsWith('Travel Ban'))",
+    "when": "activeResolution('Travel Ban')",
     "multiplier": 1.3
   },
   {
     "id": "stance-travel-ban-pluralist-down",
     "match": { "stance": "pluralist" },
-    "when": "game.knows('congress') && game.congress.available === true && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && r.name.startsWith('Travel Ban'))",
+    "when": "activeResolution('Travel Ban')",
     "multiplier": 0.75
   },
   {
     "id": "stance-decolonization-populist-local",
     "match": { "stance": ["populist", "local"] },
-    "when": "game.knows('congress') && game.congress.available === true && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && (r.name.startsWith('Decolonization') || r.name.startsWith('Global Liberation')))",
+    "when": "activeResolution('Decolonization') || activeResolution('Global Liberation')",
     "multiplier": 1.3
   },
   {
     "id": "stance-decolonization-elitist-down",
     "match": { "stance": "elitist" },
-    "when": "game.knows('congress') && game.congress.available === true && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && (r.name.startsWith('Decolonization') || r.name.startsWith('Global Liberation')))",
+    "when": "activeResolution('Decolonization') || activeResolution('Global Liberation')",
     "multiplier": 0.75
   },
   {

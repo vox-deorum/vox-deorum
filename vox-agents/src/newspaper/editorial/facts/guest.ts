@@ -118,6 +118,7 @@ function factRuntime(model, wrap, constants, shortcuts) {
   function view(from) {
     if (views.has(from)) return views.get(from);
     const currentSubjectsByKey = new Map();
+    const resolutionViews = new WeakMap();
     const selectedEvents = model.events.filter(event => event.turn > from);
     const has = (record, field) => Object.hasOwn(record, field);
 
@@ -163,6 +164,12 @@ function factRuntime(model, wrap, constants, shortcuts) {
         return list(value.entries.filter(entry => entry.turn > from && entry.turn <= model.turn),
           (entry, index) => read(entry.field, path + '[' + index + ']', date),
           entry => entry.field.sources);
+      // Keep active resolution entries identical whether read by index or through the helper.
+      if (path.startsWith('game.congress.activeResolutions[')) {
+        let resolution = resolutionViews.get(value);
+        if (!resolution) resolutionViews.set(value, resolution = record(value, path, date));
+        return resolution;
+      }
       return record(value, path, date);
     }
 
@@ -246,6 +253,31 @@ function factRuntime(model, wrap, constants, shortcuts) {
             }
           }
           return undefined;
+        }));
+        // An exact readable branch key is enough, even when only a policy count is recorded.
+        method('hasBranch', Object.freeze(name => {
+          const branches = fields.policyBranches;
+          const map = branches?.value;
+          if (typeof name !== 'string' || branches?.hidden || !map || typeof map !== 'object' || Array.isArray(map))
+            return undefined;
+          if (!Object.keys(expose(map, 'player.policyBranches', date)).includes(name)) return undefined;
+          cite(branches.sources);
+          return true;
+        }));
+        // Count only visible cities with a readable leading cause.
+        method('complaintShare', Object.freeze(causes => {
+          if (!result.knows('cities')) return 0;
+          let readable = 0, matching = 0;
+          for (const city of result.cities) {
+            if (!city.knows('unhappiness')) continue;
+            const unhappiness = city.unhappiness;
+            if (!unhappiness.knows('top')) continue;
+            const top = unhappiness.top;
+            if (top === null) continue;
+            readable++;
+            if (causes.includes(top)) matching++;
+          }
+          return readable ? matching / readable : 0;
         }));
       }
       if (timelines[kind] && current) {
@@ -511,6 +543,16 @@ function factRuntime(model, wrap, constants, shortcuts) {
       press: { value: press },
       printed: { value: Object.freeze((ruleId, subject) => printedArticles(ruleId, subject)) },
       game: { value: record(model.game, 'game', model.turn) },
+      // Find the first named match without reading an unavailable league or agenda.
+      activeResolution: { value: Object.freeze(prefix => {
+        const game = globals.game;
+        if (typeof prefix !== 'string' || !game.knows('congress')) return undefined;
+        const congress = game.congress;
+        if (!congress.knows('available') || congress.available !== true || !congress.knows('activeResolutions'))
+          return undefined;
+        return congress.activeResolutions.find(resolution =>
+          resolution.knows('name') && typeof resolution.name === 'string' && resolution.name.startsWith(prefix));
+      }) },
       distance: { value: Object.freeze((a, b) => {
         const first = distanceOperand(a), second = distanceOperand(b);
         const nearest = nearestPlotPair(first, second, wrap);

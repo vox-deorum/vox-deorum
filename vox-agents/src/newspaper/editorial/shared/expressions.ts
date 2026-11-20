@@ -267,14 +267,17 @@ ${factGuestSource}
 `;
 const endBatch = `], globalThis.editorialBatch);`;
 
-/** Build a function with named fact bindings and strict expression semantics. */
-function expressionFunction(source: string): string {
+/** Build a strict expression function with named bindings and truthy objects in conditions. */
+function expressionFunction({ field, source }: EditorialExpression): string {
+  const condition = /^(?:when(?:\[\d+\])?|weight\.adjustments\[\d+\]\.when)$/.test(field);
+  // Keep object results inside the sandbox while preserving scalar results for the audit.
+  const normalize = condition ? "(value => value !== null && typeof value === 'object' ? true : value)" : '';
   return `function (bindings) {
   with (bindings) return (function () {
     'use strict';
-    return (
+    return ${normalize}((
 ${source}
-    );
+    ));
   })();
 }`;
 }
@@ -290,7 +293,7 @@ function compileBatch(
   ));
   const sources = [...expressions, ...shortcuts.map(({ expression }) => expression)];
   for (const expression of sources) validateExpression(expression);
-  const functions = sources.map(({ source }) => expressionFunction(source));
+  const functions = sources.map(expressionFunction);
   const rules = functions.slice(0, expressions.length);
   const getters = shortcuts.map(({ kind, name }, index) =>
     `[${JSON.stringify(kind)}, ${JSON.stringify(name)}, ${functions[expressions.length + index]}]`

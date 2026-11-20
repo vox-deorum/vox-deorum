@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type {
-  NewspaperEvent, NewspaperEvidence, NewspaperSnapshot,
+  NewspaperCongressObservation, NewspaperEvent, NewspaperEvidence, NewspaperSnapshot,
 } from '../../../../../../mcp-server/dist/newspaper/evidence.js';
 import { buildNewspaperFacts } from '../../../../../src/newspaper/editorial/facts/index.js';
 import { reference } from '../../../../../src/newspaper/editorial/facts/model.js';
@@ -67,6 +67,124 @@ function compile(sources: string[], shortcuts?: EditorialShortcutDefinitions) {
 }
 
 describe('newspaper fact runtime', () => {
+  describe('condition helpers', () => {
+    it('should match readable branch keys and leave hidden or missing branches unknown', async () => {
+      const row = { ...own, values: { ...own.values, PolicyBranches: { Fealty: 3 } } };
+      const facts = buildNewspaperFacts({ ...evidence([]), players: [row, foreign] }, identity);
+      const current = facts.players[0].current!;
+      const hiddenBranches = { ...current.policyBranches, hidden: true };
+      const hidden = { ...facts, players: {
+        ...facts.players, 0: { ...facts.players[0], current: { ...current, policyBranches: hiddenBranches } },
+      } };
+      const runner = await compile([
+        "player.knows('policyBranches') && Object.keys(player.policyBranches ?? {}).includes('Fealty')",
+        "!!player.hasBranch('Fealty')",
+        "player.hasBranch('Fealty')",
+        "player.hasBranch('Tradition')",
+      ]);
+      const groups = [{ expressions: [0, 1, 2, 3], subjects: [{ player: reference('player', 0) }, { player: reference('player', 1) }] }];
+      const [[present, absent]] = await runner.evaluate({ facts, groups });
+      const [[[hiddenGuard, hiddenCondition, hiddenBranch]]] = await runner.evaluate({ facts: hidden, groups });
+
+      const match = { value: true, sources: [row.source] };
+      expect(present).toEqual([match, match, match, { value: undefined }]);
+      expect(absent).toEqual([{ value: false }, { value: false }, { value: undefined }, { value: undefined }]);
+      expect([hiddenGuard, hiddenCondition, hiddenBranch]).toEqual(absent.slice(0, 3));
+    });
+
+    it('should preserve Congress decisions and citations when the league or resolution is missing', async () => {
+      const source = { table: 'VictoryProgress', id: 40, turn: 20, createdAt: 201 } as const;
+      const league: NewspaperCongressObservation = { source, available: true, votingNow: false };
+      const runner = await compile([
+        `game.knows('congress') && game.congress.available === true && game.congress.knows('activeResolutions') &&
+          game.congress.activeResolutions.some(r => typeof r.name === 'string' && r.name.startsWith('Casus Belli'))`,
+        "activeResolution('Casus Belli')",
+        "activeResolution('Casus Belli')?.name",
+      ]);
+      const groups = [{ expressions: [0, 1, 2], subjects: [{}] }];
+      for (const observation of [
+        undefined,
+        { ...league, available: false },
+        league,
+        { ...league, activeResolutions: [] },
+        { ...league, activeResolutions: [{ name: 'Open Borders' }] },
+        { ...league, activeResolutions: [{ name: 'Casus Belli' }] },
+      ]) {
+        const input = { ...evidence([]), congress: observation && { observations: [observation] } };
+        const [[[guard, bare, name]]] = await runner.evaluate({ facts: buildNewspaperFacts(input), groups });
+        const cites = observation ? { sources: [source] } : {};
+        const matches = observation?.activeResolutions?.some(resolution => resolution.name === 'Casus Belli') ?? false;
+        expect(guard).toEqual({ value: matches, ...cites });
+        expect(bare).toEqual({ value: matches ? true : undefined, ...cites });
+        expect(name).toEqual({ value: matches ? 'Casus Belli' : undefined, ...cites });
+      }
+    });
+
+    it('should return the first matching view and allow qualifiers on its name', async () => {
+      const row = { ...own, values: { ...own.values, PolicyBranches: { Freedom: 1 } } };
+      const source = { table: 'VictoryProgress', id: 41, turn: 20, createdAt: 201 } as const;
+      const input = { ...evidence([]), players: [row, foreign], congress: { observations: [{
+        source, available: true, votingNow: false, activeResolutions: [
+          { name: 'World Ideology: Freedom', enactedTurn: 17 }, { name: 'World Ideology: Order' },
+          { name: 'Sanction: Rome' }, { name: 'Sanction: Carthage' },
+        ],
+      }] } };
+      const conditions = [
+        "activeResolution('World Ideology') === game.congress.activeResolutions[0]",
+        "activeResolution('World Ideology')?.enactedTurn",
+        "game.congress.activeResolutions.some(r => r.name.startsWith('World Ideology') && r.name.includes(self.ideology))",
+        "activeResolution('World Ideology')?.name.includes(self.ideology)",
+        "game.congress.activeResolutions.some(r => r.name.startsWith('Sanction') && r.name.includes(self.name))",
+        "activeResolution('Sanction')?.name.includes(self.name)",
+      ];
+      const runner = await compileEditorialExpressions([
+        ...conditions.map((source, index) => ({ rule: 'fact-runtime', field: `when[${index}]`, source })),
+        { rule: 'fact-runtime', field: 'values.when', source: "activeResolution('World Ideology')" },
+      ]);
+      const [[[sameView, enacted, ideology, ideologyHelper, sanction, sanctionHelper, namedValue]]] = await runner.evaluate({
+        facts: buildNewspaperFacts(input, identity, { ideologies: ['Freedom', 'Order'] }),
+        groups: [{ expressions: [0, 1, 2, 3, 4, 5, 6], subjects: [{}] }],
+      });
+      expect(sameView).toEqual({ value: true, sources: [source] });
+      expect(enacted).toEqual({ value: 17, sources: [source] });
+      const match = { value: true, sources: [source, row.source] };
+      expect([ideology, ideologyHelper, sanction, sanctionHelper]).toEqual([match, match, match, match]);
+      expect(namedValue).toHaveProperty('error');
+    });
+
+    it('should count only cities with a readable leading cause and preserve the threshold decision', async () => {
+      const gold = city(1, 20, 11, { UnhappinessSources: { Gold: 5 } });
+      const science = city(2, 20, 12, { UnhappinessSources: { Science: 4, Gold: 1 } });
+      const culture = city(3, 20, 13, { UnhappinessSources: { Culture: 3 } });
+      const religion = city(4, 20, 14, { UnhappinessSources: { Religion: 2 } });
+      const unreadable = city(5, 20, 15);
+      const balanced = city(6, 20, 16, { UnhappinessSources: {} });
+      const away = city(7, 20, 17, { OwnerID: 1, UnhappinessSources: { Distress: 4 } });
+      const runner = await compile([
+        `(() => {
+          const readable = self.cities.filter(c => c.knows('unhappiness') && c.unhappiness.knows('top') && c.unhappiness.top !== null);
+          const matching = readable.filter(c => ['gold', 'distress', 'famine'].includes(c.unhappiness.top));
+          return matching.length > 0 && matching.length * 3 >= readable.length;
+        })()`,
+        "self.complaintShare(['gold', 'distress', 'famine']) >= 1 / 3",
+        "self.complaintShare(['gold', 'distress', 'famine'])",
+      ]);
+      const groups = [{ expressions: [0, 1, 2], subjects: [{}] }];
+      for (const { cities, share, passes } of [
+        { cities: [gold, science, culture, unreadable, balanced, away], share: 1 / 3, passes: true },
+        { cities: [gold, science, culture, religion], share: 1 / 4, passes: false },
+        { cities: [unreadable, balanced], share: 0, passes: false },
+        { cities: [], share: 0, passes: false },
+      ]) {
+        const facts = buildNewspaperFacts(evidence(cities), identity);
+        const [[[guard, condition, result]]] = await runner.evaluate({ facts, groups });
+        expect(guard).toHaveProperty('value', passes);
+        expect(condition).toEqual(guard);
+        expect(result).toEqual({ ...guard, value: share });
+      }
+    });
+  });
+
   describe('shortcuts', () => {
     it('should bind each shortcut to its city, owner or list entry and cite the facts read', async () => {
       const home = city(1, 20, 11, { IsCapital: true });

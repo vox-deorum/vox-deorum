@@ -100,13 +100,10 @@
     "id": "congress-world-ideology",
     "subject": "world",
     "when": [
-      "game.knows('congress')",
-      "game.congress.available === true",
-      "game.congress.knows('activeResolutions')",
-      "game.congress.activeResolutions.some(r => r.name.startsWith('World Ideology'))"
+      "activeResolution('World Ideology')"
     ],
     "values": {
-      "resolution": "game.congress.activeResolutions.find(r => r.name.startsWith('World Ideology')).name",
+      "resolution": "activeResolution('World Ideology')?.name",
       "ours": "self.knows('ideology') && typeof self.ideology === 'string' && resolution.includes(self.ideology)"
     },
     "importance": 70,
@@ -116,13 +113,10 @@
     "id": "congress-world-religion",
     "subject": "world",
     "when": [
-      "game.knows('congress')",
-      "game.congress.available === true",
-      "game.congress.knows('activeResolutions')",
-      "game.congress.activeResolutions.some(r => r.name.startsWith('World Religion'))"
+      "activeResolution('World Religion')"
     ],
     "values": {
-      "resolution": "game.congress.activeResolutions.find(r => r.name.startsWith('World Religion')).name",
+      "resolution": "activeResolution('World Religion')?.name",
       "ours": "(self.knows('foundedReligion') && typeof self.foundedReligion === 'string' && resolution.includes(self.foundedReligion)) || (self.knows('majorityReligion') && typeof self.majorityReligion === 'string' && resolution.includes(self.majorityReligion))"
     },
     "importance": 65,

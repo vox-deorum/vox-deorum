@@ -5,7 +5,7 @@ import { editorialShortcutSubjects } from '../shared/expressions.js';
 
 const reservedValueNames = new Set([
   ...editorialShortcutSubjects, 'world', 'self', 'cities', 'players', 'events', 'pairs', 'incidents',
-  'turn', 'game', 'held', 'crossed', 'dropped', 'pct', 'changed', 'key', 'matches',
+  'turn', 'game', 'activeResolution', 'held', 'crossed', 'dropped', 'pct', 'changed', 'key', 'matches',
   'press', 'printed', 'story',
   'values', 'triggerValues', 'group', 'subject', 'period', '$kind',
   'cityId', 'playerId', 'pairId', 'eventId', 'incidentId', 'ownerId',

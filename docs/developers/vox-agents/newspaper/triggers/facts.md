@@ -90,6 +90,8 @@ The **reporting period** runs from the previous newspaper check to the cutoff tu
 
 Compare these readings with each other and against small thresholds. The list omits occupation and empire-wide unhappiness. The game also applies a population cap and handles resistance, razing and puppets separately, so the readings can differ from the net `happinessDelta`. A missing or malformed observation is hidden. `top` breaks ties by the order above.
 
+`player.complaintShare(causes)` takes a list of cause names and returns the fraction of that player's visible cities whose leading cause is on the list. Only cities with a readable, non-null `unhappiness.top` count toward the total. The share is 0 when none qualify or the city list is unavailable.
+
 ### Inferred city facts
 
 | Fact | Meaning | Inferred from |
@@ -175,7 +177,12 @@ The two diplomat facts apply to known foreign majors. Policy and deal insight co
 
 ### Policy names
 
-`player.hasPolicy('Secularism')` checks the recorded names in `player.policyBranches`. It returns `true` on an exact name match and cites the national row that supplied the branch map. It returns `undefined` for a miss, a numeric branch count, an empty map or unreadable branch data, so a missing name proves nothing. Read it with `player.hasPolicy('Secularism') === true` when the rule needs a definite answer.
+Both helpers return `true` on an exact match and cite the national row that supplied `player.policyBranches`. They return `undefined` when the name cannot be established, including when the branch map is missing or unreadable.
+
+| Helper | What matches |
+| --- | --- |
+| `player.hasBranch('Fealty')` | A readable branch key, including one with only a policy count. |
+| `player.hasPolicy('Secularism')` | A recorded policy name. A branch count alone cannot establish a policy name. |
 
 ### Technology milestones
 
@@ -210,6 +217,8 @@ The cutoff roster supplies the current view. An event reads the latest roster fr
 The recorder can skip turns between observations. `proposals` and `activeResolutions` come from the newest observation, which can predate the cutoff. `newProposals` compares proposal direction and name with the last known agenda, even across gaps. With no earlier agenda, it counts every proposal in the first agenda as new. A proposal leaving the agenda doesn't establish how the vote went.
 
 `newProposals[].observedTurn` is an approximate date. Each new proposal cites the `VictoryProgress` rows used to identify it.
+
+`activeResolution(prefix)` returns the first entry in `game.congress.activeResolutions` whose name starts with the prefix. It returns `undefined` when the Congress fact or its list is unreadable or missing, the league is unavailable, or no name matches. Use the result directly as a condition, or use optional chaining to read its name. To check a qualifier across multiple matches, search the list with `some`.
 
 ## Event
 
