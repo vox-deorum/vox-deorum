@@ -1,3 +1,42 @@
 [
-  { "id": "general" }
+  {
+    "id": "general",
+    "guidance": "Write plain, clear prose that would sit comfortably in any age. Use everyday words for people, places and numbers, and let the facts carry the piece."
+  },
+  {
+    "id": "spoken",
+    "guidance": "A tale told by the fire in the Ancient and Classical eras. Speak as one who heard it from another: 'they say', 'it is told'. Keep sentences short and things concrete, and count in hearths, herds, seasons and days of walking. 'They say forty hearths went north from Thebes before the rains.'"
+  },
+  {
+    "id": "crier",
+    "guidance": "News called out in the square, from the Ancient era to the Renaissance. Open with a call for attention, name who should listen, and give the news in a few short lines that carry over a crowd. Repeat the point that matters most. 'Hear it, people of Thebes! Forty families go north. Forty families!'"
+  },
+  {
+    "id": "chronicle",
+    "guidance": "A scribe's entry in the record of a court or a house of learning, in the Classical and Medieval eras. Write in a measured, impersonal hand, with titles given in full and time marked by years, reigns and seasons. Set each event down as it happened, in the order it happened. 'In this year the city of Thebes sent forth settlers, and its number was diminished.'"
+  },
+  {
+    "id": "gazette",
+    "guidance": "A printed broadsheet of the Renaissance and Industrial eras. Write with courtesy and a little ornament, in long balanced sentences, and report at second hand as the news reached the printer: 'we are informed', 'letters from the north relate'. 'We are credibly informed that a party of settlers has lately quitted Thebes for the northern country.'"
+  },
+  {
+    "id": "pamphlet",
+    "guidance": "Cheap print sold in the street in the Renaissance and Industrial eras. Speak straight to the common reader in plain, urgent words, with questions and exclamations to stir them. Keep it short enough to read standing up. 'Citizens! Two thousand of your neighbors are gone north. Who asked you?'"
+  },
+  {
+    "id": "press",
+    "guidance": "A paper of record in the Industrial and Modern eras. Write with confidence and pace: strong verbs, exact figures, and the eye of a correspondent who has been to the place. 'Thebes is 2,000 souls lighter this week as the northern settlement takes its first families.'"
+  },
+  {
+    "id": "tabloid",
+    "guidance": "The popular paper, from the Industrial era to the Information era. Find the person in the news and tell it through them, in short words and short sentences. Give it a headline that shouts and a last line that lands. 'Half of Baker Street packed its carts on Tuesday. Thebes will miss its bread.'"
+  },
+  {
+    "id": "broadcast",
+    "guidance": "A radio or television bulletin, from the Modern era to the Information era. Write for the ear: short sentences in the present tense, the place named first, one fact at a time. Round the numbers so they are easy to hear. 'In Thebes tonight, the last settler convoy has left for the north.'"
+  },
+  {
+    "id": "feed",
+    "guidance": "A post in a digital feed in the Information era. Compress the news into a line or two, speak to the reader directly, and point to the earlier story when there is one. Fragments are welcome. 'Thebes just lost 2,000 residents to the new northern town. Here's where they went.'"
+  }
 ]
