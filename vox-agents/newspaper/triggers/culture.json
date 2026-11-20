@@ -61,5 +61,58 @@
     },
     "importance": "ours ? 60 : 50",
     "tags": ["politics", "domestic"]
+  },
+  {
+    "id": "great-person-expended",
+    "subject": "event",
+    "event": "GreatPersonExpended",
+    "when": [
+      "event.knows('kind') && event.kind === 'expended'",
+      "event.knows('player') && event.player.knows('name')"
+    ],
+    "values": {
+      "person": "event.person",
+      "unit": "event.knows('unit') && typeof event.unit === 'string' ? event.unit : null",
+      "civilization": "event.player.name",
+      "ours": "event.player.self === true"
+    },
+    "importance": "ours ? 55 : 45",
+    "tags": ["politics"]
+  },
+  {
+    "id": "tourism-output-leader-changes",
+    "subject": "player",
+    "window": "short",
+    "when": [
+      "player.major && Number.isFinite(player.tourismPerTurn) && player.tourismPerTurn > 0",
+      "player.knows('before') && Number.isFinite(player.before.tourismPerTurn) && player.before.rank('tourismPerTurn') > 1",
+      "player.rank('tourismPerTurn') === 1",
+      "players.some(p => p.id !== player.id && p.major && p.knows('tourismPerTurn') && Number.isFinite(p.tourismPerTurn))"
+    ],
+    "values": {
+      "civilization": "player.knows('name') ? player.name : null",
+      "tourism": "player.tourismPerTurn",
+      "tied": "players.some(p => p.id !== player.id && p.knows('major') && p.major === true && p.knows('tourismPerTurn') && p.tourismPerTurn === player.tourismPerTurn)"
+    },
+    "importance": "player.self ? 65 : 50",
+    "tags": ["culture", "international"]
+  },
+  {
+    "id": "foreign-wonder-completed",
+    "subject": "city",
+    "window": "recent",
+    "when": [
+      "city.foreign && city.knows('owner') && city.owner.major",
+      "city.knows('wonders') && Array.isArray(city.wonders) && city.wonders.length > 0",
+      "!(city.owner.knows('enemy') && city.owner.enemy && city.knows('distance') && city.distance.own <= nearby)",
+      "city.built.some(b => b.knows('building') && city.wonders.includes(b.building))"
+    ],
+    "values": {
+      "wonder": "city.built.find(b => b.knows('building') && city.wonders.includes(b.building)).building",
+      "civilization": "city.owner.knows('name') ? city.owner.name : null",
+      "cityName": "city.knows('name') ? city.name : null"
+    },
+    "importance": 55,
+    "tags": ["culture", "international"]
   }
 ]

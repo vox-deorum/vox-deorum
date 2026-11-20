@@ -37,5 +37,40 @@
     "values": { "ally": "incident.knows('target') && incident.target.knows('name') ? incident.target.name : null", "aggressor": "incident.knows('initiator') && incident.initiator.knows('name') ? incident.initiator.name : null" },
     "importance": 80,
     "tags": ["politics", "military"]
+  },
+  {
+    "id": "city-state-friendship-changes",
+    "subject": "event",
+    "event": "MinorFriendsChanged",
+    "when": [
+      "event.knows('majorPlayer') && event.majorPlayer.self === true",
+      "event.knows('minorPlayer') && event.minorPlayer.knows('name')",
+      "event.knows('isNowFriend') && typeof event.isNowFriend === 'boolean'"
+    ],
+    "values": {
+      "cityState": "event.minorPlayer.knows('name') ? event.minorPlayer.name : null",
+      "began": "event.isNowFriend === true",
+      "friendship": "event.knows('newFriendship') && Number.isFinite(event.newFriendship) ? event.newFriendship : null"
+    },
+    "importance": "began ? 55 : 65",
+    "tags": ["politics", "international"]
+  },
+  {
+    "id": "foreign-major-wins-city-state",
+    "subject": "event",
+    "event": "SetAlly",
+    "when": [
+      "event.knows('newAllyPlayer') && event.newAllyPlayer.major && !event.newAllyPlayer.self",
+      "event.knows('minorPlayer') && event.minorPlayer.knows('distance') && event.minorPlayer.distance <= neighboring",
+      "!(event.knows('oldAllyPlayer') && event.oldAllyPlayer.self)"
+    ],
+    "values": {
+      "cityState": "event.minorPlayer.knows('name') ? event.minorPlayer.name : null",
+      "civilization": "event.newAllyPlayer.knows('name') ? event.newAllyPlayer.name : null",
+      "distance": "event.minorPlayer.distance",
+      "replaced": "event.knows('oldAllyPlayer') && event.oldAllyPlayer.knows('name') ? event.oldAllyPlayer.name : null"
+    },
+    "importance": "distance <= adjacent ? 75 : 62",
+    "tags": ["politics", "international"]
   }
 ]

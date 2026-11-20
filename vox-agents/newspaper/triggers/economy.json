@@ -46,5 +46,22 @@
     },
     "importance": 45,
     "tags": ["politics", "domestic"]
+  },
+  {
+    "id": "treasury-reserve-runs-short",
+    "subject": "world",
+    "when": [
+      "Number.isFinite(self.gold) && self.gold >= 0",
+      "Number.isFinite(self.goldPerTurn) && self.goldPerTurn < 0",
+      "self.gold / -self.goldPerTurn <= short",
+      "self.knows('before') && Number.isFinite(self.before.goldPerTurn) && self.before.goldPerTurn < 0"
+    ],
+    "values": {
+      "gold": "self.gold",
+      "deficit": "-self.goldPerTurn",
+      "turnsLeft": "Math.floor(self.gold / -self.goldPerTurn)"
+    },
+    "importance": "turnsLeft <= recent ? 70 : 60",
+    "tags": ["economy", "domestic"]
   }
 ]

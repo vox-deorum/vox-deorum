@@ -186,5 +186,25 @@
     },
     "importance": "60 + 5 * lost",
     "tags": ["politics", "international"]
+  },
+  {
+    "id": "ideology-switched",
+    "subject": "event",
+    "event": "IdeologySwitched",
+    "when": [
+      "event.knows('player') && event.player.major",
+      "event.knows('oldBranch') && typeof event.oldBranch === 'string'",
+      "event.knows('newBranch') && typeof event.newBranch === 'string'",
+      "event.oldBranch !== event.newBranch"
+    ],
+    "values": {
+      "civilization": "event.player.knows('name') ? event.player.name : null",
+      "formerIdeology": "event.oldBranch",
+      "ideology": "event.newBranch",
+      "ours": "event.player.self === true"
+    },
+    "importance": "ours ? 85 : 65",
+    "urgent": "ours",
+    "tags": ["politics", "international"]
   }
 ]

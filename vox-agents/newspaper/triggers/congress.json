@@ -154,5 +154,19 @@
     },
     "importance": "Math.abs(change) >= 2 ? 65 : 55",
     "tags": ["international", "congress"]
+  },
+  {
+    "id": "sanction-proposed",
+    "subject": "world",
+    "when": [
+      "game.knows('congress') && game.congress.available === true",
+      "game.congress.knows('newProposals')",
+      "game.congress.newProposals.some(p => p.isEnact === true && p.name.startsWith('Sanction'))"
+    ],
+    "values": {
+      "resolution": "game.congress.newProposals.find(p => p.isEnact === true && p.name.startsWith('Sanction')).name"
+    },
+    "importance": 72,
+    "tags": ["international", "congress"]
   }
 ]

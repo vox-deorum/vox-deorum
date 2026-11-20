@@ -153,5 +153,23 @@
       "capital": "self.capital.name"
     },
     "importance": 45
+  },
+  {
+    "id": "city-flips",
+    "subject": "event",
+    "event": "CityFlipped",
+    "when": [
+      "event.knows('oldOwner') && event.knows('newOwner')",
+      "event.oldOwner.self || event.newOwner.self",
+      "event.knows('city') && event.city.knows('name')"
+    ],
+    "values": {
+      "cityName": "event.city.name",
+      "formerOwner": "event.oldOwner.knows('name') ? event.oldOwner.name : null",
+      "newOwner": "event.newOwner.knows('name') ? event.newOwner.name : null",
+      "gained": "event.newOwner.self === true"
+    },
+    "importance": "gained ? 75 : 90",
+    "tags": ["cities", "politics"]
   }
 ]

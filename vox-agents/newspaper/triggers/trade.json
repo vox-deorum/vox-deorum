@@ -14,5 +14,57 @@
     },
     "importance": "55 + 5 * routes",
     "tags": ["politics", "domestic"]
+  },
+  {
+    "id": "our-trade-route-plundered",
+    "subject": "event",
+    "event": "PlayerPlunderedTradeRoute",
+    "when": [
+      "event.knows('originOwner') && event.originOwner.self === true",
+      "event.knows('plunderingPlayerId') && event.plunderingPlayerId !== self.id"
+    ],
+    "values": {
+      "plunderer": "event.knows('plunderingPlayer') && event.plunderingPlayer.knows('name') ? event.plunderingPlayer.name : null",
+      "gold": "event.knows('plunderGoldValue') && Number.isFinite(event.plunderGoldValue) ? event.plunderGoldValue : null",
+      "destination": "event.knows('destinationOwner') && event.destinationOwner.knows('name') ? event.destinationOwner.name : null"
+    },
+    "importance": 70,
+    "tags": ["economy", "trade"]
+  },
+  {
+    "id": "gold-trade-deal",
+    "subject": "event",
+    "event": "DealMade",
+    "when": [
+      "event.knows('fromPlayer') && event.knows('toPlayer') && (event.fromPlayer.self || event.toPlayer.self)",
+      "event.knows('fromGives') && Array.isArray(event.fromGives) && event.fromGives.length > 0",
+      "event.knows('toGives') && Array.isArray(event.toGives) && event.toGives.length > 0",
+      "event.knows('tradedItems') && Array.isArray(event.tradedItems)",
+      "event.tradedItems.some(item => item.knows('itemType') && (item.itemType === 'Gold' || item.itemType === 'GoldPerTurn'))",
+      "!event.tradedItems.some(item => item.knows('itemType') && item.itemType === 'PeaceTreaty')"
+    ],
+    "values": {
+      "partner": "(() => { const p = event.fromPlayer.self ? event.toPlayer : event.fromPlayer; return p.knows('name') ? p.name : null; })()",
+      "weGive": "(event.fromPlayer.self ? event.fromGives : event.toGives).join(', ')",
+      "weGet": "(event.fromPlayer.self ? event.toGives : event.fromGives).join(', ')"
+    },
+    "importance": 60,
+    "tags": ["economy", "trade", "international"]
+  },
+  {
+    "id": "trade-network-opens",
+    "subject": "world",
+    "when": [
+      "self.knows('before')",
+      "self.outgoingTradeRoutes !== null && typeof self.outgoingTradeRoutes === 'object' && !Array.isArray(self.outgoingTradeRoutes)",
+      "self.before.outgoingTradeRoutes !== null && typeof self.before.outgoingTradeRoutes === 'object' && (!Array.isArray(self.before.outgoingTradeRoutes) || self.before.outgoingTradeRoutes.length === 0)",
+      "!Object.values(self.before.outgoingTradeRoutes).some(route => route !== null && typeof route === 'object' && !Array.isArray(route))",
+      "Object.values(self.outgoingTradeRoutes).some(route => route !== null && typeof route === 'object' && !Array.isArray(route))"
+    ],
+    "values": {
+      "routes": "Object.values(self.outgoingTradeRoutes).filter(route => route !== null && typeof route === 'object' && !Array.isArray(route)).length"
+    },
+    "importance": 55,
+    "tags": ["economy", "trade"]
   }
 ]
