@@ -15,15 +15,11 @@ function snapshot(subjectID: number, turn: number, values: Record<string, unknow
   return { subjectID, values, source: { table: 'PlayerSummaries', id: turn * 100 + subjectID, turn, createdAt: turn * 1000 } };
 }
 
-/** Build receiver evidence for one era, optionally with a known national happiness. */
-function fixture(era: string, happiness?: number): NewspaperEvidence {
+/** Build receiver evidence for one era with optional recorded national summary columns. */
+function fixture(era: string, values: Record<string, unknown> = {}): NewspaperEvidence {
   return {
     request: { receiverPlayerID: 0, previousCheckTurn: 5, cutoffTurn: 10 },
-    players: [snapshot(0, 10, {
-      Era: era,
-      Gold: 20,
-      ...(happiness === undefined ? {} : { HappinessPercentage: happiness }),
-    })],
+    players: [snapshot(0, 10, { Era: era, Gold: 20, ...values })],
     cities: [], comparisons: { players: [], cities: [] }, events: [],
   };
 }
@@ -55,11 +51,13 @@ function styleCandidate(
 }
 
 /** Apply the stock style rules to selected candidates against one receiver fixture. */
-async function applyStock(candidates: EditorialCandidate[], era: string, happiness?: number) {
+async function applyStock(candidates: EditorialCandidate[], era: string, values: Record<string, unknown> = {}) {
   const compiled = await getEditorialExpressions(config);
   const budget: ExpressionCheckBudget = { interruptedSlots: new Set(), choiceErrors: new Map() };
-  const result = await applyStylePreferences(candidates, compiled,
-    { constants: {}, facts: buildNewspaperFacts(fixture(era, happiness)) }, budget);
+  const result = await applyStylePreferences(candidates, compiled, {
+    constants: {},
+    facts: buildNewspaperFacts(fixture(era, values), {}, { ideologies: config.constants.types.ideologies }),
+  }, budget);
   return { ...result, budget };
 }
 
@@ -124,6 +122,79 @@ describe('stock newspaper styles', () => {
     });
   });
 
+  describe('policy branches', () => {
+    it('should raise devout and lower rationalist under Fealty', async () => {
+      const candidate = styleCandidate('fealty', [
+        variant('devout', { stance: 'devout' }),
+        variant('rationalist', { stance: 'rationalist' }),
+        variant('neutral'),
+      ]);
+      const { selected } = await applyStock([candidate], 'Medieval Era', { PolicyBranches: { Fealty: ['A'] } });
+      const weights = selected[0].variantWeights;
+      expect(weights.devout).toBeGreaterThan(weights.neutral);
+      expect(weights.rationalist).toBeLessThan(weights.neutral);
+    });
+
+    it('should raise elitist and lower environmentalist under Industry', async () => {
+      const candidate = styleCandidate('industry', [
+        variant('elitist', { stance: 'elitist' }),
+        variant('environmentalist', { stance: 'environmentalist' }),
+        variant('neutral'),
+      ]);
+      const { selected } = await applyStock([candidate], 'Industrial Era', { PolicyBranches: { Industry: ['A'] } });
+      const weights = selected[0].variantWeights;
+      expect(weights.elitist).toBeGreaterThan(weights.neutral);
+      expect(weights.environmentalist).toBeLessThan(weights.neutral);
+    });
+
+    it('should leave devout equal to neutral without recorded policy branches', async () => {
+      const candidate = styleCandidate('no-branches', [
+        variant('devout', { stance: 'devout' }),
+        variant('neutral'),
+      ]);
+      const { selected } = await applyStock([candidate], 'Modern Era');
+      const weights = selected[0].variantWeights;
+      expect(weights.devout).toEqual(weights.neutral);
+    });
+  });
+
+  describe('ideologies', () => {
+    it('should raise a joke under Order', async () => {
+      const candidate = styleCandidate('order', [
+        variant('joke', { genre: 'joke' }),
+        variant('report'),
+      ]);
+      const { selected } = await applyStock([candidate], 'Industrial Era', { PolicyBranches: { Order: ['A'] } });
+      const weights = selected[0].variantWeights;
+      expect(weights.joke).toBeGreaterThan(weights.report);
+    });
+
+    it('should lower a government-critical letter below a neutral report under Autocracy', async () => {
+      const candidate = styleCandidate('autocracy', [
+        variant('critical', { stance: 'government-critical', genre: 'letter' }),
+        variant('neutral'),
+      ]);
+      const { selected } = await applyStock([candidate], 'Industrial Era', { PolicyBranches: { Autocracy: ['A'] } });
+      const weights = selected[0].variantWeights;
+      expect(weights.critical).toBeLessThan(weights.neutral);
+    });
+  });
+
+  describe('religion and happiness', () => {
+    it('should raise devout with a founded religion and pluralist without one', async () => {
+      const candidate = styleCandidate('religion', [
+        variant('devout', { stance: 'devout' }),
+        variant('pluralist', { stance: 'pluralist' }),
+        variant('neutral'),
+      ]);
+      const founded = await applyStock([candidate], 'Modern Era', { FoundedReligion: 'X' });
+      expect(founded.selected[0].variantWeights.devout).toBeGreaterThan(founded.selected[0].variantWeights.neutral);
+      expect(founded.selected[0].variantWeights.pluralist).toBeLessThan(founded.selected[0].variantWeights.neutral);
+      const none = await applyStock([candidate], 'Modern Era', { FoundedReligion: null });
+      expect(none.selected[0].variantWeights.pluralist).toBeGreaterThan(none.selected[0].variantWeights.neutral);
+    });
+  });
+
   describe('rule evaluation', () => {
     it('should record no choice error when every stock style is in play', async () => {
       const styles = config.styles;
@@ -135,7 +206,13 @@ describe('stock newspaper styles', () => {
       const voices = styleCandidate('voices', styles.voice.map(({ id }) => variant(id, { voice: id })), story);
       const stances = styleCandidate('stances', styles.stance.map(({ id }) => variant(id, { stance: id })), story);
       const genres = styleCandidate('genres', styles.genre.map(({ id }) => variant(id, { genre: id })), story);
-      const { budget } = await applyStock([voices, stances, genres], 'Ancient Era', 40);
+      const { budget } = await applyStock([voices, stances, genres], 'Ancient Era', {
+        PolicyBranches: { Order: ['A'], Fealty: ['B'], Tradition: ['C'] },
+        FoundedReligion: 'X',
+        HappinessPercentage: 30,
+        GoldenAge: '5 turns remaining',
+        GoldPerTurn: -4,
+      });
       expect(budget.choiceErrors?.size ?? 0).toBe(0);
       expect(budget.choiceEvaluationIncomplete).toBeUndefined();
     });

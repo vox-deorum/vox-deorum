@@ -12,13 +12,13 @@
     "multiplier": 1.75
   },
   {
-    "id": "stance-low-happiness-government-critical-populist",
+    "id": "stance-low-happiness-critical-populist",
     "match": { "stance": ["government-critical", "populist"] },
     "when": "self.knows('happinessPercentage') && self.happinessPercentage < 50",
     "multiplier": 1.5
   },
   {
-    "id": "stance-golden-age-or-high-happiness",
+    "id": "stance-golden-age-high-happiness",
     "match": { "stance": "pro-government" },
     "when": "(self.knows('goldenAge') && self.goldenAge) || (self.knows('happinessPercentage') && self.happinessPercentage >= 60)",
     "multiplier": 1.5
@@ -42,12 +42,6 @@
     "multiplier": 1.6
   },
   {
-    "id": "stance-international-wonders-government-critical",
-    "match": { "stance": "government-critical" },
-    "when": "story.tags.includes('wonders') && story.tags.includes('international')",
-    "multiplier": 1.5
-  },
-  {
     "id": "stance-domestic-cities-populist",
     "match": { "stance": "populist" },
     "when": "story.tags.includes('cities') && story.tags.includes('domestic')",
@@ -60,15 +54,255 @@
     "multiplier": 1.5
   },
   {
-    "id": "stance-traditional-religion",
-    "match": { "stance": "traditional" },
+    "id": "stance-devout-traditional-religion",
+    "match": { "stance": ["devout", "traditional"] },
     "when": "story.tags.includes('religion')",
     "multiplier": 1.5
   },
   {
-    "id": "stance-elitist-wonders",
-    "match": { "stance": "elitist" },
+    "id": "stance-artistic-wonders",
+    "match": { "stance": "artistic" },
     "when": "story.tags.includes('wonders')",
     "multiplier": 1.5
+  },
+  {
+    "id": "stance-rationalist-science",
+    "match": { "stance": "rationalist" },
+    "when": "story.tags.includes('science')",
+    "multiplier": 1.5
+  },
+  {
+    "id": "stance-industrialist-cities",
+    "match": { "stance": "industrialist" },
+    "when": "story.tags.includes('cities')",
+    "multiplier": 1.3
+  },
+  {
+    "id": "stance-tradition-up",
+    "match": { "stance": ["traditional", "elitist"] },
+    "when": "self.knows('policyBranches') && Object.keys(self.policyBranches ?? {}).includes('Tradition')",
+    "multiplier": 1.3
+  },
+  {
+    "id": "stance-tradition-populist-down",
+    "match": { "stance": "populist" },
+    "when": "self.knows('policyBranches') && Object.keys(self.policyBranches ?? {}).includes('Tradition')",
+    "multiplier": 0.75
+  },
+  {
+    "id": "stance-progress-up",
+    "match": { "stance": ["populist", "local", "ambitious"] },
+    "when": "self.knows('policyBranches') && Object.keys(self.policyBranches ?? {}).includes('Progress')",
+    "multiplier": 1.3
+  },
+  {
+    "id": "stance-progress-elitist-down",
+    "match": { "stance": "elitist" },
+    "when": "self.knows('policyBranches') && Object.keys(self.policyBranches ?? {}).includes('Progress')",
+    "multiplier": 0.75
+  },
+  {
+    "id": "stance-authority-up",
+    "match": { "stance": ["hawkish", "national"] },
+    "when": "self.knows('policyBranches') && Object.keys(self.policyBranches ?? {}).includes('Authority')",
+    "multiplier": 1.3
+  },
+  {
+    "id": "stance-authority-conciliatory-down",
+    "match": { "stance": "conciliatory" },
+    "when": "self.knows('policyBranches') && Object.keys(self.policyBranches ?? {}).includes('Authority')",
+    "multiplier": 0.75
+  },
+  {
+    "id": "stance-fealty-up",
+    "match": { "stance": ["devout", "traditional", "elitist"] },
+    "when": "self.knows('policyBranches') && Object.keys(self.policyBranches ?? {}).includes('Fealty')",
+    "multiplier": 1.3
+  },
+  {
+    "id": "stance-fealty-down",
+    "match": { "stance": ["pluralist", "rationalist"] },
+    "when": "self.knows('policyBranches') && Object.keys(self.policyBranches ?? {}).includes('Fealty')",
+    "multiplier": 0.75
+  },
+  {
+    "id": "stance-statecraft-up",
+    "match": { "stance": ["conciliatory", "pluralist"] },
+    "when": "self.knows('policyBranches') && Object.keys(self.policyBranches ?? {}).includes('Statecraft')",
+    "multiplier": 1.3
+  },
+  {
+    "id": "stance-statecraft-hawkish-down",
+    "match": { "stance": "hawkish" },
+    "when": "self.knows('policyBranches') && Object.keys(self.policyBranches ?? {}).includes('Statecraft')",
+    "multiplier": 0.75
+  },
+  {
+    "id": "stance-artistry-up",
+    "match": { "stance": "artistic" },
+    "when": "self.knows('policyBranches') && Object.keys(self.policyBranches ?? {}).includes('Artistry')",
+    "multiplier": 1.3
+  },
+  {
+    "id": "stance-artistry-rationalist-down",
+    "match": { "stance": "rationalist" },
+    "when": "self.knows('policyBranches') && Object.keys(self.policyBranches ?? {}).includes('Artistry')",
+    "multiplier": 0.75
+  },
+  {
+    "id": "stance-industry-up",
+    "match": { "stance": ["industrialist", "elitist"] },
+    "when": "self.knows('policyBranches') && Object.keys(self.policyBranches ?? {}).includes('Industry')",
+    "multiplier": 1.3
+  },
+  {
+    "id": "stance-industry-down",
+    "match": { "stance": ["environmentalist", "populist"] },
+    "when": "self.knows('policyBranches') && Object.keys(self.policyBranches ?? {}).includes('Industry')",
+    "multiplier": 0.75
+  },
+  {
+    "id": "stance-imperialism-up",
+    "match": { "stance": ["hawkish", "national", "ambitious"] },
+    "when": "self.knows('policyBranches') && Object.keys(self.policyBranches ?? {}).includes('Imperialism')",
+    "multiplier": 1.3
+  },
+  {
+    "id": "stance-imperialism-down",
+    "match": { "stance": ["local", "conciliatory"] },
+    "when": "self.knows('policyBranches') && Object.keys(self.policyBranches ?? {}).includes('Imperialism')",
+    "multiplier": 0.75
+  },
+  {
+    "id": "stance-rationalism-up",
+    "match": { "stance": ["rationalist", "pluralist"] },
+    "when": "self.knows('policyBranches') && Object.keys(self.policyBranches ?? {}).includes('Rationalism')",
+    "multiplier": 1.3
+  },
+  {
+    "id": "stance-rationalism-down",
+    "match": { "stance": ["devout", "traditional"] },
+    "when": "self.knows('policyBranches') && Object.keys(self.policyBranches ?? {}).includes('Rationalism')",
+    "multiplier": 0.75
+  },
+  {
+    "id": "stance-freedom-up",
+    "match": { "stance": ["elitist", "pluralist", "artistic"] },
+    "when": "self.knows('ideology') && self.ideology === 'Freedom'",
+    "multiplier": 1.5
+  },
+  {
+    "id": "stance-order-up",
+    "match": { "stance": ["populist", "ambitious", "industrialist"] },
+    "when": "self.knows('ideology') && self.ideology === 'Order'",
+    "multiplier": 1.5
+  },
+  {
+    "id": "stance-order-down",
+    "match": { "stance": ["elitist", "devout"] },
+    "when": "self.knows('ideology') && self.ideology === 'Order'",
+    "multiplier": 0.6
+  },
+  {
+    "id": "stance-autocracy-up",
+    "match": { "stance": ["pro-government", "hawkish", "national"] },
+    "when": "self.knows('ideology') && self.ideology === 'Autocracy'",
+    "multiplier": 1.5
+  },
+  {
+    "id": "stance-autocracy-elitist-devout-down",
+    "match": { "stance": ["elitist", "devout"] },
+    "when": "self.knows('ideology') && self.ideology === 'Autocracy'",
+    "multiplier": 0.6
+  },
+  {
+    "id": "stance-autocracy-government-critical-down",
+    "match": { "stance": "government-critical" },
+    "when": "self.knows('ideology') && self.ideology === 'Autocracy'",
+    "multiplier": 0.6
+  },
+  {
+    "id": "stance-founded-devout-up",
+    "match": { "stance": "devout" },
+    "when": "self.knows('foundedReligion') && self.foundedReligion !== null",
+    "multiplier": 1.4
+  },
+  {
+    "id": "stance-founded-pluralist-down",
+    "match": { "stance": "pluralist" },
+    "when": "self.knows('foundedReligion') && self.foundedReligion !== null",
+    "multiplier": 0.75
+  },
+  {
+    "id": "stance-unfounded-pluralist-up",
+    "match": { "stance": "pluralist" },
+    "when": "self.knows('foundedReligion') && self.foundedReligion === null",
+    "multiplier": 1.3
+  },
+  {
+    "id": "stance-low-happiness-revolt",
+    "match": { "stance": ["government-critical", "populist"] },
+    "when": "self.knows('happinessPercentage') && self.happinessPercentage < 35",
+    "multiplier": 1.5
+  },
+  {
+    "id": "stance-low-happiness-pro-government",
+    "match": { "stance": "pro-government" },
+    "when": "self.knows('happinessPercentage') && self.happinessPercentage < 50",
+    "multiplier": 0.75
+  },
+  {
+    "id": "stance-happiness-revolt-pro-government",
+    "match": { "stance": "pro-government" },
+    "when": "self.knows('happinessPercentage') && self.happinessPercentage < 35",
+    "multiplier": 0.5
+  },
+  {
+    "id": "stance-golden-age-artistic-ambitious",
+    "match": { "stance": ["artistic", "ambitious"] },
+    "when": "self.knows('goldenAge') && typeof self.goldenAge === 'string' && self.goldenAge.endsWith('turns remaining')",
+    "multiplier": 1.3
+  },
+  {
+    "id": "stance-environmentalist-pre-industrial",
+    "match": { "stance": "environmentalist" },
+    "when": "self.knows('era') && !['Industrial', 'Modern', 'Atomic', 'Information', 'Future'].includes(self.era?.replace(' Era', ''))",
+    "multiplier": 0.05
+  },
+  {
+    "id": "stance-war-weariness-hawkish-down",
+    "match": { "stance": "hawkish" },
+    "when": "self.knows('wars') && self.wars.some(other => self.relation(other).knows('warWeariness') && self.relation(other).warWeariness >= 50)",
+    "multiplier": 0.6
+  },
+  {
+    "id": "stance-war-weariness-conciliatory-up",
+    "match": { "stance": "conciliatory" },
+    "when": "self.knows('wars') && self.wars.some(other => self.relation(other).knows('warWeariness') && self.relation(other).warWeariness >= 50)",
+    "multiplier": 1.5
+  },
+  {
+    "id": "stance-war-weariness-critical-up",
+    "match": { "stance": "government-critical" },
+    "when": "self.knows('wars') && self.wars.some(other => self.relation(other).knows('warWeariness') && self.relation(other).warWeariness >= 50)",
+    "multiplier": 1.3
+  },
+  {
+    "id": "stance-losing-war-critical-up",
+    "match": { "stance": "government-critical" },
+    "when": "self.knows('wars') && self.wars.some(other => self.relation(other).knows('warScore') && self.relation(other).warScore <= -25)",
+    "multiplier": 1.3
+  },
+  {
+    "id": "stance-deficit-critical-up",
+    "match": { "stance": "government-critical" },
+    "when": "self.knows('goldPerTurn') && self.goldPerTurn < 0",
+    "multiplier": 1.3
+  },
+  {
+    "id": "stance-world-leader-up",
+    "match": { "stance": ["pro-government", "national"] },
+    "when": "self.knows('major') && self.major === true && self.knows('score') && self.rank('score') === 1 && players.filter(p => p.knows('major') && p.major === true && p.knows('score')).length >= 3",
+    "multiplier": 1.3
   }
 ]

@@ -1,6 +1,6 @@
 [
   {
-    "id": "genre-jokes-off-urgent-important-news",
+    "id": "genre-jokes-off-big-news",
     "match": { "genre": ["joke", "proverb"] },
     "when": "story.urgent || story.importance >= 80",
     "multiplier": 0.25
@@ -46,5 +46,77 @@
     "match": { "genre": "anecdote" },
     "when": "story.urgent",
     "multiplier": 0.5
+  },
+  {
+    "id": "genre-fealty-proverb-up",
+    "match": { "genre": "proverb" },
+    "when": "self.knows('policyBranches') && Object.keys(self.policyBranches ?? {}).includes('Fealty')",
+    "multiplier": 1.3
+  },
+  {
+    "id": "genre-statecraft-analysis-up",
+    "match": { "genre": "analysis" },
+    "when": "self.knows('policyBranches') && Object.keys(self.policyBranches ?? {}).includes('Statecraft')",
+    "multiplier": 1.3
+  },
+  {
+    "id": "genre-artistry-up",
+    "match": { "genre": ["anecdote", "obituary"] },
+    "when": "self.knows('policyBranches') && Object.keys(self.policyBranches ?? {}).includes('Artistry')",
+    "multiplier": 1.3
+  },
+  {
+    "id": "genre-industry-ledger-up",
+    "match": { "genre": "ledger" },
+    "when": "self.knows('policyBranches') && Object.keys(self.policyBranches ?? {}).includes('Industry')",
+    "multiplier": 1.3
+  },
+  {
+    "id": "genre-rationalism-analysis-up",
+    "match": { "genre": "analysis" },
+    "when": "self.knows('policyBranches') && Object.keys(self.policyBranches ?? {}).includes('Rationalism')",
+    "multiplier": 1.3
+  },
+  {
+    "id": "genre-freedom-up",
+    "match": { "genre": ["editorial", "letter"] },
+    "when": "self.knows('ideology') && self.ideology === 'Freedom'",
+    "multiplier": 1.5
+  },
+  {
+    "id": "genre-order-up",
+    "match": { "genre": ["joke", "ledger"] },
+    "when": "self.knows('ideology') && self.ideology === 'Order'",
+    "multiplier": 1.5
+  },
+  {
+    "id": "genre-autocracy-notice-up",
+    "match": { "genre": "notice" },
+    "when": "self.knows('ideology') && self.ideology === 'Autocracy'",
+    "multiplier": 1.5
+  },
+  {
+    "id": "genre-autocracy-letter-down",
+    "match": { "genre": "letter" },
+    "when": "self.knows('ideology') && self.ideology === 'Autocracy'",
+    "multiplier": 0.6
+  },
+  {
+    "id": "genre-letter-revolt",
+    "match": { "genre": "letter" },
+    "when": "self.knows('happinessPercentage') && self.happinessPercentage < 35",
+    "multiplier": 1.5
+  },
+  {
+    "id": "genre-losing-war-obituary-up",
+    "match": { "genre": "obituary" },
+    "when": "self.knows('wars') && self.wars.some(other => self.relation(other).knows('warScore') && self.relation(other).warScore <= -25)",
+    "multiplier": 1.3
+  },
+  {
+    "id": "genre-deficit-ledger-up",
+    "match": { "genre": "ledger" },
+    "when": "self.knows('goldPerTurn') && self.goldPerTurn < 0",
+    "multiplier": 1.3
   }
 ]

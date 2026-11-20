@@ -78,6 +78,12 @@
     "multiplier": 1.5
   },
   {
+    "id": "voice-pamphlet-revolt",
+    "match": { "voice": "pamphlet" },
+    "when": "self.knows('happinessPercentage') && self.happinessPercentage < 35",
+    "multiplier": 1.5
+  },
+  {
     "id": "voice-gazette-press-international",
     "match": { "voice": ["gazette", "press"] },
     "when": "story.tags.includes('international')",
