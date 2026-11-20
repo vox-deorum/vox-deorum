@@ -192,6 +192,12 @@
     "multiplier": 1.5
   },
   {
+    "id": "stance-freedom-down",
+    "match": { "stance": ["pro-government", "traditional"] },
+    "when": "self.knows('ideology') && self.ideology === 'Freedom'",
+    "multiplier": 0.75
+  },
+  {
     "id": "stance-order-up",
     "match": { "stance": ["populist", "ambitious", "industrialist"] },
     "when": "self.knows('ideology') && self.ideology === 'Order'",
@@ -208,12 +214,6 @@
     "match": { "stance": ["pro-government", "hawkish", "national"] },
     "when": "self.knows('ideology') && self.ideology === 'Autocracy'",
     "multiplier": 1.5
-  },
-  {
-    "id": "stance-autocracy-elitist-devout-down",
-    "match": { "stance": ["elitist", "devout"] },
-    "when": "self.knows('ideology') && self.ideology === 'Autocracy'",
-    "multiplier": 0.6
   },
   {
     "id": "stance-autocracy-critical-conciliatory-down",

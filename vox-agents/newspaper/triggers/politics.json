@@ -103,7 +103,7 @@
     ],
     "values": {
       "founded": "self.foundedReligion",
-      "majority": "self.majorityReligion"
+      "majorityFaith": "self.majorityReligion"
     },
     "importance": 60,
     "tags": ["politics", "domestic"]

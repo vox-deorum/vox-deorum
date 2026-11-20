@@ -44,11 +44,24 @@ function samplePitches(label: string, count = 5) {
   }));
 }
 
-/** Stream one scripted response per call, with no provider or network access. */
-function mockScout(...replies: (Error | { pitches: ReturnType<typeof samplePitches> })[]) {
+type ScoutReply = Error | { pitches: ReturnType<typeof samplePitches> };
+
+/** Stream one scripted response per call, in call order, with no provider or network access. */
+function mockScout(...replies: ScoutReply[]) {
+  return mockScoutWith(() => replies.shift());
+}
+
+/** Stream the reply whose material appears in the prompt, since parallel samples call in any order. */
+function mockScoutByMaterial(replies: Record<string, ScoutReply>) {
+  return mockScoutWith(prompt => Object.entries(replies).find(([material]) => prompt.includes(material))?.[1]);
+}
+
+/** Build a mock scout model that answers each call with the chosen reply. */
+function mockScoutWith(chooseReply: (prompt: string) => ScoutReply | undefined, delayMs = 0) {
   const model = new MockLanguageModelV4({
-    doStream: async () => {
-      const reply = replies.shift();
+    doStream: async ({ prompt }) => {
+      const reply = chooseReply(JSON.stringify(prompt));
+      if (delayMs) await new Promise(resolve => setTimeout(resolve, delayMs));
       if (!reply) throw Object.assign(new Error('Unexpected scout call'), { isRetryable: false });
       if (reply instanceof Error) throw reply;
       return {
@@ -207,8 +220,12 @@ describe('archivist story mining', () => {
       10: null, 11: 'Oversized turn', 12: 'Incomplete pitches', 13: 'Provider failure', 14: 'Nineveh built a granary',
     });
     const pitches = samplePitches('Market notes');
-    const scout = mockScout(new Error('maximum context length exceeded'), { pitches: pitches.slice(0, 4) },
-      Object.assign(new Error('Provider rejected the request'), { isRetryable: false }), { pitches });
+    const scout = mockScoutByMaterial({
+      'Oversized turn': new Error('maximum context length exceeded'),
+      'Incomplete pitches': { pitches: pitches.slice(0, 4) },
+      'Provider failure': Object.assign(new Error('Provider rejected the request'), { isRetryable: false }),
+      'Nineveh built a granary': { pitches },
+    });
     const mine = await createStoryMiner({ ...options, turnCount: 6 });
 
     expect(await mine(entry, writer)).toEqual({ errors: 2, samplesSaved: 1 });
@@ -218,6 +235,28 @@ describe('archivist story mining', () => {
     expect(await readRows()).toMatchObject(pitches.map(p => ({
       turn: 14, era: 'Medieval Era', headline: p.headline, embedding: null,
     })));
+  });
+
+  it('should start all of a player’s scout calls before saving, then save in turn order', async () => {
+    const entry = await seedArchive({ 10: 'A city was founded', 11: 'A market opened', 12: 'A wonder was finished' });
+    let started = 0;
+    let startedBeforeFirstSave: number | undefined;
+    mockScoutWith(() => {
+      started++;
+      return { pitches: samplePitches('Town news') };
+    }, 50);
+    const write = writer.writeStoryPitches.bind(writer);
+    const saves = vi.spyOn(writer, 'writeStoryPitches').mockImplementation((...args) => {
+      startedBeforeFirstSave ??= started;
+      return write(...args);
+    });
+    const mine = await createStoryMiner({ ...options, turnCount: 3, skipEmbeddings: true });
+
+    expect(await mine(entry, writer)).toEqual({ errors: 0, samplesSaved: 3 });
+
+    expect(startedBeforeFirstSave).toBe(3);
+    expect(saves.mock.calls.map(([key]) => key.turn)).toEqual([10, 11, 12]);
+    expect(new Set((await readRows()).map(row => row.turn))).toEqual(new Set([10, 11, 12]));
   });
 
   it('should skip detailed telemetry reads when the player has no episodes', async () => {

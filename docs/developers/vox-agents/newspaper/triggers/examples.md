@@ -1,6 +1,6 @@
 # Newspaper trigger examples
 
-The stock catalogue pairs 14 [trigger rules](overview.md) with story templates. Use these examples to find a rule to adapt. The JSON files contain the full conditions and copy; [facts](facts.md) and [constants and shortcuts](constants.md) explain the names they use.
+The stock catalogue supplies [trigger rules](overview.md) and story templates. Some rules, including the Congress rules, have no template yet and wait for one that names them. Use these examples to find a rule to adapt. The JSON files contain the full conditions and copy; [facts](facts.md) and [constants and shortcuts](constants.md) explain the names they use.
 
 A trigger tests the evidence and supplies values such as `lost`. A template chooses how to tell the story. An ungrouped rule's non-null scalar values and visible subject names can appear as placeholders such as `{{city}}`. A grouped rule supplies `{{key}}` and `{{count}}` for prose and keeps individual results in `matches` for conditions. See [authoring choices](../editorial.md#authoring-choices).
 
@@ -70,7 +70,7 @@ The `golden-age-in-wartime-account` template uses `self.happinessPercentage`, th
 
 ## Congress
 
-The [Congress rules](../../../../../vox-agents/newspaper/triggers/congress.json) are stock triggers without story templates. Add a template that names one of them when you want to print the story. Every rule starts with `game.knows('congress')` and `game.congress.available === true`, then reads the [Congress facts](facts.md#congress).
+The [Congress rules](../../../../../vox-agents/newspaper/triggers/congress.json) are stock triggers without story templates. Add a template that names one of them when you want to print the story. Rules about the current agenda start with `game.knows('congress')` and `game.congress.available === true`, then read the [Congress facts](facts.md#congress). The passed and defeated rules instead read a `ResolutionResult` event and need no Congress snapshot.
 
 | Rule | What makes news | Authoring pattern |
 | --- | --- | --- |
@@ -84,7 +84,7 @@ The [Congress rules](../../../../../vox-agents/newspaper/triggers/congress.json)
 | `congress-world-religion` | An active resolution imposes a world religion. | The resolution name starts with `World Religion`; the `ours` value checks our founded or majority religion. |
 | `congress-world-project` | The league starts a project such as the World's Fair or Global Wargames. | Match a known project name in the active resolutions or the current proposals. |
 
-`ResolutionResult` records a numeric type in `resolutionType`, so use it for conditions instead of prose. A resolution name is available only in the Congress facts, not in the event.
+`ResolutionResult` records `resolutionType` as the recorded type, which may be a string name or a number, and can name the proposer in `proposerName`. Use a resolution name as prose only when `resolutionType` is a string; otherwise keep the type for conditions.
 
 ## Probe catalogue examples
 

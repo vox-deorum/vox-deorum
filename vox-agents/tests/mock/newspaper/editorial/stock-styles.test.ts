@@ -711,9 +711,9 @@ describe('stock newspaper styles', () => {
         variant('critical', { stance: 'government-critical' }),
         variant('neutral'),
       ]);
-      const values = { PolicyBranches: { Freedom: ['A'] } };
+      const values = { PolicyBranches: { Order: ['A'] } };
       const aligned = await applyStock([candidate], 'Modern Era', values, {
-        congress: congressEvidence({ activeResolutions: [{ name: 'World Ideology: Freedom' }] }),
+        congress: congressEvidence({ activeResolutions: [{ name: 'World Ideology: Order' }] }),
       });
       expect(aligned.selected[0].variantWeights['pro-government'])
         .toBeGreaterThan(aligned.selected[0].variantWeights.neutral);
@@ -721,7 +721,7 @@ describe('stock newspaper styles', () => {
         .toEqual(aligned.selected[0].variantWeights.neutral);
 
       const opposed = await applyStock([candidate], 'Modern Era', values, {
-        congress: congressEvidence({ activeResolutions: [{ name: 'World Ideology: Order' }] }),
+        congress: congressEvidence({ activeResolutions: [{ name: 'World Ideology: Freedom' }] }),
       });
       expect(opposed.selected[0].variantWeights.critical)
         .toBeGreaterThan(opposed.selected[0].variantWeights.neutral);

@@ -73,7 +73,10 @@ export async function createStoryMiner(options: StoryMiningOptions, modelOverrid
   };
 }
 
-/** Read and save the sampled turns for one player, skipping unusable or completed samples. */
+/**
+ * Mine the sampled turns for one player, skipping unusable or completed samples.
+ * Scout calls run together under the model's concurrency limit; saves run one at a time in turn order.
+ */
 async function minePlayerStories(
   writer: EpisodeWriter,
   model: string,
@@ -87,18 +90,25 @@ async function minePlayerStories(
   const { gameID: gameId, playerID: playerId } = params;
   const turns = sampleStoryTurns(params.availableTurns, gameId, playerId, seed, turnCount);
   const completed = force ? undefined : await writer.getStorySampleTurns(gameId, playerId, model);
-  for (const turn of turns) {
-    if (completed?.has(turn)) continue;
+  // Each sample settles without throwing, so a failed sample never blocks the saves after it.
+  let previousSample = Promise.resolve();
+  await Promise.all(turns.filter(turn => !completed?.has(turn)).map(turn => {
+    previousSample = mineStorySample(turn, previousSample);
+    return previousSample;
+  }));
+
+  /** Generate one sample's pitches, then wait for the earlier sample to finish before writing. */
+  async function mineStorySample(turn: number, earlierSample: Promise<void>): Promise<void> {
     try {
       const episode = await writer.getEpisodeIdentity(gameId, playerId, turn);
       if (!episode) {
         playerLogger.warn('Skipping story sample without a Phase A episode', { turn });
-        continue;
+        return;
       }
       const material = await readStoryMaterial(params, turn);
       if (material === null) {
         playerLogger.warn('Skipping story sample without recorded game state', { turn });
-        continue;
+        return;
       }
 
       let contextExceeded = false;
@@ -108,7 +118,7 @@ async function minePlayerStories(
       ) as StoryScoutOutput | undefined;
       if (contextExceeded) {
         playerLogger.warn('Skipping story sample that exceeds the context window', { turn });
-        continue;
+        return;
       }
       if (!output) throw new Error('Story scout returned no pitches');
 
@@ -118,6 +128,7 @@ async function minePlayerStories(
       // The episode embedder returns nulls on failure; a failed story sample must leave its old pitches intact.
       if (embeddings.some(embedding => !embedding)) throw new Error('Could not embed all story pitches');
 
+      await earlierSample;
       await writer.writeStoryPitches({ gameId, playerId, turn, model }, episode, output.pitches.map((pitch, index) => ({
         ...pitch, embedding: embeddings[index] ?? null,
       })), force);
