@@ -205,5 +205,133 @@
     },
     "importance": 60,
     "tags": ["politics", "military"]
+  },
+  {
+    "id": "ideology-adopted",
+    "subject": "world",
+    "window": "recent",
+    "when": [
+      "self.knows('ideology') && typeof self.ideology === 'string'",
+      "!self.before.knows('ideology') || self.before.ideology === null"
+    ],
+    "values": {
+      "ideology": "self.ideology"
+    },
+    "importance": 85,
+    "urgent": "true",
+    "tags": ["politics", "domestic"]
+  },
+  {
+    "id": "rival-adopts-ideology",
+    "subject": "player",
+    "when": [
+      "!player.self && player.knows('major') && player.major === true",
+      "player.knows('ideology') && typeof player.ideology === 'string'",
+      "!player.before.knows('ideology') || player.before.ideology === null"
+    ],
+    "values": {
+      "name": "player.name",
+      "ideology": "player.ideology",
+      "shared": "self.knows('ideology') && typeof self.ideology === 'string' && self.ideology === player.ideology"
+    },
+    "importance": "self.knows('ideology') && typeof self.ideology === 'string' && self.ideology !== player.ideology ? 70 : 60",
+    "tags": ["politics", "international"]
+  },
+  {
+    "id": "policy-branch-opened",
+    "subject": "world",
+    "window": "recent",
+    "when": [
+      "self.knows('policyBranches') && self.policyBranches !== null && typeof self.policyBranches === 'object'",
+      "self.before.knows('policyBranches') && self.before.policyBranches !== null && typeof self.before.policyBranches === 'object'",
+      "Object.keys(self.policyBranches).some(branch => !Object.keys(self.before.policyBranches).includes(branch))"
+    ],
+    "values": {
+      "branch": "(() => { const before = Object.keys(self.before.policyBranches); const added = Object.keys(self.policyBranches).filter(branch => !before.includes(branch)); return added.length === 1 ? added[0] : null; })()",
+      "count": "Object.keys(self.policyBranches).length"
+    },
+    "importance": 60,
+    "tags": ["politics", "domestic"]
+  },
+  {
+    "id": "religion-founded",
+    "subject": "world",
+    "when": [
+      "self.knows('foundedReligion') && typeof self.foundedReligion === 'string'",
+      "!self.before.knows('foundedReligion') || self.before.foundedReligion === null"
+    ],
+    "values": {
+      "religion": "self.foundedReligion"
+    },
+    "importance": 75,
+    "tags": ["politics", "domestic"]
+  },
+  {
+    "id": "new-era",
+    "subject": "world",
+    "window": "recent",
+    "when": [
+      "self.knows('era') && typeof self.era === 'string'",
+      "self.before.knows('era') && typeof self.before.era === 'string'",
+      "changed(self, 'era')"
+    ],
+    "values": {
+      "era": "self.era"
+    },
+    "importance": 70,
+    "tags": ["politics", "domestic"]
+  },
+  {
+    "id": "happiness-recovers",
+    "subject": "world",
+    "window": "recent",
+    "when": [
+      "self.knows('happinessPercentage') && Number.isFinite(self.happinessPercentage)",
+      "self.before.knows('happinessPercentage') && Number.isFinite(self.before.happinessPercentage)",
+      "crossed(self.happinessPercentage, self.before.happinessPercentage, 50)"
+    ],
+    "values": {
+      "happinessPercentage": "self.happinessPercentage"
+    },
+    "importance": 50,
+    "tags": ["politics", "domestic"]
+  },
+  {
+    "id": "treasury-returns-to-surplus",
+    "subject": "world",
+    "window": "recent",
+    "when": [
+      "self.knows('goldPerTurn') && Number.isFinite(self.goldPerTurn)",
+      "self.before.knows('goldPerTurn') && Number.isFinite(self.before.goldPerTurn)",
+      "crossed(self.goldPerTurn, self.before.goldPerTurn, 0)"
+    ],
+    "values": {
+      "goldPerTurn": "self.goldPerTurn"
+    },
+    "importance": 45,
+    "tags": ["politics", "domestic"]
+  },
+  {
+    "id": "golden-age-ends",
+    "subject": "event",
+    "event": "PlayerGoldenAge",
+    "when": [
+      "event.starting === false",
+      "event.player.self === true"
+    ],
+    "importance": 45,
+    "tags": ["politics", "domestic"]
+  },
+  {
+    "id": "peace-returns",
+    "subject": "world",
+    "window": "recent",
+    "when": [
+      "self.knows('atWar') && self.atWar === false",
+      "self.knows('before')",
+      "players.some(rival => !rival.self && rival.knows('major') && rival.major === true && rival.knows('before') && self.before.relation(rival).knows('war') && self.before.relation(rival).war === true)"
+    ],
+    "importance": 70,
+    "tags": ["politics", "military"]
   }
 ]

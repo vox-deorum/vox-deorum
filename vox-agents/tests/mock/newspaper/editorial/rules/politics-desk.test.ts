@@ -15,6 +15,8 @@ const ruleIds = [
   'falls-to-last-place', 'golden-age-begins', 'faith-drifts', 'treasury-falls-into-deficit',
   'unhappiness-sets-in', 'revolt-threshold-crossed', 'war-weariness-sets-in',
   'war-turns-against-us', 'war-turns-our-way',
+  'ideology-adopted', 'rival-adopts-ideology', 'policy-branch-opened', 'religion-founded',
+  'new-era', 'happiness-recovers', 'treasury-returns-to-surplus', 'golden-age-ends', 'peace-returns',
   'cities-share-grievance', 'city-pillaged-unrest', 'city-famine-unrest',
   'congress-session-imminent', 'congress-voting-opens', 'congress-new-proposals',
   'congress-resolution-passed', 'congress-resolution-defeated', 'congress-sanctions-on-us',
@@ -541,6 +543,242 @@ describe('stock politics desk', () => {
 
       const unrelated = await check(withAgenda([{ name: 'Open Borders' }]));
       expect(firedSubjects(rule(unrelated, 'congress-world-project'))).toEqual([]);
+    });
+  });
+
+  describe('national milestones and recoveries', () => {
+    it('should report our ideology when it replaces no earlier ideology', async () => {
+      const cutoff = 30;
+      const adopted = await check(fixture({
+        cutoff, previous: 25,
+        players: [playerRow(0, cutoff, { PolicyBranches: { Order: [] } })],
+        beforePlayers: [playerRow(0, 20)],
+      }));
+      const adoptedFired = firedSubjects(rule(adopted, 'ideology-adopted'));
+      expect(adoptedFired).toHaveLength(1);
+      expect(adoptedFired[0]).toMatchObject({ subject: 'world', importance: 85, urgent: true });
+      expect(subjectValue(adoptedFired[0], 'ideology')).toBe('Order');
+
+      const held = await check(fixture({
+        cutoff, previous: 25,
+        players: [playerRow(0, cutoff, { PolicyBranches: { Order: [] } })],
+        beforePlayers: [playerRow(0, 20, { PolicyBranches: { Order: [] } })],
+      }));
+      expect(firedSubjects(rule(held, 'ideology-adopted'))).toEqual([]);
+    });
+
+    it('should report a rival ideology and lower its importance when it matches ours', async () => {
+      const cutoff = 30;
+      const differing = await check(fixture({
+        cutoff, previous: 25,
+        players: [
+          playerRow(0, cutoff, { PolicyBranches: { Order: [] } }),
+          playerRow(1, cutoff, { PolicyBranches: { Freedom: [] } }),
+        ],
+        beforePlayers: [
+          playerRow(0, 20, { PolicyBranches: { Order: [] } }),
+          playerRow(1, 20),
+        ],
+      }));
+      const rival = firedSubjects(rule(differing, 'rival-adopts-ideology'));
+      expect(rival).toHaveLength(1);
+      expect(rival[0]).toMatchObject({ subject: 'player/1', importance: 70 });
+      expect(subjectValue(rival[0], 'name')).toBe('Brazil');
+      expect(subjectValue(rival[0], 'ideology')).toBe('Freedom');
+      expect(subjectValue(rival[0], 'shared')).toBe(false);
+
+      const shared = await check(fixture({
+        cutoff, previous: 25,
+        players: [
+          playerRow(0, cutoff, { PolicyBranches: { Order: [] } }),
+          playerRow(1, cutoff, { PolicyBranches: { Order: [] } }),
+        ],
+        beforePlayers: [
+          playerRow(0, 20, { PolicyBranches: { Order: [] } }),
+          playerRow(1, 20),
+        ],
+      }));
+      const sharedFired = firedSubjects(rule(shared, 'rival-adopts-ideology'));
+      expect(sharedFired).toHaveLength(1);
+      expect(sharedFired[0].importance).toBe(60);
+      expect(subjectValue(sharedFired[0], 'shared')).toBe(true);
+
+      const held = await check(fixture({
+        cutoff, previous: 25,
+        players: [
+          playerRow(0, cutoff, { PolicyBranches: { Order: [] } }),
+          playerRow(1, cutoff, { PolicyBranches: { Freedom: [] } }),
+        ],
+        beforePlayers: [
+          playerRow(0, 20, { PolicyBranches: { Order: [] } }),
+          playerRow(1, 20, { PolicyBranches: { Freedom: [] } }),
+        ],
+      }));
+      expect(firedSubjects(rule(held, 'rival-adopts-ideology'))).toEqual([]);
+    });
+
+    it('should report a new branch key and name it only when one key was added', async () => {
+      const cutoff = 30;
+      const opened = await check(fixture({
+        cutoff, previous: 25,
+        players: [playerRow(0, cutoff, { PolicyBranches: { Tradition: [], Liberty: [], Piety: [] } })],
+        beforePlayers: [playerRow(0, 20, { PolicyBranches: { Tradition: [], Liberty: [] } })],
+      }));
+      const openedFired = firedSubjects(rule(opened, 'policy-branch-opened'));
+      expect(openedFired).toHaveLength(1);
+      expect(openedFired[0]).toMatchObject({ subject: 'world', importance: 60 });
+      expect(subjectValue(openedFired[0], 'branch')).toBe('Piety');
+      expect(subjectValue(openedFired[0], 'count')).toBe(3);
+
+      const several = await check(fixture({
+        cutoff, previous: 25,
+        players: [playerRow(0, cutoff, { PolicyBranches: { Tradition: [], Liberty: [], Piety: [] } })],
+        beforePlayers: [playerRow(0, 20, { PolicyBranches: { Tradition: [] } })],
+      }));
+      const severalFired = firedSubjects(rule(several, 'policy-branch-opened'));
+      expect(severalFired).toHaveLength(1);
+      expect(subjectValue(severalFired[0], 'branch')).toBeNull();
+      expect(subjectValue(severalFired[0], 'count')).toBe(3);
+
+      const unchanged = await check(fixture({
+        cutoff, previous: 25,
+        players: [playerRow(0, cutoff, { PolicyBranches: { Tradition: ['Liberalism'] } })],
+        beforePlayers: [playerRow(0, 20, { PolicyBranches: { Tradition: ['Socialism'] } })],
+      }));
+      expect(firedSubjects(rule(unchanged, 'policy-branch-opened'))).toEqual([]);
+    });
+
+    it('should report a newly founded religion once', async () => {
+      const cutoff = 20;
+      const founded = await check(fixture({
+        cutoff, previous: 15,
+        players: [playerRow(0, cutoff, { FoundedReligion: 'Taoism' })],
+        beforePlayers: [playerRow(0, 10)],
+      }));
+      const foundedFired = firedSubjects(rule(founded, 'religion-founded'));
+      expect(foundedFired).toHaveLength(1);
+      expect(foundedFired[0]).toMatchObject({ subject: 'world', importance: 75 });
+      expect(subjectValue(foundedFired[0], 'religion')).toBe('Taoism');
+
+      const held = await check(fixture({
+        cutoff, previous: 15,
+        players: [playerRow(0, cutoff, { FoundedReligion: 'Taoism' })],
+        beforePlayers: [playerRow(0, 10, { FoundedReligion: 'Taoism' })],
+      }));
+      expect(firedSubjects(rule(held, 'religion-founded'))).toEqual([]);
+    });
+
+    it('should report an era change in the recent window', async () => {
+      const cutoff = 30;
+      const advanced = await check(fixture({
+        cutoff, previous: 25,
+        players: [playerRow(0, cutoff, { Era: 'Renaissance Era' })],
+        beforePlayers: [playerRow(0, 20, { Era: 'Medieval Era' })],
+      }));
+      const eraFired = firedSubjects(rule(advanced, 'new-era'));
+      expect(eraFired).toHaveLength(1);
+      expect(eraFired[0]).toMatchObject({ subject: 'world', importance: 70 });
+      expect(subjectValue(eraFired[0], 'era')).toBe('Renaissance Era');
+
+      const steady = await check(fixture({
+        cutoff, previous: 25,
+        players: [playerRow(0, cutoff, { Era: 'Medieval Era' })],
+        beforePlayers: [playerRow(0, 20, { Era: 'Medieval Era' })],
+      }));
+      expect(firedSubjects(rule(steady, 'new-era'))).toEqual([]);
+    });
+
+    it('should report happiness recovering to 50 but not while it stays high', async () => {
+      const cutoff = 30;
+      const recovered = await check(fixture({
+        cutoff, previous: 25,
+        players: [playerRow(0, cutoff, { HappinessPercentage: 50 })],
+        beforePlayers: [playerRow(0, 20, { HappinessPercentage: 40 })],
+      }));
+      const recoveryFired = firedSubjects(rule(recovered, 'happiness-recovers'));
+      expect(recoveryFired).toHaveLength(1);
+      expect(recoveryFired[0]).toMatchObject({ subject: 'world', importance: 50 });
+      expect(subjectValue(recoveryFired[0], 'happinessPercentage')).toBe(50);
+
+      const high = await check(fixture({
+        cutoff, previous: 25,
+        players: [playerRow(0, cutoff, { HappinessPercentage: 55 })],
+        beforePlayers: [playerRow(0, 20, { HappinessPercentage: 60 })],
+      }));
+      expect(firedSubjects(rule(high, 'happiness-recovers'))).toEqual([]);
+    });
+
+    it('should report a treasury returning to surplus from a deficit', async () => {
+      const cutoff = 30;
+      const surplus = await check(fixture({
+        cutoff, previous: 25,
+        players: [playerRow(0, cutoff, { GoldPerTurn: 0 })],
+        beforePlayers: [playerRow(0, 20, { GoldPerTurn: -4 })],
+      }));
+      const surplusFired = firedSubjects(rule(surplus, 'treasury-returns-to-surplus'));
+      expect(surplusFired).toHaveLength(1);
+      expect(surplusFired[0]).toMatchObject({ subject: 'world', importance: 45 });
+      expect(subjectValue(surplusFired[0], 'goldPerTurn')).toBe(0);
+
+      const deficit = await check(fixture({
+        cutoff, previous: 25,
+        players: [playerRow(0, cutoff, { GoldPerTurn: -2 })],
+        beforePlayers: [playerRow(0, 20, { GoldPerTurn: -4 })],
+      }));
+      expect(firedSubjects(rule(deficit, 'treasury-returns-to-surplus'))).toEqual([]);
+    });
+
+    it('should report the end of our Golden Age and not its start', async () => {
+      const cutoff = 30;
+      const ended = await check(fixture({
+        cutoff, previous: 25,
+        players: [playerRow(0, cutoff)],
+        beforePlayers: [playerRow(0, 20)],
+        events: [eventRow('PlayerGoldenAge', 3, 28, { PlayerID: 0, Starting: false })],
+      }));
+      const endedFired = firedSubjects(rule(ended, 'golden-age-ends'));
+      expect(endedFired).toHaveLength(1);
+      expect(endedFired[0]).toMatchObject({ subject: 'event/3', importance: 45 });
+
+      const started = await check(fixture({
+        cutoff, previous: 25,
+        players: [playerRow(0, cutoff)],
+        beforePlayers: [playerRow(0, 20)],
+        events: [eventRow('PlayerGoldenAge', 4, 28, { PlayerID: 0, Starting: true })],
+      }));
+      expect(firedSubjects(rule(started, 'golden-age-ends'))).toEqual([]);
+    });
+
+    it('should report peace after a war with a major but not while the war continues', async () => {
+      const cutoff = 30;
+      const before = 25;
+      const settled = await check(fixture({
+        cutoff, previous: before,
+        players: [playerRow(0, cutoff), playerRow(1, cutoff)],
+        beforePlayers: [playerRow(0, before), playerRow(1, before)],
+        diplomacy: [
+          snapshot(0, before, [relationship(1, 'war')]),
+          snapshot(1, before, [relationship(0, 'war')]),
+          snapshot(0, cutoff, [relationship(1, 'peace')]),
+          snapshot(1, cutoff, [relationship(0, 'peace')]),
+        ],
+      }));
+      const peaceFired = firedSubjects(rule(settled, 'peace-returns'));
+      expect(peaceFired).toHaveLength(1);
+      expect(peaceFired[0]).toMatchObject({ subject: 'world', importance: 70 });
+
+      const ongoing = await check(fixture({
+        cutoff, previous: before,
+        players: [playerRow(0, cutoff), playerRow(1, cutoff)],
+        beforePlayers: [playerRow(0, before), playerRow(1, before)],
+        diplomacy: [
+          snapshot(0, before, [relationship(1, 'war')]),
+          snapshot(1, before, [relationship(0, 'war')]),
+          snapshot(0, cutoff, [relationship(1, 'war')]),
+          snapshot(1, cutoff, [relationship(0, 'war')]),
+        ],
+      }));
+      expect(firedSubjects(rule(ongoing, 'peace-returns'))).toEqual([]);
     });
   });
 });

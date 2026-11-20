@@ -148,5 +148,149 @@
     "match": { "genre": ["analysis", "editorial"] },
     "when": "game.knows('congress') && game.congress.available === true && (game.congress.votingNow === true || (game.congress.knows('expectedSessionTurn') && typeof game.congress.expectedSessionTurn === 'number' && game.congress.expectedSessionTurn <= turn + 3)) && (story.tags.includes('international') || story.tags.includes('diplomacy'))",
     "multiplier": 1.3
+  },
+  {
+    "id": "genre-military-report-up",
+    "match": { "genre": "report" },
+    "when": "story.tags.includes('military')",
+    "multiplier": 1.2
+  },
+  {
+    "id": "genre-military-joke-down",
+    "match": { "genre": "joke" },
+    "when": "story.tags.includes('military')",
+    "multiplier": 0.85
+  },
+  {
+    "id": "genre-military-proverb-down",
+    "match": { "genre": "proverb" },
+    "when": "story.tags.includes('military')",
+    "multiplier": 0.85
+  },
+  {
+    "id": "genre-diplomacy-analysis-up",
+    "match": { "genre": "analysis" },
+    "when": "story.tags.includes('diplomacy')",
+    "multiplier": 1.2
+  },
+  {
+    "id": "genre-diplomacy-notice-up",
+    "match": { "genre": "notice" },
+    "when": "story.tags.includes('diplomacy')",
+    "multiplier": 1.2
+  },
+  {
+    "id": "genre-diplomacy-anecdote-down",
+    "match": { "genre": "anecdote" },
+    "when": "story.tags.includes('diplomacy')",
+    "multiplier": 0.85
+  },
+  {
+    "id": "genre-religion-proverb-up",
+    "match": { "genre": "proverb" },
+    "when": "story.tags.includes('religion')",
+    "multiplier": 1.3
+  },
+  {
+    "id": "genre-religion-letter-up",
+    "match": { "genre": "letter" },
+    "when": "story.tags.includes('religion')",
+    "multiplier": 1.2
+  },
+  {
+    "id": "genre-religion-ledger-down",
+    "match": { "genre": "ledger" },
+    "when": "story.tags.includes('religion')",
+    "multiplier": 0.75
+  },
+  {
+    "id": "genre-city-states-notice-up",
+    "match": { "genre": "notice" },
+    "when": "story.tags.includes('city-states')",
+    "multiplier": 1.2
+  },
+  {
+    "id": "genre-city-states-anecdote-up",
+    "match": { "genre": "anecdote" },
+    "when": "story.tags.includes('city-states')",
+    "multiplier": 1.2
+  },
+  {
+    "id": "genre-science-analysis-up",
+    "match": { "genre": "analysis" },
+    "when": "story.tags.includes('science')",
+    "multiplier": 1.2
+  },
+  {
+    "id": "genre-science-ledger-up",
+    "match": { "genre": "ledger" },
+    "when": "story.tags.includes('science')",
+    "multiplier": 1.2
+  },
+  {
+    "id": "genre-science-obituary-down",
+    "match": { "genre": "obituary" },
+    "when": "story.tags.includes('science')",
+    "multiplier": 0.5
+  },
+  {
+    "id": "genre-wonders-anecdote-up",
+    "match": { "genre": "anecdote" },
+    "when": "story.tags.includes('wonders')",
+    "multiplier": 1.2
+  },
+  {
+    "id": "genre-wonders-obituary-down",
+    "match": { "genre": "obituary" },
+    "when": "story.tags.includes('wonders')",
+    "multiplier": 0.5
+  },
+  {
+    "id": "genre-congress-notice-up",
+    "match": { "genre": "notice" },
+    "when": "story.tags.includes('congress')",
+    "multiplier": 1.2
+  },
+  {
+    "id": "genre-congress-joke-down",
+    "match": { "genre": "joke" },
+    "when": "story.tags.includes('congress')",
+    "multiplier": 0.75
+  },
+  {
+    "id": "genre-wartime-obituary-up",
+    "match": { "genre": "obituary" },
+    "when": "self.knows('atWar') && self.atWar && story.tags.includes('military')",
+    "multiplier": 1.2
+  },
+  {
+    "id": "genre-short-obituary-down",
+    "match": { "genre": "obituary" },
+    "when": "story.short",
+    "multiplier": 0.85
+  },
+  {
+    "id": "genre-golden-age-obituary-down",
+    "match": { "genre": "obituary" },
+    "when": "self.knows('goldenAge') && typeof self.goldenAge === 'string' && self.goldenAge.endsWith('turns remaining')",
+    "multiplier": 0.75
+  },
+  {
+    "id": "genre-urgent-short-notice-up",
+    "match": { "genre": "notice" },
+    "when": "story.urgent && story.short",
+    "multiplier": 1.2
+  },
+  {
+    "id": "genre-order-notice-up",
+    "match": { "genre": "notice" },
+    "when": "self.knows('ideology') && self.ideology === 'Order'",
+    "multiplier": 1.2
+  },
+  {
+    "id": "genre-domestic-important-notice-down",
+    "match": { "genre": "notice" },
+    "when": "story.tags.includes('domestic') && story.importance >= 70",
+    "multiplier": 0.85
   }
 ]

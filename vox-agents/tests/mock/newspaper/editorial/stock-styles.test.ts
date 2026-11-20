@@ -186,6 +186,64 @@ describe('stock newspaper styles', () => {
     });
   });
 
+  describe('story topics', () => {
+    it('should raise a proverb above a ledger on a religion story and leave a cities story alone', async () => {
+      const styles = [variant('proverb', { genre: 'proverb' }), variant('ledger', { genre: 'ledger' })];
+      const religion = styleCandidate('religion-topic', styles, { tags: ['religion'] });
+      const { selected } = await applyStock([religion], 'Modern Era');
+      expect(selected[0].variantWeights.proverb).toBeGreaterThan(selected[0].variantWeights.ledger);
+
+      const cities = styleCandidate('cities-topic', styles, { tags: ['cities'] });
+      const quiet = await applyStock([cities], 'Modern Era');
+      expect(quiet.selected[0].variantWeights.proverb).toEqual(quiet.selected[0].variantWeights.ledger);
+    });
+
+    it('should raise a report above a joke on a military story', async () => {
+      const candidate = styleCandidate('military-topic',
+        [variant('report'), variant('joke', { genre: 'joke' })], { tags: ['military'] });
+      const { selected } = await applyStock([candidate], 'Modern Era');
+      expect(selected[0].variantWeights.report).toBeGreaterThan(selected[0].variantWeights.joke);
+    });
+
+    it('should raise a notice above an anecdote on a diplomacy story', async () => {
+      const candidate = styleCandidate('diplomacy-topic',
+        [variant('notice', { genre: 'notice' }), variant('anecdote', { genre: 'anecdote' })], { tags: ['diplomacy'] });
+      const { selected } = await applyStock([candidate], 'Modern Era');
+      expect(selected[0].variantWeights.notice).toBeGreaterThan(selected[0].variantWeights.anecdote);
+    });
+
+    it('should put an obituary below a report on a science story', async () => {
+      const candidate = styleCandidate('science-topic',
+        [variant('obituary', { genre: 'obituary' }), variant('report')], { tags: ['science'] });
+      const { selected } = await applyStock([candidate], 'Modern Era');
+      expect(selected[0].variantWeights.obituary).toBeLessThan(selected[0].variantWeights.report);
+    });
+  });
+
+  describe('underused genres', () => {
+    it('should weight an obituary higher on a military story at war than at peace', async () => {
+      const candidate = styleCandidate('wartime-obituary',
+        [variant('obituary', { genre: 'obituary' }), variant('report')], { tags: ['military'] });
+      const peace = await applyStock([candidate], 'Modern Era');
+      const war = await applyStock([candidate], 'Modern Era', {}, {
+        others: [{ id: 1 }],
+        relationships: [relationship(1, 'war', { warScore: 0 })],
+      });
+      expect(war.selected[0].variantWeights.obituary)
+        .toBeGreaterThan(peace.selected[0].variantWeights.obituary);
+    });
+
+    it('should raise a notice on an urgent short story compared with one that is neither', async () => {
+      const styles = [variant('notice', { genre: 'notice' }), variant('report')];
+      const pressing = styleCandidate('urgent-short-notice', styles, { urgent: true, short: true });
+      const quiet = styleCandidate('quiet-notice', styles, { urgent: false, short: false });
+      const urgent = await applyStock([pressing], 'Modern Era');
+      const ordinary = await applyStock([quiet], 'Modern Era');
+      expect(urgent.selected[0].variantWeights.notice)
+        .toBeGreaterThan(ordinary.selected[0].variantWeights.notice);
+    });
+  });
+
   describe('stance by story', () => {
     it('should raise a local stance above a neutral one on city and domestic news', async () => {
       const candidate = styleCandidate('local',
@@ -784,7 +842,10 @@ describe('stock newspaper styles', () => {
       if (!styles) throw new Error('The stock catalogue has no style definitions.');
       const story = {
         importance: 90, urgent: true, short: true,
-        tags: ['cities', 'domestic', 'military', 'international', 'religion', 'wonders', 'science', 'diplomacy'],
+        tags: [
+          'cities', 'domestic', 'military', 'international', 'religion', 'wonders', 'science',
+          'diplomacy', 'city-states', 'congress',
+        ],
       };
       const voices = styleCandidate('voices', styles.voice.map(({ id }) => variant(id, { voice: id })), story);
       const stances = styleCandidate('stances', styles.stance.map(({ id }) => variant(id, { stance: id })), story);

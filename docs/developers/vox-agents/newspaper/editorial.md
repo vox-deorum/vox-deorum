@@ -98,6 +98,7 @@ The stock rules are easiest to read by the evidence each group uses. Style rules
 | --- | --- | --- |
 | Era | `self.era` | A feed loses weight before the Information era. |
 | Story | Urgency, shortness, importance and tags | Crier and broadcast gain on urgent news. |
+| Story topics | `story.tags` | A religion story lifts proverb above ledger. |
 | Policy branches | Recorded policy branches | Fealty lifts devout and traditional. |
 | Ideology | `self.ideology` | Order lifts press and pamphlet. |
 | Religion | Founded and majority religion | A founded religion lifts devout; a different majority faith lifts traditional. |
