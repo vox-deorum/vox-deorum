@@ -90,6 +90,23 @@ The editor makes one weighted draw per article. Each earlier article in the issu
 
 To add style tags, guidance or rules, include just the files you need under your overlay's `styles/` folder. Style tag definitions merge by ID. If the overlay also has an older flat `styles.json`, the files in `styles/` take precedence over entries with the same ID in that flat file.
 
+#### Stock rule groups
+
+The stock rules are easiest to read by the evidence each group uses.
+
+| Group | What it reads | Example effect |
+| --- | --- | --- |
+| Era | `self.era` | A feed loses weight before the Information era. |
+| Story | Urgency, shortness, importance and tags | Crier and broadcast gain on urgent news. |
+| Policy branches | Recorded policy branches | Fealty lifts devout and traditional. |
+| Ideology | `self.ideology` | Order lifts press and pamphlet. |
+| Religion | Founded and majority religion | A founded religion lifts devout; a different majority faith lifts traditional. |
+| Happiness | Happiness percentage and golden age status | Low happiness lifts government-critical and populist. |
+| City unhappiness | Top causes across the receiver's readable `city.unhappiness` breakdowns | Boredom in a third of cities lifts artistic and anecdote. |
+| War | War state, score, weariness, vassalage and denouncements from relationships | A winning war lifts hawkish and national; war weariness lifts conciliatory. |
+| Treasury | Gold per turn | A deficit lifts government-critical and populist. |
+| Standing | Score rank and city count | A small nation lifts local; last place lifts government-critical. |
+
 ### Placeholders and facts
 
 Prose and typed link values use `{{name}}` placeholders. Headlines, subheadlines, bylines and bodies all use the same placeholders, and every one of them joins the printable text and its source rows. The editor supplies these from the same visible subject that rules can read:

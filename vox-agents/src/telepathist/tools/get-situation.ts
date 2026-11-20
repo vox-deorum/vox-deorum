@@ -11,27 +11,23 @@ import { TelepathistTool, inquiryField } from '../telepathist-tool.js';
 import { TelepathistParameters } from '../telepathist-parameters.js';
 import { cleanToolArtifacts } from '../../agents/models/text-cleaning.js';
 
-/** Maps category names to MCP tool names */
-const categoryToolMap: Record<string, string> = {
-  players: 'get-players',
-  victory: 'get-victory-progress',
-  options: 'get-options',
-  military: 'get-military-report',
-  cities: 'get-cities',
-  events: 'get-events',
-};
+/** Maps category names to MCP tools and display labels. */
+const categoryRegistry = new Map([
+  ['players', { toolName: 'get-players', label: 'Players' }],
+  ['victory', { toolName: 'get-victory-progress', label: 'Victory Progress' }],
+  ['options', { toolName: 'get-options', label: 'Options' }],
+  ['military', { toolName: 'get-military-report', label: 'Military' }],
+  ['cities', { toolName: 'get-cities', label: 'Cities' }],
+  ['events', { toolName: 'get-events', label: 'Events' }],
+] as const);
 
-const allCategories = Object.keys(categoryToolMap);
+export const situationCategories = [...categoryRegistry.keys()] as const;
+type SituationCategory = (typeof situationCategories)[number];
 
-/** Human-friendly labels for each category */
-const categoryLabelMap: Record<string, string> = {
-  players: 'Players',
-  victory: 'Victory Progress',
-  options: 'Options',
-  military: 'Military',
-  cities: 'Cities',
-  events: 'Events',
-};
+/** Check whether a category supplied to the chat tool is registered. */
+function isSituationCategory(category: string): category is SituationCategory {
+  return situationCategories.some(key => key === category);
+}
 
 const inputSchema = z.object({
   Turns: z.string().describe(
@@ -41,7 +37,7 @@ const inputSchema = z.object({
     'If true, executes raw span traversal for full game data instead of reading pre-generated summaries. Use for ground truth verification.'
   ),
   Categories: z.array(z.string()).optional().describe(
-    `Optional filter for specific data categories (only in Detailed mode): ${allCategories.join(', ')}. If omitted, returns all available data.`
+    `Optional filter for specific data categories (only in Detailed mode): ${situationCategories.join(', ')}. If omitted, returns all available data.`
   ),
   ...inquiryField
 });
@@ -58,6 +54,7 @@ export class GetSituationTool extends TelepathistTool<GetSituationInput> {
   readonly description = 'Get the world state / situation for specific turns. Returns pre-generated summaries by default; use Detailed mode for raw game data.';
   readonly inputSchema = inputSchema;
 
+  /** Select the requested mode and tell the chat wrapper whether to summarize its result. */
   async execute(input: GetSituationInput, params: TelepathistParameters): Promise<string[]> {
     // Dynamically set summarize based on Detailed mode
     this.summarize = !!input.Detailed;
@@ -85,66 +82,72 @@ export class GetSituationTool extends TelepathistTool<GetSituationInput> {
     }
 
     const requestedCategories = input.Categories && input.Categories.length > 0
-      ? input.Categories.filter(c => c in categoryToolMap)
-      : allCategories;
+      ? input.Categories.filter(isSituationCategory)
+      : situationCategories;
 
     if (requestedCategories.length === 0) {
-      return [`Invalid categories. Available: ${allCategories.join(', ')}`];
+      return [`Invalid categories. Available: ${situationCategories.join(', ')}`];
     }
 
     const sections: string[] = [];
 
     for (const turn of turns) {
-      const turnSections: string[] = [];
-      turnSections.push(`# Turn ${turn}`);
+      const { text } = await this.readDetailedTurn(turn, params, requestedCategories);
+      sections.push(text);
+    }
+    return sections;
+  }
 
-      const { turnRoots, agents } = await this.getRootSpans(params.db, [turn]);
+  /** Read one recorded turn for the given categories without going through the summarizer. */
+  async readDetailedTurn(
+    turn: number,
+    params: TelepathistParameters,
+    categories: readonly SituationCategory[]
+  ): Promise<{ text: string; hasGameState: boolean }> {
+    const turnSections = [`# Turn ${turn}`];
+    const { turnRoots, agents } = await this.getRootSpans(params.db, [turn]);
 
-      const validTraceIds = new Set<string>();
-      const turnRoot = turnRoots.get(turn);
-      if (turnRoot) validTraceIds.add(turnRoot.traceId);
-      for (const agentSpans of Object.values(agents)) {
-        for (const span of agentSpans) {
-          validTraceIds.add(span.traceId);
-        }
+    const validTraceIds = new Set<string>();
+    const turnRoot = turnRoots.get(turn);
+    if (turnRoot) validTraceIds.add(turnRoot.traceId);
+    for (const agentSpans of Object.values(agents)) {
+      for (const span of agentSpans) {
+        validTraceIds.add(span.traceId);
       }
-
-      if (validTraceIds.size === 0) {
-        turnSections.push('*No valid agent executions found for this turn.*');
-        sections.push(turnSections.join('\n'));
-        continue;
-      }
-
-      for (const category of requestedCategories) {
-        const toolName = categoryToolMap[category];
-        const mcpSpanName = `mcp-tool.${toolName}`;
-
-        const toolSpans = await params.db
-          .selectFrom('spans')
-          .selectAll()
-          .where('turn', '=', turn)
-          .where('name', '=', mcpSpanName)
-          .where('traceId', 'in', [...validTraceIds])
-          .orderBy('startTime', 'desc')
-          .limit(1)
-          .execute();
-
-        if (toolSpans.length > 0) {
-          const output = this.getToolOutput(toolSpans[0]);
-          if (output) {
-            turnSections.push(`## ${categoryLabelMap[category]}`);
-            turnSections.push(this.formatToolOutput(toolName, output));
-          }
-        }
-      }
-
-      if (turnSections.length === 1) {
-        turnSections.push('*No game state data found for this turn.*');
-      }
-
-      sections.push(cleanToolArtifacts(turnSections.join('\n')));
     }
 
-    return sections;
+    if (validTraceIds.size === 0) {
+      turnSections.push('*No valid agent executions found for this turn.*');
+      return { text: turnSections.join('\n'), hasGameState: false };
+    }
+
+    for (const category of categories) {
+      const { toolName, label } = categoryRegistry.get(category)!;
+      const mcpSpanName = `mcp-tool.${toolName}`;
+
+      const toolSpans = await params.db
+        .selectFrom('spans')
+        .selectAll()
+        .where('turn', '=', turn)
+        .where('name', '=', mcpSpanName)
+        .where('traceId', 'in', [...validTraceIds])
+        .orderBy('startTime', 'desc')
+        .limit(1)
+        .execute();
+
+      if (toolSpans.length > 0) {
+        const output = this.getToolOutput(toolSpans[0]);
+        if (output) {
+          turnSections.push(`## ${label}`);
+          turnSections.push(this.formatToolOutput(toolName, output));
+        }
+      }
+    }
+
+    const hasGameState = turnSections.length > 1;
+    if (!hasGameState) {
+      turnSections.push('*No game state data found for this turn.*');
+    }
+    return { text: cleanToolArtifacts(turnSections.join('\n')), hasGameState };
   }
 }

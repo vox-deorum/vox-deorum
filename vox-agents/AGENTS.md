@@ -59,7 +59,7 @@ Backend LLM agent framework. For UI development, see `ui/AGENTS.md`.
 - `npm run strategist`: Strategist workflow (strategist/console.ts)
 - `npm run telepathist`: Telepathist console (telepathist/console.ts)
 - `npm run oracle -- -c <experiment.js>`: Oracle prompt replay (oracle/console.ts)
-- `npm run archivist -- -a <archive-path> -o <output.duckdb> [-n <limit>] [-m <model>]`: Archivist batch pipeline (archivist/console.ts)
+- `npm run archivist -- -a <archive-path> -o <output.duckdb> [-n <limit>] [-m <model>] [--stories [--story-turns <count>] [--seed <seed>]]`: Archivist batch pipeline (archivist/console.ts)
 - `npm run newspaper -- --help`: Offline newspaper examples from a saved MCP recording, with catalogue overrides, audit JSON, and optional PNG previews. See `docs/developers/vox-agents/newspaper/replay.md` from the repository root.
 - Each workflow has a dedicated entry point with shared instrumentation (loaded via `--import`)
 
@@ -117,6 +117,7 @@ VoxAgent (Base)
 ├── Negotiator (Sole decider of deal terms)
 ├── EpisodeRetriever (Programmatic episode lookup, no LLM)
 ├── Summarizer (Unified turn/phase summarization)
+├── StoryScout (Newspaper pitches from recorded game state)
 └── OracleAgent (Counterfactual prompt replay)
 ```
 
@@ -191,7 +192,7 @@ Wraps ObsManager to add segment-based recording driven by game render events.
 - **Concurrency**: Per-model rate limiting via `streamTextWithConcurrency()` with semaphore-like tracking
 - **Global agent registry**: Singleton `agentRegistry` pre-registers all core agents. Import and call `.get(name)` to resolve
 - **Dual-database**: Telepathist uses read-only telemetry DB plus read-write analysis DB via `createTelepathistParameters()`
-- **Archivist pipeline**: Phase A (extract/transform/write, no LLM), Phase B (select diverse landmarks), Phase C (generate summaries + embeddings). CLI flags: `--skip-telepathist`, `--skip-embeddings`, `--force`, `--model`
+- **Archivist pipeline**: Phase A extracts episodes, Phase B selects landmarks, and Phase C generates summaries and embeddings. `--stories` mines pitches in place of Phase C. CLI flags: `--skip-telepathist`, `--skip-embeddings`, `--force`, `--model`, `--stories`, `--story-turns`, `--seed`
 - **game_outcomes table**: Populated in Phase A. Reader's `fetchOutcomes()` uses `LEAST(turn + horizon, max_turn)` for outcome turn capping
 - **TelepathistTool**: Abstract base for DB query tools with span hierarchy traversal helpers and `Summarizer` integration
 - **Unified Summarizer**: Flexible instruction parameter, content-hash caching, shared historian guidelines

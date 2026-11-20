@@ -13,8 +13,7 @@ import { Kysely } from 'kysely';
 import { TelepathistParameters } from './telepathist-parameters.js';
 import { createSimpleTool } from '../agents/tools/simple-tools.js';
 import { jsonToMarkdown, HeadingConfig } from '../agents/tools/json-to-markdown.js';
-import { VoxContext } from '../agents/runtime/vox-context.js';
-import { buildToolSummaryInstruction, summarizeWithCache } from './summarizer.js';
+import type { VoxContext } from '../agents/runtime/vox-context.js';
 import { createLogger } from '../utils/logger.js';
 import type { TelemetryDatabase, Span } from '../agents/telemetry/schema.js';
 import type { SummarizerInput } from './summarizer.js';
@@ -94,6 +93,9 @@ export abstract class TelepathistTool<TInput = any> {
           return assembled;
         }
 
+        // Loading the summarizer here avoids a startup cycle: a static import from the
+        // story reader reaches Strategist through the registry before VoxAgent is initialized.
+        const { buildToolSummaryInstruction, summarizeWithCache } = await import('./summarizer.js');
         const inquiry = (input as any)?.Inquiry as string | undefined;
         const instruction = buildToolSummaryInstruction(this.name, inquiry);
 

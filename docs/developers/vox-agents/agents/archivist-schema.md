@@ -8,10 +8,17 @@ The [Archivist](archivist.md) stores player-turn snapshots in DuckDB for similar
 | --- | --- | --- |
 | `episodes` | `game_id`, `turn`, `player_id` | Identity, raw state, derived metrics, feature vectors, summaries, and the `is_landmark` flag. |
 | `game_outcomes` | `game_id` | `winner_player_id`, `victory_type`, and `max_turn`. |
+| `story_pitches` | `game_id`, `player_id`, `turn`, `model`, `pitch_index` | Newspaper pitches collected in stories mode. |
 
 `src/archivist/pipeline/writer.ts` defines the SQL columns and types. `src/archivist/types.ts` defines their TypeScript counterparts; the database uses snake_case and TypeScript uses camelCase.
 
 The scanner accepts a flat archive or experiment subfolders. Each eligible player needs a game knowledge database and a telemetry database. A telepathist database may already exist or be generated during summary preparation. The extractor reads the latest version of each turn's knowledge rows and any available turn summaries. Missing source metrics and summaries can remain null.
+
+## Story pitches
+
+The archivist creates `story_pitches` in every episode database and fills it in [stories mode](archivist.md#story-mining). Each pitch has a zero-based index within its turn sample. `model` stores the resolved provider and model name, including any reasoning effort suffix, so an alias and its target share a resume key. `civilization` and `era` come from the matching episode.
+
+The model supplies `headline`, `pitch`, `genre`, `stance`, `subject`, `basis`, and `wants`. The optional `embedding` encodes the headline and pitch as a `REAL[]`, using the embedder's configured dimensions. `created_at` records when the pitch was inserted.
 
 ## Metrics
 

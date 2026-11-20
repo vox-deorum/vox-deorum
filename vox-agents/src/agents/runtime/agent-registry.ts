@@ -27,6 +27,7 @@ import { TalkativeTelepathist } from "../../telepathist/talkative-telepathist.js
 import { Summarizer } from "../../telepathist/summarizer.js";
 import { EpisodeRetriever } from "../../telepathist/episode-retriever.js";
 import { OracleAgent } from "../../oracle/oracle-agent.js";
+import { StoryScout } from "../../archivist/story-scout.js";
 
 /**
  * Registry for managing available Vox agents.
@@ -133,6 +134,9 @@ class AgentRegistry {
     this.register(new TalkativeTelepathist());
     this.register(new Summarizer());
     this.register(new EpisodeRetriever());
+
+    // Register archivist agents
+    this.register(new StoryScout());
 
     // Register oracle agent
     this.register(new OracleAgent());

@@ -14,13 +14,13 @@
   {
     "id": "stance-low-happiness-critical-populist",
     "match": { "stance": ["government-critical", "populist"] },
-    "when": "self.knows('happinessPercentage') && self.happinessPercentage < 50",
+    "when": "self.knows('happinessPercentage') && typeof self.happinessPercentage === 'number' && self.happinessPercentage < 50",
     "multiplier": 1.5
   },
   {
     "id": "stance-golden-age-high-happiness",
     "match": { "stance": "pro-government" },
-    "when": "(self.knows('goldenAge') && self.goldenAge) || (self.knows('happinessPercentage') && self.happinessPercentage >= 60)",
+    "when": "(self.knows('goldenAge') && typeof self.goldenAge === 'string' && self.goldenAge.endsWith('turns remaining')) || (self.knows('happinessPercentage') && typeof self.happinessPercentage === 'number' && self.happinessPercentage >= 60)",
     "multiplier": 1.5
   },
   {
@@ -216,8 +216,8 @@
     "multiplier": 0.6
   },
   {
-    "id": "stance-autocracy-government-critical-down",
-    "match": { "stance": "government-critical" },
+    "id": "stance-autocracy-critical-conciliatory-down",
+    "match": { "stance": ["government-critical", "conciliatory"] },
     "when": "self.knows('ideology') && self.ideology === 'Autocracy'",
     "multiplier": 0.6
   },
@@ -242,19 +242,19 @@
   {
     "id": "stance-low-happiness-revolt",
     "match": { "stance": ["government-critical", "populist"] },
-    "when": "self.knows('happinessPercentage') && self.happinessPercentage < 35",
+    "when": "self.knows('happinessPercentage') && typeof self.happinessPercentage === 'number' && self.happinessPercentage < 35",
     "multiplier": 1.5
   },
   {
     "id": "stance-low-happiness-pro-government",
     "match": { "stance": "pro-government" },
-    "when": "self.knows('happinessPercentage') && self.happinessPercentage < 50",
+    "when": "self.knows('happinessPercentage') && typeof self.happinessPercentage === 'number' && self.happinessPercentage < 50",
     "multiplier": 0.75
   },
   {
     "id": "stance-happiness-revolt-pro-government",
     "match": { "stance": "pro-government" },
-    "when": "self.knows('happinessPercentage') && self.happinessPercentage < 35",
+    "when": "self.knows('happinessPercentage') && typeof self.happinessPercentage === 'number' && self.happinessPercentage < 35",
     "multiplier": 0.5
   },
   {
@@ -266,7 +266,7 @@
   {
     "id": "stance-environmentalist-pre-industrial",
     "match": { "stance": "environmentalist" },
-    "when": "self.knows('era') && !['Industrial', 'Modern', 'Atomic', 'Information', 'Future'].includes(self.era?.replace(' Era', ''))",
+    "when": "self.knows('era') && typeof self.era === 'string' && !['Industrial', 'Modern', 'Atomic', 'Information', 'Future'].includes(self.era.replace(' Era', ''))",
     "multiplier": 0.05
   },
   {
@@ -303,6 +303,174 @@
     "id": "stance-world-leader-up",
     "match": { "stance": ["pro-government", "national"] },
     "when": "self.knows('major') && self.major === true && self.knows('score') && self.rank('score') === 1 && players.filter(p => p.knows('major') && p.major === true && p.knows('score')).length >= 3",
+    "multiplier": 1.2
+  },
+  {
+    "id": "stance-winning-war-lift",
+    "match": { "stance": ["hawkish", "pro-government", "national"] },
+    "when": "self.knows('wars') && self.wars.some(other => self.relation(other).knows('warScore') && self.relation(other).warScore >= 25)",
+    "multiplier": 1.2
+  },
+  {
+    "id": "stance-losing-war-hawkish-down",
+    "match": { "stance": "hawkish" },
+    "when": "self.knows('wars') && self.wars.some(other => self.relation(other).knows('warScore') && self.relation(other).warScore <= -25)",
+    "multiplier": 0.75
+  },
+  {
+    "id": "stance-losing-war-conciliatory-up",
+    "match": { "stance": "conciliatory" },
+    "when": "self.knows('wars') && self.wars.some(other => self.relation(other).knows('warScore') && self.relation(other).warScore <= -25)",
     "multiplier": 1.3
+  },
+  {
+    "id": "stance-deficit-populist-up",
+    "match": { "stance": "populist" },
+    "when": "self.knows('goldPerTurn') && self.goldPerTurn < 0",
+    "multiplier": 1.3
+  },
+  {
+    "id": "stance-faith-under-pressure",
+    "match": { "stance": ["devout", "traditional"] },
+    "when": "self.knows('foundedReligion') && self.foundedReligion !== null && self.knows('majorityReligion') && self.majorityReligion !== null && self.majorityReligion !== self.foundedReligion",
+    "multiplier": 1.3
+  },
+  {
+    "id": "stance-last-place-critical-ambitious",
+    "match": { "stance": ["government-critical", "ambitious"] },
+    "when": "self.knows('major') && self.major === true && self.knows('score') && players.filter(p => p.knows('major') && p.major === true && p.knows('score')).length >= 3 && players.every(p => p.knows('major') && p.major === true && p.knows('score') ? p.rank('score') <= self.rank('score') : true)",
+    "multiplier": 1.3
+  },
+  {
+    "id": "stance-last-place-pro-government-down",
+    "match": { "stance": "pro-government" },
+    "when": "self.knows('major') && self.major === true && self.knows('score') && players.filter(p => p.knows('major') && p.major === true && p.knows('score')).length >= 3 && players.every(p => p.knows('major') && p.major === true && p.knows('score') ? p.rank('score') <= self.rank('score') : true)",
+    "multiplier": 0.75
+  },
+  {
+    "id": "stance-small-nation-local-up",
+    "match": { "stance": "local" },
+    "when": "self.knows('cityCount') && typeof self.cityCount === 'number' && self.cityCount <= 2",
+    "multiplier": 1.3
+  },
+  {
+    "id": "stance-small-nation-national-down",
+    "match": { "stance": "national" },
+    "when": "self.knows('cityCount') && typeof self.cityCount === 'number' && self.cityCount <= 2",
+    "multiplier": 0.75
+  },
+  {
+    "id": "stance-large-nation-national-up",
+    "match": { "stance": "national" },
+    "when": "self.knows('cityCount') && typeof self.cityCount === 'number' && self.cityCount >= 8",
+    "multiplier": 1.2
+  },
+  {
+    "id": "stance-peacetime-hawkish-down",
+    "match": { "stance": "hawkish" },
+    "when": "self.knows('atWar') && self.atWar === false",
+    "multiplier": 0.75
+  },
+  {
+    "id": "stance-industrialist-pre-industrial",
+    "match": { "stance": "industrialist" },
+    "when": "self.knows('era') && typeof self.era === 'string' && !['Industrial', 'Modern', 'Atomic', 'Information', 'Future'].includes(self.era.replace(' Era', ''))",
+    "multiplier": 0.3
+  },
+  {
+    "id": "stance-rationalist-pre-renaissance",
+    "match": { "stance": "rationalist" },
+    "when": "self.knows('era') && typeof self.era === 'string' && !['Renaissance', 'Industrial', 'Modern', 'Atomic', 'Information', 'Future'].includes(self.era.replace(' Era', ''))",
+    "multiplier": 0.5
+  },
+  {
+    "id": "stance-vassal-critical-traditional",
+    "match": { "stance": ["government-critical", "traditional"] },
+    "when": "players.some(p => p.id !== self.id && self.relation(p).knows('vassalOf') && self.relation(p).vassalOf)",
+    "multiplier": 1.3
+  },
+  {
+    "id": "stance-vassal-pro-government-down",
+    "match": { "stance": "pro-government" },
+    "when": "players.some(p => p.id !== self.id && self.relation(p).knows('vassalOf') && self.relation(p).vassalOf)",
+    "multiplier": 0.75
+  },
+  {
+    "id": "stance-master-national-hawkish",
+    "match": { "stance": ["national", "hawkish"] },
+    "when": "players.some(p => p.id !== self.id && self.relation(p).knows('masterOf') && self.relation(p).masterOf)",
+    "multiplier": 1.2
+  },
+  {
+    "id": "stance-denounced-hawkish-national",
+    "match": { "stance": ["hawkish", "national"] },
+    "when": "players.filter(p => p.id !== self.id && self.relation(p).knows('denouncedByThem') && self.relation(p).denouncedByThem).length >= 2",
+    "multiplier": 1.2
+  },
+  {
+    "id": "stance-poverty-populist-critical",
+    "match": { "stance": ["populist", "government-critical"] },
+    "when": "(() => { const readable = self.cities.filter(c => c.knows('unhappiness') && c.unhappiness.knows('top') && c.unhappiness.top !== null); const matching = readable.filter(c => ['gold', 'distress', 'famine'].includes(c.unhappiness.top)); return matching.length > 0 && matching.length * 3 >= readable.length; })()",
+    "multiplier": 1.3
+  },
+  {
+    "id": "stance-poverty-elitist-down",
+    "match": { "stance": "elitist" },
+    "when": "(() => { const readable = self.cities.filter(c => c.knows('unhappiness') && c.unhappiness.knows('top') && c.unhappiness.top !== null); const matching = readable.filter(c => ['gold', 'distress', 'famine'].includes(c.unhappiness.top)); return matching.length > 0 && matching.length * 3 >= readable.length; })()",
+    "multiplier": 0.75
+  },
+  {
+    "id": "stance-boredom-artistic-up",
+    "match": { "stance": "artistic" },
+    "when": "(() => { const readable = self.cities.filter(c => c.knows('unhappiness') && c.unhappiness.knows('top') && c.unhappiness.top !== null); const matching = readable.filter(c => ['culture'].includes(c.unhappiness.top)); return matching.length > 0 && matching.length * 3 >= readable.length; })()",
+    "multiplier": 1.3
+  },
+  {
+    "id": "stance-illiteracy-rationalist-up",
+    "match": { "stance": "rationalist" },
+    "when": "(() => { const readable = self.cities.filter(c => c.knows('unhappiness') && c.unhappiness.knows('top') && c.unhappiness.top !== null); const matching = readable.filter(c => ['science'].includes(c.unhappiness.top)); return matching.length > 0 && matching.length * 3 >= readable.length; })()",
+    "multiplier": 1.3
+  },
+  {
+    "id": "stance-unrest-devout-pluralist-up",
+    "match": { "stance": ["devout", "pluralist"] },
+    "when": "(() => { const readable = self.cities.filter(c => c.knows('unhappiness') && c.unhappiness.knows('top') && c.unhappiness.top !== null); const matching = readable.filter(c => ['religion'].includes(c.unhappiness.top)); return matching.length > 0 && matching.length * 3 >= readable.length; })()",
+    "multiplier": 1.3
+  },
+  {
+    "id": "stance-unrest-neutral-down",
+    "match": { "stance": "neutral" },
+    "when": "(() => { const readable = self.cities.filter(c => c.knows('unhappiness') && c.unhappiness.knows('top') && c.unhappiness.top !== null); const matching = readable.filter(c => ['religion'].includes(c.unhappiness.top)); return matching.length > 0 && matching.length * 3 >= readable.length; })()",
+    "multiplier": 0.75
+  },
+  {
+    "id": "stance-isolation-local-up",
+    "match": { "stance": "local" },
+    "when": "(() => { const readable = self.cities.filter(c => c.knows('unhappiness') && c.unhappiness.knows('top') && c.unhappiness.top !== null); const matching = readable.filter(c => ['isolation'].includes(c.unhappiness.top)); return matching.length > 0 && matching.length * 3 >= readable.length; })()",
+    "multiplier": 1.3
+  },
+  {
+    "id": "stance-isolation-national-down",
+    "match": { "stance": "national" },
+    "when": "(() => { const readable = self.cities.filter(c => c.knows('unhappiness') && c.unhappiness.knows('top') && c.unhappiness.top !== null); const matching = readable.filter(c => ['isolation'].includes(c.unhappiness.top)); return matching.length > 0 && matching.length * 3 >= readable.length; })()",
+    "multiplier": 0.75
+  },
+  {
+    "id": "stance-pillaged-hawkish-critical-up",
+    "match": { "stance": ["hawkish", "government-critical"] },
+    "when": "(() => { const readable = self.cities.filter(c => c.knows('unhappiness') && c.unhappiness.knows('top') && c.unhappiness.top !== null); const matching = readable.filter(c => ['pillaged'].includes(c.unhappiness.top)); return matching.length > 0 && matching.length * 3 >= readable.length; })()",
+    "multiplier": 1.3
+  },
+  {
+    "id": "stance-crowding-environmentalist-traditional-up",
+    "match": { "stance": ["environmentalist", "traditional"] },
+    "when": "(() => { const readable = self.cities.filter(c => c.knows('unhappiness') && c.unhappiness.knows('top') && c.unhappiness.top !== null); const matching = readable.filter(c => ['specialists'].includes(c.unhappiness.top)); return matching.length > 0 && matching.length * 3 >= readable.length; })()",
+    "multiplier": 1.3
+  },
+  {
+    "id": "stance-crowding-industrialist-down",
+    "match": { "stance": "industrialist" },
+    "when": "(() => { const readable = self.cities.filter(c => c.knows('unhappiness') && c.unhappiness.knows('top') && c.unhappiness.top !== null); const matching = readable.filter(c => ['specialists'].includes(c.unhappiness.top)); return matching.length > 0 && matching.length * 3 >= readable.length; })()",
+    "multiplier": 0.75
   }
 ]

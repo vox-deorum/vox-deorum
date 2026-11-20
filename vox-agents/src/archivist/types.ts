@@ -9,6 +9,7 @@
  */
 
 import type { Selectable } from 'kysely';
+import { z } from 'zod';
 import type {
   KnowledgeDatabase,
   PlayerSummary,
@@ -138,9 +139,36 @@ export interface Episode extends RawEpisode {
   isLandmark: boolean;
 }
 
-/** Kysely database interface for the DuckDB episodes table */
+/** Fields the scout provides for each newspaper pitch. */
+const storyPitchSchema = z.object({
+  headline: z.string().trim().min(1),
+  pitch: z.string().trim().min(1),
+  genre: z.string().trim().min(1),
+  stance: z.string().trim().min(1),
+  subject: z.string().trim().min(1),
+  basis: z.string().trim().min(1),
+  wants: z.string().trim(),
+});
+
+/** Validates a complete sample of pitches from the scout. */
+export const storyScoutOutputSchema = z.object({
+  pitches: z.array(storyPitchSchema).min(5).max(10),
+});
+
+export type StoryPitch = z.infer<typeof storyPitchSchema>;
+export type StoryScoutOutput = z.infer<typeof storyScoutOutputSchema>;
+
+/** Identifies one model's sample of a recorded player turn. */
+export type StorySampleKey = Pick<Episode, 'gameId' | 'playerId' | 'turn'> & { model: string };
+
+/** Kysely database interface for the episode and story tables. */
 export interface EpisodesDatabase {
   episodes: Episode;
+  storyPitches: StorySampleKey & Pick<Episode, 'civilization' | 'era'> & StoryPitch & {
+    pitchIndex: number;
+    embedding: number[] | null;
+    createdAt: Date;
+  };
 }
 
 /** Weight configuration for composite similarity scoring */

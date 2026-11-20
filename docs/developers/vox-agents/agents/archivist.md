@@ -18,7 +18,7 @@ An **episode** is one player-turn: its identity, raw state, comparable metrics, 
 
 ## The pipeline
 
-Processing runs in three phases (`src/archivist/pipeline/`). It is resumable: already-processed players are skipped unless `--force` re-extracts them.
+Processing runs in three phases (`src/archivist/pipeline/`) and skips extraction for players it has already processed. In a normal run, `--force` rebuilds episodes and selects landmarks again while keeping saved story pitches. Only `--stories --force` replaces saved pitches.
 
 **Phase A, extract, transform, write** (no LLM). The scanner walks the archive directory, classifies each game's databases (knowledge, telemetry, and any existing telepathist database), and identifies which players were LLM-controlled. The extractor batch-reads each game's knowledge database into per-turn contexts and builds raw episodes per player. The transformer computes the derived metrics and vectors. The writer creates and fills the DuckDB tables.
 
@@ -26,7 +26,7 @@ Processing runs in three phases (`src/archivist/pipeline/`). It is resumable: al
 
 **Phase C, summaries and embeddings** (LLM). The pipeline generates missing telepathist summaries for landmarks and their future outcome turns, then embeds landmark situation abstracts with the configured embedding model. Existing summaries and embeddings are reused. `--skip-telepathist` and `--skip-embeddings` skip those steps for quick validation runs.
 
-The console starts the DuckDB UI for inspection during and after processing (suppress with `--no-ui`). Other flags limit how many games to process, target a single game, or override the summarizer model.
+The console starts the DuckDB UI for inspection during and after processing (suppress with `--no-ui`). Other flags limit how many games to process or target a single game. Use `-m` to choose summarizer models. Repeat the flag or pass a comma-separated list to run one worker per model, with games shared among the workers.
 
 ## Retrieval
 
@@ -40,6 +40,16 @@ Two consumers sit on top:
 
 - the learned strategist's `find-episodes` tool, which injects retrieved cases into the next decision's context;
 - the telepathist family's `episode-retriever` agent, which lets a human browse the same results interactively.
+
+## Story mining
+
+Add `--stories` to mine newspaper pitches in place of Phase C. The archivist preserves existing episodes and landmarks, and selects landmarks when it extracts new episodes. A later normal run can add summaries and embeddings to the same database.
+
+For each LLM player, `--story-turns` sets how many turns to sample (default 6). The archivist picks one turn from each slice of recorded turns using `--seed` (default `42`). The scout pitches 5 to 10 stories from the detailed game state, without the strategist's options or reasoning. Stories mode skips summaries, so `--skip-telepathist` has no effect. Like the normal pipeline, it opens or creates a writable `.telepathist.db` next to each player's read-only telemetry database.
+
+Choose one model per run with `-m`. If omitted, the scout uses its configured model or the default model. Pitches go in [`story_pitches`](archivist-schema.md#story-pitches). Embeddings are null when `--skip-embeddings` is set or no embedder is configured.
+
+Rerunning skips saved samples for the same model. Another model can add pitches alongside them. With `--force`, a successful sample replaces only the saved pitches for that turn and model. Failed samples leave saved pitches intact.
 
 ## Working on the archivist
 

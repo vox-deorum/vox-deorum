@@ -1,12 +1,38 @@
 /** Behavioral checks for the stock newspaper style preferences. */
 import { beforeAll, describe, expect, it } from 'vitest';
-import type { NewspaperEvidence, NewspaperSnapshot } from '../../../../../mcp-server/dist/newspaper/evidence.js';
+import type {
+  NewspaperDiplomacySnapshot, NewspaperEvidence, NewspaperSnapshot,
+} from '../../../../../mcp-server/dist/newspaper/evidence.js';
 import { getEditorialExpressions, loadEditorialConfig } from '../../../../src/newspaper/editorial/config/load.js';
 import type { AuthoredVariant, EditorialConfig } from '../../../../src/newspaper/editorial/config/schema.js';
 import { buildNewspaperFacts } from '../../../../src/newspaper/editorial/facts/index.js';
 import { applyStylePreferences } from '../../../../src/newspaper/editorial/selection/styles.js';
 import type { EditorialCandidate } from '../../../../src/newspaper/editorial/selection/templates.js';
 import type { ExpressionCheckBudget } from '../../../../src/newspaper/editorial/shared/expressions.js';
+import { relationship } from '../../../helpers/newspaper-diplomacy.js';
+
+type Relationship = NewspaperDiplomacySnapshot['relationships'][number];
+
+/** One additional player the fixture exposes at the cutoff turn. */
+interface OtherPlayer {
+  id: number;
+  values?: Record<string, unknown>;
+  relationships?: Relationship[];
+  major?: boolean;
+}
+
+/** One receiver city the fixture exposes with an optional unhappiness breakdown. */
+interface FixtureCity {
+  name: string;
+  unhappiness?: unknown;
+}
+
+/** Optional players and relationships a style test can add to the receiver fixture. */
+interface FixtureExtra {
+  others?: OtherPlayer[];
+  relationships?: Relationship[];
+  cities?: FixtureCity[];
+}
 
 let config: EditorialConfig;
 
@@ -15,12 +41,36 @@ function snapshot(subjectID: number, turn: number, values: Record<string, unknow
   return { subjectID, values, source: { table: 'PlayerSummaries', id: turn * 100 + subjectID, turn, createdAt: turn * 1000 } };
 }
 
-/** Build receiver evidence for one era with optional recorded national summary columns. */
-function fixture(era: string, values: Record<string, unknown> = {}): NewspaperEvidence {
+/** Pair a player row with the relationship entries that player observed. */
+function diplomatic(
+  row: NewspaperSnapshot, isMajor: boolean, relationships: Relationship[] = [],
+): NewspaperDiplomacySnapshot {
+  return { source: row.source, subjectID: row.subjectID, teamID: row.subjectID + 100, isMajor, relationships };
+}
+
+/** Build receiver evidence with optional other players, their relationships and the receiver's cities. */
+function fixture(era: string, values: Record<string, unknown> = {}, extra: FixtureExtra = {}): NewspaperEvidence {
+  const receiver = snapshot(0, 10, { Era: era, Gold: 20, ...values });
+  const others = (extra.others ?? []).map(other => snapshot(other.id, 10, other.values ?? {}));
+  const observations = [
+    diplomatic(receiver, true, extra.relationships ?? []),
+    ...(extra.others ?? []).map((other, index) => diplomatic(
+      others[index], other.major ?? true, other.relationships ?? [],
+    )),
+  ];
+  const cities = (extra.cities ?? []).map((city, index) => ({
+    subjectID: 100 + index,
+    source: { table: 'CityInformations' as const, id: 300 + index, turn: 10, createdAt: 10_000 },
+    values: {
+      OwnerID: 0, Name: city.name, IsCapital: index === 0 ? 1 : 0, X: index, Y: 0,
+      ...(city.unhappiness === undefined ? {} : { UnhappinessSources: city.unhappiness }),
+    },
+  }));
   return {
     request: { receiverPlayerID: 0, previousCheckTurn: 5, cutoffTurn: 10 },
-    players: [snapshot(0, 10, { Era: era, Gold: 20, ...values })],
-    cities: [], comparisons: { players: [], cities: [] }, events: [],
+    players: [receiver, ...others],
+    cities, comparisons: { players: [], cities: [] }, events: [],
+    diplomacy: { fromTurn: 5, baseline: [], history: observations, gaps: [] },
   };
 }
 
@@ -51,12 +101,14 @@ function styleCandidate(
 }
 
 /** Apply the stock style rules to selected candidates against one receiver fixture. */
-async function applyStock(candidates: EditorialCandidate[], era: string, values: Record<string, unknown> = {}) {
+async function applyStock(
+  candidates: EditorialCandidate[], era: string, values: Record<string, unknown> = {}, extra: FixtureExtra = {},
+) {
   const compiled = await getEditorialExpressions(config);
   const budget: ExpressionCheckBudget = { interruptedSlots: new Set(), choiceErrors: new Map() };
   const result = await applyStylePreferences(candidates, compiled, {
     constants: {},
-    facts: buildNewspaperFacts(fixture(era, values), {}, { ideologies: config.constants.types.ideologies }),
+    facts: buildNewspaperFacts(fixture(era, values, extra), {}, { ideologies: config.constants.types.ideologies }),
   }, budget);
   return { ...result, budget };
 }
@@ -180,6 +232,30 @@ describe('stock newspaper styles', () => {
     });
   });
 
+  describe('voice by ideology', () => {
+    it('should raise the voices each ideology favors', async () => {
+      const freedom = styleCandidate('freedom',
+        ['general', 'tabloid', 'feed'].map(id => variant(id, { voice: id })));
+      const free = await applyStock([freedom], 'Information Era', { PolicyBranches: { Freedom: ['A'] } });
+      expect(free.selected[0].variantWeights.tabloid).toBeGreaterThan(free.selected[0].variantWeights.general);
+      expect(free.selected[0].variantWeights.feed).toBeGreaterThan(free.selected[0].variantWeights.general);
+
+      const order = styleCandidate('order-voice',
+        ['general', 'press', 'pamphlet'].map(id => variant(id, { voice: id })));
+      const ordered = await applyStock([order], 'Industrial Era', { PolicyBranches: { Order: ['A'] } });
+      expect(ordered.selected[0].variantWeights.press).toBeGreaterThan(ordered.selected[0].variantWeights.general);
+      expect(ordered.selected[0].variantWeights.pamphlet).toBeGreaterThan(ordered.selected[0].variantWeights.general);
+
+      // The crier is out of era in the Modern era, so compare its weight across the same era.
+      const autocracy = styleCandidate('autocracy-voice',
+        ['general', 'broadcast', 'crier'].map(id => variant(id, { voice: id })));
+      const before = await applyStock([autocracy], 'Modern Era');
+      const after = await applyStock([autocracy], 'Modern Era', { PolicyBranches: { Autocracy: ['A'] } });
+      expect(after.selected[0].variantWeights.broadcast).toBeGreaterThan(after.selected[0].variantWeights.general);
+      expect(after.selected[0].variantWeights.crier).toBeGreaterThan(before.selected[0].variantWeights.crier);
+    });
+  });
+
   describe('religion and happiness', () => {
     it('should raise devout with a founded religion and pluralist without one', async () => {
       const candidate = styleCandidate('religion', [
@@ -192,6 +268,288 @@ describe('stock newspaper styles', () => {
       expect(founded.selected[0].variantWeights.pluralist).toBeLessThan(founded.selected[0].variantWeights.neutral);
       const none = await applyStock([candidate], 'Modern Era', { FoundedReligion: null });
       expect(none.selected[0].variantWeights.pluralist).toBeGreaterThan(none.selected[0].variantWeights.neutral);
+    });
+
+    it('should lift traditional only when the majority faith differs from the founded one', async () => {
+      const candidate = styleCandidate('faith-pressure', [
+        variant('traditional', { stance: 'traditional' }),
+        variant('neutral'),
+      ]);
+      const pressure = await applyStock([candidate], 'Modern Era', {
+        FoundedReligion: 'X', MajorityReligion: 'Y',
+      });
+      expect(pressure.selected[0].variantWeights.traditional)
+        .toBeGreaterThan(pressure.selected[0].variantWeights.neutral);
+      const settled = await applyStock([candidate], 'Modern Era', {
+        FoundedReligion: 'X', MajorityReligion: 'X',
+      });
+      expect(settled.selected[0].variantWeights.traditional)
+        .toEqual(settled.selected[0].variantWeights.neutral);
+    });
+
+    it('should lift pro-government and artistic only for an active golden age', async () => {
+      const candidate = styleCandidate('golden-age', [
+        variant('pro-government', { stance: 'pro-government' }),
+        variant('artistic', { stance: 'artistic' }),
+        variant('neutral'),
+      ]);
+      // Happiness is left unrecorded, so only the golden-age status decides.
+      const active = await applyStock([candidate], 'Modern Era', { GoldenAge: '5 turns remaining' });
+      expect(active.selected[0].variantWeights['pro-government'])
+        .toBeGreaterThan(active.selected[0].variantWeights.neutral);
+      expect(active.selected[0].variantWeights.artistic).toBeGreaterThan(active.selected[0].variantWeights.neutral);
+
+      const stalled = await applyStock([candidate], 'Modern Era', { GoldenAge: 'Need More Happiness' });
+      expect(stalled.selected[0].variantWeights['pro-government']).toEqual(stalled.selected[0].variantWeights.neutral);
+      expect(stalled.selected[0].variantWeights.artistic).toEqual(stalled.selected[0].variantWeights.neutral);
+    });
+
+    it('should raise populist during a deficit', async () => {
+      const candidate = styleCandidate('deficit', [
+        variant('populist', { stance: 'populist' }),
+        variant('neutral'),
+      ]);
+      const { selected } = await applyStock([candidate], 'Modern Era', { GoldPerTurn: -4 });
+      expect(selected[0].variantWeights.populist).toBeGreaterThan(selected[0].variantWeights.neutral);
+    });
+  });
+
+  describe('city unhappiness', () => {
+    it('should raise populist when poverty is the most common top cause', async () => {
+      const candidate = styleCandidate('poverty', [
+        variant('populist', { stance: 'populist' }),
+        variant('neutral'),
+      ]);
+      const { selected } = await applyStock([candidate], 'Modern Era', {}, {
+        cities: [
+          { name: 'Paris', unhappiness: { Gold: 5, Distress: 1 } },
+          { name: 'Orleans', unhappiness: { Gold: 4 } },
+          { name: 'Lyon', unhappiness: { Culture: 3 } },
+        ],
+      });
+      expect(selected[0].variantWeights.populist).toBeGreaterThan(selected[0].variantWeights.neutral);
+    });
+
+    it('should raise artistic when boredom is the most common top cause', async () => {
+      const candidate = styleCandidate('boredom', [
+        variant('artistic', { stance: 'artistic' }),
+        variant('neutral'),
+      ]);
+      const { selected } = await applyStock([candidate], 'Modern Era', {}, {
+        cities: [
+          { name: 'Paris', unhappiness: { Culture: 4 } },
+          { name: 'Orleans', unhappiness: { Culture: 3 } },
+          { name: 'Lyon', unhappiness: { Gold: 2 } },
+        ],
+      });
+      expect(selected[0].variantWeights.artistic).toBeGreaterThan(selected[0].variantWeights.neutral);
+    });
+
+    it('should raise devout and pluralist when religious unrest is the most common top cause', async () => {
+      const candidate = styleCandidate('unrest', [
+        variant('devout', { stance: 'devout' }),
+        variant('pluralist', { stance: 'pluralist' }),
+        variant('neutral'),
+      ]);
+      const { selected } = await applyStock([candidate], 'Modern Era', {}, {
+        cities: [
+          { name: 'Paris', unhappiness: { Religion: 4 } },
+          { name: 'Orleans', unhappiness: { Religion: 2 } },
+          { name: 'Lyon', unhappiness: { Gold: 2 } },
+        ],
+      });
+      const weights = selected[0].variantWeights;
+      expect(weights.devout).toBeGreaterThan(weights.neutral);
+      expect(weights.pluralist).toBeGreaterThan(weights.neutral);
+    });
+
+    it('should leave populist unchanged when one city of five has poverty as its top cause', async () => {
+      const candidate = styleCandidate('single-poverty', [
+        variant('populist', { stance: 'populist' }),
+        variant('neutral'),
+      ]);
+      const { selected } = await applyStock([candidate], 'Modern Era', {}, {
+        cities: [
+          { name: 'Paris', unhappiness: { Gold: 5 } },
+          { name: 'Orleans', unhappiness: { Culture: 2 } },
+          { name: 'Lyon', unhappiness: { Culture: 2 } },
+          { name: 'Tours', unhappiness: { Culture: 2 } },
+          { name: 'Marseille', unhappiness: { Culture: 2 } },
+        ],
+      });
+      expect(selected[0].variantWeights.populist).toEqual(selected[0].variantWeights.neutral);
+    });
+
+    it('should leave populist unchanged without visible cities', async () => {
+      const candidate = styleCandidate('no-cities', [
+        variant('populist', { stance: 'populist' }),
+        variant('neutral'),
+      ]);
+      const { selected } = await applyStock([candidate], 'Modern Era');
+      expect(selected[0].variantWeights.populist).toEqual(selected[0].variantWeights.neutral);
+    });
+  });
+
+  describe('era fit', () => {
+    it('should suppress environmentalist before the Industrial era and keep it after', async () => {
+      const candidate = styleCandidate('environmentalist', [
+        variant('environmentalist', { stance: 'environmentalist' }),
+        variant('neutral'),
+      ]);
+      const ancient = await applyStock([candidate], 'Ancient Era');
+      expect(ancient.selected[0].variantWeights.environmentalist)
+        .toBeLessThan(ancient.selected[0].variantWeights.neutral);
+      const modern = await applyStock([candidate], 'Modern Era');
+      expect(modern.selected[0].variantWeights.environmentalist)
+        .toEqual(modern.selected[0].variantWeights.neutral);
+    });
+
+    it('should suppress industrialist before the Industrial era and keep it after', async () => {
+      const candidate = styleCandidate('industrialist', [
+        variant('industrialist', { stance: 'industrialist' }),
+        variant('neutral'),
+      ]);
+      const ancient = await applyStock([candidate], 'Ancient Era');
+      expect(ancient.selected[0].variantWeights.industrialist)
+        .toBeLessThan(ancient.selected[0].variantWeights.neutral);
+      const modern = await applyStock([candidate], 'Modern Era');
+      expect(modern.selected[0].variantWeights.industrialist)
+        .toEqual(modern.selected[0].variantWeights.neutral);
+    });
+  });
+
+  describe('war and diplomacy', () => {
+    it('should lower hawkish and raise conciliatory under war weariness', async () => {
+      const candidate = styleCandidate('weariness', [
+        variant('hawkish', { stance: 'hawkish' }),
+        variant('conciliatory', { stance: 'conciliatory' }),
+        variant('neutral'),
+      ]);
+      const { selected } = await applyStock([candidate], 'Modern Era', {}, {
+        others: [{ id: 1 }],
+        relationships: [relationship(1, 'war', { warScore: 0, warWeariness: 60 })],
+      });
+      const weights = selected[0].variantWeights;
+      expect(weights.hawkish).toBeLessThan(weights.neutral);
+      expect(weights.conciliatory).toBeGreaterThan(weights.neutral);
+    });
+
+    it('should raise government-critical when a war is being lost', async () => {
+      const candidate = styleCandidate('losing', [
+        variant('critical', { stance: 'government-critical' }),
+        variant('neutral'),
+      ]);
+      const { selected } = await applyStock([candidate], 'Modern Era', {}, {
+        others: [{ id: 1 }],
+        relationships: [relationship(1, 'war', { warScore: -30 })],
+      });
+      expect(selected[0].variantWeights.critical).toBeGreaterThan(selected[0].variantWeights.neutral);
+    });
+
+    it('should lower hawkish and raise conciliatory when a war is being lost', async () => {
+      const candidate = styleCandidate('losing-direction', [
+        variant('hawkish', { stance: 'hawkish' }),
+        variant('conciliatory', { stance: 'conciliatory' }),
+        variant('neutral'),
+      ]);
+      const { selected } = await applyStock([candidate], 'Modern Era', {}, {
+        others: [{ id: 1 }],
+        relationships: [relationship(1, 'war', { warScore: -30 })],
+      });
+      const weights = selected[0].variantWeights;
+      expect(weights.hawkish).toBeLessThan(weights.neutral);
+      expect(weights.conciliatory).toBeGreaterThan(weights.neutral);
+    });
+
+    it('should raise hawkish when two players have denounced the receiver', async () => {
+      const candidate = styleCandidate('denounced', [
+        variant('hawkish', { stance: 'hawkish' }),
+        variant('neutral'),
+      ]);
+      const { selected } = await applyStock([candidate], 'Modern Era', {}, {
+        others: [{ id: 1 }, { id: 2 }],
+        relationships: [
+          relationship(1, 'war', { warScore: 0, denouncedByThem: true }),
+          relationship(2, 'peace', { denouncedByThem: true }),
+        ],
+      });
+      expect(selected[0].variantWeights.hawkish).toBeGreaterThan(selected[0].variantWeights.neutral);
+    });
+
+    it('should raise national for a large nation', async () => {
+      const candidate = styleCandidate('large', [
+        variant('national', { stance: 'national' }),
+        variant('neutral'),
+      ]);
+      const { selected } = await applyStock([candidate], 'Modern Era', { Cities: 8 });
+      expect(selected[0].variantWeights.national).toBeGreaterThan(selected[0].variantWeights.neutral);
+    });
+
+    it('should raise hawkish when a war is being won', async () => {
+      const candidate = styleCandidate('winning', [
+        variant('hawkish', { stance: 'hawkish' }),
+        variant('neutral'),
+      ]);
+      const { selected } = await applyStock([candidate], 'Modern Era', {}, {
+        others: [{ id: 1 }],
+        relationships: [relationship(1, 'war', { warScore: 30 })],
+      });
+      expect(selected[0].variantWeights.hawkish).toBeGreaterThan(selected[0].variantWeights.neutral);
+    });
+
+    it('should lift national for the world leader and lower pro-government for last place', async () => {
+      const candidate = styleCandidate('standing', [
+        variant('national', { stance: 'national' }),
+        variant('critical', { stance: 'government-critical' }),
+        variant('pro-government', { stance: 'pro-government' }),
+        variant('neutral'),
+      ]);
+      const leader = await applyStock([candidate], 'Modern Era', { Score: 80 }, {
+        others: [{ id: 1, values: { Score: 50 } }, { id: 2, values: { Score: 10 } }],
+      });
+      expect(leader.selected[0].variantWeights.national)
+        .toBeGreaterThan(leader.selected[0].variantWeights.neutral);
+
+      const last = await applyStock([candidate], 'Modern Era', { Score: 10 }, {
+        others: [{ id: 1, values: { Score: 50 } }, { id: 2, values: { Score: 80 } }],
+      });
+      expect(last.selected[0].variantWeights.critical).toBeGreaterThan(last.selected[0].variantWeights.neutral);
+      expect(last.selected[0].variantWeights['pro-government']).toBeLessThan(last.selected[0].variantWeights.neutral);
+    });
+
+    it('should lift local and lower national for a small nation', async () => {
+      const candidate = styleCandidate('small', [
+        variant('local', { stance: 'local' }),
+        variant('national', { stance: 'national' }),
+        variant('neutral'),
+      ]);
+      const { selected } = await applyStock([candidate], 'Modern Era', { Cities: 2 });
+      const weights = selected[0].variantWeights;
+      expect(weights.local).toBeGreaterThan(weights.neutral);
+      expect(weights.national).toBeLessThan(weights.neutral);
+    });
+
+    it('should treat a vassal and a master differently', async () => {
+      const candidate = styleCandidate('vassalage', [
+        variant('critical', { stance: 'government-critical' }),
+        variant('traditional', { stance: 'traditional' }),
+        variant('pro-government', { stance: 'pro-government' }),
+        variant('national', { stance: 'national' }),
+        variant('neutral'),
+      ]);
+      const vassal = await applyStock([candidate], 'Modern Era', {}, {
+        others: [{ id: 1 }],
+        relationships: [relationship(1, 'peace', { master: 'voluntary' })],
+      });
+      expect(vassal.selected[0].variantWeights.critical).toBeGreaterThan(vassal.selected[0].variantWeights.neutral);
+      expect(vassal.selected[0].variantWeights.traditional).toBeGreaterThan(vassal.selected[0].variantWeights.neutral);
+      expect(vassal.selected[0].variantWeights['pro-government']).toBeLessThan(vassal.selected[0].variantWeights.neutral);
+
+      const master = await applyStock([candidate], 'Modern Era', {}, {
+        others: [{ id: 1 }],
+        relationships: [relationship(1, 'peace', { vassal: 'voluntary' })],
+      });
+      expect(master.selected[0].variantWeights.national).toBeGreaterThan(master.selected[0].variantWeights.neutral);
     });
   });
 
@@ -206,15 +564,53 @@ describe('stock newspaper styles', () => {
       const voices = styleCandidate('voices', styles.voice.map(({ id }) => variant(id, { voice: id })), story);
       const stances = styleCandidate('stances', styles.stance.map(({ id }) => variant(id, { stance: id })), story);
       const genres = styleCandidate('genres', styles.genre.map(({ id }) => variant(id, { genre: id })), story);
-      const { budget } = await applyStock([voices, stances, genres], 'Ancient Era', {
+      const values = {
         PolicyBranches: { Order: ['A'], Fealty: ['B'], Tradition: ['C'] },
         FoundedReligion: 'X',
         HappinessPercentage: 30,
         GoldenAge: '5 turns remaining',
         GoldPerTurn: -4,
+      };
+      // The settled receiver has no visible cities, so the city rules still run with an empty list.
+      const settled = await applyStock([voices, stances, genres], 'Ancient Era', values);
+      expect(settled.budget.choiceErrors?.size ?? 0).toBe(0);
+      expect(settled.budget.choiceEvaluationIncomplete).toBeUndefined();
+
+      // A readable breakdown in every city exercises the city rules with matching top causes.
+      const detailed = await applyStock([voices, stances, genres], 'Ancient Era', values, {
+        cities: [
+          { name: 'Paris', unhappiness: { Gold: 5 } },
+          { name: 'Orleans', unhappiness: { Gold: 4 } },
+          { name: 'Lyon', unhappiness: { Gold: 3 } },
+          { name: 'Tours', unhappiness: { Gold: 2 } },
+          { name: 'Marseille', unhappiness: { Culture: 4 } },
+          { name: 'Rouen', unhappiness: { Culture: 3 } },
+          { name: 'Grenoble', unhappiness: { Science: 3 } },
+          { name: 'Dijon', unhappiness: { Religion: 2 } },
+          { name: 'Amiens', unhappiness: { Isolation: 2 } },
+          { name: 'Brest', unhappiness: { PillagedTiles: 2 } },
+        ],
       });
-      expect(budget.choiceErrors?.size ?? 0).toBe(0);
-      expect(budget.choiceEvaluationIncomplete).toBeUndefined();
+      expect(detailed.budget.choiceErrors?.size ?? 0).toBe(0);
+      expect(detailed.budget.choiceEvaluationIncomplete).toBeUndefined();
+
+      // A missing breakdown and an empty breakdown must leave the city rules unchanged.
+      const hidden = await applyStock([voices, stances, genres], 'Ancient Era', values, {
+        cities: [{ name: 'Paris' }, { name: 'Orleans', unhappiness: {} }],
+      });
+      expect(hidden.budget.choiceErrors?.size ?? 0).toBe(0);
+      expect(hidden.budget.choiceEvaluationIncomplete).toBeUndefined();
+
+      // A second receiver is at war with a neighbor, so the pair and relation rules evaluate too.
+      const conflict = await applyStock([voices, stances, genres], 'Ancient Era', values, {
+        others: [{ id: 1 }, { id: 2 }],
+        relationships: [
+          relationship(1, 'war', { warScore: -30, warWeariness: 60, denouncedByThem: true }),
+          relationship(2, 'peace', { denouncedByThem: true }),
+        ],
+      });
+      expect(conflict.budget.choiceErrors?.size ?? 0).toBe(0);
+      expect(conflict.budget.choiceEvaluationIncomplete).toBeUndefined();
     });
   });
 });

@@ -9,12 +9,14 @@
  *   Phase A: Extract + Transform + Write (no LLM calls)
  *   Phase B: Select diverse landmarks per player
  *   Phase C: Generate summaries + embeddings for landmark and consequence turns only
+ *   Stories mode: Mine pitches in place of Phase C, using one scout model
  *
- * Supports multiple models via comma-separated -m flag. Each model gets its own
+ * Supports multiple models via repeated -m flags or comma lists. Each model gets its own
  * worker that pulls games from a shared queue, enabling concurrent processing.
  *
  * Usage:
- *   npm run archivist -- -a <archive-path> -o <output.duckdb> [-g <gameId>] [-n <limit>] [-m <model1,model2>] [--force] [--skip-telepathist] [--skip-embeddings] [--no-ui]
+ *   npm run archivist -- -a <archive-path> -o <output.duckdb> [-g <gameId>] [-n <limit>] [-m <model1,model2>] [--force] [--no-ui]
+ *                       [--skip-telepathist] [--skip-embeddings] [--stories [--story-turns <count>] [--seed <seed>]]
  */
 
 import path from 'node:path';
@@ -32,6 +34,8 @@ import { extractPlayerEpisodes, extractTurnContexts, getAgentTurns, loadTurnSumm
 import { transformEpisode } from './pipeline/transformer.js';
 import { generateEmbeddings } from './pipeline/embeddings.js';
 import { selectLandmarks } from './pipeline/selector.js';
+import { createStoryMiner, defaultStorySeed, type StoryMiner } from './pipeline/story-mining.js';
+import { defaultStoryTurnCount, validateStoryTurnCount } from './pipeline/story-sampler.js';
 import { computeTargetTurns, type WorkerStats } from './pipeline/target-turns.js';
 import { startWebServer } from '../web/server.js';
 import { processManager } from '../agents/runtime/process-manager.js';
@@ -46,10 +50,13 @@ const { values } = parseArgs({
     output: { type: 'string', short: 'o' },
     game: { type: 'string', short: 'g' },
     limit: { type: 'string', short: 'n' },
-    model: { type: 'string', short: 'm' },
+    model: { type: 'string', short: 'm', multiple: true },
     force: { type: 'boolean', default: false },
     'skip-telepathist': { type: 'boolean', default: false },
     'skip-embeddings': { type: 'boolean', default: false },
+    stories: { type: 'boolean', default: false },
+    'story-turns': { type: 'string', default: String(defaultStoryTurnCount) },
+    seed: { type: 'string', default: defaultStorySeed },
     'no-ui': { type: 'boolean', default: false },
   },
   strict: false,
@@ -62,35 +69,39 @@ const { values } = parseArgs({
 
 let shuttingdownAfter = false;
 let rl: readline.Interface | null = null;
+type ArchivistStats = WorkerStats & { storySamplesSaved: number };
 
 /**
- * Process a single game through the full A→B→C pipeline.
- * Designed to run concurrently across workers — the DuckDB writer handles
+ * Ensure episodes and landmarks exist, then enrich them or mine story pitches.
+ * Workers can run concurrently because the DuckDB writer handles
  * internal concurrency (creates connection per operation).
  */
 async function processGame(
   entry: ArchiveEntry,
   writer: EpisodeWriter,
   modelOverride: string | undefined,
-  force: boolean,
+  forceEpisodes: boolean,
   skipTelepathist: boolean,
   skipEmbeddings: boolean,
-  stats: WorkerStats,
+  stats: ArchivistStats,
   workerLabel: string,
+  mineStories?: StoryMiner,
 ): Promise<void> {
   // Game-level completeness check: skip Phase A+B if all players already processed
   let skipPhaseAB = false;
-  if (!force) {
+  if (!forceEpisodes) {
     const existingPlayers = await writer.getProcessedPlayers(entry.gameId);
     const allPlayersProcessed = entry.players.every(p => existingPlayers.has(p.playerId));
     if (allPlayersProcessed) {
-      if (skipTelepathist && skipEmbeddings) {
+      if (!mineStories && skipTelepathist && skipEmbeddings) {
         logger.info(`[${workerLabel}] Skipping game ${entry.gameId} (already complete, Phase C disabled)`);
         stats.skipped += entry.players.length;
         return;
       }
       skipPhaseAB = true;
-      logger.info(`[${workerLabel}] Game ${entry.gameId} Phase A+B complete, checking Phase C`);
+      logger.info(mineStories
+        ? `[${workerLabel}] Game ${entry.gameId} Phase A+B complete, checking story samples`
+        : `[${workerLabel}] Game ${entry.gameId} Phase A+B complete, checking Phase C`);
     }
   }
 
@@ -102,7 +113,7 @@ async function processGame(
       players: entry.players.length,
     });
 
-    if (force) {
+    if (forceEpisodes) {
       await writer.resetGameLandmarks(entry.gameId);
     }
 
@@ -141,7 +152,7 @@ async function processGame(
       // Phase A: Extract + Transform + Write (no LLM calls)
       // ---------------------------------------------------------------
       for (const player of entry.players) {
-        if (!force && existingPlayers.has(player.playerId)) {
+        if (!forceEpisodes && existingPlayers.has(player.playerId)) {
           logger.info(`[${workerLabel}] Skipping player ${player.playerId} (already processed)`);
           stats.skipped++;
           continue;
@@ -173,7 +184,7 @@ async function processGame(
           });
 
           // In force mode, delete old rows before writing new ones
-          if (force) {
+          if (forceEpisodes) {
             await writer.deletePlayerEpisodes(entry.gameId, player.playerId);
           }
 
@@ -196,6 +207,14 @@ async function processGame(
     await selectLandmarks(writer, entry.gameId);
 
     stats.gamesProcessed++;
+  }
+
+  if (mineStories) {
+    const { errors, samplesSaved } = await mineStories(entry, writer);
+    stats.errors += errors;
+    stats.storySamplesSaved += samplesSaved;
+    if (skipPhaseAB && samplesSaved > 0) stats.gamesProcessed++;
+    return;
   }
 
   // ---------------------------------------------------------------
@@ -269,7 +288,7 @@ async function processGame(
           if (landmarkUpdates.length > 0) {
             // In non-force mode, skip landmarks that already have embeddings
             let toEmbed = landmarkUpdates;
-            if (!force) {
+            if (!forceEpisodes) {
               const alreadyEmbedded = await writer.getEmbeddedLandmarkTurns(entry.gameId, player.playerId);
               toEmbed = landmarkUpdates.filter(u => !alreadyEmbedded.has(u.turn));
               const skippedCount = landmarkUpdates.length - toEmbed.length;
@@ -300,20 +319,21 @@ async function processGame(
 
 /**
  * Worker loop: pulls games from a shared queue until empty or shutdown requested.
- * Each worker is assigned a fixed model for Phase C summaries.
+ * Each worker is assigned a fixed model for summaries or story pitches.
  */
 async function workerLoop(
   queue: ArchiveEntry[],
   writer: EpisodeWriter,
   modelOverride: string | undefined,
-  force: boolean,
+  forceEpisodes: boolean,
   skipTelepathist: boolean,
   skipEmbeddings: boolean,
   limit: number,
   dispatched: { count: number },
   workerLabel: string,
-): Promise<WorkerStats> {
-  const stats: WorkerStats = { processed: 0, skipped: 0, errors: 0, gamesProcessed: 0 };
+  mineStories?: StoryMiner,
+): Promise<ArchivistStats> {
+  const stats: ArchivistStats = { processed: 0, skipped: 0, errors: 0, gamesProcessed: 0, storySamplesSaved: 0 };
 
   for (;;) {
     // Check stop conditions before pulling next game
@@ -331,7 +351,7 @@ async function workerLoop(
     dispatched.count++;
 
     try {
-      await processGame(entry, writer, modelOverride, force, skipTelepathist, skipEmbeddings, stats, workerLabel);
+      await processGame(entry, writer, modelOverride, forceEpisodes, skipTelepathist, skipEmbeddings, stats, workerLabel, mineStories);
     } catch (error) {
       logger.error(`[${workerLabel}] Error processing game ${entry.gameId}`, error);
       stats.errors++;
@@ -341,19 +361,34 @@ async function workerLoop(
   return stats;
 }
 
+/** Parse run settings, start the workers, and report their totals. */
 async function main() {
   const archivePath = path.resolve(values.archive as string ?? 'archive');
   const outputPath = path.resolve(values.output as string ?? config.episodeDbPath);
   const gameFilter = values.game as string | undefined;
   const force = values.force as boolean;
   const limit = values.limit ? parseInt(values.limit as string, 10) : Infinity;
-  const models = (values.model as string)?.split(',').map(s => s.trim()).filter(Boolean) ?? [];
-
-  await ensureModelsResolved(models);
+  const modelFlags = (values.model as string[] | undefined) ?? [];
+  const models = modelFlags
+    .flatMap(flag => flag.split(',')).map(s => s.trim()).filter(Boolean);
+  if (values.stories && models.length > 1) {
+    throw new Error('--stories accepts only one model via -m');
+  }
 
   const skipTelepathist = values['skip-telepathist'] as boolean;
   const skipEmbeddings = values['skip-embeddings'] as boolean;
   const noUi = values['no-ui'] as boolean;
+
+  const storyTurnCount = Number(values['story-turns']);
+  if (values.stories) validateStoryTurnCount(storyTurnCount);
+  const mineStories = values.stories ? await createStoryMiner({
+    turnCount: storyTurnCount,
+    seed: values.seed as string,
+    force,
+    skipEmbeddings,
+  }, models[0]) : undefined;
+  if (!mineStories) await ensureModelsResolved(models);
+  const forceEpisodes = force && !mineStories;
 
   logger.info('Archivist starting', { archivePath, outputPath, gameFilter, force, limit, models, skipTelepathist, skipEmbeddings, noUi });
 
@@ -427,13 +462,13 @@ async function main() {
 
   // One worker per model, or a single worker if no models specified
   const workerCount = Math.max(models.length, 1);
-  const workerPromises: Promise<WorkerStats>[] = [];
+  const workerPromises: Promise<ArchivistStats>[] = [];
 
   for (let i = 0; i < workerCount; i++) {
     const modelOverride = models.length > 0 ? models[i] : undefined;
     const label = models.length > 0 ? models[i] : 'default';
     workerPromises.push(
-      workerLoop(queue, writer, modelOverride, force, skipTelepathist, skipEmbeddings, limit, dispatched, label)
+      workerLoop(queue, writer, modelOverride, forceEpisodes, skipTelepathist, skipEmbeddings, limit, dispatched, label, mineStories)
     );
   }
 
@@ -464,6 +499,7 @@ async function main() {
   logger.info('Archivist complete', {
     games: entries.length,
     ...totals,
+    ...(mineStories && { storySamplesSaved: results.reduce((sum, s) => sum + s.storySamplesSaved, 0) }),
     output: outputPath,
   });
 

@@ -11,7 +11,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { DuckDBInstance } from '@duckdb/node-api';
+import { DuckDBInstance, type DuckDBConnection } from '@duckdb/node-api';
 import { spansTableSql } from '../../../src/agents/telemetry/schema.js';
 import { seedKnowledgePlayers } from '../../helpers/knowledge-db.js';
 import { insertSpans } from '../../helpers/telemetry-db.js';
@@ -73,11 +73,11 @@ function runArchivist(args: string[], cwd: string, env: NodeJS.ProcessEnv): Prom
       env,
       stdio: ['pipe', 'pipe', 'pipe'],
     });
-    let stderr = '';
+    let output = '';
     const timeout = setTimeout(() => child.kill(), 30_000);
     child.stdin.end();
-    child.stderr.setEncoding('utf8').on('data', (chunk: string) => { stderr += chunk; });
-    child.stdout.resume();
+    child.stderr.setEncoding('utf8').on('data', (chunk: string) => { output += chunk; });
+    child.stdout.setEncoding('utf8').on('data', (chunk: string) => { output += chunk; });
     child.once('error', (error) => {
       clearTimeout(timeout);
       reject(error);
@@ -85,7 +85,7 @@ function runArchivist(args: string[], cwd: string, env: NodeJS.ProcessEnv): Prom
     child.once('close', (code, signal) => {
       clearTimeout(timeout);
       if (code === 0) resolve();
-      else reject(new Error(`Archivist CLI exited with ${code ?? signal}: ${stderr}`));
+      else reject(Object.assign(new Error(`Archivist CLI exited with ${code ?? signal}: ${output}`), { code }));
     });
   });
 }
@@ -139,20 +139,36 @@ function createTelemetryDatabase(dbPath: string): void {
   db.close();
 }
 
-/** Read one player-turn score from the real DuckDB output, closing all DuckDB handles. */
-async function readEpisodeScore(dbPath: string): Promise<number | null> {
+/** Open the fixture output for one operation and close it before the next CLI run. */
+async function withEpisodeDatabase<T>(dbPath: string, use: (connection: DuckDBConnection) => Promise<T>): Promise<T> {
   const instance = await DuckDBInstance.create(dbPath);
   const connection = await instance.connect();
   try {
-    const result = await connection.runAndReadAll(
-      "SELECT score FROM episodes WHERE game_id = 'fixture-game' AND turn = 10 AND player_id = 0"
-    );
-    const rows = result.getRowObjects() as Array<{ score: number | null }>;
-    return rows[0]?.score ?? null;
+    return await use(connection);
   } finally {
     connection.disconnectSync();
     instance.closeSync();
   }
+}
+
+/** Read the fixture episode and check whether the story table was created. */
+async function readEpisode(dbPath: string) {
+  return withEpisodeDatabase(dbPath, async connection => {
+    const result = await connection.runAndReadAll(
+      `SELECT score, is_landmark,
+         EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'story_pitches') AS has_story_table
+       FROM episodes WHERE game_id = 'fixture-game' AND turn = 10 AND player_id = 0`
+    );
+    return result.getRowObjectsJS()[0];
+  });
+}
+
+/** Read the saved pitch identities across games and models. */
+async function readStoryPitches(dbPath: string) {
+  return withEpisodeDatabase(dbPath, async connection => {
+    const result = await connection.runAndReadAll('SELECT game_id, model, headline FROM story_pitches ORDER BY game_id, model');
+    return result.getRowObjectsJS();
+  });
 }
 
 afterEach(async () => {
@@ -166,7 +182,7 @@ afterEach(async () => {
 });
 
 describe('Archivist source CLI', () => {
-  it('should skip processed players on resume and refresh them with force', async () => {
+  it('should preserve saved pitches on a forced rebuild and keep episodes, landmarks and other models’ pitches with stories force', async () => {
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'archivist-console-'));
     const archiveDir = path.join(tempDir, 'archive');
     const workDir = path.join(tempDir, 'work');
@@ -204,16 +220,68 @@ describe('Archivist source CLI', () => {
     ];
 
     await runArchivist(args, workDir, env);
-    expect(await readEpisodeScore(outputPath)).toBe(101);
+    expect(await readEpisode(outputPath)).toEqual({ score: 101, is_landmark: true, has_story_table: true });
 
-    const updateDb = new Database(gameDbPath);
-    updateDb.prepare('UPDATE PlayerSummaries SET Score = ? WHERE Key = ? AND Turn = ?').run(202, 0, 10);
-    updateDb.close();
+    const otherGamePitch = { game_id: 'other-game', model: 'archived-scout-a', headline: 'Other game pitch' };
+    const savedPitches = [
+      { game_id: 'fixture-game', model: 'archived-scout-a', headline: 'First archived pitch' },
+      { game_id: 'fixture-game', model: 'archived-scout-b', headline: 'Second archived pitch' },
+      otherGamePitch,
+    ];
+    await withEpisodeDatabase(outputPath, async connection => {
+      for (const { game_id, model, headline } of savedPitches) {
+        await connection.run(`INSERT INTO story_pitches
+          (game_id, player_id, turn, model, pitch_index, civilization, era, headline, pitch, genre, stance, subject, basis, wants)
+          VALUES (?, 0, 10, ?, 0, 'Rome', 'Classical Era', ?, 'A market opens', 'City life', 'Curious', 'Rome', 'Market', '')`,
+        [game_id, model, headline]);
+      }
+    });
 
+    updateFixtureScore(202);
     await runArchivist(args, workDir, env);
-    expect(await readEpisodeScore(outputPath)).toBe(101);
+    expect(await readEpisode(outputPath)).toMatchObject({ score: 101 });
+
+    const storyArgs = [...args, '--stories', '--story-turns', '1', '--seed', 'fixture', '--force'];
+    await runArchivist(storyArgs, workDir, env);
+    expect(await readEpisode(outputPath)).toMatchObject({ score: 101, is_landmark: true });
+    expect(await readStoryPitches(outputPath)).toEqual(savedPitches);
 
     await runArchivist([...args, '--force'], workDir, env);
-    expect(await readEpisodeScore(outputPath)).toBe(202);
+    expect(await readEpisode(outputPath)).toMatchObject({ score: 202, is_landmark: true });
+    expect(await readStoryPitches(outputPath)).toEqual(savedPitches);
+
+    updateFixtureScore(303);
+    const freshPath = path.join(tempDir, 'stories.duckdb');
+    await runArchivist([...storyArgs, '--output', freshPath], workDir, { ...env, EPISODE_DB_PATH: freshPath });
+    expect(await readEpisode(freshPath)).toEqual({ score: 303, is_landmark: true, has_story_table: true });
+
+    /** Give the fixture a new source score so the output shows whether Phase A reran. */
+    function updateFixtureScore(score: number) {
+      const db = new Database(gameDbPath);
+      try {
+        db.prepare('UPDATE PlayerSummaries SET Score = ? WHERE Key = ? AND Turn = ?').run(score, 0, 10);
+      } finally {
+        db.close();
+      }
+    }
   }, 120_000);
+
+  it.each([
+    { flags: ['-m', 'default,openai-compatible/gpt-oss-120b'], format: 'a comma-separated list' },
+    { flags: ['-m', 'default', '-m', 'openai-compatible/gpt-oss-120b'], format: 'repeated flags' },
+  ])('should reject more than one story model passed as $format', async ({ flags }) => {
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'archivist-console-'));
+    await expect(runArchivist(['--stories', ...flags, '-a', tempDir], tempDir, {
+      ...process.env, LOG_LEVEL: 'error', NODE_ENV: 'production',
+    })).rejects.toMatchObject({ code: 1 });
+  }, 30_000);
+
+  it('should validate models from earlier flags and comma lists in normal mode', async () => {
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'archivist-console-'));
+    const env = { ...process.env, LOG_LEVEL: 'error', NODE_ENV: 'production' };
+    const args = ['-a', tempDir, '-m', 'default,openai-compatible/gpt-oss-120b', '-m', 'default'];
+    await runArchivist(args, tempDir, env);
+    await expect(runArchivist([...args, '-m', 'default,unregistered-fixture-model', '-m', 'default'], tempDir, env))
+      .rejects.toMatchObject({ code: 1 });
+  }, 30_000);
 });

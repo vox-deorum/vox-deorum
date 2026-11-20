@@ -12,7 +12,7 @@ import { DuckDbDialect } from 'kysely-duckdb';
 import { DuckDBInstance, DuckDBListType, FLOAT, listValue } from '@duckdb/node-api';
 import { createLogger } from '../../utils/logger.js';
 import { getEpisodeDbInstance } from '../episode-db.js';
-import type { Episode, EpisodesDatabase } from '../types.js';
+import type { Episode, EpisodesDatabase, StoryPitch, StorySampleKey } from '../types.js';
 
 /** DuckDB LIST(FLOAT) type for appender list columns. */
 const realListType = new DuckDBListType(FLOAT);
@@ -112,6 +112,26 @@ CREATE TABLE IF NOT EXISTS game_outcomes (
   max_turn          INTEGER NOT NULL
 )`;
 
+const storyPitchesDdl = `
+CREATE TABLE IF NOT EXISTS story_pitches (
+  game_id       VARCHAR NOT NULL,
+  player_id     INTEGER NOT NULL,
+  turn          INTEGER NOT NULL,
+  model         VARCHAR NOT NULL,
+  pitch_index   INTEGER NOT NULL,
+  civilization  VARCHAR NOT NULL,
+  era           VARCHAR NOT NULL,
+  headline      VARCHAR NOT NULL,
+  pitch         VARCHAR NOT NULL,
+  genre         VARCHAR NOT NULL,
+  stance        VARCHAR NOT NULL,
+  subject       VARCHAR NOT NULL,
+  basis         VARCHAR NOT NULL,
+  wants         VARCHAR NOT NULL,
+  embedding     REAL[],
+  created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (game_id, player_id, turn, model, pitch_index)
+)`;
 
 /** Writes episode data to a DuckDB database using Kysely with CamelCasePlugin. */
 export class EpisodeWriter {
@@ -124,7 +144,7 @@ export class EpisodeWriter {
     this.instance = instance;
   }
 
-  /** Create an EpisodeWriter connected to the given DuckDB file path. */
+  /** Open the episode database and ensure its tables exist. */
   static async create(dbPath: string): Promise<EpisodeWriter> {
     const instance = await getEpisodeDbInstance(dbPath);
     const db = new Kysely<EpisodesDatabase>({
@@ -137,11 +157,78 @@ export class EpisodeWriter {
     return writer;
   }
 
-  /** Create the episodes and game_outcomes tables if they do not already exist. Uses raw SQL for REAL[] support. */
+  /** Create the episode, outcome, and pitch tables. Raw SQL supports REAL[] columns. */
   private async ensureTable(): Promise<void> {
     await sql.raw(TABLE_DDL).execute(this.db);
     await sql.raw(GAME_OUTCOMES_DDL).execute(this.db);
-    this.logger.info('Episodes and game_outcomes tables ensured');
+    await sql.raw(storyPitchesDdl).execute(this.db);
+    this.logger.info('Episode database tables ensured');
+  }
+
+  /** Read the civilization and era Phase A recorded for a sampled player turn. */
+  async getEpisodeIdentity(gameId: string, playerId: number, turn: number) {
+    return this.db.selectFrom('episodes')
+      .select(['civilization', 'era'])
+      .where('gameId', '=', gameId)
+      .where('playerId', '=', playerId)
+      .where('turn', '=', turn)
+      .executeTakeFirst();
+  }
+
+  /** List the turns with saved pitches for this game, player and model. */
+  async getStorySampleTurns(gameId: string, playerId: number, model: string): Promise<Set<number>> {
+    const rows = await this.db.selectFrom('storyPitches')
+      .select('turn')
+      .distinct()
+      .where('gameId', '=', gameId)
+      .where('playerId', '=', playerId)
+      .where('model', '=', model)
+      .execute();
+    return new Set(rows.map(row => row.turn));
+  }
+
+  /** Save a complete sample, replacing any prior pitches for this key in the same transaction. */
+  async writeStoryPitches(
+    { gameId, playerId, turn, model }: StorySampleKey,
+    { civilization, era }: Pick<Episode, 'civilization' | 'era'>,
+    pitches: (StoryPitch & { embedding: number[] | null })[],
+    replace: boolean,
+  ): Promise<void> {
+    if (pitches.length === 0) return;
+
+    const rows = pitches.map((p, index) => [
+      gameId, playerId, turn, model, index, civilization, era,
+      p.headline, p.pitch, p.genre, p.stance, p.subject, p.basis, p.wants, p.embedding,
+    ]);
+    const placeholders = rows.map(row => `(${row.map(() => '?').join(', ')})`).join(', ');
+    const conn = await this.instance.connect();
+    try {
+      await conn.run('BEGIN');
+      try {
+        if (replace) {
+          await conn.run('DELETE FROM story_pitches WHERE game_id = ? AND player_id = ? AND turn = ? AND model = ?',
+            [gameId, playerId, turn, model]);
+        }
+        const stmt = await conn.prepare(
+          `INSERT INTO story_pitches (game_id, player_id, turn, model, pitch_index, civilization, era,
+             headline, pitch, genre, stance, subject, basis, wants, embedding) VALUES ${placeholders}`,
+        );
+        let param = 1;
+        for (const value of rows.flat()) {
+          if (Array.isArray(value)) stmt.bindList(param++, listValue(value), realListType);
+          else stmt.bindValue(param++, value);
+        }
+        await stmt.run();
+        await conn.run('COMMIT');
+      } catch (error) {
+        await conn.run('ROLLBACK').catch(rollbackError => {
+          this.logger.error('Failed to roll back story sample', { gameId, playerId, turn, model, error: rollbackError });
+        });
+        throw error;
+      }
+    } finally {
+      conn.disconnectSync();
+    }
   }
 
   /** Return the set of player IDs already processed for a given game. */
