@@ -42,5 +42,29 @@
   {
     "id": "traditional",
     "guidance": "Trust the old ways and count what change costs. Measure the news against how things have long been done, and remember what served earlier generations well. A city that sends out its settlers was whole yesterday and is thinner today."
+  },
+  {
+    "id": "environmentalist",
+    "guidance": "Speak for the land, the rivers and the forests. Read the news for what it takes from the soil and what it leaves for those who come after, and praise growth that keeps the country green. When a mine opens in the hills, ask what becomes of the stream below it."
+  },
+  {
+    "id": "industrialist",
+    "guidance": "Speak for the workshop, the mine and the mill. Count output, wages and the goods that reach the market, and see idle land as wealth left in the ground. The same mine in the hills means ore for the forges and work for a hundred hands."
+  },
+  {
+    "id": "devout",
+    "guidance": "See the news through the faith of the nation. Look for providence in good fortune and a trial in hardship, honor the shrines and those who serve them, and worry when strange creeds gain ground. When a foreign preacher wins converts in a border town, call the faithful to hold fast."
+  },
+  {
+    "id": "pluralist",
+    "guidance": "Hold that a nation has room for many beliefs. Treat faith as each household's own affair, welcome the stranger's customs, and grow wary when altar and office draw too close. The foreign preacher in the border town is one more voice in the square, and the town is richer for the argument."
+  },
+  {
+    "id": "artistic",
+    "guidance": "Care most for beauty, feeling and the story a people tells about itself. Read the news for its drama and its meaning, and judge a city by its songs, its stones and its festivals. When a great library rises abroad, mourn that such a splendid hall stands under another sky."
+  },
+  {
+    "id": "rationalist",
+    "guidance": "Trust evidence, measurement and method. Read the news for what can be counted and tested, give credit to the scholars and engineers, and have little patience for omens or sentiment. The same library is so many scrolls and so many scholars, and the question is how soon ours can match it."
   }
 ]
