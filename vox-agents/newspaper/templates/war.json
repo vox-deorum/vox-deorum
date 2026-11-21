@@ -958,7 +958,7 @@
         "genre": "analysis",
         "headline": "The cost to {{city}}",
         "body": [
-          "The defenses of {{city}} are down to {{hitPoints}} of {{maxHitPoints}} hit points. Damage on that scale does not fall from the sky; it gets through when a garrison is thin or relief is late. The city is owed the truth about which one it was."
+          "The walls of {{city}} are down to {{hitPoints}} of {{maxHitPoints}}. Stone does not crack on its own. Either the garrison was thin on the day or the relief came late, and the citadel has named neither. The city is owed the truth about which one it was paying for."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -972,7 +972,7 @@
         "genre": "anecdote",
         "headline": "The crack in {{city}}'s wall",
         "body": [
-          "The mason came down his ladder at noon and did not go back up. The wall he was repointing stands at {{hitPoints}} of {{maxHitPoints}} hit points, and by evening everyone in {{city}} knew the number."
+          "The mason came down his ladder at noon and did not go back up. The wall he was repointing stands at {{hitPoints}} of {{maxHitPoints}}, and by evening everyone in {{city}} could say the number by heart."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -986,7 +986,7 @@
         "genre": "notice",
         "headline": "Hear it, {{city}}! The walls are hurt",
         "body": [
-          "The enemy has done the walls harm. The defenses stand at {{hitPoints}} of {{maxHitPoints}} hit points. Keep the watch, and mend what is broken."
+          "The enemy has struck at the walls! They stand at {{hitPoints}} of {{maxHitPoints}} and hold. Keep the watch, and mend what is broken. The walls hold at {{hitPoints}} of {{maxHitPoints}}!"
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1005,7 +1005,7 @@
         "id": "own-front-posture-counterattack-report",
         "headline": "Our forces counterattack at {{cityName}}",
         "body": [
-          "Our command at {{cityName}} has shifted from {{previousPosture}} to {{posture}}. The front there has passed from holding the line to hitting back."
+          "Our command at {{cityName}} has changed the order of the front from {{previousPosture}} to {{posture}}. The troops there have stopped absorbing blows and begun returning them."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1019,7 +1019,7 @@
         "genre": "analysis",
         "headline": "From defense to the strike at {{cityName}}",
         "body": [
-          "Our command at {{cityName}} has traded {{previousPosture}} for {{posture}}. A defense that turns to the attack says the enemy has spent his push. The question that follows is whether we have the strength to spend on the answer."
+          "At {{cityName}} the order has turned from {{previousPosture}} to {{posture}}. A hedgehog only bites when the dog is tired, and the enemy at the walls looks spent. Press while the pressing is good."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1033,7 +1033,7 @@
         "genre": "report",
         "headline": "Our forces attack at {{cityName}}",
         "body": [
-          "At {{cityName}} tonight, our forces have gone over to the attack. The command reports the shift from {{previousPosture}} to {{posture}}."
+          "In {{cityName}} tonight, our forces have gone over to the attack. The order of the front has changed from {{previousPosture}} to {{posture}}. The guns are firing outward."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1047,7 +1047,7 @@
         "genre": "report",
         "headline": "The defense holds and answers",
         "body": [
-          "Advices from {{cityName}} agree that the command there, having held fast through its {{previousPosture}} posture, has now taken the offensive with {{posture}}. The conduct of the front is judged sound, and the judgment is earned."
+          "Letters from {{cityName}} relate that the command there, having held fast through the order {{previousPosture}}, has now given the word {{posture}}. We are informed the change was made in good order and at the proper hour, and we find in that the marks of sound management."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1066,7 +1066,7 @@
         "id": "own-front-posture-defensive-report",
         "headline": "The front at {{cityName}} goes defensive",
         "body": [
-          "Our command at {{cityName}} has shifted from {{previousPosture}} to {{posture}}. The front there has settled into defense."
+          "Our command at {{cityName}} has changed the order of the front from {{previousPosture}} to {{posture}}. The troops there have stopped pushing outward and turned to hold what they have."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1080,7 +1080,7 @@
         "genre": "report",
         "headline": "At {{cityName}}, a stance change unexplained",
         "body": [
-          "Accounts from {{cityName}} agree that our command there has moved from {{previousPosture}} to {{posture}}. No reasons have been given, and this paper can find no one authorized to offer any."
+          "We are informed that the command at {{cityName}} has set aside the order {{previousPosture}} for {{posture}}. No reasons have been offered, and this paper's enquiries at the citadel have met with the courtesy of closed doors."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1094,7 +1094,7 @@
         "genre": "notice",
         "headline": "Hear it, {{cityName}}! Our soldiers stand at the walls",
         "body": [
-          "The command has set a defensive posture around the city. Keep calm, keep the watch, and give the soldiers the road."
+          "Word for the town: the soldiers are coming in from the fields and standing to the walls. Keep calm. Keep the watch. Give the soldiers the road. The soldiers at the walls, and the town behind them!"
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1108,7 +1108,7 @@
         "genre": "report",
         "headline": "The record of {{cityName}}'s front",
         "body": [
-          "It is recorded that our forces at {{cityName}} took the posture {{posture}}, having before stood at {{previousPosture}}. The change is set down without comment."
+          "It is set down that our forces at {{cityName}} took the order {{posture}}, having before stood at {{previousPosture}}. The change is entered without comment, the record's habit being to keep the facts and leave the judgment to the reader."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1127,7 +1127,7 @@
         "id": "peace-capitulation-report",
         "headline": "A war ends in capitulation",
         "body": [
-          "The war between {{initiator}} and {{target}} has ended in capitulation. One of the two now answers to the other. Which of them bows will be plain enough in the seasons ahead."
+          "The war between {{initiator}} and {{target}} has ended in capitulation. One of the two nations now answers to the other, and the terms to come are the victor's to set."
         ],
         "weight": { "base": 1 }
       },
@@ -1138,7 +1138,7 @@
         "genre": "obituary",
         "headline": "The war between {{initiator}} and {{target}} is ended",
         "body": [
-          "The war between {{initiator}} and {{target}} began with calls to arms and closed with a signature and a kneel. The fighting is over. What remains is the peace a victor allows, and a victor's peace is a hard one."
+          "The war between {{initiator}} and {{target}} is ended, and it ended on its knees. It opened with proclamations and marches; it closed with a signature given in the stronger's chamber. Of the pride that lit it, only the record remains."
         ],
         "weight": { "base": 1 }
       },
@@ -1150,7 +1150,7 @@
         "when": "role === 'target'",
         "headline": "Our war with {{initiator}} ends in capitulation",
         "body": [
-          "The war {{initiator}} brought to us has closed in capitulation. One of the two nations now rules the other; which way the ruling runs will be plain soon enough."
+          "The war {{initiator}} brought to our doors has closed in capitulation. One of the two nations now answers to the other; the direction of the answer will be plain in the terms, once the terms are published."
         ],
         "weight": { "base": 1 }
       },
@@ -1162,7 +1162,7 @@
         "when": "role === 'initiator'",
         "headline": "Our war with {{target}} is settled",
         "body": [
-          "The peace we concluded with {{target}} is sealed, and sealed with a capitulation. A hard peace, this paper grants, but even a hard peace spares both nations the further cost of the sword. For that much there is reason to be glad."
+          "We are informed that the peace concluded with {{target}} is sealed, and sealed with a capitulation. A hard instrument, this paper concedes; yet the sword is sheathed on both sides of the border, and that much is reason to be glad."
         ],
         "weight": { "base": 1 }
       }
@@ -1178,7 +1178,7 @@
         "id": "peace-concessions-report",
         "headline": "A peace with visible terms",
         "body": [
-          "A peace settlement has been recorded, and this one shows its terms: {{count}} concessions, namely {{concessions}}."
+          "A peace settlement has been recorded, and this one comes with its terms showing: {{count}} concessions in all, namely {{concessions}}."
         ],
         "weight": { "base": 1 }
       },
@@ -1191,8 +1191,8 @@
         "headline": "The terms between {{initiator}} and {{target}}",
         "body": [
           "Peace between {{initiator}} and {{target}}.",
-          "Concessions recorded: {{count}}.",
-          "The terms: {{concessions}}."
+          "Concessions on the record: {{count}}.",
+          "Their names: {{concessions}}."
         ],
         "weight": { "base": 1 }
       },
@@ -1204,7 +1204,7 @@
         "when": "role === 'initiator' && target !== null",
         "headline": "Our peace with {{target}} and its price",
         "body": [
-          "Our settlement with {{target}} carries {{count}} concessions on the record: {{concessions}}. Which side pays which is nowhere written down, and the government has volunteered nothing. It should."
+          "The settlement with {{target}} carries {{count}} concessions on the record: {{concessions}}. What the record does not say is who pays which. Until the government names its prices, the public will assume it was the payer, and the public has been right before."
         ],
         "weight": { "base": 1 }
       },
@@ -1216,7 +1216,7 @@
         "when": "initiator !== null && target !== null",
         "headline": "A peace with terms tonight",
         "body": [
-          "{{initiator}} and {{target}} have settled their war. The peace carries {{count}} concessions on the record."
+          "{{initiator}} and {{target}} have settled their war tonight. The peace carries {{count}} concessions on the record. The ink is drying. The counting has begun."
         ],
         "weight": { "base": 1 }
       }
@@ -1232,7 +1232,7 @@
         "id": "peace-on-one-front-report",
         "headline": "Peace on one front only",
         "body": [
-          "We have made peace with {{settled}}. The war is not over: we remain at war with {{remaining}}, and the guns on those fronts have not stopped."
+          "We have made our peace with {{settled}}. The war goes on elsewhere: {{remaining}} is still in the field against us, and the guns on those fronts have not stopped."
         ],
         "weight": { "base": 1 }
       },
@@ -1243,7 +1243,7 @@
         "genre": "analysis",
         "headline": "One account closes, others stay open",
         "body": [
-          "The settlement with {{settled}} closes one account and leaves the others open. The wars against {{remaining}} continue, and an army freed from one front is only a gain if it is moved to another. Idle strength does not win wars; transferred strength does."
+          "The settlement with {{settled}} closes one account and leaves the rest open. The wars against {{remaining}} continue. Watch the roads rather than the speeches: the regiments coming off the quiet front will be marched to the loud one, and where they land will say which enemy the council fears most."
         ],
         "weight": { "base": 1 }
       },
@@ -1254,7 +1254,7 @@
         "genre": "report",
         "headline": "Peace with {{settled}}",
         "body": [
-          "Peace has been concluded with {{settled}}, and the guns on that front are quiet. This paper notes with regret that the war with {{remaining}} goes on, and hopes the same good sense will find it soon."
+          "We are informed that peace has been concluded with {{settled}}, and that the guns on that front are quiet. We note with regret that the war with {{remaining}} goes forward, and we permit ourselves the hope that the same good sense will find it before another harvest is spent."
         ],
         "weight": { "base": 1 }
       },
@@ -1263,9 +1263,9 @@
         "voice": "pamphlet",
         "stance": "populist",
         "genre": "editorial",
-        "headline": "Peace for some fronts, marching for the rest",
+        "headline": "Bells for one front, drums for the others",
         "body": [
-          "The war with {{settled}} is over. The war with {{remaining}} is not. The men already in the field will not come home; they will be marched to a different fire. The council owes the families a count of what is left."
+          "Peace with {{settled}}! Half the bells in the city rang for it. But the men facing {{remaining}} heard the same bells, and no one has told them their war got smaller. Citizens, ask the council plainly: which fires are our sons being marched to now?"
         ],
         "weight": { "base": 1 }
       }
@@ -1281,7 +1281,7 @@
         "id": "peace-returns-report",
         "headline": "We are at peace",
         "body": [
-          "No power stands at war with us today. The fighting that filled these pages has stopped, and the country can begin counting what it spent."
+          "No power stands at war with us today. The fighting that filled these pages has stopped, and the counting of what it all cost has begun."
         ],
         "weight": { "base": 1 }
       },
@@ -1292,7 +1292,7 @@
         "genre": "report",
         "headline": "The record of rest",
         "body": [
-          "In this season the fighting ceased, and the nation lay at rest from its enemies. The shrines filled, and the record gives thanks."
+          "It is set down that in this season the fighting ceased, and the nation lay at rest from its enemies. The shrines filled past their doors, and the priests gave thanks. May the entry stand unamended a long while."
         ],
         "weight": { "base": 1 }
       },
@@ -1303,7 +1303,7 @@
         "genre": "anecdote",
         "headline": "The long walk home",
         "body": [
-          "The roads filled with uniforms walking the other way, and nobody asked for speeches. Quiet is the news now, and the market square knew it before the printer did."
+          "The first uniforms came up the road at noon, and the baker handed out the morning's loaves for nothing. Children ran alongside, dogs behind them. The war was signed away in some chancery; on the market square it ended at noon, with free bread."
         ],
         "weight": { "base": 1 }
       },
@@ -1314,7 +1314,7 @@
         "genre": "editorial",
         "headline": "Peace, and what to do with it",
         "body": [
-          "The fighting is over, and this paper is glad of it. The work it leaves is plain: settle the accounts of the war, care for the people who fought it, and keep the friends we mean to keep. Peace is a season for building, not only for celebrating."
+          "The guns are quiet, and this paper is glad of it. The work the silence leaves is plain: mend what the armies broke, pay what the armies borrowed, and find work for the men the armies took. Peace that only celebrates is peace half kept."
         ],
         "weight": { "base": 1 }
       }
@@ -1328,9 +1328,9 @@
     "variants": [
       {
         "id": "units-lost-in-combat-report",
-        "headline": "{{count}} of our units lost in action",
+        "headline": "{{count}} of our companies lost in action",
         "body": [
-          "Our forces lost {{count}} units in the recent fighting, every one of them to the same enemy power."
+          "Our forces lost {{count}} companies in the recent fighting, every one of them to the same enemy power."
         ],
         "weight": { "base": 1 }
       },
@@ -1341,9 +1341,9 @@
         "genre": "ledger",
         "headline": "Our losses, counted",
         "body": [
-          "Our units destroyed in the recent fighting: {{count}}.",
-          "All destroyed by one and the same enemy.",
-          "The tally is public; the reply is not."
+          "Companies lost in the recent fighting: {{count}}.",
+          "All to one and the same enemy.",
+          "The bill is public; the reply is not."
         ],
         "weight": { "base": 1 }
       },
@@ -1354,7 +1354,7 @@
         "genre": "anecdote",
         "headline": "The empty bunks",
         "body": [
-          "{{count}} units gone in the recent fighting, all to the same enemy. The bunks were stripped before this paper's ink was dry, and the town knew the number before we printed it."
+          "{{count}} companies gone in the recent fighting, all to the same enemy. The landlady by the barracks gate stopped setting out the extra plates on Thursday. The town knew the number before the printer did."
         ],
         "weight": { "base": 1 }
       },
@@ -1365,7 +1365,7 @@
         "genre": "report",
         "headline": "The count from the fighting",
         "body": [
-          "It is told that {{count}} of our units fell in the recent fighting, and all of them to one enemy. The tellers agree on the number."
+          "They say {{count}} of our companies fell in the late fighting, and all of them to one enemy. The tellers agree on the number. When tellers agree, the news is not good."
         ],
         "weight": { "base": 1 }
       }
@@ -1381,7 +1381,7 @@
         "id": "vassals-join-war-report",
         "headline": "Vassals drawn into the war",
         "body": [
-          "The war between {{initiator}} and {{target}} has drawn in vassal arms. The names on the record are {{vassals}}."
+          "The war between {{initiator}} and {{target}} has drawn in the vassal powers: {{vassals}}. Their banners now march under another's orders."
         ],
         "weight": { "base": 1 }
       },
@@ -1392,7 +1392,7 @@
         "genre": "analysis",
         "headline": "What the vassals add",
         "body": [
-          "Vassals have entered the war between {{initiator}} and {{target}}: {{vassals}}. A vassal's army is not its own to withhold. The master's war becomes the vassal's war, and the list of those fighting is now longer than the list of those with a cause."
+          "The war between {{initiator}} and {{target}} has gained a supporting cast: {{vassals}}. A vassal's soldiers go where the master points, so every banner on that list is arithmetic for one side only. The war did not grow wider; it grew heavier."
         ],
         "weight": { "base": 1 }
       },
@@ -1403,7 +1403,7 @@
         "genre": "report",
         "headline": "The record of vassalage honored",
         "body": [
-          "It is recorded that {{vassals}} entered the war between {{initiator}} and {{target}}, bound by vassalage. Their banners follow where the master's points, as such banners have always done."
+          "It is set down that {{vassals}} entered the war between {{initiator}} and {{target}}, being bound by vassalage. Their banners follow where the master's points, as such banners have always done, in this reign as in the ones before it."
         ],
         "weight": { "base": 1 }
       },
@@ -1414,7 +1414,7 @@
         "genre": "editorial",
         "headline": "Small kings, big wars",
         "body": [
-          "The war of {{initiator}} and {{target}} now includes {{vassals}}, who were not asked their view and are not paid to have one. When the great quarrel, the small bleed. Citizens, note how these things are arranged, and by whom."
+          "The quarrel of {{initiator}} and {{target}} now marches {{vassals}} to the front, none of them asked their view and none of them paid to have one. When the great quarrel, the small bleed. Citizens, note how these arrangements are made, and note who never appears in them."
         ],
         "weight": { "base": 1 }
       }
@@ -1430,7 +1430,7 @@
         "id": "war-advantage-stalls-report",
         "headline": "The war with {{opponent}} stalls",
         "body": [
-          "Our war with {{opponent}} has lost its motion. The advantage we held has stopped growing, and a war that stops moving keeps costing what it did without gaining what it should."
+          "Our war with {{opponent}} has stopped moving. The advantage we held has stopped growing with it, and the cost of the fighting has not stopped at all."
         ],
         "weight": { "base": 1 }
       },
@@ -1441,7 +1441,7 @@
         "genre": "analysis",
         "headline": "The stalled advance against {{opponent}}",
         "body": [
-          "The advantage over {{opponent}} that these pages reported has stopped moving. A stall is not a defeat, but neither is it free: men and stores keep flowing to a front that has stopped returning ground. A war should be measured by what it buys, and this one has stopped buying."
+          "The gains these pages reported against {{opponent}} have stopped arriving. A stall is not a defeat, but neither is it free: men and stores keep flowing to a front that no longer returns ground. The evidence says the advantage has been spent, not banked."
         ],
         "weight": { "base": 1 }
       },
@@ -1453,7 +1453,7 @@
         "byline": "A farmer with a son in the ranks",
         "headline": "The war that stands still",
         "body": [
-          "Madam, the war with {{opponent}} has stopped where it stood, and my son's regiment with it. A war that neither advances nor ends goes on eating its ration of men and money. Will some counselor explain what the standing still is for?"
+          "Madam, the war with {{opponent}} has stopped where it stood, and my son's regiment with it. The ploughing does not wait, the taxes do not wait, and the war alone has decided to wait. Will some counselor set down in plain words what the standing still is for?"
         ],
         "weight": { "base": 1 }
       },
@@ -1464,7 +1464,7 @@
         "genre": "report",
         "headline": "Stuck: the war with {{opponent}}",
         "body": [
-          "The advantage we were told about has not moved lately. Wars do not pause; they keep costing the same and return less."
+          "The push we were promised hasn't moved in weeks. Same bills. Same map. Wars that stop moving don't stop charging."
         ],
         "weight": { "base": 1 }
       }
@@ -1480,7 +1480,7 @@
         "id": "war-between-friends-report",
         "headline": "Two friends go to war",
         "body": [
-          "{{first}} and {{second}} have gone to war with each other. Both are friends of ours, and each friendship stands on its own; nothing in either one obliged them to keep the peace with each other."
+          "{{first}} and {{second}} have gone to war with each other. Both are friends of ours, and each friendship stands on its own footing. Nothing in either one bound them to keep the peace with the other."
         ],
         "weight": { "base": 1 }
       },
@@ -1491,7 +1491,7 @@
         "genre": "analysis",
         "headline": "When friends fight",
         "body": [
-          "The war between {{first}} and {{second}} puts our two friendships to a test neither was made for. Trade with both and arm neither, and both will call it a slight. Neutrality between friends is a policy with no friends in it."
+          "The war between {{first}} and {{second}} sets our two friendships against each other. Trade with both and arm neither, and each will count the even hand a slight. Neutrality between friends is a policy with no friends in it."
         ],
         "weight": { "base": 1 }
       },
@@ -1502,7 +1502,7 @@
         "genre": "editorial",
         "headline": "A plea in the war of {{first}} and {{second}}",
         "body": [
-          "{{first}} and {{second}} have taken up arms against each other, and both are friends of ours. This paper's wish is plain: that our good offices be offered to both, and that the quarrel end at a table while both sides still have chairs to sit on."
+          "We confess a heavy heart. {{first}} and {{second}}, both dear to this nation, have taken up arms against each other. Our wish is plain, and we state it without ornament: let our good offices be offered to both, and let the quarrel end at a table while both sides still have chairs."
         ],
         "weight": { "base": 1 }
       },
@@ -1513,7 +1513,7 @@
         "genre": "anecdote",
         "headline": "They say the table is broken",
         "body": [
-          "It is told in the evenings that {{first}} and {{second}}, whose envoys drank from the same cup under our roof, have drawn swords on each other. Old ties, they say, snap loudest."
+          "It is told in the evenings that {{first}} and {{second}}, whose envoys drank from one cup beneath our roof, have crossed swords. The old ties, they say, snap loudest. The cup is still on the shelf. Nobody at the table will look at it."
         ],
         "weight": { "base": 1 }
       }
@@ -1529,7 +1529,7 @@
         "id": "war-duration-milestone-report",
         "headline": "The war runs long",
         "body": [
-          "The war has now run {{turns}} turns, past the mark where a war stops being a season's quarrel. From here on, it will be measured less by its causes than by what it eats."
+          "The war has run {{turns}} turns by this paper's count, past the mark where a war is a season's quarrel. From here on it will be judged less by its causes than by its cost."
         ],
         "weight": { "base": 1 }
       },
@@ -1541,7 +1541,7 @@
         "when": "opponent !== null",
         "headline": "The long stretch of the war with {{opponent}}",
         "body": [
-          "The war with {{opponent}} has run {{turns}} turns. Duration is itself a fact: armies age, treasuries thin, and the aims a war began with are quietly renegotiated by every season it survives."
+          "The war with {{opponent}} has run {{turns}} turns. Duration is itself a fact: armies age, treasuries thin, and the aims a war began with are quietly renegotiated by every season it survives. The original bill is never the final one."
         ],
         "weight": { "base": 1 }
       },
@@ -1552,7 +1552,7 @@
         "genre": "report",
         "headline": "The record of a long war",
         "body": [
-          "The chronicle sets it down: the war has stood {{turns}} turns. Wars of this length were once the business of grandfathers."
+          "It is set down that the war has stood {{turns}} turns. Wars of this length were once the business of grandfathers. The record keeps such entries, and keeps them without joy."
         ],
         "weight": { "base": 1 }
       },
@@ -1564,7 +1564,7 @@
         "when": "opponent !== null",
         "headline": "The war with {{opponent}} is {{turns}} turns old",
         "body": [
-          "The war with {{opponent}} is {{turns}} turns old, and nobody remembers what the first week of it was about. The households that waved the first goodbyes have stopped counting weeks."
+          "The war with {{opponent}} turned {{turns}} turns old this week. The bakery that used to count the days in its window has given up, and nobody under the awning remembers what the first week was about. Everyone remembers who is still over there."
         ],
         "weight": { "base": 1 }
       }
@@ -1580,7 +1580,7 @@
         "id": "war-involving-us-report",
         "headline": "The nation is at war",
         "body": [
-          "The nation has entered a new war. The call to arms has gone out, and these pages will follow the fighting turn by turn, wherever it runs."
+          "The nation has gone to war. The call to arms is out, the frontier watches are doubled, and these pages will follow the fighting turn by turn, wherever it runs."
         ],
         "weight": { "base": 1 }
       },
@@ -1592,7 +1592,7 @@
         "when": "role === 'target' && initiator !== null",
         "headline": "{{initiator}} has attacked",
         "body": [
-          "War tonight. {{initiator}} has declared war on us. Our forces are standing to their posts, and the reserves are being counted."
+          "War tonight. {{initiator}} has declared war on us. Our forces are standing to their posts. The reserves are being counted. More bulletins as we have them."
         ],
         "weight": { "base": 1 }
       },
@@ -1604,7 +1604,7 @@
         "when": "role === 'target' && initiator !== null",
         "headline": "Hear it! {{initiator}} makes war on us",
         "body": [
-          "Word from the frontier: {{initiator}} has declared war on us. To arms, and mind the stores!"
+          "Word from the frontier: {{initiator}} has declared war on us! To arms, and mind the stores! {{initiator}} has made war on us, and the nation answers!"
         ],
         "weight": { "base": 1 }
       },
@@ -1616,7 +1616,7 @@
         "when": "role === 'initiator' && target !== null",
         "headline": "A state of war with {{target}}",
         "body": [
-          "A state of war now exists between the nation and {{target}}. The government has made its decision, and this paper presumes the decision was not made lightly. It expects the case to be laid before the people before the armies are far from home."
+          "We are informed that a state of war now exists between the nation and {{target}}. The government's decision, we are assured, was weighed long before it was made. This paper presumes the weighing was sound, and expects the case to be laid before the people while the armies are still within a day's march of home."
         ],
         "weight": { "base": 1 }
       },
@@ -1628,7 +1628,7 @@
         "when": "role === 'joined' && reason === 'pact' && initiator !== null && target !== null",
         "headline": "Their quarrel, our treaty",
         "body": [
-          "The war between {{initiator}} and {{target}} is now ours by treaty. Pacts are signed in calm years and honored in hard ones; that is their worth and their price. The people should hear from the government what we get for the paying of it."
+          "The war between {{initiator}} and {{target}} is now ours by treaty. Pacts are signed in calm years and honored in hard ones; that is their worth and their price. Citizens, we are owed an accounting of what the paying buys, and we should ask for it now, while the ledgers are still open."
         ],
         "weight": { "base": 1 }
       }
@@ -1644,7 +1644,7 @@
         "id": "war-on-three-fronts-report",
         "headline": "War on {{count}} fronts",
         "body": [
-          "The nation is at war with {{enemies}}. The fighting is no longer one quarrel but several, and every front draws on the same purse and the same recruits."
+          "The nation is at war with {{enemies}}. What was one quarrel is now several, and every front draws on the same purse and the same recruits."
         ],
         "weight": { "base": 1 }
       },
@@ -1655,7 +1655,7 @@
         "genre": "analysis",
         "headline": "Count the fronts",
         "body": [
-          "The nation is at war on {{count}} fronts, against {{enemies}}. Every soldier sent to one is a soldier the others go without. The government has yet to say which front it means to win, and a nation that means to win them all wins none."
+          "We are at war on {{count}} fronts, against {{enemies}}. Every soldier sent to one is a soldier the others go without, and the government has yet to say which front it means to win. A nation that means to win them all has not yet chosen."
         ],
         "weight": { "base": 1 }
       },
@@ -1666,7 +1666,7 @@
         "genre": "notice",
         "headline": "Hear it! The nation fights on {{count}} fronts",
         "body": [
-          "The roll of our enemies: {{enemies}}! The war is wide. Keep the fields tended and the watch set."
+          "Hear the roll of our enemies: {{enemies}}! The war is wide, and the harvest must be wide with it. Keep the fields tended and the watch set. Our enemies: {{enemies}}! The nation stands!"
         ],
         "weight": { "base": 1 }
       },
@@ -1677,7 +1677,7 @@
         "genre": "report",
         "headline": "We are at war with {{count}} powers now",
         "body": [
-          "The list of enemies: {{enemies}}. Your bread, your sons, your taxes. All {{count}} fronts bill the same house."
+          "Enemy count: {{count}}. Names: {{enemies}}. Your bread, your sons, your taxes. Every front bills the same house."
         ],
         "weight": { "base": 1 }
       }
@@ -1693,7 +1693,7 @@
         "id": "war-turns-against-us-report",
         "headline": "The war with {{opponent}} turns against us",
         "body": [
-          "The war with {{opponent}} has turned. The score stands at {{score}}, deep on their side of the ledger, and the advantage now belongs to them."
+          "The war with {{opponent}} has turned. The tally stands at {{score}}, deep on their side of the ledger, and the advantage is now theirs to press."
         ],
         "weight": { "base": 1 }
       },
@@ -1702,9 +1702,9 @@
         "voice": "press",
         "stance": "government-critical",
         "genre": "analysis",
-        "headline": "The score nobody mentions",
+        "headline": "The number nobody in the council quotes",
         "body": [
-          "The war score against {{opponent}} stands at {{score}}. A number that far below even is not bad luck; it is a description of how the fighting has gone. The country can bear the truth, and the government owes it one."
+          "The tally against {{opponent}} stands at {{score}}, and no minister has said a word about it in a fortnight. A number that far below even is not misfortune; it is a description of how the fighting has gone. The country can bear the truth, and it is owed one."
         ],
         "weight": { "base": 1 }
       },
@@ -1715,7 +1715,7 @@
         "genre": "report",
         "headline": "The war with {{opponent}} tonight",
         "body": [
-          "The recorded score stands at {{score}} in their favor. The balance of the fighting is theirs."
+          "The war with {{opponent}} tonight. The running tally stands at {{score}} against us. Our commanders speak of holding. Nobody speaks of advancing."
         ],
         "weight": { "base": 1 }
       },
@@ -1726,7 +1726,7 @@
         "genre": "report",
         "headline": "The record of a hard season",
         "body": [
-          "The chronicle records the war score at {{score}} against us in the war with {{opponent}}. Our fathers knew such seasons. The record preserves them, and does not flatter them."
+          "It is set down that in the war with {{opponent}} the tally stands at {{score}} against us. Our fathers knew such seasons; the record keeps them, and does not flatter them. This entry joins that column."
         ],
         "weight": { "base": 1 }
       }
@@ -1742,7 +1742,7 @@
         "id": "war-turns-our-way-report",
         "headline": "The war with {{opponent}} turns our way",
         "body": [
-          "The war score against {{opponent}} stands at {{score}} in our favor. The fighting, of late, has been giving more than it takes."
+          "The tally against {{opponent}} stands at {{score}} in our favor. The fighting, of late, has been giving more than it takes."
         ],
         "weight": { "base": 1 }
       },
@@ -1751,9 +1751,9 @@
         "voice": "press",
         "stance": "national",
         "genre": "analysis",
-        "headline": "Reading the war score",
+        "headline": "What the lead is worth",
         "body": [
-          "The score against {{opponent}} has reached {{score}}. A lead of that size is earned in the field, but wars are not won on the ledger; they end when the other side decides the price is beyond paying. The number says we can begin asking."
+          "The tally against {{opponent}} has reached {{score}}. A lead of that size is earned in the field, but wars do not end on a ledger; they end when the other side decides the price is beyond paying. The number says we can begin asking."
         ],
         "weight": { "base": 1 }
       },
@@ -1764,7 +1764,7 @@
         "genre": "notice",
         "headline": "The war proceeds favorably",
         "body": [
-          "The war with {{opponent}} proceeds favorably, the score standing at {{score}}. The nation's councils may take satisfaction in the conduct of its arms, and this paper takes some in the saying of it."
+          "Notice is given that the war with {{opponent}} proceeds favorably, the tally standing at {{score}} in the nation's favor. The councils may take satisfaction in the conduct of the arms; this paper takes some in the recording of it."
         ],
         "weight": { "base": 1 }
       },
@@ -1775,7 +1775,7 @@
         "genre": "report",
         "headline": "Good news, and the bill beside it",
         "body": [
-          "The war with {{opponent}} is going our way, and the score says so: {{score}}. Good news at last, and the price of it has not left the table."
+          "The war with {{opponent}} is going our way, and the tally says so: {{score}}. The pie shop on the square sold out by noon, the first time since the war started. People smiled at strangers. Strangers smiled back."
         ],
         "weight": { "base": 1 }
       }
@@ -1789,9 +1789,9 @@
     "variants": [
       {
         "id": "war-weariness-eases-report",
-        "headline": "War weariness eases",
+        "headline": "The war sits lighter on the country",
         "body": [
-          "War weariness across the nation has fallen to {{weariness}}, back below the halfway mark. The mood of the country has lightened with it."
+          "Weariness with the war has fallen to {{weariness}}, back below the halfway mark. The mood of the country has lightened with it."
         ],
         "weight": { "base": 1 }
       },
@@ -1803,7 +1803,7 @@
         "when": "opponent !== null",
         "headline": "Weariness eases in the war with {{opponent}}",
         "body": [
-          "Weariness in the war with {{opponent}} has eased to {{weariness}}. The country breathes more easily, and a patient nation makes a better peacemaker than a bitter one."
+          "We are informed that the public weariness over the war with {{opponent}} has eased to {{weariness}}. The nation breathes more evenly, and this paper notes the improvement with quiet satisfaction; a patient nation, history suggests, makes the better peacemaker."
         ],
         "weight": { "base": 1 }
       },
@@ -1815,7 +1815,7 @@
         "when": "opponent !== null",
         "headline": "The number behind the mood",
         "body": [
-          "War weariness in the war with {{opponent}} is down to {{weariness}}, from above the halfway mark. Weariness does not win wars, but it can lose them. The patience we have just regained is worth more than a battle, because it keeps the country willing to pay for the next one."
+          "Weariness with the war against {{opponent}} is down to {{weariness}}, from above the halfway mark. Tiredness does not win wars, but it can lose them. The patience the country has just recovered is worth more than a battle: it is what keeps a nation willing to pay for the next one."
         ],
         "weight": { "base": 1 }
       },
@@ -1824,9 +1824,9 @@
         "voice": "feed",
         "stance": "neutral",
         "genre": "report",
-        "headline": "War weariness is down to {{weariness}}",
+        "headline": "Down to {{weariness}}: the country exhales",
         "body": [
-          "The country is breathing again. After the long grind, the weariness figure has dropped below half, and you can hear it in the streets."
+          "The long grind let go a little this week. The queue at the bakery is just a queue again, not a grumble club. You can hear it in the streets: people stopped holding their breath."
         ],
         "weight": { "base": 1 }
       }
@@ -1840,9 +1840,9 @@
     "variants": [
       {
         "id": "war-weariness-sets-in-report",
-        "headline": "War weariness sets in",
+        "headline": "The war begins to wear us down",
         "body": [
-          "The war with {{opponent}} has begun to grind the nation down. War weariness stands at {{weariness}}, past the halfway mark."
+          "The war with {{opponent}} has begun to grind the nation down. Weariness stands at {{weariness}}, past the halfway mark, and it shows in the streets before it shows anywhere else."
         ],
         "weight": { "base": 1 }
       },
@@ -1853,7 +1853,7 @@
         "genre": "report",
         "headline": "A weary nation, and no statement",
         "body": [
-          "Weariness with the war against {{opponent}} stands at {{weariness}}, past the halfway mark. The council has offered no statement on what the number is to be answered with, and the silence is itself a statement."
+          "Weariness with the war against {{opponent}} stands at {{weariness}}, past the halfway mark. The council has offered no statement on what the number is to be answered with, and we are obliged to observe that the silence is itself a statement."
         ],
         "weight": { "base": 1 }
       },
@@ -1864,7 +1864,7 @@
         "genre": "editorial",
         "headline": "Tired of the war? Say it plainly",
         "body": [
-          "The war with {{opponent}} has run long enough that the country's patience is being measured, and the measure is {{weariness}}. That number is a verdict forming. The council should read it before it hardens."
+          "The war with {{opponent}} has run long enough that the country's patience is being measured, and the measure is {{weariness}}. That number is a verdict forming in the streets. Councilors, read it before it hardens into something that can no longer be read."
         ],
         "weight": { "base": 1 }
       },
@@ -1875,7 +1875,7 @@
         "genre": "report",
         "headline": "The record of a weary nation",
         "body": [
-          "It is recorded that the nation's weariness with the war against {{opponent}} stands at {{weariness}}. Long wars weary the patient."
+          "It is set down that the nation's weariness with the war against {{opponent}} stands at {{weariness}}. Long wars tire the patient. The record has said so in other reigns, and says so again in ours."
         ],
         "weight": { "base": 1 }
       }

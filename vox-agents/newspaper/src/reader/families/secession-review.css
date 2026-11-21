@@ -1,0 +1,68 @@
+/* A square cover plate and a single green impression across its ruled edge. */
+.vd-newspaper[data-publication-design="secession-review"] {
+  --branch: url("./textures/secession-botanical.svg?inline");
+
+  & .vd-masthead { padding: 10px 0 15px; }
+  & .vd-title {
+    font-size: calc(clamp(30px, 5.3cqi, 68px) * var(--vd-text-scale));
+    font-weight: 700;
+    letter-spacing: .065em;
+    line-height: 1.04;
+  }
+  & .vd-tabs { border-block: 3px double var(--vd-ink); }
+  & .vd-tab { letter-spacing: .07em; font-variant-caps: small-caps; }
+  & .vd-storylist[data-layout] .vd-story--lead .vd-headline {
+    position: relative;
+    margin: 0 0 18px;
+    padding: .45em .5em;
+    border: 2px solid var(--vd-ink);
+    font-weight: 700;
+    letter-spacing: -.035em;
+    line-height: 1;
+    overflow-wrap: anywhere;
+  }
+  & .vd-storylist[data-layout="ordinary"] .vd-story--lead .vd-headline {
+    --print-width: clamp(84px, 15cqi, 176px);
+    padding-top: calc(var(--print-width) * .62 + 6px);
+    align-content: end;
+    font-size: calc(clamp(36px, 5.3cqi, 70px) * var(--vd-text-scale));
+  }
+  & .vd-storylist[data-layout="ordinary"] .vd-story--lead .vd-headline::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    right: -9px;
+    width: var(--print-width);
+    aspect-ratio: 200 / 124;
+    background: var(--branch) center / contain no-repeat;
+    pointer-events: none;
+  }
+  & .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-headline {
+    border-width: 6px 1px 1px;
+    text-transform: none;
+  }
+  & .vd-storylist[data-layout="analysis"] .vd-story--lead .vd-headline {
+    border-width: 0 0 3px;
+    padding: 0 0 .2em;
+  }
+  & .vd-storylist[data-layout] .vd-story--lead .vd-deck { padding: 0; border: 0; }
+  & .vd-evidence { border-block: 3px double var(--vd-ink); padding-block: 8px; }
+  & .vd-number { font-weight: 700; }
+}
+
+@container newspaper (width > 760px) {
+  .vd-newspaper[data-publication-design="secession-review"] {
+    & .vd-storylist[data-layout="ordinary"]:has(.vd-story--brief) {
+      display: flow-root;
+      & .vd-story--lead { float: left; width: 55%; }
+      & .vd-story--lead .vd-headline { aspect-ratio: 1.14; }
+      & .vd-story--lead .vd-headline::after { right: -2.4cqi; }
+      & .vd-story--lead .vd-story-content > .vd-prose { columns: auto; }
+      & .vd-story--brief {
+        margin: 0 0 20px 61%;
+        padding-top: 12px;
+        border-top: 1px solid var(--vd-ink);
+      }
+    }
+  }
+}

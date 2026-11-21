@@ -1,0 +1,31 @@
+[
+  {
+    "id": "teletext-bulletin",
+    "version": "1",
+    "title": "Teletext Bulletin",
+    "when": "['Atomic', 'Information'].includes(self.era?.replace(' Era', ''))",
+    "weight": { "base": 60 },
+    "presentation": {
+      "schemaVersion": 1,
+      "rendererFamily": "folio",
+      "tokens": {
+        "paperColor": "#0a1016",
+        "inkColor": "#f3f6f7",
+        "accentColor": "#52e1e4",
+        "bodyFontAssetId": "font-inter-400",
+        "headingFontAssetId": "font-inter-800"
+      }
+    },
+    "layouts": [
+      { "id": "news-index", "variant": "ordinary", "weight": { "base": 10 } },
+      { "id": "newsflash", "variant": "breaking", "weight": { "base": 10 } },
+      { "id": "data-service", "variant": "analysis", "weight": { "base": 3 } }
+    ],
+    "pageLabels": {
+      "front": "Headlines",
+      "home": "Home News",
+      "abroad": "World News",
+      "economy": "Business"
+    }
+  }
+]

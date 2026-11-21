@@ -1,0 +1,50 @@
+[
+  {
+    "id": "clay-chronicle",
+    "version": "1",
+    "title": "The Clay Chronicle",
+    "when": "['Babylon', 'Assyria'].includes(self.name) && ['Ancient', 'Classical'].includes(self.era?.replace(' Era', ''))",
+    "weight": {
+      "base": 50,
+      "adjustments": [
+        { "when": "self.era?.replace(' Era', '') === 'Ancient'", "add": 30 }
+      ]
+    },
+    "presentation": {
+      "schemaVersion": 1,
+      "rendererFamily": "folio",
+      "tokens": {
+        "paperColor": "#dab687",
+        "inkColor": "#2c251f",
+        "accentColor": "#653c28",
+        "bodyFontAssetId": "font-literata-400",
+        "headingFontAssetId": "font-literata-700",
+        "mastheadFontAssetId": "font-marcellus-400"
+      },
+      "assets": { "ornamentAssetId": "clay-chronicle.wedges" }
+    },
+    "assetDefinitions": [
+      {
+        "id": "wedges",
+        "kind": "ornament",
+        "path": "assets/designs/clay-chronicle/wedges.svg",
+        "mediaType": "image/svg+xml",
+        "width": 84,
+        "height": 42,
+        "license": "Vox Deorum project asset",
+        "attribution": "Original drawing of stylus impressions."
+      }
+    ],
+    "layouts": [
+      { "id": "entries", "variant": "ordinary", "weight": { "base": 10 } },
+      { "id": "dispatch", "variant": "breaking", "weight": { "base": 10 } },
+      { "id": "accounts", "variant": "analysis", "weight": { "base": 3 } }
+    ],
+    "pageLabels": {
+      "front": "Chronicle",
+      "home": "Cities",
+      "economy": "Accounts",
+      "abroad": "Envoys"
+    }
+  }
+]

@@ -1,0 +1,30 @@
+[
+  {
+    "id": "secession-review",
+    "version": "1",
+    "title": "The Secession Review",
+    "when": "['Industrial', 'Modern'].includes(self.era?.replace(' Era', ''))",
+    "weight": {
+      "base": 16,
+      "adjustments": [{ "when": "self.name === 'Austria'", "add": 28 }]
+    },
+    "presentation": {
+      "schemaVersion": 1,
+      "rendererFamily": "folio",
+      "tokens": {
+        "paperColor": "#f6f0df",
+        "inkColor": "#402836",
+        "accentColor": "#77445d",
+        "bodyFontAssetId": "font-libre-caslon-400",
+        "headingFontAssetId": "font-cardo-700",
+        "mastheadFontAssetId": "font-cinzel-700"
+      }
+    },
+    "layouts": [
+      { "id": "cover", "variant": "ordinary", "weight": { "base": 10 } },
+      { "id": "extra", "variant": "breaking", "weight": { "base": 10 } },
+      { "id": "survey", "variant": "analysis", "weight": { "base": 3 } }
+    ],
+    "pageLabels": { "front": "Cover", "home": "At Home", "abroad": "Correspondence" }
+  }
+]

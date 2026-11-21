@@ -121,9 +121,12 @@ Prose and typed link values use `{{name}}` placeholders. Headlines, subheadlines
 | `{{city.owner.name}}` | A namespaced reference, here the owner of a city subject |
 | `{{lost}}` | A scalar rule value from the ungrouped development |
 | `{{key}}`, `{{count}}` | A grouped development's non-null scalar key and member count |
+| `{{terms.civilization}}`, `{{terms.civilizationAdjective}}` | The reader's civilization name and its English adjective, such as Rome and Roman |
 | `{{terms.<name>}}` | A printable [term](triggers/constants.md#terms) defined by the catalogue, such as the receiver's capital |
 
 Use qualified names such as `{{city.owner.name}}` and `{{subject.id}}` for recorded identities. An unresolved placeholder, empty link label or invalid link destination makes the variant unprintable. The editor evaluates a term once from the check's global facts, so `{{terms.capital}}` means the same thing in every article. Each variant cites the rows behind the terms it prints.
+
+The adjective comes from the recorded English short name. For a modded or localized name outside the built-in list, override the term in your catalogue or offer a variant without it.
 
 For a single group, prose can print `{{key}}` and `{{count}}`. Expressions can read each member, for example `group.matches[0].city.name` and `group.matches[0].values`. If two rules grouped cities by the same religion, they may have counted different cities. Name the rule in the placeholder, such as `{{triggerValues.conversions.count}}`, or read its members with `triggerValues.conversions.matches`. When two ungrouped rules supply the same value name, qualify it the same way. An ambiguous bare placeholder leaves that variant out.
 
@@ -138,14 +141,17 @@ Designs match the receiver’s era and, where relevant, their recorded civilizat
 | `oral-accounts` | General option in Ancient, Classical and unknown eras |
 | `shang` | Strong in Ancient China, with a smaller chance in Classical |
 | `egypt` | Egypt and Nubia in Ancient and Classical, with higher weights in Ancient and for Egypt |
+| `clay-chronicle` | Babylon and Assyria only: Ancient (80) and Classical (50) |
 | `heian` | Japan from Classical through Renaissance, peaking in Medieval; a smaller chance in Korea and China over the same span |
 | `folded-chronicle` | The Maya only: Classical (50), Medieval (80) and Renaissance (35) |
 | `port-register` | Renaissance: 60 for England, The Netherlands, Portugal and Venice; 12 elsewhere. Industrial: 40 for those four only |
 | `victorian` | General option from Medieval through Atomic, peaking in Industrial |
 | `town-book` | General Medieval option |
 | `printer-dispatch` | General Renaissance option |
+| `secession-review` | Industrial and Modern: 44 for Austria, 16 elsewhere |
 | `national-review` | General option in Modern and Atomic |
-| `wire` | General option from Modern onward, gaining weight as the game advances; the sole stock design from Information onward |
+| `teletext-bulletin` | General option in Atomic and Information (60) |
+| `wire` | General option from Modern onward, gaining weight as the game advances; the sole stock design in Future |
 
 When adding a design, start around 50 to 100 for a strong fit, 10 to 25 for a general fallback, and 4 to 8 for an occasional alternative. Compare the combined weights in each overlapping era and keep a general option available for civilizations without a match.
 

@@ -175,7 +175,7 @@ async function measurePage(): Promise<PageMeasurement> {
   };
 }
 
-/** Capture one registered vote icon against the mounted design's paper color. */
+/** Capture a registered vote icon on the same background as its button. */
 async function mountVoteIcon(assetId: string): Promise<void> {
   const current = mountedState();
   const design = current.issueDocument.publication.presentation.rendererFamily;
@@ -189,7 +189,6 @@ async function mountVoteIcon(assetId: string): Promise<void> {
     throw new Error(`Unknown vote icon "${assetId}" for design "${design}".`);
   }
   const root = exportRoot();
-  const paper = getComputedStyle(root).getPropertyValue("--vd-paper");
   const image = document.createElement("img");
   const url = new URL(asset.path, document.baseURI);
   if (url.origin !== location.origin) throw new Error("Vote icons must use local assets.");
@@ -197,7 +196,7 @@ async function mountVoteIcon(assetId: string): Promise<void> {
   image.width = 24;
   image.height = 24;
   image.style.cssText = "position:fixed;left:0;top:0;width:24px;height:24px;display:block;z-index:1;";
-  image.style.backgroundColor = paper;
+  image.style.backgroundColor = "var(--vd-vote-background, var(--vd-paper))";
   voteIcon?.remove();
   voteIcon = image;
   root.append(image);

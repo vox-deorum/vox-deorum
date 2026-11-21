@@ -1,0 +1,93 @@
+/* Ceefax's mosaic cells and bright section keys frame a clear text service. */
+.vd-newspaper[data-publication-design="teletext-bulletin"] {
+  --teletext-amber: #ffd260;
+  --teletext-signal: oklch(from var(--vd-accent) max(l, .72) c h);
+  --teletext-mono: Consolas, "Liberation Mono", monospace;
+  --vd-page-background: #05090c;
+  --vd-vote-background: #e2ecec;
+
+  & .vd-publication { --vd-accent: var(--teletext-signal); }
+  & .vd-masthead { padding: 0 0 14px; text-align: left; }
+  & .vd-title {
+    display: flex;
+    align-items: center;
+    gap: .24em;
+    font-weight: 800;
+    line-height: .98;
+    text-transform: uppercase;
+    letter-spacing: -.045em;
+    text-wrap: pretty;
+  }
+  & .vd-title::before {
+    content: "";
+    flex: none;
+    width: .64em;
+    height: .77em;
+    background:
+      linear-gradient(var(--vd-accent) 0 0) 0 0 / 47% 31%,
+      linear-gradient(var(--vd-accent) 0 0) 0 50% / 47% 31%,
+      linear-gradient(var(--teletext-amber) 0 0) 100% 50% / 47% 31%,
+      linear-gradient(var(--teletext-amber) 0 0) 0 100% / 100% 31%;
+    background-repeat: no-repeat;
+  }
+  & .vd-tabs {
+    gap: 5px;
+    justify-content: flex-start;
+    border: 0;
+    color: var(--vd-paper);
+  }
+  & .vd-tab {
+    flex: 1 1 auto;
+    --section-key: var(--vd-accent);
+    padding: 6px 10px 9px;
+    background: linear-gradient(to top, var(--vd-paper) 3px, var(--section-key) 3px);
+    color: inherit;
+    font-family: var(--teletext-mono);
+    font-weight: bold;
+  }
+  & .vd-tab:nth-child(even) { --section-key: var(--teletext-amber); }
+  &[data-mode="reader"] .vd-tab[aria-selected="true"]::after {
+    inset-inline: 6px;
+    background: var(--vd-ink);
+  }
+  & .vd-tab:hover { text-decoration: underline; }
+  & .vd-vote, &[data-mode] .vd-vote[aria-pressed="true"] {
+    border-radius: 0;
+    background: var(--vd-vote-background);
+  }
+  & .vd-storylist[data-layout="ordinary"] { display: block; }
+  & .vd-storylist .vd-story--lead .vd-headline {
+    padding: .21em .32em;
+    color: var(--vd-ink);
+    background: #174a85;
+    font-weight: 800;
+    text-align: left;
+  }
+  & .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-headline { background: #a02132; }
+  & .vd-story--lead .vd-headline :is(a, .vd-number) { color: inherit; }
+  & .vd-storylist .vd-story--lead .vd-deck { font-style: normal; }
+  & .vd-storylist .vd-story--brief {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 2px dotted var(--vd-rule);
+  }
+  & .vd-story--brief .vd-headline {
+    color: var(--teletext-amber);
+    font: bold calc(clamp(21px, 2.3cqi, 28px) * var(--vd-text-scale)) / 1.15 var(--teletext-mono);
+  }
+  & .vd-story--brief .vd-deck, & .vd-story--brief .vd-byline { margin: 0 0 8px; }
+  & .vd-number, & .vd-evidence td { font-family: var(--teletext-mono); }
+  & .vd-evidence thead { color: var(--teletext-amber); background: #182332; }
+  & .vd-evidence td { color: var(--vd-accent); font-size: calc(clamp(18px, 2cqi, 24px) * var(--vd-text-scale)); }
+}
+
+@container newspaper (width > 760px) {
+  .vd-newspaper[data-publication-design="teletext-bulletin"] .vd-story--brief .vd-story-content {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    column-gap: clamp(20px, 3cqi, 40px);
+
+    & > * { grid-column: 2; }
+    & > .vd-headline { grid-column: 1; grid-row: 1 / span 5; }
+  }
+}

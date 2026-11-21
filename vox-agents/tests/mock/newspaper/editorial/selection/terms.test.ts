@@ -36,7 +36,7 @@ async function catalogue() {
       variants: [
         {
           id: 'printed', headline: '{{terms.ruler}} rules',
-          body: ['{{terms.capital}} reports {{terms.zero}} voices.'],
+          body: ['The {{terms.civilizationAdjective}} capital of {{terms.capital}} reports {{terms.zero}} voices.'],
           links: [{ placeholder: 'terms.capital', label: 'Visit {{terms.capital}}', target: { type: 'screen', screen: 'map' } }],
           weight: { base: 1 },
         },
@@ -80,6 +80,7 @@ describe('printable terms', () => {
     const terms = await evaluateEditorialTerms(compiled, batch);
 
     expect(terms.get('civilization')).toEqual({ value: 'France', sources: [owner.source] });
+    expect(terms.get('civilizationAdjective')).toEqual({ value: 'French', sources: [owner.source] });
     expect(terms.get('ruler')?.value).toBe('the Party');
     expect(terms.get('capital')?.value).toBe('Paris');
     expect(terms.get('capital')?.sources).toEqual(expect.arrayContaining([citySource]));
@@ -98,6 +99,7 @@ describe('printable terms', () => {
     );
     expect(candidates).toHaveLength(1);
     expect(candidates[0].values).toMatchObject({
+      'terms.civilizationAdjective': 'French',
       'terms.ruler': 'the Party', 'terms.capital': 'Paris', 'terms.zero': 0,
     });
     // The empty-link variant is omitted because resolved link text must be nonempty.
