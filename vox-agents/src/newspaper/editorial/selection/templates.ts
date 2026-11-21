@@ -13,7 +13,36 @@ import { uniqueSources } from '../shared/sources.js';
 type TemplateValues = Record<string, RuleScalar>;
 type Period = RuleDevelopment['period'];
 type BatchFacts = Pick<ExpressionBatch, 'constants' | 'facts'>;
+type PlaceholderFormat = 'percent' | 'million' | 'points' | 'turns' | 'tiles';
+/** Built-in units keyed by placeholder name patterns; `*` matches any text. */
+const defaultFormatPatterns: Readonly<Record<string, PlaceholderFormat>> = {
+  '*happiness*': 'percent',
+  '*population*': 'million',
+  '*famine*': 'points',
+  '*turns*': 'turns',
+  '*distance*': 'tiles',
+  nearest: 'tiles',
+};
+
+/** Compile a case-insensitive placeholder name pattern with `*` wildcards into an anchored matcher. */
+function formatPattern(pattern: string): RegExp {
+  const source = pattern.split('*')
+    .map((part) => part.replace(/[.+?^${}()|[\]\\]/g, '\\$&'))
+    .join('.*');
+  return new RegExp(`^${source}$`, 'i');
+}
+
+/** Precompiled built-in unit matchers in declaration order. */
+const defaultPlaceholderFormats = Object.entries(defaultFormatPatterns)
+  .map(([pattern, format]) => ({ pattern: formatPattern(pattern), format }));
+
+/** Find the built-in unit for a placeholder name. */
+function defaultFormat(name: string): PlaceholderFormat | undefined {
+  return defaultPlaceholderFormats.find((entry) => entry.pattern.test(name))?.format;
+}
 export const placeholderPattern = /\{\{([^{}]+)\}\}/g;
+/** Template-declared format overrides carried with the placeholder values. */
+export const placeholderFormats = Symbol('placeholderFormats');
 
 /** A complete, evidence-supported authored choice available to an editor. */
 export interface EditorialCandidate {
@@ -51,11 +80,33 @@ export interface EditorialCandidate {
   fingerprint: string;
 }
 
-/** Substitute authored placeholders, preserving unresolved values for explicit validation. */
+/** Read the value name from a placeholder, including a plural form such as `count|branch|branches`. */
+export function placeholderName(key: string): string {
+  const separator = key.indexOf('|');
+  return separator === -1 ? key : key.slice(0, separator);
+}
+
+/** Format a resolved value with its built-in or template-declared unit. */
+function formatted(value: RuleScalar, format: PlaceholderFormat | undefined): string {
+  if (format === 'percent') return `${String(value)}%`;
+  if (format === 'million') return `${String(value)} million`;
+  if (format === 'points') return `${String(value)} ${Number(value) === 1 ? 'point' : 'points'}`;
+  if (format === 'turns') return `${String(value)} ${Number(value) === 1 ? 'turn' : 'turns'}`;
+  if (format === 'tiles') return `${String(value)} ${Number(value) === 1 ? 'tile' : 'tiles'}`;
+  return String(value);
+}
+
+/** Substitute authored placeholders, applying built-in units and any template overrides. */
 export function substitute(text: string, values: TemplateValues): string {
+  const declared = (values as TemplateValues & { [placeholderFormats]?: Record<string, PlaceholderFormat> })
+    [placeholderFormats];
   return text.replace(placeholderPattern, (whole, key: string) => {
-    const value = Object.hasOwn(values, key) ? values[key] : undefined;
-    return value == null ? whole : String(value);
+    const [name, singular, plural, ...rest] = key.split('|');
+    const value = Object.hasOwn(values, name) ? values[name] : undefined;
+    if (value == null) return whole;
+    const printed = formatted(value, declared?.[name] ?? defaultFormat(name));
+    if (singular === undefined || plural === undefined || rest.length) return printed;
+    return `${printed} ${Number(value) === 1 ? singular : plural}`;
   });
 }
 
@@ -122,7 +173,7 @@ function supportingMatch(ids: readonly string[], rules: ReadonlyMap<string, Rule
 /** Build candidate bindings and printable values without flattening members of a group. */
 function templateFacts(
   parts: readonly RuleDevelopment[], period: Period, facts?: BatchFacts['facts'], terms?: EditorialTerms,
-  civicTerms?: EditorialCivicTerms
+  civicTerms?: EditorialCivicTerms, formats: Record<string, PlaceholderFormat> = {}
 ) {
   const subject = storySubject(parts[0].subject, facts);
   const identity = storyIdentity(subject, facts, civicTerms);
@@ -185,12 +236,14 @@ function templateFacts(
       'group.key': group.key, 'group.count': group.count,
     } : {}),
   };
+  if (Object.keys(formats).length)
+    Object.defineProperty(placeholders, placeholderFormats, { value: formats, enumerable: true });
   return { bindings, placeholders, identity };
 }
 
 /** List the placeholder names used by one authored text. */
 function textPlaceholders(text: string): string[] {
-  return [...text.matchAll(placeholderPattern)].map((match) => match[1]);
+  return [...text.matchAll(placeholderPattern)].map((match) => placeholderName(match[1]));
 }
 
 /** Whether a placeholder prints civic vocabulary rather than a legacy term or identity. */
@@ -243,7 +296,7 @@ export async function matchTemplates(
     for (const rules of bySubject.values()) {
       const match = supportingMatch(template.triggers, rules);
       if (!match) continue;
-      const choice = templateFacts(match.parts, match.period, batch.facts, terms, config.civicTerms);
+      const choice = templateFacts(match.parts, match.period, batch.facts, terms, config.civicTerms, template.formats);
       const variants = template.variants.filter((variant) => printable(variant, choice.placeholders));
       if (variants.length || template.merge) plans.push({ template, prepared, ...match, choice, variants });
     }

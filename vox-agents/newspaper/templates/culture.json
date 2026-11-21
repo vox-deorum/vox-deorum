@@ -10,7 +10,7 @@
         "id": "cultural-influence-becomes-influential-incoming-report",
         "headline": "Foreign scrollwork sets the fashion in our streets",
         "body": [
-          "A cartwright has painted the foreign scrollwork on a farmer's wagon, and the farmer paid extra to have it. Foreign influence over us has crossed into Influential at {{percentage}} percent. The cartwright now keeps the pattern on a board by the door."
+          "Shopkeepers here now copy a foreign fashion without being asked, and the clerks have raised the count to Influential at {{percentage}} percent. A cooper upriver carved strange scrollwork into a barrel head this week because a customer wanted it. Nobody in the shop could say where the pattern began."
         ],
         "weight": { "base": 1 }
       },
@@ -22,7 +22,7 @@
         "when": "rival !== null",
         "headline": "In this year the voice of {{rival}} grew strong",
         "body": [
-          "It is recorded that in this year {{rival}} reached the Influential mark among our people, and the count was set at {{percentage}} percent. In the guild hall, apprentices now learn a pattern from across the border before they learn the one their masters cut."
+          "The clerks of this year set the customs of {{rival}} at the Influential mark among our people, and their count was {{percentage}} percent. In the guild hall the apprentices now practise a border pattern before their masters will let them touch the old moulds."
         ],
         "links": [
           { "placeholder": "rival", "label": "{{rival}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -37,7 +37,7 @@
         "when": "rival !== null",
         "headline": "What the children are singing",
         "body": [
-          "{{rival}} has reached the Influential mark over us. At the market, a child sang a tune she'd picked up from a traveling player. Her father says she knows the whole thing, verse after verse. Councilors, where in this town can a singer of our own make enough to buy supper?"
+          "{{rival}} has climbed to Influential in our own streets, and we let it happen at the supper table. The children know a foreign verse from end to end before they know the songs of this town. Councilors, find one bench in this city where a local singer can earn a meal."
         ],
         "links": [
           { "placeholder": "rival", "label": "{{rival}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -51,7 +51,7 @@
         "genre": "analysis",
         "headline": "The teacher stops correcting the words",
         "body": [
-          "The teacher at the school off the tanners' lane has stopped correcting the words of the new song; the children bring it in finished. Foreign influence over us has reached {{percentage}} percent, the mark the clerks call Influential. A peddler at the gate sells the song on a folded sheet."
+          "Behind the ropewalk the schoolmaster has given up marking the new song wrong; the pupils arrive knowing it whole. The foreign share of our habits now stands at {{percentage}} percent, which the clerks call Influential. Down at the gate a boy sells the words on a scrap of paper and cannot keep up with demand."
         ],
         "weight": { "base": 1 }
       }
@@ -68,7 +68,7 @@
         "id": "cultural-influence-becomes-influential-outgoing-report",
         "headline": "Our blue bolt sets the fashion across the border",
         "body": [
-          "A draper on the high street has doubled her order of the blue bolt that sells across the border. Our plays, our cloth and our songs now set the fashion in the streets abroad, and our pull there has passed into Influential at {{percentage}} percent."
+          "A draper on the high street has ordered a second loom for the blue cloth that sells across the border. Our pull abroad has reached Influential at {{percentage}} percent. The carter on the north road leaves with a full bed and returns with a purse of orders."
         ],
         "weight": { "base": 1 }
       },
@@ -80,7 +80,7 @@
         "when": "rival !== null",
         "headline": "Hear it! {{rival}} knows our jokes",
         "body": [
-          "Hear it, {{terms.civic.people}}! Our influence over {{rival}} has reached the Influential mark at {{percentage}} percent. Their players are telling our jokes, and their crowds are laughing in the right places. They know the jokes, neighbors!"
+          "{{terms.civic.people}}, listen! We hold the Influential mark in {{rival}}, and the count is {{percentage}} percent. Their players tell our jokes now, and their crowds laugh at the right moments. Our jokes, neighbors, coming home from across the border!"
         ],
         "links": [
           { "placeholder": "rival", "label": "{{rival}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -95,7 +95,7 @@
         "when": "rival !== null",
         "headline": "Our books could go farther through {{rival}}",
         "body": [
-          "Our influence over {{rival}} has reached the Influential mark at {{percentage}} percent. If printers there can sell enough copies to pay for translations, our writers gain a way to reach readers beyond both countries. A bookseller across a second border might find it cheaper to order those editions than to commission new ones."
+          "Word from {{rival}} is that our influence there has reached Influential, with the count at {{percentage}} percent. A printer in that country who can fill a run may pay for translations, which would carry our writers into lands we never traded with. Booksellers past the next border may soon find our editions cheaper than fresh commissions."
         ],
         "links": [
           { "placeholder": "rival", "label": "{{rival}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -109,7 +109,7 @@
         "genre": "anecdote",
         "headline": "Full houses, and the applause is sincere",
         "body": [
-          "Letters from a rival capital relate that our plays now play to standing crowds there, and that the house is full again the moment the doors open. The official count agrees: our influence in that nation has crossed into Influential. \"The applause,\" our correspondent writes, \"is not given to be polite.\""
+          "A letter from a distant capital says our troupe fills the house there and turns latecomers away at the door. The clerks put our influence in that country at Influential. 'They do not clap out of politeness,' our correspondent writes. 'The last act earned it.'"
         ],
         "weight": { "base": 1 }
       }
@@ -126,7 +126,7 @@
         "id": "cultural-influence-loses-influential-incoming-report",
         "headline": "The tailor clears his window: our pull slips to {{level}}",
         "body": [
-          "A tailor on the cobbled lane has cleared the foreign patterns from his window and hung his own cut in their place. The rival's hold over us has fallen from {{previousLevel}} to {{level}}, to {{percentage}} percent, and the local cloth is moving again."
+          "On the cobbled lane a tailor has taken down the foreign silks and hung his own cut in the window. The grip a rival people had on our taste has eased from {{previousLevel}} to {{level}}, down to {{percentage}} percent. Local cloth is moving again."
         ],
         "weight": { "base": 1 }
       },
@@ -138,7 +138,7 @@
         "when": "rival !== null",
         "headline": "{{rival}} loses its grip on our tastes",
         "body": [
-          "The singing master at the guild school has taken the {{rival}} air off the spring program and put a local ballad in its place. The rival's hold over us has slipped from {{previousLevel}} to {{level}}. Half the hall already knew the chorus of the replacement."
+          "Come spring, the guild school will open with a local ballad in place of the {{rival}} air it used to lead with. The hold of {{rival}} over our taste has softened from {{previousLevel}} to {{level}}. At the first rehearsal, half the hall will already be singing the replacement."
         ],
         "links": [
           { "placeholder": "rival", "label": "{{rival}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -153,7 +153,7 @@
         "when": "rival !== null",
         "headline": "The market remembers its own",
         "body": [
-          "The hold of {{rival}} over us has eased to {{level}}. In the market, a potter has put her mother's clay cups back on the stall. \"I'll make another dozen if these go,\" she says. She looks to the people who stop at her stall to tell her what to make next. The big shops would do well to listen to them too."
+          "The hand of {{rival}} on our habits has slipped to {{level}}. At the market a potter has brought out her mother's clay cups again and swears she will throw another dozen if they sell. She asks the people at her stall what they want next. The big shops could learn from that."
         ],
         "links": [
           { "placeholder": "rival", "label": "{{rival}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -167,7 +167,7 @@
         "genre": "report",
         "headline": "In this year the foreign fashion faded",
         "body": [
-          "It is recorded that the influence of a foreign people over our nation fell in this year from {{previousLevel}} to {{level}}. The elders note that the young are singing the old songs again, learned from grandmothers. What was borrowed is slowly being returned."
+          "In this year the influence of a foreign people over our nation fell from {{previousLevel}} to {{level}}, as the clerks measured it. The elders say the young have gone back to the songs their grandmothers sang. What the town once borrowed, it is handing back."
         ],
         "weight": { "base": 1 }
       }
@@ -184,7 +184,7 @@
         "id": "cultural-influence-loses-influential-outgoing-report",
         "headline": "Our cloth moves back as influence eases to {{level}}",
         "body": [
-          "At the export house, a warehouseman has moved our bolt cloth to the back shelf. Our influence over that rival people has fallen from {{previousLevel}} to {{level}}, to {{percentage}} percent."
+          "Down at the export house a warehouseman has turned our bolt cloth to the back and put plainer goods in front. The tally of our standing there has slid from {{previousLevel}} to {{level}}, now at {{percentage}} percent. Next season's order book is thinner than this one."
         ],
         "weight": { "base": 1 }
       },
@@ -196,7 +196,7 @@
         "when": "rival !== null",
         "headline": "Where our influence slipped in {{rival}}",
         "body": [
-          "Our influence over {{rival}} has slipped from {{previousLevel}} to {{level}}. A printer who once sent new plays abroad has a shelf of unsold copies, and the {{terms.civic.government}} ought to ask whether booksellers there stopped ordering them or simply found a cheaper way to print their own."
+          "Our influence in {{rival}} has dropped from {{previousLevel}} to {{level}}. A printer who once sent new plays across the border now keeps a shelf of unsold copies. The {{terms.civic.government}} should find out whether booksellers there stopped ordering or found a cheaper way to print their own."
         ],
         "links": [
           { "placeholder": "rival", "label": "{{rival}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -211,7 +211,7 @@
         "when": "rival !== null",
         "headline": "Our fashions carry less weight in {{rival}}",
         "body": [
-          "Letters from {{rival}} relate that our styles no longer set theirs as they did; a tailor of that capital, once famous for copying our cuts, has put away his patterns of ours. By the recorded count, our influence there has fallen from {{previousLevel}} to {{level}}."
+          "Letters from {{rival}} tell us our cuts no longer rule the style there; a tailor of that capital, long known for copying our patterns, has put ours away. The clerks' tally records a fall there from {{previousLevel}} to {{level}}."
         ],
         "links": [
           { "placeholder": "rival", "label": "{{rival}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -225,7 +225,7 @@
         "genre": "anecdote",
         "headline": "They've stopped singing our songs",
         "body": [
-          "A trader back from the foreign port was asked if they still sing our songs there. He shrugged. \"They know the words,\" he said. \"They've stopped singing them.\" The count of our influence abroad has fallen to {{level}}."
+          "A trader just in from the foreign port was asked if our songs still fill the streets over there. He paused. 'Every word is still in their mouths,' he said. 'They just no longer use them.' Our influence abroad has fallen to {{level}}."
         ],
         "weight": { "base": 1 }
       }
@@ -242,7 +242,7 @@
         "id": "cultural-influence-trend-turns-incoming-report",
         "headline": "Foreign influence over us turns {{trend}}",
         "body": [
-          "The influence a rival nation holds over our people has turned {{trend}}, after {{previousTrend}}. The count stands at {{percentage}} percent, graded {{level}}. At the print shop, the compositor has set the new count in larger type than the old, and the master let it stand."
+          "The pull of a rival nation on our people has turned {{trend}}, after a spell of running {{previousTrend}}. The tally is {{percentage}} percent, at the {{level}} grade. At the print shop the compositor gave the new number a larger face than the old, and the master let it stand."
         ],
         "weight": { "base": 1 }
       },
@@ -252,9 +252,9 @@
         "stance": "neutral",
         "genre": "analysis",
         "when": "turnsToInfluential !== null",
-        "headline": "Foreign influence has {{turnsToInfluential}} turns to Influential, a schoolmaster bets",
+        "headline": "Foreign influence has {{turnsToInfluential}} to Influential, a schoolmaster bets",
         "body": [
-          "A schoolmaster has ordered a second printing of the foreign songbook before the term ends, on the guess that demand will last. Foreign influence over us has turned {{trend}}, and by the count it has {{turnsToInfluential}} turns to reach Influential. If the guess is wrong, the extra copies will sit in his cupboard."
+          "A schoolmaster has ordered a second printing of the foreign songbook, betting the demand will outlast the term. The trend over us is now {{trend}}, and by the forecast it needs {{turnsToInfluential}} to reach Influential. If the bet fails, the spare copies will sit in his cupboard."
         ],
         "weight": { "base": 1 }
       },
@@ -266,7 +266,7 @@
         "when": "rival !== null",
         "headline": "The cloth sellers knew before the scribes did",
         "body": [
-          "There is an argument at the cloth stalls this season, and the wives conduct it loudly: the foreign bolt or the local weave, which does the town want? The count has come in from the scribes, and the influence of {{rival}} over us has turned {{trend}}. The stalls will tell you they knew it first."
+          "They say the cloth stalls have argued all season over the foreign bolt and the local weave, and the wives do not lower their voices. The scribes have finally sent their count, and the influence of {{rival}} over us has turned {{trend}}. The stalls claim they called it weeks ago."
         ],
         "links": [
           { "placeholder": "rival", "label": "{{rival}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -280,9 +280,9 @@
         "genre": "ledger",
         "headline": "The influence ledger",
         "body": [
-          "Foreign influence over us: {{level}}",
-          "Count at last reckoning: {{percentage}} percent",
-          "Direction: {{trend}}, after {{previousTrend}}"
+          "Hold of a foreign people on our taste: {{level}}",
+          "Share recorded at the last reckoning: {{percentage}} percent",
+          "Direction now: {{trend}}, previously {{previousTrend}}"
         ],
         "weight": { "base": 1 }
       }
@@ -299,7 +299,7 @@
         "id": "cultural-influence-trend-turns-outgoing-report",
         "headline": "Our influence abroad turns {{trend}}",
         "body": [
-          "Our influence over a rival people has turned {{trend}}, after {{previousTrend}}. The count stands at {{percentage}} percent, graded {{level}}. At the export house, the clerk has last season's order book open beside this one and runs a finger down both columns before he quotes a price."
+          "Our reach over a rival people has swung {{trend}}, after a season of running {{previousTrend}}. The tally reads {{percentage}} percent, a grade of {{level}}. At the export house the clerk lays last season's order book beside the new one and traces both columns before naming a price."
         ],
         "weight": { "base": 1 }
       },
@@ -309,9 +309,9 @@
         "stance": "ambitious",
         "genre": "report",
         "when": "turnsToInfluential !== null",
-        "headline": "Forecast: {{turnsToInfluential}} turns to Influential",
+        "headline": "Forecast: {{turnsToInfluential}} to Influential",
         "body": [
-          "Our influence abroad is {{trend}}. The forecast gives us {{turnsToInfluential}} turns to reach Influential. At the export house, the shipping agent has left the autumn order sheet half filled."
+          "Our standing abroad is {{trend}} tonight. Forecasters give us {{turnsToInfluential}} to reach Influential. At the export house, the shipping agent has set the autumn order sheet aside."
         ],
         "weight": { "base": 1 }
       },
@@ -323,7 +323,7 @@
         "when": "rival !== null && trend === 'Rising'",
         "headline": "Our fashions rise again in {{rival}}",
         "body": [
-          "Letters from {{rival}} relate that our styles are once more in the ascendant there. A hostess of that capital is said to have apologized to her guests for serving a native wine. The recorded count agrees: our influence has turned Rising, at the {{level}} grade."
+          "Letters from {{rival}} say our styles are back in favor at that court. A hostess of that capital is said to have blushed over the native wine she poured. The tally agrees, placing our influence at Rising and the {{level}} grade."
         ],
         "links": [
           { "placeholder": "rival", "label": "{{rival}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -338,7 +338,7 @@
         "when": "rival !== null && trend === 'Falling'",
         "headline": "In this year our word carried less weight",
         "body": [
-          "It is recorded that our influence over {{rival}} turned from Rising to Falling in this year, and rests at the {{level}} grade. The chronicle notes that fewer of their young came to study at our schools. The scribes set the change down as it was measured."
+          "It is recorded that our influence over {{rival}} swung to Falling in this year and now sits at the {{level}} grade. Fewer of their young came to study at our schools, the scribes observe. They wrote the change down as measured and added nothing."
         ],
         "links": [
           { "placeholder": "rival", "label": "{{rival}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -352,7 +352,7 @@
         "genre": "analysis",
         "headline": "Culture is a front line too",
         "body": [
-          "Our influence over a rival has turned {{trend}}, resting at the {{level}} grade. The officers at the border posts have a use for that number. In a village that knows our songs and buys our pots, a patrol can ask the way to the ford and get an answer. In one that knows neither, every stranger is watched from the doorway. A column that has to pass through the second kind of village loses a day before it ever sees the enemy."
+          "Our influence over a rival has swung {{trend}} and sits at the {{level}} grade. Border officers read that figure as a map. Where our songs are sung and our pots are sold, a patrol gets directions to the ford. Where neither is known, doors close and faces watch from the dark. A column crossing such a village loses a day before it ever finds the enemy."
         ],
         "weight": { "base": 1 }
       }
@@ -369,7 +369,7 @@
         "id": "enemy-wonder-nearby-report",
         "headline": "{{city}} completes the {{wonder}} under an enemy flag",
         "body": [
-          "A shepherd on the border ridge can see the {{wonder}} finished above the walls of {{city}}. The work went up through the whole war, stone on stone, and the war did not stop it."
+          "A shepherd on the border ridge saw the last scaffold come off the {{wonder}} above the walls of {{city}}. The work rose stone by stone while the fighting went on, and the fighting did not stop it."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -380,7 +380,7 @@
         "id": "enemy-wonder-nearby-unnamed",
         "headline": "An enemy city completes a wonder near our border",
         "body": [
-          "The {{wonder}} is complete in an enemy city close to our own towns."
+          "The {{wonder}} is done in an enemy city near our border. Travelers on the border road say the dust from the site settled only this week."
         ],
         "weight": { "base": 1 }
       },
@@ -391,7 +391,7 @@
         "genre": "analysis",
         "headline": "The {{wonder}} at {{city}} frees its masons for war",
         "body": [
-          "The {{wonder}} at {{city}} is finished, and the masons who raised it are looking for their next wages. A nation at war has work for hands like those. A yard that can set a course of stone that true can set a rampart just as well. Where the enemy sends them next, a wall will follow."
+          "The {{wonder}} at {{city}} is done, and its masons are already asking where the next wages will come from. A country at war never lacks work for such hands. A crew that can lay a true course of stone can raise a rampart just as well. Where the enemy sends them next, a rampart will rise."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -405,7 +405,7 @@
         "genre": "report",
         "headline": "A fine hall under a hostile flag",
         "body": [
-          "Advice reaches this office that the {{wonder}} now stands finished in enemy {{city}}, and that the workmanship is very fine; our correspondent confesses he stood a long while before it. Whatever banner hangs above it, the masons deserve their fee. It is a melancholy thing that so fine a hall should rise under a hostile sky."
+          "This office has advice that the {{wonder}} in enemy {{city}} is finished, and that the stonework is very fine; our correspondent admits he lingered before it. The masons have earned their fee, whatever flag flies above them. It is a sad waste that such skill should serve a hostile sky."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -419,7 +419,7 @@
         "genre": "anecdote",
         "headline": "The herd boys came back talking of towers",
         "body": [
-          "The herd boys came down at dusk talking of towers across the line, taller than anything on our side. The enemy city of {{city}} has raised the {{wonder}}, and the boys argued all the way home about what it was for. The capital can call the war its own affair. When you can see the enemy's towers from the pasture, the war is yours too."
+          "The boys came down from the pasture talking of towers across the line taller than ours. {{city}} had raised the {{wonder}}, they said, and they argued all the way home about what it was for. When enemy towers stand in view of the pasture, the war is the herders' too."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -440,7 +440,7 @@
         "when": "cityName !== null && civilization !== null",
         "headline": "{{cityName}} completes the {{wonder}}",
         "body": [
-          "The {{wonder}} stands finished in {{cityName}}, a city of {{civilization}}. Word of the work arrived with the last stones set, and already our own travelers are asking the way there."
+          "Builders in {{cityName}} have finished the {{wonder}}, and the city belongs to {{civilization}}. Scaffolds barely down, and travelers here are already asking the road to it."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -452,7 +452,7 @@
         "when": "cityName === null || civilization === null",
         "headline": "A wonder finished abroad",
         "body": [
-          "The {{wonder}} now stands complete in a foreign city. Word of the work reached us after the scaffolds came down, and already the travelers are changing their routes to take it in."
+          "A foreign city has just finished the {{wonder}}. By the time the report reached us the boards were down, and travelers here are already planning the detour."
         ],
         "weight": { "base": 1 }
       },
@@ -464,7 +464,7 @@
         "when": "civilization !== null",
         "headline": "The {{wonder}} makes {{civilization}} hard to forget",
         "body": [
-          "The {{wonder}} is complete in {{civilization}}. A correspondent there says his editor keeps asking for another column on it. What our own planners should notice is how much space a single work can earn in papers that usually print that country's name only when its ministers make news."
+          "{{civilization}} has finished the {{wonder}}. A correspondent there reports that his editor wants yet another column about it. Our own planners might note how much room one work can win in papers that print that country's name only when its ministers make news."
         ],
         "weight": { "base": 1 }
       },
@@ -476,7 +476,7 @@
         "when": "cityName !== null",
         "headline": "They will walk you through every stone",
         "body": [
-          "They say the scaffolds came down at {{cityName}} this season, and the {{wonder}} stood in the open air for the first time. The travelers back from {{cityName}} talk of little else. Let one of them buy you a drink and you will hear about every stone twice."
+          "Word is that the boards came off at {{cityName}} this season and left the {{wonder}} open to the sky. People who have seen it can talk of nothing else. Buy one of them a drink and every stone gets its own description."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -491,7 +491,7 @@
         "when": "cityName !== null",
         "headline": "The {{wonder}} at {{cityName}} is complete",
         "body": [
-          "Letters from {{cityName}} relate that the {{wonder}} now stands finished there, and that visitors of every nation are already on the road to see it; our own included, the innkeepers say. Whatever divides the courts, a work like this is a pleasure shared. May it long draw a crowd."
+          "Letters from {{cityName}} say the {{wonder}} is finished there, and the innkeepers report that visitors from many nations are already on the road, our own among them. Courts may quarrel, but a work of this order gives pleasure to every visitor who reaches it. May the crowds keep coming for many seasons."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -512,7 +512,7 @@
         "when": "civilization !== null",
         "headline": "A name for the histories is born in {{civilization}}",
         "body": [
-          "{{person}} has been born in {{civilization}}. By evening the neighbors had filled the doorstep with small gifts, and a scribe had come to write the name in the margin of the year."
+          "{{civilization}} has welcomed {{person}} into the world. Well-wishers filled the street before the evening meal, each carrying something small. A scribe arrived last and asked how the name was spelled."
         ],
         "weight": { "base": 1 }
       },
@@ -521,7 +521,7 @@
         "when": "civilization === null",
         "headline": "A name for the histories is born",
         "body": [
-          "{{person}} has come into the world, and no one yet agrees which court may claim them. Envoys from more than one have already called at the house, and the family has not decided whom to receive."
+          "A new name, {{person}}, has entered the world, and no one yet agrees which court may claim them. Envoys from more than one court have knocked already, and the family keeps them waiting in the yard."
         ],
         "weight": { "base": 1 }
       },
@@ -533,7 +533,7 @@
         "when": "civilization !== null && unit !== null",
         "headline": "In this year a {{unit}} came to {{civilization}}",
         "body": [
-          "It is recorded for this year that {{civilization}} received the {{unit}} {{person}}, newly come into the world. The scribes have set the name down in the margin as well as the line, which is done for no ordinary name."
+          "In this year {{civilization}} gained the {{unit}} {{person}}. The scribes entered the name in the margin as well as the line, a courtesy kept for no ordinary name."
         ],
         "weight": { "base": 1 }
       },
@@ -545,7 +545,7 @@
         "when": "ours === true",
         "headline": "A room is cleared before the work is chosen",
         "body": [
-          "{{person}} is ours. A porter at the works has been told to clear a room and find a bed before the week is out, and nobody has told him what work the room is for. The council has not decided whether the work is art, state or war. The room will be furnished first."
+          "{{person}} is ours. The works steward has orders to clear a room and find a bed by week's end, and no one has told him what the room is for. Art, state or war: the council has not chosen which. First the room gets its furniture; the purpose can wait."
         ],
         "weight": { "base": 1 }
       },
@@ -557,7 +557,7 @@
         "when": "ours === false && civilization !== null",
         "headline": "Word for the {{terms.civic.people}}: a rival has a name we lack",
         "body": [
-          "Mark it, {{terms.civic.people}}: {{civilization}} counts {{person}} among its own, and we do not. Their gates have a new name to carve over them, and ours have none. Say what you like about friendship; the ledger does not read speeches."
+          "Take note, {{terms.civic.people}}: {{civilization}} can name {{person}} as its own, and we cannot. Their gates have a fresh name to carve above them, and ours stand blank. Speak of friendship all you like; the ledger keeps no speeches."
         ],
         "weight": { "base": 1 }
       }
@@ -574,7 +574,7 @@
         "id": "great-person-died-report",
         "headline": "The death of {{person}}",
         "body": [
-          "The bells of {{civilization}} rang at noon for {{person}}, and the square filled before they stopped. The name was known far beyond that nation's borders, and the news is traveling as far now."
+          "{{civilization}} rang its bells at noon for {{person}}, and the square had filled before the echoes died. That name was known far past the nation's borders. The news is on the road again tonight, in every direction."
         ],
         "weight": { "base": 1 }
       },
@@ -585,7 +585,7 @@
         "genre": "obituary",
         "headline": "The world is one name poorer",
         "body": [
-          "{{person}} of {{civilization}} is dead. The name was spoken in many lands in life, and the work left behind is written where no fire reaches. In the shrines, a lamp has been lit beside the name, and the wardens mean to keep it burning through the season."
+          "Death has taken {{person}}, and {{civilization}} has lost one of its own. While they lived, that name carried into many lands, and what they made survives where no flame can touch it. The shrine wardens have set a lamp beside the name and sworn to keep it burning until the season turns."
         ],
         "weight": { "base": 1 }
       },
@@ -597,7 +597,7 @@
         "when": "killer !== null",
         "headline": "{{killer}} kills {{person}}",
         "body": [
-          "{{person}} of {{civilization}} has died at the hands of {{killer}}. The news reached the barracks before it reached the family, and the sergeant read it twice before he posted it. Nobody in the yard spoke."
+          "{{killer}} has killed {{person}} of {{civilization}}. The barracks heard before the family did, and the sergeant read the notice twice before he nailed it up. The yard went quiet."
         ],
         "weight": { "base": 1 }
       },
@@ -609,7 +609,7 @@
         "when": "ours === true",
         "headline": "They sat late at the fires tonight",
         "body": [
-          "They sat late at the fires tonight. {{person}}, one of our own, is gone, and nobody wanted to be the first to leave the light. The stories about {{person}} started before the fire burned low, and by tomorrow every hearth will have its favorite."
+          "Nobody moved from the fires tonight. {{person}}, one of our own, has died, and no one wanted to be the first away from the warmth. The stories began before the flames sank, and by morning each hearth will tell a different one."
         ],
         "weight": { "base": 1 }
       },
@@ -621,7 +621,7 @@
         "when": "ours === true && killer !== null",
         "headline": "Somebody sent {{person}} to their death",
         "body": [
-          "{{person}} is dead at the hands of {{killer}}. Greatness does not walk onto a battlefield by accident; somebody gave the orders that put one of our finest within an enemy's reach, and that somebody has a name and a desk. We want the name. We want the orders read aloud in council."
+          "{{killer}} has taken {{person}} from us. Greatness does not stumble onto a battlefield; an order put one of our best within an enemy's reach, and that order has an author with a desk and a name. Give us the name. Let council hear those orders read out."
         ],
         "weight": { "base": 1 }
       }
@@ -638,7 +638,7 @@
         "id": "great-person-expended-report",
         "headline": "{{person}}'s study is cleared and the door locked",
         "body": [
-          "In {{civilization}}, the study that {{person}} kept has been cleared and the books crated for the guild. The work is finished, the gift is spent, and the door is locked behind it."
+          "{{civilization}} has cleared the room where {{person}} worked and sent the books to the guild. The gift is spent, the work is done, and the key has been turned."
         ],
         "weight": { "base": 1 }
       },
@@ -650,7 +650,7 @@
         "when": "ours === true",
         "headline": "Notice: {{person}} spent in the nation's service",
         "body": [
-          "Notice is given that {{person}} has been spent in the nation's service. The council turned the gift to a purpose of state with its usual foresight. The particulars are not for every eye, and the public's thanks are owed."
+          "Let it be known that {{person}} has been spent in the nation's service. The council, in its customary foresight, turned the gift to a purpose of state. Not every detail is fit for the public eye. The public's thanks are owed all the same."
         ],
         "weight": { "base": 1 }
       },
@@ -661,7 +661,7 @@
         "genre": "analysis",
         "headline": "A talent spent is a bet on the present",
         "body": [
-          "Spending {{person}} converts a whole future into one immediate act, and {{civilization}} has placed that bet. The sums will show in time whether the trade was wise. The person was not consulted."
+          "Spending {{person}} turns a whole future into one act now, and {{civilization}} has made that bet on the present. Time and the account books will judge whether the bargain paid. Nobody thought to ask the person whose future it was."
         ],
         "weight": { "base": 1 }
       },
@@ -673,7 +673,7 @@
         "when": "ours === false",
         "headline": "The autograph he missed",
         "body": [
-          "A boy in {{civilization}} saved the last page of his copybook for {{person}} to sign. Now that the work was done, his father told him he'd missed his chance. The boy wrote the name himself. \"The first letter's got to be big,\" he told his little brother."
+          "In {{civilization}} a boy kept one blank page at the back of his copybook for {{person}} to sign. His father told him the work was finished before he had his chance. So he copied the name in his own hand. \"Make the first letter big,\" he told his little sister."
         ],
         "weight": { "base": 1 }
       }
@@ -690,7 +690,7 @@
         "id": "great-works-added-report",
         "headline": "New works on the walls of {{city}}",
         "body": [
-          "The hanging crew in {{city}} has been up the ladders since dawn, moving one frame to make room for the next. The walls now hold {{added}} more works than they did, {{total}} in all."
+          "Crews in {{city}} have been up the ladders since first light, moving frames to make room. The count on the walls has grown by {{added}}, to {{total}} in all."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -704,7 +704,7 @@
         "genre": "notice",
         "headline": "Notice to lovers of the arts",
         "body": [
-          "{{city}} is richer by {{added}} great works, making {{total}} in all. The galleries keep their usual hours. Linger as long as you like; the guards have been told to expect it."
+          "The galleries of {{city}} are richer by {{added|great work|great works}}, making {{total}} in all. They keep their usual hours. Linger as long as you please; the guards have been told to look the other way."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -718,7 +718,7 @@
         "genre": "analysis",
         "headline": "A neighboring gallery asks {{city}} for a winter loan",
         "body": [
-          "{{city}} has added {{added}} works to its collection, bringing it to {{total}}. The neighboring town gallery has offered to send its wagon, with freshly made crates, for a winter loan. A loan on those terms could let small towns show works they can't afford to buy."
+          "{{city}} has gained {{added|work|works}} for its collection, which now numbers {{total}}. The gallery in the next town has offered to send a wagon and fresh crates for a winter loan. Terms like those would carry art to towns that could never buy it."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -732,7 +732,7 @@
         "genre": "anecdote",
         "headline": "The crates came up from the docks before dawn",
         "body": [
-          "The crates came up from the docks before dawn, and by evening {{added}} new works hung in the galleries of {{city}}. The first admirers had waited at the door since noon, and the guards gave up shooing them off when the queue reached the fountain."
+          "Before dawn the crates were carried into the galleries of {{city}}, and by evening the gallery held {{added|new work|new works}}. The first admirers arrived by noon, and when the queue reached the fountain the guards stopped trying to move them along."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -752,7 +752,7 @@
         "id": "great-works-lost-report",
         "headline": "Great works lost from the galleries of {{city}}",
         "body": [
-          "The galleries of {{city}} are {{lost}} great works lighter than at the last count; {{total}} remain. A gallery hand has measured the bare spaces twice and put the tape away without cutting a frame."
+          "The galleries of {{city}} hold {{lost}} fewer great works than at the last count, with {{total}} left. Twice a gallery hand has measured the empty spaces, then put his tape away without cutting a frame."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -766,7 +766,7 @@
         "genre": "obituary",
         "headline": "The walls of {{city}} are barer",
         "body": [
-          "The galleries of {{city}} held more at their height. {{lost}} great works are gone from the walls, and {{total}} remain. At closing, the attendant walks the rooms and counts the hooks that hold nothing."
+          "The galleries of {{city}} held more in their best days. The walls have lost {{lost|great work|great works}}, and {{total}} still hang there. At closing the attendant makes his round, counting the hooks that hold nothing."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -780,7 +780,7 @@
         "genre": "editorial",
         "headline": "Print the names of the missing works",
         "body": [
-          "The new count of great works in {{city}} is down by {{lost}}. If the works were sent away, let the {{terms.civic.government}} say where we can see them. If they are lost, let it print their names. A reader might know where a missing work went, if we can tell her which one it is."
+          "The count of great works in {{city}} has dropped by {{lost}}. If the works were carried off, the {{terms.civic.government}} should tell us where they stand now. If they have vanished, it should publish the names. One of our readers may know where a missing work has gone, if only we can tell her which one to look for."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -794,7 +794,7 @@
         "genre": "anecdote",
         "headline": "The nail is still in the wall",
         "body": [
-          "The old keeper says the nail is still in the wall, right where the painting hung, and that he has not the heart to take it out. {{lost}} great works are gone from {{city}}. The capital will hardly notice. The city notices every empty frame."
+          "The old keeper cannot bring himself to pull the nail where the painting hung. {{city}} has lost {{lost|great work|great works}} from its collection. The rest of the nation will hardly feel it. Here, every empty frame is felt."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -814,7 +814,7 @@
         "id": "our-wonder-completed-report",
         "headline": "The {{wonder}} stands at {{city}}",
         "body": [
-          "{{city}} has completed the {{wonder}}. One of the people who worked on it brought her children to see what had kept her late; the youngest had never seen it without the boards the crews had put up around the site."
+          "{{city}} has raised the {{wonder}} at last. A mason's wife brought her children to see what had kept him from supper all year, and the youngest stared a long time at the roof."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -825,7 +825,7 @@
         "id": "our-wonder-completed-unnamed",
         "headline": "A wonder of our own is finished",
         "body": [
-          "The {{wonder}} is complete. The scaffolding is down, and the first people through the gate this morning stopped in the road to look. One of them has already come back with a neighbor."
+          "The {{wonder}} is finished at last. The scaffolds have come down, and the first people through the gate this morning halted in the road to stare. One of them has already gone to fetch a neighbor."
         ],
         "weight": { "base": 1 }
       },
@@ -836,7 +836,7 @@
         "genre": "notice",
         "headline": "Hear it, {{terms.civic.people}} of {{city}}! The {{wonder}} is done",
         "body": [
-          "The scaffolds are down! The {{wonder}} stands, finished and ours! Say it at the well, say it at the gate: it is ours, it is ours! Let the neighbors come and see what we build, and let them carry the sight home with them!"
+          "The last plank is down! The {{wonder}} is done, and it belongs to us! Tell it at the well and at the gate: ours, ours! Let the neighbors walk over and see what our hands can raise, and carry the sight home with them!"
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -850,7 +850,7 @@
         "genre": "analysis",
         "headline": "The innkeeper at {{city}}'s {{wonder}} orders a second cart",
         "body": [
-          "The innkeeper by the gate of {{city}} has ordered a second cart of ale for the yard. Travelers are already arriving to see it, and the masons who raised it are still in the city, their scaffolds stacked by the wall."
+          "An innkeeper outside the gate of {{city}} has ordered a second cart of ale for his yard. Visitors are already coming to look at the hall, and its masons have not yet left, their scaffolds stacked against the wall."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -864,7 +864,7 @@
         "genre": "anecdote",
         "headline": "The children got there first",
         "body": [
-          "The last scaffold plank came down at noon, and by evening the children of {{city}} were playing beneath the {{wonder}}, every one of them promising to build a bigger one. The masons watched from the fence and did not chase them off."
+          "By evening the children of {{city}} had claimed the ground under the {{wonder}}, each one promising a taller one. The masons, their last plank down since noon, leaned on the fence and let them play."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -885,7 +885,7 @@
         "when": "civilization !== null",
         "headline": "The visitors come to {{civilization}} first",
         "body": [
-          "In {{civilization}}, a guide has added a second walk to her week, and the coach yard turns away carts by noon. The count now puts the country first at {{tourism}}, ahead of last season's leader."
+          "A guide in {{civilization}} now fills two walks a week, and the coach yard is turning carts away by noon. The tally now sets the country first at {{tourism}}, above the leader of last season."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -897,7 +897,7 @@
         "when": "civilization === null",
         "headline": "A change at the top of the tourism table",
         "body": [
-          "First place in tourism has changed hands, with the new leader rated at {{tourism}}. A guide who keeps a folder of itineraries says customers have started asking what they might see if they took a different road this year."
+          "A new name sits at the top of the visitors' table, with a rating of {{tourism}}. A guide with a folder of itineraries says customers now ask what they would see by taking a different road this year."
         ],
         "weight": { "base": 1 }
       },
@@ -909,7 +909,7 @@
         "when": "civilization !== null && tied === false",
         "headline": "The tourism lead goes to {{civilization}}",
         "body": [
-          "We are informed that the tourism table has a sole leader: {{civilization}}, with a rating of {{tourism}}. The editor of a travel almanac here says he will give the country the first pages of his next edition."
+          "Word reaches us that {{civilization}} stands alone at the head of the visitors' table, rated {{tourism}}. A travel almanac editor here plans to open his next edition with the country."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -924,7 +924,7 @@
         "when": "civilization !== null && tied === true",
         "headline": "A share of first place for {{civilization}}",
         "body": [
-          "The visitors' count has {{civilization}} level with the best, at {{tourism}}. A booking clerk has stopped calling the choice obvious."
+          "{{civilization}} now shares the top of the visitors' count at {{tourism}}. A booking clerk no longer calls the choice obvious."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -939,7 +939,7 @@
         "when": "civilization !== null",
         "headline": "Tourism: No. 1 for {{civilization}}",
         "body": [
-          "{{tourism}} in the latest tourism table. That's enough for first place."
+          "{{tourism}} on the visitors' table. First place."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }

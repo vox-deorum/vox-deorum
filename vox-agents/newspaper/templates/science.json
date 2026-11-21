@@ -11,7 +11,7 @@
         "when": "civilization !== null",
         "headline": "A friend in the {{era}}: {{civilization}}",
         "body": [
-          "The crossing from the {{former}} into the {{era}} is complete in {{civilization}}, a friend of our nation. In their towns, the schoolteachers have hung new charts beside the old ones, and the youngest pupils are learning them by heart. Their parents are hearing the new words at supper."
+          "{{civilization}}, a friend of ours, has left the {{former}} behind and entered the {{era}}. In its market squares the criers have been reading the same proclamation since dawn, and the crowd keeps asking them to begin again. Our traders should take note: a neighbor with new tools will soon want new goods."
         ],
         "weight": { "base": 1 }
       },
@@ -20,7 +20,7 @@
         "when": "civilization === null",
         "headline": "A friendly power enters the {{era}}",
         "body": [
-          "A friend of our nation has crossed from the {{former}} into the {{era}}, and the name has not reached us. The couriers brought the age before they brought the name."
+          "A nation friendly to ours has passed out of the {{former}} and into the {{era}}, though no one here can yet say which nation. The rider who brought the dispatch had the date and the age right and the name wrong, or perhaps never had it. Until a second rider comes, the paper will print the age and leave the name to the next dispatch."
         ],
         "weight": { "base": 1 }
       },
@@ -32,7 +32,7 @@
         "when": "civilization !== null",
         "headline": "A friend crosses into the {{era}}",
         "body": [
-          "Letters from the friendly courts bring word that {{civilization}} has lately passed from the {{former}} into the {{era}}. Our envoys there have sent home for the new charts, and the mapmakers have begun redrawing the roads. A friend grown stronger in the learning of the age makes a better customer and a steadier neighbor, and we welcome both."
+          "We are informed by letters from the friendly courts that {{civilization}} has lately passed from the {{former}} into the {{era}}, and that its scholars have taken up the work of the new age. The envoy who writes to us asks whether we should care to see the new charts, a courtesy we accept with pleasure. It is no small thing for a neighbor to grow in knowledge while keeping its old manners, and we count the friendship the better for it."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -47,7 +47,7 @@
         "when": "civilization !== null",
         "headline": "A new age in {{civilization}}, they say",
         "body": [
-          "The drovers brought it over the pass before any letter could: {{civilization}} has crossed into the {{era}}. They say the bells in their towns rang all evening."
+          "They say the first any of us knew of it was a peddler who came down from the hills with a new sort of clasp on his coat and would not say where he got it. {{civilization}} has gone into the {{era}}, and the peddlers are always the last to tell and the first to show."
         ],
         "weight": { "base": 1 }
       },
@@ -59,7 +59,7 @@
         "when": "civilization !== null && distance !== null",
         "headline": "Of {{civilization}}'s entry into the {{era}}",
         "body": [
-          "It is recorded that {{civilization}}, whose nearest city stands {{distance}} tiles from our own, left the {{former}} in this season and entered the {{era}}. At the school there, the keeper of the books set a fresh sheet at the head of the year's accounts."
+          "In this season {{civilization}} departed the {{former}} and entered the {{era}}, and its nearest city is set down in our rolls at {{distance}} from our own. The keeper of the frontier road was instructed to note every crossing at the boundary stone. No breach of the peace was recorded."
         ],
         "weight": { "base": 1 }
       },
@@ -70,7 +70,7 @@
         "genre": "analysis",
         "headline": "What a friend's new era means",
         "body": [
-          "Our friend has crossed from the {{former}} into the {{era}}. A professor here has asked an old colleague there for permission to bring students to his lectures. A visit like that can bring home lessons our scholars would otherwise have to wait to read."
+          "Our friend has entered the {{era}}, and the {{former}} is behind it. Our professors have already written to colleagues there about an exchange of students, though no reply has come back. A friendship that carries scholars as well as goods is worth more than a treaty that carries neither."
         ],
         "weight": { "base": 1 }
       }
@@ -88,7 +88,7 @@
         "when": "!team.includes(' and ')",
         "headline": "New learning on the frontier: {{tech}}",
         "body": [
-          "Word from the frontier: {{tech}} is now known in {{team}}, whose cities stand close to ours. The border clerks have begun asking travelers what they have heard of it, and paying for the answers."
+          "{{team}} has learned {{tech}}, and its cities stand close enough that its caravans are a common sight on our roads. At the frontier market, buyers have begun asking whether goods made the new way will soon be for sale. Our own craftsmen will need an answer before their customers find one."
         ],
         "weight": { "base": 1 }
       },
@@ -97,7 +97,7 @@
         "when": "team.includes(' and ')",
         "headline": "New knowledge in {{team}}: {{tech}}",
         "body": [
-          "Word from abroad: {{tech}} now appears on the learned rolls of {{team}}. Their bookbinders have been asked for another copy before the first is dry."
+          "{{team}} now share {{tech}}, and the news reached us from two directions at once. Each court credits the other with the discovery, which is a polite way of saying that nobody will name the scholar. What matters here is that the knowledge now sits on both sides of a shared border."
         ],
         "weight": { "base": 1 }
       },
@@ -108,7 +108,7 @@
         "genre": "analysis",
         "headline": "A neighbor's new learning",
         "body": [
-          "In {{team}}, whose lands run along ours, a workshop has cleared its benches for {{tech}}. The apprentices have been kept back after hours, and the master has stopped hiding the work from visitors."
+          "In {{team}}, {{tech}} has been taken up, and the workshops there have gone quiet about it. A carter who hauls for them says the gates close earlier now and the lamps burn past midnight. We should read that as old purposes fitted with new tools, and ask what our own workshops are doing at midnight."
         ],
         "weight": { "base": 1 }
       },
@@ -119,7 +119,7 @@
         "genre": "notice",
         "headline": "Notice to the learned: {{tech}} abroad",
         "body": [
-          "The printers advise the learned that the art of {{tech}} is now practiced by {{team}}, whose cities stand near ours. The fact is set down as it arrived, and correction is invited from any scholar who can show otherwise."
+          "The printers give notice that {{tech}} is now practiced in {{team}}, whose lands lie near our own. Any scholar who can show the report false is invited to call at the office and set the record right. Until then the notice stands as received."
         ],
         "weight": { "base": 1 }
       },
@@ -130,7 +130,7 @@
         "genre": "anecdote",
         "headline": "New learning across the fence",
         "body": [
-          "At the border stalls the morning's argument was {{tech}}. The knife-grinder swore it would change everything and could not say what. By noon the market agreed on one thing only: it is {{team}}'s now, and the fence has never once stopped a rumor."
+          "The argument started at the well and moved to the bakery by midmorning: {{tech}} has reached {{team}}, and nobody could agree on what it would do to the price of bread. The baker's answer settled it. \"Whatever it is,\" she said, \"they will want it before we do, and they will pay us to carry it.\""
         ],
         "weight": { "base": 1 }
       },
@@ -141,7 +141,7 @@
         "genre": "proverb",
         "headline": "The lamp next door",
         "body": [
-          "Next door the lamp burns bright and late. {{tech}} is the word at our gate."
+          "{{tech}} burns at the neighbor's hearth. Our own fire must be tended the harder."
         ],
         "weight": { "base": 1 }
       }
@@ -158,7 +158,7 @@
         "id": "new-era-report",
         "headline": "Our nation enters the {{era}}",
         "body": [
-          "Our nation has entered the {{era}}. A joiner who began as an apprentice in the old era says she has started putting aside worn tools for pupils who want to see how their grandparents worked."
+          "Our nation has entered the {{era}}. At the shipyard the foreman has pinned the old drawings to the wall and told the apprentices to copy them before they fade. Nobody has said what the new age will ask of them, but they have kept the old plans close."
         ],
         "weight": { "base": 1 }
       },
@@ -169,7 +169,7 @@
         "genre": "notice",
         "headline": "Hear it! The {{era}} is ours",
         "body": [
-          "Hear it, hear it, {{terms.civic.people}} of the {{era}}! The old age is done with us, and the new one is ours. Every town, every farm, every one of us stands in it together. Say it in the streets and say it again: the {{era}} is ours!"
+          "Hear it, {{terms.civic.people}}! The old age is behind us and the {{era}} is here. From the capital to the last farm on the frontier, one country stands in it together. Tell your children tonight: the {{era}} is ours."
         ],
         "weight": { "base": 1 }
       },
@@ -180,7 +180,7 @@
         "genre": "report",
         "headline": "The {{era}} begins tonight",
         "body": [
-          "The nation has entered the {{era}}. We asked a schoolteacher what he would tell his pupils. \"I want to know what they expect to be able to do that I can't,\" he said."
+          "The nation is in the {{era}} tonight. In the schools, teachers are asking pupils a new question: what will you be able to do that your parents could not? Nobody has an answer yet. The country has a whole age to work it out."
         ],
         "weight": { "base": 1 }
       },
@@ -191,7 +191,7 @@
         "genre": "report",
         "headline": "The record of our passage into the {{era}}",
         "body": [
-          "In this year it was given to the nation to pass out of the former age and into the {{era}}. The scribes set it down with thanks. In the shrines the lamps will burn late this season; heaven carried us here, and the wardens mean to say so."
+          "In this year the nation passed from the former age into the {{era}}. The scribes entered the date in the great register, and the wardens lit the lamps at every shrine. Let the record show that we came into the new age with thanks, and not with boasting."
         ],
         "weight": { "base": 1 }
       },
@@ -203,7 +203,7 @@
         "headline": "The bells rang all morning",
         "byline": "A clerk of the capital",
         "body": [
-          "Madam Editor, the bells rang all morning for our entry into the {{era}}, and already I hear neighbors calling it the world turning. Worlds do not turn by themselves. This crossing was planned, paid for and finished by people who will never stand on a balcony about it, and the city owes them its thanks."
+          "Madam Editor, the bells have hardly stopped since we entered the {{era}}, and my neighbors speak as though the morning arranged itself. It did not. Clerks, surveyors and schoolmasters worked for years to bring us here, and none of them will stand on a balcony. Let the city thank them by name while they can still hear it."
         ],
         "weight": { "base": 1 }
       }
@@ -220,7 +220,7 @@
         "id": "our-team-gains-technology-report",
         "headline": "The scholars finish {{tech}}",
         "body": [
-          "Our scholars have finished {{tech}}. The first copy went to the {{terms.civic.government}}, the second to the printers, and the third is already missing from the shelf."
+          "Our scholars have completed {{tech}}. The first clean copy went to the {{terms.civic.government}} this morning, and the second is already promised to a printer in the capital. The third copy, as usual, cannot be found."
         ],
         "weight": { "base": 1 }
       },
@@ -231,7 +231,7 @@
         "genre": "analysis",
         "headline": "Who can teach {{tech}} next?",
         "body": [
-          "Our researchers have completed their work on {{tech}}. A teacher who has been following it has started copying notes for colleagues who couldn't attend the demonstrations. A finding that can be taught in another town can outlast the team that made it."
+          "{{tech}} is finished, and the useful question is who can teach it. One of the demonstrators has begun writing out the steps for a colleague in a town that missed the trials, in language plain enough for a first-year pupil. A discovery kept in one room is a curiosity; the same discovery taught in ten rooms is a national asset."
         ],
         "weight": { "base": 1 }
       },
@@ -242,7 +242,7 @@
         "genre": "report",
         "headline": "One more for the home team",
         "body": [
-          "Our scholars just finished {{tech}}. No parade, no speech, no day off. Just one more thing this country can do that it couldn't last week."
+          "We have {{tech}} now. No ceremony, no day off, no speech from anyone important. The country can do one more thing this week than it could last week."
         ],
         "weight": { "base": 1 }
       },
@@ -254,7 +254,7 @@
         "when": "era !== null",
         "headline": "Notice: {{tech}} is finished",
         "body": [
-          "The printers are advised that our scholars have brought {{tech}} to completion. The first printed sheet is drying on the line, and the binder has been asked to stitch a copy for the archive before the day is out. The {{era}} has one more finished page to its name."
+          "Notice is given that our scholars have carried {{tech}} through to its end. The first sheets are drying at the press, and a copy has been set aside for the archive before any other is sold. The {{era}} may count this among its finished works, though the hands that did it will not be remembered by name."
         ],
         "weight": { "base": 1 }
       },
@@ -265,7 +265,7 @@
         "genre": "anecdote",
         "headline": "At the market, the word is {{tech}}",
         "body": [
-          "The fish-seller at the morning market had it before the mayor's man did: our scholars have finished {{tech}}. What it does, nobody at the stalls could say. That it was ours, nobody needed telling twice."
+          "By the time the mayor's clerk reached the market with the news, half the stalls already had it: {{tech}} is ours. A porter wanted to know what it would put in his bowl, and nobody could tell him. The crowd cheered anyway, then went back to haggling."
         ],
         "weight": { "base": 1 }
       }
@@ -283,7 +283,7 @@
         "when": "civilization !== null",
         "headline": "{{civilization}} crosses into the {{era}}",
         "body": [
-          "The {{former}} has given way to the {{era}} in {{civilization}}. One merchant has asked her agent there to send samples before she promises customers what will be in her next shipment."
+          "{{civilization}} has moved out of the {{former}} and into the {{era}}. A wool merchant here has asked her agent there to send a sample of whatever the new workshops are turning out before she promises anything to her customers. Caution like that is why her shop is still open."
         ],
         "weight": { "base": 1 }
       },
@@ -292,7 +292,7 @@
         "when": "civilization === null",
         "headline": "A rival power enters the {{era}}",
         "body": [
-          "A power that is neither our friend nor our ally has crossed from the {{former}} into the {{era}}. The dispatches that carried the news managed to lose the name on the way."
+          "A rival has left the {{former}} and entered the {{era}}, and our dispatches cannot name it. The seal was unbroken and the date was plain, but the name had been rubbed from the first line. The clerks have filed the report under the age and left the name blank."
         ],
         "weight": { "base": 1 }
       },
@@ -304,7 +304,7 @@
         "when": "civilization !== null",
         "headline": "A rival leaves the {{former}}",
         "body": [
-          "Advices from abroad state that {{civilization}}, no particular friend of ours, has lately passed from the {{former}} into the {{era}}. A bookseller here has put their new grammars on the shelf beside ours, and we report the crossing as it reached us. Whether it deserves congratulation or watchfulness we leave to readers who know that quarter."
+          "Advices from abroad report that {{civilization}}, which is no particular friend of ours, has passed out of the {{former}} into the {{era}}. A bookseller in this city has set their new grammars on the same shelf as ours, without comment. Whether the crossing calls for congratulation or for care, we leave to readers who know that country better than we do."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -319,7 +319,7 @@
         "when": "civilization !== null && distance !== null",
         "headline": "Up the road, a new era",
         "body": [
-          "The map says nothing has changed. The map is wrong: {{civilization}} has crossed into the {{era}}, and its nearest city stands {{distance}} tiles from ours. The border has not moved, but the country behind it just did."
+          "{{civilization}} has entered the {{era}}, and its nearest city is {{distance}} from ours. Nobody has moved a border stone. Nobody has marched. The country on the other side of the hill simply knows more this week than it did last, and that is how these things start."
         ],
         "weight": { "base": 1 }
       },
@@ -331,7 +331,7 @@
         "when": "civilization !== null",
         "headline": "It is told of {{civilization}}",
         "body": [
-          "It is told that in {{civilization}} the old calendars were not thrown away but shelved, and the new count begins with the {{era}}. What the old age cost them, the tellers do not say."
+          "It is told that when the {{era}} came to {{civilization}}, the old men asked for the old calendars to be kept, and the young ones laughed. The calendars were shelved, and the counting began again. What the new age cost them, the tellers leave out."
         ],
         "weight": { "base": 1 }
       },
@@ -343,7 +343,7 @@
         "when": "civilization !== null",
         "headline": "A rival enters the {{era}}. And us?",
         "body": [
-          "Mark it, {{terms.civic.people}}: {{civilization}} has entered the {{era}}, and somewhere its {{player.civic.government}} is being asked what it cost. Ask ours the same question: what are we paying, and for which age? A {{terms.civic.government}} that cannot say is paying more than it admits."
+          "Look at {{civilization}}, {{terms.civic.people}}: it has entered the {{era}}, and its {{player.civic.government}} will soon be asked what the crossing cost. Put the same question to ours, and do not accept a speech for an answer. What are we paying, and who signed the bill? A {{terms.civic.government}} that cannot name the price has already lost the argument."
         ],
         "weight": { "base": 1 }
       }
@@ -361,7 +361,7 @@
         "when": "civilization !== null",
         "headline": "First in learning: {{civilization}}",
         "body": [
-          "First place in research now goes to {{civilization}}, with {{count}} known technologies. A bookseller says customers buying the latest journal from that country have started asking when a translation will come out."
+          "{{civilization}} now holds first place in learning, with {{count|known technology|known technologies}}. A bookseller in this city says readers have begun asking for copies of its journals before the ink on them is dry. First place is easy to lose, but the books that won it will still be read here next year."
         ],
         "weight": { "base": 1 }
       },
@@ -370,7 +370,7 @@
         "when": "civilization === null",
         "headline": "A new nation stands first in learning",
         "body": [
-          "A new nation has reached first place in research, with {{count}} known technologies. The librarian at one reading room says patrons have begun asking if they can borrow the foreign journals overnight."
+          "A new nation has taken first place in learning, with {{count|known technology|known technologies}}, and our dispatches have not brought its name. The reading room has already had a request to borrow its journals overnight. The librarian said yes, on condition that the borrower returns them before the name arrives."
         ],
         "weight": { "base": 1 }
       },
@@ -382,9 +382,9 @@
         "when": "civilization !== null",
         "headline": "The learning count, restated",
         "body": [
-          "First in learning: {{civilization}}",
-          "Arts and sciences held: {{count}}",
-          "Nations ahead of it: none"
+          "First place held by: {{civilization}}",
+          "Arts and sciences counted: {{count}}",
+          "Rivals above it: none"
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -399,7 +399,7 @@
         "when": "tied && civilization !== null",
         "headline": "First place, shared",
         "body": [
-          "The count says {{civilization}} leads the world in learning with {{count}} arts and sciences. The count also says somebody matched them. The podium was built for one."
+          "{{civilization}} leads the world in learning with {{count|art or science|arts and sciences}}. So does someone else, apparently. The podium is going to be crowded."
         ],
         "weight": { "base": 1 }
       },
@@ -410,7 +410,7 @@
         "genre": "analysis",
         "headline": "Two ways to count learning",
         "body": [
-          "The nation first in the tally holds {{count}} arts and sciences. In its oldest school, the shelf for one art is worn smooth while the shelf for another still smells of glue. A rival lower in the tally may have trained more people in the arts the two nations share, and its benches are fuller for it."
+          "The nation at the top of the tally holds {{count|art or science|arts and sciences}}, but a tally is a thin thing to judge a school by. In one old library, the shelf for a much-studied art is worn smooth while another shelf still smells of glue. A rival further down the list may have taught more pupils in the arts we share, and its benches are the fuller for it."
         ],
         "weight": { "base": 1 }
       }

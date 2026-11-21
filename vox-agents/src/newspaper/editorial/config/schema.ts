@@ -61,11 +61,12 @@ export const editorialTriggerRuleSchema = z.strictObject({
     ctx.addIssue({ code: 'custom', path: ['event'], message: 'Remove event or change the subject to event.' });
 });
 export type EditorialTriggerRule = z.infer<typeof editorialTriggerRuleSchema>;
-/** Templates explicitly name supported triggers. */
+/** Templates explicitly name supported triggers and any placeholder format overrides. */
 const templateSchema = eligibleSchema.extend({
   id: z.string().min(1),
   triggers: z.array(z.string().min(1)).min(1),
   tags: z.array(z.string().min(1)),
+  formats: z.record(z.string().min(1), z.enum(['percent', 'million', 'points', 'turns', 'tiles'])).default({}),
   names: z.array(z.string().min(1)).optional(),
   mode: z.enum(['authored', 'llmOnly']).default('authored'),
   short: z.boolean().default(false),

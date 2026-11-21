@@ -37,6 +37,9 @@ Following the same spirit, use relevant numbers that make sense in the game worl
 
 - “We lead by 3 technologies” makes sense. Readers can understand what the count measures.
 - Write “The city is badly damaged” in place of “The city has 100/300 HP.” Hit points do not make sense in the game world context.
+- Print a count and its noun together with `{{count|power|powers}}`. It writes the singular after 1 and the plural otherwise.
+- Built-in units match placeholder names by pattern: names containing `happiness` print percent, `population` print million, `famine` print points, `turns` print turns, and `distance` print tiles. `nearest` also prints tiles.
+- Declare `formats` only for an exception, using `percent`, `million`, `points`, `turns`, or `tiles`.
 
 ## Examples
 

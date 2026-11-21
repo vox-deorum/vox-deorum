@@ -7,7 +7,7 @@ import { getEditorialExpressions, loadEditorialConfig, parseEditorialConfig } fr
 import { buildNewspaperFacts } from '../../../../../src/newspaper/editorial/facts/index.js';
 import { renderAuthoredText } from '../../../../../src/newspaper/editorial/presentation/issue.js';
 import { evaluateTriggerRules } from '../../../../../src/newspaper/editorial/rules/evaluate.js';
-import { matchTemplates } from '../../../../../src/newspaper/editorial/selection/templates.js';
+import { matchTemplates, substitute } from '../../../../../src/newspaper/editorial/selection/templates.js';
 
 const standard = {
   id: 'report', tags: [], weight: { base: 1 },
@@ -204,5 +204,42 @@ describe('newspaper template matching', () => {
       ),
     });
     expect(adjacent).toEqual([]);
+  });
+});
+
+describe('newspaper placeholder printing', () => {
+  it('should choose a singular or plural label from the value', () => {
+    expect(substitute('{{count|branch|branches}}', { count: 1 })).toBe('1 branch');
+    expect(substitute('{{count|branch|branches}}', { count: 3 })).toBe('3 branches');
+    expect(substitute('{{count|branch|branches}}', {})).toBe('{{count|branch|branches}}');
+  });
+
+  it('should apply built-in units by wildcard name pattern', () => {
+    expect(substitute('{{turnsLeft}} at {{routeDistance}}', { turnsLeft: 1, routeDistance: 3 }))
+      .toBe('1 turn at 3 tiles');
+    expect(substitute('{{largestPopulation}} at {{happinessPercentage}}',
+      { largestPopulation: 12, happinessPercentage: 62 })).toBe('12 million at 62%');
+    expect(substitute('{{famine}}', { famine: 3 })).toBe('3 points');
+  });
+
+  it('should apply built-in units in authored prose', async () => {
+    const template = {
+      ...standard, triggers: ['report'],
+      variants: [{
+        ...standard.variants[0],
+        headline: '{{population}} people at {{happinessPercentage}}, famine at {{famine}}, war in {{turns}}, city {{distance}}',
+        body: ['Turn {{period.to}}.'],
+      }],
+    };
+    const selected = await candidates(0, [{
+      id: 'report', subject: 'world', when: 'true',
+      values: { population: '12', happinessPercentage: '62', famine: '1', turns: '3', distance: '2' },
+    }], template);
+    const [variant] = selected[0].variants;
+    const nodes = inlineTextSchema.parse(
+      renderAuthoredText(variant.headline, selected[0].values, variant, selected[0].names)
+    );
+    expect(nodes.map((node) => node.text).join(''))
+      .toBe('12 million people at 62%, famine at 1 point, war in 3 turns, city 2 tiles');
   });
 });

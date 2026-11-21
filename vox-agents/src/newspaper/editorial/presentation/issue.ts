@@ -16,7 +16,7 @@ import { pressRunDesignDraw, pressRunLayoutDraw } from '../shared/determinism.js
 import { chooseWeighted } from '../shared/weights.js';
 import { uniqueSources } from '../shared/sources.js';
 import {
-  placeholderPattern, substitute, resolveLinkTarget, type EditorialCandidate
+  placeholderPattern, placeholderName, substitute, resolveLinkTarget, type EditorialCandidate
 } from '../selection/templates.js';
 import type { PresentationWeights } from './eligibility.js';
 import { resolveMasthead, resolvePrintableTermText, termTextSources } from './masthead.js';
@@ -34,8 +34,9 @@ export function renderAuthoredText(
   for (const match of text.matchAll(placeholderPattern)) {
     const position = match.index!;
     if (position > cursor) nodes.push({ type: 'text', text: text.slice(cursor, position) });
-    const link = variant.links.find((entry) => entry.placeholder === match[1]);
-    const name = names?.includes(match[1]) ? { isName: true as const } : {};
+    const key = placeholderName(match[1]);
+    const link = variant.links.find((entry) => entry.placeholder === key);
+    const name = names?.includes(key) ? { isName: true as const } : {};
     if (link)
       nodes.push({
         type: 'link',

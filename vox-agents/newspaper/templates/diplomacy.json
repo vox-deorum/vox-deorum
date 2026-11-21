@@ -10,7 +10,7 @@
         "id": "becomes-vassal-report",
         "headline": "Our new vassalage under {{master}}",
         "body": [
-          "At the muster yard, a clerk copies our names into {{master}}'s roll. The court keeps its seat, but those names can be called to their wars."
+          "Our nation now answers to {{master}} as a vassal. A clerk in the chancery has tied the two treaty copies with one cord. When their court calls, our towns must answer."
         ],
         "links": [
           { "placeholder": "master", "label": "{{master}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -24,7 +24,7 @@
         "genre": "obituary",
         "headline": "An era of our own counsel, concluded",
         "body": [
-          "So ends the account of the years our {{terms.civic.government}} answered in its own name. As of this entry we stand as vassals to {{master}}. The keeper of the record has put a ribbon at this page for the next person who has to find where it ended."
+          "Here closes the chapter in which our {{terms.civic.government}} gave its orders and no other court confirmed them. In this year we became vassals to {{master}}. The scribe has ruled a line beneath the entry, so a reader may see where our own counsel ended."
         ],
         "links": [
           { "placeholder": "master", "label": "{{master}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -38,7 +38,7 @@
         "genre": "editorial",
         "headline": "Tell us what protection we bought",
         "body": [
-          "We are now vassals of {{master}}, and their wars can become ours. The {{terms.civic.government}} should give its account of the bargain in the square. If our young people can be sent to fight for their towns, their families have a right to hear what protection there is for ours."
+          "Vassals to {{master}}! That is the word on every step this morning, and no one has told us what it costs. The {{terms.civic.government}} must read the terms aloud in the square. If our sons can be marched to their wars, we should hear what their court promised in return."
         ],
         "links": [
           { "placeholder": "master", "label": "{{master}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -52,7 +52,7 @@
         "genre": "analysis",
         "headline": "Our neighbors have a new court to bargain with",
         "body": [
-          "As a vassal of {{master}}, our nation loses the right to declare war on other powers. A neighbor with a dispute over a field or a fishing ground can now afford to hold out longer for terms. It depends how much interest the {{player.civic.government}} of {{master}} takes in a quarrel over somebody else's land."
+          "Neighbors with a dispute against us now have a second court to persuade. Our vassalage to {{master}} puts a foreign government between their complaint and our answer. Whether that makes them bolder depends on how the {{player.civic.government}} of {{master}} reads its obligations."
         ],
         "links": [
           { "placeholder": "master", "label": "{{master}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -73,7 +73,7 @@
         "when": "ally !== null",
         "headline": "Our defensive pact with {{ally}} is over",
         "body": [
-          "On the frontier, the captain strikes {{ally}}'s countersign from the orders. The pact is over, both countries stay at peace, and each garrison keeps its road."
+          "The foreign office has marked the end of our defensive pact with {{ally}}. The two countries remain at peace, so no soldier is called anywhere today. The promise that each would answer for the other is simply gone."
         ],
         "weight": { "base": 1 }
       },
@@ -82,7 +82,7 @@
         "when": "ally === null",
         "headline": "A defensive pact comes to an end",
         "body": [
-          "One of our defensive pacts has ended. We remain at peace with the other former signatory."
+          "One of our defensive pacts has lapsed. The two countries remain at peace, and neither owes the other troops."
         ],
         "weight": { "base": 1 }
       },
@@ -94,7 +94,7 @@
         "when": "ally !== null",
         "headline": "An attack on {{ally}} is their problem now",
         "body": [
-          "The defensive pact with {{ally}} has ended. The old planning maps in our staff rooms carried two sets of flags. A captain studying one of those maps today has to ask which posts his own garrison could hold if help never came."
+          "The end of the pact with {{ally}} leaves our generals with one fewer certainty. A campaign that once promised a second army now promises only our own. Planners who counted on borrowed strength must find something else to count, or ask for less."
         ],
         "weight": { "base": 1 }
       },
@@ -107,7 +107,7 @@
         "byline": "A merchant of the capital",
         "headline": "Will you still send the next load?",
         "body": [
-          "Madam, on hearing that our pact with {{ally}} had ended, a driver asked whether I would still send her with the next load. I said I would. I have trusted the people who unload my wagons for twenty years, and I hope the two courts will give me cause to go on doing so."
+          "Sir, the end of the pact with {{ally}} was read at the exchange, and a friend who keeps a warehouse across that border asked whether I would still send my goods. I told him I would. His clerks have never lost a crate of mine, and I will not insult them over a change in the courts."
         ],
         "weight": { "base": 1 }
       }
@@ -125,7 +125,7 @@
         "when": "ally !== null",
         "headline": "We sign a defensive pact with {{ally}}",
         "body": [
-          "At the chancery, a clerk seals the copy for {{ally}} and gives it to a rider. The pact is signed. Whoever moves against one of us answers to both."
+          "A defensive pact with {{ally}} is signed and sealed. In the square, the crier had the news before the clerks had filed it. The meaning is plain: a blow at either country brings both to the field."
         ],
         "weight": { "base": 1 }
       },
@@ -134,7 +134,7 @@
         "when": "ally === null",
         "headline": "A defensive pact is signed",
         "body": [
-          "Our nation has signed a defensive pact with a major power. From this day, whoever moves against one of us answers to both."
+          "Our nation has signed a defensive pact with a major power. The terms bind each signatory to answer an attack on the other. No names are needed to make that promise heavy."
         ],
         "weight": { "base": 1 }
       },
@@ -146,7 +146,7 @@
         "when": "ally !== null",
         "headline": "Hear it! We stand with {{ally}}",
         "body": [
-          "Hear it, {{terms.civic.people}} of the nation! A defensive pact is signed with {{ally}}, and it holds from this day. A hand raised against either of us answers to both. Say it at your doors: an attack on {{ally}} is an attack on us!"
+          "Hear it, {{terms.civic.people}}! The pact with {{ally}} is signed, and the seal is dry. Raise a hand against them and you raise it against us. Say that at every door: one blow, two answers!"
         ],
         "weight": { "base": 1 }
       },
@@ -158,7 +158,7 @@
         "when": "ally !== null",
         "headline": "A pact for the {{terms.civic.government}}, a question for the street",
         "body": [
-          "The {{terms.civic.government}} has promised that if a hand is raised against {{ally}}, our banners march. Perhaps that is wisdom, and perhaps it is our sons who will make good on it. Read the terms aloud in the square before anyone cheers, and let the men who would march hear what they are marching for."
+          "Our {{terms.civic.government}} has tied its word to {{ally}}'s safety. That may be statecraft, or it may be a bill sent to our sons. Let the terms be read aloud where the recruits can hear them, and let the men who must march know what for."
         ],
         "weight": { "base": 1 }
       },
@@ -170,7 +170,7 @@
         "when": "ally !== null",
         "headline": "Letters from the {{terms.civic.government}}: a pact with {{ally}}",
         "body": [
-          "Letters from the {{terms.civic.government}} relate that a defensive pact has lately been concluded between our nation and {{ally}}. Two peoples who stand together in war are seldom asked to prove it, which all men of goodwill will welcome."
+          "We are informed by letters from the {{terms.civic.government}} that a defensive pact has been concluded with {{ally}}. Such an agreement asks little of either people in quiet seasons. It asks much of both on the day a neighbor forgets his manners."
         ],
         "weight": { "base": 1 }
       }
@@ -187,7 +187,7 @@
         "id": "denounced-by-major-report",
         "headline": "{{civilization}} denounces our nation",
         "body": [
-          "At the customs house, a tidewaiter reads {{civilization}}'s declaration to the traders in line. The denunciation is public, and the words sit on the record."
+          "{{civilization}} has denounced our nation before the world. A doorkeeper read the declaration from the steps of the foreign ministry, and the crowd carried it home in pieces. No treaty is torn up today, but the courtesy is."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -201,7 +201,7 @@
         "genre": "anecdote",
         "headline": "The square heard it first",
         "body": [
-          "A fishwife carried the news home from the market before any gazette had it: {{civilization}} has denounced us. By evening every stall in the square had an opinion, and most of them were loud."
+          "By noon the whole market knew: {{civilization}} has denounced us. A fruit seller says she had it from a sailor, who had it from a clerk, who had read it twice. By closing time the tale had grown a battle, a rescue, and a hero on a white horse."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -215,7 +215,7 @@
         "genre": "editorial",
         "headline": "Let the denunciation be answered",
         "body": [
-          "{{civilization}} has called our nation out before the world. Our answer is short: count the walls, count the friends, and give no apology that is not owed. Bowing to a shouting match is cheap today and dear every season after."
+          "{{civilization}} has spoken against us in open court. Let their ministers shout until they are hoarse; our business is the frontier and the muster roll. A soft answer to a loud insult is heard as fear, and fear is remembered."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -229,7 +229,7 @@
         "genre": "report",
         "headline": "In this year, {{civilization}} spoke against us",
         "body": [
-          "{{player.leader}}, {{player.civic.leaderTitle}} of {{civilization}}, has denounced our nation. The scribe enters the denunciation under this year."
+          "In this year {{player.leader}}, {{player.civic.leaderTitle}} of {{civilization}}, delivered a denunciation of our nation before witnesses. The scribe has copied the words beside the date. The margin is left empty for what follows."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -249,7 +249,7 @@
         "id": "first-contact-report",
         "headline": "First contact with {{stranger}}",
         "body": [
-          "Our people have met {{stranger}} for the first time. The two nations now know of each other, and neither is a rumor to the other any longer."
+          "Envoys have returned with the first confirmed meeting between our nation and {{stranger}}. Each side now knows the other's name and face. The age of guessing is over."
         ],
         "weight": { "base": 1 }
       },
@@ -260,7 +260,7 @@
         "genre": "anecdote",
         "headline": "They say strangers came over the hill",
         "body": [
-          "It is told that our scouts stood a long while on the ridge, watching fires that were not ours. By morning they had a name for the smoke: {{stranger}}. The walkers came home with the story, and the story has not stopped traveling since."
+          "They say a hunting party found tracks by the spring that no one could name, and followed them two ridges over. At the top they met {{stranger}}, and shared a fire without a word in common. The hunters came home late, and their story has been walking since."
         ],
         "weight": { "base": 1 }
       },
@@ -271,7 +271,7 @@
         "genre": "report",
         "headline": "A new people, and new roads to walk",
         "body": [
-          "Advices from the frontier bring word that our nation has opened relations with {{stranger}}. A first meeting is a door standing open: new goods, new charts, and one more chair at the table of nations."
+          "Advices from the frontier report that envoys from our nation and {{stranger}} have met and spoken. The meeting was formal, cautious, and long enough to leave a written account. Both courts can now write to each other by name."
         ],
         "weight": { "base": 1 }
       },
@@ -282,7 +282,7 @@
         "genre": "notice",
         "headline": "We just met {{stranger}}",
         "body": [
-          "Confirmed: we have met {{stranger}}. They are on the map now. More as we learn it."
+          "We have met {{stranger}}. One more people beyond the hills, one fewer mystery. More when the envoys report."
         ],
         "weight": { "base": 1 }
       },
@@ -294,7 +294,7 @@
         "headline": "The mapmaker has a question about {{stranger}}",
         "byline": "A Mapmaker",
         "body": [
-          "Sir, word of our first meeting with {{stranger}} has brought half the street into my shop. Each customer wants the name put at the end of a road he knows. If anyone who was there will show me where to put it, I can sell him a map at cost."
+          "Sir, since word of {{stranger}} arrived, my customers have asked for charts of country I have not walked. I will not ink a line I cannot stand behind. Send me the survey notes from that meeting, and the next map will be honest, even if it is plain."
         ],
         "weight": { "base": 1 }
       }
@@ -312,7 +312,7 @@
         "when": "first !== null && second !== null",
         "headline": "{{first}} and {{second}} sign a defensive pact",
         "body": [
-          "At the harbor office, the harbormaster has pinned the news beside the tide table: {{first}} and {{second}} have signed a defensive pact. A hand raised against either now answers to both."
+          "Word reached the harbor at noon: {{first}} and {{second}} have signed a defensive pact. A broker read the notice twice before he would price the news. A quarrel with one of them now carries a second name."
         ],
         "weight": { "base": 1 }
       },
@@ -321,7 +321,7 @@
         "when": "first === null || second === null",
         "headline": "Two foreign powers bind their defenses",
         "body": [
-          "A defensive pact has been concluded between two foreign powers. Neither signatory is ours, but an attack on either now draws the other in, and the neighbors of both are reading the change."
+          "Two foreign powers have signed a defensive pact. Neither signature is ours, but both now count in our own plans. Any quarrel with one of them must expect the other."
         ],
         "weight": { "base": 1 }
       },
@@ -333,7 +333,7 @@
         "when": "first !== null && second !== null",
         "headline": "The pact between {{first}} and {{second}} redraws the arithmetic",
         "body": [
-          "In the war room, an officer has drawn {{first}}'s line and {{second}}'s in the same red pencil. Every staff that planned against one now plans against two. If the two hold to the letter, a war with either means a war with both. Alliances are cheap to sign and dear to test."
+          "The pact between {{first}} and {{second}} changes the arithmetic in every staff room. A plan against either country must now leave room for the other's banners. That may make neighbors careful, or it may gather several quarrels into one. The first true test will come at a border, not at a signing."
         ],
         "weight": { "base": 1 }
       },
@@ -345,7 +345,7 @@
         "when": "first !== null && second !== null",
         "headline": "From abroad: {{first}} and {{second}} stand together",
         "body": [
-          "Letters from abroad relate that {{first}} and {{second}} have signed a defensive pact. A shipowner who calls at both countries' ports has asked her agents for news from both capitals before she loads the next cargo; a quarrel that starts in either can now reach the other."
+          "Letters from abroad relate that {{first}} and {{second}} have signed a defensive pact. A cloth merchant in our own market, who buys from both countries, has begun splitting his orders between them. If trouble starts at one frontier, he does not want his whole season waiting there."
         ],
         "weight": { "base": 1 }
       }
@@ -363,7 +363,7 @@
         "when": "first !== null && second !== null",
         "headline": "{{first}} and {{second}} end their defensive pact",
         "body": [
-          "At the foreign office, an archivist has moved {{first}}'s file and {{second}}'s to separate shelves. The two remain at peace, but neither court can count on the other's troops if it is attacked."
+          "{{first}} and {{second}} have ended their defensive pact. The notice came through the foreign office with no ceremony and no explanation. Neither country has promised troops to the other since."
         ],
         "weight": { "base": 1 }
       },
@@ -372,7 +372,7 @@
         "when": "first === null || second === null",
         "headline": "A foreign pact falls away",
         "body": [
-          "A defensive pact between two foreign powers has ended. The two states are not at war with one another, and the change came quietly."
+          "Two foreign powers have dissolved a defensive pact between them. Neither has taken up arms against the other, and no third party was asked to witness the parting."
         ],
         "weight": { "base": 1 }
       },
@@ -384,7 +384,7 @@
         "when": "first !== null && second !== null",
         "headline": "The quiet between {{first}} and {{second}}",
         "body": [
-          "The defensive pact between {{first}} and {{second}} has ended. Their neighbors used to reckon with the chance an attack would bring both armies into the field. A diplomat weighing the change now has two courts to sound out, and no promise joining their answers."
+          "The pact between {{first}} and {{second}} has been dissolved. Their neighbors once weighed a quarrel with one and counted the other's army in the answer. Now an envoy must judge each court on its own temper, with nothing on paper to bind the two replies."
         ],
         "weight": { "base": 1 }
       },
@@ -396,7 +396,7 @@
         "when": "first !== null && second !== null",
         "headline": "The fence between two gardens",
         "body": [
-          "Two neighbors took down their shared fence. The gardens still grow, and the fox is listening."
+          "Two gardens shared one fence, and one morning the posts were gone. The beans still climb, and the rabbits have learned the way."
         ],
         "weight": { "base": 1 }
       }
@@ -414,7 +414,7 @@
         "when": "friend !== null",
         "headline": "We declare friendship with {{friend}}",
         "body": [
-          "At the exchange, a wool broker has added {{friend}}'s name to the list of houses he will trust on a handshake. The friendship is declared in both courts, and the goodwill is on the record rather than in rumor."
+          "Our nation and {{friend}} have declared friendship. At the granary, a clerk pinned the notice beside the price of salt. The goodwill is now public, and merchants on both sides can plan as if it will last."
         ],
         "weight": { "base": 1 }
       },
@@ -423,7 +423,7 @@
         "when": "friend === null",
         "headline": "A friendship declared",
         "body": [
-          "Our nation has declared friendship with a major power. The pledge is public, and the goodwill between the two courts is now on the record."
+          "Our nation has declared friendship with a major power. Both governments have said so openly, and each has promised the other fair dealing. The promise is easy today; the years will show what it is worth."
         ],
         "weight": { "base": 1 }
       },
@@ -435,7 +435,7 @@
         "when": "friend !== null",
         "headline": "Hear it! Friendship with {{friend}}",
         "body": [
-          "Good news, {{terms.civic.people}}! Friendship is declared with {{friend}}, and the word is official. Say it at your doors and say it twice: friendship with {{friend}}, declared and public!"
+          "Hear it, {{terms.civic.people}}! {{friend}} is a friend of this nation, and the declaration is signed. Friendship with {{friend}}, open and sworn! Say it at the well, say it at the gate, and say it again for the people at the back!"
         ],
         "weight": { "base": 1 }
       },
@@ -448,7 +448,7 @@
         "byline": "A well-wisher across the border",
         "headline": "Sir, a good word travels slowly",
         "body": [
-          "Sir, the news reached us late, as good news does: your nation and {{friend}} have declared friendship, and I write from the far side of that border to say it is welcome in our house. Two peoples who trade and talk rarely reach for blades. May this friendship pay its way in quiet years."
+          "Sir, I drive a wagon between your country and {{friend}}'s, and the news of the friendship reached me late, at the last inn on the road. The drivers I meet are quicker to share a fire and slower to quarrel. I hope the two courts keep it so, because my family eats from that road."
         ],
         "weight": { "base": 1 }
       },
@@ -460,7 +460,7 @@
         "when": "friend !== null",
         "headline": "The tavern drank to {{friend}} last night",
         "body": [
-          "When the crier called the news, the whole room raised its cups to {{friend}} without being asked. Foreign policy is a long street away from here, but a friendly flag is good for business, and the landlord said so twice."
+          "When the crier called the news, the tavern keeper set a jug on the bar and named the first cup for {{friend}}. Nobody asked him to. He says a friendly road brings carts, carts bring thirsty drivers, and that is reason enough."
         ],
         "weight": { "base": 1 }
       }
@@ -478,7 +478,7 @@
         "when": "friend !== null",
         "headline": "Our friendship with {{friend}} is over",
         "body": [
-          "On the quay, a crate has come back from {{friend}} unopened, their seal still on the lid. The friendship is ended, and the two courts deal with each other now on plainer terms."
+          "The declaration of friendship with {{friend}} has been withdrawn. At the wool exchange, a broker has stopped quoting their houses in the same breath as ours. The two countries still trade, but the warmth is gone from it."
         ],
         "weight": { "base": 1 }
       },
@@ -487,7 +487,7 @@
         "when": "friend === null",
         "headline": "A friendship ends",
         "body": [
-          "A declaration of friendship between our nation and a major power has come to an end. The public goodwill it pledged is withdrawn."
+          "A declaration of friendship with a major power has lapsed. The two governments still keep the peace, but the public pledge of goodwill no longer stands between them."
         ],
         "weight": { "base": 1 }
       },
@@ -499,7 +499,7 @@
         "when": "friend !== null",
         "headline": "In memoriam: the friendship with {{friend}}",
         "body": [
-          "It was declared with public words and toasted glasses, and for a season our two flags made a pleasant pair on the water. The declaration is ended now, and the friendship with it. What remains is the memory that such a thing was possible."
+          "For a few seasons it was the sort of friendship that gets its own toast at public dinners. The declaration is ended now, and the toasts have gone quiet. What the two peoples keep is a habit of courtesy that may yet outlast the paper."
         ],
         "weight": { "base": 1 }
       },
@@ -511,7 +511,7 @@
         "when": "friend !== null",
         "headline": "The end of the {{friend}} friendship, weighed",
         "body": [
-          "Declarations of friendship carry no armies, but they carry credit, and the court of {{friend}} has just withdrawn its account. What tends to follow is cooler letters and slower caravans before anything louder. At the exchange, a broker has already moved that court's paper to the back of the drawer."
+          "The friendship with {{friend}} has ended, and the record now says less than it did last season. A declaration of this kind lends no troops, but it lends confidence, and confidence is what merchants price into a road. The first sign of the change will be quieter correspondence, not louder threats."
         ],
         "weight": { "base": 1 }
       }
@@ -528,7 +528,7 @@
         "id": "gains-vassal-report",
         "headline": "Our court takes {{vassal}} as a vassal",
         "body": [
-          "{{vassal}} has become a vassal of our {{terms.civic.government}}. A merchant who supplies our garrisons says he has started asking what the roads are like between our towns and theirs."
+          "{{vassal}} has become a vassal of our {{terms.civic.government}}. At the palace, a clerk has added their name to the list of courts that answer to ours. The tribute will be counted later; the obligation begins today."
         ],
         "links": [
           { "placeholder": "vassal", "label": "{{vassal}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -542,7 +542,7 @@
         "genre": "report",
         "headline": "{{vassal}} entered in the roll of vassals",
         "body": [
-          "In this season {{vassal}} came under the protection of our realm. Its {{player.civic.government}} remained in its own seat, and in the rolls it was entered as our vassal."
+          "In this season the envoys of {{vassal}} came before our court, and their nation became our vassal. Their {{player.civic.government}} keeps its hall and its officers. The first tribute is due at the turn of the year, and the scribe has made a column for it."
         ],
         "links": [
           { "placeholder": "vassal", "label": "{{vassal}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -556,7 +556,7 @@
         "genre": "analysis",
         "headline": "A new source of tribute, a new frontier to defend",
         "body": [
-          "Our court can levy tribute from {{vassal}}. It has also taken on a frontier it may have to defend. In a quiet year the income could make the bargain look handsome. The test comes when a neighbor thinks it can have one of their towns before our troops arrive."
+          "{{vassal}} now pays tribute to our court, and the money will be welcome. So will the duty of defending them, which no one has yet priced. A vassal is a promise of help, and the promise is only as good as the road our soldiers can march."
         ],
         "links": [
           { "placeholder": "vassal", "label": "{{vassal}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -570,7 +570,7 @@
         "genre": "editorial",
         "headline": "Let the magistrates of {{vassal}} set out what they can pay",
         "body": [
-          "Our {{terms.civic.government}} can set the tribute for {{vassal}}. Let it hear from the magistrates there before it names a sum. They already collect the taxes and know what the districts can pay. By all means take the tribute; have the sense to take it at a rate that can be collected."
+          "The {{terms.civic.government}} has won the right to set a tribute on {{vassal}}. A generous figure would please the square and ruin the collection. The proper course is to ask the provincial officers what the land yields, then take a little less. A tax that breaks the payer is a tax paid once."
         ],
         "links": [
           { "placeholder": "vassal", "label": "{{vassal}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -591,7 +591,7 @@
         "when": "vassal !== null",
         "headline": "{{vassal}} is no longer our vassal",
         "body": [
-          "At the tribute office, the keeper of the ledger has closed the book for {{vassal}} and tied it with string. Neither court stands to the other as master or subject now, and what follows will be negotiated rather than commanded."
+          "Our court no longer holds {{vassal}} as a vassal. The tribute office has struck their name from the roll, and a clerk has filed the old accounts. From now on, the two courts deal as equals, or not at all."
         ],
         "weight": { "base": 1 }
       },
@@ -600,7 +600,7 @@
         "when": "vassal === null",
         "headline": "One vassalage ends",
         "body": [
-          "A vassalage binding another state to our nation has ended. Neither party stands to the other now as master or subject."
+          "A vassalage that bound another state to our nation has been dissolved. The tribute stops, and the obligation to protect them stops with it. The two governments now meet as separate courts."
         ],
         "weight": { "base": 1 }
       },
@@ -612,7 +612,7 @@
         "when": "vassal !== null",
         "headline": "{{vassal}} walks free of us",
         "body": [
-          "Where our word once commanded, we now negotiate. At the border fort, the captain has been asked what ground he can hold alone; no answer has come. {{vassal}} walked free, and every other subject has noted it. The strong keep what they can hold, and our neighbors are asking what we can."
+          "{{vassal}} has left our protection, and the frontier feels the difference first. A garrison captain who once counted their militia in his plans must now write them out. Every other court that pays us tribute will be watching to see what we do about it."
         ],
         "weight": { "base": 1 }
       },
@@ -624,7 +624,7 @@
         "when": "vassal !== null",
         "headline": "The vassalage of {{vassal}} comes to an end",
         "body": [
-          "The vassalage of {{vassal}} is at an end. One of the couriers who used to bring their accounts to our treasury tells us he means to come again on his own business. The innkeeper has promised him his usual room."
+          "The vassalage of {{vassal}} has ended after a term that neither court now cares to celebrate. The clerks who once copied their accounts into our books have been reassigned. What remains is a treaty in a drawer and a road that no longer carries orders."
         ],
         "weight": { "base": 1 }
       }
@@ -641,7 +641,7 @@
         "id": "mutual-denunciation-report",
         "headline": "We and {{civilization}} denounce each other",
         "body": [
-          "{{civilization}} and our {{terms.civic.government}} have denounced each other in public. A merchant who keeps an agent abroad says he asked for both declarations before he sent out his next set of instructions."
+          "{{civilization}} and our {{terms.civic.government}} have denounced each other in the same season. Both declarations are public, and neither court has left itself a quiet way to withdraw. A broker at the exchange read both notices, then quietly raised what he charges to carry goods on that road."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -655,7 +655,7 @@
         "genre": "report",
         "headline": "Both courts put their quarrel on record",
         "body": [
-          "Our court and {{civilization}} have denounced each other in public. Their envoys can still talk in private, but it will be harder to disown a quarrel they have both committed to paper."
+          "Both our court and {{civilization}} have put a denunciation on paper. Their envoys may still meet behind a door, but each side has said in public what it cannot easily take back. From here, every small quarrel has a written precedent."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -669,7 +669,7 @@
         "genre": "proverb",
         "headline": "Two houses, one quarrel",
         "body": [
-          "When both neighbors shout at once, the market counts the broken pots. Quiet houses keep full shelves."
+          "Two neighbors shout across the wall. The mason sells them both a higher wall."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -683,7 +683,7 @@
         "genre": "editorial",
         "headline": "Who pays for the shouting?",
         "body": [
-          "Our {{terms.civic.government}} and {{civilization}} have denounced each other. In the foreign quarter, a cooper is wondering whether the customers who ordered his barrels will still come for them. Let it tell the square what it is prepared to do if they don't."
+          "Our {{terms.civic.government}} and {{civilization}} have traded denunciations, and the bill will be paid in some street. A printer on the wharf has already been asked to set the notice twice, once for each side. Ask the government plainly which of our livelihoods it is willing to spend on this quarrel."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -704,7 +704,7 @@
         "when": "civilization !== null",
         "headline": "We open our borders to {{civilization}}",
         "body": [
-          "At the frontier post, the toll keeper raises the barrier for a wagon from {{civilization}} without asking for papers. Our borders stand open, and their caravans may cross without leave."
+          "Travelers from {{civilization}} may now cross our frontier without stopping for a permit. The order went out to every post this morning, and the first carts were through before noon. Our borders are open to them, and the toll houses will have the paperwork to prove it."
         ],
         "weight": { "base": 1 }
       },
@@ -713,7 +713,7 @@
         "when": "civilization === null",
         "headline": "Our borders stand open to a neighbor",
         "body": [
-          "Our nation has granted open borders to a neighboring power. Their travelers and caravans may now cross our land without asking leave at the frontier for each journey."
+          "Our nation has opened its land to a neighboring power. Their carts and their travelers may cross as they please, and no frontier post will ask for a fresh permit. The roads will be busier, and the garrisons will have more faces to watch."
         ],
         "weight": { "base": 1 }
       },
@@ -725,7 +725,7 @@
         "when": "civilization !== null",
         "headline": "Notice to merchants: our roads are open to {{civilization}}",
         "body": [
-          "Take note, traders and caravan masters. Our borders stand open to {{civilization}}, and their goods and people may cross our land freely from this day. The frontier posts are instructed accordingly, and the toll houses will expect the traffic."
+          "Notice to merchants: the frontier is open to {{civilization}} as of this morning. Their caravans may pass without a fresh permit, and their traders may deal where they like. Toll clerks have been told to expect a busy road."
         ],
         "weight": { "base": 1 }
       },
@@ -737,7 +737,7 @@
         "when": "civilization !== null",
         "headline": "Open borders with {{civilization}}, and the goodwill they carry",
         "body": [
-          "An open border is a small treaty renewed each day by the people who use it. {{civilization}}'s caravans on our roads mean traffic at our markets and a neighbor with something to lose from trouble. A road that carries goods both ways is worth more than the guard posts it saves."
+          "Opening the border to {{civilization}} puts their carts on our roads and their money in our markets. It also gives their court something to lose if the frontier turns ugly. A crossing that carries goods both ways is worth more than the soldiers who used to watch it."
         ],
         "weight": { "base": 1 }
       }
@@ -755,7 +755,7 @@
         "when": "civilization !== null",
         "headline": "{{civilization}} opens its borders to us",
         "body": [
-          "At a {{civilization}} frontier post, our courier has ridden past without stopping for papers. Their land is open to us, and our caravans may cross without asking leave."
+          "The frontier posts of {{civilization}} have been ordered to let our people through. A courier tested the order yesterday and crossed without showing a paper. Their land is open to us now, and our caravans may follow at will."
         ],
         "weight": { "base": 1 }
       },
@@ -764,7 +764,7 @@
         "when": "civilization === null",
         "headline": "A neighbor opens its borders to us",
         "body": [
-          "A neighboring power has granted us open borders. Our travelers and caravans may now cross their land without asking leave at the frontier for each journey."
+          "A neighboring power has opened its roads to us. Our traders may cross their land without a permit for every trip, and our couriers need not wait at the post. The welcome is new, and it is worth using before it cools."
         ],
         "weight": { "base": 1 }
       },
@@ -776,7 +776,7 @@
         "when": "civilization !== null && capital !== null",
         "headline": "The road to {{capital}} is open",
         "body": [
-          "{{civilization}} has opened its borders to us, and our caravans can now reach {{capital}} without a permit at the frontier. Merchants who had priced that road for seasons were loading carts before the ink dried."
+          "The road to {{capital}} is open, since {{civilization}} has lifted its frontier permit for our caravans. A carter who has spent years quoting that route at a cautious price is now promising a faster one. His customers are listening."
         ],
         "weight": { "base": 1 }
       },
@@ -788,7 +788,7 @@
         "when": "civilization !== null",
         "headline": "One wagon, loaded by noon",
         "body": [
-          "When word came down that {{civilization}} had opened the border, the carter on the east road had his wagon loaded by noon. \"Stared at that road my whole life,\" he says. \"First time it has gone somewhere.\""
+          "The carter at the north gate had his wagon loaded by noon, and not with market goods. He heard that {{civilization}} had opened its border and packed for a look at the other side. \"All my life I have hauled along that fence,\" he says. \"Now I want to see what is behind it.\""
         ],
         "weight": { "base": 1 }
       }
@@ -806,7 +806,7 @@
         "when": "from !== null && to !== null",
         "headline": "{{from}} and {{to}} bargain, and a war ends",
         "body": [
-          "{{from}} and {{to}} have struck a bargain that requires peace with a third state. At the frontier, a carter who has been camped beside the barrier for a season is asking the guard when the road opens."
+          "{{from}} and {{to}} have struck a bargain, and part of the price is peace with a third state. In the border town, a shopkeeper has begun taking the boards from her windows. She has heard promises before, but this one came with signatures."
         ],
         "weight": { "base": 1 }
       },
@@ -815,7 +815,7 @@
         "when": "from === null || to === null",
         "headline": "Peace is part of the price",
         "body": [
-          "A deal between two states has been recorded, and part of its price is peace elsewhere: one of the parties has agreed, in the bargain, to end a war with a state that never signed it."
+          "A bargain between two states has been entered in the record, and it buys quiet on a third frontier. One of the signers has promised to end a war with a state that had no seat at the table. The state that was fighting has not been heard from yet."
         ],
         "weight": { "base": 1 }
       },
@@ -827,9 +827,9 @@
         "when": "from !== null && to !== null && fromGives !== null && toGives !== null",
         "headline": "The terms, as recorded",
         "body": [
-          "{{from}} gives: {{fromGives}}.",
-          "{{to}} gives: {{toGives}}.",
-          "The telling entry: a war, ended by signature instead of arms."
+          "{{from}} puts in: {{fromGives}}.",
+          "{{to}} puts in: {{toGives}}.",
+          "The entry that matters: a war closed by signature, not by a battle."
         ],
         "weight": { "base": 1 }
       },
@@ -841,7 +841,7 @@
         "when": "from !== null && to !== null && ours === false",
         "headline": "A war ends at someone else's table",
         "body": [
-          "The bargain between {{from}} and {{to}} includes peace with a third power. Someone at that frontier will be asking whether the troops can come home in time for the harvest. For the people still waiting, the next dispatch matters as much as the signatures."
+          "The deal between {{from}} and {{to}} carries peace to a third state that had no seat at the table. Officers there will hear it from a courier, long after the ink dried. Such arrangements end a war quickly and leave the men who fought it asking what was promised over their heads."
         ],
         "weight": { "base": 1 }
       }
@@ -859,7 +859,7 @@
         "when": "from !== null && to !== null",
         "headline": "War is written into the deal between {{from}} and {{to}}",
         "body": [
-          "A deal between {{from}} and {{to}} includes an agreement to make war on a third party. At the crossroads inn, a rider has changed horses and gone on with sealed orders. The landlord wipes the table and asks nothing."
+          "{{from}} and {{to}} have agreed on a deal, and war against a third state is part of the price. A courier stopped at the posting house for a fresh horse and would not say where he was bound. The stable boy noticed the direction and kept it to himself."
         ],
         "weight": { "base": 1 }
       },
@@ -868,7 +868,7 @@
         "when": "from === null || to === null",
         "headline": "A deal with war in the terms",
         "body": [
-          "A deal between two states has been recorded with war among its terms: one of the parties has agreed to take up arms against a state that had no say in the signing."
+          "A bargain between two states has been entered in the record, and one clause is a war. The signer has promised to take up arms against a country that had no voice in the deal. That country will learn of it from an envoy, or from the first horseman."
         ],
         "weight": { "base": 1 }
       },
@@ -880,7 +880,7 @@
         "when": "from !== null && to !== null && ours === false",
         "headline": "Tonight: a deal that buys a war",
         "body": [
-          "From the foreign desk tonight: {{from}} and {{to}} have signed a deal. Part of the terms is war on a third power. No shots reported yet. We are following this story and will bring you more."
+          "Tonight, {{from}} and {{to}} have signed a deal, and the price includes a war. The third country named in the terms has made no answer. We are watching the border and will bring you word as it comes."
         ],
         "weight": { "base": 1 }
       },
@@ -892,7 +892,7 @@
         "when": "from !== null && to !== null && ours === false",
         "headline": "Other people's wars, other people's coin",
         "body": [
-          "The deal between {{from}} and {{to}} puts a third nation's name on a contract it never signed. Our court had no seat at that table and no say in the terms. The question to put now, before the fighting finds our trade roads: what did we do while the ink dried?"
+          "The deal between {{from}} and {{to}} spends a third nation's peace without asking its leave. Our government was not at the table and has said nothing since. It should tell the country now whether our trade roads will be guarded, and by whom."
         ],
         "weight": { "base": 1 }
       }
@@ -910,7 +910,7 @@
         "when": "master !== null",
         "headline": "Our vassalage to {{master}} is over",
         "body": [
-          "At the palace gate, a guard has taken down {{master}}'s pennant and folded it into a chest. The vassalage is ended, and our {{terms.civic.government}}'s word is its last word again."
+          "The vassalage to {{master}} has ended, and the tribute rolls have been closed. Our {{terms.civic.government}} speaks for the nation again without another court's leave. The first test will come the next time a neighbor asks who speaks for us."
         ],
         "weight": { "base": 1 }
       },
@@ -919,7 +919,7 @@
         "when": "master === null",
         "headline": "We are no longer a vassal",
         "body": [
-          "The vassalage that bound our nation to a foreign power has ended. Our state stands again on its own authority."
+          "The vassalage that bound our nation to a foreign power has ended. No tribute leaves our treasury for another court, and no foreign envoy signs our orders. The government answers to its own people again."
         ],
         "weight": { "base": 1 }
       },
@@ -931,7 +931,7 @@
         "when": "master !== null",
         "headline": "Hear it! We bow no more",
         "body": [
-          "Hear it, {{terms.civic.people}} of the nation! The vassalage to {{master}} is ended, and the word is official. Our {{terms.civic.government}} answers to no throne but our own. Say it in the square, say it at your doors, and say it twice!"
+          "Hear it, {{terms.civic.people}}! {{master}} holds no claim on us this morning. The vassalage is ended, and our {{terms.civic.government}} gives its own orders again. Shout it at the gate and shout it in the square: no master, no tribute, no bowed head!"
         ],
         "weight": { "base": 1 }
       },
@@ -943,7 +943,7 @@
         "when": "master !== null",
         "headline": "In this year, the vassalage was dissolved",
         "body": [
-          "In this year the vassalage to {{master}} was dissolved, and the scribe sets it down as it stands. The tribute that came with it is paid no more; the protection that came with it is owed no longer. What follows is for the next hand to write."
+          "In this year our nation ceased to be a vassal of {{master}}. The scribe records the closing of the tribute rolls and the return of our seal. What the court does with that seal is not yet written."
         ],
         "weight": { "base": 1 }
       },
@@ -955,7 +955,7 @@
         "when": "master !== null",
         "headline": "Free, and with work to do",
         "body": [
-          "Mark it, {{terms.civic.people}}: our word is ours again. If the {{terms.civic.government}} sends another envoy to {{master}}, let it read his instructions in the square. We have a right to hear what will be said in our name."
+          "{{terms.civic.people}}, the oath to {{master}} is ended, and good riddance. Our {{terms.civic.government}} should now show that it can stand without a patron. Let every envoy's instructions be read aloud before he leaves, so we know what is said in our name."
         ],
         "weight": { "base": 1 }
       }
@@ -972,7 +972,7 @@
         "id": "we-denounce-major-report",
         "headline": "We denounce {{civilization}}",
         "body": [
-          "Our {{terms.civic.government}} has publicly denounced {{civilization}}. A correspondent waiting for a copy said other capitals would now have our words in full when they asked where we stood."
+          "Our {{terms.civic.government}} has denounced {{civilization}} in public. The declaration is copied into the day book, and other courts may now read exactly where we stand. The words will outlast the anger that produced them."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -986,7 +986,7 @@
         "genre": "editorial",
         "headline": "Said plainly, and none too soon",
         "body": [
-          "The denunciation of {{civilization}} is on the record, and plain speaking beats patient smiling. Words do not stop armies, but they tell our friends whose side we stand on while it still matters, and they tell {{civilization}} that the smiling is finished."
+          "The denunciation of {{civilization}} is signed, and it was a long time coming. A denunciation will not stop a single company of spears. It does tell every court in the world which way we will face when the trumpets sound, and that is worth the paper."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -1001,7 +1001,7 @@
         "byline": "A reader who trades across that border",
         "headline": "Sir, was there no quieter road?",
         "body": [
-          "I read that our {{terms.civic.government}} has denounced {{civilization}}, and I think of the carts that cross that border both ways each week. Quarrels are cheap to declare and dear to keep, and it is rarely the quarrellers who pay. If a word can be taken back with honor, I ask the {{terms.civic.government}} to weigh whether it should be."
+          "Sir, I read that our {{terms.civic.government}} has denounced {{civilization}}, and I think of the wagons that cross that border every week in both directions. A quarrel is easy to announce and hard to feed. If the words can be softened without shame, I would ask the government to soften them."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -1015,7 +1015,7 @@
         "genre": "report",
         "headline": "In this year, we spoke against {{civilization}}",
         "body": [
-          "In this year the {{terms.civic.government}} set down a denunciation against {{civilization}}, where none stood before. The scribe notes the fact and the season; the judgment belongs to later hands."
+          "In this year the {{terms.civic.government}} spoke against {{civilization}} in the hearing of other courts. The scribe has written the words exactly as they were delivered. No comment is added here, and none is needed yet."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
