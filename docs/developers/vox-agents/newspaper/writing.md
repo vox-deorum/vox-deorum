@@ -1,8 +1,8 @@
 # News writing rules
 
-The newspaper turns a recorded Civilization V game into stories for the player who lived it. Its first job is to entertain. A reader who wanted a manual would open the civilopedia.
+Write for the player who lived through the game. The newspaper's first job is to entertain.
 
-These rules cover the authored prose under `vox-agents/newspaper/templates/`. Show this page to a model before it edits templates. Each pair below credits the intended [voice, stance, and genre](editorial.md#variant-styles).
+Use these rules when editing `vox-agents/newspaper/templates/`, and give them to any model doing the same work. Each example names its [voice, stance, and genre](editorial.md#variant-styles). Check the corresponding trigger for the [placeholders](editorial.md#placeholders-and-facts) a template can use.
 
 ## Entertain first
 
@@ -12,13 +12,23 @@ Every variant has to earn its place. Give the reader a scene, a voice, a joke, a
 
 Write:
 
-> The war was still on, but the pie shop on the square sold out by noon. At the back of the line, a man stopped a woman on her way out and offered her a coin for half her slice. She took it and told him to fetch his own fork.
+> The war was still on, but the pie shop on the square sold out by noon. At the back of the line, a man stopped a woman on her way out and offered her a coin for half her slice. She took it. “Get your own damn fork,” she said.
 
 Avoid:
 
 > War weariness has fallen. The reduction improves production and happiness.
 
-The pie shop gives the reader a small pleasure people are willing to queue for again.
+**Voice:** `feed` · **Stance:** `neutral` · **Genre:** `joke`
+
+Write:
+
+> The standings are out: last of {{count}}. One consolation. Nobody can overtake us from there.
+
+Avoid:
+
+> The standings are out, and we're last of {{count}}. We're now at the bottom of the table.
+
+The last line of the [stock joke](../../../../vox-agents/newspaper/templates/politics.json) turns a bad result into a consolation.
 
 ## Hint at rules through consequences
 
@@ -36,9 +46,23 @@ Avoid:
 
 > Famine is the main source of unhappiness in Thebes. Reassign citizens to food tiles.
 
+**Voice:** `chronicle` · **Stance:** `traditional` · **Genre:** `obituary`
+
+Write:
+
+> Here ends the account of our last outgoing trade route. In the merchant's yard, the keeper of the scales wrapped the weights in wool and laid them in their chest.
+
+Avoid:
+
+> It was one road, and it carried everything we sent abroad. It ran through seasons of war and seasons of peace, and it ran until this one, when it ran no more.
+
+The [stock obituary](../../../../vox-agents/newspaper/templates/trade.json) gives the route a history the [trigger](../../../../vox-agents/newspaper/triggers/trade.json) never establishes. Putting the weights away shows what the ending means to someone who worked the route.
+
 ## Write from inside the world
 
 Write for people who live there. A crier can ask neighbors to share their bread, and an editorial can press the council for answers. Keep game strategy and instructions to the player out of the copy.
+
+Give ordinary people room to react when it suits the genre. A curse can come naturally from a customer in an anecdote or a crier calling across a square.
 
 **Voice:** `pamphlet` · **Stance:** `government-critical` · **Genre:** `editorial`
 
@@ -50,7 +74,17 @@ Avoid:
 
 > We lost {{cityName}}. Name the failure before the next city pays for it.
 
-The editorial says who owes an answer and who is waiting for it.
+**Voice:** `pamphlet` · **Stance:** `national` · **Genre:** `editorial`
+
+Write:
+
+> People, our word is ours again. If the council sends another envoy to {{master}}, let it read his instructions in the square. We have a right to hear what will be said in our name.
+
+Avoid:
+
+> Nobody in the square needs telling what the end of the {{master}} vassalage means. But freedom is a running expense, not a festival. Before the old master's mood changes, the court should be found buying arms, courting allies and filling the grain stores, roughly in that order.
+
+The [stock editorial](../../../../vox-agents/newspaper/templates/diplomacy.json) makes a strong start, then slips into an ordered list of moves.
 
 ## Define things by what they are
 

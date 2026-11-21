@@ -48,28 +48,44 @@ describe('masthead rule catalogue', () => {
     await expect(parseEditorialConfig(saved)).resolves.toBeDefined();
   });
 
-  it('should merge an overlay by ID and append a local rule', async () => {
+  it('should merge rules from several local files by ID after the flat overlay', async () => {
     const base = await loadEditorialConfig();
     const existing = base.mastheadRules![0];
     const added = {
       id: 'local-review', title: 'The {{terms.civilization}} Review',
       pageLabels: { front: 'Local Front' }, when: 'true', weight: { base: 1 },
     };
-    await writeDocument('masthead-rules.json', [{ id: existing.id, title: 'Local masthead title' }, added]);
+    const localWeight = { ...existing.weight, base: 20 };
+    await Promise.all([
+      writeDocument('masthead-rules.json', [{ id: existing.id, title: 'Old title', weight: { base: 20 } }]),
+      writeDocument('mastheads/ideology.json', [{ id: existing.id, title: 'Local masthead title' }]),
+      writeDocument('mastheads/newsroom.json', [added]),
+    ]);
     const loaded = await loadEditorialConfig(directory);
     expect(loaded.mastheadRules?.find(rule => rule.id === existing.id)).toMatchObject({
       title: 'Local masthead title',
       when: existing.when,
-      weight: existing.weight,
+      weight: localWeight,
     });
     expect(loaded.mastheadRules?.find(rule => rule.id === added.id)).toMatchObject(added);
+  });
+
+  it('should report a malformed flat overlay even when a local folder exists', async () => {
+    await Promise.all([
+      writeDocument('masthead-rules.json', {}),
+      writeDocument('mastheads/ideology.json', []),
+    ]);
+    await expect(loadEditorialConfig(directory)).rejects.toThrow(/Expected an array.*masthead-rules\.json/);
   });
 
   it('should reject duplicate IDs, unknown references and blank authored copy', async () => {
     const base = await loadEditorialConfig();
     const rule = { id: 'trial', title: 'Trial', when: 'true', weight: { base: 1 } };
     const stockId = base.mastheadRules![0].id;
-    await writeDocument('masthead-rules.json', [{ id: stockId, title: 'A local title' }, { id: stockId, when: 'false' }]);
+    await Promise.all([
+      writeDocument('mastheads/ideology.json', [{ id: stockId, title: 'A local title' }]),
+      writeDocument('mastheads/newsroom.json', [{ id: stockId, when: 'false' }]),
+    ]);
     await expect(loadEditorialConfig(directory)).rejects.toThrow(`Duplicate masthead rule id "${stockId}"`);
     await expect(parseEditorialConfig({ ...base, mastheadRules: [rule, rule] })).rejects.toMatchObject({
       issues: expect.arrayContaining([expect.objectContaining({ path: ['mastheadRules', 1, 'id'] })]),

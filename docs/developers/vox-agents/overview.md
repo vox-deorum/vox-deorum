@@ -30,7 +30,7 @@ Vox Agents never talks to the game directly. It is an MCP client of the [MCP ser
 | [workspace/](workspace/) | The optional per-seat file workspace: the `bash` tool, its folders, and the record and note store. |
 | [agents/](agents/) | Each agent family. Strategists have their own subfolder. |
 | [platform/](platform/) | The web dashboard, tracing and logs, and video capture. |
-| [newspaper/](newspaper/overview.md) | The implemented renderer proof and planned replay, editorial, evaluation, and live integration stages. |
+| [newspaper/](newspaper/overview.md) | Recorded-game replay, authored stories, issue design, browser reading, and export to Civilization V. |
 
 Suggested reading order:
 

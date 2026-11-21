@@ -173,38 +173,50 @@ function stripBuiltInDesignAssets(design: unknown): unknown {
   return settings;
 }
 
-/** Reject duplicates in one masthead rules file before ID overlay can hide them. */
-function checkMastheadRuleIds(rules: unknown, directory: string): void {
-  if (!Array.isArray(rules)) return;
+/** Validate the entries and IDs in one masthead layer before merging. */
+function checkMastheadRuleIds(rules: unknown, source: string): void {
+  if (rules === undefined) return;
+  if (!Array.isArray(rules)) throw new Error(`Expected an array of masthead rules in ${source}.`);
   const ids = new Set<string>();
-  for (const rule of rules) {
-    if (!isRecord(rule) || typeof rule.id !== 'string') continue;
+  for (const [index, rule] of rules.entries()) {
+    if (!isRecord(rule) || typeof rule.id !== 'string' || !rule.id)
+      throw new Error(`Expected a masthead rule id in ${source}, entry ${index + 1}.`);
     if (ids.has(rule.id))
-      throw new Error(`Duplicate masthead rule id "${rule.id}" in ${path.join(directory, 'masthead-rules.json')}.`);
+      throw new Error(`Duplicate masthead rule id "${rule.id}" in ${source}.`);
     ids.add(rule.id);
   }
+}
+
+/** Load grouped mastheads, allowing a local folder to build on an older flat overlay. */
+async function loadMastheadRules(builtIn: string, directory?: string): Promise<unknown> {
+  const stock = await readCatalogueSection(builtIn, 'mastheads');
+  checkMastheadRuleIds(stock, path.join(builtIn, 'mastheads'));
+  if (!directory) return stock;
+  const [flat, grouped] = await Promise.all([
+    readCatalogueFile(directory, 'masthead-rules', true),
+    readCatalogueSection(directory, 'mastheads', true),
+  ]);
+  checkMastheadRuleIds(flat, path.join(directory, 'masthead-rules.json'));
+  checkMastheadRuleIds(grouped, path.join(directory, 'mastheads'));
+  return overlay(stock, overlay(flat, grouped));
 }
 
 /** Load grouped built-ins and optional flat or grouped overrides, then validate together. */
 export async function loadEditorialConfig(directory?: string): Promise<EditorialConfig> {
   const builtIn = builtInCatalogueDirectory();
   const result: Record<string, unknown> = { version: 1 };
-  for (const name of ['defaults', 'constants', 'triggers', 'templates', 'pages', 'designs', 'mastheadRules']) {
+  for (const name of ['defaults', 'constants', 'triggers', 'templates', 'pages', 'designs']) {
     const grouped = name === 'triggers' || name === 'templates' || name === 'designs';
-    const file = name === 'mastheadRules' ? 'masthead-rules' : name;
     const base = grouped
       ? await readCatalogueSection(builtIn, name)
-      : await readCatalogueFile(builtIn, file);
-    let custom = directory ? await readCatalogueFile(directory, file, true) : undefined;
+      : await readCatalogueFile(builtIn, name);
+    let custom = directory ? await readCatalogueFile(directory, name, true) : undefined;
     if (directory && grouped)
       custom = overlay(custom, await readCatalogueSection(directory, name, true));
-    if (name === 'mastheadRules') {
-      checkMastheadRuleIds(base, builtIn);
-      if (directory) checkMastheadRuleIds(custom, directory);
-    }
     const settings = name === 'designs' && Array.isArray(base) ? base.map(stripBuiltInDesignAssets) : base;
     result[name] = overlay(settings, custom);
   }
+  result.mastheadRules = await loadMastheadRules(builtIn, directory);
   const stock = await readStyleCatalogue(builtIn);
   const custom = directory ? await readStyleCatalogue(directory, true) : undefined;
   const tags = overlay(stock.tags, custom?.tags);

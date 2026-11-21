@@ -1,145 +1,86 @@
 # Newspaper trigger constants and shortcuts
 
-The built-in `vox-agents/newspaper/constants.json` supplies the names used by the stock catalogue and merges with overlays. The stock `civilization` term supplies the receiving civilization's name for newspaper titles. The probe overlay in `vox-agents/newspaper/probes/constants.json` shows how to add other terms.
+Use a name from [`constants.json`](../../../../../vox-agents/newspaper/constants.json) when several rules share the same threshold or test. For example, a rule can use `city.is.neighbor` to check whether a foreign city sits within `neighboring` distance. To try 9 tiles in place of the default 7, put `{"distances":{"neighboring":9}}` in an overlay's `constants.json`.
 
-**Constants** give names to the numbers that [trigger rules](overview.md) compare against, such as `neighboring` for 7 tiles. **Shortcuts** give names to small expressions that many rules share, such as `city.is.neighbor`. **Terms** give printable names to expressions that read the facts, so prose, titles and mottos can share a phrase. This page is for developers writing or tuning rules. All three are configured in a catalogue's `constants.json`, and changing one there changes everything that uses it.
-
-| Group | Holds | Used as | Example |
-| --- | --- | --- | --- |
-| `distances` | Distances in hex tiles | A plain name | `neighboring` |
-| `spans` | Spans in Standard turns | A plain name, scaled to recorded turns | `recent` |
-| `sizes` | Population counts | A plain name | `largeCity` |
-| `shares` | Fractions from 0 to 1 | A plain name | `majority` |
-| `types` | Lists of recorded names | A plain name holding a list | `settlers` |
-| `shortcuts` | Expressions grouped by subject | `<subject>.is.<name>` | `city.is.neighbor` |
-| `terms` | Printable expressions that return text or a finite number | `{{terms.<name>}}` in prose, titles and mottos | `{{terms.civilization}}` |
+| Group | Use in a rule or story |
+| --- | --- |
+| `distances`, `spans`, `sizes`, `shares` | Named numbers such as `neighboring` or `recent` |
+| `types` | Named lists of recorded names, such as `settlers` |
+| `shortcuts` | Reusable fact tests, such as `city.is.neighbor` |
+| `terms` | Printable values, such as `{{terms.civilization}}` |
 
 ## Distance
 
-Distance counts hex steps between recorded plots. Adjacent tiles are 1 apart. For a player, `distance` uses its cities visible at the cutoff and takes the shortest reading across those cities. If either side has no usable plot, the distance is unavailable. With valid recorded map dimensions and wrap flags, the count follows the shortest permitted route across map edges.
+Distance counts hex steps. With valid recorded map dimensions and wrap flags, it can take the shorter route across a map edge. Without valid geometry, it uses unwrapped distance. A missing plot can make a distance unavailable.
 
-| Reading | Meaning |
+| Reading | Measures from |
 | --- | --- |
-| `city.distance.own` | From a city to the receiver's nearest city |
-| `city.distance.capital` | From a city to the receiver's capital |
-| `player.distance` | Between the closest pair of cities, one of the player's and one of the receiver's |
-| `event.distance.own` | From an event's plot to the receiver's nearest city |
-| `distance(a, b)` | Between any two players, cities, plots or events with usable coordinates |
+| `city.distance.own`, `event.distance.own` | The city or event plot to the receiver's nearest city |
+| `city.distance.capital` | The city to the receiver's capital |
+| `player.distance` | The closest visible pair of cities, one from that player and one from the receiver |
+| `distance(a, b)` | Two players, cities, plots or events with usable coordinates |
 
-Recordings without valid geometry, including older ones that predate it, use unwrapped distance. Two cities on opposite edges of a wrapping map then read as far apart.
-
-| Constant | Default, in tiles | Meaning | Example on the map |
-| --- | --- | --- | --- |
-| `adjacent` | 4 | Borders nearly touch | A city founded right beside ours |
-| `neighboring` | 7 | A next-door city | The closest city of the civilization we share a border with |
-| `nearby` | 15 | Within the same region | A capital two or three cities away |
-| `regional` | 25 | The same part of the continent | A war we would hear about but not feel |
+| Constant | Hex tiles |
+| --- | --- |
+| `adjacent` | 4 |
+| `neighboring` | 7 |
+| `nearby` | 15 |
+| `regional` | 25 |
 
 ## Spans
 
-Spans measure time in **Standard turns**, the turn count at Standard game speed. The `spans` group stores each span in Standard turns, and saved replay configuration keeps that form. Before a rule sees a span, it is multiplied by the game-speed multiplier and rounded to the nearest whole recorded turn, with a minimum of 1. `turn - city.captured.turn <= recent` therefore works at any speed. On Marathon, where one Standard turn spans 3 recorded turns, `recent` is 15 recorded turns. A bare number inside an expression, such as the `2` in `held(pair, test, 2)`, is always recorded turns.
+Named spans are defined and saved in Standard turns. Expressions see the span multiplied by game speed and rounded to the nearest whole recorded turn, with a minimum of one. For example, `recent` is 5 recorded turns at Standard speed and 15 at Marathon speed.
 
-| Constant | Default, in Standard turns | Use for |
-| --- | --- | --- |
-| `recent` | 5 | One reporting period at the default frequency |
-| `short` | 10 | A trend that needs confirming |
-| `medium` | 20 | A follow-up interval, or a lasting situation |
-| `long` | 40 | An era-scale comparison |
+| Constant | Standard turns |
+| --- | --- |
+| `recent` | 5 |
+| `short` | 10 |
+| `medium` | 20 |
+| `long` | 40 |
 
-A trigger's `window` and `repeat` accept these names or a bare number of Standard turns.
+Numeric `window` and `repeat` fields also use Standard turns. Inside an expression a bare number uses recorded turns, so `held(pair, test, 2)` means two recorded turns at any speed.
 
 ## Sizes and shares
 
-| Constant | Default | Meaning |
-| --- | --- | --- |
-| `town` | 5 population | Below this, a city is a small settlement |
-| `largeCity` | 15 population | A major city |
-| `metropolis` | 25 population | One of the great cities of the game |
-| `minority` | 0.25 | A quarter share |
-| `majority` | 0.5 | Half |
-| `dominant` | 0.75 | Three quarters |
+| Group | Defaults |
+| --- | --- |
+| Population | `town` 5, `largeCity` 15, `metropolis` 25 |
+| Fractions | `minority` 0.25, `majority` 0.5, `dominant` 0.75 |
 
 ## Type lists
 
-Type lists group recorded names so rules can check a category. The `ideologies` list also determines which branches count toward `player.ideology`.
+Use list membership to check a category. For example, `settlers.includes(t.unit)` matches Settler, Pioneer and Colonist. The stock file also defines `workers`, `missionaries`, `greatPeople`, `defenses`, `ideologies` and `worldProjects`. The `ideologies` list determines which branches can count toward `player.ideology`.
 
-| List | Contains | Example |
-| --- | --- | --- |
-| `settlers` | Settler, Pioneer, Colonist | `city.trained.some(t => settlers.includes(t.unit))` |
-| `workers` | Worker, Work Boat | `city.trained.some(t => workers.includes(t.unit))` |
-| `missionaries` | Missionary, Inquisitor, Great Prophet | `city.trained.some(t => missionaries.includes(t.unit))` |
-| `greatPeople` | The Great Person unit names | `greatPeople.includes(event.unit)` on a `GreatPersonExpended` event |
-| `defenses` | Walls, Castle, Arsenal, Military Base, and unique replacements | `city.built.some(b => defenses.includes(b.building))` |
-| `ideologies` | Order, Freedom, Autocracy | `ideologies.includes(event.branch)` on a `PlayerAdoptPolicyBranch` event |
-| `worldProjects` | Recorded names of World Congress projects | `worldProjects.includes(proposal.name)` |
-
-Names must match the recording's text. Recordings store localized names, so a catalogue for another language needs its own lists.
+Names must match the text in the recording. If the recorded text uses a different language, adapt the affected lists.
 
 ## Shortcuts
 
-A shortcut is a named expression for one subject. It reads like a fact and can use constants, facts and other shortcuts.
+A shortcut is an expression attached to the fact it reads. A historical fact uses the historical snapshot, so `city.before.is.conquered` tests the earlier occupation and puppet flags. Globals such as `cities` and `turn` still describe the current check. A shortcut is hidden if it needs an unavailable fact; use `city.is.knows('starving')` to test whether that shortcut can be evaluated.
 
-| Shortcut | Expression | Meaning |
-| --- | --- | --- |
-| `city.is.neighbor` | `city.foreign && city.distance.own <= neighboring` | A foreign city next door |
-| `city.is.nearby` | `city.foreign && city.distance.own <= nearby` | A foreign city in our region |
-| `city.is.frontier` | `city.own && cities.some(c => c.foreign && distance(c, city) <= neighboring)` | One of our cities with a foreign city next door |
-| `city.is.starving` | `city.foodPerTurn < 0 && city.foodStored < -city.foodPerTurn * recent` | Losing food, with a reserve that runs out in fewer than `recent` turns |
-| `city.is.besieged` | `city.owner.atWar && city.hitPoints < city.maxHitPoints` | Damaged while its owner is at war |
-| `city.is.conquered` | `city.isOccupied \|\| city.isPuppet` | Held after a capture |
-| `city.is.followsAnotherReligion` | Reads our founded religion and the city's majority | One of our cities follows a different named religion |
-| `player.is.neighbor` | `!player.self && player.distance <= neighboring` | A civilization or city-state next door |
-| `player.is.nearby` | `!player.self && player.distance <= nearby` | A civilization or city-state in our region |
-| `player.is.rival` | `player.major && !player.self && !player.friend && !player.ally` | A major civilization we have no friendship or pact with |
-| `player.is.hasFoundedReligion` | Checks for a readable, nonempty religion name | The player founded a recorded religion |
-| `player.is.hasMajorityReligion` | Checks for a readable, nonempty majority religion name | A recorded religion has a majority in the player's empire |
-| `player.is.alliedCityState` | Tests whether the recorded major ally is the receiver | Use on a city-state, including its snapshot just before a capture or attack |
-| `player.is.friendlyCityState` | Checks for friendship and a known alliance status | A city-state that is our friend and is either unallied or allied to another major |
-| `pair.is.foreignWar` | `pair.atWar && !pair.involvesSelf && pair.majors` | A war between two other major civilizations |
+| Shortcut | Test |
+| --- | --- |
+| `city.is.neighbor`, `city.is.nearby` | A foreign city within the corresponding distance |
+| `city.is.frontier` | An own city within `neighboring` distance of a foreign city |
+| `city.is.starving` | Losing food, with fewer than `recent` turns of reserves at the current rate |
+| `city.is.besieged` | Damaged while its owner is at war |
+| `city.is.conquered` | Occupied or a puppet |
+| `city.is.followsAnotherReligion` | An own city whose named majority religion differs from our founded religion |
+| `player.is.neighbor`, `player.is.nearby` | Another player within the corresponding distance |
+| `player.is.rival` | Another major civilization that is neither our friend nor our ally |
+| `player.is.alliedCityState`, `player.is.friendlyCityState` | Our city-state ally, or a city-state friend with a known alliance status who is not our ally |
+| `player.is.hasFoundedReligion`, `player.is.hasMajorityReligion` | The corresponding religion name is readable and nonempty |
+| `pair.is.foreignWar` | A war between two other major civilizations |
 
-The `pair.is.foreignWar` source is authored in the built-in file and reads pair facts in pair rules.
-
-A worked check of `city.is.starving`, with `recent` at 5 turns on Standard speed:
-
-| City | `foodPerTurn` | `foodStored` | Reserve needed: `-foodPerTurn × 5 (recent)` | Result |
-| --- | --- | --- | --- | --- |
-| Growing | 3 | 20 | Not computed, food is positive | false |
-| Slow loss, deep reserve | -2 | 30 | 10 | false, since 30 is above 10 |
-| Fast loss, thin reserve | -4 | 12 | 20 | true, since 12 is below 20 |
-| Reserve lasts exactly 5 turns | -2 | 10 | 10 | false, since 10 is not below 10 |
-
-A shortcut that reads a [hidden fact](facts.md#hidden-and-missing-facts) is hidden too. Use `city.is.knows('starving')` to check whether the receiver can evaluate it for that city.
-
-Shortcuts follow the subject they are read on: `city.before.is.conquered` tests the earlier city flags, and `city.owner.is.rival` tests the city's linked owner. Globals such as `cities` and `turn` still describe the current check. A historical shortcut can use only the facts available on that snapshot. For example, `city.before.is.frontier` is hidden because `city.own` is available only at the cutoff.
-
-Style rules can use the same shortcuts. A named religion can inform the newspaper's tone, while an unknown reading does not establish that the player lacks a founded religion.
+At Standard speed, a city losing two food per turn with 10 stored is just outside `city.is.starving`: the reserve lasts exactly five turns. With nine stored it qualifies.
 
 ## Terms
 
-A term is a named expression that reads the check's global facts and returns text or a finite number. Terms are for printing only: expressions continue to read facts directly, and terms are not added as expression bindings. Prose uses `{{terms.<name>}}`, and a design `title` or `motto` can use the same placeholder. Term names follow the same identifier and reserved-name rules as constants. See [masthead and terms](../editorial.md#masthead-and-terms).
+Terms are expressions for printed text or finite numbers. The editor evaluates them once per check against the globals. Use `{{terms.<name>}}` in copy or a masthead; conditions read the underlying facts. The evidence for a term is attached to the copy or masthead that prints it.
 
-The editor evaluates each term once per check with the same sandbox, visible facts and execution budget as the rules. A term keeps the recorded rows its expression read. An expression that fails, reads a [hidden fact](facts.md#hidden-and-missing-facts), or returns another type supplies no value. The decision records runtime errors and leaves ordinary missing facts out of the error log. A missing term makes article copy or a masthead that needs it ineligible. A design can still use a [fallback title](../editorial.md#masthead-and-terms).
-
-| Term | Expression | Prints |
-| --- | --- | --- |
-| `capital` | `self.capital.name` | The receiver's capital, when exactly one visible own city is marked as its capital |
-| `ruler` | `self.ideology == 'Order' ? 'the Party' : 'the Crown'` | A phrase chosen from the receiver's ideology |
-| `master` | `players.find(p => p.knows('master') && p.master)?.name` | The name of the player who is our master |
-
-These rows come from the probe overlay, which uses them in its masthead designs. The `knows` check keeps the search from reading `master` on a player who has no such fact.
-
-A printed term's rows join the evidence of that article or masthead. They are not attached to a sibling variant or an unrelated article.
+The stock `civilization` and `civilizationAdjective` terms provide a name such as Sweden and an adjective such as Swedish. The [probe overlay](../../../../../vox-agents/newspaper/probes/constants.json) adds terms for the capital's name, a phrase based on ideology, and the name of an overlord. A failed, hidden or nonprintable result leaves the term unavailable. Copy that needs it is ineligible; see [masthead rules](../editorial.md#masthead-rules) for title and label fallbacks.
 
 ## Change or add a name
 
-| Goal | Edit |
-| --- | --- |
-| Make "neighboring" wider for one experiment | An overlay `constants.json` with `{"distances":{"neighboring":9}}`. See [tuning with an overlay](overview.md#tune-with-an-overlay). |
-| Change a default for everyone | The built-in `vox-agents/newspaper/constants.json` and the table on this page |
-| Replace a type list | A name under `types`. The new list replaces the built-in list of that name rather than extending it. |
-| Override one shortcut | A subject and name under `shortcuts`. Only that source changes. |
-| Add a constant or type list | A new name in its group. Names must be valid JavaScript identifiers and must not collide with a global such as `self` or `turn`. |
-| Add a shortcut | A new name under its subject with its expression. Catalogue loading validates it like any rule. |
-| Add or change a term | A name under `terms` with the expression for its printed value. See [terms](#terms). |
+Edit the built-in file to change the default, or use an [overlay](overview.md#tune-with-an-overlay) to try a change for one replay. Constant groups merge by name. A type list with the same name replaces the whole list. Shortcuts merge by subject and name, and terms merge by name.
 
-Add a name when at least two rules share the idea. A threshold used by one rule reads more clearly inside that rule.
+New names must be valid JavaScript identifiers. Constants and terms cannot use reserved names such as `self` and `turn`. Shortcut names must avoid fact-view methods such as `knows`. A threshold used in only one rule can stay in that rule.

@@ -49,7 +49,8 @@ export function renderStory(
 
   const content = createElement("div", "vd-story-content");
   // A register entry has two cells: its heading and its account.
-  const registerEntry = publicationDesignId === "port-register" && page.layout === "ordinary";
+  const registerEntry = (publicationDesignId === "port-register" && page.layout === "ordinary")
+    || (publicationDesignId === "cable-desk" && !lead);
   const analysisEvidence = lead && page.layout === "analysis" ? item.evidenceTable : undefined;
   const evidenceFirst = publicationDesignId === "civic-survey" && analysisEvidence !== undefined;
   const headingGroup = registerEntry ? createElement("div", "vd-register-heading") : content;

@@ -1,0 +1,26 @@
+[
+  {
+    "id": "paste-up",
+    "version": "1",
+    "title": "The Paste-Up",
+    "when": "['Atomic', 'Information'].includes(self.era?.replace(' Era', ''))",
+    "weight": { "base": 50 },
+    "presentation": {
+      "schemaVersion": 1,
+      "rendererFamily": "folio",
+      "tokens": {
+        "paperColor": "#f8f6ee",
+        "inkColor": "#25231e",
+        "accentColor": "#d9e58b",
+        "bodyFontAssetId": "font-inter-400",
+        "headingFontAssetId": "font-inter-800"
+      }
+    },
+    "layouts": [
+      { "id": "clippings", "variant": "ordinary", "weight": { "base": 12 } },
+      { "id": "cover-story", "variant": "breaking", "weight": { "base": 8 } },
+      { "id": "cuttings-file", "variant": "analysis", "weight": { "base": 5 } }
+    ],
+    "pageLabels": { "front": "Front", "home": "Cities", "economy": "Trade", "abroad": "Abroad" }
+  }
+]

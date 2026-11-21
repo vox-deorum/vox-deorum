@@ -1,7 +1,7 @@
 # Newspaper offline evaluation
 
-The [replay reader](replay.md) stores heuristic issues, votes, and series history, and shows the evidence and decisions behind each article. Use the [stock reading examples](replay.md#stock-catalogue-reading-examples) to see the mechanically accepted starting catalogue.
+Review authored stories with [replay](replay.md). Keep the recording, receiver, and turn range fixed between catalogue variants. Read the issues for usefulness, variety, and voice, and use the audits to see which evidence and decisions produced each story.
 
-Plans [4a](../../../plans/newspaper/implementation/04a-styles.md), [4b](../../../plans/newspaper/implementation/04b-story-mining.md) and [4c](../../../plans/newspaper/implementation/04c-variant-drafting.md) will settle styles, mine story types from recorded games, and draft the authored variants. The owner's reading reviews look at usefulness, story mix, and voice.
+The [Archivist](../agents/archivist.md) can mine story pitches from recordings. Use the [writing rules](writing.md) when turning a pitch into an authored variant.
 
-[Plan 7](../../../plans/newspaper/implementation/07-llm-editors.md) will compare the authored and model editors on the same recording segments, with the same starting evidence, configuration, and history. It adds checks for fallback, mode changes, and model cost.
+[Plan 7](../../../plans/newspaper/implementation/07-llm-editors.md) proposes comparing authored and model editors with the same evidence, configuration, and publication history. It also covers fallback, mode changes, and model cost.

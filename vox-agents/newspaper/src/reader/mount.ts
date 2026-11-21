@@ -113,6 +113,9 @@ export function mountReader(
     const ornament = createOrnamentImage(issue, assetBaseUrl);
     if (ornament) masthead.append(ornament);
   }
+  if (issue.publication.designId === "cable-desk") {
+    masthead.append(createElement("span", "vd-cable-turn", issue.cutoff.label));
+  }
 
   const tabs = createElement("nav", "vd-tabs");
   tabs.setAttribute("role", "tablist");

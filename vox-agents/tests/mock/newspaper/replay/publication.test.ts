@@ -213,7 +213,8 @@ describe('durable replay publication', () => {
         insert.run(200 + turn, turn, 2000 + turn, 1, 'DeclareWar', '{"OriginatingPlayerID":1,"TargetTeamID":0,"IsAggressor":false}');
       }
     } finally { sqlite.close(); }
-    const mastheadPath = path.join(catalogue, 'masthead-rules.json');
+    const mastheadPath = path.join(catalogue, 'mastheads', 'ideology.json');
+    await mkdir(path.dirname(mastheadPath));
     const orderRules = ['a', 'b'].map(suffix => ({
       id: `fixture-order-${suffix}`, when: "self.ideology === 'Fixture Order'", weight: { base: 2 },
       title: `Order paper ${suffix}`, motto: `Order motto ${suffix}`, pageLabels: { front: `Order front ${suffix}` },

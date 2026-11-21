@@ -1,155 +1,61 @@
-# Newspaper renderer proof
+# Newspaper reader and renderer
 
-The newspaper renderer displays completed issues in a browser and exports the same layout as DDS strips with typed interaction rectangles. This guide covers its input, browser reader, export service, and game delivery. Manual testing confirmed the demo's links, scrolling, and general UI in Civilization V. The exact test environment was not recorded.
-
-The [stock designs](designs.md) use four renderer families: inscription, folio, broadsheet and feed. A family is a layout structure several designs can share, and a design id names one variant. Families provide section tabs, article links, and reversible votes shared by every appearance of an item. The host owns vote persistence. The normal VD server hosts the reader, export service, and [recording replay](replay.md), and the Debug page can open a sample issue in the loaded game.
-
-## Supply a completed issue
-
-The Zod schemas in `src/newspaper/contracts/issue.ts` are the source of the issue contract, and the TypeScript types are inferred from them. An `IssueDocument` holds ready articles in their publication order. The renderer builds the reading surface from the stored content and presentation. Authored templates produce those articles; their `triggers`, optional `when` expressions and `{ base, adjustments }` weights are described in [editorial decisions](editorial.md#authoring-choices).
-
-| Field | Content |
-| --- | --- |
-| `schemaVersion`, `issueId`, `campaignId`, `timelineId` | Document version and issue, campaign, and timeline identity |
-| `receiver` | `IssueReceiver` with the player `playerId`, display `label`, and optional `civilizationId` |
-| `cutoff` | `IssueCutoff` with the reporting `turn` and display `label` |
-| `publication` | `IssuePublication` with `title`, configurable `designId`, `designVersion`, and the presentation snapshot described below |
-| `pages` | Ordered `IssuePage` sections, each with an `id`, `label`, `layout`, and ordered `itemIds` |
-| `items` | Canonical `IssueItem` articles, each with an `id`, `tags`, `seriesKeys`, `headline`, `body`, and `sourceNote` |
-
-An item can also supply a `subheadline`, `byline`, `earlierReport`, `image`, `avatar`, and `evidenceTable`. The headline, subheadline, byline, body, source note, and earlier report prose use typed inline nodes for text, emphasis, breaks, and links. Link targets identify a city, civilization, trade relationship, supported game screen, or article.
-
-An `EarlierReportLink` holds its `label`, an article `target`, and the earlier article's `summary`. An `ItemImage` holds an `assetId` and a required `altText`. A `FeedAvatar` holds `initials` and a `tone`. An `EvidenceTable` holds a `title`, `description`, `columns`, `rows`, and an optional `footnote`; each `EvidenceRow` holds a `label`, `values`, and an optional `hasMissingValues` flag.
-
-Multiple pages can reference the same canonical item ID. Every appearance shares its vote. Page IDs and item IDs must be unique, and page item references must resolve. Renderer validation in `src/newspaper/renderer/validation.ts` checks registered assets and their kinds, including illustrations, ornaments, and presentation fonts. The contract schemas handle structure and references without importing the renderer.
-
-The developer fixtures in `newspaper/fixtures/` are complete input examples covering Victorian ordinary, breaking, and analysis issues plus a wire ordinary issue.
-
-To compare the built-in designs from a source checkout, run `npm run newspaper:preview -w vox-agents` from the repository root. The command builds MCP's queries, starts the source reader at [127.0.0.1:5600](http://127.0.0.1:5600/), and opens a browser. The reader starts in Mockups. Choose a design, one of its front page layouts, and a tint from the sample colors or a custom color to see the design with a different accent. The preview uses sample stories with the design's current masthead, colors, fonts, section labels, and first registered illustration, if any. The list follows `newspaper/designs/`, so new built-in designs appear automatically. The old `/preview.html` address loads the same shell and keeps its fixture query. You can use Mockups without starting VD or opening a recording, and you can switch to Recorded to read a recording as described in [recording replay](replay.md#open-a-recording-in-the-browser-reader). A source checkout also serves the developer fixtures through `?fixture=` links; installed builds include only the packaged Victorian ordinary sample.
-
-### Store the presentation with the issue
-
-Issues use schema 2 and require `publication.presentation`, defined in `contracts/design.ts`. Its own schema version is 1. The snapshot stores the chosen `rendererFamily` (`inscription`, `folio`, `broadsheet` or `feed`), optional paper, ink and accent colors, optional body, heading and masthead font asset IDs, and an optional ornament asset ID. Omitted tokens use the selected family's defaults. The feed family derives its text, washes, hairlines and page background from the accent color, so a civilization's color can tint the whole display. Headings and the masthead have separate font roles, so the broadsheet family keeps blackletter for its publication title.
-
-Font assets resolve to their registered family with all bundled weights and styles. Bold and italic text retain their corresponding faces, and missing files use the family's fallback stack while the reader becomes ready. Disposing the reader removes its font faces. The same saved colors, fonts and ornament apply in browser reading and export.
-
-Numbers in article text, including text inside strong, emphasis and link nodes, are wrapped in a `vd-number` span so designs can style figures. A number is an optional sign, digits with optional thousands separators or a decimal point, and an optional percent sign; digits joined to letters, such as B2 or 3rd, stay plain. Inscription sets numbers in red Cinzel, broadsheet in bold Bodoni, and feed in tabular figures with prose numbers in the accent color.
-
-A configured identity such as `oral-accounts` can therefore use the inscription renderer with its own colors and typography. Reopening the issue uses its saved snapshot without consulting today's catalogue. Export bundles keep the fixed renderer family in `designId`; cache keys include the entire issue and its presentation snapshot.
-
-An issue uses the ornament stored in its presentation snapshot. Installation includes the runtime [editorial catalogue](editorial.md#catalogue-and-eligibility). A design chooses how the issue looks; an authored template chooses what it says. The stock catalogue pairs every rule with a template, so a recording can produce stories without an overlay.
-
-Keep these related values separate:
-
-| Value | Purpose |
-| --- | --- |
-| `IssueDocument` | Completed publication supplied to the reader or exporter |
-| `RenderProfile` | Viewport, text, raster, and texture settings for export, defined in `contracts/render.ts` |
-| `ReaderState` | Active page, scroll positions, and votes persisted by the reader's host, defined in `contracts/reader.ts` |
-| `RenderBundle` | Exported strips and interaction geometry returned by the exporter, defined in `contracts/render.ts` |
-
-## Open the browser reader
-
-The normal VD server hosts the reader and the export service. Start VD as usual and open the newspaper reader at the server's `/newspaper/` path. The same shell also runs in the source preview started by `npm run newspaper:preview -w vox-agents`. Mockups opens sample stories from the bundled fixtures. Recorded opens a recording, and its Replay diagnostics below the paper show the selected edition's article sources and decision plus any cutoff evidence you inspect. A source checkout also serves the other developer fixtures; installed builds provide only the packaged Victorian ordinary fixture. Section tabs wrap to keep every section visible. Each section retains its own scroll position.
-
-`npm run type-check:newspaper -w vox-agents` checks browser code separately from the Node backend. `npm run build:newspaper -w vox-agents` rebuilds `vox-agents/dist-newspaper`. The normal workspace build includes this step.
+Open `/newspaper/` on the normal Vox Deorum server to read a sample in the browser. For a source checkout, see [how to start the preview](replay.md#open-a-recording-in-the-browser-reader) and switch between mockups and recorded editions. The browser and export service share a reader, so the game can display the same layout as DDS textures with clickable links, tabs, and votes.
 
 ## Show an issue in the game
 
-Run `npm run acquire:texconv -w vox-agents` once before exporting. The developer acquisition script verifies the pinned DirectXTex executable and retains its license. Export uses an installed Microsoft Edge browser, then Chrome. Neither startup nor export downloads a browser.
+1. Load Civilization V with the current Vox Deorum mod and an active civilization seat. A pure observer needs a seat override to receive a newspaper.
+2. In a source checkout, build the reader with `npm run build:newspaper -w vox-agents` and acquire DirectXTex with `npm run acquire:texconv -w vox-agents`. Installed builds include both. A fresh capture uses installed Microsoft Edge or Chrome, in that order.
+3. On the Vox Deorum **Debug** page, choose **Show newspaper**. It exports the packaged Victorian sample for the current seat and reports success once the game acknowledges opening it.
 
-The Debug page has a Show newspaper action beside the log download. It exports the packaged sample for the active receiver and reports success after the game displays it. Load a game with the updated mod before the first use. Later clicks need no FireTuner command or mod reload. A pure observer without a civilization-seat override has no receiving publication.
+Scroll back to the masthead to switch sections. **Close** returns from article detail before closing the paper. Resizing also returns from detail to the publication. Reopening the issue preserves its section, scroll position, and votes. In FireTuner, `LuaEvents.VoxDeorumNewspaperOpen` reopens the last delivered issue.
 
-The viewer, XML and data helpers live together under `UI/Newspaper/`; VFS includes use their module basenames. The server registers the loaded reader through a fixed Lua event, then prepares its current seat, request token, and publication view before rendering. The view reports the available physical publication width and height, plus its zoom. The masthead, section tabs, and articles scroll together. Scroll back to the masthead to switch sections; the reader saves the position reached at the tab click, including that navigation. The reader has one Close button above the paper; it returns from article detail before closing the newspaper. Resizing the game window also returns from detail to the publication. Closing and reopening the same issue preserves the current page, reading position and votes. Missing or invalid view settings require updating the mod and reloading the game. The reader rejects superseded requests and receiver changes. FireTuner can reopen the last delivered issue through `LuaEvents.VoxDeorumNewspaperOpen`.
+The game uses the DLL binding `Game.IsNewspaperTextureAvailable` to check each texture's path, dimensions, and DDS data. With an older DLL or a missing or invalid texture, the reader can show native article text and controls. If the masthead is missing a section tab, the reader shows a native title and complete tab list while keeping available article textures. An issue already delivered can be reopened without a connected renderer.
 
-The reader sits below the native EUI top bar. A solid dark backing keeps native beige text readable when the masthead or articles need a fallback, while rendered paper strips cover the same backing.
+If delivery reports an invalid view, update the mod and reload the game. If the seat or window changed during export, export again for the current view. `src/newspaper/game-delivery.ts` owns the request and acknowledgement; the Lua reader lives in `civ5-mod/UI/Newspaper/`.
 
-The viewer needs the DLL's `Game.IsNewspaperTextureAvailable` binding to use images. It checks that each file is readable, stays inside the fixture's cache root, and has a supported DDS header, dimensions, and payload length. With an older DLL, a missing file, or an invalid texture, the viewer uses native article text and controls. If a captured masthead omits any section tab, the reader shows a native title and complete tab list while keeping available article textures. Closing the viewer releases its image controls. It does not need the renderer to remain connected.
+## Supply a completed issue
 
-## Profiles and cache
+`IssueDocument` in `src/newspaper/contracts/issue.ts` holds the receiver, cutoff, publication, ordered pages, and canonical articles. Each page references article IDs, so several pages can show the same article and share its vote. Prose uses typed inline nodes; link targets can identify cities, civilizations, trade relationships, supported game screens, or earlier articles. Articles can also carry images, avatars, and evidence tables. Look in `newspaper/fixtures/` for complete input examples.
 
-Render profiles match `RenderProfile` in `src/newspaper/contracts/render.ts`. `paperWidth` is the outer publication width in CSS pixels, including margins and the stable scrollbar gutter. The Debug button fits that width to the prepared game view, capped at 1200 CSS pixels. Its physical display width is the smaller of the available width and 1200 times zoom. Dividing by zoom and rounding down to a 1/64 CSS-pixel step gives the paper width. Zoom ranges from 0.5 to 2 and defaults to 1 in the mod; text size stays at 1. The capture viewport includes the full paper and texture alignment padding. Profiles with no content space or widths beyond capture and texture limits are rejected before capture.
+Issue schema 2 stores a presentation snapshot (schema 1) with the issue. It records a renderer family and optional colors, font assets, and ornament. For example, the design ID `oral-accounts` can use the inscription family with its own typography. The family supplies defaults for omitted values. Reopening an issue uses its saved presentation independently of the current [design catalogue](designs.md). `contracts/design.ts` defines the snapshot; `renderer/validation.ts` checks that assets are registered for their roles.
 
-The default export profile uses a 1200 CSS-pixel paper, raster scale 2, and texture limits of 4096 by 2048 pixels. The Debug button uses the same raster and texture settings with its negotiated paper width. Capture viewport height stays at 720 CSS pixels because export expands each section; changing only the game view's height can reuse the same cached pixels. Tall mastheads scroll out of view and do not reduce the article viewport. The capture library supports raster scales 1 and 2, plus `BC1_UNORM` and `B8G8R8A8_UNORM`. Runtime delivery defaults to uncompressed BGRA. Native image controls use linear filtering and a white tint to preserve the captured colors when scaling. Vote icons map their full raster texture into the displayed slot. Both formats use legacy DDS headers and one mip level. Padding is recorded separately from visible dimensions and must not become extra scrolling space. Broader text-quality and format comparisons await issues generated from recorded data.
-
-Both browser reading and export use `mountReader`, which returns layout readiness and a disposal method. Export waits for fonts, images and settled layout before measuring. Shared layout calculations derive content width from the outer paper. Margins are 16 pixels through a paper width of 480, 24 pixels through 760, then 48 pixels for inscription and broadsheet and 32 for feed. The gutter remains stable as columns reflow. Sections own their scroll positions; export expands the active section while keeping the browser viewport fixed and disabling transitions. Article content is constructed from typed nodes, so prose cannot inject scripts, styles or arbitrary URLs.
-
-The browser reader fits a paper up to 1200 CSS pixels to its host and resizes without resetting reader state. Wide inscription and broadsheet ordinary pages place a full-width lead above rows of two briefs in publication order. An unpaired final brief takes the full width. Full-width prose uses two text columns when space allows, with the opening letter kept beside its first lines. The feed family keeps its single-column item stream.
-
-Through 760 pixels, ordinary stories and the inner breaking and analysis columns stack in publication order. Inscription and broadsheet display headings shrink again through 560 pixels. Footer links, vote controls, and evidence cells wrap to fit the paper.
-
-The reader and exporter load the same styles through `newspaper/src/reader/reader.css`. It loads shared rules first, then the family stylesheets, then the export overrides. To add a renderer family, register its ID in the presentation schema, add layout defaults in the shared layout module, add vote icons under its folder in `newspaper/public/assets/families/`, and import its stylesheet before the export rules. Scope the stylesheet to the family's `data-design` value. Changes to the markup, such as adding avatars to stories, belong in the reader's TypeScript. Designs that reuse an existing family can set their own colors, fonts and assets in JSON.
-
-The exporter captures the masthead and tabs separately from bounded vertical page strips. `RenderBundle` records schema, renderer and browser versions; publication and profile identity; region sizes; strip CSS offsets, visible dimensions and padded pixel dimensions; and typed action rectangles. Wrapped links use individual DOM line rectangles. Votes have reserved icon slots, and tab labels export in a neutral state so the game can update selection locally. Pixels and geometry come from the same settled layout.
-
-The game uses `displayScale` to scale image controls and action rectangles from CSS coordinates. Raster scale affects texture resolution only. Page actions belong to the page coordinate space independently of strip seams. The header and page share one clipped scroll container, with the page placed immediately below the header. Each page keeps separate rendered and native reading positions. Local positions preserve the distance into the articles when a masthead changes height; positions within the masthead preserve their proportional progress, including the publication's top. Delivered state uses page-local CSS offsets: positive values start within the articles, while missing or zero values open at the publication's top. Closing releases the displayed textures; reopening checks their availability before assigning paths. Browser absence disables new capture while cached reading and native text remain available. The browser worker reuses an installed browser for a batch and closes it after 15 seconds idle or during shutdown.
-
-Cache keys include issue content, design assets, compiled renderer bytes, schema version, profile, and texture format. Each queued request snapshots its profile, so negotiated widths and zoom remain isolated from concurrent requests. Generic exports use the service's constructor profile. Bundle schema 2 and renderer 0.2.0 invalidate exports made with the earlier content-width contract. A browser version is recorded in each bundle. Files are published together after validation, and a cache hit can be used without a browser. The default cache directory is `vox-agents/data/newspaper-cache/`, with a 256 MiB size target. The most recently delivered proof bundle is retained across restarts even when it exceeds that target. Other bundles are evicted by least recent use.
-
-## Ownership and validation
-
-The source is divided by runtime and responsibility:
-
-| Location | Responsibility |
+| Contract | Purpose |
 | --- | --- |
-| `src/newspaper/contracts/issue.ts` | Issue schemas, inferred types, typed links, and structural validation |
-| `src/newspaper/contracts/design.ts` | Versioned presentation snapshots and supported renderer families |
-| `src/newspaper/contracts/reader.ts` | Reader actions, persisted state, and their validation |
-| `src/newspaper/contracts/render.ts` | Serialized profiles, geometry and bundles, with structural schemas |
-| `src/newspaper/renderer/{assets,layout,state}.ts` | Asset registry and lookups, layout defaults, and shared reader state helpers |
-| `src/newspaper/renderer/{bridge,validation,bundle}.ts` | Browser bridge interfaces, asset and profile capability checks, and bundle consistency checks |
-| `src/newspaper/export/{browser,render,dds}.ts` | Node capture orchestration, browser lifecycle, and DDS conversion |
-| `src/newspaper/export/{cache,bundle-assets,lua-fixture}.ts` | Atomic cache publication, bundle file resolution, and structured game delivery payloads |
-| `src/newspaper/export/{http,service}.ts` | Server-mounted HTTP routes, reusable export queue, cache delivery, and shutdown |
-| `src/newspaper/{application,game-delivery}.ts` | Lazy renderer lifecycle, sample orchestration, and acknowledged MCP delivery to the active game reader |
-| `newspaper/src/reader/` | Plain DOM reader lifecycle, article construction, styling, actions, and layout measurement |
-| `newspaper/src/app/` | Mockup and recording controls, replay diagnostics, and browser navigation |
-| `newspaper/src/preview/` | Sample editions built from built-in designs and direct fixture selection |
-| `src/newspaper/cli/preview.ts` | Source preview host pairing the Vite reader with replay routes on loopback |
-| `newspaper/src/export-bridge.ts` | Browser entry point used by texture export and CLI PNG previews |
-| `civ5-mod/UI/Newspaper/VoxDeorumNewspaperData.lua` | Pure publication indexing and native text adapters |
+| `IssueDocument` | Saved publication, its presentation, and its typed content |
+| `ReaderState` | Section, scroll positions, and votes saved by the host; see `contracts/reader.ts` |
+| `RenderProfile` | Paper and viewport dimensions, display and raster scales, and texture limits; see `contracts/render.ts` |
+| `RenderBundle` | Export manifest with strip sizes, offsets, and action rectangles; see `contracts/render.ts` |
 
-Contracts have no renderer imports. The renderer depends on contracts and stays free of DOM imports; DOM work belongs to `newspaper/src/`. The asset registry reads design-owned declarations through a small adapter: Node reads `newspaper/designs/*.json`, and the reader build swaps that specifier for the bundled JSON reader under `newspaper/src/`. The Node-only exporter consumes serialized render contracts and the browser bridge interfaces. Structural schemas live in contracts; issue parsing at the rendering boundary adds registered asset and kind checks, while profile and bundle consistency checks use renderer layout defaults.
+## Layout and export
 
-`mountNewspaperRoutes` shares `web/loopback.ts` request protection with the dashboard. It exposes `/newspaper/`, `/api/newspaper/export`, and any mode-specific application routes before static and API fallbacks. The VD server mounts these routes during normal startup, so the reader and export service share its port. The Debug page's Show newspaper action uses the same export service and asks the game to display the result.
+The browser fits the paper to its host, up to 1200 CSS pixels wide. `paperWidth` includes the margins and scrollbar gutter. At widths through 480 pixels, margins are 16 pixels per side; through 760 they are 24. Wider papers use the family defaults in `renderer/layout.ts`: 32 for inscription and feed, 40 for folio, and 48 for broadsheet. Narrow pages stack stories in publication order. Wide inscription and broadsheet ordinary pages place a lead above pairs of briefs; feed keeps a single stream.
 
-`NewspaperExportService` validates issues, serializes cache lookup and capture, and awaits each request's delivery callback before pinning the delivered bundle. Generic exports do not open the game or replace its pin. A failed request does not block later requests. Shutdown rejects new exports, drains accepted jobs and delivery, then closes the browser before the VD server closes HTTP. Rendering uses the server's actual bound port, including a fallback port. The initial MCP connection wait is limited to eight seconds. Once dispatched, a game call retains the existing 660-second timeout so a paused game can resume and acknowledge delivery. Shutdown waits for that acknowledgement or failure; a second Ctrl+C forces process exit.
+For the game, export fits the paper width to the available physical width at the requested zoom, with the same 1200 CSS-pixel cap. `displayScale` controls how the game places strips and actions; raster scale controls texture resolution. Defaults are raster scale 2 and a 4096 by 2048 pixel texture limit. The runtime uses uncompressed BGRA; the exporter also supports BC1. A height change alone can reuse the same export because the reader captures the full section at a fixed capture viewport height.
 
-Vite cleans `dist-newspaper` on every build, then `scripts/utilities/package-newspaper-sample.mjs` copies the existing Victorian ordinary fixture to `sample.json`. Production packaging retains that sample, the runtime JSON catalogue, the compiled backend in `dist/newspaper`, the compiled reader, runtime `playwright-core`, and `vendor/texconv` with its license. The installer anchors its source-folder exclusion to the component root so it preserves the compiled backend, and explicitly includes the catalogue. It excludes reader source and the remaining developer fixtures. Converter acquisition runs during developer setup or the installer build. No browser is bundled or downloaded.
+The reader and exporter use `mountReader` and the styles in `newspaper/src/reader/`. Export waits for fonts, images, and layout, then captures the masthead and tabs separately from the bounded vertical page strips. The bundle records visible dimensions separately from padding and pairs the textures with action rectangles measured from the same layout. A wrapped link has a rectangle for each line, and an action can cross a strip boundary.
+
+To change an existing design's colors, fonts, or assets, edit its JSON under `newspaper/designs/`. A new renderer family also needs an entry in the presentation schema, shared layout defaults, vote icons under `newspaper/public/assets/families/`, and a stylesheet scoped to its `data-design` value and imported before export overrides.
+
+## Service and cache
+
+The normal server serves the reader and `POST /api/newspaper/export` on loopback through `export/http.ts`. A generic export accepts an issue document and returns its cache entry, including the key, directory, and bundle. The Debug action uses the same service and adds game delivery. `export/service.ts` serializes capture and delivery and drains accepted work during shutdown. DOM code stays in `newspaper/src/`; the Node exporter uses the browser bridge at `newspaper/src/export-bridge.ts`.
+
+The default cache is `vox-agents/data/newspaper-cache/`. Keys include the saved issue and presentation, compiled reader and assets, profile, texture format, and schema and renderer versions. A validated cache hit does not start a browser. The cache targets 256 MiB, evicts least recently used bundles, and retains the last acknowledged game delivery across restarts. Generic exports leave that pin in place.
+
+`npm run build:newspaper -w vox-agents` type-checks and recreates `dist-newspaper`, then copies the packaged Victorian fixture to `sample.json`. The normal workspace build includes this step. The installer ships the compiled reader and backend, runtime catalogue, sample, and licensed converter. Export uses the browser already installed on the system.
 
 ## Run the tests
 
-In-process tests under `tests/mock/newspaper/` include HTTP and service lifecycle checks. Shared test builders live in `tests/helpers/newspaper-fixtures.ts`. Tests that open a browser live in `tests/browser/newspaper/`.
+From a fresh checkout, build MCP first with `npm run build -w mcp-server`. Run focused in-process checks from the repository root with `npm test -w vox-agents -- tests/mock/newspaper`. To check browser types separately, run `npm run type-check:newspaper -w vox-agents`.
 
-Run focused mock checks from the repository root with `npm test -w vox-agents -- tests/mock/newspaper`. The real browser checks are a separate tier:
+For browser layout, replay controls, and export checks:
 
-```bash
+```sh
 npm run build:newspaper -w vox-agents
 npm run test:newspaper:browser -w vox-agents
 ```
 
-The browser tests use the built reader and an installed Microsoft Edge or Google Chrome. For the DDS cases, also run `npm run acquire:texconv -w vox-agents`. Cases skip if a prerequisite they need is missing. Run `npm run build:all` and `npm run test:all` for broader integration checks.
+These tests need installed Edge or Chrome. For DDS cases, also run `npm run acquire:texconv -w vox-agents`. Cases skip when a required dependency is missing. For broader checks, run `npm run build:all` and `npm run test:all`.
 
-Broader game acceptance needs generated issues with variable article lengths and real link targets. The stock catalogue now supplies stories from recorded play. [Plan 1](../../../plans/newspaper/implementation/01-renderer.md) retains the remaining checks for layout quality, votes, reader state, game UI interactions, and cache loss. Record the VP build, DLL revision, DX renderer, resolution, UI scaling, render profile, and DDS format when performing those checks, keeping observed appearance and interaction separate from delivery acknowledgements.
-
-## Local measurements
-
-On Windows with Chrome 157.0.8103.51 and renderer 0.2.0, the Victorian ordinary fixture exported in about 3.76 seconds at a 600.5 CSS-pixel paper width, raster scale 2, and uncompressed BGRA, with strips limited to 512 physical pixels high. Header and page DDS files totaled 25,295,296 bytes (about 24.1 MiB), excluding vote icons. The local baseline is recorded in `.tmp/newspaper-responsive/baseline.json`. This browser export does not establish in-game appearance or interaction alignment.
-
-With renderer 0.1.0, an export through the integrated VD server completed in 3.34 seconds on an ephemeral bound port. Its structured sample delivery arguments used 14,135 bytes of the DLL's 262,144-byte ArduinoJson pool, measured with the repository's parser in a 32-bit executable. The real exported payload also passed the Lua 5.1 reader harness. These checks use mocked game controls and do not establish in-game appearance.
-
-A controlled Inno Setup compiler probe confirmed that the installer retains the compiled newspaper backend and packaged sample while excluding reader source. A fresh compiled runtime using production-pruned dependencies then started the VD server, served the UI and default sample, and exported both sample pages. Dependency resolution was restricted to the staged runtime and pruned dependency tree. The remaining developer fixtures were absent. This verifies file selection and runtime dependencies; the full installer size comparison remains pending.
-
-On Windows with Chrome 157.0.8103.51 and renderer 0.1.0, the Victorian ordinary fixture exported in 3.20 seconds with browser startup, 1.68 seconds warm, and 8 ms from cache. The sampled browser working-set peak during the batch was 576 MiB. These are local observations, with the test suite running concurrently.
-
-| Export                                 | DDS bytes | Warm time |
-| -------------------------------------- | --------: | --------: |
-| Victorian, BC1, raster 1               |   953,328 |    1.68 s |
-| Victorian, BC1, raster 2, text 1.25    | 4,632,368 |    2.31 s |
-| Modern, BC1, raster 1                  |   840,928 |    1.70 s |
-| Modern, BC1, raster 2, text 1.25       | 3,705,984 |    1.89 s |
-| Victorian, uncompressed BGRA, raster 1 | 7,620,352 |    1.43 s |
-
-The added production payload measured about 23.5 MiB after dependency pruning. An isolated Inno Setup compression probe added about 8.4 MiB; this is an estimate, not a full installer size comparison. The reader and converter survived production pruning without downloading a browser.
-
-The texture-check DLL built against VP checkout `a092e06b4` with local changes. When DLL changes are needed, close Civilization V before running the DLL build-and-copy workflow, then reload the mod.
+Use [Plan 1's game checks](../../../plans/newspaper/implementation/01-renderer.md) to verify layout, link alignment, votes, and reading state in Civilization V. Try different resolutions and UI scales, and include issues with varied story lengths. A delivery acknowledgement confirms that the reader opened; inspect appearance and interaction in the game.

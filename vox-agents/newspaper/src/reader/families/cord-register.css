@@ -52,7 +52,10 @@
       column-gap: clamp(14px, 2.2cqi, 30px);
       border: 0;
       border-block-start: 9px solid var(--cord-indigo);
-      border-image: repeating-linear-gradient(57deg, #263551 0 3px, #51617c 3px 5px, #384a69 5px 8px) 9;
+      border-image: repeating-linear-gradient(57deg,
+        color-mix(in srgb, var(--cord-indigo) 80%, black) 0 3px,
+        color-mix(in srgb, var(--cord-indigo) 84%, white) 3px 5px,
+        var(--cord-indigo) 5px 8px) 9;
     }
     & .vd-storylist[data-layout] > .vd-story {
       grid-column: auto;

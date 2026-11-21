@@ -1,0 +1,69 @@
+/* The embroidered borders of the Bayeux Tapestry frame the main account. */
+.vd-newspaper[data-publication-design="stitched-chronicle"] {
+  --stitch-green: #3a5448;
+  --stitch-ochre: #8a6a32;
+  --stitch-ink: oklch(from var(--vd-accent) min(l, .49) c h);
+  --stitch-strip: #dfd0ad80;
+  --vd-vote-background: var(--vd-paper);
+  & .vd-publication { --vd-accent: var(--stitch-ink); }
+  & .vd-vote { background-color: var(--vd-vote-background); }
+  & .vd-header, & .vd-page {
+    background-image: repeating-linear-gradient(0deg, transparent 0 2px, #6243290b 2px 3px),
+      repeating-linear-gradient(90deg, transparent 0 3px, #fff8e03a 3px 4px);
+  }
+  & .vd-header::before, & .vd-story--lead::after {
+    content: "";
+    display: block;
+    height: clamp(9px, 1.4cqi, 16px);
+    border-block: 2px solid var(--stitch-green);
+    background:
+      linear-gradient(135deg, transparent 40%, var(--vd-accent) 41% 59%, transparent 60%) 0 0 / 22px 50% repeat-x,
+      linear-gradient(45deg, transparent 40%, var(--vd-accent) 41% 59%, transparent 60%) 0 100% / 22px 50% repeat-x,
+      linear-gradient(45deg, transparent 40%, var(--stitch-ochre) 41% 59%, transparent 60%) 11px 0 / 22px 50% repeat-x,
+      linear-gradient(135deg, transparent 40%, var(--stitch-ochre) 41% 59%, transparent 60%) 11px 100% / 22px 50% repeat-x;
+  }
+  & .vd-masthead { padding: 14px 0 3px; }
+  & .vd-title { color: var(--stitch-green); font-variant: small-caps; letter-spacing: .045em; }
+  & .vd-tabs { border-bottom: 1px dashed var(--vd-rule); }
+  & .vd-story--lead::after { margin-top: 16px; }
+  & .vd-story--lead :is(.vd-headline, .vd-deck, .vd-byline) { text-align: center; }
+  & .vd-storylist[data-layout] .vd-story--lead .vd-headline {
+    color: var(--vd-accent);
+    font-weight: 700;
+    text-wrap: balance;
+  }
+  & .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-headline {
+    font-size: calc(clamp(42px, 7.6cqi, 90px) * var(--vd-text-scale));
+    text-transform: none;
+    letter-spacing: -.036em;
+  }
+  & .vd-storylist[data-layout] .vd-story--lead .vd-deck { padding-bottom: 0; border-bottom: 0; }
+  & .vd-storylist[data-layout] .vd-story--brief {
+    min-width: 0;
+    margin: 0;
+    padding: 14px clamp(9px, 1.6cqi, 20px);
+    border: 0;
+    background: var(--stitch-strip);
+  }
+  & .vd-story--brief .vd-story-content {
+    padding-inline-start: 12px;
+    border-inline-start: 2px dashed var(--stitch-green);
+  }
+  & .vd-story--lead .vd-story-content > .vd-prose:has(> p:only-child) { text-align: center; }
+  & .vd-evidence {
+    padding-block: 10px;
+    background: var(--stitch-strip);
+    border-block: 2px dashed var(--stitch-green);
+  }
+  & .vd-evidence caption, & .vd-evidence-note { padding-inline: 8px; }
+  & .vd-evidence caption strong { color: var(--stitch-green); }
+  & .vd-number, & .vd-evidence td { color: var(--vd-accent); }
+}
+
+@container newspaper (width > 760px) {
+  .vd-newspaper[data-publication-design="stitched-chronicle"] .vd-storylist[data-layout] {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0;
+  }
+}

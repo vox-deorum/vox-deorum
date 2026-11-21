@@ -28,7 +28,7 @@ Extend the existing [probe overlay and tests](../../../developers/vox-agents/new
 
 ### Stage 6: masthead and vocabulary
 
-**Implemented.** See [printable terms](../../../developers/vox-agents/newspaper/triggers/constants.md#terms) and [masthead and terms](../../../developers/vox-agents/newspaper/editorial.md#masthead-and-terms). The [catalogue probes](../../../developers/vox-agents/newspaper/triggers/overview.md#probe-catalogue-behavior) cover an ideology title and motto, a moved capital, and a lost vassal relationship.
+**Implemented.** See [printable terms](../../../developers/vox-agents/newspaper/triggers/constants.md#terms) and [masthead rules](../../../developers/vox-agents/newspaper/editorial.md#masthead-rules). The [catalogue probes](../../../developers/vox-agents/newspaper/triggers/overview.md#probe-catalogue-behavior) cover an ideology title and motto, a moved capital, and a lost vassal relationship.
 
 ### Stage 7: genre, memory and chance
 
