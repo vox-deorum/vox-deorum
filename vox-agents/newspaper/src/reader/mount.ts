@@ -185,6 +185,7 @@ export function mountReader(
   root.replaceChildren(publication);
   root.classList.add("vd-newspaper");
   root.dataset.design = designId;
+  root.dataset.publicationDesign = issue.publication.designId;
   root.dataset.mode = mode;
   root.dataset.issueId = issue.issueId;
   const presentation = applyPublicationPresentation(root, issue.publication, assetBaseUrl, instancePrefix);
@@ -327,6 +328,7 @@ export function mountReader(
       root.replaceChildren();
       root.classList.remove("vd-newspaper");
       delete root.dataset.design;
+      delete root.dataset.publicationDesign;
       delete root.dataset.mode;
       delete root.dataset.issueId;
       for (const property of [
