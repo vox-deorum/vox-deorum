@@ -36,7 +36,7 @@
         "when": "rival !== null",
         "headline": "Their songs are in our houses",
         "body": [
-          "{{rival}} has reached the Influential mark over us. Walk down any street: their tunes in the taverns, their cuts in the tailor's window, their proverbs in the mouths of children. Somebody was paid to keep our own arts alive, and this is what the coin bought. Name the failure in council, and fund our singers before the next count."
+          "{{rival}} has reached the Influential mark over us. Walk down any street: their tunes in the taverns, their cuts in the tailor's window, their proverbs in the mouths of children. Somebody was paid to keep our own arts alive, and this is what the coin bought. The council owes the nation a name and the singers their coin, and it owes them before the next count."
         ],
         "links": [
           { "placeholder": "rival", "label": "{{rival}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -50,7 +50,7 @@
         "genre": "analysis",
         "headline": "The Influential mark, and what it leaves out",
         "body": [
-          "The count of foreign influence over us has crossed into Influential, at {{percentage}} percent. The figure records one thing: their ideas now spread among us faster than ours can answer. It does not record whether the spread continues. The next count settles that, and it is the only test that matters."
+          "The count of foreign influence over us has crossed into Influential, at {{percentage}} percent. Their ideas now spread among us faster than ours can answer. Whether the spread has crested, the next count will show, and the court has offered no guess."
         ],
         "weight": { "base": 1 }
       }

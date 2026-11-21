@@ -8,6 +8,7 @@ The newspaper publishes stories from a Civilization V recording. An authored tem
 | [Designs](designs.md) | Three stock designs implemented | Design principles, renderer families, stock designs and their references, and rendering constraints |
 | [Replay](replay.md) | Rule evaluation, expressions and audits implemented; the stock catalogue publishes stories from recorded play | Recording evidence, separate output storage, rule audits, issue reading, votes, preferences, and resume |
 | [Editorial](editorial.md) | Stock mechanics accepted; language tuning planned | Rules, configuration, authored choices, selection, feedback, stored presentation, and audits |
+| [Writing](writing.md) | First batch | News writing rules for authored templates and the models that edit them |
 | [Evaluation](evaluation.md) | Planned | Authored coverage and voice, then comparison with model editing |
 | [Live integration](live-integration.md) | Planned | Periodic checks against MCP's existing records and in-game access to the latest issue |
 

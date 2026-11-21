@@ -471,7 +471,7 @@
         "when": "gained === false",
         "headline": "Citizens, {{cityName}} deserved better",
         "body": [
-          "{{cityName}} is gone, and its people answer to another flag. The government will call it a loss of territory; we call it a loss that somebody's decisions failed to prevent. Name the failure before the next city pays for it."
+          "{{cityName}} is gone, and its people answer to another flag. The government will call it a loss of territory; we call it a loss that somebody's decisions failed to prevent. The council has named no one. The next city down the road has begun counting its walls."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }

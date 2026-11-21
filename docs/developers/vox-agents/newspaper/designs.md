@@ -5,12 +5,12 @@ A newspaper design sets the colors, fonts, ornaments and page labels for an issu
 ## Principles
 
 1. **Keep the copy fixed.** Show the issue's masthead, tabs, stories, links, votes and evidence. Use typography and decoration for emphasis; omit invented dates, prices and “Breaking” labels.
-2. **Use the printable width.** Keep a modest outer margin. If a line becomes too long, use the space beside it for a second column, a brief, a photo or a table. Avoid a fixed-width article floating in an empty sheet. Let short briefs run as one paragraph.
+2. **Use the printable width.** Keep a modest outer margin. If a line becomes too long, use the space beside it for a second column, a brief, a photo or a table. When a design sets prose in columns beneath a wide headline, balance even short paragraphs across those columns.
 3. **Give each paper its own composition.** Start with a real reference and name the device you borrowed. A cast inscription can group stories inside a rim; a social feed can pair a dispatch with a photo. Change the arrangement as well as the type and colors.
 4. **Give each ornament a job.** A design can use several motifs. Reserve the most recognizable one for a particular place: the Ancient paper uses the Greek key at the sheet edges and a single palm above a breaking headline. A divider needs no extra rules or blank bands around it.
 5. **Use texture when it suits the material.** Crossed strips suggest papyrus, scattered fibres suggest handmade paper, and curved seams suggest turtle shell. Keep the grain faint behind print. Check the smallest text, links and table figures at phone width and on an exported page.
 6. **Use color tokens for simple marks.** Fill frames, dividers and initials with the paper, ink or accent color. Use a local image for more intricate artwork. Give the figures in article text (`vd-number`) a treatment appropriate to the design.
-7. **Keep tintable designs legible.** The feed derives its palette from one accent. Check both dark and pale tints, including text on a solid fill. Reserve red alerts for breaking pages.
+7. **Keep tintable designs legible.** The feed and National Review derive their palettes from one accent. Check both dark and pale tints, including text on a solid fill. Reserve red alerts for breaking pages.
 8. **Protect reading space on narrow papers.** Stack columns, shrink or remove side ornaments and scale display type before reducing body text. Keep section tabs and evidence readable.
 
 ## Families and designs
@@ -30,7 +30,7 @@ A renderer family is a layout structure that several designs can share. A design
 | `folio` | Ruled vellum with briefs in the outer margin | `town-book`, The Town Book | The decorated initials and lively borders of the [Hours of Catherine of Cleves](https://www.themorgan.org/manuscript/76941) inspire the gilt initial and space for short notices. |
 | `folio` | Single sheet with a large headline and optional woodcut | `printer-dispatch`, The Printer’s Dispatch | [Hans Glaser’s 1561 Nuremberg news sheet](https://www.e-manuscripta.ch/zuzneb/wick/content/titleinfo/2723858) pairs one prominent woodcut with the lead report. |
 | `folio` | Illustrated lead panel with a stack of briefs | `secession-review`, The Secession Review | [Alfred Roller’s first cover for *Ver Sacrum*](https://artsandculture.google.com/asset/titelblatt-ver-sacrum-organ-der-vereinigung-bildenden-k%C3%BCnstler-%C3%96sterreichs-1898-jg-1-heft-1/NgGTFjIUaduJQQ) inspires the square composition and the botanical print that steps over its edge. |
-| `folio` | Picture weekly with a cobalt masthead and compact briefs | `national-review`, The National Review | The [first issue of *LIFE*](https://www.life.com/history/lifes-first-ever-cover-story-building-the-fort-peck-dam-1936/) inspires the monochrome cover picture. A large headline carries the page when there is no picture. |
+| `folio` | Picture weekly with a tinted masthead and compact briefs | `national-review`, The National Review | The [first issue of *LIFE*](https://www.life.com/history/lifes-first-ever-cover-story-building-the-fort-peck-dam-1936/) inspires the monochrome cover picture. A large headline carries the page when there is no picture. |
 | `folio` | Broadcast headline strip and index of briefs | `teletext-bulletin`, Teletext Bulletin | The [BBC’s Ceefax screens](https://downloads.bbc.co.uk/rd/pubs/archive/pdffiles/engineering/bbc_engineering_111.pdf#page=8) inspire the dark screen, colored section tabs and aligned figures. A red strip marks the breaking lead. |
 | `feed` | Full-width timeline | `wire`, e.g. France Wire | Social timelines such as Bluesky: round avatars, a byline above each post and an action row below. Wide posts put photos or data cards beside the text. |
 
@@ -51,4 +51,4 @@ Designs must keep these rules so the browser reader and the game texture match:
 1. Add or edit the design JSON in `vox-agents/newspaper/designs/`. Choose its family, tokens, fonts, assets, layouts and page labels, then set its [era and civilization weights](editorial.md#pages-and-designs).
 2. Keep shared layout rules in `vox-agents/newspaper/src/reader/families/<family>.css`, scoped by `data-design`. Scope a design’s own stylesheet by `data-publication-design` and import it after its family in `reader.css`.
 3. Put design-owned artwork in `newspaper/public/assets/designs/<design id>/` and register it as described in the [asset notes](editorial.md#design-assets).
-4. In the preview (`npm run newspaper:preview -w vox-agents`), check every layout at wide and narrow widths. Enter a civilization to try its masthead, and try several tints for the feed family.
+4. In the preview (`npm run newspaper:preview -w vox-agents`), check every layout at wide and narrow widths. Enter a civilization to try its masthead, and try several tints for the feed and National Review.

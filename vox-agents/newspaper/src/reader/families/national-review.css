@@ -1,8 +1,15 @@
 /* A picture weekly: a compact nameplate above a full-width cover photograph. */
 .vd-newspaper[data-publication-design="national-review"] {
-  --vd-page-background: #d7dbe0;
-  --vd-rule: #939ba6;
-  --review-blue: color-mix(in srgb, var(--vd-accent) 30%, #0e2c74);
+  --review-accent: oklch(from var(--vd-accent) min(l, 0.5) c h);
+  --review-paper: color-mix(in srgb, var(--vd-paper) 96%, var(--vd-accent));
+  --vd-page-background: color-mix(in srgb, var(--vd-paper) 82%, var(--review-accent));
+  --vd-rule: color-mix(in srgb, var(--vd-paper) 58%, var(--review-accent));
+
+  /* Use the saved tint as the palette, with a darker accent for contrast. */
+  & .vd-publication {
+    --vd-accent: var(--review-accent);
+    --vd-paper: var(--review-paper);
+  }
 
   & .vd-masthead {
     padding: 0;
@@ -13,7 +20,7 @@
     width: fit-content;
     max-width: 100%;
     padding: .12em .24em .15em;
-    background: var(--review-blue);
+    background: var(--vd-accent);
     color: var(--vd-paper);
     font: 800 calc(clamp(34px, 6.8cqw, 82px) * var(--vd-text-scale)) / .96 var(--vd-font-display);
     letter-spacing: -.065em;
@@ -101,7 +108,7 @@
 
   & .vd-storylist[data-layout] .vd-byline {
     margin: 0 0 12px;
-    color: var(--review-blue);
+    color: var(--vd-accent);
     text-align: left;
     opacity: 1;
   }
@@ -127,7 +134,6 @@
   }
 
   & .vd-prose .vd-number {
-    color: var(--review-blue);
     font-weight: 800;
   }
 

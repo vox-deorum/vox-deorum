@@ -2,7 +2,7 @@
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Browser, Page } from 'playwright-core';
+import type { Browser, Locator, Page } from 'playwright-core';
 import type { IssueDocument, IssueItem } from '../../../../src/newspaper/contracts/issue.js';
 import type { RendererFamily } from '../../../../src/newspaper/contracts/design.js';
 import { defaultRenderProfile } from '../../../../src/newspaper/renderer/layout.js';
@@ -122,6 +122,18 @@ function visualOrder(stories: StoryBox[]): string[] {
   return [...stories].sort((a, b) => Math.abs(a.top - b.top) <= 1 ? a.left - b.left : a.top - b.top).map(story => story.id);
 }
 
+/** Check whether the rendered text of a paragraph occupies both columns. */
+function readProseColumns(locator: Locator): Promise<{ left: boolean; right: boolean }> {
+  return locator.evaluate(prose => {
+    const box = prose.getBoundingClientRect();
+    const middle = box.left + box.width / 2;
+    const range = document.createRange();
+    range.selectNodeContents(prose.querySelector('p')!);
+    const lines = Array.from(range.getClientRects());
+    return { left: lines.some(line => line.right < middle), right: lines.some(line => line.left > middle) };
+  });
+}
+
 describe.skipIf(!existsSync(path.join(readerDirectory, 'export.html')) || !existsSync(path.join(readerDirectory, 'index.html')))('ordinary newspaper layout', () => {
   let browser: Browser | undefined;
   let unavailable: string | undefined;
@@ -200,15 +212,26 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'export.html')) || !exist
     try {
       await page.goto(`${host.url}/newspaper/export.html`);
       await exportStories(page, issue, 1200);
-      const columns = await page.locator('.vd-story:last-child .vd-prose').evaluate(prose => {
-        const box = prose.getBoundingClientRect();
-        const middle = box.left + box.width / 2;
-        const range = document.createRange();
-        range.selectNodeContents(prose.querySelector('p')!);
-        const lines = Array.from(range.getClientRects());
-        return { left: lines.some(line => line.right < middle), right: lines.some(line => line.left > middle) };
-      });
-      expect(columns).toEqual({ left: true, right: true });
+      expect(await readProseColumns(page.locator('.vd-story:last-child .vd-prose'))).toEqual({ left: true, right: true });
+    } finally { await page.close(); }
+  });
+
+  it('should balance a short National Review lead beneath its full-width headline', async context => {
+    if (!browser) { context.skip(unavailable); return; }
+    const issue = createOrdinaryIssue([1], 'folio');
+    issue.publication.designId = 'national-review';
+    issue.publication.presentation.tokens = { bodyFontAssetId: 'font-libre-caslon-400', headingFontAssetId: 'font-inter-800' };
+    issue.items[0].headline = [{ type: 'text', text: '4 of our units lost in action' }];
+    issue.items[0].body = [[{ type: 'text', text: 'Our forces lost 4 units in the recent fighting, every one of them to the same enemy power.' }]];
+    const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+    try {
+      await page.goto(`${host.url}/newspaper/export.html`);
+      for (const layout of ['ordinary', 'breaking', 'analysis'] as const) {
+        issue.pages[0].layout = layout;
+        await exportStories(page, issue, 1200);
+        const prose = page.locator('.vd-story--lead .vd-prose');
+        expect(await readProseColumns(prose), layout).toEqual({ left: true, right: true });
+      }
     } finally { await page.close(); }
   });
 

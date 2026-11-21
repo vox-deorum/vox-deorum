@@ -37,19 +37,20 @@ The built-in catalogue lives under `vox-agents/newspaper/`. Trigger files group 
 | `templates/*.json` | Authored variants, typed links and short pieces, grouped by topic like triggers |
 | `styles/` | Style tag IDs, optional writing guidance, and rules that adjust variant weights |
 | `pages.json` | Front page, section membership, and section minimums |
-| `designs/*.json` | Design identities, fixed renderer families, presentation tokens and asset references, masthead title and motto, layouts, eligibility, and local asset definitions |
+| `designs/*.json` | Renderer families, tokens, assets, layouts, eligibility, and fallback titles, mottoes, and section labels |
+| `masthead-rules.json` | Titles, mottoes, and section labels selected using the chosen design and visible game facts |
 
 An optional configured directory mirrors this structure and can supply only the files being changed. Section files load in filename order. Defaults and constants merge as objects; entries and authored variants merge by ID across files. Arrays without IDs, such as paragraphs, tags and `when` lists, replace the existing arrays. Effective configuration is validated before the run starts and saved for resume.
 
 ## Authoring choices
 
-Templates, variants, pages, designs and layouts can have a JavaScript expression string in `when`. Templates, variants, designs and layouts also take a `weight`, for example `{"base": 2, "adjustments": [{"when": "turn > 100", "add": 1}]}`. Pages use eligibility and their section minimum.
+Templates, variants, pages, designs, layouts, and masthead rules can have a JavaScript expression string in `when`. These choices take a `weight`, such as `{"base": 2, "adjustments": [{"when": "turn > 100", "add": 1}]}`. Pages use eligibility and their section minimum instead.
 
 - A missing `when` makes the choice eligible without a condition. A present condition that is false, fails, or reads a [hidden fact](triggers/facts.md#hidden-and-missing-facts) removes that choice.
 - Each true adjustment adds its `add` value. A false condition or unavailable fact contributes nothing. A choice whose adjustment could not finish within the execution budget is left out.
-- The final weight must be greater than zero. Weight influences design, layout and variant selection; template weight joins the candidate score.
+- The final weight must be greater than zero. Weight influences design, layout, variant, and masthead selection; template weight joins the candidate score.
 
-All conditions run in the shared QuickJS sandbox with no filesystem, network, clock or random source. A trigger expression reads its subject, earlier values and the check globals. Template and variant conditions read the visible fact namespace for the subject, such as `city.population`, plus the candidate bindings described below. Page, design and layout conditions read the visible facts and check globals without candidate bindings. Trigger, template and presentation expressions can also read the publication memory globals `press` and `printed`; see [publication memory](triggers/overview.md#publication-memory).
+All conditions run in the shared QuickJS sandbox with no filesystem, network, clock or random source. A trigger expression reads its subject, earlier values and the check globals. Template and variant conditions read the visible fact namespace for the subject, such as `city.population`, plus the candidate bindings described below. Page, design, layout, and masthead conditions read the visible facts and check globals without candidate bindings. Trigger, template and presentation expressions can also read the publication memory globals `press` and `printed`; see [publication memory](triggers/overview.md#publication-memory).
 
 A template names one or more rules in `triggers`. They must all fire for the same subject with overlapping evidence periods. For example, two city rules must match the same city. Grouped rules can combine with other grouped rules of the same subject kind and key. The editor uses the overlapping period, the highest importance and the combined tags.
 
@@ -64,6 +65,8 @@ A template names one or more rules in `triggers`. They must all fire for the sam
 | `variants` | Authored prose choices with an ID, text, links, eligibility, weight, and style tags |
 
 `id`, `triggers`, `tags`, `weight` and `variants` are required. Each variant requires `id`, `headline`, `body` and `weight`; `subheadline`, `byline`, `when` and `links` are optional. The reader draws the subheadline under the headline and the byline below it, so an opinion piece or a signed report can carry both.
+
+The [news writing rules](writing.md) govern the prose itself. They put entertainment first, route rule hints through consequences, and keep instructions and contrastive definitions out of the copy.
 
 ### Variant styles
 
@@ -170,13 +173,17 @@ To add a local asset:
 3. Reference the derived ID in `presentation.assets.ornamentAssetId` for ornaments or `image.assetId` on an illustrated article. An article image needs `altText` and can also carry a printed `caption`.
 4. Rebuild the reader with `npm run build:newspaper -w vox-agents` so the browser bundles the design JSON and copies the asset.
 
-### Masthead and terms
+### Masthead rules
 
-A design can name its paper after the receiving civilization. The stock `civilization` [term](triggers/constants.md#terms) reads its recorded short name. Use `civilizationTitles` for titles keyed by that name, with `"*"` as a pattern for any named civilization. For example, the wire uses `{{terms.civilization}} Wire`, while the papyrus design has a separate title for Nubia. The editor tries the exact name as recorded, including its language and capitalization, then the pattern, then `title`. An overlay can set `civilizationTitles` to `null` to use only its base title.
+The editor picks a visual design, then looks for a title, motto, and section labels that fit the receiver. For example, a Roman paper under Order can call its `abroad` page *International Solidarity*, while a paper using the same design under Freedom can call it *Foreign Correspondence*. The page keeps the same ID and story criteria.
 
-Titles and the optional `motto` can print terms. The editor skips a civilization-specific title if it cannot resolve all its terms. An unresolved placeholder in the final title or motto makes the design ineligible. If the base title resolves to empty text, the editor uses `defaults.publicationTitle`.
+In `masthead-rules.json`, give each rule an `id`, `title`, and `weight`. Use `designs` to restrict a rule to specific design IDs and `when` to check facts such as `self.ideology` or `self.hasPolicy('Five-Year Plan')`. Add a `motto` and a `pageLabels` map keyed by page IDs as needed. Local catalogues merge rules by ID. Set `when` to `false` to disable a stock rule.
 
-The issue stores the resolved title and motto. Each article's editor credit uses the same title. The decision cites the facts used to choose or print the masthead, while article sources stay with their own articles.
+The title, motto, and labels can use [terms](triggers/constants.md#terms) such as `{{terms.civilization}}` and `{{terms.civilizationAdjective}}`. An unprintable title or authored motto removes the rule from consideration. The weighted choice stays stable for the same campaign, receiver, and design while the eligible rules and weights stay the same. A winning rule without a motto leaves it out. Each displayed page uses the rule's printable label, then its design label, then the page default.
+
+With no winning rule, the design supplies the title and motto. For `civilizationTitles`, the editor tries the exact recorded name, then `"*"`, then `title`, skipping any civilization title with unresolved terms. An overlay can set `civilizationTitles` to `null` to use only the base title. An unresolved placeholder in the final design title or motto makes the design ineligible, and an empty resolved base title uses `defaults.publicationTitle`.
+
+The issue saves the chosen title, motto, and labels. Editor credits use that title, and article bylines stay with their stories. The decision records the winning rule and its evidence. To preview rules, generate an issue in [Recorded replay](replay.md); static Mockups show the design fallbacks.
 
 ### Example: tune the settler story
 

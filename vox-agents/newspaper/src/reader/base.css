@@ -229,6 +229,9 @@
   overflow-wrap: anywhere;
   font-size: calc(18px * var(--vd-text-scale));
   line-height: 1.65;
+  /* Let short paragraphs balance across columns when a design splits the prose. */
+  widows: 1;
+  orphans: 1;
 }
 
 .vd-prose p {
@@ -350,12 +353,6 @@
 }
 
 /* Ordinary layouts */
-
-/* Let a two-line brief use both columns when it spans the final row. */
-.vd-storylist[data-layout="ordinary"] .vd-story--brief .vd-prose {
-  widows: 1;
-  orphans: 1;
-}
 
 .vd-storylist[data-layout="ordinary"] .vd-story--lead .vd-headline {
   font-size: calc(50px * var(--vd-text-scale));
