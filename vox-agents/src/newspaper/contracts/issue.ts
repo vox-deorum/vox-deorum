@@ -3,7 +3,7 @@ import { z } from "zod";
 import { presentationSchema } from "./design.js";
 
 /** Version of the stored issue document shape. */
-export const newspaperIssueSchemaVersion = 2;
+export const newspaperIssueSchemaVersion = 3;
 
 /** Layout variants available for a page. */
 export const newspaperLayoutVariants = ["ordinary", "breaking", "analysis"] as const;
@@ -342,7 +342,7 @@ export const issueDocumentSchema = z
     /** Published items available to the pages. */
     items: z.array(issueItemSchema).min(1),
   })
-  // Require unique identifiers and valid page references.
+  // Require each published item to appear exactly once.
   .superRefine((issue, ctx) => {
     const itemIds = new Set<string>();
     // Collect item identifiers and reject duplicates.
@@ -365,6 +365,7 @@ export const issueDocumentSchema = z
     });
 
     const pageIds = new Set<string>();
+    const placedItemIds = new Set<string>();
     // Reject duplicate pages and invalid item selections.
     issue.pages.forEach((page, pageIndex) => {
       if (pageIds.has(page.id)) {
@@ -375,17 +376,15 @@ export const issueDocumentSchema = z
         });
       }
       pageIds.add(page.id);
-      const pageItemIds = new Set<string>();
-      // Check that each selected item exists and appears once on this page.
       page.itemIds.forEach((itemId, itemIndex) => {
-        if (pageItemIds.has(itemId)) {
+        if (placedItemIds.has(itemId)) {
           ctx.addIssue({
             code: "custom",
             path: ["pages", pageIndex, "itemIds", itemIndex],
-            message: `Duplicate item reference "${itemId}" on page "${page.id}".`,
+            message: `Item "${itemId}" appears more than once in the issue.`,
           });
         }
-        pageItemIds.add(itemId);
+        placedItemIds.add(itemId);
         if (!itemIds.has(itemId)) {
           ctx.addIssue({
             code: "custom",
@@ -394,6 +393,15 @@ export const issueDocumentSchema = z
           });
         }
       });
+    });
+    issue.items.forEach((item, index) => {
+      if (!placedItemIds.has(item.id)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["items", index, "id"],
+          message: `Item "${item.id}" does not appear on any page.`,
+        });
+      }
     });
   });
 /** A complete issue as stored by the editor and accepted by the renderer. */

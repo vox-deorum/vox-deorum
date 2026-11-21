@@ -3,7 +3,6 @@
     "id": "opinion",
     "label": "Opinion",
     "tags": ["opinion"],
-    "minimum": 1,
     "order": 4
   }
 ]

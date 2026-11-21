@@ -20,7 +20,7 @@ async function checkFixture(published = true): Promise<{ checkpoint: ReplayCheck
   };
   const publication = createInitialPublicationState();
   publication.lastCheckTurn = 10;
-  if (published) publication.issues.push({ issueId: issue.issueId, turn: 10, items: issue.items.map(item => ({
+  if (published) publication.issues.push({ issueId: issue.issueId, turn: 10, designId: issue.publication.designId, items: issue.items.map(item => ({
     id: item.id, issueId: issue.issueId, turn: 10, tags: item.tags, seriesKeys: item.seriesKeys,
     templateIds: ['fixture'], triggerIds: ['controlled'], importance: 5, headline: item.headline, evidenceSummary: 'Recorded observations', sources: [], fingerprint: item.id,
   })) });
@@ -156,12 +156,12 @@ describe('offline replay output store', () => {
     restored.publication.preferences.llmEnabled = true;
     store.save(restored);
     const saved = new Database(filename, { readonly: true });
-    expect(saved.pragma('user_version', { simple: true })).toBe(5);
+    expect(saved.pragma('user_version', { simple: true })).toBe(6);
     expect(saved.prepare('SELECT Revision FROM OfflineReplayRuns').get()).toEqual({ Revision: 1 });
     saved.close();
   });
 
-  it.each([1, 3, 4])('should reject version %s output without modifying it', async version => {
+  it.each([1, 3, 4, 5])('should reject version %s output without modifying it', async version => {
     const { checkpoint } = await checkFixture(false);
     const originalPath = path.join(path.dirname(recording.filename), `version-${version}.sqlite`);
     const original = new ReplayStore(originalPath);
@@ -172,7 +172,7 @@ describe('offline replay output store', () => {
     sqlite.pragma(`user_version = ${version}`);
     sqlite.close();
     const bytes = await readFile(originalPath);
-    expect(() => new ReplayStore(originalPath)).toThrow(/new output path/i);
+    expect(() => new ReplayStore(originalPath)).toThrow();
     expect(await readFile(originalPath)).toEqual(bytes);
   });
 

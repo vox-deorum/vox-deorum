@@ -1,5 +1,5 @@
 /** Shared controlled newspaper bundles for validation and cache tests. */
-import type { IssueDocument } from "../../src/newspaper/contracts/issue.js";
+import { newspaperIssueSchemaVersion, type IssueDocument } from "../../src/newspaper/contracts/issue.js";
 import { computeRenderLayout } from "../../src/newspaper/renderer/layout.js";
 import { newspaperRenderBundleSchemaVersion, newspaperRendererVersion, type RenderBundle, type RenderProfile, type RenderStrip } from "../../src/newspaper/contracts/render.js";
 
@@ -18,10 +18,10 @@ export const newspaperTestProfile: RenderProfile = {
 export const newspaperTestRegionWidth = newspaperTestProfile.paperWidth;
 export const newspaperTestContentWidth = computeRenderLayout("feed", newspaperTestProfile).contentWidth;
 
-/** Build a small issue whose two pages share one item. */
+/** Build a small reader issue with one article on each tab. */
 export function createNewspaperIssue(): IssueDocument {
   return {
-    schemaVersion: 2,
+    schemaVersion: newspaperIssueSchemaVersion,
     issueId: "issue-1",
     campaignId: "campaign-1",
     timelineId: "timeline-1",
@@ -44,7 +44,7 @@ export function createNewspaperIssue(): IssueDocument {
         id: "analysis",
         label: "Analysis",
         layout: "analysis",
-        itemIds: ["shared-item"],
+        itemIds: ["analysis-item"],
       },
     ],
     items: [
@@ -52,8 +52,16 @@ export function createNewspaperIssue(): IssueDocument {
         id: "shared-item",
         tags: [],
         seriesKeys: [],
-        headline: [{ type: "text", text: "Shared report" }],
+        headline: [{ type: "text", text: "Front page report" }],
         body: [[{ type: "text", text: "Body" }]],
+        sourceNote: [{ type: "text", text: "Source observation" }],
+      },
+      {
+        id: "analysis-item",
+        tags: [],
+        seriesKeys: [],
+        headline: [{ type: "text", text: "Analysis report" }],
+        body: [[{ type: "text", text: "Analysis body" }]],
         sourceNote: [{ type: "text", text: "Source observation" }],
       },
     ],

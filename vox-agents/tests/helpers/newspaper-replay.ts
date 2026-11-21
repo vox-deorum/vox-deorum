@@ -5,9 +5,10 @@ import path from 'node:path';
 import { Kysely, SqliteDialect } from 'kysely';
 import type { KnowledgeDatabase } from '../../../mcp-server/dist/knowledge/schema/base.js';
 import { setupKnowledgeDatabase } from '../../../mcp-server/dist/knowledge/schema/setup.js';
+import { editionBriefRule, editionBriefTemplate } from './newspaper-briefs.js';
 
 /** Small SQLite recording with JSON fields and stable row identities for replay boundary tests. */
-export async function createReplayRecording(speed: string | null = 'Epic') {
+export async function createReplayRecording(speed: string | null = 'Epic', briefTurns: readonly number[] = []) {
   const directory = await mkdtemp(path.join(tmpdir(), 'vd-replay-'));
   const filename = path.join(directory, 'recording.db');
   const sqlite = new Database(filename);
@@ -40,6 +41,7 @@ export async function createReplayRecording(speed: string | null = 'Epic') {
   event.run(101, 6, 2006, 1, 'DeclareWar', '{"OriginatingPlayerID":1,"TargetTeamID":0,"IsAggressor":false}');
   event.run(102, 10, 2010, 1, 'TeamSetHasTech', '{"TeamID":0,"TechID":0,"HasTech":false}');
   event.run(103, 11, 2011, 1, 'PlayerAdoptPolicy', '{"PlayerID":0,"PolicyID":7}');
+  addReplayBriefs(sqlite, briefTurns);
   const schema = sqlite.prepare('SELECT sql FROM sqlite_master ORDER BY name').all();
   await db.destroy();
   return {
@@ -47,6 +49,18 @@ export async function createReplayRecording(speed: string | null = 'Epic') {
     /** Remove the fixture after caller-owned read connections have closed. */
     cleanup: () => rm(directory, { recursive: true, force: true }),
   };
+}
+
+/** Record four unrelated, low-priority briefs so an article under test can fill a five-slot front. */
+export function addReplayBriefs(sqlite: Database.Database, turns: readonly number[]): void {
+  const insert = sqlite.prepare('INSERT INTO GameEvents (ID, Turn, CreatedAt, Player0, Type, Payload) VALUES (?, ?, ?, ?, ?, ?)');
+  for (const turn of turns) {
+    for (let index = 0; index < 4; index++) {
+      const id = 90_000 + 4 * turn + index;
+      insert.run(id, turn, id, 1, 'PlayerAdoptPolicyBranch',
+        JSON.stringify({ PlayerID: 0, BranchType: `Fixture brief ${id}` }));
+    }
+  }
 }
 
 /** Supply a turn window that crosses same-turn versions and includes structured evidence. */
@@ -59,15 +73,15 @@ export async function writeReplayPublicationCatalogue(databasePath: string) {
   const directory = path.join(path.dirname(databasePath), 'publication-catalogue');
   await mkdir(directory, { recursive: true });
   await Promise.all([
-    writeFile(path.join(directory, 'defaults.json'), JSON.stringify({ minItems: 1 })),
     writeFile(path.join(directory, 'triggers.json'), JSON.stringify([{
       id: 'fixture-war-report', subject: 'event', event: 'DeclareWar', when: 'event.type === "DeclareWar"',
       values: { eventTurn: 'event.turn' }, tags: ['military'],
-    }])),
+      importance: 100,
+    }, editionBriefRule])),
     writeFile(path.join(directory, 'templates.json'), JSON.stringify([{
       id: 'fixture-war-article', triggers: ['fixture-war-report'], tags: ['military'], weight: { base: 1 },
       variants: [{ id: 'notice', headline: 'War declared', body: ['The declaration came on turn {{eventTurn}}.'], weight: { base: 1 } }],
-    }])),
+    }, editionBriefTemplate])),
   ]);
   return directory;
 }

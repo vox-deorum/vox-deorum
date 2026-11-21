@@ -29,6 +29,7 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('Civic Survey evi
     issue.publication.designId = 'civic-survey';
     issue.publication.presentation.rendererFamily = 'folio';
     issue.pages = issue.pages.filter(page => page.layout === 'analysis');
+    issue.items = issue.items.filter(item => issue.pages[0].itemIds.includes(item.id));
     const evidence = {
       title: 'Trade share',
       description: 'Largest partner share of foreign trade income',

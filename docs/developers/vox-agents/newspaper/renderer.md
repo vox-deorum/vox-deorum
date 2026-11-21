@@ -16,9 +16,9 @@ If delivery reports an invalid view, update the mod and reload the game. If the 
 
 ## Supply a completed issue
 
-`IssueDocument` in `src/newspaper/contracts/issue.ts` holds the receiver, cutoff, publication, ordered pages, and canonical articles. Each page references article IDs, so several pages can show the same article and share its vote. Prose uses typed inline nodes; link targets can identify cities, civilizations, trade relationships, supported game screens, or earlier articles. Articles can also carry images, avatars, and evidence tables. Look in `newspaper/fixtures/` for complete input examples.
+`IssueDocument` in `src/newspaper/contracts/issue.ts` holds the receiver, cutoff, publication, ordered pages, and articles. Each article ID appears exactly once in the pages. Prose uses typed inline nodes; link targets can identify cities, civilizations, trade relationships, supported game screens, or earlier articles. Articles can also carry images, avatars, and evidence tables. Look in `newspaper/fixtures/` for complete input examples.
 
-Issue schema 2 stores a presentation snapshot (schema 1) with the issue. It records a renderer family and optional colors, font assets, and ornament. For example, the design ID `oral-accounts` can use the inscription family with its own typography. The family supplies defaults for omitted values. Reopening an issue uses its saved presentation independently of the current [design catalogue](designs.md). `contracts/design.ts` defines the snapshot; `renderer/validation.ts` checks that assets are registered for their roles.
+The issue saves a presentation snapshot with its renderer family and optional colors, font assets, and ornament. For example, `oral-accounts` uses the inscription family with its own typography. The family supplies defaults for omitted values. Reopening an issue uses the saved presentation. `contracts/design.ts` defines the snapshot; `renderer/validation.ts` checks that assets are registered for their roles.
 
 | Contract | Purpose |
 | --- | --- |

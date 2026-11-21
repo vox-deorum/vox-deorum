@@ -20,7 +20,7 @@ describe('newspaper replay command artifacts', () => {
   let recording: Awaited<ReturnType<typeof createReplayRecording>>;
   let options: NewspaperCliOptions;
   beforeEach(async () => {
-    recording = await createReplayRecording();
+    recording = await createReplayRecording('Epic', [6]);
     options = await createReplayCliOptions(recording.filename);
     vi.spyOn(renderer, 'renderNewspaperExamples').mockRejectedValue(new Error('Unexpected preview rendering in a mock replay test.'));
   });

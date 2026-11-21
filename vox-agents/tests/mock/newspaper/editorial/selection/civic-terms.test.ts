@@ -7,6 +7,7 @@ import type { EditorialConfig } from '../../../../../src/newspaper/editorial/con
 import { buildNewspaperFacts } from '../../../../../src/newspaper/editorial/facts/index.js';
 import { fact, reference } from '../../../../../src/newspaper/editorial/facts/model.js';
 import { storyIdentity, storySubject } from '../../../../../src/newspaper/editorial/facts/story.js';
+import { withEditionBriefs } from '../../../../helpers/newspaper-briefs.js';
 
 let stock: EditorialConfig;
 
@@ -45,10 +46,11 @@ const sampleVocabulary = {
 
 /** Publish a controlled issue with the real editor and its fact model. */
 function check(config: EditorialConfig, observations: NewspaperEvidence) {
+  const input = withEditionBriefs(observations, config);
   return runEditorialCheck({
-    config, evidence: observations, campaignId: 'civic', timelineId: 'test',
+    ...input, campaignId: 'civic', timelineId: 'test',
     receiver: { playerId: 0, label: 'France' }, speedMultiplier: 1, state: createInitialPublicationState(),
-    facts: buildNewspaperFacts(observations, { playerIdentities: identities }, { ideologies: config.constants.types.ideologies }),
+    facts: buildNewspaperFacts(input.evidence, { playerIdentities: identities }, { ideologies: config.constants.types.ideologies }),
   });
 }
 
@@ -97,7 +99,6 @@ describe('newspaper civic vocabulary', () => {
     const config = await parseEditorialConfig({
       ...stock,
       civicTerms: sampleVocabulary,
-      defaults: { ...stock.defaults, minItems: 2, maxItems: 2 },
       triggers: [
         { id: 'anchor', subject: 'city', when: 'true' },
         { id: 'notice', subject: 'world', when: 'true' },
@@ -107,7 +108,7 @@ describe('newspaper civic vocabulary', () => {
         { id: 'notice', triggers: ['notice'], weight, tags: [], variants: [{ id: 'notice', headline: 'Notice', body: ['Notice.'], weight }] },
         { id: 'ledger', triggers: ['ledger'], weight, tags: [], variants: [{ id: 'ledger', headline: 'Ledger', body: ['Ledger.'], weight }] },
         { id: 'anchor', triggers: ['anchor'], weight, tags: [], variants: [], merge: {
-          match: 'true', min: 2,
+          match: "member.templateIds.includes('notice') || member.templateIds.includes('ledger')", min: 2,
           variants: [{ id: 'merged', headline: 'From our {{terms.civic.government}}', weight,
             body: ['Dispatch from the {{foreignOffice}}.'],
             links: [link('foreignOffice', '{{city.owner.civic.government}}')] }],
@@ -121,28 +122,29 @@ describe('newspaper civic vocabulary', () => {
     const result = await check(config, { ...evidence([home, foreign]), cities: [city] });
     expect(result.status).toBe('published');
     if (result.status !== 'published') return;
-    expect(result.issue.items).toHaveLength(1);
-    expect(result.issue.items[0].headline).toContainEqual({ type: 'text', text: 'court' });
-    expect(result.issue.items[0].body.flat()).toContainEqual(expect.objectContaining({ type: 'link', text: 'senate' }));
-    expect(result.state.issues[0].items[0].sources).toEqual(expect.arrayContaining([home.source, foreign.source]));
+    const merged = result.issue.items.find(item => result.decision.selectedVariants[item.id] === 'merged')!;
+    expect(merged.headline).toContainEqual({ type: 'text', text: 'court' });
+    expect(merged.body.flat()).toContainEqual(expect.objectContaining({ type: 'link', text: 'senate' }));
+    expect(result.state.issues[0].items.find(item => item.id === merged.id)?.sources).toEqual(expect.arrayContaining([home.source, foreign.source]));
     expect(result.decision.evidence).toEqual(expect.arrayContaining([home.source, foreign.source]));
 
     const plain = await parseEditorialConfig({
-      ...config, defaults: { ...config.defaults, minItems: 1 },
+      ...config,
       templates: [{ id: 'notice', triggers: ['notice'], weight, tags: [],
         variants: [{ id: 'plain', headline: 'Notice', body: ['Notice.'], weight,
           links: [link('unprinted', '{{terms.civic.government}}')] }] }],
     });
     const plainResult = await check(plain, evidence([home]));
     expect(plainResult.status).toBe('published');
-    expect(plainResult.state.issues[0].items[0].sources).not.toContainEqual(home.source);
+    const plainRecord = plainResult.state.issues[0].items.find(item => plainResult.decision.selectedVariants[item.id] === 'plain')!;
+    expect(plainRecord.sources).not.toContainEqual(home.source);
   });
 
   it('should print the same stock crier variant with Fealty and with neutral defaults without a home row', async () => {
     const id = 'congress-new-proposals-ours';
     const template = stock.templates.find(entry => entry.variants.some(variant => variant.id === id))!;
     const config = await parseEditorialConfig({
-      ...stock, defaults: { ...stock.defaults, minItems: 1 },
+      ...stock,
       triggers: [{ id: 'congress-new-proposals', subject: 'world', when: 'true', values: { ours: 'true' } }],
       templates: [{ ...template, variants: template.variants.filter(variant => variant.id === id) }],
     });
@@ -152,10 +154,10 @@ describe('newspaper civic vocabulary', () => {
     expect(fealty.status).toBe('published');
     expect(neutral.status).toBe('published');
     if (fealty.status !== 'published' || neutral.status !== 'published') return;
-    expect(Object.values(fealty.decision.selectedVariants)).toEqual([id]);
-    expect(Object.values(neutral.decision.selectedVariants)).toEqual([id]);
-    expect(fealty.issue.items[0].body.flat()).toContainEqual({ type: 'text', text: 'subjects' });
-    expect(neutral.issue.items[0].body.flat()).toContainEqual({ type: 'text', text: 'people' });
-    expect(fealty.state.issues[0].items[0].sources).toContainEqual(home.source);
+    const fealtyStory = fealty.issue.items.find(item => fealty.decision.selectedVariants[item.id] === id)!;
+    const neutralStory = neutral.issue.items.find(item => neutral.decision.selectedVariants[item.id] === id)!;
+    expect(fealtyStory.body.flat()).toContainEqual({ type: 'text', text: 'subjects' });
+    expect(neutralStory.body.flat()).toContainEqual({ type: 'text', text: 'people' });
+    expect(fealty.state.issues[0].items.find(item => item.id === fealtyStory.id)?.sources).toContainEqual(home.source);
   });
 });

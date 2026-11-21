@@ -475,19 +475,20 @@ describe('stock politics desk', () => {
       expect(subjectValue(passedFired[0], 'ours')).toBe(true);
 
       const defeated = eventRow('ResolutionResult', 901, 19, {
-        IsEnact: false, Passed: false, ResolutionType: 5,
+        IsEnact: false, Passed: false, ResolutionType: 'Embargo City-States',
         ProposerPlayerID: 1, ProposerName: 'Brazil', Decision: 2,
       });
+      const unresolved = eventRow('ResolutionResult', 902, 19, { IsEnact: false, Passed: false, ResolutionType: 5 });
       const defeating = await check(fixture({
         cutoff, previous,
         players: [playerRow(0, cutoff), playerRow(1, cutoff)],
         beforePlayers: [playerRow(0, previous), playerRow(1, previous)],
-        events: [defeated],
+        events: [defeated, unresolved],
       }));
       const failedFired = firedSubjects(rule(defeating, 'congress-resolution-defeated'));
       expect(failedFired).toHaveLength(1);
       expect(failedFired[0]).toMatchObject({ subject: 'event/901', importance: 50 });
-      expect(subjectValue(failedFired[0], 'resolution')).toBeNull();
+      expect(subjectValue(failedFired[0], 'resolution')).toBe('Embargo City-States');
       expect(subjectValue(failedFired[0], 'isEnact')).toBe(false);
       expect(subjectValue(failedFired[0], 'proposer')).toBe('Brazil');
       expect(subjectValue(failedFired[0], 'ours')).toBe(false);

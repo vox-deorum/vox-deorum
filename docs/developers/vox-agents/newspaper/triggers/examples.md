@@ -32,7 +32,7 @@ Find the detailed expressions in the [city](../../../../../vox-agents/newspaper/
 | Rule | What to borrow |
 | --- | --- |
 | `neighbor-puppet-annexed` | Compare two snapshots of a foreign city within `neighboring`. Require the same owner to distinguish annexation from capture. |
-| `forward-settle` | Use `PlayerCityFounded` to report a rival within `adjacent` distance; mark the story urgent at two tiles or less. The template can omit the nearest own city's name when it is unavailable. |
+| `forward-settle` | Use `PlayerCityFounded` to report a rival within `adjacent` distance. Require the rival and both city names, and mark the story urgent at two tiles or less. |
 | `besieged-and-starving` | Combine the `besieged` and `starving` shortcuts for an own city. Half damage makes it urgent; default `rearm` waits for a check where the conditions are false. |
 | `neighbors-convert` | Group by majority religion when at least three foreign cities within `neighboring` gain the same majority religion in the `recent` window. |
 

@@ -6,7 +6,7 @@ A trigger spots a development in a game recording, such as one of our cities shr
 
 1. Describe the development in one sentence and pick its [subject](#subjects). A city-state switching allies is an `event`; a capital outgrown by another of our cities is a `world` comparison.
 2. Find the [facts](facts.md) and [thresholds](constants.md) the rule needs. If a fact is missing, see [how to add it](facts.md#add-a-fact).
-3. Add an entry to a topical JSON file under `vox-agents/newspaper/triggers/`. Put cheap conditions that rule out many subjects early in `when`.
+3. Add an entry to a topical JSON file under `vox-agents/newspaper/triggers/`. Put cheap conditions that rule out many subjects early in `when`. Check required facts there too: a report on a city-state changing allies needs both names. Leave facts used only in some variants, such as distance, to those variants.
 4. Add a template under `vox-agents/newspaper/templates/`. Name the rule's ID in `triggers` and give the template and at least one eligible variant positive weight. To tune existing coverage, start with the [settler overlay](examples.md#a-city-shrinks-after-sending-settlers).
 5. Start a fresh [replay](../replay.md#iterate-on-a-rule-or-overlay). Read the issue and audit together to see what matched, what was eligible, and what printed.
 
@@ -90,7 +90,7 @@ Importance is clamped to 0 through 100 and defaults to 50. A larger score helps 
 | `once` | Never, once the match has been recorded in repeat memory. |
 | A span such as `medium` | Once this many [Standard turns](constants.md#spans) have elapsed, even if the condition stayed true. |
 
-When an issue publishes, the editor remembers every fired stateful rule, including developments that did not print. A skipped check can rearm an existing match but does not remember new ones. Event and incident rules do not spend repeats; their subjects come from the reporting period, and a fingerprint keeps the same development from printing twice.
+When an issue publishes, the editor remembers every fired stateful rule and closes the reporting window, including for stories left out of the layout. A skipped check keeps the window open and can rearm an existing match without remembering new ones. Event and incident rules do not spend repeats. Their subjects come from the reporting period, and fingerprints keep previously printed developments from appearing twice.
 
 ## Publication memory
 

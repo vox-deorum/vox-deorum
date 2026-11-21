@@ -6,6 +6,7 @@ import { loadEditorialConfig, parseEditorialConfig } from '../../../../../src/ne
 import type { EditorialConfig } from '../../../../../src/newspaper/editorial/config/schema.js';
 import { buildNewspaperFacts } from '../../../../../src/newspaper/editorial/facts/index.js';
 import { context, evidence, event, relationship, snapshot, scores } from '../../../../helpers/newspaper-diplomacy.js';
+import { editionBriefTemplate, withEditionBriefs } from '../../../../helpers/newspaper-briefs.js';
 
 /** Supply visible identities at each date, as in a replay's projected baseline. */
 function withDatedVisibility(input: NewspaperEvidence, olderEvents: NewspaperEvidence['events']): NewspaperEvidence {
@@ -15,8 +16,9 @@ function withDatedVisibility(input: NewspaperEvidence, olderEvents: NewspaperEvi
 }
 
 /** Evaluate the catalogue through the same check used by replay. */
-function check(config: EditorialConfig, input: NewspaperEvidence, olderEvents: NewspaperEvidence['events'] = []) {
-  const evidence = withDatedVisibility(input, olderEvents);
+function check(config: EditorialConfig, input: NewspaperEvidence, olderEvents: NewspaperEvidence['events'] = [], briefs = 0) {
+  const prepared = withEditionBriefs(withDatedVisibility(input, olderEvents), config, briefs);
+  const { evidence } = prepared;
   const facts = buildNewspaperFacts(evidence, {
     playerIdentities: Object.fromEntries(Object.entries(context.playerNames!).map(([id, name]) => [
       id, { name, major: Number(id) < 10, teamId: Number(id) + 100 },
@@ -24,7 +26,7 @@ function check(config: EditorialConfig, input: NewspaperEvidence, olderEvents: N
   });
   return runEditorialCheck({
     campaignId: 'fixture', timelineId: 'diplomacy', receiver: { playerId: 0, label: 'France' },
-    evidence, facts, config, context, speedMultiplier: 1,
+    ...prepared, facts, context, speedMultiplier: 1,
     state: createInitialPublicationState(),
   });
 }
@@ -38,7 +40,6 @@ describe('newspaper diplomacy trigger rules', () => {
     };
     const config = await parseEditorialConfig({
       ...base,
-      defaults: { ...base.defaults, minItems: 1 },
       triggers: [...base.triggers.filter(rule => rule.id === 'vassals-join-war'), summary],
       templates: [
         ...base.templates.filter(template => template.id === 'vassals-join-war-account'),
@@ -66,7 +67,7 @@ describe('newspaper diplomacy trigger rules', () => {
       snapshot(2, 10, [relationship(0, 'war', { warScore: 0 })]), snapshot(3, 10, [relationship(1, 'war', { warScore: 0 })]),
     ];
     const input = evidence(current, observations, 10, 9);
-    const result = await check(config, input, [event('DeclareWar', 99, 7, 5, 4, { IsAggressor: true })]);
+    const result = await check(config, input, [event('DeclareWar', 99, 7, 5, 4, { IsAggressor: true })], 3);
     const [vassals, openings] = result.decision.triggerAudit;
     expect(vassals.subjects.map(result => result.outcome)).toEqual(['fired', 'false']);
     expect(vassals.subjects[0].expressions).toContainEqual(expect.objectContaining({
@@ -76,7 +77,7 @@ describe('newspaper diplomacy trigger rules', () => {
       .toEqual(expect.arrayContaining([1, 2, 3, 4]));
     expect(openings).toMatchObject({ windowFromTurn: -1, subjectCount: 2 });
     expect(openings.subjects.every(result => result.outcome === 'fired')).toBe(true);
-    const selected = result.decision.candidateScores.filter(score => score.selected).map(score => score.id);
+    const selected = result.decision.candidateScores.filter(score => score.selected && !score.id.startsWith(`${editionBriefTemplate.id}/`)).map(score => score.id);
     expect(selected).toHaveLength(2);
     expect(selected).toEqual(expect.arrayContaining([
       expect.stringMatching(/^vassals-join-war-account\//),

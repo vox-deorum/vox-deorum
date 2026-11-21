@@ -29,17 +29,17 @@ function savedIssue(): ArchiveIssue {
   const issue = createNewspaperIssue();
   return {
     issue,
-    index: { issueId: issue.issueId, runId: 'run-1', receiverPlayerID: 0, cutoffTurn: 12, title: issue.publication.title, itemCount: 1 },
+    index: { issueId: issue.issueId, runId: 'run-1', receiverPlayerID: 0, cutoffTurn: 12, title: issue.publication.title, itemCount: issue.items.length },
     votes: {},
     decision: {
       checkId: 'controlled-check', cutoffTurn: 12, configurationId: 'controlled', configurationSnapshot: {}, seed: 'controlled', editor: 'heuristic', status: 'published',
       candidateScores: [], selectedVariants: {}, designId: 'wire', layouts: {}, evidence: [], diplomacyInference: [], triggerAudit: [], evidenceRequest: { cutoffTurn: 12, previousCheckTurn: 11, receiverPlayerID: 0 },
       feedback: { revision: '0', windowItemIds: [], votes: {}, tagCounts: {}, seriesAdjustments: {}, tagAdjustments: {}, coefficients: { series: 1, tag: 1, bound: 10, window: 50 } },
     },
-    articles: [{
-      id: 'shared-item', issueId: issue.issueId, turn: 12, tags: ['economy'], seriesKeys: [], templateIds: ['controlled-template'], triggerIds: ['controlled-trigger'],
-      importance: 5, headline: issue.items[0].headline, evidenceSummary: 'Controlled evidence summary', sources: [{ table: 'PlayerSummaries', id: 3, turn: 12, createdAt: 123 }], fingerprint: 'controlled/12',
-    }],
+    articles: issue.items.map(item => ({
+      id: item.id, issueId: issue.issueId, turn: 12, tags: item.tags, seriesKeys: item.seriesKeys, templateIds: ['controlled-template'], triggerIds: ['controlled-trigger'],
+      importance: 5, headline: item.headline, evidenceSummary: 'Controlled evidence summary', sources: [{ table: 'PlayerSummaries', id: 3, turn: 12, createdAt: 123 }], fingerprint: `controlled/12/${item.id}`,
+    })),
   };
 }
 
@@ -121,7 +121,7 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('replay b
   for (const kind of ['preview', 'built'] as const) {
   it(`should generate, stop, continue and resume from the ${kind} host`, async context => {
     if (!browser) { context.skip(unavailable); return; }
-    const recording = await createReplayRecording();
+    const recording = await createReplayRecording('Epic', [6]);
     const state = kind === 'built' ? new ReplaySession() : undefined;
     const replayHost = state
       ? await startNewspaperHost({ mountApplicationRoutes: app => mountReplayRoutes(app, () => state) })
@@ -209,6 +209,13 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('replay b
       await page.locator('#recorded-edition').selectOption(firstId);
       await page.locator(`#reader-root[data-issue-id="${firstId}"]`).waitFor();
       expect(await vote.getAttribute('aria-pressed')).toBe('true');
+      for (const width of [390, 1280]) {
+        await page.setViewportSize({ width, height: 850 });
+        const visiblePage = page.locator('[data-vd-region=page]:not([hidden])');
+        await visiblePage.locator('.vd-story').first().waitFor();
+        expect(await visiblePage.locator('.vd-story').count()).toBeGreaterThanOrEqual(4);
+        expect(await visiblePage.evaluate(region => region.scrollWidth <= region.clientWidth)).toBe(true);
+      }
       expect(await readFile(recording.filename)).toEqual(recording.originalBytes);
     } finally {
       releaseFirst();
@@ -225,7 +232,7 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('replay b
     if (!browser) { context.skip(unavailable); return; }
     const page = await browser.newPage();
     const detail = savedIssue();
-    detail.votes['shared-item'] = 1;
+    detail.votes['analysis-item'] = 1;
     const issue = detail.issue;
     let issueReads = 0;
     const writes: string[] = [];
@@ -259,7 +266,7 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('replay b
       expect(await root.locator('.vd-title').textContent()).toBe(issue.publication.title);
       expect(await section.getAttribute('aria-selected')).toBe('true');
       const activePage = root.locator('[data-vd-region=page]:not([hidden])');
-      expect(await activePage.locator('.vd-headline').textContent()).toBe('Shared report');
+      expect(await activePage.locator('.vd-story').getAttribute('data-item-id')).toBe('analysis-item');
       expect(await activePage.locator('[data-vd-vote-value=up]').getAttribute('aria-pressed')).toBe('true');
 
       await design.selectOption('');
@@ -354,7 +361,7 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('replay b
       await expect.poll(() => issueReads).toBe(2);
       expect(await page.getByRole('tab', { name: 'Analysis' }).getAttribute('aria-selected')).toBe('true');
       expect(votes).toBe(2);
-      expect(detail.votes['shared-item']).toBe(-1);
+      expect(detail.votes['analysis-item']).toBe(-1);
     } finally { await page.close(); }
   }, 60_000);
 });

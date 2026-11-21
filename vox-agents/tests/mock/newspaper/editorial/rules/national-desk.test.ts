@@ -4,6 +4,7 @@ import { createInitialPublicationState } from '../../../../../src/newspaper/cont
 import { runEditorialCheck } from '../../../../../src/newspaper/editorial/check.js';
 import { loadEditorialConfig } from '../../../../../src/newspaper/editorial/config/load.js';
 import { buildNewspaperFacts } from '../../../../../src/newspaper/editorial/facts/index.js';
+import { editionBriefTemplate, withEditionBriefs } from '../../../../helpers/newspaper-briefs.js';
 
 let config: Awaited<ReturnType<typeof loadEditorialConfig>>;
 
@@ -52,19 +53,24 @@ function fixture({
 }
 
 /** Exercise the real editor with the shipped national rules and authored copy. */
-function check(evidence: NewspaperEvidence, state = createInitialPublicationState()) {
+async function check(observations: NewspaperEvidence, state = createInitialPublicationState()) {
+  const input = withEditionBriefs(observations, config);
+  const { evidence } = input;
   const facts = buildNewspaperFacts(evidence, { playerIdentities: {
     0: { name: 'France', major: true }, 1: { name: 'Egypt', major: true },
   } });
-  return runEditorialCheck({ campaignId: 'campaign', timelineId: 'branch', receiver: { playerId: 0, label: 'France' },
-    evidence, facts, speedMultiplier: 1, state, config });
+  const result = await runEditorialCheck({ campaignId: 'campaign', timelineId: 'branch', receiver: { playerId: 0, label: 'France' },
+    ...input, facts, speedMultiplier: 1, state });
+  const records = (result.state.issues.at(-1)?.items ?? []).filter(item =>
+    item.turn === evidence.request.cutoffTurn && !item.templateIds.includes(editionBriefTemplate.id));
+  return { ...result, records, articles: result.issue?.items.filter(item => records.some(record => record.id === item.id)) ?? [] };
 }
 
 describe('national desk', () => {
   beforeAll(async () => {
     const stock = await loadEditorialConfig();
     const ids = ['capital-outgrown', 'neighbor-army-overtakes', 'technology-leader-changes', 'golden-age-in-wartime'];
-    config = { ...stock, defaults: { ...stock.defaults, minItems: 1 },
+    config = { ...stock,
       triggers: stock.triggers.filter(rule => ids.includes(rule.id)),
       templates: stock.templates.filter(template => template.triggers.some(id => ids.includes(id))) };
   });
@@ -77,7 +83,7 @@ describe('national desk', () => {
       const evidence = fixture({ populations });
       const result = await check(evidence);
       expect(result.status).toBe('published');
-      const items = result.issue?.items ?? [];
+      const items = result.articles;
       expect(items).toHaveLength(1);
       const copy = JSON.stringify(items[0]);
       for (const city of cities) expect(copy).toContain(city);
@@ -94,7 +100,7 @@ describe('national desk', () => {
     it('should publish a measured crossing even when our measured strength is zero', async () => {
       const result = await check(fixture({ strengths: [0, 25] }));
       expect(result.status).toBe('published');
-      expect(result.state.issues[0].items).toEqual([
+      expect(result.records).toEqual([
         expect.objectContaining({ ruleIds: ['neighbor-army-overtakes'] }),
       ]);
     });
@@ -112,7 +118,7 @@ describe('national desk', () => {
     ])('should distinguish a sole lead from a tie with %i technologies', async (count, tied) => {
       const result = await check(fixture({ technologies: [13, count] }));
       expect(result.status).toBe('published');
-      expect(result.state.issues[0].items).toEqual([
+      expect(result.records).toEqual([
         expect.objectContaining({ subject: 'player/1', ruleIds: ['technology-leader-changes'] }),
       ]);
       expect(result.decision.triggerAudit.find(rule => rule.rule === 'technology-leader-changes')?.subjects)
@@ -126,7 +132,7 @@ describe('national desk', () => {
       const evidence = fixture({ technologies: [count, 13], oldTechnologies: [12, 13] });
       const result = await check(evidence);
       expect(result.status).toBe('published');
-      expect(result.state.issues[0].items).toEqual([
+      expect(result.records).toEqual([
         expect.objectContaining({ subject: 'player/0', ruleIds: ['technology-leader-changes'] }),
       ]);
       expect(result.decision.evidence).toContainEqual(evidence.players[0].source);
@@ -142,7 +148,7 @@ describe('national desk', () => {
       const evidence = fixture({ goldenAge: true });
       const result = await check(evidence);
       expect(result.status).toBe('published');
-      expect(result.state.issues[0].items).toEqual([
+      expect(result.records).toEqual([
         expect.objectContaining({ ruleIds: ['golden-age-in-wartime'] }),
       ]);
       expect(result.decision.evidence).toContainEqual(evidence.events[0].source);

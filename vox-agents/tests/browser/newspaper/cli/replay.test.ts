@@ -19,7 +19,7 @@ describe('newspaper replay command artifacts', () => {
   let options: NewspaperCliOptions;
 
   beforeEach(async () => {
-    recording = await createReplayRecording();
+    recording = await createReplayRecording('Epic', [6]);
     options = await createReplayCliOptions(recording.filename);
   });
   afterEach(async () => { await recording.cleanup(); });

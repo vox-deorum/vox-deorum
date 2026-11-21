@@ -27,9 +27,9 @@
       }
     },
     "layouts": [
-      { "id": "city-desk", "variant": "ordinary", "weight": { "base": 10 } },
-      { "id": "late-extra", "variant": "breaking", "weight": { "base": 10 } },
-      { "id": "city-figures", "variant": "analysis", "weight": { "base": 3 } }
+      { "id": "city-desk", "variant": "ordinary", "frontSlots": 5, "sectionSlots": 3, "weight": { "base": 10 } },
+      { "id": "late-extra", "variant": "breaking", "frontSlots": 5, "weight": { "base": 10 } },
+      { "id": "city-figures", "variant": "analysis", "frontSlots": 5, "sectionSlots": 3, "weight": { "base": 3 } }
     ],
     "pageLabels": { "front": "Front Page", "home": "City Desk", "abroad": "Foreign Desk" }
   }

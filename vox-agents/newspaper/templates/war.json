@@ -10,7 +10,7 @@
         "id": "ally-joins-our-war-report",
         "headline": "Allies join the war against {{opponent}}",
         "body": [
-          "{{allies}} have joined the war against {{opponent}}, honoring the pact between us. Their first columns reached our camps this week, and the quartermaster has cleared a second row of stalls for their horses. {{opponent}} must now watch more than one border.{{hostileAllies}}"
+          "A column of {{allies}} arrived at our camp before dawn, and their banners now fly beside ours against {{opponent}}. The cooks had to borrow pots from the infantry to feed them all. {{opponent}} will find its next battle more crowded than the last.{{hostileAllies}}"
         ],
         "weight": { "base": 1 }
       },
@@ -21,7 +21,7 @@
         "genre": "analysis",
         "headline": "A warning for our other rivals",
         "body": [
-          "{{opponent}} now faces another army, because {{allies}} have answered our pact. A promise is only ink until someone calls it in, and this one has been called in the open. Every other court will be recalculating what its own promises are worth.{{hostileAllies}}"
+          "{{allies}} have brought their army into the field against {{opponent}}, and the promise behind that march was made long before this war. A treaty that is never tested is only a pleasant memory; this one has now been tested in public. Every chancellery in the world is revising its estimate of what our signature is worth.{{hostileAllies}}"
         ],
         "weight": { "base": 1 }
       },
@@ -32,7 +32,7 @@
         "genre": "report",
         "headline": "The pact answered in arms",
         "body": [
-          "Letters from the capital relate that {{allies}} have taken up arms beside us against {{opponent}}, as the treaty bound them to do. At the frontier post, the gatekeeper has chalked their colors on the board beside ours. A promise kept in a hard season is the kind worth making in a calm one.{{hostileAllies}}"
+          "Dispatches from the capital confirm that {{allies}} have entered the war at our side against {{opponent}}. The keeper of the frontier post has added their colors to the board, though he had to move ours to make room. We hope the arrangement proves as durable as the paper it was written on.{{hostileAllies}}"
         ],
         "weight": { "base": 1 }
       },
@@ -43,7 +43,7 @@
         "genre": "notice",
         "headline": "Hear it! We do not fight alone",
         "body": [
-          "Word of the war, and good word at that! {{allies}} have answered the pact and march with us against {{opponent}}! We do not stand alone! We do not stand alone! Tell every street and every gate!{{hostileAllies}}"
+          "Make way! {{allies}} have come to our side and march against {{opponent}}! Their drums were heard on the north road this morning! Our friends have not left us to fight alone! Pass the word to every street!{{hostileAllies}}"
         ],
         "weight": { "base": 1 }
       }
@@ -60,7 +60,7 @@
         "id": "barbarians-at-the-gates-report",
         "headline": "Barbarians in sight of {{cityName}}",
         "body": [
-          "Raiders have come down from the hills within sight of {{cityName}}, {{barbarians}} by the last count. The watch counted them from the tower at dusk, and the outlying farms have emptied into the town. The garrison has barred the north gate and sent word to the nearest camp."
+          "Smoke from the raiders' fires has been rising beyond the ridge above {{cityName}}, and the watch counts {{barbarians}} of them. The last farm outside the wall was abandoned at midday, its door still open. The garrison has shut the north gate and sent for help."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -74,7 +74,7 @@
         "genre": "notice",
         "headline": "Hear it, {{cityName}}! Raiders at the walls",
         "body": [
-          "Raiders in the hills, {{barbarians}} by the last count! Bring the herds inside before dark and bar the shutters! Mind the children, mind the gate! {{barbarians}} at our door, and the walls are ours to hold!"
+          "Raiders on the ridge! {{barbarians}} of them, and the watch has seen their fires! Drive the herds inside and bar every shutter! Let no child stray past the gate! We hold the wall! We hold the wall!"
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -88,7 +88,7 @@
         "genre": "anecdote",
         "headline": "The herdsmen reach {{cityName}} without the herds",
         "body": [
-          "The drovers reached the gate at a run on Tuesday, and the cattle did not come with them. The raiders are camped within reach of {{cityName}}, {{barbarians}} by the last count, close enough that their fires show over the ridge. \"We left the herd in the field,\" one said. \"Better the herd than us.\""
+          "The farmer's cart came through the gate at a gallop with an empty harness trailing behind it. Raiders are camped near {{cityName}}, {{barbarians}} by the watch's count, and the ridge glows with their fires each night. 'The oxen bolted before I did,' the farmer said. 'I did not wait to argue.'"
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -102,7 +102,7 @@
         "genre": "analysis",
         "headline": "Counting raiders at {{cityName}}",
         "body": [
-          "The raiders number {{barbarians}}, the first figure the scouts around {{cityName}} have agreed on all season. A band that size cannot feed itself in one valley for long; it strips the land and moves on, burning what it cannot carry. Driving it off will take men the harvest can ill spare, and that is the bill the count does not show."
+          "The watch has fixed a figure on the raiders around {{cityName}}: {{barbarians}}. A band of that size must scatter to feed itself, which means the farms outside the wall will suffer before the town does. Driving them off is a bill the harvest can barely cover, and the town will pay it in grain either way."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -117,7 +117,7 @@
         "when": "posture !== null && posture !== 'NONE'",
         "headline": "At {{cityName}}, the garrison answers: {{posture}}",
         "body": [
-          "The town book records raiders in the lands of {{cityName}}, {{barbarians}} by the watch's count. The captain of the watch answered before the day was out, and his order stands in the margin as {{posture}}. The outer farms were brought within the wall, and the gate was shut at dusk."
+          "{{cityName}}'s town book lists raiders in the fields, {{barbarians}} by the watch's count. The captain's answer is written in the margin: {{posture}}. That evening the outer farms were emptied and the gate was barred before the stars appeared."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -137,7 +137,7 @@
         "id": "besieged-and-starving-report",
         "headline": "{{city}} goes hungry under siege",
         "body": [
-          "{{city}} is under siege, and the city has begun to starve. At the grain exchange a porter says the sacks sold this morning were half chaff, and buyers carried them off without a word. What was thrown away last year is now dinner."
+          "Food in {{city}} is running short, and the siege has begun to show at every table. A porter at the grain exchange says the sacks now weigh less than their labels promise. The city is counting meals by the week, and the count is falling."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -151,7 +151,7 @@
         "genre": "analysis",
         "headline": "Who can still buy supper in {{city}}?",
         "body": [
-          "Hunger in {{city}} will not fall evenly, and the siege will find the poorest tables first. A family that buys flour by the day has nothing to fall back on, while a merchant with a cellar can wait a month. The stalls in the market still hold food; the question is whose coin can still reach it."
+          "Hunger will not distribute itself fairly inside {{city}}. The families who buy flour daily will feel the siege first, while a merchant with a full cellar can wait a month. The market stalls are not empty yet; the real shortage is coin, not grain."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -165,7 +165,7 @@
         "genre": "anecdote",
         "headline": "In {{city}}, the queue starts before dawn",
         "body": [
-          "{{terms.civic.people}} of {{city}}, the siege has reached the baker's counter. The line forms before dawn now, and the baker weighs each loaf in his hand before he hands it over. Ask him what he will sell when the flour is gone, and he will tell you the truth: nothing."
+          "{{terms.civic.people}} of {{city}}, the baker has begun cutting loaves smaller and saying nothing about it. The queue forms before dawn, and every customer watches the scale. Ask him how long the flour will last, and he answers by tapping the empty barrel behind the counter."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -179,7 +179,7 @@
         "genre": "notice",
         "headline": "To the faithful of {{city}}: hold fast",
         "body": [
-          "To the faithful in this besieged city: the granaries are low and the gates must stay shut. Open the shrines, bring your spare bread to the poor, and let no neighbor face the night alone. What we give up now will be counted in a better season."
+          "To the faithful in the besieged city: the granaries are nearly bare and the gates must remain shut. Throw open the shrines to anyone without a warm room, and share what bread you can spare. The season will turn, and what is given now will not be forgotten."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -199,7 +199,7 @@
         "id": "enemy-city-takes-heavy-damage-report",
         "headline": "The walls of {{cityName}} are failing",
         "body": [
-          "The walls of {{cityName}} have been broken down to {{wallStrength}} of their {{maxWallStrength}} strength. From the ridge our scouts can see the gap where the masonry fell, and the rubble below it is deep enough to bury a cart. Another push may finish what the last one began."
+          "Rubble from the walls of {{cityName}} now lies in the streets, and the stone holds only {{wallStrength}} of its {{maxWallStrength}} strength. A carter who passed beneath the gate said he could see the sky through the breach. The defenders have not begun repairs, which suggests they have given up on the outer wall."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -213,9 +213,9 @@
         "genre": "ledger",
         "headline": "An accounting of {{cityName}}",
         "body": [
-          "City: {{cityName}}.",
-          "Wall and gate: {{wallStrength}} of {{maxWallStrength}} still standing.",
-          "The account: more lost than kept."
+          "City examined: {{cityName}}.",
+          "Wall standing: {{wallStrength}} of {{maxWallStrength}}.",
+          "Verdict: the next storm will finish what the siege began."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -229,7 +229,7 @@
         "genre": "report",
         "headline": "Abroad tonight: heavy damage at {{cityName}}",
         "body": [
-          "Word from abroad tonight: the walls of {{cityName}} are badly damaged. They stand at {{wallStrength}} of their {{maxWallStrength}} strength. The city is still held, but the breach is wide enough to see from the road."
+          "Word from abroad tonight: the walls of {{cityName}} have been reduced to {{wallStrength}} of their {{maxWallStrength}} strength. Engineers say the breach is wide enough to march through. The city still flies its flag, but the stone no longer argues for it."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -244,7 +244,7 @@
         "when": "civilization !== null",
         "headline": "The walls of a rival come down",
         "body": [
-          "{{cityName}} belongs to {{civilization}}, and its walls now stand at {{wallStrength}} of {{maxWallStrength}}. A wall that low no longer keeps an army out; it only slows one down. Our officers have been waiting for a gap like this, and the next assault will test whether the defenders have anything left behind it."
+          "{{cityName}} belongs to {{civilization}}, and its wall has fallen to {{wallStrength}} of the {{maxWallStrength}} it once carried. Stone in that condition turns a battle into a question of nerve, because the defenders must now choose where to stand. If {{civilization}} has a reserve, this is the week to show it."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -264,7 +264,7 @@
         "id": "enemy-front-posture-offensive-report",
         "headline": "Our forces attack before {{cityName}}",
         "body": [
-          "The attack on {{cityName}} opened at dawn, and the men of {{civilization}} on the wall heard our teams hitching up before they saw them. The word along our line is {{posture}}. Whatever the wall answers, the waiting is over."
+          "At dawn our regiments moved against {{cityName}}, and the word passed down the line was {{posture}}. From the wall, the soldiers of {{civilization}} watched the companies form in the fields below. By noon the first ladders were on the ground and the outer pickets had been driven in."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -279,7 +279,7 @@
         "when": "previousPosture !== 'NONE'",
         "headline": "From {{previousPosture}} to {{posture}}, by arithmetic",
         "body": [
-          "A new order is in force before {{cityName}}: {{posture}} has replaced {{previousPosture}}. Staff officers do not change such words for decoration; someone has weighed the men, the stores and the wall, and found the balance favorable. The defenders may draw their own conclusion from the arithmetic."
+          "The order before {{cityName}} has changed from {{previousPosture}} to {{posture}}, and the change was not made for show. Someone weighed the stores, the roads and the number of defenders, and chose to spend men rather than wait. The defenders must now decide whether to meet the attack or let the wall absorb it."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -293,7 +293,7 @@
         "genre": "report",
         "headline": "The offensive at {{cityName}}, entered",
         "body": [
-          "The scribe of the campaign writes that our army before {{cityName}}, a city of {{civilization}}, began its assault in this season. The command issued that day reads {{posture}}. By evening the forward camp had been struck, and the wagons stood ready behind the lines."
+          "In this season our host set itself against {{cityName}}, a city of {{civilization}}. The day's command is entered in the book as {{posture}}. Before the sun stood at noon, the camp had been struck and the engines drawn up in line."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -307,7 +307,7 @@
         "genre": "report",
         "headline": "The war moves to {{civilization}}'s streets",
         "body": [
-          "The attack on {{cityName}} has begun, and the men who marched past the market this morning did not stop for the usual jokes. A water seller at the gate says they drank and said nothing. When soldiers stop talking, the bill is about to be presented."
+          "The attack on {{cityName}} started before the bakers had lit their ovens. Soldiers went by at a run, and one stopped long enough to ask a boy for water. He drank it standing, handed back the cup, and was gone before the boy could ask his name."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -327,7 +327,7 @@
         "id": "enemy-front-posture-regroup-report",
         "headline": "Back in the fight near {{cityName}}",
         "body": [
-          "After a season of falling back, our troops before {{cityName}} have been ordered forward against {{civilization}} once more. The new word in the order book is {{posture}}. Wagons that had been sent to the rear are being turned around, and the camps are filling again."
+          "After weeks of falling back, our army before {{cityName}} has turned to face {{civilization}} again, and the order of the day is {{posture}}. Supply wagons that had been sent to the rear are being loaded once more. The road behind the camp is crowded with men going the other way."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -341,7 +341,7 @@
         "genre": "analysis",
         "headline": "The pullback ends at {{cityName}}",
         "body": [
-          "{{cityName}} saw our line pull back; it now sees it return under the word {{posture}}. Officers do not spend a winter falling back for the pleasure of it. They do it to shorten their supply line, and they come forward again when the enemy's has grown longer."
+          "{{cityName}} has watched our line retreat and now watches it return, under the word {{posture}}. A withdrawal can buy time, shorten a road, or hide a defeat, and headquarters has not said which it was. The answer will be read in what happens when the two armies meet again."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -355,7 +355,7 @@
         "genre": "report",
         "headline": "Our forces are back at the line near {{cityName}}",
         "body": [
-          "At {{cityName}} tonight, our troops are back at the front. The word from command is {{posture}}. The roads that were quiet last week are full of wagons again."
+          "Near {{cityName}} tonight, our troops are moving forward again. Command calls the order {{posture}}. The camps that went dark last month are lit once more, and the supply road is busy after sunset."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -369,7 +369,7 @@
         "genre": "editorial",
         "headline": "The second try at {{cityName}}",
         "body": [
-          "The men before {{cityName}} are going forward again, and the {{terms.civic.government}} calls it a resumption. The families who sent those men out the first time may call it something else. Before another levy is raised, let the council show what the pullback gained and who paid for it."
+          "The army is going back to {{cityName}}, and the {{terms.civic.government}} calls that a recovery. The families who buried sons in the first advance may use a shorter word. Before a new levy is raised, the council should publish what the retreat cost and who ordered it."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -389,7 +389,7 @@
         "id": "enemy-front-posture-withdraw-report",
         "headline": "The line comes back from {{cityName}}",
         "body": [
-          "Before {{cityName}}, a city of {{civilization}}, our forces have gone from {{previousPosture}} to {{posture}}. The tents came down before dawn, and the wounded were loaded first. The enemy on the wall let the column go without a shot."
+          "The command before {{cityName}}, held by {{civilization}}, has gone from {{previousPosture}} to {{posture}}. Our column is pulling back, and the wounded went first. No one on the wall fired as the last wagons left the road."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -403,7 +403,7 @@
         "genre": "analysis",
         "headline": "The withdrawal before {{cityName}}",
         "body": [
-          "The order before {{cityName}} has changed from {{previousPosture}} to {{posture}}, and the army has given ground. An order like that is made by a person, at a price, for a purpose, and the ministers have published none of the three. The men who paid for that ground deserve a plainer answer than silence."
+          "The word before {{cityName}} has moved from {{previousPosture}} to {{posture}}, and with it the ground our soldiers held. Three things went unstated: who gave the order, what it cost, and why. A public that pays for a retreat is owed at least the reason for it."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -417,7 +417,7 @@
         "genre": "report",
         "headline": "Letters from the front: {{cityName}}",
         "body": [
-          "Letters from the front relate that our forces before {{cityName}} have gone from {{previousPosture}} to {{posture}}. The dispatch was four lines long and named no reason for the change. We print the four lines, and we wait with our readers for the rest."
+          "We are informed from the front that our forces before {{cityName}} have passed from {{previousPosture}} to {{posture}}. The dispatch gives no cause and names no officer. We print the change as it reached us and leave the explanation to those who made it."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -431,7 +431,7 @@
         "genre": "anecdote",
         "headline": "The boys are off the front at {{cityName}}",
         "body": [
-          "At the tram stop this morning, a woman read the notice twice and then sat down on the bench. Her son's company is one of those coming back from {{cityName}}, and she had not known it until the board told her. The {{terms.civic.government}} will have its reasons for the withdrawal; she has a chair to set at the table."
+          "At the tram stop, a woman read the notice twice, then folded it and put it in her sleeve. Her son's regiment is among those leaving {{cityName}}, and the {{terms.civic.government}} posted the news before any letter arrived. She said she would put the kettle on early, in case he came that night."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -451,7 +451,7 @@
         "id": "enemy-troops-sighted-near-city-report",
         "headline": "Enemy colors near {{cityName}}",
         "body": [
-          "Soldiers wearing the colors of {{enemies}} have been seen within reach of {{cityName}}. Their cooking fires show after dark from the watchtower, and the miller has carried his flour inside the wall. The roads out of town are still open, but few are using them."
+          "Columns under the banners of {{enemies}} have been seen a short march from {{cityName}}. Watchmen counted their fires after nightfall, and the miller has hauled his flour behind the wall. The roads remain open, though the carts that use them have grown scarce."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -465,7 +465,7 @@
         "genre": "notice",
         "headline": "Hear it, {{cityName}}! The enemy is near",
         "body": [
-          "Enemy troops in sight of the walls! {{enemies}} are on the road, and the watch has seen their colors! Stand to your posts, keep the roads clear for the army, and let no one stray beyond the gate! Stand to your posts!"
+          "Look to the north road! Soldiers of {{enemies}} are coming, and their fires already light the ridge! Bring in the flocks and shut the shutters! No one walks the fields after dark! Pass the word! Pass the word!"
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -479,7 +479,7 @@
         "genre": "analysis",
         "headline": "Three things an army near {{cityName}} can do",
         "body": [
-          "{{enemies}} have brought troops within a day's march of {{cityName}}. From the wall, our officers can see enough to know the force is not a raiding party. An army that size can besiege the walls, burn the fields, or pin the garrison while it strikes elsewhere. Our officers should be asking which of the three it means to do."
+          "A force flying the colors of {{enemies}} has come within a day of {{cityName}}. This is more men than a raiding party needs, which leaves three uses: a siege, a march through the fields, or a screen while the real blow falls elsewhere. Our officers should be asking which, not merely counting."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -493,7 +493,7 @@
         "genre": "report",
         "headline": "Enemy troops just showed up near {{cityName}}",
         "body": [
-          "Enemy troops near our city. The flags: {{enemies}}. All of them at war with us, all of them this close."
+          "Enemy troops near the city. Banners: {{enemies}}. Close enough that the watch can name them."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -512,7 +512,7 @@
         "id": "enemy-units-lost-in-combat-report",
         "headline": "{{count|enemy unit|enemy units}} destroyed in the field",
         "body": [
-          "The recent fighting cost the enemy {{count|unit|units}}, all of them from the same enemy. Our men have stacked the captured standards by the gate, where they lean in a row taller than a man. The enemy will need more than a season to replace what it left behind."
+          "The latest fighting cost the enemy {{count|unit|units}}, all carrying the same standard. Our soldiers have stacked the captured colors beside the gate, and the pile reaches a man's shoulder. It will take the enemy a season to replace what was lost in an afternoon."
         ],
         "weight": { "base": 1 }
       },
@@ -523,9 +523,9 @@
         "genre": "ledger",
         "headline": "The enemy's losses, counted",
         "body": [
-          "Enemy units destroyed: {{count}}.",
-          "Flags among them: one.",
-          "The fighting this season: charged to the enemy."
+          "Enemy formations destroyed: {{count}}.",
+          "Standards taken: one design, repeated.",
+          "Balance of the season: entered in our favor."
         ],
         "weight": { "base": 1 }
       },
@@ -536,7 +536,7 @@
         "genre": "report",
         "headline": "{{count|enemy unit|enemy units}} destroyed in the fighting",
         "body": [
-          "The front, tonight. Our forces have destroyed {{count|enemy unit|enemy units}} in the latest fighting. Every one of them marched under the same flag."
+          "From the front tonight: our troops have destroyed {{count|enemy unit|enemy units}}. Every one of them marched under a single flag. That flag is not ours."
         ],
         "weight": { "base": 1 }
       },
@@ -548,7 +548,7 @@
         "when": "count >= 5",
         "headline": "Hear it! {{count|enemy unit|enemy units}} destroyed",
         "body": [
-          "Count them in the square! {{count}} of the enemy's units broken by our arms! Banners enough to fill a cart, and the enemy knows the count as well as we do! Sing it in the taverns and shout it at the gates!"
+          "Gather and hear the count! {{count}} enemy formations are broken on the field! Their banners fill a cart, and their families will learn the number soon enough! Tell it in the square and sing it in every tavern!"
         ],
         "weight": { "base": 1 }
       }
@@ -565,7 +565,7 @@
         "id": "foreign-capital-falls-report",
         "headline": "A capital falls, far from home",
         "body": [
-          "A foreign capital has fallen to conquest, {{distance}} from the nearest city of ours. Word came in with a spice cargo, and the harbormaster has already asked what the change means for the tariffs. The fighting is far away, but the ledgers that follow it are not."
+          "News has come that a capital abroad has been taken by force, {{distance}} from the nearest of our cities. The report arrived with a ship's cargo, and the customs clerk read it twice before entering the duty. The war is far away, but the prices it moves are not."
         ],
         "weight": { "base": 1 }
       },
@@ -577,7 +577,7 @@
         "when": "cityName !== null && loser !== null && winner !== null",
         "headline": "After {{cityName}} falls, where do the envoys go?",
         "body": [
-          "{{cityName}} was the seat of {{loser}} and is now held by {{winner}}. A government can lose its capital and keep its authority, or keep the buildings and lose the authority, and the difference is seen in where ambassadors call. Watch the doors that receive them this month."
+          "{{cityName}}, the seat of {{loser}}, now answers to {{winner}}. A state can lose its capital and keep its authority, or keep the buildings and lose the habit of command. Watch which envoys still call at which door, and the answer will show itself."
         ],
         "weight": { "base": 1 }
       },
@@ -589,7 +589,7 @@
         "when": "loser !== null && winner !== null",
         "headline": "The fall of a capital",
         "body": [
-          "In the annals of this year, {{winner}} took the capital of {{loser}} by force of arms, {{distance}} from our own cities. At the shrine, the keeper of the rolls entered the fall in the same hand he used for plagues and comets. The congregation was told to pray for the city's people, and the record does not say why the seat was brought low."
+          "The year's record states that {{winner}} took by arms the capital of {{loser}}, at a distance of {{distance}} from our own cities. The keeper of the rolls entered the fall beside the accounts of plague and drought. Prayer was ordered for the city's people, and no cause was written."
         ],
         "weight": { "base": 1 }
       },
@@ -601,7 +601,7 @@
         "when": "winner !== null",
         "headline": "Abroad tonight, a capital has fallen",
         "body": [
-          "News from abroad tonight: {{winner}} has taken a capital. The city stands {{distance}} from our nearest city. The maps will be reprinted, and the envoys will be busy by morning."
+          "Abroad tonight, word comes that {{winner}} has seized a capital. That is {{distance}} from the closest of our cities. New maps will be needed by morning, and the embassies will be busy before the week ends."
         ],
         "weight": { "base": 1 }
       }
@@ -618,7 +618,7 @@
         "id": "foreign-peace-nearby-report",
         "headline": "Peace near our borders",
         "body": [
-          "{{initiator}} and {{target}} have stopped fighting. The nearer of the two sits {{nearestDistance}} from our nearest city, close enough that our carters use the same roads. The toll keepers have stopped asking travelers for their business."
+          "{{initiator}} and {{target}} have ended their war. The closer of the two lies {{nearestDistance}} from our frontier, close enough that our carters know its roads. The toll keepers there have stopped asking travelers where they are headed."
         ],
         "weight": { "base": 1 }
       },
@@ -629,7 +629,7 @@
         "genre": "report",
         "headline": "Neighbors at peace again",
         "body": [
-          "Word reaches us that {{initiator}} and {{target}} have laid down their arms, and that the settlement asked no visible price of either. At the frontier bridge, the barrier stands open and the keeper has swept a winter's leaves from the planks. May the peace prove dull, and may it last longer than the quarrel."
+          "Word has reached this office that {{initiator}} and {{target}} have concluded a peace, and that neither side has announced a price. At the border bridge, the keeper has taken down the barrier and swept the planks. May the quiet last longer than the quarrel did."
         ],
         "weight": { "base": 1 }
       },
@@ -640,7 +640,7 @@
         "genre": "analysis",
         "headline": "The quiet between {{initiator}} and {{target}}",
         "body": [
-          "Neither {{initiator}} nor {{target}} gained a term worth printing, and their war is over. Such endings are less mysterious than they look: one treasury or the other reached the bottom of its purse, and the fighting stopped when the money did. The peace costs both sides less than another campaign would have."
+          "The settlement between {{initiator}} and {{target}} contains no term worth printing, which tells us most of what we need. Wars usually end when one treasury empties or both grow tired of paying. Either explanation points the same way: the fighting stopped because it had become too expensive."
         ],
         "weight": { "base": 1 }
       },
@@ -651,7 +651,7 @@
         "genre": "proverb",
         "headline": "When the neighbors' fire burns low",
         "body": [
-          "The two loud houses have gone quiet, and the lane sleeps. So it is with {{initiator}} and {{target}}."
+          "Two loud houses have gone dark, and the lane sleeps at last. {{initiator}} and {{target}} have put out their lamps."
         ],
         "weight": { "base": 1 }
       }
@@ -668,7 +668,7 @@
         "id": "foreign-war-nearby-report",
         "headline": "War breaks out near our borders",
         "body": [
-          "{{initiator}} has opened a war against {{target}}. The nearer of the two sits {{nearestDistance}} from our nearest city, and the border market has already lost half its stalls. Our farmers will sell closer to home this season."
+          "War has broken out between {{initiator}} and {{target}}, and the nearer of them stands {{nearestDistance}} from our border. Farmers along that road have begun moving stock away from the frontier. Our own patrols have been doubled, though no one has ordered them to cross."
         ],
         "weight": { "base": 1 }
       },
@@ -679,7 +679,7 @@
         "genre": "analysis",
         "headline": "A war next door",
         "body": [
-          "The fighting between {{initiator}} and {{target}} has opened {{nearestDistance}} from our nearest city. Distance is the only thing that keeps a war foreign, and that distance is short. Our envoys should be in both camps before the first foraging party crosses our line."
+          "The quarrel between {{initiator}} and {{target}} began {{nearestDistance}} from our border, close enough that smoke would be visible from our watchposts. A war that near changes the price of grain, the safety of roads and the mood of every court in the region. Neutrality is a policy, not a shelter."
         ],
         "weight": { "base": 1 }
       },
@@ -690,7 +690,7 @@
         "genre": "report",
         "headline": "{{initiator}} at war with {{target}}",
         "body": [
-          "War close to home tonight: {{initiator}} has declared against {{target}}. Our country is not in this fight. At the coach station, the board still lists the eastern route, and the driver will not say whether he means to run it."
+          "War between {{initiator}} and {{target}} tonight. The fighting is close to our frontier. Travelers on the border road are choosing the long way around, and the watchposts are keeping their lamps lit."
         ],
         "weight": { "base": 1 }
       },
@@ -701,7 +701,7 @@
         "genre": "editorial",
         "headline": "Their war, our doorstep",
         "body": [
-          "Mark this, {{terms.civic.people}}: {{initiator}} and {{target}} are at war, {{nearestDistance}} from fields our families plough. Great powers do not ask leave of the small farmer when they march, and the harvest does not move out of their way. The {{terms.civic.government}} should say now whether our roads and our sons are part of this quarrel."
+          "The war between {{initiator}} and {{target}} is being fought {{nearestDistance}} from our farms, and our {{terms.civic.government}} has said almost nothing about it. The {{terms.civic.people}} deserve to know whether our roads, our markets and our sons are exposed. Silence near a burning neighbor is not caution; it is an unannounced choice."
         ],
         "weight": { "base": 1 }
       },
@@ -712,7 +712,7 @@
         "genre": "report",
         "headline": "A war nearby, set down",
         "body": [
-          "The border record notes that {{initiator}} made war upon {{target}} in this season, and that the nearer of the two lies {{nearestDistance}} from our lands. The warden of the border stone has opened his gate an hour later each morning since the news came. He gives no reason, and the record gives none for him."
+          "In this year {{initiator}} and {{target}} took up arms against each other, at a distance of {{nearestDistance}} from our borders. The frontier scribe noted the smoke before he noted the cause. Our own watch was doubled the same week, and the record gives no order for it."
         ],
         "weight": { "base": 1 }
       }
@@ -729,7 +729,7 @@
         "id": "nearby-capital-falls-report",
         "headline": "A capital falls near our own border",
         "body": [
-          "{{winner}} has taken a capital from {{loser}}, and the fighting came close enough that our own border guard watched the flag go up. Smoke was visible from the ridge road for two days. The war has come to our doorstep, and we have a new neighbor to learn."
+          "A capital has fallen near our border: {{winner}} has taken the seat of {{loser}}. Refugees have already been seen on the road, carrying what they could tie to a cart. Our frontier posts are counting them as they pass."
         ],
         "weight": { "base": 1 }
       },
@@ -740,7 +740,7 @@
         "genre": "analysis",
         "headline": "What {{winner}}'s capture means here",
         "body": [
-          "{{winner}} now holds the capital it took from {{loser}}, and with it the machinery that made {{loser}} a state. Tax rolls, roads and treaties follow the seat, not the flag that used to fly over it. Our own border has a new weight pressing on it, whether or not a stone has moved."
+          "When {{winner}} took the capital of {{loser}}, it gained more than buildings. It gained the offices, the archives and the habit of obedience that gather in a capital. The question now is whether {{loser}} can govern from somewhere else, or whether the state follows the city."
         ],
         "weight": { "base": 1 }
       },
@@ -751,7 +751,7 @@
         "genre": "report",
         "headline": "The fall of a capital near our borders",
         "body": [
-          "In this season {{winner}} took the capital of {{loser}} by the sword, and the city fell near our own marches. Our grandmothers told stories of that gate, and the telling has not improved with the years. The map in the town hall will need a new name in the old place."
+          "The annals record that {{winner}} captured the capital of {{loser}} in this year. The court scribe wrote the entry in a steady hand and left a space beside it for the terms. That space remains empty, and the border has been quiet since."
         ],
         "weight": { "base": 1 }
       },
@@ -762,7 +762,7 @@
         "genre": "report",
         "headline": "A capital just fell near us",
         "body": [
-          "{{winner}} just took a capital from {{loser}}. Close to home. The neighbor got bigger; we did not."
+          "Capital down: {{winner}} has taken {{loser}}'s seat. It is close to us. Watch the roads."
         ],
         "weight": { "base": 1 }
       }
@@ -779,7 +779,7 @@
         "id": "nearby-city-captured-report",
         "headline": "A town changes hands near our border",
         "body": [
-          "A town across the border has been taken by force, {{distance}} from the nearest city of ours. The first cart through the gate carried a receipt with an unfamiliar seal. Our farmers have not stopped watching the road."
+          "A town near our border has changed hands. The fighting took place {{distance}} from our own fields, and a different banner hung over its gate by evening. Our patrols have been told to hold their line and watch."
         ],
         "weight": { "base": 1 }
       },
@@ -791,7 +791,7 @@
         "when": "cityName !== null && loser !== null && winner !== null",
         "headline": "{{cityName}} falls to {{winner}}",
         "body": [
-          "{{cityName}} has passed from {{loser}} to {{winner}}, {{distance}} from our nearest city. A town that size brings its market, its mill and its road tax with it, and all of them now face a different capital. The first question for us is not who won, but who will keep the road open."
+          "{{cityName}} has passed from {{loser}} to {{winner}}, at a distance of {{distance}} from our border. A town that close is a market, a road junction and a warning, depending on who holds it. The next thing to watch is not the flag but the garrison left behind."
         ],
         "weight": { "base": 1 }
       },
@@ -803,7 +803,7 @@
         "when": "cityName !== null && winner !== null",
         "headline": "Notice from abroad: {{cityName}}",
         "body": [
-          "Notice to travelers and merchants: {{cityName}}, {{distance}} from our cities, now belongs to {{winner}} by right of conquest. Papers bearing the old seal will not be honored at its gate. Those with business there should apply for new ones before the market day."
+          "Notice is given that {{cityName}}, {{distance}} from our frontier, is now held by {{winner}}. Travelers should expect new tolls and new questions at its gate. Merchants with goods in its warehouses should present their papers before the week is out."
         ],
         "weight": { "base": 1 }
       },
@@ -815,7 +815,7 @@
         "when": "loser !== null && winner !== null",
         "headline": "A new flag {{distance}} out",
         "body": [
-          "The next town over is under a new flag: {{winner}} has taken it from {{loser}}, {{distance}} from our own streets. The baker there has a new ruler and the same ovens. Our border villages will be the first to find out what that means at the fence."
+          "{{distance}} from our farms, the flag over the town has changed. {{winner}} took it from {{loser}}, and the market opened the next morning as if nothing had happened. The stallholders have seen conquerors before."
         ],
         "weight": { "base": 1 }
       }
@@ -832,7 +832,7 @@
         "id": "neighbor-army-overtakes-report",
         "headline": "{{neighbor}}'s army now outranks ours",
         "body": [
-          "{{neighbor}} now keeps a larger army than we do. The drills on the far side of the border run later than ours, and the sound carries across the valley at night. Nothing has been said at the gate, and nothing needs to be."
+          "The army of {{neighbor}} now outnumbers ours, according to the count kept at the war office. The clerks ran the figures twice before sending them up. No one there would say the gap is small."
         ],
         "links": [
           { "placeholder": "neighbor", "label": "{{neighbor}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -846,9 +846,9 @@
         "genre": "ledger",
         "headline": "The tally of arms",
         "body": [
-          "The neighbor's strength: {{theirStrength}}.",
           "Our strength: {{ourStrength}}.",
-          "The heavier scale: theirs, and only lately."
+          "Their strength: {{theirStrength}}.",
+          "The balance: theirs, for the first time this season."
         ],
         "links": [
           { "placeholder": "neighbor", "label": "{{neighbor}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -862,7 +862,7 @@
         "genre": "editorial",
         "headline": "Ask why {{neighbor}}'s army passed ours",
         "body": [
-          "{{terms.civic.people}}, the army of {{neighbor}} is now the larger one, and the {{terms.civic.government}} has offered no word on how that came about. It did not happen in a night; it happened in the nights nobody was counting. Ask the sentries what they hear after dark, and ask the council why they never asked."
+          "{{neighbor}} has passed us in the count of arms, and the {{terms.civic.government}} has not explained how. The {{terms.civic.people}} pay for every company we raise, and they are entitled to know what our money bought. Either the count is wrong or the policy is."
         ],
         "links": [
           { "placeholder": "neighbor", "label": "{{neighbor}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -876,7 +876,7 @@
         "genre": "report",
         "headline": "The balance of arms has turned",
         "body": [
-          "Set down in the garrison roll: the host of {{neighbor}} has passed ours in strength. The frontier garrison sent its muster to the capital this season with a new column ruled and filled. The armorer has taken on a second apprentice, and the record notes the reason without comment."
+          "In this season the army of {{neighbor}} exceeded our own in number. The war office entered the change without comment, as it enters the weather. The frontier companies were ordered to stand their ground and report."
         ],
         "links": [
           { "placeholder": "neighbor", "label": "{{neighbor}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -896,7 +896,7 @@
         "id": "our-army-overtakes-neighbor-report",
         "headline": "Our army passes {{neighbor}}'s",
         "body": [
-          "Our army has passed that of {{neighbor}} in strength. At the border market, a cattle drover has started asking whether the far pasture is safe again. Nobody has told him yes, and nobody has told him no."
+          "The war office count now puts our army above {{neighbor}}'s. The new figure was posted on the board, and an officer stood looking at it longer than the others. He said only that the lead would have to be used before it was spent."
         ],
         "links": [
           { "placeholder": "neighbor", "label": "{{neighbor}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -910,7 +910,7 @@
         "genre": "report",
         "headline": "Our arms in good order",
         "body": [
-          "We are informed that our army now exceeds the army of {{neighbor}}. The drill yard has taken on another smith, and the forges there have not been cold for a week. Ministers may point to that glow as the fruit of their care."
+          "Letters from the war office state that our forces now exceed those of {{neighbor}} in the field. The return was read at the war office and entered without ceremony. A lead in numbers is a tool; what matters is the hand that holds it."
         ],
         "links": [
           { "placeholder": "neighbor", "label": "{{neighbor}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -924,7 +924,7 @@
         "genre": "report",
         "headline": "Our army just passed {{neighbor}}'s",
         "body": [
-          "Our army just passed {{neighbor}}'s on the scale. Leads like this have a season, not a lifetime. Spend it or lose it."
+          "Count changed: our army is bigger than {{neighbor}}'s now. The board at the war office says so. Somebody should tell the enemy."
         ],
         "links": [
           { "placeholder": "neighbor", "label": "{{neighbor}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -938,9 +938,9 @@
         "genre": "ledger",
         "headline": "The account of strength",
         "body": [
-          "Ours, by the latest muster: {{ourStrength}}.",
-          "Theirs, by the same reckoning: {{theirStrength}}.",
-          "The heavier scale: ours, as of this muster."
+          "Our strength: {{ourStrength}}.",
+          "Their strength: {{theirStrength}}.",
+          "The balance: ours, by the difference."
         ],
         "links": [
           { "placeholder": "neighbor", "label": "{{neighbor}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -960,7 +960,7 @@
         "id": "our-city-takes-heavy-damage-report",
         "headline": "{{city}} takes heavy damage",
         "body": [
-          "{{city}} has taken heavy damage in the recent fighting, and its walls stand at {{wallStrength}} of {{maxWallStrength}}. The masons are back on the ramparts before the dust has settled. Repairs will cost the city a season of wages, and the enemy may return before the work is done."
+          "The walls of {{city}} have been badly hit and now hold {{wallStrength}} of their {{maxWallStrength}} strength. Dust from the breach has settled on the roofs as far as the market square. The garrison has moved its stores underground and posted extra men at the gap."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -974,7 +974,7 @@
         "genre": "analysis",
         "headline": "The cost to {{city}}",
         "body": [
-          "{{city}} now holds its wall at {{wallStrength}} of {{maxWallStrength}}, and the question the city should be asking is where the rest went. A wall falls when the men behind it are too few or the order to reinforce comes too late. Someone knows which it was, and the citizens who pay for the wall deserve to know too."
+          "{{city}} can still call on {{wallStrength}} of the {{maxWallStrength}} its walls were built to bear, and that is not enough for comfort. A breach changes the arithmetic of a siege: the defender must now watch two lines, the wall and the hole in it. Every hour spent repairing is an hour the attacker also gets to use."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -988,7 +988,7 @@
         "genre": "anecdote",
         "headline": "The crack in {{city}}'s wall",
         "body": [
-          "On Thursday the masons stopped work at the north wall and carried their tools away without a word. The wall stands at {{wallStrength}} of {{maxWallStrength}}, and by supper the number was being repeated in {{city}} like a weather report. Nobody needed to be told what it meant."
+          "A mason walked the length of the wall at {{city}} this morning, tapping the stone with a mallet and saying nothing. The section he stopped at holds {{wallStrength}} of its {{maxWallStrength}} strength, and he has asked for lime and a second cart. His apprentice says the old man has not slept since the first strike."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1002,7 +1002,7 @@
         "genre": "notice",
         "headline": "Hear it, {{city}}! The walls are hurt",
         "body": [
-          "Word of the walls! The enemy has hit them hard, and they stand at {{wallStrength}} of {{maxWallStrength}}! Every hand to the mending, every eye to the gate! They stand! They stand at {{wallStrength}} of {{maxWallStrength}}!"
+          "Stand clear of the wall! The stone is cracked and holds only {{wallStrength}} of its {{maxWallStrength}} strength! Keep the children off the rubble and let the masons work! We will mend it, but not if you stand in the way!"
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1022,7 +1022,7 @@
         "id": "own-front-posture-counterattack-report",
         "headline": "Our forces counterattack at {{cityName}}",
         "body": [
-          "At {{cityName}}, our command has changed the word from {{previousPosture}} to {{posture}}. The companies that held the wall are filing out through the postern, and the guns have been hauled around. The enemy camp is about to learn that the town can bite."
+          "Our forces at {{cityName}} have gone from {{previousPosture}} to {{posture}}. The change came at dawn, with the horns sounding before the mist lifted. By the time the defenders understood it, our leading companies were already across the ground between the lines."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1036,7 +1036,7 @@
         "genre": "analysis",
         "headline": "From defense to the strike at {{cityName}}",
         "body": [
-          "{{cityName}} has held through the word {{previousPosture}} and now takes up {{posture}}. An army that has been on the defensive for a season knows the enemy's habits better than the enemy knows its own. The counterstroke is the reward for that patience, and it should be delivered before the enemy can rest."
+          "The word at {{cityName}} has shifted from {{previousPosture}} to {{posture}}, and the army is spending what it saved while waiting. A counterattack works when the enemy has outrun his supplies or his nerve. If neither is true, it is only a louder way to lose men."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1050,7 +1050,7 @@
         "genre": "report",
         "headline": "Our forces attack at {{cityName}}",
         "body": [
-          "From {{cityName}} tonight: our troops are attacking. The front order has moved from {{previousPosture}} to {{posture}}. For the first time this season, the firing is going away from the town."
+          "At {{cityName}} tonight, our forces have moved from {{previousPosture}} to {{posture}}. The horns sounded at first light, and the forward companies went in before the enemy had finished his breakfast. Command says the line is holding."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1064,7 +1064,7 @@
         "genre": "report",
         "headline": "The defense holds and answers",
         "body": [
-          "Letters from {{cityName}} relate that our command there has changed its orders from {{previousPosture}} to {{posture}}. The forward ditch has been deepened, and the guns that guarded the gate have been wheeled out to it. In the steadiness of that change we read the hand of officers who know their business."
+          "Dispatches from before {{cityName}} report that our forces have passed from {{previousPosture}} to {{posture}}. The dispatch says the movement began at dawn and was carried out in good order. We print the account as it reached us, with the hope that good order may soon be matched by good news."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1084,7 +1084,7 @@
         "id": "own-front-posture-defensive-report",
         "headline": "The front at {{cityName}} goes defensive",
         "body": [
-          "At {{cityName}}, the word for the front has changed from {{previousPosture}} to {{posture}}. The outposts have been pulled back to the wall, and the wagons are being emptied inside the gate. The town is being made ready to be held."
+          "The order at {{cityName}} has changed from {{previousPosture}} to {{posture}}. Soldiers who expected to advance are instead digging, and the wagons have been sent to the rear. The wall is being strengthened at the points where the last attack came closest."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1098,7 +1098,7 @@
         "genre": "report",
         "headline": "At {{cityName}}, a stance change unexplained",
         "body": [
-          "Word comes from {{cityName}} that the order {{previousPosture}} has been replaced by {{posture}}. The citadel has vouchsafed no explanation, and our correspondent there was received with great politeness and shown the door. A change of stance in a town under threat is news the public should hear from its officers, not from its sentries."
+          "A note from the front at {{cityName}} records a change of posture from {{previousPosture}} to {{posture}}. The dispatch offers no reason for the change and no estimate of how long it will last. Our readers may draw their own conclusions from the silence."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1112,7 +1112,7 @@
         "genre": "notice",
         "headline": "Hear it, {{cityName}}! Our soldiers stand at the walls",
         "body": [
-          "Listen, townsfolk! The soldiers are leaving the fields and taking their places on the wall. Keep the streets clear, keep the watch, and go about your business quietly. The wall is manned, and the town stands behind it!"
+          "To the walls! Our soldiers stand on the walls, and every hand is needed! Bring water, bandages and hot food to the gate! Keep the streets clear and the lamps burning! We hold what we have!"
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1126,7 +1126,7 @@
         "genre": "report",
         "headline": "The record of {{cityName}}'s front",
         "body": [
-          "It is set down that the garrison of {{cityName}} put aside the word {{previousPosture}} and took up {{posture}}. The outer posts were called in that same evening, and the gate was barred early. No reason was written beside the order, and none is supplied here."
+          "In this season the command at {{cityName}} passed from {{previousPosture}} to {{posture}}. The camp was moved closer to the wall, and the men began work on ditches and palisades. The record notes the change and does not explain it."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1146,7 +1146,7 @@
         "id": "peace-capitulation-report",
         "headline": "A war ends in capitulation",
         "body": [
-          "The war between {{initiator}} and {{target}} has ended, and it ended in capitulation. The frontier gate opened to the other side's riders before noon, and the first carried a sealed case straight for the capital. The terms have not been published, but one side has clearly bowed."
+          "{{initiator}} and {{target}} have ended their war, and the settlement is entered as a capitulation. A rider brought the news to the foreign office before the market opened, and the clerks read it in silence. The terms have not been published, so no one can yet say which side bowed."
         ],
         "weight": { "base": 1 }
       },
@@ -1157,7 +1157,7 @@
         "genre": "obituary",
         "headline": "The war between {{initiator}} and {{target}} is ended",
         "body": [
-          "A war is dead, the one between {{initiator}} and {{target}}, and it died on its knees. It began with drums and promises, and it ended with a pen in a room where one side sat and the other stood. What remains is the record, and the record is shorter than the marches."
+          "The war between {{initiator}} and {{target}} is over. It began with promises and ended with a signed page, and the record calls the ending a capitulation. What is left is a border to redraw and a generation of letters to answer."
         ],
         "weight": { "base": 1 }
       },
@@ -1169,7 +1169,7 @@
         "when": "role === 'target'",
         "headline": "Our war with {{initiator}} ends in capitulation",
         "body": [
-          "The war that {{initiator}} began against us has ended in capitulation. Which nation now answers to the other will be read in the terms when they are published, and the terms are not yet in print. Until then, the only certain fact is that the fighting has stopped."
+          "Our war with {{initiator}} has ended, and the record describes the settlement as a capitulation. Whether the terms favor us will be known when they are printed, and the government has not printed them. Until then, the only fact worth holding is that the shooting has stopped."
         ],
         "weight": { "base": 1 }
       },
@@ -1181,7 +1181,7 @@
         "when": "role === 'initiator'",
         "headline": "Our war with {{target}} is settled",
         "body": [
-          "A peace with {{target}} has been concluded, and the terms carry a capitulation. On the border road the barrier is down and the first cart in months has crossed without a challenge. We grant that the instrument is a hard one; we are still glad the swords are back in their scabbards."
+          "Peace with {{target}} is signed, and the instrument records a capitulation. At the frontier station, the barrier was raised before noon and the first cart in months crossed without a challenge. We do not yet know the price, but we know the sound of the guns has stopped."
         ],
         "weight": { "base": 1 }
       }
@@ -1198,7 +1198,7 @@
         "id": "peace-concessions-report",
         "headline": "A peace with visible terms",
         "body": [
-          "Peace terms were posted at the exchange this noon, with the count of concessions set at {{count}}: {{concessions}}. A wool buyer copied the names into his ledger before he would quote a price. The market has decided to trust the paper, and the paper has not yet been tested."
+          "The peace terms include {{count}} concessions: {{concessions}}. A broker at the exchange copied the list into his book before he would name a price for anything. The market has taken the paper at its word, which is more than the parties have done."
         ],
         "weight": { "base": 1 }
       },
@@ -1210,9 +1210,9 @@
         "when": "initiator !== null && target !== null",
         "headline": "The terms between {{initiator}} and {{target}}",
         "body": [
-          "Parties: {{initiator}} and {{target}}.",
-          "Terms conceded: {{count}}.",
-          "Entered as: {{concessions}}."
+          "Signed by: {{initiator}} and {{target}}.",
+          "Concessions recorded: {{count}}.",
+          "The list: {{concessions}}."
         ],
         "weight": { "base": 1 }
       },
@@ -1224,7 +1224,7 @@
         "when": "role === 'initiator' && target !== null",
         "headline": "Who owes what in the peace with {{target}}?",
         "body": [
-          "The settlement with {{target}} records concessions of these kinds: {{concessions}}. A concession is either a payment or a promise, and the difference matters to every household that will help pay for it. Let the {{terms.civic.government}} publish the terms in two columns, what we gave and what we received, before it asks for another budget."
+          "The peace with {{target}} lists {{concessions}} among its concessions. Each concession is either a payment or a promise, and every household that helps pay can tell the two apart. Let the {{terms.civic.government}} print the full terms, what we gave and what we got, before it asks for another levy."
         ],
         "weight": { "base": 1 }
       },
@@ -1236,7 +1236,7 @@
         "when": "initiator !== null && target !== null",
         "headline": "A peace with terms tonight",
         "body": [
-          "{{initiator}} and {{target}} have made peace tonight. The settlement records a concession count of {{count}}. A clerk read the pages aloud at the exchange, and the crowd stayed to hear the list."
+          "Peace has been concluded between {{initiator}} and {{target}}. The settlement lists {{count}} concessions. A clerk read the pages aloud at the exchange, and the crowd heard every one."
         ],
         "weight": { "base": 1 }
       }
@@ -1253,7 +1253,7 @@
         "id": "peace-on-one-front-report",
         "headline": "Peace on one front only",
         "body": [
-          "Peace has been made with {{settled}}, and the fighting on that side has stopped. The war with {{remaining}} continues, and the regiments from the quiet front are already on the road. There is no rest for them, only a shorter road to the next fight."
+          "The guns facing {{settled}} are silent, and peace has been signed. The war with {{remaining}} goes on, and the regiments from the quiet side are already marching. They have traded one road for another."
         ],
         "weight": { "base": 1 }
       },
@@ -1264,7 +1264,7 @@
         "genre": "analysis",
         "headline": "One account closes, others stay open",
         "body": [
-          "One war is finished and the others are not: {{settled}} has made peace with us, while {{remaining}} has not. A treaty on one border always frees soldiers for another, and the direction they march is a truer statement of policy than any speech. The {{terms.civic.government}} can explain its priorities by where it sends those men."
+          "{{settled}} has made peace with us, while the war with {{remaining}} goes on. A treaty on one border always frees soldiers for another. Where those soldiers march will tell the country more than any speech from the {{terms.civic.government}}."
         ],
         "weight": { "base": 1 }
       },
@@ -1275,7 +1275,7 @@
         "genre": "report",
         "headline": "Peace with {{settled}}",
         "body": [
-          "The peace with {{settled}} is concluded, and the guns on that front have fallen silent. The bells rang at noon and then stopped, as though the sexton had thought better of rejoicing while other fronts burn. We note with regret that the war with {{remaining}} goes on, and we hope good sense reaches it before the harvest does."
+          "The peace with {{settled}} is concluded, and the bells rang at noon. They stopped sooner than expected, perhaps because the war with {{remaining}} is still burning. We join in the relief and reserve our hopes for the front that has no treaty yet."
         ],
         "weight": { "base": 1 }
       },
@@ -1286,7 +1286,7 @@
         "genre": "editorial",
         "headline": "Bells for one front, drums for the others",
         "body": [
-          "Peace with {{settled}} is signed, and the bells have rung for it. The war with {{remaining}} is not signed, and the same bells will not ring for the families still waiting. Let the {{terms.civic.government}} explain to those families why one front can be closed and another left open."
+          "The bells have rung for {{settled}}, and the war with {{remaining}} goes on. The families waiting on that front heard the same bells and understood what they meant. Let the {{terms.civic.government}} tell them why one quarrel could be closed and theirs left open."
         ],
         "weight": { "base": 1 }
       }
@@ -1302,7 +1302,7 @@
         "id": "peace-returns-report",
         "headline": "We are at peace",
         "body": [
-          "The last war has ended, and no power now stands against us. At the barracks gate, soldiers have stacked their packs and are sitting in the sun with their boots off. The first night without a watch will feel strange to them."
+          "Peace has come to the nation. In the capital, the recruiting table was carried away before noon, and the square filled with people who had no orders to follow. The first carts of returning soldiers are expected within the week."
         ],
         "weight": { "base": 1 }
       },
@@ -1313,7 +1313,7 @@
         "genre": "report",
         "headline": "The record of rest",
         "body": [
-          "In this season the fighting ceased, and the nation had rest from its enemies. The shrines were filled past their doors, and the priests gave thanks for a quiet border. The scribe prays that no later hand will need to amend the entry."
+          "The record notes that the war has ended. The muster rolls were closed, the frontier companies were released to their homes, and the bells were rung in every town that had one. The scribe adds no praise and no blame, only the date."
         ],
         "weight": { "base": 1 }
       },
@@ -1324,7 +1324,7 @@
         "genre": "anecdote",
         "headline": "The long walk home",
         "body": [
-          "At noon the first uniforms came up the market road, and the baker put a loaf into every hand he could reach. Children ran beside the column until their mothers called them back. The peace may have been signed in a distant room, but it arrived here as bread."
+          "A woman on the east road walked past the recruiting table this morning and stopped, because there was no table. Her husband's regiment is said to be coming home, and she has been carrying a letter in her pocket for a month. She read it again, then went to buy flour for a larger loaf."
         ],
         "weight": { "base": 1 }
       },
@@ -1335,7 +1335,7 @@
         "genre": "editorial",
         "headline": "Peace, and what to do with it",
         "body": [
-          "The guns are quiet, and we are glad to say so. The harder work begins now: repair the roads the armies ruined, settle the debts they left, and find places for the men who have no camp to return to. A peace that is only celebrated is a peace half kept."
+          "The war is over, and the country has not yet decided what to do with the peace. The men will come home to workshops that closed and fields that went unploughed, and the bills will arrive before the welcome does. A government that can raise an army should be able to plan a harvest."
         ],
         "weight": { "base": 1 }
       },
@@ -1347,7 +1347,7 @@
         "byline": "A soldier's sister",
         "headline": "Please print the names by village",
         "body": [
-          "Madam, the news says the war is over, and the road home is long. When you have the names of those returning, will you print them village by village? Our mother cannot read a page of print, but she knows one name by its shape, and she has been looking for it a long time."
+          "Madam, they say the war is over. When the names of those coming home are ready, please set them down by village, so each street can look for its own. My aunt cannot read a whole page, but she knows the shape of one name, and she has been looking for it for two years."
         ],
         "weight": { "base": 1 }
       }
@@ -1363,7 +1363,7 @@
         "id": "units-lost-in-combat-report",
         "headline": "{{count}} of our companies lost in action",
         "body": [
-          "The recent fighting cost us {{count|company|companies}}, all of them against the same enemy. At the barracks, the clerk has begun a second page for the names. The town will know most of them before the page is full."
+          "The latest fighting cost us {{count|company|companies}}. The news reached the war office in a single dispatch, and the clerk who copied it left the room without speaking. The lists of names will take longer to prepare than the count did."
         ],
         "weight": { "base": 1 }
       },
@@ -1375,8 +1375,8 @@
         "headline": "Our losses, counted",
         "body": [
           "Companies lost: {{count}}.",
-          "Enemy they fell to: one, and the same one throughout.",
-          "The cost: entered. The answer: still missing."
+          "Names entered: still being copied.",
+          "The account: not yet closed."
         ],
         "weight": { "base": 1 }
       },
@@ -1387,7 +1387,7 @@
         "genre": "anecdote",
         "headline": "The empty bunks",
         "body": [
-          "On Thursday the landlady at the barracks gate set out fewer plates and said nothing about it. The recent fighting cost us {{count|company|companies}}, all to the same enemy. The street had the number before the newspaper did, and the street had it right."
+          "At the barracks, the sergeant walked down the row of bunks and did not stop at {{count|company|companies}} of them. The blankets are folded and the kits are gone, and he has not yet asked for replacements. He says the room is quieter than it used to be."
         ],
         "weight": { "base": 1 }
       },
@@ -1398,7 +1398,7 @@
         "genre": "report",
         "headline": "The count from the fighting",
         "body": [
-          "They say {{count}} of our companies were lost in the last fighting, and every one to the same foe. The old men by the well tell it the same way, which they seldom do. When the tellers agree, the tale is usually true, and usually bad."
+          "They say the fighting took {{count}} of our companies. I heard it from a man who was there, and he would not say more than the number. The families will hear the rest soon enough."
         ],
         "weight": { "base": 1 }
       }
@@ -1415,7 +1415,7 @@
         "id": "vassals-join-war-report",
         "headline": "Vassals drawn into the war",
         "body": [
-          "The war between {{initiator}} and {{target}} has grown to include {{vassals}}, who march under their oaths. Their columns took the road this week, and the inns along it were full. A quarrel between two powers is now being fought by several.{{hostileAllies}}"
+          "The war between {{initiator}} and {{target}} has drawn in {{vassals}}, who march under their oaths. Their columns took the road this week, and the inns along it filled by nightfall. A quarrel between two powers has become the work of several.{{hostileAllies}}"
         ],
         "weight": { "base": 1 }
       },
@@ -1426,7 +1426,7 @@
         "genre": "analysis",
         "headline": "What the vassals add",
         "body": [
-          "{{vassals}} have entered the war between {{initiator}} and {{target}}, as their oaths require. A vassal does not choose the quarrel, only the march, so the names on the list add soldiers without adding a cause. The war has not spread; it has simply grown heavier.{{hostileAllies}}"
+          "{{vassals}} have joined the war between {{initiator}} and {{target}} because their oaths require it. A vassal does not choose the quarrel, only the road, so the new names bring soldiers without bringing a cause. No new quarrel has begun; the old one has simply gained more hands.{{hostileAllies}}"
         ],
         "weight": { "base": 1 }
       },
@@ -1437,7 +1437,7 @@
         "genre": "report",
         "headline": "The record of vassalage honored",
         "body": [
-          "The book of oaths records that {{vassals}} entered the war between {{initiator}} and {{target}}, being bound by vassalage. Their banners followed the master's road, as such banners did in the reigns before this one. The scribe notes that the oath was kept, and says nothing of what it cost.{{hostileAllies}}"
+          "The book of oaths sets down that {{vassals}} joined the war between {{initiator}} and {{target}} under the bond of vassalage. Their banners went where their master's went, as they have in earlier reigns. The scribe records that the oath was kept and enters no price beside it.{{hostileAllies}}"
         ],
         "weight": { "base": 1 }
       },
@@ -1448,7 +1448,7 @@
         "genre": "editorial",
         "headline": "Small kings, big wars",
         "body": [
-          "{{vassals}} are being marched to a war that {{initiator}} and {{target}} began, and nobody thought to ask them. A small power's oath is a fine thing for the great to own and a poor thing for the small to keep. {{terms.civic.people}}, look at who signs these arrangements and who is only named in them.{{hostileAllies}}"
+          "{{vassals}} are being marched into a war that {{initiator}} and {{target}} began, and no one asked their opinion. An oath is a grand thing for a great power to hold and a heavy thing for a small one to carry. {{terms.civic.people}}, note who writes these agreements and who is merely written into them.{{hostileAllies}}"
         ],
         "weight": { "base": 1 }
       }
@@ -1465,7 +1465,7 @@
         "id": "war-advantage-stalls-report",
         "headline": "Our advantage over {{opponent}} stops growing",
         "body": [
-          "The war against {{opponent}} has stopped moving in our favor. The supply yard still loads flour every morning, but the clerk has begun asking the same provisioners for the same amount twice. Nobody at the front can say when the line last moved."
+          "The war against {{opponent}} has stopped gaining ground. The supply clerk still loads the same flour each morning, but now he asks the same provisioners for it twice. The officers at the front cannot say when the line last moved."
         ],
         "weight": { "base": 1 }
       },
@@ -1476,7 +1476,7 @@
         "genre": "analysis",
         "headline": "The stalled advance against {{opponent}}",
         "body": [
-          "After a run of good reports, the count against {{opponent}} has barely changed. A stalled tally can mean a pause, a siege, or an army that has outrun its wagons, and the record does not yet say which. Until it does, the supply trains will keep rolling to the same camps."
+          "Reports have been good, yet the count against {{opponent}} has hardly moved. A number that refuses to change may mean a pause, a siege, or an army that has outrun its wagons. The record does not yet choose between them."
         ],
         "weight": { "base": 1 }
       },
@@ -1488,7 +1488,7 @@
         "byline": "A farmer with a son in the ranks",
         "headline": "The war that stands still",
         "body": [
-          "Madam, the war with {{opponent}} has settled into one place, and my son's regiment has settled with it. The fields are ploughed without him, the taxes are collected without him, and only the fighting has found nothing to do. Will some counselor tell us what the army is waiting for, and how long we are to wait with it?"
+          "Madam, the war with {{opponent}} has settled around a single camp, and my son's regiment is in that camp. The harvest is brought in by other hands, and the tax collector still finds the doorstep, while the fighting finds nothing to do. Will a counselor tell us what the army waits for, and how long our patience is expected to last?"
         ],
         "weight": { "base": 1 }
       },
@@ -1499,7 +1499,7 @@
         "genre": "report",
         "headline": "Stuck: the war with {{opponent}}",
         "body": [
-          "No movement on the front again this week. Same camps, same bills. A war that stands still keeps charging rent."
+          "The line has not moved again this week. The same camps keep sending the same bills."
         ],
         "weight": { "base": 1 }
       }
@@ -1516,7 +1516,7 @@
         "id": "war-between-friends-report",
         "headline": "Two friends go to war",
         "body": [
-          "{{first}} and {{second}} are at war, and both of them are friends of ours. Their envoys still greet each other in our capital by name, but they no longer share a carriage to the palace. Friendship with us did not promise them friendship with each other."
+          "{{first}} and {{second}} have gone to war, though both count themselves friends of ours. Their envoys still nod to each other in our capital, but they no longer ride in the same carriage. Our friendship with each never promised them friendship with each other."
         ],
         "weight": { "base": 1 }
       },
@@ -1527,7 +1527,7 @@
         "genre": "analysis",
         "headline": "When friends fight",
         "body": [
-          "Our two friends {{first}} and {{second}} are now enemies, and each will want to know what our friendship is worth. Sell to both and arm neither, and both will read the same even hand as a betrayal. There is no neutral answer that either court will call friendly."
+          "{{first}} and {{second}} were both our friends, and now they are each other's enemies. Each court will ask what our friendship is worth, and each will judge the answer by what we send the other. An even hand will look like betrayal in both capitals."
         ],
         "weight": { "base": 1 }
       },
@@ -1538,7 +1538,7 @@
         "genre": "editorial",
         "headline": "A plea in the war of {{first}} and {{second}}",
         "body": [
-          "It grieves us to write that {{first}} and {{second}}, both friends of this nation, have turned their arms on one another. We will not pretend to judge a quarrel whose beginnings we do not know. We ask only that our good offices be offered to both, before the chairs at the table are broken past mending."
+          "It is painful to report that {{first}} and {{second}}, both friends of this nation, have taken up arms against each other. We will not set ourselves up to judge a quarrel whose beginnings are hidden from us. We ask only that our friendship be put to use as a peacemaker before the table is broken past mending."
         ],
         "weight": { "base": 1 }
       },
@@ -1549,7 +1549,7 @@
         "genre": "anecdote",
         "headline": "They say the table is broken",
         "body": [
-          "They tell it by the fire now: {{first}} and {{second}}, who once drank together under our roof, have drawn steel on each other. The old bond, they say, breaks with the loudest crack. The cup they shared is still on the shelf, and the place where it sits has not been dusted since."
+          "The innkeeper keeps the corner table for two envoys who used to share it. Now {{first}} and {{second}} are at war, and each sends his man to a different room. The second cup is still on the shelf, and the girl who dusts it has stopped asking why."
         ],
         "weight": { "base": 1 }
       }
@@ -1566,7 +1566,7 @@
         "id": "war-duration-milestone-report",
         "headline": "The war runs long",
         "body": [
-          "The war has now run {{turns}}. A carpenter whose two apprentices marched away at the start has stopped telling customers when they will return. He finishes the doors himself now, and he does not talk about it."
+          "This war has now lasted {{turns}}. At the joinery, the master has stopped promising delivery dates, because the men who used to finish the work are still away. He planes the boards himself now, and the shavings pile up by the door."
         ],
         "weight": { "base": 1 }
       },
@@ -1578,7 +1578,7 @@
         "when": "opponent !== null",
         "headline": "The long stretch of the war with {{opponent}}",
         "body": [
-          "The war with {{opponent}} has run {{turns}}. A war that lasts that long stops being the war its makers declared: the men change, the money changes, and the purpose quietly changes with them. The terms signed at the end will belong to a different quarrel than the one that opened."
+          "The war with {{opponent}} has lasted {{turns}}, and a war of that age is no longer the one its makers declared. The men change, the money changes, and the purpose shifts quietly with them. Whatever is signed at the end will answer a question nobody asked at the start."
         ],
         "weight": { "base": 1 }
       },
@@ -1589,7 +1589,7 @@
         "genre": "report",
         "headline": "The record of a long war",
         "body": [
-          "The town book notes that the war has stood {{turns}}. A war of that length used to be the work of a grandfather's whole life. In the muster yard, the sergeant is now enrolling young men who were not born when it started."
+          "The town book sets down the war's length at {{turns}}. In the muster yard, the sergeant now writes down recruits who were not born when the fighting began. The record offers no judgment, only the count."
         ],
         "weight": { "base": 1 }
       },
@@ -1601,7 +1601,7 @@
         "when": "opponent !== null",
         "headline": "The war with {{opponent}} is {{turns}} old",
         "body": [
-          "The war with {{opponent}} has reached {{turns}}, and the bakery has taken down the board it used to mark the count. Nobody at the counter can remember what the quarrel was about at the start. Everybody knows someone who is still out there."
+          "The bakery has taken down the board where it marked the count. The war with {{opponent}} is {{turns}} old, and nobody at the counter remembers how it started. Everyone knows someone still out there."
         ],
         "weight": { "base": 1 }
       }
@@ -1619,7 +1619,7 @@
         "when": "role !== 'target' || initiator === null",
         "headline": "The nation is at war",
         "body": [
-          "War has come to the nation. At the courthouse, a line has formed at the recruiting table, and the sergeant is taking names in a new book. Out on the frontier, the watch fires are lit while the sky is still pale.{{hostileAllies}}"
+          "The country is at war. Before the clerks had opened their ledgers, a line had formed at the recruiting office, and the first names were written in a borrowed hand. On the frontier, the watch fires burned until dawn.{{hostileAllies}}"
         ],
         "weight": { "base": 1 }
       },
@@ -1631,7 +1631,7 @@
         "when": "role === 'target' && initiator !== null",
         "headline": "{{initiator}} has attacked",
         "body": [
-          "War, tonight. {{initiator}} has declared against us. Our troops are at their posts and the reserves are being called in. We will bring more as it reaches us.{{hostileAllies}}"
+          "War, tonight. {{initiator}} has opened war on us. The reserves have been called in, and the frontier garrisons are standing to. We will bring you more as the dispatches arrive.{{hostileAllies}}"
         ],
         "weight": { "base": 1 }
       },
@@ -1643,7 +1643,7 @@
         "when": "role === 'target' && initiator !== null",
         "headline": "Hear it! {{initiator}} makes war on us",
         "body": [
-          "Hear it! {{initiator}} has declared war upon us! Every man to his post and every store under lock! We did not ask for this war, and we will answer it!{{hostileAllies}}"
+          "Hear it! {{initiator}} has brought war to our gates! Every man to his post, every gate barred, every storehouse counted! They chose this quarrel, and we will finish it!{{hostileAllies}}"
         ],
         "weight": { "base": 1 }
       },
@@ -1655,7 +1655,7 @@
         "when": "role === 'initiator' && target !== null",
         "headline": "A state of war with {{target}}",
         "body": [
-          "A state of war now exists between this nation and {{target}}. The {{terms.civic.government}}, we are given to understand, reached its decision only after long deliberation. The first levy has been ordered, and the couriers who carried it were still in the yard when this paper went to press. We trust that the deliberation was as thorough as we are told.{{hostileAllies}}"
+          "This nation and {{target}} are now in a state of war. The {{terms.civic.government}} is said to have weighed the question at length before deciding. The first levy left the yard before this edition was set, and the couriers were still dusty when they passed the window. We hope the weighing was as careful as we are told.{{hostileAllies}}"
         ],
         "weight": { "base": 1 }
       },
@@ -1667,7 +1667,7 @@
         "when": "role === 'joined' && reason === 'pact' && initiator !== null && target !== null",
         "headline": "Their quarrel, our treaty",
         "body": [
-          "By treaty, the quarrel between {{initiator}} and {{target}} is now our quarrel. A pact is a promise to pay later, and later has arrived at our door. {{terms.civic.people}}, ask the council what this war is expected to buy, and ask it now, while the ledgers are still open.{{hostileAllies}}"
+          "A treaty has turned the quarrel between {{initiator}} and {{target}} into our own. A pact is a debt taken on in fair weather, and the collector is at the door. {{terms.civic.people}}, ask the council what this war is meant to buy, and ask before the ledgers are closed.{{hostileAllies}}"
         ],
         "weight": { "base": 1 }
       }
@@ -1693,8 +1693,8 @@
           "id": "war-on-three-fronts-merged-report",
           "headline": "War on {{count|front|fronts}}",
           "body": [
-            "New declarations of war have reached the capital from {{merge.values.attackers}}.{{merge.values.allies}}",
-            "{{merge.values.otherFronts}}"
+            "New declarations reached the capital today from {{merge.values.attackers}}.{{merge.values.allies}}",
+            "{{merge.values.otherFronts}} The map room has no wall left for another pin."
           ],
           "weight": {
             "base": 1
@@ -1707,7 +1707,7 @@
         "id": "war-on-three-fronts-report",
         "headline": "War on {{count|front|fronts}}",
         "body": [
-          "The nation is at war with {{enemies}}. In the map room, each front has its own colored pin, and a clerk keeps a separate ledger for every one. The copying alone takes a full morning now."
+          "Our enemies now number {{enemies}}. In the map room, the clerk has begun pinning new fronts to the wall because the table is full. Each declaration adds a line to his book and a name to the list of families waiting."
         ],
         "weight": { "base": 1 }
       },
@@ -1718,7 +1718,7 @@
         "genre": "analysis",
         "headline": "Count the fronts",
         "body": [
-          "We now fight {{count|war|wars}}, against {{enemies}}, and each of them asks for the same men. A soldier sent to one front is a soldier the others do without, and the {{terms.civic.government}} has not said which front matters most. Until it does, the army is being spent in equal portions on unequal quarrels."
+          "We now fight {{count|war|wars}}, against {{enemies}}, and all of them ask for the same soldiers. Every company sent to one front is a company the others must do without, and the {{terms.civic.government}} has not said which front comes first. Until it does, the army is being divided evenly among quarrels that are not equal."
         ],
         "weight": { "base": 1 }
       },
@@ -1729,7 +1729,7 @@
         "genre": "notice",
         "headline": "Hear it! The nation fights on {{count|front|fronts}}",
         "body": [
-          "The roll of our enemies: {{enemies}}! The war is wide, so the fields must be wider and the watch longer! Keep the harvest coming and the gates manned! {{enemies}}, hear it, and know we are still standing!"
+          "Hear the names of those who fight us: {{enemies}}! One country cannot feed so many fronts, so every pair of hands must do the work of two! Bring in the harvest, man the gates, and let them hear that we are still standing!"
         ],
         "weight": { "base": 1 }
       },
@@ -1740,7 +1740,7 @@
         "genre": "report",
         "headline": "We are at war with {{count|power|powers}} now",
         "body": [
-          "War count: {{count|power|powers}}. The names: {{enemies}}. One purse pays for all of them. Yours."
+          "War count: {{count|power|powers}}. Names: {{enemies}}. Every front sends its bill to the same purse. You can guess whose."
         ],
         "weight": { "base": 1 }
       }
@@ -1757,7 +1757,7 @@
         "id": "war-turns-against-us-report",
         "headline": "The war tally favors {{opponent}}",
         "body": [
-          "The count in the war with {{opponent}} has fallen to {{score}} in their favor. The printer on the high street still posts each new figure, but fewer people stop to read it. Those who do ask the same question: when will there be talks?"
+          "The tally in the war with {{opponent}} has fallen to {{score}}. The printer still posts each new figure in his window, but the crowd that used to gather around it has thinned. The ones who stop now ask only whether anyone has opened talks."
         ],
         "weight": { "base": 1 }
       },
@@ -1768,7 +1768,7 @@
         "genre": "analysis",
         "headline": "The number nobody in the {{terms.civic.government}} quotes",
         "body": [
-          "The tally in the war with {{opponent}} now reads {{score}}, and no minister has spoken of the figure in public. Numbers like that are not weather; they are the sum of decisions that were made and orders that were given. The country is entitled to hear how the sum was reached."
+          "The count in the war with {{opponent}} stands at {{score}}, a figure no minister has repeated aloud. Such numbers are not weather. They are the total of orders given and chances refused, and the public that paid for them should hear the arithmetic."
         ],
         "weight": { "base": 1 }
       },
@@ -1779,7 +1779,7 @@
         "genre": "report",
         "headline": "The war with {{opponent}} tonight",
         "body": [
-          "Tonight, the count in the war with {{opponent}} stands at {{score}} against us. Commanders talk about holding the line. No one talks about moving it."
+          "The war with {{opponent}}, tonight: the count is {{score}}. Officers talk of holding. Nobody talks of advancing."
         ],
         "weight": { "base": 1 }
       },
@@ -1790,7 +1790,7 @@
         "genre": "report",
         "headline": "The record of a hard season",
         "body": [
-          "The campaign book records that the count against {{opponent}} stands at {{score}}. The hospital this season has taken in more wounded than it has beds, and the overflow lies in the cloister. Our fathers had seasons of this kind, and the book has never pretended otherwise."
+          "The campaign book enters the count against {{opponent}} at {{score}}. The hospital has more wounded than beds, and the cloister has been given over to cots. The book records such seasons without complaint, as it recorded them for our fathers."
         ],
         "weight": { "base": 1 }
       }
@@ -1807,7 +1807,7 @@
         "id": "war-turns-our-way-report",
         "headline": "Our side leads in the war with {{opponent}}",
         "body": [
-          "The count in the war with {{opponent}} has reached {{score}} on our side. At the post office, a clerk says the same families come every week for letters and every week ask the same question. A good tally has not yet brought anyone home."
+          "The count in the war with {{opponent}} has risen to {{score}} in our favor. At the post office, the same families still come each week for letters and ask the same question at the window. A good tally has never yet brought a soldier home."
         ],
         "weight": { "base": 1 }
       },
@@ -1818,7 +1818,7 @@
         "genre": "analysis",
         "headline": "What the lead is worth",
         "body": [
-          "We now lead {{opponent}} by {{score}} on the war's own accounting. A lead of that size is bought with ground and men, and it is worth only what the other side will pay to stop losing. The moment to test that price is while the lead is fresh."
+          "Our side now leads by {{score}} in the ledger of the war with {{opponent}}. Ground and lives bought that margin, and it is worth only what the other side will pay to stop losing. The price should be tested while the lead is still new."
         ],
         "weight": { "base": 1 }
       },
@@ -1829,7 +1829,7 @@
         "genre": "notice",
         "headline": "The war proceeds favorably",
         "body": [
-          "Notice is given that the war with {{opponent}} goes well, with the count at the exchange standing at {{score}} in our favor. Shipping agents at the docks have begun quoting lower rates on the eastern run. Merchants may plan accordingly."
+          "Merchants are informed that the war with {{opponent}} goes well and that our side holds {{score}} at the exchange. Shipping agents have cut their rates on the eastern run. Traders may plan on that basis."
         ],
         "weight": { "base": 1 }
       },
@@ -1840,7 +1840,7 @@
         "genre": "report",
         "headline": "Good news, and the bill beside it",
         "body": [
-          "The tally against {{opponent}} reads {{score}} in our favor, and the barkeep has written it on the board next to the price of ale. A customer asked whether a number that good would settle his tab. \"Numbers don't pour,\" the keeper said, and filled the glass anyway."
+          "The barkeep has chalked our {{score}} lead over {{opponent}} beside the ale price, and the regulars have begun arguing about the parade route. One man ordered nothing and said he was saving for the celebration. The keeper poured him a glass anyway and put it on the slate."
         ],
         "weight": { "base": 1 }
       }
@@ -1857,7 +1857,7 @@
         "id": "war-weariness-eases-report",
         "headline": "The war sits lighter on the country",
         "body": [
-          "Weariness with the war has eased to {{weariness}} in a hundred, down from above the halfway mark. On the high street, the talk has turned from the front to the price of roof tiles. The shops are busier than they were a month ago."
+          "The country's weariness has fallen to {{weariness}} in a hundred. On the high street, people talk about roof tiles and the state of the road instead of the front. The shops have more customers than they did a month ago."
         ],
         "weight": { "base": 1 }
       },
@@ -1869,7 +1869,7 @@
         "when": "opponent !== null",
         "headline": "Weariness eases in the war with {{opponent}}",
         "body": [
-          "The public's weariness with the war against {{opponent}} has fallen to {{weariness}} in a hundred. At the coach office, the clerk says passengers have begun asking about the southern road again, and the morning coach has been full all week. A nation that can still look past a war is a nation that can end one."
+          "The country's mood has improved: weariness with the war against {{opponent}} stands at {{weariness}} in a hundred. At the coach office, travelers have begun asking after the southern road again, and the morning coach has gone out full all week. A people that can look past a war may yet be able to end it."
         ],
         "weight": { "base": 1 }
       },
@@ -1881,7 +1881,7 @@
         "when": "opponent !== null",
         "headline": "The number behind the mood",
         "body": [
-          "The country's weariness with the war against {{opponent}} has dropped to {{weariness}}, after sitting above the halfway mark. A nation's patience is a store like any other, and this one has just been replenished. That store, not a battle, decides how long a war can be fought."
+          "The nation's patience with the war against {{opponent}} has climbed back to {{weariness}}, after a season above the halfway mark. Patience is a store like grain or coin, and this one has just been replenished. What empties or fills that store, more than any battle, sets the length of a war."
         ],
         "weight": { "base": 1 }
       },
@@ -1892,7 +1892,7 @@
         "genre": "report",
         "headline": "Down to {{weariness}}: the country exhales",
         "body": [
-          "Still at war. The barber says nobody mentioned the front until noon. First complaint of the day was a haircut."
+          "Still at war. The barber says the morning passed without one word about the front. His first complaint was a haircut."
         ],
         "weight": { "base": 1 }
       }
@@ -1909,7 +1909,7 @@
         "id": "war-weariness-sets-in-report",
         "headline": "The war begins to wear us down",
         "body": [
-          "Weariness with the war against {{opponent}} has reached {{weariness}} in a hundred. A cobbler on the east street says the same boots keep coming back for another sole, and the customers no longer pretend they are buying new. The war is being paid for in small repairs now."
+          "The war against {{opponent}} now weighs on the country at {{weariness}} in a hundred. The cobbler on the east street no longer asks after customers' families; he reads their news in the state of their boots. These days the war is paid for one small repair at a time."
         ],
         "weight": { "base": 1 }
       },
@@ -1920,7 +1920,7 @@
         "genre": "report",
         "headline": "A weary nation, and no statement",
         "body": [
-          "The country's weariness with the war against {{opponent}} has passed the halfway mark and now stands at {{weariness}}. The {{terms.civic.government}} has said nothing about how it means to answer that mood. Silence in a season like this is read as an answer, and not a reassuring one."
+          "At {{weariness}} in a hundred, the country's weariness with the war against {{opponent}} has passed the halfway mark. The {{terms.civic.government}} has offered no answer to that mood. In such a season silence is taken as a reply, and not a comforting one."
         ],
         "weight": { "base": 1 }
       },
@@ -1931,7 +1931,7 @@
         "genre": "editorial",
         "headline": "Tired of the war? Say it plainly",
         "body": [
-          "{{weariness}} in a hundred: that is how far the country's patience has worn in the war against {{opponent}}. A figure like that is not a weather report; it is a vote being taken in kitchens and workshops. Councilors, hear it now, before it is spoken in a way you cannot ignore."
+          "{{weariness}} in a hundred: that is how much patience remains for the war against {{opponent}}. Such a figure is a vote cast in kitchens and workshops, long before any council records it. Read it now, before it is expressed in a way no one can ignore."
         ],
         "weight": { "base": 1 }
       },
@@ -1942,7 +1942,7 @@
         "genre": "report",
         "headline": "The record of a weary nation",
         "body": [
-          "The almshouse book records that the nation's weariness with the war against {{opponent}} has reached {{weariness}} in a hundred. The line at the almshouse forms before light now, and the butcher weighs his rations with a heavier hand. A patient people is not an endless one."
+          "The almshouse book enters the nation's weariness with the war against {{opponent}} at {{weariness}} in a hundred. The line forms before daylight now, and the butcher's hand is heavier on the scale. Patience is not the same as endurance."
         ],
         "weight": { "base": 1 }
       }
@@ -1975,7 +1975,7 @@
           "when": "merge.values.distinctAttackers >= 3",
           "headline": "Breaking: {{merge.values.distinctAttackers|power|powers}} declare war",
           "body": [
-            "Day {{key}} brought a wave of declarations of war: {{merge.values.attackers}}.{{merge.values.allies}}"
+            "On day {{key}} the declarations came in a wave. {{merge.values.attackers}} all declared war on us.{{merge.values.allies}}"
           ],
           "weight": {
             "base": 1

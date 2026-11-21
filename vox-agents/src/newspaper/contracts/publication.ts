@@ -26,7 +26,7 @@ export type PublishedItemRecord = z.infer<typeof publishedItemRecordSchema>;
 /** Compact history needed by feedback and series continuity. */
 export const publishedIssueRecordSchema = z.object({
   issueId: z.string(), turn: z.number().int(), items: z.array(publishedItemRecordSchema),
-  designId: z.string().optional(),
+  designId: z.string().min(1),
 });
 export type PublishedIssueRecord = z.infer<typeof publishedIssueRecordSchema>;
 /** Trace of votes and the corpus used to compute their current effect. */
@@ -74,23 +74,19 @@ export const seriesStateSchema = z.object({
   lastPublishedTurn: z.number().int(), lastIssueId: z.string(), lastItemId: z.string(),
 });
 export type SeriesState = z.infer<typeof seriesStateSchema>;
-const publicationSchemaVersion = 6;
+const publicationSchemaVersion = 7;
 
 /** Current offline memory excludes decisions, which are stored with each completed check. */
 export const publicationStateSchema = z.object({
   schemaVersion: z.literal(publicationSchemaVersion), lastCheckTurn: z.number().int().nullable(),
   /** Last covered turn, or the turn before a new replay begins. */
-  reportingThroughTurn: z.number().int().nullable().optional(),
+  reportingThroughTurn: z.number().int().nullable(),
   issues: z.array(publishedIssueRecordSchema), series: z.record(z.string(), seriesStateSchema),
   votes: z.record(z.string(), z.union([z.literal(-1), z.literal(0), z.literal(1)])),
-  preferences: publicationPreferencesSchema, previousDesignId: z.string().nullable(),
+  preferences: publicationPreferencesSchema,
   diplomacy: diplomacyMemorySchema,
   triggerRepeats: triggerRepeatStateSchema,
-}).transform(({ reportingThroughTurn, ...state }) => ({
-  ...state,
-  // Legacy runs already consumed evidence and updated memory through their last check.
-  reportingThroughTurn: reportingThroughTurn === undefined ? state.lastCheckTurn : reportingThroughTurn,
-}));
+}).strict();
 
 export type PublicationState = z.infer<typeof publicationStateSchema>;
 
@@ -98,5 +94,5 @@ export type PublicationState = z.infer<typeof publicationStateSchema>;
 export function createInitialPublicationState(preferences: Partial<PublicationPreferences> = {}): PublicationState {
   return { schemaVersion: publicationSchemaVersion, lastCheckTurn: null, reportingThroughTurn: null,
     issues: [], series: {}, votes: {}, diplomacy: { pairs: {} }, triggerRepeats: {},
-    preferences: publicationPreferencesSchema.parse(preferences), previousDesignId: null };
+    preferences: publicationPreferencesSchema.parse(preferences) };
 }

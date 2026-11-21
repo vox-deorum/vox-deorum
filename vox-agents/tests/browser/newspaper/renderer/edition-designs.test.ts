@@ -5,7 +5,6 @@ import type { Browser, Page } from 'playwright-core';
 import ordinary from '../../../../newspaper/fixtures/victorian-ordinary.json';
 import breaking from '../../../../newspaper/fixtures/victorian-breaking.json';
 import analysis from '../../../../newspaper/fixtures/victorian-analysis.json';
-import sections from '../../../../newspaper/pages.json';
 import { issueDocumentSchema, type IssueDocument } from '../../../../src/newspaper/contracts/issue.js';
 import { loadEditorialConfig } from '../../../../src/newspaper/editorial/config/load.js';
 import type { EditorialDesign } from '../../../../src/newspaper/editorial/config/schema.js';
@@ -13,17 +12,18 @@ import { launchInstalledBrowser } from '../../../../src/newspaper/export/browser
 import { startNewspaperHost, readerDirectory } from '../../../../src/newspaper/export/http.js';
 import { defaultRenderProfile } from '../../../../src/newspaper/renderer/layout.js';
 
-/** Mount fixture stories with the catalogue masthead, type and section labels. */
-function designIssue(design: EditorialDesign, sample: unknown): IssueDocument {
+/** Use a fixture's lead and briefs to test a design's front page at a given size. */
+function designIssue(design: EditorialDesign, sample: unknown, frontSlots?: number): IssueDocument {
   const issue = issueDocumentSchema.parse(sample);
-  const front = issue.pages[0];
+  const layout = design.layouts.find(layout => layout.variant === issue.pages[0].layout)!;
   issue.publication = { title: design.title, designId: design.id, designVersion: design.version, presentation: design.presentation };
-  issue.pages = sections.map((section, index) => ({
-    id: section.id,
-    label: design.pageLabels[section.id] ?? section.label,
-    layout: index === 0 ? front.layout : 'ordinary',
-    itemIds: index === 0 ? front.itemIds : front.itemIds.slice(1),
-  }));
+  issue.items = issue.items.slice(0, frontSlots ?? layout.frontSlots);
+  issue.pages = [{
+    id: 'front',
+    label: design.pageLabels.front ?? 'The Record',
+    layout: layout.variant,
+    itemIds: issue.items.map(item => item.id),
+  }];
   return issue;
 }
 
@@ -61,8 +61,7 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('newspaper design
       try {
         await page.goto(`${host.url}/newspaper/export.html`);
         for (const sample of [ordinary, breaking, analysis]) {
-          const issue = issueDocumentSchema.parse(sample);
-          issue.publication = { title: design.title, designId: id, designVersion: design.version, presentation: design.presentation };
+          const issue = designIssue(design, sample);
           const front = issue.pages[0];
           for (const paperWidth of [360, 1200]) {
             await page.evaluate(async ({ issue, profile }) => {
@@ -124,7 +123,17 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('newspaper design
         ['victorian', 360], ['secession-review', 360], ['shang', 360],
         ['teletext-bulletin', 360], ['oral-accounts', 360], ['oral-accounts', 1000],
       ] as const) {
-        const issue = designIssue(designs.find(candidate => candidate.id === id)!, ordinary);
+        const design = designs.find(candidate => candidate.id === id)!;
+        const issue = designIssue(design, ordinary);
+        issue.items.push(...issueDocumentSchema.parse(ordinary).items.slice(-3));
+        for (const [index, [pageId, label]] of [
+          ['home', 'At Home'], ['economy', 'Trade and Livelihood'], ['abroad', 'Beyond Our Borders'],
+        ].entries()) {
+          issue.pages.push({
+            id: pageId, label: design.pageLabels[pageId] ?? label, layout: 'ordinary',
+            itemIds: [issue.items[issue.items.length - 3 + index].id],
+          });
+        }
         if (id === 'teletext-bulletin') issue.publication.title = 'The International Teletext Bulletin for Constantinople';
         await mount(page, issue, width);
         if (id === 'teletext-bulletin') {
@@ -172,11 +181,6 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('newspaper design
         for (const sample of [ordinary, breaking, analysis]) {
           const issue = designIssue(design, sample);
           const front = issue.pages[0];
-          if (front.itemIds.length === 2) {
-            const extraBrief = issueDocumentSchema.parse(ordinary).items.find(item => !front.itemIds.includes(item.id) && !item.image)!;
-            issue.items.push(extraBrief);
-            front.itemIds.push(extraBrief.id);
-          }
           if (id === 'printed-almanack') {
             front.itemIds.forEach((itemId, index) => {
               issue.items.find(item => item.id === itemId)!.observedTurn = front.itemIds.length - index;
@@ -225,7 +229,7 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('newspaper design
       const design = (await loadEditorialConfig()).designs.find(candidate => candidate.id === 'contact-sheet')!;
       const articles = page.locator('.vd-page:not([hidden]) .vd-story');
       for (const sample of [breaking, analysis]) {
-        const issue = designIssue(design, sample);
+        const issue = designIssue(design, sample, 2);
         for (const width of [760, 761, 1200]) {
           await mount(page, issue, width);
           const boxes = await articles.evaluateAll(nodes => nodes.map(node => ({

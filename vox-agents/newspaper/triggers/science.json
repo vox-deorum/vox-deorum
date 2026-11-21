@@ -6,13 +6,14 @@
     "when": [
       "!player.self",
       "player.knows('major') && player.major === true",
+      "player.knows('name')",
       "(player.knows('friend') && player.friend === true) || (player.knows('ally') && player.ally === true)",
       "player.knows('era') && typeof player.era === 'string'",
       "player.knows('before') && player.before.knows('era') && typeof player.before.era === 'string'",
       "changed(player, 'era')"
     ],
     "values": {
-      "civilization": "player.knows('name') ? player.name : null",
+      "civilization": "player.name",
       "era": "player.era",
       "former": "player.before.era",
       "distance": "player.knows('distance') ? player.distance : null"
@@ -75,13 +76,14 @@
     "when": [
       "!player.self",
       "player.knows('major') && player.major === true",
+      "player.knows('name')",
       "!((player.knows('friend') && player.friend === true) || (player.knows('ally') && player.ally === true))",
       "player.knows('era') && typeof player.era === 'string'",
       "player.knows('before') && player.before.knows('era') && typeof player.before.era === 'string'",
       "changed(player, 'era')"
     ],
     "values": {
-      "civilization": "player.knows('name') ? player.name : null",
+      "civilization": "player.name",
       "era": "player.era",
       "former": "player.before.era",
       "distance": "player.knows('distance') ? player.distance : null"
@@ -94,7 +96,10 @@
     "subject": "player",
     "window": "short",
     "when": [
-      "player.major",
+      "player.knows('major') && player.major === true",
+      "player.knows('name')",
+      "player.knows('technologies') && Number.isFinite(player.technologies)",
+      "player.knows('before') && player.before.knows('technologies') && Number.isFinite(player.before.technologies)",
       "player.rank('technologies') === 1",
       "player.before.rank('technologies') > 1",
       "players.some(p => p.id !== player.id && p.knows('major') && p.major && p.knows('technologies') && Number.isFinite(p.technologies))"

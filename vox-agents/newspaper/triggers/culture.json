@@ -112,7 +112,8 @@
     "subject": "city",
     "window": "recent",
     "when": [
-      "city.owner.enemy",
+      "city.knows('name')",
+      "city.knows('owner') && city.owner.knows('enemy') && city.owner.enemy",
       "city.distance.own <= nearby",
       "city.built.some(b => city.wonders.includes(b.building))"
     ],
@@ -124,15 +125,15 @@
     "subject": "city",
     "window": "recent",
     "when": [
-      "city.foreign && city.knows('owner') && city.owner.major",
+      "city.knows('owner') && city.knows('name') && city.owner.knows('name') && city.owner.major && city.foreign === true",
       "city.knows('wonders') && Array.isArray(city.wonders) && city.wonders.length > 0",
       "!(city.owner.knows('enemy') && city.owner.enemy && city.knows('distance') && city.distance.own <= nearby)",
       "city.built.some(b => b.knows('building') && city.wonders.includes(b.building))"
     ],
     "values": {
       "wonder": "city.built.find(b => b.knows('building') && city.wonders.includes(b.building)).building",
-      "civilization": "city.owner.knows('name') ? city.owner.name : null",
-      "cityName": "city.knows('name') ? city.name : null"
+      "civilization": "city.owner.name",
+      "cityName": "city.name"
     },
     "importance": 55,
     "tags": ["culture", "international"]

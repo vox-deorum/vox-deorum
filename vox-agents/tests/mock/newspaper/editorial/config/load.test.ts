@@ -5,7 +5,7 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { ChoiceExpressionError } from '../../../../../src/newspaper/contracts/publication.js';
 import { getEditorialExpressions, loadEditorialConfig, parseEditorialConfig } from '../../../../../src/newspaper/editorial/config/load.js';
-import { editorialConfigSchema } from '../../../../../src/newspaper/editorial/config/schema.js';
+import { editorialConfigSchema, editorialConfigVersion } from '../../../../../src/newspaper/editorial/config/schema.js';
 import { buildNewspaperFacts } from '../../../../../src/newspaper/editorial/facts/index.js';
 import { reference } from '../../../../../src/newspaper/editorial/facts/model.js';
 import { configurationHash } from '../../../../../src/newspaper/editorial/shared/determinism.js';
@@ -35,6 +35,46 @@ describe('editorial catalogue files', () => {
     for (const id of base.templates.flatMap(template => template.triggers))
       expect(triggerIds.has(id)).toBe(true);
     expect(base.designs[0].layouts.map(layout => layout.variant)).toEqual(expect.arrayContaining(['ordinary', 'breaking']));
+    expect(base.version).toBe(editorialConfigVersion);
+  });
+
+  it.each([
+    ['minItems', 4],
+    ['frontPageItems', 5],
+    ['designSelection', 'pressRun'],
+    ['designStickiness', 0.6],
+  ])('should reject the retired defaults setting %s', async (field, value) => {
+    await writeDocument('defaults.json', { [field]: value });
+    await expect(loadEditorialConfig(directory)).rejects.toThrow(field);
+  });
+
+  it('should reject a section minimum because the layout owns its size', async () => {
+    await writeDocument('pages.json', [{ id: 'home', minimum: 2 }]);
+    await expect(loadEditorialConfig(directory)).rejects.toThrow('minimum');
+  });
+
+  it.each([
+    { variant: 'ordinary', frontSlots: undefined, sectionSlots: 2, field: 'frontSlots' },
+    { variant: 'ordinary', frontSlots: 3, sectionSlots: 2, field: 'frontSlots' },
+    { variant: 'ordinary', frontSlots: 4, sectionSlots: undefined, field: 'sectionSlots' },
+    { variant: 'analysis', frontSlots: 4, sectionSlots: 0, field: 'sectionSlots' },
+    { variant: 'breaking', frontSlots: 4, sectionSlots: 2, field: 'sectionSlots' },
+  ])('should reject invalid $field for a new $variant layout', async ({ field, ...layout }) => {
+    await writeDocument('designs.json', [{
+      id: 'wire',
+      layouts: [{ id: 'custom-layout', weight: { base: 1 }, ...layout }],
+    }]);
+    await expect(loadEditorialConfig(directory)).rejects.toThrow(field);
+  });
+
+  it('should reject a front layout beyond the ranked story cap', async () => {
+    await writeDocument('defaults.json', { maxItems: 4 });
+    await expect(loadEditorialConfig(directory)).rejects.toThrow('frontSlots');
+  });
+
+  it('should reject snapshots that predate layout slots', async () => {
+    const loaded = await loadEditorialConfig();
+    await expect(parseEditorialConfig({ ...loaded, version: editorialConfigVersion - 1 })).rejects.toThrow('version');
   });
 
   it('should layer civic vocabulary by slot and keep snapshots without it unchanged', async () => {
@@ -216,7 +256,7 @@ describe('editorial catalogue files', () => {
     await writeDocument('defaults.json', { feedback: { tag: 0.25 }, styleRepeat: { genre: 0.5 } });
     await writeDocument('triggers.json', [{ id: trigger.id, tags: ['cities'], enabled: false }]);
     await writeDocument('triggers/local.json', [{ id: trigger.id, when: ['city.own', 'true'] }]);
-    await writeDocument('pages.json', [{ id: 'additional', label: 'Extra', tags: ['extra'], minimum: 1, order: 20 }]);
+    await writeDocument('pages.json', [{ id: 'additional', label: 'Extra', tags: ['extra'], order: 20 }]);
 
     const loaded = await loadEditorialConfig(directory);
     expect(loaded.defaults.feedback).toEqual({ ...base.defaults.feedback, tag: 0.25 });
@@ -392,7 +432,8 @@ describe('editorial catalogue files', () => {
     const trial = {
       id: 'trial-design', when: 'true', weight: { base: 1 },
       layouts: [...base.designs[0].layouts, {
-        id: 'trial-layout', variant: 'ordinary', weight: { base: 1, adjustments: [{ add: 3, when: 'turn >' }] },
+        id: 'trial-layout', variant: 'ordinary', frontSlots: 4, sectionSlots: 2,
+        weight: { base: 1, adjustments: [{ add: 3, when: 'turn >' }] },
       }],
     };
     const invalid = { ...base, mastheadRules: [], designs: [{ ...base.designs[0], ...trial }] };

@@ -26,6 +26,7 @@ interface RunInput {
   deadlines?: number[];
   priorDeadlines?: number[];
   observedTurn?: number;
+  cityStateNamed?: boolean;
   repeatState?: CheckResult['repeatState'];
 }
 
@@ -61,7 +62,9 @@ async function run(input: RunInput = {}): Promise<CheckResult> {
   return evaluateTriggerRules({
     rules: config.triggers.filter(rule => [approaching, observed, disappeared].includes(rule.id)),
     compiled,
-    facts: buildNewspaperFacts(evidence, { playerIdentities }),
+    facts: buildNewspaperFacts(evidence, { playerIdentities: input.cityStateNamed === false
+      ? { ...playerIdentities, [cityState]: { ...playerIdentities[cityState], name: undefined } }
+      : playerIdentities }),
     constants: config.constants,
     speedMultiplier: 1,
     repeatState: input.repeatState,
@@ -103,6 +106,17 @@ describe('stock city-state quest deadlines', () => {
     expect(fired(result, observed)).toEqual([]);
   });
 
+  it('should skip quest stories when the city-state has no visible name', async () => {
+    const observations = { deadlines: [22, 30], priorDeadlines: [25] };
+    const named = await run(observations);
+    const unnamed = await run({ ...observations, cityStateNamed: false });
+
+    for (const rule of [approaching, observed, disappeared]) {
+      expect(fired(named, rule)).toEqual(['player/10']);
+      expect(fired(unnamed, rule)).toEqual([]);
+    }
+  });
+
   it('should not treat a deadline beyond the reminder range as approaching', async () => {
     const result = await run({ deadlines: [25], priorDeadlines: [25] });
     expect(fired(result, approaching)).toEqual([]);
@@ -121,7 +135,7 @@ describe('stock city-state quest deadlines', () => {
     const result = await run({ deadlines: [30] });
     expect(fired(result, observed)).toEqual([]);
     expect(result.audit.find(entry => entry.rule === observed)?.subjects)
-      .toContainEqual(expect.objectContaining({ subject: 'player/10', failedWhen: 4 }));
+      .toContainEqual(expect.objectContaining({ subject: 'player/10', outcome: 'false' }));
   });
 
   it('should not report a deadline that the prior snapshot already contained', async () => {

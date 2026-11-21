@@ -26,9 +26,9 @@
       }
     },
     "layouts": [
-      { "id": "news-index", "variant": "ordinary", "weight": { "base": 12 } },
-      { "id": "special-edition", "variant": "breaking", "weight": { "base": 7 } },
-      { "id": "figures", "variant": "analysis", "weight": { "base": 12 } }
+      { "id": "news-index", "variant": "ordinary", "frontSlots": 4, "sectionSlots": 2, "weight": { "base": 12 } },
+      { "id": "special-edition", "variant": "breaking", "frontSlots": 4, "weight": { "base": 7 } },
+      { "id": "figures", "variant": "analysis", "frontSlots": 4, "sectionSlots": 2, "weight": { "base": 12 } }
     ],
     "pageLabels": { "front": "Front", "home": "Cities", "economy": "Trade", "abroad": "Abroad" }
   }

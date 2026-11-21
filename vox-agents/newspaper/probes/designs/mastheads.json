@@ -22,6 +22,8 @@
       {
         "id": "capital-ordinary",
         "variant": "ordinary",
+        "frontSlots": 4,
+        "sectionSlots": 1,
         "weight": {
           "base": 10
         }
@@ -29,6 +31,7 @@
       {
         "id": "capital-breaking",
         "variant": "breaking",
+        "frontSlots": 4,
         "weight": {
           "base": 10
         }
@@ -62,6 +65,8 @@
       {
         "id": "vassal-ordinary",
         "variant": "ordinary",
+        "frontSlots": 4,
+        "sectionSlots": 1,
         "weight": {
           "base": 10
         }
@@ -69,6 +74,7 @@
       {
         "id": "vassal-breaking",
         "variant": "breaking",
+        "frontSlots": 4,
         "weight": {
           "base": 10
         }

@@ -5,10 +5,11 @@ import { describe, expect, it } from 'vitest';
 import { ReplaySession } from '../../../../src/newspaper/replay/session.js';
 import { loadEditorialConfig } from '../../../../src/newspaper/editorial/config/load.js';
 import { createReplayRecording, replaySettings } from '../../../helpers/newspaper-replay.js';
+import { editionBriefRule, editionBriefTemplate } from '../../../helpers/newspaper-briefs.js';
 
 describe('diplomacy rules in offline replay', () => {
-  it('reopens a breaking fronts lead with its covered declarations and source rows intact', async () => {
-    const recording = await createReplayRecording('Standard');
+  it('should reopen a breaking lead with its covered declarations and source rows intact', async () => {
+    const recording = await createReplayRecording('Standard', [12]);
     let session = new ReplaySession();
     try {
       const sqlite = new Database(recording.filename);
@@ -29,15 +30,22 @@ describe('diplomacy rules in offline replay', () => {
         }
         summary.run(400, 0, 12, 1250, 2, JSON.stringify(wars));
       } finally { sqlite.close(); }
+      const catalogue = path.join(path.dirname(recording.filename), 'war-catalogue');
+      await mkdir(catalogue);
+      await Promise.all([
+        writeFile(path.join(catalogue, 'triggers.json'), JSON.stringify([editionBriefRule])),
+        writeFile(path.join(catalogue, 'templates.json'), JSON.stringify([editionBriefTemplate])),
+      ]);
       const settings = {
         ...replaySettings(recording.filename), fromTurn: 12, toTurn: 18, runId: 'war-fronts',
+        editorialConfigDirectory: catalogue,
         outputPath: path.join(path.dirname(recording.filename), 'fronts.sqlite'),
       };
       await session.configure(settings);
       const { check } = await session.advance();
       expect(check?.status).toBe('published');
       const issue = check?.issue;
-      expect(issue?.items).toHaveLength(1);
+      expect(issue?.pages[0].itemIds).toHaveLength(5);
       expect(issue?.pages[0].layout).toBe('breaking');
       const absorbed = check!.decision.candidateScores.filter(candidate => candidate.mergedInto);
       expect(absorbed.filter(candidate => candidate.id.startsWith('war-involving-us-account/'))).toHaveLength(5);
@@ -46,8 +54,9 @@ describe('diplomacy rules in offline replay', () => {
       await session.configure({ ...settings, mode: 'resume' });
       const archived = await session.getIssue(issue!.issueId);
       expect(archived.decision.candidateScores.filter(candidate => candidate.mergedInto)).toEqual(absorbed);
-      expect(archived.articles[0].ruleIds).toContain('war-on-three-fronts');
-      expect(archived.articles[0].sources.filter(source => source.table === 'GameEvents').map(source => source.id))
+      const lead = archived.articles.find(article => article.id === archived.issue.pages[0].itemIds[0])!;
+      expect(lead.ruleIds).toContain('war-on-three-fronts');
+      expect(lead.sources.filter(source => source.table === 'GameEvents').map(source => source.id))
         .toEqual(expect.arrayContaining([201, 202, 203, 204, 205]));
     } finally {
       await session.close();
@@ -56,7 +65,7 @@ describe('diplomacy rules in offline replay', () => {
   });
 
   it('should preserve the score history and repeat audit on resume after a skipped check', async () => {
-    const recording = await createReplayRecording('Standard');
+    const recording = await createReplayRecording('Standard', [50]);
     const directory = path.dirname(recording.filename);
     const catalogue = path.join(directory, 'diplomacy-catalogue');
     let session = new ReplaySession();
@@ -76,13 +85,16 @@ describe('diplomacy rules in offline replay', () => {
         }
       } finally { sqlite.close(); }
       await mkdir(catalogue);
-      await writeFile(path.join(catalogue, 'defaults.json'), JSON.stringify({ minItems: 1 }));
       const base = await loadEditorialConfig();
       const stalledRule = 'war-advantage-stalls';
-      await writeFile(path.join(catalogue, 'triggers.json'), JSON.stringify([
-        ...base.triggers.filter(rule => rule.id !== stalledRule).map(rule => ({ id: rule.id, enabled: false })),
-        { id: 'wide-war-window', subject: 'pair', window: 45, when: 'false' },
-      ]));
+      await Promise.all([
+        writeFile(path.join(catalogue, 'triggers.json'), JSON.stringify([
+          ...base.triggers.filter(rule => rule.id !== stalledRule).map(rule => ({ id: rule.id, enabled: false })),
+          { id: 'wide-war-window', subject: 'pair', window: 45, when: 'false' },
+          editionBriefRule,
+        ])),
+        writeFile(path.join(catalogue, 'templates.json'), JSON.stringify([editionBriefTemplate])),
+      ]);
       const settings = {
         ...replaySettings(recording.filename), fromTurn: 46, toTurn: 54,
         frequencyStandardTurns: 4, editorialConfigDirectory: catalogue, runId: 'first',

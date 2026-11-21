@@ -22,7 +22,6 @@ At least for the first mention, use concrete names of a civilization, city, reli
 - Use `{{terms.leader}}` for the reader's leader by name and `{{player.leader}}` for the leader of a player subject. List these in the template's `names` when they should be underlined.
 - Use `{{terms.civilization}}` for the reader's country and `{{terms.civilizationAdjective}}` for its adjective, as in “Rome” and “Roman.”
 - Use [civic terms](editorial.md#civic-vocabulary) for words that vary by government: “our `{{terms.civic.government}}`,” “the `{{terms.civic.leaderTitle}}`,” or “your `{{terms.civic.people}}`” (plural). Use `{{terms.civic.leaderAddress}}` as a full phrase when speaking to the leader. Keep names like the World Congress.
-- If you don't know the name, use a plain description such as “a foreign diplomat.”
 - Use [regional shortcuts](triggers/constants.md#regional-shortcuts) when writing for a group of civilizations.
 
 ## Write from inside the world

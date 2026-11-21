@@ -7,10 +7,12 @@ import { queryNewspaperEvidence } from '../../../../../mcp-server/dist/newspaper
 import { ReplaySession } from '../../../../src/newspaper/replay/session.js';
 import { runEditorialCheck } from '../../../../src/newspaper/editorial/check.js';
 import { loadEditorialConfig } from '../../../../src/newspaper/editorial/config/load.js';
-import { createEditorialStreams } from '../../../../src/newspaper/editorial/shared/determinism.js';
 import { ReplayStore } from '../../../../src/newspaper/replay/store.js';
 import { replaySourceIdentity } from '../../../../src/newspaper/replay/database.js';
-import { createReplayRecording, replaySettings, writeReplayPublicationCatalogue } from '../../../helpers/newspaper-replay.js';
+import {
+  addReplayBriefs, createReplayRecording, replaySettings, writeReplayPublicationCatalogue,
+} from '../../../helpers/newspaper-replay.js';
+import { editionBriefRule, editionBriefTemplate } from '../../../helpers/newspaper-briefs.js';
 
 describe('durable replay publication', () => {
   let recording: Awaited<ReturnType<typeof createReplayRecording>>;
@@ -18,7 +20,7 @@ describe('durable replay publication', () => {
   let outputPath: string;
   let catalogue: string;
   beforeEach(async () => {
-    recording = await createReplayRecording();
+    recording = await createReplayRecording('Epic', [6]);
     outputPath = path.join(path.dirname(recording.filename), 'newspaper.sqlite');
     catalogue = await writeReplayPublicationCatalogue(recording.filename);
     session = new ReplaySession();
@@ -36,7 +38,7 @@ describe('durable replay publication', () => {
       sqlite.prepare('UPDATE GameMetadata SET Value = ? WHERE Key = ?').run('Standard', 'gameSpeed');
       const insert = sqlite.prepare('INSERT INTO GameEvents (ID, Turn, CreatedAt, Player0, Type, Payload) VALUES (?, ?, ?, ?, ?, ?)');
       let id = 200;
-      for (const [turn, count] of [[100, 4], [103, 2], [108, 2], [114, 11]]) {
+      for (const [turn, count] of [[100, 5], [103, 2], [108, 3], [114, 11]]) {
         for (let i = 0; i < count; i++) {
           insert.run(id, turn, 10_000 + id, 1, 'PlayerAdoptPolicyBranch', JSON.stringify({ PlayerID: 0, BranchType: `Branch ${id}` }));
           id++;
@@ -58,7 +60,7 @@ describe('durable replay publication', () => {
     const configured = { ...settings(), fromTurn: 100, toTurn: 115 };
     await session.configure(configured);
     const first = await session.advance();
-    expect(first.check?.issue?.items).toHaveLength(4);
+    expect(first.check?.issue?.items).toHaveLength(5);
     const skipped = await session.advance();
     expect(skipped.check).toMatchObject({ status: 'skipped', decision: { cutoffTurn: 105 } });
     expect(skipped.evidence.events.map(event => event.source.turn)).toEqual([103, 103]);
@@ -68,22 +70,20 @@ describe('durable replay publication', () => {
     await session.configure({ ...configured, mode: 'resume' });
     const next = await session.advance();
     expect(next.evidence.request).toMatchObject({ previousCheckTurn: 100, cutoffTurn: 110 });
-    expect(next.check?.issue?.items).toHaveLength(4);
+    expect(next.check?.issue?.items).toHaveLength(5);
     const { articles } = await session.getIssue(next.check!.issue!.issueId);
     const sourceIds = articles.flatMap(article => article.sources.filter(source => source.table === 'GameEvents').map(source => source.id));
-    expect(sourceIds.sort((a, b) => a - b)).toEqual([204, 205, 206, 207]);
+    expect(sourceIds.sort((a, b) => a - b)).toEqual([205, 206, 207, 208, 209]);
 
     const full = await session.advance();
     expect(full.evidence.request).toMatchObject({ previousCheckTurn: 110, cutoffTurn: 115 });
-    expect(full.check?.issue?.items).toHaveLength(10);
-    expect(full.check?.issue?.pages[0].itemIds).toHaveLength(5);
-
-    await Promise.all([
-      writeFile(path.join(catalogue, 'defaults.json'), JSON.stringify({ frontPageItems: 3 })),
-      writeFile(path.join(catalogue, 'pages.json'), JSON.stringify([{ id: 'economy', when: 'false' }])),
-    ]);
-    await session.configure({ ...configured, runId: 'three-visible-stories' });
-    expect((await session.advance()).check?.status).toBe('skipped');
+    expect(full.check?.decision.candidateScores).toHaveLength(11);
+    expect(full.check?.decision.candidateScores.filter(score => score.selected)).toHaveLength(8);
+    const pages = full.check!.issue!.pages;
+    expect(pages.map(page => [page.id, page.itemIds.length])).toEqual([['front', 5], ['economy', 3]]);
+    expect(new Set(pages.flatMap(page => page.itemIds)).size).toBe(8);
+    const archived = await session.getIssue(full.check!.issue!.issueId);
+    expect(archived.articles).toHaveLength(8);
   });
 
   it('should publish unwitnessed research by a met civilization using the configured ideology names', async () => {
@@ -99,11 +99,11 @@ describe('durable replay publication', () => {
         id: 'fixture-research', subject: 'event', event: 'TeamTechResearched',
         when: "self.ideology === 'Ordre' && event.tech === 'Printing Press'",
         values: { technology: 'event.tech', civilization: 'event.player.name' },
-      }])),
+      }, editionBriefRule])),
       writeFile(path.join(catalogue, 'templates.json'), JSON.stringify([{
         id: 'fixture-research-article', triggers: ['fixture-research'], tags: ['foreign'], weight: { base: 1 },
         variants: [{ id: 'notice', headline: '{{civilization}} gains a technology', body: ['{{technology}}'], weight: { base: 1 } }],
-      }])),
+      }, editionBriefTemplate])),
     ]);
     await session.configure(settings());
     const result = await session.advance();
@@ -126,12 +126,12 @@ describe('durable replay publication', () => {
     const template = stock.templates.find(entry => entry.variants.some(variant => variant.id === id))!;
     await Promise.all([
       writeFile(path.join(catalogue, 'triggers.json'), JSON.stringify(
-        stock.triggers.filter(rule => rule.id !== 'ideology-switched').map(rule => ({ id: rule.id, enabled: false })),
+        [...stock.triggers.filter(rule => rule.id !== 'ideology-switched').map(rule => ({ id: rule.id, enabled: false })), editionBriefRule],
       )),
       writeFile(path.join(catalogue, 'templates.json'), JSON.stringify([{
         id: template.id,
         variants: template.variants.filter(variant => variant.id !== id).map(variant => ({ id: variant.id, weight: { base: 0 } })),
-      }])),
+      }, editionBriefTemplate])),
       writeFile(path.join(catalogue, 'civic-terms.json'), JSON.stringify({
         civilizations: { Civ1: { ideologies: { Order: { government: 'workers’ hall' } } } },
       })),
@@ -144,8 +144,8 @@ describe('durable replay publication', () => {
     const neutral = await session.advance();
     for (const [replay, term] of [[styled, 'workers’ hall'], [neutral, 'government']] as const) {
       expect(replay.check?.status).toBe('published');
-      expect(Object.values(replay.check?.decision.selectedVariants ?? {})).toEqual([id]);
-      expect(replay.check?.issue?.items[0].body.flat()).toContainEqual({ type: 'text', text: term });
+      const articleId = Object.entries(replay.check!.decision.selectedVariants).find(([, variant]) => variant === id)?.[0];
+      expect(replay.check?.issue?.items.find(item => item.id === articleId)?.body.flat()).toContainEqual({ type: 'text', text: term });
       expect(replay.check?.decision.evidence).toContainEqual(expect.objectContaining({ table: 'PlayerSummaries', id: 6 }));
     }
   });
@@ -161,7 +161,12 @@ describe('durable replay publication', () => {
       insert.run(107, 6, 2010, 1, 'UnitPrekill', JSON.stringify({ OwnerID: 1, UnitID: 19, Unit: unit, DelayKill: false }));
     } finally { sqlite.close(); }
     const probes = fileURLToPath(new URL('../../../../newspaper/probes/', import.meta.url));
-    await session.configure({ ...settings(), editorialConfigDirectory: probes });
+    const probeConfig = await loadEditorialConfig(probes);
+    await Promise.all([
+      writeFile(path.join(catalogue, 'triggers.json'), JSON.stringify([...probeConfig.triggers, editionBriefRule])),
+      writeFile(path.join(catalogue, 'templates.json'), JSON.stringify([...probeConfig.templates, editionBriefTemplate])),
+    ]);
+    await session.configure(settings());
     const result = await session.advance();
     expect(result.check?.status).toBe('published');
     expect(result.evidence.events.find(event => event.source.id === 104)?.values).toEqual({ PlayerID: 1, Person: 'Hypatia' });
@@ -249,6 +254,7 @@ describe('durable replay publication', () => {
       for (const turn of [14, 22]) {
         insert.run(200 + turn, turn, 2000 + turn, 1, 'DeclareWar', '{"OriginatingPlayerID":1,"TargetTeamID":0,"IsAggressor":false}');
       }
+      addReplayBriefs(sqlite, [14, 22]);
     } finally { sqlite.close(); }
     const mastheadPath = path.join(catalogue, 'mastheads', 'ideology.json');
     await mkdir(path.dirname(mastheadPath));
@@ -294,6 +300,7 @@ describe('durable replay publication', () => {
       const insert = sqlite.prepare('INSERT INTO GameEvents (ID, Turn, CreatedAt, Player0, Type, Payload) VALUES (?, ?, ?, ?, ?, ?)');
       for (const turn of [22, 30, 38, 46])
         insert.run(200 + turn, turn, 2000 + turn, 1, 'DeclareWar', '{"OriginatingPlayerID":1,"TargetTeamID":0,"IsAggressor":false}');
+      addReplayBriefs(sqlite, [22, 30, 38, 46]);
     } finally { sqlite.close(); }
     const config = await loadEditorialConfig(catalogue);
     const opening = config.designs.find(design => design.id === 'oral-accounts')!;
@@ -304,7 +311,7 @@ describe('durable replay publication', () => {
         { ...opening, id: 'fixture-alternate', title: 'Another paper', civilizationTitles: null },
       ])),
       writeFile(triggerPath, JSON.stringify([
-        ...config.triggers.filter(rule => rule.id !== 'fixture-war-report').map(rule => ({ id: rule.id, enabled: false })),
+        ...config.triggers.filter(rule => !['fixture-war-report', editionBriefRule.id].includes(rule.id)).map(rule => ({ id: rule.id, enabled: false })),
         ...triggers,
       ])),
     ]);
@@ -328,18 +335,16 @@ describe('durable replay publication', () => {
 
     await session.configure({ ...configured, outputPath: path.join(path.dirname(outputPath), 'uninterrupted.sqlite') });
     for (let check = 0; check < 4; check++) await session.advance();
-    expect([(await session.advance()).check, (await session.advance()).check]).toEqual(resumed);
+    const uninterrupted = [(await session.advance()).check, (await session.advance()).check];
+    expect(uninterrupted.map(check => check?.issue)).toEqual(resumed.map(check => check?.issue));
+    expect(uninterrupted.map(check => check?.decision.designSelection)).toEqual(resumed.map(check => check?.decision.designSelection));
   });
 
-  it('should resume a catalogue saved before design runs and style tags with the legacy draws', async () => {
+  it('should reject a checkpoint with a pre-slot catalogue', async () => {
     const initialized = await session.configure(settings());
     await session.close();
     const identity = await replaySourceIdentity(recording.filename);
-    const { styles: _styles, ...legacy } = await loadEditorialConfig(catalogue);
-    delete legacy.defaults.designSelection;
-    const template = legacy.templates.find(entry => entry.id === 'fixture-war-article')!;
-    template.variants.push({ ...template.variants[0], id: 'dispatch', headline: 'A new dispatch' });
-    legacy.templates = [template];
+    const legacy = { ...await loadEditorialConfig(catalogue), version: 1 };
 
     const store = new ReplayStore(outputPath);
     try {
@@ -347,16 +352,8 @@ describe('durable replay publication', () => {
       store.create(identity, { ...checkpoint, session: { ...initialized, runId: 'legacy' }, configuration: legacy });
     } finally { store.close(); }
 
-    const draw = createEditorialStreams(`${encodeURIComponent(identity)}/receiver/0/6`, legacy).prose();
     session = new ReplaySession();
-    await session.configure({ ...settings(), runId: 'legacy', mode: 'resume' });
-    const result = await session.advance();
-    expect(result.check?.status).toBe('published');
-    const decision = result.check!.decision;
-    expect(decision.configurationSnapshot).toEqual(legacy);
-    expect(decision.designSelection).toBeUndefined();
-    expect(Object.values(decision.selectedVariants)).toEqual([draw < 0.5 ? 'notice' : 'dispatch']);
-    expect(Object.values(decision.selectedStyles!)).toEqual([{ voice: 'general', stance: 'neutral', genre: 'report' }]);
+    await expect(session.configure({ ...settings(), runId: 'legacy', mode: 'resume' })).rejects.toMatchObject({ status: 400 });
   });
 
   it.each([

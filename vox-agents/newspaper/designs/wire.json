@@ -44,6 +44,8 @@
       {
         "id": "feed",
         "variant": "ordinary",
+        "frontSlots": 4,
+        "sectionSlots": 2,
         "weight": {
           "base": 10
         }
@@ -51,6 +53,7 @@
       {
         "id": "breaking-wire",
         "variant": "breaking",
+        "frontSlots": 4,
         "weight": {
           "base": 10
         }
@@ -58,6 +61,8 @@
       {
         "id": "data-desk",
         "variant": "analysis",
+        "frontSlots": 4,
+        "sectionSlots": 2,
         "weight": {
           "base": 3
         }

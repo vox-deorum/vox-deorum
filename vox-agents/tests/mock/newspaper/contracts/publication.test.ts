@@ -5,7 +5,7 @@ import { createInitialPublicationState, publicationStateSchema } from '../../../
 describe('publication memory', () => {
   it('should create current memory without accumulating audit decisions', () => {
     const state = createInitialPublicationState();
-    expect(state.schemaVersion).toBe(6);
+    expect(state.schemaVersion).toBe(7);
     expect(state).not.toHaveProperty('decisions');
     expect(publicationStateSchema.parse(state)).toEqual(state);
   });
@@ -13,19 +13,18 @@ describe('publication memory', () => {
   it('should retain current memory with the cursor, votes, preferences and series', () => {
     const state = createInitialPublicationState({ frequencyStandardTurns: 3, llmEnabled: true });
     state.lastCheckTurn = 25;
-    state.previousDesignId = 'wire';
+    state.reportingThroughTurn = 20;
     state.votes['published-item'] = 1;
     state.series['city/3/growth'] = { importance: 20, evaluatedTurn: 25, lastPublishedTurn: 20, lastIssueId: 'old-issue', lastItemId: 'published-item' };
     expect(publicationStateSchema.parse(state)).toEqual(state);
   });
 
-  it('should resume older checkpoints after the last turn they already consumed', () => {
-    const { reportingThroughTurn: _bound, ...legacy } = createInitialPublicationState();
-    const state = publicationStateSchema.parse({ ...legacy, lastCheckTurn: 105 });
-    expect(state.reportingThroughTurn).toBe(105);
+  it('should require a reporting boundary in the current checkpoint', () => {
+    const { reportingThroughTurn: _bound, ...incomplete } = createInitialPublicationState();
+    expect(publicationStateSchema.safeParse(incomplete).success).toBe(false);
   });
 
-  it.each([1, 2, 3, 4, 5, 99])('should reject unsupported memory version %s', schemaVersion => {
+  it.each([1, 2, 3, 4, 5, 6, 99])('should reject unsupported memory version %s', schemaVersion => {
     expect(publicationStateSchema.safeParse({ ...createInitialPublicationState(), schemaVersion }).success).toBe(false);
   });
 });

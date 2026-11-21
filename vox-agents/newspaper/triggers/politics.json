@@ -120,13 +120,14 @@
     "subject": "event",
     "event": "IdeologySwitched",
     "when": [
-      "event.knows('player') && event.player.major",
+      "event.knows('player') && event.player.knows('major') && event.player.major === true",
+      "event.player.knows('name')",
       "event.knows('oldBranch') && typeof event.oldBranch === 'string'",
       "event.knows('newBranch') && typeof event.newBranch === 'string'",
       "event.oldBranch !== event.newBranch"
     ],
     "values": {
-      "civilization": "event.player.knows('name') ? event.player.name : null",
+      "civilization": "event.player.name",
       "formerIdeology": "event.oldBranch",
       "ideology": "event.newBranch",
       "ours": "event.player.self === true"
@@ -141,13 +142,14 @@
     "window": "medium",
     "when": [
       "!player.self && player.knows('major') && player.major === true",
+      "player.knows('name')",
       "player.knows('cityCount') && Number.isFinite(player.cityCount)",
       "player.knows('before') && player.before.knows('cityCount') && Number.isFinite(player.before.cityCount)",
       "player.cityCount === 1",
       "player.before.cityCount > 1"
     ],
     "values": {
-      "civilization": "player.knows('name') ? player.name : null",
+      "civilization": "player.name",
       "lost": "player.before.cityCount - player.cityCount"
     },
     "importance": "60 + 5 * lost",
@@ -174,10 +176,10 @@
     "when": [
       "self.knows('policyBranches') && self.policyBranches !== null && typeof self.policyBranches === 'object'",
       "self.before.knows('policyBranches') && self.before.policyBranches !== null && typeof self.before.policyBranches === 'object'",
-      "Object.keys(self.policyBranches).some(branch => !Object.keys(self.before.policyBranches).includes(branch))"
+      "Object.keys(self.policyBranches).filter(branch => !Object.keys(self.before.policyBranches).includes(branch)).length === 1"
     ],
     "values": {
-      "branch": "(() => { const before = Object.keys(self.before.policyBranches); const added = Object.keys(self.policyBranches).filter(branch => !before.includes(branch)); return added.length === 1 ? added[0] : null; })()",
+      "branch": "Object.keys(self.policyBranches).find(branch => !Object.keys(self.before.policyBranches).includes(branch))",
       "count": "Object.keys(self.policyBranches).length"
     },
     "importance": 60,
@@ -221,6 +223,7 @@
     "subject": "player",
     "when": [
       "!player.self && player.knows('major') && player.major === true",
+      "player.knows('name')",
       "player.knows('ideology') && typeof player.ideology === 'string'",
       "!player.before.knows('ideology') || player.before.ideology === null"
     ],
@@ -238,6 +241,7 @@
     "window": "short",
     "when": [
       "player.knows('major') && player.major === true",
+      "player.knows('name')",
       "player.knows('score') && Number.isFinite(player.score)",
       "player.before.knows('score')",
       "player.rank('score') === 1",

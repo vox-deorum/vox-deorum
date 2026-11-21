@@ -15,7 +15,6 @@ async function catalogue() {
   const base = await loadEditorialConfig();
   return parseEditorialConfig({
     ...base,
-    defaults: { ...base.defaults, minItems: 1 },
     constants: {
       ...base.constants,
       terms: {

@@ -6,7 +6,7 @@ import {
   prepareEditorialExpressions,
   type EditorialTerms,
 } from '../../../../../src/newspaper/editorial/config/expressions.js';
-import { editorialConfigSchema, type EditorialConfig } from '../../../../../src/newspaper/editorial/config/schema.js';
+import { editorialConfigSchema, editorialConfigVersion, type EditorialConfig } from '../../../../../src/newspaper/editorial/config/schema.js';
 import { buildNewspaperFacts } from '../../../../../src/newspaper/editorial/facts/index.js';
 import { evaluatePresentation } from '../../../../../src/newspaper/editorial/presentation/eligibility.js';
 import { presentIssue } from '../../../../../src/newspaper/editorial/presentation/issue.js';
@@ -20,11 +20,11 @@ import type { ExpressionCheckBudget } from '../../../../../src/newspaper/editori
 /** Build a small catalogue with one front page, one section and two designs. */
 function createConfig(): EditorialConfig {
   return editorialConfigSchema.parse({
-    version: 1,
+    version: editorialConfigVersion,
     defaults: {
       frequencyStandardTurns: 5, llmEnabled: false, publicationTitle: 'Publication',
-      maxItems: 4, frontPageItems: 2, importanceMax: 100, decayPerTurn: 0.9,
-      seriesWeight: 1, noveltyBonus: 1, varietyBonus: 1, designStickiness: 0.8,
+      maxItems: 8, importanceMax: 100, decayPerTurn: 0.9,
+      seriesWeight: 1, noveltyBonus: 1, varietyBonus: 1,
       feedback: { window: 50, series: 3, tag: 1, bound: 10 },
     },
     constants: { distances: {}, spans: { long: 40 }, sizes: {}, shares: {}, types: {}, shortcuts: {} },
@@ -34,26 +34,26 @@ function createConfig(): EditorialConfig {
       variants: [{ id: 'standard', headline: 'Headline', body: ['Body'], weight: { base: 1 } }],
     }],
     pages: [
-      { id: 'front', label: 'Front', tags: [], minimum: 1, order: 0, front: true },
-      { id: 'desk', label: 'Desk', tags: ['economy'], minimum: 1, order: 1 },
-      { id: 'unused', label: 'Unused', tags: ['international'], minimum: 1, order: 2 },
+      { id: 'front', label: 'Front', tags: [], order: 0, front: true },
+      { id: 'desk', label: 'Desk', tags: ['economy'], order: 1 },
+      { id: 'unused', label: 'Unused', tags: ['international'], order: 2 },
     ],
     designs: [
       {
         id: 'wire', version: '1', title: 'Design Title', motto: 'Design Motto', weight: { base: 1 },
         presentation: { schemaVersion: 1, rendererFamily: 'feed', tokens: { paperColor: '#ffffff' } },
         layouts: [
-          { id: 'ordinary', variant: 'ordinary', weight: { base: 1 } },
-          { id: 'breaking', variant: 'breaking', weight: { base: 1 } },
+          { id: 'ordinary', variant: 'ordinary', frontSlots: 4, sectionSlots: 2, weight: { base: 1 } },
+          { id: 'breaking', variant: 'breaking', frontSlots: 4, weight: { base: 1 } },
         ],
         pageLabels: { desk: 'Design Desk' },
       },
       {
-        id: 'victorian', version: '1', title: 'Other Title', weight: { base: 1 },
+        id: 'victorian', version: '1', title: 'Other Title', weight: { base: 0 },
         presentation: { schemaVersion: 1, rendererFamily: 'broadsheet', tokens: { paperColor: '#eeeecc' } },
         layouts: [
-          { id: 'broadsheet', variant: 'ordinary', weight: { base: 1 } },
-          { id: 'war-edition', variant: 'breaking', weight: { base: 1 } },
+          { id: 'broadsheet', variant: 'ordinary', frontSlots: 4, sectionSlots: 2, weight: { base: 1 } },
+          { id: 'war-edition', variant: 'breaking', frontSlots: 4, weight: { base: 1 } },
         ],
       },
     ],
@@ -218,13 +218,9 @@ describe('masthead presentation', () => {
       checkId: 'check/10',
       issueId: 'issue/10', campaignId: 'campaign', timelineId: 'branch',
       receiver: { playerId: 0, label: 'France' }, turn: 10,
-      selected: [
-        createCandidate(config, 'first'),
-        createCandidate(config, 'second'),
-        createCandidate(config, 'third'),
-      ],
+      selected: Array.from({ length: 8 }, (_, index) => createCandidate(config, String(index))),
       state: createInitialPublicationState(), config, weights: await weightsFor(config),
-      proseRandom: () => 0, presentationRandom: () => 0,
+      proseRandom: () => 0,
       terms: new Map([
         ['civilization', { value: 'France', sources: [titleSource] }],
         ['frontName', { value: 'Rule Front', sources: [frontSource] }],
@@ -252,13 +248,9 @@ describe('masthead presentation', () => {
       checkId: 'check/10',
       issueId: 'issue/10', campaignId: 'campaign', timelineId: 'branch',
       receiver: { playerId: 0, label: 'France' }, turn: 10,
-      selected: [
-        createCandidate(config, 'first'),
-        createCandidate(config, 'second'),
-        createCandidate(config, 'third'),
-      ],
+      selected: Array.from({ length: 6 }, (_, index) => createCandidate(config, String(index))),
       state: createInitialPublicationState(), config, weights: await weightsFor(config),
-      proseRandom: () => 0, presentationRandom: () => 0,
+      proseRandom: () => 0,
       selectMasthead: async () => undefined,
     }))!;
     expect(result.issue.publication).toMatchObject({ title: 'Design Title', motto: 'Design Motto' });

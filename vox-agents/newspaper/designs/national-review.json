@@ -26,9 +26,9 @@
       }
     },
     "layouts": [
-      { "id": "picture-weekly", "variant": "ordinary", "weight": { "base": 10 } },
-      { "id": "special-edition", "variant": "breaking", "weight": { "base": 10 } },
-      { "id": "in-figures", "variant": "analysis", "weight": { "base": 3 } }
+      { "id": "picture-weekly", "variant": "ordinary", "frontSlots": 5, "sectionSlots": 3, "weight": { "base": 10 } },
+      { "id": "special-edition", "variant": "breaking", "frontSlots": 5, "weight": { "base": 10 } },
+      { "id": "in-figures", "variant": "analysis", "frontSlots": 5, "sectionSlots": 3, "weight": { "base": 3 } }
     ],
     "pageLabels": {
       "front": "Cover",

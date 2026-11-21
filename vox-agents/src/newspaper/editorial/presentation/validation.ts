@@ -5,7 +5,7 @@ import type { EditorialConfig } from '../config/schema.js';
 import type { PresentationWeights } from './eligibility.js';
 import type { PresentationResult } from './issue.js';
 
-/** Enforce canonical series, threat prominence, evidence dates and configured page minimums. */
+/** Enforce canonical series, threat prominence, evidence dates and exact layout slots. */
 export function validateEditorialIssue(
   { issue, itemCandidates: candidates, layouts, variants }: PresentationResult,
   config: EditorialConfig,
@@ -27,8 +27,6 @@ export function validateEditorialIssue(
       throw new Error('Every article requires an eligible authored candidate.');
     if (candidate.sources.some((source) => source.turn > parsed.cutoff.turn))
       throw new Error('Article evidence exceeds the cutoff.');
-    if (!parsed.pages.some((page) => page.itemIds.includes(item.id)))
-      throw new Error('Every article must be displayed.');
     for (const key of item.seriesKeys) {
       if (seenSeries.has(key)) throw new Error('A series may occupy only one canonical item.');
       seenSeries.add(key);
@@ -52,8 +50,8 @@ export function validateEditorialIssue(
     if (!layout || layout.variant !== page.layout || (weights.get(layout) ?? 0) <= 0 ||
         (layout.variant === 'breaking') !== isBreaking)
       throw new Error('Unknown or ineligible layout.');
-    if (!definition.front && page.itemIds.length < definition.minimum)
-      throw new Error('Section content is below its minimum.');
+    if (page.itemIds.length !== (definition.front ? layout.frontSlots : layout.sectionSlots))
+      throw new Error(`Page ${page.id} does not fill its configured layout slots.`);
     if (
       !definition.front &&
       page.itemIds.some(

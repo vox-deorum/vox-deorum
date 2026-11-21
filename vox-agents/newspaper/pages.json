@@ -3,7 +3,6 @@
     "id": "front",
     "label": "The Record",
     "tags": [],
-    "minimum": 1,
     "order": 0,
     "front": true
   },
@@ -13,7 +12,6 @@
     "tags": [
       "domestic"
     ],
-    "minimum": 2,
     "order": 1
   },
   {
@@ -23,7 +21,6 @@
       "economy",
       "trade"
     ],
-    "minimum": 1,
     "order": 2
   },
   {
@@ -32,7 +29,6 @@
     "tags": [
       "international"
     ],
-    "minimum": 2,
     "order": 3
   }
 ]

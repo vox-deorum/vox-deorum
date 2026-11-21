@@ -1,4 +1,4 @@
-/** Stable configuration serialization and independent deterministic editorial streams. */
+/** Stable configuration serialization and independent deterministic editorial draws. */
 import { createHash } from 'node:crypto';
 import seedrandom from 'seedrandom';
 import type { EditorialConfig } from '../config/schema.js';
@@ -38,17 +38,9 @@ export function pressRunLayoutDraw(checkId: string, designId: string, pageId: st
   return stableDraw(checkId, 'press-run-layout', JSON.stringify([designId, pageId]));
 }
 
-/** Bind independent streams only to the configuration sections that affect their choices. */
-export function createEditorialStreams(
-  identitySeed: string,
-  config: EditorialConfig
-): { prose: () => number; presentation: () => number } {
-  return {
-    prose: seedrandom(
-      `${identitySeed}/prose/${configurationHash({ templates: config.templates, triggers: config.triggers })}`
-    ),
-    presentation: seedrandom(
-      `${identitySeed}/presentation/${configurationHash({ designs: config.designs, pages: config.pages })}`
-    ),
-  };
+/** Bind the prose seed only to the configuration sections that affect authored text. */
+export function createProseDraw(identitySeed: string, config: EditorialConfig): () => number {
+  return seedrandom(
+    `${identitySeed}/prose/${configurationHash({ templates: config.templates, triggers: config.triggers })}`
+  );
 }

@@ -11,10 +11,11 @@ describe("newspaper issue contracts", () => {
     const { presentation: _presentation, ...publication } = issue.publication;
     expect(issueDocumentSchema.safeParse({ ...issue, publication }).success).toBe(false);
     expect(issueDocumentSchema.safeParse({ ...issue, schemaVersion: 1 }).success).toBe(false);
+    expect(issueDocumentSchema.safeParse({ ...issue, schemaVersion: 2 }).success).toBe(false);
     expect(issueDocumentSchema.safeParse({ ...issue, schemaVersion: 99 }).success).toBe(false);
   });
 
-  it("should keep an optional publication motto while accepting older issues without one", () => {
+  it("should keep a publication motto when present", () => {
     const issue = createNewspaperIssue();
     const { motto: _motto, ...publication } = issue.publication;
     expect(issueDocumentSchema.parse({ ...issue, publication }).publication.motto).toBeUndefined();
@@ -26,10 +27,18 @@ describe("newspaper issue contracts", () => {
     }).success).toBe(false);
   });
 
-  it("should allow sharing an item across pages but reject repeats within a page", () => {
+  it("should reject repeats within a page and across pages", () => {
     const issue = createNewspaperIssue();
-    expect(issueDocumentSchema.parse(issue).pages).toHaveLength(2);
-    issue.pages[0].itemIds.push(issue.pages[0].itemIds[0]);
+    const [front, analysis] = issue.pages;
+    front.itemIds.push(front.itemIds[0]);
+    expect(() => issueDocumentSchema.parse(issue)).toThrow();
+    analysis.itemIds.push(front.itemIds.pop()!);
+    expect(() => issueDocumentSchema.parse(issue)).toThrow();
+  });
+
+  it("should reject an unplaced item", () => {
+    const issue = createNewspaperIssue();
+    issue.pages.pop();
     expect(() => issueDocumentSchema.parse(issue)).toThrow();
   });
 
@@ -78,7 +87,7 @@ describe("newspaper issue contracts", () => {
           target,
           summary: [[{ type: "text", text: "Earlier observations" }]],
         },
-      }],
+      }, issue.items[1]],
     };
     expect(issueDocumentSchema.safeParse(input).success).toBe(false);
   });
@@ -93,7 +102,7 @@ describe("newspaper issue contracts", () => {
     { assetId: "wire.port", altText: 42 },
   ])("should reject an image without a non-empty asset identifier and alternative text: %j", (image) => {
     const issue = createNewspaperIssue();
-    const input = { ...issue, items: [{ ...issue.items[0], image }] };
+    const input = { ...issue, items: [{ ...issue.items[0], image }, issue.items[1]] };
     expect(issueDocumentSchema.safeParse(input).success).toBe(false);
   });
 

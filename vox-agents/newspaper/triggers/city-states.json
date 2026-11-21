@@ -6,10 +6,11 @@
       "incident.kind == 'war'",
       "incident.knows('role') && incident.role === 'none'",
       "incident.knows('target') && incident.target.knows('cityState') && incident.target.cityState === true",
+      "incident.target.knows('name') && incident.knows('initiator') && incident.initiator.knows('name')",
       "incident.target.knows('at') && turn - incident.turn < long",
       "incident.target.at(turn - incident.turn + 1).is.alliedCityState"
     ],
-    "values": { "ally": "incident.knows('target') && incident.target.knows('name') ? incident.target.name : null", "aggressor": "incident.knows('initiator') && incident.initiator.knows('name') ? incident.initiator.name : null" },
+    "values": { "ally": "incident.target.name", "aggressor": "incident.initiator.name" },
     "importance": 80,
     "tags": ["politics", "military"]
   },
@@ -19,6 +20,7 @@
     "event": "CityCaptureComplete",
     "when": [
       "event.knows('oldOwner') && event.knows('newOwner')",
+      "event.oldOwner.knows('name') && event.newOwner.knows('name')",
       "event.oldOwner.knows('cityState') && event.oldOwner.cityState === true",
       "event.newOwner.knows('major') && event.newOwner.major === true && event.newOwner.self === false",
       "event.knows('isConquest') && event.isConquest === true",
@@ -26,8 +28,8 @@
       "event.oldOwner.at(turn - event.turn + 1).is.alliedCityState"
     ],
     "values": {
-      "cityState": "event.oldOwner.knows('name') ? event.oldOwner.name : null",
-      "captor": "event.newOwner.knows('name') ? event.newOwner.name : null",
+      "cityState": "event.oldOwner.name",
+      "captor": "event.newOwner.name",
       "cityName": "event.knows('city') && event.city.knows('name') ? event.city.name : null",
       "distance": "event.knows('distance') ? event.distance.own : null"
     },
@@ -40,9 +42,10 @@
     "subject": "event",
     "event": "SetAlly",
     "when": [
-      "event.oldAllyPlayer.self",
-      "event.newAllyPlayer.is.rival",
-      "event.minorPlayer.distance <= nearby"
+      "event.knows('oldAllyPlayer') && event.oldAllyPlayer.self",
+      "event.knows('newAllyPlayer') && event.newAllyPlayer.knows('name') && event.newAllyPlayer.is.rival",
+      "event.knows('minorPlayer') && event.minorPlayer.knows('name')",
+      "event.minorPlayer.knows('distance') && event.minorPlayer.distance <= nearby"
     ],
     "values": { "cityState": "event.minorPlayer.name", "rival": "event.newAllyPlayer.name" },
     "importance": "65"
@@ -53,10 +56,10 @@
     "event": "SetAlly",
     "when": [
       "event.knows('newAllyPlayer') && event.newAllyPlayer.self === true",
-      "event.knows('minorPlayer')",
+      "event.knows('minorPlayer') && event.minorPlayer.knows('name')",
       "!(event.knows('oldAllyPlayer') && event.oldAllyPlayer.self)"
     ],
-    "values": { "cityState": "event.minorPlayer.knows('name') ? event.minorPlayer.name : null", "distance": "event.minorPlayer.knows('distance') ? event.minorPlayer.distance : null", "replaced": "event.knows('oldAllyPlayer') && event.oldAllyPlayer.knows('name') ? event.oldAllyPlayer.name : null" },
+    "values": { "cityState": "event.minorPlayer.name", "distance": "event.minorPlayer.knows('distance') ? event.minorPlayer.distance : null", "replaced": "event.knows('oldAllyPlayer') && event.oldAllyPlayer.knows('name') ? event.oldAllyPlayer.name : null" },
     "importance": "distance !== null && distance <= nearby ? 70 : 60",
     "tags": ["politics", "international"]
   },
@@ -67,10 +70,10 @@
     "when": [
       "event.knows('oldAllyPlayer') && event.oldAllyPlayer.self === true",
       "event.knows('newAllyPlayerId') && event.newAllyPlayerId === -1",
-      "event.knows('minorPlayer')"
+      "event.knows('minorPlayer') && event.minorPlayer.knows('name')"
     ],
     "values": {
-      "cityState": "event.minorPlayer.knows('name') ? event.minorPlayer.name : null",
+      "cityState": "event.minorPlayer.name",
       "distance": "event.minorPlayer.knows('distance') ? event.minorPlayer.distance : null"
     },
     "importance": "distance !== null && distance <= nearby ? 60 : 50",
@@ -83,12 +86,13 @@
     "when": [
       "event.knows('oldAllyPlayer') && event.oldAllyPlayer.self === true",
       "event.knows('newAllyPlayer') && event.newAllyPlayer.self === false && event.newAllyPlayer.knows('major') && event.newAllyPlayer.major === true",
+      "event.newAllyPlayer.knows('name')",
       "event.newAllyPlayer.knows('friend') && event.newAllyPlayer.friend === true",
-      "event.knows('minorPlayer') && event.minorPlayer.knows('distance') && event.minorPlayer.distance <= nearby"
+      "event.knows('minorPlayer') && event.minorPlayer.knows('name') && event.minorPlayer.knows('distance') && event.minorPlayer.distance <= nearby"
     ],
     "values": {
-      "cityState": "event.minorPlayer.knows('name') ? event.minorPlayer.name : null",
-      "friend": "event.newAllyPlayer.knows('name') ? event.newAllyPlayer.name : null",
+      "cityState": "event.minorPlayer.name",
+      "friend": "event.newAllyPlayer.name",
       "distance": "event.minorPlayer.distance"
     },
     "importance": "distance <= adjacent ? 60 : 55",
@@ -104,7 +108,7 @@
       "event.knows('isNowFriend') && typeof event.isNowFriend === 'boolean'"
     ],
     "values": {
-      "cityState": "event.minorPlayer.knows('name') ? event.minorPlayer.name : null",
+      "cityState": "event.minorPlayer.name",
       "began": "event.isNowFriend === true",
       "friendship": "event.knows('newFriendship') && Number.isFinite(event.newFriendship) ? event.newFriendship : null"
     },
@@ -115,7 +119,7 @@
     "id": "city-state-quest-countdown-disappeared",
     "subject": "player",
     "when": [
-      "player.knows('cityState') && player.cityState === true",
+      "player.knows('cityState') && player.cityState === true && player.knows('name')",
       "player.knows('questDeadlines') && Array.isArray(player.questDeadlines)",
       "player.knows('questObservationTurn') && Number.isSafeInteger(player.questObservationTurn)",
       "player.questObservationTurn <= turn && turn - player.questObservationTurn <= 1",
@@ -127,7 +131,7 @@
     ],
     "values": {
       "previousDeadline": "Math.min(...player.before.questDeadlines.filter(deadline => Number.isSafeInteger(deadline) && deadline > turn && !player.questDeadlines.includes(deadline)))",
-      "cityState": "player.knows('name') ? player.name : null"
+      "cityState": "player.name"
     },
     "importance": 25,
     "tags": ["politics", "international"]
@@ -136,7 +140,7 @@
     "id": "city-state-quest-deadline-approaching",
     "subject": "player",
     "when": [
-      "player.knows('cityState') && player.cityState === true",
+      "player.knows('cityState') && player.cityState === true && player.knows('name')",
       "player.knows('questDeadlines') && Array.isArray(player.questDeadlines)",
       "player.knows('questObservationTurn') && Number.isSafeInteger(player.questObservationTurn)",
       "player.questObservationTurn <= turn && turn - player.questObservationTurn <= 1",
@@ -144,7 +148,7 @@
     ],
     "values": {
       "turnsLeft": "(() => { const next = Math.min(...player.questDeadlines.filter(deadline => Number.isSafeInteger(deadline) && deadline >= turn && deadline <= turn + 3)); return next - turn; })()",
-      "cityState": "player.knows('name') ? player.name : null"
+      "cityState": "player.name"
     },
     "importance": 45,
     "tags": ["politics", "international"]
@@ -153,7 +157,7 @@
     "id": "city-state-timed-quest-observed",
     "subject": "player",
     "when": [
-      "player.knows('cityState') && player.cityState === true",
+      "player.knows('cityState') && player.cityState === true && player.knows('name')",
       "player.knows('questDeadlines') && Array.isArray(player.questDeadlines)",
       "player.knows('questObservationTurn') && Number.isSafeInteger(player.questObservationTurn)",
       "player.questObservationTurn <= turn && turn - player.questObservationTurn <= 1",
@@ -163,7 +167,7 @@
     ],
     "values": {
       "turnsLeft": "Math.min(...player.questDeadlines.filter(deadline => deadline > turn + 3 && !player.before.questDeadlines.includes(deadline))) - turn",
-      "cityState": "player.knows('name') ? player.name : null"
+      "cityState": "player.name"
     },
     "importance": 35,
     "tags": ["politics", "international"]
@@ -174,12 +178,13 @@
     "event": "SetAlly",
     "when": [
       "event.knows('newAllyPlayer') && event.newAllyPlayer.major && !event.newAllyPlayer.self",
-      "event.knows('minorPlayer') && event.minorPlayer.knows('distance') && event.minorPlayer.distance <= neighboring",
+      "event.newAllyPlayer.knows('name')",
+      "event.knows('minorPlayer') && event.minorPlayer.knows('name') && event.minorPlayer.knows('distance') && event.minorPlayer.distance <= neighboring",
       "!(event.knows('oldAllyPlayer') && event.oldAllyPlayer.self)"
     ],
     "values": {
-      "cityState": "event.minorPlayer.knows('name') ? event.minorPlayer.name : null",
-      "civilization": "event.newAllyPlayer.knows('name') ? event.newAllyPlayer.name : null",
+      "cityState": "event.minorPlayer.name",
+      "civilization": "event.newAllyPlayer.name",
       "distance": "event.minorPlayer.distance",
       "replaced": "event.knows('oldAllyPlayer') && event.oldAllyPlayer.knows('name') ? event.oldAllyPlayer.name : null"
     },
@@ -193,12 +198,13 @@
       "incident.kind == 'war'",
       "incident.knows('role') && incident.role === 'none'",
       "incident.knows('target') && incident.target.knows('cityState') && incident.target.cityState === true",
+      "incident.target.knows('name') && incident.knows('initiator') && incident.initiator.knows('name')",
       "incident.target.knows('at') && turn - incident.turn < long",
       "incident.target.at(turn - incident.turn + 1).is.friendlyCityState"
     ],
     "values": {
-      "cityState": "incident.knows('target') && incident.target.knows('name') ? incident.target.name : null",
-      "aggressor": "incident.knows('initiator') && incident.initiator.knows('name') ? incident.initiator.name : null"
+      "cityState": "incident.target.name",
+      "aggressor": "incident.initiator.name"
     },
     "importance": 60,
     "tags": ["politics", "military", "international"]
@@ -209,6 +215,7 @@
     "event": "CityCaptureComplete",
     "when": [
       "event.knows('oldOwner') && event.knows('newOwner')",
+      "event.oldOwner.knows('name') && event.newOwner.knows('name')",
       "event.oldOwner.knows('cityState') && event.oldOwner.cityState === true",
       "event.newOwner.knows('major') && event.newOwner.major === true && event.newOwner.self === false",
       "event.knows('isConquest') && event.isConquest === true",
@@ -216,8 +223,8 @@
       "event.oldOwner.at(turn - event.turn + 1).is.friendlyCityState"
     ],
     "values": {
-      "cityState": "event.oldOwner.knows('name') ? event.oldOwner.name : null",
-      "captor": "event.newOwner.knows('name') ? event.newOwner.name : null",
+      "cityState": "event.oldOwner.name",
+      "captor": "event.newOwner.name",
       "cityName": "event.knows('city') && event.city.knows('name') ? event.city.name : null",
       "distance": "event.knows('distance') ? event.distance.own : null"
     },

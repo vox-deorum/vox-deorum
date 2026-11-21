@@ -7,7 +7,7 @@ import { replayStateSchema, replayCheckSchema } from '../contracts/replay.js';
 import { publicationStateSchema, type PublicationState } from '../contracts/publication.js';
 
 /** Offline output schema version written to SQLite `user_version`. */
-const offlineSchemaVersion = 5;
+const offlineSchemaVersion = 6;
 
 const checkpointSchema = z.object({ session: replayStateSchema, publication: publicationStateSchema, configuration: z.unknown().optional() });
 export type ReplayCheckpoint = z.infer<typeof checkpointSchema>;
@@ -19,7 +19,7 @@ export class ReplayStoreConflictError extends Error {}
 /** Refuse source aliases, symlinks and existing hardlinks before creating an output file. */
 export function resolveReplayOutput(sourcePath: string, outputPath?: string): string {
   const source = realpathSync(sourcePath);
-  const output = path.resolve(outputPath ?? path.join(process.cwd(), '.tmp', 'newspaper', 'replays.sqlite'));
+  const output = path.resolve(outputPath ?? path.join(process.cwd(), '.tmp', 'newspaper', `replays-v${offlineSchemaVersion}.sqlite`));
   const sourceStat = statSync(source);
   if (existsSync(output)) {
     const outputStat = statSync(output);
@@ -47,7 +47,7 @@ export class ReplayStore {
       const version = this.db.pragma('user_version', { simple: true });
       const tables = this.db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as { name: string }[];
       if (version !== 0 && version !== offlineSchemaVersion) {
-        throw new Error('Unsupported offline newspaper database version. Choose a new output path to start a fresh run.');
+        throw new Error('Unsupported offline newspaper database version. Regenerate from the same MCP recording using a fresh newspaper output path.');
       }
       if (version === 0 && tables.length) throw new Error('The output path contains a different database.');
       if (version !== 0 && !['OfflineReplayRuns', 'OfflineReplayChecks', 'OfflineReplayIssues'].every(name => tables.some(table => table.name === name))) {

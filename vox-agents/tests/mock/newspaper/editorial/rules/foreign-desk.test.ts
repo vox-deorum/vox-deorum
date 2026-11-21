@@ -5,6 +5,7 @@ import { runEditorialCheck } from '../../../../../src/newspaper/editorial/check.
 import { loadEditorialConfig } from '../../../../../src/newspaper/editorial/config/load.js';
 import { buildNewspaperFacts } from '../../../../../src/newspaper/editorial/facts/index.js';
 import { context, event, evidence, relationship, scores, snapshot } from '../../../../helpers/newspaper-diplomacy.js';
+import { withEditionBriefs } from '../../../../helpers/newspaper-briefs.js';
 
 /** Supply a public city observation with a stable identity. */
 function city(id: number, turn: number, owner: number, name: string, x: number, wonders: string[] = []): NewspaperSnapshot {
@@ -38,11 +39,10 @@ async function publish(input: NewspaperEvidence, cities: NewspaperSnapshot[] = [
       events: input.events, gaps: [],
     },
   };
-  const config = await loadEditorialConfig();
-  config.defaults.minItems = 1;
+  const { evidence, config } = withEditionBriefs(projected, await loadEditorialConfig());
   return runEditorialCheck({
     campaignId: 'fixture', timelineId: 'foreign-desk', receiver: { playerId: 0, label: 'France' },
-    evidence: projected, facts: buildNewspaperFacts(projected, { playerIdentities }),
+    evidence, facts: buildNewspaperFacts(evidence, { playerIdentities }),
     config, context, speedMultiplier: 1, state: createInitialPublicationState(),
   });
 }
@@ -133,6 +133,18 @@ describe('stock foreign desk', () => {
     expect(fired(result, 'city-state-ally-lost')).toEqual(['event/1']);
   });
 
+  it('should report an election failure only when the city-state has a name', async () => {
+    const outcome = { PlayerID: 0, InfluenceChange: -8 };
+    const result = await publish(evidence([
+      event('ElectionResultFailure', 1, 9, 0, 10, { ...outcome, CityState: 'Geneva' }),
+      event('ElectionResultFailure', 2, 9, 0, 11, outcome),
+      event('ElectionResultFailure', 3, 9, 0, 12, { ...outcome, CityState: '   ' }),
+    ], [snapshot(0, 8, [])]));
+
+    expect(fired(result, 'election-operation')).toEqual(['event/1']);
+    expectStory(result, 'election-operation', ['Geneva']);
+  });
+
   it('should use the prewar relationships for attacks on friends, allies and city-state captures', async () => {
     const result = await publish(evidence([
       ...[10, 11, 12, 13].map((target, index) => event('DeclareWar', index + 1, 9, 1, target, { IsAggressor: true })),
@@ -157,6 +169,22 @@ describe('stock foreign desk', () => {
     expect(fired(result, 'ally-city-state-captured')).toEqual(['event/5']);
     expect(fired(result, 'friendly-city-state-captured')).toEqual(['event/6']);
     expect(fired(result, 'war-between-friends')).toEqual(['incident/war/9/9']);
+  });
+
+  it('should skip a city-state capture when the captor is visible but unnamed', async () => {
+    const result = await publish(evidence([
+      event('CityCaptureComplete', 1, 9, 6, 10, { OldOwnerID: 10, NewOwnerID: 6, IsConquest: true }),
+      event('CityCaptureComplete', 2, 9, 1, 11, { OldOwnerID: 11, NewOwnerID: 1, IsConquest: true }),
+    ], [
+      snapshot(0, 8, [relationship(1), relationship(6), relationship(10, 'peace', { ally: true }), relationship(11, 'peace', { ally: true })]),
+      snapshot(6, 8, []),
+      snapshot(10, 8, [], { majorAllyPlayerID: 0 }),
+      snapshot(11, 8, [], { majorAllyPlayerID: 0 }),
+    ]));
+
+    expect(fired(result, 'ally-city-state-captured')).toEqual(['event/2']);
+    expect(result.decision.triggerAudit.find(entry => entry.rule === 'ally-city-state-captured')?.subjects)
+      .toContainEqual(expect.objectContaining({ subject: 'event/1', outcome: 'false' }));
   });
 
   it('should distinguish outgoing and incoming trade losses from our own plunder', async () => {

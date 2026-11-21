@@ -21,7 +21,8 @@
     "window": "recent",
     "when": [
       "city.foreign",
-      "city.knows('owner') && city.owner.knows('cityState') && city.owner.cityState === true",
+      "city.knows('name')",
+      "city.knows('owner') && city.owner.knows('cityState') && city.owner.cityState === true && city.owner.knows('name')",
       "city.knows('distance') && city.distance.knows('own') && city.distance.own > neighboring",
       "city.knows('majorityReligion') && typeof city.majorityReligion === 'string' && city.majorityReligion.length > 0",
       "city.knows('before') && city.before.knows('majorityReligion')",
@@ -29,7 +30,7 @@
       "self.knows('foundedReligion') && typeof self.foundedReligion === 'string' && self.foundedReligion === city.majorityReligion",
       "city.conversions.some(c => c.knows('religion') && c.religion === city.majorityReligion)"
     ],
-    "values": { "cityState": "city.knows('owner') && city.owner.knows('name') ? city.owner.name : null", "religion": "city.majorityReligion" },
+    "values": { "cityState": "city.owner.name", "religion": "city.majorityReligion" },
     "importance": 55,
     "tags": ["politics", "international"]
   },
@@ -39,7 +40,8 @@
     "window": "recent",
     "when": [
       "city.knows('foreign') && city.foreign === true",
-      "city.knows('owner') && city.owner.major === true",
+      "city.knows('name')",
+      "city.knows('owner') && city.owner.major === true && city.owner.knows('name')",
       "self.is.hasFoundedReligion",
       "city.knows('majorityReligion') && city.majorityReligion === self.foundedReligion",
       "city.knows('before') && city.before.knows('majorityReligion')",
@@ -48,8 +50,8 @@
       "city.conversions.some(c => c.knows('religion') && c.religion === city.majorityReligion)"
     ],
     "values": {
-      "cityName": "city.knows('name') ? city.name : null",
-      "civilization": "city.owner.knows('name') ? city.owner.name : null",
+      "cityName": "city.name",
+      "civilization": "city.owner.name",
       "religion": "city.majorityReligion",
       "distance": "city.distance.own"
     },
@@ -61,11 +63,11 @@
     "subject": "event",
     "event": ["ReligionEnhanced", "ReligionReformed"],
     "when": [
-      "event.knows('player') && event.player.self === false && event.player.knows('major') && event.player.major === true",
+      "event.knows('player') && event.player.self === false && event.player.knows('major') && event.player.major === true && event.player.knows('name')",
       "event.knows('religion') && typeof event.religion === 'string' && event.religion.length > 0"
     ],
     "values": {
-      "civilization": "event.player.knows('name') ? event.player.name : null",
+      "civilization": "event.player.name",
       "religion": "event.religion",
       "stage": "event.type === 'ReligionReformed' ? 'reformed' : 'enhanced'"
     },
@@ -77,14 +79,14 @@
     "subject": "player",
     "window": "medium",
     "when": [
-      "!player.self && player.knows('major') && player.major === true",
+      "!player.self && player.knows('major') && player.major === true && player.knows('name')",
       "player.is.hasMajorityReligion",
       "player.knows('before') && player.before.knows('majorityReligion')",
       "(player.before.majorityReligion === null || player.before.majorityReligion === -1 || player.before.majorityReligion === '' || (typeof player.before.majorityReligion === 'string' && player.before.majorityReligion.length > 0 && player.before.majorityReligion !== player.majorityReligion))",
       "self.knows('foundedReligion') && typeof self.foundedReligion === 'string' && self.foundedReligion === player.majorityReligion"
     ],
     "values": {
-      "civilization": "player.knows('name') ? player.name : null",
+      "civilization": "player.name",
       "religion": "player.majorityReligion"
     },
     "importance": 65,
@@ -95,11 +97,11 @@
     "subject": "event",
     "event": "ReligionFounded",
     "when": [
-      "event.knows('player') && !event.player.self && event.player.major",
+      "event.knows('player') && !event.player.self && event.player.major && event.player.knows('name')",
       "event.knows('religion') && typeof event.religion === 'string' && event.religion.length > 0"
     ],
     "values": {
-      "civilization": "event.player.knows('name') ? event.player.name : null",
+      "civilization": "event.player.name",
       "religion": "event.religion",
       "holyCity": "event.knows('holyCity') && event.holyCity.knows('name') ? event.holyCity.name : null"
     },
@@ -128,7 +130,7 @@
     "id": "neighbor-majority-faith-changed",
     "subject": "player",
     "when": [
-      "!player.self && player.major && player.is.nearby",
+      "!player.self && player.major && player.is.nearby && player.knows('name')",
       "player.is.hasMajorityReligion",
       "player.knows('before') && player.before.knows('majorityReligion') && typeof player.before.majorityReligion === 'string' && player.before.majorityReligion.length > 0",
       "player.majorityReligion !== player.before.majorityReligion",
@@ -136,7 +138,7 @@
       "!(self.knows('majorityReligion') && self.majorityReligion === player.majorityReligion)"
     ],
     "values": {
-      "civilization": "player.knows('name') ? player.name : null",
+      "civilization": "player.name",
       "religion": "player.majorityReligion",
       "former": "player.before.majorityReligion"
     },

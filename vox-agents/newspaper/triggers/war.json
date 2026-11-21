@@ -180,14 +180,14 @@
       "event.knows('isConquest') && event.isConquest === true",
       "event.knows('oldOwner') && event.knows('newOwner')",
       "event.oldOwner.self === false && event.newOwner.self === false",
-      "event.oldOwner.knows('major') && event.oldOwner.major === true",
-      "event.newOwner.knows('major') && event.newOwner.major === true",
+      "event.oldOwner.knows('major') && event.oldOwner.major === true && event.oldOwner.knows('name')",
+      "event.newOwner.knows('major') && event.newOwner.major === true && event.newOwner.knows('name')",
       "event.knows('distance') && event.distance.own > nearby"
     ],
     "values": {
       "cityName": "event.knows('city') && event.city.knows('name') ? event.city.name : null",
-      "loser": "event.oldOwner.knows('name') ? event.oldOwner.name : null",
-      "winner": "event.newOwner.knows('name') ? event.newOwner.name : null",
+      "loser": "event.oldOwner.name",
+      "winner": "event.newOwner.name",
       "distance": "event.distance.own"
     },
     "importance": "Math.max(50, 70 - distance)",
@@ -494,9 +494,11 @@
     "subject": "incident",
     "when": [
       "incident.kind == 'war'",
-      "incident.knows('role') && incident.role != 'none'"
+      "incident.knows('role') && incident.role != 'none'",
+      "incident.knows('initiator') && incident.initiator.knows('name')",
+      "incident.knows('target') && incident.target.knows('name')"
     ],
-    "values": { "role": "incident.role", "reason": "incident.knows('reason') ? incident.reason : null", "initiator": "incident.knows('initiator') && incident.initiator.knows('name') ? incident.initiator.name : null", "target": "incident.knows('target') && incident.target.knows('name') ? incident.target.name : null", "hostileAllies": "(() => { const names = incident.hostileCityStateAllies.filter(entry => entry.player.knows('name')).map(entry => entry.player.name); return names.length ? ' Hostile city-state allies: ' + names.join(', ') + '.' : ''; })()" },
+    "values": { "role": "incident.role", "reason": "incident.knows('reason') ? incident.reason : null", "initiator": "incident.initiator.name", "target": "incident.target.name", "hostileAllies": "(() => { const names = incident.hostileCityStateAllies.filter(entry => entry.player.knows('name')).map(entry => entry.player.name); return names.length ? ' Hostile city-state allies: ' + names.join(', ') + '.' : ''; })()" },
     "importance": "role == 'target' ? 95 : role == 'initiator' ? 85 : 75",
     "urgent": "role == 'target'",
     "tags": ["politics", "military"]

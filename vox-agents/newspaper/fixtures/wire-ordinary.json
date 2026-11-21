@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "issueId": "wire-ordinary-225",
   "campaignId": "fixture-campaign",
   "timelineId": "fixture-timeline-main",
@@ -26,13 +26,13 @@
       "id": "headlines",
       "label": "Headlines",
       "layout": "ordinary",
-      "itemIds": ["trade", "paris", "york"]
+      "itemIds": ["trade", "paris", "york", "reservoir"]
     },
     {
       "id": "economy",
       "label": "Economy",
       "layout": "ordinary",
-      "itemIds": ["trade", "york"]
+      "itemIds": ["convoy", "embassy"]
     }
   ],
   "items": [
@@ -148,6 +148,30 @@
         }
       ],
       "avatar": { "initials": "Y", "tone": "sage" }
+    },
+    {
+      "id": "reservoir",
+      "tags": ["domestic"],
+      "seriesKeys": [],
+      "headline": [{ "type": "text", "text": "Council approves a second reservoir" }],
+      "body": [[{ "type": "text", "text": "Surveyors marked higher ground for a new reservoir after the council approved the site. Work will start with the channel that feeds the old waterworks." }]],
+      "sourceNote": [{ "type": "text", "text": "The council minutes name the site and the first channel. They give no date for filling the new reservoir." }]
+    },
+    {
+      "id": "convoy",
+      "tags": ["international", "military", "economy"],
+      "seriesKeys": [],
+      "headline": [{ "type": "text", "text": "Northern convoy reaches the strait" }],
+      "body": [[{ "type": "text", "text": "The first grain ships have cleared the strait under escort. Their captains report that the crossing is open, though two merchant ships are still awaiting repairs." }]],
+      "sourceNote": [{ "type": "text", "text": "The captains reported arrival at the strait and named two ships held back for repairs." }]
+    },
+    {
+      "id": "embassy",
+      "tags": ["international", "economy"],
+      "seriesKeys": [],
+      "headline": [{ "type": "text", "text": "Border talks resume at the summer embassy" }],
+      "body": [[{ "type": "text", "text": "Envoys have returned to the summer embassy to discuss the boundary and reopen traffic through mountain passes. They will exchange maps before the next meeting." }]],
+      "sourceNote": [{ "type": "text", "text": "Both delegations confirmed they had returned and agreed to exchange maps." }]
     }
   ]
 }

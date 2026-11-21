@@ -21,9 +21,9 @@
       }
     },
     "layouts": [
-      { "id": "street-sheet", "variant": "ordinary", "weight": { "base": 10 } },
-      { "id": "late-handbill", "variant": "breaking", "weight": { "base": 10 } },
-      { "id": "printed-returns", "variant": "analysis", "weight": { "base": 3 } }
+      { "id": "street-sheet", "variant": "ordinary", "frontSlots": 5, "sectionSlots": 3, "weight": { "base": 10 } },
+      { "id": "late-handbill", "variant": "breaking", "frontSlots": 5, "weight": { "base": 10 } },
+      { "id": "printed-returns", "variant": "analysis", "frontSlots": 5, "sectionSlots": 3, "weight": { "base": 3 } }
     ],
     "pageLabels": { "front": "The Sheet", "home": "Local Notices", "abroad": "Foreign Notices" }
   }

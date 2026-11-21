@@ -1,4 +1,4 @@
-/** Combine selected original stories without changing the heuristic's coverage decisions. */
+/** Combine selected original stories while keeping a front page fillable. */
 import type { NewspaperSourceReference } from '../../../../../mcp-server/dist/newspaper/evidence.js';
 import type { RuleScalar } from '../../contracts/triggers.js';
 import type { CompiledEditorialExpressions, EditorialTerms } from '../config/expressions.js';
@@ -120,7 +120,7 @@ async function mergeCandidate(
   };
 }
 
-/** Apply merge anchors by priority, leaving originals intact unless an authored replacement is ready. */
+/** Apply merge anchors by priority, leaving originals intact unless the replacement keeps the front fillable. */
 export async function mergeSelectedStories(
   selected: EditorialCandidate[],
   candidates: readonly EditorialCandidate[],
@@ -129,6 +129,7 @@ export async function mergeSelectedStories(
   batch: MergeBatch,
   budget: ExpressionCheckBudget,
   published: ReadonlySet<string>,
+  frontFits: (readyCount: number, urgent: boolean) => boolean,
   terms?: EditorialTerms,
 ): Promise<EditorialCandidate[]> {
   const definitions = new Map(config.templates.flatMap(template => template.merge ? [[template.id, template.merge]] : []));
@@ -138,16 +139,22 @@ export async function mergeSelectedStories(
     return definition && !published.has(anchor.fingerprint) ? [{ anchor, definition }] : [];
   }).sort((a, b) => (b.definition.priority ?? 0) - (a.definition.priority ?? 0) || a.anchor.id.localeCompare(b.anchor.id));
   const consumed = new Map<string, EditorialCandidate>();
+  let readyCount = selected.length;
+  let urgent = selected.some(candidate => candidate.urgent);
   for (const { anchor, definition } of anchors) {
     if (consumed.has(anchor.id)) continue;
     const merged = await mergeCandidate(
       anchor, selected.filter(candidate => !consumed.has(candidate.id)), definition, compiled, batch, budget, terms,
     );
-    if (merged) merged.mergedCandidateIds!.forEach(id => consumed.set(id, merged));
+    if (!merged) continue;
+    const members = merged.mergedCandidateIds!;
+    const resultingCount = readyCount - members.length + 1;
+    // Every merged article inherits urgency from its members and can gain it from the anchor.
+    const resultingUrgency = urgent || merged.urgent;
+    if (!frontFits(resultingCount, resultingUrgency)) continue;
+    for (const id of members) consumed.set(id, merged);
+    readyCount = resultingCount;
+    urgent = resultingUrgency;
   }
-  const combined = [...new Set(selected.map(candidate => consumed.get(candidate.id) ?? candidate))];
-  // An anchor can introduce urgency even when none of its original members had it.
-  const firstUrgent = combined.findIndex(candidate => candidate.urgent);
-  if (firstUrgent > 0) combined.unshift(...combined.splice(firstUrgent, 1));
-  return combined;
+  return [...new Set(selected.map(candidate => consumed.get(candidate.id) ?? candidate))];
 }

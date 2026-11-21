@@ -17,7 +17,7 @@ describe('replay HTTP routes', () => {
   let session: ReplaySession;
   let host: Awaited<ReturnType<typeof startNewspaperHost>>;
   beforeEach(async () => {
-    recording = await createReplayRecording();
+    recording = await createReplayRecording('Epic', [6]);
     session = new ReplaySession();
     host = await startNewspaperHost({
       /** Exercise the same application injection used by the normal VD server. */

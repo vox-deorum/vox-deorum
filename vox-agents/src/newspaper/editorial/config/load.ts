@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { isRecord } from '../../../utils/guards.js';
 import { variantStyleKinds } from '../../contracts/style.js';
 import { prepareEditorialExpressions, type CompiledEditorialExpressions } from './expressions.js';
-import { editorialConfigSchema, type EditorialConfig } from './schema.js';
+import { editorialConfigSchema, editorialConfigVersion, type EditorialConfig } from './schema.js';
 
 /** Resolve built-in files from both source and installed dist directory layouts. */
 export function builtInCatalogueDirectory(): string {
@@ -204,7 +204,7 @@ async function loadMastheadRules(builtIn: string, directory?: string): Promise<u
 /** Load grouped built-ins and optional flat or grouped overrides, then validate together. */
 export async function loadEditorialConfig(directory?: string): Promise<EditorialConfig> {
   const builtIn = builtInCatalogueDirectory();
-  const result: Record<string, unknown> = { version: 1 };
+  const result: Record<string, unknown> = { version: editorialConfigVersion };
   for (const name of ['defaults', 'constants', 'triggers', 'templates', 'pages', 'designs', 'civicTerms']) {
     const grouped = name === 'triggers' || name === 'templates' || name === 'designs';
     const file = name === 'civicTerms' ? 'civic-terms' : name;

@@ -18,7 +18,8 @@ import { uniqueSources } from '../shared/sources.js';
 import {
   placeholderPattern, placeholderName, substitute, resolveLinkTarget, type EditorialCandidate
 } from '../selection/templates.js';
-import type { PresentationWeights } from './eligibility.js';
+import { fittingFrontLayouts, prepareFrontLayouts, type FrontLayouts, type PresentationWeights } from './eligibility.js';
+import { placeArticles } from './placement.js';
 import { resolveMasthead, resolvePrintableTermText, termTextSources } from './masthead.js';
 import type { MastheadRuleSelection } from './masthead-rules.js';
 
@@ -56,62 +57,17 @@ export function renderAuthoredText(
   return nodes.length ? nodes : [{ type: 'text', text }];
 }
 
-/** Require a printable masthead and both ordinary and breaking layouts for every eligible design. */
-function eligibleDesigns(
-  config: EditorialConfig,
-  weights: PresentationWeights,
-  terms: EditorialTerms,
-): EditorialDesign[] {
-  const eligible = config.designs.filter((design) =>
-    (weights.get(design) ?? 0) > 0 && resolveMasthead(design, terms) !== undefined
-  );
-  for (const design of eligible) {
-    for (const variant of ['ordinary', 'breaking'])
-      if (
-        !design.layouts.some(
-          (layout) => layout.variant === variant && (weights.get(layout) ?? 0) > 0
-        )
-      ) {
-        throw new Error(`Eligible design ${design.id} has no available ${variant} layout.`);
-      }
-  }
-  return eligible;
-}
-
-/** Choose a design using legacy stickiness and the original shared presentation draw. */
-export function chooseDesign(
-  config: EditorialConfig,
-  weights: PresentationWeights,
-  previousId: string | null,
-  random: () => number,
-  terms: EditorialTerms = new Map()
-): EditorialDesign | undefined {
-  const eligible = eligibleDesigns(config, weights, terms);
-  const strongest = Math.max(
-    0,
-    ...eligible.map((design) => weights.get(design)!)
-  );
-  const previous = eligible.find((design) => design.id === previousId);
-  if (
-    previous &&
-    weights.get(previous)! >= strongest * config.defaults.designStickiness
-  )
-    return previous;
-  return chooseWeighted(eligible, (design) => weights.get(design)!, random);
-}
-
 const protectedIssues = 3;
 const maximumIssues = 6;
 
 /** Keep a competitive incumbent through three issues and force it out after six when an alternative fits. */
 export function choosePressRunDesign(
-  config: EditorialConfig,
+  eligibleDesigns: readonly EditorialDesign[],
   weights: PresentationWeights,
   state: PublicationState,
   random: () => number,
-  terms: EditorialTerms = new Map(),
 ): { design: EditorialDesign | undefined; audit: DesignSelection } {
-  const eligible = eligibleDesigns(config, weights, terms);
+  const eligible = [...eligibleDesigns];
   // Use a fixed code point order so catalogue ordering and the process locale cannot change the draw.
   eligible.sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
   const strongest = Math.max(0, ...eligible.map((design) => weights.get(design)!));
@@ -170,22 +126,38 @@ export async function presentIssue(input: {
   config: EditorialConfig;
   weights: PresentationWeights;
   proseRandom: () => number;
-  presentationRandom: () => number;
+  fittingFronts?: FrontLayouts;
+  prepareProse?: (candidates: EditorialCandidate[]) => Promise<EditorialCandidate[]>;
   recordDesignSelection?: (audit: DesignSelection) => void;
   terms?: EditorialTerms;
   selectMasthead?: (design: EditorialDesign) => Promise<MastheadRuleSelection | undefined>;
 }): Promise<PresentationResult | undefined> {
   const { config, weights, state } = input;
   const terms = input.terms ?? new Map();
-  const pressRun = config.defaults.designSelection === 'pressRun';
-  const choice = pressRun
-    ? choosePressRunDesign(config, weights, state, () => pressRunDesignDraw(input.checkId), terms)
-    : undefined;
-  if (choice) input.recordDesignSelection?.(choice.audit);
-  const design = choice
-    ? choice.design
-    : chooseDesign(config, weights, state.previousDesignId, input.presentationRandom, terms);
-  if (!design || !input.selected.length) return undefined;
+  const fitting = input.fittingFronts ?? fittingFrontLayouts(
+    prepareFrontLayouts(config, weights, terms), input.selected.length, input.selected.some(candidate => candidate.urgent),
+  );
+  const { design, audit } = choosePressRunDesign([...fitting.keys()], weights, state, () => pressRunDesignDraw(input.checkId));
+  input.recordDesignSelection?.(audit);
+  if (!design) return undefined;
+  const frontPage = config.pages.find(page => page.front)!;
+  /** Draw each page independently so an omitted tab cannot affect later layouts. */
+  const pageDraw = (page: typeof frontPage) => pressRunLayoutDraw(input.checkId, design.id, page.id);
+  /** Use the precomputed positive weights for this design's layout choices. */
+  const layoutWeight = (layout: EditorialDesign['layouts'][number]) => weights.get(layout) ?? 0;
+  const frontLayout = chooseWeighted(fitting.get(design)!, layoutWeight, () => pageDraw(frontPage))!;
+  const placement = placeArticles({
+    entries: input.selected,
+    frontPage,
+    frontLayout,
+    sectionPages: config.pages.filter(page => (weights.get(page) ?? 0) > 0),
+    sectionLayouts: design.layouts,
+    layoutWeight,
+    sectionDraw: pageDraw,
+  });
+  const placed = new Set(placement.flatMap(page => page.itemIds));
+  const candidates = input.selected.filter(candidate => placed.has(candidate.id));
+  const prose = input.prepareProse ? await input.prepareProse(candidates) : candidates;
   const selectedMasthead = input.selectMasthead ? await input.selectMasthead(design) : undefined;
   const masthead = selectedMasthead ?? resolveMasthead(design, terms, config.defaults.publicationTitle);
   if (!masthead) return undefined;
@@ -195,7 +167,8 @@ export async function presentIssue(input: {
   const styleCounts = new Map(variantStyleKinds.map(kind => [kind, new Map<string, number>()] as const));
   const itemCandidates = new Map<string, EditorialCandidate>();
   const items: IssueItem[] = [];
-  for (const [index, candidate] of input.selected.entries()) {
+  const publishedIds = new Map<string, string>();
+  for (const [index, candidate] of prose.entries()) {
     const variant = chooseWeighted(
       candidate.variants,
       (choice) => {
@@ -211,8 +184,9 @@ export async function presentIssue(input: {
       },
       input.proseRandom
     );
-    if (!variant) continue;
+    if (!variant) throw new Error('A placed article has no eligible prose.');
     const id = `${input.issueId}/item/${index + 1}`;
+    publishedIds.set(candidate.id, id);
     variants[id] = variant.id;
     const style = resolveVariantStyle(variant);
     styles[id] = style;
@@ -259,43 +233,9 @@ export async function presentIssue(input: {
         : {}),
     });
   }
-  if (!items.length) return undefined;
   const pages: IssueDocument['pages'] = [];
-  const frontItemIds = new Set<string>();
   const layouts: Record<string, string> = {};
-  // Front pages sort first so later sections can skip items already displayed there.
-  const pageDefinitions = config.pages
-    .filter((page) => (weights.get(page) ?? 0) > 0)
-    .sort(
-      (a, b) => Number(b.front) - Number(a.front) || a.order - b.order || a.id.localeCompare(b.id)
-    );
-  for (const page of pageDefinitions) {
-    let members = page.front
-      ? [...items]
-      : items.filter((item) => item.tags.some((tag) => page.tags.includes(tag)));
-    if (page.front) {
-      const lead = members[0];
-      const leadSubject = itemCandidates.get(lead.id)!.subject;
-      const varied = members
-        .slice(1)
-        .find((item) => itemCandidates.get(item.id)!.subject !== leadSubject);
-      if (varied)
-        members = [lead, varied, ...members.filter((item) => item !== lead && item !== varied)];
-      members = members.slice(0, config.defaults.frontPageItems);
-      for (const item of members) frontItemIds.add(item.id);
-    }
-    if (!members.length || (!page.front && members.length < page.minimum)) continue;
-    if (!page.front && members.every((item) => frontItemIds.has(item.id))) continue;
-    const urgent = page.front && members.some((item) => itemCandidates.get(item.id)?.urgent);
-    const choices = design.layouts.filter(
-      (layout) => urgent ? layout.variant === 'breaking' : layout.variant !== 'breaking'
-    );
-    const layout = chooseWeighted(
-      choices,
-      (choice) => weights.get(choice) ?? 0,
-      pressRun ? () => pressRunLayoutDraw(input.checkId, design.id, page.id) : input.presentationRandom
-    );
-    if (!layout) throw new Error(`No eligible layout for page ${page.id}.`);
+  for (const { page, layout, itemIds } of placement) {
     layouts[page.id] = layout.id;
     let label = Object.hasOwn(design.pageLabels, page.id) ? design.pageLabels[page.id] : page.label;
     const ruleLabels = selectedMasthead?.rule.pageLabels;
@@ -311,13 +251,9 @@ export async function presentIssue(input: {
       id: page.id,
       label,
       layout: layout.variant,
-      itemIds: members.map((item) => item.id),
+      itemIds: itemIds.map(id => publishedIds.get(id)!),
     });
   }
-  // Remove authored items that no eligible page displays, along with their variant and candidate mappings.
-  const displayed = new Set(pages.flatMap((page) => page.itemIds));
-  const visibleItems = items.filter((item) => displayed.has(item.id));
-  for (const id of itemCandidates.keys()) if (!displayed.has(id)) itemCandidates.delete(id);
   return {
     issue: {
       schemaVersion: newspaperIssueSchemaVersion,
@@ -335,10 +271,10 @@ export async function presentIssue(input: {
         presentation: structuredClone(design.presentation),
       },
       pages,
-      items: visibleItems,
+      items,
     },
-    variants: Object.fromEntries(Object.entries(variants).filter(([id]) => displayed.has(id))),
-    styles: Object.fromEntries(Object.entries(styles).filter(([id]) => displayed.has(id))),
+    variants,
+    styles,
     layouts,
     itemCandidates,
     mastheadSources: uniqueSources(mastheadSources),

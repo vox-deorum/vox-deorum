@@ -1,18 +1,14 @@
 import { z } from 'zod';
 import { presentationSchema } from '../../contracts/design.js';
-import { newspaperLayoutVariantSchema, linkTargetSchema } from '../../contracts/issue.js';
+import { linkTargetSchema } from '../../contracts/issue.js';
 import { variantStyleKinds, variantStyleSchema } from '../../contracts/style.js';
 import { getNewspaperAsset } from '../../renderer/assets.js';
 import { editorialCivicTermsSchema } from './civic-terms.js';
 import { editorialConstantsSchema, editorialValueNameSchema } from './constants.js';
+import { editorialLayoutSchema, editorialPageSchema, eligibleSchema, expressionSchema } from './layouts.js';
 import { defaultVariantStyle, styleCatalogueSchema, styleMatchTags } from './styles.js';
 
-const expressionSchema = z.string().refine((source) => source.trim().length > 0, 'Expected an expression.');
-const weightSchema = z.strictObject({
-  base: z.number().finite(),
-  adjustments: z.array(z.strictObject({ when: expressionSchema, add: z.number().finite() })).default([]),
-});
-const eligibleSchema = z.strictObject({ when: expressionSchema.optional(), weight: weightSchema });
+export { editorialLayoutSchema, editorialPageSchema, minimumFrontSlots, type EditorialLayout } from './layouts.js';
 /** Authored prose uses named placeholders and explicit typed link destinations. */
 export const authoredVariantSchema = eligibleSchema.extend({
   id: z.string().min(1),
@@ -80,10 +76,9 @@ const templateSchema = eligibleSchema.extend({
   }).nullish(),
 });
 export type EditorialTemplate = z.infer<typeof templateSchema>;
-const layoutSchema = eligibleSchema.extend({
-  id: z.string().min(1),
-  variant: newspaperLayoutVariantSchema,
-});
+/** Version of the effective editorial catalogue saved with decisions. */
+export const editorialConfigVersion = 2;
+
 const designSchema = eligibleSchema.extend({
   id: z.string().min(1),
   version: z.string().min(1),
@@ -91,7 +86,7 @@ const designSchema = eligibleSchema.extend({
   civilizationTitles: z.record(z.string().min(1), z.string().trim().min(1)).nullable().optional(),
   motto: z.string().min(1).optional(),
   presentation: presentationSchema,
-  layouts: z.array(layoutSchema).min(1),
+  layouts: z.array(editorialLayoutSchema).min(1),
   pageLabels: z.record(z.string(), z.string()).default({}),
 });
 export type EditorialDesign = z.infer<typeof designSchema>;
@@ -107,22 +102,18 @@ export type EditorialMastheadRule = z.infer<typeof editorialMastheadRuleSchema>;
 /** Complete effective catalogue snapshot stored in editorial decisions. */
 export const editorialConfigSchema = z
   .object({
-    version: z.literal(1),
+    version: z.literal(editorialConfigVersion),
     constants: editorialConstantsSchema,
-    defaults: z.object({
+    defaults: z.strictObject({
       frequencyStandardTurns: z.number().int().positive(),
       llmEnabled: z.boolean(),
       publicationTitle: z.string().min(1),
-      minItems: z.number().int().positive().optional(),
       maxItems: z.number().int().positive(),
-      frontPageItems: z.number().int().min(2),
       importanceMax: z.number().positive(),
       decayPerTurn: z.number().min(0).max(1),
       seriesWeight: z.number().nonnegative(),
       noveltyBonus: z.number().nonnegative(),
       varietyBonus: z.number().nonnegative(),
-      designStickiness: z.number().min(0).max(1),
-      designSelection: z.enum(['legacy', 'pressRun']).optional(),
       styleRepeat: z.strictObject({
         voice: z.number().finite().positive(),
         stance: z.number().finite().positive(),
@@ -137,27 +128,13 @@ export const editorialConfigSchema = z
     }),
     triggers: z.array(editorialTriggerRuleSchema),
     templates: z.array(templateSchema),
-    pages: z
-      .array(
-        z.strictObject({
-          id: z.string().min(1),
-          label: z.string().min(1),
-          tags: z.array(z.string()),
-          minimum: z.number().int().positive(),
-          order: z.number(),
-          front: z.boolean().default(false),
-          when: expressionSchema.optional(),
-        })
-      )
-      .min(1),
+    pages: z.array(editorialPageSchema).min(1),
     designs: z.array(designSchema).min(1),
     mastheadRules: z.array(editorialMastheadRuleSchema).optional(),
     styles: styleCatalogueSchema.optional(),
     civicTerms: editorialCivicTermsSchema.optional(),
   })
   .superRefine((config, ctx) => {
-    if ((config.defaults.minItems ?? 1) > config.defaults.maxItems)
-      ctx.addIssue({ code: 'custom', path: ['defaults', 'minItems'], message: 'The edition minimum cannot exceed the edition cap.' });
     // Validate all catalogue identifiers before resolving references.
     for (const section of ['triggers', 'templates', 'pages', 'designs'] as const) {
       const ids = new Set<string>();
@@ -315,6 +292,14 @@ export const editorialConfigSchema = z
       if (template.merge) checkVariants(template.merge.variants, ['merge', 'variants']);
     });
     config.designs.forEach((design, index) => {
+      design.layouts.forEach((layout, layoutIndex) => {
+        if (layout.frontSlots > config.defaults.maxItems)
+          ctx.addIssue({
+            code: 'custom',
+            path: ['designs', index, 'layouts', layoutIndex, 'frontSlots'],
+            message: 'Front slots cannot exceed defaults.maxItems.',
+          });
+      });
       for (const variant of ['ordinary', 'breaking']) {
         if (
           !design.layouts.some(

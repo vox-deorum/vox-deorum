@@ -15,23 +15,23 @@ A design supplies an issue's layout, type, colors, and ornaments. Its `label` de
 npm run newspaper:screenshots -w vox-agents
 ```
 
-The command uses installed Edge or Chrome to capture the full sample front page for each built-in design and its distinct visual layouts: ordinary, breaking, and analysis where available. It reads the source files on each run, so CSS, artwork, and catalogue edits appear without a build or game recording. Captures show the vote icons over the slots the game uses for its own controls. The default width is 1000 pixels, and files are saved as `.tmp/newspaper-screenshots/<design>/<variant>.png`. Rerunning replaces the PNGs with the same names.
+The command uses installed Edge or Chrome to capture the full sample front page for each built-in design and layout. It reads the source on each run, so CSS, artwork, and catalogue edits appear without a build or game recording. Captures show the vote icons where the game puts its controls. The default width is 1000 pixels. Files are saved as `.tmp/newspaper-screenshots/<design>/<layout-id>.png`.
 
-To capture only the Victorian design at phone width and keep it in a separate folder:
+To capture the Victorian broadsheet at phone width in a separate folder:
 
 ```sh
-npm run newspaper:screenshots -w vox-agents -- --design victorian --width 360 --output .tmp/newspaper-narrow
+npm run newspaper:screenshots -w vox-agents -- --design victorian --layout broadsheet --width 360 --output .tmp/newspaper-narrow
 ```
 
 For a layout review, capture at 360, 1000, and 1200 pixels in separate folders. Check how the briefs pair and whether the titles and body text have enough room.
 
 ### Which design runs
 
-The stock editor draws among designs with positive weight, a printable fallback title, and at least half the highest eligible weight. A competitive design stays for its first three published issues. Then it joins a new weighted draw at each check. After six issues, the next draw leaves it out if another competitive design fits. A design that stops fitting can change immediately. Skipped checks do not advance the run, and a sole competitive design can continue indefinitely.
+The editor draws among designs with positive weight, a printable fallback title, and a front layout it can fill. It checks the fit after combining related stories, so a merge can leave enough articles for a compact front but too few for the previous design. An eligible design competes when its weight is at least half the strongest one. A competitive design stays for its first three published issues, then joins a weighted draw at each check. After six issues, the next draw leaves it out if another competitive design fits. Skipped checks do not advance the run.
 
 Use `when` to rule out a format that would be out of place. Knotted Inca Cords, for example, fits The Inca from Classical through Renaissance. Set weights relative to the other designs that can appear at the same time: an option needs 40 to compete with a weight of 80. Keep a general option for each era and a fallback if the era is missing. Check the [replay decision](replay.md#read-replay-diagnostics) before tuning weights.
 
-New stock runs use `defaults.designSelection: "pressRun"`. Saved catalogues that predate that setting and overlays with `"legacy"` use `designStickiness` instead. Legacy keeps the previous design while its weight is at least the configured fraction of the highest eligible weight, then draws among all eligible designs.
+Every layout sets `frontSlots` to the exact number of articles it needs on the front, at least four and no more than `defaults.maxItems`. Ordinary and analysis layouts also set `sectionSlots`, the exact count for an inside tab. Breaking layouts are for the front only. Each design needs an unconditional ordinary and breaking layout with positive constant weights. Most stock designs take five on the front and three inside; Civic Index, Paste-Up, Teletext Bulletin, and Wire take four and two. Resizing rearranges the same articles.
 
 ### Design assets
 

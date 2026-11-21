@@ -12,18 +12,19 @@ const configFile = fileURLToPath(new URL('../../vite.config.ts', import.meta.url
 const defaultOutput = fileURLToPath(new URL('../../../../.tmp/newspaper-screenshots/', import.meta.url));
 const logger = createLogger('Newspaper Screenshots');
 
-/** Capture the full sample front page for each distinct visual layout in the source catalogue. */
+/** Capture the full sample front page for each selected layout in the source catalogue. */
 async function main(): Promise<void> {
   const { values } = parseArgs({
     options: {
       design: { type: 'string' },
+      layout: { type: 'string' },
       output: { type: 'string' },
       width: { type: 'string', default: '1000' },
       help: { type: 'boolean' },
     },
   });
   if (values.help) {
-    process.stdout.write('Usage: npm run newspaper:screenshots -w vox-agents -- [--design ID] [--width PIXELS] [--output DIRECTORY]\n');
+    process.stdout.write('Usage: npm run newspaper:screenshots -w vox-agents -- [--design ID] [--layout ID] [--width PIXELS] [--output DIRECTORY]\n');
     return;
   }
   const width = Number(values.width);
@@ -57,29 +58,29 @@ async function main(): Promise<void> {
       page.on('response', response => { if (response.status() >= 400) failed.add(response.url()); });
       await page.goto(`${origin}/export.html`);
       await page.locator('#newspaper-export-root').evaluate(root => { root.setAttribute('data-preview-screenshot', ''); });
-      const samples = await page.evaluate(async ({ moduleUrl, designId }) => {
+      const samples = await page.evaluate(async ({ moduleUrl, designId, layoutId }) => {
         const { createPreviewIssue, readPreviewDesigns }: typeof import('./issue.js') = await import(moduleUrl);
         return readPreviewDesigns().filter(design => designId === undefined || design.id === designId).flatMap(design =>
-          [...new Set(design.layouts.map(layout => layout.variant))].map(variant => ({
-            designId: design.id, variant, issue: createPreviewIssue(design, variant),
+          design.layouts.filter(layout => layoutId === undefined || layout.id === layoutId).map(layout => ({
+            designId: design.id, layoutId: layout.id, issue: createPreviewIssue(design, layout),
           }))
         );
-      }, { moduleUrl: '/src/preview/issue.ts', designId: values.design });
-      if (!samples.length) throw new Error(values.design === undefined
-        ? 'No built-in newspaper designs were found.' : `Unknown newspaper design: ${values.design}`);
+      }, { moduleUrl: '/src/preview/issue.ts', designId: values.design, layoutId: values.layout });
+      if (!samples.length) throw new Error(`No built-in newspaper layouts match design "${values.design ?? '*'}" and layout "${values.layout ?? '*'}".`);
 
-      for (const { designId, variant, issue } of samples) {
+      for (const { designId, layoutId, issue } of samples) {
         if (!/^[a-z0-9][a-z0-9-]*$/.test(designId)) throw new Error(`Invalid design ID for a screenshot directory: ${designId}`);
+        if (!/^[a-z0-9][a-z0-9-]*$/.test(layoutId)) throw new Error(`Invalid layout ID for a screenshot filename: ${layoutId}`);
         await page.evaluate(async ({ issue, profile }) => {
           const bridge = window.voxDeorumNewspaperExport!;
           await bridge.mount(issue, profile);
           await bridge.selectPage('front');
         }, { issue, profile });
         const png = await page.locator('#newspaper-export-root .vd-publication').screenshot({ animations: 'disabled', type: 'png' });
-        if (failed.size) throw new Error(`Assets failed to load for ${designId}/${variant}: ${[...failed].join(', ')}`);
+        if (failed.size) throw new Error(`Assets failed to load for ${designId}/${layoutId}: ${[...failed].join(', ')}`);
         const directory = path.join(output, designId);
         await mkdir(directory, { recursive: true });
-        await writeFile(path.join(directory, `${variant}.png`), png);
+        await writeFile(path.join(directory, `${layoutId}.png`), png);
       }
       logger.info(`Saved ${samples.length} newspaper screenshots to ${output}.`);
     } finally {

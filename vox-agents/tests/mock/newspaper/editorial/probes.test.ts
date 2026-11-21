@@ -6,10 +6,18 @@ import type {
 } from '../../../../../mcp-server/dist/newspaper/evidence.js';
 import { createInitialPublicationState, type PublicationState } from '../../../../src/newspaper/contracts/publication.js';
 import { runEditorialCheck } from '../../../../src/newspaper/editorial/check.js';
-import { loadEditorialConfig } from '../../../../src/newspaper/editorial/config/load.js';
+import { scaleEditorialConstants } from '../../../../src/newspaper/editorial/config/constants.js';
+import { getEditorialExpressions, loadEditorialConfig } from '../../../../src/newspaper/editorial/config/load.js';
 import { editorialConfigSchema, type EditorialConfig } from '../../../../src/newspaper/editorial/config/schema.js';
 import { buildNewspaperFacts } from '../../../../src/newspaper/editorial/facts/index.js';
 import type { FactObject, FactWindow } from '../../../../src/newspaper/editorial/facts/model.js';
+import { renderAuthoredText } from '../../../../src/newspaper/editorial/presentation/issue.js';
+import { evaluateTriggerRules } from '../../../../src/newspaper/editorial/rules/evaluate.js';
+import { computeFeedback } from '../../../../src/newspaper/editorial/selection/feedback.js';
+import { selectHeuristic } from '../../../../src/newspaper/editorial/selection/heuristic.js';
+import { matchTemplates } from '../../../../src/newspaper/editorial/selection/templates.js';
+import { uniqueSources } from '../../../../src/newspaper/editorial/shared/sources.js';
+import { withEditionBriefs } from '../../../helpers/newspaper-briefs.js';
 import { evidence as buildEvidence, relationship, snapshot } from '../../../helpers/newspaper-diplomacy.js';
 
 const probeDirectory = fileURLToPath(new URL('../../../../newspaper/probes/', import.meta.url));
@@ -21,6 +29,7 @@ type Inline = PublicationState['issues'][number]['items'][number]['headline'];
 
 let defaultConfig: EditorialConfig;
 let probeConfig: EditorialConfig;
+let storyConfig: EditorialConfig;
 let probeOnlyConfig: EditorialConfig;
 let capitalConfig: EditorialConfig;
 let vassalConfig: EditorialConfig;
@@ -113,6 +122,49 @@ function check(
   });
 }
 
+/** Run a four-slot edition with three unrelated briefs alongside the probe. */
+function checkWithBriefs(
+  projected: NewspaperEvidence,
+  catalogue: EditorialConfig,
+  state?: PublicationState,
+  campaignId?: string,
+) {
+  const { evidence, config } = withEditionBriefs(projected, catalogue, 3);
+  return check(evidence, config, state, campaignId);
+}
+
+/** Inspect trigger and template behavior before the editor tries to fill a layout. */
+async function inspect(projected: NewspaperEvidence, config = storyConfig) {
+  const facts = buildFacts(projected, config);
+  const compiled = await getEditorialExpressions(config);
+  const rules = await evaluateTriggerRules({
+    rules: config.triggers, compiled, facts, constants: config.constants, speedMultiplier: 1,
+  });
+  const candidates = await matchTemplates(rules.developments, config, compiled, {
+    facts, constants: scaleEditorialConstants(config.constants, 1),
+  });
+  return { decision: { triggerAudit: rules.audit }, candidates };
+}
+
+/** Find and render one eligible prose variant of a named probe candidate. */
+function candidateArticle(result: Awaited<ReturnType<typeof inspect>>, templateId: string) {
+  const candidate = result.candidates.find((story) => story.templateIds.includes(templateId));
+  if (!candidate) return undefined;
+  const [variant] = candidate.variants;
+  /** Render one authored passage against the evidence supplied to the template. */
+  const render = (passage: string | undefined) =>
+    passage ? renderAuthoredText(passage, candidate.values, variant, candidate.names) : undefined;
+  return {
+    ...candidate,
+    variant: variant.id,
+    sources: uniqueSources([...candidate.sources, ...candidate.variantSources[variant.id]]),
+    headline: render(variant.headline),
+    subheadline: render(variant.subheadline),
+    byline: render(variant.byline),
+    body: variant.body.map(render),
+  };
+}
+
 /** Supply a projected event on a date when the actors were already known. */
 function probeEvent(
   type: string,
@@ -173,13 +225,21 @@ function shipEvidence({
 function probeCatalogue(
   triggerIds: string[],
   templateIds: string[],
-  defaults: Partial<EditorialConfig['defaults']> = {},
 ): EditorialConfig {
   return editorialConfigSchema.parse({
     ...probeConfig,
     triggers: probeConfig.triggers.filter((trigger) => triggerIds.includes(trigger.id)),
     templates: probeConfig.templates.filter((template) => templateIds.includes(template.id)),
-    defaults: { ...probeConfig.defaults, ...defaults },
+  });
+}
+
+/** Isolate the design being tested, using Wire for cases that do not depend on the design. */
+function publicationCatalogue(config: EditorialConfig, designId = 'wire'): EditorialConfig {
+  const design = config.designs.find(entry => entry.id === designId)!;
+  return editorialConfigSchema.parse({
+    ...config,
+    designs: [{ ...design, ...(designId === 'wire' ? { when: undefined } : {}) }],
+    mastheadRules: [],
   });
 }
 
@@ -200,7 +260,7 @@ function lastIssueState(turn: number): PublicationState {
 
 /** Find the audit entry for one rule and subject. */
 function auditSubject(
-  result: Awaited<ReturnType<typeof check>>,
+  result: { decision: Pick<Awaited<ReturnType<typeof check>>['decision'], 'triggerAudit'> },
   ruleId: string,
   subject: string,
 ) {
@@ -211,7 +271,7 @@ function auditSubject(
 
 /** Find one audited expression value for a rule and subject. */
 function auditValue(
-  result: Awaited<ReturnType<typeof check>>,
+  result: Parameters<typeof auditSubject>[0],
   ruleId: string,
   subject: string,
   field: string,
@@ -225,11 +285,6 @@ function issueItem(
   itemId: string,
 ) {
   return result.status === 'published' ? result.issue.items.find((item) => item.id === itemId) : undefined;
-}
-
-/** Read which templates actually made it into print. */
-function publishedTemplates(state: PublicationState) {
-  return state.issues.flatMap((issue) => issue.items.flatMap((item) => item.templateIds));
 }
 
 /** Find the published record for one template. */
@@ -246,44 +301,34 @@ describe('probe overlay', () => {
   beforeAll(async () => {
     defaultConfig = await loadEditorialConfig();
     probeConfig = await loadEditorialConfig(probeDirectory);
-    defaultConfig.defaults.minItems = 1;
-    probeConfig.defaults.minItems = 1;
-    probeOnlyConfig = {
-      ...probeConfig,
-      designs: probeConfig.designs.filter((design) => design.id === probeDesignId),
-      // Keep the old People's Daily design fallback under test.
-      mastheadRules: [],
-    };
-    const repeatableTriggers = probeConfig.triggers.map((trigger) =>
-      trigger.id === probeTriggerId ? { ...trigger, repeat: 1 } : trigger);
-    capitalConfig = {
-      ...probeConfig,
-      triggers: repeatableTriggers,
-      designs: probeConfig.designs.filter((design) => design.id === 'probe-capital-masthead'),
-    };
-    vassalConfig = {
-      ...probeConfig,
-      triggers: repeatableTriggers,
-      designs: probeConfig.designs.filter((design) => design.id === 'probe-vassal-strapline'),
-    };
+    storyConfig = probeCatalogue(
+      probeConfig.triggers.filter(rule => rule.id.startsWith('probe-')).map(rule => rule.id),
+      probeConfig.templates.filter(template => template.id.startsWith('probe-')).map(template => template.id),
+    );
+    const treasuryConfig = probeCatalogue([probeTriggerId], [probeTemplateId]);
+    treasuryConfig.triggers[0].repeat = 1;
+    probeOnlyConfig = publicationCatalogue(treasuryConfig, probeDesignId);
+    capitalConfig = publicationCatalogue(treasuryConfig, 'probe-capital-masthead');
+    vassalConfig = publicationCatalogue(treasuryConfig, 'probe-vassal-strapline');
     opinionConfig = probeCatalogue(
       ['probe-treasury', 'probe-huns-riding', 'probe-ideology-adopted', 'probe-obituary', 'probe-culture-opinion'],
       ['probe-treasury-account', 'probe-huns-riding-account', 'probe-ideology-adopted-account',
         'probe-obituary-account', 'probe-culture-opinion-account'],
-      { maxItems: 5, frontPageItems: 4 },
     );
+    opinionConfig.designs = opinionConfig.designs.filter(design => design.id === 'probe-capital-masthead');
+    opinionConfig.mastheadRules = [];
     opinionOnlyConfig = probeCatalogue(
       ['probe-culture-opinion'], ['probe-culture-opinion-account'],
     );
-    peaceConfig = probeCatalogue(
+    peaceConfig = publicationCatalogue(probeCatalogue(
       ['probe-peace', 'probe-retraction'], ['probe-peace-account', 'probe-retraction-account'],
-    );
-    milestoneConfig = probeCatalogue(
+    ));
+    milestoneConfig = publicationCatalogue(probeCatalogue(
       ['probe-hundredth-issue'], ['probe-hundredth-issue-account'],
-    );
-    quietConfig = probeCatalogue(
+    ));
+    quietConfig = publicationCatalogue(probeCatalogue(
       ['probe-quiet-spell'], ['probe-quiet-spell-account'],
-    );
+    ));
     spyConfig = probeCatalogue(
       ['probe-spy-city-profile'], ['probe-spy-city-profile-account'],
     );
@@ -297,25 +342,24 @@ describe('probe overlay', () => {
       ['probe-espionage-tech', 'probe-spy-loss', 'probe-defender-report', 'probe-election-influence'],
       ['probe-espionage-tech-account', 'probe-spy-loss-account', 'probe-defender-report-account',
         'probe-election-influence-account'],
-      { maxItems: 1 },
     );
     frontConfig = probeCatalogue(
-      ['probe-front-zone'], ['probe-front-zone-account'], { maxItems: 1 },
+      ['probe-front-zone'], ['probe-front-zone-account'],
     );
     shipConfig = probeCatalogue(
-      ['probe-ship-launch'], ['probe-ship-launch-account'], { maxItems: 1 },
+      ['probe-ship-launch'], ['probe-ship-launch-account'],
     );
   });
 
   describe('treasury probe', () => {
-    it('should publish the probe story at the constant threshold', async () => {
-      const result = await check(probeEvidence({ gold: 100 }));
-      expect(publishedTemplates(result.state)).toContain(probeTemplateId);
+    it('should match the treasury template at the constant threshold', async () => {
+      const result = await inspect(probeEvidence({ gold: 100 }));
+      expect(result.candidates.flatMap(story => story.templateIds)).toContain(probeTemplateId);
     });
 
-    it('should leave the probe story unpublished below the threshold', async () => {
-      const result = await check(probeEvidence({ gold: 99 }));
-      expect(publishedTemplates(result.state)).not.toContain(probeTemplateId);
+    it('should not match the treasury template below the threshold', async () => {
+      const result = await inspect(probeEvidence({ gold: 99 }));
+      expect(result.candidates.flatMap(story => story.templateIds)).not.toContain(probeTemplateId);
     });
   });
 
@@ -334,8 +378,8 @@ describe('probe overlay', () => {
       const events = [probeEvent('TeamTechResearched', {
         TeamID: 101, Tech: tech, ...(changeAmount === undefined ? {} : { ChangeAmount: changeAmount }),
       })];
-      const result = await check(probeEvidence({ events, riderX }));
-      expect(publishedTemplates(result.state).includes('probe-huns-riding-account')).toBe(published);
+      const result = await inspect(probeEvidence({ events, riderX }));
+      expect(result.candidates.flatMap(story => story.templateIds).includes('probe-huns-riding-account')).toBe(published);
     });
 
     it.each([
@@ -343,18 +387,20 @@ describe('probe overlay', () => {
       { branch: 'Tradition', published: false },
     ])('should report $branch as an ideology only if it qualifies', async ({ branch, published }) => {
       const events = [probeEvent('PlayerAdoptPolicyBranch', { PlayerID: 1, Branch: branch })];
-      const result = await check(probeEvidence({ events }));
-      expect(publishedTemplates(result.state).includes('probe-ideology-adopted-account')).toBe(published);
+      const result = await inspect(probeEvidence({ events }));
+      expect(result.candidates.flatMap(story => story.templateIds).includes('probe-ideology-adopted-account')).toBe(published);
     });
   });
 
   describe('great people probes', () => {
-    it('should report a named birth abroad from only a player and a name', async () => {
+    it('should print a named birth abroad from only a player and a name', async () => {
       const birth = probeEvent('UnitCreated', { PlayerID: 1, Person: 'Ptolemy' });
       const projected = probeEvidence({ events: [birth] });
-      const result = await check(projected);
+      const config = publicationCatalogue(probeCatalogue(['probe-foreign-birth'], ['probe-foreign-birth-account']));
+      const result = await checkWithBriefs(projected, config);
       const item = publishedItem(result.state, 'probe-foreign-birth-account');
 
+      expect(result.status).toBe('published');
       expect(item).toBeDefined();
       expect(headlineText(item!.headline)).toContain('Ptolemy');
       expect(item!.sources).toEqual(expect.arrayContaining([
@@ -366,8 +412,8 @@ describe('probe overlay', () => {
       { label: 'an unnamed creation abroad', values: { PlayerID: 1, Unit: 'Warrior' } },
       { label: 'a named birth at home', values: { PlayerID: 0, Person: 'Ptolemy' } },
     ])('should not report $label as a foreign birth', async ({ values }) => {
-      const result = await check(probeEvidence({ events: [probeEvent('UnitCreated', values)] }));
-      expect(publishedItem(result.state, 'probe-foreign-birth-account')).toBeUndefined();
+      const result = await inspect(probeEvidence({ events: [probeEvent('UnitCreated', values)] }));
+      expect(candidateArticle(result, 'probe-foreign-birth-account')).toBeUndefined();
     });
 
     it.each([
@@ -382,19 +428,17 @@ describe('probe overlay', () => {
     ])('should report a named $kind as one obituary without coordinates', async ({ type, owner, civilization, values, variant }) => {
       const obituary = probeEvent(type, values);
       const projected = probeEvidence({ events: [obituary] });
-      const result = await check(projected);
-      const item = publishedItem(result.state, 'probe-obituary-account');
+      const result = await inspect(projected);
+      const item = candidateArticle(result, 'probe-obituary-account');
 
       expect(item).toBeDefined();
-      const printed = issueItem(result, item!.id);
-      expect(printed).toBeDefined();
       expect(item!.ruleIds).toContain('probe-obituary');
       expect(item!.subject).toMatch(/^event\//);
       expect(headlineText(item!.headline)).toContain('Hypatia');
-      expect(headlineText(printed!.subheadline)).toContain('Hypatia');
-      expect(headlineText(printed!.subheadline)).toContain(civilization);
-      expect(headlineText(printed!.byline)).toContain(civilization);
-      expect(result.decision.selectedVariants[item!.id]).toBe(variant);
+      expect(headlineText(item!.subheadline)).toContain('Hypatia');
+      expect(headlineText(item!.subheadline)).toContain(civilization);
+      expect(headlineText(item!.byline)).toContain(civilization);
+      expect(item!.variant).toBe(variant);
       expect(item!.sources).toEqual(expect.arrayContaining([
         obituary.source, projected.players.find((player) => player.subjectID === owner)!.source,
       ]));
@@ -404,8 +448,8 @@ describe('probe overlay', () => {
       { type: 'GreatPersonExpended', values: { PlayerID: 1 } },
       { type: 'UnitPrekill', values: { OwnerID: 1, AttackingPlayerID: -1 } },
     ])('should not report an unnamed $type', async ({ type, values }) => {
-      const result = await check(probeEvidence({ events: [probeEvent(type, values)] }));
-      expect(publishedItem(result.state, 'probe-obituary-account')).toBeUndefined();
+      const result = await inspect(probeEvidence({ events: [probeEvent(type, values)] }));
+      expect(candidateArticle(result, 'probe-obituary-account')).toBeUndefined();
     });
   });
 
@@ -414,20 +458,18 @@ describe('probe overlay', () => {
       { label: 'no cause detail', unhappiness: undefined },
       { label: 'a non-numeric cause', unhappiness: { Culture: 'much' } },
     ])('should hide the culture opinion with $label', async ({ unhappiness }) => {
-      const result = await check(probeEvidence({
+      const result = await inspect(probeEvidence({
         ownCities: [{ name: 'Paris', capital: true, unhappiness }],
       }), opinionOnlyConfig);
 
-      expect(result.status).toBe('skipped');
       expect(auditSubject(result, 'probe-culture-opinion', 'city/100')?.outcome).toBe('hidden');
     });
 
     it('should not report culture when another cause is larger', async () => {
-      const result = await check(probeEvidence({
+      const result = await inspect(probeEvidence({
         ownCities: [{ name: 'Paris', capital: true, unhappiness: { Culture: 2, Distress: 5 } }],
       }), opinionOnlyConfig);
 
-      expect(result.status).toBe('skipped');
       expect(auditSubject(result, 'probe-culture-opinion', 'city/100')?.outcome).toBe('false');
     });
   });
@@ -463,14 +505,14 @@ describe('probe overlay', () => {
 
   describe('peace retraction probes', () => {
     it('should retract a peace story while the printed report is recent', async () => {
-      const peace = await check(probeEvidence({ relationships: [relationship(1)] }), peaceConfig);
+      const peace = await checkWithBriefs(probeEvidence({ relationships: [relationship(1)] }), peaceConfig);
       expect(peace.status).toBe('published');
       const peaceRecord = publishedItem(peace.state, 'probe-peace-account');
       expect(peaceRecord).toBeDefined();
       expect(peaceRecord!.ruleIds).toContain('probe-peace');
       expect(peaceRecord!.subject).toBe('pair/0/1');
 
-      const result = await check(probeEvidence({
+      const result = await checkWithBriefs(probeEvidence({
         turn: 15, previous: 10, relationships: [relationship(1, 'war')],
       }), peaceConfig, peace.state);
 
@@ -486,7 +528,7 @@ describe('probe overlay', () => {
     });
 
     it('should not retract a war without an earlier peace story in print', async () => {
-      const result = await check(probeEvidence({
+      const result = await checkWithBriefs(probeEvidence({
         relationships: [relationship(1, 'war')],
       }), peaceConfig);
 
@@ -495,10 +537,10 @@ describe('probe overlay', () => {
     });
 
     it('should not retract a war after the printed peace story is too old', async () => {
-      const peace = await check(probeEvidence({ relationships: [relationship(1)] }), peaceConfig);
+      const peace = await checkWithBriefs(probeEvidence({ relationships: [relationship(1)] }), peaceConfig);
       expect(peace.status).toBe('published');
 
-      const result = await check(probeEvidence({
+      const result = await checkWithBriefs(probeEvidence({
         turn: 30, previous: 10, relationships: [relationship(1, 'war')],
       }), peaceConfig, peace.state);
 
@@ -509,7 +551,7 @@ describe('probe overlay', () => {
 
   describe('milestone and chance probes', () => {
     it('should publish the hundredth issue only after ninety-nine issues', async () => {
-      const result = await check(probeEvidence(), milestoneConfig, pastIssues(99));
+      const result = await checkWithBriefs(probeEvidence(), milestoneConfig, pastIssues(99));
 
       expect(result.status).toBe('published');
       const record = publishedItem(result.state, 'probe-hundredth-issue-account');
@@ -519,17 +561,17 @@ describe('probe overlay', () => {
       expect(printed).toBeDefined();
       expect(headlineText(printed!.body[0])).toContain('100');
 
-      const early = await check(probeEvidence(), milestoneConfig, pastIssues(98));
+      const early = await checkWithBriefs(probeEvidence(), milestoneConfig, pastIssues(98));
       expect(early.status).toBe('skipped');
       expect(auditSubject(early, 'probe-hundredth-issue', 'world')?.outcome).toBe('false');
     });
 
     it('should leave the quiet-spell story out when there is no issue or the gap is short', async () => {
-      const never = await check(probeEvidence({ turn: 30, previous: 5 }), quietConfig);
+      const never = await checkWithBriefs(probeEvidence({ turn: 30, previous: 5 }), quietConfig);
       expect(never.status).toBe('skipped');
       expect(auditSubject(never, 'probe-quiet-spell', 'world')?.outcome).toBe('false');
 
-      const early = await check(probeEvidence(), quietConfig, lastIssueState(5));
+      const early = await checkWithBriefs(probeEvidence(), quietConfig, lastIssueState(5));
       expect(early.status).toBe('skipped');
       expect(auditSubject(early, 'probe-quiet-spell', 'world')?.outcome).toBe('false');
     });
@@ -538,7 +580,7 @@ describe('probe overlay', () => {
       const campaigns = Array.from({ length: 40 }, (_, index) => `quiet-${index}`);
       const results: Awaited<ReturnType<typeof check>>[] = [];
       for (const campaignId of campaigns)
-        results.push(await check(probeEvidence({ turn: 30, previous: 5 }), quietConfig,
+        results.push(await checkWithBriefs(probeEvidence({ turn: 30, previous: 5 }), quietConfig,
           lastIssueState(5), campaignId));
       const passed = results.find((result) => result.status === 'published');
       const failed = results.find((result) =>
@@ -559,20 +601,20 @@ describe('probe overlay', () => {
   });
 
   describe('covert presence probes', () => {
-    it('should report boredom in a foreign city only while our spy is stationed there', async () => {
+    it('should print a foreign city profile when our spy reports boredom there', async () => {
       const projected = probeEvidence({
         foreignCityValues: { OurSpyPresent: true, UnhappinessSources: { Culture: 3, Distress: 1 } },
       });
-      const result = await check(projected, spyConfig);
+      const result = await checkWithBriefs(projected, publicationCatalogue(spyConfig));
       const record = publishedItem(result.state, 'probe-spy-city-profile-account');
 
+      expect(result.status).toBe('published');
       expect(record).toBeDefined();
       expect(record!.ruleIds).toContain('probe-spy-city-profile');
       expect(record!.subject).toBe('city/11');
       expect(record!.sources).toContainEqual(
         projected.cities.find((city) => city.subjectID === 11)!.source);
-      const printed = issueItem(result, record!.id);
-      expect(headlineText(printed!.headline)).toContain('Persepolis');
+      expect(headlineText(record!.headline)).toContain('Persepolis');
     });
 
     it.each([
@@ -580,9 +622,9 @@ describe('probe overlay', () => {
       { label: 'no presence observation', values: { UnhappinessSources: { Culture: 3 } }, outcome: 'hidden' },
       { label: 'detail without boredom', values: { OurSpyPresent: true, UnhappinessSources: { Distress: 3 } }, outcome: 'false' },
     ])('should withhold the spy profile with $label', async ({ values, outcome }) => {
-      const result = await check(probeEvidence({ foreignCityValues: values }), spyConfig);
+      const result = await inspect(probeEvidence({ foreignCityValues: values }), spyConfig);
 
-      expect(publishedItem(result.state, 'probe-spy-city-profile-account')).toBeUndefined();
+      expect(candidateArticle(result, 'probe-spy-city-profile-account')).toBeUndefined();
       expect(auditSubject(result, 'probe-spy-city-profile', 'city/11')?.outcome).toBe(outcome);
     });
 
@@ -590,8 +632,8 @@ describe('probe overlay', () => {
       const projected = probeEvidence({
         playerValues: { 1: { TheirDiplomatHere: true, OurDiplomatThere: false } },
       });
-      const result = await check(projected, diplomatConfig);
-      const record = publishedItem(result.state, 'probe-inbound-diplomat-account');
+      const result = await inspect(projected, diplomatConfig);
+      const record = candidateArticle(result, 'probe-inbound-diplomat-account');
 
       expect(record).toBeDefined();
       expect(record!.ruleIds).toContain('probe-inbound-diplomat');
@@ -606,9 +648,9 @@ describe('probe overlay', () => {
       { label: 'no inbound observation', values: { OurDiplomatThere: false }, outcome: 'hidden' },
       { label: 'no outgoing observation', values: { TheirDiplomatHere: true }, outcome: 'hidden' },
     ])('should withhold the inbound story with $label', async ({ values, outcome }) => {
-      const result = await check(probeEvidence({ playerValues: { 1: values } }), diplomatConfig);
+      const result = await inspect(probeEvidence({ playerValues: { 1: values } }), diplomatConfig);
 
-      expect(publishedItem(result.state, 'probe-inbound-diplomat-account')).toBeUndefined();
+      expect(candidateArticle(result, 'probe-inbound-diplomat-account')).toBeUndefined();
       expect(auditSubject(result, 'probe-inbound-diplomat', 'player/1')?.outcome).toBe(outcome);
     });
 
@@ -619,15 +661,14 @@ describe('probe overlay', () => {
           PolicyBranches: { Tradition: ['Aristocracy'], Industry: ['Free Trade'], Order: ['Workers’ Faculties'], Freedom: [] },
         } },
       });
-      const result = await check(projected, foreignPolicyConfig);
-      const record = publishedItem(result.state, 'probe-foreign-policies-account');
+      const result = await inspect(projected, foreignPolicyConfig);
+      const record = candidateArticle(result, 'probe-foreign-policies-account');
 
       expect(record).toBeDefined();
       expect(record!.ruleIds).toContain('probe-foreign-policies');
       expect(record!.subject).toBe('player/1');
-      const printed = issueItem(result, record!.id);
-      expect(headlineText(printed!.body[0])).toContain('Workers’ Faculties');
-      expect(headlineText(printed!.body[0])).not.toMatch(/Aristocracy|Free Trade/);
+      expect(headlineText(record!.body[0])).toContain('Workers’ Faculties');
+      expect(headlineText(record!.body[0])).not.toMatch(/Aristocracy|Free Trade/);
     });
 
     it('should vary among readable branches in the latest tier without joining their lists', async () => {
@@ -637,9 +678,9 @@ describe('probe overlay', () => {
       } };
       const stories = [];
       for (const turn of [10, 11]) {
-        const result = await check(probeEvidence({ turn, playerValues }), foreignPolicyConfig);
-        const record = publishedItem(result.state, 'probe-foreign-policies-account');
-        const body = headlineText(issueItem(result, record!.id)?.body[0]);
+        const result = await inspect(probeEvidence({ turn, playerValues }), foreignPolicyConfig);
+        const record = candidateArticle(result, 'probe-foreign-policies-account');
+        const body = headlineText(record?.body[0]);
         const named = body.match(/Free Trade|Scientific Revolution/g);
         expect(named).toHaveLength(1);
         expect(body).not.toContain('Aristocracy');
@@ -654,24 +695,24 @@ describe('probe overlay', () => {
       { label: 'an inbound visit without our diplomat', values: { TheirDiplomatHere: true, OurDiplomatThere: false, PolicyBranches: { Tradition: ['Liberty'] } }, outcome: 'false' },
       { label: 'no outgoing observation', values: { PolicyBranches: { Tradition: ['Liberty'] } }, outcome: 'hidden' },
     ])('should withhold the policy briefing with $label', async ({ values, outcome }) => {
-      const result = await check(probeEvidence({ playerValues: { 1: values } }), foreignPolicyConfig);
+      const result = await inspect(probeEvidence({ playerValues: { 1: values } }), foreignPolicyConfig);
 
-      expect(publishedItem(result.state, 'probe-foreign-policies-account')).toBeUndefined();
+      expect(candidateArticle(result, 'probe-foreign-policies-account')).toBeUndefined();
       expect(auditSubject(result, 'probe-foreign-policies', 'player/1')?.outcome).toBe(outcome);
     });
   });
 
   describe('espionage and election probes', () => {
     describe('technology theft', () => {
-      it('should publish a likely source-side gain with its original evidence', async () => {
+      it('should write a likely source-side gain with its original evidence', async () => {
         const theft = probeEvent('EspionageResult', {
           Perspective: 'source', SpyResult: 'Detected', SourcePlayerID: 0, TargetPlayerID: 1,
           CityX: 10, CityY: 0, CityName: 'Persepolis', Tech: 'Steam Power',
         });
         theft.relatedSources = [{ table: 'GameEvents', id: 102, turn: 8, createdAt: 8000 }];
         const projected = probeEvidence({ events: [theft] });
-        const result = await check(projected, espionageConfig);
-        const record = publishedItem(result.state, 'probe-espionage-tech-account');
+        const result = await inspect(projected, espionageConfig);
+        const record = candidateArticle(result, 'probe-espionage-tech-account');
 
         expect(record).toBeDefined();
         expect(record!.ruleIds).toContain('probe-espionage-tech');
@@ -679,9 +720,8 @@ describe('probe overlay', () => {
         expect(auditValue(result, 'probe-espionage-tech', 'event/101', 'values.technology')?.value)
           .toBe('Steam Power');
         expect(record!.sources).toEqual(expect.arrayContaining([theft.source, ...theft.relatedSources]));
-        const printed = issueItem(result, record!.id);
-        expect(headlineText(printed!.body[0])).toContain('Steam Power');
-        expect(headlineText(printed!.body[0])).toContain('Persepolis');
+        expect(headlineText(record!.body[0])).toContain('Steam Power');
+        expect(headlineText(record!.body[0])).toContain('Persepolis');
       });
 
       it('should fall back to a generic city when the operation has no recorded name', async () => {
@@ -689,22 +729,21 @@ describe('probe overlay', () => {
           Perspective: 'source', SpyResult: 'Undetected', SourcePlayerID: 0, TargetPlayerID: 1,
           CityX: 10, CityY: 0, Tech: 'Steam Power',
         });
-        const result = await check(probeEvidence({ events: [theft] }), espionageConfig);
-        const record = publishedItem(result.state, 'probe-espionage-tech-account');
+        const result = await inspect(probeEvidence({ events: [theft] }), espionageConfig);
+        const record = candidateArticle(result, 'probe-espionage-tech-account');
 
         expect(record).toBeDefined();
-        const printed = issueItem(result, record!.id);
-        expect(headlineText(printed!.body[0])).toContain('Steam Power');
-        expect(headlineText(printed!.body[0])).not.toMatch(/\{\{|\bundefined\b/);
+        expect(headlineText(record!.body[0])).toContain('Steam Power');
+        expect(headlineText(record!.body[0])).not.toMatch(/\{\{|\bundefined\b/);
       });
 
       it('should leave an unnamed technology out of the theft story', async () => {
         const attempt = probeEvent('EspionageResult', {
           Perspective: 'source', SpyResult: 'Detected', SourcePlayerID: 0, TargetPlayerID: 1,
         });
-        const result = await check(probeEvidence({ events: [attempt] }), espionageConfig);
+        const result = await inspect(probeEvidence({ events: [attempt] }), espionageConfig);
 
-        expect(publishedItem(result.state, 'probe-espionage-tech-account')).toBeUndefined();
+        expect(candidateArticle(result, 'probe-espionage-tech-account')).toBeUndefined();
         expect(auditSubject(result, 'probe-espionage-tech', 'event/101')?.outcome).toBe('false');
       });
     });
@@ -714,15 +753,14 @@ describe('probe overlay', () => {
         const loss = probeEvent('EspionageResult', {
           Perspective: 'source', SpyResult: outcome, SourcePlayerID: 0, TargetPlayerID: 1,
         });
-        const result = await check(probeEvidence({ events: [loss] }), espionageConfig);
-        const record = publishedItem(result.state, 'probe-spy-loss-account');
+        const result = await inspect(probeEvidence({ events: [loss] }), espionageConfig);
+        const record = candidateArticle(result, 'probe-spy-loss-account');
 
         expect(record).toBeDefined();
         expect(record!.ruleIds).toContain('probe-spy-loss');
         expect(auditSubject(result, 'probe-spy-loss', 'event/101')?.outcome).toBe('fired');
         expect(record!.sources).toContainEqual(loss.source);
-        const printed = issueItem(result, record!.id);
-        expect(headlineText(printed!.body[0])).not.toMatch(/\{\{|\bundefined\b/);
+        expect(headlineText(record!.body[0])).not.toMatch(/\{\{|\bundefined\b/);
       });
 
       it('should keep the loss story ahead of a technology gain from the same operation', async () => {
@@ -730,10 +768,12 @@ describe('probe overlay', () => {
           Perspective: 'source', SpyResult: 'Killed', SourcePlayerID: 0, TargetPlayerID: 1,
           CityName: 'Persepolis', Tech: 'Steam Power',
         });
-        const result = await check(probeEvidence({ events: [loss] }), espionageConfig);
+        const result = await inspect(probeEvidence({ events: [loss] }), espionageConfig);
+        const state = createInitialPublicationState();
+        const { selected } = selectHeuristic(result.candidates, state, espionageConfig, computeFeedback(state, espionageConfig));
+        const taking = selected.flatMap(candidate => candidate.templateIds);
 
-        expect(publishedItem(result.state, 'probe-spy-loss-account')).toBeDefined();
-        expect(publishedItem(result.state, 'probe-espionage-tech-account')).toBeUndefined();
+        expect(taking.slice(0, 2)).toEqual(['probe-spy-loss-account', 'probe-espionage-tech-account']);
         expect(auditSubject(result, 'probe-espionage-tech', 'event/101')?.outcome).toBe('fired');
       });
     });
@@ -745,16 +785,15 @@ describe('probe overlay', () => {
           CityName: 'Paris', CityX: 0, CityY: 0,
         });
         const projected = probeEvidence({ events: [report] });
-        const result = await check(projected, espionageConfig);
-        const record = publishedItem(result.state, 'probe-defender-report-account');
+        const result = await inspect(projected, espionageConfig);
+        const record = candidateArticle(result, 'probe-defender-report-account');
 
         expect(record).toBeDefined();
         expect(record!.ruleIds).toContain('probe-defender-report');
         const playerSource = projected.players.find((player) => player.subjectID === 1)!.source;
         expect(record!.sources).toEqual(expect.arrayContaining([report.source, playerSource]));
-        const printed = issueItem(result, record!.id);
-        expect(headlineText(printed!.body[0])).toContain('Persia');
-        expect(headlineText(printed!.body[0])).toContain('Paris');
+        expect(headlineText(record!.body[0])).toContain('Persia');
+        expect(headlineText(record!.body[0])).toContain('Paris');
       });
 
       it('should keep an anonymous source generic without a player citation', async () => {
@@ -762,15 +801,14 @@ describe('probe overlay', () => {
           Perspective: 'target', SpyResult: 'KilledNotIdentified', TargetPlayerID: 0,
         });
         const projected = probeEvidence({ events: [report] });
-        const result = await check(projected, espionageConfig);
-        const record = publishedItem(result.state, 'probe-defender-report-account');
+        const result = await inspect(projected, espionageConfig);
+        const record = candidateArticle(result, 'probe-defender-report-account');
 
         expect(record).toBeDefined();
         const playerSource = projected.players.find((player) => player.subjectID === 1)!.source;
         expect(record!.sources).not.toContainEqual(playerSource);
-        const printed = issueItem(result, record!.id);
-        expect(headlineText(printed!.body[0])).not.toContain('Persia');
-        expect(headlineText(printed!.body[0])).not.toMatch(/\{\{|\bundefined\b/);
+        expect(headlineText(record!.body[0])).not.toContain('Persia');
+        expect(headlineText(record!.body[0])).not.toMatch(/\{\{|\bundefined\b/);
       });
     });
 
@@ -782,26 +820,25 @@ describe('probe overlay', () => {
         const election = probeEvent(type, {
           PlayerID: 0, InfluenceChange: change, ...(cityState === undefined ? {} : { CityState: cityState }),
         });
-        const result = await check(probeEvidence({ events: [election] }), espionageConfig);
-        const record = publishedItem(result.state, 'probe-election-influence-account');
+        const result = await inspect(probeEvidence({ events: [election] }), espionageConfig);
+        const record = candidateArticle(result, 'probe-election-influence-account');
 
         expect(record).toBeDefined();
         expect(record!.ruleIds).toContain('probe-election-influence');
         expect(auditValue(result, 'probe-election-influence', 'event/101', 'values.change')?.value).toBe(change);
         expect(record!.sources).toContainEqual(election.source);
-        const printed = issueItem(result, record!.id);
-        expect(headlineText(printed!.body[0])).toContain(String(change));
-        expect(headlineText(printed!.body[0])).not.toMatch(/\{\{|\bundefined\b/);
-        if (cityState) expect(headlineText(printed!.body[0])).toContain(cityState);
+        expect(headlineText(record!.body[0])).toContain(String(change));
+        expect(headlineText(record!.body[0])).not.toMatch(/\{\{|\bundefined\b/);
+        if (cityState) expect(headlineText(record!.body[0])).toContain(cityState);
       });
 
       it('should not report a zero influence change', async () => {
         const election = probeEvent('ElectionResultSuccess', {
           PlayerID: 0, InfluenceChange: 0, CityState: 'Geneva',
         });
-        const result = await check(probeEvidence({ events: [election] }), espionageConfig);
+        const result = await inspect(probeEvidence({ events: [election] }), espionageConfig);
 
-        expect(publishedItem(result.state, 'probe-election-influence-account')).toBeUndefined();
+        expect(candidateArticle(result, 'probe-election-influence-account')).toBeUndefined();
         expect(auditSubject(result, 'probe-election-influence', 'event/101')?.outcome).toBe('false');
       });
     });
@@ -832,8 +869,7 @@ describe('probe overlay', () => {
         expect(model.events.some((event) => event.id === 101)).toBe(false);
         expect(model.subjects.event).not.toContain(101);
         expect(playerEvents.entries.some((entry) => entry.turn === 9)).toBe(false);
-        const result = await check(projected, espionageConfig);
-        expect(result.status).toBe('skipped');
+        const result = await inspect(projected, espionageConfig);
         expect(auditSubject(result, 'probe-defender-report', 'event/101')).toBeUndefined();
       });
 
@@ -841,10 +877,9 @@ describe('probe overlay', () => {
         const report = probeEvent('EspionageResult', {
           Perspective: 'target', SpyResult: 'KilledNotIdentified', TargetPlayerID: 0,
         }, 101, 8, 9);
-        const result = await check(probeEvidence({ turn: 9, previous: 8, events: [report] }), espionageConfig);
+        const result = await inspect(probeEvidence({ turn: 9, previous: 8, events: [report] }), espionageConfig);
 
-        expect(result.status).toBe('published');
-        expect(publishedItem(result.state, 'probe-defender-report-account')).toBeDefined();
+                expect(candidateArticle(result, 'probe-defender-report-account')).toBeDefined();
         expect(auditSubject(result, 'probe-defender-report', 'event/101')?.outcome).toBe('fired');
       });
 
@@ -867,10 +902,10 @@ describe('probe overlay', () => {
   });
 
   describe('front zone probes', () => {
-    it('should publish a named city front with recorded posture and observed counts', async () => {
+    it('should write a named city front with recorded posture and observed counts', async () => {
       const zone = tacticalZone();
-      const result = await check(probeEvidence({ tacticalZones: [zone] }), frontConfig);
-      const record = publishedItem(result.state, 'probe-front-zone-account');
+      const result = await inspect(probeEvidence({ tacticalZones: [zone] }), frontConfig);
+      const record = candidateArticle(result, 'probe-front-zone-account');
 
       expect(record).toBeDefined();
       expect(record!.ruleIds).toContain('probe-front-zone');
@@ -880,9 +915,6 @@ describe('probe overlay', () => {
       expect(auditValue(result, 'probe-front-zone', 'player/0', 'values.posture')?.value).toBe('Withdraw');
       expect(String(auditValue(result, 'probe-front-zone', 'player/0', 'values.counts')?.value))
         .toContain('Frigate');
-      const front = result.status === 'published'
-        ? result.issue.pages.find((page) => page.id === 'front') : undefined;
-      expect(front?.itemIds).toContain(record!.id);
     });
 
     it('should cite only the selected zone row', async () => {
@@ -894,8 +926,8 @@ describe('probe overlay', () => {
         city: 'Utrecht', posture: 'Advance',
         source: { table: 'TacticalZones', id: 903, turn: 10, createdAt: 10000 },
       });
-      const result = await check(probeEvidence({ tacticalZones: [selected, other] }), frontConfig);
-      const record = publishedItem(result.state, 'probe-front-zone-account');
+      const result = await inspect(probeEvidence({ tacticalZones: [selected, other] }), frontConfig);
+      const record = candidateArticle(result, 'probe-front-zone-account');
 
       expect(record).toBeDefined();
       expect(record!.sources).toContainEqual(selected.source);
@@ -910,18 +942,18 @@ describe('probe overlay', () => {
       { label: 'a zone without a city', zones: [tacticalZone({ city: undefined })] },
       { label: 'a named zone without visible counts', zones: [tacticalZone({ units: {} })] },
     ])('should leave the front unknown with $label', async ({ zones }) => {
-      const result = await check(probeEvidence({ tacticalZones: zones }), frontConfig);
+      const result = await inspect(probeEvidence({ tacticalZones: zones }), frontConfig);
 
-      expect(publishedItem(result.state, 'probe-front-zone-account')).toBeUndefined();
+      expect(candidateArticle(result, 'probe-front-zone-account')).toBeUndefined();
       expect(auditSubject(result, 'probe-front-zone', 'player/0')?.outcome).toBe('false');
     });
   });
 
   describe('ship launch probes', () => {
-    it.each(['Frigate', 'Trireme'])('should publish a non-purchased %s with its joined citations', async (unit) => {
+    it.each(['Frigate', 'Trireme'])('should write a non-purchased %s with its joined citations', async (unit) => {
       const { projected, training, created, city } = shipEvidence({ unit });
-      const result = await check(projected, shipConfig);
-      const record = publishedItem(result.state, 'probe-ship-launch-account');
+      const result = await inspect(projected, shipConfig);
+      const record = candidateArticle(result, 'probe-ship-launch-account');
 
       expect(record).toBeDefined();
       expect(record!.ruleIds).toContain('probe-ship-launch');
@@ -936,7 +968,7 @@ describe('probe overlay', () => {
     it('should use the recorded port instead of a renamed current city', async () => {
       const { projected } = shipEvidence();
       projected.cities.find((row) => row.subjectID === 100)!.values.Name = 'Rotterdam Reborn';
-      const result = await check(projected, shipConfig);
+      const result = await inspect(projected, shipConfig);
 
       expect(auditValue(result, 'probe-ship-launch', 'city/100', 'values.port')?.value).toBe('Rotterdam');
     });
@@ -950,9 +982,9 @@ describe('probe overlay', () => {
       { label: 'no recorded port', options: { port: null } },
     ])('should withhold the launch report with $label', async ({ options }) => {
       const { projected } = shipEvidence(options);
-      const result = await check(projected, shipConfig);
+      const result = await inspect(projected, shipConfig);
 
-      expect(publishedItem(result.state, 'probe-ship-launch-account')).toBeUndefined();
+      expect(candidateArticle(result, 'probe-ship-launch-account')).toBeUndefined();
       expect(auditSubject(result, 'probe-ship-launch', 'city/100')?.outcome).toBe('false');
     });
 
@@ -964,15 +996,15 @@ describe('probe overlay', () => {
       expect(trained.entries).toHaveLength(1);
       const fields = trained.entries[0].field.value as FactObject;
       expect(fields).not.toHaveProperty('port');
-      const result = await check(projected, shipConfig);
-      expect(publishedItem(result.state, 'probe-ship-launch-account')).toBeUndefined();
+      const result = await inspect(projected, shipConfig);
+      expect(candidateArticle(result, 'probe-ship-launch-account')).toBeUndefined();
       expect(auditSubject(result, 'probe-ship-launch', 'city/11')?.outcome).toBe('false');
     });
   });
 
   describe("People's Daily design", () => {
     it('should choose the probe design when the receiver follows Order', async () => {
-      const result = await check(probeEvidence({
+      const result = await checkWithBriefs(probeEvidence({
         gold: 100, branch: 'Order', ownCities: [{ name: 'Paris', capital: true }],
       }), probeOnlyConfig);
       expect(result.status).toBe('published');
@@ -983,7 +1015,7 @@ describe('probe overlay', () => {
     });
 
     it('should not publish with this design when the receiver follows Freedom', async () => {
-      const result = await check(probeEvidence({
+      const result = await checkWithBriefs(probeEvidence({
         gold: 100, branch: 'Freedom', ownCities: [{ name: 'Paris', capital: true }],
       }), probeOnlyConfig);
       expect(result.status).toBe('skipped');
@@ -1000,7 +1032,7 @@ describe('probe overlay', () => {
       const firstEvidence = probeEvidence({
         gold: 100, ownCities: [{ name: 'Paris', capital: true }, { name: 'Orleans', capital: false }],
       });
-      const first = await check(firstEvidence, capitalConfig);
+      const first = await checkWithBriefs(firstEvidence, capitalConfig);
       expect(first.status).toBe('published');
       if (first.status !== 'published') return;
       expect(first.issue.publication.title).toBe('The Paris Herald');
@@ -1008,7 +1040,7 @@ describe('probe overlay', () => {
       expect(first.decision.evidence).toContainEqual(capitalSource);
       expect(publishedItem(first.state, probeTemplateId)!.sources).not.toContainEqual(capitalSource);
 
-      const second = await check(probeEvidence({
+      const second = await checkWithBriefs(probeEvidence({
         gold: 100, turn: 15, previous: 10,
         ownCities: [{ name: 'Paris', capital: false }, { name: 'Orleans', capital: true }],
       }), capitalConfig, first.state);
@@ -1018,7 +1050,7 @@ describe('probe overlay', () => {
     });
 
     it('should drop a selected design when its motto loses our master', async () => {
-      const first = await check(probeEvidence({
+      const first = await checkWithBriefs(probeEvidence({
         gold: 100, relationships: [relationship(2, 'peace', { master: 'voluntary' })],
       }), vassalConfig);
       expect(first.status).toBe('published');
@@ -1026,7 +1058,7 @@ describe('probe overlay', () => {
       expect(first.issue.publication.designId).toBe('probe-vassal-strapline');
       expect(first.issue.publication.motto).toBe("A journal of The Huns's dominion");
 
-      const second = await check(probeEvidence({
+      const second = await checkWithBriefs(probeEvidence({
         gold: 100, turn: 15, previous: 10, relationships: [relationship(2)],
       }), vassalConfig, first.state);
       expect(second.status).toBe('skipped');

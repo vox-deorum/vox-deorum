@@ -4,11 +4,12 @@
     "subject": "event",
     "event": ["ElectionResultSuccess", "ElectionResultFailure"],
     "when": [
-      "event.knows('player') && event.player.self === true"
+      "event.knows('player') && event.player.self === true",
+      "event.knows('cityState') && typeof event.cityState === 'string' && event.cityState.trim().length > 0"
     ],
     "values": {
       "success": "event.type === 'ElectionResultSuccess'",
-      "cityState": "event.knows('cityState') && typeof event.cityState === 'string' ? event.cityState : null",
+      "cityState": "event.cityState",
       "influence": "event.knows('influenceChange') ? event.influenceChange : null"
     },
     "importance": "success ? 55 : 45",
@@ -19,11 +20,12 @@
     "subject": "player",
     "when": [
       "!player.self && player.major",
+      "player.knows('name')",
       "player.knows('ourDiplomatThere') && player.ourDiplomatThere === true",
       "player.knows('before') && player.before.knows('ourDiplomatThere') && player.before.ourDiplomatThere === false"
     ],
     "values": {
-      "civilization": "player.knows('name') ? player.name : null",
+      "civilization": "player.name",
       "capital": "player.knows('capital') && player.capital.knows('name') ? player.capital.name : null"
     },
     "importance": 50,
@@ -131,11 +133,12 @@
     "subject": "player",
     "when": [
       "!player.self && player.major",
+      "player.knows('name')",
       "player.knows('theirDiplomatHere') && player.theirDiplomatHere === true",
       "player.knows('before') && player.before.knows('theirDiplomatHere') && player.before.theirDiplomatHere === false"
     ],
     "values": {
-      "civilization": "player.knows('name') ? player.name : null"
+      "civilization": "player.name"
     },
     "importance": 45,
     "tags": ["politics", "international"]

@@ -14,8 +14,8 @@ The stock catalogue is in `vox-agents/newspaper/`. To override a rule or story, 
 | `templates/*.json` | Authored variants, typed links and short pieces, grouped by topic like triggers |
 | `civic-terms.json` | Government, people, and leader terms by policy and civilization |
 | `styles/` | Style tag IDs, optional writing guidance, and rules that adjust variant weights |
-| `pages.json` | Front page, section membership, and section minimums |
-| `designs/*.json` | Browser labels, renderer families, tokens, assets, layouts, eligibility, and fallback mastheads |
+| `pages.json` | Front page, section order, topic tags, and eligibility |
+| `designs/*.json` | Browser labels, renderer families, tokens, assets, layouts and article counts, eligibility, and fallback mastheads |
 | `mastheads/*.json` | Titles, mottoes, and section labels selected using the chosen design and visible game facts |
 
 The loader reads grouped files in filename order. Entries and authored variants merge by ID; arrays of values such as tags, conditions, or paragraphs replace the inherited array. Defaults and constants merge as objects. [Style rules](#variant-styles) have their own merge behavior. Replay validates the effective catalogue and saves it for resume.
@@ -26,7 +26,7 @@ Templates, variants, pages, designs, layouts, and masthead rules can use `when` 
 
 - Without `when`, the choice passes its condition. A false result, error, or [hidden fact](triggers/facts.md#hidden-and-missing-facts) rules it out.
 - For choices with a `weight`, start with its `base` and add the amount from each true adjustment. False conditions and unavailable facts contribute nothing. If an adjustment is interrupted or skipped because of the execution budget, the choice is left out.
-- A final weight must be positive. Template weight adds to the story's score; variant, design, layout, and masthead weights affect their draws. Pages use their conditions and section minimums.
+- A final weight must be positive. Template weight adds to the story's score; variant, design, layout, and masthead weights affect their draws. Sections use their conditions and topic tags.
 
 A template names one or more rules in `triggers`. They must all fire for the same subject with overlapping evidence periods. For example, two city rules must match the same city. Grouped rules can combine with other grouped rules of the same subject kind and key. The editor uses the overlapping period, the highest importance and the combined tags.
 
@@ -52,7 +52,7 @@ A template with `merge` can use its trigger match to combine stories already cho
 
 Merged prose uses `merge.variants`. Its conditions and `merge.values` expressions can read `merge.members` and `merge.count`. A scalar value named `attackers` can be printed as `{{merge.values.attackers}}`. Keep ordinary `variants` for a story that can also stand alone, or use an empty list for a template that only combines stories. An overlay can set `merge` to `null` to keep the ordinary choices only.
 
-A merge replaces its matching stories only when the combined copy is eligible. It keeps their evidence and urgency. If the editor also selected the combining template's standalone story, the merge replaces it and keeps its contribution to the edition minimum. See [war coverage](triggers/war-and-peace.md#combining-declaration-reports) for the stock example.
+A merge replaces its matching stories when the combined copy is eligible and enough articles remain to fill a front page. It keeps the evidence and urgency of the reports and replaces the combining template's standalone story if selected. See [war coverage](triggers/war-and-peace.md#combining-declaration-reports) for the stock example.
 
 ### Variant styles
 
@@ -75,7 +75,7 @@ A style rule's `when` can also read facts about the selected story:
 
 For example, `story.tags.includes('military')` applies a preference only to stories tagged military. Guard subject-specific facts in shared rules. For example, check `subject.kind === 'city'` before reading `city.happinessDelta`. The editor applies rules after choosing stories. A false condition, an error, or unavailable evidence leaves the weight unchanged. For displayed stories, facts read by applied preferences join the decision audit without becoming evidence for the article's claims.
 
-The editor makes one weighted draw per article. Each earlier article in the issue whose chosen variant has the same style tag multiplies the weight by that kind's factor in `defaults.styleRepeat`. A factor below 1 discourages repeats, and a factor above 1 encourages them. The stock factors are voice 1.25, stance 1 and genre 0.8, so a repeated genre is slightly discouraged while a repeated voice is favored. Counts follow draw order and include articles later omitted from the pages. Saved catalogues without `styles` keep their original draw behavior.
+The editor draws a variant for each placed article in ranked order. Each earlier choice with the same style tag multiplies the weight by that kind's factor in `defaults.styleRepeat`. The stock factors are voice 1.25, stance 1 and genre 0.8. This favors a repeated voice, leaves stance unchanged, and slightly discourages a repeated genre.
 
 To add style tags, guidance or rules, include just the files you need under your overlay's `styles/` folder. Style tag definitions merge by ID. If the overlay also has an older flat `styles.json`, the files in `styles/` take precedence over entries with the same ID in that flat file.
 
@@ -98,7 +98,7 @@ Prose and typed link values use `{{name}}` placeholders. Headlines, subheadlines
 | `{{terms.leader}}` | The reader's leader name |
 | `{{terms.<name>}}` | A printable [term](triggers/constants.md#terms) defined by the catalogue, such as the receiver's capital |
 
-Use qualified names such as `{{city.owner.name}}` and `{{subject.id}}` for recorded identities. Missing facts, including an unrecorded leader, leave placeholders unresolved, so keep another variant that can run without them. An empty link label or invalid link destination also makes a variant unprintable. The editor evaluates terms once per check and each variant cites the rows behind the terms it prints.
+Use qualified names such as `{{city.owner.name}}` and `{{subject.id}}` for recorded identities. Require facts essential to the story in the trigger. Missing optional facts, such as a leader's name in a supporting detail, leave their placeholders unresolved; another variant can print without them. An empty link label or invalid link destination also makes a variant unprintable. The editor evaluates terms once per check and each variant cites the rows behind the terms it prints.
 
 List name placeholders in the template's `names` array without braces. For example, add `terms.leader` to the array when the body uses `{{terms.leader}}`. The reader underlines the resolved name with the `vd-name` CSS class, and any declared link stays clickable.
 
@@ -124,9 +124,9 @@ Terms layer from defaults to the winning profile, then to civilization terms and
 
 ### Pages and designs
 
-The front page is always eligible. Other sections can have conditions and must meet their minimums, with at least one story that does not appear on the front page. The stock sections collect domestic, international, and economic coverage by topic tag.
+The editor picks a [design and front layout](designs.md#which-design-runs) it can fill, then places exactly the number of articles specified by the layout. An urgent article leads a breaking front. If no eligible front can be filled, the editor skips the issue and keeps the reporting window open.
 
-Each design needs an unconditional ordinary layout and an unconditional breaking layout with positive constant weights. The editor rotates among competitive designs after a run of issues. See [design selection](designs.md#which-design-runs) for the weights, fallback, and legacy behavior.
+Sections try to fill in the order set by `pages.json`, using only unplaced articles that match their topic tags. A section that cannot fill an eligible layout is omitted and leaves its articles available to later sections. For example, a five-article front can leave three articles for the international tab, but the tab opens only if all three match and an eligible layout takes three. Every published article appears on one tab.
 
 ### Masthead rules
 
@@ -148,7 +148,7 @@ The issue saves the chosen title, motto, and labels. Editor credits use that tit
 
 The [trigger audit](triggers/overview.md#how-a-check-evaluates-triggers) shows which developments matched. To pick stories, the editor scores candidates by importance, decayed series history, novelty, variety, template weight, and reader feedback. A series follows one rule and subject and can appear in only one item per issue. A story supported by multiple rules contributes once to each of its series. Skips advance the schedule and decay series importance while leaving the reporting window open.
 
-The stock paper selects four to ten stories before combining related coverage. For example, five declarations can meet the minimum and appear as one headline. The front page shows up to five articles, and an urgent story leads a breaking issue. Each displayed article gets one vote, even if it combines several stories or appears on two pages.
+The stock editor ranks up to ten stories. A combined article takes one slot, so five declarations can run as one headline when enough other articles remain to fill the front. Stories that find no place are left out of the issue and its history. Publishing still advances the reporting window and records fired trigger repeats, even for those stories.
 
 The audit saves the seed, catalogue, scores, presentation, sources, feedback, and trigger results. Stock design and layout draws are independent of each other and of prose. `designSelection` explains the prior design, how many issues it ran (up to six), and the candidate weights used for the draw. `selectedVariants` and `selectedStyles` record each displayed article's wording and style by item ID. Replay reopens the stored issue without running the editor again.
 

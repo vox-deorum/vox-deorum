@@ -6,6 +6,7 @@ import { loadEditorialConfig } from '../../../../../src/newspaper/editorial/conf
 import type { EditorialConfig } from '../../../../../src/newspaper/editorial/config/schema.js';
 import { buildNewspaperFacts } from '../../../../../src/newspaper/editorial/facts/index.js';
 import { relationship, snapshot as diplomacySnapshot } from '../../../../helpers/newspaper-diplomacy.js';
+import { editionBriefTemplate, withEditionBriefs } from '../../../../helpers/newspaper-briefs.js';
 
 let config: EditorialConfig;
 
@@ -40,18 +41,19 @@ function fixture(cities: NewspaperSnapshot[], before: NewspaperSnapshot[] = [], 
 }
 
 /** Run the complete stock editor and expose the audit alongside published articles. */
-async function check(evidence: NewspaperEvidence, catalogue = config) {
+async function check(input: NewspaperEvidence, catalogue = config) {
+  const { evidence, config } = withEditionBriefs(input, catalogue);
   const facts = buildNewspaperFacts(evidence, { playerIdentities: {
     0: { name: 'France', major: true, teamId: 100 }, 1: { name: 'Brazil', major: true, teamId: 101 },
   } });
   const result = await runEditorialCheck({
     campaignId: 'fixture', timelineId: 'city-desk', receiver: { playerId: 0, label: 'France' },
-    evidence, facts, config: catalogue, speedMultiplier: 1, state: createInitialPublicationState(),
+    evidence, facts, config, speedMultiplier: 1, state: createInitialPublicationState(),
   });
   const audit = (id: string) => result.decision.triggerAudit.find(rule => rule.rule === id)!;
-  const variants = Object.values(result.decision.selectedVariants);
-  const items = result.status === 'published' ? result.issue.items : [];
-  const archived = result.state.issues[0]?.items ?? [];
+  const archived = (result.state.issues[0]?.items ?? []).filter(item => !item.templateIds.includes(editionBriefTemplate.id));
+  const items = result.issue?.items.filter(item => archived.some(record => record.id === item.id)) ?? [];
+  const variants = items.map(item => result.decision.selectedVariants[item.id]);
   expect(result.decision.choiceErrors ?? []).toEqual([]);
   /** Find printed articles whose archived evidence includes this rule. */
   function stories(rule: string) {
@@ -67,7 +69,6 @@ const settlers = event(100, 'CityTrained', { PlayerID: 0, CityID: 10, CityX: 0, 
 describe('stock city desk', () => {
   beforeAll(async () => {
     config = await loadEditorialConfig();
-    config.defaults.minItems = 1;
   });
 
   it('should cover a neighboring annexation only when the owner remains the same', async () => {
@@ -105,7 +106,7 @@ describe('stock city desk', () => {
     expect((await check(fixture([now], [before]))).variants).toEqual([]);
   });
 
-  it('should use one founding hook and report close rivals urgently, with or without a joined city', async () => {
+  it('should report a named rival settlement urgently from the player founding hook', async () => {
     const town = city(20, 10, 2, 1, 'Recife');
     const founded = event(101, 'PlayerCityFounded', { PlayerID: 1, PlotX: 2, PlotY: 2 });
     const unitFounded = event(102, 'UnitCityFounded', founded.values);
@@ -119,10 +120,9 @@ describe('stock city desk', () => {
     expect(text).toContain('Tours');
     expect(copy).toContainEqual(expect.objectContaining({ target: { type: 'city', cityId: '20' } }));
     expect(result.audit('forward-settle').subjects).toMatchObject([{ subject: 'event/101', outcome: 'fired', urgent: true }]);
-    const unnamed = (await check(fixture([home], [], [founded]))).stories('forward-settle');
-    expect(unnamed).toHaveLength(1);
-    expect(JSON.stringify(unnamed[0].body)).toContain('Brazil');
-    expect(unnamed[0].body.flat()).not.toContainEqual(expect.objectContaining({ target: { type: 'city', cityId: expect.any(String) } }));
+    const unnamed = await check(fixture([home], [], [founded]));
+    expect(unnamed.stories('forward-settle')).toEqual([]);
+    expect(unnamed.audit('forward-settle').subjects).toMatchObject([{ subject: 'event/101', outcome: 'false' }]);
     expect((await check(fixture([home, town], [], [founded], 'peace', true))).stories('forward-settle')).toEqual([]);
   });
 

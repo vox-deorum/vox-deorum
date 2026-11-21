@@ -1,5 +1,5 @@
 /** Editorial dispatch and validation boundary; orchestration owns atomic persistence. */
-import type { NewspaperEvidence } from '../../../../mcp-server/dist/newspaper/evidence.js';
+import type { NewspaperEvidence, NewspaperSourceReference } from '../../../../mcp-server/dist/newspaper/evidence.js';
 import type { IssueDocument, IssueReceiver } from '../contracts/issue.js';
 import type {
   PublicationState,
@@ -7,7 +7,7 @@ import type {
   EditorialDecisionRecord,
   PublishedItemRecord,
 } from '../contracts/publication.js';
-import type { EditorialConfig } from './config/schema.js';
+import { minimumFrontSlots, type EditorialConfig } from './config/schema.js';
 import type {
   CompiledTriggerExpressions,
   EditorialTerm,
@@ -28,10 +28,10 @@ import { applyStylePreferences } from './selection/styles.js';
 import type { EditorialContext } from './shared/context.js';
 import type { ExpressionBatch, ExpressionCheckBudget } from './shared/expressions.js';
 import { recordChoiceError } from './shared/eligibility.js';
-import { configurationHash, createEditorialStreams } from './shared/determinism.js';
+import { configurationHash, createProseDraw } from './shared/determinism.js';
 import { summarizeSources, uniqueSources } from './shared/sources.js';
 import { presentIssue } from './presentation/issue.js';
-import { evaluatePresentation } from './presentation/eligibility.js';
+import { evaluatePresentation, fittingFrontLayouts, prepareFrontLayouts } from './presentation/eligibility.js';
 import { selectMastheadRule } from './presentation/masthead-rules.js';
 import { validateEditorialIssue } from './presentation/validation.js';
 import { inferWarAndPeace } from './diplomacy/war-peace.js';
@@ -213,17 +213,17 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
     recordChoiceErrors();
     return { status: 'skipped', reason: decision.reason, state, decision };
   };
-  if (!selection.selected.length) return skip('No eligible new authored stories.');
-  const minimum = config.defaults.minItems ?? 1;
-  /** Explain how many eligible or displayable stories were available for this edition. */
-  const shortfall = (count: number) => skip(`Only ${count} of ${minimum} required stories are ready.`);
-  if (selection.selected.length < minimum) return shortfall(selection.selected.length);
-  const merged = await mergeSelectedStories(
-    selection.selected, candidates, config, compiled, batch, budget, publishedFingerprints(state), terms,
-  );
-  const streams = createEditorialStreams(identitySeed, config);
+  if (selection.selected.length < minimumFrontSlots)
+    return skip(`Only ${selection.selected.length} of ${minimumFrontSlots} required front articles are ready.`);
   const weights = await evaluatePresentation(config, compiled, batch, budget);
-  const { selected, sources: styleSources } = await applyStylePreferences(merged, compiled, batch, budget);
+  const fronts = prepareFrontLayouts(config, weights, terms);
+  const merged = await mergeSelectedStories(
+    selection.selected, candidates, config, compiled, batch, budget, publishedFingerprints(state),
+    (count, urgent) => fittingFrontLayouts(fronts, count, urgent).size > 0, terms,
+  );
+  const urgent = merged.some(candidate => candidate.urgent);
+  const fittingFronts = fittingFrontLayouts(fronts, merged.length, urgent);
+  let styleSources = new Map<string, NewspaperSourceReference[]>();
   const presentation = await presentIssue({
     checkId,
     issueId: `${scope}/issue/${turn}`,
@@ -231,12 +231,17 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
     timelineId: input.timelineId,
     receiver: input.receiver,
     turn,
-    selected,
+    selected: merged,
     state,
     config,
     weights,
-    proseRandom: streams.prose,
-    presentationRandom: streams.presentation,
+    proseRandom: createProseDraw(identitySeed, config),
+    fittingFronts,
+    prepareProse: async (candidates) => {
+      const { selected, sources } = await applyStylePreferences(candidates, compiled, batch, budget);
+      styleSources = sources;
+      return selected;
+    },
     recordDesignSelection: (audit) => { decision.designSelection = audit; },
     terms,
     selectMasthead: (design) => selectMastheadRule({
@@ -250,11 +255,15 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
       terms,
     }),
   });
-  if (!presentation) return skip('No eligible design or visible authored content.');
-  const coverage = [...presentation.itemCandidates.values()].reduce(
-    (count, candidate) => count + (candidate.mergedCandidateIds?.length ?? 1), 0,
-  );
-  if (coverage < minimum) return shortfall(coverage);
+  if (!presentation) {
+    const slots = [...fronts.values()].flatMap(layouts => layouts
+      .filter(layout => (layout.variant === 'breaking') === urgent)
+      .map(layout => layout.frontSlots));
+    const kind = urgent ? 'breaking' : 'regular';
+    return slots.length
+      ? skip(`Only ${merged.length} of ${Math.min(...slots)} required ${kind} front articles are ready.`)
+      : skip(`No eligible ${kind} front layout for ${merged.length} ready articles.`);
+  }
   const issue = validateEditorialIssue(presentation, config, weights);
   const records: PublishedItemRecord[] = issue.items.map((item) => {
     const candidate = presentation.itemCandidates.get(item.id)!;
@@ -282,7 +291,6 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
   state.triggerRepeats = rules.repeatState;
   state.series = advanceSeries(state.series, records, turn);
   state.issues.push({ issueId: issue.issueId, turn, items: records, designId: issue.publication.designId });
-  state.previousDesignId = issue.publication.designId;
   decision.status = 'published';
   const displayedCandidates = new Set<string>();
   const mergedInto = new Map<string, string>();
@@ -302,7 +310,7 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
   decision.evidence = uniqueSources([
     ...records.flatMap((item) => item.sources),
     ...presentation.mastheadSources,
-    ...[...displayedCandidates].flatMap(id => styleSources.get(id) ?? []),
+    ...[...styleSources.values()].flat(),
   ]);
   decision.selectedVariants = presentation.variants;
   decision.selectedStyles = presentation.styles;

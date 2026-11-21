@@ -18,7 +18,7 @@ Each independent declaration keeps its incident. An incoming war story can name 
 
 When the paper is due to report **War on N fronts**, that story can absorb selected declarations by major civs still at war with the reader. It identifies the new attackers and separates the other active fronts. If that overview is unavailable, three or more distinct major civs declaring on the same turn can share a breaking headline. One or two declarations can still run separately, with each attacker's allies reported in the same story. The rules count distinct major declarers and can name their shared city-state allies once.
 
-The edition counts the selected stories before [combining them](../editorial.md#combining-stories). A combined report keeps links to the original decisions and evidence in replay.
+The editor [combines reports](../editorial.md#combining-stories) when enough articles still remain to fill the front. A combined report uses one slot and keeps links to the original decisions and evidence in replay.
 
 ## When a city changes hands again
 

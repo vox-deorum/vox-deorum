@@ -116,11 +116,12 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('newspape
       await votes.first().click();
       expect(await votes.first().getAttribute('aria-pressed')).toBe('true');
       await secondTab.click();
-      const shared = page.locator(`[data-vd-region=page]:not([hidden]) [data-vd-vote-item="${item}"][data-vd-vote-value=up]`);
-      expect(await shared.getAttribute('aria-pressed')).toBe('true');
-      await shared.click();
+      const sectionVote = votes.first();
+      expect(await sectionVote.getAttribute('data-vd-vote-item')).not.toBe(item);
+      expect(await sectionVote.getAttribute('aria-pressed')).toBe('false');
+      await sectionVote.click();
       await firstTab.click();
-      expect(await votes.first().getAttribute('aria-pressed')).toBe('false');
+      expect(await votes.first().getAttribute('aria-pressed')).toBe('true');
       await page.locator('[data-vd-region=page]:not([hidden])').evaluate(element => { element.scrollTop = 120; });
       const saved = await page.locator('[data-vd-region=page]:not([hidden])').evaluate(element => element.scrollTop);
       expect(saved).toBeGreaterThan(0);
@@ -214,6 +215,29 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('newspape
     } finally { await page.close(); }
   }, 180_000);
 
+  it('should let mockups select concrete layouts and show full pages with distinct articles', async context => {
+    if (!browser) { context.skip(unavailable); return; }
+    const page = await browser.newPage({ viewport: { width: 1200, height: 900 } });
+    try {
+      await page.goto(`${host.url}/newspaper/`);
+      for (const [design, layout, frontCount, sectionCount] of [
+        ['victorian', 'broadsheet', 5, 3],
+        ['victorian', 'war-edition', 5, 3],
+        ['victorian', 'dispatch', 5, 3],
+        ['wire', 'feed', 4, 2],
+      ] as const) {
+        await page.locator('#preview-design').selectOption(design);
+        await page.locator('#preview-layout').selectOption(layout);
+        await waitForPaper(page, `preview-${design}-${layout}`);
+        const sections = await page.locator('[data-vd-region=page]').evaluateAll(nodes =>
+          nodes.map(node => Array.from(node.querySelectorAll('.vd-story'), story => story.getAttribute('data-item-id')))
+        );
+        expect(sections.map(items => items.length)).toEqual([frontCount, sectionCount]);
+        expect(new Set(sections.flat()).size).toBe(frontCount + sectionCount);
+      }
+    } finally { await page.close(); }
+  }, 60_000);
+
   it('should resize the default reader in place while retaining votes and the selected page', async context => {
     if (!browser) { context.skip(unavailable); return; }
     const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
@@ -278,7 +302,7 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('newspape
       await page.waitForLoadState('networkidle');
       const mounted = page.locator(`#reader-root[data-issue-id] [data-vd-vote-item="${itemId}"][data-vd-vote-value=up]`);
       expect(await mounted.evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-pressed'))))
-        .toEqual(['true', 'true']);
+        .toEqual(['true']);
     } finally { releaseFonts(); await page.close(); }
   }, 60_000);
 
@@ -289,6 +313,7 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('newspape
       const issue = parseIssueDocument(JSON.parse(await readFile(path.join(fixtures, 'victorian-ordinary.json'), 'utf8')));
       issue.pages = Array.from({ length: 6 }, (_, index) => ({
         ...issue.pages[0], id: `section-${index}`, label: `Section ${index} with a lengthy descriptive label`,
+        itemIds: issue.items.slice(index, index < 5 ? index + 1 : undefined).map(item => item.id),
       }));
       issue.pages[0].label = 'Unbroken'.repeat(30);
       await page.goto(`${host.url}/newspaper/export.html`);

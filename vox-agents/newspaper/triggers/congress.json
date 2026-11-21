@@ -21,11 +21,13 @@
     "subject": "event",
     "event": "ResolutionResult",
     "when": [
-      "event.passed === false"
+      "event.passed === false",
+      "event.knows('resolutionType') && typeof event.resolutionType === 'string' && event.resolutionType.trim().length > 0",
+      "event.knows('isEnact') && typeof event.isEnact === 'boolean'"
     ],
     "values": {
-      "resolution": "event.knows('resolutionType') && typeof event.resolutionType === 'string' ? event.resolutionType : null",
-      "isEnact": "event.knows('isEnact') ? event.isEnact : null",
+      "resolution": "event.resolutionType",
+      "isEnact": "event.isEnact",
       "proposer": "event.knows('proposerName') ? event.proposerName : null",
       "ours": "event.knows('player') && event.player.self === true"
     },
@@ -37,11 +39,13 @@
     "subject": "event",
     "event": "ResolutionResult",
     "when": [
-      "event.passed === true"
+      "event.passed === true",
+      "event.knows('resolutionType') && typeof event.resolutionType === 'string' && event.resolutionType.trim().length > 0",
+      "event.knows('isEnact') && typeof event.isEnact === 'boolean'"
     ],
     "values": {
-      "resolution": "event.knows('resolutionType') && typeof event.resolutionType === 'string' ? event.resolutionType : null",
-      "isEnact": "event.knows('isEnact') ? event.isEnact : null",
+      "resolution": "event.resolutionType",
+      "isEnact": "event.isEnact",
       "proposer": "event.knows('proposerName') ? event.proposerName : null",
       "ours": "event.knows('player') && event.player.self === true"
     },

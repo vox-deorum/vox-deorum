@@ -24,12 +24,17 @@ export function mountMockupControls(
   function updateLayouts(): void {
     const design = designs.get(designSelect.value);
     civilizationInput.disabled = !design?.civilizationTitles;
-    const variants = new Set(design?.layouts.map(layout => layout.variant));
+    const layouts = design?.layouts ?? [];
+    const previousVariant = layoutSelect.selectedOptions[0]?.dataset.variant;
     const previous = layoutSelect.value;
-    layoutSelect.replaceChildren(...Array.from(variants, variant =>
-      new Option(variant[0].toUpperCase() + variant.slice(1), variant)
-    ));
-    if (Array.from(layoutSelect.options).some(option => option.value === previous)) layoutSelect.value = previous;
+    layoutSelect.replaceChildren(...layouts.map(({ id, variant, frontSlots }) => {
+      const label = variant[0].toUpperCase() + variant.slice(1);
+      const option = new Option(`${label} · ${id} (${frontSlots} articles)`, id);
+      option.dataset.variant = variant;
+      return option;
+    }));
+    layoutSelect.value = layouts.some(layout => layout.id === previous) ? previous
+      : layouts.find(layout => layout.variant === previousVariant)?.id ?? layouts[0]?.id ?? '';
   }
 
   /** Report a fixture or design error near the corresponding controls. */
@@ -43,7 +48,7 @@ export function mountMockupControls(
     alert.hidden = true;
     try {
       const design = designs.get(designSelect.value);
-      const layout = design?.layouts.find(option => option.variant === layoutSelect.value)?.variant;
+      const layout = design?.layouts.find(option => option.id === layoutSelect.value);
       if (!design || !layout) throw new Error('No built-in newspaper designs were found.');
       showIssue(createPreviewIssue(design, layout, readTint(), civilizationInput.value));
     } catch (error) {

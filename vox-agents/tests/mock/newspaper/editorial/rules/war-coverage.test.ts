@@ -7,6 +7,7 @@ import { loadEditorialConfig, parseEditorialConfig } from '../../../../../src/ne
 import type { EditorialConfig } from '../../../../../src/newspaper/editorial/config/schema.js';
 import { buildNewspaperFacts } from '../../../../../src/newspaper/editorial/facts/index.js';
 import { context, evidence, event, relationship, snapshot } from '../../../../helpers/newspaper-diplomacy.js';
+import { editionBriefTemplate, withEditionBriefs } from '../../../../helpers/newspaper-briefs.js';
 
 interface Attack { player: number; ally?: number; turn?: number }
 interface WarFixture { active?: number[]; ongoing?: number[]; defensiveAlly?: number; vassal?: number; hiddenNames?: number[] }
@@ -49,8 +50,8 @@ function declarations(attacks: Attack[], options: WarFixture): NewspaperEvidence
 }
 
 /** Run the stock war catalogue through the same editorial check as replay. */
-function check(attacks: Attack[], options: WarFixture = {}, config = stock) {
-  const evidence = declarations(attacks, options);
+function check(attacks: Attack[], options: WarFixture = {}, catalogue = stock, briefs = 4) {
+  const { evidence, config } = withEditionBriefs(declarations(attacks, options), catalogue, briefs);
   const facts = buildNewspaperFacts(evidence, {
     playerIdentities: Object.fromEntries(Object.entries(context.playerNames!).map(([id, name]) => [id, {
       name: options.hiddenNames?.includes(Number(id)) ? undefined : name,
@@ -68,45 +69,40 @@ function articleText(item: IssueItem): string {
   return [item.headline, item.subheadline ?? [], ...item.body].flat().map(node => node.text).join(' ');
 }
 
-/** Allow small issues for examples focused on which news gets combined. */
-function smallIssue(): EditorialConfig {
-  return { ...stock, defaults: { ...stock.defaults, minItems: 1 } };
-}
-
 describe('newspaper declaration coverage', () => {
-  it('counts five declarations before merging them into one breaking story', async () => {
+  it('leads a full breaking front with one story that covers five declarations', async () => {
     const result = await check([{ player: 1, ally: 10 }, { player: 2, ally: 11 }, { player: 3 }, { player: 4 }, { player: 5 }]);
     expect(result.status).toBe('published');
     if (result.status !== 'published') return;
-    expect(result.issue.items).toHaveLength(1);
-    const [article] = result.issue.items;
-    expect(result.issue.pages[0]).toMatchObject({ layout: 'breaking', itemIds: [article.id] });
+    expect(result.issue.items).toHaveLength(5);
+    const front = result.issue.pages[0];
+    expect(front.layout).toBe('breaking');
+    expect(front.itemIds).toHaveLength(5);
+    const article = result.issue.items.find(item => item.id === front.itemIds[0])!;
     for (const name of ['Brazil', 'India', 'Iroquois', 'Byzantium', 'Zulu', 'Geneva', 'Sidon'])
       expect(articleText(article)).toContain(name);
     const covered = result.decision.candidateScores.filter(candidate => candidate.mergedInto);
     expect(covered).toHaveLength(5);
-    expect(new Set(covered.map(candidate => candidate.mergedInto))).toEqual(new Set(
-      result.decision.candidateScores.filter(candidate => candidate.selected).map(candidate => candidate.id),
-    ));
-    const record = result.state.issues[0].items[0];
+    expect(new Set(covered.map(candidate => candidate.mergedInto)).size).toBe(1);
+    const record = result.state.issues[0].items.find(item => item.id === article.id)!;
     expect(record.ruleIds).toContain('incoming-war-wave');
     expect(record.sources.filter(row => row.table === 'GameEvents').map(row => row.id))
       .toEqual(expect.arrayContaining([1, 2, 3, 4, 5, 6, 7]));
   });
 
   it('still waits when only three declaration stories are ready', async () => {
-    const result = await check([{ player: 1 }, { player: 2 }, { player: 3 }]);
+    const result = await check([{ player: 1 }, { player: 2 }, { player: 3 }], {}, stock, 0);
     expect(result.status).toBe('skipped');
     expect(result.state.issues).toHaveLength(0);
   });
 
   it('prints two separate reports with their own allies and excludes defensive and unnamed allies from the copy', async () => {
     const result = await check([{ player: 1, ally: 10 }, { player: 2, ally: 11 }],
-      { defensiveAlly: 12, hiddenNames: [11] }, smallIssue());
+      { defensiveAlly: 12, hiddenNames: [11] }, stock, 3);
     expect(result.status).toBe('published');
     if (result.status !== 'published') return;
-    expect(result.issue.items).toHaveLength(2);
-    const stories = result.issue.items.map(articleText);
+    const stories = result.issue.items.filter(item => result.decision.selectedVariants[item.id] !== editionBriefTemplate.variants[0].id).map(articleText);
+    expect(stories).toHaveLength(2);
     expect(stories.find(story => story.includes('Brazil'))).toContain('Geneva');
     expect(stories.find(story => story.includes('India'))).not.toContain('Geneva');
     expect(stories.join(' ')).not.toMatch(/Riga|Sidon/);
@@ -114,14 +110,14 @@ describe('newspaper declaration coverage', () => {
 
   it('uses the fronts lead for two new wars and an existing enemy', async () => {
     const result = await check([{ player: 1, ally: 10 }, { player: 2, ally: 11 }],
-      { active: [1, 2, 4], ongoing: [4] }, smallIssue());
+      { active: [1, 2, 4], ongoing: [4] });
     expect(result.status).toBe('published');
     if (result.status !== 'published') return;
-    expect(result.issue.items).toHaveLength(1);
-    const record = result.state.issues[0].items[0];
+    const lead = result.issue.pages[0].itemIds[0];
+    const record = result.state.issues[0].items.find(item => item.id === lead)!;
     expect(record.ruleIds).toContain('war-on-three-fronts');
     expect(record.ruleIds).toContain('war-involving-us');
-    const article = result.issue.items[0];
+    const article = result.issue.items.find(item => item.id === lead)!;
     expect(article.body.some(paragraph => {
       const text = paragraph.map(node => node.text).join('');
       return text.includes('Brazil') && text.includes('India') && !text.includes('Byzantium');
@@ -133,22 +129,22 @@ describe('newspaper declaration coverage', () => {
   });
 
   it('uses the attack incident when a vassal account wins a story slot', async () => {
-    const config = await parseEditorialConfig({ ...smallIssue(), templates: stock.templates.map(template =>
+    const config = await parseEditorialConfig({ ...stock, templates: stock.templates.map(template =>
       template.id === 'vassals-join-war-account' ? { ...template, weight: { base: 50 } } : template) });
     const result = await check([{ player: 1, ally: 10 }, { player: 2 }, { player: 3 }], { vassal: 5 }, config);
     expect(result.status).toBe('published');
     if (result.status !== 'published') return;
-    expect(result.issue.items).toHaveLength(1);
-    expect(articleText(result.issue.items[0])).toContain('Geneva');
+    const lead = result.issue.items.find(item => item.id === result.issue.pages[0].itemIds[0])!;
+    expect(articleText(lead)).toContain('Geneva');
     expect(result.decision.candidateScores.some(candidate =>
       candidate.id.startsWith('vassals-join-war-account/') && candidate.mergedInto)).toBe(true);
   });
 
   it('keeps declarations on different turns and independent city-state attacks separate', async () => {
-    const result = await check([{ player: 1, turn: 9 }, { player: 2 }, { player: 3 }, { player: 10 }], {}, smallIssue());
+    const result = await check([{ player: 1, turn: 9 }, { player: 2 }, { player: 3 }, { player: 10 }], {}, stock, 1);
     expect(result.status).toBe('published');
     if (result.status !== 'published') return;
-    expect(result.issue.items).toHaveLength(4);
+    expect(result.issue.items.filter(item => result.decision.selectedVariants[item.id] !== editionBriefTemplate.variants[0].id)).toHaveLength(4);
     expect(result.decision.candidateScores.some(candidate => candidate.mergedInto)).toBe(false);
   });
 });

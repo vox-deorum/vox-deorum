@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "issueId": "victorian-breaking-230",
   "campaignId": "fixture-campaign",
   "timelineId": "fixture-timeline-main",
@@ -27,13 +27,13 @@
       "id": "front",
       "label": "Headlines",
       "layout": "breaking",
-      "itemIds": ["war", "york"]
+      "itemIds": ["war", "york", "reservoir", "ledger", "mill"]
     },
     {
-      "id": "military",
-      "label": "Military",
+      "id": "abroad",
+      "label": "Foreign Correspondence",
       "layout": "ordinary",
-      "itemIds": ["war", "york"]
+      "itemIds": ["canal", "convoy", "embassy"]
     }
   ],
   "items": [
@@ -132,6 +132,54 @@
           "text": "The latest observation of York shows its workshops open. No new disruption is recorded."
         }
       ]
+    },
+    {
+      "id": "reservoir",
+      "tags": ["domestic"],
+      "seriesKeys": [],
+      "headline": [{ "type": "text", "text": "Council approves a second reservoir" }],
+      "body": [[{ "type": "text", "text": "Surveyors marked higher ground for a new reservoir after the council approved the site. Work will start with the channel that feeds the old waterworks." }]],
+      "sourceNote": [{ "type": "text", "text": "The council minutes name the site and the first channel. They give no date for filling the new reservoir." }]
+    },
+    {
+      "id": "ledger",
+      "tags": ["politics"],
+      "seriesKeys": [],
+      "headline": [{ "type": "text", "text": "Town clerks open the public ledger" }],
+      "body": [[{ "type": "text", "text": "Residents may now inspect the council accounts at the guildhall. The first reports cover road repairs and the cost of keeping the night watch." }]],
+      "sourceNote": [{ "type": "text", "text": "The public ledger records spending on the roads and night watch. The next accounts have yet to be posted." }]
+    },
+    {
+      "id": "mill",
+      "tags": ["domestic"],
+      "seriesKeys": [],
+      "headline": [{ "type": "text", "text": "Millers reopen the river crossing" }],
+      "body": [[{ "type": "text", "text": "The repaired crossing now carries grain carts again. Millers are checking the banks each morning until the spring water falls." }]],
+      "sourceNote": [{ "type": "text", "text": "Millers recorded the first grain carts to cross. Water levels are still being checked." }]
+    },
+    {
+      "id": "canal",
+      "tags": ["international"],
+      "seriesKeys": [],
+      "headline": [{ "type": "text", "text": "Canal towns agree on common tolls" }],
+      "body": [[{ "type": "text", "text": "Three ports have agreed to collect the same toll along the canal. Boat owners say that the new schedule will make it easier to price a journey before setting out." }]],
+      "sourceNote": [{ "type": "text", "text": "The published toll schedule lists the same rates for all three ports." }]
+    },
+    {
+      "id": "convoy",
+      "tags": ["international", "military"],
+      "seriesKeys": [],
+      "headline": [{ "type": "text", "text": "Northern convoy reaches the strait" }],
+      "body": [[{ "type": "text", "text": "The first grain ships have cleared the strait under escort. Their captains report that the crossing is open, though two merchant ships are still awaiting repairs." }]],
+      "sourceNote": [{ "type": "text", "text": "The captains reported arrival at the strait and named two ships held back for repairs." }]
+    },
+    {
+      "id": "embassy",
+      "tags": ["international"],
+      "seriesKeys": [],
+      "headline": [{ "type": "text", "text": "Border talks resume at the summer embassy" }],
+      "body": [[{ "type": "text", "text": "Envoys have returned to the summer embassy to discuss the boundary and reopen traffic through mountain passes. They will exchange maps before the next meeting." }]],
+      "sourceNote": [{ "type": "text", "text": "Both delegations confirmed they had returned and agreed to exchange maps." }]
     }
   ]
 }
