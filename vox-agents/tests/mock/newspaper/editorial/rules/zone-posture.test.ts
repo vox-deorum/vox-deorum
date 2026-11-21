@@ -1,8 +1,8 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import type {
-  NewspaperEvidence, NewspaperSnapshot, NewspaperTacticalZone,
+  NewspaperEvidence, NewspaperSnapshot, NewspaperTacticalPostureChange, NewspaperTacticalZone,
 } from '../../../../../../mcp-server/dist/newspaper/evidence.js';
-import { createInitialPublicationState } from '../../../../../src/newspaper/contracts/publication.js';
+import { createInitialPublicationState, type PublicationState } from '../../../../../src/newspaper/contracts/publication.js';
 import { runEditorialCheck } from '../../../../../src/newspaper/editorial/check.js';
 import { loadEditorialConfig } from '../../../../../src/newspaper/editorial/config/load.js';
 import type { EditorialConfig } from '../../../../../src/newspaper/editorial/config/schema.js';
@@ -20,15 +20,17 @@ function city(id: number, owner: number, name: string): NewspaperSnapshot {
   };
 }
 
-/** Record one receiver front observation with an optional prior-check reading. */
+/** Record one receiver front observation and an optional earlier sighting. */
 function zone({
-  zoneID, city: cityName, domain, posture, previousPosture,
+  zoneID, city: cityName, domain, posture, previousPosture, units = {}, turn = 10,
 }: {
   zoneID: number;
   city: string;
   domain: 'Land' | 'Sea';
   posture: string;
   previousPosture?: string;
+  units?: NewspaperTacticalZone['units'];
+  turn?: number;
 }): NewspaperTacticalZone {
   const offset = zoneID < 0 ? 30 : 0;
   return {
@@ -39,44 +41,50 @@ function zone({
     ...(previousPosture === undefined ? {} : {
       previousPosture: {
         posture: previousPosture,
-        source: { table: 'TacticalZones', id: 400 + offset + Math.abs(zoneID), turn: 5, createdAt: 5000 },
+        source: { table: 'TacticalZones', id: 400 + offset + Math.abs(zoneID), turn: turn - 1, createdAt: (turn - 1) * 1000 },
       },
     }),
-    units: {},
-    source: { table: 'TacticalZones', id: 200 + offset + Math.abs(zoneID), turn: 10, createdAt: 10000 },
+    units,
+    source: { table: 'TacticalZones', id: 200 + offset + Math.abs(zoneID), turn, createdAt: turn * 1000 },
   };
 }
 
 /** Supply visible cities, fronts and a continuous diplomatic relationship. */
 function fixture({
-  cities, zones, state = 'peace',
+  cities, zones, state = 'peace', previousState = state, changes, cutoff = 10, previous = 5,
 }: {
   cities: NewspaperSnapshot[];
   zones: NewspaperTacticalZone[];
   state?: 'peace' | 'war';
+  previousState?: 'peace' | 'war';
+  changes?: NewspaperTacticalPostureChange[];
+  cutoff?: number;
+  previous?: number;
 }): NewspaperEvidence {
-  const players = [0, 1].map(subjectID => {
-    const row = diplomacySnapshot(subjectID, 10, []);
-    return { subjectID, values: {}, source: row.source };
-  });
-  const pastPlayers = players.map(row => ({
-    ...row, source: { ...row.source, id: row.subjectID, turn: 0, createdAt: 0 },
-  }));
   const diplomacy = [
-    diplomacySnapshot(0, 10, [relationship(1, state)]),
-    diplomacySnapshot(1, 10, [relationship(0, state)]),
+    diplomacySnapshot(0, 0, [relationship(1, previousState)]),
+    diplomacySnapshot(1, 0, [relationship(0, previousState)]),
+    diplomacySnapshot(0, cutoff, [relationship(1, state)]),
+    diplomacySnapshot(1, cutoff, [relationship(0, state)]),
   ];
+  const snapshots = diplomacy.map(({ subjectID, source }) => ({ subjectID, values: {}, source }));
+  const postureChanges = changes ?? zones.flatMap(({ previousPosture, city, ...observation }) =>
+    city && previousPosture && previousPosture.posture !== observation.posture
+      ? [{ ...observation, city, previousPosture }]
+      : []
+  );
   return {
-    request: { receiverPlayerID: 0, previousCheckTurn: 5, cutoffTurn: 10, historyFromTurn: -1 },
-    players,
+    request: { receiverPlayerID: 0, previousCheckTurn: previous, cutoffTurn: cutoff, historyFromTurn: -1 },
+    players: snapshots.slice(2),
     cities,
     comparisons: { players: [], cities: [] },
     events: [],
     tacticalZones: zones,
+    tacticalPostureChanges: postureChanges,
     history: {
       fromTurn: -1,
       baseline: { players: [], cities: [] },
-      snapshots: { players: [...pastPlayers, ...players], cities: [...cities] },
+      snapshots: { players: snapshots, cities: [...cities] },
       events: [],
       gaps: [],
     },
@@ -84,8 +92,8 @@ function fixture({
   };
 }
 
-/** Run the complete stock editor and expose its rule audit. */
-async function check(evidence: NewspaperEvidence) {
+/** Run the editor and expose its rule audit. */
+async function check(evidence: NewspaperEvidence, state: PublicationState = createInitialPublicationState()) {
   const facts = buildNewspaperFacts(evidence, {
     playerIdentities: {
       0: { name: 'France', major: true, teamId: 100 },
@@ -100,7 +108,7 @@ async function check(evidence: NewspaperEvidence) {
     facts,
     config,
     speedMultiplier: 1,
-    state: createInitialPublicationState(),
+    state,
   });
   expect(result.decision.choiceErrors ?? []).toEqual([]);
   return result;
@@ -123,7 +131,7 @@ function value(result: CheckResult, ruleId: string, subject: string, field: stri
 const home = city(10, 0, 'Paris');
 const enemy = city(20, 1, 'Persepolis');
 
-describe('stock zone posture triggers', () => {
+describe('zone posture triggers', () => {
   beforeAll(async () => {
     config = await loadEditorialConfig();
   });
@@ -226,6 +234,31 @@ describe('stock zone posture triggers', () => {
   });
 
   describe('enemy front offensive posture', () => {
+    it('should report an offensive between issues even after the posture changes back and peace begins', async () => {
+      const latest = zone({ zoneID: 20, city: 'Persepolis', domain: 'Land', posture: 'Attrition' });
+      const offensive: NewspaperTacticalPostureChange = {
+        ...latest,
+        city: 'Persepolis',
+        posture: 'Steamroll',
+        source: { ...latest.source, id: 608, turn: 8, createdAt: 8000 },
+        previousPosture: { posture: 'Attrition', source: { ...latest.source, id: 607, turn: 7, createdAt: 7000 } },
+      };
+      const changes = [offensive];
+      const rule = 'enemy-front-posture-offensive';
+      const result = await check(fixture({ cities: [home, enemy], zones: [latest], previousState: 'war', changes }));
+
+      expect(audit(result, rule, 'city/20')).toMatchObject({
+        outcome: 'fired', sources: expect.arrayContaining([offensive.source, offensive.previousPosture.source]),
+      });
+      expect(value(result, rule, 'city/20', 'values.observedTurn')).toBe(8);
+      const reversed = await check(fixture({ cities: [home, enemy], zones: [latest], state: 'war', previousState: 'peace', changes }));
+      expect(audit(reversed, rule, 'city/20')?.outcome).toBe('false');
+      const older = { ...offensive, source: { ...offensive.source, turn: 5 },
+        previousPosture: { ...offensive.previousPosture, source: { ...offensive.previousPosture.source, turn: 4 } } };
+      const outside = await check(fixture({ cities: [home, enemy], zones: [latest], state: 'war', changes: [older] }));
+      expect(audit(outside, rule, 'city/20')?.outcome).toBe('false');
+    });
+
     it('should report a land zone that turns offensive against a known enemy city', async () => {
       const land = zone({
         zoneID: 20, city: 'Persepolis', domain: 'Land', posture: 'Steamroll', previousPosture: 'Attrition',
@@ -258,7 +291,10 @@ describe('stock zone posture triggers', () => {
       const sea = zone({
         zoneID: -20, city: 'Persepolis', domain: 'Sea', posture: 'Surgical City Strike', previousPosture: 'Exploit Flanks',
       });
-      const result = await check(fixture({ cities: [home, enemy], zones: [sea], state: 'war' }));
+      const land = zone({
+        zoneID: 20, city: 'Persepolis', domain: 'Land', posture: 'Attrition', previousPosture: 'Exploit Flanks',
+      });
+      const result = await check(fixture({ cities: [home, enemy], zones: [sea, land], state: 'war' }));
 
       expect(audit(result, 'enemy-front-posture-offensive', 'city/20')?.outcome).toBe('fired');
       expect(value(result, 'enemy-front-posture-offensive', 'city/20', 'values.domain')).toBe('Sea');
@@ -316,6 +352,43 @@ describe('stock zone posture triggers', () => {
       const sea = zone({ zoneID: -20, city: 'Persepolis', domain: 'Sea', posture: 'Surgical City Strike' });
       const seaResult = await check(fixture({ cities: [home, enemy], zones: [sea], state: 'war' }));
       expect(audit(seaResult, 'enemy-front-posture-offensive', 'city/20')?.outcome).toBe('false');
+    });
+  });
+
+  describe('active war zone analysis', () => {
+    const rule = 'active-war-zone-analysis';
+    it('should cover sustained contact with observed units on both sides of the same zone', async () => {
+      const land = zone({
+        zoneID: 20, city: 'Persepolis', domain: 'Land', posture: 'Attrition', previousPosture: 'Attrition',
+        units: { France: { Musketman: 2, Settler: 1 }, Brazil: { Pikeman: 3, 'Great General': 1 } },
+      });
+      const result = await check(fixture({ cities: [home, enemy], zones: [land], state: 'war' }));
+
+      expect(audit(result, rule, 'city/20')).toMatchObject({
+        outcome: 'fired', sources: expect.arrayContaining([land.source]),
+      });
+      expect(value(result, rule, 'city/20', 'values.ourUnits')).toBe(2);
+      expect(value(result, rule, 'city/20', 'values.theirUnits')).toBe(3);
+      expect(result.state.issues.at(-1)?.items.some(item => item.ruleIds?.includes(rule))).toBe(true);
+      expect(audit(result, 'enemy-front-posture-offensive', 'city/20')?.outcome).toBe('false');
+      const later = zone({
+        zoneID: 20, city: 'Persepolis', domain: 'Land', posture: 'Attrition', units: land.units, turn: 15,
+      });
+      const next = await check(fixture({ cities: [home, enemy], zones: [later], state: 'war', cutoff: 15, previous: 10 }), result.state);
+      expect(audit(next, rule, 'city/20')?.outcome).toBe('repeat');
+    });
+
+    it('should not combine units across domains or infer a front from civilians', async () => {
+      const land = zone({
+        zoneID: 10, city: 'Paris', domain: 'Land', posture: 'Counterattack',
+        units: { France: { Musketman: 3 }, Brazil: { Pikeman: 1, Worker: 4 } },
+      });
+      const sea = zone({
+        zoneID: -10, city: 'Paris', domain: 'Sea', posture: 'Counterattack',
+        units: { Brazil: { Galleass: 3 } },
+      });
+      const result = await check(fixture({ cities: [home, enemy], zones: [land, sea], state: 'war' }));
+      expect(audit(result, rule, 'city/10')?.outcome).toBe('false');
     });
   });
 });

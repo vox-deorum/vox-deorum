@@ -85,6 +85,7 @@ export const newspaperDiplomacySnapshotSchema = z.object({
 
 /** One private front observation recorded for the receiving player. */
 const tacticalZoneSourceSchema = newspaperSourceReferenceSchema.extend({ table: z.literal('TacticalZones') });
+const tacticalPostureSchema = z.object({ posture: z.string(), source: tacticalZoneSourceSchema });
 
 export const newspaperTacticalZoneSchema = z.object({
   source: tacticalZoneSourceSchema
@@ -93,10 +94,17 @@ export const newspaperTacticalZoneSchema = z.object({
   city: z.string().optional().describe('Recorded city label when the zone names a city'),
   domain: z.string().describe('Recorded zone domain label'),
   posture: z.string().describe('Recorded tactical posture assessment'),
-  previousPosture: z.object({ posture: z.string(), source: tacticalZoneSourceSchema }).optional()
+  previousPosture: tacticalPostureSchema.optional()
     .describe('Receiver posture for the matching city and zone on the previous check turn'),
   units: z.record(z.string(), z.record(z.string(), z.number()))
     .describe('Visible unit counts by civilization label and recorded unit type')
+});
+
+const newspaperTacticalPostureChangeSchema = tacticalPostureSchema.extend({
+  zoneID: z.number().int().describe('Recorded zone ID, including its land or sea sign'),
+  city: z.string().describe('Readable city label on both sightings'),
+  domain: z.string().describe('Recorded zone domain on both sightings'),
+  previousPosture: tacticalPostureSchema.describe('Different posture on the preceding recorded turn')
 });
 
 /** One public cultural victory observation, limited to directions between the receiver and known majors. */
@@ -193,6 +201,8 @@ export const newspaperEvidenceSchema = z.object({
     .describe('Last recorded change per named technology on the receiving team through the cutoff'),
   tacticalZones: z.array(newspaperTacticalZoneSchema).optional()
     .describe('Latest permitted observation per zone during the cutoff turn, ordered by zone ID; absent when the table is unavailable'),
+  tacticalPostureChanges: z.array(newspaperTacticalPostureChangeSchema).optional()
+    .describe('Dated posture changes at still-readable cities after the reporting boundary, oldest first'),
   culturalInfluence: z.object({
     baseline: newspaperCulturalInfluenceObservationSchema.optional(),
     observations: z.array(newspaperCulturalInfluenceObservationSchema)
@@ -214,6 +224,7 @@ export type NewspaperSnapshot = z.infer<typeof newspaperSnapshotSchema>;
 export type NewspaperEvent = z.infer<typeof newspaperEventSchema>;
 export type NewspaperTechnology = z.infer<typeof newspaperTechnologySchema>;
 export type NewspaperTacticalZone = z.infer<typeof newspaperTacticalZoneSchema>;
+export type NewspaperTacticalPostureChange = z.infer<typeof newspaperTacticalPostureChangeSchema>;
 export type NewspaperCulturalInfluenceObservation = z.infer<typeof newspaperCulturalInfluenceObservationSchema>;
 export type NewspaperHistory = z.infer<typeof newspaperHistorySchema>;
 export type NewspaperEvidence = z.infer<typeof newspaperEvidenceSchema>;

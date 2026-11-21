@@ -114,11 +114,46 @@ describe('newspaper tactical zones', () => {
     expect(previous(43)).toBeUndefined();
   });
 
+  it('should keep dated changes between issues even when the cutoff returns to the earlier posture', async () => {
+    await city({ ID: 22, Turn: 9 });
+    await zone(620, 9, 0, 2, { zoneID: 42, city: 'Port', posture: 'Attrition' });
+    await zone(621, 10, 0, 2, { zoneID: 42, city: 'Port', posture: 'Withdraw' });
+    await zone(622, 10, 0, 2, { zoneID: 42, city: 'Port', posture: 'Steamroll' });
+    await zone(623, 10, 1, 2, { zoneID: 42, city: 'Port', posture: 'Hedgehog' });
+    await zone(624, 11, 0, 2, { zoneID: 42, city: 'Port', posture: 'Attrition' });
+    await zone(625, 12, 0, 2, { zoneID: 42, city: 'Port', posture: 'Attrition' });
+
+    const { tacticalZones, tacticalPostureChanges } = newspaperEvidenceSchema.parse(await queryNewspaperEvidence(db, request));
+    expect(tacticalZones?.[0]).toMatchObject({ posture: 'Attrition' });
+    expect(tacticalPostureChanges).toMatchObject([
+      { zoneID: 42, posture: 'Steamroll', source: { id: 622, turn: 10 }, previousPosture: { posture: 'Attrition', source: { id: 620 } } },
+      { zoneID: 42, posture: 'Attrition', source: { id: 624, turn: 11 }, previousPosture: { posture: 'Steamroll', source: { id: 622 } } }
+    ]);
+    const noCutoffSighting = await queryNewspaperEvidence(db, { ...request, cutoffTurn: 13 });
+    expect(noCutoffSighting.tacticalZones).toEqual([]);
+    expect(noCutoffSighting.tacticalPostureChanges).toEqual(tacticalPostureChanges);
+    const later = await queryNewspaperEvidence(db, { ...request, previousCheckTurn: 11 });
+    expect(later.tacticalPostureChanges).toEqual([]);
+  });
+
+  it('should leave changes across missing sightings and interrupted city visibility unknown', async () => {
+    await city({ ID: 22, Turn: 9 });
+    await city({ ID: 23, Turn: 11, Player0: 0 });
+    await city({ ID: 24, Turn: 12 });
+    await zone(620, 9, 0, 2, { zoneID: 42, city: 'Port', posture: 'Attrition' });
+    await zone(621, 10, 0, 2, { zoneID: 42, city: 'Port', posture: 'Steamroll' });
+    await zone(622, 12, 0, 2, { zoneID: 42, city: 'Port', posture: 'Withdraw' });
+
+    const result = await queryNewspaperEvidence(db, request);
+    expect(result.tacticalPostureChanges).toEqual([]);
+  });
+
   it('keeps an empty front list and leaves fronts unknown without the table', async () => {
     expect((await queryNewspaperEvidence(db, request)).tacticalZones).toEqual([]);
     await db.schema.dropTable('TacticalZones').execute();
     const result = await queryNewspaperEvidence(db, request);
     expect(result.tacticalZones).toBeUndefined();
+    expect(result.tacticalPostureChanges).toBeUndefined();
     expect(newspaperEvidenceSchema.parse(result)).toEqual(result);
   });
 });

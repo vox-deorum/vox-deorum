@@ -1,5 +1,28 @@
 [
   {
+    "id": "active-war-zone-analysis",
+    "subject": "city",
+    "when": [
+      "city.knows('own') && city.knows('name') && self.knows('name')",
+      "city.own === true || (city.foreign === true && city.knows('owner') && city.owner.knows('major') && city.owner.major === true && city.owner.knows('name') && city.owner.knows('enemy') && city.owner.enemy === true)",
+      "city.own !== true || (self.knows('wars') && self.wars.some(p => !p.self && p.knows('major') && p.major === true && p.knows('name')))",
+      "(() => { const count = (units, name) => { if (!units || !Object.hasOwn(units, name)) return 0; return Object.entries(units[name]).reduce((sum, [unit, n]) => types.settlers.includes(unit) || types.workers.includes(unit) || types.missionaries.includes(unit) || types.greatPeople.includes(unit) || !Number.isFinite(n) || n <= 0 ? sum : sum + n, 0); }; const zones = city.tacticalZones()?.filter(z => z.knows('units') && z.knows('zoneID') && z.knows('domain')); if (!zones) return false; const names = city.own === true ? self.wars.filter(p => !p.self && p.knows('major') && p.major === true && p.knows('name')).map(p => p.name) : [city.owner.name]; return zones.some(zone => { const ours = count(zone.units, self.name); if (ours < 2) return false; return names.some(name => count(zone.units, name) >= 2); }); })()"
+    ],
+    "values": {
+      "opponent": "(() => { const count = (units, name) => { if (!units || !Object.hasOwn(units, name)) return 0; return Object.entries(units[name]).reduce((sum, [unit, n]) => types.settlers.includes(unit) || types.workers.includes(unit) || types.missionaries.includes(unit) || types.greatPeople.includes(unit) || !Number.isFinite(n) || n <= 0 ? sum : sum + n, 0); }; const zones = city.tacticalZones()?.filter(z => z.knows('units') && z.knows('zoneID') && z.knows('domain')) ?? []; const names = city.own === true ? self.wars.filter(p => !p.self && p.knows('major') && p.major === true && p.knows('name')).map(p => p.name) : [city.owner.name]; let best = null, bestCombined = -1; for (const name of [...new Set(names)]) for (const zone of zones) { const ours = count(zone.units, self.name), theirs = count(zone.units, name); const combined = ours + theirs; if (ours < 2 || theirs < 2 || combined <= bestCombined) continue; bestCombined = combined; best = name; } return best; })()",
+      "zoneID": "(() => { const count = (units, name) => { if (!units || !Object.hasOwn(units, name)) return 0; return Object.entries(units[name]).reduce((sum, [unit, n]) => types.settlers.includes(unit) || types.workers.includes(unit) || types.missionaries.includes(unit) || types.greatPeople.includes(unit) || !Number.isFinite(n) || n <= 0 ? sum : sum + n, 0); }; const zones = city.tacticalZones()?.filter(z => z.knows('units') && z.knows('zoneID') && z.knows('domain')) ?? []; let best = null, bestCombined = -1; for (const zone of zones) { const ours = count(zone.units, self.name), theirs = count(zone.units, opponent); const combined = ours + theirs; if (ours < 2 || theirs < 2 || combined <= bestCombined) continue; bestCombined = combined; best = zone.zoneID; } return best; })()",
+      "cityName": "city.name",
+      "ourUnits": "(() => { const zone = city.tacticalZones()?.find(z => z.zoneID === zoneID); if (!zone || !zone.knows('units') || !Object.hasOwn(zone.units, self.name)) return 0; return Object.entries(zone.units[self.name]).reduce((sum, [unit, n]) => types.settlers.includes(unit) || types.workers.includes(unit) || types.missionaries.includes(unit) || types.greatPeople.includes(unit) || !Number.isFinite(n) || n <= 0 ? sum : sum + n, 0); })()",
+      "theirUnits": "(() => { const zone = city.tacticalZones()?.find(z => z.zoneID === zoneID); if (!zone || !zone.knows('units') || opponent === null || !Object.hasOwn(zone.units, opponent)) return 0; return Object.entries(zone.units[opponent]).reduce((sum, [unit, n]) => types.settlers.includes(unit) || types.workers.includes(unit) || types.missionaries.includes(unit) || types.greatPeople.includes(unit) || !Number.isFinite(n) || n <= 0 ? sum : sum + n, 0); })()",
+      "domain": "city.tacticalZones()?.find(z => z.zoneID === zoneID)?.domain ?? null",
+      "posture": "(() => { const zone = city.tacticalZones()?.find(z => z.zoneID === zoneID); return zone?.knows('posture') ? zone.posture : null; })()"
+    },
+    "tier": "notable",
+    "adjust": "city.stake.place",
+    "repeat": "medium",
+    "tags": ["cities", "military"]
+  },
+  {
     "id": "ally-joins-our-war",
     "subject": "incident",
     "when": [
@@ -83,19 +106,20 @@
       "city.knows('name')",
       "city.knows('owner') && city.owner.knows('major') && city.owner.major === true",
       "city.owner.knows('name')",
-      "city.owner.knows('enemy') && city.owner.enemy === true",
-      "city.tacticalZones()?.some(z => z.knows('posture') && z.knows('previousPosture') && (z.posture === 'Steamroll' || z.posture === 'Surgical City Strike') && typeof z.previousPosture === 'string' && z.previousPosture !== 'Steamroll' && z.previousPosture !== 'Surgical City Strike')"
+      "city.knows('tacticalPostureChanges')",
+      "city.tacticalPostureChanges.some(c => c.knows('posture') && c.knows('previousPosture') && typeof c.previousPosture === 'string' && (c.posture === 'Steamroll' || c.posture === 'Surgical City Strike') && c.previousPosture !== 'Steamroll' && c.previousPosture !== 'Surgical City Strike' && self.at(turn - c.turn)?.relation(city.owner)?.war === true)"
     ],
     "values": {
-      "zoneIndex": "city.tacticalZones().findIndex(z => z.knows('posture') && z.knows('previousPosture') && (z.posture === 'Steamroll' || z.posture === 'Surgical City Strike') && typeof z.previousPosture === 'string' && z.previousPosture !== 'Steamroll' && z.previousPosture !== 'Surgical City Strike')",
+      "observedTurn": "city.tacticalPostureChanges.filter(c => c.knows('posture') && c.knows('previousPosture') && typeof c.previousPosture === 'string' && (c.posture === 'Steamroll' || c.posture === 'Surgical City Strike') && c.previousPosture !== 'Steamroll' && c.previousPosture !== 'Surgical City Strike' && self.at(turn - c.turn)?.relation(city.owner)?.war === true).at(-1)?.turn",
       "cityName": "city.name",
       "civilization": "city.owner.name",
-      "domain": "city.tacticalZones()[zoneIndex].domain",
-      "previousPosture": "city.tacticalZones()[zoneIndex].previousPosture",
-      "posture": "city.tacticalZones()[zoneIndex].posture"
+      "domain": "city.tacticalPostureChanges.filter(c => c.turn === observedTurn).at(-1)?.domain",
+      "previousPosture": "city.tacticalPostureChanges.filter(c => c.turn === observedTurn).at(-1)?.previousPosture",
+      "posture": "city.tacticalPostureChanges.filter(c => c.turn === observedTurn).at(-1)?.posture"
     },
     "tier": "notable",
     "adjust": "city.stake.place",
+    "repeat": 1,
     "tags": ["cities", "military", "international"]
   },
   {
@@ -106,39 +130,44 @@
       "city.knows('name')",
       "city.knows('owner') && city.owner.knows('major') && city.owner.major === true",
       "city.owner.knows('name')",
-      "city.owner.knows('enemy') && city.owner.enemy === true",
-      "city.tacticalZones()?.some(z => z.knows('posture') && z.knows('previousPosture') && (z.posture === 'Attrition' || z.posture === 'Exploit Flanks') && z.previousPosture === 'Withdraw')"
+      "city.knows('tacticalPostureChanges')",
+      "city.tacticalPostureChanges.some(c => c.knows('posture') && c.knows('previousPosture') && (c.posture === 'Attrition' || c.posture === 'Exploit Flanks') && c.previousPosture === 'Withdraw' && self.at(turn - c.turn)?.relation(city.owner)?.war === true)"
     ],
     "values": {
-      "zoneIndex": "city.tacticalZones().findIndex(z => z.knows('posture') && z.knows('previousPosture') && (z.posture === 'Attrition' || z.posture === 'Exploit Flanks') && z.previousPosture === 'Withdraw')",
+      "observedTurn": "city.tacticalPostureChanges.filter(c => c.knows('posture') && c.knows('previousPosture') && (c.posture === 'Attrition' || c.posture === 'Exploit Flanks') && c.previousPosture === 'Withdraw' && self.at(turn - c.turn)?.relation(city.owner)?.war === true).at(-1)?.turn",
       "cityName": "city.name",
       "civilization": "city.owner.name",
-      "domain": "city.tacticalZones()[zoneIndex].domain",
-      "previousPosture": "city.tacticalZones()[zoneIndex].previousPosture",
-      "posture": "city.tacticalZones()[zoneIndex].posture"
+      "domain": "city.tacticalPostureChanges.filter(c => c.turn === observedTurn).at(-1)?.domain",
+      "previousPosture": "city.tacticalPostureChanges.filter(c => c.turn === observedTurn).at(-1)?.previousPosture",
+      "posture": "city.tacticalPostureChanges.filter(c => c.turn === observedTurn).at(-1)?.posture"
     },
     "tier": "routine",
     "adjust": "city.stake.place",
+    "repeat": 1,
     "tags": ["cities", "military", "international"]
   },
   {
     "id": "enemy-front-posture-withdraw",
     "subject": "city",
     "when": [
-      "city.foreign && city.knows('name')",
-      "city.knows('owner') && city.owner.major && city.owner.knows('name') && city.owner.knows('enemy') && city.owner.enemy",
-      "city.tacticalZones()?.some(z => z.posture === 'Withdraw' && z.knows('previousPosture') && z.previousPosture !== 'NONE' && z.previousPosture !== 'Withdraw')"
+      "city.knows('foreign') && city.foreign === true",
+      "city.knows('name')",
+      "city.knows('owner') && city.owner.knows('major') && city.owner.major === true",
+      "city.owner.knows('name')",
+      "city.knows('tacticalPostureChanges')",
+      "city.tacticalPostureChanges.some(c => c.knows('posture') && c.knows('previousPosture') && c.posture === 'Withdraw' && c.previousPosture !== 'NONE' && c.previousPosture !== 'Withdraw' && self.at(turn - c.turn)?.relation(city.owner)?.war === true)"
     ],
     "values": {
-      "zoneIndex": "city.tacticalZones().findIndex(z => z.posture === 'Withdraw' && z.knows('previousPosture') && z.previousPosture !== 'NONE' && z.previousPosture !== 'Withdraw')",
+      "observedTurn": "city.tacticalPostureChanges.filter(c => c.knows('posture') && c.knows('previousPosture') && c.posture === 'Withdraw' && c.previousPosture !== 'NONE' && c.previousPosture !== 'Withdraw' && self.at(turn - c.turn)?.relation(city.owner)?.war === true).at(-1)?.turn",
       "cityName": "city.name",
       "civilization": "city.owner.name",
-      "domain": "city.tacticalZones()[zoneIndex].domain",
-      "previousPosture": "city.tacticalZones()[zoneIndex].previousPosture",
-      "posture": "city.tacticalZones()[zoneIndex].posture"
+      "domain": "city.tacticalPostureChanges.filter(c => c.turn === observedTurn).at(-1)?.domain",
+      "previousPosture": "city.tacticalPostureChanges.filter(c => c.turn === observedTurn).at(-1)?.previousPosture",
+      "posture": "city.tacticalPostureChanges.filter(c => c.turn === observedTurn).at(-1)?.posture"
     },
     "tier": "routine",
     "adjust": "city.stake.place",
+    "repeat": 1,
     "tags": ["cities", "military", "international"]
   },
   {
@@ -335,17 +364,19 @@
     "when": [
       "city.knows('own') && city.own === true",
       "city.knows('name')",
-      "city.tacticalZones()?.some(z => z.posture === 'Counterattack' && z.knows('previousPosture') && z.previousPosture === 'Hedgehog')"
+      "city.knows('tacticalPostureChanges')",
+      "city.tacticalPostureChanges.some(c => c.knows('posture') && c.knows('previousPosture') && c.posture === 'Counterattack' && c.previousPosture === 'Hedgehog')"
     ],
     "values": {
-      "zoneIndex": "city.tacticalZones().findIndex(z => z.posture === 'Counterattack' && z.knows('previousPosture') && z.previousPosture === 'Hedgehog')",
+      "observedTurn": "city.tacticalPostureChanges.filter(c => c.knows('posture') && c.knows('previousPosture') && c.posture === 'Counterattack' && c.previousPosture === 'Hedgehog').at(-1)?.turn",
       "cityName": "city.name",
-      "domain": "city.tacticalZones()[zoneIndex].domain",
-      "previousPosture": "city.tacticalZones()[zoneIndex].previousPosture",
-      "posture": "city.tacticalZones()[zoneIndex].posture"
+      "domain": "city.tacticalPostureChanges.filter(c => c.turn === observedTurn).at(-1)?.domain",
+      "previousPosture": "city.tacticalPostureChanges.filter(c => c.turn === observedTurn).at(-1)?.previousPosture",
+      "posture": "city.tacticalPostureChanges.filter(c => c.turn === observedTurn).at(-1)?.posture"
     },
     "tier": "routine",
     "adjust": "city.stake.place",
+    "repeat": 1,
     "tags": ["cities", "military", "domestic"]
   },
   {
@@ -354,17 +385,19 @@
     "when": [
       "city.knows('own') && city.own === true",
       "city.knows('name')",
-      "city.tacticalZones()?.some(z => z.posture === 'Hedgehog' && z.knows('previousPosture') && z.previousPosture !== 'NONE' && z.previousPosture !== 'Hedgehog')"
+      "city.knows('tacticalPostureChanges')",
+      "city.tacticalPostureChanges.some(c => c.knows('posture') && c.knows('previousPosture') && c.posture === 'Hedgehog' && c.previousPosture !== 'NONE' && c.previousPosture !== 'Hedgehog')"
     ],
     "values": {
-      "zoneIndex": "city.tacticalZones().findIndex(z => z.posture === 'Hedgehog' && z.knows('previousPosture') && z.previousPosture !== 'NONE' && z.previousPosture !== 'Hedgehog')",
+      "observedTurn": "city.tacticalPostureChanges.filter(c => c.knows('posture') && c.knows('previousPosture') && c.posture === 'Hedgehog' && c.previousPosture !== 'NONE' && c.previousPosture !== 'Hedgehog').at(-1)?.turn",
       "cityName": "city.name",
-      "domain": "city.tacticalZones()[zoneIndex].domain",
-      "previousPosture": "city.tacticalZones()[zoneIndex].previousPosture",
-      "posture": "city.tacticalZones()[zoneIndex].posture"
+      "domain": "city.tacticalPostureChanges.filter(c => c.turn === observedTurn).at(-1)?.domain",
+      "previousPosture": "city.tacticalPostureChanges.filter(c => c.turn === observedTurn).at(-1)?.previousPosture",
+      "posture": "city.tacticalPostureChanges.filter(c => c.turn === observedTurn).at(-1)?.posture"
     },
     "tier": "routine",
     "adjust": "city.stake.place",
+    "repeat": 1,
     "tags": ["cities", "military", "domestic"]
   },
   {

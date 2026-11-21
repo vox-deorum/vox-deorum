@@ -1,5 +1,57 @@
 [
   {
+    "id": "active-war-zone-analysis-account",
+    "triggers": ["active-war-zone-analysis"],
+    "tags": ["cities", "military"],
+    "names": ["cityName", "opponent"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "active-war-zone-analysis-press",
+        "voice": "press",
+        "stance": "rationalist",
+        "genre": "analysis",
+        "headline": "Two forces in one zone near {{cityName}}",
+        "body": [
+          "Our observers count {{ourUnits}} of our units and {{theirUnits}} under {{opponent}} in the same {{domain}} zone near {{cityName}}. These are sightings, not a measure of fighting power, since training, position and support decide far more than a tally. The count tells us who can see whom, and it leaves open what either side will do with that."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "active-war-zone-analysis-chronicle",
+        "voice": "chronicle",
+        "stance": "neutral",
+        "genre": "analysis",
+        "when": "posture !== null",
+        "headline": "The {{domain}} zone at {{cityName}}, entered",
+        "body": [
+          "The observer's book lists {{ourUnits}} of our units and {{theirUnits}} of {{opponent}}'s in the {{domain}} zone at {{cityName}}, with the front reading entered as {{posture}}. The tally records what was seen and does not measure combat strength. A sea zone can carry land units as well as ships, so the entry describes the contents of the zone rather than a fleet."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "active-war-zone-analysis-pamphlet",
+        "voice": "pamphlet",
+        "stance": "populist",
+        "genre": "analysis",
+        "headline": "What the count near {{cityName}} leaves out",
+        "body": [
+          "Word from the front puts {{ourUnits}} of our units and {{theirUnits}} under {{opponent}} in the same {{domain}} zone near {{cityName}}. A count of this kind records what our people could see, and it is not combat strength. The {{terms.civic.people}} should ask what the two forces are placed to do, and treat the number as the start of the question."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
     "id": "ally-joins-our-war-account",
     "triggers": ["ally-joins-our-war"],
     "tags": ["politics", "military", "international"],
@@ -262,9 +314,9 @@
     "variants": [
       {
         "id": "enemy-front-posture-offensive-report",
-        "headline": "Our forces attack before {{cityName}}",
+        "headline": "The reading at {{cityName}} changes to {{posture}}",
         "body": [
-          "At dawn our regiments moved against {{cityName}}, and the word passed down the line was {{posture}}. From the wall, the soldiers of {{civilization}} watched the companies form in the fields below. By noon the first ladders were on the ground and the outer pickets had been driven in."
+          "Our observers watching {{cityName}} entered a new front reading for the {{domain}} zone on turn {{observedTurn}}, and the entry now reads {{posture}}. The older line was struck through rather than erased. The city is held by {{civilization}}, and the assessment comes from what our staff could see around it."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -277,9 +329,9 @@
         "stance": "rationalist",
         "genre": "analysis",
         "when": "previousPosture !== 'NONE'",
-        "headline": "From {{previousPosture}} to {{posture}}, by arithmetic",
+        "headline": "From {{previousPosture}} to {{posture}} at {{cityName}}",
         "body": [
-          "The order before {{cityName}} has changed from {{previousPosture}} to {{posture}}, and the change was not made for show. Someone weighed the stores, the roads and the number of defenders, and chose to spend men rather than wait. The defenders must now decide whether to meet the attack or let the wall absorb it."
+          "The front assessment for {{cityName}}, held by {{civilization}}, moved from {{previousPosture}} to {{posture}} on turn {{observedTurn}}. The change concerns the {{domain}} zone and describes how our observers read the balance there. An assessment can turn before any formation moves, and the entry records the balance as our observers found it."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -291,9 +343,9 @@
         "voice": "chronicle",
         "stance": "neutral",
         "genre": "report",
-        "headline": "The offensive at {{cityName}}, entered",
+        "headline": "Turn {{observedTurn}}: the entry for {{cityName}}",
         "body": [
-          "In this season our host set itself against {{cityName}}, a city of {{civilization}}. The day's command is entered in the book as {{posture}}. Before the sun stood at noon, the camp had been struck and the engines drawn up in line."
+          "The campaign book records a change at {{cityName}} on turn {{observedTurn}}, where the {{domain}} entry now reads {{posture}}. The earlier line remains legible beneath the correction. The city is held by {{civilization}}, and the book sets down the new word without assigning a cause."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -305,9 +357,9 @@
         "voice": "tabloid",
         "stance": "populist",
         "genre": "report",
-        "headline": "The war moves to {{civilization}}'s streets",
+        "headline": "A new word on the board at {{cityName}}",
         "body": [
-          "The attack on {{cityName}} started before the bakers had lit their ovens. Soldiers went by at a run, and one stopped long enough to ask a boy for water. He drank it standing, handed back the cup, and was gone before the boy could ask his name."
+          "The watch board outside the map room carries a fresh entry for {{cityName}}, dated turn {{observedTurn}}. The word chalked against the {{domain}} zone is now {{posture}}, and the earlier word has been wiped away. The board is the only news most people at the gate get, and a crowd gathers whenever it changes."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -325,9 +377,9 @@
     "variants": [
       {
         "id": "enemy-front-posture-regroup-report",
-        "headline": "Back in the fight near {{cityName}}",
+        "headline": "The entry at {{cityName}} moves from {{previousPosture}} to {{posture}}",
         "body": [
-          "After weeks of falling back, our army before {{cityName}} has turned to face {{civilization}} again, and the order of the day is {{posture}}. Supply wagons that had been sent to the rear are being loaded once more. The road behind the camp is crowded with men going the other way."
+          "Our front assessment for {{cityName}} moved from {{previousPosture}} to {{posture}} on turn {{observedTurn}}. The earlier word described a withdrawal, and the new one describes a different footing in the {{domain}} zone. The city is held by {{civilization}}."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -339,9 +391,9 @@
         "voice": "press",
         "stance": "hawkish",
         "genre": "analysis",
-        "headline": "The pullback ends at {{cityName}}",
+        "headline": "After the withdrawal: the reading at {{cityName}}",
         "body": [
-          "{{cityName}} has watched our line retreat and now watches it return, under the word {{posture}}. A withdrawal can buy time, shorten a road, or hide a defeat, and headquarters has not said which it was. The answer will be read in what happens when the two armies meet again."
+          "The entry for {{cityName}}, held by {{civilization}}, changed from {{previousPosture}} to {{posture}} on turn {{observedTurn}}. Both words are our observers' reading of the {{domain}} zone, and the shift ends a stretch in which that zone was assessed as a withdrawal. Whether the new reading holds depends on what the next sighting records."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -353,9 +405,9 @@
         "voice": "broadcast",
         "stance": "neutral",
         "genre": "report",
-        "headline": "Our forces are back at the line near {{cityName}}",
+        "headline": "The board at {{cityName}} is updated",
         "body": [
-          "Near {{cityName}} tonight, our troops are moving forward again. Command calls the order {{posture}}. The camps that went dark last month are lit once more, and the supply road is busy after sunset."
+          "The front board for {{cityName}} was updated on turn {{observedTurn}}. The reading moved from {{previousPosture}} to {{posture}} in the {{domain}} zone, and the city is held by {{civilization}}. That is the assessment our own observers entered."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -367,9 +419,9 @@
         "voice": "pamphlet",
         "stance": "populist",
         "genre": "editorial",
-        "headline": "The second try at {{cityName}}",
+        "headline": "A different word for the same ground at {{cityName}}",
         "body": [
-          "The army is going back to {{cityName}}, and the {{terms.civic.government}} calls that a recovery. The families who buried sons in the first advance may use a shorter word. Before a new levy is raised, the council should publish what the retreat cost and who ordered it."
+          "The map room has changed its entry for {{cityName}} from {{previousPosture}} to {{posture}}, dated turn {{observedTurn}}. A change of that kind is a judgment about the {{domain}} zone, and readers who follow the front will want it explained in plain language. The {{terms.civic.government}} should say what the new word means and how long it expects the reading to stand."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -387,9 +439,9 @@
     "variants": [
       {
         "id": "enemy-front-posture-withdraw-report",
-        "headline": "The line comes back from {{cityName}}",
+        "headline": "The reading at {{cityName}} turns to {{posture}}",
         "body": [
-          "The command before {{cityName}}, held by {{civilization}}, has gone from {{previousPosture}} to {{posture}}. Our column is pulling back, and the wounded went first. No one on the wall fired as the last wagons left the road."
+          "Our staff entered a new front reading for {{cityName}} on turn {{observedTurn}}. The {{domain}} entry moved from {{previousPosture}} to {{posture}}. The city is held by {{civilization}}, and the change is our own reading of the ground around it."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -401,9 +453,9 @@
         "voice": "press",
         "stance": "government-critical",
         "genre": "analysis",
-        "headline": "The withdrawal before {{cityName}}",
+        "headline": "The new word at {{cityName}}, and the questions it raises",
         "body": [
-          "The word before {{cityName}} has moved from {{previousPosture}} to {{posture}}, and with it the ground our soldiers held. Three things went unstated: who gave the order, what it cost, and why. A public that pays for a retreat is owed at least the reason for it."
+          "The front entry for {{cityName}}, held by {{civilization}}, moved from {{previousPosture}} to {{posture}} on turn {{observedTurn}}. A withdrawal reading is a statement about the balance our observers can see in the {{domain}} zone, and it invites questions about what happens next. The public has been given the label and nothing more."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -415,9 +467,9 @@
         "voice": "gazette",
         "stance": "neutral",
         "genre": "report",
-        "headline": "Letters from the front: {{cityName}}",
+        "headline": "A change in the {{domain}} entry at {{cityName}}",
         "body": [
-          "We are informed from the front that our forces before {{cityName}} have passed from {{previousPosture}} to {{posture}}. The dispatch gives no cause and names no officer. We print the change as it reached us and leave the explanation to those who made it."
+          "We are informed that the front entry for {{cityName}}, held by {{civilization}}, passed from {{previousPosture}} to {{posture}} on turn {{observedTurn}}. The dispatch supplies the new word and no commentary. We print the change as it reached us and leave the explanation to those who keep the board."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }

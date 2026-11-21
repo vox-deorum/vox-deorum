@@ -54,7 +54,9 @@ Find the detailed expressions in the [city](../../../../../vox-agents/newspaper/
 
 ### A nearby offensive outranks a distant one
 
-In [`enemy-front-posture-offensive`](../../../../../vox-agents/newspaper/triggers/war.json), give a shift to an offensive posture the `notable` tier and set `adjust` to [`city.stake.place`](constants.md#stakes). A shift at a city six tiles from our nearest city scores 65; at 100 tiles it scores 52.
+In [`enemy-front-posture-offensive`](../../../../../vox-agents/newspaper/triggers/war.json), find the latest shift to an offensive posture during the reporting period and check that the city belonged to a wartime opponent when it happened. Give the shift the `notable` tier and use [`city.stake.place`](constants.md#stakes). It scores 65 at a city six tiles from our nearest city and 52 at 100 tiles.
+
+`active-war-zone-analysis` can cover a front even when its posture has not changed. It looks for at least two observed units on each side in the same zone and leaves 20 Standard turns between published updates at the same city. Use the counts to describe the sighting; they do not measure either side's fighting strength.
 
 ### Vassals follow their master to war
 

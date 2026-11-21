@@ -121,9 +121,11 @@ The stored `Cities` column becomes `cityCount`; `player.cities` lists visible ci
 
 `self.tacticalZones` uses the receiver's latest cutoff row per zone: `zoneID`, `city` if a readable city matches, `domain`, `posture` and `units` counted by known civilization, known city-state or barbarians and by unit type. Zone zero holds unassigned units and is omitted. No eligible rows leaves the fact hidden. Only the seat itself can read its zones.
 
-A posture such as `Withdraw` comes from the receiver AI. Only occupied zones are recorded, so the last sighting of the turn can outlast the units and a missing zone leaves their movement unknown. Sea zones can include land units. `previousPosture` uses the row for the same visible city and zone at the reporting boundary when available.
+A posture such as `Withdraw` comes from the receiver's AI. Only occupied zones are recorded. The last sighting can outlast the units, and a missing zone leaves their movement unknown. Sea zones can include land units.
 
-`city.tacticalZones()` matches the cutoff city name and absolute zone ID, so it can find both land and sea zones. It returns an empty list if no known zone matches, or `undefined` when the city identity or cutoff zones are unavailable.
+`city.tacticalZones()` matches the cutoff city name and absolute zone ID, so it can find both land and sea zones. It returns an empty list if no known zone matches, or `undefined` when the city identity or cutoff zones are unavailable. A zone's `previousPosture` is the assessment at the reporting boundary when the same city and zone were readable.
+
+`city.tacticalPostureChanges` lists changes during the reporting period, oldest first. Each entry has `zoneID`, `domain`, `turn`, `previousPosture` and `posture`. The city must stay readable under the same owner, and both sightings must come from consecutive turns in the same zone. Use the entry's `owner` and `receiver` when known to check relations at the time of the change. Date the report using the entry's `turn`, even if the assessment has changed again by the cutoff.
 
 ### Quest deadlines and cultural influence
 

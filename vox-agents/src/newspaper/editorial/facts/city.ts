@@ -254,5 +254,18 @@ export function buildCityFacts(row: NewspaperSnapshot, context: FactBuildContext
     .map(event => trained(event, context.receiverId)), sources);
   fields.built = windowFacts(built, sources);
   fields.conversions = windowFacts(conversions, sources);
+  if (context.evidence.tacticalPostureChanges) {
+    const changes = context.evidence.tacticalPostureChanges.filter(change =>
+      Math.abs(change.zoneID) === row.subjectID && change.city === row.values.Name
+    );
+    fields.tacticalPostureChanges = windowFacts(changes.map(change => dated(change.source.turn, {
+      zoneID: fact(change.zoneID, [change.source]),
+      domain: fact(change.domain, [change.source]),
+      posture: fact(change.posture, [change.source]),
+      previousPosture: fact(change.previousPosture.posture, [change.previousPosture.source]),
+      ...(owner === undefined ? {} : { owner: fact(reference('player', owner, change.source.turn), sources) }),
+      receiver: fact(reference('player', context.receiverId, change.source.turn))
+    }, [change.source, change.previousPosture.source])), sources);
+  }
   return fields;
 }

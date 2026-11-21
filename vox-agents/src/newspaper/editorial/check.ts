@@ -114,6 +114,8 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
       ...(evidence.diplomacy?.gaps ?? []),
       ...(evidence.tacticalZones ?? []),
       ...(evidence.tacticalZones ?? []).flatMap(zone => zone.previousPosture ? [zone.previousPosture] : []),
+      ...(evidence.tacticalPostureChanges ?? []),
+      ...(evidence.tacticalPostureChanges ?? []).map(change => change.previousPosture),
       ...(evidence.culturalInfluence?.baseline ? [evidence.culturalInfluence.baseline] : []),
       ...(evidence.culturalInfluence?.observations ?? []),
       ...(evidence.congress?.baseline ? [evidence.congress.baseline] : []),
