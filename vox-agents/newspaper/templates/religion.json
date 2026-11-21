@@ -1,0 +1,764 @@
+[
+  {
+    "id": "faith-drifts-account",
+    "triggers": ["faith-drifts"],
+    "tags": ["politics", "domestic"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "faith-drifts-report",
+        "headline": "The majority faith at home is not the one we founded",
+        "body": [
+          "The faith kept by most of our people is {{majorityFaith}}. The religion this nation founded, {{founded}}, does not hold the majority at home."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "faith-drifts-editorial",
+        "voice": "pamphlet",
+        "stance": "devout",
+        "genre": "editorial",
+        "headline": "Keep the faith we founded",
+        "body": [
+          "Citizens! The majority among us now pray in the manner of {{majorityFaith}}, and {{founded}}, the faith of our own founding, holds the smaller field.",
+          "A creed is not lost in a day; it is lost one untaught child at a time. Teach it at home, keep the shrines filled, and let what our founders handed down be handed down again."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "faith-drifts-letter",
+        "voice": "gazette",
+        "stance": "pluralist",
+        "genre": "letter",
+        "headline": "Sir, on the counting of faiths",
+        "byline": "A Reader of This Paper",
+        "body": [
+          "Sir, you will print the count of faiths as though a wall had fallen. Most of the nation keeps {{majorityFaith}}; some keep {{founded}}; my street keeps both, and the borrowing of kettles continues without incident.",
+          "A nation has room for many beliefs. It is the counting of them, not the keeping, that makes the trouble."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "faith-drifts-analysis",
+        "voice": "press",
+        "stance": "rationalist",
+        "genre": "analysis",
+        "headline": "What the count of faiths does and does not tell us",
+        "body": [
+          "The count is plain: {{majorityFaith}} now claims the majority of the nation, and {{founded}}, our own founding creed, does not. What the count does not say is how the balance came to sit this way, and no decree in the record says so either.",
+          "Adherence follows settlement, trade and the passage of years. Every pulpit will take the number as a verdict; this paper takes it as a measurement, and the next measurement will matter more."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "faith-reaches-city-state-account",
+    "triggers": ["faith-reaches-city-state"],
+    "tags": ["politics", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "faith-reaches-city-state-report",
+        "headline": "{{city}} takes the faith we founded",
+        "body": [
+          "The majority faith of {{city}} is now {{religion}}, the religion this nation founded. Conversions among the city's people account for the change, which reached well beyond the circle of our immediate neighbors."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "faith-reaches-city-state-gazette",
+        "voice": "gazette",
+        "stance": "conciliatory",
+        "genre": "report",
+        "when": "cityState !== null",
+        "headline": "{{cityState}} receives the faith we founded",
+        "body": [
+          "We are informed that {{cityState}} has taken {{religion}}, the religion this nation founded, as its majority faith. Letters from the city-state relate quiet processions and busier altars. Whatever else divides the great powers, a shared creed gives two peoples a courteous subject of conversation."
+        ],
+        "links": [
+          { "placeholder": "cityState", "label": "{{cityState}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "faith-reaches-city-state-anecdote",
+        "voice": "tabloid",
+        "stance": "devout",
+        "genre": "anecdote",
+        "headline": "Lamps in the windows at {{city}}",
+        "body": [
+          "A trader passing through {{city}} told our reporter the same story twice: lamps at dusk, altars swept before market, the neighbors calling it the new custom. The majority faith of the city is now {{religion}}, the creed we founded. He sold out of candles by Thursday and gave the profit to the shrine."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "faith-reaches-city-state-feed",
+        "voice": "feed",
+        "stance": "ambitious",
+        "genre": "report",
+        "headline": "Our faith just took a whole city-state",
+        "body": [
+          "{{city}} now has {{religion}}, the faith we founded, as its majority religion. That is a whole city-state keeping our creed, no treaty required. The creed is doing our diplomacy for us; send the traders next."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "faith-reaches-distant-city-account",
+    "triggers": ["faith-reaches-distant-city"],
+    "tags": ["religion", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "faith-reaches-distant-city-report",
+        "when": "cityName !== null && civilization !== null",
+        "headline": "Our faith reaches {{cityName}}",
+        "body": [
+          "{{cityName}}, a city of {{civilization}} some {{distance}} tiles from our nearest city, has taken {{religion}}, the religion this nation founded, as its majority faith. Conversions in the city account for the change."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "faith-reaches-distant-city-far",
+        "when": "cityName === null || civilization === null",
+        "headline": "A distant city turns to our faith",
+        "body": [
+          "A city far beyond our borders has taken {{religion}}, the religion this nation founded, as its majority faith. Conversions account for the change, and the distance has not slowed the creed."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "faith-reaches-distant-city-analysis",
+        "voice": "press",
+        "stance": "hawkish",
+        "genre": "analysis",
+        "when": "cityName !== null && civilization !== null",
+        "headline": "The creed arrives before the flag",
+        "body": [
+          "{{cityName}}, in the country of {{civilization}}, now keeps {{religion}}, our founded faith, as its majority religion. The distance is real: {{distance}} tiles. So is the result.",
+          "A majority faith shapes what a people defends and whom it trusts. That the change came by conversion and not by conquest alters the manner, not the direction, of the influence. Someone's creed will hold that city; at present it is ours."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "faith-reaches-distant-city-tale",
+        "voice": "spoken",
+        "stance": "artistic",
+        "genre": "anecdote",
+        "headline": "They sing of a far city keeping our faith",
+        "body": [
+          "They say a far city, {{distance}} tiles past the last road we know, has turned to {{religion}}, the faith of our own hearths. The travelers' songs give the town a new verse this year, and the verse is ours."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "foreign-faith-deepens-account",
+    "triggers": ["foreign-faith-deepens"],
+    "tags": ["religion", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "foreign-faith-deepens-report",
+        "when": "civilization !== null",
+        "headline": "{{civilization}} deepens its faith",
+        "body": [
+          "The religion {{religion}}, kept by {{civilization}}, has been deepened with a new article of belief. The creed now teaches more than it did, and the change was made by that power's own hand."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-faith-deepens-unnamed",
+        "when": "civilization === null",
+        "headline": "A foreign power deepens its faith",
+        "body": [
+          "The faith {{religion}}, kept by a major power abroad, has been deepened with a new article of belief. The creed's teaching now stands broader than before."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-faith-deepens-chronicle",
+        "voice": "chronicle",
+        "stance": "traditional",
+        "genre": "report",
+        "when": "stage === 'reformed' && civilization !== null",
+        "headline": "A creed reformed in a foreign land",
+        "body": [
+          "It is set down that {{civilization}} has reformed the faith of {{religion}}, weighing its rites and setting them in order anew. Reform is a costly virtue: what the old observances held together, the new order keeps or sets aside, and the price is counted in custom."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-faith-deepens-notice",
+        "voice": "gazette",
+        "stance": "elitist",
+        "genre": "notice",
+        "when": "stage === 'enhanced' && civilization !== null",
+        "headline": "Notice to the learned: new observances abroad",
+        "body": [
+          "We are informed that {{civilization}} has enriched the faith of {{religion}} with further articles of belief. The addition is orderly, directed from above and kept below. The discerning will watch how the new discipline travels."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "foreign-major-adopts-our-faith-account",
+    "triggers": ["foreign-major-adopts-our-faith"],
+    "tags": ["politics", "international", "religion"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "foreign-major-adopts-our-faith-report",
+        "when": "civilization !== null",
+        "headline": "{{civilization}} adopts the faith we founded",
+        "body": [
+          "{{civilization}} now keeps {{religion}}, the religion this nation founded, as its majority faith. The change among its people is recent, and the creed reached them from beyond our borders."
+        ],
+        "links": [
+          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-major-adopts-our-faith-unnamed",
+        "when": "civilization === null",
+        "headline": "A foreign power adopts our founded faith",
+        "body": [
+          "A major power abroad now keeps {{religion}}, the religion this nation founded, as its majority faith. The adoption is recent, and it came by conversion rather than by conquest."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-major-adopts-our-faith-analysis",
+        "voice": "press",
+        "stance": "ambitious",
+        "genre": "analysis",
+        "when": "civilization !== null",
+        "headline": "One faith, two nations: the opening in this",
+        "body": [
+          "{{civilization}} has adopted {{religion}}, our founded faith, as its majority religion. The fact is religious; the consequences are commercial and diplomatic. A people that prays as we pray will hear our name spoken kindly, and trade follows a good name.",
+          "The window will not stay open on its own. Missions, markets and a courteous court should follow the creed while the door is wide."
+        ],
+        "links": [
+          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-major-adopts-our-faith-letter",
+        "voice": "gazette",
+        "stance": "conciliatory",
+        "genre": "letter",
+        "when": "civilization !== null",
+        "headline": "Sir, on the roads to {{civilization}}",
+        "byline": "A Trader of the Long Roads",
+        "body": [
+          "Sir, I have walked the trade roads to {{civilization}} for twenty years, and I have never known our two peoples to have so much to talk about. Their people now keep {{religion}}, our own founded faith.",
+          "Print it plainly: a shared creed is a wider road than any treaty, and I say let the caravans use it."
+        ],
+        "links": [
+          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "foreign-religion-founded-account",
+    "triggers": ["foreign-religion-founded"],
+    "tags": ["politics", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "foreign-religion-founded-report",
+        "when": "civilization !== null",
+        "headline": "{{civilization}} founds a religion",
+        "body": [
+          "A new religion has entered the world: {{religion}}, founded by {{civilization}}. The creed will now travel with that power's traders, settlers and priests."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-religion-founded-unnamed",
+        "when": "civilization === null",
+        "headline": "A new religion is founded abroad",
+        "body": [
+          "A new religion has been founded by a power abroad. Its name is {{religion}}, and it will travel with its founder's people wherever they go."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-religion-founded-ledger",
+        "voice": "chronicle",
+        "stance": "neutral",
+        "genre": "ledger",
+        "when": "holyCity !== null && civilization !== null",
+        "headline": "Entered in the record: a new creed",
+        "body": [
+          "Founder: {{civilization}}",
+          "Creed: {{religion}}",
+          "Holy city: {{holyCity}}",
+          "So the faith begins, with a founder and a seat."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-religion-founded-bulletin",
+        "voice": "broadcast",
+        "stance": "hawkish",
+        "genre": "report",
+        "when": "civilization !== null",
+        "headline": "A new creed is on the map",
+        "body": [
+          "A new religion has been founded abroad. Its name is {{religion}}. Its founder is {{civilization}}. Faith travels with settlers and traders, and where it takes hold, that power's word travels too."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "national-majority-faith-changed-account",
+    "triggers": ["national-majority-faith-changed"],
+    "tags": ["politics", "domestic", "religion"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "national-majority-faith-changed-report",
+        "when": "former !== null",
+        "headline": "Majority faith turns from {{former}} to {{religion}}",
+        "body": [
+          "The faith kept by most of our people is now {{religion}}, where lately it was {{former}}. The change stands in the recent record."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "national-majority-faith-changed-first",
+        "when": "former === null",
+        "headline": "A majority faith is counted among us",
+        "body": [
+          "The recent record shows a first: a single faith now claims the majority of our people. The faith is {{religion}}."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "national-majority-faith-changed-crier",
+        "voice": "crier",
+        "stance": "devout",
+        "genre": "notice",
+        "when": "founded !== null && religion === founded",
+        "headline": "Hear it! Our own faith leads the nation",
+        "body": [
+          "Hear it, people of the nation! The majority among you now keep {{religion}}, the very faith we founded! The altars this people raised are the altars the people keep! Hear it, and keep the feast."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "national-majority-faith-changed-analysis",
+        "voice": "press",
+        "stance": "traditional",
+        "genre": "analysis",
+        "when": "founded === null || religion !== founded",
+        "headline": "The count turns to a creed not of our founding",
+        "body": [
+          "The majority of the nation now keeps {{religion}}, a faith this nation did not found. Changes of this kind rarely arrive by decree; they accumulate, household by household, until the number turns.",
+          "The measure for what follows is an old one: what long custom held together, and whether the new creed holds it as well. On that, the record is still open."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "neighbor-majority-faith-changed-account",
+    "triggers": ["neighbor-majority-faith-changed"],
+    "tags": ["politics", "international", "religion"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "neighbor-majority-faith-changed-report",
+        "when": "civilization !== null",
+        "headline": "{{civilization}} turns from {{former}} to {{religion}}",
+        "body": [
+          "{{civilization}}, a power near our borders, has changed its majority faith from {{former}} to {{religion}}. The shift among its people is recent."
+        ],
+        "links": [
+          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "neighbor-majority-faith-changed-unnamed",
+        "when": "civilization === null",
+        "headline": "A neighboring power changes its faith",
+        "body": [
+          "A power near our borders has changed its majority faith from {{former}} to {{religion}}. The change is recent."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "neighbor-majority-faith-changed-gazette",
+        "voice": "gazette",
+        "stance": "pluralist",
+        "genre": "report",
+        "when": "civilization !== null",
+        "headline": "{{civilization}} keeps a new majority faith",
+        "body": [
+          "We are informed that {{civilization}} has changed its majority faith from {{former}} to {{religion}}. The households of that realm have made their own count, as households will. Creeds suit the soil that keeps them, and the change will be argued in their markets long before it is settled in ours."
+        ],
+        "links": [
+          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "neighbor-majority-faith-changed-notice",
+        "voice": "pamphlet",
+        "stance": "populist",
+        "genre": "notice",
+        "headline": "Notice to the border towns: the neighbor prays differently now",
+        "body": [
+          "The power next door has a new majority faith: {{religion}}, where {{former}} held before. What that means for the frontier markets, the festivals and the marriages across the line is the towns' business before it is the palace's."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "neighbors-convert-account",
+    "triggers": ["neighbors-convert"],
+    "tags": ["religion"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "neighbors-convert-report",
+        "headline": "{{count}} neighboring cities turn to {{key}}",
+        "body": [
+          "{{count}} cities among our neighbors now keep {{key}} as their majority faith. Each changed in the recent record; together they mark how far the creed has traveled along the border."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "neighbors-convert-ledger",
+        "voice": "press",
+        "stance": "neutral",
+        "genre": "ledger",
+        "headline": "The border tally of faiths",
+        "body": [
+          "Creed gaining the border: {{key}}",
+          "Neighbor cities newly keeping it: {{count}}",
+          "Read together: the line is turning town by town."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "neighbors-convert-anecdote",
+        "voice": "tabloid",
+        "stance": "populist",
+        "genre": "anecdote",
+        "headline": "The candle-seller counts the towns",
+        "body": [
+          "The candle-seller at the crossing has a new joke: this season everyone crossing buys wax, because {{count}} towns on the far side have all taken up {{key}}. 'New blessings, same copper,' she says, and counts her takings like everyone else."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "neighbors-convert-proverb",
+        "voice": "spoken",
+        "stance": "traditional",
+        "genre": "proverb",
+        "headline": "One town, then the field",
+        "body": [
+          "One town turns to {{key}}: news. {{count}} towns turn: a season. The wind that bends one stalk bends the field."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "our-faith-deepens-account",
+    "triggers": ["our-faith-deepens"],
+    "tags": ["religion", "domestic"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "our-faith-deepens-report",
+        "headline": "{{religion}} gains a new article of belief",
+        "body": [
+          "The faith this nation founded, {{religion}}, has gained a new article of belief. Its teaching now stands wider than before, and the addition was made at home."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "our-faith-deepens-gazette",
+        "voice": "gazette",
+        "stance": "pro-government",
+        "genre": "report",
+        "when": "stage === 'enhanced'",
+        "headline": "The state's stewardship adds to the creed",
+        "body": [
+          "We are informed that {{religion}}, the faith we founded, has been enriched with further observances. Such work does not happen of its own accord; it is directed, and the direction has been steady."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "our-faith-deepens-chronicle",
+        "voice": "chronicle",
+        "stance": "devout",
+        "genre": "report",
+        "when": "stage === 'reformed'",
+        "headline": "The rites set in order anew",
+        "body": [
+          "It is set down that {{religion}} has been reformed, its rites weighed and ordered anew by our own hand. The faithful will read purpose in the timing; the record notes only that the work is done, and done at home."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "our-faith-deepens-crier",
+        "voice": "crier",
+        "stance": "national",
+        "genre": "notice",
+        "headline": "Hear it! The national faith is deepened",
+        "body": [
+          "Hear it, people of the nation! The faith we founded, {{religion}}, has been deepened with a new article of belief! A broader creed for the whole people! Hear it, and pass the word from market to market."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "own-cities-divided-by-faith-account",
+    "triggers": ["own-cities-divided-by-faith"],
+    "tags": ["politics", "domestic", "religion"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "own-cities-divided-by-faith-report",
+        "headline": "Our cities keep more than one faith",
+        "body": [
+          "Of our own cities, {{faithful}} keep {{founded}}, the religion this nation founded, while {{divided}} keep other creeds: {{others}}. The count is from the current record."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "own-cities-divided-by-faith-editorial",
+        "voice": "press",
+        "stance": "government-critical",
+        "genre": "editorial",
+        "headline": "A founded faith, unevenly kept",
+        "body": [
+          "A nation that founds a religion ought to be able to keep it. Today {{divided}} of our cities pray in other creeds while {{faithful}} hold to {{founded}}.",
+          "The paper's question is for the ministry: what has been spent on the shrines these past years, and where? Every foreign creed won its ground here one city at a time."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "own-cities-divided-by-faith-letter",
+        "voice": "press",
+        "stance": "pluralist",
+        "genre": "letter",
+        "headline": "Madam, on the counting of divided cities",
+        "byline": "A Keeper of a Small Shrine",
+        "body": [
+          "Madam Editor, you will print the tally of divided cities as though division were a debt to be called in. In my street the divided and the faithful share a wall, and the ladder I lend crosses it daily.",
+          "Print that too: a nation keeps {{founded}} by keeping its people, and no ledger ever prayed."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "own-cities-divided-by-faith-ledger",
+        "voice": "gazette",
+        "stance": "neutral",
+        "genre": "ledger",
+        "headline": "The tally of faiths in our cities",
+        "body": [
+          "Cities keeping the founded faith, {{founded}}: {{faithful}}",
+          "Own cities keeping other creeds: {{divided}}",
+          "Creeds kept among them: {{others}}",
+          "One law over all of them, and more than one prayer under it."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "own-city-converts-account",
+    "triggers": ["own-city-converts"],
+    "tags": ["cities", "domestic"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "own-city-converts-report",
+        "headline": "{{religion}} leads in {{city}}",
+        "body": [
+          "The majority faith of our own {{city}} is {{religion}}. Recent conversions in the city have gone its way."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "own-city-converts-pamphlet",
+        "voice": "pamphlet",
+        "stance": "devout",
+        "genre": "notice",
+        "when": "ours === true",
+        "headline": "Good news, people of {{city}}",
+        "body": [
+          "Good news, people of {{city}}! Conversions in your city have gone the way of {{religion}}, the very creed this nation founded, and the city's majority faith besides! Keep the feast, and keep the faith."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "own-city-converts-press",
+        "voice": "press",
+        "stance": "traditional",
+        "genre": "report",
+        "when": "ours === false",
+        "headline": "A creed not of our founding leads in {{city}}",
+        "body": [
+          "The majority faith of {{city}} is {{religion}}, a religion this nation did not found. Recent conversions in the city have gone its way.",
+          "What its growing following does to the city's festivals and its loyalties is the question the record will answer in time."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "own-city-converts-anecdote",
+        "voice": "tabloid",
+        "stance": "local",
+        "genre": "anecdote",
+        "headline": "New hymns over the wall",
+        "body": [
+          "The washing lines at {{city}} told it first, the old women say: ribbons at the shrine on a workday, and singing over the wall earlier than the bells. The majority faith of the city is {{religion}}, and the singing goes with it. One grandmother calls it weather. Her neighbor calls it the future."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "pantheon-founded-account",
+    "triggers": ["pantheon-founded"],
+    "tags": ["religion", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "pantheon-founded-report",
+        "headline": "{{civilization}} founds a pantheon",
+        "body": [
+          "{{civilization}} has founded a pantheon, the first shape of that people's worship. What its rites ask, and how far they travel, the record will show."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "pantheon-founded-spoken",
+        "voice": "spoken",
+        "stance": "devout",
+        "genre": "report",
+        "when": "ours === true",
+        "headline": "They say the first altars are ours",
+        "body": [
+          "They say it in the streets, and it is told from the wells: our own people have raised a pantheon. The elders speak of beginnings, and the households go on asking the old blessings in a new way. It is a good season to be counted among the faithful."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "pantheon-founded-chronicle",
+        "voice": "chronicle",
+        "stance": "rationalist",
+        "genre": "report",
+        "when": "ours === false",
+        "headline": "A pantheon entered in the foreign record",
+        "body": [
+          "It is set down that {{civilization}} has founded a pantheon. What it holds sacred and what it asks of its keepers are that people's own affair; the record notes the founding, and counts its followers from here."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "pantheon-founded-notice",
+        "voice": "gazette",
+        "stance": "neutral",
+        "genre": "notice",
+        "when": "cityName !== null && belief !== null",
+        "headline": "Notice to travelers: a new pantheon at {{cityName}}",
+        "body": [
+          "We are informed that {{civilization}} has founded a pantheon at {{cityName}}. Its first teaching goes by the name of {{belief}}. Travelers of a curious habit may see the rites; travelers of a devout one may bow or pass by."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "religion-founded-account",
+    "triggers": ["religion-founded"],
+    "tags": ["politics", "domestic"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "religion-founded-report",
+        "headline": "This nation has founded {{religion}}",
+        "body": [
+          "This nation has founded a religion: {{religion}}. Its first followers are our own people, and its teaching begins here at home."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "religion-founded-crier",
+        "voice": "crier",
+        "stance": "ambitious",
+        "genre": "notice",
+        "headline": "Hear it! A religion of our own",
+        "body": [
+          "Hear it, people of the nation! A religion is founded among us, and its name is {{religion}}! Let the shrines reach every city, and let the creed carry our name down the roads!"
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "religion-founded-analysis",
+        "voice": "press",
+        "stance": "national",
+        "genre": "analysis",
+        "headline": "What a founded faith carries with it",
+        "body": [
+          "The nation has founded a religion, {{religion}}, and the act is larger than one creed. A founded faith travels with our traders, our settlers and our name, and where it takes root we are known before we arrive.",
+          "Standing among the peoples is built from such beginnings. The faith is ours; what the nation does with the reach is the question that follows."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "religion-founded-chronicle",
+        "voice": "chronicle",
+        "stance": "neutral",
+        "genre": "report",
+        "headline": "A founding entered in the record",
+        "body": [
+          "It is set down for the record: in this season the faith of {{religion}} was founded among our people. The entry stands with the acts of the realm, and later entries will carry what follows from it."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  }
+]

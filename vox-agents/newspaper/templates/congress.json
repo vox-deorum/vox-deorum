@@ -1,0 +1,777 @@
+[
+  {
+    "id": "congress-new-proposals-account",
+    "triggers": ["congress-new-proposals"],
+    "tags": ["international", "congress"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "congress-new-proposals-report",
+        "when": "count > 1",
+        "headline": "{{count}} new proposals before the World Congress",
+        "body": [
+          "The chamber's agenda carries {{count}} new proposals, first among them {{proposal}}. The delegates will take them up at the next session."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "congress-new-proposals-single",
+        "when": "count === 1",
+        "headline": "A new proposal before the World Congress",
+        "body": [
+          "One new proposal has reached the chamber's agenda: {{proposal}}. The delegates will take it up at the next session."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "congress-new-proposals-ours",
+        "voice": "crier",
+        "stance": "national",
+        "genre": "report",
+        "when": "ours === true",
+        "headline": "Hear it! Our proposal is before the world's chamber",
+        "body": [
+          "Our own delegates have brought new business to the Congress, and {{proposal}} stands among the chamber's proposals. Let the other delegations read the agenda and know who drafted it."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "congress-new-proposals-notice",
+        "voice": "gazette",
+        "stance": "elitist",
+        "genre": "notice",
+        "headline": "New business for the delegates",
+        "body": [
+          "We are informed that fresh proposals have lately come before the World Congress, {{proposal}} among them. The chamber will sit in due course, and the agenda rewards careful study."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "congress-new-proposals-ledger",
+        "voice": "feed",
+        "stance": "neutral",
+        "genre": "ledger",
+        "when": "count > 1",
+        "headline": "The Congress docket grows",
+        "body": [
+          "New proposals: {{count}}.",
+          "First on the docket: {{proposal}}."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "congress-resolution-defeated-account",
+    "triggers": ["congress-resolution-defeated"],
+    "tags": ["international", "congress"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "congress-resolution-defeated-report",
+        "headline": "The World Congress votes a measure down",
+        "body": [
+          "A proposal before the chamber has been defeated. The delegates declined to carry it, and the Congress's law stands as it was."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "congress-resolution-defeated-named",
+        "voice": "tabloid",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "resolution !== null",
+        "headline": "Delegates reject {{resolution}}",
+        "body": [
+          "The World Congress has voted {{resolution}} down. The proposal is defeated, and the chamber's law is unchanged by it."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "congress-resolution-defeated-repeal-refused",
+        "voice": "broadcast",
+        "stance": "rationalist",
+        "genre": "analysis",
+        "when": "isEnact === false",
+        "headline": "A repeal refused, and the law stands",
+        "body": [
+          "The Congress was asked to undo its own law, and the Congress refused. A standing resolution stays on the books, and the chamber's record now shows it was tested."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "congress-resolution-defeated-ours",
+        "voice": "pamphlet",
+        "stance": "national",
+        "genre": "editorial",
+        "when": "ours === true",
+        "headline": "The chamber turns our proposal away",
+        "body": [
+          "Our delegates put a measure before the World Congress, and the world's chamber said no. A defeat there is a tally of our friends, or the lack of them. The government should read the tally and set about improving it."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "congress-resolution-passed-account",
+    "triggers": ["congress-resolution-passed"],
+    "tags": ["international", "congress"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "congress-resolution-passed-report",
+        "headline": "The World Congress passes a measure",
+        "body": [
+          "A proposal before the chamber has been approved. The delegates carried it, and their decision now has the force of the Congress's law."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "congress-resolution-passed-enacted",
+        "voice": "gazette",
+        "stance": "national",
+        "genre": "report",
+        "when": "resolution !== null && isEnact === true",
+        "headline": "The Congress enacts {{resolution}}",
+        "body": [
+          "We are informed that the World Congress has enacted {{resolution}}. It now stands among the chamber's active resolutions, and the nations that argued for it may count the day well spent."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "congress-resolution-passed-repealed",
+        "voice": "press",
+        "stance": "traditional",
+        "genre": "report",
+        "when": "resolution !== null && isEnact === false",
+        "headline": "The Congress strikes {{resolution}} from the books",
+        "body": [
+          "The delegates have voted {{resolution}} out of force. What was settled law yesterday is the chamber's business no longer, and the world will learn again how to do without it."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "congress-resolution-passed-ours",
+        "voice": "crier",
+        "stance": "ambitious",
+        "genre": "notice",
+        "when": "ours === true",
+        "headline": "Hear it! Our measure has carried the Congress",
+        "body": [
+          "Our delegates proposed it. The chamber has approved it. Let the news run ahead of the couriers to every market in the realm."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "congress-sanctions-on-us-account",
+    "triggers": ["congress-sanctions-on-us"],
+    "tags": ["international", "congress"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "congress-sanctions-on-us-report",
+        "headline": "The World Congress sanctions us",
+        "body": [
+          "{{resolution}} is in force among the chamber's active resolutions. Our nation stands sanctioned before the assembled world, and every delegation holds the record."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "congress-sanctions-on-us-crier",
+        "voice": "crier",
+        "stance": "national",
+        "genre": "notice",
+        "headline": "Hear it! The Congress has set its hand against us",
+        "body": [
+          "{{resolution}} is the law of the chamber. We are sanctioned, and we are not silenced. Let every delegate who reads the record know that the realm stands."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "congress-sanctions-on-us-editorial",
+        "voice": "pamphlet",
+        "stance": "populist",
+        "genre": "editorial",
+        "headline": "Sanctioned, and by whom?",
+        "body": [
+          "The great chamber has voted, and we are the party it named. A sanction is aimed at a government, but it is the market stall that feels the chill first. The delegates should say plainly what this is for, and how it ends."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "congress-sanctions-on-us-analysis",
+        "voice": "press",
+        "stance": "government-critical",
+        "genre": "analysis",
+        "headline": "What the sanction means for our standing",
+        "body": [
+          "A sanction is the heaviest word the chamber has short of war. With {{resolution}} in force, our envoys carry the world's censure into every negotiation they enter. The ministries have yet to say how they intend to lift it, or what they will trade to do so."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "congress-session-approaching-account",
+    "triggers": ["congress-session-approaching"],
+    "tags": ["international", "congress"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "congress-session-approaching-report",
+        "when": "turnsUntil >= 2",
+        "headline": "The World Congress sits in {{turnsUntil}} turns",
+        "body": [
+          "The chamber's next session is expected in {{turnsUntil}} turns. The delegations have their instructions to prepare and their promises to gather."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "congress-session-approaching-at-hand",
+        "when": "turnsUntil < 2",
+        "headline": "A session of the World Congress is at hand",
+        "body": [
+          "The chamber is expected to sit at any moment. The delegates' agenda is ready, and the world's business waits on the doors opening."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "congress-session-approaching-notice",
+        "voice": "gazette",
+        "stance": "neutral",
+        "genre": "notice",
+        "when": "league !== null && turnsUntil >= 2",
+        "headline": "Notice: {{league}} to convene",
+        "body": [
+          "We are informed that {{league}} is expected to sit in {{turnsUntil}} turns. Delegates are advised to hold their instructions ready."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "congress-session-approaching-ledger",
+        "voice": "broadcast",
+        "stance": "neutral",
+        "genre": "ledger",
+        "when": "turnsUntil >= 2",
+        "headline": "Countdown to the session",
+        "body": [
+          "Turns until the chamber sits: {{turnsUntil}}.",
+          "Proposals known on the agenda: {{count}}."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "congress-session-approaching-analysis",
+        "voice": "press",
+        "stance": "ambitious",
+        "genre": "analysis",
+        "when": "turnsUntil >= 2",
+        "headline": "The bargaining days before the session",
+        "body": [
+          "In {{turnsUntil}} turns the world's chamber opens. A session is where the world's bargains are struck, and the days before it are when they are priced. A delegation that arrives with its promises already gathered will do better than one that arrives counting."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "congress-session-imminent-account",
+    "triggers": ["congress-session-imminent"],
+    "tags": ["international", "congress"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "congress-session-imminent-report",
+        "headline": "The World Congress convenes on the next turn",
+        "body": [
+          "The chamber's session is expected on the very next turn. The delegates will take their seats, and the agenda will be put to the vote."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "congress-session-imminent-notice",
+        "voice": "pamphlet",
+        "stance": "neutral",
+        "genre": "notice",
+        "when": "league !== null",
+        "headline": "Notice to the delegations: {{league}} sits",
+        "body": [
+          "The word is out: {{league}} convenes on the next turn. Hold your instructions ready, and mind your promises."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "congress-session-imminent-agenda",
+        "voice": "broadcast",
+        "stance": "national",
+        "genre": "report",
+        "when": "count > 1",
+        "headline": "{{count}} proposals before the delegates",
+        "body": [
+          "The session opens on the next turn. {{count}} proposals are on the agenda, and every delegation is counting its votes."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "congress-session-imminent-single",
+        "voice": "crier",
+        "stance": "populist",
+        "genre": "notice",
+        "when": "count === 1",
+        "headline": "Hear it! One matter before the world's chamber",
+        "body": [
+          "A single proposal waits for the delegates, and the Congress sits on the next turn. One question, one count, and then the world has its answer."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "congress-votes-changed-account",
+    "triggers": ["congress-votes-changed"],
+    "tags": ["international", "congress"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "congress-votes-changed-report",
+        "headline": "Our votes in the Congress change",
+        "body": [
+          "Our delegation's votes in the chamber now number {{votes}}, against {{previous}} before. Every vote matters when the rolls are called."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "congress-votes-changed-gain",
+        "voice": "press",
+        "stance": "national",
+        "genre": "report",
+        "when": "change > 0",
+        "headline": "Our voice in the Congress grows",
+        "body": [
+          "We now hold {{votes}} votes in the chamber, up from {{previous}}. The gain gives our delegates more weight when the count is taken, and more to trade on between sessions."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "congress-votes-changed-loss",
+        "voice": "pamphlet",
+        "stance": "government-critical",
+        "genre": "editorial",
+        "when": "change < 0",
+        "headline": "Our voice in the Congress shrinks",
+        "body": [
+          "The count of our votes has fallen from {{previous}} to {{votes}}. The chamber will notice, and so should the ministers whose work it is to keep us strong in the world's assembly. Friends are won before the count, not after it."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "congress-voting-opens-account",
+    "triggers": ["congress-voting-opens"],
+    "tags": ["international", "congress"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "congress-voting-opens-report",
+        "headline": "Voting opens in the World Congress",
+        "body": [
+          "The chamber has begun its vote. The delegates are casting their ballots, and the world's business waits on the count."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "congress-voting-opens-notice",
+        "voice": "gazette",
+        "stance": "conciliatory",
+        "genre": "notice",
+        "when": "league !== null",
+        "headline": "Notice from {{league}}: the vote is open",
+        "body": [
+          "We are informed that {{league}} has opened its vote. The result will be known when the count is done, and the world is asked to await it calmly."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "congress-voting-opens-ballot",
+        "voice": "tabloid",
+        "stance": "national",
+        "genre": "report",
+        "when": "count > 1",
+        "headline": "Voting day in the world's chamber",
+        "body": [
+          "The ballots are out in the World Congress, with {{count}} proposals on the slate. Every delegation is playing for keeps, and the count will tell who played best."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "congress-voting-opens-feed",
+        "voice": "feed",
+        "stance": "populist",
+        "genre": "notice",
+        "when": "count > 1",
+        "headline": "The Congress vote is live",
+        "body": [
+          "Ballots are open in the World Congress.",
+          "On the slate: {{count}} proposals."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "congress-world-ideology-account",
+    "triggers": ["congress-world-ideology"],
+    "tags": ["international", "congress"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "congress-world-ideology-report",
+        "headline": "The Congress sets a world ideology",
+        "body": [
+          "{{resolution}} stands among the chamber's active resolutions. The world's assembly has put its weight behind one way of ordering the world's affairs."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "congress-world-ideology-ours",
+        "voice": "press",
+        "stance": "national",
+        "genre": "analysis",
+        "when": "ours === true",
+        "headline": "Our ideology carries the world",
+        "body": [
+          "{{resolution}} is in force, and the name it carries is ours. The chamber's law and our own convictions now point the same way. In the world's assembly that alignment is worth more than a treaty, and our delegates should spend it well."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "congress-world-ideology-editorial",
+        "voice": "pamphlet",
+        "stance": "devout",
+        "genre": "editorial",
+        "when": "ours === false",
+        "headline": "A creed not ours is crowned",
+        "body": [
+          "The Congress has enacted {{resolution}}, and no name in it is ours. The chamber can bless a creed; it cannot choose what we believe. Let the faithful hold fast, and let the government say plainly where it stands."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "congress-world-ideology-anecdote",
+        "voice": "tabloid",
+        "stance": "populist",
+        "genre": "anecdote",
+        "headline": "The galleries watch a creed get crowned",
+        "body": [
+          "When the name {{resolution}} was read out, the galleries craned to see which delegations clapped. An official creed is one thing; the price of bread is another, and the street knows the difference."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "congress-world-project-account",
+    "triggers": ["congress-world-project"],
+    "tags": ["international", "congress"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "congress-world-project-report",
+        "headline": "A world project before the Congress",
+        "body": [
+          "The World Congress has taken up {{project}}. The work belongs to the chamber's business, and the world's powers will have a hand in seeing it done."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "congress-world-project-analysis",
+        "voice": "gazette",
+        "stance": "ambitious",
+        "genre": "analysis",
+        "headline": "The Congress reaches for {{project}}",
+        "body": [
+          "A world project is the grandest business the chamber takes up. With {{project}} before it, the Congress has the chance to leave a mark that no single nation could leave alone. The delegations that champion the work will own a share of the record."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "congress-world-project-work",
+        "voice": "broadcast",
+        "stance": "industrialist",
+        "genre": "report",
+        "headline": "Work, if the chamber wills it",
+        "body": [
+          "The World Congress has {{project}} before it. One project, work for thousands of hands, and contracts for whoever the chamber favors."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "congress-world-project-anecdote",
+        "voice": "feed",
+        "stance": "artistic",
+        "genre": "anecdote",
+        "headline": "The biggest building site in the world",
+        "body": [
+          "{{project}} is on the Congress agenda. Somewhere a stonemason is already sharpening chisels at the thought of it."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "congress-world-religion-account",
+    "triggers": ["congress-world-religion"],
+    "tags": ["international", "congress"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "congress-world-religion-report",
+        "headline": "The Congress names a world religion",
+        "body": [
+          "{{resolution}} is in force among the chamber's active resolutions. The world's assembly has given its blessing to one faith above the others."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "congress-world-religion-ours",
+        "voice": "press",
+        "stance": "devout",
+        "genre": "report",
+        "when": "ours === true",
+        "headline": "Our faith carries the world's blessing",
+        "body": [
+          "The chamber has enacted {{resolution}}, and the name it carries is ours. Where the world's favor stands, our shrines stand, and the faithful may take the record as a sign."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "congress-world-religion-editorial",
+        "voice": "pamphlet",
+        "stance": "traditional",
+        "genre": "editorial",
+        "when": "ours === false",
+        "headline": "The old faiths need no blessing",
+        "body": [
+          "The Congress has enacted {{resolution}}, and no name in it is ours. The old faith fed our grandparents and buried them honorably. The chamber's blessing was not needed then and is not needed now."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "congress-world-religion-letter",
+        "voice": "general",
+        "stance": "pluralist",
+        "genre": "letter",
+        "byline": "A Neighbor",
+        "headline": "One altar blessed, many houses standing",
+        "body": [
+          "To the editor: the chamber has named {{resolution}} as the world's religion. My household keeps another, and so do the households on either side of mine. The Congress blesses one altar; the town prays at several, and is the richer for the argument."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "sanction-proposed-account",
+    "triggers": ["sanction-proposed"],
+    "tags": ["international", "congress"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "sanction-proposed-report",
+        "headline": "A sanctions proposal reaches the Congress",
+        "body": [
+          "A proposal to sanction a nation has come before the World Congress: {{resolution}}. If the delegates enact it, the chamber will set its face against the nation it names."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "sanction-proposed-analysis",
+        "voice": "press",
+        "stance": "hawkish",
+        "genre": "analysis",
+        "headline": "Sanctions: the chamber's weapon",
+        "body": [
+          "{{resolution}} is before the Congress. A sanction is conflict by ledger: no armies move, but the named nation stands to lose coin and company alike. The delegations are choosing a target as much as a tool, and the target will remember."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "sanction-proposed-editorial",
+        "voice": "gazette",
+        "stance": "conciliatory",
+        "genre": "editorial",
+        "headline": "Against the sanctions proposal",
+        "body": [
+          "{{resolution}} is before the chamber. We urge the delegates to weigh what the named nation could still owe its neighbors, and what isolation costs the world that imposes it. The chamber's strength has always been its open doors."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "sanction-proposed-street",
+        "voice": "tabloid",
+        "stance": "populist",
+        "genre": "report",
+        "headline": "Who feels a sanction first?",
+        "body": [
+          "The proposal {{resolution}} is in the Congress. Sanctions are aimed at palaces, but it is the market stall that braces for the chill."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "sanction-repeal-proposed-account",
+    "triggers": ["sanction-repeal-proposed"],
+    "tags": ["international", "congress"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "sanction-repeal-proposed-report",
+        "headline": "A proposal to end a sanction",
+        "body": [
+          "A motion to repeal a sanction has come before the World Congress: {{resolution}}. If the delegates carry it, the chamber lifts its censure from the nation it names."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "sanction-repeal-proposed-hand",
+        "voice": "press",
+        "stance": "conciliatory",
+        "genre": "report",
+        "headline": "A hand extended in the chamber",
+        "body": [
+          "{{resolution}} may be lifted if the Congress agrees. The motion before the delegates would end the chamber's censure and bring the named nation back to the table."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "sanction-repeal-proposed-editorial",
+        "voice": "pamphlet",
+        "stance": "hawkish",
+        "genre": "editorial",
+        "headline": "The pressure may come off",
+        "body": [
+          "Now, of all times, the Congress is asked to end {{resolution}}. A sanction is the one sure hold the chamber has on the nation it names. The delegates should think hard before loosening that grip."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "sanction-repeal-proposed-feed",
+        "voice": "feed",
+        "stance": "neutral",
+        "genre": "notice",
+        "headline": "Sanction repeal on the docket",
+        "body": [
+          "Motion before the chamber: repeal of {{resolution}}.",
+          "Status: proposed, with the vote pending."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "travel-ban-proposed-account",
+    "triggers": ["travel-ban-proposed"],
+    "tags": ["international", "congress", "culture"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "travel-ban-proposed-report",
+        "headline": "A travel ban proposed in the Congress",
+        "body": [
+          "A proposal to close the world's doors to a nation's culture has come before the World Congress: {{resolution}}. If enacted, the chamber shuts out the name the proposal carries."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "travel-ban-proposed-proposer",
+        "voice": "press",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "proposer !== null",
+        "headline": "{{proposer}} proposes a travel ban",
+        "body": [
+          "{{proposer}} has brought {{resolution}} before the World Congress. The chamber will decide whether the nation it names keeps its welcome abroad."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "travel-ban-proposed-letter",
+        "voice": "gazette",
+        "stance": "local",
+        "genre": "letter",
+        "byline": "A Traveler",
+        "headline": "The roads they propose to close",
+        "body": [
+          "To the editor: the chamber is weighing {{resolution}}. A border that stops a song stops it on both sides of the gate, and the towns along the road lose either way. The delegates should travel more and legislate less."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "travel-ban-proposed-anecdote",
+        "voice": "tabloid",
+        "stance": "artistic",
+        "genre": "anecdote",
+        "headline": "They want to stop the singers at the border",
+        "body": [
+          "The delegates call {{resolution}} order. The bards, if they could still cross the border, would call it something else and set it to music by nightfall."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "travel-ban-repeal-proposed-account",
+    "triggers": ["travel-ban-repeal-proposed"],
+    "tags": ["international", "congress", "culture"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "travel-ban-repeal-proposed-report",
+        "headline": "A proposal to lift a travel ban",
+        "body": [
+          "A motion to end a travel ban has come before the World Congress: {{resolution}}. If the delegates carry it, the doors the chamber closed will open again."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "travel-ban-repeal-proposed-notice",
+        "voice": "gazette",
+        "stance": "traditional",
+        "genre": "notice",
+        "when": "proposer !== null",
+        "headline": "Notice: {{proposer}} moves to end a travel ban",
+        "body": [
+          "We are informed that {{proposer}} has proposed the repeal of {{resolution}}, so that the old freedom of the roads may be restored. The chamber will vote in due course."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "travel-ban-repeal-proposed-editorial",
+        "voice": "press",
+        "stance": "artistic",
+        "genre": "editorial",
+        "headline": "Let the borders open",
+        "body": [
+          "The Congress has before it a motion to lift {{resolution}}. A nation's songs travel farther than its armies, and a closed door silences the singer before it stops the soldier. The delegates should open it."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "travel-ban-repeal-proposed-crier",
+        "voice": "pamphlet",
+        "stance": "populist",
+        "genre": "notice",
+        "headline": "Hear this, travelers: the ban may end",
+        "body": [
+          "A travel ban is felt at the tollgate, not at the palace. Couriers, pilgrims and players wait at the border, and the Congress may at last lift {{resolution}}."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  }
+]

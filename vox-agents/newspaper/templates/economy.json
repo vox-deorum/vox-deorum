@@ -1,0 +1,253 @@
+[
+  {
+    "id": "treasury-falls-into-deficit-account",
+    "triggers": ["treasury-falls-into-deficit"],
+    "tags": ["politics", "domestic"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "treasury-falls-into-deficit-report",
+        "headline": "The treasury slips into deficit",
+        "body": [
+          "The nation's accounts have turned negative. Spending now outruns income by {{deficit}} gold a turn, after the books held at or above balance in the recent count."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "treasury-falls-into-deficit-ledger",
+        "voice": "gazette",
+        "stance": "neutral",
+        "genre": "ledger",
+        "headline": "The treasury's rate, in deficit",
+        "body": [
+          "Rate in the recent count: at or above balance.",
+          "Rate now: in deficit.",
+          "Shortfall: {{deficit}} gold each turn."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "treasury-falls-into-deficit-analysis",
+        "voice": "press",
+        "stance": "government-critical",
+        "genre": "analysis",
+        "headline": "A deficit that names no one",
+        "body": [
+          "Income now trails spending by {{deficit}} gold a turn, where the recent count showed the accounts at or above balance. A shortfall that arrives without a decision attached still repeats every turn, and the ledger does not say who will be asked to make it good."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "treasury-falls-into-deficit-letter",
+        "voice": "pamphlet",
+        "stance": "populist",
+        "genre": "letter",
+        "headline": "Sir, the treasury now outspends its income",
+        "byline": "A stallholder",
+        "body": [
+          "I keep a stall by the east gate, and when I spend more than I earn, my wife hears of it before the market closes. The treasury now spends {{deficit}} gold a turn more than it earns. When does the palace hear of it?"
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "treasury-milestone-account",
+    "triggers": ["treasury-milestone"],
+    "tags": ["politics", "domestic"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "treasury-milestone-report",
+        "headline": "The treasury passes 1,000 gold",
+        "body": [
+          "The reserve has crossed the 1,000 gold mark and now stands at {{gold}}. It took on {{gain}} gold since the recent count."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "treasury-milestone-gazette",
+        "voice": "gazette",
+        "stance": "elitist",
+        "genre": "report",
+        "headline": "The reserve passes the thousand mark",
+        "body": [
+          "We are informed that the treasury has lately passed the 1,000 gold mark and now holds {{gold}} gold. A full vault is the mark of a well-kept house, grown by {{gain}} gold in recent turns."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "treasury-milestone-crier",
+        "voice": "crier",
+        "stance": "ambitious",
+        "genre": "notice",
+        "headline": "Hear it! A thousand gold in the vault!",
+        "body": [
+          "Hear it, merchants and magistrates! The treasury has passed the 1,000 gold mark and holds {{gold}} gold. A thousand gold, counted and kept!"
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "treasury-milestone-feed",
+        "voice": "feed",
+        "stance": "rationalist",
+        "genre": "report",
+        "headline": "The treasury just crossed 1,000 gold",
+        "body": [
+          "Reserve: {{gold}} gold, up {{gain}} gold in a few turns. The mark is passed, and the number is exact."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "treasury-reserve-recovers-account",
+    "triggers": ["treasury-reserve-recovers"],
+    "tags": ["economy", "domestic"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "treasury-reserve-recovers-report",
+        "headline": "The treasury gains time against the deficit",
+        "body": [
+          "The shortfall continues, but the treasury has more room against it. The reserve of {{gold}} gold now covers {{turnsLeft}} turns at {{deficit}} gold a turn, where the recent count showed shorter cover."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "treasury-reserve-recovers-analysis",
+        "voice": "press",
+        "stance": "pro-government",
+        "genre": "analysis",
+        "headline": "Time returns to the treasury",
+        "body": [
+          "The shortfall holds at {{deficit}} gold a turn, yet the reserve now funds {{turnsLeft}} turns of it on {{gold}} gold. The recent count left less room. A deficit that can be carried this long is a problem with options, and options are what an administration needs."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "treasury-reserve-recovers-anecdote",
+        "voice": "tabloid",
+        "stance": "populist",
+        "genre": "anecdote",
+        "headline": "The count runs long at the money-changer's table",
+        "body": [
+          "A few turns back, the money-changers were counting the treasury's remaining turns on their fingers. This morning the tally ran to {{turnsLeft}} turns of cover, {{gold}} gold against {{deficit}} a turn, and the talk over the coins turned easier."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "treasury-reserve-runs-short-account",
+    "triggers": ["treasury-reserve-runs-short"],
+    "tags": ["economy", "domestic"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "treasury-reserve-runs-short-report",
+        "headline": "The treasury reserve runs short",
+        "body": [
+          "The deficit that showed in the recent count continues at {{deficit}} gold a turn, and the reserve behind it is wearing thin. The {{gold}} gold on hand covers {{turnsLeft}} full turns of spending at that rate."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "treasury-reserve-runs-short-ledger",
+        "voice": "chronicle",
+        "stance": "neutral",
+        "genre": "ledger",
+        "headline": "The treasury, counted",
+        "body": [
+          "Reserve: {{gold}} gold.",
+          "Shortfall: {{deficit}} gold a turn.",
+          "Cover at this rate: {{turnsLeft}} full turns."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "treasury-reserve-runs-short-bulletin",
+        "voice": "broadcast",
+        "stance": "government-critical",
+        "genre": "report",
+        "headline": "Treasury cover down to {{turnsLeft}} turns",
+        "body": [
+          "The treasury holds {{gold}} gold. Spending outruns income by {{deficit}} gold a turn. That leaves {{turnsLeft}} turns of cover, and the shortfall is not new. The figures do not say who is minding the store."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "treasury-reserve-runs-short-editorial",
+        "voice": "pamphlet",
+        "stance": "traditional",
+        "genre": "editorial",
+        "headline": "The old rule was a full store",
+        "body": [
+          "Our grandparents kept a reserve against bad years, and bad years came all the same. The treasury now holds {{gold}} gold against a deficit of {{deficit}} gold a turn, {{turnsLeft}} turns from empty. The paper's view is the old one: fill the store before the store empties itself."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "treasury-returns-to-surplus-account",
+    "triggers": ["treasury-returns-to-surplus"],
+    "tags": ["politics", "domestic"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "treasury-returns-to-surplus-report",
+        "headline": "The deficit ends",
+        "body": [
+          "The treasury's rate has climbed out of the red. Income now covers spending, leaving {{goldPerTurn}} gold a turn to spare after the recent shortfall."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "treasury-returns-to-surplus-press",
+        "voice": "press",
+        "stance": "national",
+        "genre": "report",
+        "headline": "The state pays its way",
+        "body": [
+          "The treasury's rate stands at {{goldPerTurn}} gold a turn, at or above balance after the recent shortfall. Spending no longer takes more than income brings, and the state is paying its way."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "treasury-returns-to-surplus-notice",
+        "voice": "gazette",
+        "stance": "pro-government",
+        "genre": "notice",
+        "headline": "Notice: the accounts no longer run behind",
+        "body": [
+          "We are informed that the deficit lately showing in the accounts has closed. The rate now reads {{goldPerTurn}} gold a turn, and good order in the treasury serves the whole nation."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "treasury-returns-to-surplus-proverb",
+        "voice": "spoken",
+        "stance": "traditional",
+        "genre": "proverb",
+        "headline": "The purse that stopped leaking",
+        "body": [
+          "They say a stopped leak fills no purse, but it empties none. The treasury's leak has stopped; what comes in now meets what goes out."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "treasury-returns-to-surplus-crier",
+        "voice": "crier",
+        "stance": "populist",
+        "genre": "notice",
+        "when": "goldPerTurn > 0",
+        "headline": "Hear it! The treasury runs a surplus!",
+        "body": [
+          "Hear it, good people! Income beats spending by {{goldPerTurn}} gold a turn, and the deficit is done! The lean stretch is past us, past us!"
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  }
+]

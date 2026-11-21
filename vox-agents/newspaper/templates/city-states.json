@@ -1,0 +1,814 @@
+[
+  {
+    "id": "ally-city-state-attacked-account",
+    "triggers": ["ally-city-state-attacked"],
+    "tags": ["politics", "military"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "ally-city-state-attacked-report",
+        "when": "ally !== null && aggressor !== null",
+        "headline": "{{ally}} attacked by {{aggressor}}",
+        "body": [
+          "A city-state in alliance with us has come under attack. {{aggressor}} opened the war, and its first blow fell on {{ally}}. We are no party to the fighting."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "ally-city-state-attacked-unnamed",
+        "when": "ally === null || aggressor === null",
+        "headline": "An allied city-state under attack",
+        "body": [
+          "A city-state allied to us has been drawn into a war. The reports that reached us do not name every party to the fighting."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "ally-city-state-attacked-analysis",
+        "voice": "press",
+        "stance": "hawkish",
+        "genre": "analysis",
+        "when": "ally !== null && aggressor !== null",
+        "headline": "Our ally {{ally}} is at war",
+        "body": [
+          "The attack on {{ally}} is a test of more than one small state's walls. {{aggressor}} has shown where its armies point, and wars that start on small states do not always end there. Our councils should be pricing what the defense of an ally costs."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "ally-city-state-attacked-notice",
+        "voice": "gazette",
+        "stance": "neutral",
+        "genre": "notice",
+        "when": "ally !== null && aggressor !== null",
+        "headline": "War reaches {{ally}}",
+        "body": [
+          "We are informed that {{aggressor}} has opened hostilities against {{ally}}, a city-state in alliance with this nation. Our own part in the war remains none."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "ally-city-state-attacked-editorial",
+        "voice": "pamphlet",
+        "stance": "national",
+        "genre": "editorial",
+        "when": "ally !== null",
+        "headline": "An ally is at war. What is our answer?",
+        "body": [
+          "Our ally {{ally}} is at war, and the nation watches. The paper wants the government's answer spoken plainly: what is an alliance worth on the day it costs something, and what do we mean to do about ours?"
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "ally-city-state-captured-account",
+    "triggers": ["ally-city-state-captured"],
+    "tags": ["politics", "military", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "ally-city-state-captured-report",
+        "when": "cityState !== null && captor !== null",
+        "headline": "{{cityState}} falls to {{captor}}",
+        "body": [
+          "{{captor}} has taken {{cityState}} by conquest. The city-state was allied to us, and its territory now answers to a foreign power."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "ally-city-state-captured-unnamed",
+        "when": "cityState === null || captor === null",
+        "headline": "An allied city-state is taken",
+        "body": [
+          "A city-state allied to us has fallen to a foreign army. The conquest removes an ally from the map, and the reports before us do not name every party."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "ally-city-state-captured-analysis",
+        "voice": "press",
+        "stance": "national",
+        "genre": "analysis",
+        "when": "cityState !== null && captor !== null",
+        "headline": "The loss of {{cityState}}",
+        "body": [
+          "An ally's capture is more than a change of flags. {{captor}} now holds {{cityState}} and the position it guarded. A nation that loses an ally loses the ground the friendship stood on, and the map now shows whose army holds it."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "ally-city-state-captured-obituary",
+        "voice": "chronicle",
+        "stance": "traditional",
+        "genre": "obituary",
+        "when": "cityState !== null",
+        "headline": "The passing of {{cityState}}",
+        "body": [
+          "{{cityState}} stood among the small powers of its age and gave its alliance to our nation. It kept its own councils to the end. What remains is a province under another hand, and the record of an alliance kept."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "ally-city-state-captured-editorial",
+        "voice": "pamphlet",
+        "stance": "government-critical",
+        "genre": "editorial",
+        "when": "cityState !== null && captor !== null",
+        "headline": "We let an ally fall",
+        "body": [
+          "The government counted {{cityState}} an ally and watched it fall to {{captor}}. The paper wants an accounting: what was done before the walls came down, and who decided that it was enough?"
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "ally-city-state-captured-near",
+        "voice": "tabloid",
+        "stance": "populist",
+        "genre": "report",
+        "when": "cityState !== null && captor !== null && distance !== null",
+        "headline": "The war comes within {{distance}} tiles",
+        "body": [
+          "{{captor}}'s conquest of {{cityState}} took place {{distance}} tiles from our nearest city. A war that close to home is everyone's business."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "city-state-ally-defects-account",
+    "triggers": ["city-state-ally-defects"],
+    "tags": ["politics"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "city-state-ally-defects-report",
+        "when": "cityState !== null && rival !== null",
+        "headline": "{{cityState}} defects to {{rival}}",
+        "body": [
+          "A nearby city-state has ended its alliance with us and named {{rival}} in our place. The change leaves our former ally standing with a power that is neither our friend nor our partner."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-state-ally-defects-unnamed",
+        "when": "cityState === null || rival === null",
+        "headline": "A city-state leaves our side",
+        "body": [
+          "One of the city-states near us has given its alliance to a rival power. Our own arrangement with it has ended."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-state-ally-defects-analysis",
+        "voice": "press",
+        "stance": "government-critical",
+        "genre": "analysis",
+        "when": "cityState !== null && rival !== null",
+        "headline": "How {{cityState}} was lost",
+        "body": [
+          "Alliances with city-states are kept with attention, and {{rival}} has plainly given {{cityState}} more of it than we did. The record now shows an ally gone and a rival strengthened. Someone in the capital should say which part of that is ours."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-state-ally-defects-anecdote",
+        "voice": "tabloid",
+        "stance": "populist",
+        "genre": "anecdote",
+        "when": "cityState !== null && rival !== null",
+        "headline": "The flags came down at {{cityState}}",
+        "body": [
+          "Our colors flew over {{cityState}}'s gate for years, or so the caravans told it. This week the watch changed, and {{rival}}'s emblem went up in their place. The gate did not move; everything else did."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-state-ally-defects-letter",
+        "voice": "gazette",
+        "stance": "populist",
+        "genre": "letter",
+        "when": "cityState !== null && rival !== null",
+        "headline": "A letter from the frontier",
+        "byline": "A trader on the {{cityState}} road",
+        "body": [
+          "Madam Editor: I keep a stall where the road meets {{cityState}}'s market, and I have watched the envoys come and go. Lately more of them wore {{rival}}'s colors. When the alliance changed this week, no one on my road was surprised."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "city-state-ally-gained-account",
+    "triggers": ["city-state-ally-gained"],
+    "tags": ["politics", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "city-state-ally-gained-report",
+        "when": "cityState !== null",
+        "headline": "We win the alliance of {{cityState}}",
+        "body": [
+          "{{cityState}} has named us its ally. Its support now stands with our nation, and whatever arrangement it had before has ended."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-state-ally-gained-unnamed",
+        "when": "cityState === null",
+        "headline": "A city-state takes our side",
+        "body": [
+          "A city-state has ended whatever arrangement it had and named us its ally. Its support now stands with our nation."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-state-ally-gained-analysis",
+        "voice": "press",
+        "stance": "ambitious",
+        "genre": "analysis",
+        "when": "cityState !== null && distance !== null",
+        "headline": "What {{cityState}} opens to us",
+        "body": [
+          "An allied city-state is a door, not a trophy. {{cityState}} sits {{distance}} tiles from our nearest city, close enough for its friendship to matter on the ground. What we do with that door is the next question."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-state-ally-gained-notice",
+        "voice": "gazette",
+        "stance": "pro-government",
+        "genre": "notice",
+        "when": "cityState !== null && replaced !== null",
+        "headline": "Notice: our envoys succeed in {{cityState}}",
+        "body": [
+          "We are informed that {{cityState}} has ended the alliance of {{replaced}} and named this nation in its place. The patient work of our envoys is credited on all sides."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-state-ally-gained-crier",
+        "voice": "crier",
+        "stance": "national",
+        "genre": "notice",
+        "when": "cityState !== null",
+        "headline": "Hear it! {{cityState}} stands with us",
+        "body": [
+          "Hear it, people of the court and the road! A city-state has taken our side! {{cityState}} names us ally, and its friendship answers to our flag. Let the news carry."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "city-state-ally-lost-account",
+    "triggers": ["city-state-ally-lost"],
+    "tags": ["politics", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "city-state-ally-lost-report",
+        "when": "cityState !== null",
+        "headline": "We lose the alliance of {{cityState}}",
+        "body": [
+          "Our alliance with {{cityState}} has ended, and no other power has taken our place. The city-state stands for the moment with no ally at all."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-state-ally-lost-unnamed",
+        "when": "cityState === null",
+        "headline": "A city-state sets our alliance aside",
+        "body": [
+          "One of the city-states has ended its alliance with us. No other nation has been named in our place; the position simply stands empty."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-state-ally-lost-analysis",
+        "voice": "press",
+        "stance": "government-critical",
+        "genre": "analysis",
+        "when": "cityState !== null",
+        "headline": "Who lost {{cityState}}?",
+        "body": [
+          "Alliances do not end in a day; they leak. The record shows {{cityState}} walking away from us without walking toward anyone, and that is the part that should worry the capital. A rival did not buy this ally; we misplaced it."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-state-ally-lost-chronicle",
+        "voice": "chronicle",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "cityState !== null",
+        "headline": "The alliance with {{cityState}} ends",
+        "body": [
+          "In this season the alliance between our nation and {{cityState}} came to its end. No ally was named in our place, and the city-state remains in the record of known powers."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-state-ally-lost-ledger",
+        "voice": "gazette",
+        "stance": "neutral",
+        "genre": "ledger",
+        "when": "cityState !== null",
+        "headline": "The state of the {{cityState}} account",
+        "body": [
+          "Alliance with this nation: ended.",
+          "Ally taken in our place: none.",
+          "What remains: a city-state that owes no one its friendship."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "city-state-ally-switches-to-friend-account",
+    "triggers": ["city-state-ally-switches-to-friend"],
+    "tags": ["politics", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "city-state-ally-switches-to-friend-report",
+        "when": "cityState !== null && friend !== null",
+        "headline": "{{cityState}} switches its alliance to {{friend}}",
+        "body": [
+          "Our former ally {{cityState}} has named {{friend}} as its new ally. {{friend}} is a declared friend of our nation, which softens the change: the alliance has left our hands, but not for an enemy's."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-state-ally-switches-to-friend-unnamed",
+        "when": "cityState === null || friend === null",
+        "headline": "An ally passes to a friend",
+        "body": [
+          "A city-state near us has ended its alliance with our nation and given it to a power we count as a friend. The change is a loss, but the gentlest kind."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-state-ally-switches-to-friend-analysis",
+        "voice": "press",
+        "stance": "conciliatory",
+        "genre": "analysis",
+        "when": "cityState !== null && friend !== null",
+        "headline": "The alliance moves inside the family of friends",
+        "body": [
+          "{{cityState}} has traded our alliance for {{friend}}'s, and both of the powers in the exchange are on good terms with us. A friend's gain is not our loss in the way a rival's would be. What we gave up, a friend now holds."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-state-ally-switches-to-friend-notice",
+        "voice": "gazette",
+        "stance": "conciliatory",
+        "genre": "notice",
+        "when": "cityState !== null && friend !== null",
+        "headline": "Notice of a new ally in {{cityState}}",
+        "body": [
+          "We are informed that {{cityState}}, {{distance}} tiles from our nearest city, has named {{friend}} its ally. Our own alliance with the city-state has ended in {{friend}}'s favor."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-state-ally-switches-to-friend-broadcast",
+        "voice": "broadcast",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "cityState !== null && friend !== null",
+        "headline": "{{cityState}} changes allies tonight",
+        "body": [
+          "In the news from the small powers: {{cityState}} has a new ally, {{friend}}. The city-state stands {{distance}} tiles away. Our own alliance with it has ended."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "city-state-friendship-changes-account",
+    "triggers": ["city-state-friendship-changes"],
+    "tags": ["politics", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "city-state-friendship-changes-report",
+        "when": "began === true",
+        "headline": "{{cityState}} counts us a friend",
+        "body": [
+          "Our standing with {{cityState}} has risen into friendship. The city-state receives us warmly now, short of the alliance that would bind us closer."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-state-friendship-changes-ends",
+        "when": "began === false",
+        "headline": "{{cityState}} is friendly no longer",
+        "body": [
+          "Our standing with {{cityState}} has fallen out of friendship. The city-state's regard for us has cooled past the line that marks a friend."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-state-friendship-changes-notice",
+        "voice": "chronicle",
+        "stance": "neutral",
+        "genre": "notice",
+        "when": "began === true",
+        "headline": "Friendship recorded with {{cityState}}",
+        "body": [
+          "Be it recorded that friendship now holds between this nation and {{cityState}}. The change takes effect with the present season."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-state-friendship-changes-critical",
+        "voice": "press",
+        "stance": "government-critical",
+        "genre": "report",
+        "when": "began === false",
+        "headline": "We let a friendship lapse",
+        "body": [
+          "Friendship with a city-state is kept by attention, and ours with {{cityState}} has been found short. The envoys have some explaining to do about how a neighbor's regard was left to cool."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-state-friendship-changes-proverb",
+        "voice": "spoken",
+        "stance": "traditional",
+        "genre": "proverb",
+        "when": "began === false",
+        "headline": "A word at the fire",
+        "body": [
+          "They say at the fire: the guest who forgets the house is forgotten by the door. So stands our friendship with {{cityState}}."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "city-state-quest-countdown-disappeared-account",
+    "triggers": ["city-state-quest-countdown-disappeared"],
+    "tags": ["politics", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "city-state-quest-countdown-disappeared-report",
+        "when": "cityState !== null",
+        "headline": "A quest vanishes from {{cityState}}",
+        "body": [
+          "A countdown that ran among the quests of {{cityState}} has gone from the notices. Whether the work was finished or set aside, the city-state is not saying."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-state-quest-countdown-disappeared-unnamed",
+        "when": "cityState === null",
+        "headline": "A quest countdown disappears",
+        "body": [
+          "One of the city-states has let a quest countdown go from its notices. The reason is not ours to know."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-state-quest-countdown-disappeared-notice",
+        "voice": "gazette",
+        "stance": "neutral",
+        "genre": "notice",
+        "when": "cityState !== null",
+        "headline": "Notice: the {{cityState}} quest is off the books",
+        "body": [
+          "We are informed that a quest of {{cityState}} no longer carries a countdown. Merchants and others with a stake in it should govern themselves accordingly."
+        ],
+        "links": [
+          { "placeholder": "cityState", "label": "{{cityState}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-state-quest-countdown-disappeared-record",
+        "voice": "press",
+        "stance": "rationalist",
+        "genre": "report",
+        "when": "cityState !== null && previousDeadline !== null",
+        "headline": "The {{cityState}} countdown, gone without a reason",
+        "body": [
+          "The quest notices of {{cityState}} carried a deadline on turn {{previousDeadline}}. They carry none now, and no cause is recorded. Without a cause, no conclusion can be drawn."
+        ],
+        "links": [
+          { "placeholder": "cityState", "label": "{{cityState}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "city-state-quest-deadline-approaching-account",
+    "triggers": ["city-state-quest-deadline-approaching"],
+    "tags": ["politics", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "city-state-quest-deadline-approaching-report",
+        "when": "cityState !== null && turnsLeft > 0",
+        "headline": "A {{cityState}} quest nears its deadline",
+        "body": [
+          "A quest set by {{cityState}} comes to its deadline in {{turnsLeft}} turns. Whatever remains of the work must be done before the count runs out."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-state-quest-deadline-approaching-today",
+        "when": "cityState !== null && turnsLeft === 0",
+        "headline": "A {{cityState}} quest ends this turn",
+        "body": [
+          "The deadline set by {{cityState}} falls on the present turn. The count for the quest runs out with it."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-state-quest-deadline-approaching-unnamed",
+        "when": "cityState === null",
+        "headline": "A quest deadline arrives",
+        "body": [
+          "One of the city-states has a quest whose deadline is at hand. The notices before us do not say which city-state set it."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-state-quest-deadline-approaching-feed",
+        "voice": "feed",
+        "stance": "neutral",
+        "genre": "notice",
+        "when": "cityState !== null && turnsLeft === 0",
+        "headline": "Zero turns left on a {{cityState}} quest",
+        "body": [
+          "The {{cityState}} quest count just hit zero. If the work isn't done, it isn't getting done."
+        ],
+        "links": [
+          { "placeholder": "cityState", "label": "{{cityState}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-state-quest-deadline-approaching-crier",
+        "voice": "crier",
+        "stance": "populist",
+        "genre": "notice",
+        "when": "cityState !== null && turnsLeft > 0",
+        "headline": "Hear it! {{cityState}} counts {{turnsLeft}} turns",
+        "body": [
+          "A quest of {{cityState}} ends in {{turnsLeft}} turns! Let those with a stake in it hurry, for the count will not wait."
+        ],
+        "links": [
+          { "placeholder": "cityState", "label": "{{cityState}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "city-state-timed-quest-observed-account",
+    "triggers": ["city-state-timed-quest-observed"],
+    "tags": ["politics", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "city-state-timed-quest-observed-report",
+        "when": "cityState !== null",
+        "headline": "{{cityState}} posts a timed quest",
+        "body": [
+          "A new quest has appeared in the notices of {{cityState}}, with a deadline of {{turnsLeft}} turns on its count. The count has already begun."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-state-timed-quest-observed-unnamed",
+        "when": "cityState === null",
+        "headline": "A new timed quest appears",
+        "body": [
+          "One of the city-states has posted a quest with a deadline of {{turnsLeft}} turns. The count has already begun."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-state-timed-quest-observed-notice",
+        "voice": "broadcast",
+        "stance": "neutral",
+        "genre": "notice",
+        "when": "cityState !== null",
+        "headline": "New quest from {{cityState}}",
+        "body": [
+          "In the notices tonight: {{cityState}} has posted a new quest with a deadline of {{turnsLeft}} turns. The count is running."
+        ],
+        "links": [
+          { "placeholder": "cityState", "label": "{{cityState}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-state-timed-quest-observed-analysis",
+        "voice": "press",
+        "stance": "ambitious",
+        "genre": "analysis",
+        "when": "cityState !== null",
+        "headline": "A clock worth beating",
+        "body": [
+          "{{cityState}} has posted a quest with {{turnsLeft}} turns to spare, which is room enough for serious work. A timed quest is a prize with a schedule attached. The nation that moves first usually collects."
+        ],
+        "links": [
+          { "placeholder": "cityState", "label": "{{cityState}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "foreign-major-wins-city-state-account",
+    "triggers": ["foreign-major-wins-city-state"],
+    "tags": ["politics", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "foreign-major-wins-city-state-report",
+        "when": "cityState !== null && civilization !== null",
+        "headline": "{{civilization}} wins the alliance of {{cityState}}",
+        "body": [
+          "The city-state {{cityState}} has taken {{civilization}} as its ally. The new arrangement stands {{distance}} tiles from our nearest city."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-major-wins-city-state-unnamed",
+        "when": "cityState === null || civilization === null",
+        "headline": "A city-state changes allies",
+        "body": [
+          "A city-state near our borders has given its alliance to a foreign power. The arrangement stands {{distance}} tiles from our nearest city."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-major-wins-city-state-analysis",
+        "voice": "press",
+        "stance": "hawkish",
+        "genre": "analysis",
+        "when": "cityState !== null && civilization !== null",
+        "headline": "A foothold {{distance}} tiles from home",
+        "body": [
+          "{{civilization}} now holds the alliance of {{cityState}}, whose ground sits {{distance}} tiles from our nearest city. Influence is bought with gold and patience, but it is spent like position. A power that collects friends this close to our cities is not collecting them for nothing."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-major-wins-city-state-pamphlet",
+        "voice": "pamphlet",
+        "stance": "hawkish",
+        "genre": "report",
+        "when": "cityState !== null && civilization !== null",
+        "headline": "Citizens! {{civilization}} buys a neighbor",
+        "body": [
+          "{{civilization}} has been named ally to {{cityState}}, a city-state close to our own ground. Who counts the friends being bought around our borders? Someone should."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-major-wins-city-state-joke",
+        "voice": "tabloid",
+        "stance": "neutral",
+        "genre": "joke",
+        "when": "cityState !== null && civilization !== null && replaced !== null",
+        "headline": "The seat is still warm",
+        "body": [
+          "{{cityState}} has a new ally: {{civilization}}, who will now enjoy everything {{replaced}} enjoyed about the arrangement."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "friendly-city-state-attacked-account",
+    "triggers": ["friendly-city-state-attacked"],
+    "tags": ["politics", "military", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "friendly-city-state-attacked-report",
+        "when": "cityState !== null && aggressor !== null",
+        "headline": "{{cityState}} attacked by {{aggressor}}",
+        "body": [
+          "A friend among the city-states has been attacked. {{aggressor}} opened the war against {{cityState}}, a power joined to us by declared friendship. The fighting is not ours, but the friend is."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "friendly-city-state-attacked-unnamed",
+        "when": "cityState === null || aggressor === null",
+        "headline": "A friendly city-state under attack",
+        "body": [
+          "War has reached one of the city-states that call us friend. Not every party to the fighting is named in the reports that reached us."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "friendly-city-state-attacked-analysis",
+        "voice": "press",
+        "stance": "hawkish",
+        "genre": "analysis",
+        "when": "cityState !== null && aggressor !== null",
+        "headline": "Our friend {{cityState}} is in the fighting",
+        "body": [
+          "The attack on {{cityState}} shows where {{aggressor}}'s armies are willing to strike. Friendship gives us no part in the war, but it gives us a view of it: a power that will cross a friendly small state may cross others."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "friendly-city-state-attacked-spoken",
+        "voice": "spoken",
+        "stance": "traditional",
+        "genre": "report",
+        "when": "cityState !== null && aggressor !== null",
+        "headline": "It is told that war came to {{cityState}}",
+        "body": [
+          "It is told by the roads that {{aggressor}} has made war on {{cityState}}, a small state that has called us friend. We are not in the fighting, and for that the hearths are thankful."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "friendly-city-state-attacked-notice",
+        "voice": "gazette",
+        "stance": "neutral",
+        "genre": "notice",
+        "when": "cityState !== null && aggressor !== null",
+        "headline": "War reaches {{cityState}}",
+        "body": [
+          "We are informed that {{aggressor}} has opened hostilities against {{cityState}}, a city-state in friendship with this nation. Our own part in the war remains none."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "friendly-city-state-captured-account",
+    "triggers": ["friendly-city-state-captured"],
+    "tags": ["politics", "military", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "friendly-city-state-captured-report",
+        "when": "cityState !== null && captor !== null",
+        "headline": "{{cityState}} falls to {{captor}}",
+        "body": [
+          "{{captor}} has taken {{cityState}} by conquest. The city-state counted us a friend, and its territory now answers to a foreign power."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "friendly-city-state-captured-unnamed",
+        "when": "cityState === null || captor === null",
+        "headline": "A friendly city-state is taken",
+        "body": [
+          "A city-state in friendship with us has fallen to a foreign army. The conquest removes a friend from the map, and the reports before us do not name every party."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "friendly-city-state-captured-obituary",
+        "voice": "chronicle",
+        "stance": "devout",
+        "genre": "obituary",
+        "when": "cityState !== null",
+        "headline": "The passing of {{cityState}}",
+        "body": [
+          "In the record of the small powers, {{cityState}} held its place among the friendliest. It kept our friendship to the end and lost its independence by the sword. Its people pass under another rule, and its name passes into the record."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "friendly-city-state-captured-broadcast",
+        "voice": "broadcast",
+        "stance": "hawkish",
+        "genre": "report",
+        "when": "captor !== null && distance !== null",
+        "headline": "Conquest near our borders",
+        "body": [
+          "Tonight, {{captor}} holds a friendly city-state by conquest. The fighting was {{distance}} tiles from our nearest city. That is close, and the map has changed."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "friendly-city-state-captured-gazette",
+        "voice": "gazette",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "cityState !== null && captor !== null",
+        "headline": "Letters from the frontier: {{cityState}} is taken",
+        "body": [
+          "Letters from the frontier relate that {{captor}} has completed the conquest of {{cityState}}, a city-state in friendship with this nation. The place is gone from the list of independent powers."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  }
+]

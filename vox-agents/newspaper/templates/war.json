@@ -1,0 +1,1884 @@
+[
+  {
+    "id": "ally-joins-our-war-account",
+    "triggers": ["ally-joins-our-war"],
+    "tags": ["politics", "military", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "ally-joins-our-war-report",
+        "headline": "Allies join the war against {{opponent}}",
+        "body": [
+          "Our war against {{opponent}} no longer rests on our own arms. Our ranks have been joined by {{allies}}, called by the pact between us."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "ally-joins-our-war-analysis",
+        "voice": "press",
+        "stance": "national",
+        "genre": "analysis",
+        "headline": "More banners against {{opponent}}",
+        "body": [
+          "The pact has been honored: our side in the war against {{opponent}} now includes {{allies}}. A wider coalition means more fronts for the enemy to watch and fewer men required at each of ours."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "ally-joins-our-war-gazette",
+        "voice": "gazette",
+        "stance": "conciliatory",
+        "genre": "report",
+        "headline": "Friends keep their word",
+        "body": [
+          "We are informed that the defensive pact has been answered. In the war against {{opponent}}, our side now includes {{allies}}. Treaties honored in hard years are the ones worth signing in calm ones."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "ally-joins-our-war-crier",
+        "voice": "crier",
+        "stance": "national",
+        "genre": "notice",
+        "headline": "Hear it! We do not fight alone",
+        "body": [
+          "News from the war against {{opponent}}: our allies have kept the pact, and the strength of {{allies}} stands with us. Tell it in every street."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "barbarians-at-the-gates-account",
+    "triggers": ["barbarians-at-the-gates"],
+    "tags": ["cities", "military"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "barbarians-at-the-gates-report",
+        "headline": "Barbarians at the gates of {{cityName}}",
+        "body": [
+          "Scouts report barbarians in the country around {{cityName}}. The count stands at {{barbarians}}, and the garrison has been warned."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "barbarians-at-the-gates-crier",
+        "voice": "crier",
+        "stance": "populist",
+        "genre": "notice",
+        "headline": "Hear it, {{cityName}}! Barbarians are at the gates",
+        "body": [
+          "The scouts have counted {{barbarians}} barbarians outside the walls. Bar the gates, mind the herds, and keep the children close."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "barbarians-at-the-gates-anecdote",
+        "voice": "tabloid",
+        "stance": "local",
+        "genre": "anecdote",
+        "headline": "The fields around {{cityName}} go quiet",
+        "body": [
+          "The herdsmen saw them first and came in without the herds. {{barbarians}} barbarians now camp within reach of {{cityName}}, and the evening roads stand empty."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "barbarians-at-the-gates-analysis",
+        "voice": "press",
+        "stance": "rationalist",
+        "genre": "analysis",
+        "headline": "Counting the raiders at {{cityName}}",
+        "body": [
+          "The sightings near {{cityName}} are not rumor: {{barbarians}} barbarians are counted in the surrounding country. A raid at that strength takes herds and burned fields, and a response takes men the harvest cannot spare."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "barbarians-at-the-gates-posture",
+        "voice": "chronicle",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "posture !== null && posture !== 'NONE'",
+        "headline": "The garrison of {{cityName}} stands at {{posture}}",
+        "body": [
+          "It is recorded that our command around {{cityName}} holds to a {{posture}} posture against the raiders, of whom {{barbarians}} are counted."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "besieged-and-starving-account",
+    "triggers": ["besieged-and-starving"],
+    "tags": ["military"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "besieged-and-starving-report",
+        "headline": "{{city}} is besieged and starving",
+        "body": [
+          "Enemy forces have closed the roads into {{city}}, and the granaries are running down. The city is under siege and going hungry."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "besieged-and-starving-analysis",
+        "voice": "press",
+        "stance": "populist",
+        "genre": "analysis",
+        "headline": "Who answers for {{city}}?",
+        "body": [
+          "A besieged city eats what it stores and then what it can find, and {{city}} is doing both. The government owes the city a relief plan and a date, in that order."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "besieged-and-starving-anecdote",
+        "voice": "pamphlet",
+        "stance": "populist",
+        "genre": "anecdote",
+        "headline": "Bread lines in {{city}}",
+        "body": [
+          "The baker on the high street opens late now and closes early. In {{city}} the siege has reached the table, and no one has to be told what an empty shelf means."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "besieged-and-starving-notice",
+        "voice": "gazette",
+        "stance": "devout",
+        "genre": "notice",
+        "headline": "A call to {{city}} in its hunger",
+        "body": [
+          "The city is besieged and hungry. Hold to the shrines and to one another; keep the gates shut, and feed the poor where you can, for the trial is shared."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "enemy-city-takes-heavy-damage-account",
+    "triggers": ["enemy-city-takes-heavy-damage"],
+    "tags": ["cities", "military", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "enemy-city-takes-heavy-damage-report",
+        "headline": "Heavy damage to {{cityName}}",
+        "body": [
+          "The defenses of {{cityName}} have taken serious damage in the recent fighting. The city stands at {{hitPoints}} of {{maxHitPoints}} hit points."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "enemy-city-takes-heavy-damage-ledger",
+        "voice": "gazette",
+        "stance": "neutral",
+        "genre": "ledger",
+        "headline": "The state of {{cityName}}",
+        "body": [
+          "City: {{cityName}}.",
+          "Defenses: {{hitPoints}} of {{maxHitPoints}} hit points.",
+          "Condition: heavily damaged in the recent fighting."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "enemy-city-takes-heavy-damage-broadcast",
+        "voice": "broadcast",
+        "stance": "neutral",
+        "genre": "report",
+        "headline": "Abroad tonight, heavy damage at {{cityName}}",
+        "body": [
+          "The foreign city of {{cityName}} reports heavy damage. Its defenses stand at {{hitPoints}} of {{maxHitPoints}} hit points."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "enemy-city-takes-heavy-damage-analysis",
+        "voice": "press",
+        "stance": "hawkish",
+        "genre": "analysis",
+        "when": "civilization !== null",
+        "headline": "The walls of a rival come down",
+        "body": [
+          "{{cityName}}, held by {{civilization}}, is down to {{hitPoints}} of {{maxHitPoints}} hit points. Walls that cannot be held do not protect what lies behind them."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "enemy-front-posture-offensive-account",
+    "triggers": ["enemy-front-posture-offensive"],
+    "tags": ["cities", "military", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "enemy-front-posture-offensive-report",
+        "headline": "Our forces attack before {{cityName}}",
+        "body": [
+          "The command near {{cityName}}, a city of {{civilization}}, has shifted to the offensive. The new posture reads {{posture}}."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "enemy-front-posture-offensive-analysis",
+        "voice": "press",
+        "stance": "rationalist",
+        "genre": "analysis",
+        "when": "previousPosture !== 'NONE'",
+        "headline": "From {{previousPosture}} to {{posture}}",
+        "body": [
+          "Our front before {{cityName}} has changed stance, from {{previousPosture}} to {{posture}}. A shift of that kind is not mood; it is an assessment, and the assessment says the opening is worth the cost."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "enemy-front-posture-offensive-chronicle",
+        "voice": "chronicle",
+        "stance": "neutral",
+        "genre": "report",
+        "headline": "The record before {{cityName}}",
+        "body": [
+          "It is set down that our command before {{cityName}}, held by {{civilization}}, has taken the posture {{posture}} against that city."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "enemy-front-posture-offensive-tabloid",
+        "voice": "tabloid",
+        "stance": "populist",
+        "genre": "report",
+        "headline": "The war moves toward {{civilization}}'s streets",
+        "body": [
+          "Our push at {{cityName}} has begun in earnest; the command has set its offensive posture there. Wars are dear to finish, and the last mile is always paid in someone's street."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "enemy-front-posture-regroup-account",
+    "triggers": ["enemy-front-posture-regroup"],
+    "tags": ["cities", "military", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "enemy-front-posture-regroup-report",
+        "headline": "Our forces return to the fight near {{cityName}}",
+        "body": [
+          "After a withdrawal, the command near {{cityName}} has taken up a new stance against {{civilization}}: {{posture}}. The front there is active again."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "enemy-front-posture-regroup-analysis",
+        "voice": "press",
+        "stance": "hawkish",
+        "genre": "analysis",
+        "headline": "The pullback ends at {{cityName}}",
+        "body": [
+          "Our forces had fallen back from {{cityName}}; the new posture, {{posture}}, ends that. A withdrawal that ends was a repositioning, and the ground it gave up is now ground to be retaken."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "enemy-front-posture-regroup-broadcast",
+        "voice": "broadcast",
+        "stance": "neutral",
+        "genre": "report",
+        "headline": "Our forces are back in position near {{cityName}}",
+        "body": [
+          "Near {{cityName}} tonight, our forces have returned to the line. The command has moved from withdrawal to {{posture}}."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "enemy-front-posture-regroup-editorial",
+        "voice": "pamphlet",
+        "stance": "populist",
+        "genre": "editorial",
+        "headline": "The second try at {{cityName}}",
+        "body": [
+          "The orders came, and our men walk forward again near {{cityName}}. A war that needs two tries at the same ground spends two armies' worth of boots and bread. Ask the council what the first withdrawal bought."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "enemy-front-posture-withdraw-account",
+    "triggers": ["enemy-front-posture-withdraw"],
+    "tags": ["cities", "military", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "enemy-front-posture-withdraw-report",
+        "headline": "Our forces pull back from {{cityName}}",
+        "body": [
+          "Our command near {{cityName}}, a city of {{civilization}}, has shifted to {{posture}}, leaving its earlier {{previousPosture}} stance. The units there are drawing back."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "enemy-front-posture-withdraw-analysis",
+        "voice": "press",
+        "stance": "government-critical",
+        "genre": "analysis",
+        "headline": "The withdrawal before {{cityName}}",
+        "body": [
+          "Our forces have left their {{previousPosture}} posture before {{cityName}} and fallen back to {{posture}}. The record shows the change of stance; it does not show who ordered it or what it buys. Both questions deserve answers."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "enemy-front-posture-withdraw-gazette",
+        "voice": "gazette",
+        "stance": "neutral",
+        "genre": "report",
+        "headline": "Letters from the front: {{cityName}}",
+        "body": [
+          "Letters from the front relate that our forces before {{cityName}} have gone from {{previousPosture}} to {{posture}}. The news reached the printer with the evening post."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "enemy-front-posture-withdraw-anecdote",
+        "voice": "tabloid",
+        "stance": "local",
+        "genre": "anecdote",
+        "headline": "The boys are coming back from {{cityName}}",
+        "body": [
+          "Word came ahead of them: our men are off the front at {{cityName}}. Some houses will set a place again; others will ask quietly what the push there cost."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "enemy-troops-sighted-near-city-account",
+    "triggers": ["enemy-troops-sighted-near-city"],
+    "tags": ["cities", "military", "domestic"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "enemy-troops-sighted-near-city-report",
+        "headline": "Enemy troops sighted near {{cityName}}",
+        "body": [
+          "Soldiers flying the colors of {{enemies}} have been counted near {{cityName}}. We are at war with them, and they are close."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "enemy-troops-sighted-near-city-crier",
+        "voice": "crier",
+        "stance": "national",
+        "genre": "notice",
+        "headline": "Hear it, {{cityName}}! The enemy is near",
+        "body": [
+          "Troops of {{enemies}} are sighted outside the walls. Stand to your posts, keep the watch, and let the roads be clear for the army."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "enemy-troops-sighted-near-city-analysis",
+        "voice": "press",
+        "stance": "hawkish",
+        "genre": "analysis",
+        "headline": "What the sighting at {{cityName}} means",
+        "body": [
+          "Troops of {{enemies}} within reach of {{cityName}} can besiege it, raid its fields, or pin our garrison in place. Which comes next depends on their strength, not their intentions, and their strength is what our command should be counting."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "enemy-troops-sighted-near-city-feed",
+        "voice": "feed",
+        "stance": "neutral",
+        "genre": "report",
+        "headline": "Enemy troops just showed up near {{cityName}}",
+        "body": [
+          "The list: {{enemies}}. We are at war with all of them, and this is how close it has come."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "enemy-units-lost-in-combat-account",
+    "triggers": ["enemy-units-lost-in-combat"],
+    "tags": ["politics", "military"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "enemy-units-lost-in-combat-report",
+        "headline": "{{count}} enemy units destroyed",
+        "body": [
+          "In the recent fighting our forces destroyed {{count}} units belonging to a single enemy power. The losses fall on one side's ledger alone."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "enemy-units-lost-in-combat-ledger",
+        "voice": "press",
+        "stance": "national",
+        "genre": "ledger",
+        "headline": "The enemy's losses, counted",
+        "body": [
+          "Enemy units destroyed by our forces: {{count}}.",
+          "All from one enemy army.",
+          "Period: the recent fighting."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "enemy-units-lost-in-combat-broadcast",
+        "voice": "broadcast",
+        "stance": "neutral",
+        "genre": "report",
+        "headline": "{{count}} enemy units destroyed in the fighting",
+        "body": [
+          "Our forces destroyed {{count}} enemy units in the latest fighting. All of the losses belong to one enemy army."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "enemy-units-lost-in-combat-crier",
+        "voice": "crier",
+        "stance": "national",
+        "genre": "notice",
+        "when": "count >= 5",
+        "headline": "Hear it! {{count}} enemy units destroyed",
+        "body": [
+          "The tally from the front is plain: {{count}} of the enemy's units destroyed by our arms. Let the count be told in every street."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "foreign-capital-falls-account",
+    "triggers": ["foreign-capital-falls"],
+    "tags": ["politics", "military", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "foreign-capital-falls-report",
+        "headline": "A capital falls abroad",
+        "body": [
+          "A foreign capital has been taken by conquest, {{distance}} tiles from our nearest city. The fighting did not reach our borders, but the map has changed."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-capital-falls-analysis",
+        "voice": "press",
+        "stance": "neutral",
+        "genre": "analysis",
+        "when": "cityName !== null && loser !== null && winner !== null",
+        "headline": "A capital changes hands: {{cityName}}",
+        "body": [
+          "{{cityName}}, the capital of {{loser}}, has fallen to {{winner}} by conquest. A capital is more than a city; whoever holds it holds the machinery of the state, and {{winner}} now holds both."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-capital-falls-chronicle",
+        "voice": "chronicle",
+        "stance": "devout",
+        "genre": "report",
+        "when": "loser !== null && winner !== null",
+        "headline": "The fall of a capital",
+        "body": [
+          "It is set down that {{winner}} has taken the capital of {{loser}} by force of arms, {{distance}} tiles from our own cities. Providence writes long chapters."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-capital-falls-broadcast",
+        "voice": "broadcast",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "winner !== null",
+        "headline": "Abroad tonight, a capital has fallen",
+        "body": [
+          "A capital has fallen to {{winner}}. The city lies {{distance}} tiles from our frontier."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "foreign-peace-nearby-account",
+    "triggers": ["foreign-peace-nearby"],
+    "tags": ["politics", "military", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "foreign-peace-nearby-report",
+        "headline": "Peace near our borders",
+        "body": [
+          "{{initiator}} and {{target}} have ended their war. The nearer of the two powers sits {{nearest}} tiles from our cities, and the fighting between them is over."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-peace-nearby-gazette",
+        "voice": "gazette",
+        "stance": "conciliatory",
+        "genre": "report",
+        "headline": "Neighbors at peace again",
+        "body": [
+          "We are informed that {{initiator}} and {{target}} have laid down their arms. The peace, concluded near our frontier, asked no visible price of either side. Quiet borders make good neighbors."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-peace-nearby-analysis",
+        "voice": "press",
+        "stance": "rationalist",
+        "genre": "analysis",
+        "headline": "The peace between {{initiator}} and {{target}}",
+        "body": [
+          "The war between {{initiator}} and {{target}} has ended with no recorded concessions and no capitulation. A peace without terms usually means both sides spent what they meant to spend. Their quiet frees our attention for our own accounts."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-peace-nearby-proverb",
+        "voice": "spoken",
+        "stance": "traditional",
+        "genre": "proverb",
+        "headline": "When the neighbors' fire burns low",
+        "body": [
+          "When the neighbors' quarrel dies, your own fence stands straighter. So it is said, and so it is with {{initiator}} and {{target}} at peace."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "foreign-war-nearby-account",
+    "triggers": ["foreign-war-nearby"],
+    "tags": ["politics", "military", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "foreign-war-nearby-report",
+        "headline": "War breaks out near our borders",
+        "body": [
+          "{{initiator}} has opened a war against {{target}}. The nearer of the two sits {{nearest}} tiles from our nearest city."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-war-nearby-analysis",
+        "voice": "press",
+        "stance": "hawkish",
+        "genre": "analysis",
+        "headline": "A war next door",
+        "body": [
+          "The war between {{initiator}} and {{target}} begins within {{nearest}} tiles of our border. Wars this close are never spectators' news: armies forage, borders close, and both sides start counting what our friendship is worth."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-war-nearby-broadcast",
+        "voice": "broadcast",
+        "stance": "neutral",
+        "genre": "report",
+        "headline": "War abroad tonight",
+        "body": [
+          "{{initiator}} has attacked {{target}}. The front lies as close as {{nearest}} tiles from our cities."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-war-nearby-editorial",
+        "voice": "pamphlet",
+        "stance": "populist",
+        "genre": "editorial",
+        "headline": "Their war, our doorstep",
+        "body": [
+          "{{initiator}} and {{target}} are at it, {{nearest}} tiles from our farms. When kings quarrel this close, it is the neighbor's fence that gets trampled. The council should say plainly what we intend to do about it."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-war-nearby-chronicle",
+        "voice": "chronicle",
+        "stance": "neutral",
+        "genre": "report",
+        "headline": "The record of a war nearby",
+        "body": [
+          "It is set down that {{initiator}} made war upon {{target}}, and that the nearer of them lies {{nearest}} tiles from our lands."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "nearby-capital-falls-account",
+    "triggers": ["nearby-capital-falls"],
+    "tags": ["military"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "nearby-capital-falls-report",
+        "headline": "A capital falls close to home",
+        "body": [
+          "{{winner}} has taken a capital from {{loser}} by conquest, near enough to our border to concern us. The map at our doorstep has changed."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "nearby-capital-falls-analysis",
+        "voice": "press",
+        "stance": "neutral",
+        "genre": "analysis",
+        "headline": "What {{winner}}'s capture means here",
+        "body": [
+          "A conquered capital makes {{winner}} a stronger presence near our border and {{loser}} a lesser one. When a change of that size happens this close, it becomes our business whoever's flag is on the walls."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "nearby-capital-falls-chronicle",
+        "voice": "chronicle",
+        "stance": "traditional",
+        "genre": "report",
+        "headline": "The fall of a capital near our borders",
+        "body": [
+          "In this season {{winner}} took the capital of {{loser}} by the sword. The news came to us quickly, for it fell near our marches."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "nearby-capital-falls-feed",
+        "voice": "feed",
+        "stance": "neutral",
+        "genre": "report",
+        "headline": "A capital just fell near us",
+        "body": [
+          "{{winner}} took it from {{loser}}. Here is who got stronger today, and it is not us."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "nearby-city-captured-account",
+    "triggers": ["nearby-city-captured"],
+    "tags": ["cities", "military"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "nearby-city-captured-report",
+        "headline": "A town changes hands near our border",
+        "body": [
+          "A foreign town has been taken by conquest {{distance}} tiles from our nearest city. Neither its old master nor its new one is us."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "nearby-city-captured-analysis",
+        "voice": "press",
+        "stance": "neutral",
+        "genre": "analysis",
+        "when": "cityName !== null && loser !== null && winner !== null",
+        "headline": "{{cityName}} falls to {{winner}}",
+        "body": [
+          "{{cityName}}, which belonged to {{loser}}, has been taken by {{winner}}. The town lies {{distance}} tiles from our nearest city, and whatever its fields and roads were worth now answers to another flag."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "nearby-city-captured-notice",
+        "voice": "gazette",
+        "stance": "neutral",
+        "genre": "notice",
+        "when": "cityName !== null && winner !== null",
+        "headline": "Notice from abroad: {{cityName}}",
+        "body": [
+          "We are informed that {{cityName}}, {{distance}} tiles from our cities, has passed to {{winner}} by conquest. Travelers on that road should expect a new authority at the gate."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "nearby-city-captured-tabloid",
+        "voice": "tabloid",
+        "stance": "local",
+        "genre": "report",
+        "when": "loser !== null && winner !== null",
+        "headline": "A new flag {{distance}} tiles out",
+        "body": [
+          "{{winner}} has taken a town from {{loser}}, {{distance}} tiles from our nearest city. The border towns will be the first to meet whoever now holds it."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "neighbor-army-overtakes-account",
+    "triggers": ["neighbor-army-overtakes"],
+    "tags": ["military"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "neighbor-army-overtakes-report",
+        "headline": "{{neighbor}}'s army now outranks ours",
+        "body": [
+          "{{neighbor}}, our neighbor, now fields a stronger army than we do. The balance between our two nations has tipped, and not in our favor."
+        ],
+        "links": [
+          { "placeholder": "neighbor", "label": "{{neighbor}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "neighbor-army-overtakes-ledger",
+        "voice": "press",
+        "stance": "national",
+        "genre": "ledger",
+        "headline": "The tally of arms",
+        "body": [
+          "Their strength: {{theirStrength}}.",
+          "Our strength: {{ourStrength}}.",
+          "The comparison: theirs is now the larger."
+        ],
+        "links": [
+          { "placeholder": "neighbor", "label": "{{neighbor}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "neighbor-army-overtakes-editorial",
+        "voice": "pamphlet",
+        "stance": "government-critical",
+        "genre": "editorial",
+        "headline": "Ask why {{neighbor}}'s army passed ours",
+        "body": [
+          "{{neighbor}}'s army is now stronger than ours. Some counselor will say it does not matter. It matters to anyone who shares a border with {{neighbor}}, and we do. The government should account for the gap."
+        ],
+        "links": [
+          { "placeholder": "neighbor", "label": "{{neighbor}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "neighbor-army-overtakes-chronicle",
+        "voice": "chronicle",
+        "stance": "traditional",
+        "genre": "report",
+        "headline": "The record notes a shift in arms",
+        "body": [
+          "It is recorded that the host of {{neighbor}} has grown past our own in strength. The seasons turn, and the balance turns with them."
+        ],
+        "links": [
+          { "placeholder": "neighbor", "label": "{{neighbor}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "our-army-overtakes-neighbor-account",
+    "triggers": ["our-army-overtakes-neighbor"],
+    "tags": ["politics", "military", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "our-army-overtakes-neighbor-report",
+        "headline": "Our army passes {{neighbor}}'s",
+        "body": [
+          "Our military strength has overtaken that of {{neighbor}}. The balance between our nations now leans our way."
+        ],
+        "links": [
+          { "placeholder": "neighbor", "label": "{{neighbor}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "our-army-overtakes-neighbor-gazette",
+        "voice": "gazette",
+        "stance": "pro-government",
+        "genre": "report",
+        "headline": "Our arms in good order",
+        "body": [
+          "We are informed that the strength of our army now surpasses that of {{neighbor}}. The stewardship of the army has borne fruit, and the nation may take satisfaction in it."
+        ],
+        "links": [
+          { "placeholder": "neighbor", "label": "{{neighbor}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "our-army-overtakes-neighbor-feed",
+        "voice": "feed",
+        "stance": "hawkish",
+        "genre": "report",
+        "headline": "Our army just passed {{neighbor}}'s",
+        "body": [
+          "Our army is now stronger than {{neighbor}}'s. Strength invites options, and the window for pressing our interests is open."
+        ],
+        "links": [
+          { "placeholder": "neighbor", "label": "{{neighbor}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "our-army-overtakes-neighbor-ledger",
+        "voice": "chronicle",
+        "stance": "neutral",
+        "genre": "ledger",
+        "headline": "The account of strength",
+        "body": [
+          "Our strength: {{ourStrength}}.",
+          "Their strength: {{theirStrength}}.",
+          "The comparison: ours is now the larger."
+        ],
+        "links": [
+          { "placeholder": "neighbor", "label": "{{neighbor}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "our-city-takes-heavy-damage-account",
+    "triggers": ["our-city-takes-heavy-damage"],
+    "tags": ["cities", "military", "domestic"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "our-city-takes-heavy-damage-report",
+        "headline": "{{city}} takes heavy damage",
+        "body": [
+          "Our city of {{city}} has lost a large share of its defenses in the recent fighting. The walls stand at {{hitPoints}} of {{maxHitPoints}} hit points."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "our-city-takes-heavy-damage-analysis",
+        "voice": "press",
+        "stance": "government-critical",
+        "genre": "analysis",
+        "headline": "The cost to {{city}}",
+        "body": [
+          "The defenses of {{city}} are down to {{hitPoints}} of {{maxHitPoints}} hit points. Damage of this scale does not fall from the sky; it gets through when a garrison is thin or relief is late. The city deserves to know which it was."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "our-city-takes-heavy-damage-anecdote",
+        "voice": "tabloid",
+        "stance": "local",
+        "genre": "anecdote",
+        "headline": "The crack in {{city}}'s wall",
+        "body": [
+          "The mason came down his ladder at noon and did not go back up. The wall he was pointing at stands at {{hitPoints}} of {{maxHitPoints}} hit points, and everyone in {{city}} now knows the number."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "our-city-takes-heavy-damage-crier",
+        "voice": "crier",
+        "stance": "national",
+        "genre": "notice",
+        "headline": "Hear it, {{city}}! The walls are hurt",
+        "body": [
+          "The enemy has done the city harm. The defenses stand at {{hitPoints}} of {{maxHitPoints}} hit points. Keep the watch, and mend what is broken."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "own-front-posture-counterattack-account",
+    "triggers": ["own-front-posture-counterattack"],
+    "tags": ["cities", "military", "domestic"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "own-front-posture-counterattack-report",
+        "headline": "Our forces counterattack at {{cityName}}",
+        "body": [
+          "The front at {{cityName}} has gone from defense to the attack. Our command there has shifted from {{previousPosture}} to {{posture}}."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "own-front-posture-counterattack-analysis",
+        "voice": "press",
+        "stance": "hawkish",
+        "genre": "analysis",
+        "headline": "From defense to the strike at {{cityName}}",
+        "body": [
+          "Our command at {{cityName}} has traded {{previousPosture}} for {{posture}}. A defense that turns offensive says the attackers have spent their push; the question is whether we have the strength to spend on the answer."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "own-front-posture-counterattack-broadcast",
+        "voice": "broadcast",
+        "stance": "neutral",
+        "genre": "report",
+        "headline": "Our forces attack at {{cityName}}",
+        "body": [
+          "At {{cityName}} tonight, our forces have gone onto the attack. The command reports a shift from {{previousPosture}} to {{posture}}."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "own-front-posture-counterattack-gazette",
+        "voice": "gazette",
+        "stance": "pro-government",
+        "genre": "report",
+        "headline": "The defense holds and answers",
+        "body": [
+          "We are informed that the command at {{cityName}}, having held fast through its {{previousPosture}} posture, has taken the offensive with {{posture}}. The conduct of the front is judged sound."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "own-front-posture-defensive-account",
+    "triggers": ["own-front-posture-defensive"],
+    "tags": ["cities", "military", "domestic"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "own-front-posture-defensive-report",
+        "headline": "The front at {{cityName}} goes defensive",
+        "body": [
+          "Our command at {{cityName}} has shifted to {{posture}} after {{previousPosture}}. The front there has settled into defense."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "own-front-posture-defensive-gazette",
+        "voice": "gazette",
+        "stance": "government-critical",
+        "genre": "report",
+        "headline": "Letters from the front: {{cityName}}",
+        "body": [
+          "Letters from the front relate that our command at {{cityName}} has moved from {{previousPosture}} to {{posture}}. The reasons have not been given."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "own-front-posture-defensive-crier",
+        "voice": "crier",
+        "stance": "local",
+        "genre": "notice",
+        "headline": "Hear it, {{cityName}}! Our soldiers stand at the walls",
+        "body": [
+          "The command has set a defensive posture around the city. Keep calm, keep the watch, and give the soldiers the road."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "own-front-posture-defensive-chronicle",
+        "voice": "chronicle",
+        "stance": "neutral",
+        "genre": "report",
+        "headline": "The record of {{cityName}}'s front",
+        "body": [
+          "It is recorded that our forces at {{cityName}} took the posture {{posture}}, having before stood at {{previousPosture}}."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "peace-capitulation-account",
+    "triggers": ["peace-capitulation"],
+    "tags": ["politics", "military", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "peace-capitulation-report",
+        "headline": "A war ends in capitulation",
+        "body": [
+          "The war between {{initiator}} and {{target}} has ended, and a capitulation followed the peace. One of the two now answers to the other; the record does not say which."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "peace-capitulation-obituary",
+        "voice": "chronicle",
+        "stance": "neutral",
+        "genre": "obituary",
+        "headline": "The war between {{initiator}} and {{target}} is ended",
+        "body": [
+          "It began with calls to arms and closed with a signature and a kneel. Between {{initiator}} and {{target}} the fighting is over; what remains is the peace a victor allows, which is a hard peace."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "peace-capitulation-analysis",
+        "voice": "press",
+        "stance": "neutral",
+        "genre": "analysis",
+        "when": "role === 'target'",
+        "headline": "Our war with {{initiator}} ends in capitulation",
+        "body": [
+          "The war {{initiator}} brought to us has closed with a capitulation. One of the two nations now rules the other; which of the two it is will be plain soon enough."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "peace-capitulation-gazette",
+        "voice": "gazette",
+        "stance": "conciliatory",
+        "genre": "report",
+        "when": "role === 'initiator'",
+        "headline": "Our war with {{target}} is settled",
+        "body": [
+          "The peace we made with {{target}} has been sealed with a capitulation. Even a hard peace spares both nations the further cost of the sword, and for that much there is reason to be glad."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "peace-concessions-account",
+    "triggers": ["peace-concessions"],
+    "tags": ["politics", "military", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "peace-concessions-report",
+        "headline": "A peace with visible terms",
+        "body": [
+          "A peace settlement has been recorded with visible concessions. The terms on the record number {{count}}: {{concessions}}."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "peace-concessions-ledger",
+        "voice": "gazette",
+        "stance": "neutral",
+        "genre": "ledger",
+        "when": "initiator !== null && target !== null",
+        "headline": "The terms between {{initiator}} and {{target}}",
+        "body": [
+          "Peace between {{initiator}} and {{target}}.",
+          "Concessions recorded: {{count}}.",
+          "The terms: {{concessions}}."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "peace-concessions-editorial",
+        "voice": "press",
+        "stance": "government-critical",
+        "genre": "editorial",
+        "when": "role === 'initiator' && target !== null",
+        "headline": "Our peace with {{target}} and its price",
+        "body": [
+          "Our settlement with {{target}} carries {{count}} recorded concessions: {{concessions}}. The direction of the terms is not written in the record, and the government has not said. It should."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "peace-concessions-broadcast",
+        "voice": "broadcast",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "initiator !== null && target !== null",
+        "headline": "Abroad tonight, a peace with terms",
+        "body": [
+          "{{initiator}} and {{target}} have settled their war with {{count}} concessions on the record."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "peace-on-one-front-account",
+    "triggers": ["peace-on-one-front"],
+    "tags": ["politics", "military", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "peace-on-one-front-report",
+        "headline": "Peace on one front only",
+        "body": [
+          "We have made peace with {{settled}}, but the war is not over. We remain at war with {{remaining}}."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "peace-on-one-front-analysis",
+        "voice": "press",
+        "stance": "rationalist",
+        "genre": "analysis",
+        "headline": "One account closes, others stay open",
+        "body": [
+          "The settlement with {{settled}} closes one account and leaves the rest. The wars against {{remaining}} continue, and an army freed from one front is only a gain if it is moved to another."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "peace-on-one-front-gazette",
+        "voice": "gazette",
+        "stance": "conciliatory",
+        "genre": "report",
+        "headline": "Peace with {{settled}}",
+        "body": [
+          "We are informed that peace has been concluded with {{settled}}, and the guns on that front are quiet. This paper notes with regret that the war with {{remaining}} goes on, and hopes the same sense will find it."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "peace-on-one-front-editorial",
+        "voice": "pamphlet",
+        "stance": "populist",
+        "genre": "editorial",
+        "headline": "Peace for some fronts, marching for the rest",
+        "body": [
+          "The war with {{settled}} is over; the war with {{remaining}} is not. The men already in the field will not come home, they will walk to a different fire. The council owes the families a count of what is left."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "peace-returns-account",
+    "triggers": ["peace-returns"],
+    "tags": ["politics", "military"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "peace-returns-report",
+        "headline": "The wars are over",
+        "body": [
+          "No known power stands at war with us today. The fighting that filled these pages has stopped, and the country can begin counting what it spent."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "peace-returns-chronicle",
+        "voice": "chronicle",
+        "stance": "devout",
+        "genre": "report",
+        "headline": "The record of rest",
+        "body": [
+          "In this season the wars ceased, and the nation was at rest from its enemies. The shrines filled, and the record gives thanks."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "peace-returns-anecdote",
+        "voice": "tabloid",
+        "stance": "populist",
+        "genre": "anecdote",
+        "headline": "The homecoming",
+        "body": [
+          "The roads filled with uniforms walking the other way, and nobody asked for speeches. After the wars, quiet is the news, and the market square knew it before the printer did."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "peace-returns-editorial",
+        "voice": "press",
+        "stance": "national",
+        "genre": "editorial",
+        "headline": "Peace, and what to do with it",
+        "body": [
+          "The wars are over, and this paper welcomes it. The task it brings is plain: settle the accounts of the war, care for the people who fought it, and keep the friends we mean to keep. Peace is a season to build, not only to celebrate."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "units-lost-in-combat-account",
+    "triggers": ["units-lost-in-combat"],
+    "tags": ["politics", "military"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "units-lost-in-combat-report",
+        "headline": "{{count}} of our units lost in action",
+        "body": [
+          "Our forces lost {{count}} units to a single enemy power in the recent fighting. The toll falls on one front alone."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "units-lost-in-combat-ledger",
+        "voice": "press",
+        "stance": "government-critical",
+        "genre": "ledger",
+        "headline": "Our losses, counted",
+        "body": [
+          "Our units destroyed in the recent fighting: {{count}}.",
+          "All destroyed by one and the same enemy.",
+          "The tally is public; the reply is not."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "units-lost-in-combat-anecdote",
+        "voice": "tabloid",
+        "stance": "local",
+        "genre": "anecdote",
+        "headline": "The empty bunks",
+        "body": [
+          "{{count}} units gone in the recent fighting, all to the same enemy. In the barracks the bunks were stripped before the ink dried, and the town knew the number before the paper printed it."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "units-lost-in-combat-spoken",
+        "voice": "spoken",
+        "stance": "neutral",
+        "genre": "report",
+        "headline": "The count from the fighting",
+        "body": [
+          "It is told that {{count}} of our units fell to one enemy in the recent fighting. The count is certain; the name is not."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "vassals-join-war-account",
+    "triggers": ["vassals-join-war"],
+    "tags": ["military"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "vassals-join-war-report",
+        "headline": "Vassals drawn into the war",
+        "body": [
+          "The war between {{initiator}} and {{target}} has drawn in vassal arms. The names on record: {{vassals}}."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "vassals-join-war-analysis",
+        "voice": "press",
+        "stance": "neutral",
+        "genre": "analysis",
+        "headline": "What the vassals add",
+        "body": [
+          "Vassals have entered the war between {{initiator}} and {{target}}: {{vassals}}. A vassal's army is not its own to withhold; the master's war is the vassal's war, and the list of belligerents is longer than the list of causes."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "vassals-join-war-chronicle",
+        "voice": "chronicle",
+        "stance": "traditional",
+        "genre": "report",
+        "headline": "The record of vassalage honored",
+        "body": [
+          "It is recorded that {{vassals}} entered the war between {{initiator}} and {{target}}, bound by vassalage. Their banners follow their master's, as such banners do."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "vassals-join-war-editorial",
+        "voice": "pamphlet",
+        "stance": "populist",
+        "genre": "editorial",
+        "headline": "Small kings, big wars",
+        "body": [
+          "The war of {{initiator}} and {{target}} now includes {{vassals}}, who were not asked and are not paid to hold opinions. When masters quarrel, vassals bleed. Citizens, note how the great arrange these things."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "war-advantage-stalls-account",
+    "triggers": ["war-advantage-stalls"],
+    "tags": ["military"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "war-advantage-stalls-report",
+        "headline": "The war with {{opponent}} stalls",
+        "body": [
+          "Our war with {{opponent}} has lost its motion. After pushing ahead, the balance in our favor has stopped moving, and a war that stops moving starts costing without gaining."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "war-advantage-stalls-analysis",
+        "voice": "press",
+        "stance": "rationalist",
+        "genre": "analysis",
+        "headline": "The stalled advance against {{opponent}}",
+        "body": [
+          "The advantage over {{opponent}} that these pages reported has stopped moving. A stall is not a defeat, but it is not free either: men and stores keep flowing into a front that has stopped returning ground. A war should be measured by what it buys, and this one has stopped buying."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "war-advantage-stalls-letter",
+        "voice": "gazette",
+        "stance": "local",
+        "genre": "letter",
+        "byline": "A farmer with a son in the ranks",
+        "headline": "The war that stands still",
+        "body": [
+          "Madam, the war with {{opponent}} has stopped where it stood, and my husband's regiment with it. A war that neither advances nor ends still eats its ration of men and money. Will some counselor explain what the standing still is for?"
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "war-advantage-stalls-feed",
+        "voice": "feed",
+        "stance": "neutral",
+        "genre": "report",
+        "headline": "The war with {{opponent}}: still stuck",
+        "body": [
+          "The advantage we were told about has not moved lately. Wars do not pause; they just cost the same for less."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "war-between-friends-account",
+    "triggers": ["war-between-friends"],
+    "tags": ["politics", "military", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "war-between-friends-report",
+        "headline": "Two friends go to war",
+        "body": [
+          "{{first}} and {{second}} have opened a war against each other. Both are friends of ours; the friendship of each with us does not carry over to the two of them."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "war-between-friends-analysis",
+        "voice": "press",
+        "stance": "neutral",
+        "genre": "analysis",
+        "headline": "When friends fight",
+        "body": [
+          "The war between {{first}} and {{second}} puts our friendships to a test they were not made for. We may trade with both and arm neither, and be blamed by everyone; neutrality between friends is a policy with no friends in it."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "war-between-friends-editorial",
+        "voice": "gazette",
+        "stance": "conciliatory",
+        "genre": "editorial",
+        "headline": "A plea in the war of {{first}} and {{second}}",
+        "body": [
+          "{{first}} and {{second}} have taken up arms against each other, and both are friends to us. This paper's wish is plain: that our good offices be offered to both, and that the quarrel end at a table while both still have chairs to sit on."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "war-between-friends-anecdote",
+        "voice": "spoken",
+        "stance": "traditional",
+        "genre": "anecdote",
+        "headline": "They say the table is broken",
+        "body": [
+          "It is told in the evenings that {{first}} and {{second}}, whose envoys drank from the same cup under our roof, have drawn swords on each other. Old ties snap loudest."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "war-duration-milestone-account",
+    "triggers": ["war-duration-milestone"],
+    "tags": ["politics", "military"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "war-duration-milestone-report",
+        "headline": "The war runs long",
+        "body": [
+          "The war has now lasted {{turns}} turns, past the mark where a war stops being a season's quarrel. Long wars are measured in what they eat."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "war-duration-milestone-analysis",
+        "voice": "press",
+        "stance": "neutral",
+        "genre": "analysis",
+        "when": "opponent !== null",
+        "headline": "The long stretch of the war with {{opponent}}",
+        "body": [
+          "The war with {{opponent}} has run {{turns}} turns. Duration is itself a fact: armies age, treasuries thin, and the goals a war began with are quietly renegotiated by every year it survives."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "war-duration-milestone-chronicle",
+        "voice": "chronicle",
+        "stance": "traditional",
+        "genre": "report",
+        "headline": "The record of a long war",
+        "body": [
+          "The chronicle sets it down: the war has stood {{turns}} turns. Wars of this length were once the business of grandfathers."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "war-duration-milestone-tabloid",
+        "voice": "tabloid",
+        "stance": "populist",
+        "genre": "report",
+        "when": "opponent !== null",
+        "headline": "The war with {{opponent}} is {{turns}} turns old",
+        "body": [
+          "Nobody remembers what the first week of it was about. The war with {{opponent}} has run {{turns}} turns, and the households that waved the first goodbyes have stopped counting weeks."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "war-involving-us-account",
+    "triggers": ["war-involving-us"],
+    "tags": ["politics", "military"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "war-involving-us-report",
+        "headline": "The nation is at war",
+        "body": [
+          "A new war has involved the nation. The call has gone out, and these pages will follow the fighting turn by turn."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "war-involving-us-broadcast",
+        "voice": "broadcast",
+        "stance": "national",
+        "genre": "report",
+        "when": "role === 'target' && initiator !== null",
+        "headline": "{{initiator}} has attacked",
+        "body": [
+          "War tonight. {{initiator}} has declared war on us, and our forces stand to their posts. The nation's reserves are being counted."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "war-involving-us-crier",
+        "voice": "crier",
+        "stance": "national",
+        "genre": "notice",
+        "when": "role === 'target' && initiator !== null",
+        "headline": "Hear it! {{initiator}} makes war on us",
+        "body": [
+          "Word from the frontier: {{initiator}} has declared war. To arms, and mind the stores."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "war-involving-us-gazette",
+        "voice": "gazette",
+        "stance": "pro-government",
+        "genre": "report",
+        "when": "role === 'initiator' && target !== null",
+        "headline": "A state of war with {{target}}",
+        "body": [
+          "We are informed that a state of war now exists between the nation and {{target}}. The government has made its decision; this paper presumes it was not made lightly, and expects the case to be laid before the people."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "war-involving-us-editorial",
+        "voice": "pamphlet",
+        "stance": "government-critical",
+        "genre": "editorial",
+        "when": "role === 'joined' && reason === 'pact' && initiator !== null && target !== null",
+        "headline": "Their quarrel, our treaty",
+        "body": [
+          "The war between {{initiator}} and {{target}} has become ours by treaty. Pacts are signed in calm years and honored in hard ones; that is their worth and their price. The people should hear from the government what we get for the paying of it."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "war-on-three-fronts-account",
+    "triggers": ["war-on-three-fronts"],
+    "tags": ["politics", "military"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "war-on-three-fronts-report",
+        "headline": "War on {{count}} fronts",
+        "body": [
+          "The nation is at war with {{enemies}}. The fighting is no longer a single quarrel; every front draws on the same purse and the same recruits."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "war-on-three-fronts-analysis",
+        "voice": "press",
+        "stance": "government-critical",
+        "genre": "analysis",
+        "headline": "Count the fronts",
+        "body": [
+          "We are at war on {{count}} fronts, against {{enemies}}. Every soldier sent to one front is a soldier the others will not see. The government has yet to say which front it means to win, and a nation that tries to win them all wins none."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "war-on-three-fronts-crier",
+        "voice": "crier",
+        "stance": "national",
+        "genre": "notice",
+        "headline": "Hear it! The nation fights on {{count}} fronts",
+        "body": [
+          "The roll of enemies: {{enemies}}. The war is wide. Keep the fields tended and the watch set."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "war-on-three-fronts-feed",
+        "voice": "feed",
+        "stance": "populist",
+        "genre": "report",
+        "headline": "We are at war with {{count}} powers now",
+        "body": [
+          "The list: {{enemies}}. Your bread, your sons, your taxes; all {{count}} fronts bill the same house."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "war-turns-against-us-account",
+    "triggers": ["war-turns-against-us"],
+    "tags": ["politics", "military"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "war-turns-against-us-report",
+        "headline": "The war with {{opponent}} turns against us",
+        "body": [
+          "The war score against {{opponent}} has slid to {{score}}. Where the advantage lay, it lies with them now."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "war-turns-against-us-analysis",
+        "voice": "press",
+        "stance": "government-critical",
+        "genre": "analysis",
+        "headline": "The score nobody mentions",
+        "body": [
+          "The war score against {{opponent}} stands at {{score}}. Numbers that far below even are not bad luck; they are a description of how the fighting has gone. The country can bear the truth, and the government owes it one."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "war-turns-against-us-broadcast",
+        "voice": "broadcast",
+        "stance": "neutral",
+        "genre": "report",
+        "headline": "The war with {{opponent}} tonight",
+        "body": [
+          "The recorded score stands at {{score}} in their favor. The balance of damage is theirs."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "war-turns-against-us-chronicle",
+        "voice": "chronicle",
+        "stance": "traditional",
+        "genre": "report",
+        "headline": "The record of a hard season",
+        "body": [
+          "The chronicle records the war score at {{score}} against us in the war with {{opponent}}. Our fathers knew such seasons, and the record does not flatter them."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "war-turns-our-way-account",
+    "triggers": ["war-turns-our-way"],
+    "tags": ["politics", "military"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "war-turns-our-way-report",
+        "headline": "The war with {{opponent}} turns our way",
+        "body": [
+          "The war score against {{opponent}} now stands at {{score}} in our favor. The fighting has been giving more than it takes."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "war-turns-our-way-analysis",
+        "voice": "press",
+        "stance": "national",
+        "genre": "analysis",
+        "headline": "Reading the war score",
+        "body": [
+          "The score against {{opponent}} has reached {{score}}. A lead of that size is earned in the field, but wars are not won on the ledger; they end when the other side decides the price is beyond paying. The number says we can begin asking."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "war-turns-our-way-notice",
+        "voice": "gazette",
+        "stance": "pro-government",
+        "genre": "notice",
+        "headline": "The war proceeds favorably",
+        "body": [
+          "We are informed that the war with {{opponent}} proceeds favorably, the score standing at {{score}}. The nation's councils may take satisfaction in the conduct of its arms."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "war-turns-our-way-tabloid",
+        "voice": "tabloid",
+        "stance": "populist",
+        "genre": "report",
+        "headline": "Good news, and the bill beside it",
+        "body": [
+          "The war with {{opponent}} is going our way; the score is {{score}}. Good news at last, and the price of it is still on the table."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "war-weariness-eases-account",
+    "triggers": ["war-weariness-eases"],
+    "tags": ["politics", "military"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "war-weariness-eases-report",
+        "headline": "War weariness eases",
+        "body": [
+          "The nation's war weariness has fallen to {{weariness}}, back below the halfway mark. The mood of the country has lightened with it."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "war-weariness-eases-gazette",
+        "voice": "gazette",
+        "stance": "conciliatory",
+        "genre": "report",
+        "when": "opponent !== null",
+        "headline": "Weariness eases in the war with {{opponent}}",
+        "body": [
+          "We are informed that weariness in the war with {{opponent}} has eased to {{weariness}}. A patient nation makes a better peacemaker than a bitter one."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "war-weariness-eases-analysis",
+        "voice": "press",
+        "stance": "national",
+        "genre": "analysis",
+        "when": "opponent !== null",
+        "headline": "The number behind the mood",
+        "body": [
+          "War weariness in the war with {{opponent}} is down to {{weariness}}, from above the halfway mark. Weariness does not win wars, but it can lose them; the reserve we have just regained is worth more than a battle."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "war-weariness-eases-feed",
+        "voice": "feed",
+        "stance": "neutral",
+        "genre": "report",
+        "headline": "War weariness is down to {{weariness}}",
+        "body": [
+          "The country is breathing again. After the long grind, the weariness figure has fallen back below half."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "war-weariness-sets-in-account",
+    "triggers": ["war-weariness-sets-in"],
+    "tags": ["politics", "military"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "war-weariness-sets-in-report",
+        "headline": "War weariness sets in",
+        "body": [
+          "The war with {{opponent}} has begun to grind on the nation. War weariness stands at {{weariness}}, past the halfway mark."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "war-weariness-sets-in-gazette",
+        "voice": "gazette",
+        "stance": "government-critical",
+        "genre": "report",
+        "headline": "A weary nation, and no statement",
+        "body": [
+          "We are informed that weariness with the war against {{opponent}} stands at {{weariness}}, past the halfway mark. No statement has come from the council on what the number is to be answered with."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "war-weariness-sets-in-editorial",
+        "voice": "pamphlet",
+        "stance": "populist",
+        "genre": "editorial",
+        "headline": "Tired of the war? Say it plainly",
+        "body": [
+          "The war with {{opponent}} has run long enough that the country's patience is being measured: {{weariness}}, and past half. That number is the people's verdict forming, and the council should read it before it hardens."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "war-weariness-sets-in-chronicle",
+        "voice": "chronicle",
+        "stance": "traditional",
+        "genre": "report",
+        "headline": "The record of a weary nation",
+        "body": [
+          "It is recorded that the nation's weariness with the war against {{opponent}} stands at {{weariness}}. Long wars weary the patient."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  }
+]

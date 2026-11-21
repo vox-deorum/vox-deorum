@@ -1,0 +1,413 @@
+[
+  {
+    "id": "friend-enters-new-era-account",
+    "triggers": ["friend-enters-new-era"],
+    "tags": ["politics", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "friend-enters-new-era-report",
+        "when": "civilization !== null",
+        "headline": "{{civilization}} enters the {{era}}",
+        "body": [
+          "{{civilization}}, a friend of our nation, has passed out of the {{former}} and into the {{era}}."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "friend-enters-new-era-unnamed",
+        "when": "civilization === null",
+        "headline": "A friendly nation enters the {{era}}",
+        "body": [
+          "A friend of our nation has passed out of the {{former}} and into the {{era}}. The name has not reached our records."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "friend-enters-new-era-gazette",
+        "voice": "gazette",
+        "stance": "conciliatory",
+        "genre": "report",
+        "when": "civilization !== null",
+        "headline": "A friend crosses into the {{era}}",
+        "body": [
+          "We are informed that {{civilization}}, a friendly power, has lately left the {{former}} for the {{era}}. A friend's progress is welcome news in any age."
+        ],
+        "links": [
+          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "friend-enters-new-era-spoken",
+        "voice": "spoken",
+        "stance": "neutral",
+        "genre": "anecdote",
+        "when": "civilization !== null",
+        "headline": "A new age in {{civilization}}, they say",
+        "body": [
+          "The traders say the roads out of {{civilization}} smell of fresh ink this season. Our friend has crossed into the {{era}}, and the story came with the first travelers."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "friend-enters-new-era-chronicle",
+        "voice": "chronicle",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "civilization !== null && distance !== null",
+        "headline": "Of {{civilization}}'s entry into the {{era}}",
+        "body": [
+          "In this season {{civilization}}, whose nearest city lies {{distance}} tiles from our own, passed out of the {{former}} and into the {{era}}. The record notes the change and holds it without comment."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "friend-enters-new-era-analysis",
+        "voice": "press",
+        "stance": "ambitious",
+        "genre": "analysis",
+        "headline": "What a friend's new era means",
+        "body": [
+          "A nation does not move from the {{former}} to the {{era}} in a season; the crossing is the work of years. A friend standing in a new age is a friend with more to trade, more to teach and more to lean on."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "nearby-team-gains-technology-account",
+    "triggers": ["nearby-team-gains-technology"],
+    "tags": ["science", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "nearby-team-gains-technology-report",
+        "when": "!team.includes(' and ')",
+        "headline": "{{team}} gains {{tech}}",
+        "body": [
+          "{{team}}, a nearby power, has gained {{tech}}, according to reports from the border. Its cities lie close to our own."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "nearby-team-gains-technology-partners",
+        "when": "team.includes(' and ')",
+        "headline": "{{team}} gain {{tech}}",
+        "body": [
+          "{{team}}, nearby powers acting as one team, have gained {{tech}}, according to reports from the border. Their cities lie close to our own."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "nearby-team-gains-technology-analysis",
+        "voice": "press",
+        "stance": "hawkish",
+        "genre": "analysis",
+        "headline": "A neighbor's new learning",
+        "body": [
+          "What a neighbor knows changes what a neighbor can do. {{tech}} now sits in the hands of {{team}}, a team whose lands run near ours. The ledger of the age has a new entry, and it is not in our handwriting."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "nearby-team-gains-technology-notice",
+        "voice": "gazette",
+        "stance": "neutral",
+        "genre": "notice",
+        "headline": "Notice to the learned: {{tech}} abroad",
+        "body": [
+          "We are informed that {{tech}} is now held by {{team}}, a team with cities close to our own. The fact is reported as it reached the printer."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "nearby-team-gains-technology-anecdote",
+        "voice": "tabloid",
+        "stance": "local",
+        "genre": "anecdote",
+        "headline": "New learning across the fence",
+        "body": [
+          "At the border stalls they were asking what {{tech}} does. Nobody could say, but everyone agreed it belonged to {{team}} now, and the fence has never once stopped a rumor."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "nearby-team-gains-technology-proverb",
+        "voice": "spoken",
+        "stance": "traditional",
+        "genre": "proverb",
+        "headline": "The lamp next door",
+        "body": [
+          "Next door the lamp burns bright and late. {{tech}} is the word at our gate."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "new-era-account",
+    "triggers": ["new-era"],
+    "tags": ["politics", "domestic"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "new-era-report",
+        "headline": "Our nation enters the {{era}}",
+        "body": [
+          "The chronicles will mark this season: we have left the old age behind and entered the {{era}}."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "new-era-crier",
+        "voice": "crier",
+        "stance": "national",
+        "genre": "notice",
+        "headline": "Hear it! The {{era}} is ours",
+        "body": [
+          "Hear it, people! Our nation has entered the {{era}}. Say it in the streets and say it again: the {{era}} is ours."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "new-era-broadcast",
+        "voice": "broadcast",
+        "stance": "ambitious",
+        "genre": "report",
+        "headline": "We enter the {{era}}",
+        "body": [
+          "Here is the news: our nation has entered the {{era}}. The old age is over. The new one starts now."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "new-era-chronicle",
+        "voice": "chronicle",
+        "stance": "devout",
+        "genre": "report",
+        "headline": "The record of our passage into the {{era}}",
+        "body": [
+          "In this year providence carried our nation out of the former age and into the {{era}}. The scribes set it down with thanks, and the shrines will do the same."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "new-era-letter",
+        "voice": "gazette",
+        "stance": "pro-government",
+        "genre": "letter",
+        "headline": "The bells rang all morning",
+        "byline": "A clerk of the capital",
+        "body": [
+          "Madam Editor, the bells rang all morning for our entry into the {{era}}. Ages do not arrive by accident; they are built, and the men who built this one deserve the city's thanks. I have sent mine."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "our-team-gains-technology-account",
+    "triggers": ["our-team-gains-technology"],
+    "tags": ["science", "domestic"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "our-team-gains-technology-report",
+        "headline": "Our nation gains {{tech}}",
+        "body": [
+          "{{tech}} is now counted among the knowledge of our team. The record of what our people know grows by one name."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "our-team-gains-technology-analysis",
+        "voice": "press",
+        "stance": "rationalist",
+        "genre": "analysis",
+        "headline": "{{tech}}: measured and gained",
+        "body": [
+          "Our team has gained {{tech}}, and the measured sum of what this nation knows has risen by one. Credit belongs to the scholars and their method, kept through seasons when no one was watching: no omen ever finished a study."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "our-team-gains-technology-feed",
+        "voice": "feed",
+        "stance": "national",
+        "genre": "report",
+        "headline": "One more for the home team",
+        "body": [
+          "We just gained {{tech}}. That's the nation's count of technologies up again. You love to see it."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "our-team-gains-technology-gazette",
+        "voice": "gazette",
+        "stance": "traditional",
+        "genre": "notice",
+        "when": "era !== null",
+        "headline": "Notice: our team gains {{tech}}",
+        "body": [
+          "We are informed that {{tech}} is now counted among the knowledge of our team. The {{era}} continues what earlier ages began, one name at a time."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "our-team-gains-technology-anecdote",
+        "voice": "tabloid",
+        "stance": "populist",
+        "genre": "anecdote",
+        "headline": "At the market, the word is {{tech}}",
+        "body": [
+          "They asked at the stalls what {{tech}} does. The best answer anyone gave was that it is ours, and at the market that was answer enough."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "rival-enters-new-era-account",
+    "triggers": ["rival-enters-new-era"],
+    "tags": ["politics", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "rival-enters-new-era-report",
+        "when": "civilization !== null",
+        "headline": "{{civilization}} crosses into the {{era}}",
+        "body": [
+          "{{civilization}}, neither our friend nor our ally, has passed out of the {{former}} and into the {{era}}."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "rival-enters-new-era-unnamed",
+        "when": "civilization === null",
+        "headline": "A rival power enters the {{era}}",
+        "body": [
+          "A power that is neither our friend nor our ally has passed out of the {{former}} and into the {{era}}. The name has not reached our records."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "rival-enters-new-era-gazette",
+        "voice": "gazette",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "civilization !== null",
+        "headline": "A rival leaves the {{former}}",
+        "body": [
+          "We are informed that {{civilization}}, no friend of ours, has lately passed from the {{former}} into the {{era}}. The news is set down as it arrived, neither better nor worse for the telling."
+        ],
+        "links": [
+          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "rival-enters-new-era-tabloid",
+        "voice": "tabloid",
+        "stance": "hawkish",
+        "genre": "report",
+        "when": "civilization !== null && distance !== null",
+        "headline": "Up the road, a new era",
+        "body": [
+          "{{civilization}} has crossed into the {{era}}, and its nearest city stands {{distance}} tiles from ours. The border has not moved, but the country behind it just did."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "rival-enters-new-era-spoken",
+        "voice": "spoken",
+        "stance": "traditional",
+        "genre": "anecdote",
+        "when": "civilization !== null",
+        "headline": "It is told of {{civilization}}",
+        "body": [
+          "It is told that in {{civilization}} the old calendars were not thrown away but shelved, and the new count begins with the {{era}}. What the old age cost them, the tellers do not say."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "rival-enters-new-era-editorial",
+        "voice": "pamphlet",
+        "stance": "government-critical",
+        "genre": "editorial",
+        "when": "civilization !== null",
+        "headline": "A rival enters the {{era}}. And us?",
+        "body": [
+          "Citizens! {{civilization}} has entered the {{era}}. Every age is paid for somewhere, with coin, study or toil. Let the ministers say what we are paying, and for which age."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "technology-leader-changes-account",
+    "triggers": ["technology-leader-changes"],
+    "tags": ["science"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "technology-leader-changes-report",
+        "when": "civilization !== null",
+        "headline": "{{civilization}} now stands first in technologies",
+        "body": [
+          "No nation counts more technologies than {{civilization}}, which now holds {{count}} of them. A season past, others stood ahead of it."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "technology-leader-changes-unnamed",
+        "when": "civilization === null",
+        "headline": "A new nation stands first in technologies",
+        "body": [
+          "No nation counts more technologies than the new front-runner, which now holds {{count}} of them. A season past, others stood ahead. The name has not reached our records."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "technology-leader-changes-ledger",
+        "voice": "press",
+        "stance": "rationalist",
+        "genre": "ledger",
+        "when": "civilization !== null",
+        "headline": "The technologies count, restated",
+        "body": [
+          "Nation at the front: {{civilization}}",
+          "Technologies held: {{count}}",
+          "Nations counted ahead of it: none"
+        ],
+        "links": [
+          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "technology-leader-changes-joke",
+        "voice": "feed",
+        "stance": "neutral",
+        "genre": "joke",
+        "when": "tied && civilization !== null",
+        "headline": "First place, shared",
+        "body": [
+          "{{civilization}} tops the technologies count at {{count}}. So does somebody else. The podium was built for one."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "technology-leader-changes-analysis",
+        "voice": "chronicle",
+        "stance": "elitist",
+        "genre": "analysis",
+        "headline": "What the front of the count means",
+        "body": [
+          "The technologies count is a blunt instrument; it weighs a nation's learning by number, not by use. Still, the power now standing first, with {{count}} technologies, has done reading that others put off. The count will be argued over. The reading will not."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  }
+]

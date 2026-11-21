@@ -1,0 +1,868 @@
+[
+  {
+    "id": "falls-to-last-place-account",
+    "triggers": ["falls-to-last-place"],
+    "tags": ["politics", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "falls-to-last-place-report",
+        "headline": "We fall to last place among the powers",
+        "body": [
+          "The latest count of national scores places us last among {{count}} major powers. We did not hold this position at the previous count."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "falls-to-last-place-analysis",
+        "voice": "press",
+        "stance": "government-critical",
+        "genre": "analysis",
+        "headline": "Last place, and the reckoning behind it",
+        "body": [
+          "Our nation now trails every scored major power, {{count}} in all. The score is a ledger of choices: what we built, what we kept and what we defended.",
+          "The record shows where we stand. What it cannot show is who intends to answer for it."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "falls-to-last-place-pamphlet",
+        "voice": "pamphlet",
+        "stance": "populist",
+        "genre": "editorial",
+        "headline": "Citizens, we are last!",
+        "body": [
+          "Last of {{count}} powers, and the council tells us the tally is complicated. Bread is not complicated. Wages are not complicated.",
+          "This paper asks one question: who in the palace owns this result?"
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "falls-to-last-place-joke",
+        "voice": "feed",
+        "stance": "neutral",
+        "genre": "joke",
+        "headline": "Last of {{count}} in the national scores",
+        "body": [
+          "The standings are out. We're last of {{count}}. On the bright side, there's only one direction left to go."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "foreign-golden-age-begins-account",
+    "triggers": ["foreign-golden-age-begins"],
+    "tags": ["politics", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "foreign-golden-age-report",
+        "headline": "{{civilization}} enters a golden age",
+        "body": [
+          "A golden age has begun in {{civilization}}, a period of national flourishing. Such ages lift the fortunes of the state that enjoys them."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-golden-age-notice",
+        "voice": "gazette",
+        "stance": "neutral",
+        "genre": "notice",
+        "headline": "Notice from abroad: a golden age in {{civilization}}",
+        "body": [
+          "We are informed that {{civilization}} has entered a golden age. Letters from its capital speak of flourishing affairs and a confident court."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-golden-age-analysis",
+        "voice": "press",
+        "stance": "hawkish",
+        "genre": "analysis",
+        "headline": "A rival flourishes, and the balance shifts",
+        "body": [
+          "{{civilization}} has begun a golden age, and a flourishing rival is a stronger rival. Prosperity pays for armies as surely as for festivals.",
+          "Its strength will count for more in every negotiation that follows. Ours should count for no less."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-golden-age-proverb",
+        "voice": "spoken",
+        "stance": "traditional",
+        "genre": "proverb",
+        "headline": "The neighbor's granary is full",
+        "body": [
+          "When the neighbor's granary fills, the wise count their own grain."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "foreign-golden-age-ends-account",
+    "triggers": ["foreign-golden-age-ends"],
+    "tags": ["politics", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "foreign-golden-age-end-report",
+        "headline": "The golden age of {{civilization}} ends",
+        "body": [
+          "The golden age of {{civilization}} has run its course. The period of national flourishing is over, and ordinary times resume."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-golden-age-end-obituary",
+        "voice": "press",
+        "stance": "devout",
+        "genre": "obituary",
+        "headline": "An age ends in {{civilization}}",
+        "body": [
+          "At its height, the golden age of {{civilization}} filled its markets and lent its court a confident air. Like all such ages, it was granted, not owned.",
+          "It has now been taken back. What remains is for {{civilization}} to prove what it keeps without it."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-golden-age-end-chronicle",
+        "voice": "chronicle",
+        "stance": "traditional",
+        "genre": "report",
+        "headline": "The record of {{civilization}}: the age is done",
+        "body": [
+          "In this season the golden age of {{civilization}} came to its end, as such ages have always ended. The court continues. The flourish is spent."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "golden-age-begins-account",
+    "triggers": ["golden-age-begins"],
+    "tags": ["politics", "domestic"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "golden-age-begins-report",
+        "headline": "A golden age begins at home",
+        "body": [
+          "Our nation has entered a golden age, with the country at peace. The government can expect a period of unusual flourishing."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "golden-age-begins-crier",
+        "voice": "crier",
+        "stance": "national",
+        "genre": "notice",
+        "headline": "Hear it! A golden age is upon us",
+        "body": [
+          "Hear it, people! A golden age has begun for our nation, and we are at peace. A golden age, and peace with it! Let the news run through the streets."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "golden-age-begins-editorial",
+        "voice": "press",
+        "stance": "pro-government",
+        "genre": "editorial",
+        "headline": "The golden age, earned",
+        "body": [
+          "A golden age does not begin by accident. It follows years of steady government, sound accounts and kept peace, and the nation now enjoys the return.",
+          "This paper's view: the age should be spent wisely, and the credit shared with those who earned it."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "golden-age-begins-letter",
+        "voice": "gazette",
+        "stance": "local",
+        "genre": "letter",
+        "headline": "Sir, they call it golden",
+        "byline": "A Baker",
+        "body": [
+          "Sir, the capital has declared a golden age, and I am told the court is delighted. In my street the flour costs the same as it did on Monday.",
+          "I ask only: when does golden reach the bakers?"
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "golden-age-begins-anecdote",
+        "voice": "tabloid",
+        "stance": "populist",
+        "genre": "anecdote",
+        "headline": "The morning the age turned golden",
+        "body": [
+          "In the market they were already saying it by noon: good times have come, and no war to spoil them. One fruit seller gave away the bruised apples for the joy of it.",
+          "Golden age or not, free apples are free apples."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "golden-age-ends-account",
+    "triggers": ["golden-age-ends"],
+    "tags": ["politics", "domestic"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "golden-age-ends-report",
+        "headline": "Our golden age ends",
+        "body": [
+          "The golden age of our nation has come to its end. The period of flourishing is over, and ordinary times resume."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "golden-age-ends-obituary",
+        "voice": "gazette",
+        "stance": "traditional",
+        "genre": "obituary",
+        "headline": "The age we had",
+        "body": [
+          "It was a good age. Markets were full, the mood was generous, and the nation spoke of itself with pride. Such ages have always been borrowed rather than owned.",
+          "The loan is called in. What we built in the good years is what we keep."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "golden-age-ends-analysis",
+        "voice": "press",
+        "stance": "ambitious",
+        "genre": "analysis",
+        "headline": "After the golden age, the next one",
+        "body": [
+          "The golden age is over, and the error would be to mourn it rather than to start earning the next.",
+          "Prosperity was built once. The same work, begun again, builds it twice."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "golden-age-in-wartime-account",
+    "triggers": ["golden-age-in-wartime"],
+    "tags": ["politics"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "golden-age-wartime-report",
+        "when": "enemies !== null",
+        "headline": "A golden age begins, even against {{enemies}}",
+        "body": [
+          "Our nation has entered a golden age while at war with {{enemies}}. The period of flourishing begins with the fighting unfinished."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "golden-age-wartime-fallback",
+        "when": "enemies === null",
+        "headline": "A golden age begins in wartime",
+        "body": [
+          "Our nation has entered a golden age even as the war goes on. Flourishing at home, fighting abroad: the two will now share the same years."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "golden-age-wartime-editorial",
+        "voice": "press",
+        "stance": "national",
+        "genre": "editorial",
+        "headline": "Golden, and still at war",
+        "body": [
+          "A golden age has begun with our soldiers still in the field. That is luck, and luck is not a plan.",
+          "This paper's view: spend the age on the war while the war lasts, and let the peace find us prepared rather than spent."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "golden-age-wartime-crier",
+        "voice": "crier",
+        "stance": "hawkish",
+        "genre": "notice",
+        "when": "enemies !== null",
+        "headline": "Hear it! A golden age, even in war!",
+        "body": [
+          "Hear it, people! A golden age is ours while we fight {{enemies}}! Let them hear it too: we flourish while we fight!"
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "happiness-recovers-account",
+    "triggers": ["happiness-recovers"],
+    "tags": ["politics", "domestic"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "happiness-recovers-report",
+        "headline": "National happiness rises past half",
+        "body": [
+          "National happiness has climbed to {{happinessPercentage}} percent, past the halfway mark. The contented now outnumber the discontented."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "happiness-recovers-broadcast",
+        "voice": "broadcast",
+        "stance": "pro-government",
+        "genre": "report",
+        "headline": "The national mood has mended",
+        "body": [
+          "Good news at home tonight. National happiness now stands at {{happinessPercentage}} percent. The government's course holds, and the numbers show it."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "happiness-recovers-anecdote",
+        "voice": "tabloid",
+        "stance": "neutral",
+        "genre": "anecdote",
+        "headline": "Back above half, and it shows",
+        "body": [
+          "The number is {{happinessPercentage}} percent, but you could read it on the trams: fewer arguments, longer queues at the cake shop, a busker playing something cheerful.",
+          "Half the country's mood is arithmetic. The other half is cake."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "happiness-recovers-pamphlet",
+        "voice": "pamphlet",
+        "stance": "populist",
+        "genre": "notice",
+        "headline": "Citizens: the hard days have eased",
+        "body": [
+          "The tally says {{happinessPercentage}} percent of us are content, and the tally has not said that in a while. Enjoy it. And remember who stewarded the lean years."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "ideology-adopted-account",
+    "triggers": ["ideology-adopted"],
+    "tags": ["politics", "domestic"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "ideology-adopted-report",
+        "headline": "Our nation takes up {{ideology}}",
+        "body": [
+          "The government has adopted the ideology of {{ideology}}, the first guiding doctrine the state has taken. The decision sets the direction of national politics from here."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "ideology-adopted-analysis",
+        "voice": "press",
+        "stance": "national",
+        "genre": "analysis",
+        "headline": "A doctrine for the state",
+        "body": [
+          "The state has chosen {{ideology}}, and a chosen doctrine is a public promise about what the government will value.",
+          "Allies and rivals will now read our politics by it. The question for the years ahead is whether the promise is kept."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "ideology-adopted-pamphlet",
+        "voice": "pamphlet",
+        "stance": "government-critical",
+        "genre": "editorial",
+        "headline": "A doctrine descends from the capital",
+        "body": [
+          "The palace has adopted {{ideology}}, and no one below the palace was asked. Doctrine is easy at the top, where it costs nothing.",
+          "This paper asks: what does {{ideology}} do for the man at the plough? Answer that first."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "ideology-adopted-gazette",
+        "voice": "gazette",
+        "stance": "traditional",
+        "genre": "report",
+        "headline": "The state takes a doctrine",
+        "body": [
+          "We are informed that the government has adopted {{ideology}} as its guiding ideology. The old ways of governing served earlier generations well; time will tell how the new doctrine serves us."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "ideology-switched-account",
+    "triggers": ["ideology-switched"],
+    "tags": ["politics", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "ideology-switched-report",
+        "when": "civilization !== null",
+        "headline": "{{civilization}} abandons {{formerIdeology}} for {{ideology}}",
+        "body": [
+          "The government of {{civilization}} has set aside {{formerIdeology}} and taken up {{ideology}}. The change of doctrine remakes its politics at a stroke."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "ideology-switched-unnamed",
+        "when": "civilization === null",
+        "headline": "A major power changes its ideology",
+        "body": [
+          "One of the world's major powers has changed its guiding ideology, setting aside {{formerIdeology}} for {{ideology}}. Its name has not reached this desk."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "ideology-switched-ours",
+        "voice": "press",
+        "stance": "national",
+        "genre": "report",
+        "when": "ours === true",
+        "headline": "Our government changes doctrine",
+        "body": [
+          "Our state has set aside {{formerIdeology}} and taken up {{ideology}}. The direction of national politics changes with it, at home and before the world."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "ideology-switched-chronicle",
+        "voice": "chronicle",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "civilization !== null && ours === false",
+        "headline": "A change of doctrine recorded",
+        "body": [
+          "In this season the government of {{civilization}} set aside {{formerIdeology}} and took up {{ideology}}. The court remains; the doctrine does not."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "major-reduced-to-single-city-account",
+    "triggers": ["major-reduced-to-single-city"],
+    "tags": ["politics", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "major-single-city-report",
+        "when": "civilization !== null",
+        "headline": "{{civilization}} is reduced to a single city",
+        "body": [
+          "The nation of {{civilization}}, once counted among the major powers, now holds one city. It held more than one until recently."
+        ],
+        "links": [
+          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "major-single-city-unnamed",
+        "when": "civilization === null",
+        "headline": "A major power reduced to one city",
+        "body": [
+          "One of the world's major powers now holds a single city, having held more until recently. Its name has not reached this desk."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "major-single-city-ledger",
+        "voice": "press",
+        "stance": "neutral",
+        "genre": "ledger",
+        "when": "civilization !== null && lost !== null",
+        "headline": "The remaining holdings of {{civilization}}",
+        "body": [
+          "Cities now held: 1",
+          "Cities lost in recent turns: {{lost}}",
+          "A major power, at its last walls."
+        ],
+        "links": [
+          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "major-single-city-anecdote",
+        "voice": "spoken",
+        "stance": "traditional",
+        "genre": "anecdote",
+        "when": "civilization !== null",
+        "headline": "The wide lands of {{civilization}}",
+        "body": [
+          "They say the roads of {{civilization}} once ran between many cities. Now the roads are quiet, and one city keeps the name.",
+          "An old trader put it plainly: a house with one room still stands, but it is not the house it was."
+        ],
+        "links": [
+          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "policy-adopted-account",
+    "triggers": ["policy-adopted"],
+    "tags": ["politics", "domestic"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "policy-adopted-report",
+        "headline": "The government adopts {{policy}}",
+        "body": [
+          "Our government has adopted the policy of {{policy}}, the newest measure in its program of state. Its effects begin now."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "policy-adopted-notice",
+        "voice": "gazette",
+        "stance": "pro-government",
+        "genre": "notice",
+        "headline": "Notice of a new policy",
+        "body": [
+          "We are informed that the government has adopted {{policy}}. The measure takes its place in the state's program, and ministers expect it to serve the nation well."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "policy-adopted-analysis",
+        "voice": "press",
+        "stance": "rationalist",
+        "genre": "analysis",
+        "headline": "{{policy}}: a wager on what works",
+        "body": [
+          "A policy is a hypothesis: the state acts, and the record will show whether the action helped.",
+          "The government has adopted {{policy}}. The measurable question is simple. What improves, and by how much?"
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "policy-adopted-editorial",
+        "voice": "tabloid",
+        "stance": "populist",
+        "genre": "editorial",
+        "headline": "New policy, old question",
+        "body": [
+          "The government has adopted {{policy}}, and the announcement is splendid as always. Splendid announcements do not fill bowls.",
+          "This paper wants one number with the policy: what changes at the kitchen table? Publish it, then celebrate."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "policy-branch-opened-account",
+    "triggers": ["policy-branch-opened"],
+    "tags": ["politics", "domestic"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "policy-branch-opened-report",
+        "when": "branch !== null",
+        "headline": "The state opens a new branch of policy",
+        "body": [
+          "Our government has opened the {{branch}} branch of policy, bringing the state's pursuits to {{count}} in all. The new direction begins now."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "policy-branch-opened-unnamed",
+        "when": "branch === null",
+        "headline": "New branches of policy open at once",
+        "body": [
+          "Our government has opened more than one new branch of policy in a single stroke. The state now pursues {{count}} branches in all."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "policy-branch-opened-crier",
+        "voice": "crier",
+        "stance": "pro-government",
+        "genre": "notice",
+        "when": "branch !== null",
+        "headline": "Hear it! The {{branch}} branch is open",
+        "body": [
+          "Hear it, people! Your government has opened the {{branch}} branch of policy, {{count}} branches now in hand! Good governance, and more of it!"
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "policy-branch-opened-chronicle",
+        "voice": "chronicle",
+        "stance": "national",
+        "genre": "report",
+        "when": "branch !== null",
+        "headline": "The {{branch}} branch, recorded",
+        "body": [
+          "In this season the court opened the {{branch}} branch of policy, and the state's pursuits now number {{count}}. Set down as it happened, for the record."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "revolt-threshold-cleared-account",
+    "triggers": ["revolt-threshold-cleared"],
+    "tags": ["politics", "domestic"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "revolt-cleared-report",
+        "headline": "The threat of revolt recedes",
+        "body": [
+          "National happiness has risen to {{happinessPercentage}} percent, above the level at which revolt threatens. The nation remains short of the halfway mark, where the contented outnumber the discontented."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "revolt-cleared-analysis",
+        "voice": "press",
+        "stance": "pro-government",
+        "genre": "analysis",
+        "headline": "Out of the danger zone, not yet safe",
+        "body": [
+          "The national mood has climbed to {{happinessPercentage}} percent, past the level where revolt threatens. Recovery, on this record, has a direction, and it is the government's course.",
+          "Half is where contentment properly begins. The distance left is the work left."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "revolt-cleared-feed",
+        "voice": "feed",
+        "stance": "neutral",
+        "genre": "report",
+        "headline": "Happiness update: out of revolt range",
+        "body": [
+          "National happiness: {{happinessPercentage}} percent. That's above the revolt threshold for the first time in a while. Still below half, though. Not out of the woods."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "revolt-threshold-crossed-account",
+    "triggers": ["revolt-threshold-crossed"],
+    "tags": ["politics", "domestic"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "revolt-crossed-report",
+        "headline": "National happiness falls below the revolt threshold",
+        "body": [
+          "National happiness has fallen to {{happiness}} percent, below the level at which revolt threatens. The discontented now outnumber the contented by a wide margin."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "revolt-crossed-crier",
+        "voice": "crier",
+        "stance": "populist",
+        "genre": "notice",
+        "headline": "Hear it! The people are angry!",
+        "body": [
+          "Hear it, hear it! The nation's happiness has fallen to {{happiness}} percent, past the line where revolt threatens! Bread, work and peace of mind: the people want them back!"
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "revolt-crossed-editorial",
+        "voice": "press",
+        "stance": "government-critical",
+        "genre": "editorial",
+        "headline": "Below the line, and who is counting",
+        "body": [
+          "National happiness stands at {{happiness}} percent, past the threshold where revolt threatens. This did not fall on the government from the sky.",
+          "This paper's demand: name the causes, and name who will carry the remedy. The street is already counting."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "revolt-crossed-broadcast",
+        "voice": "broadcast",
+        "stance": "national",
+        "genre": "report",
+        "headline": "Happiness falls past revolt threshold",
+        "body": [
+          "This is the national bulletin. Happiness now stands at {{happiness}} percent. That is below the revolt threshold. Repeat: below the threshold. The nation's mood is a matter of state."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "rival-adopts-ideology-account",
+    "triggers": ["rival-adopts-ideology"],
+    "tags": ["politics", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "rival-ideology-report",
+        "when": "name !== null",
+        "headline": "{{name}} takes up {{ideology}}",
+        "body": [
+          "The nation of {{name}} has adopted the ideology of {{ideology}}. Its politics now answer to a doctrine, where before they had none."
+        ],
+        "links": [
+          { "placeholder": "name", "label": "{{name}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "rival-ideology-unnamed",
+        "when": "name === null",
+        "headline": "A rival power takes up {{ideology}}",
+        "body": [
+          "One of the world's major powers has adopted the ideology of {{ideology}}, its first guiding doctrine. Its name has not reached this desk."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "rival-ideology-shared",
+        "voice": "gazette",
+        "stance": "conciliatory",
+        "genre": "report",
+        "when": "shared === true && name !== null",
+        "headline": "{{name}} now shares our doctrine",
+        "body": [
+          "We are informed that {{name}} has embraced {{ideology}}, the same doctrine that guides our own state. Common convictions make easier neighbors, and we welcome the company."
+        ],
+        "links": [
+          { "placeholder": "name", "label": "{{name}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "rival-ideology-analysis",
+        "voice": "broadcast",
+        "stance": "hawkish",
+        "genre": "analysis",
+        "when": "name !== null",
+        "headline": "{{name}} has a doctrine now",
+        "body": [
+          "{{name}} has adopted {{ideology}}. A nation with a doctrine is a nation with a direction, and directions can be aimed.",
+          "Watch what it builds next. Doctrine tells you the target before any declaration does."
+        ],
+        "links": [
+          { "placeholder": "name", "label": "{{name}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "score-leader-changes-account",
+    "triggers": ["score-leader-changes"],
+    "tags": ["politics", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "score-leader-report",
+        "when": "civilization !== null",
+        "headline": "{{civilization}} takes first place among the powers",
+        "body": [
+          "The latest reckoning of national scores places {{civilization}} first among the major powers. Another power held the lead before."
+        ],
+        "links": [
+          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "score-leader-unnamed",
+        "when": "civilization === null",
+        "headline": "A new power leads the reckoning",
+        "body": [
+          "The latest reckoning of national scores has a new leader among the major powers. The name behind the change has not reached this desk."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "score-leader-tied",
+        "voice": "gazette",
+        "stance": "neutral",
+        "genre": "ledger",
+        "when": "tied === true && civilization !== null",
+        "headline": "First place, shared",
+        "body": [
+          "First place in score: {{civilization}}",
+          "The lead: shared with another major power",
+          "One first place, two claimants"
+        ],
+        "links": [
+          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "score-leader-ours",
+        "voice": "press",
+        "stance": "ambitious",
+        "genre": "report",
+        "when": "player.self === true",
+        "headline": "Our nation stands first",
+        "body": [
+          "The reckoning of national scores now places us first among the major powers. First place is a fact; keeping it is a program.",
+          "The next reckoning is already worth preparing for."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "unhappiness-sets-in-account",
+    "triggers": ["unhappiness-sets-in"],
+    "tags": ["politics", "domestic"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "unhappiness-sets-in-report",
+        "headline": "National happiness falls below half",
+        "body": [
+          "National happiness has fallen to {{happiness}} percent, a drop of {{drop}} points from the last reckoning. The discontented now outnumber the contented."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "unhappiness-sets-in-critical",
+        "voice": "tabloid",
+        "stance": "government-critical",
+        "genre": "report",
+        "headline": "Below half, and falling",
+        "body": [
+          "The national mood has dropped {{drop}} points to {{happiness}} percent, below half. Ministers call the matter serious.",
+          "Serious is what a government calls a problem it did not prevent. The people counted in this tally were not asked for their description."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "unhappiness-sets-in-gazette",
+        "voice": "gazette",
+        "stance": "neutral",
+        "genre": "report",
+        "headline": "The national mood, diminished",
+        "body": [
+          "We are informed that national happiness now stands at {{happiness}} percent, some {{drop}} points below its former level and under the halfway mark. The figures are the state's own."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "unhappiness-sets-in-proverb",
+        "voice": "spoken",
+        "stance": "populist",
+        "genre": "proverb",
+        "headline": "When the pot runs low",
+        "body": [
+          "When the pot runs low, the square fills up."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  }
+]

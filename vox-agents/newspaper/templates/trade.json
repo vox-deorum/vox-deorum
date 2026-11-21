@@ -1,0 +1,419 @@
+[
+  {
+    "id": "gold-trade-deal-account",
+    "triggers": ["gold-trade-deal"],
+    "tags": ["economy", "trade", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "gold-trade-deal-account-report",
+        "when": "partner !== null",
+        "headline": "A bargain with {{partner}}, and gold in the terms",
+        "body": [
+          "We have concluded an agreement with {{partner}}. Our side gives {{weGive}} and receives {{weGet}}. Gold is in the terms."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "gold-trade-deal-account-unnamed",
+        "when": "partner === null",
+        "headline": "A bargain abroad, with gold in the terms",
+        "body": [
+          "Our envoys have concluded an agreement with a foreign power. Our side gives {{weGive}} and receives {{weGet}}. Gold is in the terms."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "gold-trade-deal-account-ledger",
+        "voice": "gazette",
+        "stance": "neutral",
+        "genre": "ledger",
+        "headline": "The terms of the bargain",
+        "body": [
+          "We give: {{weGive}}.",
+          "We receive: {{weGet}}.",
+          "Among the terms: gold."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "gold-trade-deal-account-notice",
+        "voice": "crier",
+        "stance": "populist",
+        "genre": "notice",
+        "when": "partner !== null",
+        "headline": "Hear it! Terms are struck with {{partner}}",
+        "body": [
+          "Gold moves in this bargain, good people. We give {{weGive}}; we take {{weGet}}. Let the merchants mark it well."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "gold-trade-deal-account-editorial",
+        "voice": "pamphlet",
+        "stance": "pro-government",
+        "genre": "editorial",
+        "when": "partner !== null",
+        "headline": "The envoys earn their keep",
+        "body": [
+          "The envoys have settled terms with {{partner}}: we give {{weGive}}, we receive {{weGet}}. Making a bargain stick takes patience, and gold in the terms takes nerve. The paper calls that governing well."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "incoming-trade-route-plundered-account",
+    "triggers": ["incoming-trade-route-plundered"],
+    "tags": ["economy", "trade"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "incoming-trade-route-plundered-account-report",
+        "headline": "Incoming trade route plundered",
+        "body": [
+          "A trade route bound for our territory has been plundered on the road. Whatever the run was worth to our cities is gone with it."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "incoming-trade-route-plundered-account-robber",
+        "voice": "press",
+        "stance": "hawkish",
+        "genre": "report",
+        "when": "plunderer !== null",
+        "headline": "{{plunderer}} robs the road to our gates",
+        "body": [
+          "{{plunderer}} has plundered a trade route bound for our territory. The run is destroyed. A raider who feeds on our roads unopposed will not stop at one."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "incoming-trade-route-plundered-account-gold",
+        "voice": "tabloid",
+        "stance": "local",
+        "genre": "anecdote",
+        "when": "gold !== null",
+        "headline": "{{gold}} gold gone with a plundered route",
+        "body": [
+          "The market heard it first: a trade route bound for our territory, plundered on the road, {{gold}} gold gone with the run. What that road was worth to our towns, no tally in the capital will show."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "incoming-trade-route-plundered-account-editorial",
+        "voice": "gazette",
+        "stance": "government-critical",
+        "genre": "editorial",
+        "headline": "Who keeps the road?",
+        "body": [
+          "We learn that a trade route bound for our territory has been plundered on the road. Those who would enjoy the income of trade must also keep the road; the one cannot be had without the other. The paper wants the routes watched."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "incoming-trade-route-plundered-account-origin",
+        "voice": "spoken",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "origin !== null",
+        "headline": "The road from {{origin}} is robbed",
+        "body": [
+          "They say a trade route out of {{origin}}, bound for our gates, was plundered on the road. The run is ended, and the loss sits at both ends."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "last-trade-route-ends-account",
+    "triggers": ["last-trade-route-ends"],
+    "tags": ["politics", "domestic"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "last-trade-route-ends-account-report",
+        "headline": "Our outgoing trade has stopped",
+        "body": [
+          "We no longer run any outgoing trade route. No trade of ours now sets out for a foreign market."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "last-trade-route-ends-account-obituary",
+        "voice": "chronicle",
+        "stance": "traditional",
+        "genre": "obituary",
+        "when": "routes === 1",
+        "headline": "The last route is closed",
+        "body": [
+          "It was the only outgoing trade route we still ran, and now it runs no more. With its ending, no trade of ours crosses the border. What remains is the road, and the habit of trade."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "last-trade-route-ends-account-analysis",
+        "voice": "press",
+        "stance": "government-critical",
+        "genre": "analysis",
+        "when": "routes > 1",
+        "headline": "Every outgoing route has ended",
+        "body": [
+          "Of the {{routes}} outgoing trade routes we ran, not one survives. Whatever ended them, no new route has been opened in its place. The income is gone; the paper asks who is minding the trade, and what they intend to do about it."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "last-trade-route-ends-account-notice",
+        "voice": "gazette",
+        "stance": "industrialist",
+        "genre": "notice",
+        "headline": "Notice to those who send trade out",
+        "body": [
+          "Our outgoing trade routes have ended; we run none. Those with goods for foreign markets have, for the present, no route of ours to carry them."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "long-trade-route-completed-account",
+    "triggers": ["long-trade-route-completed"],
+    "tags": ["economy", "trade", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "long-trade-route-completed-account-report",
+        "headline": "A {{routeDistance}}-tile trade route completes its run",
+        "body": [
+          "The trade route between {{ourCity}} and {{theirCity}} has completed a journey of {{routeDistance}} tiles, a long road for trade by any measure."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "long-trade-route-completed-account-outgoing",
+        "voice": "press",
+        "stance": "ambitious",
+        "genre": "analysis",
+        "when": "outgoing === true",
+        "headline": "Our trade reaches {{theirCity}}",
+        "body": [
+          "Distance is the story here: an outgoing route from {{ourCity}} has completed the {{routeDistance}}-tile run to {{theirCity}}. The farther a route reaches, the wider the market it ties to ours. Runs of this length turn a distant city into a trading partner of consequence."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "long-trade-route-completed-account-incoming",
+        "voice": "gazette",
+        "stance": "conciliatory",
+        "genre": "report",
+        "when": "outgoing === false",
+        "headline": "A long road ends at {{ourCity}}",
+        "body": [
+          "Letters from the road relate that a trade route of {{routeDistance}} tiles from {{theirCity}} has completed its run to {{ourCity}}. Trade that crosses so far to reach us does more than bring income; it makes two markets one."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "long-trade-route-completed-account-chronicle",
+        "voice": "chronicle",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "partner !== null",
+        "headline": "The long road to {{partner}}",
+        "body": [
+          "In this season the trade route between {{ourCity}} and {{theirCity}}, {{routeDistance}} tiles apart, completed its journey. The record notes that the road between us and {{partner}} stands open."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "long-trade-route-completed-account-feed",
+        "voice": "feed",
+        "stance": "neutral",
+        "genre": "report",
+        "headline": "A {{routeDistance}}-tile run, completed",
+        "body": [
+          "That is a lot of map between two markets. The route between {{ourCity}} and {{theirCity}} just finished the run, and both ends are the richer for it."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "our-trade-route-plundered-account",
+    "triggers": ["our-trade-route-plundered"],
+    "tags": ["economy", "trade"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "our-trade-route-plundered-account-report",
+        "headline": "Our trade route plundered on the road",
+        "body": [
+          "A trade route setting out from our territory has been plundered before it reached its destination. The run is lost, and with it what our side stood to gain."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "our-trade-route-plundered-account-robber",
+        "voice": "tabloid",
+        "stance": "populist",
+        "genre": "report",
+        "when": "plunderer !== null",
+        "headline": "{{plunderer}} takes our trade on the road",
+        "body": [
+          "Our route never reached its destination. {{plunderer}} plundered it on the way, and the loss lands here at home, where the trade was to earn its keep."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "our-trade-route-plundered-account-ledger",
+        "voice": "press",
+        "stance": "neutral",
+        "genre": "ledger",
+        "when": "gold !== null",
+        "headline": "The account of a plundered route",
+        "body": [
+          "Route lost: one, outbound from our territory.",
+          "Gold taken: {{gold}}.",
+          "The entry closes against us."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "our-trade-route-plundered-account-destination",
+        "voice": "broadcast",
+        "stance": "conciliatory",
+        "genre": "report",
+        "when": "destination !== null",
+        "headline": "Our route to {{destination}} is plundered",
+        "body": [
+          "A trade route running from our territory to {{destination}} has been plundered. Both ends of the trade lose the run."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "our-trade-route-plundered-account-editorial",
+        "voice": "pamphlet",
+        "stance": "hawkish",
+        "genre": "editorial",
+        "headline": "Send the spears with the trade",
+        "body": [
+          "One of our trade routes has been plundered on the road. Roads that make money will be robbed so long as robbery is cheap. The paper wants our trade guarded, and the robbers made to regret the road."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "trade-network-opens-account",
+    "triggers": ["trade-network-opens"],
+    "tags": ["economy", "trade"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "trade-network-opens-account-report",
+        "headline": "Our trade network opens",
+        "body": [
+          "The count of our outgoing trade routes has risen from none to {{routes}}. Our trade now moves beyond our own borders."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "trade-network-opens-account-notice",
+        "voice": "crier",
+        "stance": "national",
+        "genre": "notice",
+        "headline": "Hear it! Our trade goes abroad",
+        "body": [
+          "Outgoing trade routes: {{routes}}, where before there were none! Our trade goes out to the world. Mark it well: our trade is on the move!"
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "trade-network-opens-account-analysis",
+        "voice": "press",
+        "stance": "pro-government",
+        "genre": "analysis",
+        "headline": "What an open trade network is worth",
+        "body": [
+          "We ran no outgoing trade routes at the last count; we now run {{routes}}. Routes do not found themselves; someone chose to send our trade out, and the nation is the richer for the choice. The paper counts that to the government's credit."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "trade-network-opens-account-proverb",
+        "voice": "spoken",
+        "stance": "neutral",
+        "genre": "proverb",
+        "headline": "The road out stands open",
+        "body": [
+          "Where the road goes out, the gold comes home."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "we-plunder-foreign-trade-route-account",
+    "triggers": ["we-plunder-foreign-trade-route"],
+    "tags": ["economy", "trade"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "we-plunder-foreign-trade-route-account-report",
+        "headline": "We plunder a foreign trade route",
+        "body": [
+          "Our forces have plundered a trade route setting out from foreign territory. The run is at an end."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "we-plunder-foreign-trade-route-account-gold",
+        "voice": "press",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "gold !== null",
+        "headline": "{{gold}} gold taken from a foreign route",
+        "body": [
+          "Our forces plundered a trade route out of foreign territory and took {{gold}} gold from the run. The coin is in our treasury now; the loss sits in another ledger."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "we-plunder-foreign-trade-route-account-origin",
+        "voice": "gazette",
+        "stance": "elitist",
+        "genre": "report",
+        "when": "origin !== null && destination !== null",
+        "headline": "A route from {{origin}} to {{destination}} is plundered",
+        "body": [
+          "Our forces have plundered a trade route running from {{origin}} to {{destination}}, and the run is ended on the road. The taking is effective; whether it is dignified is another question. Orderly commerce is the more profitable habit."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "we-plunder-foreign-trade-route-account-joke",
+        "voice": "pamphlet",
+        "stance": "hawkish",
+        "genre": "joke",
+        "headline": "Foreign trade turns a profit",
+        "body": [
+          "It turns out other people's trade routes pay well. You just have to take one."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "we-plunder-foreign-trade-route-account-letter",
+        "voice": "general",
+        "stance": "conciliatory",
+        "genre": "letter",
+        "byline": "A merchant",
+        "headline": "Have we no merchants left?",
+        "body": [
+          "Sir, the route our soldiers plundered set out from foreign ground, but trade is a habit between peoples, and habits break both ways. We will want open roads again one day. Robbery is a poor way to keep them."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  }
+]

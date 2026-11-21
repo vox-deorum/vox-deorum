@@ -1,0 +1,936 @@
+[
+  {
+    "id": "cultural-influence-becomes-influential-incoming-account",
+    "triggers": ["cultural-influence-becomes-influential-incoming"],
+    "tags": ["culture", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "cultural-influence-becomes-influential-incoming-report",
+        "headline": "A foreign culture becomes influential over us",
+        "body": [
+          "The cultural influence a rival civilization holds over our nation has reached the Influential level. The reading stands at {{percentage}} percent."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "cultural-influence-becomes-influential-incoming-chronicle",
+        "voice": "chronicle",
+        "stance": "traditional",
+        "genre": "report",
+        "when": "rival !== null",
+        "headline": "In this year the stranger's voice grew strong",
+        "body": [
+          "It is recorded that the influence of {{rival}} over our people became Influential in this year, at {{percentage}} percent. The scribes set it down without comment."
+        ],
+        "links": [
+          { "placeholder": "rival", "label": "{{rival}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "cultural-influence-becomes-influential-incoming-editorial",
+        "voice": "pamphlet",
+        "stance": "government-critical",
+        "genre": "editorial",
+        "when": "rival !== null",
+        "headline": "Their culture is in our houses. Where was ours?",
+        "body": [
+          "The influence of {{rival}} over our nation is now Influential. Someone was meant to be tending our songs, our stages and our schools. The public should ask who was watching the door."
+        ],
+        "links": [
+          { "placeholder": "rival", "label": "{{rival}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "cultural-influence-becomes-influential-incoming-analysis",
+        "voice": "press",
+        "stance": "rationalist",
+        "genre": "analysis",
+        "headline": "What influential influence changes",
+        "body": [
+          "Influence at the Influential level is a measurement, not a mood: it records whose ideas now spread among us without opposition. The reading over our nation stands at {{percentage}} percent, and the direction of the tilt is not ours."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "cultural-influence-becomes-influential-outgoing-account",
+    "triggers": ["cultural-influence-becomes-influential-outgoing"],
+    "tags": ["culture", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "cultural-influence-becomes-influential-outgoing-report",
+        "headline": "Our culture becomes influential abroad",
+        "body": [
+          "Our cultural influence over a rival civilization has reached the Influential level. The reading stands at {{percentage}} percent."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "cultural-influence-becomes-influential-outgoing-notice",
+        "voice": "crier",
+        "stance": "national",
+        "genre": "notice",
+        "when": "rival !== null",
+        "headline": "Hear it! Our culture prevails in {{rival}}",
+        "body": [
+          "People of our nation, hear it! The influence of our works over {{rival}} is now Influential, at {{percentage}} percent. Our songs speak for us in their streets."
+        ],
+        "links": [
+          { "placeholder": "rival", "label": "{{rival}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "cultural-influence-becomes-influential-outgoing-analysis",
+        "voice": "press",
+        "stance": "ambitious",
+        "genre": "analysis",
+        "when": "rival !== null",
+        "headline": "Why the Influential level over {{rival}} matters",
+        "body": [
+          "Influence at this level means the public of {{rival}} takes its cues from our artists and our thinkers. That is a standing no treaty can confer, and it is recorded at {{percentage}} percent."
+        ],
+        "links": [
+          { "placeholder": "rival", "label": "{{rival}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "cultural-influence-becomes-influential-outgoing-anecdote",
+        "voice": "gazette",
+        "stance": "artistic",
+        "genre": "anecdote",
+        "headline": "Full houses for our plays in a rival capital",
+        "body": [
+          "Letters from a rival capital relate that our plays now play to full houses there. The influence of our culture over that court has reached the Influential level, and the applause, we are told, is sincere."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "cultural-influence-loses-influential-incoming-account",
+    "triggers": ["cultural-influence-loses-influential-incoming"],
+    "tags": ["culture", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "cultural-influence-loses-influential-incoming-report",
+        "headline": "Foreign influence over us recedes",
+        "body": [
+          "The cultural influence a rival civilization holds over our nation has fallen from {{previousLevel}} to {{level}}. The reading stands at {{percentage}} percent."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "cultural-influence-loses-influential-incoming-analysis",
+        "voice": "press",
+        "stance": "national",
+        "genre": "analysis",
+        "when": "rival !== null",
+        "headline": "The hold of {{rival}} on our tastes loosens",
+        "body": [
+          "Influence over a nation is won slowly and lost slowly. The grip of {{rival}} on ours has slipped from {{previousLevel}} to {{level}}; by the measure of culture, the nation stands a little more on its own ground."
+        ],
+        "links": [
+          { "placeholder": "rival", "label": "{{rival}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "cultural-influence-loses-influential-incoming-editorial",
+        "voice": "pamphlet",
+        "stance": "populist",
+        "genre": "editorial",
+        "when": "rival !== null",
+        "headline": "Our songs again",
+        "body": [
+          "The influence of {{rival}} over us has fallen to {{level}}. The stages they filled are empty for the taking. Fill them, and do not hand them back."
+        ],
+        "links": [
+          { "placeholder": "rival", "label": "{{rival}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "cultural-influence-loses-influential-incoming-chronicle",
+        "voice": "chronicle",
+        "stance": "traditional",
+        "genre": "report",
+        "headline": "In this year the foreign fashion faded",
+        "body": [
+          "It is recorded that the influence of a foreign people over our nation declined in this year, from {{previousLevel}} to {{level}}. What was borrowed is slowly being returned."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "cultural-influence-loses-influential-outgoing-account",
+    "triggers": ["cultural-influence-loses-influential-outgoing"],
+    "tags": ["culture", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "cultural-influence-loses-influential-outgoing-report",
+        "headline": "Our influence abroad recedes",
+        "body": [
+          "Our cultural influence over a rival civilization has fallen from {{previousLevel}} to {{level}}. The reading stands at {{percentage}} percent."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "cultural-influence-loses-influential-outgoing-analysis",
+        "voice": "press",
+        "stance": "government-critical",
+        "genre": "analysis",
+        "when": "rival !== null",
+        "headline": "Who lost {{rival}}?",
+        "body": [
+          "Our influence over {{rival}} has slipped from {{previousLevel}} to {{level}}. Influence abroad is not an ornament; it is work, and somewhere that work has stopped being done. The offices responsible should say which."
+        ],
+        "links": [
+          { "placeholder": "rival", "label": "{{rival}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "cultural-influence-loses-influential-outgoing-gazette",
+        "voice": "gazette",
+        "stance": "traditional",
+        "genre": "report",
+        "when": "rival !== null",
+        "headline": "Our fashions carry less weight in {{rival}}",
+        "body": [
+          "Letters from {{rival}} relate that our styles no longer lead theirs as they did. The recorded influence of our nation there has fallen from {{previousLevel}} to {{level}}."
+        ],
+        "links": [
+          { "placeholder": "rival", "label": "{{rival}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "cultural-influence-loses-influential-outgoing-anecdote",
+        "voice": "tabloid",
+        "stance": "populist",
+        "genre": "anecdote",
+        "headline": "They have stopped singing our songs",
+        "body": [
+          "The trader back from the foreign port shrugged. \"They still know our songs,\" he said, \"but they have stopped singing them.\" Our influence abroad has fallen to {{level}}."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "cultural-influence-trend-turns-incoming-account",
+    "triggers": ["cultural-influence-trend-turns-incoming"],
+    "tags": ["culture", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "cultural-influence-trend-turns-incoming-report",
+        "headline": "Foreign influence over us turns {{trend}}",
+        "body": [
+          "The cultural influence a rival civilization holds over our nation has turned {{trend}}; it was {{previousTrend}} before. The reading stands at {{percentage}} percent, at the {{level}} level."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "cultural-influence-trend-turns-incoming-projection",
+        "voice": "press",
+        "stance": "neutral",
+        "genre": "analysis",
+        "when": "turnsToInfluential !== null",
+        "headline": "Influential in {{turnsToInfluential}} turns, on this course",
+        "body": [
+          "The influence a rival civilization holds over our nation has turned {{trend}}, and the projection gives {{turnsToInfluential}} turns until it reaches the Influential level. A number this specific deserves attention now rather than later."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "cultural-influence-trend-turns-incoming-anecdote",
+        "voice": "spoken",
+        "stance": "traditional",
+        "genre": "anecdote",
+        "when": "rival !== null",
+        "headline": "Foreign cloth in the market again",
+        "body": [
+          "They say in the market that the foreign cloth is everywhere this season. The readings agree with the market: the influence of {{rival}} over us has turned {{trend}}."
+        ],
+        "links": [
+          { "placeholder": "rival", "label": "{{rival}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "cultural-influence-trend-turns-incoming-ledger",
+        "voice": "press",
+        "stance": "rationalist",
+        "genre": "ledger",
+        "headline": "The influence ledger",
+        "body": [
+          "Level held over our nation: {{level}}",
+          "Trend: {{trend}}, after {{previousTrend}}",
+          "Reading: {{percentage}} percent"
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "cultural-influence-trend-turns-outgoing-account",
+    "triggers": ["cultural-influence-trend-turns-outgoing"],
+    "tags": ["culture", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "cultural-influence-trend-turns-outgoing-report",
+        "headline": "Our influence abroad turns {{trend}}",
+        "body": [
+          "Our cultural influence over a rival civilization has turned {{trend}}; it was {{previousTrend}} before. The reading stands at {{percentage}} percent, at the {{level}} level."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "cultural-influence-trend-turns-outgoing-broadcast",
+        "voice": "broadcast",
+        "stance": "ambitious",
+        "genre": "report",
+        "when": "turnsToInfluential !== null",
+        "headline": "Influence rising: influential in {{turnsToInfluential}} turns",
+        "body": [
+          "Our influence over a rival power is {{trend}}. Projection: the Influential level in {{turnsToInfluential}} turns. The figures are firm."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "cultural-influence-trend-turns-outgoing-letters",
+        "voice": "gazette",
+        "stance": "ambitious",
+        "genre": "report",
+        "when": "rival !== null && trend === 'Rising'",
+        "headline": "Our fashions rise again in {{rival}}",
+        "body": [
+          "Letters from {{rival}} relate that our styles are once more in the ascendant there. The recorded trend in our influence has turned Rising, at the {{level}} level."
+        ],
+        "links": [
+          { "placeholder": "rival", "label": "{{rival}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "cultural-influence-trend-turns-outgoing-chronicle",
+        "voice": "chronicle",
+        "stance": "traditional",
+        "genre": "report",
+        "when": "rival !== null && trend === 'Falling'",
+        "headline": "In this year our word carried less weight",
+        "body": [
+          "It is recorded that our influence over {{rival}} changed its course in this year, from Rising to Falling, and rests at the {{level}} level. The scribes set the change down as it was measured."
+        ],
+        "links": [
+          { "placeholder": "rival", "label": "{{rival}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "cultural-influence-trend-turns-outgoing-analysis",
+        "voice": "press",
+        "stance": "hawkish",
+        "genre": "analysis",
+        "headline": "Culture is a front line too",
+        "body": [
+          "The trend in our influence over a rival has turned {{trend}}, at the {{level}} level. Strength is counted in soldiers and coin; it is also counted in whose stories the other side tells itself."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "enemy-wonder-nearby-account",
+    "triggers": ["enemy-wonder-nearby"],
+    "tags": ["culture"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "enemy-wonder-nearby-report",
+        "headline": "{{city}} completes the {{wonder}} under an enemy flag",
+        "body": [
+          "The enemy city of {{city}} has finished the {{wonder}}. The work stands close to our borders, close enough to keep an eye on."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "enemy-wonder-nearby-unnamed",
+        "headline": "An enemy wonder rises near our borders",
+        "body": [
+          "An enemy city close to our own has completed the {{wonder}}. The work stands inside a nation we are at war with."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "enemy-wonder-nearby-analysis",
+        "voice": "press",
+        "stance": "hawkish",
+        "genre": "analysis",
+        "headline": "The {{wonder}} is more than a monument",
+        "body": [
+          "A wonder draws travelers, and travelers draw coin and attention. The enemy's new {{wonder}} at {{city}} will do both for a nation we are at war with. Our own builders should take note."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "enemy-wonder-nearby-gazette",
+        "voice": "gazette",
+        "stance": "artistic",
+        "genre": "report",
+        "headline": "A fine hall under a hostile flag",
+        "body": [
+          "We are informed that the {{wonder}} now stands finished in enemy {{city}}. Whatever banner flies over it, the workmanship is said to be very fine."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "enemy-wonder-nearby-anecdote",
+        "voice": "spoken",
+        "stance": "local",
+        "genre": "anecdote",
+        "headline": "The boys came back talking of towers",
+        "body": [
+          "The herd boys came down at dusk talking of towers across the line. The enemy city of {{city}} has raised the {{wonder}}. The war may be the capital's business; this close, it is ours too."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "foreign-wonder-completed-account",
+    "triggers": ["foreign-wonder-completed"],
+    "tags": ["culture", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "foreign-wonder-completed-report",
+        "when": "cityName !== null && civilization !== null",
+        "headline": "{{cityName}} completes the {{wonder}}",
+        "body": [
+          "The {{wonder}} is finished in {{cityName}}, a city of {{civilization}}. Word of the work has reached us with the last stones set."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-wonder-completed-unnamed",
+        "when": "cityName === null || civilization === null",
+        "headline": "A wonder completed abroad",
+        "body": [
+          "The {{wonder}} now stands complete in a foreign city. Word of the work reached us after the scaffolds came down."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-wonder-completed-analysis",
+        "voice": "press",
+        "stance": "ambitious",
+        "genre": "analysis",
+        "when": "civilization !== null",
+        "headline": "Why the {{wonder}} matters to {{civilization}}",
+        "body": [
+          "A wonder abroad is a claim to be remembered. {{civilization}} has now made that claim with the {{wonder}}. The right answer is not envy; it is a finer work of our own."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-wonder-completed-anecdote",
+        "voice": "spoken",
+        "stance": "neutral",
+        "genre": "anecdote",
+        "when": "cityName !== null",
+        "headline": "They speak of the new hall at {{cityName}}",
+        "body": [
+          "They say the scaffolds came down at {{cityName}} this season, and the {{wonder}} stood in the open air for the first time. Travelers came home talking of little else."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-wonder-completed-gazette",
+        "voice": "gazette",
+        "stance": "conciliatory",
+        "genre": "report",
+        "when": "cityName !== null",
+        "headline": "The {{wonder}} at {{cityName}} is complete",
+        "body": [
+          "We are informed that the {{wonder}} in {{cityName}} stands finished. Whatever divides the nations, the workmanship deserves a traveler's respect."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "great-person-born-account",
+    "triggers": ["great-person-born"],
+    "tags": ["politics", "domestic"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "great-person-born-report",
+        "when": "civilization !== null",
+        "headline": "A great person is born in {{civilization}}",
+        "body": [
+          "The great person {{person}} has been born to {{civilization}}. Such births are rare, and the news of one does not stay inside a single court."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "great-person-born-unnamed",
+        "when": "civilization === null",
+        "headline": "A great person is born",
+        "body": [
+          "A great person, {{person}}, has come into the world. Which court will count them among its own remains to be seen."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "great-person-born-chronicle",
+        "voice": "chronicle",
+        "stance": "traditional",
+        "genre": "report",
+        "when": "civilization !== null && unit !== null",
+        "headline": "In this year a {{unit}} came to {{civilization}}",
+        "body": [
+          "It is recorded that {{person}}, a {{unit}}, was born to {{civilization}} in this year. The scribes have set the name down in full."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "great-person-born-analysis",
+        "voice": "press",
+        "stance": "ambitious",
+        "genre": "analysis",
+        "when": "ours === true",
+        "headline": "A great person of our own",
+        "body": [
+          "Every great person is a choice. {{person}} is ours to direct, and the question before the court is where the gift will do the most good."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "great-person-born-pamphlet",
+        "voice": "pamphlet",
+        "stance": "hawkish",
+        "genre": "report",
+        "when": "ours === false && civilization !== null",
+        "headline": "Citizens! A rival has a new great person",
+        "body": [
+          "{{civilization}} now counts the great person {{person}} among its own. A rival's talent is a rival's strength, and the tally of power has moved."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "great-person-died-account",
+    "triggers": ["great-person-died"],
+    "tags": ["politics", "military", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "great-person-died-report",
+        "headline": "The death of {{person}}",
+        "body": [
+          "The great person {{person}} of {{civilization}} has died. News of the death has traveled quickly."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "great-person-died-obituary",
+        "voice": "press",
+        "stance": "devout",
+        "genre": "obituary",
+        "headline": "The world is one name poorer",
+        "body": [
+          "{{person}} of {{civilization}} has died. At its height the name was spoken in many lands, and the work behind it will be found in the ledgers. What remains is the memory, and it is owed keeping."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "great-person-died-killing",
+        "voice": "press",
+        "stance": "hawkish",
+        "genre": "report",
+        "when": "killer !== null",
+        "headline": "{{killer}} kills {{person}}",
+        "body": [
+          "The great person {{person}} of {{civilization}} has died at the hands of {{killer}}. A killing of this kind settles nothing and is felt long after the burial."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "great-person-died-anecdote",
+        "voice": "spoken",
+        "stance": "traditional",
+        "genre": "anecdote",
+        "when": "ours === true",
+        "headline": "Our own {{person}} is gone",
+        "body": [
+          "They sat late at the fires tonight. {{person}}, one of our own, is gone. The stories told now will be about the person, and there will be many."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "great-person-died-editorial",
+        "voice": "pamphlet",
+        "stance": "government-critical",
+        "genre": "editorial",
+        "when": "ours === true && killer !== null",
+        "headline": "Who answers for {{person}}?",
+        "body": [
+          "{{person}} is dead at the hands of {{killer}}. Someone gave the orders that put our great person within an enemy's reach. The paper wants to know who."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "great-person-expended-account",
+    "triggers": ["great-person-expended"],
+    "tags": ["politics"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "great-person-expended-report",
+        "headline": "A great person spent: {{person}}",
+        "body": [
+          "{{civilization}} has expended the great person {{person}}, turning a lifetime's gift into a single great act. What that act bought, the record does not yet say."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "great-person-expended-notice",
+        "voice": "gazette",
+        "stance": "pro-government",
+        "genre": "notice",
+        "when": "ours === true",
+        "headline": "Notice: {{person}} expended in the nation's service",
+        "body": [
+          "We are informed that the great person {{person}} has been expended in our service. The council has turned the gift to good purpose, and the public's thanks are owed."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "great-person-expended-analysis",
+        "voice": "press",
+        "stance": "rationalist",
+        "genre": "analysis",
+        "headline": "A talent spent is a bet on the present",
+        "body": [
+          "Expenditure converts a person's whole future into one immediate act. {{civilization}} has made that trade with {{person}}. The sums will show whether it was wise; the person will not be consulted."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "great-person-expended-anecdote",
+        "voice": "tabloid",
+        "stance": "populist",
+        "genre": "anecdote",
+        "when": "ours === false",
+        "headline": "Nobody came out of the palace",
+        "body": [
+          "In {{civilization}} they say {{person}} walked into the palace one last time. The doors opened once and closed again, and the gift was spent. Nobody came out."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "great-works-added-account",
+    "triggers": ["great-works-added"],
+    "tags": ["cities", "domestic"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "great-works-added-report",
+        "headline": "Great works come to {{city}}",
+        "body": [
+          "The galleries of {{city}} have gained {{added}} great works, bringing the city's collection to {{total}}."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "great-works-added-notice",
+        "voice": "gazette",
+        "stance": "artistic",
+        "genre": "notice",
+        "headline": "Notice to lovers of the arts",
+        "body": [
+          "{{city}} is richer by {{added}} great works, for a total of {{total}}. The galleries keep their usual hours, and the walls do the talking."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "great-works-added-analysis",
+        "voice": "press",
+        "stance": "national",
+        "genre": "analysis",
+        "headline": "What {{total}} great works mean for {{city}}",
+        "body": [
+          "A collection is a city's hold on the attention of the world. With {{added}} new works and {{total}} in all, {{city}} has one more reason for a traveler to stop, and one more answer to a rival's galleries."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "great-works-added-anecdote",
+        "voice": "tabloid",
+        "stance": "local",
+        "genre": "anecdote",
+        "headline": "The crates came up from the docks",
+        "body": [
+          "The crates came in before dawn, and by evening {{added}} new works hung in the galleries of {{city}}. The guards were already shooing away the first admirers."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "great-works-lost-account",
+    "triggers": ["great-works-lost"],
+    "tags": ["cities", "domestic"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "great-works-lost-report",
+        "headline": "Great works lost from {{city}}",
+        "body": [
+          "The collection of great works in {{city}} has shrunk by {{lost}}. {{total}} works remain on the walls."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "great-works-lost-obituary",
+        "voice": "chronicle",
+        "stance": "traditional",
+        "genre": "obituary",
+        "headline": "The walls of {{city}} are barer",
+        "body": [
+          "The galleries of {{city}} held more at their height. {{lost}} great works are gone from the walls, and {{total}} remain. What remains inherits the rooms, and the care of them."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "great-works-lost-editorial",
+        "voice": "pamphlet",
+        "stance": "government-critical",
+        "genre": "editorial",
+        "headline": "Who lost our art?",
+        "body": [
+          "The galleries of {{city}} are {{lost}} works lighter, and no one has explained how. A count that can fall can be questioned. The paper wants a cause and a name."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "great-works-lost-anecdote",
+        "voice": "spoken",
+        "stance": "local",
+        "genre": "anecdote",
+        "headline": "The nail is still in the wall",
+        "body": [
+          "An old keeper says the nail is still there, right where the painting hung. {{lost}} great works are gone from {{city}}. The capital will not miss them; the city will."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "our-wonder-completed-account",
+    "triggers": ["our-wonder-completed"],
+    "tags": ["cities", "domestic"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "our-wonder-completed-report",
+        "headline": "Our wonder stands: the {{wonder}} at {{city}}",
+        "body": [
+          "Work in {{city}} is finished. The {{wonder}} now stands under our flag, the newest of the works the whole world knows by name."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "our-wonder-completed-unnamed",
+        "headline": "A wonder of our own is finished",
+        "body": [
+          "The {{wonder}} is complete. Of all the works a nation raises, a wonder is the one the world agrees to call by name."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "our-wonder-completed-notice",
+        "voice": "crier",
+        "stance": "national",
+        "genre": "notice",
+        "headline": "Hear it, people of {{city}}! The {{wonder}} is done",
+        "body": [
+          "The scaffolds are down and the {{wonder}} stands. Let the neighbors come and see what we build."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "our-wonder-completed-analysis",
+        "voice": "press",
+        "stance": "ambitious",
+        "genre": "analysis",
+        "headline": "What the {{wonder}} gives {{city}}",
+        "body": [
+          "A wonder is more than a landmark. For {{city}} it means travelers on the road and the nation's name spoken abroad. The next work should already be on the drawing board."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "our-wonder-completed-anecdote",
+        "voice": "tabloid",
+        "stance": "local",
+        "genre": "anecdote",
+        "headline": "The children are playing under it already",
+        "body": [
+          "The last plank came down at noon, and by evening the children of {{city}} were playing beneath the {{wonder}}, each one promising to build a bigger one."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "tourism-output-leader-changes-account",
+    "triggers": ["tourism-output-leader-changes"],
+    "tags": ["culture", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "tourism-output-leader-changes-report",
+        "when": "civilization !== null",
+        "headline": "A new leader in tourism: {{civilization}}",
+        "body": [
+          "{{civilization}} now stands first in the world in tourism, at {{tourism}} a turn. At the last count the position belonged to someone else."
+        ],
+        "links": [
+          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "tourism-output-leader-changes-unnamed",
+        "when": "civilization === null",
+        "headline": "A new leader in tourism",
+        "body": [
+          "The world has a new first in tourism, at {{tourism}} a turn. The name has not reached us with the numbers."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "tourism-output-leader-changes-gazette",
+        "voice": "gazette",
+        "stance": "national",
+        "genre": "report",
+        "when": "civilization !== null && tied === false",
+        "headline": "We are informed: {{civilization}} leads the world in tourism",
+        "body": [
+          "Figures now place {{civilization}} first among the nations in tourism, at {{tourism}} a turn. Where the traveler's coin goes, influence follows."
+        ],
+        "links": [
+          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "tourism-output-leader-changes-shared",
+        "voice": "press",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "civilization !== null && tied === true",
+        "headline": "{{civilization}} shares the tourism lead",
+        "body": [
+          "{{civilization}} stands level with another great power at {{tourism}} tourism a turn. First place is real; the sole holding of it is not."
+        ],
+        "links": [
+          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "tourism-output-leader-changes-feed",
+        "voice": "feed",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "civilization !== null",
+        "headline": "New No. 1 in tourism: {{civilization}}",
+        "body": [
+          "{{civilization}}, at {{tourism}} a turn. The previous leader now has a number to chase."
+        ],
+        "links": [
+          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  }
+]
