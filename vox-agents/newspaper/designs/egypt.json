@@ -2,10 +2,31 @@
   {
     "id": "egypt",
     "version": "1",
-    "title": "The Two Lands",
-    "when": "self.name === 'Egypt' && self.era?.replace(' Era', '') === 'Ancient'",
+    "title": "The Two Lands Register",
+    "civilizationTitles": {
+      "Nubia": "The Nubian Ledger"
+    },
+    "when": "['Egypt', 'Nubia'].includes(self.name) && ['Ancient', 'Classical'].includes(self.era?.replace(' Era', ''))",
     "weight": {
-      "base": 100
+      "base": 0,
+      "adjustments": [
+        {
+          "when": "self.name === 'Egypt' && self.era?.replace(' Era', '') === 'Ancient'",
+          "add": 80
+        },
+        {
+          "when": "self.name === 'Egypt' && self.era?.replace(' Era', '') === 'Classical'",
+          "add": 20
+        },
+        {
+          "when": "self.name === 'Nubia' && self.era?.replace(' Era', '') === 'Ancient'",
+          "add": 40
+        },
+        {
+          "when": "self.name === 'Nubia' && self.era?.replace(' Era', '') === 'Classical'",
+          "add": 8
+        }
+      ]
     },
     "presentation": {
       "schemaVersion": 1,

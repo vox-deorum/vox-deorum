@@ -15,9 +15,10 @@ import { resolveVariantStyle } from '../config/styles.js';
 import { chooseWeighted } from '../shared/weights.js';
 import { uniqueSources } from '../shared/sources.js';
 import {
-  placeholderPattern, substitute, resolveLinkTarget, termPlaceholders, type EditorialCandidate
+  placeholderPattern, substitute, resolveLinkTarget, type EditorialCandidate
 } from '../selection/templates.js';
 import type { PresentationWeights } from './eligibility.js';
+import { resolveMasthead } from './masthead.js';
 
 /** Render authored placeholders into text nodes and explicitly declared typed links. */
 export function renderAuthoredText(
@@ -46,39 +47,6 @@ export function renderAuthoredText(
   }
   if (cursor < text.length) nodes.push({ type: 'text', text: text.slice(cursor) });
   return nodes.length ? nodes : [{ type: 'text', text }];
-}
-
-/** A design title and motto after term substitution, with the rows cited by the terms it prints. */
-export interface ResolvedMasthead {
-  title: string;
-  motto?: string;
-  sources: NewspaperSourceReference[];
-}
-
-/** Substitute printable terms into a design's masthead, or reject it while a placeholder remains. */
-export function resolveMasthead(
-  design: EditorialDesign,
-  terms: EditorialTerms = new Map(),
-  fallbackTitle = ''
-): ResolvedMasthead | undefined {
-  const values = termPlaceholders(terms);
-  const resolvedTitle = substitute(design.title, values);
-  if (resolvedTitle.match(placeholderPattern)) return undefined;
-  const resolvedMotto = design.motto === undefined ? undefined : substitute(design.motto, values);
-  if (resolvedMotto?.match(placeholderPattern)) return undefined;
-  const title = resolvedTitle || fallbackTitle;
-  const used = [
-    ...(resolvedTitle ? [design.title] : []),
-    ...(resolvedMotto ? [design.motto!] : []),
-  ].flatMap((text) => [...text.matchAll(placeholderPattern)].map((match) => match[1]));
-  const sources = uniqueSources(used.flatMap((key) =>
-    key.startsWith('terms.') ? terms.get(key.slice('terms.'.length))?.sources ?? [] : []
-  ));
-  return {
-    title,
-    ...(resolvedMotto ? { motto: resolvedMotto } : {}),
-    sources,
-  };
 }
 
 /** Choose a design with a printable masthead and eligible positive layouts, retaining the earlier identity while competitive. */

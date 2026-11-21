@@ -3,9 +3,30 @@
     "id": "wire",
     "version": "1",
     "title": "The Civic Wire",
+    "civilizationTitles": {
+      "*": "{{terms.civilization}} Wire"
+    },
     "when": "['Modern', 'Atomic', 'Information', 'Future'].includes(self.era?.replace(' Era', ''))",
     "weight": {
-      "base": 60
+      "base": 0,
+      "adjustments": [
+        {
+          "when": "self.era?.replace(' Era', '') === 'Modern'",
+          "add": 60
+        },
+        {
+          "when": "self.era?.replace(' Era', '') === 'Atomic'",
+          "add": 80
+        },
+        {
+          "when": "self.era?.replace(' Era', '') === 'Information'",
+          "add": 100
+        },
+        {
+          "when": "self.era?.replace(' Era', '') === 'Future'",
+          "add": 100
+        }
+      ]
     },
     "presentation": {
       "schemaVersion": 1,

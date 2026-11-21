@@ -99,7 +99,14 @@ body {
   display: none;
 }
 
-#preview-custom-tint {
+.host-appearance {
+  min-inline-size: 0;
+  padding: 0;
+  border: 0;
+  margin: 8px 0 0;
+}
+
+.host-toolbar input[type="color"] {
   width: 2.75rem;
   height: 2rem;
   padding: 2px 4px;

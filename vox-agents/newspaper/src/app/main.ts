@@ -9,6 +9,7 @@ import { parseIssueDocument } from '../../../src/newspaper/renderer/validation.j
 import { errorMessage } from '../../../src/utils/errors.js';
 import { mountReader, type ReaderHandle } from '../reader/mount.js';
 import { getReplayIssue, listReplayIssues, saveReplayVote } from './api.js';
+import { mountRecordedAppearance } from './appearance.js';
 import { element } from './dom.js';
 import { createDiagnostics } from './inspector.js';
 import { mountMockupControls } from './mockups.js';
@@ -23,6 +24,7 @@ const note = element('#reader-note');
 const mockupMode = element('#mockups-mode');
 const recordedMode = element('#recorded-mode');
 const editionPicker = element<HTMLSelectElement>('#recorded-edition');
+const recordedAppearance = element<HTMLFieldSetElement>('#recorded-appearance');
 const diagnostics = createDiagnostics(element<HTMLDetailsElement>('#replay-diagnostics'));
 
 let source: Source = 'mockups';
@@ -35,7 +37,7 @@ let recordedPosition: { issueId: string; state: ReaderState } | undefined;
 let selectedEdition = '';
 let latestEdition = '';
 let configuring = false;
-let mountVersion = 0;
+let loadVersion = 0;
 let readingVersion = 0;
 let voteTail = Promise.resolve();
 const failedVotes = new Set<SavedView>();
@@ -54,20 +56,26 @@ function clearReader(message?: string): void {
   } else readerRoot.replaceChildren();
 }
 
-/** Display the issue with its own pages, styles and saved votes. */
+/** Mount the display issue and keep diagnostics tied to the original archive entry. */
 async function showIssue(issue: IssueDocument, state: ReaderState, saved?: SavedView): Promise<void> {
-  const version = ++mountVersion;
-  clearReader();
+  let mounted: ReaderHandle | undefined;
   try {
-    const mounted = mountReader(readerRoot, issue, state, handleAction);
+    reader?.dispose();
+    mounted = mountReader(readerRoot, issue, state, handleAction);
     reader = mounted;
+    if (visible?.detail !== saved?.detail) diagnostics.setEdition(saved?.detail);
     visible = saved;
-    diagnostics.setEdition(saved?.detail);
     await mounted.ready;
   } catch (error) {
-    if (version === mountVersion) clearReader(errorMessage(error, 'The issue could not be displayed.'));
+    if (!mounted || reader === mounted) clearReader(errorMessage(error, 'The issue could not be displayed.'));
   }
 }
+
+const styleRecordedIssue = mountRecordedAppearance(() => {
+  if (source === 'recorded' && visible && reader) {
+    void showIssue(styleRecordedIssue(visible.detail.issue), reader.getState(), visible);
+  }
+});
 
 /** Read the active archive's scoped identifiers. */
 function activeArchive(): NewspaperArchiveScope | undefined {
@@ -135,25 +143,23 @@ function focusArticle(issue: IssueDocument, itemId: string): void {
 async function openSaved(issueId: string, itemId?: string): Promise<void> {
   const archive = activeArchive();
   if (!archive || source !== 'recorded' || configuring) return;
-  const version = ++mountVersion;
+  const version = ++loadVersion;
   selectedEdition = issueId;
   editionPicker.value = issueId;
   try {
     await flushVotes();
-    if (version !== mountVersion) return;
+    if (version !== loadVersion) return;
     const detail = await getReplayIssue(issueId, archive.runId, archive.receiverPlayerID);
-    if (version !== mountVersion) return;
+    if (version !== loadVersion) return;
     note.textContent = '';
     const position = recordedPosition?.issueId === issueId ? recordedPosition.state : undefined;
-    const mounted = showIssue(detail.issue, createReaderState(detail.issue, {
+    await showIssue(styleRecordedIssue(detail.issue), createReaderState(detail.issue, {
       ...position, votes: readerVotes(detail.votes),
     }), { detail, archive });
-    const mountedVersion = mountVersion;
-    await mounted;
-    if (itemId && mountedVersion === mountVersion && visible?.detail === detail
+    if (itemId && version === loadVersion && visible?.detail === detail
       && document.activeElement === document.body) focusArticle(detail.issue, itemId);
   } catch (error) {
-    if (version !== mountVersion) return;
+    if (version !== loadVersion) return;
     selectedEdition = visible?.detail.issue.issueId ?? '';
     editionPicker.value = selectedEdition;
     note.textContent = errorMessage(error, 'The saved edition could not be opened.');
@@ -209,20 +215,23 @@ const mockups = mountMockupControls(
   issue => {
     mockupIssue = issue;
     mockupState = undefined;
-    if (source === 'mockups') void showIssue(issue, createReaderState(issue));
+    if (source === 'mockups') {
+      ++loadVersion;
+      void showIssue(issue, createReaderState(issue));
+    }
   },
   async fixture => {
-    const version = ++mountVersion;
+    const version = ++loadVersion;
     try {
       const response = await fetch(new URL(`fixtures/${fixture}.json`, document.baseURI));
       if (!response.ok) throw new Error('This fixture is available in the developer source checkout.');
       const issue = parseIssueDocument(await response.json());
-      if (version === mountVersion) {
+      if (version === loadVersion) {
         mockupIssue = issue;
         await showIssue(issue, createReaderState(issue));
       }
     } catch (error) {
-      if (version === mountVersion) {
+      if (version === loadVersion) {
         mockups.showSample();
         return errorMessage(error, 'The fixture could not be loaded.');
       }
@@ -239,7 +248,7 @@ const restoreRecording = mountReplayControls({
     recordedPosition = undefined;
     showEditions([]);
     if (source === 'recorded') {
-      ++mountVersion;
+      ++loadVersion;
       clearReader('No editions yet. Generate from a recording or resume a saved run.');
     }
     await refreshEditions();
@@ -270,6 +279,7 @@ const restoreRecording = mountReplayControls({
 function setConfiguring(active: boolean): void {
   configuring = active;
   editionPicker.disabled = active || !latestEdition;
+  recordedAppearance.disabled = active;
   readerRoot.querySelectorAll<HTMLButtonElement>('button[data-vd-vote-value]').forEach(button => {
     button.disabled = active;
   });
@@ -282,7 +292,7 @@ function selectSource(next: Source): void {
   else if (visible && reader) recordedPosition = { issueId: visible.detail.issue.issueId, state: reader.getState() };
   source = next;
   readingVersion += 1;
-  mountVersion += 1;
+  loadVersion += 1;
   mockupMode.setAttribute('aria-pressed', String(source === 'mockups'));
   recordedMode.setAttribute('aria-pressed', String(source === 'recorded'));
   element('#mockup-controls').hidden = source !== 'mockups';

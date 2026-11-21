@@ -19,12 +19,12 @@ A renderer family is a layout structure that several designs can share. A design
 
 | Family | Structure | Stock design | Real-world references |
 | --- | --- | --- | --- |
-| `inscription` | Framed, centred notice board | `oral-accounts`, Accounts of the Settlements (ancient) | The Roman *Acta Diurna* notice board, painted election notices at Pompeii (red and black), Trajan's Column capitals (Cinzel), the *tabula ansata* panel for the masthead, Greek key friezes, and the *hedera* ivy leaf as divider |
-| `folio` | Framed writing field | `shang`, Records of the King’s House (Ancient China) | The paired eyes and symmetrical horns of a [Shang bronze cauldron](https://www.metmuseum.org/art/collection/search/60594) crown the masthead. Inside the bronze rim, pale seams and growth rings trace the plates of a turtle shell. |
-| `folio` | Stacked painted registers | `egypt`, The Two Lands (Ancient Egypt) | The [agricultural registers in Nakht’s chapel](https://www.metmuseum.org/art/collection/search/548438) inspire the horizontal bands. A winged sun and ochre rules sit on pale papyrus with fine horizontal fibres over broader vertical strips. |
-| `folio` | Letters on dyed paper | `heian`, Letters from the Capital (Medieval Japan) | The dyed sheets of the [Gen’ei poetry manuscript](https://emuseum.nich.go.jp/detail?content_base_id=100171&content_part_id=000&langId=en) inspire the wisteria tint. Fine grain and scattered fibres suggest handmade washi. A flowering branch opens the ordinary edition; a folded slip closes the page. |
-| `broadsheet` | Ruled multi-column print page | `victorian`, The Civic Chronicle (Classical era onward) | *The Illustrated London News* and *Harper's Weekly* mastheads with medallion ears, *The Times* Oxford rules, printers' factotum initials and fleurons, and *Le Petit Journal* for the breaking edition |
-| `feed` | Full-width timeline | `wire`, The Civic Wire (Modern era onward) | Social timelines such as Bluesky: round avatars, a byline above each post and an action row below. Wide posts put photos or data cards beside the text. |
+| `inscription` | Framed, centred notice board | `oral-accounts`, e.g. Annals of Rome | The Roman *Acta Diurna* notice board, painted election notices at Pompeii (red and black), Trajan's Column capitals (Cinzel), the *tabula ansata* panel for the masthead, Greek key friezes, and the *hedera* ivy leaf as divider |
+| `folio` | Framed writing field | `shang`, Records of the Shang Court | The paired eyes and symmetrical horns of a [Shang bronze cauldron](https://www.metmuseum.org/art/collection/search/60594) crown the masthead. Inside the bronze rim, pale seams and growth rings trace the plates of a turtle shell. |
+| `folio` | Stacked painted registers | `egypt`, The Two Lands Register or The Nubian Ledger | The [agricultural registers in Nakht’s chapel](https://www.metmuseum.org/art/collection/search/548438) inspire the horizontal bands. A winged sun and ochre rules sit on pale papyrus with fine horizontal fibres over broader vertical strips. |
+| `folio` | Letters on dyed paper | `heian`, e.g. Letters from the Heian Court | The dyed sheets of the [Gen’ei poetry manuscript](https://emuseum.nich.go.jp/detail?content_base_id=100171&content_part_id=000&langId=en) inspire the wisteria tint. Fine grain and scattered fibres suggest handmade washi. A flowering branch opens the ordinary edition; a folded slip closes the page. |
+| `broadsheet` | Ruled multi-column print page | `victorian`, e.g. Chronicle of France | *The Illustrated London News* and *Harper's Weekly* mastheads with medallion ears, *The Times* Oxford rules, printers' factotum initials and fleurons, and *Le Petit Journal* for the breaking edition |
+| `feed` | Full-width timeline | `wire`, e.g. France Wire | Social timelines such as Bluesky: round avatars, a byline above each post and an action row below. Wide posts put photos or data cards beside the text. |
 
 Every design has three front-page layouts. An ordinary page opens with one story followed by briefs. A breaking page gives the lead the most space. An analysis page pairs it with an evidence table. On a narrow sheet, the table follows the lead text.
 
@@ -39,7 +39,7 @@ Designs must keep these rules so the browser reader and the game texture match:
 
 ## Add or change a design
 
-1. Add or edit the design JSON in `vox-agents/newspaper/designs/`, choosing its family, tokens, fonts, assets, layouts and page labels.
+1. Add or edit the design JSON in `vox-agents/newspaper/designs/`. Choose its family, tokens, fonts, assets, layouts and page labels, then set its [era and civilization weights](editorial.md#pages-and-designs).
 2. Keep shared layout rules in `vox-agents/newspaper/src/reader/families/<family>.css`, scoped by `data-design`. Scope a design’s own stylesheet by `data-publication-design` and import it after its family in `reader.css`.
 3. Put design-owned artwork in `newspaper/public/assets/designs/<design id>/` and register it as described in the [asset notes](editorial.md#design-assets).
-4. Check every layout at wide and narrow widths, and for the feed family with several tints, in the preview (`npm run newspaper:preview -w vox-agents`).
+4. In the preview (`npm run newspaper:preview -w vox-agents`), check every layout at wide and narrow widths. Enter a civilization to try its masthead, and try several tints for the feed family.

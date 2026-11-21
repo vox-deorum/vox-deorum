@@ -19,6 +19,7 @@ async function catalogue() {
     constants: {
       ...base.constants,
       terms: {
+        ...base.constants.terms,
         ruler: "self.ideology == 'Order' ? 'the Party' : 'the Crown'",
         capital: 'self.capital.name',
         zero: '0',
@@ -78,6 +79,7 @@ describe('printable terms', () => {
     const batch = { facts, constants: scaleEditorialConstants(config.constants, 1) };
     const terms = await evaluateEditorialTerms(compiled, batch);
 
+    expect(terms.get('civilization')).toEqual({ value: 'France', sources: [owner.source] });
     expect(terms.get('ruler')?.value).toBe('the Party');
     expect(terms.get('capital')?.value).toBe('Paris');
     expect(terms.get('capital')?.sources).toEqual(expect.arrayContaining([citySource]));

@@ -104,6 +104,29 @@ describe('editorial eligibility', () => {
 });
 
 describe('masthead terms', () => {
+  it('should use the civilization title, then its pattern, then the base title', async () => {
+    const config = createConfig();
+    config.designs[0].civilizationTitles = {
+      France: 'Special edition',
+      Rome: 'The {{terms.capital}} Register',
+      '*': '{{terms.civilization}} Register',
+    };
+    const source = { table: 'PlayerSummaries' as const, id: 99, turn: 5, createdAt: 500 };
+    const candidate = createCandidate(config, 'home');
+
+    for (const [name, title] of [['France', 'Special edition'], ['Rome', 'Rome Register']] as const) {
+      const result = await render(config, [candidate], 'masthead', new Map([
+        ['civilization', { value: name, sources: [source] }],
+      ]));
+      expect(result.issue.publication.title).toBe(title);
+      expect(result.mastheadSources).toEqual([source]);
+    }
+
+    const fallback = await render(config, [candidate]);
+    expect(fallback.issue.publication.title).toBe(config.designs[0].title);
+    expect(fallback.mastheadSources).toEqual([]);
+  });
+
   it('should leave out a design while its title or motto has an unresolved term', async () => {
     const config = createConfig();
     config.designs[0].title = 'The {{terms.capital}} Herald';

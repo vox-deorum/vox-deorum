@@ -3,9 +3,34 @@
     "id": "victorian",
     "version": "1",
     "title": "The Civic Chronicle",
-    "when": "['Classical', 'Medieval', 'Renaissance', 'Industrial', 'Modern', 'Atomic', 'Information', 'Future'].includes(self.era?.replace(' Era', ''))",
+    "civilizationTitles": {
+      "*": "Chronicle of {{terms.civilization}}"
+    },
+    "when": "['Medieval', 'Renaissance', 'Industrial', 'Modern', 'Atomic'].includes(self.era?.replace(' Era', ''))",
     "weight": {
-      "base": 25
+      "base": 0,
+      "adjustments": [
+        {
+          "when": "self.era?.replace(' Era', '') === 'Medieval'",
+          "add": 15
+        },
+        {
+          "when": "self.era?.replace(' Era', '') === 'Renaissance'",
+          "add": 25
+        },
+        {
+          "when": "self.era?.replace(' Era', '') === 'Industrial'",
+          "add": 60
+        },
+        {
+          "when": "self.era?.replace(' Era', '') === 'Modern'",
+          "add": 30
+        },
+        {
+          "when": "self.era?.replace(' Era', '') === 'Atomic'",
+          "add": 15
+        }
+      ]
     },
     "presentation": {
       "schemaVersion": 1,

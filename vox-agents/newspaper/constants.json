@@ -21,6 +21,9 @@
     "majority": 0.5,
     "dominant": 0.75
   },
+  "terms": {
+    "civilization": "self.knows('name') ? self.name.trim() || undefined : undefined"
+  },
   "types": {
     "settlers": ["Settler", "Pioneer", "Colonist"],
     "workers": ["Worker", "Work Boat"],

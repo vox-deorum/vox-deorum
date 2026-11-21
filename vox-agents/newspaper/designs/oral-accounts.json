@@ -2,12 +2,19 @@
   {
     "id": "oral-accounts",
     "version": "1",
-    "title": "Accounts of the Settlements",
+    "title": "Settlement Annals",
+    "civilizationTitles": {
+      "*": "Annals of {{terms.civilization}}"
+    },
     "weight": {
       "base": 10,
       "adjustments": [
         {
-          "when": "['Classical', 'Medieval', 'Renaissance', 'Industrial', 'Modern', 'Atomic', 'Information', 'Future'].includes(self.era?.replace(' Era', ''))",
+          "when": "self.era?.replace(' Era', '') === 'Classical'",
+          "add": 5
+        },
+        {
+          "when": "['Medieval', 'Renaissance', 'Industrial', 'Modern', 'Atomic', 'Information', 'Future'].includes(self.era?.replace(' Era', ''))",
           "add": -10
         }
       ]

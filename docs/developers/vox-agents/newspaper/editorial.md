@@ -131,7 +131,20 @@ For a single group, prose can print `{{key}}` and `{{count}}`. Expressions can r
 
 The front page is unconditional. Each design needs one unconditional ordinary layout and one unconditional breaking layout, both with a constant positive weight. Other pages can use `when`; designs and extra layouts can also adjust their weights. Section labels must name configured pages, and fonts and ornaments are validated against registered renderer assets, including assets declared by built-in designs.
 
-The editor favors `shang` for Ancient China, `egypt` for Ancient Egypt and `heian` for Medieval Japan. These designs match the receiver’s recorded civilization name in English and era. The general choices are `oral-accounts` for Ancient or unknown eras, `victorian` from Classical onward and `wire` from Modern onward. Published issues retain their chosen presentation and bundled artwork IDs.
+Designs match the receiver’s era and, where relevant, their recorded civilization name in English.
+
+| Design | Where it appears |
+| --- | --- |
+| `oral-accounts` | General option in Ancient, Classical and unknown eras |
+| `shang` | Strong in Ancient China, with a smaller chance in Classical |
+| `egypt` | Egypt and Nubia in Ancient and Classical, with higher weights in Ancient and for Egypt |
+| `heian` | Japan from Classical through Renaissance, peaking in Medieval; a smaller chance in Korea and China over the same span |
+| `victorian` | General option from Medieval through Atomic, peaking in Industrial |
+| `wire` | General option from Modern onward, gaining weight as the game advances; the sole stock design from Information onward |
+
+When adding a design, start around 50 to 100 for a strong fit, 10 to 25 for a general fallback, and 4 to 8 for an occasional alternative. Compare the combined weights in each overlapping era and keep a general option available for civilizations without a match.
+
+On a fresh draw, each eligible design’s chance is its weight divided by the total. By default, the current design stays if it is eligible and has at least 60% of the strongest eligible weight. A low weight gives a design a chance on a fresh draw without displacing an established design. Published issues keep their chosen presentation and bundled artwork IDs.
 
 ### Design assets
 
@@ -148,15 +161,11 @@ To add a local asset:
 
 ### Masthead and terms
 
-A design's `title` and optional `motto` may print [terms](triggers/constants.md#terms), the named printable expressions a catalogue defines under `constants.terms`. `presentIssue` substitutes the resolved terms into both and uses `defaults.publicationTitle` only when the resolved title is empty. `chooseDesign` rejects a design whose title or motto still holds an unresolved placeholder before it weights designs, so an ineligible design is never chosen, including when it was the previous issue's design. Layout availability is checked only for designs that pass.
+A design can name its paper after the receiving civilization. The stock `civilization` [term](triggers/constants.md#terms) reads its recorded short name. Use `civilizationTitles` for titles keyed by that name, with `"*"` as a pattern for any named civilization. For example, the wire uses `{{terms.civilization}} Wire`, while the papyrus design has a separate title for Nubia. The editor tries the exact name as recorded, including its language and capitalization, then the pattern, then `title`. An overlay can set `civilizationTitles` to `null` to use only its base title.
 
-| Masthead field | Behavior |
-| --- | --- |
-| `title` | Resolved title stored in `publication.title`; also named in each item's "From the editors of ..." source note |
-| `motto` | Optional resolved line stored in `publication.motto`; the reader draws it under the title |
-| Evidence | The rows read by printed terms join the decision's evidence; article sources stay with their own article |
+Titles and the optional `motto` can print terms. The editor skips a civilization-specific title if it cannot resolve all its terms. An unresolved placeholder in the final title or motto makes the design ineligible. If the base title resolves to empty text, the editor uses `defaults.publicationTitle`.
 
-The resolved values are part of the stored issue, so a later change to a term or design does not rewrite an older masthead. A publication without `motto` renders as before.
+The issue stores the resolved title and motto. Each article's editor credit uses the same title. The decision cites the facts used to choose or print the masthead, while article sources stay with their own articles.
 
 ### Example: tune the settler story
 

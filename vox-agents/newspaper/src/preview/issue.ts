@@ -7,6 +7,7 @@ import {
   type IssueDocument,
   type NewspaperLayoutVariant,
 } from "../../../src/newspaper/contracts/issue.js";
+import { resolveMasthead } from "../../../src/newspaper/editorial/presentation/masthead.js";
 import { readBuiltInDesignDocuments } from "../design-assets-source.js";
 import ordinaryFixture from "../../fixtures/victorian-ordinary.json";
 import breakingFixture from "../../fixtures/victorian-breaking.json";
@@ -16,6 +17,7 @@ import pages from "../../pages.json";
 const previewDesignSchema = issuePublicationSchema.omit({ designId: true, designVersion: true }).extend({
   id: z.string().min(1),
   version: z.string().min(1),
+  civilizationTitles: z.record(z.string(), z.string()).nullable().optional(),
   layouts: z.array(z.object({ variant: newspaperLayoutVariantSchema })).min(1),
   pageLabels: z.record(z.string(), z.string()).default({}),
   assetDefinitions: z.array(z.object({ id: z.string().min(1), kind: z.string() })).default([]),
@@ -35,17 +37,25 @@ export function readPreviewDesigns(): PreviewDesign[] {
   return readBuiltInDesignDocuments().flatMap(document => z.array(previewDesignSchema).parse(document));
 }
 
-/** Use fixture stories and the current design's masthead, section labels and lead artwork, with an optional accent override. */
-export function createPreviewIssue(design: PreviewDesign, layout: NewspaperLayoutVariant, accentColor?: string): IssueDocument {
+/** Use fixture stories with the chosen design, sample civilization and accent. */
+export function createPreviewIssue(
+  design: PreviewDesign,
+  layout: NewspaperLayoutVariant,
+  accentColor?: string,
+  civilizationName?: string
+): IssueDocument {
   const sample = samples[layout];
   const itemIds = sample.pages[0].itemIds;
   const image = design.assetDefinitions.find(asset => asset.kind === "image");
+  const name = civilizationName?.trim();
+  const masthead = resolveMasthead(design, new Map(name ? [["civilization", { value: name, sources: [] }]] : []));
+  if (!masthead) throw new Error(`The masthead for ${design.id} needs terms the mockup cannot supply.`);
   return {
     ...sample,
     issueId: `preview-${design.id}-${layout}`,
     publication: {
-      title: design.title,
-      motto: design.motto,
+      title: masthead.title,
+      motto: masthead.motto,
       designId: design.id,
       designVersion: design.version,
       presentation: accentColor

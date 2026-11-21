@@ -3,9 +3,40 @@
     "id": "heian",
     "version": "1",
     "title": "Letters from the Capital",
-    "when": "self.name === 'Japan' && self.era?.replace(' Era', '') === 'Medieval'",
+    "civilizationTitles": {
+      "Japan": "Letters from the Heian Court",
+      "Korea": "Letters from the Korean Court",
+      "China": "Letters from the Chinese Court"
+    },
+    "when": "['Japan', 'Korea', 'China'].includes(self.name) && ['Classical', 'Medieval', 'Renaissance'].includes(self.era?.replace(' Era', ''))",
     "weight": {
-      "base": 100
+      "base": 0,
+      "adjustments": [
+        {
+          "when": "self.name === 'Japan' && self.era?.replace(' Era', '') === 'Classical'",
+          "add": 50
+        },
+        {
+          "when": "self.name === 'Japan' && self.era?.replace(' Era', '') === 'Medieval'",
+          "add": 80
+        },
+        {
+          "when": "self.name === 'Japan' && self.era?.replace(' Era', '') === 'Renaissance'",
+          "add": 55
+        },
+        {
+          "when": "['Korea', 'China'].includes(self.name) && self.era?.replace(' Era', '') === 'Classical'",
+          "add": 4
+        },
+        {
+          "when": "['Korea', 'China'].includes(self.name) && self.era?.replace(' Era', '') === 'Medieval'",
+          "add": 5
+        },
+        {
+          "when": "['Korea', 'China'].includes(self.name) && self.era?.replace(' Era', '') === 'Renaissance'",
+          "add": 6
+        }
+      ]
     },
     "presentation": {
       "schemaVersion": 1,

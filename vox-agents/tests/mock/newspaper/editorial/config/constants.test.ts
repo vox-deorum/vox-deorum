@@ -89,15 +89,16 @@ describe('editorial constants and shortcuts', () => {
   });
 
   it('should load printable terms in the authored and serialized catalogue', async () => {
+    const stock = await loadEditorialConfig();
     const terms = {
       capital: 'self.capital.name',
       ruler: "self.ideology == 'Order' ? 'the Party' : 'the Crown'",
     };
     await writeConstants({ terms });
     const config = await loadEditorialConfig(directory);
-    expect(config.constants.terms).toEqual(terms);
+    expect(config.constants.terms).toEqual({ ...stock.constants.terms, ...terms });
     const restored = await parseEditorialConfig(JSON.parse(JSON.stringify(config)));
-    expect(restored.constants.terms).toEqual(terms);
+    expect(restored.constants.terms).toEqual(config.constants.terms);
     const { terms: _terms, ...constants } = config.constants;
     const withoutTerms = await parseEditorialConfig({ ...config, constants });
     expect(withoutTerms.constants.terms).toBeUndefined();

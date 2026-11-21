@@ -38,6 +38,18 @@ function check(evidence: NewspaperEvidence, state = createInitialPublicationStat
     evidence, facts: buildNewspaperFacts(evidence), speedMultiplier: 1, state, config: catalogue });
 }
 
+/** Evaluate the stock designs against the receiver's recorded civilization and era. */
+async function designChoices(name: string, era?: string) {
+  const evidence = fixture();
+  evidence.players[0].values.Era = era;
+  const facts = buildNewspaperFacts(evidence, { playerIdentities: { 0: { name } } });
+  const weights = await evaluatePresentation(config, await getEditorialExpressions(config), { facts });
+  return {
+    weights,
+    byId: Object.fromEntries(config.designs.map(design => [design.id, weights.get(design)!])),
+  };
+}
+
 /** Build minimal history for feedback calculations. */
 function historyItem(id: string, tags: string[], seriesKeys = ['trade/0/1']): PublishedItemRecord {
   return { id, issueId: 'old', turn: 1, tags, seriesKeys, templateIds: ['authored'], triggerIds: ['observed'],
@@ -565,20 +577,56 @@ describe('editorial engine', () => {
       expect(retried.state.lastCheckTurn).toBe(20);
     });
 
-    it('should exclude the early account from all known later-era choices while preserving unknown and Ancient coverage', async () => {
-      const early = config.designs.find(design => design.id === 'oral-accounts')!;
-      const compiled = await getEditorialExpressions(config);
+    it('should cover every era for a civilization without a regional design', async () => {
       for (const [era, expected] of [
-        ['Classical', 0], ['Classical Era', 0], ['Modern', 0], ['Modern Era', 0], ['Future', 0], ['Future Era', 0],
-        [undefined, 10], ['Unrecognized', 10], ['Ancient', 10], ['Ancient Era', 10],
+        [undefined, ['oral-accounts']], ['Unrecognized', ['oral-accounts']],
+        ['Ancient', ['oral-accounts']], ['Classical', ['oral-accounts']], ['Classical Era', ['oral-accounts']],
+        ['Medieval Era', ['victorian']], ['Renaissance', ['victorian']], ['Industrial', ['victorian']],
+        ['Modern', ['victorian', 'wire']], ['Atomic Era', ['victorian', 'wire']],
+        ['Information Era', ['wire']], ['Future', ['wire']],
       ] as const) {
-        const evidence = fixture();
-        evidence.players[0].values.Era = era;
-        const weights = await evaluatePresentation(config, compiled, { facts: buildNewspaperFacts(evidence) });
-        expect(weights.get(early)).toBe(expected);
-        if (expected === 0)
-          expect(chooseDesign(config, weights, 'oral-accounts', () => 0.99)?.id).not.toBe('oral-accounts');
+        const { byId, weights } = await designChoices('France', era);
+        expect(Object.keys(byId).filter(id => byId[id] > 0).sort(), era).toEqual(expected);
+        if (era === 'Information Era')
+          expect(chooseDesign(config, weights, 'victorian', () => 0)?.id).toBe('wire');
+        if (era === 'Modern' || era === 'Atomic Era')
+          expect(byId.wire).toBeGreaterThan(byId.victorian);
       }
+    });
+
+    it('should favor Heian in Japan and make it an occasional choice in Korea and China', async () => {
+      for (const [era, general] of [
+        ['Classical Era', 'oral-accounts'], ['Medieval', 'victorian'], ['Renaissance Era', 'victorian'],
+      ] as const) {
+        const japan = (await designChoices('Japan', era)).byId;
+        expect(japan.heian, era).toBeGreaterThan(japan[general]);
+        for (const name of ['Korea', 'China']) {
+          const { byId } = await designChoices(name, era);
+          expect(byId.heian, `${name}, ${era}`).toBeGreaterThan(0);
+          expect(byId.heian, `${name}, ${era}`).toBeLessThan(byId[general]);
+        }
+      }
+      expect((await designChoices('Japan', 'Ancient')).byId.heian).toBe(0);
+      expect((await designChoices('Japan', 'Industrial')).byId.heian).toBe(0);
+    });
+
+    it('should offer Egypt to Nubia and let China draw again when Shang loses weight in Classical', async () => {
+      for (const era of ['Ancient Era', 'Classical']) {
+        const egypt = (await designChoices('Egypt', era)).byId;
+        const nubia = (await designChoices('Nubia', era)).byId;
+        expect(nubia.egypt, era).toBeGreaterThan(0);
+        expect(egypt.egypt, era).toBeGreaterThan(nubia.egypt);
+      }
+      expect((await designChoices('Nubia', 'Medieval')).byId.egypt).toBe(0);
+
+      const ancient = await designChoices('China', 'Ancient');
+      const classical = await designChoices('China', 'Classical Era');
+      expect(ancient.byId.shang).toBeGreaterThan(ancient.byId['oral-accounts']);
+      expect(classical.byId.shang).toBeGreaterThan(0);
+      expect(classical.byId.shang).toBeLessThan(ancient.byId.shang);
+      const draws = [0, 0.25, 0.5, 0.75, 1 - Number.EPSILON];
+      const choices = draws.map(draw => chooseDesign(config, classical.weights, 'shang', () => draw)?.id);
+      expect(choices).toEqual(expect.arrayContaining(['shang', 'oral-accounts']));
     });
 
   });

@@ -20,6 +20,7 @@
       <div id="mockup-controls">
         <div class="host-toolbar-row">
           <label>Design <select id="preview-design"></select></label>
+          <label>Civilization <input id="preview-civilization" type="text" placeholder="Default title" /></label>
           <label>Front page layout <select id="preview-layout"></select></label>
           <label>Tint <select id="preview-tint"></select></label>
           <label>Custom tint <input id="preview-custom-tint" type="color" value="#6d2c91" /></label>
@@ -34,6 +35,12 @@
           <button id="replay-stop" type="button" hidden>Stop after current check</button>
           <output id="replay-status" aria-live="polite">Choose a recording to generate editions.</output>
         </div>
+        <fieldset id="recorded-appearance" class="host-toolbar-row host-appearance" aria-label="Edition appearance">
+          <label>Design <select id="recorded-design"></select></label>
+          <label>Front page layout <select id="recorded-layout"></select></label>
+          <label>Tint <select id="recorded-tint"></select></label>
+          <label>Custom tint <input id="recorded-custom-tint" type="color" value="#6d2c91" /></label>
+        </fieldset>
         <details id="recording-details" class="host-recording">
           <summary>Recording</summary>
           <form id="replay-form" class="host-replay">

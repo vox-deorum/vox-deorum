@@ -78,6 +78,7 @@ const designSchema = eligibleSchema.extend({
   id: z.string().min(1),
   version: z.string().min(1),
   title: z.string().min(1),
+  civilizationTitles: z.record(z.string().min(1), z.string().trim().min(1)).nullable().optional(),
   motto: z.string().min(1).optional(),
   presentation: presentationSchema,
   layouts: z.array(layoutSchema).min(1),

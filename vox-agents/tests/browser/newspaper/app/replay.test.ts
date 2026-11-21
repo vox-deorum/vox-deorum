@@ -93,6 +93,27 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('replay b
     await host?.close();
   });
 
+  it('should preview the selected civilization title and restore the default when cleared', async context => {
+    if (!browser) { context.skip(unavailable); return; }
+    const page = await browser.newPage({ viewport: { width: 390, height: 850 } });
+    try {
+      await page.goto(`${host.url}/newspaper/`);
+      await page.locator('#preview-design').selectOption('wire');
+      const masthead = page.locator('[data-publication-design="wire"] .vd-title');
+      const civilization = page.getByRole('textbox', { name: 'Civilization' });
+      const defaultTitle = await masthead.innerText();
+      const sampleName = 'New Zealand';
+      await civilization.fill(sampleName);
+      await civilization.press('Tab');
+      await masthead.filter({ hasText: sampleName }).waitFor();
+      await civilization.fill('');
+      await civilization.press('Tab');
+      await masthead.filter({ hasText: defaultTitle }).waitFor();
+    } finally {
+      await page.close();
+    }
+  });
+
   for (const kind of ['preview', 'built'] as const) {
   it(`should generate, stop, continue and resume from the ${kind} host`, async context => {
     if (!browser) { context.skip(unavailable); return; }
@@ -195,6 +216,55 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('replay b
     }
   }, 60_000);
   }
+
+  it('should restyle a saved edition while preserving its content, section and vote', async context => {
+    if (!browser) { context.skip(unavailable); return; }
+    const page = await browser.newPage();
+    const detail = savedIssue();
+    detail.votes['shared-item'] = 1;
+    const issue = detail.issue;
+    let issueReads = 0;
+    const writes: string[] = [];
+    await page.route('**/api/newspaper/replay**', async route => {
+      const { pathname } = new URL(route.request().url());
+      if (route.request().method() !== 'GET') writes.push(pathname);
+      if (pathname.endsWith('/issues')) return json(route, { issues: [detail.index] });
+      if (pathname.includes('/issues/')) { issueReads += 1; return json(route, detail); }
+      return json(route, session());
+    });
+    try {
+      await page.goto(`${host.url}/newspaper/`);
+      await openRecorded(page);
+      const root = page.locator('#reader-root');
+      const front = root.locator('[data-vd-region=page]').first();
+      const section = page.getByRole('tab', { name: 'Analysis' });
+      await section.click();
+      const design = page.locator('#recorded-design');
+      const layout = page.locator('#recorded-layout');
+      const tint = page.locator('#recorded-tint');
+      await design.selectOption('shang');
+      await layout.selectOption('breaking');
+      const customTint = '#123456';
+      await page.locator('#recorded-custom-tint').fill(customTint);
+      expect(await root.getAttribute('data-publication-design')).toBe('shang');
+      expect(await front.getAttribute('data-layout')).toBe('breaking');
+      expect(await root.evaluate(node => node.style.getPropertyValue('--vd-accent'))).toBe(customTint);
+      expect(await root.locator('.vd-title').textContent()).toBe(issue.publication.title);
+      expect(await section.getAttribute('aria-selected')).toBe('true');
+      const activePage = root.locator('[data-vd-region=page]:not([hidden])');
+      expect(await activePage.locator('.vd-headline').textContent()).toBe('Shared report');
+      expect(await activePage.locator('[data-vd-vote-value=up]').getAttribute('aria-pressed')).toBe('true');
+
+      await design.selectOption('');
+      await layout.selectOption('');
+      await tint.selectOption('');
+      expect(await root.getAttribute('data-publication-design')).toBe(issue.publication.designId);
+      expect(await front.getAttribute('data-layout')).toBe(issue.pages[0].layout);
+      expect(await root.evaluate(node => node.style.getPropertyValue('--vd-accent'))).toBe('');
+      expect(issueReads).toBe(1);
+      expect(writes).toEqual([]);
+    } finally { await page.close(); }
+  }, 60_000);
 
   it('should drain queued votes in order before advancing even after switching to mockups', async context => {
     if (!browser) { context.skip(unavailable); return; }

@@ -1,6 +1,6 @@
 # Newspaper trigger constants and shortcuts
 
-The built-in `vox-agents/newspaper/constants.json` supplies the names used by the stock catalogue and merges with overlays. Pair shortcuts are available to both stock and overlay rules. The stock file does not define terms yet; the probe overlay in `vox-agents/newspaper/probes/constants.json` shows how to add them.
+The built-in `vox-agents/newspaper/constants.json` supplies the names used by the stock catalogue and merges with overlays. The stock `civilization` term supplies the receiving civilization's name for newspaper titles. The probe overlay in `vox-agents/newspaper/probes/constants.json` shows how to add other terms.
 
 **Constants** give names to the numbers that [trigger rules](overview.md) compare against, such as `neighboring` for 7 tiles. **Shortcuts** give names to small expressions that many rules share, such as `city.is.neighbor`. **Terms** give printable names to expressions that read the facts, so prose, titles and mottos can share a phrase. This page is for developers writing or tuning rules. All three are configured in a catalogue's `constants.json`, and changing one there changes everything that uses it.
 
@@ -12,7 +12,7 @@ The built-in `vox-agents/newspaper/constants.json` supplies the names used by th
 | `shares` | Fractions from 0 to 1 | A plain name | `majority` |
 | `types` | Lists of recorded names | A plain name holding a list | `settlers` |
 | `shortcuts` | Expressions grouped by subject | `<subject>.is.<name>` | `city.is.neighbor` |
-| `terms` | Printable expressions that return text or a finite number | `{{terms.<name>}}` in prose, titles and mottos | `{{terms.ruler}}` |
+| `terms` | Printable expressions that return text or a finite number | `{{terms.<name>}}` in prose, titles and mottos | `{{terms.civilization}}` |
 
 ## Distance
 
@@ -118,7 +118,7 @@ Style rules can use the same shortcuts. A named religion can inform the newspape
 
 A term is a named expression that reads the check's global facts and returns text or a finite number. Terms are for printing only: expressions continue to read facts directly, and terms are not added as expression bindings. Prose uses `{{terms.<name>}}`, and a design `title` or `motto` can use the same placeholder. Term names follow the same identifier and reserved-name rules as constants. See [masthead and terms](../editorial.md#masthead-and-terms).
 
-The editor evaluates each term once per check with the same sandbox, visible facts and execution budget as the rules. A term keeps the recorded rows its expression read. An expression that fails, reads a [hidden fact](facts.md#hidden-and-missing-facts), or returns another type supplies no value. The decision records runtime errors and leaves ordinary missing facts out of the error log. A missing term makes a variant that prints it ineligible. The same rule applies to a design whose title or motto prints it.
+The editor evaluates each term once per check with the same sandbox, visible facts and execution budget as the rules. A term keeps the recorded rows its expression read. An expression that fails, reads a [hidden fact](facts.md#hidden-and-missing-facts), or returns another type supplies no value. The decision records runtime errors and leaves ordinary missing facts out of the error log. A missing term makes article copy or a masthead that needs it ineligible. A design can still use a [fallback title](../editorial.md#masthead-and-terms).
 
 | Term | Expression | Prints |
 | --- | --- | --- |

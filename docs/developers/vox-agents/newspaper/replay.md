@@ -84,7 +84,7 @@ npm run dev --workspace=vox-agents
 
 Normal VD resolves relative paths against its server working directory. Running Vite alone serves the shell but does not supply replay routes.
 
-Both hosts open in Mockups. Its design, front page layout, and tint controls build sample stories from the built-in designs. A source checkout also accepts `?fixture=` links for the developer fixtures; installed builds provide only the packaged Victorian ordinary fixture. Switch to Recorded to generate or reopen editions.
+Both hosts open in Mockups. Choose a built-in design, front page layout, and tint to see sample stories. Enter a recorded civilization name, such as Nubia, to try a customized masthead where the design supports one. A source checkout also accepts `?fixture=` links for the developer fixtures; installed builds provide only the packaged Victorian ordinary fixture. Switch to Recorded to generate or reopen editions.
 
 ### Recorded controls
 
@@ -95,6 +95,7 @@ Both hosts open in Mockups. Its design, front page layout, and tint controls bui
 | Stop after current check | Finishes the check in progress, then stops the batch. Completed checks remain saved. |
 | Continue | Continues the open run from its cursor. It is hidden once the run is complete. |
 | Edition | Saved editions for the open run, newest first. Selecting one opens its stored prose and decision without generating again. The newest edition opens after a batch unless you selected or focused another edition. |
+| Edition appearance | Pick a built-in design, a front page layout, and a preset or custom tint. These choices apply to editions you open in this browser tab, while the saved masthead, articles, votes, and editorial decisions stay intact. Choose **As published** for design and layout, and **Design default** for tint, to restore the original appearance. |
 | Saved run | Recording > Saved run reopens a run from its run ID and, when not the default, its output path. Enter the recording path and Player ID as well. |
 | Advanced | Holds the replay purpose, comparison duration, duration units, speed multiplier override, new or branch mode, parent run for a branch, editorial configuration directory, publication frequency, LLM preference, and Save preferences. |
 
