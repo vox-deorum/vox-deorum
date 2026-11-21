@@ -16,6 +16,7 @@ type BatchFacts = Pick<ExpressionBatch, 'constants' | 'facts'>;
 /** Built-in formats keyed by placeholder name patterns; `*` matches any text. */
 const defaultFormatPatterns: Readonly<Record<string, string>> = {
   '*happiness*': 'percent',
+  '*weariness*': 'percent',
   '*population*': 'million',
   '*points*': 'point|points',
   '*turns*': 'turn|turns',

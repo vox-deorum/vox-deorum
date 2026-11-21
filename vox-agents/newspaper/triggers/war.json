@@ -591,7 +591,7 @@
     ],
     "values": {
       "opponent": "pair.other.knows('name') ? pair.other.name : null",
-      "weariness": "self.relation(pair.other).warWeariness"
+      "wearinessPercent": "self.relation(pair.other).warWeariness"
     },
     "tier": "routine",
     "adjust": "pair.other.stake.front",
@@ -608,7 +608,7 @@
     ],
     "values": {
       "opponent": "pair.other.name",
-      "weariness": "self.relation(pair.other).warWeariness"
+      "wearinessPercent": "self.relation(pair.other).warWeariness"
     },
     "tier": "notable",
     "adjust": "pair.other.stake.front",

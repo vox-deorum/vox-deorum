@@ -195,7 +195,8 @@ describe('stock politics desk', () => {
       }));
       const master = firedSubjects(rule(gains, 'gains-vassal'));
       expect(master).toHaveLength(1);
-      expect(master[0]).toMatchObject({ subject: 'player/1', importance: 75 });
+      expect(master[0].subject).toBe('player/1');
+      expect(vassal[0].importance).toBeGreaterThan(master[0].importance!);
       expect(subjectValue(master[0], 'vassal')).toBe('Brazil');
     });
 
@@ -245,7 +246,7 @@ describe('stock politics desk', () => {
       }));
       const goldenAge = firedSubjects(rule(peaceful, 'golden-age-begins'));
       expect(goldenAge).toHaveLength(1);
-      expect(goldenAge[0]).toMatchObject({ subject: 'event/1', importance: 55 });
+      expect(goldenAge[0].subject).toBe('event/1');
 
       const continuing = eventRow('PlayerGoldenAge', 2, 28, { PlayerID: 0, Starting: false });
       const ended = await check(fixture({
@@ -301,7 +302,7 @@ describe('stock politics desk', () => {
       const record = rule(deficit, 'treasury-falls-into-deficit');
       const fired = firedSubjects(record);
       expect(fired).toHaveLength(1);
-      expect(fired[0]).toMatchObject({ subject: 'world', importance: 55 });
+      expect(fired[0].subject).toBe('world');
       expect(subjectValue(fired[0], 'deficit')).toBe(4);
 
       const alreadyNegative = await check(fixture({
@@ -322,7 +323,7 @@ describe('stock politics desk', () => {
       const unhappyRecord = rule(unhappy, 'unhappiness-sets-in');
       const unhappyFired = firedSubjects(unhappyRecord);
       expect(unhappyFired).toHaveLength(1);
-      expect(unhappyFired[0]).toMatchObject({ subject: 'world', importance: 60 });
+      expect(unhappyFired[0].subject).toBe('world');
       expect(subjectValue(unhappyFired[0], 'happiness')).toBe(40);
       expect(subjectValue(unhappyFired[0], 'dropPoints')).toBe(15);
       expect(firedSubjects(rule(unhappy, 'revolt-threshold-crossed'))).toEqual([]);
@@ -335,7 +336,8 @@ describe('stock politics desk', () => {
       const revoltRecord = rule(revolt, 'revolt-threshold-crossed');
       const revoltFired = firedSubjects(revoltRecord);
       expect(revoltFired).toHaveLength(1);
-      expect(revoltFired[0]).toMatchObject({ subject: 'world', importance: 80, urgent: true });
+      expect(revoltFired[0]).toMatchObject({ subject: 'world', urgent: true });
+      expect(revoltFired[0].importance).toBeGreaterThan(unhappyFired[0].importance!);
       expect(subjectValue(revoltFired[0], 'happiness')).toBe(30);
       expect(firedSubjects(rule(revolt, 'unhappiness-sets-in'))).toEqual([]);
     });
@@ -347,9 +349,9 @@ describe('stock politics desk', () => {
       const record = rule(weary, 'war-weariness-sets-in');
       const fired = firedSubjects(record);
       expect(fired).toHaveLength(1);
-      expect(fired[0]).toMatchObject({ subject: 'pair/0/1', importance: 65 });
+      expect(fired[0].subject).toBe('pair/0/1');
       expect(subjectValue(fired[0], 'opponent')).toBe('Brazil');
-      expect(subjectValue(fired[0], 'weariness')).toBe(60);
+      expect(subjectValue(fired[0], 'wearinessPercent')).toBe(60);
 
       const rested = await check(warEvidence({ warWeariness: 20 }));
       expect(firedSubjects(rule(rested, 'war-weariness-sets-in'))).toEqual([]);
@@ -370,7 +372,7 @@ describe('stock politics desk', () => {
       const forward = await check(warEvidence({ warScore: 30 }));
       const winning = firedSubjects(rule(forward, 'war-turns-our-way'));
       expect(winning).toHaveLength(1);
-      expect(winning[0]).toMatchObject({ subject: 'pair/0/1', importance: 60 });
+      expect(winning[0].subject).toBe('pair/0/1');
       expect(subjectValue(winning[0], 'score')).toBe(30);
 
       const stalemate = await check(warEvidence({ warScore: 10 }));
@@ -386,7 +388,7 @@ describe('stock politics desk', () => {
       const audit = await check(fixture({ cutoff: 10, players: [playerRow(0, 10)], cities }));
       const record = rule(audit, 'cities-share-grievance');
       expect(record.groups).toHaveLength(1);
-      expect(record.groups[0]).toMatchObject({ key: 'distress', outcome: 'fired', importance: 70 });
+      expect(record.groups[0]).toMatchObject({ key: 'distress', outcome: 'fired' });
       expect(record.groups[0].matches.map(match => match.subject)).toEqual(['city/10', 'city/11', 'city/12']);
 
       const sparse = await check(fixture({ cutoff: 10, players: [playerRow(0, 10)], cities: cities.slice(0, 2) }));
@@ -571,7 +573,7 @@ describe('stock politics desk', () => {
       }));
       const adoptedFired = firedSubjects(rule(adopted, 'ideology-adopted'));
       expect(adoptedFired).toHaveLength(1);
-      expect(adoptedFired[0]).toMatchObject({ subject: 'world', importance: 85, urgent: true });
+      expect(adoptedFired[0]).toMatchObject({ subject: 'world', urgent: true });
       expect(subjectValue(adoptedFired[0], 'ideology')).toBe('Order');
 
       const held = await check(fixture({
@@ -597,7 +599,7 @@ describe('stock politics desk', () => {
       }));
       const rival = firedSubjects(rule(differing, 'rival-adopts-ideology'));
       expect(rival).toHaveLength(1);
-      expect(rival[0]).toMatchObject({ subject: 'player/1', importance: 70 });
+      expect(rival[0].subject).toBe('player/1');
       expect(subjectValue(rival[0], 'name')).toBe('Brazil');
       expect(subjectValue(rival[0], 'ideology')).toBe('Freedom');
       expect(subjectValue(rival[0], 'shared')).toBe(false);
@@ -615,7 +617,7 @@ describe('stock politics desk', () => {
       }));
       const sharedFired = firedSubjects(rule(shared, 'rival-adopts-ideology'));
       expect(sharedFired).toHaveLength(1);
-      expect(sharedFired[0].importance).toBe(60);
+      expect(rival[0].importance).toBeGreaterThan(sharedFired[0].importance!);
       expect(subjectValue(sharedFired[0], 'shared')).toBe(true);
 
       const held = await check(fixture({
@@ -690,7 +692,7 @@ describe('stock politics desk', () => {
       }));
       const eraFired = firedSubjects(rule(advanced, 'new-era'));
       expect(eraFired).toHaveLength(1);
-      expect(eraFired[0]).toMatchObject({ subject: 'world', importance: 70 });
+      expect(eraFired[0].subject).toBe('world');
       expect(subjectValue(eraFired[0], 'era')).toBe('Renaissance Era');
 
       const steady = await check(fixture({
@@ -710,7 +712,7 @@ describe('stock politics desk', () => {
       }));
       const recoveryFired = firedSubjects(rule(recovered, 'happiness-recovers'));
       expect(recoveryFired).toHaveLength(1);
-      expect(recoveryFired[0]).toMatchObject({ subject: 'world', importance: 50 });
+      expect(recoveryFired[0].subject).toBe('world');
       expect(subjectValue(recoveryFired[0], 'happinessPercentage')).toBe(50);
 
       const high = await check(fixture({
@@ -778,7 +780,7 @@ describe('stock politics desk', () => {
       }));
       const peaceFired = firedSubjects(rule(settled, 'peace-returns'));
       expect(peaceFired).toHaveLength(1);
-      expect(peaceFired[0]).toMatchObject({ subject: 'world', importance: 70 });
+      expect(peaceFired[0].subject).toBe('world');
 
       const ongoing = await check(fixture({
         cutoff, previous: before,

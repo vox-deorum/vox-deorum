@@ -238,6 +238,7 @@ describe('newspaper placeholder printing', () => {
       .toBe('1 turn at 3 tiles');
     expect(substitute('{{largestPopulation}} at {{happinessPercentage}}',
       { largestPopulation: 12, happinessPercentage: 62 })).toBe('12 million at 62 percent');
+    expect(substitute('{{wearinessPercent}}', { wearinessPercent: 60 })).toBe('60 percent');
     expect(substitute('{{dropPoints}}', { dropPoints: 5 })).toBe('5 points');
     expect(substitute('{{unrestPoints}}', { unrestPoints: -1 })).toBe('-1 point');
     expect(substitute('{{nearestDistance}}', { nearestDistance: 3 })).toBe('3 tiles');

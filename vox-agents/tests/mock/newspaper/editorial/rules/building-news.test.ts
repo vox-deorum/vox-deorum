@@ -217,7 +217,7 @@ describe('stock building news', () => {
     const { audit } = await check(own('Market', ['Market'], { purchase }));
     expect(subject(audit('building-completed'))).toMatchObject({ outcome: 'false' });
     const purchased = subject(audit('building-purchased'));
-    expect(purchased).toMatchObject({ outcome: 'fired', importance: 35 });
+    expect(purchased).toMatchObject({ outcome: 'fired', tier: 'filler' });
     expect(placeholder(purchased, 'values.building')).toBe('Market');
     expect(placeholder(purchased, 'values.currency')).toBe(currency);
   });
@@ -225,7 +225,7 @@ describe('stock building news', () => {
   it('should report an activated building investment with its city', async () => {
     const { audit } = await check(investing('Monument'));
     const investment = subject(audit('building-investment-made'));
-    expect(investment).toMatchObject({ outcome: 'fired', importance: 25 });
+    expect(investment).toMatchObject({ outcome: 'fired', tier: 'filler' });
     expect(placeholder(investment, 'values.building')).toBe('Monument');
     expect(placeholder(investment, 'values.cityName')).toBe('Tours');
     expect(investment.sources).toEqual(expect.arrayContaining([
@@ -289,7 +289,7 @@ describe('stock building news', () => {
     expect(subject(audit('building-completed'))).toMatchObject({ outcome: 'false' });
     expect(subject(audit('building-purchased'))).toMatchObject({ outcome: 'false' });
     const completed = subject(audit('foreign-building-completed'));
-    expect(completed).toMatchObject({ outcome: 'fired', importance: 20 });
+    expect(completed).toMatchObject({ outcome: 'fired', tier: 'filler' });
     expect(placeholder(completed, 'values.building')).toBe('Library');
     expect(placeholder(completed, 'values.cityName')).toBe('Recife');
     expect(placeholder(completed, 'values.civilization')).toBe('Brazil');

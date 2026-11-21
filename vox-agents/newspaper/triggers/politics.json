@@ -155,7 +155,7 @@
       "lost": "player.before.cityCount - player.cityCount"
     },
     "tier": "major",
-    "adjust": ["player.stake.relation", "5 * lost"],
+    "adjust": ["player.stake.relation", "Math.min(15, 5 * lost)"],
     "tags": ["politics", "international"]
   },
   {
@@ -272,7 +272,6 @@
       "dropPoints": "self.before.happinessPercentage - self.happinessPercentage"
     },
     "tier": "notable",
-    "adjust": "dropPoints / 2",
     "tags": ["politics", "domestic"]
   }
 ]

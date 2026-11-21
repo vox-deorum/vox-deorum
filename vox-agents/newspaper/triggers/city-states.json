@@ -81,7 +81,7 @@
       "distance": "event.minorPlayer.knows('distance') ? event.minorPlayer.distance : null"
     },
     "tier": "notable",
-    "adjust": "event.minorPlayer.distance <= nearby ? 5 : 0",
+    "adjust": "event.minorPlayer.stake.relation",
     "tags": ["politics", "international"]
   },
   {
@@ -139,6 +139,7 @@
       "cityState": "player.name"
     },
     "tier": "filler",
+    "adjust": "player.stake.relation",
     "tags": ["politics", "international"]
   },
   {
@@ -175,6 +176,7 @@
       "cityState": "player.name"
     },
     "tier": "filler",
+    "adjust": "player.stake.relation",
     "tags": ["politics", "international"]
   },
   {
@@ -193,7 +195,8 @@
       "distance": "event.minorPlayer.distance",
       "replaced": "event.knows('oldAllyPlayer') && event.oldAllyPlayer.knows('name') ? event.oldAllyPlayer.name : null"
     },
-    "tier": "distance <= adjacent ? 'major' : 'notable'",
+    "tier": "notable",
+    "adjust": "event.minorPlayer.stake.relation",
     "tags": ["politics", "international"]
   },
   {

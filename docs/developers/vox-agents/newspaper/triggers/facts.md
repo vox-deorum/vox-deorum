@@ -165,7 +165,7 @@ Each `relationships` entry shows what its own summary recorded. `relation(other)
 | `denouncedThem`, `denouncedByThem` | The subject denounced the other player, or the reverse. A positive reading wins a same-turn disagreement. A negative reading needs the denouncing player's full major entry. |
 | `openBordersTo`, `openBordersFrom` | The subject granted borders to the other player, or the reverse. Each needs the grantor's own entry; a negative reading requires full major access. |
 | `proximity` | The recorded label, such as `Close`, preferring the subject's entry if both are current. |
-| `warWeariness` | The subject's own reading. Requires full access to a major at war with another major. |
+| `warWeariness` | The subject's own reading on a 0 to 100 scale. Requires full access to a major at war with another major. |
 | `influence`, `protected` | A major's signed influence over a city-state and whether it protects it. Either side can supply the reading. |
 
 For example, `relation(other).knows('openBordersFrom')` checks whether the reverse grant is readable.

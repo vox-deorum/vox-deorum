@@ -127,7 +127,7 @@ describe('stock city-state quest deadlines', () => {
     expect(fired(result, approaching)).toEqual([]);
     expect(fired(result, observed)).toEqual(['player/10']);
     expect(development(result, observed)).toMatchObject({
-      subject: 'player/10', importance: 35, values: { turnsLeft: 10, cityState: 'Geneva' },
+      subject: 'player/10', tier: 'filler', values: { turnsLeft: 10, cityState: 'Geneva' },
     });
   });
 

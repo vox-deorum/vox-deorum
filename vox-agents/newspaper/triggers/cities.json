@@ -215,7 +215,8 @@
       "liberated": "event.liberatedPlayer.name",
       "returned": "event.liberatedPlayer.self"
     },
-    "tier": "returned ? 'crisis' : 'major'",
+    "tier": "returned ? 'major' : 'notable'",
+    "adjust": "event.stake.place",
     "urgent": "returned",
     "tags": ["politics", "military", "international"]
   },
@@ -271,7 +272,7 @@
       "distance": "event.city.distance.capital"
     },
     "tier": "notable",
-    "adjust": "Math.min(20, distance - nearby)",
+    "adjust": "Math.min(10, distance - nearby)",
     "tags": ["cities", "domestic"]
   },
   {
@@ -336,7 +337,7 @@
       "distance": "event.distance.own"
     },
     "tier": "notable",
-    "adjust": "5 * (adjacent - distance)",
+    "adjust": "event.stake.place",
     "urgent": "distance <= 2"
   },
   {

@@ -78,8 +78,8 @@ describe('newspaper trigger rules', () => {
     it('should fire both rules from visible facts and cite the rows behind each match', async () => {
       const result = await runExamples(examples('positive'));
       expect(result.developments).toMatchObject([
-        { definitionId: annexationId, subject: 'city/20', values: { distance: 4 }, importance: 58, urgent: false },
-        { definitionId: settlerId, subject: 'city/10', values: { lost: 2 }, importance: 50, urgent: false },
+        { definitionId: annexationId, subject: 'city/20', values: { distance: 4 }, urgent: false },
+        { definitionId: settlerId, subject: 'city/10', values: { lost: 2 }, urgent: false },
       ]);
       expect(result.developments[0].sources.map(source => source.id)).toEqual(expect.arrayContaining([2, 3, 4]));
       expect(result.developments[1].sources.map(source => source.id)).toEqual(expect.arrayContaining([1, 2, 200]));

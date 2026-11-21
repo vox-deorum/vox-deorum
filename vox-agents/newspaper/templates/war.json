@@ -1856,7 +1856,7 @@
         "id": "war-weariness-eases-report",
         "headline": "The war sits lighter on the country",
         "body": [
-          "The country's weariness has fallen to {{weariness}} in a hundred. On the high street, people talk about roof tiles and the state of the road instead of the front. The shops have more customers than they did a month ago."
+          "The country's weariness has fallen to {{wearinessPercent}}. On the high street, people talk about roof tiles and the state of the road instead of the front. The shops have more customers than they did a month ago."
         ],
         "weight": { "base": 1 }
       },
@@ -1868,7 +1868,7 @@
         "when": "opponent !== null",
         "headline": "Weariness eases in the war with {{opponent}}",
         "body": [
-          "The country's mood has improved: weariness with the war against {{opponent}} stands at {{weariness}} in a hundred. At the coach office, travelers have begun asking after the southern road again, and the morning coach has gone out full all week. A people that can look past a war may yet be able to end it."
+          "The country's mood has improved: weariness with the war against {{opponent}} stands at {{wearinessPercent}}. At the coach office, travelers have begun asking after the southern road again, and the morning coach has gone out full all week. A people that can look past a war may yet be able to end it."
         ],
         "weight": { "base": 1 }
       },
@@ -1880,7 +1880,7 @@
         "when": "opponent !== null",
         "headline": "The number behind the mood",
         "body": [
-          "The nation's patience with the war against {{opponent}} has climbed back to {{weariness}}, after a season above the halfway mark. Patience is a store like grain or coin, and this one has just been replenished. What empties or fills that store, more than any battle, sets the length of a war."
+          "The nation's patience with the war against {{opponent}} has climbed back to {{wearinessPercent}}, after a season above the halfway mark. Patience is a store like grain or coin, and this one has just been replenished. What empties or fills that store, more than any battle, sets the length of a war."
         ],
         "weight": { "base": 1 }
       },
@@ -1889,7 +1889,7 @@
         "voice": "feed",
         "stance": "neutral",
         "genre": "report",
-        "headline": "Down to {{weariness}}: the country exhales",
+        "headline": "Down to {{wearinessPercent}}: the country exhales",
         "body": [
           "Still at war. The barber says the morning passed without one word about the front. His first complaint was a haircut."
         ],
@@ -1908,7 +1908,7 @@
         "id": "war-weariness-sets-in-report",
         "headline": "The war begins to wear us down",
         "body": [
-          "The war against {{opponent}} now weighs on the country at {{weariness}} in a hundred. The cobbler on the east street no longer asks after customers' families; he reads their news in the state of their boots. These days the war is paid for one small repair at a time."
+          "The war against {{opponent}} now weighs on the country at {{wearinessPercent}}. The cobbler on the east street no longer asks after customers' families; he reads their news in the state of their boots. These days the war is paid for one small repair at a time."
         ],
         "weight": { "base": 1 }
       },
@@ -1919,7 +1919,7 @@
         "genre": "report",
         "headline": "A weary nation, and no statement",
         "body": [
-          "At {{weariness}} in a hundred, the country's weariness with the war against {{opponent}} has passed the halfway mark. The {{terms.civic.government}} has offered no answer to that mood. In such a season silence is taken as a reply, and not a comforting one."
+          "At {{wearinessPercent}}, the country's weariness with the war against {{opponent}} has passed the halfway mark. The {{terms.civic.government}} has offered no answer to that mood. In such a season silence is taken as a reply, and not a comforting one."
         ],
         "weight": { "base": 1 }
       },
@@ -1930,7 +1930,7 @@
         "genre": "editorial",
         "headline": "Tired of the war? Say it plainly",
         "body": [
-          "{{weariness}} in a hundred: that is how much patience remains for the war against {{opponent}}. Such a figure is a vote cast in kitchens and workshops, long before any council records it. Read it now, before it is expressed in a way no one can ignore."
+          "{{wearinessPercent}}: that is how much patience remains for the war against {{opponent}}. Such a figure is a vote cast in kitchens and workshops, long before any council records it. Read it now, before it is expressed in a way no one can ignore."
         ],
         "weight": { "base": 1 }
       },
@@ -1941,7 +1941,7 @@
         "genre": "report",
         "headline": "The record of a weary nation",
         "body": [
-          "The almshouse book enters the nation's weariness with the war against {{opponent}} at {{weariness}} in a hundred. The line forms before daylight now, and the butcher's hand is heavier on the scale. Patience is not the same as endurance."
+          "The almshouse book enters the nation's weariness with the war against {{opponent}} at {{wearinessPercent}}. The line forms before daylight now, and the butcher's hand is heavier on the scale. Patience is not the same as endurance."
         ],
         "weight": { "base": 1 }
       }
