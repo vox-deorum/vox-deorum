@@ -25,6 +25,8 @@ Multiple pages can reference the same canonical item ID. Every appearance shares
 
 The developer fixtures in `newspaper/fixtures/` are complete input examples covering ordinary, breaking, analysis, and modern layouts.
 
+To compare the built-in designs from a source checkout, run `npm run newspaper:preview -w vox-agents` from the repository root. It opens the preview at [localhost:5600/preview.html](http://localhost:5600/preview.html). Choose a design and one of its front page layouts. The preview uses sample stories with the design's current masthead, colors, fonts, section labels, and first registered illustration, if any. The list follows `newspaper/designs/`, so new built-in designs appear automatically. You can use the preview without starting VD or opening a recording.
+
 ### Store the presentation with the issue
 
 Issues use schema 2 and require `publication.presentation`, defined in `contracts/design.ts`. Its own schema version is 1. The snapshot stores the chosen `rendererFamily` (`victorian` or `modern`), optional paper, ink and accent colors, optional body, heading and masthead font asset IDs, and an optional ornament asset ID. Omitted tokens use the selected family's defaults. Headings and the masthead have separate font roles, so the Victorian design reserves blackletter for its publication title.
