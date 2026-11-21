@@ -383,7 +383,7 @@
         {
           "id": "city-capture-roundup",
           "headline": "Flags change over {{cityName}}",
-          "body": ["Reports of the same city changing hands have reached this office more than once, and each was printed as it came. {{merge.values.transfers}}{{merge.values.holder}} The people there have learned to wait before they repaint the gate."],
+          "body": ["This office has reported {{cityName}} changing hands more than once, and each report went to print as it arrived. {{merge.values.transfers}}{{merge.values.holder}} Folk there have learned to leave the gate unpainted until they are sure who holds it next."],
           "links": [
             { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
           ],
@@ -852,7 +852,7 @@
         "genre": "notice",
         "headline": "{{cityName}} holds against the siege",
         "body": [
-          "Hear me, {{terms.civic.people}} of {{cityName}}! The enemy is at the gate and the wall still holds! It stands at {{wallStrength}} of {{maxWallStrength|stone|stones}}! Bring water to the rampart and keep the fires low! The wall holds!"
+          "Hear me, {{terms.civic.people}} of {{cityName}}! The enemy is at the gate and the wall is battered, but it still stands! Bring water to the rampart and keep your fires low! Stand fast. The wall holds!"
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -894,7 +894,7 @@
         "genre": "notice",
         "headline": "The defense of {{cityName}} continues",
         "body": [
-          "We are advised that {{cityName}} remains under siege, its wall holding at {{wallStrength}} of {{maxWallStrength|stone|stones}}. The watch changes without a gap, and runners are moving at all hours. Citizens are asked to keep the streets clear for them."
+          "We are advised that {{cityName}} remains under siege, its walls sorely battered but still holding. The watch relieves itself without a gap, and runners are moving at all hours. Citizens are asked to keep the streets clear for them."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }

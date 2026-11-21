@@ -35,7 +35,7 @@
         "genre": "anecdote",
         "headline": "A new age in {{civilization}}, they say",
         "body": [
-          "They say a boy brought home a counting board marked in a way his father could not read. Traders said {{civilization}} had entered the {{era}} and its clerks now reckoned faster than ours. The father kept the board on the shelf and told the boy to learn the markings before the traders changed their minds."
+          "They say {{civilization}} has entered the {{era}}, and the traders say its clerks now reckon faster than ours. One boy brought home a counting board marked in a way his father could not read. The father kept the board on the shelf and told the boy to learn the markings before the traders changed their minds."
         ],
         "weight": { "base": 1 }
       },
@@ -58,7 +58,7 @@
         "genre": "analysis",
         "headline": "What a friend's new era means",
         "body": [
-          "The {{era}} has reached our friend's workshops, and the {{former}} is now a thing its apprentices study from old drawings. The ceremony matters less than what follows it: our professors have begun asking for places at its schools, and its scholars have begun asking for ours. A friendship that trades students as well as goods will outlast any treaty signed in a hall."
+          "The {{era}} has reached {{civilization}}'s workshops, and the {{former}} is now a thing its apprentices study from old drawings. The ceremony matters less than what follows it: our professors have begun asking for places at its schools, and its scholars have begun asking for ours. A friendship that trades students as well as goods will outlast any treaty signed in a hall."
         ],
         "weight": { "base": 1 }
       }

@@ -426,7 +426,7 @@
         "genre": "obituary",
         "headline": "In memoriam: the friendship with {{friend}}",
         "body": [
-          "Once this friendship was toasted at public dinners, and the glasses were raised without irony. The declaration has been withdrawn, and the toasts have fallen silent. What remains between the two peoples is a habit of courtesy that may yet outlive the paper."
+          "The friendship between our people and {{friend}} was once raised in toasts at every public dinner, the glasses lifted without a doubting word behind them. That declaration has now been withdrawn, and the toasts have fallen quiet. What remains between us and {{friend}} is an old habit of courtesy, which may yet outlast the paper that ended it."
         ],
         "weight": { "base": 1 }
       },
@@ -844,7 +844,7 @@
         "genre": "editorial",
         "headline": "Said plainly, and none too soon",
         "body": [
-          "{{civilization}} has been denounced at last, and the paper is signed. A denunciation stops no spear and turns no gate. It does tell every court where we will stand when the horns sound, and that is worth more than a polite silence."
+          "{{civilization}} has been denounced at last, and the declaration stands signed in our own hand. That is a firm word where too many careful ones were spent before it, and every court on the frontier has taken note. Now bring the garrisons up to the same pitch, so {{civilization}} weighs our spears as carefully as it has just read our resolve."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }

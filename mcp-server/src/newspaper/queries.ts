@@ -298,7 +298,8 @@ async function readTacticalZones(
   const table = await sql<{ name: string }>`select name from sqlite_master where type = 'table' and name = 'TacticalZones'`.execute(db);
   if (!table.rows.length) return undefined;
   return db.selectFrom('TacticalZones')
-    .select(['ID', 'Turn', 'CreatedAt', 'ZoneID', 'City', 'Domain', 'Posture', 'Units'])
+    .select(['ID', 'Turn', 'CreatedAt', 'ZoneID', 'City', 'Domain', 'Posture',
+      sql<TacticalRow['Units']>`case when Turn = ${cutoff} then Units else '{}' end`.as('Units')])
     .where('ID', 'in', sql<number>`(select max(ID) from TacticalZones
       where Turn between ${from} and ${cutoff} and PlayerID = ${receiver} and ${sql.ref(field)} = 2 and ZoneID != 0
       group by Turn, ZoneID)`)
@@ -366,17 +367,17 @@ async function readTacticalPostureChanges(
   const interrupted = new Set<number>();
   for (const city of datedCities) {
     if (interrupted.has(city.Key)) continue;
-    const current = cityById.get(city.Key)!;
-    if ((city[field] === 1 || city[field] === 2) && city.Name === current.Name && city.Owner === current.Owner &&
+    const current = cityById.get(city.Key);
+    if (current && (city[field] === 1 || city[field] === 2) && city.Name === current.Name && city.Owner === current.Owner &&
         city.X === current.X && city.Y === current.Y) knownSince.set(city.Key, city.Turn);
     else interrupted.add(city.Key);
   }
   return changes.filter(change => {
     const id = Math.abs(change.zoneID);
     const since = knownSince.get(id);
-    const city = cityById.get(id)!;
+    const city = cityById.get(id);
     const priorTurn = change.previousPosture.source.turn;
-    return since !== undefined && priorTurn >= since &&
+    return city !== undefined && since !== undefined && priorTurn >= since &&
       !removals.get(`${city.X}/${city.Y}`)?.some(event => event.Turn >= priorTurn);
   });
 }

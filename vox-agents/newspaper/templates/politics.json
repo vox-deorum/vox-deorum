@@ -31,7 +31,7 @@
         "genre": "editorial",
         "headline": "Hear it, {{terms.civic.people}}: we are last!",
         "body": [
-          "Dead last of {{count}}, and the {{terms.civic.government}} calls the tally a delicate matter. Ask the fishwife if her empty stall is delicate. Ask the mason if the work he lost is delicate.",
+          "Dead last of {{count|power|powers}}, and the {{terms.civic.government}} has the nerve to call the tally a delicate matter. Ask the fishwife at her empty stall, or the mason out of work, how delicate it feels.",
           "These same men bowed for the cheers when the ledgers balanced. Let them come down to the market steps and bow for this."
         ],
         "weight": { "base": 1 }
@@ -172,7 +172,7 @@
         "genre": "editorial",
         "headline": "The golden age, earned",
         "body": [
-          "Prosperity does not arrive by accident. This one rests on a peace kept, ledgers balanced, and clerks who did the unglamorous work while others took the credit.",
+          "Our golden age has begun, and it did not arrive by accident: it rests on a peace kept, ledgers balanced, and clerks who did the unglamorous work while others took the credit.",
           "Our advice is to spend the surplus where it will still stand in ten years: walls, roads and full granaries. A good season should leave a mark that outlasts it."
         ],
         "weight": { "base": 1 }
@@ -198,7 +198,7 @@
         "headline": "The morning the age turned golden",
         "body": [
           "The news reached the market before the stalls were half set: peace, and the good years at last. A potter's wife bought a ribbon she did not need, then stood in the lane letting the sun catch it.",
-          "The scholars can argue about golden ages. The ribbon is already in her hair."
+          "Our scholars can argue about golden ages. The ribbon is already in her hair."
         ],
         "weight": { "base": 1 }
       }
@@ -275,7 +275,7 @@
         "genre": "notice",
         "headline": "Hear it! A golden age, even in war!",
         "body": [
-          "People of the capital, the golden age is here and the war with {{enemies}} is not! Coin in the chest and spears in the field, both at once! Carry that to the front, {{terms.civic.people}}, and let the other side hear it!"
+          "Hear it, {{terms.civic.people}}! The golden age is here in the capital, and the war against {{enemies}} runs on! Coin in the chest and spears in the field, both at once! Carry that to the front and let the other side hear it!"
         ],
         "weight": { "base": 1 }
       },
@@ -548,7 +548,7 @@
         "id": "policy-branch-opened-report",
         "headline": "The {{terms.civic.government}} takes up {{branch}}",
         "body": [
-          "The {{terms.civic.government}} has opened the {{branch}} branch, and the state now works along {{count}} lines of policy. A clerk ruled a fresh page in the great register and left the lines below it empty. What fills them will be read for years."
+          "The {{terms.civic.government}} has opened the {{branch}} branch, and the state now works along {{count|line|lines}} of policy. A clerk ruled a fresh page in the great register and left the space under it bare. What fills it will be read for years."
         ],
         "weight": { "base": 1 }
       },
@@ -559,7 +559,7 @@
         "genre": "notice",
         "headline": "Hear it! The {{branch}} branch is open",
         "body": [
-          "Listen, {{terms.civic.people}}! The {{branch}} branch is open, and your {{terms.civic.government}} opened it! That makes {{count}} branches, all of them working! {{count}}! Now give the council the cheer it has earned!"
+          "Listen, {{terms.civic.people}}! Your {{terms.civic.government}} has opened the {{branch}} branch! That makes {{count|branch|branches}} of policy working for you! Now give the council the cheer it has earned!"
         ],
         "weight": { "base": 1 }
       },

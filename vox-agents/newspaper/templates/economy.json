@@ -33,7 +33,7 @@
         "genre": "analysis",
         "headline": "A bill that comes back every season",
         "body": [
-          "{{deficit}} gold now leaves the treasury every season with nothing coming in to replace it. Sell a warehouse or postpone a road and this season is covered, but the same gap waits on the other side of the sale. A minister who will not name the account they mean to trim is not managing the money, they are borrowing against next year's patience. The next reckoning will tell us whether this was a bad harvest or a new habit."
+          "{{deficit}} gold leaves the treasury every season, and every season it must be found again. Sell a warehouse or postpone a road and one reckoning is covered; the same gap waits on the other side. A {{terms.civic.government}} that will not name the account it means to trim is borrowing against next year's patience, and the next reckoning will show whether this was a bad harvest or a new habit."
         ],
         "weight": { "base": 1 }
       },
@@ -110,7 +110,7 @@
         "id": "treasury-reserve-recovers-report",
         "headline": "The treasury gains time against the deficit",
         "body": [
-          "The treasury now holds enough to meet its bills for {{turnsLeft}} seasons, with {{gold}} gold in hand and {{deficit}} leaving each season. That is more cover than the last count allowed, and the clerk at the pay window has started paying the smaller claims again. The queue at his window is shorter; the book of names is not."
+          "The treasury can meet its bills for {{turnsLeft}} now, with {{gold}} gold in hand and {{deficit}} gold still leaving each season. That is more cover than the last count showed, and the clerk at the pay window has started paying the smaller claims again. The queue at his window is shorter; the book of names is not."
         ],
         "weight": { "base": 1 }
       },
@@ -121,7 +121,7 @@
         "genre": "analysis",
         "headline": "What the treasury can do with more time",
         "body": [
-          "The shortfall has not gone away: {{deficit}} gold still leaves the treasury every season. What has changed is the time in hand, now {{turnsLeft}} seasons, and the {{terms.civic.government}} has put that time to work. The pay office has been told to settle the oldest warrants first and to send a clerk upriver after what is owed there. If the money comes in, the season closes without a new levy, though the reprieve lasts only while spending holds near today's figure."
+          "The shortfall has not gone away: {{deficit}} gold still leaves the treasury every season. What has changed is the time in hand, now {{turnsLeft}}, and the {{terms.civic.government}} is putting it to work: the pay office settles the oldest warrants first, and a clerk is gone upriver after what is owed there. If that money comes in, the season closes without a new levy, though the reprieve lasts only while spending holds near today's figure."
         ],
         "weight": { "base": 1 }
       },
@@ -130,9 +130,9 @@
         "voice": "tabloid",
         "stance": "populist",
         "genre": "anecdote",
-        "headline": "The count runs long at the money-changer's table",
+        "headline": "The count runs long at the pawnbroker's table",
         "body": [
-          "The chest now has {{turnsLeft}} seasons of cover, and on Candle Street the pawnbroker marked it by hanging his best coat back on the rail. The figures behind his cheer: {{gold}} gold in hand, {{deficit}} going out each season. \"Come back next month,\" he told a customer, and this time he meant it kindly."
+          "The chest has {{turnsLeft}} of cover now, and on Candle Street the pawnbroker hung his best coat back on the rail. His reasons are {{gold}} gold in hand and {{deficit}} gold still going out each season. \"Come back next month,\" he told a customer, and this time he meant it kindly."
         ],
         "weight": { "base": 1 }
       }
@@ -148,7 +148,7 @@
         "id": "treasury-reserve-runs-short-report",
         "headline": "The treasury reserve runs short",
         "body": [
-          "The reserve will cover {{turnsLeft}} more seasons, with {{gold}} gold on hand and {{deficit}} spent beyond receipts each season. At the glassworks by the river, the owner has taken to paying his men in two parts and keeping the second until the bottles sell. His foreman says the furnace has never been banked so early in the year."
+          "The reserve will cover {{turnsLeft}} more, with {{gold}} gold on hand and {{deficit}} gold spent beyond receipts each season. At the glassworks by the river, the owner is paying his men in two parts and keeping the second until the bottles sell. His foreman says the furnace has never been banked so early in the year."
         ],
         "weight": { "base": 1 }
       },
@@ -161,7 +161,7 @@
         "body": [
           "Gold in the chest at this count: {{gold}} gold.",
           "Spent beyond receipts, each season: {{deficit}} gold.",
-          "Seasons for which the chest can answer: {{turnsLeft}}."
+          "The chest can answer bills for {{turnsLeft}}."
         ],
         "weight": { "base": 1 }
       },
@@ -172,7 +172,7 @@
         "genre": "report",
         "headline": "Treasury cover: {{turnsLeft}} left",
         "body": [
-          "At the capital tonight, the treasury holds {{gold}} gold and spends {{deficit}} more than it takes in each season. That leaves {{turnsLeft}} seasons of cover. A miller waiting on a payment for flour has one question for the {{terms.civic.government}}: who gets paid last when the chest runs dry?"
+          "In the capital tonight, the treasury holds {{gold}} gold. It spends {{deficit}} gold more than it takes in each season, which leaves {{turnsLeft}} of cover. A miller waiting on a payment for flour has one question for the {{terms.civic.government}}: who gets paid last when the chest runs dry?"
         ],
         "weight": { "base": 1 }
       },
@@ -183,7 +183,7 @@
         "genre": "editorial",
         "headline": "The old rule was a full store",
         "body": [
-          "Our grandparents kept a full granary and slept through the winter. This treasury holds {{gold}} gold, sends {{deficit}} out the door every season, and can answer for {{turnsLeft}} seasons more. Councilors, lay the pay rolls and the grain bills on the table before you vote a single further expense, so the trades that fill this city know what work they may take."
+          "Our grandparents kept a full granary and slept through the winter. This treasury holds {{gold}} gold, sends {{deficit}} gold out the door every season, and can answer for {{turnsLeft}} more. Councilors, lay the pay rolls and the grain bills on the table before you vote a single further expense, so the trades that fill this city know what work they may take."
         ],
         "weight": { "base": 1 }
       }
@@ -210,7 +210,7 @@
         "genre": "report",
         "headline": "The state pays its way",
         "body": [
-          "After a run of seasons in arrears, the state now clears {{goldPerTurn}} gold a season. The pay office has cleared its backlog of small warrants, and on the exchange a ship's agent who had been cutting his prices held them and still found takers. The country is paying its way again."
+          "After a run of seasons in arrears, the state now clears {{goldPerTurn}} gold a season. The pay office has cleared its backlog of small warrants, and a ship's agent on the exchange held his prices and still found buyers after seasons of cutting to move cargo. When the country pays its way, credit follows the coin."
         ],
         "weight": { "base": 1 }
       },

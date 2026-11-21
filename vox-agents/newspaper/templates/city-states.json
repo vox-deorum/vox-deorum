@@ -32,7 +32,7 @@
         "genre": "notice",
         "headline": "{{aggressor}} opens war on {{ally}}",
         "body": [
-          "Notice to carriers and merchants: {{aggressor}} has opened war on {{ally}}, a small power allied to this nation. Carts bound for that market should turn aside until the roads are clear. This nation stays out of the fighting."
+          "Notice to carriers and merchants: {{aggressor}} has opened war on {{ally}}, a small power allied to {{terms.civilization}}. Carts bound for that market should turn aside until the roads are clear. Our {{terms.civic.government}} keeps its soldiers out of the fighting."
         ],
         "weight": { "base": 1 }
       },
@@ -82,7 +82,7 @@
         "genre": "obituary",
         "headline": "{{cityState}}, faithful to the last",
         "body": [
-          "Set it in the record that {{cityState}} held faith with this nation to the last, and asked no reward for it. The city had its own council, its own gate and its own name among the small powers, and it held all three until a stronger army came. What remains is the example, which no conqueror can garrison."
+          "Be it set down in the record that {{cityState}} kept faith with {{terms.civilization}} to the last, and asked no reward for it. The city held its own council, its own gate, and its own name among the small powers until a stronger army came and took all three. What remains is the example, which no conqueror can garrison."
         ],
         "weight": { "base": 1 }
       },
@@ -173,7 +173,7 @@
         "id": "city-state-ally-gained-report",
         "headline": "{{cityState}} names us its ally",
         "body": [
-          "{{cityState}} has named this nation its ally, and its envoy came to the foreign office before the ink was dry. The first question he asked was what we mean to send, and when it will arrive. Friendship is a fine word, and the envoy is waiting to see what follows it."
+          "{{cityState}} has chosen {{terms.civilization}} as its ally, and its envoy came to the foreign office before the ink was dry. His first question was what we mean to send, and when it will arrive. Friendship is a fine word, and the envoy is waiting to see what follows it."
         ],
         "weight": { "base": 1 }
       },
@@ -197,7 +197,7 @@
         "when": "replaced !== null",
         "headline": "Notice: our envoys succeed in {{cityState}}",
         "body": [
-          "Notice is given that {{cityState}} has left the alliance of {{replaced}} and chosen this nation instead. The {{terms.civic.government}}'s envoys won this with patience and coin, and the credit belongs to them. Traders bound for that market may collect a letter of introduction at the foreign office."
+          "Notice is given that {{cityState}} has left the alliance of {{replaced}} and chosen {{terms.civilization}} instead. The {{terms.civic.government}}'s envoys won it with patience and coin, and the credit belongs to them. Traders bound for that market may collect a letter of introduction at the foreign office."
         ],
         "weight": { "base": 1 }
       },
@@ -208,7 +208,7 @@
         "genre": "notice",
         "headline": "Hear it! {{cityState}} stands with us",
         "body": [
-          "Hear it, {{terms.civic.people}}, and pass it down the street! {{cityState}} has bound itself to this nation! Its council has chosen our friendship, and chosen it freely! {{cityState}} stands with us!"
+          "Hear it, {{terms.civic.people}}, and pass it down the street! {{cityState}} has bound itself to {{terms.civilization}}! Its council has chosen our friendship, and chosen it freely! {{cityState}} stands with us!"
         ],
         "weight": { "base": 1 }
       }
@@ -247,7 +247,7 @@
         "genre": "report",
         "headline": "The alliance with {{cityState}} ends",
         "body": [
-          "In this season the council of {{cityState}} released this nation from its alliance, and no other power was named in our place. The city remains among the small powers, owing its friendship to none. It keeps its own counsel on the reason, and this record keeps only the fact."
+          "In this season the council of {{cityState}} ended its alliance with {{terms.civilization}}, and no other power was named in our place. The city remains among the small powers, owing its friendship to none. It keeps its own counsel on the reason, and this record keeps only the fact."
         ],
         "weight": { "base": 1 }
       },
@@ -258,7 +258,7 @@
         "genre": "ledger",
         "headline": "The {{cityState}} account, closed",
         "body": [
-          "Alliance held by this nation: dissolved.",
+          "Alliance of {{terms.civilization}} with {{cityState}}: dissolved.",
           "Power named to take our place: none.",
           "Balance: a free small power, owing us nothing."
         ],
@@ -328,7 +328,7 @@
         "when": "began === true",
         "headline": "{{cityState}} counts us a friend",
         "body": [
-          "{{cityState}} now counts this nation a friend, though the bond has not grown into an alliance. Its market admits our traders on friend's terms, and our letters sit near the top of its council's pile. Friendship is a smaller thing than alliance, and it is also easier to lose."
+          "{{cityState}} now counts {{terms.civilization}} a friend, though the bond has not grown into an alliance. Its market admits our traders on friend's terms, and our letters sit near the top of its council's pile. Friendship is a smaller thing than alliance, and it is also easier to lose."
         ],
         "weight": { "base": 1 }
       },
@@ -349,7 +349,7 @@
         "when": "began === true",
         "headline": "Friendship recorded with {{cityState}}",
         "body": [
-          "Be it entered in the record that this nation and {{cityState}} are friends from this season forward. The city's scribes have written the bond into their book, and our archive holds the matching page."
+          "Be it entered in the record that {{terms.civilization}} and {{cityState}} are friends from this season forward. The city's scribes have written the bond into their book, and our archive holds the matching page."
         ],
         "weight": { "base": 1 }
       },
@@ -517,7 +517,7 @@
         "genre": "analysis",
         "headline": "A clock worth beating",
         "body": [
-          "The new errand in {{cityState}} has {{turnsLeft}} to be finished, which is time enough to do the work properly. A prize with a clock beside it is still a prize, and the first to start usually takes it. This realm should start first."
+          "The new errand in {{cityState}} has {{turnsLeft}} to be finished, which is time enough to do the work properly. A prize with a clock beside it is still a prize, and the first to start usually takes it. {{terms.civilization}} should be first to start."
         ],
         "links": [
           { "placeholder": "cityState", "label": "{{cityState}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -588,7 +588,7 @@
         "id": "friendly-city-state-attacked-report",
         "headline": "{{aggressor}} makes war on our friend {{cityState}}",
         "body": [
-          "{{aggressor}} is at war with {{cityState}}, a small power that counts this nation its friend. Its traders have pulled their goods off the road, and not one of our soldiers has been called to its gate. The war is ours to watch, not ours to fight, and that distinction will be tested."
+          "{{aggressor}} is at war with {{cityState}}, a small power that counts {{terms.civilization}} its friend. Its traders have pulled their goods off the road, and not one of our soldiers has been called to its gate. In the market people keep their voices low and wonder how long a friend's word stays a promise."
         ],
         "weight": { "base": 1 }
       },
@@ -621,7 +621,7 @@
         "genre": "notice",
         "headline": "War reaches {{cityState}}",
         "body": [
-          "Notice to traders: {{aggressor}} has opened a war on {{cityState}}, a small power that counts this nation a friend. Drivers bound for that market should take the longer road until the fighting ends. Our {{terms.civic.government}} keeps its soldiers at home."
+          "Notice to traders: {{aggressor}} has opened a war on {{cityState}}, a small power that counts {{terms.civilization}} a friend. Drivers bound for that market should take the longer road until the fighting ends. Our {{terms.civic.government}} keeps its soldiers at home."
         ],
         "weight": { "base": 1 }
       }
@@ -638,7 +638,7 @@
         "id": "friendly-city-state-captured-report",
         "headline": "Our friend {{cityState}} falls to {{captor}}",
         "body": [
-          "{{cityState}} has fallen to {{captor}}, and its gate now opens to a foreign watch. The city counted this nation a friend, and the traders who once crowded its square will need a new road this season. The new watch will learn the road soon enough, and the road will not welcome it."
+          "{{cityState}} has fallen to {{captor}}, and its gate now opens to a foreign watch. The city counted {{terms.civilization}} a friend, and the traders who once crowded its square will need a new road this season. The new watch will learn the road soon enough, and the road will not welcome it."
         ],
         "weight": { "base": 1 }
       },
@@ -649,7 +649,7 @@
         "genre": "obituary",
         "headline": "The passing of {{cityState}}",
         "body": [
-          "The record of the small powers will show {{cityState}} kept faith with this nation until the swords reached its streets. Its altars stood open to every traveler, and its people gave what they had to the poor. Its holy fires are in other hands now, and the faithful can only hope they are still burning."
+          "The record of the small powers will show that {{cityState}} kept faith with {{terms.civilization}} until the swords reached its streets. Its altars stood open to every traveler, and its people gave what they had to the poor. Its holy fires are in other hands now, and the faithful can only hope they are still burning."
         ],
         "weight": { "base": 1 }
       },
@@ -672,7 +672,7 @@
         "genre": "report",
         "headline": "Letters from the frontier: {{cityState}} is taken",
         "body": [
-          "Letters from the frontier relate that {{captor}} has taken {{cityState}} by conquest. A small power in friendship with this nation is gone from the roll of independents, and this paper can print nothing but regret. We are informed that the city's gates are watched by strangers, and its old courtesies are now a matter of memory."
+          "Letters from the frontier relate that {{captor}} has taken {{cityState}} by conquest. A small power that counted {{terms.civilization}} a friend is gone from the roll of independents, and this paper can print nothing but regret. We are informed that the city's gates are watched by strangers, and its old courtesies are now a matter of memory."
         ],
         "weight": { "base": 1 }
       }

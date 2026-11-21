@@ -11,9 +11,9 @@
         "voice": "press",
         "stance": "rationalist",
         "genre": "analysis",
-        "headline": "Two forces in one zone near {{cityName}}",
+        "headline": "Both sides in sight near {{cityName}}",
         "body": [
-          "Our observers count {{ourUnits}} of our units and {{theirUnits}} under {{opponent}} in the same {{domain}} zone near {{cityName}}. These are sightings, not a measure of fighting power, since training, position and support decide far more than a tally. The count tells us who can see whom, and it leaves open what either side will do with that."
+          "Our observers counted {{ourUnits}} of our units and {{theirUnits}} from {{opponent}} in the {{domain}} zone near {{cityName}}. If both sides stay in the area, either could contest the approaches. The counts are not combat strength, and strength will depend on positions and support as well as numbers."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -28,7 +28,7 @@
         "when": "posture !== null",
         "headline": "The {{domain}} zone at {{cityName}}, entered",
         "body": [
-          "The observer's book lists {{ourUnits}} of our units and {{theirUnits}} of {{opponent}}'s in the {{domain}} zone at {{cityName}}, with the front reading entered as {{posture}}. The tally records what was seen and does not measure combat strength. A sea zone can carry land units as well as ships, so the entry describes the contents of the zone rather than a fleet."
+          "The observer's book lists {{ourUnits}} of our units and {{theirUnits}} from {{opponent}} in the {{domain}} zone at {{cityName}}. Our assessment was {{posture}}. A sea zone can include land units as well as ships. The tally is not combat strength and tells us little about who could control the approaches."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -42,7 +42,7 @@
         "genre": "analysis",
         "headline": "What the count near {{cityName}} leaves out",
         "body": [
-          "Word from the front puts {{ourUnits}} of our units and {{theirUnits}} under {{opponent}} in the same {{domain}} zone near {{cityName}}. A count of this kind records what our people could see, and it is not combat strength. The {{terms.civic.people}} should ask what the two forces are placed to do, and treat the number as the start of the question."
+          "The latest sighting places {{ourUnits}} of our units and {{theirUnits}} from {{opponent}} in the {{domain}} zone near {{cityName}}. Anyone reading the tally should ask who has the ground and who can bring up support. The count is not combat strength and leaves both questions open."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -316,7 +316,7 @@
         "id": "enemy-front-posture-offensive-report",
         "headline": "The reading at {{cityName}} changes to {{posture}}",
         "body": [
-          "Our observers watching {{cityName}} entered a new front reading for the {{domain}} zone on turn {{observedTurn}}, and the entry now reads {{posture}}. The older line was struck through rather than erased. The city is held by {{civilization}}, and the assessment comes from what our staff could see around it."
+          "On turn {{observedTurn}}, our assessment of the {{domain}} zone at {{cityName}} changed from {{previousPosture}} to {{posture}}. {{civilization}} holds the city."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -345,7 +345,7 @@
         "genre": "report",
         "headline": "Turn {{observedTurn}}: the entry for {{cityName}}",
         "body": [
-          "The campaign book records a change at {{cityName}} on turn {{observedTurn}}, where the {{domain}} entry now reads {{posture}}. The earlier line remains legible beneath the correction. The city is held by {{civilization}}, and the book sets down the new word without assigning a cause."
+          "In the campaign record, turn {{observedTurn}} marks a change from {{previousPosture}} to {{posture}} in our assessment of the {{domain}} zone at {{cityName}}, held by {{civilization}}. The cause is unrecorded."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -359,7 +359,7 @@
         "genre": "report",
         "headline": "A new word on the board at {{cityName}}",
         "body": [
-          "The watch board outside the map room carries a fresh entry for {{cityName}}, dated turn {{observedTurn}}. The word chalked against the {{domain}} zone is now {{posture}}, and the earlier word has been wiped away. The board is the only news most people at the gate get, and a crowd gathers whenever it changes."
+          "The watch board's entry for {{cityName}} on turn {{observedTurn}} went from {{previousPosture}} to {{posture}}. That is our command's assessment of the {{domain}} zone. What happened on the ground is still an open question."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -481,9 +481,9 @@
         "voice": "tabloid",
         "stance": "local",
         "genre": "anecdote",
-        "headline": "The boys are off the front at {{cityName}}",
+        "headline": "The word at the carters' stand: {{cityName}}",
         "body": [
-          "At the tram stop, a woman read the notice twice, then folded it and put it in her sleeve. Her son's regiment is among those leaving {{cityName}}, and the {{terms.civic.government}} posted the news before any letter arrived. She said she would put the kettle on early, in case he came that night."
+          "At the carters' stand, a man read the day's board aloud for those who cannot: {{cityName}}, turn {{observedTurn}}, {{posture}} where the last entry said {{previousPosture}}. Someone asked whether the new word meant the fighting had stopped. Nobody at the stand could answer, and the reader moved on to the next line."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1071,9 +1071,9 @@
     "variants": [
       {
         "id": "own-front-posture-counterattack-report",
-        "headline": "Our forces counterattack at {{cityName}}",
+        "headline": "Our front at {{cityName}} is read as {{posture}}",
         "body": [
-          "Our forces at {{cityName}} have gone from {{previousPosture}} to {{posture}}. The change came at dawn, with the horns sounding before the mist lifted. By the time the defenders understood it, our leading companies were already across the ground between the lines."
+          "Our own observers entered a new reading for the front at {{cityName}} on turn {{observedTurn}}. The {{domain}} entry moved from {{previousPosture}} to {{posture}}. The city is ours, and the change describes how our staff now judges the ground around it."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1085,9 +1085,9 @@
         "voice": "press",
         "stance": "hawkish",
         "genre": "analysis",
-        "headline": "From defense to the strike at {{cityName}}",
+        "headline": "From {{previousPosture}} to {{posture}} at {{cityName}}",
         "body": [
-          "The word at {{cityName}} has shifted from {{previousPosture}} to {{posture}}, and the army is spending what it saved while waiting. A counterattack works when the enemy has outrun his supplies or his nerve. If neither is true, it is only a louder way to lose men."
+          "The front assessment for {{cityName}} changed from {{previousPosture}} to {{posture}} on turn {{observedTurn}}. A counterattack reading says our observers see an opening in the {{domain}} zone. An opening is an estimate, and the entry records the estimate as it stood when the sighting was made."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1099,9 +1099,9 @@
         "voice": "broadcast",
         "stance": "neutral",
         "genre": "report",
-        "headline": "Our forces attack at {{cityName}}",
+        "headline": "A change on the board at {{cityName}}",
         "body": [
-          "At {{cityName}} tonight, our forces have moved from {{previousPosture}} to {{posture}}. The horns sounded at first light, and the forward companies went in before the enemy had finished his breakfast. Command says the line is holding."
+          "The front board for {{cityName}} shows a new entry tonight, dated turn {{observedTurn}}. The reading moved from {{previousPosture}} to {{posture}} in the {{domain}} zone. That is the assessment our own observers recorded."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1113,9 +1113,9 @@
         "voice": "gazette",
         "stance": "pro-government",
         "genre": "report",
-        "headline": "The defense holds and answers",
+        "headline": "Our line at {{cityName}} is read anew",
         "body": [
-          "Dispatches from before {{cityName}} report that our forces have passed from {{previousPosture}} to {{posture}}. The dispatch says the movement began at dawn and was carried out in good order. We print the account as it reached us, with the hope that good order may soon be matched by good news."
+          "Dispatches from the map room state that the front at {{cityName}} has been reassessed from {{previousPosture}} to {{posture}}, with the change entered on turn {{observedTurn}}. The dispatch describes the {{domain}} zone and offers no forecast. We print the entry as it stands."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1133,9 +1133,9 @@
     "variants": [
       {
         "id": "own-front-posture-defensive-report",
-        "headline": "The front at {{cityName}} goes defensive",
+        "headline": "The front at {{cityName}} is read as {{posture}}",
         "body": [
-          "The order at {{cityName}} has changed from {{previousPosture}} to {{posture}}. Soldiers who expected to advance are instead digging, and the wagons have been sent to the rear. The wall is being strengthened at the points where the last attack came closest."
+          "Our observers entered a new front reading for {{cityName}} on turn {{observedTurn}}. The {{domain}} entry moved from {{previousPosture}} to {{posture}}. The city is ours, and the entry records a change in how our staff judges the ground around it."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1147,9 +1147,9 @@
         "voice": "gazette",
         "stance": "government-critical",
         "genre": "report",
-        "headline": "At {{cityName}}, a stance change unexplained",
+        "headline": "At {{cityName}}, a quieter word on the board",
         "body": [
-          "A note from the front at {{cityName}} records a change of posture from {{previousPosture}} to {{posture}}. The dispatch offers no reason for the change and no estimate of how long it will last. Our readers may draw their own conclusions from the silence."
+          "The front entry for {{cityName}} moved from {{previousPosture}} to {{posture}} on turn {{observedTurn}}. The dispatch gives the new reading for the {{domain}} zone and no explanation of what prompted it. Our readers may judge for themselves whether the change follows the ground or the mood at headquarters."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1161,9 +1161,9 @@
         "voice": "crier",
         "stance": "local",
         "genre": "notice",
-        "headline": "Hear it, {{cityName}}! Our soldiers stand at the walls",
+        "headline": "Hear it, {{cityName}}! The board has a new word",
         "body": [
-          "To the walls! Our soldiers stand on the walls, and every hand is needed! Bring water, bandages and hot food to the gate! Keep the streets clear and the lamps burning! We hold what we have!"
+          "The watch board at {{cityName}} has a fresh entry, dated turn {{observedTurn}}. The word for the {{domain}} zone is now {{posture}}, where the last entry said {{previousPosture}}. Ask at the gate for the full notice, and keep the streets clear for the runners."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1177,7 +1177,7 @@
         "genre": "report",
         "headline": "The record of {{cityName}}'s front",
         "body": [
-          "In this season the command at {{cityName}} passed from {{previousPosture}} to {{posture}}. The camp was moved closer to the wall, and the men began work on ditches and palisades. The record notes the change and does not explain it."
+          "In this season the front book for {{cityName}} passed from {{previousPosture}} to {{posture}}. The change is dated turn {{observedTurn}} and concerns the {{domain}} zone. The scribe records the new reading and adds no interpretation."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }

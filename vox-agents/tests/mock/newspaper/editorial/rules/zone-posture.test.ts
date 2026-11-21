@@ -7,6 +7,7 @@ import { runEditorialCheck } from '../../../../../src/newspaper/editorial/check.
 import { loadEditorialConfig } from '../../../../../src/newspaper/editorial/config/load.js';
 import type { EditorialConfig } from '../../../../../src/newspaper/editorial/config/schema.js';
 import { buildNewspaperFacts } from '../../../../../src/newspaper/editorial/facts/index.js';
+import { withEditionBriefs } from '../../../../helpers/newspaper-briefs.js';
 import { relationship, snapshot as diplomacySnapshot } from '../../../../helpers/newspaper-diplomacy.js';
 
 let config: EditorialConfig;
@@ -93,7 +94,8 @@ function fixture({
 }
 
 /** Run the editor and expose its rule audit. */
-async function check(evidence: NewspaperEvidence, state: PublicationState = createInitialPublicationState()) {
+async function check(input: NewspaperEvidence, state: PublicationState = createInitialPublicationState(), briefs = 0) {
+  const { evidence, config: catalogue } = briefs ? withEditionBriefs(input, config, briefs) : { evidence: input, config };
   const facts = buildNewspaperFacts(evidence, {
     playerIdentities: {
       0: { name: 'France', major: true, teamId: 100 },
@@ -106,7 +108,7 @@ async function check(evidence: NewspaperEvidence, state: PublicationState = crea
     receiver: { playerId: 0, label: 'France' },
     evidence,
     facts,
-    config,
+    config: catalogue,
     speedMultiplier: 1,
     state,
   });
@@ -362,7 +364,7 @@ describe('zone posture triggers', () => {
         zoneID: 20, city: 'Persepolis', domain: 'Land', posture: 'Attrition', previousPosture: 'Attrition',
         units: { France: { Musketman: 2, Settler: 1 }, Brazil: { Pikeman: 3, 'Great General': 1 } },
       });
-      const result = await check(fixture({ cities: [home, enemy], zones: [land], state: 'war' }));
+      const result = await check(fixture({ cities: [home, enemy], zones: [land], state: 'war' }), undefined, 4);
 
       expect(audit(result, rule, 'city/20')).toMatchObject({
         outcome: 'fired', sources: expect.arrayContaining([land.source]),

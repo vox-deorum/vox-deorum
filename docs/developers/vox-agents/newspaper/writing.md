@@ -14,6 +14,7 @@ Use this guide to write or revise `vox-agents/newspaper/templates/`. Check the t
 - Use simple grammar structures. Write “Merchants brought grain from Memphis to Thebes” in place of “The grain that the merchants brought to Thebes came from Memphis.”
 - Read the piece aloud; if you have to stop to work out who did what, rewrite the sentence.
 - Avoid unnatural structures like "this is A. not B." or "this is A. A do not mean B."
+- Avoid defensive writing, such as "The tally is not combat strength" - the reader knows about that.
 
 ## Use concrete names when available
 
@@ -26,9 +27,11 @@ While "War Declared On Us" sounds like a good *headline*, use concrete names of 
 
 ## Write from inside the world
 
-While you should mainly use the player's record for game facts, you can invent a scene or quote to show how people react. A crowd can wave flags when a country gains its freedom, a resident can curse the government when things go south. Do not invent stories that may confuse the player with gameplay mechanics, though. (For example, if there is no mention of a border toll, do not invent one.)
+Choose the [voice, stance, and genre](editorial.md#variant-styles) before you draft. Decide how the piece sounds, what position it takes, and what job it does:
 
-Choose the [voice, stance, and genre](editorial.md#variant-styles) before you draft. Decide how the piece sounds, what position it takes, and what job it does.
+- Create a perspective for your story. For example, a military zone analysis can be an evaluation from the general staff, and a building's completion can be announced by the local mayor.
+- While you should mainly use the player's record for game facts, you can invent a scene or quote to show how people react. A crowd can wave flags when a country gains its freedom, a resident can curse the government when things go south. 
+- Do not invent stories that may confuse the player with gameplay mechanics, though. (For example, if there is no mention of a border toll, do not invent one.)
 
 ## Use relevant numbers in the game world
 

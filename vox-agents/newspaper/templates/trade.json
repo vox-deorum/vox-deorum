@@ -189,7 +189,7 @@
         "when": "outgoing === true",
         "headline": "The next order from {{theirCity}}",
         "body": [
-          "Our traders have taken a full load from {{ourCity}} to {{theirCity}} and come home with the road behind them. The prize is not the single cargo but the custom a second run would fix: a buyer in {{theirCity}} who learns our measures will ask for them again. A workshop in {{ourCity}} that can fill such an order twice will have its next season spoken for."
+          "Our traders have taken a full load from {{ourCity}} to {{theirCity}} and come home with empty carts. The profit worth chasing is the habit this road starts: a buyer in {{theirCity}} who learns our measures will order from them again. A workshop in {{ourCity}} that can fill such an order twice over has its next season spoken for."
         ],
         "weight": { "base": 1 }
       },
@@ -380,7 +380,7 @@
         "when": "origin !== null && destination !== null",
         "headline": "A route from {{origin}} to {{destination}} is plundered",
         "body": [
-          "Letters from the frontier relate that a caravan bound from {{origin}} to {{destination}} was stopped by our soldiers and brought in with its goods. That the cargo will sell we do not doubt, nor that the officers will hear praise for it. We observe only that a great power takes what it intends to keep, while a highwayman takes whatever the road offers."
+          "Letters from the frontier relate that our soldiers stopped a caravan bound from {{origin}} to {{destination}} and brought it in with its goods. The cargo will sell well at our markets, and the officers may expect their share of praise. A great power takes what it intends to keep, and this cargo we intend to keep."
         ],
         "weight": { "base": 1 }
       },
