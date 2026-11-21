@@ -245,7 +245,7 @@
         "when": "!tied",
         "headline": "The capital just got outgrown",
         "body": [
-          "{{largest}} has passed {{capital}}: {{largestPopulation}} people and counting. The government stays in the capital. The crowds are in {{largest}} now."
+          "{{largest}} has passed {{capital}}: {{largestPopulation}} people and counting. The {{terms.civic.government}} stays in the capital. The crowds are in {{largest}} now."
         ],
         "weight": { "base": 1 }
       }

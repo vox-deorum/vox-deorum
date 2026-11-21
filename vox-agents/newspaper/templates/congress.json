@@ -109,7 +109,7 @@
         "when": "ours === true",
         "headline": "The chamber turns our proposal away",
         "body": [
-          "Our delegates put a measure before the World Congress, and the world said no. A defeat in that chamber is a tally of our friends, or the lack of them, and the tally is now public. The government should read it aloud, wince, and set about changing the count."
+          "Our delegates put a measure before the World Congress, and the world said no. A defeat in that chamber is a tally of our friends, or the lack of them, and the tally is now public. The {{terms.civic.government}} should read it aloud, wince, and set about changing the count."
         ],
         "weight": { "base": 1 }
       }

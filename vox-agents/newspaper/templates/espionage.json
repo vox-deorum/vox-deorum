@@ -143,7 +143,7 @@
         "when": "result === 'Killed'",
         "headline": "A foreign spy is killed in our streets",
         "body": [
-          "A foreign spy caught at work inside our borders did not survive the catching. The government knows whose service sent them, which is more than the family back home will ever be told."
+          "A foreign spy caught at work inside our borders did not survive the catching. The {{terms.civic.government}} knows whose service sent them, which is more than the family back home will ever be told."
         ],
         "weight": { "base": 1 }
       },
@@ -155,7 +155,7 @@
         "when": "cityName !== null",
         "headline": "Hear it! A spy is taken in {{cityName}}",
         "body": [
-          "Hear it, people of {{cityName}}! A foreign spy was at work in your streets, and your watch took them! Taken, and stopped! Go about your business, and sleep well: the watch is awake!"
+          "Hear it, {{terms.civic.people}} of {{cityName}}! A foreign spy was at work in your streets, and your watch took them! Taken, and stopped! Go about your business, and sleep well: the watch is awake!"
         ],
         "weight": { "base": 1 }
       },

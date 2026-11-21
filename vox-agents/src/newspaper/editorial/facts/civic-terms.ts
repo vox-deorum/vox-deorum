@@ -95,8 +95,8 @@ export function resolveCivicVocabulary(
       const tier = Math.max(...candidates.map((candidate) => candidate.tier));
       const competing = candidates.filter((candidate) => candidate.tier === tier);
       const countsKnown = competing.every((candidate) => candidate.count !== undefined);
-      competing.sort((a, b) => countsKnown
-        ? b.count! - a.count! || compareNames(a.name, b.name)
+      competing.sort((a, b) => countsKnown && a.count !== undefined && b.count !== undefined
+        ? b.count - a.count || compareNames(a.name, b.name)
         : compareNames(a.name, b.name));
       selected = { name: competing[0].name, kind: 'branch', terms: competing[0].terms };
     }

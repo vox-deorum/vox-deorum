@@ -13,6 +13,7 @@ Use this guide to write or revise `vox-agents/newspaper/templates/`. Check the t
 - Put the subject and verb close together: “We lost the city” is easier to read than “The loss of the city was reported.”
 - Use simple grammar structures. Write “Merchants brought grain from Memphis to Thebes” in place of “The grain that the merchants brought to Thebes came from Memphis.”
 - Read the piece aloud; if you have to stop to work out who did what, rewrite the sentence.
+- Avoid unnatural structures like "this is A. not B." or "this is A. A do not mean B."
 
 ## Use concrete names when available
 
@@ -26,9 +27,9 @@ At least for the first mention, use concrete names of a civilization, city, reli
 
 ## Write from inside the world
 
-Use the player's record for game facts and official decisions. You can invent a scene to show how people react. A crowd can wave flags when a country gains its freedom. Report a new border toll only if the game records one. If you quote someone, name them or say what they do.
+While you should mainly use the player's record for game facts, you can invent a scene or quote to show how people react. A crowd can wave flags when a country gains its freedom, a resident can curse the government when things go south. Do not invent stories that may confuse the player with gameplay mechanics, though. (For example, if there is no mention of a border toll, do not invent one.)
 
-Choose the [voice, stance, and genre](editorial.md#variant-styles) before you draft. Decide how the piece sounds, what position it takes, and what job it does. A report tells readers what happened. An analysis explains why it matters. An editorial makes a case. A notice can tell people what to do. A joke sets up a punch line. Use an exclamation mark when it fits the voice and the news.
+Choose the [voice, stance, and genre](editorial.md#variant-styles) before you draft. Decide how the piece sounds, what position it takes, and what job it does.
 
 ## Use relevant numbers in the game world
 
@@ -41,11 +42,15 @@ Following the same spirit, use relevant numbers that make sense in the game worl
 
 **Crier · Local · Notice.** Tell neighbors who needs help and what they can do.
 
-> {{city}}, some of your neighbors are going hungry! Families near the well have nothing to cook tonight. If you have soup to spare, take a bowl to a neighbor.
+> {{city}}, your neighbors are going hungry! Families near the well have nothing to cook tonight. If you have soup to spare, take a bowl to a neighbor.
+
+**Press · Neutral · Report.** Describe the damage in words a resident would use.
+
+> {{city}} is badly damaged. Families near the walls are carrying their bedding to the market hall. “We'll run out of room by nightfall,” says the caretaker.
 
 **Pamphlet · Government-critical · Editorial.** Lead with the loss and let a local voice say what's at stake.
 
-> We lost {{cityName}} on our {{terms.civic.government}}'s watch. In neighboring towns, people are checking their gates and watchtowers. “Send us soldiers,” said a local councilman, “or we will have to swear loyalty to {{captor}} tomorrow.”
+> {{term.civilization}} lost {{cityName}} on our {{terms.civic.government}}'s watch. In neighboring towns, people are checking their gates and watchtowers. “Send us soldiers,” said a local councilman, “or we will have to swear loyalty to {{captor}} tomorrow.”
 
 **Pamphlet · National · Editorial.** Speak to the leader in the mood of the crowd.
 
@@ -53,25 +58,25 @@ Following the same spirit, use relevant numbers that make sense in the game worl
 
 **Press · National · Editorial.** Give the leader a reason to act.
 
-> Our golden age has begun, but we're still at war with {{enemies}}. Families still line up at the post office for letters from the front. {{terms.civic.leaderAddress}}, open peace talks so our soldiers have a chance to come home.
+> {{terms.civilizationAdjective}} golden age has begun, but we are still at war with {{enemies}}. Across the nation, families line up at the post office for letters from the front. {{terms.civic.leaderAddress}}, open peace talks now, so our soldiers have a chance to come home.
 
-**Press · Rationalist · Analysis.** Keep the same lead. Let religious unrest shape the next two sentences. To judge unrest, divide total religious unhappiness by total happiness if both figures are known and total happiness is above zero. Check separately whether the country lost any benefits from the old faith.
+**Press · Rationalist · Analysis.** In this case, branch out the same story into two versions depending on the situation:
 
 Low unrest, when the facts also show a loss of religious benefits:
 
-> {{terms.civilization}} founded {{founded}}, but {{majorityFaith}} is now the main faith in most of our cities. Across our towns, people of both faiths live together peacefully. We have lost the blessings of {{founded}}, so our {{terms.civic.government}} has good reason to keep the peace.
+> {{terms.civilization}} founded {{founded}}, but {{majorityFaith}} is now the main faith in most cities. Across our towns, people of both faiths live together peacefully. We may have lost the blessings of {{founded}}, but {{terms.civic.government}} has good reason to keep the peace.
 
 High unrest:
 
-> {{terms.civilization}} founded {{founded}}, but {{majorityFaith}} is now the main faith in most of our cities. In one town, neighbors from both faiths argue over who should lead prayers at the old shrine. If these disputes spread, people may keep the old faith at home and have fewer places to practice it in public.
+> {{terms.civilization}} founded {{founded}}, but {{majorityFaith}} is now the main faith in most cities. In many towns, followers of {{founded}} stuggle to keep their ancestral shrines. As distributes spread, the old faith could soon lose its place in {{terms.civilizationAdjective}} public life.
 
-**Broadcast · National · Report.** Give the count and let someone react to the news.
+**Broadcast · National · Report.** Name the assembly and give a count its readers can use.
 
-> The World Congress will hear {{count}} proposals at its next session. Back home, one civics class is voting on the same proposals. “My pupils have to explain their votes,” their teacher says, “and our delegates should do the same.”
+> The {{league}} will hear {{count}} proposals at its next session. Back home, a teacher has asked her class to vote on the same proposals. “My pupils have to say why they voted that way,” she says, “and I'd like to hear our delegates do the same.”
 
 **Feed · Neutral · Joke.** State the result plainly so the joke can land.
 
-> We came last out of {{count}} in the world standings. Everyone else has to look over their shoulder. Nobody can overtake us now.
+> We came last out of {{count}} in the world' cultural standings. Everyone else has to look over their shoulder. Nobody can overtake us now!
 
 ## Before it goes to print
 

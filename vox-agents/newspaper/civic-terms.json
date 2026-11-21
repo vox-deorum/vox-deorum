@@ -142,6 +142,7 @@
           "leaderAddress": "Archon"
         },
         "Rationalism": {
+          "government": "academy",
           "leaderTitle": "philosopher",
           "leaderAddress": "Philosopher"
         }

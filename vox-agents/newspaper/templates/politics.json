@@ -388,7 +388,7 @@
         "genre": "report",
         "headline": "The state takes a doctrine",
         "body": [
-          "The government has adopted {{ideology}} as the state's guiding doctrine. At the grammar school, the master has put away the primer he has taught from for years and ordered the new one from the printer. The old ways carried the nation this far; the new creed will have to carry it farther."
+          "The {{terms.civic.government}} has adopted {{ideology}} as the state's guiding doctrine. At the grammar school, the master has put away the primer he has taught from for years and ordered the new one from the printer. The old ways carried the nation this far; the new creed will have to carry it farther."
         ],
         "weight": { "base": 1 }
       }
@@ -425,7 +425,7 @@
         "stance": "national",
         "genre": "report",
         "when": "ours === true",
-        "headline": "Our government changes doctrine",
+        "headline": "Our {{terms.civic.government}} changes doctrine",
         "body": [
           "Our {{terms.civic.government}} has set aside {{formerIdeology}} for {{ideology}}. In the council lobby, ushers are stacking the old pamphlets for the pulping cart."
         ],
@@ -517,7 +517,7 @@
     "variants": [
       {
         "id": "policy-adopted-report",
-        "headline": "The government adopts {{policy}}",
+        "headline": "The {{terms.civic.government}} adopts {{policy}}",
         "body": [
           "Our {{terms.civic.government}} has adopted {{policy}}. The notice went up on the council door this morning, and a shoemaker read it twice before opening his stall."
         ],
@@ -541,7 +541,7 @@
         "genre": "analysis",
         "headline": "The lease that stayed unsigned",
         "body": [
-          "The government has adopted {{policy}}. A printer in the west ward was on the point of renting a second shop. He says he will wait until he sees what the policy does to his costs. For one landlord, the first thing the new policy brought was the return of an unsigned lease."
+          "The {{terms.civic.government}} has adopted {{policy}}. A printer in the west ward was on the point of renting a second shop. He says he will wait until he sees what the policy does to his costs. For one landlord, the first thing the new policy brought was the return of an unsigned lease."
         ],
         "weight": { "base": 1 }
       },
@@ -552,7 +552,7 @@
         "genre": "editorial",
         "headline": "New policy, old question",
         "body": [
-          "The government has adopted {{policy}}, and the announcement is as splendid as ever. Splendid announcements do not fill bowls.",
+          "The {{terms.civic.government}} has adopted {{policy}}, and the announcement is as splendid as ever. Splendid announcements do not fill bowls.",
           "Pin one number to it before the celebrating starts: what changes at the kitchen table. Publish that number, and this paper will lead the cheering."
         ],
         "weight": { "base": 1 }
@@ -569,7 +569,7 @@
       {
         "id": "policy-branch-opened-report",
         "when": "branch !== null",
-        "headline": "The government takes up {{branch}}",
+        "headline": "The {{terms.civic.government}} takes up {{branch}}",
         "body": [
           "The {{terms.civic.government}} has added {{branch}} to its program, bringing the total to {{count}} policy branches. A clerk has ruled a fresh page in the council's register for the first measures."
         ],
@@ -580,7 +580,7 @@
         "when": "branch === null",
         "headline": "New branches of statecraft open at once",
         "body": [
-          "Our government has opened several new branches of statecraft at once. A scribe has ruled fresh pages in the register, and the ink is wet on {{count}} headings."
+          "Our {{terms.civic.government}} has opened several new branches of statecraft at once. A scribe has ruled fresh pages in the register, and the ink is wet on {{count}} headings."
         ],
         "weight": { "base": 1 }
       },
@@ -592,7 +592,7 @@
         "when": "branch !== null",
         "headline": "Hear it! The {{branch}} branch is open",
         "body": [
-          "Hear it, people! Your government has opened the {{branch}} branch of statecraft! {{count}} branches in hand now! {{count}} branches! Your government keeps its house in order!"
+          "Hear it, {{terms.civic.people}}! Your {{terms.civic.government}} has opened the {{branch}} branch of statecraft! {{count}} branches in hand now! {{count}} branches! Your {{terms.civic.government}} keeps its house in order!"
         ],
         "weight": { "base": 1 }
       },
