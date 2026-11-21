@@ -69,9 +69,9 @@
       {
         "id": "defensive-pact-ends-report",
         "when": "ally !== null",
-        "headline": "Our defensive pact with {{ally}} is at an end",
+        "headline": "Our defensive pact with {{ally}} is over",
         "body": [
-          "The defensive pact between our nation and {{ally}} has ended. Both countries remain at peace with each other."
+          "The defensive pact with {{ally}} has ended. Both countries remain at peace, and each court now answers for its own frontier."
         ],
         "weight": { "base": 1 }
       },
@@ -339,7 +339,7 @@
         "when": "first !== null && second !== null",
         "headline": "From abroad: {{first}} and {{second}} stand together",
         "body": [
-          "Letters from foreign courts relate that {{first}} and {{second}} have concluded a defensive pact. The news reached us by way of travelers, and it is set down here as it came to us."
+          "Letters from abroad relate that {{first}} and {{second}} have signed a defensive pact. A shipowner who calls at both countries' ports has asked her agents for news from both capitals before she loads the next cargo; a quarrel that starts in either can now reach the other."
         ],
         "weight": { "base": 1 }
       }
@@ -356,7 +356,7 @@
         "when": "first !== null && second !== null",
         "headline": "{{first}} and {{second}} end their defensive pact",
         "body": [
-          "The defensive pact between {{first}} and {{second}} has ended. The two states are not at war with one another, and the parting came at a table rather than on a field."
+          "{{first}} and {{second}} remain at peace after ending their defensive pact. Neither court can count on the agreement to bring the other's troops if it is attacked."
         ],
         "weight": { "base": 1 }
       },
@@ -516,9 +516,9 @@
     "variants": [
       {
         "id": "gains-vassal-report",
-        "headline": "A new vassal for our court: {{vassal}}",
+        "headline": "Our court takes {{vassal}} as a vassal",
         "body": [
-          "Our court now has the right to levy tribute from {{vassal}} and must come to their defense if they are attacked."
+          "{{vassal}} has become a vassal of our court. A merchant who supplies our garrisons says he has started asking what the roads are like between our towns and theirs."
         ],
         "links": [
           { "placeholder": "vassal", "label": "{{vassal}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -629,7 +629,7 @@
         "id": "mutual-denunciation-report",
         "headline": "We and {{civilization}} denounce each other",
         "body": [
-          "Denunciations now run both ways between our nation and {{civilization}}. Each court has condemned the other in public, and the quarrel between them is on the record in both directions."
+          "{{civilization}} and our court have denounced each other in public. A merchant who keeps an agent abroad says he asked for both declarations before he sent out his next set of instructions."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -791,7 +791,7 @@
         "when": "from !== null && to !== null",
         "headline": "{{from}} and {{to}} bargain, and a war ends",
         "body": [
-          "The bargain struck between {{from}} and {{to}} reaches past their own affairs: one of the two has agreed, as part of the price, to end a war with a third state that never sat at their table."
+          "{{from}} and {{to}} have struck a bargain that requires peace with a third state. Traders whose carts have turned back from that frontier will want to know when they can use the road again."
         ],
         "weight": { "base": 1 }
       },
@@ -954,7 +954,7 @@
         "id": "we-denounce-major-report",
         "headline": "We denounce {{civilization}}",
         "body": [
-          "Our nation has publicly denounced {{civilization}}. The declaration sets our hostility toward their court on the public record. It falls short of war."
+          "Our court has publicly denounced {{civilization}}. A correspondent waiting for a copy said other capitals would now have our words in full when they asked where we stood."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }

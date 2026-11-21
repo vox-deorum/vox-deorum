@@ -298,9 +298,9 @@
     "variants": [
       {
         "id": "happiness-recovers-report",
-        "headline": "The nation's mood climbs past half",
+        "headline": "The national mood recovers",
         "body": [
-          "The count of the national mood has climbed to {{happinessPercentage}} in the hundred, past the halfway mark. The contented now outnumber the discontented."
+          "National contentment has recovered to {{happinessPercentage}} percent. A potter who had been firing only once a week says customers have finally come back for the jars they left on her shelf."
         ],
         "weight": { "base": 1 }
       },
@@ -309,9 +309,9 @@
         "voice": "broadcast",
         "stance": "pro-government",
         "genre": "report",
-        "headline": "The national mood has mended",
+        "headline": "The national mood has picked up",
         "body": [
-          "Good news at home tonight. The mood count stands at {{happinessPercentage}} percent, past the halfway mark. Ministers say their course is working. The numbers are on their side."
+          "Good news tonight. The national contentment score has recovered to {{happinessPercentage}} percent, and at one assembly hall a government supporter says he can finally talk about next year's plans without being shouted down."
         ],
         "weight": { "base": 1 }
       },
@@ -562,9 +562,9 @@
       {
         "id": "policy-branch-opened-report",
         "when": "branch !== null",
-        "headline": "The state opens a new branch of statecraft",
+        "headline": "The government takes up {{branch}}",
         "body": [
-          "Our government has opened the {{branch}} branch of statecraft, bringing the state's pursuits to {{count}} in all. The work of the new branch begins now."
+          "The government has added {{branch}} to its program, bringing the total to {{count}} policy branches. A clerk has ruled a fresh page in the council's register for the first measures."
         ],
         "weight": { "base": 1 }
       },
@@ -597,7 +597,7 @@
         "when": "branch !== null",
         "headline": "The {{branch}} branch, recorded",
         "body": [
-          "In this season the court opened the {{branch}} branch of statecraft, and the state's pursuits now number {{count}}. So it is set down, in the order it happened."
+          "The court took up {{branch}} in this season, and the branches of its policy now number {{count}}. The scribes have left room beneath its name for the measures that will follow."
         ],
         "weight": { "base": 1 }
       }
@@ -613,7 +613,7 @@
         "id": "revolt-cleared-report",
         "headline": "The threat of revolt recedes",
         "body": [
-          "The count of the national mood has risen to {{happinessPercentage}} percent, back above the level at which revolt threatens. The nation remains short of the halfway mark, where the contented outnumber the rest."
+          "National contentment has risen to {{happinessPercentage}} percent, clear of the level that puts cities at risk of revolt. At a lodging house near the square, a family that had been talking about leaving says it will wait and see if the improvement holds."
         ],
         "weight": { "base": 1 }
       },
@@ -652,7 +652,7 @@
         "id": "revolt-crossed-report",
         "headline": "The mood falls past the danger line",
         "body": [
-          "The count of the national mood has fallen to {{happiness}} percent, below the level at which revolt threatens. The discontented now outnumber the contented by a wide margin."
+          "National contentment has fallen to {{happiness}} percent, low enough to put cities at risk of revolt. A carter who usually stops at the square now unloads at his customers' back doors; he says it's easier to get home that way when tempers are short."
         ],
         "weight": { "base": 1 }
       },
@@ -844,7 +844,7 @@
         "genre": "report",
         "headline": "The national mood, diminished",
         "body": [
-          "The national contentment stands at {{happiness}} in the hundred by the state's own figures, some {{drop}} points below its former level and under the halfway mark. The figures are the state's; the mood is the nation's."
+          "We are credibly informed that national contentment has fallen {{drop}} points to {{happiness}} percent, below the halfway mark. A cloth seller tells us her customers have begun asking to buy a sleeve's worth now and pay for the rest when they have the money."
         ],
         "weight": { "base": 1 }
       },

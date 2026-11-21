@@ -69,7 +69,7 @@
         "genre": "analysis",
         "headline": "What a friend's new era means",
         "body": [
-          "Nations do not stumble out of the {{former}} into the {{era}}; somebody lays the road, and our friend has laid it. New ages do not stay quiet: they trade differently, build differently and expect more of their friends. Good, we say. The same road lies open to us."
+          "Our friend has crossed from the {{former}} into the {{era}}. A professor here has asked an old colleague there for permission to bring students to his lectures. A visit like that can bring home lessons our scholars would otherwise have to wait to read."
         ],
         "weight": { "base": 1 }
       }
@@ -155,7 +155,7 @@
         "id": "new-era-report",
         "headline": "Our nation enters the {{era}}",
         "body": [
-          "The nation has passed into the {{era}}. What the old age built still stands; what the new age builds begins now."
+          "Our nation has entered the {{era}}. A joiner who began as an apprentice in the old era says she has started putting aside worn tools for pupils who want to see how their grandparents worked."
         ],
         "weight": { "base": 1 }
       },
@@ -177,7 +177,7 @@
         "genre": "report",
         "headline": "The {{era}} begins tonight",
         "body": [
-          "The nation enters the {{era}} tonight. The old age ended this week. Bells are ringing across the country, and everyone is arguing about what gets built first."
+          "The nation has entered the {{era}}. We asked a schoolteacher what he would tell his pupils. \"I want to know what they expect to be able to do that I can't,\" he said."
         ],
         "weight": { "base": 1 }
       },
@@ -225,9 +225,9 @@
         "voice": "press",
         "stance": "rationalist",
         "genre": "analysis",
-        "headline": "{{tech}}: asked, tested, ours",
+        "headline": "Who can teach {{tech}} next?",
         "body": [
-          "{{tech}} is finished, and it is ours. The notes are still on the lecturer's desk, and the first student to read them has already found a question the lecturer cannot answer. That is how a nation learns: a question asked, an answer tested, a result written down. No omen ever finished a study."
+          "Our researchers have completed their work on {{tech}}. A teacher who has been following it has started copying notes for colleagues who couldn't attend the demonstrations. A finding that can be taught in another town can outlast the team that made it."
         ],
         "weight": { "base": 1 }
       },
@@ -278,7 +278,7 @@
         "when": "civilization !== null",
         "headline": "{{civilization}} crosses into the {{era}}",
         "body": [
-          "{{civilization}}, neither our friend nor our ally, has left the {{former}} and entered the {{era}}. Every part of their nation crossed with them: its schools, its forges and its roads."
+          "The {{former}} has given way to the {{era}} in {{civilization}}. One merchant has asked her agent there to send samples before she promises customers what will be in her next shipment."
         ],
         "weight": { "base": 1 }
       },
@@ -355,7 +355,7 @@
         "when": "civilization !== null",
         "headline": "First in learning: {{civilization}}",
         "body": [
-          "No nation now holds more learning than {{civilization}}, which counts {{count}} arts and sciences. Our bookseller has moved their scholars' books to the front table. A season ago, others stood ahead."
+          "First place in research now goes to {{civilization}}, with {{count}} known technologies. A bookseller says customers buying the latest journal from that country have started asking when a translation will come out."
         ],
         "weight": { "base": 1 }
       },
@@ -364,7 +364,7 @@
         "when": "civilization === null",
         "headline": "A new nation stands first in learning",
         "body": [
-          "First place in learning has changed hands. The new front-runner counts {{count}} arts and sciences. In our reading room, the librarian has left the top line of the ledger blank and a candle burning beside it. The name will go in when the courier arrives."
+          "A new nation has reached first place in research, with {{count}} known technologies. The librarian at one reading room says patrons have begun asking if they can borrow the foreign journals overnight."
         ],
         "weight": { "base": 1 }
       },

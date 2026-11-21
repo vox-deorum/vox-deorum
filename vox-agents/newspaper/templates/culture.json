@@ -21,7 +21,7 @@
         "when": "rival !== null",
         "headline": "In this year the voice of {{rival}} grew strong",
         "body": [
-          "It is recorded that in this year the influence of {{rival}} over our people attained the Influential mark, the count standing at {{percentage}} percent. The scribes set down the figure, and with it a note that they had been told to add nothing else."
+          "It is recorded that in this year {{rival}} reached the Influential mark among our people, and the count was set at {{percentage}} percent. In the guild hall, apprentices now learn a pattern from across the border before they learn the one their masters cut."
         ],
         "links": [
           { "placeholder": "rival", "label": "{{rival}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -190,9 +190,9 @@
         "stance": "government-critical",
         "genre": "analysis",
         "when": "rival !== null",
-        "headline": "Somebody let our hold on {{rival}} slip",
+        "headline": "Where our influence slipped in {{rival}}",
         "body": [
-          "Our influence over {{rival}} has slipped from {{previousLevel}} to {{level}}. Standing abroad is not kept by luck; it is kept by steady work, and ours has gone untended. The offices charged with that work should say what they did with the years when the count was high, and say it in public."
+          "Our influence over {{rival}} has slipped from {{previousLevel}} to {{level}}. A printer who once sent new plays abroad has a shelf of unsold copies, and the council ought to ask whether booksellers there stopped ordering them or simply found a cheaper way to print their own."
         ],
         "links": [
           { "placeholder": "rival", "label": "{{rival}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -305,7 +305,7 @@
         "when": "turnsToInfluential !== null",
         "headline": "Influential in {{turnsToInfluential}} turns, projection says",
         "body": [
-          "The projection desk has new numbers tonight. Our influence abroad is {{trend}}. The Influential mark is {{turnsToInfluential}} turns away. The desk calls the figures firm. Rival capitals have the numbers too."
+          "Our influence abroad is {{trend}}, and the latest forecast puts us {{turnsToInfluential}} turns from the Influential mark. The date stays in pencil until we see whether the pace holds."
         ],
         "weight": { "base": 1 }
       },
@@ -456,7 +456,7 @@
         "when": "civilization !== null",
         "headline": "The {{wonder}} makes {{civilization}} hard to forget",
         "body": [
-          "A wonder is a nation's claim to be remembered, and {{civilization}} has now made that claim with the {{wonder}}. It sits over every rival's desk, ours included. The right answer is not envy. It is a finer work of our own, and the plans should already be drawn."
+          "The {{wonder}} is complete in {{civilization}}. A correspondent there says his editor keeps asking for another column on it. What our own planners should notice is how much space a single work can earn in papers that usually print that country's name only when its ministers make news."
         ],
         "weight": { "base": 1 }
       },
@@ -704,9 +704,9 @@
         "voice": "press",
         "stance": "national",
         "genre": "analysis",
-        "headline": "A longer visit to the galleries of {{city}}",
+        "headline": "A neighboring gallery asks {{city}} for a winter loan",
         "body": [
-          "{{city}} has added {{added}} works to its collection, bringing it to {{total}}. For visitors who used to see the collection before lunch, the new works may be worth an afternoon. The innkeeper who has pinned the gallery hours beside her room rates is betting on a second morning."
+          "{{city}} has added {{added}} works to its collection, bringing it to {{total}}. The neighboring town gallery has offered to send its wagon, with freshly made crates, for a winter loan. A loan on those terms could let small towns show works they can't afford to buy."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -800,7 +800,7 @@
         "id": "our-wonder-completed-report",
         "headline": "The {{wonder}} stands at {{city}}",
         "body": [
-          "Work in {{city}} is finished. The {{wonder}} stands under our flag, the newest of the works the whole world knows by name, and the first thing travelers will ask to see."
+          "{{city}} has completed the {{wonder}}. One of the people who worked on it brought her children to see what had kept her late; the youngest had never seen it without the boards the crews had put up around the site."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -882,7 +882,7 @@
         "when": "civilization === null",
         "headline": "A change at the top of the tourism table",
         "body": [
-          "A nation has climbed to the top of the tourism table with a rating of {{tourism}}. Its name has yet to reach this desk."
+          "First place in tourism has changed hands, with the new leader rated at {{tourism}}. A guide who keeps a folder of itineraries says customers have started asking what they might see if they took a different road this year."
         ],
         "weight": { "base": 1 }
       },

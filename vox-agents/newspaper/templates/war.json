@@ -881,7 +881,7 @@
         "id": "our-army-overtakes-neighbor-report",
         "headline": "Our army passes {{neighbor}}'s",
         "body": [
-          "Our army has grown past that of {{neighbor}} in strength. The balance between our nations, long contested, now leans our way."
+          "Our forces now rate ahead of {{neighbor}}'s. A farmer near the border says he has begun asking whether it is safe to turn his cattle out onto the far pasture again."
         ],
         "links": [
           { "placeholder": "neighbor", "label": "{{neighbor}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -1440,9 +1440,9 @@
     "variants": [
       {
         "id": "war-advantage-stalls-report",
-        "headline": "The war with {{opponent}} stalls",
+        "headline": "Our advantage over {{opponent}} stops growing",
         "body": [
-          "Our war with {{opponent}} has stopped moving. The advantage we held has stopped growing with it, and the cost of the fighting has not stopped at all."
+          "Our advantage over {{opponent}} has stopped growing. At one supply yard the men are still loading flour each morning, and a baker who has filled the same order since the army went out says he has been asked what he can spare for another delivery."
         ],
         "weight": { "base": 1 }
       },
@@ -1541,7 +1541,7 @@
         "id": "war-duration-milestone-report",
         "headline": "The war runs long",
         "body": [
-          "The war has run {{turns}} turns by this paper's count, past the mark where a war is a season's quarrel. From here on it will be judged less by its causes than by its cost."
+          "The war has lasted {{turns}} turns. A carpenter who sent off two apprentices at the start says he has stopped promising customers that either man will be back in time to finish their doors."
         ],
         "weight": { "base": 1 }
       },
@@ -1727,9 +1727,9 @@
     "variants": [
       {
         "id": "war-turns-against-us-report",
-        "headline": "The war with {{opponent}} turns against us",
+        "headline": "The war tally favors {{opponent}}",
         "body": [
-          "The war with {{opponent}} has turned. The tally stands at {{score}}, deep on their side of the ledger, and the advantage is now theirs to press."
+          "The war tally against {{opponent}} stands at {{score}}, well in their favor. A printer who posts each new count in his window says people have started asking when there might be talks."
         ],
         "weight": { "base": 1 }
       },
@@ -1776,9 +1776,9 @@
     "variants": [
       {
         "id": "war-turns-our-way-report",
-        "headline": "The war with {{opponent}} turns our way",
+        "headline": "Our side leads in the war with {{opponent}}",
         "body": [
-          "The tally against {{opponent}} stands at {{score}} in our favor. The fighting, of late, has been giving more than it takes."
+          "The tally against {{opponent}} stands at {{score}} in our favor. A woman collecting letters for the regiment says soldiers' families keep asking whether a better tally means their men will get home any sooner."
         ],
         "weight": { "base": 1 }
       },
@@ -1827,7 +1827,7 @@
         "id": "war-weariness-eases-report",
         "headline": "The war sits lighter on the country",
         "body": [
-          "Weariness with the war has fallen to {{weariness}}, back below the halfway mark. The mood of the country has lightened with it."
+          "Weariness with the war has fallen to {{weariness}}, back below the halfway mark. In the shops, people have begun to ask what roof tiles and seed cost again."
         ],
         "weight": { "base": 1 }
       },
@@ -1878,7 +1878,7 @@
         "id": "war-weariness-sets-in-report",
         "headline": "The war begins to wear us down",
         "body": [
-          "The war with {{opponent}} has begun to grind the nation down. Weariness stands at {{weariness}}, past the halfway mark, and it shows in the streets before it shows anywhere else."
+          "The latest weariness figure for the war with {{opponent}} is {{weariness}}. A cobbler says customers who once ordered a new pair now bring in boots he's already soled twice and ask him for one more season."
         ],
         "weight": { "base": 1 }
       },

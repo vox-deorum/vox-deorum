@@ -7,9 +7,9 @@
     "variants": [
       {
         "id": "faith-drifts-report",
-        "headline": "{{majorityFaith}} leads in most of our cities",
+        "headline": "Most of our cities now keep {{majorityFaith}}",
         "body": [
-          "{{majorityFaith}} holds a majority in most of our cities. Our nation founded a different faith, {{founded}}."
+          "{{majorityFaith}} has taken a majority in most of our cities, though our nation founded {{founded}}. In one town, the wardens of the shrine of {{founded}} have begun lending their hall to the congregation that keeps {{majorityFaith}}."
         ],
         "weight": { "base": 1 }
       },
@@ -129,9 +129,9 @@
       {
         "id": "faith-reaches-distant-city-far",
         "when": "cityName === null || civilization === null",
-        "headline": "A distant city turns to our faith",
+        "headline": "A far city takes up our faith",
         "body": [
-          "A city far beyond our borders has taken {{religion}}, the creed this nation founded, as its majority faith. Conversions in the city account for the change, and the distance has not slowed the creed."
+          "{{religion}}, the faith we founded, now has a majority in a faraway city. Caravans bring word of a shrine beside the well where the first drivers stop before setting out."
         ],
         "weight": { "base": 1 }
       },
@@ -223,9 +223,9 @@
       {
         "id": "foreign-major-adopts-our-faith-report",
         "when": "civilization !== null",
-        "headline": "Our faith leads in most cities of {{civilization}}",
+        "headline": "Our faith takes most cities of {{civilization}}",
         "body": [
-          "In {{civilization}}, {{religion}} now holds a majority in most cities. The faith was founded here."
+          "{{religion}}, the faith we founded, now has a majority in most cities of {{civilization}}. A merchant from that country carries a prayer sheet inside his account book and has asked a scribe here for copies for his partners."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -336,9 +336,9 @@
       {
         "id": "national-majority-faith-changed-report",
         "when": "former !== null",
-        "headline": "{{religion}} overtakes {{former}} in the tally of cities",
+        "headline": "{{religion}} overtakes {{former}} in most of our cities",
         "body": [
-          "{{religion}} has a majority in most of our cities. {{former}} held that distinction at the previous count."
+          "{{religion}} now has a majority in most of our cities, a lead {{former}} held at the last count. In one town the same bell calls both congregations; the bell ringer says it takes a good memory to keep their hours straight."
         ],
         "weight": { "base": 1 }
       },
@@ -386,9 +386,9 @@
       {
         "id": "neighbor-majority-faith-changed-report",
         "when": "civilization !== null",
-        "headline": "{{religion}} gains a majority in most cities of {{civilization}}",
+        "headline": "{{religion}} takes most cities in {{civilization}}",
         "body": [
-          "In {{civilization}}, {{religion}} now has a majority in most cities. The previous majority was held by {{former}}."
+          "{{religion}} now holds a majority in most cities of {{civilization}}, where {{former}} led at the last count. On the border road, a carter carries candles to two shrines in the same town and says the newer congregation buys more."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -440,9 +440,9 @@
     "variants": [
       {
         "id": "neighbors-convert-report",
-        "headline": "{{count}} neighboring cities turn to {{key}}",
+        "headline": "{{key}} gains a majority in {{count}} nearby cities",
         "body": [
-          "{{count}} cities among our neighbors now keep {{key}} as their majority faith. The changes are recent, and taken together they show how far the creed has walked along the border."
+          "{{count}} nearby cities now keep {{key}} as their majority faith. A bookseller at the fair says his customers have begun asking whether he can get their prayers written on cheaper paper."
         ],
         "weight": { "base": 1 }
       },
@@ -597,9 +597,9 @@
     "variants": [
       {
         "id": "own-city-converts-report",
-        "headline": "{{religion}} leads in {{city}}",
+        "headline": "{{city}} turns to {{religion}}",
         "body": [
-          "The majority faith of our own {{city}} is now {{religion}}, and recent conversions in the city have gone its way."
+          "{{religion}} has taken a majority in {{city}}. At one supper table, a grandmother says the old grace, and the grandchildren answer in the new words."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }

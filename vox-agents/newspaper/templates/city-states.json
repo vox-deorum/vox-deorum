@@ -55,7 +55,7 @@
         "when": "ally !== null",
         "headline": "An ally is at war. What is our answer?",
         "body": [
-          "Citizens, {{ally}} fights tonight, and it fights as our ally! An alliance is cheap while it costs nothing; the day it costs something is the day it means something. We say the government's answer must be spoken plainly, and spoken soon."
+          "Citizens, war has been declared on {{ally}}. Our council should tell the ally what it can send, and when; a town that needs grain and timber for its defenses has no use for a promise that comes after the roads close."
         ],
         "weight": { "base": 1 }
       }
@@ -93,7 +93,7 @@
         "when": "cityState !== null && captor !== null",
         "headline": "What we lost with {{cityState}}",
         "body": [
-          "{{captor}}'s flag flies over {{cityState}} this week, and over the ground our ally guarded with it. A friendship is not land, but it stands on land, and that land now belongs to {{captor}}. What the nation lost is not one small city; it is every road that ran through a friend."
+          "The flag of {{captor}} now flies over {{cityState}}. A carter who used to change horses there is looking for a stop outside town; if enough drivers do the same, the city's stable keepers could lose the trade they once counted on."
         ],
         "weight": { "base": 1 }
       },
@@ -457,18 +457,18 @@
       {
         "id": "city-state-quest-countdown-disappeared-report",
         "when": "cityState !== null",
-        "headline": "An errand vanishes from {{cityState}}'s board",
+        "headline": "A deadline comes off {{cityState}}'s board",
         "body": [
-          "A deadline that ran on one of {{cityState}}'s posted errands has been taken down without a word. Whether the work was finished or quietly abandoned, the small power is not saying."
+          "A deadline has come off the board at {{cityState}}. A traveler who had already put money aside for the trip says she will keep it another week before she spends it on something else."
         ],
         "weight": { "base": 1 }
       },
       {
         "id": "city-state-quest-countdown-disappeared-unnamed",
         "when": "cityState === null",
-        "headline": "A deadline comes off the board",
+        "headline": "A small power's notice board loses a deadline",
         "body": [
-          "One of the small powers has pulled a deadline off its notice board this week and offered no reason. Whether the work behind it was finished or forgotten, the board does not say."
+          "A deadline has come off a small power's notice board this week, and the mason who had priced stone for the job is asking whether the order still stands."
         ],
         "weight": { "base": 1 }
       },
@@ -493,9 +493,9 @@
         "stance": "rationalist",
         "genre": "report",
         "when": "cityState !== null && previousDeadline !== null",
-        "headline": "In {{cityState}}, a deadline disappears without a cause",
+        "headline": "The missing date on {{cityState}}'s board",
         "body": [
-          "The errand board in {{cityState}} carried a deadline, and the deadline read {{previousDeadline}}. It has been taken down, and no cause is recorded. A number that vanishes without a cause is an observation, not yet a conclusion."
+          "The errand board in {{cityState}} no longer lists the job that was due at {{previousDeadline}}. One man who had been saving his good boots for the trip says he will wait to hear whether the work still stands."
         ],
         "links": [
           { "placeholder": "cityState", "label": "{{cityState}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -531,9 +531,9 @@
       {
         "id": "city-state-quest-deadline-approaching-unnamed",
         "when": "cityState === null",
-        "headline": "A deadline falls somewhere today",
+        "headline": "A small power's errand is nearly due",
         "body": [
-          "One of the small powers has a deadline at hand, and the notices reaching us do not say which. The work, whatever it is, ends with the day."
+          "An errand posted by a city-state is nearly due. A traveler who means to answer it says he has asked the next cart leaving town to take him as far as it can."
         ],
         "weight": { "base": 1 }
       },
@@ -707,7 +707,7 @@
         "when": "cityState === null || aggressor === null",
         "headline": "A friendly city-state under attack",
         "body": [
-          "War has reached one of the small powers that call us friend. The reports name the fighting but not every banner in it, and the capital is saying little."
+          "War has reached one of the small powers that call us friend. On the road from its market, a wool trader is asking every driver whether the way is still open."
         ],
         "weight": { "base": 1 }
       },

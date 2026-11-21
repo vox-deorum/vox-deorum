@@ -71,7 +71,7 @@
         "id": "congress-resolution-defeated-report",
         "headline": "The Congress votes a measure down",
         "body": [
-          "A proposal before the World Congress has been defeated. The delegates declined to carry it, and the chamber's law stands as it did before the vote."
+          "The World Congress has voted down a proposal. Its backers left the chamber with their copies of the draft still in hand."
         ],
         "weight": { "base": 1 }
       },
@@ -95,7 +95,7 @@
         "when": "isEnact === false",
         "headline": "A repeal refused, and the law stands",
         "body": [
-          "The Congress was asked to strike one of its own laws. The Congress said no. The law stays on the books. It was tested, and it held, which is more than most laws can say."
+          "The Congress has refused to repeal one of its laws. Repeal backers can try again, but they will need a place on a later agenda as well as more votes."
         ],
         "weight": { "base": 1 }
       },
@@ -123,7 +123,7 @@
         "id": "congress-resolution-passed-report",
         "headline": "The Congress carries a measure",
         "body": [
-          "Delegates have approved a proposal before the World Congress, changing which measures are in force."
+          "The World Congress has approved a proposal and changed which rules are in force. Copyists were still at work when messengers came to the door; their delegations wanted the text to send home."
         ],
         "weight": { "base": 1 }
       },
@@ -135,7 +135,7 @@
         "when": "resolution !== null && isEnact === true",
         "headline": "The Congress enacts {{resolution}}",
         "body": [
-          "By word from the chamber, the World Congress has enacted {{resolution}}. It stands among the active resolutions of the world, and the nations that argued for it may count the day well spent. The couriers, one notes, were saddled before the telling was finished."
+          "The World Congress has enacted {{resolution}}. After the vote, a correspondent waiting for a copy watched a clerk put the adopted text beside the original motion so readers could see exactly what the chamber had agreed to."
         ],
         "weight": { "base": 1 }
       },
@@ -147,7 +147,7 @@
         "when": "resolution !== null && isEnact === false",
         "headline": "The Congress strikes {{resolution}} from the books",
         "body": [
-          "The delegates have voted {{resolution}} out of force. What was settled law yesterday is the chamber's business no longer, and the world will learn again how to do without it. People manage. They always did, before the chamber took an interest."
+          "The World Congress has repealed {{resolution}}. At the dispatch desk, a clerk folded the old text into the same packet as the result so the people who worked under it would know which instructions to strike out."
         ],
         "weight": { "base": 1 }
       },
@@ -363,7 +363,7 @@
         "when": "change < 0",
         "headline": "Our voice in the Congress shrinks",
         "body": [
-          "Our votes have fallen from {{previous}} to {{votes}}, and the chamber keeps a ledger of such things. The ministers whose work it is to keep us strong abroad owe us an explanation, and 'these things happen' is not one. Friends are won before the count, not after it."
+          "Our votes in the World Congress have fallen from {{previous}} to {{votes}}. Let the foreign ministers put both tallies on the same sheet and tell us which votes went missing, and which delegations they mean to approach before the next ballot."
         ],
         "weight": { "base": 1 }
       }
@@ -642,9 +642,9 @@
         "voice": "press",
         "stance": "conciliatory",
         "genre": "report",
-        "headline": "A hand extended in the chamber",
+        "headline": "A motion to lift {{resolution}}",
         "body": [
-          "The delegates have a motion before them to lift {{resolution}}. Carried, it ends the chamber's censure and brings the named nation back to the table. Somebody in that chamber had to swallow pride to draft it, and that deserves a line of its own. Tables, not walls, are where quarrels end."
+          "The World Congress will consider repealing {{resolution}}. A trader who has put orders on hold will be listening for the vote; if the motion passes, she can ask her old customers whether they still want the goods."
         ],
         "weight": { "base": 1 }
       },

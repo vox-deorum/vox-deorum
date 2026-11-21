@@ -49,9 +49,9 @@
         "voice": "press",
         "stance": "ambitious",
         "genre": "analysis",
-        "headline": "What the finished {{building}} says about {{cityName}}",
+        "headline": "Another job for the builders of {{cityName}}",
         "body": [
-          "The {{building}} is finished in {{cityName}}, and the completion makes two statements. One concerns the building itself. The other concerns a city with the surplus, the hands and the patience to see long work through, and that is the statement rivals read closest. A finished work is also a promise of the next one."
+          "{{cityName}} has finished the {{building}}, and the foreman still has her whole crew on the wage sheet. If the council has another job ready, it can start while the people who know the work are still in town."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -321,9 +321,9 @@
         "stance": "neutral",
         "genre": "report",
         "when": "cityName === null",
-        "headline": "A city we cannot name is burning",
+        "headline": "A city held by {{civilization}} is being razed",
         "body": [
-          "A city is burning under {{civilization}}'s hand, and its name has not even reached us. {{turns}} turns remain before there is nothing left to name."
+          "A city held by {{civilization}} is being pulled down, with {{turns}} turns left at the current pace. Outside the city, families with room on their carts have been stopping to take on passengers."
         ],
         "weight": { "base": 1 }
       },
@@ -333,9 +333,9 @@
         "stance": "neutral",
         "genre": "report",
         "when": "population !== null",
-        "headline": "{{cityName}} burns with {{population}} people inside",
+        "headline": "{{population}} people remain as {{cityName}} is razed",
         "body": [
-          "{{civilization}} is razing {{cityName}} with {{population}} people inside its walls. {{turns}} turns remain before the city and its inhabitants are gone."
+          "{{cityName}} is being razed under {{civilization}}; {{population}} people are still there, with {{turns}} turns left at the current pace. One family has brought its door down to the street to use as a handcart bed."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -631,7 +631,7 @@
         "id": "city-flips-report",
         "headline": "{{cityName}} changes allegiance",
         "body": [
-          "{{cityName}} has left {{formerOwner}} to join {{newOwner}}. The city made the change by its own decision, with no army at its gates."
+          "{{cityName}} revolted and passed from {{formerOwner}} to {{newOwner}}. A carter brought his license to the town hall to ask whether the old seal would still get him through the gate."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -643,9 +643,9 @@
         "voice": "press",
         "stance": "neutral",
         "genre": "analysis",
-        "headline": "{{cityName}} chooses a new flag",
+        "headline": "Old orders under a new flag in {{cityName}}",
         "body": [
-          "Cities change hands by conquest or by choice, and the two are not the same kind of event. {{cityName}} has gone from {{formerOwner}} to {{newOwner}} without a battle, which means the new flag was invited in. Invitations can be withdrawn."
+          "{{cityName}} has passed from {{formerOwner}} to {{newOwner}} after a revolt. A flour dealer still has orders out with mills under the old flag, and any new duty at the gate will show up in the price of bread before bakers can find other suppliers."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -877,9 +877,9 @@
     "variants": [
       {
         "id": "city-under-siege-report",
-        "headline": "{{cityName}} is under siege",
+        "headline": "{{cityName}} holds with damaged defenses",
         "body": [
-          "Enemy forces have ringed {{cityName}}, and the walls have taken real damage. The city holds, and the siege goes on."
+          "{{cityName}} remains in our hands, its defenses badly damaged. Families who live near the wall have begun taking blankets to relatives farther inside the city."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1572,7 +1572,7 @@
         "genre": "anecdote",
         "headline": "The granary at {{city}} is emptying",
         "body": [
-          "The bakers of {{city}} have started counting loaves instead of selling them. The store stands at {{foodStored}} and falls by {{shortfall}} a turn, and there is no army outside the walls to blame for a single crumb of it."
+          "{{city}} is at peace, and its food stores are down to {{foodStored}}, falling by {{shortfall}} a turn. A baker set her bread knife on the counter and started selling half loaves so the people still in line could buy something for supper."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }

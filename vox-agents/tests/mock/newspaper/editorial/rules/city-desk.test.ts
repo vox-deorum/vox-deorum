@@ -113,9 +113,11 @@ describe('stock city desk', () => {
     const stories = result.stories('forward-settle');
     expect(stories).toHaveLength(1);
     const [article] = stories;
-    const headline = article.headline.map(node => 'text' in node ? node.text : '').join('');
-    expect(JSON.stringify(article.body)).toContain('Brazil');
-    expect(headline).toContain('Tours');
+    const copy = [...article.headline, ...article.body.flat()];
+    const text = copy.map(node => 'text' in node ? node.text : '').join(' ');
+    expect(text).toContain('Brazil');
+    expect(text).toContain('Tours');
+    expect(copy).toContainEqual(expect.objectContaining({ target: { type: 'city', cityId: '20' } }));
     expect(result.audit('forward-settle').subjects).toMatchObject([{ subject: 'event/101', outcome: 'fired', urgent: true }]);
     const unnamed = (await check(fixture([home], [], [founded]))).stories('forward-settle');
     expect(unnamed).toHaveLength(1);

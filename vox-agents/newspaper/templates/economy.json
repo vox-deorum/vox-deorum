@@ -9,7 +9,7 @@
         "id": "treasury-falls-into-deficit-report",
         "headline": "The treasury slips into deficit",
         "body": [
-          "The treasury now spends {{deficit}} gold a season more than it takes in, after a count that held the books at balance or better. The gap repeats each season until it is closed. At the sailmaker's loft, the master has started cutting canvas for one order at a time. The next order waits until the last is paid."
+          "The treasury now takes in {{deficit}} gold less than it spends each turn. A sailmaker who fills government orders says he is cutting only as much canvas as the first installment will cover."
         ],
         "weight": { "base": 1 }
       },
@@ -70,9 +70,9 @@
         "voice": "gazette",
         "stance": "elitist",
         "genre": "report",
-        "headline": "The reserve passes the thousand mark",
+        "headline": "The reserve reaches the thousand mark",
         "body": [
-          "It is a pleasure to record that the treasury has passed the thousand-gold mark and now holds {{gold}} gold, a store grown by {{gain}} gold in recent seasons. At the counting house, the partners have moved the strongbox to the inner room and given the key to the eldest of them. The youngest still counts it twice."
+          "The treasury has reached the thousand-gold mark and now holds {{gold}} gold, up {{gain}} from the last count. One of the capital's larger suppliers tells us he has sent his clerk to ask when the council will settle its oldest bills."
         ],
         "weight": { "base": 1 }
       },
@@ -110,7 +110,7 @@
         "id": "treasury-reserve-recovers-report",
         "headline": "The treasury gains time against the deficit",
         "body": [
-          "The treasury can stretch its reserve further even though it still runs a deficit. At the current shortfall of {{deficit}} gold a season, its {{gold}} gold can cover {{turnsLeft}} full seasons."
+          "The treasury holds {{gold}} gold against a shortfall of {{deficit}} a turn, enough for {{turnsLeft}} full turns at the current rate. A mason who waits outside the pay office each reckoning says he can leave his account with the clerk this time."
         ],
         "weight": { "base": 1 }
       },
@@ -170,9 +170,9 @@
         "voice": "broadcast",
         "stance": "government-critical",
         "genre": "report",
-        "headline": "Treasury cover: {{turnsLeft}} seasons left",
+        "headline": "Treasury cover: {{turnsLeft}} full turns left",
         "body": [
-          "The treasury holds {{gold}} gold tonight. Spending outruns income by {{deficit}} gold a season. That leaves {{turnsLeft}} seasons of cover, and the shortfall is not new. What nobody in the palace has said is what happens when the count reaches zero. We asked. There was no answer yet."
+          "The treasury holds {{gold}} gold tonight. With spending ahead of revenue by {{deficit}} gold a turn, that's {{turnsLeft}} full turns of cover at the current rate. A woman who brings grain to the public stores has one question for the council: who gets paid first if the money runs out?"
         ],
         "weight": { "base": 1 }
       },
@@ -183,7 +183,7 @@
         "genre": "editorial",
         "headline": "The old rule was a full store",
         "body": [
-          "Our grandparents kept a store against bad years, and the bad years came all the same. The treasury holds {{gold}} gold against a deficit of {{deficit}} gold a season, and that is {{turnsLeft}} seasons from empty. The old rule was plain: a full store first, arguments after. Fill it now, while there is still something to fill it from."
+          "Councilors, the treasury holds {{gold}} gold and loses {{deficit}} a turn, which leaves {{turnsLeft}} full turns at this rate. Put next week's pay and grain bills on the table before you vote another expense; the people who fill our stores will soon need to know which orders they can afford to take."
         ],
         "weight": { "base": 1 }
       }
@@ -199,7 +199,7 @@
         "id": "treasury-returns-to-surplus-report",
         "headline": "The deficit ends",
         "body": [
-          "The treasury has returned to surplus. Income again covers spending, with {{goldPerTurn}} gold a season to spare where the recent count showed a shortfall."
+          "The treasury is out of deficit, with {{goldPerTurn}} gold to spare each turn at the latest count. A supplier who has been taking public orders a barrel at a time says she will ask whether she can deliver the rest at once."
         ],
         "weight": { "base": 1 }
       },
@@ -221,7 +221,7 @@
         "genre": "notice",
         "headline": "Notice: the accounts no longer run behind",
         "body": [
-          "Notice is given that the deficit lately showing in the accounts has closed. The rate now reads {{goldPerTurn}} gold a season to the good, a correction made without panic. Good order in the treasury serves the whole nation, and the ministers concerned merit its thanks."
+          "Notice is given that the treasury no longer spends more than it takes in, with {{goldPerTurn}} gold now left over each turn. Merchants with unpaid accounts may bring their receipts when the pay office opens."
         ],
         "weight": { "base": 1 }
       },

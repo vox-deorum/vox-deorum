@@ -29,9 +29,9 @@
         "stance": "pro-government",
         "genre": "report",
         "when": "success && cityState !== null",
-        "headline": "A quiet success in {{cityState}}",
+        "headline": "The election in {{cityState}} goes our way",
         "body": [
-          "Letters from {{cityState}} relate that the election there has ended to our advantage. The government's patient friends in the city are quietly owed the credit, and the ministry's judgment in backing them, this paper notes, stands confirmed."
+          "We are informed that the election in {{cityState}} has gone our government's way. A merchant who often calls at the council hall says the canvassers are already bringing back the stools they borrowed while taking names at the door."
         ],
         "weight": { "base": 1 }
       },
@@ -82,9 +82,9 @@
       {
         "id": "our-diplomat-abroad-unnamed",
         "when": "civilization === null",
-        "headline": "A diplomat goes abroad, and the office keeps the name",
+        "headline": "Our envoy takes a post at a major court",
         "body": [
-          "We have posted a diplomat to the capital of a major power. At the foreign office, a porter roped a strapped trunk onto a coach and was reminded, twice, that he had not seen it. The envoy will speak for us at that court. The clerks who know which one have been given other work to do."
+          "We have posted an envoy to a foreign court. At the coach yard, a clerk tucked an empty dispatch pouch under the strap of the envoy's trunk; the first replies can come back in the same pouch."
         ],
         "weight": { "base": 1 }
       },
@@ -161,9 +161,9 @@
         "voice": "pamphlet",
         "stance": "populist",
         "genre": "notice",
-        "headline": "A spy among us, caught!",
+        "headline": "A foreign spy uncovered!",
         "body": [
-          "Foreign eyes were at work in our streets, neighbors, and our own watch closed on them. Caught! The councils will keep their secrets, as councils do, but the street can take this much home: our watch was awake, and it was equal to it."
+          "Neighbors! Our watch has uncovered a foreign spy among us. The porter who works the late door says half the street has stopped by to compare notes about its callers. Ask him again tomorrow and he'll have to charge admission."
         ],
         "weight": { "base": 1 }
       }
@@ -201,9 +201,9 @@
         "stance": "ambitious",
         "genre": "report",
         "when": "possibleTechnology !== null",
-        "headline": "Detected, and perhaps not empty-handed",
+        "headline": "Our spy drew notice and may bring home {{possibleTechnology}}",
         "body": [
-          "Word reaches this paper that our agent abroad was noticed at the work, an embarrassment in any season. Yet the letters home suggest the visit may nonetheless have secured {{possibleTechnology}}, which, if it holds, would dress the misstep handsomely."
+          "Our agent abroad drew notice. The dispatches leave open whether the attempt yielded {{possibleTechnology}}, and an embassy clerk says he's already been asked twice why unfamiliar faces were calling at his door."
         ],
         "weight": { "base": 1 }
       },
@@ -213,9 +213,9 @@
         "stance": "neutral",
         "genre": "report",
         "when": "cityName !== null",
-        "headline": "Our spy is noticed in {{cityName}}",
+        "headline": "One of ours is marked in {{cityName}}",
         "body": [
-          "In this season one of ours was marked at work in {{cityName}}, and the marking was known to both sides. Whose service sent the agent, the other side has not learned. The record here keeps that entry blank as well."
+          "In this season our agent drew notice in {{cityName}}. A copyist there recalls how the people who once called openly began stopping at the outer door after dusk."
         ],
         "weight": { "base": 1 }
       }
@@ -417,7 +417,7 @@
         "genre": "notice",
         "headline": "A quiet posting to {{cityName}}",
         "body": [
-          "It is understood in reliable quarters, which is all this paper will say about them, that one of our people is now placed in {{cityName}}, of {{civilization}}. The nation's standing is kept by many kinds of work, and this posting is one of the quieter kinds."
+          "One of our people has taken a post in {{cityName}}, a city of {{civilization}}. The first letter home can say what a visiting envoy might miss: what people there talk about once their visitors have gone."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -443,9 +443,9 @@
         "voice": "press",
         "stance": "hawkish",
         "genre": "analysis",
-        "headline": "Eyes inside {{cityName}}",
+        "headline": "A room inside {{cityName}}",
         "body": [
-          "A pair of eyes inside {{cityName}} is worth more than a listener's post. This is the early line on what {{civilization}} builds, moves and plans, and news from inside a city arrives before any courier. When the next war starts, it will show in the quiet placements first."
+          "We now have an agent in {{cityName}}. A count of the wagons passing the same window every morning can tell us something the occasional dispatch from {{civilization}} cannot: whether a long train at the gate is ordinary traffic or something new."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
