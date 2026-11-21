@@ -9,7 +9,7 @@
         "id": "building-completed-report",
         "headline": "{{cityName}} completes the {{building}}",
         "body": [
-          "The key turned in the new {{building}} in {{cityName}} this morning, and a woman with a broom went in first. The city's own masons raised it and took their wages. From this week the doors stand open."
+          "The key turned in the new {{building}} in {{cityName}} this morning, and a woman with a broom went in first. Masons and carpenters raised it; no purchase hurried the work, and from this week the doors stand open."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -98,7 +98,7 @@
         "genre": "analysis",
         "headline": "Why {{cityName}} is paying for the {{building}}",
         "body": [
-          "The city has put extra money into the {{building}} at {{cityName}}, and what the money bought was time. The scaffold now carries twice the men it did a month ago, and the work has a finishing date. The coin is gone from the chest, and in its place the city will have walls and a roof before the season turns."
+          "The city has put extra money into the {{building}} at {{cityName}}, and what the money bought was time. The scaffold now carries twice the men it did a month ago, and the work has a finishing date. Whether the trade was wise will show in the treasury, and in whatever the city could not buy with the coin it spent."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -131,7 +131,7 @@
         "id": "building-purchased-report",
         "headline": "{{cityName}} buys the {{building}}",
         "body": [
-          "The doors of the {{building}} in {{cityName}} opened this morning for the first time, with no scaffold left to take down. The city paid in {{currency}} and took the work finished; people were at the door before the step was swept."
+          "The doors of the {{building}} in {{cityName}} opened this morning with no scaffold left to take down. The city paid in {{currency}} and took the work finished; people were at the door before the step was swept."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -193,7 +193,7 @@
         "when": "!tied",
         "headline": "{{largest}} outgrows the capital",
         "body": [
-          "At the gate of {{largest}}, the man who counts carts has stopped writing. The city holds {{largestPopulation}} people, more than {{capital}}, and is no longer the realm's capital."
+          "At the gate of {{largest}}, the cart counter's slate is full and he has sent for a second. The city holds {{largestPopulation}} people, more than {{capital}}."
         ],
         "weight": { "base": 1 }
       },
@@ -523,7 +523,7 @@
         "genre": "report",
         "headline": "{{cityName}} strengthens its walls",
         "body": [
-          "The {{building}} at {{cityName}} is complete, and the night watch has moved its stool behind the new stone. Any army that comes this way will find the city a harder prize than its map suggests."
+          "The {{building}} at {{cityName}} is complete. The night watch has moved its stool behind the new stone, and any army that comes will find a harder prize than its map suggests."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -693,7 +693,7 @@
         "id": "city-growth-milestone-report",
         "headline": "{{cityName}} reaches {{population}} people",
         "body": [
-          "A new lane in {{cityName}} has houses on both sides now, and the city counts {{population}} people, enough to make it a {{milestone}} in our realm."
+          "A new lane in {{cityName}} has houses on both sides now. The city counts {{population}} people and is now a {{milestone}} in our realm."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -707,7 +707,7 @@
         "genre": "analysis",
         "headline": "{{cityName}} crosses {{population}}",
         "body": [
-          "{{cityName}} has reached {{population}} people, the measure of a {{milestone}}. The market that used to empty by noon now runs past the afternoon bell, and the potters have lit a second kiln. More people mean more fields, more work and more room, and a city that supplies them draws the families that make the next milestone. The room {{cityName}} has now will decide how far the next wave carries it."
+          "{{cityName}} has reached {{population}} people, the measure of a {{milestone}}. The market that used to empty by noon now runs past the afternoon bell, and the potters have lit a second kiln. More people mean more fields, more work and more room, and a city that supplies them draws the families that make the next milestone. The potters have already laid in clay for a third kiln."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -790,7 +790,7 @@
         "when": "returned === false",
         "headline": "A nation restored: {{liberated}} is free",
         "body": [
-          "By the hand of {{liberator}}, {{liberated}} has resumed its place among the independent nations, to the quiet relief of its neighbors. At its hall, the old seal went into a sack and the nation's own was pressed into the wax before noon."
+          "By the hand of {{liberator}}, {{liberated}} has resumed its place among the independent nations, to the relief of its neighbors. At its hall, the old seal went into a sack and the nation's own was pressed into the wax."
         ],
         "weight": { "base": 1 }
       },
@@ -1027,7 +1027,7 @@
         "id": "foreign-building-completed-report",
         "headline": "{{civilization}} completes the {{building}} in {{cityName}}",
         "body": [
-          "From our side of the border, the scaffold came down at {{cityName}} this week. The {{building}} is in use, and {{civilization}} has one more finished work at a city we can see."
+          "From our side of the border, the scaffold came down at {{cityName}} this week. The {{building}} is in use, and {{civilization}}'s road to it carries loads again."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1100,7 +1100,7 @@
         "id": "foreign-building-purchased-report",
         "headline": "{{civilization}} buys the {{building}} in {{cityName}}",
         "body": [
-          "The {{building}} at {{cityName}} opened with no scaffold around it. {{civilization}} paid in {{currency}} and took the work finished; the first people through the door found the floors still smelling of new wood."
+          "The {{building}} at {{cityName}} opened with no scaffold around it. {{civilization}} paid in {{currency}} and took the work finished; the first through the door smelled new wood."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }

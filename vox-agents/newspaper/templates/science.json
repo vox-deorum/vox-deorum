@@ -31,7 +31,7 @@
         "when": "civilization !== null",
         "headline": "A friend crosses into the {{era}}",
         "body": [
-          "Letters from the friendly courts bring word that {{civilization}} has lately passed from the {{former}} into the {{era}}. We offer congratulations without hesitation: a friend grown stronger in the learning of the age makes a better customer, a better teacher and a steadier neighbor, and we welcome all three."
+          "Letters from the friendly courts bring word that {{civilization}} has lately passed from the {{former}} into the {{era}}. Our envoys there have sent home for the new charts, and the mapmakers have begun redrawing the roads. A friend grown stronger in the learning of the age makes a better customer and a steadier neighbor, and we welcome both."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -106,7 +106,7 @@
         "genre": "analysis",
         "headline": "A neighbor's new learning",
         "body": [
-          "What a neighbor knows changes what a neighbor can do. {{team}}, whose lands run along ours, now knows {{tech}}. Somewhere across the border a workshop is already trying it out. The ledger of the age has a new entry, not in our handwriting."
+          "In {{team}}, whose lands run along ours, a workshop has cleared its benches for {{tech}}. The apprentices have been kept back after hours, and the master has stopped hiding the work from visitors."
         ],
         "weight": { "base": 1 }
       },
@@ -250,7 +250,7 @@
         "when": "era !== null",
         "headline": "Notice: {{tech}} is finished",
         "body": [
-          "The printers are advised that our scholars have brought {{tech}} to completion. The {{era}} continues what earlier ages began; each generation takes up the work where the last one laid it down, and this piece is now whole."
+          "The printers are advised that our scholars have brought {{tech}} to completion. The first printed sheet is drying on the line, and the binder has been asked to stitch a copy for the archive before the day is out. The {{era}} has one more finished page to its name."
         ],
         "weight": { "base": 1 }
       },
@@ -299,7 +299,7 @@
         "when": "civilization !== null",
         "headline": "A rival leaves the {{former}}",
         "body": [
-          "Advices from abroad state that {{civilization}}, no particular friend of ours, has lately passed from the {{former}} into the {{era}}. We report the crossing as it reached us. Whether it deserves congratulation or watchfulness we leave to readers better acquainted with that quarter."
+          "Advices from abroad state that {{civilization}}, no particular friend of ours, has lately passed from the {{former}} into the {{era}}. A bookseller here has put their new grammars on the shelf beside ours, and we report the crossing as it reached us. Whether it deserves congratulation or watchfulness we leave to readers who know that quarter."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -404,7 +404,7 @@
         "genre": "analysis",
         "headline": "Two ways to count learning",
         "body": [
-          "The nation first in the tally holds {{count}} arts and sciences. One art may have passed through several generations of masters while another has scarcely left the school, yet each adds one to the sum. A rival lower in the tally may have trained more people in the arts the two nations share."
+          "The nation first in the tally holds {{count}} arts and sciences. In its oldest school, the shelf for one art is worn smooth while the shelf for another still smells of glue. A rival lower in the tally may have trained more people in the arts the two nations share, and its benches are fuller for it."
         ],
         "weight": { "base": 1 }
       }

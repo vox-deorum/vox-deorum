@@ -469,7 +469,7 @@
         "when": "friend !== null",
         "headline": "Our friendship with {{friend}} is over",
         "body": [
-          "At the customs house, a crate has come back from {{friend}} unopened, their seal still on the lid. The friendship is ended, and the two courts deal with each other now on plainer terms."
+          "On the quay, a crate has come back from {{friend}} unopened, their seal still on the lid. The friendship is ended, and the two courts deal with each other now on plainer terms."
         ],
         "weight": { "base": 1 }
       },

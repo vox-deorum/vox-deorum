@@ -311,7 +311,7 @@
         "genre": "report",
         "headline": "The national mood has picked up",
         "body": [
-          "Good news tonight. The mood in the country has lifted to {{happinessPercentage}} in the hundred. At one assembly hall, a government supporter says he can finally talk about next year's plans without being shouted down."
+          "Good news tonight. The mood in the country has lifted to {{happinessPercentage}} in every hundred. At one assembly hall, a government supporter says he can finally talk about next year's plans without being shouted down."
         ],
         "weight": { "base": 1 }
       },
@@ -334,7 +334,7 @@
         "genre": "notice",
         "headline": "Citizens: the hard days have eased",
         "body": [
-          "Citizens: the count says {{happinessPercentage}} in the hundred of us are content, past half at last. It was earned down here, in the shops and the yards, not in the palace. Enjoy it. And when the next hard stretch comes, remember who was in charge during the last one."
+          "Citizens: the count says {{happinessPercentage}} of us in every hundred are content, past half at last. It was earned down here, in the shops and the yards, not in the palace. Enjoy it. And when the next hard stretch comes, remember who was in charge during the last one."
         ],
         "weight": { "base": 1 }
       }
@@ -611,9 +611,9 @@
     "variants": [
       {
         "id": "revolt-cleared-report",
-        "headline": "A family unpacks one trunk",
+        "headline": "The mood lifts, and a trunk stays packed",
         "body": [
-          "The mood in the street has lifted to {{happinessPercentage}} in the hundred. At a lodging house near the square, a family that had packed two trunks in the spring has unpacked one and pushed the other under the bed."
+          "The mood in the street has lifted to {{happinessPercentage}} out of a hundred. At a lodging house near the square, a family that had packed two trunks in the spring has unpacked one and pushed the other under the bed."
         ],
         "weight": { "base": 1 }
       },
@@ -622,9 +622,9 @@
         "voice": "press",
         "stance": "pro-government",
         "genre": "analysis",
-        "headline": "A quieter docket, short of half",
+        "headline": "A quieter docket, still short of half",
         "body": [
-          "The mood has climbed to {{happinessPercentage}} in the hundred, and the magistrate's docket shows it: two brawls and a broken window where a riot stood in the spring.",
+          "The mood has climbed to {{happinessPercentage}} out of a hundred, and the magistrate's docket shows it: two brawls and a broken window where a riot stood in the spring.",
           "The climb has a direction, and the direction matches the government's course. The granaries are full, the watch is paid, and the carts are not being stopped in the street. The distance to half is the work left, and it is being walked, not waited for."
         ],
         "weight": { "base": 1 }
@@ -652,7 +652,7 @@
         "id": "revolt-crossed-report",
         "headline": "The mood falls, and the carter takes the back lane",
         "body": [
-          "The mood has fallen to {{happiness}} in the hundred. A carter who usually stops at the square now unloads at his customers' back doors; he says it is easier to get home that way when tempers are short."
+          "The mood has fallen to {{happiness}} out of a hundred. A carter who usually stops at the square now unloads at his customers' back doors; he says it is easier to get home that way when tempers are short."
         ],
         "weight": { "base": 1 }
       },
@@ -686,7 +686,7 @@
         "genre": "report",
         "headline": "The mood falls, and shops close early",
         "body": [
-          "This is the national bulletin. The mood of the nation stands at {{happiness}} in the hundred tonight. Shops on the east side closed early. The council meets in the morning. Repeat: the council meets in the morning."
+          "This is the national bulletin. The mood of the nation stands at {{happiness}} in every hundred tonight. Shops on the east side closed early. The council meets in the morning. Repeat: the council meets in the morning."
         ],
         "weight": { "base": 1 }
       }
@@ -821,7 +821,7 @@
         "id": "unhappiness-sets-in-report",
         "headline": "The nation's mood falls below half",
         "body": [
-          "The mood has fallen to {{happiness}} in the hundred, down {{drop}} from the last reckoning. A fishmonger on the quay says customers who used to buy for the week now buy for the day."
+          "The mood has fallen to {{happiness}} out of a hundred, down {{drop}} from the last reckoning. A fishmonger on the quay says customers who used to buy for the week now buy for the day."
         ],
         "weight": { "base": 1 }
       },
@@ -833,7 +833,7 @@
         "headline": "Below half, and falling",
         "body": [
           "The mood has dropped {{drop}} points to {{happiness}} in the hundred, below half. Ministers call it serious.",
-          "Serious is what a government calls a problem it did not prevent. On the east side, a mother sends her boy to the bakery at opening time, when the day-old loaves are marked down. That is not the word she uses."
+          "Serious is what a government calls a problem it did not prevent. On the east side, a mother sends her boy to the bakery at opening time, when the day-old loaves are marked down. Serious is not the word she uses."
         ],
         "weight": { "base": 1 }
       },

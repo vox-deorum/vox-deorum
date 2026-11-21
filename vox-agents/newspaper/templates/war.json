@@ -58,7 +58,7 @@
         "id": "barbarians-at-the-gates-report",
         "headline": "Barbarians in sight of {{cityName}}",
         "body": [
-          "A herd boy drove the last cattle through the north gate of {{cityName}} at dusk, and the watch above him counted {{barbarians}} barbarians in the hills behind. The garrison has been warned, and the outlying fields are empty."
+          "A herd boy drove the last cattle through the north gate of {{cityName}} at dusk, and the watch above counted {{barbarians}} barbarians in the hills behind. The garrison has been warned, and the outlying fields are empty."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -115,7 +115,7 @@
         "when": "posture !== null && posture !== 'NONE'",
         "headline": "At {{cityName}}, the garrison answers: {{posture}}",
         "body": [
-          "It is set down that {{barbarians}} barbarians were counted in the lands of {{cityName}}. Before the count was a day old, the watch on the north wall was doubled, and the captain's answer went into the order book: {{posture}}."
+          "It is set down that {{barbarians}} barbarians were counted in the lands of {{cityName}}. Before the count was a day old, the watch was doubled, and the captain's answer went into the order book: {{posture}}."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -259,7 +259,7 @@
         "id": "enemy-front-posture-offensive-report",
         "headline": "Our forces attack before {{cityName}}",
         "body": [
-          "A rider brought the attack order to our camp before {{cityName}} at dawn. On the wall, the men of {{civilization}} hear the teams hitching up; the word down the line is {{posture}}."
+          "A rider brought the attack order to our camp before {{cityName}} at dawn. On the wall, the men of {{civilization}} hear the teams hitching up; the word is {{posture}}."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -580,7 +580,7 @@
         "when": "loser !== null && winner !== null",
         "headline": "The fall of a capital",
         "body": [
-          "It is set down that {{winner}} has taken the capital of {{loser}} by force of arms, {{distance}} leagues from our own cities. In the cathedral, the bells were rung once for the fallen throne and then stopped, and the priest wrote the date in the margin of his register."
+          "It is set down that {{winner}} has taken the capital of {{loser}} by force of arms, {{distance}} leagues from our own cities. At the temple, the priest wrote the date in the margin of his register and had the bell rung once for the fallen throne."
         ],
         "weight": { "base": 1 }
       },

@@ -59,7 +59,7 @@
         "id": "faith-reaches-city-state-report",
         "headline": "{{city}} takes the faith we founded",
         "body": [
-          "The woman who sweeps the shrine in {{city}} now keeps {{religion}}, the creed this nation founded, beside the prayers she learned at that same altar. The city's own people made the change. {{city}} lies beyond the lands we neighbor, and the creed reached it anyway."
+          "The woman who sweeps the shrine in {{city}} now follows {{religion}}, the creed this nation founded, at the altar where she learned the older prayers. The city's own people made the change. {{city}} lies beyond the lands we neighbor, and the creed reached it anyway."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -144,7 +144,7 @@
         "headline": "Our creed gains a distant majority",
         "body": [
           "In {{civilization}}, {{cityName}} has taken {{religion}}, the faith we founded, as its majority creed. The nearest of our settlements lies {{distance}} tiles away on the survey map.",
-          "A sermon can reach well beyond the ground a regiment can hold. In that city, the shrine now holds a copy of our founding prayer, carried over the distance by a traveler with no escort at all. The question for both capitals is where the people of that city will turn for counsel on matters of faith."
+          "A sermon can reach well beyond the ground a regiment can hold. The shrine there now holds a copy of our founding prayer, carried over the distance by one traveler. The question for both capitals is where the people of that city will turn for counsel on matters of faith."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -347,7 +347,7 @@
         "when": "former === null",
         "headline": "{{religion}} now leads in most of our cities",
         "body": [
-          "No faith held a majority in most of our cities at the last count. {{religion}} does now. Its feast days fill the street."
+          "No faith held a majority in most of our cities at the last count. {{religion}} does now. The feast fills the street."
         ],
         "weight": { "base": 1 }
       },
@@ -400,7 +400,7 @@
         "when": "civilization === null",
         "headline": "{{religion}} gains a majority across the border",
         "body": [
-          "Across the border, {{religion}} now leads in most cities, where {{former}} did at the last count. The toll keeper has posted the new feast day beside the old one."
+          "Across the border, {{religion}} now leads in most cities, where {{former}} did at the last count. The toll keeper posts the new feast day beside the old."
         ],
         "weight": { "base": 1 }
       },
@@ -715,7 +715,7 @@
         "id": "religion-founded-report",
         "headline": "This nation has founded {{religion}}",
         "body": [
-          "This nation has founded a religion: {{religion}}. Its first followers are our own people. At the shrine, the priest read the first prayer to a full hall, and latecomers copied it by lamplight."
+          "This nation has founded a religion: {{religion}}. Its first followers are our own people. At the shrine, the priest read the first prayer, and latecomers copied it by lamplight."
         ],
         "weight": { "base": 1 }
       },
