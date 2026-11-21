@@ -10,7 +10,7 @@
         "when": "success",
         "headline": "The vote abroad went our way",
         "body": [
-          "Our effort to sway the election in a small city-state has succeeded. The result stands, and the count finished where we intended."
+          "Our effort in a small city-state has succeeded. At the town hall, the tellers have finished the count, and the man we backed is shaking hands on the steps."
         ],
         "weight": { "base": 1 }
       },
@@ -55,7 +55,7 @@
         "when": "influence !== null",
         "headline": "One number from a murky business",
         "body": [
-          "Strip away the rumor and one figure survives: our standing in the city-state moved by {{influence}}. Figures do not flatter themselves. Whatever else the operation achieved or cost, this is the part that can be weighed, and the next one will be weighed against it."
+          "At our residency in the city-state, a bookkeeper has entered one figure in the ledger and ruled a line beneath it: our standing moved by {{influence}}. Strip away the rumor and that is what survives. Whatever else the operation achieved or cost, this is the part that can be weighed, and the next one will be weighed against it."
         ],
         "weight": { "base": 1 }
       }
@@ -72,7 +72,7 @@
         "when": "civilization !== null",
         "headline": "Our diplomat takes up post in {{civilization}}",
         "body": [
-          "We have posted a diplomat to {{civilization}}. The envoy will speak for us at that court, and the letters home will carry what its ministers say in rooms our traders never see."
+          "We have posted a diplomat to {{civilization}}. At the coach yard, the envoy's trunk went up last, and the porter was told to keep the dispatch case in the carriage, not the boot."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -96,7 +96,7 @@
         "when": "civilization !== null && capital !== null",
         "headline": "An envoy established at {{capital}}",
         "body": [
-          "In the manner of former reigns, an envoy of ours is now established at {{capital}}, the seat of {{civilization}}. Letters will pass between the two courts, as they have since courts first learned to write."
+          "In the manner of former reigns, an envoy of ours is now established at {{capital}}, the seat of {{civilization}}. The envoy was received at the gate with the old courtesies, and the first letter home is already sealed. So the custom is kept."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -131,7 +131,7 @@
         "when": "result === 'Identified'",
         "headline": "A foreign spy, caught and named",
         "body": [
-          "A foreign spy at work inside our borders has been caught, and this time the watch learned whose service sent them. The government now knows exactly whom it is dealing with."
+          "The watch caught a foreign spy at work inside our borders, and this time the agent's papers named the service that sent them. The magistrate read the name twice before he sealed the file."
         ],
         "weight": { "base": 1 }
       },
@@ -179,7 +179,7 @@
         "id": "spy-detected-abroad-report",
         "headline": "Seen at the work, but not named",
         "body": [
-          "One of our spies abroad has been noticed at the work. The watchers there know an agent was operating against them, but the agent's name and employer stayed hidden."
+          "One of our spies abroad has been noticed at the work. The watchers there have begun questioning the porters at the ministry gate, but the agent's name and employer stayed hidden."
         ],
         "weight": { "base": 1 }
       },
@@ -252,7 +252,7 @@
         "genre": "notice",
         "headline": "Notice: the watch is awake",
         "body": [
-          "This paper learns that our watchers have marked a foreign agent at work inside our borders. The employer is not yet named, but the marking itself should reassure: the government's counter-work proceeds, quietly and without panic."
+          "This paper learns that our watchers have marked a foreign agent at work inside our borders. The employer is not yet named. At the watch house, the duty sergeant has put a second man on the archive door, and he says the government's counter-work proceeds without panic."
         ],
         "weight": { "base": 1 }
       },
@@ -281,7 +281,7 @@
         "when": "result === 'Identified'",
         "headline": "Named abroad, and the doors close",
         "body": [
-          "One of our spies has been identified at work abroad. The other side now knows whose agent it was, and agents who are known do not work again. The quiet work in that country is over."
+          "One of our spies has been identified at work abroad. The other side now knows whose agent it was. At our embassy, the code clerk has burned the cipher used for that agent's letters, and the char is in the grate."
         ],
         "weight": { "base": 1 }
       },
@@ -290,7 +290,7 @@
         "when": "result === 'Killed'",
         "headline": "Killed abroad, and known to them",
         "body": [
-          "One of our spies has been killed at work abroad, and the other side knows whose agent died. Whatever the operation was worth, it is ended now, and the worth is a ledger only the service will ever read."
+          "One of our spies has been killed at work abroad, and the other side knows whose agent died. At the ministry, an archivist has closed the file and written 'ended' across the cover. The rest will not be read outside the service."
         ],
         "weight": { "base": 1 }
       },
@@ -403,7 +403,7 @@
         "id": "spy-posted-abroad-report",
         "headline": "One of ours has taken rooms in {{cityName}}",
         "body": [
-          "One of our spies is now stationed in {{cityName}}, a city of {{civilization}}. The work of watching that city begins from inside its walls, closer than any envoy could get."
+          "One of our spies is now stationed in {{cityName}}, a city of {{civilization}}. A room has been taken above a chandler's shop, with a window on the gate and a back stair to the alley."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -489,7 +489,7 @@
         "when": "civilization !== null",
         "headline": "An envoy from {{civilization}} at our court",
         "body": [
-          "This paper is pleased to record that an envoy of {{civilization}} is now received at our capital. Governments that speak directly have less cause to speak sharply, and words that travel by envoy arrive with fewer dents than words that travel by rumor."
+          "This paper is pleased to record that an envoy of {{civilization}} is now received at our capital. At the foreign ministry, a new page has been ruled in the visitors' book, and the ink is wet under the envoy's name. Words that travel by envoy arrive with fewer dents than words that travel by rumor."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }

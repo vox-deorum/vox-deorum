@@ -61,7 +61,7 @@
         "id": "treasury-milestone-report",
         "headline": "The treasury passes a thousand gold",
         "body": [
-          "The treasury has crossed the thousand-gold mark. It stands at {{gold}} gold, up {{gain}} gold since the last count. At the public pay window, a supplier waiting to collect asked how much of that money was already spoken for."
+          "A supplier waiting at the public pay window this morning asked how much of the thousand gold was already spoken for. The treasury has crossed the mark at {{gold}} gold, up {{gain}} since the last count."
         ],
         "weight": { "base": 1 }
       },
@@ -72,7 +72,7 @@
         "genre": "report",
         "headline": "The reserve reaches the thousand mark",
         "body": [
-          "The treasury has reached the thousand-gold mark and now holds {{gold}} gold, up {{gain}} from the last count. One of the capital's larger suppliers tells us he has sent his clerk to ask when the council will settle its oldest bills."
+          "The treasury has reached the thousand mark and holds {{gold}} gold, up {{gain}} from the last count. Among the capital's old families, the question is whether the vault's new weight will reach the notes they hold before the winter."
         ],
         "weight": { "base": 1 }
       },
@@ -110,7 +110,7 @@
         "id": "treasury-reserve-recovers-report",
         "headline": "The treasury gains time against the deficit",
         "body": [
-          "The treasury holds {{gold}} gold against a shortfall of {{deficit}} a turn, enough for {{turnsLeft}} full turns at the current rate. A mason who waits outside the pay office each reckoning says he can leave his account with the clerk this time."
+          "The plasterer who waits by the treasury door each reckoning says he can hand in his account this time. The treasury holds {{gold}} gold against a shortfall of {{deficit}} a turn, enough for {{turnsLeft}} full turns at the current rate."
         ],
         "weight": { "base": 1 }
       },
@@ -148,7 +148,7 @@
         "id": "treasury-reserve-runs-short-report",
         "headline": "The treasury reserve runs short",
         "body": [
-          "The treasury holds {{gold}} gold against a deficit of {{deficit}} gold a season, enough to cover {{turnsLeft}} more seasons at the present rate. At the gate, a carter hauling stone for the walls has begun asking for his fee when the load is tipped rather than at the month's end. The clerk paid him from the chest by the door."
+          "At the gate, a carter hauling stone for the walls has begun asking for his fee when the load is tipped rather than at the month's end. The clerk paid him from the chest by the door. The treasury holds {{gold}} gold against a deficit of {{deficit}} a season, enough to cover {{turnsLeft}} more seasons at the present rate."
         ],
         "weight": { "base": 1 }
       },
@@ -172,7 +172,7 @@
         "genre": "report",
         "headline": "Treasury cover: {{turnsLeft}} full turns left",
         "body": [
-          "The treasury holds {{gold}} gold tonight. With spending ahead of revenue by {{deficit}} gold a turn, that's {{turnsLeft}} full turns of cover at the current rate. A woman who brings grain to the public stores has one question for the council: who gets paid first if the money runs out?"
+          "A woman who brings grain to the public stores has one question for the council: who gets paid first if the money runs out? The treasury holds {{gold}} gold tonight, and with spending ahead of revenue by {{deficit}} gold a turn, that is {{turnsLeft}} full turns of cover at the current rate."
         ],
         "weight": { "base": 1 }
       },
@@ -199,7 +199,7 @@
         "id": "treasury-returns-to-surplus-report",
         "headline": "The deficit ends",
         "body": [
-          "The treasury is out of deficit, with {{goldPerTurn}} gold to spare each turn at the latest count. A supplier who has been taking public orders a barrel at a time says she will ask whether she can deliver the rest at once."
+          "In the yard where the barrels are made, a woman who has been taking public orders a barrel at a time says she will ask whether she can deliver the rest at once. The treasury is out of deficit, with {{goldPerTurn}} gold to spare each turn at the latest count."
         ],
         "weight": { "base": 1 }
       },

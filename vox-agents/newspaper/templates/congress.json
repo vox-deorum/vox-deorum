@@ -19,7 +19,7 @@
         "when": "count === 1",
         "headline": "One new matter for the world's chamber",
         "body": [
-          "A single new proposal has reached the agenda: {{proposal}}. It goes before the delegates at the next session, and the other delegations are already asking who drafted it, and why now."
+          "One new proposal has reached the agenda: {{proposal}}. It goes before the delegates at the next session. In the taverns where the delegations lodge, the same question is going round: who drafted it, and why now."
         ],
         "weight": { "base": 1 }
       },
@@ -42,7 +42,7 @@
         "genre": "notice",
         "headline": "New business for the delegates",
         "body": [
-          "Letters from the delegations tell of fresh proposals before the World Congress, {{proposal}} among them. The chamber will sit in due course. The agenda rewards careful study, which is more than can be said for the haste of some of its authors."
+          "Notice to the delegations: fresh proposals are before the World Congress, {{proposal}} among them, and the chamber will sit in due course. Delegates should bring their instructions a day early. The agenda rewards careful study, which is more than can be said for the haste of some of its authors."
         ],
         "weight": { "base": 1 }
       },
@@ -95,7 +95,7 @@
         "when": "isEnact === false",
         "headline": "A repeal refused, and the law stands",
         "body": [
-          "The Congress has refused to repeal one of its laws. Repeal backers can try again, but they will need a place on a later agenda as well as more votes."
+          "The Congress has refused to repeal one of its laws. Its backers counted twice on the floor and came up short; they will need a later agenda and more votes."
         ],
         "weight": { "base": 1 }
       },
@@ -175,7 +175,7 @@
         "id": "congress-sanctions-on-us-report",
         "headline": "The World Congress has sanctioned us",
         "body": [
-          "{{resolution}} is in force among the chamber's active resolutions. Our nation stands sanctioned before the assembled world, and the harbors and the money-changers will feel it before the palace does."
+          "{{resolution}} is in force, and it names us. At the harbor, a shipping clerk is asking which cargoes the chamber's law will let him load. The money-changers will feel it before the palace does."
         ],
         "weight": { "base": 1 }
       },
@@ -339,7 +339,7 @@
         "id": "congress-votes-changed-report",
         "headline": "Our votes in the Congress change",
         "body": [
-          "Our delegation now holds {{votes}} votes in the chamber, against {{previous}} before. The count is what speaks when the rolls are called, and ours has changed."
+          "Our delegation now holds {{votes}} votes in the chamber, against {{previous}} before. At the lodging, an usher has rewritten the tally by the door, and the old figure still shows beneath it."
         ],
         "weight": { "base": 1 }
       },
@@ -432,7 +432,7 @@
         "id": "congress-world-ideology-report",
         "headline": "The Congress sets a world ideology",
         "body": [
-          "{{resolution}} is in force among the chamber's active resolutions. The assembled nations have put their weight behind one way of ordering the world's affairs. The courts and the newspapers of every rival capital are reading it carefully tonight."
+          "{{resolution}} is in force, and the assembled nations have put their weight behind it. In a rival capital, a magistrate has read the text twice and set it beside the old statutes; the newspapers there will print it in the morning."
         ],
         "weight": { "base": 1 }
       },
@@ -483,7 +483,7 @@
         "id": "congress-world-project-report",
         "headline": "A world project before the Congress",
         "body": [
-          "The World Congress has taken up {{project}}. Nations that contribute to the work stand to earn rewards based on their share of the effort."
+          "The World Congress has taken up {{project}}. At the shipyard, a foreman weighs whether his crews can take the work; the largest share of it brings the largest return."
         ],
         "weight": { "base": 1 }
       },
@@ -532,7 +532,7 @@
         "id": "congress-world-religion-report",
         "headline": "The Congress names a world religion",
         "body": [
-          "{{resolution}} is in force among the chamber's active resolutions. The world's assembly has given its blessing to one faith above the others, and every other faith has noticed."
+          "{{resolution}} is in force, and the world's assembly has given its blessing to one faith above the others. At a shrine across town, the keeper read the notice twice, then lit the lamps as usual for a smaller crowd."
         ],
         "weight": { "base": 1 }
       },
@@ -683,7 +683,7 @@
         "id": "travel-ban-proposed-report",
         "headline": "Congress weighs limits on travel abroad",
         "body": [
-          "The World Congress is considering {{resolution}}. If passed, it would restrict travel between nations and reduce tourism for all of them."
+          "The World Congress is considering {{resolution}}. If it passes, the roads between nations would be harder, and the inns that live on foreign guests would feel it first."
         ],
         "weight": { "base": 1 }
       },
@@ -734,7 +734,7 @@
         "id": "travel-ban-repeal-proposed-report",
         "headline": "A proposal to lift a travel ban",
         "body": [
-          "Delegates to the World Congress will consider ending {{resolution}}. Repeal would lift the Congress's restrictions on international travel."
+          "Delegates to the World Congress will consider ending {{resolution}}. At the coaching inn, the keeper has begun airing the upstairs rooms; the ban stands until the vote."
         ],
         "weight": { "base": 1 }
       },

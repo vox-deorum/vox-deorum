@@ -9,7 +9,7 @@
         "id": "ally-joins-our-war-report",
         "headline": "Allies join the war against {{opponent}}",
         "body": [
-          "The war against {{opponent}} is no longer ours alone. {{allies}} have answered the call of the pact between us, and what one nation carried now rests on several. Their banners move with ours from this week on.{{hostileAllies}}"
+          "The war against {{opponent}} is no longer ours alone. {{allies}} have answered the pact, and their columns are already on the road to our camps. In the muster yard, a quartermaster is clearing a second row of stalls for the new horses.{{hostileAllies}}"
         ],
         "weight": { "base": 1 }
       },
@@ -31,7 +31,7 @@
         "genre": "report",
         "headline": "The pact answered in arms",
         "body": [
-          "We are credibly informed that the pact has been answered, and that the war against {{opponent}} now includes {{allies}} on our side. Treaties kept in hard years are the ones worth signing in calm ones, and this one has been kept. We congratulate the chancelleries on their constancy.{{hostileAllies}}"
+          "Letters from the capital relate that the pact has been answered, and that {{allies}} now stand with us against {{opponent}}. At the frontier post, the guard has been given a new countersign and a list of allied colors to pass without question. Treaties kept in hard years are the ones worth signing in calm ones.{{hostileAllies}}"
         ],
         "weight": { "base": 1 }
       },
@@ -58,7 +58,7 @@
         "id": "barbarians-at-the-gates-report",
         "headline": "Barbarians in sight of {{cityName}}",
         "body": [
-          "Scouts count {{barbarians}} barbarians in the country around {{cityName}}. The garrison has been warned, and the herds have been brought in from the outlying fields."
+          "A herd boy drove the last cattle through the north gate of {{cityName}} at dusk, and the watch above him counted {{barbarians}} barbarians in the hills behind. The garrison has been warned, and the outlying fields are empty."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -115,7 +115,7 @@
         "when": "posture !== null && posture !== 'NONE'",
         "headline": "At {{cityName}}, the garrison answers: {{posture}}",
         "body": [
-          "It is set down that {{barbarians}} barbarians were counted in the lands of {{cityName}}, and that the command there has entered its answer in the record: {{posture}}."
+          "It is set down that {{barbarians}} barbarians were counted in the lands of {{cityName}}. Before the count was a day old, the watch on the north wall was doubled, and the captain's answer went into the order book: {{posture}}."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -195,7 +195,7 @@
         "id": "enemy-city-takes-heavy-damage-report",
         "headline": "The walls of {{cityName}} are failing",
         "body": [
-          "The recent fighting has left the defenses of {{cityName}} at {{hitPoints}} of {{maxHitPoints}}. More than half of what guarded the city is gone, and the gap is visible from outside the walls."
+          "The recent fighting has left the defenses of {{cityName}} at {{hitPoints}} of {{maxHitPoints}}. Our scouts on the ridge can see the breach from where they stand, and there is rubble enough at its foot to fill a cart."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -259,7 +259,7 @@
         "id": "enemy-front-posture-offensive-report",
         "headline": "Our forces attack before {{cityName}}",
         "body": [
-          "Our command before {{cityName}}, a city of {{civilization}}, has gone over to the attack. The order that went out reads {{posture}}."
+          "A rider brought the attack order to our camp before {{cityName}} at dawn. On the wall, the men of {{civilization}} hear the teams hitching up; the word down the line is {{posture}}."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -288,7 +288,7 @@
         "genre": "report",
         "headline": "The offensive at {{cityName}}, entered",
         "body": [
-          "It is set down that our command before {{cityName}}, a city held by {{civilization}}, has passed to the assault, and that its stance is now given in the orders as {{posture}}."
+          "It is set down that our command before {{cityName}}, a city held by {{civilization}}, passed to the assault this season. The order went out as {{posture}}, and the siege lines were moved forward before the ink was dry."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -321,7 +321,7 @@
         "id": "enemy-front-posture-regroup-report",
         "headline": "Back in the fight near {{cityName}}",
         "body": [
-          "After falling back, the command near {{cityName}} has taken up a new stance against {{civilization}}: {{posture}}. The front there is active again, and our soldiers are back at the line."
+          "The companies that fell back from {{cityName}} have turned their faces to {{civilization}} again. Their orders now read {{posture}}, and the supply wagons that had been sent south are being loaded for the front once more."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -349,7 +349,7 @@
         "genre": "report",
         "headline": "Our forces are back at the line near {{cityName}}",
         "body": [
-          "Near {{cityName}} tonight, our forces are back at the line. The command has moved from withdrawal to {{posture}}. Officers describe the front as active again."
+          "Near {{cityName}} tonight, our forces are back at the line. The order is {{posture}} now. The wagons had been heading home; tonight they are heading the other way."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -382,7 +382,7 @@
         "id": "enemy-front-posture-withdraw-report",
         "headline": "The line comes back from {{cityName}}",
         "body": [
-          "Our command before {{cityName}}, a city of {{civilization}}, has shifted from {{previousPosture}} to {{posture}}. The line on that front is drawing back."
+          "Our command before {{cityName}}, a city of {{civilization}}, has shifted from {{previousPosture}} to {{posture}}. At first light the camp was struck, and the hospital carts went first along the road."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -443,7 +443,7 @@
         "id": "enemy-troops-sighted-near-city-report",
         "headline": "Enemy colors near {{cityName}}",
         "body": [
-          "Soldiers flying the colors of {{enemies}} have been counted within reach of {{cityName}}. We are at war with them, and this is how close the war has come."
+          "Soldiers flying the colors of {{enemies}} have been counted within reach of {{cityName}}. From the watchtower, their cooking fires show after dark, and the miller has brought his flour inside the wall."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -504,7 +504,7 @@
         "id": "enemy-units-lost-in-combat-report",
         "headline": "{{count}} enemy units destroyed in the field",
         "body": [
-          "Our forces destroyed {{count}} enemy units in the recent fighting, every one of them belonging to the same enemy army."
+          "Our forces destroyed {{count}} enemy units in the recent fighting, every one from the same army. The captured standards are stacked by the gate."
         ],
         "weight": { "base": 1 }
       },
@@ -556,7 +556,7 @@
         "id": "foreign-capital-falls-report",
         "headline": "A capital falls, far from home",
         "body": [
-          "A foreign capital has fallen by conquest, {{distance}} leagues from our nearest city. The fighting never approached our borders, but the balance of powers abroad has changed all the same."
+          "A foreign capital has fallen by conquest, {{distance}} leagues from our nearest city. On the quay, a shipping agent has struck the old flag from his register and written the new owner's name above it."
         ],
         "weight": { "base": 1 }
       },
@@ -580,7 +580,7 @@
         "when": "loser !== null && winner !== null",
         "headline": "The fall of a capital",
         "body": [
-          "It is set down that {{winner}} has taken the capital of {{loser}} by force of arms, {{distance}} leagues from our own cities. The chronicles teach that providence moves in the fall of thrones, and that its meaning shows itself only later."
+          "It is set down that {{winner}} has taken the capital of {{loser}} by force of arms, {{distance}} leagues from our own cities. In the cathedral, the bells were rung once for the fallen throne and then stopped, and the priest wrote the date in the margin of his register."
         ],
         "weight": { "base": 1 }
       },
@@ -619,7 +619,7 @@
         "genre": "report",
         "headline": "Neighbors at peace again",
         "body": [
-          "Word reaches us that {{initiator}} and {{target}} have laid down their arms, and that the peace asked no visible price of either side. Quiet borders make good neighbors, and ours are the quieter for it. We wish both peoples a long and dull peace, the best kind there is."
+          "Word reaches us that {{initiator}} and {{target}} have laid down their arms, and that the peace asked no visible price of either side. On the frontier bridge, the toll keeper has taken the chain off the barrier and swept the road for the first carts in a year. We wish both peoples a long and dull peace, the best kind there is."
         ],
         "weight": { "base": 1 }
       },
@@ -657,7 +657,7 @@
         "id": "foreign-war-nearby-report",
         "headline": "War breaks out near our borders",
         "body": [
-          "{{initiator}} has opened a war against {{target}}. The nearer of the two sits {{nearest}} leagues from our nearest city, and the war is not ours. Both of the belligerents, however, are neighbors of ours."
+          "{{initiator}} has opened a war against {{target}}. The nearer of the two sits {{nearest}} leagues from our nearest city; the war is not ours, but at the tollgate a carter bound that way has been turned back until the road is safe."
         ],
         "weight": { "base": 1 }
       },
@@ -701,7 +701,7 @@
         "genre": "report",
         "headline": "A war nearby, set down",
         "body": [
-          "It is set down that {{initiator}} made war upon {{target}}, and that the nearer of the two lies {{nearest}} leagues from our lands. The entry takes no side. It notes only that the fighting is near, and that our own peace holds."
+          "It is set down that {{initiator}} made war upon {{target}}, and that the nearer of the two lies {{nearest}} leagues from our lands. On the frontier road, the guard has begun asking travelers for their business, and the market at the border stone closed an hour early."
         ],
         "weight": { "base": 1 }
       }
@@ -717,7 +717,7 @@
         "id": "nearby-capital-falls-report",
         "headline": "A capital falls near our own border",
         "body": [
-          "{{winner}} has taken a capital from {{loser}} by conquest, close enough to our border to be our concern. One neighbor has grown stronger, and another weaker."
+          "{{winner}} has taken a capital from {{loser}} by conquest, close enough to our border to be our concern. The border guard saw the new flag go up on the far tower before any courier reached him."
         ],
         "weight": { "base": 1 }
       },
@@ -766,7 +766,7 @@
         "id": "nearby-city-captured-report",
         "headline": "A town changes hands near our border",
         "body": [
-          "A foreign town has changed hands by conquest, {{distance}} leagues from our nearest city. Neither its old master nor its new one is us, and the fighting stayed off our soil."
+          "A foreign town has changed hands by conquest, {{distance}} leagues from our nearest city. The carter on the border road came in with a new toll receipt in his hand. The fighting stayed off our soil."
         ],
         "weight": { "base": 1 }
       },
@@ -818,7 +818,7 @@
         "id": "neighbor-army-overtakes-report",
         "headline": "{{neighbor}}'s army now outranks ours",
         "body": [
-          "The army of {{neighbor}} now outweighs ours. The border between us has not moved, and the balance of strength at it has tipped all the same."
+          "The army of {{neighbor}} now outweighs ours. The border stone has not moved, but the sentry on it hears drilling on the far side long after dark."
         ],
         "links": [
           { "placeholder": "neighbor", "label": "{{neighbor}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -862,7 +862,7 @@
         "genre": "report",
         "headline": "The balance of arms has turned",
         "body": [
-          "It is set down that the host of {{neighbor}} has grown past our own in strength. The seasons turn, and the balance of arms turns with them; the scribe notes the crossing and keeps the page."
+          "It is set down that the host of {{neighbor}} has grown past our own in strength. This season the frontier garrison sent its muster roll to the capital with a second column added, and the armorer's orders were doubled."
         ],
         "links": [
           { "placeholder": "neighbor", "label": "{{neighbor}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -895,7 +895,7 @@
         "genre": "report",
         "headline": "Our arms in good order",
         "body": [
-          "We are informed that the strength of our army now surpasses that of {{neighbor}}, an advance owing much to steady counsel and diligently kept armories. The nation may take satisfaction in a policy that has borne so visible a fruit."
+          "The arsenal reports that our army now surpasses that of {{neighbor}}. In the drill yard, the armorer has hired two more hands, and the smithies burn past dark. The nation may take satisfaction in a policy that has borne so visible a fruit."
         ],
         "links": [
           { "placeholder": "neighbor", "label": "{{neighbor}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -1005,7 +1005,7 @@
         "id": "own-front-posture-counterattack-report",
         "headline": "Our forces counterattack at {{cityName}}",
         "body": [
-          "Our command at {{cityName}} has changed the order of the front from {{previousPosture}} to {{posture}}. The troops there have stopped absorbing blows and begun returning them."
+          "Our command at {{cityName}} has changed the order of the front from {{previousPosture}} to {{posture}}. On the south rampart, a gun crew has swung its piece around to face the enemy camp."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1047,7 +1047,7 @@
         "genre": "report",
         "headline": "The defense holds and answers",
         "body": [
-          "Letters from {{cityName}} relate that the command there, having held fast through the order {{previousPosture}}, has now given the word {{posture}}. We are informed the change was made in good order and at the proper hour, and we find in that the marks of sound management."
+          "Letters from {{cityName}} relate that the command there, having held fast through the order {{previousPosture}}, has now given the word {{posture}}. At the north gate, the watch has been doubled and the guns have been moved up to the forward ditch. We find in the good order of the change the marks of sound management."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1066,7 +1066,7 @@
         "id": "own-front-posture-defensive-report",
         "headline": "The front at {{cityName}} goes defensive",
         "body": [
-          "Our command at {{cityName}} has changed the order of the front from {{previousPosture}} to {{posture}}. The troops there have stopped pushing outward and turned to hold what they have."
+          "Our command at {{cityName}} has changed the order of the front from {{previousPosture}} to {{posture}}. The pickets have come in from the forward posts, and the supply wagons are unloading inside the gate."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1108,7 +1108,7 @@
         "genre": "report",
         "headline": "The record of {{cityName}}'s front",
         "body": [
-          "It is set down that our forces at {{cityName}} took the order {{posture}}, having before stood at {{previousPosture}}. The change is entered without comment, the record's habit being to keep the facts and leave the judgment to the reader."
+          "It is set down that our forces at {{cityName}} took the order {{posture}}, having before stood at {{previousPosture}}. That evening the outer pickets came in, the gate was barred an hour before sunset, and no reason was entered beside the order."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1127,7 +1127,7 @@
         "id": "peace-capitulation-report",
         "headline": "A war ends in capitulation",
         "body": [
-          "The war between {{initiator}} and {{target}} has ended in capitulation. One of the two nations now answers to the other, and the terms to come are the victor's to set."
+          "The war between {{initiator}} and {{target}} has ended in capitulation. At the frontier gate, the guard has been told to pass the other side's couriers, and the first rode through before noon with a sealed portfolio."
         ],
         "weight": { "base": 1 }
       },
@@ -1162,7 +1162,7 @@
         "when": "role === 'initiator'",
         "headline": "Our war with {{target}} is settled",
         "body": [
-          "We are informed that the peace concluded with {{target}} is sealed, and sealed with a capitulation. A hard instrument, this paper concedes; yet the sword is sheathed on both sides of the border, and that much is reason to be glad."
+          "The peace concluded with {{target}} is sealed, and sealed with a capitulation. On the border road, the barrier is down and the first cart in months has crossed without a pass. A hard instrument, this paper concedes; yet the sword is sheathed, and that is reason to be glad."
         ],
         "weight": { "base": 1 }
       }
@@ -1178,7 +1178,7 @@
         "id": "peace-concessions-report",
         "headline": "A peace with visible terms",
         "body": [
-          "A peace settlement has been recorded, and this one comes with its terms showing: {{count}} concessions in all, namely {{concessions}}."
+          "The peace terms went up on the exchange door at noon: {{count}} concessions in all, namely {{concessions}}. A wool buyer read them twice before he opened his stall."
         ],
         "weight": { "base": 1 }
       },
@@ -1216,7 +1216,7 @@
         "when": "initiator !== null && target !== null",
         "headline": "A peace with terms tonight",
         "body": [
-          "{{initiator}} and {{target}} have settled their war tonight. The peace carries {{count}} concessions on the record. The ink is drying. The counting has begun."
+          "{{initiator}} and {{target}} have settled their war tonight. The peace carries {{count}} concessions on the record. A porter carried the signed pages out to a waiting cart, and the ink was still wet."
         ],
         "weight": { "base": 1 }
       }
@@ -1232,7 +1232,7 @@
         "id": "peace-on-one-front-report",
         "headline": "Peace on one front only",
         "body": [
-          "We have made our peace with {{settled}}. The war goes on elsewhere: {{remaining}} is still in the field against us, and the guns on those fronts have not stopped."
+          "We have made our peace with {{settled}}. The guns there are silent, but the war with {{remaining}} goes on, and the troops who held that line are already packing for the next front."
         ],
         "weight": { "base": 1 }
       },
@@ -1254,7 +1254,7 @@
         "genre": "report",
         "headline": "Peace with {{settled}}",
         "body": [
-          "We are informed that peace has been concluded with {{settled}}, and that the guns on that front are quiet. We note with regret that the war with {{remaining}} goes forward, and we permit ourselves the hope that the same good sense will find it before another harvest is spent."
+          "The peace with {{settled}} is concluded, and the guns on that front are quiet. The church bells rang at noon and stopped before the second bell, as if the sexton were saving the rest. We note with regret that the war with {{remaining}} goes forward, and hope good sense finds it before another harvest."
         ],
         "weight": { "base": 1 }
       },
@@ -1281,7 +1281,7 @@
         "id": "peace-returns-report",
         "headline": "We are at peace",
         "body": [
-          "No power stands at war with us today. The fighting that filled these pages has stopped, and the counting of what it all cost has begun."
+          "No power stands at war with us today. By the barracks gate, the first men off the road have sat down in the sun, and nobody is telling them to form up."
         ],
         "weight": { "base": 1 }
       },
@@ -1342,7 +1342,7 @@
         "id": "units-lost-in-combat-report",
         "headline": "{{count}} of our companies lost in action",
         "body": [
-          "Our forces lost {{count}} companies in the recent fighting, every one of them to the same enemy power."
+          "Our forces lost {{count}} companies in the recent fighting, every one to the same enemy. The barracks board has a second column now."
         ],
         "weight": { "base": 1 }
       },
@@ -1393,7 +1393,7 @@
         "id": "vassals-join-war-report",
         "headline": "Vassals drawn into the war",
         "body": [
-          "The war between {{initiator}} and {{target}} has drawn in the vassal powers: {{vassals}}. Their banners now march under another's orders.{{hostileAllies}}"
+          "The war between {{initiator}} and {{target}} has drawn in the vassal powers: {{vassals}}. Their contingents passed the capital gate this week with no billets waiting.{{hostileAllies}}"
         ],
         "weight": { "base": 1 }
       },
@@ -1492,7 +1492,7 @@
         "id": "war-between-friends-report",
         "headline": "Two friends go to war",
         "body": [
-          "{{first}} and {{second}} have gone to war with each other. Both are friends of ours, and each friendship stands on its own footing. Nothing in either one bound them to keep the peace with the other."
+          "{{first}} and {{second}} have gone to war with each other. Both are friends of ours, and the two envoys who used to share a table now eat at different hours. Nothing in either friendship bound them to keep the peace with the other."
         ],
         "weight": { "base": 1 }
       },
@@ -1564,7 +1564,7 @@
         "genre": "report",
         "headline": "The record of a long war",
         "body": [
-          "It is set down that the war has stood {{turns}} turns. Wars of this length were once the business of grandfathers. The record keeps such entries, and keeps them without joy."
+          "It is set down that the war has stood {{turns}} turns. Wars of this length were once the business of grandfathers. In the muster yard, the sergeant now takes the names of boys not born when it began."
         ],
         "weight": { "base": 1 }
       },
@@ -1593,7 +1593,7 @@
         "when": "role !== 'target' || initiator === null",
         "headline": "The nation is at war",
         "body": [
-          "The nation has gone to war. The call to arms is out, the frontier watches are doubled, and these pages will follow the fighting turn by turn, wherever it runs.{{hostileAllies}}"
+          "The nation has gone to war. On the courthouse steps, the recruiting sergeant has set his table and the first names are going into the book; on the frontier, the watch fires are lit before dark.{{hostileAllies}}"
         ],
         "weight": { "base": 1 }
       },
@@ -1629,7 +1629,7 @@
         "when": "role === 'initiator' && target !== null",
         "headline": "A state of war with {{target}}",
         "body": [
-          "We are informed that a state of war now exists between the nation and {{target}}. The government's decision, we are assured, was weighed long before it was made. This paper presumes the weighing was sound, and expects the case to be laid before the people while the armies are still within a day's march of home.{{hostileAllies}}"
+          "A state of war now exists between the nation and {{target}}. The government's decision, we are assured, was weighed long before it was made. At the war office, the order for the first levy has gone out, and the couriers were still saddling when the news reached this paper. This paper presumes the weighing was sound.{{hostileAllies}}"
         ],
         "weight": { "base": 1 }
       },
@@ -1680,7 +1680,7 @@
         "id": "war-on-three-fronts-report",
         "headline": "War on {{count}} fronts",
         "body": [
-          "The nation is at war with {{enemies}}. What was one quarrel is now several, and every front draws on the same purse and the same recruits."
+          "The nation is at war with {{enemies}}. In the map room, the fronts are marked in several colors, and one copyist writes a set of orders for each."
         ],
         "weight": { "base": 1 }
       },
@@ -1762,7 +1762,7 @@
         "genre": "report",
         "headline": "The record of a hard season",
         "body": [
-          "It is set down that in the war with {{opponent}} the tally stands at {{score}} against us. Our fathers knew such seasons; the record keeps them, and does not flatter them. This entry joins that column."
+          "It is set down that in the war with {{opponent}} the count stands at {{score}} against us. This season the hospital took in more wounded than it had beds. Our fathers knew such seasons, and the record does not flatter them."
         ],
         "weight": { "base": 1 }
       }
@@ -1800,7 +1800,7 @@
         "genre": "notice",
         "headline": "The war proceeds favorably",
         "body": [
-          "Notice is given that the war with {{opponent}} proceeds favorably, the tally standing at {{score}} in the nation's favor. The councils may take satisfaction in the conduct of the arms; this paper takes some in the recording of it."
+          "Notice is given that the war with {{opponent}} proceeds favorably, the count at the exchange standing at {{score}} in our favor. At the docks, shipping agents have begun quoting lower rates on the eastern run."
         ],
         "weight": { "base": 1 }
       },
@@ -1839,7 +1839,7 @@
         "when": "opponent !== null",
         "headline": "Weariness eases in the war with {{opponent}}",
         "body": [
-          "We are informed that the public weariness over the war with {{opponent}} has eased to {{weariness}}. The nation breathes more evenly, and this paper notes the improvement with quiet satisfaction; a patient nation, history suggests, makes the better peacemaker."
+          "The public's fatigue over the war with {{opponent}} has eased to {{weariness}}. On the tram platform, the talk has turned from the front to the price of coal, and the conductor says the car has been full all week. A patient nation, history suggests, makes the better peacemaker."
         ],
         "weight": { "base": 1 }
       },
@@ -1911,7 +1911,7 @@
         "genre": "report",
         "headline": "The record of a weary nation",
         "body": [
-          "It is set down that the nation's weariness with the war against {{opponent}} stands at {{weariness}}. Long wars tire the patient. The record has said so in other reigns, and says so again in ours."
+          "It is set down that the nation's patience with the war against {{opponent}} has worn to {{weariness}}. This season the almshouse line forms before light, and the butcher's ration is smaller again. Long wars tire the patient."
         ],
         "weight": { "base": 1 }
       }

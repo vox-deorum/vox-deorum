@@ -10,7 +10,7 @@
         "when": "ally !== null && aggressor !== null",
         "headline": "{{aggressor}} marches on {{ally}}",
         "body": [
-          "{{aggressor}} has opened war against {{ally}}, a small power allied to us. The first blow fell inside the ally's own borders, and our soldiers are not in the fighting."
+          "{{aggressor}} has opened war against {{ally}}, a small power allied to us. In the ally's market, the shutters went up before the first soldiers were seen. Our soldiers are not in the fighting."
         ],
         "weight": { "base": 1 }
       },
@@ -19,7 +19,7 @@
         "when": "ally === null || aggressor === null",
         "headline": "One of our small allies is at war",
         "body": [
-          "War has come to one of the small powers allied to us. The dispatches reaching the capital name the fighting but not every banner in it."
+          "War has come to one of the small powers allied to us. A carter on that road has turned back twice; the dispatches name the fighting but not every banner in it."
         ],
         "weight": { "base": 1 }
       },
@@ -43,7 +43,7 @@
         "when": "ally !== null && aggressor !== null",
         "headline": "{{aggressor}} opens war on {{ally}}",
         "body": [
-          "We are given to understand that {{aggressor}} has opened hostilities against {{ally}}, a small power in alliance with this nation. Readers are advised that our own peace stands unbroken."
+          "Notice to carriers: {{aggressor}} has opened hostilities against {{ally}}, a small power in alliance with this nation. Those bound for its market should look for another road. Our own peace stands unbroken."
         ],
         "weight": { "base": 1 }
       },
@@ -72,7 +72,7 @@
         "when": "cityState !== null && captor !== null",
         "headline": "{{cityState}} falls to {{captor}}",
         "body": [
-          "{{captor}} has taken {{cityState}} by conquest. The small power was allied to us; its lands, its walls and its friendship now answer to a foreign flag."
+          "{{captor}} has taken {{cityState}} by conquest. A trader who kept a stall inside its gate has brought his goods home; the small power that was our ally now answers to a foreign flag."
         ],
         "weight": { "base": 1 }
       },
@@ -146,7 +146,7 @@
         "when": "cityState !== null && rival !== null",
         "headline": "{{cityState}} defects to {{rival}}",
         "body": [
-          "{{cityState}}, a small power near our borders, has ended its alliance with us and named {{rival}} in its place. The friendship we counted ours now belongs to a rival."
+          "{{cityState}}, a small power near our borders, has ended its alliance with us and named {{rival}} in its place. The envoy who kept our friendship there is packing his ledgers for the road home."
         ],
         "weight": { "base": 1 }
       },
@@ -209,7 +209,7 @@
         "when": "cityState !== null",
         "headline": "{{cityState}} names us its ally",
         "body": [
-          "{{cityState}} has named this nation its ally. Whatever arrangement the small power had before is ended, and its support now stands with us."
+          "{{cityState}} has named this nation its ally, ending whatever arrangement it had before. Its envoy asked, before he sat down, what we mean to send and when."
         ],
         "weight": { "base": 1 }
       },
@@ -242,7 +242,7 @@
         "when": "cityState !== null && replaced !== null",
         "headline": "Notice: our envoys succeed in {{cityState}}",
         "body": [
-          "Notice is given that {{cityState}} has ended its alliance with {{replaced}} and named this nation in its place. The government's envoys, backed with patience and coin, are owed the credit, and on all sides they are receiving it."
+          "Notice is given that {{cityState}} has ended its alliance with {{replaced}} and named this nation in its place. The government's envoys, backed with patience and coin, are owed the credit. Traders bound for its market should call at the foreign office for a letter of introduction."
         ],
         "weight": { "base": 1 }
       },
@@ -271,7 +271,7 @@
         "when": "cityState !== null",
         "headline": "{{cityState}} walks away from our alliance",
         "body": [
-          "Our alliance with {{cityState}} has ended, and no other power has taken our place. The small power stands alone, owing its friendship to no one."
+          "Our alliance with {{cityState}} has ended, and no other power has taken our place. In the capital, the keeper of the book of friendships has struck out the city's name."
         ],
         "weight": { "base": 1 }
       },
@@ -335,7 +335,7 @@
         "when": "cityState !== null && friend !== null",
         "headline": "{{cityState}} switches its alliance to {{friend}}",
         "body": [
-          "{{cityState}} has named {{friend}} its ally, ending the alliance it held with us. {{friend}} is a declared friend of this nation, so the alliance has left our hands, but not into an enemy's."
+          "{{cityState}} has named {{friend}} its ally, ending the alliance it held with us. Our envoy hands his letters to {{friend}}'s man in the square. {{friend}} is a declared friend, so the alliance leaves our hands, but not into an enemy's."
         ],
         "weight": { "base": 1 }
       },
@@ -480,7 +480,7 @@
         "when": "cityState !== null",
         "headline": "Notice: an errand ends in {{cityState}}",
         "body": [
-          "For the information of merchants and travelers: {{cityState}} has taken one of its posted errands off the board, deadline and all. Those with a stake in the matter should govern themselves accordingly."
+          "For the information of merchants and travelers: {{cityState}} has taken one of its posted errands off the board, deadline and all. Those who priced work for it should ask at the gate before they spend more on the road."
         ],
         "links": [
           { "placeholder": "cityState", "label": "{{cityState}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -515,7 +515,7 @@
         "when": "cityState !== null && turnsLeft > 0",
         "headline": "The {{cityState}} deadline is {{turnsLeft}} days out",
         "body": [
-          "{{cityState}} has an errand on its board whose deadline falls in {{turnsLeft}} days. Whatever remains of the work must be finished inside them."
+          "{{cityState}} has an errand on its board whose deadline falls in {{turnsLeft}} days. A hauler has taken the last of the goods aboard and means to reach the city before it closes."
         ],
         "weight": { "base": 1 }
       },
@@ -580,7 +580,7 @@
         "when": "cityState !== null",
         "headline": "{{cityState}} posts an errand with a deadline",
         "body": [
-          "A new errand has gone up on {{cityState}}'s board, with {{turnsLeft}} days allowed for the doing. Whatever the work is, the time for it has begun."
+          "A new errand has gone up on {{cityState}}'s board, with {{turnsLeft}} days allowed for the doing. A tanner read it twice, then went to find his partner; the work would need both."
         ],
         "weight": { "base": 1 }
       },
@@ -636,7 +636,7 @@
         "when": "cityState !== null && civilization !== null",
         "headline": "{{civilization}} wins the alliance of {{cityState}}",
         "body": [
-          "The small power {{cityState}} has taken {{civilization}} as its ally. The new friends stand a {{distance}}-day journey from our nearest city."
+          "The small power {{cityState}} has taken {{civilization}} as its ally. At its gate, the watch raised {{civilization}}'s colors, a {{distance}}-day journey from our nearest city."
         ],
         "weight": { "base": 1 }
       },
@@ -698,7 +698,7 @@
         "when": "cityState !== null && aggressor !== null",
         "headline": "{{aggressor}} makes war on our friend {{cityState}}",
         "body": [
-          "{{aggressor}} has opened war on {{cityState}}, a small power joined to this nation by declared friendship. The fighting is not ours, and we remain at peace."
+          "{{aggressor}} has opened war on {{cityState}}, a small power joined to this nation by declared friendship. Its traders have pulled their goods off the road, and the fighting is not ours."
         ],
         "weight": { "base": 1 }
       },
@@ -743,7 +743,7 @@
         "when": "cityState !== null && aggressor !== null",
         "headline": "War reaches {{cityState}}",
         "body": [
-          "We are informed that {{aggressor}} has opened hostilities against {{cityState}}, a small power in friendship with this nation. The war has not asked for our arms, and the government has offered none."
+          "Notice to traders: {{aggressor}} has opened hostilities against {{cityState}}, a small power that counts us friend. Those bound for its market should take another road. The war has not asked for our arms, and the government has offered none."
         ],
         "weight": { "base": 1 }
       }

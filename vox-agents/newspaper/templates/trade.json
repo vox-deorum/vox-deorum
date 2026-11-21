@@ -10,7 +10,7 @@
         "when": "partner !== null",
         "headline": "A bargain with {{partner}}, and gold in the terms",
         "body": [
-          "We have struck terms with {{partner}}. Our side gives {{weGive}} and receives {{weGet}}, and gold is part of the bargain."
+          "The terms with {{partner}} lie on the counting-house table: we give {{weGive}}, we receive {{weGet}}, and gold is in them. The clerk leaves the scales out."
         ],
         "weight": { "base": 1 }
       },
@@ -210,7 +210,7 @@
         "when": "outgoing === false",
         "headline": "A long road ends at {{ourCity}}",
         "body": [
-          "Letters from the road relate that a caravan out of {{theirCity}} has completed the {{routeDistance}}-tile journey to {{ourCity}}. To walk so far to sell to us is a compliment of some weight, and our merchants, we trust, returned it. Fuller stalls will do the rest."
+          "Letters from the road relate that a caravan out of {{theirCity}} has completed the {{routeDistance}}-tile journey to {{ourCity}}. At the gate, the carter climbed down with the dust still on him and asked where he might water his oxen. Our merchants, we trust, made him welcome, and fuller stalls will do the rest."
         ],
         "weight": { "base": 1 }
       },
@@ -314,7 +314,7 @@
         "id": "trade-network-opens-account-report",
         "headline": "Our trade goes abroad",
         "body": [
-          "Our outgoing trade routes now number {{routes}}, where at the last count there were none. The first caravans are out on the roads, and the goods they carry will come home again as coin."
+          "At the warehouse, the keeper has swept out a bay that stood empty all last season. Our trade now goes out by {{routes}} routes, where at the last count there were none, and the first carts are already on the road."
         ],
         "weight": { "base": 1 }
       },
@@ -363,7 +363,7 @@
         "id": "we-plunder-foreign-trade-route-account-report",
         "headline": "We plunder a foreign trade route",
         "body": [
-          "Our forces have plundered a trade route out of foreign territory, and the run is at an end. The goods it carried are ours now, and the road it used will be quiet for a while."
+          "At the depot, a quartermaster sorts bales stencilled with foreign marks. Our forces took a foreign trade route, and the run is at an end. The goods are ours now, and that road will be quiet for a while."
         ],
         "weight": { "base": 1 }
       },
@@ -375,7 +375,7 @@
         "when": "gold !== null",
         "headline": "{{gold}} gold taken from a foreign route",
         "body": [
-          "Our forces plundered a foreign trade route on the road and took {{gold}} gold from the run. The coin is in our treasury now. The loss sits in somebody else's books, and they know where to find us."
+          "Our forces plundered a foreign trade route and took {{gold}} gold from the run. At the pay table, a clerk counts it out of a foreign strongbox into ours. The loss sits in somebody else's books, and they know where to find us."
         ],
         "weight": { "base": 1 }
       },
