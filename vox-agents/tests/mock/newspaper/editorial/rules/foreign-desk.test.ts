@@ -107,7 +107,9 @@ describe('stock foreign desk', () => {
       city(22, 8, 2, 'Delhi', 5), city(23, 8, 1, 'Salvador', 16),
     ]);
     expect(fired(result, 'enemy-wonder-nearby')).toEqual(['city/20']);
-    expectStory(result, 'enemy-wonder-nearby', ['Petra', 'Sao Paulo']);
+    const story = expectStory(result, 'enemy-wonder-nearby', ['Petra']);
+    const record = result.state.issues[0]?.items.find(item => item.id === story.id);
+    expect(record?.sources).toContainEqual(expect.objectContaining({ table: 'CityInformations', id: 2010 }));
   });
 
   it('should report Geneva changing sides and exclude a city-state that merely lost its ally', async () => {

@@ -93,9 +93,9 @@
       {
         "id": "nearby-team-gains-technology-partners",
         "when": "team.includes(' and ')",
-        "headline": "{{team}} gain {{tech}}",
+        "headline": "New knowledge in {{team}}: {{tech}}",
         "body": [
-          "Word from the frontier says {{team}} have gained {{tech}}, both of them together. Their scholars keep one house, their cities stand near ours, and the lesson reached both at once."
+          "Word from abroad: {{tech}} has been added to the roll of arts and sciences in {{team}}."
         ],
         "weight": { "base": 1 }
       },
@@ -402,9 +402,9 @@
         "voice": "chronicle",
         "stance": "elitist",
         "genre": "analysis",
-        "headline": "What first place in learning means",
+        "headline": "Two ways to count learning",
         "body": [
-          "A count of learning is a blunt instrument; it weighs a nation by the number of its arts, not by the use it makes of them. Still, the power now standing first, with {{count}} such arts, has done reading that others put off. The count will be argued over. The reading will not."
+          "The nation first in the tally holds {{count}} arts and sciences. One art may have passed through several generations of masters while another has scarcely left the school, yet each adds one to the sum. A rival lower in the tally may have trained more people in the arts the two nations share."
         ],
         "weight": { "base": 1 }
       }

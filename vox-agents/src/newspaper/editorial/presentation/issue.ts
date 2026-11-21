@@ -215,10 +215,11 @@ export async function presentIssue(input: {
       const counts = styleCounts.get(kind)!;
       counts.set(style[kind], (counts.get(style[kind]) ?? 0) + 1);
     }
-    itemCandidates.set(id, {
-      ...candidate,
-      sources: uniqueSources([...candidate.sources, ...(candidate.variantSources[variant.id] ?? [])]),
-    });
+    const sources = uniqueSources([...candidate.sources, ...(candidate.variantSources[variant.id] ?? [])]);
+    itemCandidates.set(id, { ...candidate, sources });
+    const observedTurn = design.id === 'printed-almanack'
+      ? sources.reduce((latest, source) => Math.max(latest, source.turn), -1)
+      : -1;
     const prior = candidate.seriesKeys
       .map((key) => state.series[key])
       .filter((value) => value !== undefined)
@@ -228,6 +229,7 @@ export async function presentIssue(input: {
       state.issues.flatMap((issue) => issue.items).find((item) => item.id === prior.lastItemId);
     items.push({
       id,
+      ...(observedTurn >= 0 ? { observedTurn } : {}),
       tags: candidate.tags,
       seriesKeys: candidate.seriesKeys,
       headline: renderAuthoredText(variant.headline, candidate.values, variant),
@@ -321,6 +323,7 @@ export async function presentIssue(input: {
       cutoff: { turn: input.turn, label: `Turn ${input.turn}` },
       publication: {
         title: masthead.title,
+        ...(design.id === 'coffeehouse-essay' ? { editionNumber: state.issues.length + 1 } : {}),
         ...(masthead.motto === undefined ? {} : { motto: masthead.motto }),
         designId: design.id,
         designVersion: design.version,

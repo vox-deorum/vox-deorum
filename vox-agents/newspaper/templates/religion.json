@@ -7,9 +7,9 @@
     "variants": [
       {
         "id": "faith-drifts-report",
-        "headline": "Another faith now leads at home",
+        "headline": "{{majorityFaith}} leads in most of our cities",
         "body": [
-          "Most of our people now keep {{majorityFaith}}, a creed this nation did not found. {{founded}}, which our own hands raised, holds the smaller field at home."
+          "{{majorityFaith}} holds a majority in most of our cities. Our nation founded a different faith, {{founded}}."
         ],
         "weight": { "base": 1 }
       },
@@ -20,8 +20,7 @@
         "genre": "editorial",
         "headline": "Keep the faith we founded",
         "body": [
-          "Citizens! The majority among us now pray after the manner of {{majorityFaith}}, while {{founded}}, the faith this very nation founded, keeps the smaller field.",
-          "A creed is not lost in a day. It is lost one untaught child at a time. Teach it at home, keep the lamps lit at its shrines, and let what our founders handed down be handed down again."
+          "People of {{founded}}, another faith, {{majorityFaith}}, leads in most of our cities. If your children can learn the words to every song in the street, they can learn the words to one prayer. Say it with them before supper, while everyone is still at the table."
         ],
         "weight": { "base": 1 }
       },
@@ -30,11 +29,10 @@
         "voice": "gazette",
         "stance": "pluralist",
         "genre": "letter",
-        "headline": "Sir, on the counting of faiths",
+        "headline": "My daughter still comes on washing day",
         "byline": "A Reader of This Paper",
         "body": [
-          "Sir, you will print the count of faiths as though a wall had fallen. Most of the nation keeps {{majorityFaith}}; some keep {{founded}}; my street keeps both, and the borrowing of kettles continues without incident.",
-          "A nation has room for many beliefs. It is the counting of them, not the keeping, that makes the trouble."
+          "Sir, you report that {{majorityFaith}} leads in most of our cities. My daughter keeps it; I keep {{founded}}. She is the only one of my children who comes round on washing day. Pray spare me the letters of condolence."
         ],
         "weight": { "base": 1 }
       },
@@ -43,10 +41,9 @@
         "voice": "press",
         "stance": "rationalist",
         "genre": "analysis",
-        "headline": "Two shrines on the same street",
+        "headline": "Who keeps the old shrine open?",
         "body": [
-          "The tally gives {{majorityFaith}} the majority and puts {{founded}}, our own founding creed, behind it. In the lane behind the dye works, the woman who sweeps the steps of both shrines says the same neighbors still lend her a broom.",
-          "A national tally can show how widely each creed is kept. Follow the woman on her rounds, and you can learn how much of the old routine her neighbors still share."
+          "{{majorityFaith}} has a majority in most of our cities. In the lane behind the dye works, some of its worshippers still bring oil to the shrine of {{founded}} and help patch its roof. Those families could keep the shrine open even if its congregation dwindles."
         ],
         "weight": { "base": 1 }
       }
@@ -226,9 +223,9 @@
       {
         "id": "foreign-major-adopts-our-faith-report",
         "when": "civilization !== null",
-        "headline": "{{civilization}} adopts the faith we founded",
+        "headline": "Our faith leads in most cities of {{civilization}}",
         "body": [
-          "{{civilization}} now keeps {{religion}}, the creed this nation founded, as its majority faith. The change among its people is recent. A faith that began at our altars now leads another people's prayers."
+          "In {{civilization}}, {{religion}} now holds a majority in most cities. The faith was founded here."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -238,9 +235,9 @@
       {
         "id": "foreign-major-adopts-our-faith-unnamed",
         "when": "civilization === null",
-        "headline": "A foreign power adopts our founded faith",
+        "headline": "Our faith gains ground abroad",
         "body": [
-          "A major power abroad now keeps {{religion}}, the creed this nation founded, as its majority faith. The adoption is recent. What began at our altars now leads a foreign people's prayers."
+          "{{religion}}, the faith founded here, now holds a majority in most of the cities of another major power."
         ],
         "weight": { "base": 1 }
       },
@@ -250,10 +247,9 @@
         "stance": "ambitious",
         "genre": "analysis",
         "when": "civilization !== null",
-        "headline": "One faith, two nations: the opening in this",
+        "headline": "Will pilgrims from {{civilization}} visit our shrines?",
         "body": [
-          "{{civilization}} has adopted {{religion}}, the faith we founded, as its majority creed. The fact is religious; the consequences will not be. A people that prays as we pray will hear our name spoken kindly, and trade follows a good name.",
-          "The window will not stay open on its own. Missions, markets and a courteous court should follow the creed while the door is wide."
+          "{{religion}} now holds a majority in most cities of {{civilization}}. Worshippers who know the prayers can join in when they visit our shrines. Whether our inns and stallholders see any of that business depends on how easily pilgrims can make the trip."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -266,11 +262,10 @@
         "stance": "conciliatory",
         "genre": "letter",
         "when": "civilization !== null",
-        "headline": "Sir, on the roads to {{civilization}}",
+        "headline": "A potter's bowls for {{civilization}}",
         "byline": "A Trader of the Long Roads",
         "body": [
-          "Sir, I have walked the trade roads to {{civilization}} since my beard was brown, and I have never known our two peoples to have so much to talk about. Their people now keep {{religion}}, the faith our own nation founded.",
-          "Print it plainly: a shared creed is a wider road than any treaty, and I say let the caravans use it."
+          "Sir, my daughter makes bowls for our shrine and has got better at it than I ever was. I read that {{religion}} now leads in most cities of {{civilization}}, so I've offered to take some of her best work on my next trip. I'd like her to meet the people who'll use it."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -341,18 +336,18 @@
       {
         "id": "national-majority-faith-changed-report",
         "when": "former !== null",
-        "headline": "Majority faith turns from {{former}} to {{religion}}",
+        "headline": "{{religion}} overtakes {{former}} in the tally of cities",
         "body": [
-          "Most of our people now keep {{religion}}, where {{former}} lately held the field. The change is recent."
+          "{{religion}} has a majority in most of our cities. {{former}} held that distinction at the previous count."
         ],
         "weight": { "base": 1 }
       },
       {
         "id": "national-majority-faith-changed-first",
         "when": "former === null",
-        "headline": "A majority faith is counted among us",
+        "headline": "{{religion}} now leads in most of our cities",
         "body": [
-          "For the first time in the record, one faith now claims the majority of our people. The faith is {{religion}}."
+          "No faith held a majority in most of our cities at the last count. {{religion}} does now."
         ],
         "weight": { "base": 1 }
       },
@@ -364,7 +359,7 @@
         "when": "founded !== null && religion === founded",
         "headline": "Hear it! Our own faith leads the nation",
         "body": [
-          "Hear it, people of the nation! The majority among you now keep {{religion}}, the very faith this people founded! The altars we raised are the altars we keep! Keep the feast, and keep the faith!"
+          "Hear it, households of the nation! {{religion}}, the faith we founded, now has a majority in most of our cities. Ring it out where there's a bell to ring. The faith we founded leads at home!"
         ],
         "weight": { "base": 1 }
       },
@@ -374,10 +369,9 @@
         "stance": "traditional",
         "genre": "analysis",
         "when": "founded === null || religion !== founded",
-        "headline": "The count turns to a creed not of our founding",
+        "headline": "A new majority, an old day of rest",
         "body": [
-          "The majority of the nation now keeps {{religion}}, a faith this nation did not found. Such changes rarely arrive by decree. They accumulate, household by household, until the number turns.",
-          "The old measure of what follows still stands: what long custom held together, and whether the new creed holds it as well. On that, the count has only begun."
+          "{{religion}}, a creed founded abroad, now has a majority in most of our cities. The next change to watch is the calendar. A town can count a new majority and keep the day it has always shut its shops. That custom will be harder to keep if apprentices and their employers begin asking for different days off."
         ],
         "weight": { "base": 1 }
       }
@@ -392,9 +386,9 @@
       {
         "id": "neighbor-majority-faith-changed-report",
         "when": "civilization !== null",
-        "headline": "{{civilization}} turns from {{former}} to {{religion}}",
+        "headline": "{{religion}} gains a majority in most cities of {{civilization}}",
         "body": [
-          "{{civilization}}, a power near our borders, has changed its majority faith from {{former}} to {{religion}}. The shift among its people is recent."
+          "In {{civilization}}, {{religion}} now has a majority in most cities. The previous majority was held by {{former}}."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -404,9 +398,9 @@
       {
         "id": "neighbor-majority-faith-changed-unnamed",
         "when": "civilization === null",
-        "headline": "A neighboring power changes its faith",
+        "headline": "{{religion}} gains a majority across the border",
         "body": [
-          "A power near our borders has changed its majority faith from {{former}} to {{religion}}. The change is recent."
+          "In a power near our borders, {{religion}} now holds a majority in most cities. At the previous count, {{former}} did."
         ],
         "weight": { "base": 1 }
       },
@@ -416,9 +410,9 @@
         "stance": "pluralist",
         "genre": "report",
         "when": "civilization !== null",
-        "headline": "{{civilization}} keeps a new majority faith",
+        "headline": "Two prayer books for a binder in {{civilization}}",
         "body": [
-          "Letters from across the border bring word that {{civilization}} has changed its majority faith from {{former}} to {{religion}}. The households of that realm have made their own count, as households will. A creed suits the soil that keeps it, and this one will be argued in their markets long before it troubles ours."
+          "Letters from {{civilization}} report that {{religion}} now holds a majority in most of its cities, where {{former}} lately led. A bookbinder there has two prayer books on his bench, one from each congregation. He says the customer who called first will have his book on Friday and the other will have to wait his turn."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -430,9 +424,9 @@
         "voice": "pamphlet",
         "stance": "populist",
         "genre": "notice",
-        "headline": "Notice to the border towns: the neighbor prays differently now",
+        "headline": "Border towns: ask after the feast days",
         "body": [
-          "The power next door has a new majority faith, {{religion}}, where {{former}} held the field before. What that means for the frontier markets, the festivals and the weddings across the line is your business before it is the palace's."
+          "Across the border, {{religion}} now has a majority in most cities, where {{former}} used to lead. If you go across for the fairs, ask before you hitch up whether the old feast days still draw a crowd."
         ],
         "weight": { "base": 1 }
       }

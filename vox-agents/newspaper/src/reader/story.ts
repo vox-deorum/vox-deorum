@@ -43,6 +43,12 @@ export function renderStory(
   article.setAttribute("aria-labelledby", headingId);
 
   if (designId === "feed") article.append(renderAvatar(item));
+  if (publicationDesignId === "printed-almanack") {
+    const date = createElement("div", "vd-almanack-date");
+    if (item.observedTurn === undefined) date.textContent = "Undated";
+    else date.append(createElement("span", undefined, "Observed turn"), createElement("b", undefined, String(item.observedTurn)));
+    article.append(date);
+  }
   if (publicationDesignId === "court-dispatch") {
     article.append(createElement("div", "vd-dispatch-docket", cutoffLabel));
   }
@@ -76,12 +82,9 @@ export function renderStory(
   const prose = createElement("div", "vd-prose");
   appendParagraphs(prose, item.body, item.id, bindReaderAction);
   const footer = renderStoryFooter(item, vote, designId, assetBaseUrl);
-  const cover = lead && publicationDesignId === "national-review";
+  const pictureSheet = publicationDesignId === "meiji-picture-sheet";
+  const cover = lead && (publicationDesignId === "national-review" || pictureSheet);
   const image = renderStoryImage(item, assetBaseUrl);
-  if (cover && image) {
-    image.classList.add("vd-cover-art");
-    content.prepend(image);
-  }
   const figure = cover ? null : image;
 
   if (lead && page.layout === "breaking" && figure) {
@@ -107,6 +110,16 @@ export function renderStory(
     if (registerEntry) content.append(headingGroup, account);
   }
 
+  if (cover && image) {
+    image.classList.add("vd-cover-art");
+    if (pictureSheet) {
+      const panel = createElement("div", "vd-meiji-copy");
+      panel.append(...Array.from(content.childNodes));
+      content.append(image, panel);
+    } else {
+      content.prepend(image);
+    }
+  }
   article.append(content);
   return article;
 }

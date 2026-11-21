@@ -68,6 +68,13 @@ const templateSchema = eligibleSchema.extend({
   mode: z.enum(['authored', 'llmOnly']).default('authored'),
   short: z.boolean().default(false),
   variants: z.array(authoredVariantSchema),
+  merge: z.strictObject({
+    match: expressionSchema,
+    min: z.number().int().positive(),
+    priority: z.number().int().optional(),
+    values: z.record(editorialValueNameSchema, expressionSchema).optional(),
+    variants: z.array(authoredVariantSchema).min(1),
+  }).nullish(),
 });
 export type EditorialTemplate = z.infer<typeof templateSchema>;
 const layoutSchema = eligibleSchema.extend({
@@ -289,14 +296,19 @@ export const editorialConfigSchema = z
           path: ['templates', index, 'triggers'],
           message: 'Template triggers must use the same subject kind and must either all group their matches or all leave them ungrouped.',
         });
-      if (new Set(template.variants.map((variant) => variant.id)).size !== template.variants.length)
-        ctx.addIssue({
-          code: 'custom',
-          path: ['templates', index],
-          message: 'Variant ids must be unique.',
+      const variantIds = new Set<string>();
+      /** Validate variant identity across both prose lists and check style tags. */
+      function checkVariants(variants: AuthoredVariant[], path: string[]) {
+        variants.forEach((variant, variantIndex) => {
+          const variantPath = ['templates', index, ...path, variantIndex];
+          if (variantIds.has(variant.id))
+            ctx.addIssue({ code: 'custom', path: [...variantPath, 'id'], message: 'Variant ids must be unique.' });
+          variantIds.add(variant.id);
+          checkStyleTags(variant, variantPath);
         });
-      template.variants.forEach((variant, variantIndex) =>
-        checkStyleTags(variant, ['templates', index, 'variants', variantIndex]));
+      }
+      checkVariants(template.variants, ['variants']);
+      if (template.merge) checkVariants(template.merge.variants, ['merge', 'variants']);
     });
     config.designs.forEach((design, index) => {
       for (const variant of ['ordinary', 'breaking']) {

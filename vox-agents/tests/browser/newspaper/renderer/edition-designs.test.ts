@@ -1,4 +1,4 @@
-/** Exercise the manuscript, city daily and civic bulletin in the export reader. */
+/** Check how stock designs reflow across editions in the export reader. */
 import { existsSync } from 'node:fs';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Browser } from 'playwright-core';
@@ -11,7 +11,7 @@ import { launchInstalledBrowser } from '../../../../src/newspaper/export/browser
 import { startNewspaperHost, readerDirectory } from '../../../../src/newspaper/export/http.js';
 import { defaultRenderProfile } from '../../../../src/newspaper/renderer/layout.js';
 
-describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('palm leaf, city extra and civic index editions', () => {
+describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('newspaper design editions', () => {
   let browser: Browser | undefined;
   let unavailable: string | undefined;
   let host: Awaited<ReturnType<typeof startNewspaperHost>>;
@@ -27,7 +27,10 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('palm leaf, city 
     await host?.close();
   });
 
-  it.for(['palm-leaf-register', 'city-extra', 'civic-index'] as const)(
+  it.for([
+    'street-gazette', 'port-register', 'cable-desk', 'clay-chronicle', 'palm-leaf-register', 'court-dispatch',
+    'city-extra', 'civic-index',
+  ] as const)(
     'should preserve reading order and reflow every %s edition', async (id, context) => {
       if (!browser) { context.skip(unavailable); return; }
       const design = (await loadEditorialConfig()).designs.find(candidate => candidate.id === id)!;
@@ -63,7 +66,7 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('palm leaf, city 
             const [lead, firstBrief, secondBrief] = rendered.stories;
             expect(rendered.overflow, label).toBe(false);
             expect(rendered.stories.map(story => story.id), label).toEqual(front.itemIds);
-            if (paperWidth === 360 || id === 'palm-leaf-register') {
+            if (paperWidth === 360 || (front.layout !== 'ordinary' && id !== 'city-extra' && id !== 'civic-index')) {
               for (let i = 1; i < rendered.stories.length; i++) {
                 expect(rendered.stories[i].top, label).toBeGreaterThanOrEqual(rendered.stories[i - 1].bottom);
               }

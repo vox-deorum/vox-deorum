@@ -34,6 +34,10 @@ const samples: Record<NewspaperLayoutVariant, IssueDocument> = {
 };
 const previewPages = [...pages].sort((a, b) => a.order - b.order);
 const tradeIllustrations = new Map<string, ItemImage>([
+  ["meiji-picture-sheet", {
+    assetId: "meiji-picture-sheet.ferry",
+    altText: "A boatman poles a timber ferry across a blue river below tiled roofs and a low mountain.",
+  }],
   ["printer-dispatch", {
     assetId: "printer-dispatch.harbour",
     altText: "Woodcut of a sailing barge beside a stone quay and riverside warehouses.",
@@ -77,6 +81,7 @@ export function createPreviewIssue(
     publication: {
       title: masthead.title,
       motto: masthead.motto,
+      ...(design.id === "coffeehouse-essay" && { editionNumber: 12 }),
       designId: design.id,
       designVersion: design.version,
       presentation: accentColor
@@ -92,8 +97,10 @@ export function createPreviewIssue(
         itemIds: isFront || itemIds.length < 2 ? itemIds : itemIds.slice(1),
       };
     }),
-    items: sample.items.map(item => ({
+    items: sample.items.map((item, index) => ({
       ...item,
+      // Sample dates are illustrative; live almanacks use recorded observations.
+      ...(design.id === "printed-almanack" && { observedTurn: sample.cutoff.turn - 3 * index }),
       image: item.id === itemIds[0] ? image : undefined,
     })),
   };

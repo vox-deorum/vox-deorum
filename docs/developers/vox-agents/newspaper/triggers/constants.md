@@ -70,6 +70,7 @@ A shortcut is an expression attached to the fact it reads. A historical fact use
 | `player.is.alliedCityState`, `player.is.friendlyCityState` | Our city-state ally, or a city-state friend with a known alliance status who is not our ally |
 | `player.is.hasFoundedReligion`, `player.is.hasMajorityReligion` | The corresponding religion name is readable and nonempty |
 | `pair.is.foreignWar` | A war between two other major civilizations |
+| `incident.is.incomingMajorDeclaration` | A direct declaration by an identified major civilization targeting the receiver |
 
 At Standard speed, a city losing two food per turn with 10 stored is just outside `city.is.starving`: the reserve lasts exactly five turns. With nine stored it qualifies.
 

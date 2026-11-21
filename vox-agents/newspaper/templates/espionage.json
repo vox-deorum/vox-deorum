@@ -41,9 +41,9 @@
         "stance": "government-critical",
         "genre": "editorial",
         "when": "!success",
-        "headline": "The failed election bid owes us answers",
+        "headline": "Make the case for meddling",
         "body": [
-          "Citizens, someone sent our silver and our people into a foreign election, and the foreign electorate declined the gift. Who chose that ground? Who called it worth the cost? A failed operation owes the public an accounting, and we mean to keep asking until we get one."
+          "We tried to swing an election abroad and failed. The next minister who asks us to meddle should say what he hopes to get that an envoy couldn't win in the open. Until he makes that case, let him deal with the people the voters choose."
         ],
         "weight": { "base": 1 }
       },
@@ -189,9 +189,9 @@
         "stance": "government-critical",
         "genre": "analysis",
         "when": "target !== null",
-        "headline": "Our work in {{target}} loses its quiet",
+        "headline": "What {{target}} may hold back",
         "body": [
-          "The operation in {{target}} has been noticed, which in this trade is the same as being over. The other side knows an agent walked its streets; only the employer stayed hidden. Someone chose that ground, and someone should explain what the choosing was for. The next such choice deserves a harder look than the last one got."
+          "The authorities in {{target}} know a spy was at work and have yet to trace the agent to us. That may spare our envoy a formal complaint. It also gives the ministries there a reason to look twice at the papers they normally share with foreigners. Our ministry may have made its diplomats' work harder even with the spy's employer still unknown."
         ],
         "weight": { "base": 1 }
       },
@@ -309,9 +309,9 @@
         "stance": "government-critical",
         "genre": "editorial",
         "when": "result === 'Identified' && target !== null",
-        "headline": "Named in {{target}}, and no one explains",
+        "headline": "The ministry owes us its account",
         "body": [
-          "One of ours stands named as a spy in {{target}}, and the naming is the failure. An operation whose last product is our own name in another capital's mouth has not paid for itself, whatever it gathered. Who weighed that risk, and for what gain? The public is owed the answer, and this paper intends to collect it."
+          "The authorities in {{target}} have identified a spy in our service. If the ministry keeps its explanation behind closed doors, our own citizens will have to take the other country's account on trust. Let the minister tell us what public purpose the operation served. The people who did the work can stay out of the statement."
         ],
         "weight": { "base": 1 }
       },
@@ -333,9 +333,9 @@
         "stance": "neutral",
         "genre": "obituary",
         "when": "result === 'Killed' || result === 'KilledNotIdentified'",
-        "headline": "An agent of ours, unnamed",
+        "headline": "A winter coat passed on",
         "body": [
-          "The state does not print the name, and the record here will not invent one. One of our agents has died abroad in the secret work. What was gathered, what was paid and what it was all for stay with the office that sent them. The rest of us hold the debt."
+          "An agent of ours has died in service abroad. At the old lodgings, the landlady gave the agent's winter coat to a traveler. She recalled a night when her lodger had come back in shirtsleeves after doing much the same."
         ],
         "weight": { "base": 1 }
       }

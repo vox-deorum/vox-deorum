@@ -31,7 +31,7 @@
         "when": "ours === true",
         "headline": "Hear it! Our name is on the agenda",
         "body": [
-          "Hear it, people! Our delegates have put new business before the world: {{proposal}} stands on the agenda with our name on it! Let the other delegations read that name and count their friends!"
+          "Hear it, citizens! Our delegates have brought new business before the World Congress. If you meet a delegate in the square, ask what we've put before the world. Our proposal, in our name!"
         ],
         "weight": { "base": 1 }
       },
@@ -123,7 +123,7 @@
         "id": "congress-resolution-passed-report",
         "headline": "The Congress carries a measure",
         "body": [
-          "A proposal before the World Congress has been approved. The delegates carried it, and their decision now has the force of the chamber's law. Somewhere a clerk is already copying it out for every court."
+          "Delegates have approved a proposal before the World Congress, changing which measures are in force."
         ],
         "weight": { "base": 1 }
       },
@@ -195,9 +195,9 @@
         "voice": "pamphlet",
         "stance": "populist",
         "genre": "editorial",
-        "headline": "Sanctioned, and by whom?",
+        "headline": "Tell merchants what the sanction stops",
         "body": [
-          "The great chamber has voted, and we are the party it named. The sanction is aimed at a government, they say, but it is the market stall that feels the chill first: the fish costs more by the week, and the stall did not vote in any chamber. The delegates should say plainly what this is for, and how it ends."
+          "The Congress has sanctioned us. A merchant fitting out a ship now needs to know which routes can still take its cargo. An answer when the ship is already at sea will be worth very little. Our ministers should post the rules at the docks before the next cargo is loaded."
         ],
         "weight": { "base": 1 }
       },
@@ -309,9 +309,9 @@
         "stance": "national",
         "genre": "report",
         "when": "count > 1",
-        "headline": "{{count}} proposals before the delegates",
+        "headline": "World Congress to hear {{count}} proposals at its next session",
         "body": [
-          "At the World Congress, the next session is close. There are {{count}} proposals on the agenda, and our delegates still have a few doors to knock on. The country wants to know where they stand."
+          "At the World Congress, {{count}} proposals are on the agenda for the next session. Back home, one civics class is voting on the same proposals. “I ask the pupils why they voted that way,” their teacher says. “I'd like to put that question to our delegates.”"
         ],
         "weight": { "base": 1 }
       },
@@ -483,7 +483,7 @@
         "id": "congress-world-project-report",
         "headline": "A world project before the Congress",
         "body": [
-          "The World Congress has taken up {{project}}. The work belongs to the whole chamber, and the world's powers will have a hand in seeing it done. The quarrels will be over whose hand is in which part."
+          "The World Congress has taken up {{project}}. Nations that contribute to the work stand to earn rewards based on their share of the effort."
         ],
         "weight": { "base": 1 }
       },
@@ -492,9 +492,9 @@
         "voice": "gazette",
         "stance": "ambitious",
         "genre": "analysis",
-        "headline": "The Congress reaches for {{project}}",
+        "headline": "What a share in {{project}} will cost",
         "body": [
-          "A world project is the grandest business the chamber takes up. With {{project}} before it, the Congress may leave a mark no single nation could leave alone, and the delegations that champion the work will own a share of the record. Records of that kind outlive every signature in the chamber."
+          "The Congress has taken up {{project}}, and the greatest rewards will go to the largest contributors. A city can put hands to that work only by drawing them from other jobs. A country with full order books may find that the top prize costs more in delayed work than it brings in."
         ],
         "weight": { "base": 1 }
       },
@@ -503,9 +503,9 @@
         "voice": "broadcast",
         "stance": "industrialist",
         "genre": "report",
-        "headline": "Work, if the chamber wills it",
+        "headline": "Trade halls eye work on {{project}}",
         "body": [
-          "At the World Congress, there is word of {{project}}. In the trade halls, masons are asking how much stone a job like that would take, and haulers want to know who would move it. Is there work in it for crews here?"
+          "At the World Congress, there's news of {{project}}. At home, one shop foreman is waiting to hear whether there'll be work for his crew. “I've got two men whose jobs finish this week,” he tells us. “If there's a place for them, I'd like to know before they leave town.”"
         ],
         "weight": { "base": 1 }
       },
@@ -514,9 +514,9 @@
         "voice": "feed",
         "stance": "artistic",
         "genre": "anecdote",
-        "headline": "The biggest building site in the world",
+        "headline": "A blank line under {{project}}",
         "body": [
-          "{{project}} is on the Congress agenda. Somewhere a stonemason is already sharpening chisels at the thought of it, and somewhere an apprentice is telling his mother he will be gone a few years."
+          "The local sign painter adds {{project}} to his sampler. A reader asks what he'll put under it. “I left room for our name,” he says. “Let's see if we earn it.”"
         ],
         "weight": { "base": 1 }
       }
@@ -681,9 +681,9 @@
     "variants": [
       {
         "id": "travel-ban-proposed-report",
-        "headline": "A travel ban proposed in the Congress",
+        "headline": "Congress weighs limits on travel abroad",
         "body": [
-          "A proposal to close the world's doors to a nation's singers, scholars and salesmen has come before the World Congress: {{resolution}}. If enacted, the nation it names loses its welcome abroad."
+          "The World Congress is considering {{resolution}}. If passed, it would restrict travel between nations and reduce tourism for all of them."
         ],
         "weight": { "base": 1 }
       },
@@ -693,9 +693,9 @@
         "stance": "neutral",
         "genre": "report",
         "when": "proposer !== null",
-        "headline": "{{proposer}} wants the doors shut",
+        "headline": "Travel limits proposed by {{proposer}}",
         "body": [
-          "{{proposer}} has brought {{resolution}} before the World Congress, and the chamber will decide whether the nation it names keeps its welcome abroad. The stated reason is order. The unstated one is on every delegate's lips, and none of them will say it for the record."
+          "The World Congress has received {{resolution}} from {{proposer}}. The proposed limits would apply to travel between all nations. At a guesthouse near the arrivals hall, the owner says he's waiting for the result before hiring anyone for the busy season."
         ],
         "weight": { "base": 1 }
       },
@@ -705,9 +705,9 @@
         "stance": "local",
         "genre": "letter",
         "byline": "A Traveler",
-        "headline": "The roads they propose to close",
+        "headline": "Will my cousins make it to the fair?",
         "body": [
-          "To the editor: the chamber is weighing {{resolution}}. A border that stops a song stops it on both sides of the gate, and the towns along the road lose either way: our beds, their suppers, everyone's custom. The delegates should travel more and legislate less."
+          "Sir, I meant to meet my cousins at the fair, where we spent our summers as children. They live abroad now and have written to ask whether {{resolution}} might keep them from coming. Would your paper print what the delegates intend? We can manage without the fair, but I'd like the cousins to come."
         ],
         "weight": { "base": 1 }
       },
@@ -716,9 +716,9 @@
         "voice": "tabloid",
         "stance": "artistic",
         "genre": "anecdote",
-        "headline": "They want to stop the singers at the border",
+        "headline": "The singer has two posters ready",
         "body": [
-          "The delegates call {{resolution}} order. The bards at the border have another name for it, and by closing time the taverns had already set it to music. The vote is not until the chamber sits, and the song is finished."
+          "With {{resolution}} up for a vote, a touring singer ordered two sets of posters. One lists the dates abroad, the other the halls that might take her here. The printer asked which one to run first. She pointed to the foreign dates. “Let's look at that one a little longer.”"
         ],
         "weight": { "base": 1 }
       }
@@ -734,7 +734,7 @@
         "id": "travel-ban-repeal-proposed-report",
         "headline": "A proposal to lift a travel ban",
         "body": [
-          "A motion to end a travel ban has come before the World Congress: {{resolution}}. If the delegates carry it, the doors the chamber closed will open again, and the queue at them is already forming."
+          "Delegates to the World Congress will consider ending {{resolution}}. Repeal would lift the Congress's restrictions on international travel."
         ],
         "weight": { "base": 1 }
       },
@@ -744,9 +744,9 @@
         "stance": "traditional",
         "genre": "notice",
         "when": "proposer !== null",
-        "headline": "Notice: {{proposer}} moves to end a travel ban",
+        "headline": "Notice: A proposal to end the travel ban",
         "body": [
-          "We hear that {{proposer}} has proposed the repeal of {{resolution}}, that the old freedom of the roads may be restored. The chamber will take the vote when it sits. Some freedoms are missed only when they are gone; the roads, it seems, were one of them."
+          "We hear that a proposal from {{proposer}} would repeal {{resolution}}. Readers waiting to resume visits abroad are advised that the restrictions stand until the Congress votes to lift them."
         ],
         "weight": { "base": 1 }
       },
@@ -755,9 +755,9 @@
         "voice": "press",
         "stance": "artistic",
         "genre": "editorial",
-        "headline": "Let the borders open",
+        "headline": "Give touring artists their audiences back",
         "body": [
-          "The Congress has before it a motion to lift {{resolution}}. A nation's songs travel farther than its armies and cost less to feed, and a closed door silences the singer long before it stops the soldier. The delegates should open it, and the singers will do the rest."
+          "Delegates should vote to repeal {{resolution}}. A small theatre abroad can make a place for a player who can't sell a ticket at home, and a new audience can sustain a play long enough for the author to write another. The less room we leave for travel, the more our stages have to rely on the same few dependable names."
         ],
         "weight": { "base": 1 }
       },
@@ -768,7 +768,7 @@
         "genre": "notice",
         "headline": "Hear this, travelers: the ban may end",
         "body": [
-          "Couriers, pilgrims and players, hear this! A travel ban is felt at the tollgate, never at the palace, and the Congress may at last lift {{resolution}}! If it does, the roads are ours again. If it does not, ask your delegate which inn he stayed at on the way there."
+          "Travelers, the Congress may lift {{resolution}}. Hold off on paying anyone who promises you an easy trip across the border. Wait to hear how your delegates voted."
         ],
         "weight": { "base": 1 }
       }

@@ -35,6 +35,14 @@ export interface EditorialCandidate {
   variantSources: Record<string, NewspaperSourceReference[]>;
   /** Check-local fact bindings used by style rules after the story is selected. */
   variantBindings?: ExpressionBindings;
+  /** Visible identity fields available to merged prose. */
+  mergeIdentity?: ReturnType<typeof storyIdentity>;
+  /** Fingerprints of the anchor and original selections covered by this merged story. */
+  coveredFingerprints?: string[];
+  /** Original candidate IDs replaced by this merged story. */
+  mergedCandidateIds?: string[];
+  /** Original rule and subject pairs used by publication memory. */
+  ruleSubjects?: { ruleId: string; subject: string }[];
   values: TemplateValues;
   sources: NewspaperSourceReference[];
   fingerprint: string;
@@ -72,7 +80,7 @@ export function resolveLinkTarget(
 }
 
 /** Check that every prose and link placeholder has a visible scalar value. */
-function printable(variant: AuthoredVariant, values: TemplateValues): boolean {
+export function printable(variant: AuthoredVariant, values: TemplateValues): boolean {
   const augmented = {
     ...values,
     ...Object.fromEntries(variant.links.map((link) => [link.placeholder, substitute(link.label, values)])),
@@ -177,8 +185,10 @@ function templateFacts(
 }
 
 /** Find source rows for the visible identities actually printed by a variant. */
-function placeholderSources(
-  variant: AuthoredVariant, choice: ReturnType<typeof templateFacts>, terms?: EditorialTerms
+export function placeholderSources(
+  variant: AuthoredVariant,
+  choice: Pick<ReturnType<typeof templateFacts>, 'identity' | 'placeholders'>,
+  terms?: EditorialTerms
 ): NewspaperSourceReference[] {
   const used = [
     ...variantText(variant),
@@ -200,6 +210,7 @@ export async function matchTemplates(
   budget?: ExpressionCheckBudget,
   terms?: EditorialTerms
 ): Promise<EditorialCandidate[]> {
+  const retainBindings = compiled.styleRules.length || config.templates.some(template => template.merge);
   const bySubject = new Map<string, Map<string, RuleDevelopment>>();
   for (const part of triggers) {
     const rules = bySubject.get(part.subject) ?? new Map<string, RuleDevelopment>();
@@ -215,7 +226,7 @@ export async function matchTemplates(
       if (!match) continue;
       const choice = templateFacts(match.parts, match.period, batch.facts, terms);
       const variants = template.variants.filter((variant) => printable(variant, choice.placeholders));
-      if (variants.length) plans.push({ template, prepared, ...match, choice, variants });
+      if (variants.length || template.merge) plans.push({ template, prepared, ...match, choice, variants });
     }
   }
   const templateWeights = await evaluateChoices(compiled.runner, batch, plans.map((plan) => ({
@@ -240,9 +251,10 @@ export async function matchTemplates(
       sources[variant.id] = uniqueSources([...result.sources, ...placeholderSources(variant, choice, terms)]);
       return true;
     });
-    return eligible.length ? [candidate(
+    return eligible.length || template.merge ? [candidate(
       template, parts, period, choice.placeholders, rating, eligible, weights, sources,
-      compiled.styleRules.length ? choice.bindings : undefined,
+      retainBindings ? choice.bindings : undefined,
+      template.merge ? choice.identity : undefined,
     )] : [];
   });
 }
@@ -253,6 +265,7 @@ function candidate(
   rating: { weight: number; sources: NewspaperSourceReference[] }, variants: AuthoredVariant[],
   variantWeights: EditorialCandidate['variantWeights'], variantSources: EditorialCandidate['variantSources'],
   variantBindings?: ExpressionBindings,
+  mergeIdentity?: EditorialCandidate['mergeIdentity'],
 ): EditorialCandidate {
   return {
     id: `${template.id}/${parts.map((part) => part.id).join('+')}`,
@@ -270,6 +283,7 @@ function candidate(
     weight: rating.weight,
     variants, variantWeights, variantSources, values,
     ...(variantBindings === undefined ? {} : { variantBindings }),
+    ...(mergeIdentity === undefined ? {} : { mergeIdentity }),
     sources: uniqueSources([...parts.flatMap((part) => part.sources), ...rating.sources]),
     fingerprint: parts.map((part) => part.fingerprint).sort().join('+'),
   };

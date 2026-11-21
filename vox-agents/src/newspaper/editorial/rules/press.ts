@@ -23,11 +23,10 @@ export function buildPress(state: PublicationState): NewspaperPress {
   for (const issue of state.issues)
     for (const item of issue.items) {
       const ruleIds = new Set(item.ruleIds ?? []);
-      for (const ruleId of ruleIds) {
-        addPrinted(rules, ruleId, item);
-        if (item.subject !== undefined)
-          addPrinted(subjects, ruleSubjectKey(ruleId, item.subject), item);
-      }
+      for (const ruleId of ruleIds) addPrinted(rules, ruleId, item);
+      const subjectKeys = item.ruleSubjects?.map(({ ruleId, subject }) => ruleSubjectKey(ruleId, subject)) ??
+        (item.subject === undefined ? [] : [...ruleIds].map(ruleId => ruleSubjectKey(ruleId, item.subject!)));
+      for (const key of new Set(subjectKeys)) addPrinted(subjects, key, item);
     }
   return {
     issues: state.issues.length,

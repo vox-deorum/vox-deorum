@@ -38,10 +38,19 @@ A template names one or more rules in `triggers`. They must all fire for the sam
 | `short` | Lets the editor reserve the last slot for a brief |
 | `weight` | Base weight and conditional adjustments |
 | `variants` | Authored prose choices with an ID, text, links, eligibility, weight, and style tags |
+| `merge` | Optional rules and prose for combining selected stories |
 
 `id`, `triggers`, `tags`, `weight` and `variants` are required. Each variant requires `id`, `headline`, `body` and `weight`; `subheadline`, `byline`, `when` and `links` are optional. The reader draws the subheadline under the headline and the byline below it, so an opinion piece or a signed report can carry both.
 
 The [news writing rules](writing.md) show how to turn visible game facts into entertaining stories, imagine what the news means to people in the world, and write in the chosen voice, stance, and genre.
+
+### Combining stories
+
+A template with `merge` can use its trigger match to combine stories already chosen for the issue, even when its own article was not selected. `merge.match` reads the combining template's facts as `lead` and tests each other selected story as `member`. Match the exact subjects or template IDs you intend to cover. Set `merge.min` to the number of other stories required. When merges compete for a story, the higher `merge.priority` goes first.
+
+Merged prose uses `merge.variants`. Its conditions and `merge.values` expressions can read `merge.members` and `merge.count`. A scalar value named `attackers` can be printed as `{{merge.values.attackers}}`. Keep ordinary `variants` for a story that can also stand alone, or use an empty list for a template that only combines stories. An overlay can set `merge` to `null` to keep the ordinary choices only.
+
+A merge replaces its matching stories only when the combined copy is eligible. It keeps their evidence and urgency. See [war coverage](triggers/war-and-peace.md#combining-declaration-reports) for the stock example.
 
 ### Variant styles
 
@@ -117,7 +126,7 @@ The issue saves the chosen title, motto, and labels. Editor credits use that tit
 
 The [trigger audit](triggers/overview.md#how-a-check-evaluates-triggers) shows which developments matched. To pick stories, the editor scores candidates by importance, decayed series history, novelty, variety, template weight, and reader feedback. A series follows one rule and subject and can appear in only one item per issue. A story supported by multiple rules contributes once to each of its series. Skips advance the schedule and decay series importance while leaving the reporting window open.
 
-The stock paper needs four distinct stories, allows up to ten, and puts at most five on the front page. A selected urgent story leads a breaking front page. An article appearing on two pages still counts as one item with one vote.
+The stock paper selects four to ten stories before combining related coverage. For example, five declarations can meet the minimum and appear as one headline. The front page shows up to five articles, and an urgent story leads a breaking issue. Each displayed article gets one vote, even if it combines several stories or appears on two pages.
 
 The audit saves the seed, catalogue, scores, presentation, sources, feedback, and trigger results. Stock design and layout draws are independent of each other and of prose. `designSelection` explains the prior design, how many issues it ran (up to six), and the candidate weights used for the draw. `selectedVariants` and `selectedStyles` record each displayed article's wording and style by item ID. Replay reopens the stored issue without running the editor again.
 

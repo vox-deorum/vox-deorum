@@ -36,6 +36,18 @@
     box-shadow: inset 0 1px var(--clay-lip);
     padding-top: 12px;
   }
+  & .vd-storylist[data-layout="ordinary"] .vd-story--brief {
+    position: relative;
+    &::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto auto 0;
+      width: 10px;
+      height: 6px;
+      background: var(--clay-groove);
+      clip-path: polygon(0 0, 100% 0, 0 100%);
+    }
+  }
   & .vd-storylist[data-layout="breaking"] .vd-story--lead :is(.vd-headline, .vd-deck, .vd-byline) {
     text-align: left;
     text-transform: none;
@@ -46,18 +58,8 @@
 }
 
 @container newspaper (width > 760px) {
-  .vd-newspaper[data-publication-design="clay-chronicle"] {
-    /* A full-width cut separates successive entries on the tablet. */
-    & .vd-storylist[data-layout="ordinary"] { display: block; }
-    & .vd-storylist[data-layout="ordinary"] .vd-story--brief .vd-story-content {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
-      column-gap: clamp(18px, 3cqi, 40px);
-    }
-    & .vd-storylist[data-layout="ordinary"] .vd-story--brief .vd-story-content > * { grid-column: 2; }
-    & .vd-storylist[data-layout="ordinary"] .vd-story--brief .vd-story-content > .vd-headline {
-      grid-column: 1;
-      grid-row: 1 / span 4;
-    }
+  .vd-newspaper[data-publication-design="clay-chronicle"] .vd-storylist[data-layout="ordinary"] .vd-prose {
+    columns: auto;
+    max-width: 66ch;
   }
 }

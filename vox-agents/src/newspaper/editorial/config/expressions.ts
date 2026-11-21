@@ -41,6 +41,11 @@ export interface CompiledTriggerExpressions {
 
 interface PreparedTemplate extends ChoiceExpressions {
   variants: ReadonlyMap<string, ChoiceExpressions>;
+  merge?: {
+    match: number;
+    values: ReadonlyMap<string, number>;
+    variants: ReadonlyMap<string, ChoiceExpressions>;
+  };
 }
 
 interface PreparedDesign extends ChoiceExpressions {
@@ -134,6 +139,15 @@ export async function prepareEditorialExpressions(config: EditorialConfig): Prom
     variants: new Map(template.variants.map(variant => [
       variant.id, choice(`template ${template.id} / variant ${variant.id}`, variant),
     ])),
+    ...(template.merge ? { merge: {
+      match: addExpression(expressions, `template ${template.id} / merge`, 'match', template.merge.match),
+      values: new Map(Object.entries(template.merge.values ?? {}).map(([name, source]) =>
+        [name, addExpression(expressions, `template ${template.id} / merge`, `values.${name}`, source)]
+      )),
+      variants: new Map(template.merge.variants.map(variant => [
+        variant.id, choice(`template ${template.id} / merge variant ${variant.id}`, variant),
+      ])),
+    } } : {}),
   }]));
   const pages = new Map(config.pages.map(page => [page.id, choice(`page ${page.id}`, page)]));
   const designs = new Map(config.designs.map(design => [design.id, {

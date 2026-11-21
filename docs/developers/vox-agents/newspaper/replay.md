@@ -75,7 +75,7 @@ Open `index.html` directly in a browser. Rendered issues appear first; expand th
 
 Mirror the catalogue paths in an overlay directory. For example, place a copy of `vox-agents/newspaper/triggers/cities.json` under `triggers/` in the overlay, edit a rule there, and add `--config .tmp/newspaper-overlay` to the command. Run it with a new `--output` and keep the same source, player, range, and frequency. See [catalogue merging](editorial.md#catalogue-and-eligibility) for which fields carry over.
 
-If a story is missing, read the [trigger audit](triggers/overview.md) for matched subjects and their evidence. The decision shows eligible candidates and how they competed for space. `choiceErrors` records expression failures and whether the check hit its execution limit. For [design weights](designs.md#which-design-runs), compare runs with the same recording, receiver, and first cutoff. Use matching shorter windows if a long replay reaches its memory limit; a fresh window starts with no publication history.
+If a story is missing, read the [trigger audit](triggers/overview.md) for matched subjects and their evidence. The decision shows how the candidates competed for space. A `mergedInto` entry points to the combined story that covered a candidate. `choiceErrors` records expression failures and whether the check hit its execution limit. For [design weights](designs.md#which-design-runs), compare runs with the same recording, receiver, and first cutoff. Use matching shorter windows if a long replay reaches its memory limit; a fresh window starts with no publication history.
 
 ### Stock catalogue reading examples
 

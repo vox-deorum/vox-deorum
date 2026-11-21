@@ -9,7 +9,7 @@
         "id": "ally-joins-our-war-report",
         "headline": "Allies join the war against {{opponent}}",
         "body": [
-          "The war against {{opponent}} is no longer ours alone. {{allies}} have answered the call of the pact between us, and what one nation carried now rests on several. Their banners move with ours from this week on."
+          "The war against {{opponent}} is no longer ours alone. {{allies}} have answered the call of the pact between us, and what one nation carried now rests on several. Their banners move with ours from this week on.{{hostileAllies}}"
         ],
         "weight": { "base": 1 }
       },
@@ -18,9 +18,9 @@
         "voice": "press",
         "stance": "national",
         "genre": "analysis",
-        "headline": "A longer line against {{opponent}}",
+        "headline": "A warning for our other rivals",
         "body": [
-          "Our side against {{opponent}} now counts {{allies}} among its members, and the war they joined is no longer a private quarrel. It is a line of nations, and the line just got longer. {{opponent}} must now guard against all of us at once."
+          "{{allies}} have entered the war against {{opponent}} under our pact. Until a promise like that is tested, a rival can tell itself our allies would sit a war out. Now even a ruler with no stake in this fight has to reckon with the chance of facing them as well as us.{{hostileAllies}}"
         ],
         "weight": { "base": 1 }
       },
@@ -31,7 +31,7 @@
         "genre": "report",
         "headline": "The pact answered in arms",
         "body": [
-          "We are credibly informed that the pact has been answered, and that the war against {{opponent}} now includes {{allies}} on our side. Treaties kept in hard years are the ones worth signing in calm ones, and this one has been kept. We congratulate the chancelleries on their constancy."
+          "We are credibly informed that the pact has been answered, and that the war against {{opponent}} now includes {{allies}} on our side. Treaties kept in hard years are the ones worth signing in calm ones, and this one has been kept. We congratulate the chancelleries on their constancy.{{hostileAllies}}"
         ],
         "weight": { "base": 1 }
       },
@@ -42,7 +42,7 @@
         "genre": "notice",
         "headline": "Hear it! We do not fight alone",
         "body": [
-          "News from the war against {{opponent}}! The pact is honored, and {{allies}} stand at our side! We do not fight alone! We do not fight alone! Carry it to every street and every gate!"
+          "News from the war against {{opponent}}! The pact is honored, and {{allies}} stand at our side! We do not fight alone! We do not fight alone! Carry it to every street and every gate!{{hostileAllies}}"
         ],
         "weight": { "base": 1 }
       }
@@ -132,9 +132,9 @@
     "variants": [
       {
         "id": "besieged-and-starving-report",
-        "headline": "{{city}} besieged, and going hungry",
+        "headline": "{{city}} goes hungry under siege",
         "body": [
-          "Enemy forces have closed the roads into {{city}}. No grain is moving in, the granaries are running down, and the ration is smaller every week."
+          "{{city}} is under siege and running short of food. A woman boiling supper in a shared courtyard says she has started saving the cooking water. \"There's a little starch in it yet. It goes in tomorrow's pot.\""
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -146,9 +146,9 @@
         "voice": "press",
         "stance": "populist",
         "genre": "analysis",
-        "headline": "Who feeds {{city}} tonight?",
+        "headline": "Who can still buy supper in {{city}}?",
         "body": [
-          "A city under siege eats its stores first and its luck afterward, and {{city}} is well into the second course. The people there did not choose this war, and they cannot lift it by wanting bread less. Someone in the capital owes them a relief convoy and a date, and owes them soon."
+          "{{city}} is hungry under siege, and the first households to go without may be those that normally buy food a day at a time. A laundress who lives on each day's earnings has no store to run down. A few sacks still for sale at the market tell us very little about whether her children have eaten."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -566,9 +566,9 @@
         "stance": "neutral",
         "genre": "analysis",
         "when": "cityName !== null && loser !== null && winner !== null",
-        "headline": "A capital changes hands: {{cityName}}",
+        "headline": "After {{cityName}} falls, where do the envoys go?",
         "body": [
-          "{{cityName}}, the capital of {{loser}}, has fallen to {{winner}} by conquest. A capital is more than a city: its ministries, its treasury and its archives sit behind one set of walls, and {{winner}} now sits inside all of them. The machinery of the state did not burn; it changed hands."
+          "{{cityName}}, the capital of {{loser}}, is now in the hands of {{winner}}. If the old government opens its offices elsewhere and the foreign envoys follow it, their change of address will tell us whose signature their governments still honor."
         ],
         "weight": { "base": 1 }
       },
@@ -677,9 +677,9 @@
         "voice": "broadcast",
         "stance": "neutral",
         "genre": "report",
-        "headline": "War abroad tonight",
+        "headline": "{{initiator}} at war with {{target}}",
         "body": [
-          "Abroad tonight. {{initiator}} has attacked {{target}}. The front runs as close as {{nearest}} miles from our cities. The border markets are emptying, and the border roads are filling."
+          "War close to home tonight: a declaration by {{initiator}} against {{target}}. We are outside this fight. At a coach station here, one driver is waiting to talk to someone who has made the return trip. \"I'll sell seats when I know I can bring people back.\""
         ],
         "weight": { "base": 1 }
       },
@@ -1202,9 +1202,9 @@
         "stance": "government-critical",
         "genre": "editorial",
         "when": "role === 'initiator' && target !== null",
-        "headline": "Our peace with {{target}} and its price",
+        "headline": "Who owes what in the peace with {{target}}?",
         "body": [
-          "The settlement with {{target}} carries {{count}} concessions on the record: {{concessions}}. What the record does not say is who pays which. Until the government names its prices, the public will assume it was the payer, and the public has been right before."
+          "The peace with {{target}} lists concessions by kind: {{concessions}}. Before the council draws up its next budget, the public should be able to tell a debt from a windfall. Let the negotiators print the terms in two columns: what we gave and what we got."
         ],
         "weight": { "base": 1 }
       },
@@ -1317,6 +1317,18 @@
           "The guns are quiet, and this paper is glad of it. The work the silence leaves is plain: mend what the armies broke, pay what the armies borrowed, and find work for the men the armies took. Peace that only celebrates is peace half kept."
         ],
         "weight": { "base": 1 }
+      },
+      {
+        "id": "peace-returns-names-by-village",
+        "voice": "gazette",
+        "stance": "local",
+        "genre": "letter",
+        "byline": "A soldier's sister",
+        "headline": "Please print the names by village",
+        "body": [
+          "Madam, we hear that the war is over. If you learn who is coming home, please print the names by village. Our mother knows the name of ours by sight. It is the only word she can read, and she will want to find it for herself."
+        ],
+        "weight": { "base": 1 }
       }
     ]
   },
@@ -1381,7 +1393,7 @@
         "id": "vassals-join-war-report",
         "headline": "Vassals drawn into the war",
         "body": [
-          "The war between {{initiator}} and {{target}} has drawn in the vassal powers: {{vassals}}. Their banners now march under another's orders."
+          "The war between {{initiator}} and {{target}} has drawn in the vassal powers: {{vassals}}. Their banners now march under another's orders.{{hostileAllies}}"
         ],
         "weight": { "base": 1 }
       },
@@ -1392,7 +1404,7 @@
         "genre": "analysis",
         "headline": "What the vassals add",
         "body": [
-          "The war between {{initiator}} and {{target}} has gained a supporting cast: {{vassals}}. A vassal's soldiers go where the master points, so every banner on that list is arithmetic for one side only. The war did not grow wider; it grew heavier."
+          "The war between {{initiator}} and {{target}} has gained a supporting cast: {{vassals}}. A vassal's soldiers go where the master points, so every banner on that list is arithmetic for one side only. The war did not grow wider; it grew heavier.{{hostileAllies}}"
         ],
         "weight": { "base": 1 }
       },
@@ -1403,7 +1415,7 @@
         "genre": "report",
         "headline": "The record of vassalage honored",
         "body": [
-          "It is set down that {{vassals}} entered the war between {{initiator}} and {{target}}, being bound by vassalage. Their banners follow where the master's points, as such banners have always done, in this reign as in the ones before it."
+          "It is set down that {{vassals}} entered the war between {{initiator}} and {{target}}, being bound by vassalage. Their banners follow where the master's points, as such banners have always done, in this reign as in the ones before it.{{hostileAllies}}"
         ],
         "weight": { "base": 1 }
       },
@@ -1414,7 +1426,7 @@
         "genre": "editorial",
         "headline": "Small kings, big wars",
         "body": [
-          "The quarrel of {{initiator}} and {{target}} now marches {{vassals}} to the front, none of them asked their view and none of them paid to have one. When the great quarrel, the small bleed. Citizens, note how these arrangements are made, and note who never appears in them."
+          "The quarrel of {{initiator}} and {{target}} now marches {{vassals}} to the front, none of them asked their view and none of them paid to have one. When the great quarrel, the small bleed. Citizens, note how these arrangements are made, and note who never appears in them.{{hostileAllies}}"
         ],
         "weight": { "base": 1 }
       }
@@ -1578,9 +1590,10 @@
     "variants": [
       {
         "id": "war-involving-us-report",
+        "when": "role !== 'target' || initiator === null",
         "headline": "The nation is at war",
         "body": [
-          "The nation has gone to war. The call to arms is out, the frontier watches are doubled, and these pages will follow the fighting turn by turn, wherever it runs."
+          "The nation has gone to war. The call to arms is out, the frontier watches are doubled, and these pages will follow the fighting turn by turn, wherever it runs.{{hostileAllies}}"
         ],
         "weight": { "base": 1 }
       },
@@ -1592,7 +1605,7 @@
         "when": "role === 'target' && initiator !== null",
         "headline": "{{initiator}} has attacked",
         "body": [
-          "War tonight. {{initiator}} has declared war on us. Our forces are standing to their posts. The reserves are being counted. More bulletins as we have them."
+          "War tonight. {{initiator}} has declared war on us. Our forces are standing to their posts. The reserves are being counted. More bulletins as we have them.{{hostileAllies}}"
         ],
         "weight": { "base": 1 }
       },
@@ -1604,7 +1617,7 @@
         "when": "role === 'target' && initiator !== null",
         "headline": "Hear it! {{initiator}} makes war on us",
         "body": [
-          "Word from the frontier: {{initiator}} has declared war on us! To arms, and mind the stores! {{initiator}} has made war on us, and the nation answers!"
+          "Word from the frontier: {{initiator}} has declared war on us! To arms, and mind the stores! {{initiator}} has made war on us, and the nation answers!{{hostileAllies}}"
         ],
         "weight": { "base": 1 }
       },
@@ -1616,7 +1629,7 @@
         "when": "role === 'initiator' && target !== null",
         "headline": "A state of war with {{target}}",
         "body": [
-          "We are informed that a state of war now exists between the nation and {{target}}. The government's decision, we are assured, was weighed long before it was made. This paper presumes the weighing was sound, and expects the case to be laid before the people while the armies are still within a day's march of home."
+          "We are informed that a state of war now exists between the nation and {{target}}. The government's decision, we are assured, was weighed long before it was made. This paper presumes the weighing was sound, and expects the case to be laid before the people while the armies are still within a day's march of home.{{hostileAllies}}"
         ],
         "weight": { "base": 1 }
       },
@@ -1628,7 +1641,7 @@
         "when": "role === 'joined' && reason === 'pact' && initiator !== null && target !== null",
         "headline": "Their quarrel, our treaty",
         "body": [
-          "The war between {{initiator}} and {{target}} is now ours by treaty. Pacts are signed in calm years and honored in hard ones; that is their worth and their price. Citizens, we are owed an accounting of what the paying buys, and we should ask for it now, while the ledgers are still open."
+          "The war between {{initiator}} and {{target}} is now ours by treaty. Pacts are signed in calm years and honored in hard ones; that is their worth and their price. Citizens, we are owed an accounting of what the paying buys, and we should ask for it now, while the ledgers are still open.{{hostileAllies}}"
         ],
         "weight": { "base": 1 }
       }
@@ -1639,6 +1652,29 @@
     "triggers": ["war-on-three-fronts"],
     "tags": ["politics", "military"],
     "weight": { "base": 1 },
+    "merge": {
+      "match": "member.incident?.is.incomingMajorDeclaration && self.wars.some(p => p.knows('id') && p.id === member.incident.initiator.id)",
+      "min": 1,
+      "priority": 10,
+      "values": {
+        "attackers": "(() => { const declarations = new Map(merge.members.map(({ incident }) => [incident.initiator.id, incident.initiator])); const named = [...declarations.values()].filter(p => p.knows('name')).map(p => p.name); const unknown = declarations.size - named.length; if (unknown) named.push(unknown === 1 ? 'one unnamed power' : unknown + ' unnamed powers'); return named.join(', '); })()",
+        "otherFronts": "(() => { const declarations = merge.members.map(m => m.incident); const fresh = new Set(declarations.map(i => i.initiator.id)); const first = declarations.reduce((a, b) => b.turn < a.turn ? b : a); const earlier = new Set(first.earlierWarOpponents.map(entry => entry.player.id)); const ongoing = [], other = []; for (const rival of self.wars) { if (!rival.knows('major') || !rival.major || !rival.knows('id') || fresh.has(rival.id)) continue; (earlier.has(rival.id) ? ongoing : other).push(rival.knows('name') ? rival.name : 'an unnamed power'); } return [ongoing.length ? 'Already at war with: ' + ongoing.join(', ') + '.' : '', other.length ? 'Other active fronts: ' + other.join(', ') + '.' : ''].filter(Boolean).join(' ') || 'These declarations account for all active major fronts.'; })()",
+        "allies": "(() => { const named = new Map(); for (const { incident } of merge.members) for (const entry of incident.hostileCityStateAllies) if (entry.player.knows('name')) named.set(entry.player.id, entry.player.name); return named.size ? ' Hostile city-state allies: ' + [...named.values()].join(', ') + '.' : ''; })()"
+      },
+      "variants": [
+        {
+          "id": "war-on-three-fronts-merged-report",
+          "headline": "War on {{count}} fronts",
+          "body": [
+            "New declarations of war: {{merge.values.attackers}}.{{merge.values.allies}}",
+            "{{merge.values.otherFronts}}"
+          ],
+          "weight": {
+            "base": 1
+          }
+        }
+      ]
+    },
     "variants": [
       {
         "id": "war-on-three-fronts-report",
@@ -1880,5 +1916,41 @@
         "weight": { "base": 1 }
       }
     ]
+  },
+  {
+    "id": "incoming-war-wave-account",
+    "triggers": [
+      "incoming-war-wave"
+    ],
+    "tags": [
+      "politics",
+      "military"
+    ],
+    "weight": {
+      "base": 1
+    },
+    "variants": [],
+    "merge": {
+      "match": "member.incident?.is.incomingMajorDeclaration && member.incident.turn === lead.key",
+      "min": 3,
+      "values": {
+        "attackers": "(() => { const declarations = new Map(merge.members.map(({ incident }) => [incident.initiator.id, incident.initiator])); const named = [...declarations.values()].filter(p => p.knows('name')).map(p => p.name); const unknown = declarations.size - named.length; if (unknown) named.push(unknown === 1 ? 'one unnamed power' : unknown + ' unnamed powers'); return named.join(', '); })()",
+        "distinctAttackers": "new Set(merge.members.map(m => m.incident.initiator.id)).size",
+        "allies": "(() => { const named = new Map(); for (const { incident } of merge.members) for (const entry of incident.hostileCityStateAllies) if (entry.player.knows('name')) named.set(entry.player.id, entry.player.name); return named.size ? ' Hostile city-state allies: ' + [...named.values()].join(', ') + '.' : ''; })()"
+      },
+      "variants": [
+        {
+          "id": "incoming-war-wave-report",
+          "when": "merge.values.distinctAttackers >= 3",
+          "headline": "Breaking: {{merge.values.distinctAttackers}} powers declare war",
+          "body": [
+            "Declarations of war on turn {{key}}: {{merge.values.attackers}}.{{merge.values.allies}}"
+          ],
+          "weight": {
+            "base": 1
+          }
+        }
+      ]
+    }
   }
 ]

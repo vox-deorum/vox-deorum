@@ -1,0 +1,66 @@
+/* A letterpress calendar: each observation has its own ruled entry. */
+.vd-newspaper[data-publication-design="printed-almanack"] {
+  & .vd-masthead {
+    display: grid;
+    justify-items: center;
+    border: 3px double var(--vd-ink);
+    padding: 8px 12px;
+  }
+  & .vd-title {
+    font-variant: small-caps;
+    font-size: calc(clamp(34px, 5.3cqi, 64px) * var(--vd-text-scale));
+    letter-spacing: .025em;
+  }
+  & .vd-ornament { width: 96px; margin: 4px auto 0; }
+  & .vd-motto { margin: 2px 0 0; }
+  & .vd-tabs { border-bottom: 3px double var(--vd-ink); }
+  & .vd-storylist[data-layout] { display: block; }
+  & .vd-storylist .vd-story {
+    display: grid;
+    grid-template-columns: clamp(72px, 9cqi, 110px) minmax(0, 1fr);
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-top: 1px solid var(--vd-ink);
+  }
+  & .vd-almanack-date {
+    padding: 14px 6px;
+    border-right: 3px double var(--vd-ink);
+    text-align: center;
+    color: var(--vd-accent);
+    font: small-caps calc(15px * var(--vd-text-scale))/1.15 var(--vd-font-body);
+  }
+  & .vd-almanack-date b {
+    display: block;
+    color: var(--vd-ink);
+    font: calc(clamp(26px, 3.8cqi, 46px) * var(--vd-text-scale))/1.05 var(--vd-font-display);
+    font-variant-numeric: lining-nums tabular-nums;
+    overflow-wrap: anywhere;
+  }
+  & .vd-story-content { min-width: 0; padding: 14px 0 16px clamp(12px, 2cqi, 28px); }
+  & .vd-storylist .vd-story .vd-prose {
+    columns: 2;
+    column-gap: clamp(12px, 2.5cqi, 32px);
+    column-rule: 1px solid var(--vd-rule);
+    line-height: 1.48;
+  }
+  & .vd-breaking-columns, & .vd-analysis-columns { display: block; }
+  & .vd-evidence { margin-top: 16px; border-block: 3px double var(--vd-ink); padding-block: 10px; }
+  & .vd-end-ornament { width: 100px; }
+}
+
+@container newspaper (width <= 520px) {
+  .vd-newspaper[data-publication-design="printed-almanack"] {
+    & .vd-storylist .vd-story { display: block; }
+    & .vd-almanack-date {
+      display: flex;
+      align-items: baseline;
+      gap: .45em;
+      border: 0;
+      padding: 9px 0 0;
+    }
+    & .vd-almanack-date b { font-size: calc(24px * var(--vd-text-scale)); }
+    & .vd-story-content { padding: 6px 0 14px; }
+    & .vd-storylist .vd-story .vd-prose { font-size: calc(16px * var(--vd-text-scale)); }
+  }
+}

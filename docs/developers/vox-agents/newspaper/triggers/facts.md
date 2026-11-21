@@ -284,6 +284,10 @@ The spy's owner can infer a technology name when exactly one named gain by its t
 | `pair` | The pair's state at the incident turn, when available |
 | `participants` | Visible majors linked to the calls, each with `player`, `side` (`initiator` or `target`) and `reason` (`root`, `pact`, `vassal`, `master`, `cityStateAlly`, `inherited`) |
 | `cityStates` | Visible city-states involved |
+| `cityStateParticipants` | Visible city-states with an inferred `player`, `side`, and `reason` |
+| `hostileCityStateAllies` | City-state participants that joined the attacker when we were the target |
+| `directDeclaration` | A native war root recorded as an attack with no inferred inherited war |
+| `earlierWarOpponents` | Visible opponents whose current war with us started before this incoming declaration, each as a `player` reference |
 | `role` | The receiver's part when known: `initiator`, `target`, `joined` or `none` |
 | `reason` | Why the receiver takes part, when known, using the participant vocabulary |
 | `resumed` | For war: the two had fought before and were known to be at peace |

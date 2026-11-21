@@ -91,9 +91,9 @@
         "stance": "ambitious",
         "genre": "analysis",
         "when": "rival !== null",
-        "headline": "Influential over {{rival}}, and no treaty did it",
+        "headline": "Our books could go farther through {{rival}}",
         "body": [
-          "The count of our influence over {{rival}} now reads Influential, at {{percentage}} percent. No signature won that; the songs, the books and the workshops did. Treaties can be torn up. A public that hums your tunes cannot, and there are other capitals that have not heard the songs yet."
+          "Our influence over {{rival}} has reached the Influential mark at {{percentage}} percent. If printers there can sell enough copies to pay for translations, our writers gain a way to reach readers beyond both countries. A bookseller across a second border might find it cheaper to order those editions than to commission new ones."
         ],
         "links": [
           { "placeholder": "rival", "label": "{{rival}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -371,9 +371,9 @@
       },
       {
         "id": "enemy-wonder-nearby-unnamed",
-        "headline": "An enemy wonder rises within sight of home",
+        "headline": "An enemy city completes a wonder near our border",
         "body": [
-          "An enemy city close to our own has completed the {{wonder}}. The work stands finished inside a nation we are at war with, near enough that travelers from our side can describe the doors."
+          "The {{wonder}} is complete in an enemy city close to our own towns."
         ],
         "weight": { "base": 1 }
       },
@@ -660,9 +660,9 @@
         "stance": "populist",
         "genre": "anecdote",
         "when": "ours === false",
-        "headline": "Nobody came out of the palace",
+        "headline": "The autograph he missed",
         "body": [
-          "In {{civilization}} they say {{person}} walked into the palace one last time. The doors opened once, then closed, and the gift was spent inside. Nobody came out."
+          "A boy in {{civilization}} saved the last page of his copybook for {{person}} to sign. Now that the work was done, his father told him he'd missed his chance. The boy wrote the name himself. \"The first letter's got to be big,\" he told his little brother."
         ],
         "weight": { "base": 1 }
       }
@@ -765,9 +765,9 @@
         "voice": "pamphlet",
         "stance": "government-critical",
         "genre": "editorial",
-        "headline": "Our art walked out of {{city}}",
+        "headline": "Print the names of the missing works",
         "body": [
-          "The galleries of {{city}} are {{lost}} great works lighter, and no one in office has said how. Works do not walk off walls on their own; somebody carried them, through a door somebody unlocked. We want a cause, a name, and a promise we can check."
+          "The new count of great works in {{city}} is down by {{lost}}. If the works were sent away, let the council say where we can see them. If they are lost, let it print their names. A reader might know where a missing work went, if we can tell her which one it is."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -868,9 +868,9 @@
       {
         "id": "tourism-output-leader-changes-report",
         "when": "civilization !== null",
-        "headline": "The world's travelers now go to {{civilization}}",
+        "headline": "First place in tourism for {{civilization}}",
         "body": [
-          "{{civilization}} now draws the world's travelers as no other nation does, at {{tourism}} a turn by the customs count. Another power held the lead at the last reckoning."
+          "The latest standings put {{civilization}} first in tourism, with a rating of {{tourism}}. At least one other nation stood higher at the previous count."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -880,9 +880,9 @@
       {
         "id": "tourism-output-leader-changes-unnamed",
         "when": "civilization === null",
-        "headline": "The world's most visited nation has changed",
+        "headline": "A change at the top of the tourism table",
         "body": [
-          "The world has a new first destination for travelers, at {{tourism}} a turn by the count. The name behind the number has not yet reached this desk."
+          "A nation has climbed to the top of the tourism table with a rating of {{tourism}}. Its name has yet to reach this desk."
         ],
         "weight": { "base": 1 }
       },
@@ -892,9 +892,9 @@
         "stance": "national",
         "genre": "report",
         "when": "civilization !== null && tied === false",
-        "headline": "{{civilization}} is where the world's roads now lead",
+        "headline": "The tourism lead goes to {{civilization}}",
         "body": [
-          "Figures now place {{civilization}} first among the nations for drawing visitors, at {{tourism}} a turn and clear of the field. Where the traveler's coin goes, influence follows, and both are headed the same way. The innkeepers of that nation, one imagines, sleep well."
+          "We are informed that the tourism table has a sole leader: {{civilization}}, with a rating of {{tourism}}. The editor of a travel almanac here says he will give the country the first pages of his next edition."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -907,9 +907,9 @@
         "stance": "neutral",
         "genre": "report",
         "when": "civilization !== null && tied === true",
-        "headline": "{{civilization}} shares the lead in visitors",
+        "headline": "A share of the tourism lead for {{civilization}}",
         "body": [
-          "{{civilization}} stands level with another great power at {{tourism}} a turn. First place is real. The sole holding of it is not, and both nations know exactly who the other is."
+          "The latest standings give {{civilization}} a share of first place in tourism. No nation rates above {{tourism}}."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -922,9 +922,9 @@
         "stance": "neutral",
         "genre": "report",
         "when": "civilization !== null",
-        "headline": "New No. 1 for travelers: {{civilization}}",
+        "headline": "Tourism: No. 1 for {{civilization}}",
         "body": [
-          "{{civilization}} now tops the world at {{tourism}} a turn. The old leader has a number to chase. Expect some very sudden festival announcements."
+          "{{tourism}} in the latest tourism table. That's enough for first place."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }

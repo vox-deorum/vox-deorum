@@ -7,9 +7,9 @@
     "variants": [
       {
         "id": "becomes-vassal-report",
-        "headline": "{{master}} takes us as vassal",
+        "headline": "Our new vassalage under {{master}}",
         "body": [
-          "Our nation is now vassal to {{master}}. Our name, our laws and our coin remain ours; the last word in our affairs now comes from their court."
+          "Our nation is now a vassal of {{master}}. We keep our government, but we can be called to fight in their wars."
         ],
         "links": [
           { "placeholder": "master", "label": "{{master}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -35,9 +35,9 @@
         "voice": "pamphlet",
         "stance": "government-critical",
         "genre": "editorial",
-        "headline": "Who signed us into vassalage?",
+        "headline": "Tell us what protection we bought",
         "body": [
-          "Citizens, we woke this season as subjects of {{master}}, and nobody will say whose hand signed us away or what it bought. A bargain of that size belongs in the open, shouted from the square, not settled in a corridor."
+          "We are now vassals of {{master}}, and their wars can become ours. The council should give its account of the bargain in the square. If our young people can be sent to fight for their towns, their families have a right to hear what protection there is for ours."
         ],
         "links": [
           { "placeholder": "master", "label": "{{master}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -49,9 +49,9 @@
         "voice": "press",
         "stance": "neutral",
         "genre": "analysis",
-        "headline": "Under {{master}}, the second chair",
+        "headline": "Our neighbors have a new court to bargain with",
         "body": [
-          "Our court still sits, but it sits in the second chair now. Envoys who once carried our word abroad carry it first to {{master}}, and our wars are no longer wholly ours to choose. Subject states have kept their walls and their gods before. What they seldom keep is the choosing."
+          "As a vassal of {{master}}, our nation loses the right to declare war on other powers. A neighbor with a dispute over a field or a fishing ground can now afford to hold out longer for terms. It depends how much interest the court of {{master}} takes in a quarrel over somebody else's land."
         ],
         "links": [
           { "placeholder": "master", "label": "{{master}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -71,7 +71,7 @@
         "when": "ally !== null",
         "headline": "Our defensive pact with {{ally}} is at an end",
         "body": [
-          "The defensive pact between our nation and {{ally}} has come to an end. The two states are not at war, and the parting was a matter of policy, not of battle."
+          "The defensive pact between our nation and {{ally}} has ended. Both countries remain at peace with each other."
         ],
         "weight": { "base": 1 }
       },
@@ -80,7 +80,7 @@
         "when": "ally === null",
         "headline": "A defensive pact comes to an end",
         "body": [
-          "One of our defensive pacts has come to an end. The other state has not gone to war with us, and the parting was a matter of policy, not of battle."
+          "One of our defensive pacts has ended. We remain at peace with the other former signatory."
         ],
         "weight": { "base": 1 }
       },
@@ -103,9 +103,9 @@
         "genre": "letter",
         "when": "ally !== null",
         "byline": "A merchant of the capital",
-        "headline": "Madam, must we lose every friend we have?",
+        "headline": "Will you still send the next load?",
         "body": [
-          "I read that the pact with {{ally}} has lapsed, and my partner there wrote the same day to ask what it means for the carts. We have crossed that border for years on the faith that neither side would let harm come to the other's goods. If the court will not renew this one, let it at least say what changed."
+          "Madam, on hearing that our pact with {{ally}} had ended, a driver asked whether I would still send her with the next load. I said I would. I have trusted the people who unload my wagons for twenty years, and I hope the two courts will give me cause to go on doing so."
         ],
         "weight": { "base": 1 }
       }
@@ -278,6 +278,18 @@
         "headline": "We just met {{stranger}}",
         "body": [
           "Confirmed: we have met {{stranger}}. They are on the map now. More as we learn it."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "first-contact-mapmaker-letter",
+        "voice": "gazette",
+        "stance": "rationalist",
+        "genre": "letter",
+        "headline": "The mapmaker has a question about {{stranger}}",
+        "byline": "A Mapmaker",
+        "body": [
+          "Sir, word of our first meeting with {{stranger}} has brought half the street into my shop. Each customer wants the name put at the end of a road he knows. If anyone who was there will show me where to put it, I can sell him a map at cost."
         ],
         "weight": { "base": 1 }
       }
@@ -504,9 +516,9 @@
     "variants": [
       {
         "id": "gains-vassal-report",
-        "headline": "{{vassal}} becomes our vassal",
+        "headline": "A new vassal for our court: {{vassal}}",
         "body": [
-          "{{vassal}} has entered vassalage under our nation. Their name and their walls remain theirs; the last word in their affairs now comes from our court."
+          "Our court now has the right to levy tribute from {{vassal}} and must come to their defense if they are attacked."
         ],
         "links": [
           { "placeholder": "vassal", "label": "{{vassal}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -518,9 +530,9 @@
         "voice": "chronicle",
         "stance": "national",
         "genre": "report",
-        "headline": "In this year, {{vassal}} was made subject",
+        "headline": "{{vassal}} entered in the roll of vassals",
         "body": [
-          "In this year the realm was enlarged, and {{vassal}} was entered among its subjects. Their name is set in the rolls beneath ours, and the scribe takes note of the season."
+          "In this season {{vassal}} came under the protection of our realm. Its court remained in its own seat, and in the rolls it was entered as our vassal."
         ],
         "links": [
           { "placeholder": "vassal", "label": "{{vassal}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -532,9 +544,9 @@
         "voice": "press",
         "stance": "ambitious",
         "genre": "analysis",
-        "headline": "What {{vassal}} adds to our standing",
+        "headline": "A new source of tribute, a new frontier to defend",
         "body": [
-          "A vassal is land, tribute and a buffer all at once, and {{vassal}} brings all three. The cost is the defending of it: what touches them now touches us. On that balance the account runs in our favor, and the map agrees."
+          "Our court can levy tribute from {{vassal}}. It has also taken on a frontier it may have to defend. In a quiet year the income could make the bargain look handsome. The test comes when a neighbor thinks it can have one of their towns before our troops arrive."
         ],
         "links": [
           { "placeholder": "vassal", "label": "{{vassal}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -546,9 +558,9 @@
         "voice": "pamphlet",
         "stance": "elitist",
         "genre": "editorial",
-        "headline": "Order, properly extended",
+        "headline": "Let the magistrates of {{vassal}} set out what they can pay",
         "body": [
-          "The new arrangement with {{vassal}} will be called many things in many taverns, and the taverns are welcome to their names. What matters is that a strong hand at the center keeps the peace, and the realm now has one more province under its steady guidance. Somebody must hold the map together, and better the patient than the loud."
+          "Our court can set the tribute for {{vassal}}. Let the council hear from the magistrates there before it names a sum. They already collect the taxes and know what the districts can pay. By all means take the tribute; have the sense to take it at a rate that can be collected."
         ],
         "links": [
           { "placeholder": "vassal", "label": "{{vassal}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -599,9 +611,9 @@
         "stance": "neutral",
         "genre": "obituary",
         "when": "vassal !== null",
-        "headline": "Our mastery of {{vassal}}, concluded",
+        "headline": "The vassalage of {{vassal}} comes to an end",
         "body": [
-          "It held while it held: tribute, garrisons and the quiet pride of a subject province. The vassalage of {{vassal}} is dissolved. What survives is the memory of the arrangement, and the maps that wait to be corrected."
+          "The vassalage of {{vassal}} is at an end. One of the couriers who used to bring their accounts to our treasury tells us he means to come again on his own business. The innkeeper has promised him his usual room."
         ],
         "weight": { "base": 1 }
       }
@@ -629,9 +641,9 @@
         "voice": "press",
         "stance": "hawkish",
         "genre": "report",
-        "headline": "Both courts speak, and neither yields",
+        "headline": "Both courts put their quarrel on record",
         "body": [
-          "Our denunciation of {{civilization}} has been answered in kind, and the exchange now runs both ways on the official record. There is no ambiguity left to trade on: the two states are adversaries in writing, whatever the envoys say at dinner."
+          "Our court and {{civilization}} have denounced each other in public. Their envoys can still talk in private, but it will be harder to disown a quarrel they have both committed to paper."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }

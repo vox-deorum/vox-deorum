@@ -7,6 +7,54 @@ import { loadEditorialConfig } from '../../../../src/newspaper/editorial/config/
 import { createReplayRecording, replaySettings } from '../../../helpers/newspaper-replay.js';
 
 describe('diplomacy rules in offline replay', () => {
+  it('reopens a breaking fronts lead with its covered declarations and source rows intact', async () => {
+    const recording = await createReplayRecording('Standard');
+    let session = new ReplaySession();
+    try {
+      const sqlite = new Database(recording.filename);
+      try {
+        const addPlayer = sqlite.prepare(`INSERT INTO PlayerInformations
+          (Key, TeamID, IsMajor, Civilization, Leader, IsHuman) VALUES (?, ?, 1, ?, ?, 0)`);
+        const summary = sqlite.prepare(`INSERT INTO PlayerSummaries
+          (ID, Key, Turn, CreatedAt, Player0, Relationships, Payload, Cities, Population, Gold, GoldPerTurn, Technologies)
+          VALUES (?, ?, ?, ?, ?, ?, '{}', 1, 1, 0, 0, 0)`);
+        const declare = sqlite.prepare(`INSERT INTO GameEvents
+          (ID, Turn, CreatedAt, Player0, Type, Payload) VALUES (?, 12, 1200, 1, 'DeclareWar', ?)`);
+        const wars: Record<string, string[]> = {};
+        for (const player of [1, 2, 3, 4, 5]) {
+          if (player !== 1) addPlayer.run(player, player, `Civ${player}`, `Leader${player}`);
+          summary.run(300 + player, player, 11, 1100, 1, '{}');
+          declare.run(200 + player, JSON.stringify({ OriginatingPlayerID: player, TargetTeamID: 0, IsAggressor: true }));
+          wars[`Civ${player}`] = ['War'];
+        }
+        summary.run(400, 0, 12, 1250, 2, JSON.stringify(wars));
+      } finally { sqlite.close(); }
+      const settings = {
+        ...replaySettings(recording.filename), fromTurn: 12, toTurn: 18, runId: 'war-fronts',
+        outputPath: path.join(path.dirname(recording.filename), 'fronts.sqlite'),
+      };
+      await session.configure(settings);
+      const { check } = await session.advance();
+      expect(check?.status).toBe('published');
+      const issue = check?.issue;
+      expect(issue?.items).toHaveLength(1);
+      expect(issue?.pages[0].layout).toBe('breaking');
+      const absorbed = check!.decision.candidateScores.filter(candidate => candidate.mergedInto);
+      expect(absorbed.filter(candidate => candidate.id.startsWith('war-involving-us-account/'))).toHaveLength(5);
+      await session.close();
+      session = new ReplaySession();
+      await session.configure({ ...settings, mode: 'resume' });
+      const archived = await session.getIssue(issue!.issueId);
+      expect(archived.decision.candidateScores.filter(candidate => candidate.mergedInto)).toEqual(absorbed);
+      expect(archived.articles[0].ruleIds).toContain('war-on-three-fronts');
+      expect(archived.articles[0].sources.filter(source => source.table === 'GameEvents').map(source => source.id))
+        .toEqual(expect.arrayContaining([201, 202, 203, 204, 205]));
+    } finally {
+      await session.close();
+      await recording.cleanup();
+    }
+  });
+
   it('should preserve the score history and repeat audit on resume after a skipped check', async () => {
     const recording = await createReplayRecording('Standard');
     const directory = path.dirname(recording.filename);

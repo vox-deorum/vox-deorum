@@ -12,6 +12,14 @@ For example, if Shaka declares on Brazil and India follows its defensive pact wi
 
 A rule with `subject: incident` can report a pact drawing in the receiver with `incident.kind === 'war' && incident.knows('role') && incident.role === 'joined' && incident.reason === 'pact'`. A story can name visible participants with `incident.participants.filter(p => p.player.knows('name')).map(p => p.player.name).join(', ')`. All rules for an incident share a conflict key, so selection can publish at most one account per issue. A declaration targeting the receiver can use `urgent` to qualify for the breaking front page.
 
+## Combining declaration reports
+
+Each independent declaration keeps its incident. An incoming war story can name the visible city-states that joined the attacker. A city-state that declares independently gets its own incident.
+
+When the paper is due to report **War on N fronts**, that story can absorb selected declarations by major civs still at war with the reader. It identifies the new attackers and separates the other active fronts. If that overview is unavailable, three or more distinct major civs declaring on the same turn can share a breaking headline. One or two declarations can still run separately, with each attacker's allies reported in the same story. The rules count distinct major declarers and can name their shared city-state allies once.
+
+The edition counts the selected stories before [combining them](../editorial.md#combining-stories). A combined report keeps links to the original decisions and evidence in replay.
+
 ## Pair facts in rules
 
 To report an advantage in the receiver's war, use a `short` window with `pair.involvesSelf && pair.atWar`, `crossed(pair.warScore, pair.before.warScore, 25)` and `held(pair, s => s.warScore >= 25, 2)`. At turn 100 on Standard speed, `before` is turn 90. The last condition checks turns 98 through 100, inclusive.

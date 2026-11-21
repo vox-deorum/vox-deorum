@@ -9,6 +9,13 @@ export interface HeuristicSelection {
   scores: { id: string; score: number; selected: boolean }[];
 }
 
+/** Track editions' printed fingerprints and developments already covered by a merge. */
+export function publishedFingerprints(state: PublicationState): Set<string> {
+  return new Set(state.issues.flatMap(issue =>
+    issue.items.flatMap(item => [item.fingerprint, ...(item.coveredFingerprints ?? [])])
+  ));
+}
+
 /** Score evidence-backed choices, selecting one angle per incident, series or development. */
 export function selectHeuristic(
   candidates: EditorialCandidate[],
@@ -22,9 +29,7 @@ export function selectHeuristic(
   const usedTags = new Set<string>();
   const selected: EditorialCandidate[] = [];
   const scores = new Map<string, number>();
-  const published = new Set(
-    state.issues.flatMap((issue) => issue.items.map((item) => item.fingerprint))
-  );
+  const published = publishedFingerprints(state);
   const remaining = candidates.filter(
     (candidate) => candidate.variants.length && !published.has(candidate.fingerprint)
   );

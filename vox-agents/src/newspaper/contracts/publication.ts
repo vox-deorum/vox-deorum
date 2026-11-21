@@ -17,8 +17,10 @@ export const publishedItemRecordSchema = z.object({
   id: z.string(), issueId: z.string(), turn: z.number().int(), tags: z.array(z.string()),
   seriesKeys: z.array(z.string()), templateIds: z.array(z.string()), triggerIds: z.array(z.string()),
   ruleIds: z.array(z.string()).optional(), subject: z.string().optional(),
+  ruleSubjects: z.array(z.object({ ruleId: z.string(), subject: z.string() })).optional(),
   importance: z.number().finite(), headline: inlineTextSchema, evidenceSummary: z.string(),
   sources: z.array(newspaperSourceReferenceSchema), fingerprint: z.string(),
+  coveredFingerprints: z.array(z.string()).optional(),
 });
 export type PublishedItemRecord = z.infer<typeof publishedItemRecordSchema>;
 /** Compact history needed by feedback and series continuity. */
@@ -53,7 +55,7 @@ export const editorialDecisionRecordSchema = z.object({
   checkId: z.string(), cutoffTurn: z.number().int(), configurationId: z.string(),
   configurationSnapshot: z.unknown(), seed: z.string(), editor: z.literal('heuristic'),
   fallbackReason: z.string().optional(), status: z.enum(['published', 'skipped']), reason: z.string().optional(),
-  candidateScores: z.array(z.object({ id: z.string(), score: z.number(), selected: z.boolean() })),
+  candidateScores: z.array(z.object({ id: z.string(), score: z.number(), selected: z.boolean(), mergedInto: z.string().optional() })),
   selectedVariants: z.record(z.string(), z.string()), designId: z.string().nullable(),
   mastheadRuleId: z.string().optional(),
   designSelection: designSelectionSchema.optional(),

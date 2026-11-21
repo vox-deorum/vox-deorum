@@ -35,9 +35,9 @@
         "voice": "tabloid",
         "stance": "local",
         "genre": "anecdote",
-        "headline": "The scaffolding comes down in {{cityName}}",
+        "headline": "Now fix the gutter",
         "body": [
-          "The fences came down this week, and the {{building}} stood finished behind them. The men who had watched it rise since the first post went in lingered a while, as if the show were not over. In {{cityName}} the talk has moved from waiting to using."
+          "The {{building}} in {{cityName}} is finished. A carpenter coming home with a ladder over his shoulder got as far as his front step before his wife called down. \"Round the back. You've had that ladder for months and the gutter still leaks.\""
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -469,9 +469,9 @@
         "stance": "government-critical",
         "genre": "editorial",
         "when": "gained === false",
-        "headline": "Citizens, {{cityName}} deserved better",
+        "headline": "Who is taking names for {{cityName}}?",
         "body": [
-          "{{cityName}} is gone, and its people answer to another flag. The government will call it a loss of territory; we call it a loss that somebody's decisions failed to prevent. The council has named no one. The next city down the road has begun counting its walls."
+          "Since we lost {{cityName}}, a washerwoman here has offered three carters money to take a letter to her brother. None would say when it could get through. Councilors, open a desk where families can leave letters for an envoy to carry. You knew how to reach our neighbors when you wanted their taxes."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -886,9 +886,9 @@
         "voice": "press",
         "stance": "government-critical",
         "genre": "analysis",
-        "headline": "The siege of {{cityName}} tests the frontier",
+        "headline": "Can {{cityName}} repair its walls under siege?",
         "body": [
-          "A siege is a test of supply before it is a test of walls. While {{cityName}} is surrounded, the city burns through stores and time it cannot quickly replace, and relief, whenever it comes, will be somebody's decision to explain."
+          "The defenses of {{cityName}} are already damaged. If supplies cannot get through, the defenders may have nothing with which to mend the wall when the fighting lets up. For the families behind it, an open road could be worth more than a full day without an attack."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1427,6 +1427,22 @@
         "headline": "A new settlement at {{cityName}}",
         "body": [
           "We are pleased to record that our settlers have founded {{cityName}}. The new town begins under the nation's protection, with the government's intentions for its care said to be settled and generous."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "our-city-founded-sign-painter",
+        "voice": "gazette",
+        "stance": "local",
+        "genre": "letter",
+        "when": "cityName !== null",
+        "headline": "Who pays for the sign in {{cityName}}?",
+        "byline": "A sign painter",
+        "body": [
+          "Madam, my son in the new town of {{cityName}} has asked me to paint its first sign. He tells me the town is already the equal of any in the country. Will you print the address of the person who settles its accounts? I mean to charge it like any other town."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }

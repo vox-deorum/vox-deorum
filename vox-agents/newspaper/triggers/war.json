@@ -10,6 +10,7 @@
       "incident.participants.some(p => p.reason === 'pact' && p.side === incident.role && !p.player.self && p.player.knows('name'))"
     ],
     "values": {
+      "hostileAllies": "(() => { const names = incident.hostileCityStateAllies.filter(entry => entry.player.knows('name')).map(entry => entry.player.name); return names.length ? ' Hostile city-state allies: ' + names.join(', ') + '.' : ''; })()",
       "allies": "incident.participants.filter(p => p.reason === 'pact' && p.side === incident.role && !p.player.self && p.player.knows('name')).map(p => p.player.name).join(', ')",
       "opponent": "incident.role === 'initiator' ? incident.target.name : incident.initiator.name"
     },
@@ -433,6 +434,7 @@
       "incident.participants.some(p => p.reason == 'vassal')"
     ],
     "values": {
+      "hostileAllies": "(() => { const names = incident.hostileCityStateAllies.filter(entry => entry.player.knows('name')).map(entry => entry.player.name); return names.length ? ' Hostile city-state allies: ' + names.join(', ') + '.' : ''; })()",
       "vassals": "incident.participants.filter(p => p.reason == 'vassal').map(p => p.player.name).join(', ')",
       "initiator": "incident.initiator.name",
       "target": "incident.target.name"
@@ -494,7 +496,7 @@
       "incident.kind == 'war'",
       "incident.knows('role') && incident.role != 'none'"
     ],
-    "values": { "role": "incident.role", "reason": "incident.knows('reason') ? incident.reason : null", "initiator": "incident.knows('initiator') && incident.initiator.knows('name') ? incident.initiator.name : null", "target": "incident.knows('target') && incident.target.knows('name') ? incident.target.name : null" },
+    "values": { "role": "incident.role", "reason": "incident.knows('reason') ? incident.reason : null", "initiator": "incident.knows('initiator') && incident.initiator.knows('name') ? incident.initiator.name : null", "target": "incident.knows('target') && incident.target.knows('name') ? incident.target.name : null", "hostileAllies": "(() => { const names = incident.hostileCityStateAllies.filter(entry => entry.player.knows('name')).map(entry => entry.player.name); return names.length ? ' Hostile city-state allies: ' + names.join(', ') + '.' : ''; })()" },
     "importance": "role == 'target' ? 95 : role == 'initiator' ? 85 : 75",
     "urgent": "role == 'target'",
     "tags": ["politics", "military"]
@@ -579,5 +581,20 @@
     },
     "importance": 65,
     "tags": ["politics", "military"]
+  },
+  {
+    "id": "incoming-war-wave",
+    "subject": "incident",
+    "when": "incident.is.incomingMajorDeclaration",
+    "group": {
+      "by": "incident.turn",
+      "min": 3
+    },
+    "importance": 95,
+    "urgent": "true",
+    "tags": [
+      "politics",
+      "military"
+    ]
   }
 ]

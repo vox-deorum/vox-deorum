@@ -115,9 +115,9 @@
         "stance": "government-critical",
         "genre": "editorial",
         "when": "cityState !== null && captor !== null",
-        "headline": "{{cityState}} fell, and we watched",
+        "headline": "Tell our allies when help can reach them",
         "body": [
-          "The government called {{cityState}} an ally, and {{captor}}'s soldiers called it a conquest, and both turned out to be right. Citizens, we want an accounting: what was done before the walls came down, and who decided that watching was enough?"
+          "Our ally {{cityState}} has fallen to {{captor}}. Before the next city counts on our protection, the council should tell it what help we can send and how fast. A town that knows when to expect us can decide whether it can afford to hold out."
         ],
         "weight": { "base": 1 }
       },
@@ -165,9 +165,9 @@
         "stance": "government-critical",
         "genre": "analysis",
         "when": "cityState !== null && rival !== null",
-        "headline": "How {{cityState}} was lost",
+        "headline": "Would more gold have kept {{cityState}}?",
         "body": [
-          "Nobody in {{cityState}} woke one morning and simply chose {{rival}}. The choice was made over seasons of gifts, flattery and attention, and {{rival}} supplied all three while our envoys sent home comfortable reports. An ally gone and a rival strengthened: the capital should say which part of that is ours."
+          "{{cityState}} has switched its alliance from us to {{rival}}. The capital may suspect it was outbid. If the city was looking for help with a border quarrel, though, even a larger gift from us could go down as a courtesy and leave the alliance where it is."
         ],
         "weight": { "base": 1 }
       },
@@ -354,9 +354,9 @@
         "stance": "conciliatory",
         "genre": "analysis",
         "when": "cityState !== null && friend !== null",
-        "headline": "The alliance moves inside the family of friends",
+        "headline": "A go-between for {{cityState}}",
         "body": [
-          "The alliance of {{cityState}} has passed from our hands to {{friend}}'s, and of all the powers to lose it to, {{friend}} is the easiest to lose it to. Nothing changes on our maps except the flag beside a friend's. When friends hold the ground between you, the ground feels wider."
+          "{{cityState}} has chosen {{friend}} in our place. If a dispute over a road or a field comes up now, both sides still have someone they can talk to. {{friend}} can sound out the two towns before the quarrel grows serious enough to call for a formal protest."
         ],
         "weight": { "base": 1 }
       },

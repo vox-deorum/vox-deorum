@@ -19,7 +19,8 @@ import { addDiplomacyFacts, addPressFacts, type NewspaperFactModel } from './fac
 import { evaluateTriggerRules, ruleHistoryTurns } from './rules/evaluate.js';
 import { buildPress } from './rules/press.js';
 import { computeFeedback } from './selection/feedback.js';
-import { selectHeuristic } from './selection/heuristic.js';
+import { publishedFingerprints, selectHeuristic } from './selection/heuristic.js';
+import { mergeSelectedStories } from './selection/merge.js';
 import { advanceSeries, decaySeries } from './selection/series.js';
 import { matchTemplates } from './selection/templates.js';
 import { applyStylePreferences } from './selection/styles.js';
@@ -210,9 +211,12 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
   /** Explain how many eligible or displayable stories were available for this edition. */
   const shortfall = (count: number) => skip(`Only ${count} of ${minimum} required stories are ready.`);
   if (selection.selected.length < minimum) return shortfall(selection.selected.length);
+  const merged = await mergeSelectedStories(
+    selection.selected, candidates, config, compiled, batch, budget, publishedFingerprints(state), terms,
+  );
   const streams = createEditorialStreams(identitySeed, config);
   const weights = await evaluatePresentation(config, compiled, batch, budget);
-  const { selected, sources: styleSources } = await applyStylePreferences(selection.selected, compiled, batch, budget);
+  const { selected, sources: styleSources } = await applyStylePreferences(merged, compiled, batch, budget);
   const presentation = await presentIssue({
     checkId,
     issueId: `${scope}/issue/${turn}`,
@@ -240,7 +244,10 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
     }),
   });
   if (!presentation) return skip('No eligible design or visible authored content.');
-  if (presentation.issue.items.length < minimum) return shortfall(presentation.issue.items.length);
+  const coverage = [...presentation.itemCandidates.values()].reduce(
+    (count, candidate) => count + (candidate.mergedCandidateIds?.length ?? 1), 0,
+  );
+  if (coverage < minimum) return shortfall(coverage);
   const issue = validateEditorialIssue(presentation, config, weights);
   const records: PublishedItemRecord[] = issue.items.map((item) => {
     const candidate = presentation.itemCandidates.get(item.id)!;
@@ -253,12 +260,14 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
       templateIds: candidate.templateIds,
       triggerIds: candidate.triggerIds,
       ruleIds: candidate.ruleIds,
+      ...(candidate.ruleSubjects ? { ruleSubjects: candidate.ruleSubjects } : {}),
       subject: candidate.subject,
       importance: candidate.importance,
       headline: item.headline,
       evidenceSummary: summarizeSources(candidate.sources),
       sources: candidate.sources,
       fingerprint: candidate.fingerprint,
+      ...(candidate.coveredFingerprints ? { coveredFingerprints: candidate.coveredFingerprints } : {}),
     };
   });
   state.reportingThroughTurn = turn;
@@ -268,11 +277,21 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
   state.issues.push({ issueId: issue.issueId, turn, items: records, designId: issue.publication.designId });
   state.previousDesignId = issue.publication.designId;
   decision.status = 'published';
-  const displayedCandidates = new Set(records.map((item) => presentation.itemCandidates.get(item.id)!.id));
-  decision.candidateScores = decision.candidateScores.map((entry) => ({
-    ...entry,
-    selected: displayedCandidates.has(entry.id),
-  }));
+  const displayedCandidates = new Set<string>();
+  const mergedInto = new Map<string, string>();
+  const originalScores = new Map(selection.scores.map(({ id, score }) => [id, score]));
+  for (const candidate of presentation.itemCandidates.values()) {
+    displayedCandidates.add(candidate.id);
+    if (!candidate.mergedCandidateIds) continue;
+    for (const id of candidate.mergedCandidateIds) mergedInto.set(id, candidate.id);
+    // The merge is a presentation choice, so its audit score reports the strongest original.
+    const score = Math.max(...candidate.mergedCandidateIds.map(id => originalScores.get(id)!));
+    decision.candidateScores.push({ id: candidate.id, score, selected: true });
+  }
+  decision.candidateScores = decision.candidateScores.map((entry) => {
+    const replacement = mergedInto.get(entry.id);
+    return { ...entry, selected: displayedCandidates.has(entry.id), ...(replacement ? { mergedInto: replacement } : {}) };
+  });
   decision.evidence = uniqueSources([
     ...records.flatMap((item) => item.sources),
     ...presentation.mastheadSources,

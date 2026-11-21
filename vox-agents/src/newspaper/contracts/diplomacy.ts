@@ -39,14 +39,17 @@ export const diplomacyInferenceSchema = z.object({
 export type DiplomacyInference = z.infer<typeof diplomacyInferenceSchema>;
 
 export type DiplomacyReason = 'root' | 'pact' | 'vassal' | 'master' | 'cityStateAlly' | 'inherited';
+type DiplomacyParticipant = { id: number; side: 'initiator' | 'target'; reason: DiplomacyReason };
 export interface DiplomacyIncidentFact {
   id: string;
   kind: 'war' | 'peace';
   turn: number;
   root: [number, number];
   rootRolesUnknown?: true;
-  participants: { id: number; side: 'initiator' | 'target'; reason: DiplomacyReason }[];
+  participants: DiplomacyParticipant[];
   cityStates: number[];
+  cityStateParticipants?: DiplomacyParticipant[];
+  directDeclaration?: boolean;
   role?: 'initiator' | 'target' | 'joined' | 'none';
   reason?: DiplomacyReason;
   resumed: boolean;

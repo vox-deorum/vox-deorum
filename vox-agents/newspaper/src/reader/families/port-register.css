@@ -21,7 +21,6 @@
   }
   & .vd-tab { padding-block: 5px; font-variant-caps: small-caps; letter-spacing: .045em; }
   & .vd-page { padding-block-start: var(--entry-space); }
-  & .vd-storylist[data-layout="ordinary"] { display: block; }
   & .vd-storylist .vd-story--brief {
     margin: var(--entry-space) 0 0;
     padding: var(--entry-space) 0 0;
@@ -57,11 +56,14 @@
 
 @container newspaper (width > 760px) {
   .vd-newspaper[data-publication-design="port-register"] {
-    & .vd-storylist[data-layout="ordinary"] .vd-story-content {
-      display: grid;
-      grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    & .vd-storylist[data-layout="ordinary"] {
+      & .vd-prose { max-width: 66ch; }
+      & .vd-story--lead .vd-story-content {
+        display: grid;
+        grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+      }
+      & .vd-story--lead .vd-register-heading { padding-inline-end: var(--entry-space); }
+      & .vd-story--lead .vd-register-account { border-inline-start: 1px solid var(--register-rule); padding-inline-start: var(--entry-space); }
     }
-    & .vd-register-heading { padding-right: var(--entry-space); }
-    & .vd-register-account { border-left: 1px solid var(--register-rule); padding-left: var(--entry-space); }
   }
 }

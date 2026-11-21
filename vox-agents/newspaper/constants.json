@@ -61,6 +61,9 @@
     },
     "pair": {
       "foreignWar": "pair.atWar && !pair.involvesSelf && pair.majors"
+    },
+    "incident": {
+      "incomingMajorDeclaration": "incident.directDeclaration && incident.knows('role') && incident.role === 'target' && incident.knows('initiator') && incident.initiator.knows('major') && incident.initiator.major && incident.initiator.knows('id')"
     }
   }
 }

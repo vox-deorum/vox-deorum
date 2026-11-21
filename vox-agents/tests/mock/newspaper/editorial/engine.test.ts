@@ -10,8 +10,11 @@ import { matchTemplates, type EditorialCandidate } from '../../../../src/newspap
 import { applyStylePreferences } from '../../../../src/newspaper/editorial/selection/styles.js';
 import { computeFeedback, candidateFeedback } from '../../../../src/newspaper/editorial/selection/feedback.js';
 import { decaySeries } from '../../../../src/newspaper/editorial/selection/series.js';
-import { selectHeuristic } from '../../../../src/newspaper/editorial/selection/heuristic.js';
+import { publishedFingerprints, selectHeuristic } from '../../../../src/newspaper/editorial/selection/heuristic.js';
+import { mergeSelectedStories } from '../../../../src/newspaper/editorial/selection/merge.js';
 import { runEditorialCheck } from '../../../../src/newspaper/editorial/check.js';
+import { buildPress } from '../../../../src/newspaper/editorial/rules/press.js';
+import { ruleSubjectKey } from '../../../../src/newspaper/editorial/rules/subjects.js';
 import { choosePressRunDesign } from '../../../../src/newspaper/editorial/presentation/issue.js';
 import { evaluatePresentation } from '../../../../src/newspaper/editorial/presentation/eligibility.js';
 import { createEditorialStreams } from '../../../../src/newspaper/editorial/shared/determinism.js';
@@ -127,6 +130,153 @@ describe('editorial engine', () => {
   });
 
   describe('authored selection and history', () => {
+    it('should give one merged story credit for its displayed originals and preserve their history', async () => {
+      const catalogue = editorialConfigSchema.parse({
+        ...config,
+        defaults: { ...config.defaults, minItems: 2, maxItems: 2 },
+        templates: [...config.templates, {
+          id: 'roundup', triggers: ['balance'], tags: ['roundup'], weight: { base: 1 }, variants: [],
+          merge: {
+            match: "lead.subject.kind === member.subject.kind && (member.templateIds.includes('ledger') || member.templateIds.includes('culture'))",
+            min: 2,
+            values: {
+              missing: 'self.happinessPercentage',
+              total: 'merge.members.reduce((sum, member) => sum + (member.$balance ?? member.amount), 0)',
+            },
+            variants: [{
+              id: 'combined', when: 'merge.count === 2 && merge.values.total > 0',
+              headline: 'Roundup: {{merge.values.total}}', body: ['Reports combined.'], weight: { base: 1 },
+            }],
+          },
+        }],
+      });
+      const result = await check(fixture(), undefined, catalogue);
+      expect(result.status).toBe('published');
+      if (result.status !== 'published') return;
+      expect(result.issue.items).toHaveLength(1);
+      expect(result.issue.items[0].headline).toContainEqual({ type: 'text', text: '32' });
+      const [item] = result.state.issues[0].items;
+      expect(item.ruleIds).toEqual(expect.arrayContaining(['balance', 'ledger', 'culture']));
+      expect(item.sources.map(source => source.id)).toEqual(expect.arrayContaining([1000, 1001]));
+      const fingerprints = publicationStateSchema.parse(result.state).issues[0].items[0].coveredFingerprints!;
+      expect(fingerprints).toHaveLength(3);
+      const scores = editorialDecisionRecordSchema.parse(result.decision).candidateScores;
+      const [displayed] = scores.filter(score => score.selected);
+      const replaced = scores.filter(score => score.mergedInto === displayed.id);
+      expect(replaced).toHaveLength(2);
+      expect(displayed.score).toBe(Math.max(...replaced.map(score => score.score)));
+      const press = buildPress(publicationStateSchema.parse(result.state));
+      expect(press.subjects[ruleSubjectKey('culture', 'player/1')]).toEqual({ turn: 10, count: 1 });
+      expect(press.subjects[ruleSubjectKey('culture', 'player/0')]).toBeUndefined();
+
+      const compiled = await getEditorialExpressions(catalogue);
+      const batch = { facts: buildNewspaperFacts(fixture()) };
+      const priorDevelopment = (entry: RuleDevelopment) =>
+        ({ ...entry, fingerprint: fingerprints.find(id => id.startsWith(`["${entry.definitionId}"`))! });
+      const originals = await matchTemplates([
+        development('ledger', 'player/0'), development('culture', 'player/1'),
+      ].map(priorDevelopment), catalogue, compiled, batch);
+      const feedback = computeFeedback(result.state, catalogue);
+      expect(selectHeuristic(originals, result.state, catalogue, feedback).selected).toEqual([]);
+
+      const newCandidates = await matchTemplates([
+        development('ledger', 'player/0'), development('culture', 'player/1'),
+        priorDevelopment(development('balance', 'player/0')),
+      ], catalogue, compiled, batch);
+      const { selected } = selectHeuristic(newCandidates, result.state, catalogue, feedback);
+      expect(selected).toHaveLength(2);
+      expect(await mergeSelectedStories(selected, newCandidates, catalogue, compiled, batch,
+        { interruptedSlots: new Set() }, publishedFingerprints(result.state))).toEqual(selected);
+    });
+
+    it('should leave a competing original the only story credited to its series', async () => {
+      const catalogue = editorialConfigSchema.parse({
+        ...config,
+        defaults: { ...config.defaults, minItems: 3, maxItems: 3, frontPageItems: 3 },
+        templates: [...config.templates, {
+          id: 'roundup', triggers: ['balance'], tags: ['economy'], weight: { base: 1 }, variants: [],
+          merge: {
+            match: "member.templateIds.includes('ledger') || member.templateIds.includes('culture')",
+            min: 2,
+            variants: [{ id: 'combined', headline: 'Roundup', body: ['Combined reports.'], weight: { base: 1 } }],
+          },
+        }, {
+          id: 'balance-report', triggers: ['balance'], tags: ['economy'], weight: { base: 1 },
+          variants: [{ id: 'balance', headline: 'Balance', body: ['Independent report.'], weight: { base: 1 } }],
+        }],
+      });
+      const result = await check(fixture(), undefined, catalogue);
+      expect(result.status).toBe('published');
+      if (result.status !== 'published') return;
+      const records = result.state.issues[0].items;
+      expect(records).toHaveLength(2);
+      const merged = records.find(record => record.coveredFingerprints)!;
+      const [balanceSeries] = records.find(record => record.templateIds.includes('balance-report'))!.seriesKeys;
+      expect(merged.ruleIds).toContain('balance');
+      expect(merged.seriesKeys).not.toContain(balanceSeries);
+    });
+
+    it('should retain ordinary stories if merged prose cannot print and still enforce the original minimum', async () => {
+      const catalogue = editorialConfigSchema.parse({
+        ...config,
+        defaults: { ...config.defaults, minItems: 2 },
+        templates: [...config.templates, {
+          id: 'roundup', triggers: ['balance'], tags: ['roundup'], weight: { base: 1 }, variants: [],
+          merge: {
+            match: 'true', min: 2, variants: [{
+              id: 'combined', headline: '{{merge.values.missing}}', body: ['Reports combined.'], weight: { base: 1 },
+            }],
+          },
+        }],
+      });
+      const ready = await check(fixture(), undefined, catalogue);
+      expect(ready.status).toBe('published');
+      if (ready.status !== 'published') return;
+      expect(ready.issue.items).toHaveLength(2);
+      expect(ready.decision.candidateScores.filter(score => score.selected)).toHaveLength(2);
+      expect(ready.decision.candidateScores.every(score => !score.mergedInto)).toBe(true);
+      const lacking = await check(fixture(10, 5, 0), undefined, catalogue);
+      expect(lacking.status).toBe('skipped');
+    });
+
+    it('should let a higher priority selected lead absorb only the original reports it matches', async () => {
+      const lead = config.templates[0];
+      const catalogue = editorialConfigSchema.parse({
+        ...config,
+        defaults: { ...config.defaults, minItems: 2, maxItems: 2 },
+        templates: [
+          {
+            id: 'lower', triggers: ['balance'], tags: ['roundup'], weight: { base: 1 }, variants: [],
+            merge: {
+              match: 'true', min: 2,
+              variants: [{ id: 'lower', headline: 'Other roundup', body: ['Reports combined.'], weight: { base: 1 } }],
+            },
+          },
+          {
+            ...lead,
+            merge: {
+              priority: 10, match: 'true', min: 1,
+              values: { amount: 'merge.members[0].amount' },
+              variants: [{
+                id: 'higher', when: 'merge.count === 1',
+                headline: 'Treasury and culture', body: ['{{merge.values.amount}}'], weight: { base: 1 },
+              }],
+            },
+          },
+          config.templates[1],
+        ],
+      });
+      const result = await check(fixture(10, 5, 100), undefined, catalogue);
+      expect(result.status).toBe('published');
+      if (result.status !== 'published') return;
+      expect(result.issue.items).toHaveLength(1);
+      expect(result.issue.pages[0].layout).toBe('breaking');
+      expect(result.issue.items[0].body).toEqual([[{ type: 'text', text: '12' }]]);
+      const [record] = result.state.issues[0].items;
+      expect(record.templateIds).toEqual(['ledger', 'culture']);
+      expect(record.coveredFingerprints).toHaveLength(2);
+    });
+
     it('should prefer a tag combination using visible happiness without changing eligibility or story selection', async () => {
       const prose = { headline: 'Settlers', body: ['The town trained settlers.'], voice: 'general', weight: { base: 1 } };
       const tagged = editorialConfigSchema.parse({

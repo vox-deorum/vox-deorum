@@ -111,6 +111,25 @@ export function buildDiplomacyFacts(model: NewspaperFactModel, diplomacy: Diplom
       const dated = playerObservation(model, player, turn)?.sources ?? [];
       return fact(reference('player', player, visible.has(player) ? undefined : turn), uniqueSources([...rows, ...dated]));
     };
+    const cityStateParticipants = (incident.cityStateParticipants ?? [])
+      .filter(entry => playerObservation(model, entry.id, turn)?.fields);
+    /** Keep the side and cause attached to each permitted player reference. */
+    const participantField = (entry: (typeof cityStateParticipants)[number]): FactObject => ({
+      player: playerLink(entry.id, sources), side: fact(entry.side, sources), reason: fact(entry.reason, sources),
+    });
+    const hostileAllies = new Map(cityStateParticipants
+      .filter(entry => incident.kind === 'war' && incident.role === 'target' &&
+        entry.side === 'initiator' && entry.reason === 'cityStateAlly')
+      .map(entry => [entry.id, entry]));
+    const earlierWars: FactObject[] = [];
+    if (incident.directDeclaration && incident.role === 'target') {
+      for (const pair of Object.values(diplomacy.memory.pairs)) {
+        const other = pair.players.find(player => player !== model.receiverId);
+        if (other === undefined || !pair.players.includes(model.receiverId) || !visible.has(other) ||
+          pair.state !== 'war' || pair.since === null || pair.since >= turn) continue;
+        earlierWars.push({ player: playerLink(other, pair.sinceSources ?? []) });
+      }
+    }
     const fields: Record<string, FactField> = {
       id: fact(id, sources),
       kind: fact(incident.kind, sources),
@@ -123,6 +142,10 @@ export function buildDiplomacyFacts(model: NewspaperFactModel, diplomacy: Diplom
         })), sources),
       cityStates: fact(incident.cityStates.filter(player => playerObservation(model, player, turn)?.fields)
         .map(player => reference('player', player, visible.has(player) ? undefined : turn)), sources),
+      cityStateParticipants: fact(cityStateParticipants.map(participantField), sources),
+      hostileCityStateAllies: fact([...hostileAllies.values()].map(participantField), sources),
+      directDeclaration: fact(incident.directDeclaration === true, sources),
+      earlierWarOpponents: fact(earlierWars, sources),
       resumed: fact(incident.resumed, sources),
       observed: fact(incident.observed, sources),
       partial: fact(incident.partial, sources),

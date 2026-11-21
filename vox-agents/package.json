@@ -11,6 +11,7 @@
     "acquire:texconv": "node ../scripts/utilities/acquire-texconv.mjs",
     "newspaper": "tsx src/newspaper/console.ts",
     "newspaper:preview": "tsx src/newspaper/preview-console.ts",
+    "newspaper:screenshots": "tsx newspaper/src/preview/screenshots.ts",
     "newspaper:triggers": "node ../scripts/utilities/list-newspaper-triggers.mjs",
     "newspaper:sort-triggers": "node ../scripts/utilities/sort-newspaper-triggers.mjs",
     "dev": "tsx watch --import ./src/instrumentation.ts src/index.ts",

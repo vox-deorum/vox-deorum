@@ -94,9 +94,9 @@
         "stance": "local",
         "genre": "anecdote",
         "when": "gold !== null",
-        "headline": "{{gold}} gold gone with a plundered route",
+        "headline": "Payday for the raiders",
         "body": [
-          "The market square heard it before the magistrates did: the run was plundered on the road, {{gold}} gold gone with it. The stallholders did their own sums in chalk. The capital will count the route; this town was counting the crates."
+          "The raid on a route bound for us paid the raiders {{gold}} gold. At the unloading yard a porter rubbed his rate off his little slate. He wrote WILL CARRY ANYTHING and set it back against his stool."
         ],
         "weight": { "base": 1 }
       },
@@ -157,9 +157,9 @@
         "stance": "government-critical",
         "genre": "analysis",
         "when": "routes > 1",
-        "headline": "Every outgoing route has ended",
+        "headline": "Small exporters have less room to wait",
         "body": [
-          "Of the {{routes}} outgoing routes we ran at the last count, not one survives, and no new one has been sent out to replace them. Somewhere in the government a decision was made, or not made, that emptied the roads. The treasury will notice eventually. The drivers already have."
+          "We had {{routes}} outgoing trade routes at the last count. With all of them gone, a merchant can't move a waiting shipment onto another run. The big houses can rent another shed and wait. Smaller shops may have to cut production before they run out of room for stock."
         ],
         "weight": { "base": 1 }
       },
@@ -196,9 +196,9 @@
         "stance": "ambitious",
         "genre": "analysis",
         "when": "outgoing === true",
-        "headline": "Our trade reaches {{theirCity}}",
+        "headline": "The next order from {{theirCity}}",
         "body": [
-          "The caravan out of {{ourCity}} has finished the {{routeDistance}}-tile run to {{theirCity}}, and the drivers came home with dust on their boots and orders in their pockets. A city that far away used to be a rumor to us. It is a customer now, and the next road should go farther."
+          "Merchants from {{ourCity}} have completed a long trade run to {{theirCity}}. If somebody makes a regular trip of it, a buyer there can ask for a particular cloth and expect it on a later run. A weaver here could start making cloth to order instead of packing a bolt and hoping it suits."
         ],
         "weight": { "base": 1 }
       },
@@ -285,9 +285,9 @@
         "stance": "conciliatory",
         "genre": "report",
         "when": "destination !== null",
-        "headline": "Our route to {{destination}} is plundered",
+        "headline": "Trade route to {{destination}} plundered",
         "body": [
-          "The road to {{destination}} has cost us a trade route tonight. Robbers took the run before it arrived. Our traders have lost the goods. {{destination}} has lost the market. Two cities, one theft."
+          "A trade route of ours bound for {{destination}} has been plundered. At the dispatch yard, one merchant is thinking of the people who were expecting a delivery. \"I'd like to get word to them,\" she says. \"At least they'd know to look somewhere else.\""
         ],
         "weight": { "base": 1 }
       },
@@ -334,9 +334,9 @@
         "voice": "press",
         "stance": "pro-government",
         "genre": "analysis",
-        "headline": "What the new trade routes are worth",
+        "headline": "What a new market can do for one kiln",
         "body": [
-          "We ran no outgoing trade routes at the last count; we now run {{routes}}. Caravans do not saddle themselves. Somebody in the ministry weighed the risk of the open road and chose it anyway, and the first receipts are starting to show why. The credit belongs where the decision was made."
+          "The government's new trade network has {{routes}} routes abroad. A potter who used to fire a half-empty kiln for the home market can spend less on fuel per bowl if buyers in a second town help her sell a whole batch. A market abroad could make bowls cheaper here at home."
         ],
         "weight": { "base": 1 }
       },

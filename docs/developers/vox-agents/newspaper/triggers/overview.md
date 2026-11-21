@@ -69,6 +69,8 @@ All expressions can read the check's [globals](facts.md#globals). Other names de
 | Trigger `values`, `group.by`, and ungrouped `importance` and `urgent` | The subject and any earlier values |
 | Grouped `importance` and `urgent` | The [group bindings](#grouping) |
 | Template and variant conditions and weight adjustments | The subject's visible facts, unambiguous value names, `values`, `triggerValues`, `subject`, `period`, and `group`, `key` and `count` for a single group |
+| Template `merge.match` | `lead` and `member`: the combining template's facts and a selected story's facts, with `member.templateIds` identifying its templates |
+| Merge values and variants | The combining template's bindings, plus `merge.members` and `merge.count`; variants also get the computed `merge.values` |
 | Style preferences | The variant bindings and `story`, with `importance`, `urgent`, `short` and `tags` |
 | Page, design, layout, and masthead conditions and weight adjustments | No candidate bindings |
 

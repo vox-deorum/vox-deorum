@@ -116,6 +116,13 @@ export function mountReader(
   if (issue.publication.designId === "cable-desk") {
     masthead.append(createElement("span", "vd-cable-turn", issue.cutoff.label));
   }
+  if (issue.publication.designId === "coffeehouse-essay") {
+    const imprint = createElement("div", "vd-coffeehouse-imprint");
+    if (issue.publication.editionNumber !== undefined)
+      imprint.append(createElement("span", undefined, `No. ${issue.publication.editionNumber}`));
+    imprint.append(createElement("span", undefined, issue.cutoff.label));
+    masthead.append(imprint);
+  }
 
   const tabs = createElement("nav", "vd-tabs");
   tabs.setAttribute("role", "tablist");
@@ -155,11 +162,21 @@ export function mountReader(
     const storyList = createElement("div", "vd-storylist");
     storyList.dataset.layout = page.layout;
 
-    page.itemIds.forEach((itemId, index) => {
+    const [lead] = page.itemIds;
+    let itemIds = page.itemIds;
+    if (issue.publication.designId === "printed-almanack") {
+      // Breaking news and analysis open with their lead before the dated entries.
+      const fixed = page.layout === "ordinary" ? 0 : 1;
+      const undated = issue.cutoff.turn + 1;
+      const dated = page.itemIds.slice(fixed).sort((a, b) =>
+        (itemById.get(a)?.observedTurn ?? undated) - (itemById.get(b)?.observedTurn ?? undated));
+      itemIds = [...page.itemIds.slice(0, fixed), ...dated];
+    }
+    itemIds.forEach((itemId) => {
       const item = itemById.get(itemId);
       if (!item) return;
       storyList.append(
-        renderStory(item, page, index === 0, {
+        renderStory(item, page, itemId === lead, {
           instancePrefix,
           designId,
           publicationDesignId: issue.publication.designId,

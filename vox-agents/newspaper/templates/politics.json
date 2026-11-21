@@ -18,10 +18,9 @@
         "voice": "press",
         "stance": "government-critical",
         "genre": "analysis",
-        "headline": "Last place, and the reckoning behind it",
+        "headline": "Why our own tallies can flatter us",
         "body": [
-          "We stand last of {{count}} in the new reckoning. At the exchange, a clerk has pinned this tally beside the old one, and people are stopping on their way out to see how far we've slipped.",
-          "The ministers who answer for that standing should come out and take the same questions the clerk has been hearing all day."
+          "We have fallen to last of {{count}}. A minister who opens a new town has every reason to put it at the top of his report. If other countries have built towns faster than we have, those same reports can make us look strong year after year while the gap grows."
         ],
         "weight": { "base": 1 }
       },
@@ -222,10 +221,9 @@
         "voice": "gazette",
         "stance": "traditional",
         "genre": "obituary",
-        "headline": "The age we had",
+        "headline": "A kettle from the golden age",
         "body": [
-          "It was a good age. Markets were full, the mood was generous, and the nation spoke of itself with pride. Such ages have always been borrowed rather than owned.",
-          "The loan is now called in. What we built in the good years is what we keep."
+          "The good age began, on one street at least, with a tinsmith finding work for a second apprentice. We hear the young man has now turned out a kettle he can put his own name to. The age is over; its kettle ought to give good service yet."
         ],
         "weight": { "base": 1 }
       },
@@ -262,10 +260,9 @@
         "voice": "press",
         "stance": "national",
         "genre": "editorial",
-        "headline": "Golden, and still at war",
+        "headline": "Open peace talks while we can afford to walk away",
         "body": [
-          "A golden age has begun while our soldiers are in the field. There is work in the shops and an empty stool at the joiner's bench, kept clear for his son who is away with the army.",
-          "Keep him a place to come back to. The country will have earned its golden age if the people who went out to fight can share in it when they come home."
+          "Our golden age has begun with the army still in the field. The council should open talks with {{enemies}} while we can afford to turn down a bad offer. If another campaign drains the treasury, the other side can name its price."
         ],
         "weight": { "base": 1 }
       },
@@ -277,6 +274,17 @@
         "headline": "Hear it! A golden age, even in war!",
         "body": [
           "Hear it, people! A golden age is ours, and the war against {{enemies}} goes on! Good years, even in wartime! Let them hear it across the lines: we flourish while we fight!"
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "golden-age-wartime-dance-lesson",
+        "voice": "tabloid",
+        "stance": "local",
+        "genre": "anecdote",
+        "headline": "A partner for the next dance",
+        "body": [
+          "The dance teacher gave a free lesson to celebrate the golden age. With the war still on, there were more women than men. Two women watched from the doorway until one said, “I'll step on your feet if you'll step on mine.” They stayed for the next dance."
         ],
         "weight": { "base": 1 }
       }
@@ -525,10 +533,9 @@
         "voice": "press",
         "stance": "rationalist",
         "genre": "analysis",
-        "headline": "{{policy}}: a wager on what works",
+        "headline": "The lease that stayed unsigned",
         "body": [
-          "A policy is a wager that acting will beat not acting, and the record settles the wager.",
-          "The government has adopted {{policy}}. The questions that matter are simple: what improves, and by how much. The record will answer, and it does not take sides."
+          "The government has adopted {{policy}}. A printer in the west ward was on the point of renting a second shop. He says he will wait until he sees what the policy does to his costs. For one landlord, the first thing the new policy brought was the return of an unsigned lease."
         ],
         "weight": { "base": 1 }
       },

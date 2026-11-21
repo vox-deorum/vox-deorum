@@ -190,6 +190,10 @@ export function inferWarAndPeace(
         id: entry.id, side: entry.side === a ? 'initiator' : 'target', reason: participantReason(entry),
       })),
       cityStates: incident.participants.filter(entry => facts.major(entry.id) === false).map(entry => entry.id),
+      cityStateParticipants: incident.participants.filter(entry => facts.major(entry.id) === false).map(entry => ({
+        id: entry.id, side: entry.side === a ? 'initiator' : 'target', reason: participantReason(entry),
+      })),
+      directDeclaration: incident.kind === 'war' && incident.deliberate && inherited === undefined,
       role: receiver === a ? 'initiator' : receiver === b ? 'target' : domestic ? 'joined' : 'none',
       reason: ownParticipation ? participantReason(ownParticipation) : undefined,
       resumed: !!pairContext?.resumed, observed: false, partial: !!pairContext?.partialSources.length,

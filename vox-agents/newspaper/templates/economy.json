@@ -31,9 +31,9 @@
         "voice": "press",
         "stance": "government-critical",
         "genre": "analysis",
-        "headline": "A deficit that names no one",
+        "headline": "A bill that comes back every season",
         "body": [
-          "Income trails spending by {{deficit}} gold a season, where the last count held the books at balance. A shortfall like that does not sit still: it repeats until someone is made to make it good, and nobody in office has said who that will be. The creditors already know the way to the side door."
+          "The treasury is spending {{deficit}} gold a season more than it takes in. Sell a piece of public land and the proceeds might cover this season's bill. At the current rate, the same bill comes due next season, with one piece of land fewer to sell. Any minister who proposes a sale should bring next season's figures too."
         ],
         "weight": { "base": 1 }
       },
@@ -110,7 +110,7 @@
         "id": "treasury-reserve-recovers-report",
         "headline": "The treasury gains time against the deficit",
         "body": [
-          "The deficit continues, but the reserve behind it has grown. The {{gold}} gold on hand now covers {{turnsLeft}} seasons at {{deficit}} gold a season, against shorter cover at the last count."
+          "The treasury can stretch its reserve further even though it still runs a deficit. At the current shortfall of {{deficit}} gold a season, its {{gold}} gold can cover {{turnsLeft}} full seasons."
         ],
         "weight": { "base": 1 }
       },
@@ -119,9 +119,9 @@
         "voice": "press",
         "stance": "pro-government",
         "genre": "analysis",
-        "headline": "Time returns to the treasury",
+        "headline": "What the treasury can do with more time",
         "body": [
-          "The shortfall holds at {{deficit}} gold a season, but the reserve has grown to {{gold}} gold, enough to carry {{turnsLeft}} seasons where the last count allowed fewer. A deficit that can be carried is a problem with choices, and choices are what an administration needs. The creditors still call, but these days they are seen in order and offered chairs."
+          "At a shortfall of {{deficit}} gold a season, the treasury now has enough in reserve for {{turnsLeft}} full seasons. That gives ministers time to collect money already owed before they have to consider a new tax in a hurry. The advantage lasts only while receipts and spending hold near today's figures."
         ],
         "weight": { "base": 1 }
       },

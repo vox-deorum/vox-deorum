@@ -232,6 +232,8 @@ export type ItemImage = z.infer<typeof itemImageSchema>;
 
 /** Schema for one published item with its editorial metadata. */
 export const issueItemSchema = z.object({
+  /** Latest recorded observation supporting this report, when known. */
+  observedTurn: z.number().int().nonnegative().optional(),
   /** Unique item identifier within the issue. */
   id: z.string().min(1),
   /** Editorial topic tags. */
@@ -298,6 +300,8 @@ export type IssueCutoff = z.infer<typeof issueCutoffSchema>;
 
 /** Schema for publication identity and selected design. */
 export const issuePublicationSchema = z.object({
+  /** Sequential issue number, when recorded by the publisher. */
+  editionNumber: z.number().int().positive().optional(),
   /** Name displayed on the publication. */
   title: z.string().min(1),
   /** Optional motto displayed under the masthead. */
@@ -339,6 +343,13 @@ export const issueDocumentSchema = z
     const itemIds = new Set<string>();
     // Collect item identifiers and reject duplicates.
     issue.items.forEach((item, index) => {
+      if (item.observedTurn !== undefined && item.observedTurn > issue.cutoff.turn) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["items", index, "observedTurn"],
+          message: "The observation turn exceeds the issue cutoff.",
+        });
+      }
       if (itemIds.has(item.id)) {
         ctx.addIssue({
           code: "custom",
