@@ -50,7 +50,7 @@
       "event.minorPlayer.knows('distance') && event.minorPlayer.distance <= nearby"
     ],
     "values": { "cityState": "event.minorPlayer.name", "rival": "event.newAllyPlayer.name" },
-    "tier": "notable",
+    "tier": "major",
     "adjust": "event.newAllyPlayer.stake.relation"
   },
   {
@@ -212,6 +212,7 @@
       "aggressor": "incident.initiator.name"
     },
     "tier": "notable",
+    "adjust": "incident.target.stake.relation",
     "tags": ["politics", "military", "international"]
   },
   {
@@ -234,7 +235,7 @@
       "distance": "event.knows('distance') ? event.distance.own : null"
     },
     "tier": "major",
-    "adjust": "-5",
+    "adjust": "event.stake.place",
     "tags": ["politics", "military", "international"]
   }
 ]

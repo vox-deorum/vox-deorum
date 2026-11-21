@@ -438,6 +438,7 @@
       "turns": "city.razingTurns"
     },
     "tier": "major",
+    "adjust": "city.stake.place",
     "tags": ["cities", "domestic"]
   }
 ]

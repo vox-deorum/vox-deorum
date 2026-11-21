@@ -216,6 +216,7 @@
       "ours": "self.knows('foundedReligion') && typeof self.foundedReligion === 'string' && city.majorityReligion === self.foundedReligion"
     },
     "tier": "ours ? 'routine' : 'notable'",
+    "adjust": "city.stake.place",
     "tags": ["cities", "domestic"]
   },
   {

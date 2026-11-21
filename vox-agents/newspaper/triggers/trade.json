@@ -36,7 +36,7 @@
       "gold": "event.knows('plunderGoldValue') && Number.isFinite(event.plunderGoldValue) ? event.plunderGoldValue : null"
     },
     "tier": "notable",
-    "adjust": ["event.plunderingPlayer.stake.relation", "Math.min(10, gold / 10)"],
+    "adjust": "event.originOwner.stake.relation",
     "tags": ["economy", "trade"]
   },
   {
@@ -74,7 +74,7 @@
       "routeDistance": "distance(event.originCity, event.destinationCity)",
       "outgoing": "event.originPlayer.self === true"
     },
-    "tier": "notable",
+    "tier": "routine",
     "tags": ["economy", "trade", "international"]
   },
   {
@@ -91,7 +91,7 @@
       "destination": "event.knows('destinationOwner') && event.destinationOwner.knows('name') ? event.destinationOwner.name : null"
     },
     "tier": "major",
-    "adjust": ["event.plunderingPlayer.stake.relation", "Math.min(10, gold / 10)"],
+    "adjust": "event.plunderingPlayer.stake.relation",
     "tags": ["economy", "trade"]
   },
   {
@@ -107,7 +107,6 @@
       "routes": "self.outgoingTradeRouteCount"
     },
     "tier": "notable",
-    "adjust": "Math.min(15, 5 * (routes - 1))",
     "tags": ["economy", "trade"]
   },
   {
@@ -124,7 +123,7 @@
       "destination": "event.knows('destinationOwner') && event.destinationOwner.knows('name') ? event.destinationOwner.name : null"
     },
     "tier": "notable",
-    "adjust": ["event.originOwner.stake.relation", "Math.min(10, gold / 10)"],
+    "adjust": "event.originOwner.stake.relation",
     "tags": ["economy", "trade"]
   }
 ]

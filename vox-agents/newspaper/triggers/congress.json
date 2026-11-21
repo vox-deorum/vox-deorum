@@ -31,7 +31,7 @@
       "proposer": "event.knows('proposerName') ? event.proposerName : null",
       "ours": "event.knows('player') && event.player.self === true"
     },
-    "tier": "ours ? 'notable' : 'routine'",
+    "tier": "ours ? 'major' : 'routine'",
     "tags": ["international", "congress"]
   },
   {
@@ -87,7 +87,6 @@
       "count": "game.congress.knows('proposals') ? game.congress.proposals.length : 0"
     },
     "tier": "routine",
-    "adjust": "Math.round(10 * (recent - turnsUntil) / recent)",
     "tags": ["international", "congress"]
   },
   {

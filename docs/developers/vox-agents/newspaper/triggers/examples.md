@@ -4,7 +4,7 @@ Start with the settler overlay to tune a score and revise a report. The stock ru
 
 ## A city shrinks after sending settlers
 
-The stock [`settler-departure` rule](overview.md#a-first-example) supplies `lost`, the decrease in population. To try a different score, add `settler-departure` to your overlay's `triggers/` folder with tier `routine` and adjustment `10 * lost`. A drop from eight to six scores 65 with the stock tier base.
+[`settler-departure`](overview.md#a-first-example) rates the story by how much population the city lost. To give the capital and large cities more weight, set `adjust` to `["city.stake.place", "10 * lost"]` for `settler-departure` in your overlay's `triggers/` folder. A capital shrinking from eight to six scores 73: 45 for the `routine` tier, 8 for the capital, and 20 for the population loss.
 
 To edit the neutral report, save this as `<overlay>/templates/settler.json`:
 
@@ -50,7 +50,7 @@ Find the detailed expressions in the [city](../../../../../vox-agents/newspaper/
 | `city-state-ally-defects`, `city-state-ally-lost` | Separate a nearby city-state switching from us to a rival from a city-state becoming unallied. The latter requires the explicit no-ally ID in `SetAlly`. See the [city-state triggers](../../../../../vox-agents/newspaper/triggers/city-states.json). |
 | `city-state-quest-countdown-disappeared` | Compare two readable quest observations. If a deadline still in the future disappears, report the observation without treating it as an outcome. See [quest facts](facts.md#quest-deadlines-and-cultural-influence). |
 | `war-advantage-stalls` | Look for a score of at least 25 in the `long` window, then use `held` to require a continuous stretch of `short` turns within five points of the current score. `repeat: medium` allows a follow-up after 20 Standard turns. |
-| `war-turns-against-us` | Add the opponent's `pair.other.stake.front` and a separate adjustment for how far the war score has fallen below the threshold. |
+| `war-turns-against-us` | Use `pair.other.stake.front` to weigh the opponent's proximity, the war score, and war weariness. |
 
 ### A nearby offensive outranks a distant one
 

@@ -273,7 +273,7 @@
       "tourism": "player.tourismPerTurn",
       "tied": "players.some(p => p.id !== player.id && p.knows('major') && p.major === true && p.knows('tourismPerTurn') && p.tourismPerTurn === player.tourismPerTurn)"
     },
-    "tier": "player.self ? 'notable' : 'routine'",
+    "tier": "player.self ? 'major' : 'notable'",
     "tags": ["culture", "international"]
   }
 ]

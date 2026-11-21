@@ -393,7 +393,7 @@
       "incident.knows('concessions') && Array.isArray(incident.concessions) && incident.concessions.length > 0"
     ],
     "values": { "concessions": "incident.concessions.join(', ')", "count": "incident.concessions.length", "role": "incident.knows('role') ? incident.role : null", "initiator": "incident.knows('initiator') && incident.initiator.knows('name') ? incident.initiator.name : null", "target": "incident.knows('target') && incident.target.knows('name') ? incident.target.name : null" },
-    "tier": "role !== null && role !== 'none' ? 'major' : 'notable'",
+    "tier": "role !== null && role !== 'none' ? 'major' : 'routine'",
     "tags": ["politics", "military", "international"]
   },
   {
@@ -460,7 +460,7 @@
       "initiator": "incident.initiator.name",
       "target": "incident.target.name"
     },
-    "tier": "incident.knows('role') && incident.role !== 'none' ? 'major' : 'notable'",
+    "tier": "incident.knows('role') && incident.role !== 'none' ? 'major' : 'routine'",
     "urgent": "incident.role == 'target'"
   },
   {
@@ -473,7 +473,7 @@
       "held(pair, s => Math.abs(s.warScore - pair.warScore) <= 5, short)"
     ],
     "values": { "opponent": "pair.other.name" },
-    "tier": "notable",
+    "tier": "routine",
     "adjust": "pair.other.stake.front",
     "repeat": "medium"
   },
@@ -541,7 +541,7 @@
       "enemies": "(() => { const names = self.wars.filter(p => !p.self && p.knows('major') && p.major === true).map(p => p.name); return names.slice(0, -1).join(', ') + ', and ' + names[names.length - 1]; })()"
     },
     "tier": "major",
-    "adjust": "Math.min(15, 5 * (count - 3))",
+    "adjust": "self.stake.war",
     "repeat": "medium",
     "tags": ["politics", "military"]
   },
@@ -559,7 +559,7 @@
       "score": "pair.warScore"
     },
     "tier": "notable",
-    "adjust": ["pair.other.stake.front","Math.min(15, (-score - 25) / 3)"],
+    "adjust": "pair.other.stake.front",
     "tags": ["politics", "military"]
   },
   {
