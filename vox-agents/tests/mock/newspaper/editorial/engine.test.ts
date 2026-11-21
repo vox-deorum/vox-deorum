@@ -335,7 +335,8 @@ describe('editorial engine', () => {
       const stockResult = await check(evidence, createInitialPublicationState(), stock);
       expect(stockResult.status).toBe('published');
       if (stockResult.status !== 'published') return;
-      expect(stockResult.decision.selectedVariants[stockResult.issue.items[0].id]).toBe('settler-departure-report');
+      expect(stock.templates.find(template => template.id === 'settler-departure-account')?.variants.map(variant => variant.id))
+        .toContain(stockResult.decision.selectedVariants[stockResult.issue.items[0].id]);
       expect(stockResult.decision.triggerAudit.find(rule => rule.rule === 'settler-departure')?.subjects)
         .toContainEqual(expect.objectContaining({ subject: 'city/10', outcome: 'fired' }));
 

@@ -1,0 +1,1642 @@
+[
+  {
+    "id": "building-completed-account",
+    "triggers": ["building-completed"],
+    "tags": ["cities", "domestic"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "building-completed-report",
+        "headline": "{{cityName}} completes the {{building}}",
+        "body": [
+          "Work on the {{building}} in {{cityName}} is finished. The city can now put it to use."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "building-completed-notice",
+        "voice": "gazette",
+        "stance": "neutral",
+        "genre": "notice",
+        "headline": "Notice from {{cityName}}: the {{building}} is ready",
+        "body": [
+          "The {{building}} in {{cityName}} is finished. The work is complete, and the building is ready for use."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "building-completed-anecdote",
+        "voice": "tabloid",
+        "stance": "local",
+        "genre": "anecdote",
+        "headline": "The {{building}} opens, and {{cityName}} has something to show for it",
+        "body": [
+          "For months the site drew onlookers. This week the work came to an end, and the {{building}} stands finished in {{cityName}}."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "building-completed-analysis",
+        "voice": "press",
+        "stance": "ambitious",
+        "genre": "analysis",
+        "headline": "What the new {{building}} means for {{cityName}}",
+        "body": [
+          "A building is more than a finished shell. The {{building}} gives {{cityName}} one more thing it can do, and one more reason for people to stay."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "building-investment-account",
+    "triggers": ["building-investment-made"],
+    "tags": ["cities", "domestic"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "building-investment-report",
+        "headline": "{{cityName}} puts money behind the {{building}}",
+        "body": [
+          "{{cityName}} has committed funds to the {{building}}. The work can now go forward."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "building-investment-notice",
+        "voice": "gazette",
+        "stance": "neutral",
+        "genre": "notice",
+        "headline": "{{cityName}} funds the {{building}}",
+        "body": [
+          "The city has set aside the money for the {{building}}. With the funds in hand, the work can proceed."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "building-investment-analysis",
+        "voice": "press",
+        "stance": "neutral",
+        "genre": "analysis",
+        "headline": "Why {{cityName}} is paying for the {{building}}",
+        "body": [
+          "An investment spends coin now for a result later. {{cityName}} has decided the {{building}} is worth the wait."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "building-investment-notice-crier",
+        "voice": "crier",
+        "stance": "ambitious",
+        "genre": "notice",
+        "headline": "Hear it, {{cityName}}! The {{building}} is paid for",
+        "body": [
+          "The city has found the money for the {{building}}. The work goes forward."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "building-purchased-account",
+    "triggers": ["building-purchased"],
+    "tags": ["cities", "domestic"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "building-purchased-report",
+        "headline": "{{cityName}} buys the {{building}}",
+        "body": [
+          "The {{building}} in {{cityName}} was purchased with {{currency}}. The work is finished."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "building-purchased-tabloid",
+        "voice": "tabloid",
+        "stance": "populist",
+        "genre": "report",
+        "headline": "No wait in {{cityName}}: the {{building}} is bought and ready",
+        "body": [
+          "{{cityName}} did not wait for the {{building}} to rise stone by stone. The city paid in {{currency}}, and the building is ready now."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "building-purchased-notice",
+        "voice": "gazette",
+        "stance": "pro-government",
+        "genre": "notice",
+        "headline": "A purchase for {{cityName}}: the {{building}} is ready",
+        "body": [
+          "We are informed that {{cityName}} has secured its {{building}} with {{currency}}. The city may now make use of it."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "building-purchased-analysis",
+        "voice": "press",
+        "stance": "neutral",
+        "genre": "analysis",
+        "headline": "{{cityName}} pays for speed",
+        "body": [
+          "Buying a {{building}} trades coin for time. {{cityName}} has made that trade, and the building stands ready."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "capital-outgrown-account",
+    "triggers": ["capital-outgrown"],
+    "tags": ["cities", "domestic"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "capital-outgrown-report",
+        "when": "!tied",
+        "headline": "{{largest}} outgrows the capital",
+        "body": [
+          "{{largest}} now holds {{largestPopulation}} people, more than {{capital}}."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "capital-outgrown-tied",
+        "voice": "general",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "tied",
+        "headline": "{{largest}} pass the capital",
+        "body": [
+          "{{largest}} now hold {{largestPopulation}} people each, more than {{capital}}."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "capital-outgrown-analysis",
+        "voice": "press",
+        "stance": "national",
+        "genre": "analysis",
+        "when": "!tied",
+        "headline": "The capital is no longer the largest city",
+        "body": [
+          "{{largest}} has passed {{capital}} in population. The seat of government now answers to a larger city within its own borders."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "capital-outgrown-anecdote",
+        "voice": "tabloid",
+        "stance": "local",
+        "genre": "anecdote",
+        "when": "!tied",
+        "headline": "{{capital}} loses its crown to {{largest}}",
+        "body": [
+          "The capital can still claim the government. It can no longer claim the most people. {{largest}} has {{largestPopulation}} residents, and {{capital}} has fewer."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "capital-outgrown-feed",
+        "voice": "feed",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "!tied",
+        "headline": "The capital just got outgrown",
+        "body": [
+          "{{largest}} now has more people than {{capital}}: {{largestPopulation}} and counting."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "cities-share-grievance-account",
+    "triggers": ["cities-share-grievance"],
+    "tags": ["cities", "domestic"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "cities-share-grievance-report",
+        "headline": "The same grievance in {{count}} cities",
+        "body": [
+          "{{count}} of our cities name {{key}} as their heaviest source of unhappiness."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "cities-share-grievance-analysis",
+        "voice": "press",
+        "stance": "government-critical",
+        "genre": "analysis",
+        "headline": "One problem, {{count}} cities",
+        "body": [
+          "The same item tops the list of complaints in {{count}} of our cities: {{key}}. A problem that repeats across the map is not a local accident."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "cities-share-grievance-famine",
+        "voice": "feed",
+        "stance": "populist",
+        "genre": "notice",
+        "when": "key == 'famine'",
+        "headline": "Hunger in {{count}} of our cities",
+        "body": [
+          "{{count}} of our cities now name famine as their worst problem. Empty granaries are no longer a local story."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "cities-share-grievance-culture",
+        "voice": "tabloid",
+        "stance": "populist",
+        "genre": "anecdote",
+        "when": "key == 'culture'",
+        "headline": "Boredom in {{count}} cities",
+        "body": [
+          "In {{count}} of our cities, the lack of culture is the loudest complaint. The evenings are long, and there is little to fill them."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "city-being-razed-account",
+    "triggers": ["city-being-razed"],
+    "tags": ["cities", "military", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "city-being-razed-report",
+        "headline": "{{cityName}} is being razed",
+        "body": [
+          "{{civilization}} is burning {{cityName}}. The city has {{turns}} turns left before it is gone."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-being-razed-unnamed",
+        "voice": "general",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "cityName === null",
+        "headline": "A city is being razed",
+        "body": [
+          "{{civilization}} is burning a city. It has {{turns}} turns left before it is gone."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-being-razed-population",
+        "voice": "general",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "population !== null",
+        "headline": "{{cityName}} burns with {{population}} people inside",
+        "body": [
+          "{{civilization}} is razing {{cityName}}. {{population}} people remain in a city that has {{turns}} turns left."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-being-razed-distance",
+        "voice": "gazette",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "distance !== null",
+        "headline": "A city burns {{distance}} tiles from our nearest city",
+        "body": [
+          "{{civilization}} is razing {{cityName}}, {{distance}} tiles from our own settlements. The fire is close to home."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-being-razed-obituary",
+        "voice": "press",
+        "stance": "devout",
+        "genre": "obituary",
+        "headline": "The end of {{cityName}}",
+        "body": [
+          "In {{turns}} turns, {{cityName}} will be gone. {{civilization}} has chosen to leave nothing where the city stood."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "city-capture-involving-us-account",
+    "triggers": ["city-capture-involving-us"],
+    "tags": ["cities", "military", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "city-capture-gained",
+        "when": "gained === true && formerOwner !== null",
+        "headline": "{{cityName}} is ours",
+        "body": [
+          "Our forces have taken {{cityName}} from {{formerOwner}}. The city is under our control."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-capture-gained-unnamed",
+        "voice": "general",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "gained === true && formerOwner === null",
+        "headline": "{{cityName}} is ours",
+        "body": [
+          "Our forces have taken {{cityName}}. The city is under our control."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-capture-lost",
+        "voice": "general",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "gained === false && captor !== null",
+        "headline": "{{cityName}} falls to {{captor}}",
+        "body": [
+          "{{cityName}} has been taken from us by {{captor}}."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-capture-lost-unnamed",
+        "voice": "general",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "gained === false && captor === null",
+        "headline": "{{cityName}} is lost",
+        "body": [
+          "The city has fallen from our hands. The flag over {{cityName}} is no longer ours."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-capture-unnamed",
+        "voice": "general",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "cityName === null",
+        "headline": "A city changes hands",
+        "body": [
+          "One city has changed hands. Its people now live under a different flag."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-capture-gained-analysis",
+        "voice": "press",
+        "stance": "hawkish",
+        "genre": "analysis",
+        "when": "gained === true",
+        "headline": "What {{cityName}} adds",
+        "body": [
+          "Taking {{cityName}} changes more than a flag. The city brings its land, its people and a new border to defend."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-capture-lost-editorial",
+        "voice": "pamphlet",
+        "stance": "government-critical",
+        "genre": "editorial",
+        "when": "gained === false",
+        "headline": "A city lost, and no one asks why",
+        "body": [
+          "{{cityName}} is gone from us. The people who lived there now live under another flag."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "city-defense-completed-account",
+    "triggers": ["city-defense-completed"],
+    "tags": ["cities", "military", "domestic"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "city-defense-completed-report",
+        "headline": "{{cityName}} finishes new defenses",
+        "body": [
+          "Work on the {{building}} at {{cityName}} is done. The city's defenses are stronger for it."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-defense-completed-press",
+        "voice": "press",
+        "stance": "national",
+        "genre": "report",
+        "headline": "{{cityName}} strengthens its walls",
+        "body": [
+          "The {{building}} is finished, and {{cityName}} can meet an attack from behind stronger defenses."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-defense-completed-crier",
+        "voice": "crier",
+        "stance": "national",
+        "genre": "notice",
+        "headline": "{{cityName}} is ready for a siege",
+        "body": [
+          "The {{building}} is complete. Let those who would test {{cityName}} take note."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-defense-completed-notice",
+        "voice": "gazette",
+        "stance": "pro-government",
+        "genre": "notice",
+        "headline": "A stronger {{cityName}}",
+        "body": [
+          "We are informed that the {{building}} at {{cityName}} is complete. The city now stands better protected."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "city-famine-unrest-account",
+    "triggers": ["city-famine-unrest"],
+    "tags": ["cities", "domestic"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "city-famine-unrest-report",
+        "headline": "Famine grips {{city}}",
+        "body": [
+          "Hunger is the heaviest burden in {{city}}. The city's own tally puts {{famine}} of its discontent down to famine."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-famine-unrest-analysis",
+        "voice": "press",
+        "stance": "government-critical",
+        "genre": "analysis",
+        "headline": "Why {{city}} is hungry",
+        "body": [
+          "Famine is the top complaint in {{city}}, at {{famine}}. A city that cannot feed itself will not stay quiet."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-famine-unrest-anecdote",
+        "voice": "tabloid",
+        "stance": "populist",
+        "genre": "anecdote",
+        "headline": "Empty stalls in {{city}}",
+        "body": [
+          "The market at {{city}} grows thin. Hunger is now the loudest grievance in the city, and the city's own figures say so."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-famine-unrest-notice",
+        "voice": "gazette",
+        "stance": "devout",
+        "genre": "notice",
+        "headline": "A call for bread in {{city}}",
+        "body": [
+          "Famine weighs on {{city}} above every other trouble. The city's stores and its people both need relief."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "city-flips-account",
+    "triggers": ["city-flips"],
+    "tags": ["cities", "politics", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "city-flips-report",
+        "headline": "{{cityName}} changes allegiance",
+        "body": [
+          "{{cityName}} has left {{formerOwner}} and joined {{newOwner}}."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-flips-analysis",
+        "voice": "press",
+        "stance": "neutral",
+        "genre": "analysis",
+        "headline": "{{cityName}} chooses a new flag",
+        "body": [
+          "A city changing hands by its own people is a different matter from one taken by siege. {{cityName}} has gone from {{formerOwner}} to {{newOwner}} without a reported battle."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-flips-letter",
+        "voice": "gazette",
+        "stance": "conciliatory",
+        "genre": "letter",
+        "headline": "Madam, we are {{newOwner}} now",
+        "byline": "A resident of {{cityName}}",
+        "body": [
+          "One morning the flag over {{cityName}} was {{formerOwner}}'s; the next it was {{newOwner}}'s. The city did not wait for an army to decide."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-flips-anecdote",
+        "voice": "tabloid",
+        "stance": "local",
+        "genre": "anecdote",
+        "headline": "The flag changed overnight in {{cityName}}",
+        "body": [
+          "There was no siege and no battle in the streets. {{cityName}} simply stopped answering to {{formerOwner}} and began answering to {{newOwner}}."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "city-growth-milestone-account",
+    "triggers": ["city-growth-milestone"],
+    "tags": ["cities", "domestic"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "city-growth-milestone-report",
+        "headline": "{{cityName}} reaches {{population}} people",
+        "body": [
+          "{{cityName}} has reached a population of {{population}} and now counts as a {{milestone}}."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-growth-milestone-analysis",
+        "voice": "press",
+        "stance": "ambitious",
+        "genre": "analysis",
+        "headline": "{{cityName}} crosses {{population}}",
+        "body": [
+          "Growth at this scale changes what a city needs: more food, more work, more room. {{cityName}} has reached {{population}} people and now counts as a {{milestone}}."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-growth-milestone-crier",
+        "voice": "crier",
+        "stance": "national",
+        "genre": "notice",
+        "headline": "{{cityName}} has grown to {{population}}!",
+        "body": [
+          "Hear it! {{cityName}} now holds {{population}} people and is counted a {{milestone}} among our cities."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-growth-milestone-gazette",
+        "voice": "gazette",
+        "stance": "traditional",
+        "genre": "report",
+        "headline": "A milestone for {{cityName}}",
+        "body": [
+          "The city has grown to {{population}} people, enough to be counted a {{milestone}}. Its streets and its obligations have grown with it."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "city-liberated-account",
+    "triggers": ["city-liberated"],
+    "tags": ["cities", "politics", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "city-liberated-report",
+        "headline": "{{liberator}} liberates {{liberated}}",
+        "body": [
+          "{{liberated}} has been restored to independence by {{liberator}}."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-liberated-returned",
+        "voice": "press",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "returned === true",
+        "headline": "Our independence is restored",
+        "body": [
+          "{{liberator}} has brought our nation back from occupation. We are free again."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-liberated-other",
+        "voice": "press",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "returned === false",
+        "headline": "{{liberated}} is free again",
+        "body": [
+          "Our forces have restored {{liberated}} to independence."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-liberated-gazette",
+        "voice": "gazette",
+        "stance": "conciliatory",
+        "genre": "report",
+        "when": "returned === false",
+        "headline": "A nation restored: {{liberated}} is free",
+        "body": [
+          "By the hand of {{liberator}}, {{liberated}} has returned to the company of independent nations."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-liberated-editorial",
+        "voice": "pamphlet",
+        "stance": "national",
+        "genre": "editorial",
+        "when": "returned === false",
+        "headline": "Freedom for {{liberated}}",
+        "body": [
+          "A people held under another's flag now stands free. {{liberator}} has given them back their own government."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "city-pillaged-unrest-account",
+    "triggers": ["city-pillaged-unrest"],
+    "tags": ["cities", "domestic", "military"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "city-pillaged-unrest-report",
+        "headline": "Pillaged land weighs on {{city}}",
+        "body": [
+          "Raided fields and broken roads are the heaviest burden in {{city}}. The city's own tally puts {{pillaged}} of its discontent down to pillage."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-pillaged-unrest-analysis",
+        "voice": "press",
+        "stance": "government-critical",
+        "genre": "analysis",
+        "headline": "The fields around {{city}} lie in ruin",
+        "body": [
+          "Pillage is the loudest grievance in {{city}}, measured at {{pillaged}}. Broken land is slow to mend."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-pillaged-unrest-anecdote",
+        "voice": "tabloid",
+        "stance": "populist",
+        "genre": "anecdote",
+        "headline": "The road to {{city}} is empty now",
+        "body": [
+          "Farmers once walked it at dawn. Pillage is now the city's heaviest complaint, and the fields show why."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-pillaged-unrest-notice",
+        "voice": "gazette",
+        "stance": "conciliatory",
+        "genre": "notice",
+        "headline": "{{city}} counts the cost of pillage",
+        "body": [
+          "The city reports {{pillaged}} of its discontent from pillaged land, the largest single cause. The damage lies outside the walls."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "city-under-siege-account",
+    "triggers": ["city-under-siege"],
+    "tags": ["cities", "military"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "city-under-siege-report",
+        "headline": "{{cityName}} is under siege",
+        "body": [
+          "Enemy forces have surrounded {{cityName}}. The city is besieged, and its defenses have taken serious damage."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-under-siege-crier",
+        "voice": "crier",
+        "stance": "national",
+        "genre": "notice",
+        "headline": "{{cityName}} holds against the siege",
+        "body": [
+          "The enemy is at the gates of {{cityName}}. The city is besieged, but it has not fallen. Its defenders hold at {{hitPoints}} of {{maxHitPoints}} hit points."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-under-siege-analysis",
+        "voice": "press",
+        "stance": "government-critical",
+        "genre": "analysis",
+        "headline": "The siege of {{cityName}} tests the frontier",
+        "body": [
+          "A siege is a test of more than walls. While {{cityName}} is surrounded, the city spends men, stores and time it cannot recover."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-under-siege-anecdote",
+        "voice": "tabloid",
+        "stance": "local",
+        "genre": "anecdote",
+        "headline": "Life inside besieged {{cityName}}",
+        "body": [
+          "The markets are thin and the streets are quiet. In {{cityName}}, the siege is no longer news from the frontier. It is the noise at the gate."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-under-siege-notice",
+        "voice": "gazette",
+        "stance": "pro-government",
+        "genre": "notice",
+        "headline": "The defense of {{cityName}} continues",
+        "body": [
+          "The city of {{cityName}} remains under siege. The defenders are said to hold the walls at {{hitPoints}} of {{maxHitPoints}} hit points."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "distant-colony-founded-account",
+    "triggers": ["distant-colony-founded"],
+    "tags": ["cities", "domestic"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "distant-colony-founded-report",
+        "headline": "A new colony {{distance}} tiles from the capital",
+        "body": [
+          "{{cityName}} has been founded far from the capital, {{distance}} tiles out. It will have to stand on its own for a while."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "distant-colony-founded-unnamed",
+        "voice": "general",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "cityName === null",
+        "headline": "A colony far from the capital",
+        "body": [
+          "A new settlement has been founded {{distance}} tiles from the capital. It will have to stand on its own for a while."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "distant-colony-founded-analysis",
+        "voice": "press",
+        "stance": "ambitious",
+        "genre": "analysis",
+        "headline": "{{cityName}} is a long way from home",
+        "body": [
+          "At {{distance}} tiles from the capital, {{cityName}} is less a suburb than an outpost. Distance makes it costly to defend and slow to supply."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "distant-colony-founded-report-pamphlet",
+        "voice": "pamphlet",
+        "stance": "local",
+        "genre": "report",
+        "headline": "A new town, {{distance}} tiles out",
+        "body": [
+          "{{cityName}} has been founded beyond the old frontier. Its people are on their own ground now, far from the capital's walls."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "distant-colony-founded-notice",
+        "voice": "gazette",
+        "stance": "neutral",
+        "genre": "notice",
+        "headline": "A colony at {{cityName}}",
+        "body": [
+          "We are informed that {{cityName}} has been founded {{distance}} tiles from the capital. The new settlement begins with little but its site."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "foreign-building-completed-account",
+    "triggers": ["foreign-building-completed"],
+    "tags": ["cities", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "foreign-building-completed-report",
+        "headline": "{{civilization}} completes the {{building}} in {{cityName}}",
+        "body": [
+          "The {{building}} in {{cityName}}, a city of {{civilization}} near our borders, is finished."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-building-completed-unnamed",
+        "voice": "general",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "cityName === null",
+        "headline": "New work near our border",
+        "body": [
+          "{{civilization}} has finished the {{building}} in a nearby city."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-building-completed-analysis",
+        "voice": "press",
+        "stance": "hawkish",
+        "genre": "analysis",
+        "headline": "New works at {{cityName}}",
+        "body": [
+          "{{civilization}} has finished the {{building}} at {{cityName}}. Nearby works change what a neighbor can do, and this one is close enough to watch."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-building-completed-notice",
+        "voice": "gazette",
+        "stance": "neutral",
+        "genre": "notice",
+        "headline": "From beyond our border: {{cityName}} completes the {{building}}",
+        "body": [
+          "We are informed that {{cityName}}, a city of {{civilization}}, has completed the {{building}}."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-building-completed-anecdote",
+        "voice": "tabloid",
+        "stance": "neutral",
+        "genre": "anecdote",
+        "headline": "A neighbor's new work",
+        "body": [
+          "The {{building}} at {{cityName}} is finished. Word of it reached us after the work was done."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "foreign-building-purchased-account",
+    "triggers": ["foreign-building-purchased"],
+    "tags": ["cities", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "foreign-building-purchased-report",
+        "headline": "{{civilization}} buys the {{building}} in {{cityName}}",
+        "body": [
+          "{{cityName}} has a new {{building}}, bought with {{currency}} by {{civilization}}."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-building-purchased-unnamed",
+        "voice": "general",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "cityName === null",
+        "headline": "A purchase near our border",
+        "body": [
+          "{{civilization}} has bought the {{building}} in a nearby city with {{currency}}."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-building-purchased-press",
+        "voice": "press",
+        "stance": "hawkish",
+        "genre": "report",
+        "headline": "{{civilization}} pays for the {{building}} near our border",
+        "body": [
+          "The {{building}} at {{cityName}} was purchased, not built. {{civilization}} was in a hurry."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-building-purchased-anecdote",
+        "voice": "tabloid",
+        "stance": "neutral",
+        "genre": "anecdote",
+        "headline": "A neighbor's deep purse",
+        "body": [
+          "The {{building}} in {{cityName}} went up without the usual years of work. {{civilization}} paid in {{currency}} and got it done."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-building-purchased-notice",
+        "voice": "gazette",
+        "stance": "neutral",
+        "genre": "notice",
+        "headline": "Notice from {{cityName}}: the {{building}} is bought",
+        "body": [
+          "We are informed that {{civilization}} has purchased the {{building}} at {{cityName}} with {{currency}}."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "forward-settle-account",
+    "triggers": ["forward-settle"],
+    "tags": ["cities", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "forward-settle-named",
+        "when": "ours !== null",
+        "headline": "A new town on the doorstep of {{ours}}",
+        "body": [
+          "{{player}} has founded {{city}} {{distance}} tiles from {{ours}}. The two settlements now share a neighborhood."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "forward-settle-location",
+        "voice": "general",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "ours === null",
+        "headline": "A rival town rises close to home",
+        "body": [
+          "{{player}} has founded a town {{distance}} tiles from one of our cities. There is little ground between the two sites to grow into."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "forward-settle-analysis",
+        "voice": "press",
+        "stance": "hawkish",
+        "genre": "analysis",
+        "when": "ours !== null",
+        "headline": "{{player}} plants a town near {{ours}}",
+        "body": [
+          "At {{distance}} tiles, {{city}} is close enough to crowd {{ours}}. A neighbor's town this near is a claim on the same ground."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "forward-settle-editorial",
+        "voice": "pamphlet",
+        "stance": "local",
+        "genre": "editorial",
+        "when": "ours !== null",
+        "headline": "Whose land is this?",
+        "body": [
+          "{{player}} has founded {{city}} {{distance}} tiles from {{ours}}. The border is now a matter of daily walking, not maps."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "forward-settle-gazette",
+        "voice": "gazette",
+        "stance": "conciliatory",
+        "genre": "report",
+        "when": "ours !== null",
+        "headline": "New neighbors at {{city}}",
+        "body": [
+          "{{player}} has founded {{city}} {{distance}} tiles from {{ours}}. A town this close brings new neighbors and new customers as well as a new border."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "neighbor-puppet-annexed-account",
+    "triggers": ["neighbor-puppet-annexed"],
+    "tags": ["cities", "international"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "neighbor-puppet-annexed-report",
+        "headline": "{{city}} comes under direct rule",
+        "body": [
+          "The same flag flies over {{city}}, but the days of puppet rule are over. The city now falls under the direct government of {{owner}}."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "neighbor-puppet-annexed-analysis",
+        "voice": "press",
+        "stance": "national",
+        "genre": "analysis",
+        "headline": "{{owner}} tightens its hold on {{city}}",
+        "body": [
+          "{{city}} has moved from puppet to direct rule. The change puts {{owner}}'s officials directly over a city {{distance}} tiles from us."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "neighbor-puppet-annexed-press",
+        "voice": "press",
+        "stance": "hawkish",
+        "genre": "report",
+        "headline": "A puppet no more: {{city}} answers to {{owner}}",
+        "body": [
+          "The city's status has changed within {{owner}}'s realm. A city ruled directly is a city that can be used directly."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "neighbor-puppet-annexed-notice",
+        "voice": "gazette",
+        "stance": "neutral",
+        "genre": "notice",
+        "headline": "A change of rule in {{city}}",
+        "body": [
+          "We are informed that {{city}} is a puppet no longer, and now answers to {{owner}} directly."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "occupied-city-resists-account",
+    "triggers": ["occupied-city-resists"],
+    "tags": ["cities", "domestic"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "occupied-city-resists-report",
+        "headline": "Resistance continues in {{cityName}}",
+        "body": [
+          "{{cityName}} remains under occupation. The city is expected to resist for {{turns}} more turns."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "occupied-city-resists-unnamed",
+        "voice": "general",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "cityName === null",
+        "headline": "Resistance continues in an occupied city",
+        "body": [
+          "One of our occupied cities is still resisting. The city is expected to resist for {{turns}} more turns."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "occupied-city-resists-population",
+        "voice": "press",
+        "stance": "government-critical",
+        "genre": "analysis",
+        "when": "population !== null",
+        "headline": "{{population}} people in an occupied {{cityName}}",
+        "body": [
+          "{{cityName}} is ours on paper, but {{population}} people remain under occupation and {{turns}} turns of resistance lie ahead."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "occupied-city-resists-anecdote",
+        "voice": "tabloid",
+        "stance": "populist",
+        "genre": "anecdote",
+        "when": "formerOwner !== null",
+        "headline": "The old loyalty runs deep in {{cityName}}",
+        "body": [
+          "{{formerOwner}}'s city is not reconciled to its new ruler. Resistance is expected to last {{turns}} more turns."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "occupied-city-resists-unrest",
+        "voice": "press",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "unrest !== null",
+        "headline": "Unrest in {{cityName}}",
+        "body": [
+          "{{cityName}} is occupied and unhappy. The city's happiness balance stands at {{unrest}}, and resistance is expected to last {{turns}} more turns."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "our-city-founded-account",
+    "triggers": ["our-city-founded"],
+    "tags": ["cities", "domestic"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "our-city-founded-report",
+        "when": "cityName !== null",
+        "headline": "A new city: {{cityName}}",
+        "body": [
+          "Our settlers have founded {{cityName}}. Another settlement now stands under our flag."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "our-city-founded-unnamed",
+        "voice": "general",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "cityName === null",
+        "headline": "A new city is founded",
+        "body": [
+          "Our settlers have founded a new city. The place is ours, and the work of building it begins."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "our-city-founded-crier",
+        "voice": "crier",
+        "stance": "national",
+        "genre": "notice",
+        "when": "cityName !== null",
+        "headline": "Hear it! {{cityName}} is founded",
+        "body": [
+          "Our people have set down roots at {{cityName}}. Let the news carry."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "our-city-founded-analysis",
+        "voice": "press",
+        "stance": "ambitious",
+        "genre": "analysis",
+        "when": "cityName !== null",
+        "headline": "{{cityName}} begins",
+        "body": [
+          "A founding is a promise that takes years to keep. {{cityName}} starts with little and will need people, food and time."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "our-city-founded-notice",
+        "voice": "gazette",
+        "stance": "pro-government",
+        "genre": "notice",
+        "when": "cityName !== null",
+        "headline": "A new settlement at {{cityName}}",
+        "body": [
+          "We are informed that our settlers have founded {{cityName}}. The new town begins under our protection."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "settler-departure-account",
+    "triggers": ["settler-departure"],
+    "tags": ["cities", "domestic"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "settler-departure-report",
+        "when": "!city.knows('happinessDelta') || !(city.happinessDelta < 0 || city.happinessDelta > 0)",
+        "headline": "Settlers ready as {{town}} grows smaller",
+        "body": [
+          "A party of settlers is ready in {{town}}. There are fewer people to feed in the city now, and more food still comes in than goes on the table."
+        ],
+        "links": [
+          { "placeholder": "town", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "settler-departure-strained",
+        "voice": "press",
+        "stance": "government-critical",
+        "genre": "report",
+        "when": "city.knows('happinessDelta') && city.happinessDelta < 0",
+        "headline": "Settlers ready, spirits low in {{town}}",
+        "body": [
+          "{{town}} has raised a party of settlers. There are fewer people now and food to spare, but the city's mood is poor."
+        ],
+        "links": [
+          { "placeholder": "town", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "settler-departure-hopeful",
+        "voice": "press",
+        "stance": "pro-government",
+        "genre": "report",
+        "when": "city.knows('happinessDelta') && city.happinessDelta > 0",
+        "headline": "Good cheer in {{town}} as settlers prepare to go",
+        "body": [
+          "{{town}} has raised a party of settlers. There are fewer places to set for supper these days, with food to spare."
+        ],
+        "links": [
+          { "placeholder": "town", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "settler-departure-anecdote",
+        "voice": "tabloid",
+        "stance": "populist",
+        "genre": "anecdote",
+        "headline": "One fewer place at supper in {{town}}",
+        "body": [
+          "A party of settlers has left {{town}}, and the city is {{lost}} people smaller. There is more food to go around, but fewer hands to bring it in."
+        ],
+        "links": [
+          { "placeholder": "town", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "starvation-without-siege-account",
+    "triggers": ["starvation-without-siege"],
+    "tags": ["cities", "domestic"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "starvation-without-siege-report",
+        "headline": "{{city}} is eating into its stores",
+        "body": [
+          "{{city}} uses more food than it produces. With {{foodStored}} in store and a shortfall of {{shortfall}} each turn, the city cannot hold out indefinitely."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "starvation-without-siege-analysis",
+        "voice": "press",
+        "stance": "government-critical",
+        "genre": "analysis",
+        "headline": "Why {{city}} is starving in peacetime",
+        "body": [
+          "There is no siege to blame. {{city}} is losing {{shortfall}} food a turn and drawing down a store of {{foodStored}}."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "starvation-without-siege-anecdote",
+        "voice": "tabloid",
+        "stance": "populist",
+        "genre": "anecdote",
+        "headline": "The granary at {{city}} is emptying",
+        "body": [
+          "At {{shortfall}} food a turn, the store of {{foodStored}} will not last. The city is not under siege, which makes the empty shelves harder to explain."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "starvation-without-siege-ledger",
+        "voice": "gazette",
+        "stance": "government-critical",
+        "genre": "ledger",
+        "headline": "The food account of {{city}}",
+        "body": [
+          "Stored: {{foodStored}}.",
+          "Shortfall: {{shortfall}} a turn.",
+          "The city is not besieged, and the balance does not close."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "we-raze-a-city-account",
+    "triggers": ["we-raze-a-city"],
+    "tags": ["cities", "domestic"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "we-raze-a-city-report",
+        "headline": "{{cityName}} is being razed",
+        "body": [
+          "Our forces are burning {{cityName}}. The city has {{turns}} turns left before it is gone."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "we-raze-a-city-unnamed",
+        "voice": "general",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "cityName === null",
+        "headline": "A city is being razed",
+        "body": [
+          "Our forces are burning a city. It has {{turns}} turns left before it is gone."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "we-raze-a-city-analysis",
+        "voice": "press",
+        "stance": "national",
+        "genre": "analysis",
+        "headline": "The decision to raze {{cityName}}",
+        "body": [
+          "Razing {{cityName}} removes a city from the map. In {{turns}} turns there will be nothing left to govern."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "we-raze-a-city-obituary",
+        "voice": "press",
+        "stance": "devout",
+        "genre": "obituary",
+        "headline": "The end of {{cityName}}",
+        "body": [
+          "{{cityName}} has {{turns}} turns left. When the last wall falls, only the site will remain."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "we-raze-a-city-population",
+        "voice": "tabloid",
+        "stance": "populist",
+        "genre": "report",
+        "when": "population !== null",
+        "headline": "{{population}} people and {{turns}} turns left in {{cityName}}",
+        "body": [
+          "The city is being razed with {{population}} people still in it. In {{turns}} turns, the site will be empty."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  }
+]

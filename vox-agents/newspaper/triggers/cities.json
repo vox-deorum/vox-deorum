@@ -224,6 +224,27 @@
     "tags": ["cities", "domestic"]
   },
   {
+    "id": "city-under-siege",
+    "subject": "city",
+    "when": [
+      "city.own",
+      "city.knows('name')",
+      "city.is.besieged",
+      "city.knows('hitPoints') && Number.isFinite(city.hitPoints)",
+      "city.knows('maxHitPoints') && Number.isFinite(city.maxHitPoints) && city.maxHitPoints > 0",
+      "(city.maxHitPoints - city.hitPoints) / city.maxHitPoints >= 0.25"
+    ],
+    "values": {
+      "cityName": "city.name",
+      "damage": "(city.maxHitPoints - city.hitPoints) / city.maxHitPoints",
+      "hitPoints": "city.hitPoints",
+      "maxHitPoints": "city.maxHitPoints"
+    },
+    "importance": "55 + 45 * damage",
+    "urgent": "damage >= 0.5",
+    "tags": ["cities", "military", "domestic"]
+  },
+  {
     "id": "distant-colony-founded",
     "subject": "event",
     "event": "PlayerCityFounded",

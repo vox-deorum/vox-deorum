@@ -1,21 +1,33 @@
-# Plan 4a: Variant tags and editorial preferences
+# Plan 4a: narrative styles
 
-**Status: technical groundwork implemented.** The owner directs the creative tag choices, writing guidance, and tuning. [Plan 4c](04c-variant-drafting.md) uses the catalogue for authored variants. [Plan 7](07-llm-editors.md) validates the same three tag IDs in model proposals.
+**Status: technical plan.** First of three streams that give the newspaper its substance. This stream adds voice, stance and genre tags. [Plan 4b](04b-story-mining.md) finds story types independently, and [Plan 4c](04c-variant-drafting.md) drafts variants for the tags.
 
-## Variant tags and rules
+## Goal
 
-Authored variants carry one voice, one stance, and one genre. Set all three together. Untagged legacy variants resolve to `general`, `neutral`, and `report` when selected. Under `newspaper/styles/`, the files `voice.json`, `stance.json`, and `genre.json` register tag IDs and store optional writing guidance. The loader validates variant and rule tags against the effective catalogue.
+Let stories carry a voice, a stance and a genre without hand-written rules on every variant, and keep selection deterministic and evidence-backed. Creative vocabulary, writing guidance and tuning values belong to the owner.
 
-A rule that matches a single kind of style tag goes in `voice-rules.json`, `stance-rules.json`, or `genre-rules.json`. Rules that match several kinds go in `mixed-rules.json`. A preference applies a positive weight multiplier when the style tags match and its condition holds. For example, a mixed rule can favor a pro-government letter when national or local happiness is high. Missing evidence leaves the preference inactive.
+## Catalogue
 
-## Heuristic selection
+`newspaper/styles.json` holds registered tag IDs for the three axes, optional owner guidance for each tag, and reusable positive rules. A rule names the tags it matches and the facts it reads. It may match one tag or several, so one condition can lift a family of voices without repeating the rule.
 
-After selecting stories and evaluating page and design eligibility, the editor applies style preferences to the eligible variants for each story. Existing conditions still protect claims that require specific evidence. Each article uses one seeded weighted draw, so several voices can appear in an issue.
+A variant either carries all three fields (`voice`, `stance`, `genre`) or none. Untagged variants are legacy and resolve to general, neutral and report only at use.
 
-Scale each variant's weight by the repeat factor for each kind under `defaults.styleRepeat`: each earlier article in the issue with the same voice, stance or genre tag multiplies the weight by that kind's factor, with stock values voice 1.25, stance 1 and genre 0.8. Count in draw order, including articles later omitted from the pages, and reset each issue. Every eligible variant stays in the draw.
+## Selection
 
-The audit records tags beside variant IDs for displayed articles. Applied preference reads join the decision's evidence. Older saved catalogues keep their original draws and older decisions remain readable.
+Selection keeps its order. After story selection and presentation eligibility, the editor evaluates the existing evidence for the story and adjusts the seeded variant draw before it runs. A matching rule multiplies the weights of eligible variants that carry its tags. A tag with no matching evidence changes nothing; missing facts are not penalties. Factual gates stay in place, so a variant the evidence cannot support is still excluded.
 
-## Verification
+Voices may differ between stories in one issue. Mixed voices are allowed, for example a foreign dispatch beside a local notice.
 
-Controlled fixtures check that happiness shifts the odds, missing facts have no effect, factual gates still hold, repeated genres remain possible, and story ranking and design selection stay separate. Replay coverage checks legacy seeds and the displayed article audit. See the [editorial guide](../../../developers/vox-agents/newspaper/editorial.md#variant-styles) for catalogue authoring.
+Repeated genres are damped within an issue. The nth earlier use of a genre multiplies later draws by 1/(1+0.25*n) in draw order: the first use is unaffected, the second is weighted 0.8 and the third 0.67.
+
+## Audit and compatibility
+
+The decision audit records each article's variant ID and displayed voice, stance and genre. A saved catalogue without `styles.json` replays with its original draws, because untagged variants use the legacy resolution and no rule can act without a style file.
+
+## Tests
+
+Mock tests under `tests/mock/newspaper/` cover rule odds in a controlled seeded draw, absent evidence leaving weights unchanged, repeat damping in draw order, old catalogue replay, and the displayed tags in the audit. A rule matching several tags is checked against each tag.
+
+## Out of scope
+
+Bulk drafting belongs to [Plan 4c](04c-variant-drafting.md), story types to [Plan 4b](04b-story-mining.md), and visual designs to the existing design catalogue.
