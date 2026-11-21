@@ -13,15 +13,13 @@ import { uniqueSources } from '../shared/sources.js';
 type TemplateValues = Record<string, RuleScalar>;
 type Period = RuleDevelopment['period'];
 type BatchFacts = Pick<ExpressionBatch, 'constants' | 'facts'>;
-type PlaceholderFormat = 'percent' | 'million' | 'points' | 'turns' | 'tiles';
-/** Built-in units keyed by placeholder name patterns; `*` matches any text. */
-const defaultFormatPatterns: Readonly<Record<string, PlaceholderFormat>> = {
+/** Built-in formats keyed by placeholder name patterns; `*` matches any text. */
+const defaultFormatPatterns: Readonly<Record<string, string>> = {
   '*happiness*': 'percent',
   '*population*': 'million',
-  '*famine*': 'points',
-  '*turns*': 'turns',
-  '*distance*': 'tiles',
-  nearest: 'tiles',
+  '*points*': 'point|points',
+  '*turns*': 'turn|turns',
+  '*distance*': 'tile|tiles',
 };
 
 /** Compile a case-insensitive placeholder name pattern with `*` wildcards into an anchored matcher. */
@@ -32,12 +30,12 @@ function formatPattern(pattern: string): RegExp {
   return new RegExp(`^${source}$`, 'i');
 }
 
-/** Precompiled built-in unit matchers in declaration order. */
+/** Precompiled built-in format matchers in declaration order. */
 const defaultPlaceholderFormats = Object.entries(defaultFormatPatterns)
   .map(([pattern, format]) => ({ pattern: formatPattern(pattern), format }));
 
-/** Find the built-in unit for a placeholder name. */
-function defaultFormat(name: string): PlaceholderFormat | undefined {
+/** Find the built-in format for a placeholder name. */
+function defaultFormat(name: string): string | undefined {
   return defaultPlaceholderFormats.find((entry) => entry.pattern.test(name))?.format;
 }
 export const placeholderPattern = /\{\{([^{}]+)\}\}/g;
@@ -86,19 +84,17 @@ export function placeholderName(key: string): string {
   return separator === -1 ? key : key.slice(0, separator);
 }
 
-/** Format a resolved value with its built-in or template-declared unit. */
-function formatted(value: RuleScalar, format: PlaceholderFormat | undefined): string {
-  if (format === 'percent') return `${String(value)}%`;
-  if (format === 'million') return `${String(value)} million`;
-  if (format === 'points') return `${String(value)} ${Number(value) === 1 ? 'point' : 'points'}`;
-  if (format === 'turns') return `${String(value)} ${Number(value) === 1 ? 'turn' : 'turns'}`;
-  if (format === 'tiles') return `${String(value)} ${Number(value) === 1 ? 'tile' : 'tiles'}`;
-  return String(value);
+/** Append a raw unit, choosing its singular or plural form when the format supplies both. */
+function formatted(value: RuleScalar, format: string | undefined): string {
+  if (!format) return String(value);
+  const [singular, plural] = format.split('|').map((part) => part.trim());
+  const unit = plural !== undefined && Math.abs(Number(value)) !== 1 ? plural : singular;
+  return `${String(value)} ${unit}`;
 }
 
 /** Substitute authored placeholders, applying built-in units and any template overrides. */
 export function substitute(text: string, values: TemplateValues): string {
-  const declared = (values as TemplateValues & { [placeholderFormats]?: Record<string, PlaceholderFormat> })
+  const declared = (values as TemplateValues & { [placeholderFormats]?: Record<string, string> })
     [placeholderFormats];
   return text.replace(placeholderPattern, (whole, key: string) => {
     const [name, singular, plural, ...rest] = key.split('|');
@@ -173,7 +169,7 @@ function supportingMatch(ids: readonly string[], rules: ReadonlyMap<string, Rule
 /** Build candidate bindings and printable values without flattening members of a group. */
 function templateFacts(
   parts: readonly RuleDevelopment[], period: Period, facts?: BatchFacts['facts'], terms?: EditorialTerms,
-  civicTerms?: EditorialCivicTerms, formats: Record<string, PlaceholderFormat> = {}
+  civicTerms?: EditorialCivicTerms, formats: Record<string, string> = {}
 ) {
   const subject = storySubject(parts[0].subject, facts);
   const identity = storyIdentity(subject, facts, civicTerms);

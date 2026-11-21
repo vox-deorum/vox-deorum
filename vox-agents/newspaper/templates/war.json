@@ -199,7 +199,7 @@
         "id": "enemy-city-takes-heavy-damage-report",
         "headline": "The walls of {{cityName}} are failing",
         "body": [
-          "The walls of {{cityName}} have been broken down to {{hitPoints}} of their {{maxHitPoints}} strength. From the ridge our scouts can see the gap where the masonry fell, and the rubble below it is deep enough to bury a cart. Another push may finish what the last one began."
+          "The walls of {{cityName}} have been broken down to {{wallStrength}} of their {{maxWallStrength}} strength. From the ridge our scouts can see the gap where the masonry fell, and the rubble below it is deep enough to bury a cart. Another push may finish what the last one began."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -214,7 +214,7 @@
         "headline": "An accounting of {{cityName}}",
         "body": [
           "City: {{cityName}}.",
-          "Wall and gate: {{hitPoints}} of {{maxHitPoints}} still standing.",
+          "Wall and gate: {{wallStrength}} of {{maxWallStrength}} still standing.",
           "The account: more lost than kept."
         ],
         "links": [
@@ -229,7 +229,7 @@
         "genre": "report",
         "headline": "Abroad tonight: heavy damage at {{cityName}}",
         "body": [
-          "Word from abroad tonight: the walls of {{cityName}} are badly damaged. They stand at {{hitPoints}} of their {{maxHitPoints}} strength. The city is still held, but the breach is wide enough to see from the road."
+          "Word from abroad tonight: the walls of {{cityName}} are badly damaged. They stand at {{wallStrength}} of their {{maxWallStrength}} strength. The city is still held, but the breach is wide enough to see from the road."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -244,7 +244,7 @@
         "when": "civilization !== null",
         "headline": "The walls of a rival come down",
         "body": [
-          "{{cityName}} belongs to {{civilization}}, and its walls now stand at {{hitPoints}} of {{maxHitPoints}}. A wall that low no longer keeps an army out; it only slows one down. Our officers have been waiting for a gap like this, and the next assault will test whether the defenders have anything left behind it."
+          "{{cityName}} belongs to {{civilization}}, and its walls now stand at {{wallStrength}} of {{maxWallStrength}}. A wall that low no longer keeps an army out; it only slows one down. Our officers have been waiting for a gap like this, and the next assault will test whether the defenders have anything left behind it."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -618,7 +618,7 @@
         "id": "foreign-peace-nearby-report",
         "headline": "Peace near our borders",
         "body": [
-          "{{initiator}} and {{target}} have stopped fighting. The nearer of the two sits {{nearest}} from our nearest city, close enough that our carters use the same roads. The toll keepers have stopped asking travelers for their business."
+          "{{initiator}} and {{target}} have stopped fighting. The nearer of the two sits {{nearestDistance}} from our nearest city, close enough that our carters use the same roads. The toll keepers have stopped asking travelers for their business."
         ],
         "weight": { "base": 1 }
       },
@@ -668,7 +668,7 @@
         "id": "foreign-war-nearby-report",
         "headline": "War breaks out near our borders",
         "body": [
-          "{{initiator}} has opened a war against {{target}}. The nearer of the two sits {{nearest}} from our nearest city, and the border market has already lost half its stalls. Our farmers will sell closer to home this season."
+          "{{initiator}} has opened a war against {{target}}. The nearer of the two sits {{nearestDistance}} from our nearest city, and the border market has already lost half its stalls. Our farmers will sell closer to home this season."
         ],
         "weight": { "base": 1 }
       },
@@ -679,7 +679,7 @@
         "genre": "analysis",
         "headline": "A war next door",
         "body": [
-          "The fighting between {{initiator}} and {{target}} has opened {{nearest}} from our nearest city. Distance is the only thing that keeps a war foreign, and that distance is short. Our envoys should be in both camps before the first foraging party crosses our line."
+          "The fighting between {{initiator}} and {{target}} has opened {{nearestDistance}} from our nearest city. Distance is the only thing that keeps a war foreign, and that distance is short. Our envoys should be in both camps before the first foraging party crosses our line."
         ],
         "weight": { "base": 1 }
       },
@@ -701,7 +701,7 @@
         "genre": "editorial",
         "headline": "Their war, our doorstep",
         "body": [
-          "Mark this, {{terms.civic.people}}: {{initiator}} and {{target}} are at war, {{nearest}} from fields our families plough. Great powers do not ask leave of the small farmer when they march, and the harvest does not move out of their way. The {{terms.civic.government}} should say now whether our roads and our sons are part of this quarrel."
+          "Mark this, {{terms.civic.people}}: {{initiator}} and {{target}} are at war, {{nearestDistance}} from fields our families plough. Great powers do not ask leave of the small farmer when they march, and the harvest does not move out of their way. The {{terms.civic.government}} should say now whether our roads and our sons are part of this quarrel."
         ],
         "weight": { "base": 1 }
       },
@@ -712,7 +712,7 @@
         "genre": "report",
         "headline": "A war nearby, set down",
         "body": [
-          "The border record notes that {{initiator}} made war upon {{target}} in this season, and that the nearer of the two lies {{nearest}} from our lands. The warden of the border stone has opened his gate an hour later each morning since the news came. He gives no reason, and the record gives none for him."
+          "The border record notes that {{initiator}} made war upon {{target}} in this season, and that the nearer of the two lies {{nearestDistance}} from our lands. The warden of the border stone has opened his gate an hour later each morning since the news came. He gives no reason, and the record gives none for him."
         ],
         "weight": { "base": 1 }
       }
@@ -960,7 +960,7 @@
         "id": "our-city-takes-heavy-damage-report",
         "headline": "{{city}} takes heavy damage",
         "body": [
-          "{{city}} has taken heavy damage in the recent fighting, and its walls stand at {{hitPoints}} of {{maxHitPoints}}. The masons are back on the ramparts before the dust has settled. Repairs will cost the city a season of wages, and the enemy may return before the work is done."
+          "{{city}} has taken heavy damage in the recent fighting, and its walls stand at {{wallStrength}} of {{maxWallStrength}}. The masons are back on the ramparts before the dust has settled. Repairs will cost the city a season of wages, and the enemy may return before the work is done."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -974,7 +974,7 @@
         "genre": "analysis",
         "headline": "The cost to {{city}}",
         "body": [
-          "{{city}} now holds its wall at {{hitPoints}} of {{maxHitPoints}}, and the question the city should be asking is where the rest went. A wall falls when the men behind it are too few or the order to reinforce comes too late. Someone knows which it was, and the citizens who pay for the wall deserve to know too."
+          "{{city}} now holds its wall at {{wallStrength}} of {{maxWallStrength}}, and the question the city should be asking is where the rest went. A wall falls when the men behind it are too few or the order to reinforce comes too late. Someone knows which it was, and the citizens who pay for the wall deserve to know too."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -988,7 +988,7 @@
         "genre": "anecdote",
         "headline": "The crack in {{city}}'s wall",
         "body": [
-          "On Thursday the masons stopped work at the north wall and carried their tools away without a word. The wall stands at {{hitPoints}} of {{maxHitPoints}}, and by supper the number was being repeated in {{city}} like a weather report. Nobody needed to be told what it meant."
+          "On Thursday the masons stopped work at the north wall and carried their tools away without a word. The wall stands at {{wallStrength}} of {{maxWallStrength}}, and by supper the number was being repeated in {{city}} like a weather report. Nobody needed to be told what it meant."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1002,7 +1002,7 @@
         "genre": "notice",
         "headline": "Hear it, {{city}}! The walls are hurt",
         "body": [
-          "Word of the walls! The enemy has hit them hard, and they stand at {{hitPoints}} of {{maxHitPoints}}! Every hand to the mending, every eye to the gate! They stand! They stand at {{hitPoints}} of {{maxHitPoints}}!"
+          "Word of the walls! The enemy has hit them hard, and they stand at {{wallStrength}} of {{maxWallStrength}}! Every hand to the mending, every eye to the gate! They stand! They stand at {{wallStrength}} of {{maxWallStrength}}!"
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }

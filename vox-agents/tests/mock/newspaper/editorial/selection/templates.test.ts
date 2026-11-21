@@ -214,12 +214,38 @@ describe('newspaper placeholder printing', () => {
     expect(substitute('{{count|branch|branches}}', {})).toBe('{{count|branch|branches}}');
   });
 
-  it('should apply built-in units by wildcard name pattern', () => {
+  it('should infer units from placeholder names', () => {
     expect(substitute('{{turnsLeft}} at {{routeDistance}}', { turnsLeft: 1, routeDistance: 3 }))
       .toBe('1 turn at 3 tiles');
     expect(substitute('{{largestPopulation}} at {{happinessPercentage}}',
-      { largestPopulation: 12, happinessPercentage: 62 })).toBe('12 million at 62%');
-    expect(substitute('{{famine}}', { famine: 3 })).toBe('3 points');
+      { largestPopulation: 12, happinessPercentage: 62 })).toBe('12 million at 62 percent');
+    expect(substitute('{{dropPoints}}', { dropPoints: 5 })).toBe('5 points');
+    expect(substitute('{{unrestPoints}}', { unrestPoints: -1 })).toBe('-1 point');
+    expect(substitute('{{nearestDistance}}', { nearestDistance: 3 })).toBe('3 tiles');
+    expect(substitute('{{faminePopulation}}', { faminePopulation: 3 })).toBe('3 million');
+    expect(substitute('{{faminePopulation}} {{terms.civic.people}}',
+      { faminePopulation: 3, 'terms.civic.people': 'citizens' })).toBe('3 million citizens');
+    expect(substitute('{{wallStrength}} of {{maxWallStrength}}',
+      { wallStrength: 100, maxWallStrength: 300 })).toBe('100 of 300');
+  });
+
+  it('should let a template declare a raw unit', async () => {
+    const template = {
+      ...standard, triggers: ['report'], formats: { turns: 'cycle|cycles' },
+      variants: [{
+        ...standard.variants[0],
+        headline: 'After {{turns}}',
+        body: ['Turn {{period.to}}.'],
+      }],
+    };
+    const selected = await candidates(0, [{
+      id: 'report', subject: 'world', when: 'true', values: { turns: '2' },
+    }], template);
+    const [variant] = selected[0].variants;
+    const nodes = inlineTextSchema.parse(
+      renderAuthoredText(variant.headline, selected[0].values, variant, selected[0].names)
+    );
+    expect(nodes.map((node) => node.text).join('')).toBe('After 2 cycles');
   });
 
   it('should apply built-in units in authored prose', async () => {
@@ -227,19 +253,19 @@ describe('newspaper placeholder printing', () => {
       ...standard, triggers: ['report'],
       variants: [{
         ...standard.variants[0],
-        headline: '{{population}} people at {{happinessPercentage}}, famine at {{famine}}, war in {{turns}}, city {{distance}}',
+        headline: '{{population}} people at {{happinessPercentage}}, famine at {{faminePopulation}}, war in {{turns}}, city {{distance}}',
         body: ['Turn {{period.to}}.'],
       }],
     };
     const selected = await candidates(0, [{
       id: 'report', subject: 'world', when: 'true',
-      values: { population: '12', happinessPercentage: '62', famine: '1', turns: '3', distance: '2' },
+      values: { population: '12', happinessPercentage: '62', faminePopulation: '1', turns: '3', distance: '2' },
     }], template);
     const [variant] = selected[0].variants;
     const nodes = inlineTextSchema.parse(
       renderAuthoredText(variant.headline, selected[0].values, variant, selected[0].names)
     );
     expect(nodes.map((node) => node.text).join(''))
-      .toBe('12 million people at 62%, famine at 1 point, war in 3 turns, city 2 tiles');
+      .toBe('12 million people at 62 percent, famine at 1 million, war in 3 turns, city 2 tiles');
   });
 });

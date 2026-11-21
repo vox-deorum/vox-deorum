@@ -319,7 +319,7 @@ describe('stock politics desk', () => {
       expect(unhappyFired).toHaveLength(1);
       expect(unhappyFired[0]).toMatchObject({ subject: 'world', importance: 60 });
       expect(subjectValue(unhappyFired[0], 'happiness')).toBe(40);
-      expect(subjectValue(unhappyFired[0], 'drop')).toBe(15);
+      expect(subjectValue(unhappyFired[0], 'dropPoints')).toBe(15);
       expect(firedSubjects(rule(unhappy, 'revolt-threshold-crossed'))).toEqual([]);
 
       const revolt = await check(fixture({
@@ -390,7 +390,7 @@ describe('stock politics desk', () => {
       const pillageFired = firedSubjects(pillageRecord);
       expect(pillageFired).toHaveLength(1);
       expect(pillageFired[0]).toMatchObject({ subject: 'city/20', importance: 60 });
-      expect(subjectValue(pillageFired[0], 'pillaged')).toBe(5);
+      expect(subjectValue(pillageFired[0], 'pillagedPopulation')).toBe(5);
       expect(firedSubjects(rule(audit, 'city-famine-unrest'))).toEqual([]);
 
       const famine = cityRow(21, 10, 0, 'Tours', { UnhappinessSources: { Famine: 4, PillagedTiles: 1 } });
@@ -398,7 +398,7 @@ describe('stock politics desk', () => {
       const famineFired = firedSubjects(rule(second, 'city-famine-unrest'));
       expect(famineFired).toHaveLength(1);
       expect(famineFired[0]).toMatchObject({ subject: 'city/21', importance: 60 });
-      expect(subjectValue(famineFired[0], 'famine')).toBe(4);
+      expect(subjectValue(famineFired[0], 'faminePopulation')).toBe(4);
     });
   });
 

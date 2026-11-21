@@ -151,7 +151,7 @@
       "city.unhappiness.top === 'famine'"
     ],
     "values": {
-      "famine": "city.unhappiness.famine"
+      "faminePopulation": "city.unhappiness.famine"
     },
     "importance": 60,
     "tags": ["cities", "domestic"]
@@ -218,7 +218,7 @@
       "city.unhappiness.top === 'pillaged'"
     ],
     "values": {
-      "pillaged": "city.unhappiness.pillaged"
+      "pillagedPopulation": "city.unhappiness.pillaged"
     },
     "importance": 60,
     "tags": ["cities", "domestic"]
@@ -237,8 +237,8 @@
     "values": {
       "cityName": "city.name",
       "damage": "(city.maxHitPoints - city.hitPoints) / city.maxHitPoints",
-      "hitPoints": "city.hitPoints",
-      "maxHitPoints": "city.maxHitPoints"
+      "wallStrength": "city.hitPoints",
+      "maxWallStrength": "city.maxHitPoints"
     },
     "importance": "55 + 45 * damage",
     "urgent": "damage >= 0.5",
@@ -350,7 +350,7 @@
       "turns": "city.resistanceTurns",
       "population": "city.knows('population') && Number.isFinite(city.population) ? city.population : null",
       "formerOwner": "city.knows('formerOwner') && city.formerOwner.knows('name') ? city.formerOwner.name : null",
-      "unrest": "city.knows('happinessDelta') && Number.isFinite(city.happinessDelta) ? city.happinessDelta : null"
+      "unrestPoints": "city.knows('happinessDelta') && Number.isFinite(city.happinessDelta) ? city.happinessDelta : null"
     },
     "importance": "Math.min(70, 45 + 5 * turns)",
     "tags": ["cities", "domestic"]

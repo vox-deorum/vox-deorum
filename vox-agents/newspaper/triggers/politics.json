@@ -262,7 +262,7 @@
     ],
     "values": {
       "happiness": "self.happinessPercentage",
-      "drop": "self.before.happinessPercentage - self.happinessPercentage"
+      "dropPoints": "self.before.happinessPercentage - self.happinessPercentage"
     },
     "importance": 60,
     "tags": ["politics", "domestic"]

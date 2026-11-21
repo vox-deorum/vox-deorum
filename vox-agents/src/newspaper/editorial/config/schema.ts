@@ -66,7 +66,7 @@ const templateSchema = eligibleSchema.extend({
   id: z.string().min(1),
   triggers: z.array(z.string().min(1)).min(1),
   tags: z.array(z.string().min(1)),
-  formats: z.record(z.string().min(1), z.enum(['percent', 'million', 'points', 'turns', 'tiles'])).default({}),
+  formats: z.record(z.string().min(1), z.string().min(1)).default({}),
   names: z.array(z.string().min(1)).optional(),
   mode: z.enum(['authored', 'llmOnly']).default('authored'),
   short: z.boolean().default(false),

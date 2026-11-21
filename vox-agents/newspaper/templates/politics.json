@@ -830,7 +830,7 @@
         "id": "unhappiness-sets-in-report",
         "headline": "The nation's mood falls below half",
         "body": [
-          "The national mood has slipped to {{happiness}}, a fall of {{drop}} since the last count. A fish seller on the quay says customers who once bought a week's worth now buy a day's worth. She has stopped setting aside the best of the catch."
+          "The national mood has slipped to {{happiness}}, a fall of {{dropPoints}} since the last count. A fish seller on the quay says customers who once bought a week's worth now buy a day's worth. She has stopped setting aside the best of the catch."
         ],
         "weight": { "base": 1 }
       },
@@ -841,7 +841,7 @@
         "genre": "report",
         "headline": "Below half, and falling",
         "body": [
-          "The mood has fallen to {{happiness}}, under half and down {{drop}} from the last count. The ministers call the situation serious.",
+          "The mood has fallen to {{happiness}}, under half and down {{dropPoints}} from the last count. The ministers call the situation serious.",
           "Serious is the word a government uses for a problem it failed to see coming. On the east side, a mother sends her son to the bakery at opening time, when yesterday's loaves are sold cheap. She has a different word for it."
         ],
         "weight": { "base": 1 }
@@ -853,7 +853,7 @@
         "genre": "report",
         "headline": "The national mood, diminished",
         "body": [
-          "We are credibly informed that national contentment has dropped to {{happiness}}, below the halfway mark and down {{drop}} on the last count. One draper tells us her customers now ask to buy a single shirt front and settle the rest when money allows."
+          "We are credibly informed that national contentment has dropped to {{happiness}}, below the halfway mark and down {{dropPoints}} on the last count. One draper tells us her customers now ask to buy a single shirt front and settle the rest when money allows."
         ],
         "weight": { "base": 1 }
       },

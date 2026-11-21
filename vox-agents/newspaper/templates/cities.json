@@ -578,7 +578,7 @@
         "id": "city-famine-unrest-report",
         "headline": "Famine grips {{city}}",
         "body": [
-          "The bakeries of {{city}} shut their shutters before noon now, and the queues form an hour earlier each week. Hunger has become the city's loudest grievance, counted at {{famine}} of its discontent. The market square empties as soon as the bread is gone."
+          "The bakeries of {{city}} shut their shutters before noon now, and the queues form an hour earlier each week. Hunger has become the city's loudest grievance, and it leaves {{faminePopulation}} {{terms.civic.people}} unhappy. The market square empties as soon as the bread is gone."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -592,7 +592,7 @@
         "genre": "analysis",
         "headline": "Why {{city}} is hungry",
         "body": [
-          "A city that cannot feed itself has one question to answer, and {{city}} has not answered it. Famine accounts for {{famine}} of the city's discontent, the biggest share of its troubles. The granaries did not empty by themselves, and the men who count the harvest owe the city an explanation."
+          "A city that cannot feed itself has one question to answer, and {{city}} has not answered it. Famine leaves {{faminePopulation}} {{terms.civic.people}} unhappy, the biggest share of the city's troubles. The granaries did not empty by themselves, and the men who count the harvest owe the city an explanation."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -830,7 +830,7 @@
         "id": "city-pillaged-unrest-report",
         "headline": "Pillaged land weighs on {{city}}",
         "body": [
-          "The fields south of {{city}} still show the raiders' tracks, and the farmsteads along the road stand empty. Pillage is now the city's heaviest burden, set down at {{pillaged}} in its own accounts. Nothing has been rebuilt since the last raid."
+          "The fields south of {{city}} still show the raiders' tracks, and the farmsteads along the road stand empty. Pillage is now the city's heaviest burden, and it leaves {{pillagedPopulation}} {{terms.civic.people}} unhappy. Nothing has been rebuilt since the last raid."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -844,7 +844,7 @@
         "genre": "analysis",
         "headline": "The fields around {{city}} lie in ruin",
         "body": [
-          "The land around {{city}} was stripped, and the city's own count of its discontent puts pillage at {{pillaged}}, the heaviest entry. Raiders do the damage in a night; rebuilding it takes seasons, seed and hands. The men who decide where the garrison is posted should be asked why the fields were left unguarded."
+          "The land around {{city}} was stripped, and the city's own count puts pillage first, with {{pillagedPopulation}} {{terms.civic.people}} unhappy. Raiders do the damage in a night; rebuilding it takes seasons, seed and hands. The men who decide where the garrison is posted should be asked why the fields were left unguarded."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -872,7 +872,7 @@
         "genre": "notice",
         "headline": "{{city}} counts the cost of pillage",
         "body": [
-          "The city of {{city}} reports {{pillaged}} of its discontent owing to pillaged land, the largest single cause. The damage lies outside the walls, beyond the city's own reach. Towns that can spare wagons, seed or labor are asked to send word to the council."
+          "The city of {{city}} puts its largest single complaint down to pillaged land, with {{pillagedPopulation}} {{terms.civic.people}} unhappy. The damage lies outside the walls, beyond the city's own reach. Towns that can spare wagons, seed or labor are asked to send word to the council."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -906,7 +906,7 @@
         "genre": "notice",
         "headline": "{{cityName}} holds against the siege",
         "body": [
-          "Hear it, {{terms.civic.people}} of {{cityName}}! The enemy is at the gate, and the wall holds, sound to {{hitPoints}} of its {{maxHitPoints|stone|stones}}! Bring water to the rampart and keep the fires low! The wall holds! The wall holds!"
+          "Hear it, {{terms.civic.people}} of {{cityName}}! The enemy is at the gate, and the wall holds, sound to {{wallStrength}} of its {{maxWallStrength|stone|stones}}! Bring water to the rampart and keep the fires low! The wall holds! The wall holds!"
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -948,7 +948,7 @@
         "genre": "notice",
         "headline": "The defense of {{cityName}} continues",
         "body": [
-          "We are advised that {{cityName}} remains under siege, its wall sound to {{hitPoints}} of {{maxHitPoints|stone|stones}}. The watch changes without a gap, and the commanders report stores sufficient. Citizens are asked to keep the streets clear for runners."
+          "We are advised that {{cityName}} remains under siege, its wall sound to {{wallStrength}} of {{maxWallStrength|stone|stones}}. The watch changes without a gap, and the commanders report stores sufficient. Citizens are asked to keep the streets clear for runners."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1384,10 +1384,10 @@
         "voice": "press",
         "stance": "neutral",
         "genre": "report",
-        "when": "unrest !== null",
+        "when": "unrestPoints !== null",
         "headline": "Mood darkens in occupied {{cityName}}",
         "body": [
-          "{{cityName}} remains under occupation, and its own books put the mood of the streets at {{unrest}} on the happiness scale. Patrols have been doubled in the old quarter, and the prefect reports that {{turns}} more must pass before the city settles under our flag."
+          "{{cityName}} remains under occupation, and its own books put local happiness at {{unrestPoints}}. Patrols have been doubled in the old quarter, and the prefect reports that {{turns}} more must pass before the city settles under our flag."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }

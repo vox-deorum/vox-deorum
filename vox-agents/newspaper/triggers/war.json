@@ -65,8 +65,8 @@
       "cityName": "city.name",
       "civilization": "city.owner.knows('name') ? city.owner.name : null",
       "damage": "(city.maxHitPoints - city.hitPoints) / city.maxHitPoints",
-      "hitPoints": "city.hitPoints",
-      "maxHitPoints": "city.maxHitPoints"
+      "wallStrength": "city.hitPoints",
+      "maxWallStrength": "city.maxHitPoints"
     },
     "importance": "50 + 30 * damage",
     "tags": ["cities", "military", "international"]
@@ -206,9 +206,9 @@
     "values": {
       "initiator": "incident.initiator.knows('name') ? incident.initiator.name : null",
       "target": "incident.target.knows('name') ? incident.target.name : null",
-      "nearest": "Math.min(incident.initiator.knows('distance') ? incident.initiator.distance : Infinity, incident.target.knows('distance') ? incident.target.distance : Infinity)"
+      "nearestDistance": "Math.min(incident.initiator.knows('distance') ? incident.initiator.distance : Infinity, incident.target.knows('distance') ? incident.target.distance : Infinity)"
     },
-    "importance": "45 + nearby - nearest",
+    "importance": "45 + nearby - nearestDistance",
     "tags": ["politics", "military", "international"]
   },
   {
@@ -223,9 +223,9 @@
     "values": {
       "initiator": "incident.initiator.knows('name') ? incident.initiator.name : null",
       "target": "incident.target.knows('name') ? incident.target.name : null",
-      "nearest": "Math.min(incident.initiator.knows('distance') ? incident.initiator.distance : Infinity, incident.target.knows('distance') ? incident.target.distance : Infinity)"
+      "nearestDistance": "Math.min(incident.initiator.knows('distance') ? incident.initiator.distance : Infinity, incident.target.knows('distance') ? incident.target.distance : Infinity)"
     },
-    "importance": "55 + nearby - nearest",
+    "importance": "55 + nearby - nearestDistance",
     "tags": ["politics", "military", "international"]
   },
   {
@@ -305,8 +305,8 @@
     ],
     "values": {
       "damage": "(city.maxHitPoints - city.hitPoints) / city.maxHitPoints",
-      "hitPoints": "city.hitPoints",
-      "maxHitPoints": "city.maxHitPoints"
+      "wallStrength": "city.hitPoints",
+      "maxWallStrength": "city.maxHitPoints"
     },
     "importance": "50 + 40 * damage",
     "urgent": "damage >= 0.5",
