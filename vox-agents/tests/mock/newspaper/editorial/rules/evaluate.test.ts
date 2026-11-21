@@ -270,7 +270,7 @@ describe('newspaper trigger rules', () => {
 
     it('should add usable points to the tier base while auditing hidden and failed adjustments', async () => {
       const rule: EditorialTriggerRule = {
-        id: 'dispatch', subject: 'world', tier: 'turn > 10 ? "notable" : "filler"', when: 'true',
+        id: 'dispatch', subject: 'world', tier: 'turn > 10 ? notable : filler', when: 'true',
         adjust: ['turn / 4', 'game.mapWidth', 'unknownPoints()', 'Infinity', '-2'], tags: [],
       };
       const run = await prepare([rule]);

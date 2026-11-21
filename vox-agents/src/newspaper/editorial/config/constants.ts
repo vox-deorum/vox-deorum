@@ -68,7 +68,7 @@ export const editorialConstantsSchema = z.strictObject({
 });
 
 export type EditorialConstants = z.infer<typeof editorialConstantsSchema>;
-type ScaledEditorialConstants = Readonly<Record<string, number | readonly string[]> & { long: number }>;
+type ScaledEditorialConstants = Readonly<Record<string, number | string | readonly string[]> & { long: number }>;
 
 /** Resolve a named span or a literal in Standard turns to a positive whole recorded count. */
 export function resolveEditorialSpan(
@@ -89,7 +89,8 @@ export function resolveEditorialSpan(
 /** Flatten constants for expressions without changing the saved Standard turn spans. */
 export function scaleEditorialConstants(constants: EditorialConstants, speedMultiplier: number): ScaledEditorialConstants {
   return {
-    ...constants.distances, ...constants.sizes, ...constants.shares, ...constants.types, ...constants.tiers,
+    ...constants.distances, ...constants.sizes, ...constants.shares, ...constants.types,
+    ...Object.fromEntries(Object.keys(constants.tiers).map(name => [name, name])),
     ...Object.fromEntries(Object.keys(constants.spans).map(name => [
       name, resolveEditorialSpan(name, constants, speedMultiplier),
     ])),
