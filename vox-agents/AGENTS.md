@@ -65,7 +65,7 @@ Backend LLM agent framework. For UI development, see `ui/AGENTS.md`.
 
 ### Newspaper Renderer
 
-`src/newspaper/` groups publication schemas in `contracts/issue.ts`, reader actions and state in `contracts/reader.ts`, serialized render data in `contracts/render.ts`, and replay settings and responses in `contracts/replay.ts`. Keep contracts and renderer modules free of Node and DOM imports. Contracts must not import runtime implementations. Replay contracts reuse MCP's browser-safe `newspaper/evidence.ts`; browser code must never import MCP queries or live services. `renderer/bridge.ts` defines browser bridge interfaces, while renderer validation adds asset, profile and bundle consistency checks.
+`src/newspaper/` groups publication schemas in `contracts/issue.ts`, reader actions and state in `contracts/reader.ts`, serialized render data in `contracts/render.ts`, and replay settings and responses in `contracts/replay.ts`. Keep contracts and renderer modules free of Node and DOM imports. Contracts must not import runtime implementations. Replay contracts reuse MCP's browser-safe `newspaper/evidence.ts`; browser code must never import MCP queries or live services. `renderer/bridge.ts` defines browser bridge interfaces, while renderer validation adds asset, profile and bundle consistency checks. The asset registry loads built-in design JSON through `design-assets-source.ts`; the newspaper Vite config replaces the Node adapter with the browser adapter.
 
 `editorial/check.ts` validates the evidence, advances diplomacy memory, evaluates trigger rules and selects stories for the issue. Keep the editor organized by responsibility:
 

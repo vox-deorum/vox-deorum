@@ -85,12 +85,12 @@ describe("newspaper issue contracts", () => {
 
   it.each([
     {},
-    { assetId: "modern-port" },
+    { assetId: "modern.port" },
     { altText: "Ships at a port" },
-    { assetId: "modern-port", altText: "" },
+    { assetId: "modern.port", altText: "" },
     { assetId: "", altText: "Ships at a port" },
     { assetId: 42, altText: "Ships at a port" },
-    { assetId: "modern-port", altText: 42 },
+    { assetId: "modern.port", altText: 42 },
   ])("should reject an image without a non-empty asset identifier and alternative text: %j", (image) => {
     const issue = createNewspaperIssue();
     const input = { ...issue, items: [{ ...issue.items[0], image }] };

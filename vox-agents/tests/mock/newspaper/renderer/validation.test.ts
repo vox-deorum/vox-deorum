@@ -21,7 +21,7 @@ describe("newspaper renderer issue validation", () => {
 
   it.each(["bodyFontAssetId", "headingFontAssetId", "mastheadFontAssetId"] as const)("should reject a non-font presentation reference for %s", (role) => {
     const issue = createNewspaperIssue();
-    issue.publication.presentation = { schemaVersion: 1, rendererFamily: "modern", tokens: { bodyFontAssetId: "font-inter-400", [role]: "modern-port" } };
+    issue.publication.presentation = { schemaVersion: 1, rendererFamily: "modern", tokens: { bodyFontAssetId: "font-inter-400", [role]: "modern.port" } };
     expect(() => parseIssueDocument(issue)).toThrowError(expect.objectContaining({
       issues: expect.arrayContaining([expect.objectContaining({ path: ["publication", "presentation", "tokens", role] })]),
     }));
@@ -29,11 +29,11 @@ describe("newspaper renderer issue validation", () => {
 
   it("should accept registered snapshot ornaments", () => {
     const issue = createNewspaperIssue();
-    issue.publication.presentation = { schemaVersion: 1, rendererFamily: "victorian", assets: { ornamentAssetId: "victorian-ornament" } };
-    expect(parseIssueDocument(issue).publication.presentation.assets?.ornamentAssetId).toBe("victorian-ornament");
+    issue.publication.presentation = { schemaVersion: 1, rendererFamily: "victorian", assets: { ornamentAssetId: "victorian.scrollwork" } };
+    expect(parseIssueDocument(issue).publication.presentation.assets?.ornamentAssetId).toBe("victorian.scrollwork");
   });
 
-  it.each(["unregistered-image", "victorian-ornament", "font-inter-400"])(
+  it.each(["unregistered-image", "victorian.scrollwork", "font-inter-400"])(
     "should reject an unknown or non-image article asset: %s", (assetId) => {
       const issue = createNewspaperIssue();
       issue.items[0].image = { assetId, altText: "A report illustration" };
@@ -46,7 +46,7 @@ describe("newspaper renderer issue validation", () => {
     },
   );
 
-  it.each(["unregistered-ornament", "modern-port", "vote-modern-up-neutral"])(
+  it.each(["unregistered-ornament", "modern.port", "vote-modern-up-neutral"])(
     "should reject an unknown or non-ornament publication asset: %s", (assetId) => {
       const issue = createNewspaperIssue();
       issue.publication.presentation.assets = { ornamentAssetId: assetId };
@@ -57,7 +57,7 @@ describe("newspaper renderer issue validation", () => {
 
   it("should accept a registered article image with alternative text", () => {
     const issue = createNewspaperIssue();
-    issue.items[0].image = { assetId: "modern-port", altText: "Ships at a port" };
+    issue.items[0].image = { assetId: "modern.port", altText: "Ships at a port" };
     expect(parseIssueDocument(issue).items[0].image).toEqual(issue.items[0].image);
   });
 

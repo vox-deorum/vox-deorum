@@ -90,7 +90,7 @@ The source is divided by runtime and responsibility:
 | `src/newspaper/contracts/design.ts` | Versioned presentation snapshots and supported renderer families |
 | `src/newspaper/contracts/reader.ts` | Reader actions, persisted state, and their validation |
 | `src/newspaper/contracts/render.ts` | Serialized profiles, geometry and bundles, with structural schemas |
-| `src/newspaper/renderer/{assets,layout,state}.ts` | Browser-safe assets, layout defaults, and shared reader state helpers |
+| `src/newspaper/renderer/{assets,layout,state}.ts` | Asset registry and lookups, layout defaults, and shared reader state helpers |
 | `src/newspaper/renderer/{bridge,validation,bundle}.ts` | Browser bridge interfaces, asset and profile capability checks, and bundle consistency checks |
 | `src/newspaper/export/{browser,render,dds}.ts` | Node capture orchestration, browser lifecycle, and DDS conversion |
 | `src/newspaper/export/{cache,bundle-assets,lua-fixture}.ts` | Atomic cache publication, bundle file resolution, and structured game delivery payloads |
@@ -101,7 +101,7 @@ The source is divided by runtime and responsibility:
 | `newspaper/src/export-bridge.ts` | Browser entry point used by texture export and CLI previews |
 | `civ5-mod/UI/Newspaper/VoxDeorumNewspaperData.lua` | Pure publication indexing and native text adapters |
 
-Contracts have no renderer imports. The renderer depends on contracts and stays free of Node and DOM imports; DOM work belongs to `newspaper/src/`. The Node-only exporter consumes serialized render contracts and the browser bridge interfaces. Structural schemas live in contracts; issue parsing at the rendering boundary adds registered asset and kind checks, while profile and bundle consistency checks use renderer layout defaults.
+Contracts have no renderer imports. The renderer depends on contracts and stays free of DOM imports; DOM work belongs to `newspaper/src/`. The asset registry reads design-owned declarations through a small adapter: Node reads `newspaper/designs/*.json`, and the reader build swaps that specifier for the bundled JSON reader under `newspaper/src/`. The Node-only exporter consumes serialized render contracts and the browser bridge interfaces. Structural schemas live in contracts; issue parsing at the rendering boundary adds registered asset and kind checks, while profile and bundle consistency checks use renderer layout defaults.
 
 `mountNewspaperRoutes` shares `web/loopback.ts` request protection with the dashboard. It exposes `/newspaper/`, `/api/newspaper/export`, and any mode-specific application routes before static and API fallbacks. The VD server mounts these routes during normal startup, so the reader and export service share its port. The Debug page's Show newspaper action uses the same export service and asks the game to display the result.
 

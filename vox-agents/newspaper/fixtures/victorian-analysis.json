@@ -19,7 +19,7 @@
     "presentation": {
       "schemaVersion": 1,
       "rendererFamily": "victorian",
-      "assets": { "ornamentAssetId": "victorian-ornament" }
+      "assets": { "ornamentAssetId": "victorian.scrollwork" }
     }
   },
   "pages": [
@@ -80,7 +80,7 @@
         }
       ],
       "image": {
-        "assetId": "victorian-harbour",
+        "assetId": "victorian.harbour",
         "altText": "Wood engraving of a steamship and workers unloading barrels at Bristol harbour."
       },
       "evidenceTable": {

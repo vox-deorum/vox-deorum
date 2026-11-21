@@ -165,6 +165,14 @@ export function getEditorialExpressions(config: EditorialConfig): Promise<Compil
   return prepared;
 }
 
+/** Keep asset declarations out of the effective editorial catalogue. */
+function stripBuiltInDesignAssets(design: unknown): unknown {
+  if (!isRecord(design)) return design;
+  const settings = { ...design };
+  delete settings.assetDefinitions;
+  return settings;
+}
+
 /** Load grouped built-ins and optional flat or grouped overrides, then validate together. */
 export async function loadEditorialConfig(directory?: string): Promise<EditorialConfig> {
   const builtIn = builtInCatalogueDirectory();
@@ -177,7 +185,8 @@ export async function loadEditorialConfig(directory?: string): Promise<Editorial
     let custom = directory ? await readCatalogueFile(directory, name, true) : undefined;
     if (directory && grouped)
       custom = overlay(custom, await readCatalogueSection(directory, name, true));
-    result[name] = overlay(base, custom);
+    const settings = name === 'designs' && Array.isArray(base) ? base.map(stripBuiltInDesignAssets) : base;
+    result[name] = overlay(settings, custom);
   }
   const stock = await readStyleCatalogue(builtIn);
   const custom = directory ? await readStyleCatalogue(directory, true) : undefined;

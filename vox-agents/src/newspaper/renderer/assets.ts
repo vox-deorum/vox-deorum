@@ -1,5 +1,11 @@
-/** Browser-safe newspaper asset registry and lookups. */
+/**
+ * Newspaper asset registry and lookups.
+ *
+ * The reader build swaps the design document reader for bundled JSON, so the compiled reader stays browser-safe.
+ */
 import type { RendererFamily } from "../contracts/design.js";
+import { readBuiltInDesignDocuments } from "../design-assets-source.js";
+import { normalizeDesignAssets } from "./design-assets.js";
 
 /** Kinds of asset that a registered newspaper asset can represent. */
 export type NewspaperAssetKind = "font" | "image" | "ornament" | "vote-icon";
@@ -18,8 +24,8 @@ export interface NewspaperAsset {
   font?: { family: string; weight: number; style: "normal" | "italic"; fallback: string };
 }
 
-/** Registered asset paths and their licenses. */
-export const newspaperAssets = {
+/** Assets shared by every design, including fonts and vote icons. */
+const sharedNewspaperAssets = {
   "font-unifrakturmaguntia-400": {
     id: "font-unifrakturmaguntia-400",
     kind: "font",
@@ -150,36 +156,6 @@ export const newspaperAssets = {
     licensePath: "assets/licenses/inter-OFL.txt",
     attribution: "Inter by the Inter Project Authors.",
   },
-  "victorian-harbour": {
-    id: "victorian-harbour",
-    kind: "image",
-    path: "assets/images/victorian-harbour.png",
-    mediaType: "image/png",
-    width: 1536,
-    height: 1024,
-    license: "Generated for Vox Deorum",
-    attribution: "Generated with the built-in image tool for the newspaper prototype.",
-  },
-  "modern-port": {
-    id: "modern-port",
-    kind: "image",
-    path: "assets/images/modern-port.png",
-    mediaType: "image/png",
-    width: 1536,
-    height: 1024,
-    license: "Generated for Vox Deorum",
-    attribution: "Generated with the built-in image tool for the newspaper prototype.",
-  },
-  "victorian-ornament": {
-    id: "victorian-ornament",
-    kind: "ornament",
-    path: "assets/ornaments/victorian.svg",
-    mediaType: "image/svg+xml",
-    width: 900,
-    height: 70,
-    license: "Vox Deorum project asset",
-    attribution: "Authored SVG scrollwork for the Victorian prototype.",
-  },
   "vote-victorian-up-neutral": {
     id: "vote-victorian-up-neutral",
     kind: "vote-icon",
@@ -262,8 +238,18 @@ export const newspaperAssets = {
   },
 } as const satisfies Record<string, NewspaperAsset>;
 
-/** Asset identifiers known to the renderer. */
-export type NewspaperAssetId = keyof typeof newspaperAssets;
+/** Asset identifiers declared by the shared renderer. */
+type SharedNewspaperAssetId = keyof typeof sharedNewspaperAssets;
+
+let assetRegistry: ReadonlyMap<string, NewspaperAsset> | undefined;
+
+/** Load authored definitions on first use so a bad design cannot break server startup. */
+function getAssetRegistry(): ReadonlyMap<string, NewspaperAsset> {
+  return assetRegistry ??= new Map([
+    ...Object.entries(sharedNewspaperAssets),
+    ...normalizeDesignAssets(readBuiltInDesignDocuments()),
+  ]);
+}
 
 /** Vote icon asset pairs by design and direction. */
 export const newspaperVoteIconAssets = {
@@ -289,22 +275,18 @@ export const newspaperVoteIconAssets = {
   },
 } as const satisfies Record<
   RendererFamily,
-  Record<"up" | "down", { neutral: NewspaperAssetId; selected: NewspaperAssetId }>
+  Record<"up" | "down", { neutral: SharedNewspaperAssetId; selected: SharedNewspaperAssetId }>
 >;
 
 /** Return a registered asset, or undefined for an unknown id. */
 export function getNewspaperAsset(id: string): NewspaperAsset | undefined {
-  return isNewspaperAssetId(id) ? newspaperAssets[id] : undefined;
+  return getAssetRegistry().get(id);
 }
 
 /** Resolve every bundled weight and style belonging to the selected font's family. */
 export function getNewspaperFontFaces(id: string): NewspaperAsset[] {
-  const family = getNewspaperAsset(id)?.font?.family;
-  return family ? Object.values(newspaperAssets).filter((asset: NewspaperAsset) => asset.font?.family === family) : [];
-}
-
-/** Tell whether a string names a registered asset. */
-export function isNewspaperAssetId(id: string): id is NewspaperAssetId {
-  return Object.prototype.hasOwnProperty.call(newspaperAssets, id);
+  const assets = getAssetRegistry();
+  const family = assets.get(id)?.font?.family;
+  return family ? [...assets.values()].filter(asset => asset.font?.family === family) : [];
 }
 

@@ -20,7 +20,7 @@
         "mastheadFontAssetId": "font-unifrakturmaguntia-400"
       },
       "assets": {
-        "ornamentAssetId": "victorian-ornament"
+        "ornamentAssetId": "victorian.scrollwork"
       }
     },
     "layouts": [

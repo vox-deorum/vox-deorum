@@ -37,7 +37,7 @@ The built-in catalogue lives under `vox-agents/newspaper/`. Trigger files group 
 | `templates/*.json` | Authored variants, typed links and short pieces, grouped by topic like triggers |
 | `styles/` | Style tag IDs, optional writing guidance, and rules that adjust variant weights |
 | `pages.json` | Front page, section membership, and section minimums |
-| `designs/*.json` | Design identities, fixed renderer families, saved tokens/assets, masthead title and motto, layouts, and eligibility |
+| `designs/*.json` | Design identities, fixed renderer families, presentation tokens and asset references, masthead title and motto, layouts, eligibility, and local asset definitions |
 
 An optional configured directory mirrors this structure and can supply only the files being changed. Section files load in filename order. Defaults and constants merge as objects; entries and authored variants merge by ID across files. Arrays without IDs, such as paragraphs, tags and `when` lists, replace the existing arrays. Effective configuration is validated before the run starts and saved for resume.
 
@@ -129,9 +129,22 @@ For a single group, prose can print `{{key}}` and `{{count}}`. Expressions can r
 
 ### Pages and designs
 
-The front page is unconditional. Each design needs one unconditional ordinary layout and one unconditional breaking layout, both with a constant positive weight. Other pages can use `when`; designs and extra layouts can also adjust their weights. Section labels must name configured pages, and fonts and ornaments are validated against renderer assets.
+The front page is unconditional. Each design needs one unconditional ordinary layout and one unconditional breaking layout, both with a constant positive weight. Other pages can use `when`; designs and extra layouts can also adjust their weights. Section labels must name configured pages, and fonts and ornaments are validated against registered renderer assets, including assets declared by built-in designs.
 
-The stock designs choose by `self.era`. `victorian` runs from the Classical through Future eras, `modern` from Modern through Future, and `oral-accounts` is the fallback for Ancient or unknown eras. Published presentation snapshots keep old issues independent of later catalogue changes.
+The stock designs choose by `self.era`. `victorian` runs from the Classical through Future eras, `modern` from Modern through Future, and `oral-accounts` is the fallback for Ancient or unknown eras. Published issues save their presentation settings and refer to artwork by its bundled asset ID.
+
+### Design assets
+
+A built-in design declares the images and ornaments it ships in `assetDefinitions`. Each entry has a local `id`, `kind` (`image` or `ornament`), `path`, `mediaType`, `width`, `height`, `license`, and `attribution`. The renderer registers the derived ID `<design id>.<local id>`, so the Victorian `harbour` becomes `victorian.harbour`. Presentation values refer to that ID, such as `assets.ornamentAssetId: "victorian.scrollwork"`.
+
+Define assets in built-in `newspaper/designs/*.json` files. Replay overlays can reference their bundled IDs. Asset declarations stay out of the saved catalogue.
+
+To add a local asset:
+
+1. Put the file under `vox-agents/newspaper/public/assets/` and keep its path relative, such as `assets/images/new-illustration.png`.
+2. Add its `assetDefinitions` entry to the matching built-in design file. Derived IDs must be unique, paths must stay under `assets/` without dot segments or URL syntax, and the metadata must be complete.
+3. Reference the derived ID in `presentation.assets.ornamentAssetId` for ornaments or `image.assetId` on an illustrated article.
+4. Rebuild the reader with `npm run build:newspaper -w vox-agents` so the browser bundles the design JSON and copies the asset.
 
 ### Masthead and terms
 

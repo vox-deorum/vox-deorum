@@ -18,6 +18,18 @@
         "headingFontAssetId": "font-inter-800"
       }
     },
+    "assetDefinitions": [
+      {
+        "id": "port",
+        "kind": "image",
+        "path": "assets/images/modern-port.png",
+        "mediaType": "image/png",
+        "width": 1536,
+        "height": 1024,
+        "license": "Generated for Vox Deorum",
+        "attribution": "Generated with the built-in image tool for the newspaper prototype."
+      }
+    ],
     "layouts": [
       {
         "id": "feed",

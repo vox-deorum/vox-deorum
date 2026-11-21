@@ -72,7 +72,7 @@
         }
       ],
       "image": {
-        "assetId": "modern-port",
+        "assetId": "modern.port",
         "altText": "Container cranes and a cargo ship at blue hour."
       },
       "avatar": { "initials": "B", "tone": "slate" },

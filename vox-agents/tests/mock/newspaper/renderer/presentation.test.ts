@@ -27,7 +27,7 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('stored newspaper
     issue.publication.presentation = {
       schemaVersion: 1, rendererFamily: 'victorian',
       tokens: { paperColor: '#f0e0c0', inkColor: '#202020', accentColor: '#554433', bodyFontAssetId: 'font-libre-caslon-400', headingFontAssetId: 'font-bodoni-moda-700', mastheadFontAssetId: 'font-unifrakturmaguntia-400' },
-      assets: { ornamentAssetId: 'victorian-ornament' },
+      assets: { ornamentAssetId: 'victorian.scrollwork' },
     };
     const page = await browser.newPage();
     try {

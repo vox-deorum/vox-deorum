@@ -8,14 +8,15 @@ import {
 } from "../contracts/issue.js";
 import type { RendererFamily } from "../contracts/design.js";
 import { renderProfileSchema, type RenderProfile } from "../contracts/render.js";
-import { getNewspaperAsset, isNewspaperAssetId } from "./assets.js";
+import { getNewspaperAsset } from "./assets.js";
 import { computeRenderLayout } from "./layout.js";
 
 /** Require a registered image asset for an illustrated item. */
 const renderableIssueItemSchema = issueItemSchema.superRefine((item, ctx) => {
   if (!item.image) return;
   const { assetId } = item.image;
-  if (!isNewspaperAssetId(assetId)) {
+  const asset = getNewspaperAsset(assetId);
+  if (!asset) {
     ctx.addIssue({
       code: "custom",
       path: ["image", "assetId"],
@@ -23,8 +24,7 @@ const renderableIssueItemSchema = issueItemSchema.superRefine((item, ctx) => {
     });
     return;
   }
-  const asset = getNewspaperAsset(assetId);
-  if (asset?.kind !== "image") {
+  if (asset.kind !== "image") {
     ctx.addIssue({
       code: "custom",
       path: ["image", "assetId"],

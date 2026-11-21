@@ -13,6 +13,15 @@ const root = realpathSync.native(new URL('.', import.meta.url));
 export default defineConfig({
   root,
   base: "./",
+  resolve: {
+    alias: [
+      // Swap the Node design reader for the bundled JSON reader at the only specifier that imports it.
+      {
+        find: "../design-assets-source.js",
+        replacement: join(root, "src/design-assets-source.ts"),
+      },
+    ],
+  },
   build: {
     outDir: "../dist-newspaper",
     emptyOutDir: true,

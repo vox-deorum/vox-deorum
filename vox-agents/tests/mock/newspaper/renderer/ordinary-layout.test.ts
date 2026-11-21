@@ -210,7 +210,7 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'export.html')) || !exist
   it('should retain most of a registered illustration in full-width stories without changing brief or narrow image sizes', async context => {
     if (!browser) { context.skip(unavailable); return; }
     const issue = createOrdinaryIssue([1, 3, 2, 3]);
-    for (const item of issue.items) item.image = { assetId: 'victorian-harbour', altText: 'Harbour illustration' };
+    for (const item of issue.items) item.image = { assetId: 'victorian.harbour', altText: 'Harbour illustration' };
     const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
     try {
       await page.goto(`${host.url}/newspaper/export.html`);

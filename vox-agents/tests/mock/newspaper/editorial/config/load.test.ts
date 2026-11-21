@@ -36,6 +36,22 @@ describe('editorial catalogue files', () => {
     expect(base.designs[0].layouts.map(layout => layout.variant)).toEqual(expect.arrayContaining(['ordinary', 'breaking']));
   });
 
+  it('should strip built-in design asset metadata after discovery', async () => {
+    const base = await loadEditorialConfig();
+    expect(base.designs.every(design => !Object.hasOwn(design, 'assetDefinitions'))).toBe(true);
+    const victorian = base.designs.find(design => design.id === 'victorian');
+    expect(victorian?.presentation.assets?.ornamentAssetId).toBe('victorian.scrollwork');
+  });
+
+  it('should reject asset declarations in a design overlay', async () => {
+    await writeDocument('designs/override.json', [{ id: 'victorian', assetDefinitions: [] }]);
+    await expect(loadEditorialConfig(directory)).rejects.toMatchObject({
+      issues: expect.arrayContaining([expect.objectContaining({
+        code: 'unrecognized_keys', keys: ['assetDefinitions'],
+      })]),
+    });
+  });
+
   it('should merge style additions by ID and reject unregistered or partial variant tags', async () => {
     const base = await loadEditorialConfig();
     const template = base.templates[0];
