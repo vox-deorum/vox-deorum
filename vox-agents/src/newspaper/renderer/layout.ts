@@ -23,7 +23,7 @@ export const defaultMaxTextureEdge = 2048;
 /** Design-specific layout defaults used by the browser reader and exporter. */
 export const newspaperDesignDefaults = {
   inscription: {
-    paperPadding: 48,
+    paperPadding: 32,
     scrollbarGutter: 16,
   },
   broadsheet: {

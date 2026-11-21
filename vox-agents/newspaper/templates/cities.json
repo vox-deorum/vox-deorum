@@ -674,7 +674,7 @@
         "id": "city-growth-milestone-report",
         "headline": "{{cityName}} reaches {{population}} people",
         "body": [
-          "{{cityName}} has reached a population of {{population}} and now counts as a {{milestone}}."
+          "{{cityName}} counts {{population}} people, crossing the mark that makes it a {{milestone}} in our realm."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -688,7 +688,7 @@
         "genre": "analysis",
         "headline": "{{cityName}} crosses {{population}}",
         "body": [
-          "Growth at this scale changes what a city needs: more food, more work, more room. {{cityName}} has reached {{population}} people and now counts as a {{milestone}}."
+          "{{cityName}} has reached {{population}} people, the measure of a {{milestone}}. A population of this size needs more of everything: fields, work, room to live. Cities that keep feeding their growth keep growing, and the next few seasons will show whether {{cityName}} is one of them."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -702,7 +702,7 @@
         "genre": "notice",
         "headline": "{{cityName}} has grown to {{population}}!",
         "body": [
-          "Hear it! {{cityName}} now holds {{population}} people and is counted a {{milestone}} among our cities."
+          "Hear it, good people! {{cityName}} now numbers {{population}} souls, and is counted a {{milestone}} among our cities. Say it loud: a {{milestone}} is among us!"
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -716,7 +716,7 @@
         "genre": "report",
         "headline": "A milestone for {{cityName}}",
         "body": [
-          "The city has grown to {{population}} people, enough to be counted a {{milestone}}. Its streets and its obligations have grown with it."
+          "A city grows slowly, and the growing counts. {{cityName}} now numbers {{population}} people, the measure of a {{milestone}}, and takes an established place among the cities of the realm, with the burdens that established places carry."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -735,7 +735,7 @@
         "id": "city-liberated-report",
         "headline": "{{liberator}} liberates {{liberated}}",
         "body": [
-          "{{liberated}} has been restored to independence by {{liberator}}."
+          "{{liberated}} has been restored to independence by {{liberator}}. A nation that was held under another's banner answers to its own flag again."
         ],
         "weight": { "base": 1 }
       },
@@ -747,7 +747,7 @@
         "when": "returned === true",
         "headline": "Our independence is restored",
         "body": [
-          "{{liberator}} has brought our nation back from occupation. We are free again."
+          "Occupation is ended. {{liberator}} has returned our nation to its own flag, and we answer to ourselves again."
         ],
         "weight": { "base": 1 }
       },
@@ -759,7 +759,7 @@
         "when": "returned === false",
         "headline": "{{liberated}} is free again",
         "body": [
-          "Our forces have restored {{liberated}} to independence."
+          "Our forces have restored {{liberated}} to its independence. The nation that was held under another's banner flies its own colors today."
         ],
         "weight": { "base": 1 }
       },
@@ -771,7 +771,7 @@
         "when": "returned === false",
         "headline": "A nation restored: {{liberated}} is free",
         "body": [
-          "By the hand of {{liberator}}, {{liberated}} has returned to the company of independent nations."
+          "By the hand of {{liberator}}, {{liberated}} has resumed its place among the independent nations of the world, to the satisfaction of all who wish their neighbors well."
         ],
         "weight": { "base": 1 }
       },
@@ -783,7 +783,7 @@
         "when": "returned === false",
         "headline": "Freedom for {{liberated}}",
         "body": [
-          "A people held under another's flag now stands free. {{liberator}} has given them back their own government."
+          "{{liberated}} stands free, and {{liberator}} holds the credit. A power that restores a nation wins a name that garrisons cannot buy, and this paper counts the deed worth more than any ground taken in war."
         ],
         "weight": { "base": 1 }
       }
@@ -813,7 +813,7 @@
         "genre": "analysis",
         "headline": "The fields around {{city}} lie in ruin",
         "body": [
-          "Pillage is the loudest grievance in {{city}}, measured at {{pillaged}}. Broken land is slow to mend."
+          "Pillage tops the grievance list in {{city}}, measured at {{pillaged}} on the city's count. The raiders ride away and the broken fields remain, and repair is a cost somebody in the capital has yet to answer for."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -827,7 +827,7 @@
         "genre": "anecdote",
         "headline": "The road to {{city}} is empty now",
         "body": [
-          "Farmers once walked it at dawn. Pillage is now the city's heaviest complaint, and the fields show why."
+          "The road into {{city}} used to fill at dawn with carts bound for market. The fields along it stand stripped now, and the city names pillage as its heaviest complaint."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -841,7 +841,7 @@
         "genre": "notice",
         "headline": "{{city}} counts the cost of pillage",
         "body": [
-          "The city reports {{pillaged}} of its discontent from pillaged land, the largest single cause. The damage lies outside the walls."
+          "The city of {{city}} attributes {{pillaged}} of its discontent to pillaged land, the largest single cause, and the damage lies outside the walls. Repair will want many hands, and the city asks its neighbors for the loan of some."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -860,7 +860,7 @@
         "id": "city-under-siege-report",
         "headline": "{{cityName}} is under siege",
         "body": [
-          "Enemy forces have surrounded {{cityName}}. The city is besieged, and its defenses have taken serious damage."
+          "Enemy forces have ringed {{cityName}}, and the walls have taken real damage. The city holds, and the siege goes on."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -874,7 +874,7 @@
         "genre": "notice",
         "headline": "{{cityName}} holds against the siege",
         "body": [
-          "The enemy is at the gates of {{cityName}}. The city is besieged, but it has not fallen. Its defenders hold at {{hitPoints}} of {{maxHitPoints}} hit points."
+          "Hear it! The enemy stands at the gates of {{cityName}}, and the city has not fallen. The walls hold at {{hitPoints}} of {{maxHitPoints}} hit points. Hold fast, people! The walls hold!"
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -888,7 +888,7 @@
         "genre": "analysis",
         "headline": "The siege of {{cityName}} tests the frontier",
         "body": [
-          "A siege is a test of more than walls. While {{cityName}} is surrounded, the city spends men, stores and time it cannot recover."
+          "A siege is a test of supply before it is a test of walls. While {{cityName}} is surrounded, the city burns through stores and time it cannot quickly replace, and relief, whenever it comes, will be somebody's decision to explain."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -902,7 +902,7 @@
         "genre": "anecdote",
         "headline": "Life inside besieged {{cityName}}",
         "body": [
-          "The markets are thin and the streets are quiet. In {{cityName}}, the siege is no longer news from the frontier. It is the noise at the gate."
+          "Inside {{cityName}} the market stalls stand half empty and the talk runs quiet. The siege is not news from the frontier here; it is the sound at the gate in every hour of the night."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -916,7 +916,7 @@
         "genre": "notice",
         "headline": "The defense of {{cityName}} continues",
         "body": [
-          "The city of {{cityName}} remains under siege. The defenders are said to hold the walls at {{hitPoints}} of {{maxHitPoints}} hit points."
+          "We are advised that {{cityName}} remains under siege. The garrison is reported to hold the walls at {{hitPoints}} of {{maxHitPoints}} hit points, and the city's commanders describe the defense as steady."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -935,7 +935,7 @@
         "id": "distant-colony-founded-report",
         "headline": "A new colony {{distance}} tiles from the capital",
         "body": [
-          "{{cityName}} has been founded far from the capital, {{distance}} tiles out. It will have to stand on its own for a while."
+          "Our settlers have founded {{cityName}}, {{distance}} tiles out from the capital. The colony must stand on its own for a while, the capital being a long way behind it."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -950,7 +950,7 @@
         "when": "cityName === null",
         "headline": "A colony far from the capital",
         "body": [
-          "A new settlement has been founded {{distance}} tiles from the capital. It will have to stand on its own for a while."
+          "A new settlement stands {{distance}} tiles from the capital, farther than any of our present towns. Its name has not yet reached us."
         ],
         "weight": { "base": 1 }
       },
@@ -961,7 +961,7 @@
         "genre": "analysis",
         "headline": "{{cityName}} is a long way from home",
         "body": [
-          "At {{distance}} tiles from the capital, {{cityName}} is less a suburb than an outpost. Distance makes it costly to defend and slow to supply."
+          "{{cityName}} lies {{distance}} tiles from the capital, an outpost by any measure. Distance will tax its supply and its defense, but the site now flies our flag, and the empty land between it and home will not stay empty for long."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -975,7 +975,7 @@
         "genre": "report",
         "headline": "A new town, {{distance}} tiles out",
         "body": [
-          "{{cityName}} has been founded beyond the old frontier. Its people are on their own ground now, far from the capital's walls."
+          "The nation has a new colony at {{cityName}}, {{distance}} tiles from the capital. We wish the settlers well. We note, as ever, that frontiers are exciting for those who do not have to pay for them."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -989,7 +989,7 @@
         "genre": "notice",
         "headline": "A colony at {{cityName}}",
         "body": [
-          "We are informed that {{cityName}} has been founded {{distance}} tiles from the capital. The new settlement begins with little but its site."
+          "Advice reaches us of a new settlement: {{cityName}}, founded {{distance}} tiles from the capital. The colony begins with little beyond its site and the courage of the people who chose it."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1008,7 +1008,7 @@
         "id": "foreign-building-completed-report",
         "headline": "{{civilization}} completes the {{building}} in {{cityName}}",
         "body": [
-          "The {{building}} in {{cityName}}, a city of {{civilization}} near our borders, is finished."
+          "The {{building}} at {{cityName}}, a city of {{civilization}} near our borders, is finished. The building now serves the city that raised it."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1023,7 +1023,7 @@
         "when": "cityName === null",
         "headline": "New work near our border",
         "body": [
-          "{{civilization}} has finished the {{building}} in a nearby city."
+          "{{civilization}} has completed the {{building}} in one of its cities near our border. The city's name has not reached us; the finished work stands close enough all the same."
         ],
         "weight": { "base": 1 }
       },
@@ -1034,7 +1034,7 @@
         "genre": "analysis",
         "headline": "New works at {{cityName}}",
         "body": [
-          "{{civilization}} has finished the {{building}} at {{cityName}}. Nearby works change what a neighbor can do, and this one is close enough to watch."
+          "The {{building}} is finished at {{cityName}}, and {{civilization}}'s nearby city can now put it to use. A work this close to our border changes what a neighbor can bring to bear here, and our own plans should be counted with that in view."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1048,7 +1048,7 @@
         "genre": "notice",
         "headline": "From beyond our border: {{cityName}} completes the {{building}}",
         "body": [
-          "We are informed that {{cityName}}, a city of {{civilization}}, has completed the {{building}}."
+          "Word arrives from across the border that {{cityName}}, a city of {{civilization}}, has completed the {{building}}. We record the work for what it says of our neighbor's industry."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1062,7 +1062,7 @@
         "genre": "anecdote",
         "headline": "A neighbor's new work",
         "body": [
-          "The {{building}} at {{cityName}} is finished. Word of it reached us after the work was done."
+          "Travelers crossing the border bring the same account: the scaffolding down at {{cityName}}, and the {{building}} open behind it. The work was done quietly, and the news of it arrived after the fact."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1081,7 +1081,7 @@
         "id": "foreign-building-purchased-report",
         "headline": "{{civilization}} buys the {{building}} in {{cityName}}",
         "body": [
-          "{{cityName}} has a new {{building}}, bought with {{currency}} by {{civilization}}."
+          "The {{building}} at {{cityName}} is ready for use. {{civilization}} paid in {{currency}} rather than wait for the work to run its course."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1096,7 +1096,7 @@
         "when": "cityName === null",
         "headline": "A purchase near our border",
         "body": [
-          "{{civilization}} has bought the {{building}} in a nearby city with {{currency}}."
+          "{{civilization}} has bought the {{building}} outright, paying in {{currency}} in a city near our border whose name has not reached us."
         ],
         "weight": { "base": 1 }
       },
@@ -1107,7 +1107,7 @@
         "genre": "report",
         "headline": "{{civilization}} pays for the {{building}} near our border",
         "body": [
-          "The {{building}} at {{cityName}} was purchased, not built. {{civilization}} was in a hurry."
+          "The {{building}} at {{cityName}} was bought, not built: {{civilization}} paid for it finished. A neighbor with money to spare for haste is worth watching, and this one is close."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1121,7 +1121,7 @@
         "genre": "anecdote",
         "headline": "A neighbor's deep purse",
         "body": [
-          "The {{building}} in {{cityName}} went up without the usual years of work. {{civilization}} paid in {{currency}} and got it done."
+          "The traders from {{cityName}} tell one story: one season a fenced building site, the next an open door. The {{building}} arrived finished, because {{civilization}} paid in {{currency}} and skipped the waiting."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1135,7 +1135,7 @@
         "genre": "notice",
         "headline": "Notice from {{cityName}}: the {{building}} is bought",
         "body": [
-          "We are informed that {{civilization}} has purchased the {{building}} at {{cityName}} with {{currency}}."
+          "It is learned that {{civilization}} has purchased the {{building}} at {{cityName}}, the account settled in {{currency}}. The work, we understand, was bought complete rather than raised over time."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1155,7 +1155,7 @@
         "when": "ours !== null",
         "headline": "A new town on the doorstep of {{ours}}",
         "body": [
-          "{{player}} has founded {{city}} {{distance}} tiles from {{ours}}. The two settlements now share a neighborhood."
+          "{{player}} has founded {{city}}, {{distance}} tiles from {{ours}}. Two towns this close share one stretch of ground between them."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1170,7 +1170,7 @@
         "when": "ours === null",
         "headline": "A rival town rises close to home",
         "body": [
-          "{{player}} has founded a town {{distance}} tiles from one of our cities. There is little ground between the two sites to grow into."
+          "{{player}} has planted a town {{distance}} tiles from one of our cities. What was open ground between us is now their street and their claim."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1185,7 +1185,7 @@
         "when": "ours !== null",
         "headline": "{{player}} plants a town near {{ours}}",
         "body": [
-          "At {{distance}} tiles, {{city}} is close enough to crowd {{ours}}. A neighbor's town this near is a claim on the same ground."
+          "{{city}} stands {{distance}} tiles from {{ours}}, inside ground both nations could use. {{player}} will call it a town; a planner of wars calls it a stake driven into shared land, and the stake is theirs."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1198,9 +1198,9 @@
         "stance": "local",
         "genre": "editorial",
         "when": "ours !== null",
-        "headline": "Whose land is this?",
+        "headline": "{{city}} rises beside {{ours}}",
         "body": [
-          "{{player}} has founded {{city}} {{distance}} tiles from {{ours}}. The border is now a matter of daily walking, not maps."
+          "{{player}} has founded {{city}} {{distance}} tiles from {{ours}}, and the ground our farmers cross is suddenly a frontier. This paper wants the border surveyed and marked before the next planting season, because fields that two nations use become incidents faster than either notices."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1215,7 +1215,7 @@
         "when": "ours !== null",
         "headline": "New neighbors at {{city}}",
         "body": [
-          "{{player}} has founded {{city}} {{distance}} tiles from {{ours}}. A town this close brings new neighbors and new customers as well as a new border."
+          "We learn that {{player}} has founded {{city}}, {{distance}} tiles from {{ours}}. A border this near will test both nations' manners, but a neighboring town also brings new customers within easy reach of our merchants."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1234,7 +1234,7 @@
         "id": "neighbor-puppet-annexed-report",
         "headline": "{{city}} comes under direct rule",
         "body": [
-          "The same flag flies over {{city}}, but the days of puppet rule are over. The city now falls under the direct government of {{owner}}."
+          "The same flag flies over {{city}}, but its time as a puppet is ended. The city now answers to the direct government of {{owner}}."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1248,7 +1248,7 @@
         "genre": "analysis",
         "headline": "{{owner}} tightens its hold on {{city}}",
         "body": [
-          "{{city}} has moved from puppet to direct rule. The change puts {{owner}}'s officials directly over a city {{distance}} tiles from us."
+          "{{city}} has passed from puppet rule to the direct government of {{owner}}, at a site {{distance}} tiles from our own cities. The realm next door has tightened its grip within sight of our borders."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1262,7 +1262,7 @@
         "genre": "report",
         "headline": "A puppet no more: {{city}} answers to {{owner}}",
         "body": [
-          "The city's status has changed within {{owner}}'s realm. A city ruled directly is a city that can be used directly."
+          "{{owner}} now rules {{city}} directly, and that changes what the city can be asked to do. Puppets hesitate; provinces march. A city under direct rule is a resource, and this one belongs to our neighbor."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1276,7 +1276,7 @@
         "genre": "notice",
         "headline": "A change of rule in {{city}}",
         "body": [
-          "We are informed that {{city}} is a puppet no longer, and now answers to {{owner}} directly."
+          "Notice is given of a change of station at {{city}}: the city, lately governed as a puppet, now answers to {{owner}} directly. The formality is small; the meaning is not."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1295,7 +1295,7 @@
         "id": "occupied-city-resists-report",
         "headline": "Resistance continues in {{cityName}}",
         "body": [
-          "{{cityName}} remains under occupation. The city is expected to resist for {{turns}} more turns."
+          "{{cityName}} remains under occupation, and the city has not accepted it. Resistance is expected to last {{turns}} more turns before {{cityName}} answers our orders."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1310,7 +1310,7 @@
         "when": "cityName === null",
         "headline": "Resistance continues in an occupied city",
         "body": [
-          "One of our occupied cities is still resisting. The city is expected to resist for {{turns}} more turns."
+          "One of the cities we hold under occupation continues to resist our rule. {{turns}} more turns are expected before its administration answers to us."
         ],
         "weight": { "base": 1 }
       },
@@ -1322,7 +1322,7 @@
         "when": "population !== null",
         "headline": "{{population}} people in an occupied {{cityName}}",
         "body": [
-          "{{cityName}} is ours on paper, but {{population}} people remain under occupation and {{turns}} turns of resistance lie ahead."
+          "On paper, {{cityName}} is ours: {{population}} people added to the realm with the stroke of a mapmaker. In practice the city resists, and {{turns}} turns of it lie ahead. Conquest counts the taking; it cannot count the agreeing."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1337,7 +1337,7 @@
         "when": "formerOwner !== null",
         "headline": "The old loyalty runs deep in {{cityName}}",
         "body": [
-          "{{formerOwner}}'s city is not reconciled to its new ruler. Resistance is expected to last {{turns}} more turns."
+          "A fruit seller in {{cityName}} was heard pricing her figs in {{formerOwner}}'s coin this week. The city is not reconciled to its new ruler, and the resistance runs on: {{turns}} more turns by the reckoning."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1352,7 +1352,7 @@
         "when": "unrest !== null",
         "headline": "Unrest in {{cityName}}",
         "body": [
-          "{{cityName}} is occupied and unhappy. The city's happiness balance stands at {{unrest}}, and resistance is expected to last {{turns}} more turns."
+          "Occupation weighs on {{cityName}}. The city's books put its happiness balance at {{unrest}}, and resistance is expected to run {{turns}} more turns before the city settles."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1372,7 +1372,7 @@
         "when": "cityName !== null",
         "headline": "A new city: {{cityName}}",
         "body": [
-          "Our settlers have founded {{cityName}}. Another settlement now stands under our flag."
+          "Our settlers have founded {{cityName}}, and a new city stands under our flag. The work begins now: first houses, first fields, first walls."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1387,7 +1387,7 @@
         "when": "cityName === null",
         "headline": "A new city is founded",
         "body": [
-          "Our settlers have founded a new city. The place is ours, and the work of building it begins."
+          "Our settlers have founded a new city. The ground is ours, the name is not yet in the records, and the work of building begins."
         ],
         "weight": { "base": 1 }
       },
@@ -1399,7 +1399,7 @@
         "when": "cityName !== null",
         "headline": "Hear it! {{cityName}} is founded",
         "body": [
-          "Our people have set down roots at {{cityName}}. Let the news carry."
+          "Hear it, good people! Our settlers have founded {{cityName}}, and a new city stands on the map of the realm. Carry the name abroad: {{cityName}}!"
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1412,9 +1412,9 @@
         "stance": "ambitious",
         "genre": "analysis",
         "when": "cityName !== null",
-        "headline": "{{cityName}} begins",
+        "headline": "{{cityName}} begins its story",
         "body": [
-          "A founding is a promise that takes years to keep. {{cityName}} starts with little and will need people, food and time."
+          "{{cityName}} begins with a site, some settlers and a claim. What it becomes depends on what the nation sends next: people, grain, tools, patience. Every great city of the realm started exactly this small."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1429,7 +1429,7 @@
         "when": "cityName !== null",
         "headline": "A new settlement at {{cityName}}",
         "body": [
-          "We are informed that our settlers have founded {{cityName}}. The new town begins under our protection."
+          "We are pleased to record that our settlers have founded {{cityName}}. The new town begins under the nation's protection, with the government's intentions for its care said to be settled and generous."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1449,7 +1449,7 @@
         "when": "!city.knows('happinessDelta') || !(city.happinessDelta < 0 || city.happinessDelta > 0)",
         "headline": "Settlers ready as {{town}} grows smaller",
         "body": [
-          "A party of settlers is ready in {{town}}. There are fewer people to feed in the city now, and more food still comes in than goes on the table."
+          "A party of settlers stands ready to leave {{town}}. Fewer mouths remain to feed in the city, and the fields yield more than its tables need."
         ],
         "links": [
           { "placeholder": "town", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1464,7 +1464,7 @@
         "when": "city.knows('happinessDelta') && city.happinessDelta < 0",
         "headline": "Settlers ready, spirits low in {{town}}",
         "body": [
-          "{{town}} has raised a party of settlers. There are fewer people now and food to spare, but the city's mood is poor."
+          "{{town}} has raised a party of settlers and given up part of its people to do it. The bread stretches further now, yet the city's mood has gone the other way, and no one in charge has explained why."
         ],
         "links": [
           { "placeholder": "town", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1479,7 +1479,7 @@
         "when": "city.knows('happinessDelta') && city.happinessDelta > 0",
         "headline": "Good cheer in {{town}} as settlers prepare to go",
         "body": [
-          "{{town}} has raised a party of settlers. There are fewer places to set for supper these days, with food to spare."
+          "A party of settlers is ready to leave {{town}}, and the city sends them off in good heart. With fewer at the tables there is more on each plate, and the city's mood has risen with its prospects."
         ],
         "links": [
           { "placeholder": "town", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1493,7 +1493,7 @@
         "genre": "anecdote",
         "headline": "One fewer place at supper in {{town}}",
         "body": [
-          "A party of settlers has left {{town}}, and the city is {{lost}} people smaller. There is more food to go around, but fewer hands to bring it in."
+          "The supper tables of {{town}} have {{lost}} empty places this week, and the families who filled them are off to found a city somewhere. There is more bread to go around now, and fewer hands to bake it."
         ],
         "links": [
           { "placeholder": "town", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1512,7 +1512,7 @@
         "id": "starvation-without-siege-report",
         "headline": "{{city}} is eating into its stores",
         "body": [
-          "{{city}} uses more food than it produces. With {{foodStored}} in store and a shortfall of {{shortfall}} each turn, the city cannot hold out indefinitely."
+          "{{city}} raises less food than it eats. Against a store of {{foodStored}} and a shortfall of {{shortfall}} each turn, the arithmetic ends one way, and it ends with empty granaries."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1526,7 +1526,7 @@
         "genre": "analysis",
         "headline": "Why {{city}} is starving in peacetime",
         "body": [
-          "There is no siege to blame. {{city}} is losing {{shortfall}} food a turn and drawing down a store of {{foodStored}}."
+          "No enemy sits outside {{city}}, and the city is hungry all the same, losing {{shortfall}} food a turn against a store of {{foodStored}}. In wartime, hunger has an obvious author. In peace it has a planner, and the planner is nowhere to be seen."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1540,7 +1540,7 @@
         "genre": "anecdote",
         "headline": "The granary at {{city}} is emptying",
         "body": [
-          "At {{shortfall}} food a turn, the store of {{foodStored}} will not last. The city is not under siege, which makes the empty shelves harder to explain."
+          "The bakers of {{city}} have started counting loaves instead of selling them. The store stands at {{foodStored}} and falls by {{shortfall}} a turn, and there is no army outside the walls to blame for a single crumb of it."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1554,9 +1554,9 @@
         "genre": "ledger",
         "headline": "The food account of {{city}}",
         "body": [
-          "Stored: {{foodStored}}.",
-          "Shortfall: {{shortfall}} a turn.",
-          "The city is not besieged, and the balance does not close."
+          "Stores: {{foodStored}}.",
+          "Shortfall: {{shortfall}} each turn.",
+          "Besieged: no. At war: no. The account closes on hunger all the same."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1575,7 +1575,7 @@
         "id": "we-raze-a-city-report",
         "headline": "{{cityName}} is being razed",
         "body": [
-          "Our forces are burning {{cityName}}. The city has {{turns}} turns left before it is gone."
+          "Our forces have put {{cityName}} to the torch. {{turns}} turns remain before the city is gone and the site lies bare."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1590,7 +1590,7 @@
         "when": "cityName === null",
         "headline": "A city is being razed",
         "body": [
-          "Our forces are burning a city. It has {{turns}} turns left before it is gone."
+          "Our forces are burning a city whose name has not reached this paper. {{turns}} turns remain of it."
         ],
         "weight": { "base": 1 }
       },
@@ -1601,7 +1601,7 @@
         "genre": "analysis",
         "headline": "The decision to raze {{cityName}}",
         "body": [
-          "Razing {{cityName}} removes a city from the map. In {{turns}} turns there will be nothing left to govern."
+          "In {{turns}} turns, {{cityName}} will be gone from the map, leaving nothing to garrison, feed or govern. The realm keeps the ground and sheds the burden, and the decision that made it so was ours alone."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1615,7 +1615,7 @@
         "genre": "obituary",
         "headline": "The end of {{cityName}}",
         "body": [
-          "{{cityName}} has {{turns}} turns left. When the last wall falls, only the site will remain."
+          "{{cityName}} has {{turns}} turns left, and then only the ground it stood on. Whatever the city was, its walls will keep no record of it. May the gods it prayed to remember what the fire will not."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1630,7 +1630,7 @@
         "when": "population !== null",
         "headline": "{{population}} people and {{turns}} turns left in {{cityName}}",
         "body": [
-          "The city is being razed with {{population}} people still in it. In {{turns}} turns, the site will be empty."
+          "{{population}} people remain in {{cityName}} as the fires take it. In {{turns}} turns the site will be empty, and the roads out of the city are the busiest streets it has now."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }

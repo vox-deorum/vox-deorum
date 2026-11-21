@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 36" width="900" height="36">
-  <defs>
-    <pattern id="key" width="30" height="36" patternUnits="userSpaceOnUse" x="0">
-      <path d="M0 30H30M30 30V6H6V25H25V12H12V19H19" fill="none" stroke="#9b2f1f" stroke-width="2.4" stroke-linecap="square"/>
-    </pattern>
-  </defs>
-  <path d="M0 1H900M0 35H900" stroke="#231a14" stroke-width="1.2"/>
-  <rect x="0" y="2" width="900" height="32" fill="url(#key)"/>
-</svg>

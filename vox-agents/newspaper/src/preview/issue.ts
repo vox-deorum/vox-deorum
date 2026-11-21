@@ -35,8 +35,8 @@ export function readPreviewDesigns(): PreviewDesign[] {
   return readBuiltInDesignDocuments().flatMap(document => z.array(previewDesignSchema).parse(document));
 }
 
-/** Use fixture stories and the current design's masthead, section labels and lead artwork. */
-export function createPreviewIssue(design: PreviewDesign, layout: NewspaperLayoutVariant): IssueDocument {
+/** Use fixture stories and the current design's masthead, section labels and lead artwork, with an optional accent override. */
+export function createPreviewIssue(design: PreviewDesign, layout: NewspaperLayoutVariant, accentColor?: string): IssueDocument {
   const sample = samples[layout];
   const itemIds = sample.pages[0].itemIds;
   const image = design.assetDefinitions.find(asset => asset.kind === "image");
@@ -48,7 +48,9 @@ export function createPreviewIssue(design: PreviewDesign, layout: NewspaperLayou
       motto: design.motto,
       designId: design.id,
       designVersion: design.version,
-      presentation: design.presentation,
+      presentation: accentColor
+        ? { ...design.presentation, tokens: { ...design.presentation.tokens, accentColor } }
+        : design.presentation,
     },
     pages: previewPages.map(page => {
       const isFront = "front" in page && page.front === true;

@@ -12,7 +12,7 @@ Folders group assets by owner:
 
 Cinzel supplies weights 400, 700 and 900. Cardo supplies 400, 700 and 400 italic. Both come from Google Fonts and keep their OFL texts in `licenses/` as `cinzel-OFL.txt` and `cardo-OFL.txt`. The other font families retain their existing license files.
 
-The generated illustrations are `designs/victorian/harbour.png` (`victorian.harbour`) and `designs/wire/port.png` (`wire.port`). The authored SVG ornaments are the Greek key band in `designs/oral-accounts/meander.svg` (`oral-accounts.meander`) and the redrawn scrollwork cartouche in `designs/victorian/scrollwork.svg` (`victorian.scrollwork`). Each renderer family owns its neutral and selected vote icons. These project artwork assets follow the repository license. Family stylesheets draw decorations as pseudo-elements with inline SVG masks, so they add no asset loads.
+The generated illustrations are `designs/victorian/harbour.png` (`victorian.harbour`) and `designs/wire/port.png` (`wire.port`). The authored SVG ornament is the scrollwork cartouche in `designs/victorian/scrollwork.svg` (`victorian.scrollwork`). Each renderer family owns its neutral and selected vote icons. These project artwork assets follow the repository license. Family stylesheets draw decorations as pseudo-elements with inline SVG masks, so they add no asset loads.
 
 To add an illustration or ornament:
 

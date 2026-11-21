@@ -21,23 +21,8 @@
         "accentColor": "#9b2f1f",
         "bodyFontAssetId": "font-cardo-400",
         "headingFontAssetId": "font-cinzel-700"
-      },
-      "assets": {
-        "ornamentAssetId": "oral-accounts.meander"
       }
     },
-    "assetDefinitions": [
-      {
-        "id": "meander",
-        "kind": "ornament",
-        "path": "assets/designs/oral-accounts/meander.svg",
-        "mediaType": "image/svg+xml",
-        "width": 900,
-        "height": 36,
-        "license": "Vox Deorum project asset",
-        "attribution": "Authored SVG Greek key band for the oral accounts design."
-      }
-    ],
     "layouts": [
       {
         "id": "account",
