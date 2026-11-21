@@ -33,6 +33,8 @@ export interface EditorialCandidate {
   variants: AuthoredVariant[];
   variantWeights: Record<string, number>;
   variantSources: Record<string, NewspaperSourceReference[]>;
+  /** Placeholders that print names in this template's prose. */
+  names?: readonly string[];
   /** Check-local fact bindings used by style rules after the story is selected. */
   variantBindings?: ExpressionBindings;
   /** Visible identity fields available to merged prose. */
@@ -282,6 +284,7 @@ function candidate(
     short: template.short,
     weight: rating.weight,
     variants, variantWeights, variantSources, values,
+    ...(template.names === undefined ? {} : { names: template.names }),
     ...(variantBindings === undefined ? {} : { variantBindings }),
     ...(mergeIdentity === undefined ? {} : { mergeIdentity }),
     sources: uniqueSources([...parts.flatMap((part) => part.sources), ...rating.sources]),

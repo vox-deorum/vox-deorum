@@ -3,6 +3,7 @@
     "id": "becomes-vassal-account",
     "triggers": ["becomes-vassal"],
     "tags": ["politics", "international"],
+    "names": ["master"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -64,6 +65,7 @@
     "id": "defensive-pact-ends-account",
     "triggers": ["defensive-pact-ends"],
     "tags": ["politics", "international"],
+    "names": ["ally"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -115,6 +117,7 @@
     "id": "defensive-pact-signed-account",
     "triggers": ["defensive-pact-signed"],
     "tags": ["politics", "international"],
+    "names": ["ally"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -177,6 +180,7 @@
     "id": "denounced-by-major-account",
     "triggers": ["denounced-by-major"],
     "tags": ["politics", "international"],
+    "names": ["civilization", "player.leader"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -225,7 +229,7 @@
         "genre": "report",
         "headline": "In this year, {{civilization}} spoke against us",
         "body": [
-          "In this year the court of {{civilization}} set down a denunciation against our nation, where none stood before. The scribe records the fact and the year, and sets down no opinion beside it."
+          "{{player.leader}}, ruler of {{civilization}}, has denounced our nation. The scribe enters the denunciation under this year."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -238,6 +242,7 @@
     "id": "first-contact-account",
     "triggers": ["first-contact"],
     "tags": ["politics", "international"],
+    "names": ["stranger"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -299,6 +304,7 @@
     "id": "foreign-defensive-pact-account",
     "triggers": ["foreign-defensive-pact"],
     "tags": ["politics", "international"],
+    "names": ["first", "second"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -349,6 +355,7 @@
     "id": "foreign-defensive-pact-ends-account",
     "triggers": ["foreign-defensive-pact-ends"],
     "tags": ["politics", "international"],
+    "names": ["first", "second"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -399,6 +406,7 @@
     "id": "friendship-begins-account",
     "triggers": ["friendship-begins"],
     "tags": ["politics", "international"],
+    "names": ["friend"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -462,6 +470,7 @@
     "id": "friendship-ends-account",
     "triggers": ["friendship-ends"],
     "tags": ["politics", "international"],
+    "names": ["friend"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -512,6 +521,7 @@
     "id": "gains-vassal-account",
     "triggers": ["gains-vassal"],
     "tags": ["politics", "international"],
+    "names": ["vassal"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -573,6 +583,7 @@
     "id": "loses-vassal-account",
     "triggers": ["loses-vassal"],
     "tags": ["politics", "international"],
+    "names": ["vassal"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -623,6 +634,7 @@
     "id": "mutual-denunciation-account",
     "triggers": ["mutual-denunciation"],
     "tags": ["politics", "international"],
+    "names": ["civilization"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -684,6 +696,7 @@
     "id": "open-borders-granted-account",
     "triggers": ["open-borders-granted"],
     "tags": ["politics", "international"],
+    "names": ["civilization"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -734,6 +747,7 @@
     "id": "open-borders-received-account",
     "triggers": ["open-borders-received"],
     "tags": ["politics", "international"],
+    "names": ["capital", "civilization"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -784,6 +798,7 @@
     "id": "third-party-peace-deal-account",
     "triggers": ["third-party-peace-deal"],
     "tags": ["politics", "military", "international"],
+    "names": ["from", "to"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -836,6 +851,7 @@
     "id": "third-party-war-deal-account",
     "triggers": ["third-party-war-deal"],
     "tags": ["politics", "military", "international"],
+    "names": ["from", "to"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -886,6 +902,7 @@
     "id": "vassalage-ends-account",
     "triggers": ["vassalage-ends"],
     "tags": ["politics", "international"],
+    "names": ["master"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -948,6 +965,7 @@
     "id": "we-denounce-major-account",
     "triggers": ["we-denounce-major"],
     "tags": ["politics", "international"],
+    "names": ["civilization"],
     "weight": { "base": 1 },
     "variants": [
       {

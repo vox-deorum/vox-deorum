@@ -3,6 +3,7 @@
     "id": "ally-joins-our-war-account",
     "triggers": ["ally-joins-our-war"],
     "tags": ["politics", "military", "international"],
+    "names": ["allies", "opponent"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -52,6 +53,7 @@
     "id": "barbarians-at-the-gates-account",
     "triggers": ["barbarians-at-the-gates"],
     "tags": ["cities", "military"],
+    "names": ["cityName"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -128,6 +130,7 @@
     "id": "besieged-and-starving-account",
     "triggers": ["besieged-and-starving"],
     "tags": ["military"],
+    "names": ["city"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -189,6 +192,7 @@
     "id": "enemy-city-takes-heavy-damage-account",
     "triggers": ["enemy-city-takes-heavy-damage"],
     "tags": ["cities", "military", "international"],
+    "names": ["cityName", "civilization"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -253,6 +257,7 @@
     "id": "enemy-front-posture-offensive-account",
     "triggers": ["enemy-front-posture-offensive"],
     "tags": ["cities", "military", "international"],
+    "names": ["cityName", "civilization"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -315,6 +320,7 @@
     "id": "enemy-front-posture-regroup-account",
     "triggers": ["enemy-front-posture-regroup"],
     "tags": ["cities", "military", "international"],
+    "names": ["cityName", "civilization"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -376,6 +382,7 @@
     "id": "enemy-front-posture-withdraw-account",
     "triggers": ["enemy-front-posture-withdraw"],
     "tags": ["cities", "military", "international"],
+    "names": ["cityName", "civilization"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -437,6 +444,7 @@
     "id": "enemy-troops-sighted-near-city-account",
     "triggers": ["enemy-troops-sighted-near-city"],
     "tags": ["cities", "military", "domestic"],
+    "names": ["cityName", "enemies"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -550,6 +558,7 @@
     "id": "foreign-capital-falls-account",
     "triggers": ["foreign-capital-falls"],
     "tags": ["politics", "military", "international"],
+    "names": ["cityName", "loser", "winner"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -602,6 +611,7 @@
     "id": "foreign-peace-nearby-account",
     "triggers": ["foreign-peace-nearby"],
     "tags": ["politics", "military", "international"],
+    "names": ["initiator", "target"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -651,6 +661,7 @@
     "id": "foreign-war-nearby-account",
     "triggers": ["foreign-war-nearby"],
     "tags": ["politics", "military", "international"],
+    "names": ["initiator", "target"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -711,6 +722,7 @@
     "id": "nearby-capital-falls-account",
     "triggers": ["nearby-capital-falls"],
     "tags": ["military"],
+    "names": ["loser", "winner"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -760,6 +772,7 @@
     "id": "nearby-city-captured-account",
     "triggers": ["nearby-city-captured"],
     "tags": ["cities", "military"],
+    "names": ["cityName", "loser", "winner"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -812,6 +825,7 @@
     "id": "neighbor-army-overtakes-account",
     "triggers": ["neighbor-army-overtakes"],
     "tags": ["military"],
+    "names": ["neighbor"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -875,6 +889,7 @@
     "id": "our-army-overtakes-neighbor-account",
     "triggers": ["our-army-overtakes-neighbor"],
     "tags": ["politics", "military", "international"],
+    "names": ["neighbor"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -938,6 +953,7 @@
     "id": "our-city-takes-heavy-damage-account",
     "triggers": ["our-city-takes-heavy-damage"],
     "tags": ["cities", "military", "domestic"],
+    "names": ["city"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -999,6 +1015,7 @@
     "id": "own-front-posture-counterattack-account",
     "triggers": ["own-front-posture-counterattack"],
     "tags": ["cities", "military", "domestic"],
+    "names": ["cityName"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -1060,6 +1077,7 @@
     "id": "own-front-posture-defensive-account",
     "triggers": ["own-front-posture-defensive"],
     "tags": ["cities", "military", "domestic"],
+    "names": ["cityName"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -1121,6 +1139,7 @@
     "id": "peace-capitulation-account",
     "triggers": ["peace-capitulation"],
     "tags": ["politics", "military", "international"],
+    "names": ["initiator", "target"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -1172,6 +1191,7 @@
     "id": "peace-concessions-account",
     "triggers": ["peace-concessions"],
     "tags": ["politics", "military", "international"],
+    "names": ["initiator", "target"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -1226,6 +1246,7 @@
     "id": "peace-on-one-front-account",
     "triggers": ["peace-on-one-front"],
     "tags": ["politics", "military", "international"],
+    "names": ["remaining", "settled"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -1387,6 +1408,7 @@
     "id": "vassals-join-war-account",
     "triggers": ["vassals-join-war"],
     "tags": ["military"],
+    "names": ["initiator", "target", "vassals"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -1436,6 +1458,7 @@
     "id": "war-advantage-stalls-account",
     "triggers": ["war-advantage-stalls"],
     "tags": ["military"],
+    "names": ["opponent"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -1486,6 +1509,7 @@
     "id": "war-between-friends-account",
     "triggers": ["war-between-friends"],
     "tags": ["politics", "military", "international"],
+    "names": ["first", "second"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -1535,6 +1559,7 @@
     "id": "war-duration-milestone-account",
     "triggers": ["war-duration-milestone"],
     "tags": ["politics", "military"],
+    "names": ["opponent"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -1586,6 +1611,7 @@
     "id": "war-involving-us-account",
     "triggers": ["war-involving-us"],
     "tags": ["politics", "military"],
+    "names": ["initiator", "target"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -1651,6 +1677,7 @@
     "id": "war-on-three-fronts-account",
     "triggers": ["war-on-three-fronts"],
     "tags": ["politics", "military"],
+    "names": ["enemies"],
     "weight": { "base": 1 },
     "merge": {
       "match": "member.incident?.is.incomingMajorDeclaration && self.wars.some(p => p.knows('id') && p.id === member.incident.initiator.id)",
@@ -1723,6 +1750,7 @@
     "id": "war-turns-against-us-account",
     "triggers": ["war-turns-against-us"],
     "tags": ["politics", "military"],
+    "names": ["opponent"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -1772,6 +1800,7 @@
     "id": "war-turns-our-way-account",
     "triggers": ["war-turns-our-way"],
     "tags": ["politics", "military"],
+    "names": ["opponent"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -1821,6 +1850,7 @@
     "id": "war-weariness-eases-account",
     "triggers": ["war-weariness-eases"],
     "tags": ["politics", "military"],
+    "names": ["opponent"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -1872,6 +1902,7 @@
     "id": "war-weariness-sets-in-account",
     "triggers": ["war-weariness-sets-in"],
     "tags": ["politics", "military"],
+    "names": ["opponent"],
     "weight": { "base": 1 },
     "variants": [
       {

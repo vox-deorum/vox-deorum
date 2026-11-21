@@ -3,6 +3,7 @@
     "id": "friend-enters-new-era-account",
     "triggers": ["friend-enters-new-era"],
     "tags": ["politics", "international"],
+    "names": ["civilization", "era", "former"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -79,6 +80,7 @@
     "id": "nearby-team-gains-technology-account",
     "triggers": ["nearby-team-gains-technology"],
     "tags": ["science", "international"],
+    "names": ["team", "tech"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -149,6 +151,7 @@
     "id": "new-era-account",
     "triggers": ["new-era"],
     "tags": ["politics", "domestic"],
+    "names": ["era"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -210,6 +213,7 @@
     "id": "our-team-gains-technology-account",
     "triggers": ["our-team-gains-technology"],
     "tags": ["science", "domestic"],
+    "names": ["era", "tech"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -271,6 +275,7 @@
     "id": "rival-enters-new-era-account",
     "triggers": ["rival-enters-new-era"],
     "tags": ["politics", "international"],
+    "names": ["civilization", "era", "former"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -348,6 +353,7 @@
     "id": "technology-leader-changes-account",
     "triggers": ["technology-leader-changes"],
     "tags": ["science"],
+    "names": ["civilization"],
     "weight": { "base": 1 },
     "variants": [
       {

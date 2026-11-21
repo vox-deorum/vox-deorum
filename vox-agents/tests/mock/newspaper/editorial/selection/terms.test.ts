@@ -72,7 +72,7 @@ describe('printable terms', () => {
     };
     const facts = buildNewspaperFacts(
       evidence,
-      { playerIdentities: { 0: { name: 'France', major: true } } },
+      { playerIdentities: { 0: { name: 'France', leader: 'Napoleon', major: true } } },
       { ideologies: config.constants.types.ideologies },
     );
     const compiled = await prepareEditorialExpressions(config);
@@ -80,6 +80,7 @@ describe('printable terms', () => {
     const terms = await evaluateEditorialTerms(compiled, batch);
 
     expect(terms.get('civilization')).toEqual({ value: 'France', sources: [owner.source] });
+    expect(terms.get('leader')).toEqual({ value: 'Napoleon', sources: [owner.source] });
     expect(terms.get('civilizationAdjective')).toEqual({ value: 'French', sources: [owner.source] });
     expect(terms.get('ruler')?.value).toBe('the Party');
     expect(terms.get('capital')?.value).toBe('Paris');

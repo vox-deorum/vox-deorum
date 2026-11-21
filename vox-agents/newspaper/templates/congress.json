@@ -3,6 +3,7 @@
     "id": "congress-new-proposals-account",
     "triggers": ["congress-new-proposals"],
     "tags": ["international", "congress"],
+    "names": ["proposal"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -65,6 +66,7 @@
     "id": "congress-resolution-defeated-account",
     "triggers": ["congress-resolution-defeated"],
     "tags": ["international", "congress"],
+    "names": ["resolution"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -117,6 +119,7 @@
     "id": "congress-resolution-passed-account",
     "triggers": ["congress-resolution-passed"],
     "tags": ["international", "congress"],
+    "names": ["resolution"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -169,6 +172,7 @@
     "id": "congress-sanctions-on-us-account",
     "triggers": ["congress-sanctions-on-us"],
     "tags": ["international", "congress"],
+    "names": ["resolution"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -218,6 +222,7 @@
     "id": "congress-session-approaching-account",
     "triggers": ["congress-session-approaching"],
     "tags": ["international", "congress"],
+    "names": ["league"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -281,6 +286,7 @@
     "id": "congress-session-imminent-account",
     "triggers": ["congress-session-imminent"],
     "tags": ["international", "congress"],
+    "names": ["league"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -373,6 +379,7 @@
     "id": "congress-voting-opens-account",
     "triggers": ["congress-voting-opens"],
     "tags": ["international", "congress"],
+    "names": ["league"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -426,6 +433,7 @@
     "id": "congress-world-ideology-account",
     "triggers": ["congress-world-ideology"],
     "tags": ["international", "congress"],
+    "names": ["resolution"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -477,6 +485,7 @@
     "id": "congress-world-project-account",
     "triggers": ["congress-world-project"],
     "tags": ["international", "congress"],
+    "names": ["project"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -526,6 +535,7 @@
     "id": "congress-world-religion-account",
     "triggers": ["congress-world-religion"],
     "tags": ["international", "congress"],
+    "names": ["resolution"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -578,6 +588,7 @@
     "id": "sanction-proposed-account",
     "triggers": ["sanction-proposed"],
     "tags": ["international", "congress"],
+    "names": ["resolution"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -627,6 +638,7 @@
     "id": "sanction-repeal-proposed-account",
     "triggers": ["sanction-repeal-proposed"],
     "tags": ["international", "congress"],
+    "names": ["resolution"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -677,6 +689,7 @@
     "id": "travel-ban-proposed-account",
     "triggers": ["travel-ban-proposed"],
     "tags": ["international", "congress", "culture"],
+    "names": ["proposer", "resolution"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -728,6 +741,7 @@
     "id": "travel-ban-repeal-proposed-account",
     "triggers": ["travel-ban-repeal-proposed"],
     "tags": ["international", "congress", "culture"],
+    "names": ["proposer", "resolution"],
     "weight": { "base": 1 },
     "variants": [
       {

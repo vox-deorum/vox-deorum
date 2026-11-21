@@ -54,12 +54,6 @@
     text-wrap: balance;
   }
   & .vd-storylist .vd-story--lead .vd-deck { font-size: calc(19px * var(--vd-text-scale)); }
-  & .vd-story--lead .vd-story-content .vd-prose {
-    columns: 2;
-    column-gap: var(--essay-gutter);
-    orphans: 2;
-    widows: 2;
-  }
   & .vd-prose { font-size: calc(clamp(15px, 1.7cqi, 18px) * var(--vd-text-scale)); line-height: 1.55; }
   & .vd-prose p { margin-bottom: 0; }
   & .vd-prose p + p { text-indent: 1.25em; }
@@ -76,4 +70,14 @@
   }
   & .vd-storylist[data-layout] .vd-story--brief .vd-headline { font-size: calc(clamp(19px, 2cqi, 25px) * var(--vd-text-scale)); }
   & .vd-end-rule { width: 5em; margin-inline: auto; }
+}
+
+/* The lead spans both text tracks on a wide sheet; narrow sheets keep one column. */
+@container newspaper (width > 760px) {
+  .vd-newspaper[data-publication-design="coffeehouse-essay"] .vd-story--lead .vd-story-content .vd-prose {
+    columns: 2;
+    column-gap: var(--essay-gutter);
+    orphans: 2;
+    widows: 2;
+  }
 }

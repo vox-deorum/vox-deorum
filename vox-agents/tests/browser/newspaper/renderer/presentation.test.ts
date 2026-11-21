@@ -92,6 +92,35 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('stored newspaper
     }
   }, 60_000);
 
+  it('should underline named body text and named links in the exported paper', async context => {
+    if (!browser) { context.skip(unavailable); return; }
+    const issue = createNewspaperIssue();
+    issue.items[0].body = [[
+      { type: 'text', text: 'Napoleon', isName: true },
+      { type: 'text', text: ' visits ' },
+      { type: 'link', text: 'Paris', isName: true, target: { type: 'city', cityId: '1' } },
+      { type: 'text', text: ' on turn 12.' },
+    ]];
+    const page = await browser.newPage();
+    try {
+      await page.goto(`${host.url}/newspaper/export.html`);
+      await page.evaluate(async issueInput => window.voxDeorumNewspaperExport!.mount(issueInput, {
+        viewportWidth: 1280, viewportHeight: 720, paperWidth: 1200, displayScale: 1,
+        textScale: 1, rasterScale: 1, maxTextureWidth: 4096, maxTextureHeight: 2048, scrollbarGutter: 16,
+      }), issue);
+      const body = page.locator('.vd-prose').first();
+      expect(await body.locator('.vd-name').evaluateAll(names => names.map(name => ({
+        label: name.textContent, tag: name.tagName, decoration: getComputedStyle(name).textDecorationLine,
+      })))).toEqual([
+        { label: 'Napoleon', tag: 'SPAN', decoration: 'underline' },
+        { label: 'Paris', tag: 'A', decoration: 'underline' },
+      ]);
+      expect(await body.locator('.vd-number').textContent()).toBe('12');
+    } finally {
+      await page.close();
+    }
+  }, 60_000);
+
   it('should draw stored masthead and article credits beneath their headings', async context => {
     if (!browser) { context.skip(unavailable); return; }
     const issue = createNewspaperIssue();

@@ -3,6 +3,7 @@
     "id": "cultural-influence-becomes-influential-incoming-account",
     "triggers": ["cultural-influence-becomes-influential-incoming"],
     "tags": ["culture", "international"],
+    "names": ["rival"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -60,6 +61,7 @@
     "id": "cultural-influence-becomes-influential-outgoing-account",
     "triggers": ["cultural-influence-becomes-influential-outgoing"],
     "tags": ["culture", "international"],
+    "names": ["rival"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -117,6 +119,7 @@
     "id": "cultural-influence-loses-influential-incoming-account",
     "triggers": ["cultural-influence-loses-influential-incoming"],
     "tags": ["culture", "international"],
+    "names": ["rival"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -174,6 +177,7 @@
     "id": "cultural-influence-loses-influential-outgoing-account",
     "triggers": ["cultural-influence-loses-influential-outgoing"],
     "tags": ["culture", "international"],
+    "names": ["rival"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -231,6 +235,7 @@
     "id": "cultural-influence-trend-turns-incoming-account",
     "triggers": ["cultural-influence-trend-turns-incoming"],
     "tags": ["culture", "international"],
+    "names": ["rival"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -287,6 +292,7 @@
     "id": "cultural-influence-trend-turns-outgoing-account",
     "triggers": ["cultural-influence-trend-turns-outgoing"],
     "tags": ["culture", "international"],
+    "names": ["rival"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -356,6 +362,7 @@
     "id": "enemy-wonder-nearby-account",
     "triggers": ["enemy-wonder-nearby"],
     "tags": ["culture"],
+    "names": ["city", "wonder"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -425,6 +432,7 @@
     "id": "foreign-wonder-completed-account",
     "triggers": ["foreign-wonder-completed"],
     "tags": ["culture", "international"],
+    "names": ["cityName", "civilization", "wonder"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -496,6 +504,7 @@
     "id": "great-person-born-account",
     "triggers": ["great-person-born"],
     "tags": ["politics", "domestic"],
+    "names": ["civilization", "person", "unit"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -558,6 +567,7 @@
     "id": "great-person-died-account",
     "triggers": ["great-person-died"],
     "tags": ["politics", "military", "international"],
+    "names": ["civilization", "killer", "person"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -621,6 +631,7 @@
     "id": "great-person-expended-account",
     "triggers": ["great-person-expended"],
     "tags": ["politics"],
+    "names": ["civilization", "person"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -672,6 +683,7 @@
     "id": "great-works-added-account",
     "triggers": ["great-works-added"],
     "tags": ["cities", "domestic"],
+    "names": ["city"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -733,6 +745,7 @@
     "id": "great-works-lost-account",
     "triggers": ["great-works-lost"],
     "tags": ["cities", "domestic"],
+    "names": ["city"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -794,6 +807,7 @@
     "id": "our-wonder-completed-account",
     "triggers": ["our-wonder-completed"],
     "tags": ["cities", "domestic"],
+    "names": ["city", "wonder"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -863,6 +877,7 @@
     "id": "tourism-output-leader-changes-account",
     "triggers": ["tourism-output-leader-changes"],
     "tags": ["culture", "international"],
+    "names": ["civilization"],
     "weight": { "base": 1 },
     "variants": [
       {

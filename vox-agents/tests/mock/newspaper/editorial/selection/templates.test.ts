@@ -1,9 +1,11 @@
 ﻿import { describe, expect, it } from 'vitest';
 import type { NewspaperEvidence } from '../../../../../../mcp-server/dist/newspaper/evidence.js';
 import type { RuleDevelopment } from '../../../../../src/newspaper/contracts/triggers.js';
+import { inlineTextSchema } from '../../../../../src/newspaper/contracts/issue.js';
 import { scaleEditorialConstants } from '../../../../../src/newspaper/editorial/config/constants.js';
 import { getEditorialExpressions, loadEditorialConfig, parseEditorialConfig } from '../../../../../src/newspaper/editorial/config/load.js';
 import { buildNewspaperFacts } from '../../../../../src/newspaper/editorial/facts/index.js';
+import { renderAuthoredText } from '../../../../../src/newspaper/editorial/presentation/issue.js';
 import { evaluateTriggerRules } from '../../../../../src/newspaper/editorial/rules/evaluate.js';
 import { matchTemplates } from '../../../../../src/newspaper/editorial/selection/templates.js';
 
@@ -14,9 +16,10 @@ const standard = {
 
 /** Exercise authored eligibility against the same visible facts and compiled catalogue as a check. */
 async function candidates(totalCities: number, triggers: unknown[], template: unknown,
-  { adjust, receiverName = 'France' }: {
+  { adjust, receiverName = 'France', receiverLeader }: {
     adjust?: (developments: RuleDevelopment[]) => RuleDevelopment[];
     receiverName?: string;
+    receiverLeader?: string;
   } = {}) {
   const base = await loadEditorialConfig();
   const config = await parseEditorialConfig({ ...base, triggers, templates: [template] });
@@ -33,7 +36,7 @@ async function candidates(totalCities: number, triggers: unknown[], template: un
     players: [owner], cities, events: [], comparisons: { players: [], cities: [] },
     history: { fromTurn: 5, baseline: { players: [], cities: [] },
       snapshots: { players: [owner], cities }, events: [], gaps: [] },
-  }, { playerIdentities: { 0: { name: receiverName, major: true } } });
+  }, { playerIdentities: { 0: { name: receiverName, major: true, leader: receiverLeader } } });
   const compiled = await getEditorialExpressions(config);
   const rules = await evaluateTriggerRules({
     rules: config.triggers, compiled, facts, constants: config.constants, speedMultiplier: 1,
@@ -83,6 +86,33 @@ describe('newspaper template matching', () => {
       expect.objectContaining({ table: 'CityInformations', id: 129 }),
       expect.objectContaining({ table: 'PlayerSummaries', id: 2 }),
     ]);
+  });
+
+  it('should print and source a visible leader name in the body while preserving named links', async () => {
+    const triggers = [{ id: 'report', subject: 'city', when: 'true' }];
+    const template = {
+      ...standard, triggers: ['report'], names: ['city', 'city.owner.leader'],
+      variants: [
+        {
+          ...standard.variants[0], id: 'named',
+          body: ['{{city.owner.leader}} visits {{city}} on turn {{period.to}}.'],
+          links: [{ placeholder: 'city', label: '{{city}}', target: { type: 'city', cityId: '{{cityId}}' } }],
+        },
+        standard.variants[0],
+      ],
+    };
+    const [candidate] = await candidates(1, triggers, template, { receiverLeader: 'Napoleon' });
+    const [variant] = candidate.variants;
+    const body = inlineTextSchema.parse(renderAuthoredText(variant.body[0], candidate.values, variant, candidate.names));
+    expect(body.filter(node => node.type === 'text' || node.type === 'link').filter(node => node.isName))
+      .toEqual([
+        { type: 'text', text: 'Napoleon', isName: true },
+        { type: 'link', text: 'City 0', isName: true, target: { type: 'city', cityId: '0' } },
+      ]);
+    expect(candidate.variantSources.named).toContainEqual(expect.objectContaining({ table: 'PlayerSummaries', id: 2 }));
+
+    const [withoutLeader] = await candidates(1, triggers, template);
+    expect(withoutLeader.variants.map(choice => choice.id)).toEqual(['account']);
   });
 
   it('should expose group totals and each member’s values without treating a member as the group', async () => {

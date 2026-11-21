@@ -215,6 +215,9 @@
 .vd-newspaper[data-design="feed"] .vd-byline a,
 .vd-newspaper[data-design="feed"] .vd-prose a {
   color: var(--vd-feed-tint-text);
+}
+
+.vd-newspaper[data-design="feed"] .vd-inline-link:not(.vd-name) {
   text-decoration: none;
 }
 

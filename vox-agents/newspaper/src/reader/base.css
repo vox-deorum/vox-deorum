@@ -194,6 +194,12 @@
   text-wrap: balance;
 }
 
+.vd-name {
+  text-decoration-line: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.17em;
+}
+
 .vd-headline a,
 .vd-deck a,
 .vd-byline a,

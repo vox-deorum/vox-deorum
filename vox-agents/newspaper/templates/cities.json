@@ -3,6 +3,7 @@
     "id": "building-completed-account",
     "triggers": ["building-completed"],
     "tags": ["cities", "domestic"],
+    "names": ["building", "cityName"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -64,6 +65,7 @@
     "id": "building-investment-account",
     "triggers": ["building-investment-made"],
     "tags": ["cities", "domestic"],
+    "names": ["building", "cityName"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -125,6 +127,7 @@
     "id": "building-purchased-account",
     "triggers": ["building-purchased"],
     "tags": ["cities", "domestic"],
+    "names": ["building", "cityName"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -186,6 +189,7 @@
     "id": "capital-outgrown-account",
     "triggers": ["capital-outgrown"],
     "tags": ["cities", "domestic"],
+    "names": ["capital", "largest"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -302,6 +306,7 @@
     "id": "city-being-razed-account",
     "triggers": ["city-being-razed"],
     "tags": ["cities", "military", "international"],
+    "names": ["cityName", "civilization"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -377,6 +382,7 @@
     "id": "city-capture-involving-us-account",
     "triggers": ["city-capture-involving-us"],
     "tags": ["cities", "military", "international"],
+    "names": ["captor", "cityName", "formerOwner"],
     "weight": { "base": 1 },
     "merge": {
       "match": "member.templateIds.includes('city-capture-involving-us-account') && lead.event.knows('city') && member.event.knows('city') && lead.event.city.id === member.event.city.id",
@@ -503,6 +509,7 @@
     "id": "city-defense-completed-account",
     "triggers": ["city-defense-completed"],
     "tags": ["cities", "military", "domestic"],
+    "names": ["building", "cityName"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -564,6 +571,7 @@
     "id": "city-famine-unrest-account",
     "triggers": ["city-famine-unrest"],
     "tags": ["cities", "domestic"],
+    "names": ["city"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -625,6 +633,7 @@
     "id": "city-flips-account",
     "triggers": ["city-flips"],
     "tags": ["cities", "politics", "international"],
+    "names": ["cityName", "formerOwner", "newOwner"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -687,6 +696,7 @@
     "id": "city-growth-milestone-account",
     "triggers": ["city-growth-milestone"],
     "tags": ["cities", "domestic"],
+    "names": ["cityName"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -748,6 +758,7 @@
     "id": "city-liberated-account",
     "triggers": ["city-liberated"],
     "tags": ["cities", "politics", "international"],
+    "names": ["liberated", "liberator"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -812,6 +823,7 @@
     "id": "city-pillaged-unrest-account",
     "triggers": ["city-pillaged-unrest"],
     "tags": ["cities", "domestic", "military"],
+    "names": ["city"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -873,6 +885,7 @@
     "id": "city-under-siege-account",
     "triggers": ["city-under-siege"],
     "tags": ["cities", "military"],
+    "names": ["cityName"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -948,6 +961,7 @@
     "id": "distant-colony-founded-account",
     "triggers": ["distant-colony-founded"],
     "tags": ["cities", "domestic"],
+    "names": ["cityName"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -1021,6 +1035,7 @@
     "id": "foreign-building-completed-account",
     "triggers": ["foreign-building-completed"],
     "tags": ["cities", "international"],
+    "names": ["building", "cityName", "civilization"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -1094,6 +1109,7 @@
     "id": "foreign-building-purchased-account",
     "triggers": ["foreign-building-purchased"],
     "tags": ["cities", "international"],
+    "names": ["building", "cityName", "civilization"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -1167,6 +1183,7 @@
     "id": "forward-settle-account",
     "triggers": ["forward-settle"],
     "tags": ["cities", "international"],
+    "names": ["city", "ours", "player"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -1244,6 +1261,7 @@
     "id": "neighbor-puppet-annexed-account",
     "triggers": ["neighbor-puppet-annexed"],
     "tags": ["cities", "international"],
+    "names": ["city", "owner"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -1305,6 +1323,7 @@
     "id": "occupied-city-resists-account",
     "triggers": ["occupied-city-resists"],
     "tags": ["cities", "domestic"],
+    "names": ["cityName", "formerOwner"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -1381,6 +1400,7 @@
     "id": "our-city-founded-account",
     "triggers": ["our-city-founded"],
     "tags": ["cities", "domestic"],
+    "names": ["cityName"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -1474,6 +1494,7 @@
     "id": "settler-departure-account",
     "triggers": ["settler-departure"],
     "tags": ["cities", "domestic"],
+    "names": ["town"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -1538,6 +1559,7 @@
     "id": "starvation-without-siege-account",
     "triggers": ["starvation-without-siege"],
     "tags": ["cities", "domestic"],
+    "names": ["city"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -1601,6 +1623,7 @@
     "id": "we-raze-a-city-account",
     "triggers": ["we-raze-a-city"],
     "tags": ["cities", "domestic"],
+    "names": ["cityName"],
     "weight": { "base": 1 },
     "variants": [
       {

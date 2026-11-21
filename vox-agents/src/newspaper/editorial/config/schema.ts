@@ -65,6 +65,7 @@ const templateSchema = eligibleSchema.extend({
   id: z.string().min(1),
   triggers: z.array(z.string().min(1)).min(1),
   tags: z.array(z.string().min(1)),
+  names: z.array(z.string().min(1)).optional(),
   mode: z.enum(['authored', 'llmOnly']).default('authored'),
   short: z.boolean().default(false),
   variants: z.array(authoredVariantSchema),

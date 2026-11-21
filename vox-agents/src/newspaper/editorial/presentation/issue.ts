@@ -22,11 +22,12 @@ import type { PresentationWeights } from './eligibility.js';
 import { resolveMasthead, resolvePrintableTermText, termTextSources } from './masthead.js';
 import type { MastheadRuleSelection } from './masthead-rules.js';
 
-/** Render authored placeholders into text nodes and explicitly declared typed links. */
+/** Render authored placeholders as text or links, marking names for the reader. */
 export function renderAuthoredText(
   text: string,
   values: EditorialCandidate['values'],
-  variant: AuthoredVariant
+  variant: AuthoredVariant,
+  names?: readonly string[],
 ): InlineText {
   const nodes: InlineText = [];
   let cursor = 0;
@@ -34,16 +35,19 @@ export function renderAuthoredText(
     const position = match.index!;
     if (position > cursor) nodes.push({ type: 'text', text: text.slice(cursor, position) });
     const link = variant.links.find((entry) => entry.placeholder === match[1]);
+    const name = names?.includes(match[1]) ? { isName: true as const } : {};
     if (link)
       nodes.push({
         type: 'link',
         text: substitute(link.label, values),
         target: resolveLinkTarget(link.target, values),
+        ...name,
       });
     else
       nodes.push({
         type: 'text',
         text: substitute(match[0], values),
+        ...name,
       });
     cursor = position + match[0].length;
   }
@@ -232,15 +236,15 @@ export async function presentIssue(input: {
       ...(observedTurn >= 0 ? { observedTurn } : {}),
       tags: candidate.tags,
       seriesKeys: candidate.seriesKeys,
-      headline: renderAuthoredText(variant.headline, candidate.values, variant),
+      headline: renderAuthoredText(variant.headline, candidate.values, variant, candidate.names),
       ...(variant.subheadline === undefined
         ? {}
-        : { subheadline: renderAuthoredText(variant.subheadline, candidate.values, variant) }),
+        : { subheadline: renderAuthoredText(variant.subheadline, candidate.values, variant, candidate.names) }),
       ...(variant.byline === undefined
         ? {}
-        : { byline: renderAuthoredText(variant.byline, candidate.values, variant) }),
+        : { byline: renderAuthoredText(variant.byline, candidate.values, variant, candidate.names) }),
       body: variant.body.map((paragraph) =>
-        renderAuthoredText(paragraph, candidate.values, variant)
+        renderAuthoredText(paragraph, candidate.values, variant, candidate.names)
       ),
       sourceNote: [{ type: 'text', text: `From the editors of ${masthead.title}` }],
       ...(earlier

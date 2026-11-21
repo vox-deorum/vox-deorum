@@ -11,6 +11,9 @@ interface StorySubject {
   ref?: FactReference;
 }
 
+const identityKeys = ['name', 'id'] as const;
+const playerIdentityKeys = [...identityKeys, 'leader'] as const;
+
 /** Find visible subjects without interpreting an authored or recorded label as an ID. */
 export function storySubject(key: string, facts?: NewspaperFactModel): StorySubject {
   const slash = key.indexOf('/');
@@ -41,32 +44,34 @@ function storyFields(ref: FactReference, facts: NewspaperFactModel): FactObject 
   return undefined;
 }
 
-/** Copy only a readable name or ID into prose metadata, retaining the sources behind a link. */
-function readIdentity(fields: FactObject | undefined, key: 'name' | 'id', link?: FactField): FactField | undefined {
+/** Copy a readable identity field into prose metadata, retaining the sources behind a reference. */
+function readIdentity(fields: FactObject | undefined, key: typeof playerIdentityKeys[number], link?: FactField): FactField | undefined {
   const field = fields?.[key];
   if (typeof field?.value !== 'number' && typeof field?.value !== 'string') return undefined;
+  if (key === 'leader' && (typeof field.value !== 'string' || !field.value.trim())) return undefined;
   return fact(field.value, [...(link?.sources ?? []), ...(field.sources ?? [])]);
 }
 
-/** Add subject namespaces and convenient name/ID aliases, leaving unavailable facts absent. */
+/** Add qualified identity fields and short name and ID aliases for the visible subjects. */
 export function storyIdentity(subject: StorySubject, facts?: NewspaperFactModel): Record<string, FactField> {
   const fields: Record<string, FactField> = Object.create(null);
-  for (const key of ['name', 'id'] as const) {
+  for (const key of subject.kind === 'player' ? playerIdentityKeys : identityKeys) {
     const field = readIdentity(subject.fields, key);
     if (!field) continue;
     fields['subject.' + key] = fields[subject.kind + '.' + key] = field;
-    fields[key === 'name' ? subject.kind : subject.kind + 'Id'] = field;
+    if (key !== 'leader') fields[key === 'name' ? subject.kind : subject.kind + 'Id'] = field;
   }
   if (!facts) return fields;
   for (const [name, link] of Object.entries(subject.fields ?? {})) {
-    const ref = link.value;
-    if (typeof ref !== 'object' || ref === null || !('$kind' in ref) || ref.$kind !== 'reference') continue;
-    const target = storyFields(ref as FactReference, facts);
-    for (const key of ['name', 'id'] as const) {
+    const value = link.value;
+    if (typeof value !== 'object' || value === null || !('$kind' in value) || value.$kind !== 'reference') continue;
+    const ref = value as FactReference;
+    const target = storyFields(ref, facts);
+    for (const key of ref.kind === 'player' ? playerIdentityKeys : identityKeys) {
       const field = readIdentity(target, key, link);
       if (!field) continue;
       fields[subject.kind + '.' + name + '.' + key] = field;
-      fields[key === 'name' ? name : name + 'Id'] = field;
+      if (key !== 'leader') fields[key === 'name' ? name : name + 'Id'] = field;
     }
   }
   return fields;

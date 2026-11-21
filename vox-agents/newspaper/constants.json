@@ -23,6 +23,7 @@
   },
   "terms": {
     "civilization": "self.knows('name') ? self.name.trim() || undefined : undefined",
+    "leader": "self.knows('leader') ? self.leader.trim() || undefined : undefined",
     "civilizationAdjective": "self.knows('name') ? ({ __proto__: null, America: 'American', Arabia: 'Arabian', Assyria: 'Assyrian', Austria: 'Austrian', Babylon: 'Babylonian', Brazil: 'Brazilian', Byzantium: 'Byzantine', Carthage: 'Carthaginian', China: 'Chinese', Denmark: 'Danish', Egypt: 'Egyptian', England: 'English', Ethiopia: 'Ethiopian', France: 'French', Germany: 'German', Greece: 'Greek', India: 'Indian', Indonesia: 'Indonesian', Japan: 'Japanese', Korea: 'Korean', Mongolia: 'Mongolian', Morocco: 'Moroccan', Nubia: 'Nubian', Persia: 'Persian', Poland: 'Polish', Polynesia: 'Polynesian', Portugal: 'Portuguese', Rome: 'Roman', Russia: 'Russian', Siam: 'Siamese', Songhai: 'Songhai', Spain: 'Spanish', Sweden: 'Swedish', 'The Aztecs': 'Aztec', 'The Celts': 'Celtic', 'The Huns': 'Hunnic', 'The Inca': 'Incan', 'The Iroquois': 'Iroquois', 'The Maya': 'Mayan', 'The Netherlands': 'Dutch', 'The Ottomans': 'Ottoman', 'The Shoshone': 'Shoshone', 'The Zulus': 'Zulu', Venice: 'Venetian' })[self.name.trim()] : undefined"
   },
   "types": {

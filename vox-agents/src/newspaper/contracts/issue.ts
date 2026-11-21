@@ -111,6 +111,8 @@ export const inlineNodeSchema = z.discriminatedUnion("type", [
     type: z.literal("text"),
     /** Text to display. */
     text: z.string(),
+    /** Whether the text is an authored name. */
+    isName: z.literal(true).optional(),
   }),
   /** Strongly emphasized text. */
   z.object({
@@ -137,6 +139,8 @@ export const inlineNodeSchema = z.discriminatedUnion("type", [
     type: z.literal("link"),
     /** Text to display. */
     text: z.string().min(1),
+    /** Whether the label is an authored name. */
+    isName: z.literal(true).optional(),
     /** Destination to open. */
     target: linkTargetSchema,
   }),

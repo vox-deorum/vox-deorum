@@ -53,6 +53,7 @@
     "id": "foreign-golden-age-begins-account",
     "triggers": ["foreign-golden-age-begins"],
     "tags": ["politics", "international"],
+    "names": ["civilization"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -103,6 +104,7 @@
     "id": "foreign-golden-age-ends-account",
     "triggers": ["foreign-golden-age-ends"],
     "tags": ["politics", "international"],
+    "names": ["civilization"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -344,6 +346,7 @@
     "id": "ideology-adopted-account",
     "triggers": ["ideology-adopted"],
     "tags": ["politics", "domestic"],
+    "names": ["ideology"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -395,6 +398,7 @@
     "id": "ideology-switched-account",
     "triggers": ["ideology-switched"],
     "tags": ["politics", "international"],
+    "names": ["civilization", "formerIdeology", "ideology"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -445,6 +449,7 @@
     "id": "major-reduced-to-single-city-account",
     "triggers": ["major-reduced-to-single-city"],
     "tags": ["politics", "international"],
+    "names": ["civilization"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -507,6 +512,7 @@
     "id": "policy-adopted-account",
     "triggers": ["policy-adopted"],
     "tags": ["politics", "domestic"],
+    "names": ["policy"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -557,6 +563,7 @@
     "id": "policy-branch-opened-account",
     "triggers": ["policy-branch-opened"],
     "tags": ["politics", "domestic"],
+    "names": ["branch"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -696,6 +703,7 @@
     "id": "rival-adopts-ideology-account",
     "triggers": ["rival-adopts-ideology"],
     "tags": ["politics", "international"],
+    "names": ["ideology", "name"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -756,6 +764,7 @@
     "id": "score-leader-changes-account",
     "triggers": ["score-leader-changes"],
     "tags": ["politics", "international"],
+    "names": ["civilization"],
     "weight": { "base": 1 },
     "variants": [
       {

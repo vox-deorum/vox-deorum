@@ -3,6 +3,7 @@
     "id": "ally-city-state-attacked-account",
     "triggers": ["ally-city-state-attacked"],
     "tags": ["politics", "military"],
+    "names": ["aggressor", "ally"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -65,6 +66,7 @@
     "id": "ally-city-state-captured-account",
     "triggers": ["ally-city-state-captured"],
     "tags": ["politics", "military", "international"],
+    "names": ["captor", "cityState"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -139,6 +141,7 @@
     "id": "city-state-ally-defects-account",
     "triggers": ["city-state-ally-defects"],
     "tags": ["politics"],
+    "names": ["cityState", "rival"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -202,6 +205,7 @@
     "id": "city-state-ally-gained-account",
     "triggers": ["city-state-ally-gained"],
     "tags": ["politics", "international"],
+    "names": ["cityState", "replaced"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -264,6 +268,7 @@
     "id": "city-state-ally-lost-account",
     "triggers": ["city-state-ally-lost"],
     "tags": ["politics", "international"],
+    "names": ["cityState"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -328,6 +333,7 @@
     "id": "city-state-ally-switches-to-friend-account",
     "triggers": ["city-state-ally-switches-to-friend"],
     "tags": ["politics", "international"],
+    "names": ["cityState", "friend"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -390,6 +396,7 @@
     "id": "city-state-friendship-changes-account",
     "triggers": ["city-state-friendship-changes"],
     "tags": ["politics", "international"],
+    "names": ["cityState"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -452,6 +459,7 @@
     "id": "city-state-quest-countdown-disappeared-account",
     "triggers": ["city-state-quest-countdown-disappeared"],
     "tags": ["politics", "international"],
+    "names": ["cityState"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -508,6 +516,7 @@
     "id": "city-state-quest-deadline-approaching-account",
     "triggers": ["city-state-quest-deadline-approaching"],
     "tags": ["politics", "international"],
+    "names": ["cityState"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -573,6 +582,7 @@
     "id": "city-state-timed-quest-observed-account",
     "triggers": ["city-state-timed-quest-observed"],
     "tags": ["politics", "international"],
+    "names": ["cityState"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -629,6 +639,7 @@
     "id": "foreign-major-wins-city-state-account",
     "triggers": ["foreign-major-wins-city-state"],
     "tags": ["politics", "international"],
+    "names": ["cityState", "civilization", "replaced"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -691,6 +702,7 @@
     "id": "friendly-city-state-attacked-account",
     "triggers": ["friendly-city-state-attacked"],
     "tags": ["politics", "military", "international"],
+    "names": ["aggressor", "cityState"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -753,6 +765,7 @@
     "id": "friendly-city-state-captured-account",
     "triggers": ["friendly-city-state-captured"],
     "tags": ["politics", "military", "international"],
+    "names": ["captor", "cityState"],
     "weight": { "base": 1 },
     "variants": [
       {

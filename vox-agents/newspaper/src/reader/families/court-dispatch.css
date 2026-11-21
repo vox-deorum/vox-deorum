@@ -10,6 +10,7 @@
   & .vd-title { font-style: italic; font-weight: 600; letter-spacing: -.035em; line-height: 1.05; }
   & .vd-tabs { justify-content: flex-start; }
   & .vd-storylist[data-layout] { display: grid; grid-template-columns: minmax(0, 1fr); gap: clamp(14px, 2cqi, 26px); }
+  & .vd-storylist[data-layout] .vd-prose { columns: auto; }
   & .vd-storylist[data-layout] > .vd-story {
     display: grid;
     grid-template-columns: 2.15em minmax(0, 1fr);
@@ -52,7 +53,7 @@
   .vd-newspaper[data-publication-design="court-dispatch"] {
     & .vd-storylist[data-layout="ordinary"] {
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      & .vd-prose { columns: auto; max-width: 66ch; }
+      & .vd-prose { max-width: 66ch; }
     }
     & .vd-storylist:not([data-layout="ordinary"]) > .vd-story:nth-child(odd) { margin-inline-end: 2.5cqi; }
     & .vd-storylist:not([data-layout="ordinary"]) > .vd-story:nth-child(even) { margin-inline-start: 3.5cqi; }
@@ -63,8 +64,6 @@
       & > * { grid-column: 1; }
       & > .vd-story-art { grid-column: 2; grid-row: 1 / span 5; align-self: start; width: auto; margin: 0; }
     }
-    & .vd-story--lead .vd-story-content:has(> .vd-story-art) > .vd-prose { columns: auto; }
-    & .vd-storylist:not([data-layout="ordinary"]) .vd-story--brief .vd-story-content:not(:has(> .vd-story-art)) > .vd-prose { columns: 25em 2; column-gap: var(--dispatch-inset); }
   }
 }
 

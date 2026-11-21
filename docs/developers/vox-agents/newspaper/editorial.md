@@ -38,6 +38,7 @@ A template names one or more rules in `triggers`. They must all fire for the sam
 | `short` | Lets the editor reserve the last slot for a brief |
 | `weight` | Base weight and conditional adjustments |
 | `variants` | Authored prose choices with an ID, text, links, eligibility, weight, and style tags |
+| `names` | Optional list of placeholders that display names, such as `["cityName", "player.leader"]` |
 | `merge` | Optional rules and prose for combining selected stories |
 
 `id`, `triggers`, `tags`, `weight` and `variants` are required. Each variant requires `id`, `headline`, `body` and `weight`; `subheadline`, `byline`, `when` and `links` are optional. The reader draws the subheadline under the headline and the byline below it, so an opinion piece or a signed report can carry both.
@@ -89,12 +90,16 @@ Prose and typed link values use `{{name}}` placeholders. Headlines, subheadlines
 | `{{subject.name}}`, `{{subject.id}}` | The visible subject's name and ID |
 | `{{period.from}}`, `{{period.to}}` | The matched rules' shared window: exclusive lower bound and inclusive cutoff turn |
 | `{{city.owner.name}}` | A namespaced reference, here the owner of a city subject |
+| `{{player.leader}}`, `{{city.owner.leader}}` | The visible leader of a player subject or a referenced player |
 | `{{lost}}` | A scalar rule value from the ungrouped development |
 | `{{key}}`, `{{count}}` | A grouped development's non-null scalar key and member count |
 | `{{terms.civilization}}`, `{{terms.civilizationAdjective}}` | The reader's civilization name and its English adjective, such as Rome and Roman |
+| `{{terms.leader}}` | The reader's leader name |
 | `{{terms.<name>}}` | A printable [term](triggers/constants.md#terms) defined by the catalogue, such as the receiver's capital |
 
-Use qualified names such as `{{city.owner.name}}` and `{{subject.id}}` for recorded identities. An unresolved placeholder, empty link label or invalid link destination makes the variant unprintable. The editor evaluates a term once from the check's global facts, so `{{terms.capital}}` means the same thing in every article. Each variant cites the rows behind the terms it prints.
+Use qualified names such as `{{city.owner.name}}` and `{{subject.id}}` for recorded identities. Missing facts, including an unrecorded leader, leave placeholders unresolved, so keep another variant that can run without them. An empty link label or invalid link destination also makes a variant unprintable. The editor evaluates terms once per check and each variant cites the rows behind the terms it prints.
+
+List name placeholders in the template's `names` array without braces. For example, add `terms.leader` to the array when the body uses `{{terms.leader}}`. The reader underlines the resolved name with the `vd-name` CSS class, and any declared link stays clickable.
 
 The adjective comes from the recorded English short name. For a modded or localized name outside the built-in list, override the term in your catalogue or offer a variant without it.
 

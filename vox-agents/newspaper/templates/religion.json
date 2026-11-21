@@ -3,6 +3,7 @@
     "id": "faith-drifts-account",
     "triggers": ["faith-drifts"],
     "tags": ["politics", "domestic"],
+    "names": ["founded", "majorityFaith"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -53,6 +54,7 @@
     "id": "faith-reaches-city-state-account",
     "triggers": ["faith-reaches-city-state"],
     "tags": ["politics", "international"],
+    "names": ["city", "cityState", "religion"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -115,6 +117,7 @@
     "id": "faith-reaches-distant-city-account",
     "triggers": ["faith-reaches-distant-city"],
     "tags": ["religion", "international"],
+    "names": ["cityName", "civilization", "religion"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -168,6 +171,7 @@
     "id": "foreign-faith-deepens-account",
     "triggers": ["foreign-faith-deepens"],
     "tags": ["religion", "international"],
+    "names": ["civilization", "religion"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -218,6 +222,7 @@
     "id": "foreign-major-adopts-our-faith-account",
     "triggers": ["foreign-major-adopts-our-faith"],
     "tags": ["politics", "international", "religion"],
+    "names": ["civilization", "religion"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -278,6 +283,7 @@
     "id": "foreign-religion-founded-account",
     "triggers": ["foreign-religion-founded"],
     "tags": ["politics", "international"],
+    "names": ["civilization", "holyCity", "religion"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -331,6 +337,7 @@
     "id": "national-majority-faith-changed-account",
     "triggers": ["national-majority-faith-changed"],
     "tags": ["politics", "domestic", "religion"],
+    "names": ["former", "religion"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -381,6 +388,7 @@
     "id": "neighbor-majority-faith-changed-account",
     "triggers": ["neighbor-majority-faith-changed"],
     "tags": ["politics", "international", "religion"],
+    "names": ["civilization", "former", "religion"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -436,6 +444,7 @@
     "id": "neighbors-convert-account",
     "triggers": ["neighbors-convert"],
     "tags": ["religion"],
+    "names": ["key"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -487,6 +496,7 @@
     "id": "our-faith-deepens-account",
     "triggers": ["our-faith-deepens"],
     "tags": ["religion", "domestic"],
+    "names": ["religion"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -538,6 +548,7 @@
     "id": "own-cities-divided-by-faith-account",
     "triggers": ["own-cities-divided-by-faith"],
     "tags": ["politics", "domestic", "religion"],
+    "names": ["founded", "others"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -593,6 +604,7 @@
     "id": "own-city-converts-account",
     "triggers": ["own-city-converts"],
     "tags": ["cities", "domestic"],
+    "names": ["city", "religion"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -657,6 +669,7 @@
     "id": "pantheon-founded-account",
     "triggers": ["pantheon-founded"],
     "tags": ["religion", "international"],
+    "names": ["belief", "cityName", "civilization"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -709,6 +722,7 @@
     "id": "religion-founded-account",
     "triggers": ["religion-founded"],
     "tags": ["politics", "domestic"],
+    "names": ["religion"],
     "weight": { "base": 1 },
     "variants": [
       {

@@ -156,13 +156,22 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('newspaper design
     } finally { await page.close(); }
   }, 60_000);
 
-  it('should use two columns for the lead while leaving each brief in one column', async context => {
-    if (!browser) { context.skip(unavailable); return; }
-    const page = await browser.newPage();
-    try {
-      await page.goto(`${host.url}/newspaper/export.html`);
-      for (const id of ['meiji-picture-sheet', 'printed-almanack', 'coffeehouse-essay']) {
-        const issue = await designIssue(id, breaking);
+  it.for([
+    ['meiji-picture-sheet', breaking, true],
+    ['coffeehouse-essay', breaking, true],
+    ['printed-almanack', breaking, false],
+    ['court-dispatch', breaking, false],
+    ['civic-survey', analysis, false],
+    ['civic-index', ordinary, false],
+    ['contact-sheet', ordinary, false],
+  ] as const)(
+    'should fit the prose to the headline layout in %s', async ([id, sample, splitsWideLead], context) => {
+      if (!browser) { context.skip(unavailable); return; }
+      const page = await browser.newPage();
+      try {
+        await page.goto(`${host.url}/newspaper/export.html`);
+        const issue = await designIssue(id, sample);
+        if (id === 'court-dispatch') delete issue.items[0].image;
         const sentence = ' The provisional report compares the two observations and records how the accounts changed.';
         for (const item of issue.items) {
           item.body = [[{ type: 'text', text: sentence.repeat(8).trim() }]];
@@ -176,11 +185,14 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('newspaper design
             const lines = Array.from(range.getClientRects());
             return lines.some(line => line.left > box.left + box.width / 2);
           }));
-          expect(columns, `${id} at ${width}px`).toEqual([true, false]);
+          expect(columns, `${width}px`).toEqual([
+            width === 1200 && splitsWideLead,
+            ...issue.pages[0].itemIds.slice(1).map(() => false),
+          ]);
         }
-      }
-    } finally { await page.close(); }
-  }, 60_000);
+      } finally { await page.close(); }
+    }, 60_000,
+  );
 
   it('should give a lone urgent brief the full row and keep ordinary briefs paired', async context => {
     if (!browser) { context.skip(unavailable); return; }

@@ -48,12 +48,13 @@ function inlineHtml(nodes: InlineText): string {
     const text = escapeHtml(node.text);
     if (node.type === 'strong') return `<strong>${text}</strong>`;
     if (node.type === 'emphasis') return `<em>${text}</em>`;
+    const nameClass = node.isName ? ' class="vd-name"' : '';
     if (node.type === 'link') {
       const title = escapeHtml(JSON.stringify(node.target));
-      if (node.target.type === 'article') return `<a href="#article-${encodeURIComponent(node.target.itemId)}" title="${title}">${text}</a>`;
-      return `<span title="${title}">${text}</span>`;
+      if (node.target.type === 'article') return `<a${nameClass} href="#article-${encodeURIComponent(node.target.itemId)}" title="${title}">${text}</a>`;
+      return `<span${nameClass} title="${title}">${text}</span>`;
     }
-    return text;
+    return node.isName ? `<span${nameClass}>${text}</span>` : text;
   }).join('');
 }
 
@@ -178,6 +179,7 @@ details.issue{margin-top:.5rem}
 .text{max-width:48rem}
 article{margin-top:1.25rem;padding-top:.75rem;border-top:1px solid #ccc}
 article:target{outline:2px solid #d9a93f;outline-offset:6px}
+.vd-name{text-decoration-line:underline;text-decoration-thickness:1px;text-underline-offset:.17em}
 pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px}
 table{border-collapse:collapse}td,th{border:1px solid #bbb;padding:.4rem}
 a{color:#235789}

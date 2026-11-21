@@ -84,14 +84,15 @@ export function appendInlineNodes(
       continue;
     }
     if (node.type === "link") {
-      const link = createElement("a", "vd-inline-link");
+      const link = createElement("a", node.isName ? "vd-inline-link vd-name" : "vd-inline-link");
       appendText(link, node.text);
       link.href = "#";
       bindAction(link, { type: "follow-link", itemId, target: node.target });
       container.append(link);
       continue;
     }
-    appendText(container, node.text);
+    if (node.isName) container.append(createElement("span", "vd-name", node.text));
+    else appendText(container, node.text);
   }
 }
 

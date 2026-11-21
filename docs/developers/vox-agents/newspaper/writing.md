@@ -4,6 +4,8 @@ The player lived through the game. Give them a paper their citizens would want t
 
 Use this guide when you edit `vox-agents/newspaper/templates/`. Share it with any model drafting variants. Each example names its [voice, stance, and genre](editorial.md#variant-styles). Check the trigger and the [placeholder reference](editorial.md#placeholders-and-facts) before you draft. Use [regional shortcuts](triggers/constants.md#regional-shortcuts) when a variant is written for a group of civilizations.
 
+The [design sets the columns](designs.md#rendering-constraints): a headline in one column has a body in one column, even when the headline wraps.
+
 ## Get to the action early
 
 Keep the subject and verb close. If prepositional phrases pile up, cut the ones the reader can spare and let the strongest detail follow the action. When two clipped sentences split a thought, let one sentence carry the action and its consequence.
@@ -82,7 +84,7 @@ Picture the neighbors who hear the crier, or the councilor opening the morning p
 
 Write:
 
-> Councilors, tell the next town how we lost {{cityName}}. People there are checking their gate bolts by lamplight, and they want to know whether ours held.
+> We lost {{cityName}} on the government's watch. In neighboring towns, people are checking their gates and watchtowers. “Dispatch your royal guards,” said a local councilman, “or we will have to swear loyalty to {{captor}} tomorrow.”
 
 Avoid:
 
@@ -92,7 +94,7 @@ Avoid:
 
 Write:
 
-> People, our word is ours again. If the council sends another envoy to {{master}}, let it read his instructions in the square. We have a right to hear what will be said in our name.
+> At last, we are free of {{master}}! Out in the square, people are singing and waving the {{terms.civilizationAdjective}} flag. {{terms.leader}}, come celebrate with your subjects.
 
 Avoid:
 
@@ -106,7 +108,7 @@ An editorial takes a side on a public question. Give skeptical readers a reason 
 
 Write:
 
-> Our golden age has begun with the army still in the field. The council should open talks with {{enemies}} while we can afford to turn down a bad offer. If another campaign drains the treasury, the other side can name its price.
+> Our golden age has begun, but we're still at war with {{enemies}}. At the post office, families are lining up for letters from the front. {{terms.leader}}, open peace talks and give those families a chance to welcome their soldiers home.
 
 Avoid:
 

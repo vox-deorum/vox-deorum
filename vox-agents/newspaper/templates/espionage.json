@@ -3,6 +3,7 @@
     "id": "election-operation-account",
     "triggers": ["election-operation"],
     "tags": ["politics", "international"],
+    "names": ["cityState"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -65,6 +66,7 @@
     "id": "our-diplomat-abroad-account",
     "triggers": ["our-diplomat-abroad"],
     "tags": ["politics", "international"],
+    "names": ["capital", "civilization"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -124,6 +126,7 @@
     "id": "spy-caught-at-home-account",
     "triggers": ["spy-caught-at-home"],
     "tags": ["politics", "international"],
+    "names": ["cityName"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -173,6 +176,7 @@
     "id": "spy-detected-abroad-account",
     "triggers": ["spy-detected-abroad"],
     "tags": ["politics", "international"],
+    "names": ["cityName", "possibleTechnology", "target"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -225,6 +229,7 @@
     "id": "spy-detected-at-home-account",
     "triggers": ["spy-detected-at-home"],
     "tags": ["politics", "international"],
+    "names": ["cityName"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -274,6 +279,7 @@
     "id": "spy-exposed-abroad-account",
     "triggers": ["spy-exposed-abroad"],
     "tags": ["politics", "international"],
+    "names": ["target"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -345,6 +351,7 @@
     "id": "spy-may-gain-technology-account",
     "triggers": ["spy-may-gain-technology"],
     "tags": ["politics", "international"],
+    "names": ["possibleTechnology", "target"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -397,6 +404,7 @@
     "id": "spy-posted-abroad-account",
     "triggers": ["spy-posted-abroad"],
     "tags": ["politics", "international"],
+    "names": ["cityName", "civilization"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -458,6 +466,7 @@
     "id": "their-diplomat-arrives-account",
     "triggers": ["their-diplomat-arrives"],
     "tags": ["politics", "international"],
+    "names": ["civilization"],
     "weight": { "base": 1 },
     "variants": [
       {
