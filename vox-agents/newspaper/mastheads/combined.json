@@ -1,0 +1,86 @@
+[
+  {
+    "id": "combined-acta-diurna",
+    "title": "Acta Diurna",
+    "motto": "The doings of the city, day by day",
+    "pageLabels": {
+      "home": "Public Acts",
+      "abroad": "Reports from Abroad"
+    },
+    "when": "self.name === 'Rome' && self.era?.replace(' Era', '') === 'Classical' && self.ideology === null",
+    "weight": {
+      "base": 10
+    },
+    "designs": ["oral-accounts"]
+  },
+  {
+    "id": "combined-english-mercantile",
+    "title": "The Mercantile Gazette",
+    "motto": "Shipping, markets, and news from every port",
+    "pageLabels": {
+      "economy": "Prices and Cargoes",
+      "abroad": "Foreign Intelligence"
+    },
+    "when": "self.name === 'England' && self.era?.replace(' Era', '') === 'Industrial' && self.hasBranch('Industry') && self.ideology === null",
+    "weight": {
+      "base": 11
+    },
+    "designs": ["port-register", "street-gazette", "cable-desk", "victorian"]
+  },
+  {
+    "id": "combined-venetian-mercury",
+    "title": "The Venetian Mercury",
+    "motto": "From the counting house to the council chamber",
+    "pageLabels": {
+      "home": "Council Affairs",
+      "abroad": "Letters of State"
+    },
+    "when": "self.name === 'Venice' && self.era?.replace(' Era', '') === 'Renaissance' && self.hasBranch('Statecraft') && self.ideology === null",
+    "weight": {
+      "base": 10
+    },
+    "designs": ["port-register", "printer-dispatch", "court-dispatch"]
+  },
+  {
+    "id": "combined-order-shift-report",
+    "title": "The Shift Report",
+    "motto": "From every shop floor to every worker",
+    "pageLabels": {
+      "economy": "Production and the Plan",
+      "abroad": "International Solidarity"
+    },
+    "when": "self.ideology === 'Order' && self.hasBranch('Industry')",
+    "weight": {
+      "base": 12
+    },
+    "designs": ["national-review", "street-gazette", "cable-desk", "victorian", "wire"]
+  },
+  {
+    "id": "combined-freedom-daily-citizen",
+    "title": "The Daily Citizen",
+    "motto": "The news belongs to the reader",
+    "pageLabels": {
+      "home": "The Public Square",
+      "abroad": "Foreign Correspondence"
+    },
+    "when": "self.ideology === 'Freedom' && self.hasPolicy('Civil Society')",
+    "weight": {
+      "base": 12
+    },
+    "designs": ["national-review", "street-gazette", "victorian", "civic-survey", "wire"]
+  },
+  {
+    "id": "combined-autocracy-national-sentinel",
+    "title": "The National Sentinel",
+    "motto": "A watch on every frontier",
+    "pageLabels": {
+      "home": "Home Front",
+      "abroad": "External Affairs"
+    },
+    "when": "self.ideology === 'Autocracy' && ['Modern', 'Atomic'].includes(self.era?.replace(' Era', ''))",
+    "weight": {
+      "base": 12
+    },
+    "designs": ["national-review", "street-gazette", "cable-desk", "victorian", "wire"]
+  }
+]

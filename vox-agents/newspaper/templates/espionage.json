@@ -232,7 +232,7 @@
         "when": "result === 'Detected'",
         "headline": "A foreign spy, seen and unnamed",
         "body": [
-          "Our watchers have detected a foreign spy at work inside our borders. The intruder was noticed but not identified, and no one can yet say which power paid for the work."
+          "Our watch has discovered a foreign agent at work. A clerk who heard the news took his papers with him when he went to dinner. The agent's employer is still unknown."
         ],
         "weight": { "base": 1 }
       },

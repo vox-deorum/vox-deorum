@@ -58,7 +58,7 @@
         "when": "civilization !== null && distance !== null",
         "headline": "Of {{civilization}}'s entry into the {{era}}",
         "body": [
-          "In this season it came to pass that {{civilization}}, whose nearest city stands {{distance}} tiles from our own, left the {{former}} and entered the {{era}}. The chronicle sets the crossing down as it happened, and adds nothing to it."
+          "It is recorded that {{civilization}}, whose nearest city stands {{distance}} tiles from our own, left the {{former}} in this season and entered the {{era}}. At the school there, the keeper of the books set a fresh sheet at the head of the year's accounts."
         ],
         "weight": { "base": 1 }
       },
@@ -214,9 +214,9 @@
     "variants": [
       {
         "id": "our-team-gains-technology-report",
-        "headline": "Our nation gains {{tech}}",
+        "headline": "The scholars finish {{tech}}",
         "body": [
-          "Our scholars have finished {{tech}}. The knowledge is ours now, and the nation can do one more thing than it could last season."
+          "Word from our scholars: work on {{tech}} is complete."
         ],
         "weight": { "base": 1 }
       },

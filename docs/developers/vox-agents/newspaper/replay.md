@@ -10,7 +10,7 @@ From the repository root, run:
 npm run newspaper:preview -w vox-agents
 ```
 
-The command builds MCP's queries, serves the reader and replay API at [127.0.0.1:5600](http://127.0.0.1:5600/), and opens a browser. Ctrl+C stops it. The reader starts in **Mockups**. Pick a design, front page layout, and tint, or enter a civilization such as Nubia to try a customized masthead. Source checkouts also accept `?fixture=` links to developer fixtures, including through the old `/preview.html` address. Installed builds include only the Victorian ordinary fixture.
+The command builds MCP's queries, serves the reader and replay API at [127.0.0.1:5600](http://127.0.0.1:5600/), and opens a browser. Ctrl+C stops it. The reader starts in **Mockups**. Pick a design, front page layout, and tint, or enter a civilization such as Nubia to try a customized masthead. The source preview accepts `?fixture=` links to developer fixtures, including through the old `/preview.html` address. Installed builds serve the Victorian ordinary sample as a separate fixture.
 
 Switch to **Recorded**, open **Recording**, and enter the full MCP knowledge database, receiving player ID, and inclusive first and last turns. The form suggests the latest archived knowledge database when one is available. Click **Generate**, then choose an **Edition** to read its saved articles. The batch opens the newest edition unless you chose or focused another one. The design, front page layout, and tint controls apply to this browser tab; choose **As published** and **Design default** to restore the saved appearance.
 

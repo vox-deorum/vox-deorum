@@ -17,9 +17,9 @@
       {
         "id": "gold-trade-deal-account-unnamed",
         "when": "partner === null",
-        "headline": "A bargain abroad, with gold in the terms",
+        "headline": "A bargain abroad, with the name left blank",
         "body": [
-          "Our envoys have struck terms with a foreign power whose name the dispatches did not carry. We give {{weGive}}; we take {{weGet}}. Gold moved, which means the bargain was real even where the name was not."
+          "Word of a bargain abroad came to the counting house with the other party's name missing. We give {{weGive}}; we take {{weGet}}. There is gold in the terms."
         ],
         "weight": { "base": 1 }
       },
@@ -145,9 +145,9 @@
         "stance": "traditional",
         "genre": "obituary",
         "when": "routes === 1",
-        "headline": "The last road out is closed",
+        "headline": "The weights are put away",
         "body": [
-          "It was one road, and it carried everything we sent abroad. It ran through seasons of war and seasons of peace, and it ran until this one, when it ran no more. The ruts are still in the road. Nothing travels in them."
+          "Here ends the account of our last outgoing trade route. In the merchant's yard, the keeper of the scales wrapped the weights in wool and laid them in their chest."
         ],
         "weight": { "base": 1 }
       },
@@ -184,9 +184,9 @@
     "variants": [
       {
         "id": "long-trade-route-completed-account-report",
-        "headline": "A {{routeDistance}}-tile trade route completes its run",
+        "headline": "Trade run complete between cities {{routeDistance}} tiles apart",
         "body": [
-          "The trade route between {{ourCity}} and {{theirCity}} has completed its run, {{routeDistance}} tiles end to end. The goods came through, and the two cities are now trading partners in fact as well as on paper."
+          "The trade run linking {{ourCity}} and {{theirCity}} has finished. The cities lie {{routeDistance}} tiles apart on the survey map. A shopkeeper who followed the run is already asking whether the merchants plan to make it again."
         ],
         "weight": { "base": 1 }
       },
@@ -220,9 +220,9 @@
         "stance": "neutral",
         "genre": "report",
         "when": "partner !== null",
-        "headline": "The long road to {{partner}}",
+        "headline": "A trade run with {{partner}} enters the record",
         "body": [
-          "In this season the trade road between {{ourCity}} and {{theirCity}}, {{routeDistance}} tiles apart, was run from end to end, and the goods were delivered whole. The record notes that the way between us and {{partner}} stands open, and sets down the season of its opening."
+          "In this season the trade run between {{ourCity}} and {{theirCity}}, which lie {{routeDistance}} tiles apart, was completed. The annalist set down both names under the heading for {{partner}}, so that a reader of the account may know how far the trade reached."
         ],
         "weight": { "base": 1 }
       },

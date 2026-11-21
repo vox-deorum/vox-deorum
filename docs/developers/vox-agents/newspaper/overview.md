@@ -15,6 +15,6 @@ With [workspace dependencies](../../setup.md) installed, run from the repository
 
 MCP owns the historical queries, evidence schemas, and visibility policy in `mcp-server/src/newspaper/`. Replay calls the same dated query as the `get-newspaper-evidence` MCP tool. The query reads recorded data for one player without refreshing it from the game.
 
-Vox Agents owns replay, editing, and presentation in `vox-agents/src/newspaper/`. QuickJS evaluates expressions from the JSON catalogue in `vox-agents/newspaper/` against the permitted facts. A saved issue keeps its prose, links, and presentation, so reopening it preserves how it was published. The browser reader and game export use the same layout code; the game viewer is in `civ5-mod/UI/Newspaper/`.
+Vox Agents owns replay, editing, and presentation in `vox-agents/src/newspaper/`. QuickJS evaluates expressions from the JSON catalogue in `vox-agents/newspaper/` against the permitted facts. Reopening a saved issue restores its prose, links, and presentation choices. The browser reader and game export use the same layout code; the game viewer is in `civ5-mod/UI/Newspaper/`.
 
 The [evaluation guide](evaluation.md) describes how to review authored stories and the planned comparison with model editing. [Live integration](live-integration.md) will add automatic publication during play. See the [roadmap](../../../plans/newspaper/implementation.md) for the plan.

@@ -42,7 +42,6 @@ Find the detailed expressions in the [city](../../../../../vox-agents/newspaper/
 | --- | --- |
 | `capital-outgrown` | A world rule compares the population of the capital with other own cities. It can name several cities tied for largest. |
 | `technology-leader-changes` | Compare ranks at the cutoff and at the start of the `short` window. The highest readable research count can have several leaders. See the [science triggers](../../../../../vox-agents/newspaper/triggers/science.json). |
-| `golden-age-in-wartime` | Match a `PlayerGoldenAge` start for the receiver while the receiver is at war at the cutoff. The [politics template](../../../../../vox-agents/newspaper/templates/politics.json) uses the supplied enemy names when available and offers an unconditional editorial. National happiness does not gate these variants. |
 
 ## Foreign affairs and war
 
@@ -74,7 +73,7 @@ From the repository root, add `--config vox-agents/newspaper/probes` to a fresh 
 
 ### An inbound diplomat
 
-`probe-inbound-diplomat` reads the two rosters separately. A foreign major's diplomat must be recorded in our territory, and our post there must be explicitly empty. A hidden or ambiguous reading cannot qualify.
+`probe-inbound-diplomat` reads the two rosters separately. The foreign diplomat must be recorded at our capital, and our diplomat must be recorded as absent from theirs. A hidden or ambiguous reading cannot qualify.
 
 ### A foreign policy briefing
 

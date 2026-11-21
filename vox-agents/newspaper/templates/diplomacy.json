@@ -23,7 +23,7 @@
         "genre": "obituary",
         "headline": "An era of our own counsel, concluded",
         "body": [
-          "It lasted as long as living memory: wars we chose, treaties we signed in our own name, envoys who answered to nobody else. That independence is gone. {{master}} sits above our court now, and every answer we give travels first by the road to their gates. What remains is a people who remember standing alone."
+          "So ends the account of the years our court answered in its own name. As of this entry we stand as vassals to {{master}}. The keeper of the record has put a ribbon at this page for the next person who has to find where it ended."
         ],
         "links": [
           { "placeholder": "master", "label": "{{master}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -92,7 +92,7 @@
         "when": "ally !== null",
         "headline": "An attack on {{ally}} is their problem now",
         "body": [
-          "The staff maps will be redrawn this week. An attack on {{ally}} no longer brings our banners, and an attack on us calls none of theirs; whatever the courts say in public, each nation stands on its own ground again. A prudent general counts the walls he can hold alone, and starts counting now."
+          "The defensive pact with {{ally}} has ended. The old planning maps in our staff rooms carried two sets of flags. A captain studying one of those maps today has to ask which posts his own garrison could hold if help never came."
         ],
         "weight": { "base": 1 }
       },
@@ -365,7 +365,7 @@
         "when": "first !== null && second !== null",
         "headline": "The quiet between {{first}} and {{second}}",
         "body": [
-          "The pact that made {{first}} and {{second}} a single problem now leaves them as two. Alliances that end without a war leave open ground between the old partners, and open ground is where third parties try their luck. The quiet between them should be watched, not trusted."
+          "The defensive pact between {{first}} and {{second}} has ended. Their neighbors used to reckon with the chance an attack would bring both armies into the field. A diplomat weighing the change now has two courts to sound out, and no promise joining their answers."
         ],
         "weight": { "base": 1 }
       },
@@ -659,7 +659,7 @@
         "genre": "editorial",
         "headline": "Who pays for the shouting?",
         "body": [
-          "The court traded denunciations with {{civilization}} this season, and both sides spoke proudly. What nobody has named is what the quarrel costs the people who will pay for it. Bread does not care who shouted first. Name the price before applauding the pride."
+          "Our court and {{civilization}} have denounced each other. In the foreign quarter, a cooper is wondering whether the customers who ordered his barrels will still come for them. Let the ministers tell the square what they're prepared to do if they don't."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -814,7 +814,7 @@
         "when": "from !== null && to !== null && ours === false",
         "headline": "A war ends at someone else's table",
         "body": [
-          "The deal between {{from}} and {{to}} ends a war fought by other hands, paid for at a table a long way from it. Peace of that kind tends to last as long as the payment does. Watch which borders go quiet, and count the seasons before they do not."
+          "The bargain between {{from}} and {{to}} includes peace with a third power. Someone at that frontier will be asking whether the troops can come home in time for the harvest. For the people still waiting, the next dispatch matters as much as the signatures."
         ],
         "weight": { "base": 1 }
       }
@@ -926,7 +926,7 @@
         "when": "master !== null",
         "headline": "Free, and with work to do",
         "body": [
-          "Nobody in the square needs telling what the end of the {{master}} vassalage means. But freedom is a running expense, not a festival. Before the old master's mood changes, the court should be found buying arms, courting allies and filling the grain stores, roughly in that order."
+          "People, our word is ours again. If the council sends another envoy to {{master}}, let it read his instructions in the square. We have a right to hear what will be said in our name."
         ],
         "weight": { "base": 1 }
       }

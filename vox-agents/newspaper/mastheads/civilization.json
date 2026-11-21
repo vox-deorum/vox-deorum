@@ -1,0 +1,128 @@
+[
+  {
+    "id": "civilization-rome-forum",
+    "title": "The Forum Record",
+    "motto": "What the city says and does",
+    "pageLabels": {
+      "home": "Forum Notices",
+      "economy": "Market Accounts"
+    },
+    "when": "self.name === 'Rome' && self.ideology === null",
+    "weight": {
+      "base": 7
+    },
+    "designs": ["victorian", "court-dispatch", "port-register", "oral-accounts"]
+  },
+  {
+    "id": "civilization-babylon-chronicle",
+    "title": "The Babylonian Chronicle",
+    "motto": "Marks in clay, year by year",
+    "pageLabels": {
+      "home": "The City Tablet",
+      "economy": "Measures and Rations"
+    },
+    "when": "self.name === 'Babylon' && self.ideology === null",
+    "weight": {
+      "base": 7
+    },
+    "designs": ["clay-chronicle", "oral-accounts"]
+  },
+  {
+    "id": "civilization-england-courant",
+    "title": "The English Courant",
+    "motto": "Intelligence by post and packet",
+    "pageLabels": {
+      "home": "Home Intelligence",
+      "abroad": "Foreign Letters"
+    },
+    "when": "self.name === 'England' && self.ideology === null",
+    "weight": {
+      "base": 7
+    },
+    "designs": ["printer-dispatch", "port-register", "street-gazette", "cable-desk"]
+  },
+  {
+    "id": "civilization-venice-avvisi",
+    "title": "Avvisi di Venezia",
+    "motto": "Letters from home and from every port",
+    "pageLabels": {
+      "economy": "Merchants' Letters",
+      "abroad": "Dispatches by Sea and Land"
+    },
+    "when": "self.name === 'Venice' && self.ideology === null",
+    "weight": {
+      "base": 7
+    },
+    "designs": ["port-register", "printer-dispatch", "court-dispatch"]
+  },
+  {
+    "id": "civilization-siam-gazette",
+    "title": "The Siam Gazette",
+    "motto": "Public notices and news from the provinces",
+    "pageLabels": {
+      "home": "Public Notices",
+      "abroad": "Foreign Affairs"
+    },
+    "when": "self.name === 'Siam' && self.ideology === null",
+    "weight": {
+      "base": 6
+    },
+    "designs": ["street-gazette", "cable-desk", "national-review"]
+  },
+  {
+    "id": "civilization-korea-court-gazette",
+    "title": "The Court Gazette",
+    "motto": "The day's dispatches, set down by the scribes",
+    "pageLabels": {
+      "home": "Memorials and Petitions",
+      "abroad": "Reports from Envoys"
+    },
+    "when": "self.name === 'Korea' && self.ideology === null",
+    "weight": {
+      "base": 6
+    },
+    "designs": ["heian", "court-dispatch", "printer-dispatch"]
+  },
+  {
+    "id": "civilization-polynesia-star-compass",
+    "title": "The Star Compass",
+    "motto": "By stars and swells, word reaches shore",
+    "pageLabels": {
+      "home": "News from Home Shores",
+      "abroad": "Beyond the Horizon"
+    },
+    "when": "self.name === 'Polynesia' && self.ideology === null",
+    "weight": {
+      "base": 6
+    },
+    "designs": ["oral-accounts", "port-register", "victorian"]
+  },
+  {
+    "id": "civilization-germany-neue-zeitung",
+    "title": "Neue Zeitung",
+    "motto": "New tidings from town and country",
+    "pageLabels": {
+      "home": "Town and Country",
+      "abroad": "Tidings from Abroad"
+    },
+    "when": "self.name === 'Germany' && self.ideology === null",
+    "weight": {
+      "base": 6
+    },
+    "designs": ["printer-dispatch", "street-gazette", "cable-desk"]
+  },
+  {
+    "id": "civilization-brazil-correio",
+    "title": "Correio das Cidades",
+    "motto": "Letters and news for the public reader",
+    "pageLabels": {
+      "home": "Letters from the Cities",
+      "abroad": "Letters from Abroad"
+    },
+    "when": "self.name === 'Brazil' && self.ideology === null",
+    "weight": {
+      "base": 7
+    },
+    "designs": ["port-register", "street-gazette", "cable-desk", "national-review"]
+  }
+]

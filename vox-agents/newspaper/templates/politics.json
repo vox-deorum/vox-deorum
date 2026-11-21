@@ -20,8 +20,8 @@
         "genre": "analysis",
         "headline": "Last place, and the reckoning behind it",
         "body": [
-          "This nation now trails all {{count}} of the great powers in the standing. A standing is not weather. It is a ledger of choices: what we built, what we kept, what we chose not to defend.",
-          "The tally is on the table for anyone to read. The names that wrote it should be beside it."
+          "We stand last of {{count}} in the new reckoning. At the exchange, a clerk has pinned this tally beside the old one, and people are stopping on their way out to see how far we've slipped.",
+          "The ministers who answer for that standing should come out and take the same questions the clerk has been hearing all day."
         ],
         "weight": { "base": 1 }
       },
@@ -251,19 +251,9 @@
     "variants": [
       {
         "id": "golden-age-wartime-report",
-        "when": "enemies !== null",
         "headline": "A golden age begins, even against {{enemies}}",
         "body": [
           "Our nation has entered a golden age with the war against {{enemies}} unfinished. The good years begin anyway, with soldiers yet in the field."
-        ],
-        "weight": { "base": 1 }
-      },
-      {
-        "id": "golden-age-wartime-fallback",
-        "when": "enemies === null",
-        "headline": "A golden age begins in wartime",
-        "body": [
-          "Our nation has entered a golden age even as the war goes on. Good years at home, soldiers abroad: the two will share the same seasons from here."
         ],
         "weight": { "base": 1 }
       },
@@ -274,8 +264,8 @@
         "genre": "editorial",
         "headline": "Golden, and still at war",
         "body": [
-          "A golden age has begun with our soldiers in the field. That is fortune, and fortune is not a plan.",
-          "Our view: put the age to work on the war while the war lasts, so the peace finds us prepared rather than spent."
+          "A golden age has begun while our soldiers are in the field. There is work in the shops and an empty stool at the joiner's bench, kept clear for his son who is away with the army.",
+          "Keep him a place to come back to. The country will have earned its golden age if the people who went out to fight can share in it when they come home."
         ],
         "weight": { "base": 1 }
       },
@@ -284,7 +274,6 @@
         "voice": "crier",
         "stance": "hawkish",
         "genre": "notice",
-        "when": "enemies !== null",
         "headline": "Hear it! A golden age, even in war!",
         "body": [
           "Hear it, people! A golden age is ours, and the war against {{enemies}} goes on! Good years, even in wartime! Let them hear it across the lines: we flourish while we fight!"
@@ -678,8 +667,8 @@
         "genre": "editorial",
         "headline": "Below the line, and who is counting",
         "body": [
-          "The mood count stands at {{happiness}} percent, past the line where revolt threatens. A fall this steep is not weather. It is a route, walked decision by decision.",
-          "Name the causes, and name who carries the remedy. The street is counting already, and its count does not flatter."
+          "The mood count has fallen to {{happiness}} percent, below the line where revolt threatens. On the east side, a cobbler has started pinning his customers' complaints above the bench. At closing time somebody always asks whether the council has come to read them yet.",
+          "The ministers should come read that wall and tell the people who wrote on it what they mean to do."
         ],
         "weight": { "base": 1 }
       },

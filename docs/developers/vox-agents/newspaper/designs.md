@@ -15,10 +15,10 @@ The editor keeps the previous design if it is still eligible and its weight is a
 
 ### Design assets
 
-Declare built-in images and ornaments in the design's `assetDefinitions`. The registered ID joins the design and local IDs: Victorian's `harbour` becomes `victorian.harbour`. Overlays can reference bundled IDs.
+Declare built-in images and ornaments in the design's `assetDefinitions`. The registered ID joins the design and local IDs: Victorian's `harbour` becomes `victorian.harbour`. Overlays and saved issues refer to these bundled IDs. Keep an ID if an existing issue still uses it.
 
 1. Place the file under `vox-agents/newspaper/public/assets/designs/<design id>/`.
-2. Give its definition a unique local ID, kind (`image` or `ornament`), media type, dimensions, license, attribution, and relative path under `assets/` without dot segments or URL syntax.
+2. Give its definition a unique local ID, kind (`image` or `ornament`), media type, dimensions, license, and attribution. Set `path` to a relative path starting with `assets/`, such as `assets/designs/victorian/harbour.png`. Omit dot segments and URL syntax.
 3. Reference the registered ID in `presentation.assets.ornamentAssetId` or in an article's `image.assetId`. An article image requires `altText` and can also have a caption.
 4. Rebuild with `npm run build:newspaper -w vox-agents` so the reader bundles the declarations and copies the assets.
 

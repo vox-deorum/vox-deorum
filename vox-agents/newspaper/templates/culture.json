@@ -34,9 +34,9 @@
         "stance": "government-critical",
         "genre": "editorial",
         "when": "rival !== null",
-        "headline": "Their songs are in our houses",
+        "headline": "What the children are singing",
         "body": [
-          "{{rival}} has reached the Influential mark over us. Walk down any street: their tunes in the taverns, their cuts in the tailor's window, their proverbs in the mouths of children. Somebody was paid to keep our own arts alive, and this is what the coin bought. The council owes the nation a name and the singers their coin, and it owes them before the next count."
+          "{{rival}} has reached the Influential mark over us. At the market, a child sang a tune she'd picked up from a traveling player. Her father says she knows the whole thing, verse after verse. Councilors, where in this town can a singer of our own make enough to buy supper?"
         ],
         "links": [
           { "placeholder": "rival", "label": "{{rival}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -48,9 +48,9 @@
         "voice": "press",
         "stance": "rationalist",
         "genre": "analysis",
-        "headline": "The Influential mark, and what it leaves out",
+        "headline": "Foreign influence reaches a new mark",
         "body": [
-          "The count of foreign influence over us has crossed into Influential, at {{percentage}} percent. Their ideas now spread among us faster than ours can answer. Whether the spread has crested, the next count will show, and the court has offered no guess."
+          "Foreign influence over us has crossed into Influential at {{percentage}} percent. At one school off the tanners' lane, the children have taken up a song the teacher used to have to explain. A single schoolyard gives a glimpse of the change. To see how fast it is moving, we need another tally."
         ],
         "weight": { "base": 1 }
       }
@@ -76,9 +76,9 @@
         "stance": "national",
         "genre": "notice",
         "when": "rival !== null",
-        "headline": "Hear it! Our songs have won {{rival}}",
+        "headline": "Hear it! {{rival}} knows our jokes",
         "body": [
-          "Hear it, people! The count of our influence over {{rival}} has crossed into Influential, {{percentage}} percent and climbing! Our plays fill their theaters! Our songs fill their streets! Influential! Let every hearth say it once more: Influential!"
+          "Hear it, people! Our influence over {{rival}} has reached the Influential mark at {{percentage}} percent. Their players are telling our jokes, and their crowds are laughing in the right places. They know the jokes, neighbors!"
         ],
         "links": [
           { "placeholder": "rival", "label": "{{rival}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -148,9 +148,9 @@
         "stance": "populist",
         "genre": "editorial",
         "when": "rival !== null",
-        "headline": "The street is taking its songs back",
+        "headline": "The market remembers its own",
         "body": [
-          "The hold of {{rival}} over us has eased to {{level}}, and you can see it in the market: our own cloth, our own tunes, our own cooking selling again. This did not come from the palace. It came from ordinary people keeping their own ways alive while the foreign fashion blew past. Spend your coin on your own street, and the fashion will keep falling."
+          "The hold of {{rival}} over us has eased to {{level}}. In the market, a potter has put her mother's clay cups back on the stall. \"I'll make another dozen if these go,\" she says. She looks to the people who stop at her stall to tell her what to make next. The big shops would do well to listen to them too."
         ],
         "links": [
           { "placeholder": "rival", "label": "{{rival}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }

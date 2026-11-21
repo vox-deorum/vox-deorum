@@ -2,7 +2,7 @@
 
 Write for the player who lived through the game. The newspaper's first job is to entertain.
 
-Use these rules when editing `vox-agents/newspaper/templates/`, and give them to any model doing the same work. Each example names its [voice, stance, and genre](editorial.md#variant-styles). Check the corresponding trigger for the [placeholders](editorial.md#placeholders-and-facts) a template can use.
+Use these rules when editing `vox-agents/newspaper/templates/`, and give them to any model doing the same work. Each example names its [voice, stance, and genre](editorial.md#variant-styles). Check the corresponding trigger for the [placeholders](editorial.md#placeholders-and-facts) a template can use. Rules are not absolute: also try to diversify your writing and reduce repetitive phrases or writing patterns.
 
 ## Entertain first
 
@@ -56,7 +56,7 @@ Avoid:
 
 > It was one road, and it carried everything we sent abroad. It ran through seasons of war and seasons of peace, and it ran until this one, when it ran no more.
 
-The [stock obituary](../../../../vox-agents/newspaper/templates/trade.json) gives the route a history the [trigger](../../../../vox-agents/newspaper/triggers/trade.json) never establishes. Putting the weights away shows what the ending means to someone who worked the route.
+The [trigger](../../../../vox-agents/newspaper/triggers/trade.json) establishes that the outgoing route count fell to zero. In the [stock obituary](../../../../vox-agents/newspaper/templates/trade.json), putting the weights away shows what the ending means to someone who worked the route.
 
 ## Write from inside the world
 

@@ -311,7 +311,7 @@
         "when": "count > 1",
         "headline": "{{count}} proposals before the delegates",
         "body": [
-          "The World Congress opens tomorrow. {{count}} proposals are on the agenda. Every delegation is counting its votes tonight. So, we can report, is everyone else."
+          "At the World Congress, the next session is close. There are {{count}} proposals on the agenda, and our delegates still have a few doors to knock on. The country wants to know where they stand."
         ],
         "weight": { "base": 1 }
       },
@@ -505,7 +505,7 @@
         "genre": "report",
         "headline": "Work, if the chamber wills it",
         "body": [
-          "The World Congress has {{project}} before it. One project. Steady work for masons and haulers. Contracts for whoever the chamber favors. The trade halls are already asking who that might be."
+          "At the World Congress, there is word of {{project}}. In the trade halls, masons are asking how much stone a job like that would take, and haulers want to know who would move it. Is there work in it for crews here?"
         ],
         "weight": { "base": 1 }
       },

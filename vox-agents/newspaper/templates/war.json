@@ -1265,7 +1265,7 @@
         "genre": "editorial",
         "headline": "Bells for one front, drums for the others",
         "body": [
-          "Peace with {{settled}}! Half the bells in the city rang for it. But the men facing {{remaining}} heard the same bells, and no one has told them their war got smaller. Citizens, ask the council plainly: which fires are our sons being marched to now?"
+          "The bells have rung for peace with {{settled}}, while we are still at war with {{remaining}}. At the rope yard, a wagoner listened until the bells stopped and then asked which load was his. Let the council tell the people still packing the wagons why the fighting goes on elsewhere."
         ],
         "weight": { "base": 1 }
       }
@@ -1441,7 +1441,7 @@
         "genre": "analysis",
         "headline": "The stalled advance against {{opponent}}",
         "body": [
-          "The gains these pages reported against {{opponent}} have stopped arriving. A stall is not a defeat, but neither is it free: men and stores keep flowing to a front that no longer returns ground. The evidence says the advantage has been spent, not banked."
+          "The tally in the war against {{opponent}} has scarcely moved in recent reports, after showing a clear advantage earlier. At a supply yard, a teamster waiting for his next load is asking whether he'll take it to the same camp. Another advance may change the tally. The teamsters still have to hitch up in the morning."
         ],
         "weight": { "base": 1 }
       },
@@ -1775,7 +1775,7 @@
         "genre": "report",
         "headline": "Good news, and the bill beside it",
         "body": [
-          "The war with {{opponent}} is going our way, and the tally says so: {{score}}. The pie shop on the square sold out by noon, the first time since the war started. People smiled at strangers. Strangers smiled back."
+          "The war tally against {{opponent}} stands at {{score}}, and the barkeep chalked it beside the price of a pint. A customer asked if a big enough score would pay his slate. \"Try bringing coins,\" the keeper said, and poured him another."
         ],
         "weight": { "base": 1 }
       }
@@ -1826,7 +1826,7 @@
         "genre": "report",
         "headline": "Down to {{weariness}}: the country exhales",
         "body": [
-          "The long grind let go a little this week. The queue at the bakery is just a queue again, not a grumble club. You can hear it in the streets: people stopped holding their breath."
+          "Still at war. The barber says it was nearly noon before anybody asked about the front. First complaint of the day: he'd taken too much off the back."
         ],
         "weight": { "base": 1 }
       }

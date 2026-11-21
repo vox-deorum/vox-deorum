@@ -17,7 +17,7 @@ The stock catalogue is in `vox-agents/newspaper/`. To override a rule or story, 
 | `designs/*.json` | Renderer families, tokens, assets, layouts, eligibility, and fallback titles, mottoes, and section labels |
 | `mastheads/*.json` | Titles, mottoes, and section labels selected using the chosen design and visible game facts |
 
-The loader reads grouped files in filename order. Entries and authored variants merge by ID; arrays of values such as tags, conditions, or paragraphs replace the inherited array. Defaults and constants merge as objects. Replay validates the effective catalogue and saves it for resume.
+The loader reads grouped files in filename order. Entries and authored variants merge by ID; arrays of values such as tags, conditions, or paragraphs replace the inherited array. Defaults and constants merge as objects. [Style rules](#variant-styles) have their own merge behavior. Replay validates the effective catalogue and saves it for resume.
 
 ## Authoring choices
 
@@ -35,7 +35,7 @@ A template names one or more rules in `triggers`. They must all fire for the sam
 | `triggers` | Trigger IDs that must all match the same subject |
 | `tags` | Topic and scope labels for pages, variety and feedback |
 | `mode` | `authored` (default) or `llmOnly`; the heuristic editor skips `llmOnly` templates |
-| `short` | Marks a short filler story reserved near the item limit |
+| `short` | Lets the editor reserve the last slot for a brief |
 | `weight` | Base weight and conditional adjustments |
 | `variants` | Authored prose choices with an ID, text, links, eligibility, weight, and style tags |
 
@@ -49,7 +49,7 @@ Each variant can carry one style tag of each kind: voice, stance and genre. Set 
 
 Voice sets how the piece sounds, stance sets the position it takes, and genre sets its form. A peace treaty can be covered in a report or a letter. A neutral account explains the terms; a pro-government account makes the case for signing. See `styles/genre.json` and `styles/stance.json` for drafting guidance.
 
-Put a rule that matches only one kind of style tag in `voice-rules.json`, `stance-rules.json` or `genre-rules.json` under `styles/`. Put a rule that matches two or more kinds in `mixed-rules.json`. The loader reads the four files in that order, with all stock rules before overlay rules. Rule IDs must be unique across the files.
+Put a rule that matches only one kind of style tag in `voice-rules.json`, `stance-rules.json` or `genre-rules.json` under `styles/`. Put a rule that matches two or more kinds in `mixed-rules.json`. The loader reads the four files in that order, with overlay rules after stock rules. Give every added rule a new ID. Reusing a stock rule ID is a validation error.
 
 Every style rule has an `id`, a `match`, a `when` expression, and a positive `multiplier`. A variant must match an allowed style tag for every kind named in `match`. For example, a mixed rule can double the weight of letters with a `pro-government` or `government-critical` stance when `self.happinessPercentage > 50`. Use the variant's own `when` for evidence required by its wording.
 
@@ -101,7 +101,9 @@ Each design needs an unconditional ordinary layout and an unconditional breaking
 
 The editor picks a visual design, then looks for a title, motto, and section labels that fit the receiver. For example, a Roman paper under Order can call its `abroad` page *International Solidarity*, while a paper using the same design under Freedom can call it *Foreign Correspondence*. The page keeps the same ID and story criteria.
 
-Give each rule under `mastheads/` an `id`, `title`, and `weight`. See `mastheads/ideology.json` for the stock rules. Use `designs` to restrict a rule to specific designs and `when` to check facts such as `self.ideology` or `self.hasPolicy('Five-Year Plan')`. Add a `motto` and a `pageLabels` map keyed by page IDs as needed.
+The stock rules in `mastheads/` are grouped by civilization, era, policy, ideology, and combinations of these facts. The stock rules without an ideology theme are eligible only when the record shows no ideology. Generic era rules apply to selected designs so formats with their own title can keep it.
+
+Give each rule an `id`, `title`, and `weight`. Use `designs` to restrict it to specific designs and `when` to check facts such as `self.name`, `self.era`, or `self.hasPolicy('Five-Year Plan')`. Add a `motto` and a `pageLabels` map keyed by page IDs as needed.
 
 Rule IDs must be unique within each `mastheads/` folder. Local rules override stock rules by ID, and local folder entries apply after any older flat `masthead-rules.json` overlay. Set `when` to the string `"false"` to disable a stock rule.
 
@@ -137,6 +139,6 @@ Preferences default to five Standard turns and LLM editing off in `defaults.json
 
 ## Ownership and inputs
 
-Under `vox-agents/src/newspaper/editorial/`, `check.ts` takes the permitted facts, infers the diplomacy, evaluates rules, selects stories, and assembles the issue. `config/load.ts` loads and compiles the catalogue. The `selection/` and `presentation/` folders own decisions about stories and appearance. `contracts/publication.ts` defines publication state (schema 6).
+Under `vox-agents/src/newspaper/editorial/`, `check.ts` takes the permitted facts, infers the diplomacy, evaluates rules, selects stories, and assembles the issue. `config/load.ts` loads and compiles the catalogue. The `selection/` and `presentation/` folders own decisions about stories and appearance. `vox-agents/src/newspaper/contracts/publication.ts` defines publication state (schema 6).
 
 [Replay](replay.md#source-storage-and-api) commits issues and skips, including their decisions and audits. A query or validation error leaves the previous checkpoint available for retry. Use the [catalogue verification commands](triggers/overview.md#verify-changes) after changing rules or editorial code.

@@ -61,7 +61,7 @@
         "id": "treasury-milestone-report",
         "headline": "The treasury passes a thousand gold",
         "body": [
-          "The treasury has crossed the thousand-gold mark and now stands at {{gold}} gold, up {{gain}} gold since the last count."
+          "The treasury has crossed the thousand-gold mark. It stands at {{gold}} gold, up {{gain}} gold since the last count. At the public pay window, a supplier waiting to collect asked how much of that money was already spoken for."
         ],
         "weight": { "base": 1 }
       },

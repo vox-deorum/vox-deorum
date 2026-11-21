@@ -127,9 +127,9 @@
         "stance": "populist",
         "genre": "report",
         "when": "cityState !== null && captor !== null && distance !== null",
-        "headline": "The war is a {{distance}}-day ride away",
+        "headline": "Our ally falls {{distance}} tiles from home",
         "body": [
-          "{{captor}} has swallowed {{cityState}}, neighbors, and it happened a {{distance}}-day ride from our own gate. That is not a war somewhere over the horizon. That is a war up the road, and up the road is everyone's business."
+          "{{captor}} has taken {{cityState}}, {{distance}} tiles from our nearest town. One carter has cousins there. He's been asking everyone coming down the road for word of them."
         ],
         "weight": { "base": 1 }
       }
@@ -230,7 +230,7 @@
         "when": "cityState !== null && distance !== null",
         "headline": "What {{cityState}} opens to us",
         "body": [
-          "An ally is a door, not a trophy, and {{cityState}} is a door {{distance}} days from our own gate. That is near enough for its friendship to matter on the ground, in its markets and on its roads. The question is not whether the door is open but who walks through it first."
+          "We have a new ally in {{cityState}}, {{distance}} tiles away on the survey map. The traders here are already asking their guild which goods might sell there. Our envoys have a chance to make introductions while both sides still remember the ceremony."
         ],
         "weight": { "base": 1 }
       },
@@ -667,9 +667,9 @@
         "stance": "hawkish",
         "genre": "report",
         "when": "cityState !== null && civilization !== null",
-        "headline": "Citizens! {{civilization}} buys a neighbor",
+        "headline": "Citizens! {{civilization}} wins a neighbor",
         "body": [
-          "Citizens, {{civilization}} has been named ally to {{cityState}}, a small power close to our own ground. Who is counting the friends being bought around our borders? Someone should be, and the government has not said a word."
+          "Citizens, {{civilization}} now has an ally in nearby {{cityState}}. The carters at our end are asking whose men they'll meet when they bring in the wool. Our court owes them an answer before they're left to find out at the gate."
         ],
         "weight": { "base": 1 }
       },

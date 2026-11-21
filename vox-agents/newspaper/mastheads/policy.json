@@ -1,0 +1,81 @@
+[
+  {
+    "id": "policy-foreign-gazette",
+    "title": "The Diplomatic Post",
+    "motto": "Dispatches from every quarter",
+    "pageLabels": {
+      "abroad": "Embassy Dispatches"
+    },
+    "when": "self.hasPolicy('Foreign Service') && self.ideology === null",
+    "weight": {
+      "base": 7
+    },
+    "designs": ["port-register", "victorian", "national-review"]
+  },
+  {
+    "id": "policy-labor-ledger",
+    "title": "The Labor Ledger",
+    "motto": "Wages, hours, and the work of the nation",
+    "pageLabels": {
+      "economy": "Wages and Workshops"
+    },
+    "when": "self.hasPolicy('Division of Labor') && self.ideology === null",
+    "weight": {
+      "base": 7
+    },
+    "designs": ["street-gazette", "sunday-colour", "cable-desk", "victorian"]
+  },
+  {
+    "id": "policy-arts-review",
+    "title": "The Arts Review",
+    "motto": "Letters, pictures, and the life of the mind",
+    "pageLabels": {
+      "home": "Life and Letters"
+    },
+    "when": "self.hasPolicy('Refinement') && self.ideology === null",
+    "weight": {
+      "base": 6
+    },
+    "designs": ["court-dispatch", "sunday-colour", "victorian"]
+  },
+  {
+    "id": "policy-colonial-dispatch",
+    "title": "The Colonial Dispatch",
+    "motto": "News from far shores and home",
+    "pageLabels": {
+      "economy": "Trade and Concessions",
+      "abroad": "Foreign Dispatches"
+    },
+    "when": "self.hasPolicy('Colonialism') && self.ideology === null",
+    "weight": {
+      "base": 7
+    },
+    "designs": ["port-register", "victorian", "national-review", "secession-review"]
+  },
+  {
+    "id": "policy-common-reader",
+    "title": "The Common Reader",
+    "motto": "A paper for every household",
+    "pageLabels": {
+      "home": "The Public Page"
+    },
+    "when": "self.hasPolicy('Mass Education') && self.ideology === null",
+    "weight": {
+      "base": 6
+    },
+    "designs": ["national-review", "civic-survey", "cable-desk", "victorian"]
+  },
+  {
+    "id": "policy-manor-rolls",
+    "title": "The Manor Rolls",
+    "motto": "Land, duty, and the order of the realm",
+    "pageLabels": {
+      "economy": "Rents and Market Dues"
+    },
+    "when": "self.hasPolicy('Fiefdoms') && self.ideology === null",
+    "weight": {
+      "base": 6
+    },
+    "designs": ["town-book", "stitched-chronicle", "court-dispatch", "victorian"]
+  }
+]

@@ -43,10 +43,10 @@
         "voice": "press",
         "stance": "rationalist",
         "genre": "analysis",
-        "headline": "What the count of faiths does and does not tell us",
+        "headline": "Two shrines on the same street",
         "body": [
-          "The count is plain: {{majorityFaith}} now claims the majority of the nation, and {{founded}}, our own founding creed, does not. How the balance came to sit this way the count does not say, and no decree in the record says either.",
-          "Adherence follows settlement, trade and the passage of years. Every pulpit will take the number as a verdict; this paper takes it as a measurement, and the next measurement will matter more."
+          "The tally gives {{majorityFaith}} the majority and puts {{founded}}, our own founding creed, behind it. In the lane behind the dye works, the woman who sweeps the steps of both shrines says the same neighbors still lend her a broom.",
+          "A national tally can show how widely each creed is kept. Follow the woman on her rounds, and you can learn how much of the old routine her neighbors still share."
         ],
         "weight": { "base": 1 }
       }
@@ -144,10 +144,10 @@
         "stance": "hawkish",
         "genre": "analysis",
         "when": "cityName !== null && civilization !== null",
-        "headline": "The creed arrives before the flag",
+        "headline": "Our creed gains a distant majority",
         "body": [
-          "{{cityName}}, in the country of {{civilization}}, now keeps {{religion}}, our founded faith, as its majority creed. The distance is real, {{distance}} leagues of it. So is the result.",
-          "A creed shapes what a people defends and whom it trusts. That the change came by conversion and not by conquest alters the manner, not the direction. Someone's creed will hold that city. At present it is ours."
+          "In {{civilization}}, {{cityName}} has taken {{religion}}, the faith we founded, as its majority creed. The nearest of our settlements lies {{distance}} tiles away on the survey map.",
+          "A sermon can reach well beyond the ground a regiment can hold. The question for both capitals is where the people of that city will turn for counsel on matters of faith."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -209,9 +209,9 @@
         "stance": "elitist",
         "genre": "notice",
         "when": "stage === 'enhanced' && civilization !== null",
-        "headline": "Notice to the learned: new observances abroad",
+        "headline": "Notice to readers of divinity",
         "body": [
-          "It is given out that {{civilization}} has enriched the faith of {{religion}} with further articles of belief. The addition is orderly, directed from above and kept below, as such things should be. The discerning will watch how the new discipline travels."
+          "We are advised that {{civilization}} has added new articles to the faith of {{religion}}. Readers who mean to speak on the matter will wish to see the articles themselves before they venture an opinion."
         ],
         "weight": { "base": 1 }
       }

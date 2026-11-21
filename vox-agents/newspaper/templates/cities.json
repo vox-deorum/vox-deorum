@@ -217,7 +217,7 @@
         "when": "!tied",
         "headline": "{{largest}} now outweighs {{capital}}",
         "body": [
-          "{{largest}} has passed {{capital}} in population, and the realm has quietly shifted its weight. Government keeps its address in {{capital}}, but the nation's people now mostly live elsewhere, and a nation's business tends in time to follow its people. The seat of power has not moved. The center of the realm has."
+          "The latest count puts {{largest}} ahead of {{capital}} in population. The petitions still have to go to {{capital}}, where the council sits. In the larger city, the clerk who wraps them for dispatch has begun asking for a second bag."
         ],
         "weight": { "base": 1 }
       },
@@ -350,7 +350,7 @@
         "when": "distance !== null",
         "headline": "A city burns {{distance}} tiles from our nearest city",
         "body": [
-          "Letters from the frontier relate that {{civilization}} is putting {{cityName}} to the torch, just {{distance}} tiles from our own settlements. The glow on the horizon is near enough to watch."
+          "Letters from the frontier say {{civilization}} is burning {{cityName}}, {{distance}} tiles from the nearest of our settlements. A wool merchant who used to sell there has asked us to print another dispatch as soon as there is word of the people."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -935,7 +935,7 @@
         "id": "distant-colony-founded-report",
         "headline": "A new colony {{distance}} tiles from the capital",
         "body": [
-          "Our settlers have founded {{cityName}}, {{distance}} tiles out from the capital. The colony must stand on its own for a while, the capital being a long way behind it."
+          "Our settlers have founded {{cityName}}, {{distance}} tiles from the capital. A settler helping put up the first shelters has already counted the nails in his pocket twice."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1446,7 +1446,7 @@
         "when": "!city.knows('happinessDelta') || !(city.happinessDelta < 0 || city.happinessDelta > 0)",
         "headline": "Settlers ready as {{town}} grows smaller",
         "body": [
-          "A party of settlers is ready to leave {{town}}, and the city is smaller for the making of it. Fewer mouths remain to feed, and there is food to spare for the ones who stay."
+          "A party of settlers is ready to leave {{town}}, where the latest count shows a smaller city. In the lane by the gate, people are asking which of their neighbors will go and who will take on their work."
         ],
         "links": [
           { "placeholder": "town", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1488,9 +1488,9 @@
         "voice": "tabloid",
         "stance": "populist",
         "genre": "anecdote",
-        "headline": "One fewer place at supper in {{town}}",
+        "headline": "One more thing to pack in {{town}}",
         "body": [
-          "The supper tables of {{town}} have {{lost}} empty places this week, and the families who filled them are off to found a city somewhere. There is more bread to go around now, and fewer hands to bake it."
+          "The count for {{town}} is down by {{lost}}. At the end of Cooper's Row, a woman is seeing how many pots she can fit in the settlers' cart. The neighbor who offered to keep her hens has one request: \"Take the damn rooster.\""
         ],
         "links": [
           { "placeholder": "town", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
