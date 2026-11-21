@@ -1,0 +1,67 @@
+/*
+ * Export mode.
+ *
+ * These rules load after the family styles so export overrides win at equal
+ * specificity for every design.
+ */
+
+/* Export mode expands the section for full-page strips without a viewport. */
+
+.vd-newspaper[data-mode="export"] {
+  display: block;
+  /* Keep capture padding outside the measured regions at the document edge. */
+  padding: 0 4px 4px 0;
+  overflow: visible;
+  background: var(--vd-paper);
+}
+
+.vd-newspaper[data-mode="export"] .vd-publication {
+  min-height: 0;
+  box-shadow: none;
+}
+
+.vd-newspaper[data-mode="export"] .vd-page-viewport {
+  height: auto;
+}
+
+.vd-newspaper[data-mode="export"] .vd-page {
+  position: static;
+  width: var(--vd-region-width);
+  height: auto;
+  padding-right: calc(var(--vd-paper-padding) + var(--vd-scrollbar-gutter));
+  overflow: visible;
+  scrollbar-gutter: auto;
+}
+
+.vd-newspaper[data-mode="export"] * {
+  transition: none !important;
+  animation: none !important;
+  scroll-behavior: auto !important;
+}
+
+/* Tabs stay neutral so Lua can draw the selected state locally. */
+
+.vd-newspaper[data-mode="export"] .vd-tab,
+.vd-newspaper[data-mode="export"] .vd-tab[aria-selected="true"] {
+  color: inherit;
+}
+
+.vd-newspaper[data-mode="export"] .vd-tab[aria-selected="true"]::after {
+  display: none;
+}
+
+/* Vote slots keep their size while Lua supplies the icons. */
+
+.vd-newspaper[data-mode="export"] .vd-vote {
+  pointer-events: none;
+}
+
+.vd-newspaper[data-mode="export"] .vd-vote-icon {
+  visibility: hidden;
+}
+
+.vd-newspaper[data-mode="export"] .vd-vote[aria-pressed="true"] {
+  border-color: transparent;
+  background: none;
+  color: inherit;
+}
