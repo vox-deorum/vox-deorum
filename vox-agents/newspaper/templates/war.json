@@ -818,7 +818,7 @@
         "id": "neighbor-army-overtakes-report",
         "headline": "{{neighbor}}'s army now outranks ours",
         "body": [
-          "{{neighbor}} now fields a stronger army than we do. The balance between our two nations has tipped, and it did not tip our way."
+          "The army of {{neighbor}} now outweighs ours. The border between us has not moved, and the balance of strength at it has tipped all the same."
         ],
         "links": [
           { "placeholder": "neighbor", "label": "{{neighbor}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -834,7 +834,7 @@
         "body": [
           "Their strength: {{theirStrength}}.",
           "Our strength: {{ourStrength}}.",
-          "The comparison: theirs is now the larger."
+          "The larger: theirs, and newly so."
         ],
         "links": [
           { "placeholder": "neighbor", "label": "{{neighbor}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -848,7 +848,7 @@
         "genre": "editorial",
         "headline": "Ask why {{neighbor}}'s army passed ours",
         "body": [
-          "{{neighbor}}'s army has passed ours in strength. Some counselor will say numbers do not matter. They matter to anyone who shares a border with {{neighbor}}, and we do. The government should account for the gap while it is a gap, not a margin."
+          "Citizens, the army of {{neighbor}} is now the stronger, and no one in the council will say when that was allowed to happen. Ask the border sentries what they hear drilling at night. A gap left unmeasured gets measured later, in land."
         ],
         "links": [
           { "placeholder": "neighbor", "label": "{{neighbor}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -860,9 +860,9 @@
         "voice": "chronicle",
         "stance": "traditional",
         "genre": "report",
-        "headline": "The record notes a shift in arms",
+        "headline": "The balance of arms has turned",
         "body": [
-          "It is recorded that the host of {{neighbor}} has grown past our own in strength. The seasons turn, and the balance of arms turns with them."
+          "It is set down that the host of {{neighbor}} has grown past our own in strength. The seasons turn, and the balance of arms turns with them; the scribe notes the crossing and keeps the page."
         ],
         "links": [
           { "placeholder": "neighbor", "label": "{{neighbor}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -881,7 +881,7 @@
         "id": "our-army-overtakes-neighbor-report",
         "headline": "Our army passes {{neighbor}}'s",
         "body": [
-          "Our army has grown past that of {{neighbor}}. The balance between our nations now leans our way."
+          "Our army has grown past that of {{neighbor}} in strength. The balance between our nations, long contested, now leans our way."
         ],
         "links": [
           { "placeholder": "neighbor", "label": "{{neighbor}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -895,7 +895,7 @@
         "genre": "report",
         "headline": "Our arms in good order",
         "body": [
-          "The strength of our army now surpasses that of {{neighbor}}, and the credit belongs to those who kept the ranks paid and the armories filled. The nation may take satisfaction in a policy that has borne visible fruit."
+          "We are informed that the strength of our army now surpasses that of {{neighbor}}, an advance owing much to steady counsel and diligently kept armories. The nation may take satisfaction in a policy that has borne so visible a fruit."
         ],
         "links": [
           { "placeholder": "neighbor", "label": "{{neighbor}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -909,7 +909,7 @@
         "genre": "report",
         "headline": "Our army just passed {{neighbor}}'s",
         "body": [
-          "The balance with {{neighbor}} has flipped our way. Strength invites options, and the window for pressing our interests is open."
+          "New count: our army outweighs {{neighbor}}'s. Windows like this don't stay open. Nobody prints the schedule."
         ],
         "links": [
           { "placeholder": "neighbor", "label": "{{neighbor}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -925,7 +925,7 @@
         "body": [
           "Our strength: {{ourStrength}}.",
           "Their strength: {{theirStrength}}.",
-          "The comparison: ours is now the larger."
+          "The larger: ours, and newly so."
         ],
         "links": [
           { "placeholder": "neighbor", "label": "{{neighbor}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -944,7 +944,7 @@
         "id": "our-city-takes-heavy-damage-report",
         "headline": "{{city}} takes heavy damage",
         "body": [
-          "The recent fighting has taken a heavy toll on the defenses of {{city}}. The walls stand at {{hitPoints}} of {{maxHitPoints}} hit points."
+          "The recent fighting has done heavy harm to the walls of {{city}}, which now stand at {{hitPoints}} of {{maxHitPoints}}. Masons are on the ramparts, and the bill for the mending is still being written."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }

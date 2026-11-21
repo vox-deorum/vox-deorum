@@ -218,14 +218,16 @@ export const feedAvatarSchema = z.object({
 /** A short label and color tone for the modern feed avatar. */
 export type FeedAvatar = z.infer<typeof feedAvatarSchema>;
 
-/** Schema for an item illustration and its alternative text. */
+/** Schema for an item illustration and its accompanying text. */
 export const itemImageSchema = z.object({
   /** Asset identifier for the illustration. */
   assetId: z.string().min(1),
   /** Description for readers who cannot see the illustration. */
   altText: z.string().min(1),
+  /** Optional text printed beside the illustration. */
+  caption: z.string().min(1).optional(),
 });
-/** An item illustration and its alternative text. */
+/** An item illustration and its accompanying text. */
 export type ItemImage = z.infer<typeof itemImageSchema>;
 
 /** Schema for one published item with its editorial metadata. */

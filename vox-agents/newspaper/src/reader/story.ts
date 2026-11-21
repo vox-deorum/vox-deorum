@@ -20,6 +20,7 @@ import {
 export interface StoryRenderContext {
   instancePrefix: string;
   designId: RendererFamily;
+  publicationDesignId: string;
   assetBaseUrl: string;
   vote: VoteValue;
 }
@@ -43,27 +44,36 @@ export function renderStory(
   if (designId === "feed") article.append(renderAvatar(item));
 
   const content = createElement("div", "vd-story-content");
+  // A register entry has two cells: its heading and its account.
+  const registerEntry = context.publicationDesignId === "port-register" && page.layout === "ordinary";
+  const headingGroup = registerEntry ? createElement("div", "vd-register-heading") : content;
   const heading = createElement("h2", "vd-headline");
   heading.id = headingId;
   appendInlineNodes(heading, item.headline, item.id, bindReaderAction);
-  content.append(heading);
+  headingGroup.append(heading);
 
   if (item.subheadline) {
     const subheadline = createElement("p", "vd-deck");
     appendInlineNodes(subheadline, item.subheadline, item.id, bindReaderAction);
-    content.append(subheadline);
+    headingGroup.append(subheadline);
   }
 
   if (item.byline) {
     const byline = createElement("p", "vd-byline");
     appendInlineNodes(byline, item.byline, item.id, bindReaderAction);
-    content.append(byline);
+    headingGroup.append(byline);
   }
 
   const prose = createElement("div", "vd-prose");
   appendParagraphs(prose, item.body, item.id, bindReaderAction);
   const footer = renderStoryFooter(item, vote, designId, assetBaseUrl);
-  const figure = renderStoryImage(item, assetBaseUrl);
+  const cover = lead && context.publicationDesignId === "national-review";
+  const image = renderStoryImage(item, assetBaseUrl);
+  if (cover && image) {
+    image.classList.add("vd-cover-art");
+    content.prepend(image);
+  }
+  const figure = cover ? null : image;
 
   if (lead && page.layout === "breaking" && figure) {
     const columns = createElement("div", "vd-breaking-columns");
@@ -78,9 +88,11 @@ export function renderStory(
     columns.append(main, renderEvidence(item.evidenceTable, figure));
     content.append(columns);
   } else {
-    content.append(prose);
-    if (figure) content.append(figure);
-    content.append(footer);
+    const account = registerEntry ? createElement("div", "vd-register-account") : content;
+    account.append(prose);
+    if (figure) account.append(figure);
+    account.append(footer);
+    if (registerEntry) content.append(headingGroup, account);
   }
 
   article.append(content);
@@ -109,6 +121,7 @@ function renderStoryImage(item: IssueItem, assetBaseUrl: string): HTMLElement | 
   if (asset?.width) image.width = asset.width;
   if (asset?.height) image.height = asset.height;
   figure.append(image);
+  if (item.image.caption) figure.append(createElement("figcaption", undefined, item.image.caption));
   return figure;
 }
 

@@ -1,0 +1,70 @@
+[
+  {
+    "id": "folded-chronicle",
+    "version": "1",
+    "title": "The Folded Chronicle",
+    "civilizationTitles": {
+      "The Maya": "The Maya Chronicle"
+    },
+    "when": "self.name === 'The Maya' && ['Classical', 'Medieval', 'Renaissance'].includes(self.era?.replace(' Era', ''))",
+    "weight": {
+      "base": 0,
+      "adjustments": [
+        {
+          "when": "self.era?.replace(' Era', '') === 'Classical'",
+          "add": 50
+        },
+        {
+          "when": "self.era?.replace(' Era', '') === 'Medieval'",
+          "add": 80
+        },
+        {
+          "when": "self.era?.replace(' Era', '') === 'Renaissance'",
+          "add": 35
+        }
+      ]
+    },
+    "presentation": {
+      "schemaVersion": 1,
+      "rendererFamily": "folio",
+      "tokens": {
+        "paperColor": "#eee2c8",
+        "inkColor": "#29241f",
+        "accentColor": "#923e32",
+        "bodyFontAssetId": "font-literata-400",
+        "headingFontAssetId": "font-literata-700",
+        "mastheadFontAssetId": "font-marcellus-400"
+      },
+      "assets": {}
+    },
+    "layouts": [
+      {
+        "id": "folio",
+        "variant": "ordinary",
+        "weight": {
+          "base": 10
+        }
+      },
+      {
+        "id": "dispatch",
+        "variant": "breaking",
+        "weight": {
+          "base": 10
+        }
+      },
+      {
+        "id": "review",
+        "variant": "analysis",
+        "weight": {
+          "base": 3
+        }
+      }
+    ],
+    "pageLabels": {
+      "front": "Chronicle",
+      "home": "At Home",
+      "economy": "Trade",
+      "abroad": "Abroad"
+    }
+  }
+]

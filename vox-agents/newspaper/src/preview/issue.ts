@@ -5,6 +5,7 @@ import {
   issuePublicationSchema,
   newspaperLayoutVariantSchema,
   type IssueDocument,
+  type ItemImage,
   type NewspaperLayoutVariant,
 } from "../../../src/newspaper/contracts/issue.js";
 import { resolveMasthead } from "../../../src/newspaper/editorial/presentation/masthead.js";
@@ -31,10 +32,29 @@ const samples: Record<NewspaperLayoutVariant, IssueDocument> = {
   analysis: issueDocumentSchema.parse(analysisFixture),
 };
 const previewPages = [...pages].sort((a, b) => a.order - b.order);
+const tradeIllustrations = new Map<string, ItemImage>([
+  ["printer-dispatch", {
+    assetId: "printer-dispatch.harbour",
+    altText: "Woodcut of a sailing barge beside a stone quay and riverside warehouses.",
+  }],
+  ["national-review", {
+    assetId: "wire.port",
+    altText: "Cranes loading containers onto a ship at dusk.",
+    caption: "Illustration of a modern cargo terminal.",
+  }],
+]);
 
 /** Load every built-in design with the fields needed by the preview. */
 export function readPreviewDesigns(): PreviewDesign[] {
   return readBuiltInDesignDocuments().flatMap(document => z.array(previewDesignSchema).parse(document));
+}
+
+/** Use the matching artwork for a sample issue's lead story. */
+function previewIllustration(design: PreviewDesign, layout: NewspaperLayoutVariant): ItemImage | undefined {
+  const tradeIllustration = tradeIllustrations.get(design.id);
+  if (tradeIllustration) return layout === "breaking" ? undefined : tradeIllustration;
+  const image = design.assetDefinitions.find(asset => asset.kind === "image");
+  return image ? { assetId: `${design.id}.${image.id}`, altText: "Sample illustration" } : undefined;
 }
 
 /** Use fixture stories with the chosen design, sample civilization and accent. */
@@ -46,7 +66,7 @@ export function createPreviewIssue(
 ): IssueDocument {
   const sample = samples[layout];
   const itemIds = sample.pages[0].itemIds;
-  const image = design.assetDefinitions.find(asset => asset.kind === "image");
+  const image = previewIllustration(design, layout);
   const name = civilizationName?.trim();
   const masthead = resolveMasthead(design, new Map(name ? [["civilization", { value: name, sources: [] }]] : []));
   if (!masthead) throw new Error(`The masthead for ${design.id} needs terms the mockup cannot supply.`);
@@ -73,9 +93,7 @@ export function createPreviewIssue(
     }),
     items: sample.items.map(item => ({
       ...item,
-      image: image && item.id === itemIds[0]
-        ? { assetId: `${design.id}.${image.id}`, altText: "Sample illustration" }
-        : undefined,
+      image: item.id === itemIds[0] ? image : undefined,
     })),
   };
 }

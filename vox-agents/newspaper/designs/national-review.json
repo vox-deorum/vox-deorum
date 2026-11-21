@@ -1,0 +1,30 @@
+[
+  {
+    "id": "national-review",
+    "version": "1",
+    "title": "The National Review",
+    "when": "['Modern', 'Atomic'].includes(self.era?.replace(' Era', ''))",
+    "weight": { "base": 60 },
+    "presentation": {
+      "schemaVersion": 1,
+      "rendererFamily": "folio",
+      "tokens": {
+        "paperColor": "#f9fafb",
+        "inkColor": "#15191f",
+        "accentColor": "#1742a6",
+        "bodyFontAssetId": "font-libre-caslon-400",
+        "headingFontAssetId": "font-inter-800"
+      }
+    },
+    "layouts": [
+      { "id": "picture-weekly", "variant": "ordinary", "weight": { "base": 10 } },
+      { "id": "special-edition", "variant": "breaking", "weight": { "base": 10 } },
+      { "id": "in-figures", "variant": "analysis", "weight": { "base": 3 } }
+    ],
+    "pageLabels": {
+      "front": "Cover",
+      "home": "National Affairs",
+      "abroad": "World Affairs"
+    }
+  }
+]

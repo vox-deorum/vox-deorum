@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="156" height="96" viewBox="0 0 156 96">
+  <!-- Short, uneven bast fibres under the writing surface. -->
+  <g fill="none" stroke="#775431" stroke-linecap="round" opacity=".12">
+    <path d="m6 14 7-1 4 1m37 9 3-1m52-13 8 1 3-1m19 31 8-2M21 61l6-2 5 1m42-10 8 1m26 24 6-2 6 1m-70 8 4-1" stroke-width=".8"/>
+    <path d="m30 33 10-1m47-16 2 1m48 49 8 1M8 83l4-1m55-15 4 1m25-27 6-1" stroke-width=".55"/>
+  </g>
+</svg>

@@ -1,0 +1,51 @@
+/* A ruled town manuscript with a painted initial at the start of each lead. */
+.vd-newspaper[data-publication-design="town-book"] {
+  --town-gold: #dfbc67;
+
+  & .vd-masthead { padding: 0 0 16px; text-align: left; }
+  & .vd-title { font-size: calc(clamp(38px, 6.6cqi, 80px) * var(--vd-text-scale)); }
+  & .vd-tabs {
+    justify-content: flex-start;
+    border-top: 3px double var(--vd-accent);
+    border-bottom: 1px solid var(--vd-accent);
+  }
+  & .vd-page {
+    background-image: repeating-linear-gradient(0deg, transparent 0 29px, rgb(96 73 46 / 7%) 29px 30px);
+    background-attachment: local;
+  }
+  & .vd-story--lead .vd-prose p:first-child::first-letter {
+    float: left;
+    margin: .06em .12em .04em 0;
+    padding: .06em .13em .1em;
+    border: 3px double var(--town-gold);
+    background: var(--vd-ink);
+    color: var(--town-gold);
+    font: 400 2.6em/.86 var(--vd-font-masthead);
+  }
+  & .vd-story--lead .vd-prose { display: flow-root; }
+  & .vd-story--brief .vd-headline, & .vd-byline { color: var(--vd-accent); }
+  & .vd-storylist[data-layout="breaking"] .vd-story--lead :is(.vd-headline, .vd-deck, .vd-byline) {
+    text-align: left;
+    text-transform: none;
+  }
+  & .vd-number { font-weight: bold; }
+  & .vd-evidence { border-top: 3px double var(--vd-accent); padding-top: 10px; }
+}
+
+@container newspaper (width > 760px) {
+  .vd-newspaper[data-publication-design="town-book"] {
+    /* Keep the margin notes together even when the lead is much taller. */
+    & .vd-storylist[data-layout="ordinary"]:has(.vd-story--brief) {
+      display: flow-root;
+
+      & .vd-story--lead { float: left; width: 64%; }
+      & .vd-story--lead .vd-story-content > .vd-prose { columns: auto; }
+      & .vd-story--brief {
+        margin: 0 0 20px 68%;
+        padding: 0 0 0 clamp(12px, 1.6cqi, 24px);
+        border: 0;
+        border-left: 1px solid var(--vd-accent);
+      }
+    }
+  }
+}

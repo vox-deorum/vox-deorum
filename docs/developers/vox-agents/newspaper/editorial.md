@@ -139,7 +139,12 @@ Designs match the receiver’s era and, where relevant, their recorded civilizat
 | `shang` | Strong in Ancient China, with a smaller chance in Classical |
 | `egypt` | Egypt and Nubia in Ancient and Classical, with higher weights in Ancient and for Egypt |
 | `heian` | Japan from Classical through Renaissance, peaking in Medieval; a smaller chance in Korea and China over the same span |
+| `folded-chronicle` | The Maya only: Classical (50), Medieval (80) and Renaissance (35) |
+| `port-register` | Renaissance: 60 for England, The Netherlands, Portugal and Venice; 12 elsewhere. Industrial: 40 for those four only |
 | `victorian` | General option from Medieval through Atomic, peaking in Industrial |
+| `town-book` | General Medieval option |
+| `printer-dispatch` | General Renaissance option |
+| `national-review` | General option in Modern and Atomic |
 | `wire` | General option from Modern onward, gaining weight as the game advances; the sole stock design from Information onward |
 
 When adding a design, start around 50 to 100 for a strong fit, 10 to 25 for a general fallback, and 4 to 8 for an occasional alternative. Compare the combined weights in each overlapping era and keep a general option available for civilizations without a match.
@@ -156,7 +161,7 @@ To add a local asset:
 
 1. Put the file under `vox-agents/newspaper/public/assets/designs/<design id>/` and keep its path relative, such as `assets/designs/victorian/new-illustration.png`.
 2. Add its `assetDefinitions` entry to the matching built-in design file. Derived IDs must be unique, paths must stay under `assets/` without dot segments or URL syntax, and the metadata must be complete.
-3. Reference the derived ID in `presentation.assets.ornamentAssetId` for ornaments or `image.assetId` on an illustrated article.
+3. Reference the derived ID in `presentation.assets.ornamentAssetId` for ornaments or `image.assetId` on an illustrated article. An article image needs `altText` and can also carry a printed `caption`.
 4. Rebuild the reader with `npm run build:newspaper -w vox-agents` so the browser bundles the design JSON and copies the asset.
 
 ### Masthead and terms

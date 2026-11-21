@@ -581,8 +581,9 @@ describe('editorial engine', () => {
       for (const [era, expected] of [
         [undefined, ['oral-accounts']], ['Unrecognized', ['oral-accounts']],
         ['Ancient', ['oral-accounts']], ['Classical', ['oral-accounts']], ['Classical Era', ['oral-accounts']],
-        ['Medieval Era', ['victorian']], ['Renaissance', ['victorian']], ['Industrial', ['victorian']],
-        ['Modern', ['victorian', 'wire']], ['Atomic Era', ['victorian', 'wire']],
+        ['Medieval Era', ['town-book', 'victorian']],
+        ['Renaissance', ['port-register', 'printer-dispatch', 'victorian']], ['Industrial', ['victorian']],
+        ['Modern', ['national-review', 'victorian', 'wire']], ['Atomic Era', ['national-review', 'victorian', 'wire']],
         ['Information Era', ['wire']], ['Future', ['wire']],
       ] as const) {
         const { byId, weights } = await designChoices('France', era);

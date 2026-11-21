@@ -1,0 +1,72 @@
+[
+  {
+    "id": "port-register",
+    "version": "1",
+    "title": "The Port Register",
+    "civilizationTitles": {
+      "England": "The English Port Register",
+      "The Netherlands": "The Dutch Port Register",
+      "Portugal": "The Portuguese Port Register",
+      "Venice": "The Venetian Port Register"
+    },
+    "weight": {
+      "base": 0,
+      "adjustments": [
+        {
+          "when": "self.era?.replace(' Era', '') === 'Renaissance'",
+          "add": 12
+        },
+        {
+          "when": "self.era?.replace(' Era', '') === 'Renaissance' && ['England', 'The Netherlands', 'Portugal', 'Venice'].includes(self.name)",
+          "add": 48
+        },
+        {
+          "when": "self.era?.replace(' Era', '') === 'Industrial' && ['England', 'The Netherlands', 'Portugal', 'Venice'].includes(self.name)",
+          "add": 40
+        }
+      ]
+    },
+    "presentation": {
+      "schemaVersion": 1,
+      "rendererFamily": "folio",
+      "tokens": {
+        "paperColor": "#f4f3ea",
+        "inkColor": "#222e38",
+        "accentColor": "#3c586d",
+        "bodyFontAssetId": "font-libre-caslon-400",
+        "headingFontAssetId": "font-libre-caslon-700",
+        "mastheadFontAssetId": "font-libre-caslon-400"
+      },
+      "assets": {}
+    },
+    "layouts": [
+      {
+        "id": "folio",
+        "variant": "ordinary",
+        "weight": {
+          "base": 10
+        }
+      },
+      {
+        "id": "dispatch",
+        "variant": "breaking",
+        "weight": {
+          "base": 10
+        }
+      },
+      {
+        "id": "review",
+        "variant": "analysis",
+        "weight": {
+          "base": 3
+        }
+      }
+    ],
+    "pageLabels": {
+      "front": "Register",
+      "home": "Home",
+      "economy": "Markets",
+      "abroad": "Foreign"
+    }
+  }
+]

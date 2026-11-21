@@ -159,6 +159,7 @@ export function mountReader(
         renderStory(item, page, index === 0, {
           instancePrefix,
           designId,
+          publicationDesignId: issue.publication.designId,
           assetBaseUrl,
           vote: getVote(state, item.id),
         }),
