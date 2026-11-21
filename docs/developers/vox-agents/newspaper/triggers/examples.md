@@ -54,11 +54,7 @@ Find the detailed expressions in the [city](../../../../../vox-agents/newspaper/
 
 ### A nearby offensive outranks a distant one
 
-The stock [`enemy-front-posture-offensive` rule](../../../../../vox-agents/newspaper/triggers/war.json) uses `city.tacticalZones()` to detect a shift to an offensive posture. Finding a zone does not apply the city's stake automatically.
-
-In an overlay's `triggers/war.json`, use the same rule ID and set `adjust` to `["-5", "city.stake.place"]`. This keeps the stock adjustment and adds the city's location score. With stock constants, the same offensive scores 60 at six tiles from our nearest city and 47 at 100 tiles.
-
-To weigh the offensive itself, add a separate adjustment for visible enemy units in the matching zone. The rule's `zoneIndex` identifies that zone, so the adjustment can count its units without mixing nearby land and sea observations.
+In [`enemy-front-posture-offensive`](../../../../../vox-agents/newspaper/triggers/war.json), give a shift to an offensive posture the `notable` tier and set `adjust` to [`city.stake.place`](constants.md#stakes). A shift at a city six tiles from our nearest city scores 65; at 100 tiles it scores 52.
 
 ### Vassals follow their master to war
 

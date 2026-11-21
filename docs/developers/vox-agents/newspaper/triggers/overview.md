@@ -73,7 +73,7 @@ The QuickJS runner validates expressions, including shortcuts and stakes, when t
 
 ## Tiers, adjustments, and stakes
 
-Choose a tier for what happened, then adjust the score for how much it matters in this situation.
+Choose a tier for what happened. Use shared stakes to account for why it matters to the reader. Add a custom adjustment only when a separate fact should change the ranking.
 
 | Tier | Stock base | Stock example |
 | --- | --- | --- |
@@ -91,7 +91,7 @@ A tier expression can distinguish stories of different kinds, for example `ours 
 | --- | --- |
 | A civilization's relationship to the reader | For a foreign wonder, use `city.owner.stake.relation`: a friend within seven tiles can add 14 points, while a distant neutral civilization can subtract 8. For news about two civilizations, use `pair.stake.relation`. |
 | The city itself | Use `city.stake.place`. A foreign city six tiles from our nearest city gets +5; one 100 tiles away gets −8. Use visible `city.isCapital` or `city.population` to add a separate bonus for a foreign capital or a large foreign city. |
-| A military zone | Use [tactical observations](facts.md#tactical-observations) from `city.tacticalZones()` or `self.tacticalZones`. The stock catalogue has no shared zone score. See [how to weigh a nearby offensive](examples.md#a-nearby-offensive-outranks-a-distant-one) using the city and the matching zone. |
+| An offensive near a city | Use [tactical observations](facts.md#tactical-observations) to detect a shift in posture. [Rank the offensive by the city's location](examples.md#a-nearby-offensive-outranks-a-distant-one). |
 
 City location and the owner's relationship can count separately. Check whether you want proximity in both, since the relationship stake also considers distance. Adjustments help eligible stories compete alongside [novelty, variety, and votes](../editorial.md#developments-selection-and-continuity). Visibility and matching still follow the rule's facts and conditions.
 

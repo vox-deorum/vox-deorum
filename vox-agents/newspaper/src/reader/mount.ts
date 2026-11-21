@@ -171,10 +171,18 @@ export function mountReader(
         (itemById.get(a)?.observedTurn ?? undated) - (itemById.get(b)?.observedTurn ?? undated));
       itemIds = [...page.itemIds.slice(0, 1), ...dated];
     }
-    itemIds.forEach((itemId) => {
+    // The ordinary Swiss front flows down each stack before crossing the gutter.
+    const splitSwissFront = issue.publication.designId === "civic-index"
+      && page === issue.pages[0] && page.layout === "ordinary" && itemIds.length > 1;
+    const leftStack = splitSwissFront ? createElement("div", "vd-index-stack") : storyList;
+    const rightStack = splitSwissFront ? createElement("div", "vd-index-stack") : storyList;
+    if (splitSwissFront) storyList.append(leftStack, rightStack);
+    const leftCount = Math.floor(itemIds.length / 2);
+    itemIds.forEach((itemId, index) => {
       const item = itemById.get(itemId);
       if (!item) return;
-      storyList.append(
+      const stack = index < leftCount ? leftStack : rightStack;
+      stack.append(
         renderStory(item, page, itemId === lead, {
           instancePrefix,
           designId,

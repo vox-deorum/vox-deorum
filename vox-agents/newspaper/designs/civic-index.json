@@ -26,7 +26,7 @@
       }
     },
     "layouts": [
-      { "id": "news-index", "variant": "ordinary", "frontSlots": 4, "sectionSlots": 2, "weight": { "base": 12 } },
+      { "id": "news-index", "variant": "ordinary", "frontSlots": 5, "sectionSlots": 2, "weight": { "base": 12 } },
       { "id": "special-edition", "variant": "breaking", "frontSlots": 4, "weight": { "base": 7 } },
       { "id": "figures", "variant": "analysis", "frontSlots": 4, "sectionSlots": 2, "weight": { "base": 12 } }
     ],

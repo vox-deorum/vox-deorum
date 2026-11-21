@@ -34,6 +34,24 @@ async function mount(page: Page, issue: IssueDocument, paperWidth: number): Prom
   }, { issue, profile: { ...defaultRenderProfile, paperWidth } });
 }
 
+/** Measure story placement and how evidence sits relative to the lead's copy. */
+function measureEdition(page: Page) {
+  return page.locator('.vd-page:not([hidden])').evaluate(region => {
+    const stories = Array.from(region.querySelectorAll<HTMLElement>('.vd-story'), story => {
+      const { left, right, top, bottom, width } = story.getBoundingClientRect();
+      return { id: story.dataset.itemId, left, right, top, bottom, width };
+    });
+    const prose = region.querySelector('.vd-analysis-columns .vd-prose')?.getBoundingClientRect();
+    const evidence = region.querySelector('.vd-evidence')?.getBoundingClientRect();
+    return {
+      stories,
+      overflow: region.scrollWidth > region.clientWidth,
+      evidenceBesideProse: Boolean(evidence && prose && evidence.left >= prose.right),
+      evidenceBelowProse: Boolean(evidence && prose && evidence.top >= prose.bottom),
+    };
+  });
+}
+
 describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('newspaper design editions', () => {
   let browser: Browser | undefined;
   let unavailable: string | undefined;
@@ -64,26 +82,8 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('newspaper design
           const issue = designIssue(design, sample);
           const front = issue.pages[0];
           for (const paperWidth of [360, 1200]) {
-            await page.evaluate(async ({ issue, profile }) => {
-              await window.voxDeorumNewspaperExport!.mount(issue, profile);
-            }, { issue, profile: { ...defaultRenderProfile, paperWidth } });
-            const rendered = await page.locator('.vd-page:not([hidden])').evaluate(region => {
-              const stories = Array.from(region.querySelectorAll<HTMLElement>('.vd-story'), story => ({
-                id: story.dataset.itemId,
-                left: story.getBoundingClientRect().left,
-                right: story.getBoundingClientRect().right,
-                top: story.getBoundingClientRect().top,
-                bottom: story.getBoundingClientRect().bottom,
-              }));
-              const prose = region.querySelector('.vd-analysis-columns .vd-prose')?.getBoundingClientRect();
-              const evidence = region.querySelector('.vd-evidence')?.getBoundingClientRect();
-              return {
-                stories,
-                overflow: region.scrollWidth > region.clientWidth,
-                evidenceBesideProse: Boolean(evidence && prose && evidence.left >= prose.right),
-                evidenceBelowProse: Boolean(evidence && prose && evidence.top >= prose.bottom),
-              };
-            });
+            await mount(page, issue, paperWidth);
+            const rendered = await measureEdition(page);
             const label = `${id} ${front.layout} at ${paperWidth}px`;
             const [lead, firstBrief, secondBrief] = rendered.stories;
             expect(rendered.overflow, label).toBe(false);
@@ -97,10 +97,16 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('newspaper design
               expect(firstBrief.top, label).toBeCloseTo(secondBrief.top, 1);
               expect(secondBrief.left, label).toBeGreaterThanOrEqual(firstBrief.right);
             } else if (front.layout === 'ordinary' && id === 'civic-index') {
-              expect(firstBrief.top, label).toBeCloseTo(lead.top, 1);
-              expect(firstBrief.left, label).toBeGreaterThan(lead.right);
-              expect(secondBrief.top, label).toBeGreaterThanOrEqual(firstBrief.bottom);
-              expect(secondBrief.left, label).toBeCloseTo(firstBrief.left, 1);
+              expect(rendered.stories, label).toHaveLength(5);
+              expect(firstBrief.top, label).toBeGreaterThanOrEqual(lead.bottom);
+              expect(firstBrief.left, label).toBeCloseTo(lead.left, 1);
+              expect(secondBrief.top, label).toBeCloseTo(lead.top, 1);
+              expect(secondBrief.left, label).toBeGreaterThan(Math.max(lead.right, firstBrief.right));
+              expect(secondBrief.width / lead.width, label).toBeCloseTo(3 / 2, 1);
+              for (let i = 3; i < rendered.stories.length; i++) {
+                expect(rendered.stories[i].left, label).toBeCloseTo(secondBrief.left, 1);
+                expect(rendered.stories[i].top, label).toBeGreaterThanOrEqual(rendered.stories[i - 1].bottom);
+              }
             } else {
               expect(firstBrief.top, label).toBeGreaterThanOrEqual(lead.bottom);
             }
@@ -112,6 +118,39 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('newspaper design
       } finally { await page.close(); }
     }, 60_000,
   );
+
+  it('should pair Swiss section stories and keep secondary analysis evidence under its prose', async context => {
+    if (!browser) { context.skip(unavailable); return; }
+    const design = (await loadEditorialConfig()).designs.find(candidate => candidate.id === 'civic-index')!;
+    const page = await browser.newPage();
+    try {
+      await page.goto(`${host.url}/newspaper/export.html`);
+      for (const [layout, sample] of [['ordinary', ordinary], ['analysis', analysis]] as const) {
+        const issue = designIssue(design, sample);
+        const sectionItems = issueDocumentSchema.parse(sample).items.slice(-2);
+        if (layout === 'analysis') sectionItems[0].evidenceTable = issue.items[0].evidenceTable;
+        issue.items.push(...sectionItems);
+        const section = { id: 'home', label: design.pageLabels.home, layout, itemIds: sectionItems.map(item => item.id) };
+        issue.pages.push(section);
+        for (const paperWidth of [360, 1200]) {
+          await mount(page, issue, paperWidth);
+          await page.evaluate(pageId => window.voxDeorumNewspaperExport!.selectPage(pageId), section.id);
+          const rendered = await measureEdition(page);
+          const label = `${layout} section at ${paperWidth}px`;
+          const [lead, brief] = rendered.stories;
+          expect(rendered.overflow, label).toBe(false);
+          expect(rendered.stories.map(story => story.id), label).toEqual(section.itemIds);
+          if (paperWidth === 360) {
+            expect(brief.top, label).toBeGreaterThanOrEqual(lead.bottom);
+          } else {
+            expect(brief.top, label).toBeCloseTo(lead.top, 1);
+            expect(brief.left, label).toBeGreaterThanOrEqual(lead.right);
+          }
+          if (layout === 'analysis') expect(rendered.evidenceBelowProse, label).toBe(true);
+        }
+      }
+    } finally { await page.close(); }
+  }, 60_000);
 
   it('should keep the stock section tabs in aligned rows on narrow paper', async context => {
     if (!browser) { context.skip(unavailable); return; }
