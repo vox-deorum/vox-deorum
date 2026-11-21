@@ -83,7 +83,7 @@ The stock designs have ordinary, breaking, and analysis layouts; a design can of
 ## Rendering constraints
 
 - Give every story one continuous column of text, including the lead. A lead can fill the row. Its body still reads straight down, even when art or evidence sits alongside it.
-- Above 760 CSS pixels of paper width, give the lead a full row and pair briefs below it, one story per column. Keep an unpaired brief in its grid slot. At narrower widths, stack the stories in reading order. Modern designs such as the feed, Teletext, the Fanzine, and the Swiss Grid can keep their own arrangements.
+- Above 760 CSS pixels of paper width, give the lead a full row and pair briefs below it, one story per column. Keep an unpaired brief in its grid slot. At narrower widths, stack the stories in reading order. The feed, Teletext, the Fanzine, and the Swiss Grid keep their own arrangements. Darkroom Contact Sheet gives a lone brief the full row on breaking and analysis pages.
 - Keep the issue's copy, links, votes, and evidence in reading order. At narrow widths, scale display type before shrinking body text. Use the margins in `vox-agents/src/newspaper/renderer/layout.ts` so the reader and export have the same geometry.
 - Keep selected-tab decoration in browser reader mode. The game draws selection itself. Use `--vd-vote-background` when vote icons need their own background in the export.
 - Draw dividers from the format’s materials, such as an incised clay rule or an etched line beside a palm leaf’s binding hole. Use paper, ink, and accent tokens for these marks. Keep textures light behind type and use local artwork for intricate motifs.

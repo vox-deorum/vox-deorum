@@ -34,7 +34,7 @@
     font-size: calc(clamp(48px, 9cqi, 108px) * var(--vd-text-scale));
   }
   & .vd-story--brief { margin-top: 0; padding-top: 14px; min-width: 0; }
-  & .vd-story--lead + .vd-story--brief { border-top: 0; }
+  & .vd-storylist[data-layout="ordinary"] .vd-story--lead + .vd-story--brief { border-top: 0; }
   & .vd-story--brief .vd-headline { font-family: var(--vd-font-masthead); font-weight: 700; }
   & .vd-number { font-weight: 700; }
 }
@@ -43,7 +43,7 @@
   .vd-newspaper[data-publication-design="city-extra"] .vd-storylist[data-layout="ordinary"] {
     column-gap: 0;
     & .vd-story--brief { margin-top: 14px; padding-top: 0; border-top: 0; }
-    & .vd-story--brief:nth-child(even):not(:last-child) { padding-right: 1.4em; }
+    & .vd-story--brief:nth-child(even) { padding-right: 1.4em; }
     & .vd-story--brief:nth-child(odd) { padding-left: 1.4em; border-left: 1px solid var(--vd-ink); }
   }
 }

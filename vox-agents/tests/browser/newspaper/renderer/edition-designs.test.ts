@@ -89,7 +89,7 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('newspaper design
             const [lead, firstBrief, secondBrief] = rendered.stories;
             expect(rendered.overflow, label).toBe(false);
             expect(rendered.stories.map(story => story.id), label).toEqual(front.itemIds);
-            if (paperWidth === 360 || (front.layout !== 'ordinary' && id !== 'city-extra' && id !== 'civic-index')) {
+            if (paperWidth === 360) {
               for (let i = 1; i < rendered.stories.length; i++) {
                 expect(rendered.stories[i].top, label).toBeGreaterThanOrEqual(rendered.stories[i - 1].bottom);
               }
@@ -102,6 +102,8 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('newspaper design
               expect(firstBrief.left, label).toBeGreaterThan(lead.right);
               expect(secondBrief.top, label).toBeGreaterThanOrEqual(firstBrief.bottom);
               expect(secondBrief.left, label).toBeCloseTo(firstBrief.left, 1);
+            } else {
+              expect(firstBrief.top, label).toBeGreaterThanOrEqual(lead.bottom);
             }
             if (front.layout === 'analysis') {
               expect(paperWidth === 360 ? rendered.evidenceBelowProse : rendered.evidenceBesideProse, label).toBe(true);
@@ -176,9 +178,8 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('newspaper design
             front.itemIds.push(extraBrief.id);
           }
           if (id === 'printed-almanack') {
-            const turns = [3, 2, 1];
             front.itemIds.forEach((itemId, index) => {
-              issue.items.find(item => item.id === itemId)!.observedTurn = turns[index];
+              issue.items.find(item => item.id === itemId)!.observedTurn = front.itemIds.length - index;
             });
           }
           for (const item of issue.items) {

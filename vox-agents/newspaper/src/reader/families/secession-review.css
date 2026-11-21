@@ -56,15 +56,3 @@
     gap: 0 8px;
   }
 }
-
-@container newspaper (width > 760px) {
-  .vd-newspaper[data-publication-design="secession-review"] {
-    & .vd-storylist[data-layout="ordinary"]:has(.vd-story--brief) .vd-story--lead .vd-headline {
-      --print-width: clamp(118px, 17cqi, 196px);
-    }
-    & .vd-storylist[data-layout="ordinary"]:has(.vd-story--brief) .vd-story--lead .vd-headline::after {
-      top: -8px;
-      right: -2.4cqi;
-    }
-  }
-}

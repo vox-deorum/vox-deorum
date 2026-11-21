@@ -122,11 +122,11 @@ The same news can call for a different ending depending on the state of the empi
 
 Write when religious unrest is low:
 
-> {{terms.civilization}} founded {{founded}}, but {{majorityFaith}} is now the main faith in most of its cities. In one town, people from both faiths are fixing the roof of the old shrine. The shrine could stay open even if fewer people come to pray, as long as its neighbors still help.
+> {{terms.civilization}} founded {{founded}}, but {{majorityFaith}} is now the main faith in most of its cities. Across our towns, people of both faiths live together peacefully. As long as tensions stay low, the old faith can remain part of town life even where it has few followers.
 
 Write when religious unrest is high:
 
-> {{terms.civilization}} founded {{founded}}, but {{majorityFaith}} is now the main faith in most of its cities. In one town, neighbors who used to look after the old shrine together are arguing over who should lead prayers there. If they stop working together, even people who kept the old faith could lose their place to pray.
+> {{terms.civilization}} founded {{founded}}, but {{majorityFaith}} is now the main faith in most of its cities. In one town, neighbors who used to look after the old shrine together are arguing over who should lead prayers there. If disputes like this spread, the old faith could lose its place in town life well before people stop practicing it at home.
 
 Avoid:
 

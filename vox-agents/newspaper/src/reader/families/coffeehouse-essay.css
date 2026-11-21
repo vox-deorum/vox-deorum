@@ -62,4 +62,3 @@
   & .vd-storylist[data-layout] .vd-story--brief .vd-headline { font-size: calc(clamp(19px, 2cqi, 25px) * var(--vd-text-scale)); }
   & .vd-end-rule { width: 5em; margin-inline: auto; }
 }
-

@@ -54,11 +54,10 @@
   .vd-newspaper[data-publication-design="folded-chronicle"] {
     & .vd-storylist[data-layout="ordinary"] {
       column-gap: 0;
-      background: var(--fold) left / calc(100% / 2) 100% repeat-x;
       border-block: 2px solid var(--vd-accent);
 
       & > .vd-story { margin: 0; padding: var(--panel-inset); }
-      & > :nth-child(2) { border-top: 0; }
+      & > .vd-story--brief { background: var(--fold); }
     }
   }
 }
