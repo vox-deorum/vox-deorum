@@ -1,0 +1,67 @@
+[
+  {
+    "id": "egypt",
+    "version": "1",
+    "title": "The Two Lands",
+    "when": "self.name === 'Egypt' && self.era?.replace(' Era', '') === 'Ancient'",
+    "weight": {
+      "base": 100
+    },
+    "presentation": {
+      "schemaVersion": 1,
+      "rendererFamily": "folio",
+      "tokens": {
+        "paperColor": "#f5ead1",
+        "inkColor": "#28231b",
+        "accentColor": "#964023",
+        "bodyFontAssetId": "font-libre-caslon-400",
+        "headingFontAssetId": "font-cinzel-700",
+        "mastheadFontAssetId": "font-cinzel-700"
+      },
+      "assets": {
+        "ornamentAssetId": "egypt.ornament"
+      }
+    },
+    "assetDefinitions": [
+      {
+        "id": "ornament",
+        "kind": "ornament",
+        "path": "assets/designs/egypt/ornament.svg",
+        "mediaType": "image/svg+xml",
+        "width": 260,
+        "height": 48,
+        "license": "Vox Deorum project asset",
+        "attribution": "Authored ornament for the newspaper."
+      }
+    ],
+    "layouts": [
+      {
+        "id": "folio",
+        "variant": "ordinary",
+        "weight": {
+          "base": 10
+        }
+      },
+      {
+        "id": "dispatch",
+        "variant": "breaking",
+        "weight": {
+          "base": 10
+        }
+      },
+      {
+        "id": "review",
+        "variant": "analysis",
+        "weight": {
+          "base": 3
+        }
+      }
+    ],
+    "pageLabels": {
+      "front": "The Register",
+      "home": "Towns",
+      "economy": "Trade",
+      "abroad": "Foreign Lands"
+    }
+  }
+]

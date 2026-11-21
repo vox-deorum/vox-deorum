@@ -7,9 +7,9 @@
     "variants": [
       {
         "id": "becomes-vassal-report",
-        "headline": "{{master}} takes our nation as vassal",
+        "headline": "{{master}} takes us as vassal",
         "body": [
-          "Our nation has entered vassalage under {{master}}. Our state remains, but the last word in its affairs now belongs to another court."
+          "Our nation is now vassal to {{master}}. Our name, our laws and our coin remain ours; the last word in our affairs now comes from their court."
         ],
         "links": [
           { "placeholder": "master", "label": "{{master}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -23,7 +23,7 @@
         "genre": "obituary",
         "headline": "An era of our own counsel, concluded",
         "body": [
-          "We kept our own counsel in war and in peace, and no foreign court sat above ours. That independence has passed: {{master}} is our master now, and what we answer passes through their court. What remains is a nation that remembers standing alone."
+          "It lasted as long as living memory: wars we chose, treaties we signed in our own name, envoys who answered to nobody else. That independence is gone. {{master}} sits above our court now, and every answer we give travels first by the road to their gates. What remains is a people who remember standing alone."
         ],
         "links": [
           { "placeholder": "master", "label": "{{master}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -37,7 +37,7 @@
         "genre": "editorial",
         "headline": "Who signed us into vassalage?",
         "body": [
-          "Citizens, our court has handed the nation to {{master}}. No one has told us who agreed to it, or what they took in return. A bargain this size belongs in the open, and the paper means to see it there."
+          "Citizens, we woke this season as subjects of {{master}}, and nobody will say whose hand signed us away or what it bought. A bargain of that size belongs in the open, shouted from the square, not settled in a corridor."
         ],
         "links": [
           { "placeholder": "master", "label": "{{master}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -49,9 +49,9 @@
         "voice": "press",
         "stance": "neutral",
         "genre": "analysis",
-        "headline": "What vassalage under {{master}} means",
+        "headline": "Under {{master}}, the second chair",
         "body": [
-          "Vassalage puts {{master}} above our state in the conduct of its affairs. Our wars and our friendships now pass through their court, and so does our standing among nations. Which side of that weighs more will show in the seasons ahead."
+          "Our court still sits, but it sits in the second chair now. Envoys who once carried our word abroad carry it first to {{master}}, and our wars are no longer wholly ours to choose. Subject states have kept their walls and their gods before. What they seldom keep is the choosing."
         ],
         "links": [
           { "placeholder": "master", "label": "{{master}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -71,7 +71,7 @@
         "when": "ally !== null",
         "headline": "Our defensive pact with {{ally}} is at an end",
         "body": [
-          "The defensive pact between our nation and {{ally}} has come to an end. We are not at war with them, and the parting, so far as the record shows, was a matter of policy rather than battle."
+          "The defensive pact between our nation and {{ally}} has come to an end. The two states are not at war, and the parting was a matter of policy, not of battle."
         ],
         "weight": { "base": 1 }
       },
@@ -80,7 +80,7 @@
         "when": "ally === null",
         "headline": "A defensive pact comes to an end",
         "body": [
-          "One of our defensive pacts has come to an end. The other state has not gone to war with us, and the parting, so far as the record shows, was a matter of policy rather than battle."
+          "One of our defensive pacts has come to an end. The other state has not gone to war with us, and the parting was a matter of policy, not of battle."
         ],
         "weight": { "base": 1 }
       },
@@ -90,9 +90,9 @@
         "stance": "hawkish",
         "genre": "analysis",
         "when": "ally !== null",
-        "headline": "The pact with {{ally}} is gone, and the guarantee with it",
+        "headline": "An attack on {{ally}} is their problem now",
         "body": [
-          "A defensive pact is a promise to fight together. Without it, an attack on {{ally}} no longer calls us to arms, and an attack on us calls no one. Our generals should read the map as it now stands, not as it stood last season."
+          "The staff maps will be redrawn this week. An attack on {{ally}} no longer brings our banners, and an attack on us calls none of theirs; whatever the courts say in public, each nation stands on its own ground again. A prudent general counts the walls he can hold alone, and starts counting now."
         ],
         "weight": { "base": 1 }
       },
@@ -105,7 +105,7 @@
         "byline": "A merchant of the capital",
         "headline": "Madam, must we lose every friend we have?",
         "body": [
-          "I read that the pact with {{ally}} has lapsed, and my partners there already ask whether their goods will travel as safely next season. Wars begin in seasons when nobody wants them, and it is the treaties that hold until then. If the court will not renew this one, let it at least say why."
+          "I read that the pact with {{ally}} has lapsed, and my partner there wrote the same day to ask what it means for the carts. We have crossed that border for years on the faith that neither side would let harm come to the other's goods. If the court will not renew this one, let it at least say what changed."
         ],
         "weight": { "base": 1 }
       }
@@ -122,7 +122,7 @@
         "when": "ally !== null",
         "headline": "We sign a defensive pact with {{ally}}",
         "body": [
-          "Our nation and {{ally}} have entered a defensive pact. From this day, an attack on either state is an attack on both."
+          "Our nation and {{ally}} have signed a defensive pact. From this day, whoever moves against one of us answers to both."
         ],
         "weight": { "base": 1 }
       },
@@ -131,7 +131,7 @@
         "when": "ally === null",
         "headline": "A defensive pact is signed",
         "body": [
-          "Our nation has entered a defensive pact with a major power. From this day, an attack on either state is an attack on both."
+          "Our nation has signed a defensive pact with a major power. From this day, whoever moves against one of us answers to both."
         ],
         "weight": { "base": 1 }
       },
@@ -143,7 +143,7 @@
         "when": "ally !== null",
         "headline": "Hear it! We stand with {{ally}}",
         "body": [
-          "People of the nation, take note. A defensive pact is signed with {{ally}}, and it holds from this day. A hand raised against either of us now answers to both."
+          "Hear it, people of the nation! A defensive pact is signed with {{ally}}, and it holds from this day. A hand raised against either of us answers to both. Say it at your doors: an attack on {{ally}} is an attack on us!"
         ],
         "weight": { "base": 1 }
       },
@@ -155,7 +155,7 @@
         "when": "ally !== null",
         "headline": "A pact for the palace, a question for the street",
         "body": [
-          "The court has promised our armies to {{ally}} if war comes looking. Perhaps that is wisdom, and perhaps it is our sons who will answer for it. The paper wants the terms read aloud in the square before anyone cheers."
+          "The court has promised that if a hand is raised against {{ally}}, our banners march. Perhaps that is wisdom, and perhaps it is our sons who will make good on it. Read the terms aloud in the square before anyone cheers, and let the men who would march hear what they are marching for."
         ],
         "weight": { "base": 1 }
       },

@@ -1,0 +1,39 @@
+/* A sequence of full-width panels, each with a single reading column. */
+.vd-newspaper[data-design="folio"] {
+  --vd-paper: #f5eddf;
+  --vd-ink: #302721;
+  --vd-accent: #754633;
+  --vd-rule: color-mix(in srgb, var(--vd-ink) 32%, var(--vd-paper));
+  --vd-page-background: color-mix(in srgb, var(--vd-paper) 82%, var(--vd-ink));
+  --vd-font-body: Georgia, serif;
+  --vd-font-display: Georgia, serif;
+
+  & .vd-page-viewport { flex-grow: 1; }
+  & .vd-tabs { gap: 0 clamp(12px, 3cqi, 36px); }
+  & .vd-tab { padding-block: 8px; }
+  & .vd-title { font-size: calc(clamp(32px, 6.3cqi, 72px) * var(--vd-text-scale)); }
+  & .vd-story-content { max-width: 78ch; margin-inline: auto; }
+  & .vd-story--brief { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--vd-rule); }
+  & .vd-headline { margin-bottom: 10px; }
+  & .vd-storylist .vd-story--lead .vd-headline {
+    font-size: calc(clamp(31px, 4.4cqi, 52px) * var(--vd-text-scale));
+    font-weight: 500;
+  }
+  & .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-headline {
+    font-size: calc(clamp(39px, 7.2cqi, 84px) * var(--vd-text-scale));
+  }
+  & .vd-storylist[data-layout="analysis"] .vd-story--brief { max-width: none; }
+  & .vd-story--brief .vd-headline { font-size: calc(clamp(23px, 3.2cqi, 32px) * var(--vd-text-scale)); }
+  & .vd-storylist .vd-story--lead .vd-deck {
+    margin: 0 0 14px;
+    font: italic calc(clamp(21px, 2.6cqi, 28px) * var(--vd-text-scale)) / 1.25 var(--vd-font-body);
+  }
+  & .vd-storylist .vd-story--lead .vd-byline { margin: 0 0 13px; }
+  & .vd-analysis-columns { grid-template-columns: 1fr; gap: 24px; }
+  & .vd-evidence { border: 0; padding: 0; }
+  & .vd-evidence th, & .vd-evidence td { padding-block: 8px; }
+  & .vd-evidence td { font-size: calc(26px * var(--vd-text-scale)); font-variant-numeric: tabular-nums; }
+  & .vd-evidence .vd-missing td { font: italic calc(16px * var(--vd-text-scale)) / 1.4 var(--vd-font-body); }
+  & .vd-number { color: var(--vd-accent); font-variant-numeric: lining-nums tabular-nums; }
+  & .vd-end-ornament { width: 80px; }
+}

@@ -1,0 +1,67 @@
+[
+  {
+    "id": "heian",
+    "version": "1",
+    "title": "Letters from the Capital",
+    "when": "self.name === 'Japan' && self.era?.replace(' Era', '') === 'Medieval'",
+    "weight": {
+      "base": 100
+    },
+    "presentation": {
+      "schemaVersion": 1,
+      "rendererFamily": "folio",
+      "tokens": {
+        "paperColor": "#f5eff5",
+        "inkColor": "#322937",
+        "accentColor": "#754263",
+        "bodyFontAssetId": "font-cardo-400",
+        "headingFontAssetId": "font-cardo-700",
+        "mastheadFontAssetId": "font-cormorant-garamond-italic-600"
+      },
+      "assets": {
+        "ornamentAssetId": "heian.ornament"
+      }
+    },
+    "assetDefinitions": [
+      {
+        "id": "ornament",
+        "kind": "ornament",
+        "path": "assets/designs/heian/ornament.svg",
+        "mediaType": "image/svg+xml",
+        "width": 360,
+        "height": 120,
+        "license": "Vox Deorum project asset",
+        "attribution": "Authored ornament for the newspaper."
+      }
+    ],
+    "layouts": [
+      {
+        "id": "folio",
+        "variant": "ordinary",
+        "weight": {
+          "base": 10
+        }
+      },
+      {
+        "id": "dispatch",
+        "variant": "breaking",
+        "weight": {
+          "base": 10
+        }
+      },
+      {
+        "id": "review",
+        "variant": "analysis",
+        "weight": {
+          "base": 3
+        }
+      }
+    ],
+    "pageLabels": {
+      "front": "Letters",
+      "home": "Provinces",
+      "economy": "Markets",
+      "abroad": "Letters Abroad"
+    }
+  }
+]

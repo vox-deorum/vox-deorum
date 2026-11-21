@@ -34,6 +34,10 @@ export const newspaperDesignDefaults = {
     paperPadding: 32,
     scrollbarGutter: 16,
   },
+  folio: {
+    paperPadding: 40,
+    scrollbarGutter: 16,
+  },
 } as const satisfies Record<RendererFamily, NewspaperDesignLayoutDefaults>;
 
 /** Default browser capture profile for a newspaper export. */

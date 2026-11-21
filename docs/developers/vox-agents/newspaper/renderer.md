@@ -2,7 +2,7 @@
 
 The newspaper renderer displays completed issues in a browser and exports the same layout as DDS strips with typed interaction rectangles. This guide covers its input, browser reader, export service, and game delivery. Manual testing confirmed the demo's links, scrolling, and general UI in Civilization V. The exact test environment was not recorded.
 
-Configurable designs use three renderer families: inscription, broadsheet, and feed. A family is a layout structure several designs can share, and a design id names one variant. Families provide section tabs, article links, and reversible votes shared by every appearance of an item. The host owns vote persistence. The normal VD server hosts the reader, export service, and [recording replay](replay.md), and the Debug page can open a sample issue in the loaded game.
+The [stock designs](designs.md) use four renderer families: inscription, folio, broadsheet and feed. A family is a layout structure several designs can share, and a design id names one variant. Families provide section tabs, article links, and reversible votes shared by every appearance of an item. The host owns vote persistence. The normal VD server hosts the reader, export service, and [recording replay](replay.md), and the Debug page can open a sample issue in the loaded game.
 
 ## Supply a completed issue
 
@@ -29,7 +29,7 @@ To compare the built-in designs from a source checkout, run `npm run newspaper:p
 
 ### Store the presentation with the issue
 
-Issues use schema 2 and require `publication.presentation`, defined in `contracts/design.ts`. Its own schema version is 1. The snapshot stores the chosen `rendererFamily` (`inscription`, `broadsheet`, or `feed`), optional paper, ink and accent colors, optional body, heading and masthead font asset IDs, and an optional ornament asset ID. Omitted tokens use the selected family's defaults. The feed family derives its text, washes, hairlines and page background from the accent color, so a civilization's color can tint the whole display. Headings and the masthead have separate font roles, so the broadsheet family keeps blackletter for its publication title.
+Issues use schema 2 and require `publication.presentation`, defined in `contracts/design.ts`. Its own schema version is 1. The snapshot stores the chosen `rendererFamily` (`inscription`, `folio`, `broadsheet` or `feed`), optional paper, ink and accent colors, optional body, heading and masthead font asset IDs, and an optional ornament asset ID. Omitted tokens use the selected family's defaults. The feed family derives its text, washes, hairlines and page background from the accent color, so a civilization's color can tint the whole display. Headings and the masthead have separate font roles, so the broadsheet family keeps blackletter for its publication title.
 
 Font assets resolve to their registered family with all bundled weights and styles. Bold and italic text retain their corresponding faces, and missing files use the family's fallback stack while the reader becomes ready. Disposing the reader removes its font faces. The same saved colors, fonts and ornament apply in browser reading and export.
 

@@ -351,6 +351,12 @@
 
 /* Ordinary layouts */
 
+/* Let a two-line brief use both columns when it spans the final row. */
+.vd-storylist[data-layout="ordinary"] .vd-story--brief .vd-prose {
+  widows: 1;
+  orphans: 1;
+}
+
 .vd-storylist[data-layout="ordinary"] .vd-story--lead .vd-headline {
   font-size: calc(50px * var(--vd-text-scale));
   font-weight: 900;

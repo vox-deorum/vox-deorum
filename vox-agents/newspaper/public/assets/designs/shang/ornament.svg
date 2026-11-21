@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 58" width="180" height="58">
+  <defs>
+    <g id="horn" stroke-linejoin="miter">
+      <path d="M84 24 68 8H48V3H29V14H10V7H3V22H37V11H45V21H60L79 37V45H69V39H56V48H43V41H29" fill="none" stroke="#cab48a" stroke-width="3.3"/>
+      <path d="M78 27 65 16H52M6 29H27V35H17M76 52H62V46M37 26H50" fill="none" stroke="#9a9976" stroke-width="2"/>
+      <path d="M42 32 52 24H65L76 33 65 39H51Z" fill="#ceb98b"/>
+      <path d="M53 30 59 26 65 30 60 37 54 35Z" fill="#344c40"/>
+    </g>
+  </defs>
+  <use href="#horn"/>
+  <use href="#horn" transform="translate(180 0) scale(-1 1)"/>
+  <path d="M90 4 95 11 92 20V40L97 46 90 55 83 46 88 40V20L85 11Z" fill="#deca9b"/>
+</svg>

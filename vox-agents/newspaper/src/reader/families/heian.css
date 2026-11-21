@@ -1,0 +1,70 @@
+/* A court letter on dyed paper. The title and signature share a left margin. */
+.vd-newspaper[data-publication-design="heian"] {
+  --letter-inset: clamp(0px, calc(11cqi - 40px), 92px);
+  --paper-wash: linear-gradient(115deg, #e9dce9, transparent 64%);
+
+  & .vd-header {
+    background: var(--paper-wash),
+      repeating-linear-gradient(38deg, transparent 0 12px, #9d82a00b 12px 13px, transparent 13px 25px),
+      repeating-linear-gradient(-38deg, transparent 0 12px, #9d82a00b 12px 13px, transparent 13px 25px),
+      var(--vd-paper);
+    border-top: 5px solid #69566e;
+    padding-top: 0;
+  }
+  & .vd-masthead {
+    padding: clamp(24px, 4cqi, 48px) 24% 14px var(--letter-inset);
+    text-align: left;
+  }
+  & .vd-title {
+    font-style: italic;
+    font-weight: 600;
+    line-height: .98;
+    letter-spacing: -.045em;
+    text-wrap: pretty;
+  }
+  & .vd-ornament {
+    position: absolute;
+    inset: 0 0 auto auto;
+    width: 33%;
+    max-width: 340px;
+    margin: 0;
+  }
+  & .vd-publication:has(.vd-page:first-child[data-layout="breaking"]) .vd-ornament { visibility: hidden; }
+  & .vd-tabs {
+    justify-content: flex-start;
+    margin-left: var(--letter-inset);
+    border-color: var(--vd-rule);
+  }
+  & .vd-tab { font-style: italic; }
+  & .vd-story-content { margin-inline: var(--letter-inset) auto; max-width: 70ch; }
+  & .vd-headline { letter-spacing: -.025em; }
+  & .vd-story--brief { border: 0; padding-top: 0; }
+  & .vd-story--brief::before {
+    display: block;
+    width: 38px;
+    height: 1px;
+    margin: 0 0 18px var(--letter-inset);
+    background: var(--vd-accent);
+    content: "";
+  }
+  & .vd-storylist[data-layout="breaking"] .vd-story--lead :is(.vd-headline, .vd-deck, .vd-byline) {
+    text-align: left;
+    text-transform: none;
+  }
+  & .vd-storylist .vd-story--lead .vd-deck { border: 0; padding-bottom: 0; }
+  & .vd-byline { color: var(--vd-accent); opacity: 1; }
+  & .vd-evidence {
+    margin-inline: clamp(0px, 2cqi, 24px) 0;
+    padding: clamp(12px, 2.5cqi, 25px);
+    border-left: 2px solid #b69aac;
+    background: color-mix(in srgb, var(--vd-paper), white 36%);
+  }
+  & .vd-end-ornament { margin-right: 6%; width: 115px; }
+}
+
+@container newspaper (max-width: 520px) {
+  .vd-newspaper[data-publication-design="heian"] {
+    & .vd-masthead { padding-right: 17%; }
+    & .vd-ornament { width: 24%; }
+  }
+}

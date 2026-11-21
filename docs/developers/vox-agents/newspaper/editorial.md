@@ -131,7 +131,7 @@ For a single group, prose can print `{{key}}` and `{{count}}`. Expressions can r
 
 The front page is unconditional. Each design needs one unconditional ordinary layout and one unconditional breaking layout, both with a constant positive weight. Other pages can use `when`; designs and extra layouts can also adjust their weights. Section labels must name configured pages, and fonts and ornaments are validated against registered renderer assets, including assets declared by built-in designs.
 
-The stock designs choose by `self.era`. `victorian` runs from the Classical through Future eras, `wire` from Modern through Future, and `oral-accounts` is the fallback for Ancient or unknown eras. Published issues save their presentation settings and refer to artwork by its bundled asset ID.
+The editor favors `shang` for Ancient China, `egypt` for Ancient Egypt and `heian` for Medieval Japan. These designs match the receiver’s recorded civilization name in English and era. The general choices are `oral-accounts` for Ancient or unknown eras, `victorian` from Classical onward and `wire` from Modern onward. Published issues retain their chosen presentation and bundled artwork IDs.
 
 ### Design assets
 

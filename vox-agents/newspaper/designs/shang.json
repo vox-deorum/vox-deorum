@@ -1,0 +1,67 @@
+[
+  {
+    "id": "shang",
+    "version": "1",
+    "title": "Records of the King’s House",
+    "when": "self.name === 'China' && self.era?.replace(' Era', '') === 'Ancient'",
+    "weight": {
+      "base": 100
+    },
+    "presentation": {
+      "schemaVersion": 1,
+      "rendererFamily": "folio",
+      "tokens": {
+        "paperColor": "#eee3c7",
+        "inkColor": "#30291e",
+        "accentColor": "#36594e",
+        "bodyFontAssetId": "font-literata-400",
+        "headingFontAssetId": "font-marcellus-400",
+        "mastheadFontAssetId": "font-marcellus-400"
+      },
+      "assets": {
+        "ornamentAssetId": "shang.ornament"
+      }
+    },
+    "assetDefinitions": [
+      {
+        "id": "ornament",
+        "kind": "ornament",
+        "path": "assets/designs/shang/ornament.svg",
+        "mediaType": "image/svg+xml",
+        "width": 180,
+        "height": 58,
+        "license": "Vox Deorum project asset",
+        "attribution": "Authored ornament for the newspaper."
+      }
+    ],
+    "layouts": [
+      {
+        "id": "folio",
+        "variant": "ordinary",
+        "weight": {
+          "base": 10
+        }
+      },
+      {
+        "id": "dispatch",
+        "variant": "breaking",
+        "weight": {
+          "base": 10
+        }
+      },
+      {
+        "id": "review",
+        "variant": "analysis",
+        "weight": {
+          "base": 3
+        }
+      }
+    ],
+    "pageLabels": {
+      "front": "Royal Record",
+      "home": "Settlements",
+      "economy": "Exchange",
+      "abroad": "Envoys"
+    }
+  }
+]

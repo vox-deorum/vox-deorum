@@ -1,12 +1,12 @@
 # Newspaper designs
 
-A newspaper design decides how an issue looks: colors, fonts, ornaments, decoration and page labels. The stories and their information stay the same in every design. This page records the design principles and the three stock designs. The [renderer guide](renderer.md) covers the presentation contract, export and testing; the [editorial guide](editorial.md#pages-and-designs) covers when each design is chosen.
+A newspaper design sets the colors, fonts, ornaments and page labels for an issue. The stories stay the same. The [renderer guide](renderer.md) covers rendering and export; the [editorial guide](editorial.md#pages-and-designs) covers when the editor chooses each design.
 
 ## Principles
 
 1. **Content is fixed; decoration varies.** Every design shows the same elements: the masthead title and optional motto, section tabs, headline, deck, byline, prose, the earlier-report link, votes and the evidence table. A design adds no text of its own, such as dates, prices, volume numbers or a "Breaking" label. Emphasis comes from scale, color, rules, frames, ornaments and initials.
 2. **Keep text short.** Today's amount of text is the ceiling. A richer design adds decoration, not words.
-3. **Decoration grows with age.** The ancient design is the most decorated, the Victorian design uses period print ornament, and the modern design stays clean but has a strong identity.
+3. **Let the medium set the amount of decoration.** Cast bronze carries a patterned rim, a court letter needs only a flowering branch, and a modern feed relies on spacing and tint.
 4. **Base each design on real-world references.** Name the sources (see the table below) and take concrete devices from them, such as a frame shape, a rule style or a type choice.
 5. **Decoration frames the content.** Place ornaments at the edges of the sheet rather than between the masthead and the stories. For example, the ancient design runs a Greek key frieze along the top and bottom of the sheet and uses smaller margins, so it gains decoration and reading space at once.
 6. **An ornament is its own divider.** Where an ornament separates parts of the page, it does the job alone. Do not wrap it in extra rules or padding. The ancient design's Greek key frieze is the pattern itself with no lines above or below, and the ivy leaf between briefs stands without flanking rules. Every rule and margin spends space that the ornament already marks.
@@ -22,10 +22,13 @@ A renderer family is a layout structure that several designs can share. A design
 | Family | Structure | Stock design | Real-world references |
 | --- | --- | --- | --- |
 | `inscription` | Framed, centred notice board | `oral-accounts`, Accounts of the Settlements (ancient) | The Roman *Acta Diurna* notice board, painted election notices at Pompeii (red and black), Trajan's Column capitals (Cinzel), the *tabula ansata* panel for the masthead, Greek key friezes, and the *hedera* ivy leaf as divider |
+| `folio` | Framed writing field | `shang`, Records of the King’s House (Ancient China) | The paired eyes and symmetrical horns of a [Shang bronze cauldron](https://www.metmuseum.org/art/collection/search/60594) above spaced Marcellus capitals. A bronze frame encloses a breaking report; the analysis table reads like an inventory. |
+| `folio` | Stacked painted registers | `egypt`, The Two Lands (Ancient Egypt) | The [agricultural registers in Nakht’s chapel](https://www.metmuseum.org/art/collection/search/548438) inspire the horizontal bands. A winged sun crowns the masthead; ochre rules divide stories and evidence rows. |
+| `folio` | Single column of letters | `heian`, Letters from the Capital (Medieval Japan) | The dyed and patterned sheets of the [Gen’ei poetry manuscript](https://emuseum.nich.go.jp/detail?content_base_id=100171&content_part_id=000&langId=en) inspire the pale wisteria paper. The italic masthead sits beside a flowering branch. Urgent editions clear that corner; analysis sets the figures below the letter as an enclosure. |
 | `broadsheet` | Ruled multi-column print page | `victorian`, The Civic Chronicle (Classical era onward) | *The Illustrated London News* and *Harper's Weekly* mastheads with medallion ears, *The Times* Oxford rules, printers' factotum initials and fleurons, and *Le Petit Journal* for the breaking edition |
 | `feed` | Single timeline column of posts | `wire`, The Civic Wire (Modern era onward) | Social timelines such as Bluesky: a centred post column between hairlines, round avatars, the byline as the post header, an action row of votes, and one brand tint |
 
-Each family has three front-page layouts. Ordinary pages lead with one story followed by briefs. Breaking pages enlarge and frame the lead: a framed proclamation, a headline between heavy bars, or a pinned alert post. Analysis pages pair the lead with the evidence table, set as a carved tally, a ledger or a data card.
+Every design has three front-page layouts. An ordinary page opens with one story followed by briefs. A breaking page gives the lead the most space. An analysis page pairs it with an evidence table; in the folio family, that table follows the prose in the same column.
 
 ## Rendering constraints
 
@@ -39,6 +42,6 @@ Designs must keep these rules so the browser reader and the game texture match:
 ## Add or change a design
 
 1. Add or edit the design JSON in `vox-agents/newspaper/designs/`, choosing its family, tokens, fonts, assets, layouts and page labels.
-2. Keep family styles in `vox-agents/newspaper/src/reader/families/<family>.css`, scoped to the family's `data-design` value.
+2. Keep shared layout rules in `vox-agents/newspaper/src/reader/families/<family>.css`, scoped by `data-design`. Scope a design’s own stylesheet by `data-publication-design` and import it after its family in `reader.css`.
 3. Put design-owned artwork in `newspaper/public/assets/designs/<design id>/` and register it as described in the [asset notes](editorial.md#design-assets).
 4. Check every layout at wide and narrow widths, and for the feed family with several tints, in the preview (`npm run newspaper:preview -w vox-agents`).

@@ -55,7 +55,7 @@ function createStory(id: string, sentences: number): IssueItem {
 }
 
 /** Built-in design ids that carry each renderer family. */
-const designIds: Record<RendererFamily, string> = { inscription: 'oral-accounts', broadsheet: 'victorian', feed: 'wire' };
+const designIds: Record<RendererFamily, string> = { inscription: 'oral-accounts', broadsheet: 'victorian', feed: 'wire', folio: 'egypt' };
 
 /** Build a one-page ordinary issue whose stories have the given lengths. */
 function createOrdinaryIssue(sentences: number[], family: RendererFamily = 'broadsheet'): IssueDocument {
@@ -191,6 +191,26 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'export.html')) || !exist
       }
     } finally { await page.close(); }
   }, 60_000);
+
+  it.for(['inscription', 'broadsheet'] as const)('should balance a short unpaired brief across both %s columns', async (family, context) => {
+    if (!browser) { context.skip(unavailable); return; }
+    const issue = createOrdinaryIssue([1, 1, 1, 1], family);
+    issue.items[3].body = [[{ type: 'text', text: 'Our settlers have founded Novgorod. The work begins now: first houses, first fields, first walls.' }]];
+    const page = await browser.newPage();
+    try {
+      await page.goto(`${host.url}/newspaper/export.html`);
+      await exportStories(page, issue, 1200);
+      const columns = await page.locator('.vd-story:last-child .vd-prose').evaluate(prose => {
+        const box = prose.getBoundingClientRect();
+        const middle = box.left + box.width / 2;
+        const range = document.createRange();
+        range.selectNodeContents(prose.querySelector('p')!);
+        const lines = Array.from(range.getClientRects());
+        return { left: lines.some(line => line.right < middle), right: lines.some(line => line.left > middle) };
+      });
+      expect(columns).toEqual({ left: true, right: true });
+    } finally { await page.close(); }
+  });
 
   it('should keep the opening letter in the first column of a short lead', async context => {
     if (!browser) { context.skip(unavailable); return; }

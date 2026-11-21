@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 120" width="360" height="120">
+  <defs>
+    <g id="flower">
+      <path fill="#d3a6b5" d="M0 1C-9-3-10-11-6-14L-2-12 0-15C6-13 7-6 2-1 8-8 14-8 16-4L13-1 16 1C13 7 7 7 2 3 9 7 10 14 5 16L2 13 0 16C-6 14-6 8-2 3-7 10-14 10-16 5L-13 3-16 0C-14-5-7-6 0 1Z"/>
+      <path fill="#f6e4e7" d="M-2 0Q-8-8-5-11Q0-12 1-2Q8-8 12-4Q13 0 3 2Q9 9 4 12Q1 13 0 4Q-8 8-11 4Q-12 0-2 0Z"/>
+      <circle r="2.3" fill="#aa8653"/>
+    </g>
+    <path id="bud" d="M0 0Q-5-9-1-13Q6-12 5-7Q4-3 0 0Z" fill="#9f7184"/>
+  </defs>
+  <g fill="#56404c">
+    <path d="M364 9Q324 18 290 39Q264 54 225 50Q185 45 156 61Q121 82 73 84Q49 85 18 98Q45 83 72 81Q123 76 152 57Q183 40 224 45Q263 49 287 33Q324 9 364 0Z"/>
+    <path d="M290 36Q261 30 247 19Q233 7 213 4Q231 4 249 17Q264 26 294 31ZM244 48Q216 66 202 86Q194 99 178 109Q195 94 200 84Q211 63 235 49ZM173 53Q150 42 137 28L118 19Q136 24 140 29Q157 44 182 49ZM121 74Q107 66 88 66L73 59Q87 64 96 63Q112 64 126 71Z"/>
+    <path d="M87 81Q72 92 62 108Q66 94 80 82ZM220 64Q214 74 217 85Q212 77 216 69ZM261 24Q259 14 250 6Q260 10 265 27Z"/>
+  </g>
+  <g fill="#91866a">
+    <path d="M314 25q-5-14-19-16q5 11 19 16Zm-49 22q-7 11-23 13q8-11 23-13ZM146 61q-13-4-25 0q9 5 25 0Zm-39 17q-10 11-26 13q7-10 26-13Z"/>
+  </g>
+  <use href="#flower" transform="translate(276 38) rotate(19) scale(.69)"/>
+  <use href="#flower" transform="translate(249 20) rotate(-13) scale(.57)"/>
+  <use href="#bud" transform="translate(234 13) rotate(-48) scale(.64)"/>
+  <use href="#flower" transform="translate(212 73) rotate(34) scale(.82)"/>
+  <use href="#flower" transform="translate(198 89) rotate(-18) scale(.5)"/>
+  <use href="#bud" transform="translate(181 106) rotate(-135) scale(.55)"/>
+  <use href="#flower" transform="translate(159 48) rotate(-23) scale(.76)"/>
+  <use href="#flower" transform="translate(135 28) rotate(34) scale(.46)"/>
+  <use href="#bud" transform="translate(119 20) rotate(-60) scale(.64)"/>
+  <use href="#flower" transform="translate(109 74) rotate(28) scale(.55)"/>
+  <use href="#flower" transform="translate(70 84) rotate(-32) scale(.57)"/>
+  <use href="#bud" transform="translate(38 89) rotate(-76) scale(.58)"/>
+</svg>

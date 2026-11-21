@@ -9,7 +9,7 @@
         "id": "building-completed-report",
         "headline": "{{cityName}} completes the {{building}}",
         "body": [
-          "Work on the {{building}} in {{cityName}} is finished, raised by the city's own labor rather than bought with coin. It stands ready for use."
+          "The {{building}} in {{cityName}} is finished, raised by the city's own masons and carpenters rather than bought with coin. From this week the city can put it to use."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -23,7 +23,7 @@
         "genre": "notice",
         "headline": "Notice from {{cityName}}: the {{building}} is ready",
         "body": [
-          "The {{building}} at {{cityName}} stands finished, and the city may put it to use from this week on."
+          "Notice is given that the {{building}} at {{cityName}} stands finished and ready for use from this week on."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -37,7 +37,7 @@
         "genre": "anecdote",
         "headline": "The scaffolding comes down in {{cityName}}",
         "body": [
-          "The fences came down this week, and the {{building}} stood finished behind them. The onlookers who had gathered at the site went home, and the talk in {{cityName}} turned from waiting to using."
+          "The fences came down this week, and the {{building}} stood finished behind them. The men who had watched it rise since the first post went in lingered a while, as if the show were not over. In {{cityName}} the talk has moved from waiting to using."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -49,9 +49,9 @@
         "voice": "press",
         "stance": "ambitious",
         "genre": "analysis",
-        "headline": "What the new {{building}} means for {{cityName}}",
+        "headline": "What the finished {{building}} says about {{cityName}}",
         "body": [
-          "The {{building}} is finished in {{cityName}}, and the finishing matters as much as the opening. A city that completes great work draws people, trade and the next ambition. A finished work is simply where the next one starts."
+          "The {{building}} is finished in {{cityName}}, and the completion makes two statements. One concerns the building itself. The other concerns a city with the surplus, the hands and the patience to see long work through, and that is the statement rivals read closest. A finished work is also a promise of the next one."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -70,7 +70,7 @@
         "id": "building-investment-report",
         "headline": "{{cityName}} puts money behind the {{building}}",
         "body": [
-          "{{cityName}} has paid toward the {{building}}, coin laid down to hurry the work. The building rises the faster for it, and the city will have it sooner."
+          "Extra coin has gone into the {{building}} at {{cityName}}, laid down to hurry the work along. The building rises the faster for it, and the city will have it sooner."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -84,7 +84,7 @@
         "genre": "notice",
         "headline": "{{cityName}} funds the {{building}}",
         "body": [
-          "The printers are advised that {{cityName}} has laid money on the {{building}}. The sums are committed, and the work proceeds the quicker for it."
+          "We are given to understand that {{cityName}} has laid fresh money on the {{building}}, and that the work proceeds the quicker for it. The sums stand committed."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -98,7 +98,7 @@
         "genre": "analysis",
         "headline": "Why {{cityName}} is paying for the {{building}}",
         "body": [
-          "Investment is coin spent now against a result later. {{cityName}} has judged the {{building}} worth hurrying, and the money says plainly that the city would rather have the building soon than keep the gold a while longer."
+          "Extra money is going into the {{building}} at {{cityName}}, and the reason is time: the city would rather have the building soon than the gold in hand. Whether the trade was wise will show in the treasury, and in whatever the city could not buy with the coin it spent."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -110,9 +110,9 @@
         "voice": "crier",
         "stance": "ambitious",
         "genre": "notice",
-        "headline": "Hear it, {{cityName}}! The {{building}} is paid for",
+        "headline": "Hear it, {{cityName}}! Coin speeds the {{building}}",
         "body": [
-          "Money is laid down for the {{building}}, and the work goes forward the faster! The {{building}} comes sooner. The {{building}} comes sooner!"
+          "Hear it, good people! Money is laid down for the {{building}}, and the work goes forward the faster! The {{building}} comes sooner. The {{building}} comes sooner!"
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -131,7 +131,7 @@
         "id": "building-purchased-report",
         "headline": "{{cityName}} buys the {{building}}",
         "body": [
-          "The {{building}} stands finished in {{cityName}}. The city paid in {{currency}}, and there was no waiting for masonry."
+          "The {{building}} is finished in {{cityName}}, paid for outright in {{currency}}. There was no construction to wait through; the building is ready for use now."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -159,7 +159,7 @@
         "genre": "notice",
         "headline": "A purchase for {{cityName}}: the {{building}} is ready",
         "body": [
-          "We are advised that {{cityName}} has secured the {{building}} with {{currency}}, and the city's officers may take credit for so prompt an addition. The building stands ready for use."
+          "We are advised that {{cityName}} has secured the {{building}} with {{currency}}, a prompt piece of business that reflects credit on the city's officers. The building stands ready for use from this day."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -173,7 +173,7 @@
         "genre": "analysis",
         "headline": "{{cityName}} pays for speed",
         "body": [
-          "A purchase trades coin for time, and {{cityName}} has made the trade. The {{building}} stands ready without a single season of construction, and the city's account books will carry the cost of the saving."
+          "There was no scaffolding to take down at the {{building}} in {{cityName}}: the city paid in {{currency}} and took it finished. What the purchase saved was time, and what it cost sits in the treasury. Which mattered more will show in what the city does with the building it now has."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -215,9 +215,9 @@
         "stance": "national",
         "genre": "analysis",
         "when": "!tied",
-        "headline": "The capital is no longer the largest city",
+        "headline": "{{largest}} now outweighs {{capital}}",
         "body": [
-          "{{largest}} has passed {{capital}} in population, and the meaning is larger than one number. Power keeps its address in the capital, but the weight of the nation's people now sits elsewhere, and over the years a nation's business tends to follow its people."
+          "{{largest}} has passed {{capital}} in population, and the realm has quietly shifted its weight. Government keeps its address in {{capital}}, but the nation's people now mostly live elsewhere, and a nation's business tends in time to follow its people. The seat of power has not moved. The center of the realm has."
         ],
         "weight": { "base": 1 }
       },
@@ -229,7 +229,7 @@
         "when": "!tied",
         "headline": "{{capital}} loses its crown to {{largest}}",
         "body": [
-          "The census takers of {{capital}} have lost their favorite boast. {{largest}} now counts {{largestPopulation}} people, and the biggest crowds in the realm gather somewhere else entirely."
+          "The corner orators of {{capital}} have had to retire their favorite opening line. {{largest}} counts {{largestPopulation}} people now, and the biggest crowds in the realm gather somewhere else. The orators still draw a crowd, it should be said. Just not the biggest one."
         ],
         "weight": { "base": 1 }
       },
@@ -241,7 +241,7 @@
         "when": "!tied",
         "headline": "The capital just got outgrown",
         "body": [
-          "{{largest}} passes {{capital}}: {{largestPopulation}} people and growing. The capital keeps the government. {{largest}} has the crowd now."
+          "{{largest}} has passed {{capital}}: {{largestPopulation}} people and counting. The government stays in the capital. The crowds are in {{largest}} now."
         ],
         "weight": { "base": 1 }
       }
@@ -257,7 +257,7 @@
         "id": "cities-share-grievance-report",
         "headline": "The same grievance in {{count}} cities",
         "body": [
-          "Across {{count}} of our cities, the heaviest single cause of unhappiness is the same: {{key}}. A trouble that repeats that widely is no longer a local matter."
+          "In {{count}} of our cities, the leading complaint is the same one: {{key}}. A trouble that appears in that many places at once is no longer any single city's affair."
         ],
         "weight": { "base": 1 }
       },
@@ -268,7 +268,7 @@
         "genre": "analysis",
         "headline": "One problem, {{count}} cities",
         "body": [
-          "{{key}} now tops the complaint list in {{count}} of our cities at once. One city's trouble can be misfortune. The same trouble in every quarter is a pattern, and a pattern has an author somewhere in the government's choices."
+          "{{key}} now leads the complaints in {{count}} of our cities at once, which is past the point where bad luck explains it. One city's trouble can be misfortune. The same trouble in every quarter is a pattern, and a pattern has an author somewhere in the government's choices."
         ],
         "weight": { "base": 1 }
       },
@@ -280,7 +280,7 @@
         "when": "key == 'famine'",
         "headline": "Hunger in {{count}} of our cities",
         "body": [
-          "Famine now leads the grievance list in {{count}} of our cities. Ask anyone in the bread lines: this stopped being one city's hard luck some time ago."
+          "Famine tops the grievance list in {{count}} of our cities now. Ask anyone in the bread lines: this stopped being one city's hard luck a while back."
         ],
         "weight": { "base": 1 }
       },
@@ -308,7 +308,7 @@
         "id": "city-being-razed-report",
         "headline": "{{cityName}} is being razed",
         "body": [
-          "{{civilization}} has put {{cityName}} to the torch. {{turns}} turns remain before nothing is left of the city but its site."
+          "{{civilization}} has put {{cityName}} to the torch. {{turns}} turns remain before nothing is left of it but the ground it stood on."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -321,9 +321,9 @@
         "stance": "neutral",
         "genre": "report",
         "when": "cityName === null",
-        "headline": "A city is being razed",
+        "headline": "A city we cannot name is burning",
         "body": [
-          "{{civilization}} is razing a city whose name has not reached us. {{turns}} turns remain before it is gone."
+          "A city is burning under {{civilization}}'s hand, and its name has not even reached us. {{turns}} turns remain before there is nothing left to name."
         ],
         "weight": { "base": 1 }
       },
@@ -364,7 +364,7 @@
         "genre": "obituary",
         "headline": "The end of {{cityName}}",
         "body": [
-          "In {{turns}} turns, {{cityName}} will pass from the map entire: its walls, its markets and its prayers all ending together. {{civilization}} has chosen to leave nothing standing where the city stood."
+          "In {{turns}} turns, {{cityName}} will pass from the map entire: its walls, its markets and its prayers ending together. {{civilization}} has chosen that nothing stand where the city stood, and so nothing will."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -444,7 +444,7 @@
         "when": "cityName === null",
         "headline": "A city changes hands",
         "body": [
-          "A city has changed hands, and the change touches us closely. Its people wake under a flag that was not flying over them yesterday."
+          "A city has changed hands, and the hand that won or lost it was ours. The dispatches name no streets and no gates, but its people woke this morning under a flag that was not flying over them yesterday."
         ],
         "weight": { "base": 1 }
       },
@@ -490,7 +490,7 @@
         "id": "city-defense-completed-report",
         "headline": "{{cityName}} finishes new defenses",
         "body": [
-          "Work on the {{building}} at {{cityName}} is done, and the city's protection is the stronger for it."
+          "Work on the {{building}} at {{cityName}} is done, and the city is a harder target than it was."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -532,7 +532,7 @@
         "genre": "notice",
         "headline": "A stronger {{cityName}}",
         "body": [
-          "We are advised that the {{building}} at {{cityName}} is complete, the council's provision for the city's safety standing finished. {{cityName}} now rests behind stouter walls."
+          "We are advised that the {{building}} at {{cityName}} is complete, the council's provision for the city's safety standing finished. {{cityName}} rests tonight behind stouter walls, and the foresight belongs where it was earned."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -551,7 +551,7 @@
         "id": "city-famine-unrest-report",
         "headline": "Famine grips {{city}}",
         "body": [
-          "Hunger now outweighs every other trouble in {{city}}. The city's own tally puts {{famine}} of its discontent down to famine."
+          "Hunger now outweighs every other trouble in {{city}}. On the city's own count, {{famine}} of its discontent comes down to empty bellies."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -688,7 +688,7 @@
         "genre": "analysis",
         "headline": "{{cityName}} crosses {{population}}",
         "body": [
-          "{{cityName}} has reached {{population}} people, the measure of a {{milestone}}. A population of this size needs more of everything: fields, work, room to live. Cities that keep feeding their growth keep growing, and the next few seasons will show whether {{cityName}} is one of them."
+          "{{cityName}} has reached {{population}} people, the measure of a {{milestone}}, and the city now grows in a new way: more people need more fields, more work and more room, and a city that supplies them draws the families that make the next milestone. The next few seasons will show which kind of city {{cityName}} means to be."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -799,7 +799,7 @@
         "id": "city-pillaged-unrest-report",
         "headline": "Pillaged land weighs on {{city}}",
         "body": [
-          "Raided fields and broken roads are the heaviest burden in {{city}}. The city's own tally puts {{pillaged}} of its discontent down to pillage."
+          "Raided fields and broken roads are the heaviest burden in {{city}}. The city puts {{pillaged}} of its discontent down to the stripped ground outside the walls."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -874,7 +874,7 @@
         "genre": "notice",
         "headline": "{{cityName}} holds against the siege",
         "body": [
-          "Hear it! The enemy stands at the gates of {{cityName}}, and the city has not fallen. The walls hold at {{hitPoints}} of {{maxHitPoints}} hit points. Hold fast, people! The walls hold!"
+          "Hear it, people of {{cityName}}! The enemy stands at the gates, and the city has not fallen. The walls stand at {{hitPoints}} of {{maxHitPoints}}. Hold fast! The walls hold! The walls hold!"
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -916,7 +916,7 @@
         "genre": "notice",
         "headline": "The defense of {{cityName}} continues",
         "body": [
-          "We are advised that {{cityName}} remains under siege. The garrison is reported to hold the walls at {{hitPoints}} of {{maxHitPoints}} hit points, and the city's commanders describe the defense as steady."
+          "We are advised that {{cityName}} remains under siege. The garrison holds the walls, which stand at {{hitPoints}} of {{maxHitPoints}}, and the city's commanders describe the defense as steady and the stores as sufficient."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1034,7 +1034,7 @@
         "genre": "analysis",
         "headline": "New works at {{cityName}}",
         "body": [
-          "The {{building}} is finished at {{cityName}}, and {{civilization}}'s nearby city can now put it to use. A work this close to our border changes what a neighbor can bring to bear here, and our own plans should be counted with that in view."
+          "The {{building}} is finished at {{cityName}}, and {{civilization}} can now put it to use. A work this close to our border changes what a neighbor can bring to bear here. Whatever our answer is, it should assume the neighbor is not finished building."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1259,7 +1259,7 @@
         "genre": "report",
         "headline": "A puppet no more: {{city}} answers to {{owner}}",
         "body": [
-          "{{owner}} now rules {{city}} directly, and that changes what the city can be asked to do. Puppets hesitate; provinces march. A city under direct rule is a resource, and this one belongs to our neighbor."
+          "{{owner}} now rules {{city}} directly, and the change is not ceremonial. Puppets hesitate; provinces march. A neighbor that can now call on this city's men and grain is a different neighbor than it was."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1347,9 +1347,9 @@
         "stance": "neutral",
         "genre": "report",
         "when": "unrest !== null",
-        "headline": "Unrest in {{cityName}}",
+        "headline": "Mood darkens in occupied {{cityName}}",
         "body": [
-          "Occupation weighs on {{cityName}}. The city's books put its happiness balance at {{unrest}}, and resistance is expected to run {{turns}} more turns before the city settles."
+          "Occupation weighs on {{cityName}}, and the city's own books count the mood of its streets at {{unrest}}. Resistance is expected to run {{turns}} more turns before the city settles under our flag."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1446,7 +1446,7 @@
         "when": "!city.knows('happinessDelta') || !(city.happinessDelta < 0 || city.happinessDelta > 0)",
         "headline": "Settlers ready as {{town}} grows smaller",
         "body": [
-          "A party of settlers stands ready to leave {{town}}. Fewer mouths remain to feed in the city, and the fields yield more than its tables need."
+          "A party of settlers is ready to leave {{town}}, and the city is smaller for the making of it. Fewer mouths remain to feed, and there is food to spare for the ones who stay."
         ],
         "links": [
           { "placeholder": "town", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }

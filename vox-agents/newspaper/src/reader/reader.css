@@ -9,4 +9,8 @@
 @import "./families/inscription.css";
 @import "./families/broadsheet.css";
 @import "./families/feed.css";
+@import "./families/folio.css";
+@import "./families/heian.css";
+@import "./families/shang.css";
+@import "./families/egypt.css";
 @import "./export.css";

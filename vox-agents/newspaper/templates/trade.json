@@ -10,7 +10,7 @@
         "when": "partner !== null",
         "headline": "A bargain with {{partner}}, and gold in the terms",
         "body": [
-          "We have struck terms with {{partner}}. Our side gives {{weGive}} and receives {{weGet}}, with gold among them."
+          "We have struck terms with {{partner}}. Our side gives {{weGive}} and receives {{weGet}}, and gold is part of the bargain."
         ],
         "weight": { "base": 1 }
       },
@@ -19,7 +19,7 @@
         "when": "partner === null",
         "headline": "A bargain abroad, with gold in the terms",
         "body": [
-          "Our envoys have struck terms with a foreign power, name unknown to the dispatches. Our side gives {{weGive}} and receives {{weGet}}, with gold among them."
+          "Our envoys have struck terms with a foreign power whose name the dispatches did not carry. We give {{weGive}}; we take {{weGet}}. Gold moved, which means the bargain was real even where the name was not."
         ],
         "weight": { "base": 1 }
       },
@@ -32,7 +32,7 @@
         "body": [
           "We give: {{weGive}}.",
           "We receive: {{weGet}}.",
-          "Gold: counted among the terms."
+          "Gold in the terms: counted."
         ],
         "weight": { "base": 1 }
       },
@@ -44,7 +44,7 @@
         "when": "partner !== null",
         "headline": "Hear it! Terms are struck with {{partner}}",
         "body": [
-          "Mark it, good people, mark it: terms are struck with {{partner}}. We give {{weGive}}; we take {{weGet}}. Gold moves in the bargain, and the merchants will feel it first."
+          "Mark it, good people, mark it: terms are struck with {{partner}}! We give {{weGive}}. We take {{weGet}}. Gold is moving, and when gold moves, the market stalls feel it first. Mark the prices this week, and mark them well!"
         ],
         "weight": { "base": 1 }
       },
@@ -56,7 +56,7 @@
         "when": "partner !== null",
         "headline": "The envoys earn their keep",
         "body": [
-          "The envoys have settled terms with {{partner}}: we give {{weGive}}, we receive {{weGet}}. Making a bargain stick takes patience, and gold in the terms takes nerve. The paper calls that governing well."
+          "Citizens, we have a bargain with {{partner}}: we give {{weGive}}, we take {{weGet}}, and gold is in the terms. Striking one is slow, unglamorous work, done by envoys who get blamed when it fails and forgotten when it holds. This one holds. Remember the office that made it so."
         ],
         "weight": { "base": 1 }
       }
@@ -72,7 +72,7 @@
         "id": "incoming-trade-route-plundered-account-report",
         "headline": "A trade route bound for us is plundered",
         "body": [
-          "A trade route bound for our territory has been plundered on the road. The run is lost, and with it whatever our cities stood to draw from it."
+          "A trade route bound for our territory has been plundered on the road, and the run is lost. Our cities will go without whatever the caravan was carrying, and the road will be quieter for a while."
         ],
         "weight": { "base": 1 }
       },
@@ -84,7 +84,7 @@
         "when": "plunderer !== null",
         "headline": "{{plunderer}} robs the road to our gates",
         "body": [
-          "{{plunderer}} has plundered a trade route bound for our gates. The run is destroyed. A raider who feeds on our roads unopposed will not stop at one."
+          "{{plunderer}} has plundered a trade route bound for our gates, and the run is lost. Their riders knew the road and the schedule, which is worth thinking about. A raider fed once on our roads will come back for the next meal."
         ],
         "weight": { "base": 1 }
       },
@@ -96,7 +96,7 @@
         "when": "gold !== null",
         "headline": "{{gold}} gold gone with a plundered route",
         "body": [
-          "The market heard it first: a route bound for us, plundered on the road, {{gold}} gold gone with the run. What that road was worth to our towns, no tally in the capital will show."
+          "The market square heard it before the magistrates did: the run was plundered on the road, {{gold}} gold gone with it. The stallholders did their own sums in chalk. The capital will count the route; this town was counting the crates."
         ],
         "weight": { "base": 1 }
       },
@@ -107,7 +107,7 @@
         "genre": "editorial",
         "headline": "Trade needs a guarded road",
         "body": [
-          "We learn that a trade route on the way to our gates has been plundered. Those who would enjoy the income of trade must also keep the road; the one cannot be had without the other. The paper wants the routes watched, and wants to know who was not watching them."
+          "We learn that a trade route on its way to our gates has been plundered on the open road. The ledgers can say to the coin what the run was carrying. What no ledger says is who was meant to be watching the road, and this paper has asked."
         ],
         "weight": { "base": 1 }
       },
@@ -119,7 +119,7 @@
         "when": "origin !== null",
         "headline": "The road from {{origin}} is robbed",
         "body": [
-          "They say a trade route out of {{origin}}, bound for our cities, was plundered on the road. The run is ended. The loss sits at both ends, and a piece of it lands here."
+          "They say the run out of {{origin}} never finished. Robbers had it on the road, and nothing came through. The far end loses its goods, our end loses its market, and the robbers eat well."
         ],
         "weight": { "base": 1 }
       }
@@ -135,7 +135,7 @@
         "id": "last-trade-route-ends-account-report",
         "headline": "Our outgoing trade has stopped",
         "body": [
-          "Our last outgoing trade route has ended. No trade of ours now sets out for a foreign market."
+          "Our last outgoing trade route has ended, and no trade of ours now sets out for a foreign market. The caravan is unharnessed, and the foreign coin that used to arrive with it has stopped."
         ],
         "weight": { "base": 1 }
       },
@@ -145,9 +145,9 @@
         "stance": "traditional",
         "genre": "obituary",
         "when": "routes === 1",
-        "headline": "The last route is closed",
+        "headline": "The last road out is closed",
         "body": [
-          "It was the only outgoing trade route we still ran, and now it runs no more. With its ending, no trade of ours crosses the border. What remains is the road, and the habit of trade."
+          "It was one road, and it carried everything we sent abroad. It ran through seasons of war and seasons of peace, and it ran until this one, when it ran no more. The ruts are still in the road. Nothing travels in them."
         ],
         "weight": { "base": 1 }
       },
@@ -159,7 +159,7 @@
         "when": "routes > 1",
         "headline": "Every outgoing route has ended",
         "body": [
-          "Of the {{routes}} outgoing trade routes we ran, not one survives. Whatever ended them, no new route has been opened in its place. The income is gone. The paper asks who is minding the trade, and what they intend to do about it."
+          "Of the {{routes}} outgoing routes we ran at the last count, not one survives, and no new one has been sent out to replace them. Somewhere in the government a decision was made, or not made, that emptied the roads. The treasury will notice eventually. The drivers already have."
         ],
         "weight": { "base": 1 }
       },
@@ -170,7 +170,7 @@
         "genre": "notice",
         "headline": "Notice to those who send trade out",
         "body": [
-          "Our outgoing trade routes have ended; we run none. Those with goods for foreign markets have, for the present, no route of ours to carry them."
+          "Notice to shippers and warehousemen: our outgoing trade routes have ended, and we run none. Goods meant for foreign markets must wait for a new road or go into storage. The workshops keep making; the roads, for the present, carry nothing out."
         ],
         "weight": { "base": 1 }
       }
@@ -186,7 +186,7 @@
         "id": "long-trade-route-completed-account-report",
         "headline": "A {{routeDistance}}-tile trade route completes its run",
         "body": [
-          "The trade route between {{ourCity}} and {{theirCity}} has completed its run: {{routeDistance}} tiles from end to end, a long road for trade by any measure."
+          "The trade route between {{ourCity}} and {{theirCity}} has completed its run, {{routeDistance}} tiles end to end. The goods came through, and the two cities are now trading partners in fact as well as on paper."
         ],
         "weight": { "base": 1 }
       },
@@ -198,7 +198,7 @@
         "when": "outgoing === true",
         "headline": "Our trade reaches {{theirCity}}",
         "body": [
-          "Distance is the story: an outgoing route from {{ourCity}} has completed the {{routeDistance}}-tile run to {{theirCity}}. The farther a route reaches, the wider the market it ties to ours. Runs of this length turn a distant city into a partner of consequence, and the next one should reach farther still."
+          "The caravan out of {{ourCity}} has finished the {{routeDistance}}-tile run to {{theirCity}}, and the drivers came home with dust on their boots and orders in their pockets. A city that far away used to be a rumor to us. It is a customer now, and the next road should go farther."
         ],
         "weight": { "base": 1 }
       },
@@ -210,7 +210,7 @@
         "when": "outgoing === false",
         "headline": "A long road ends at {{ourCity}}",
         "body": [
-          "Letters from the road relate that a trade route of {{routeDistance}} tiles from {{theirCity}} has completed its run to {{ourCity}}. Trade that crosses so far to reach us does more than bring income; it makes two markets one."
+          "Letters from the road relate that a caravan out of {{theirCity}} has completed the {{routeDistance}}-tile journey to {{ourCity}}. To walk so far to sell to us is a compliment of some weight, and our merchants, we trust, returned it. Fuller stalls will do the rest."
         ],
         "weight": { "base": 1 }
       },
@@ -222,7 +222,7 @@
         "when": "partner !== null",
         "headline": "The long road to {{partner}}",
         "body": [
-          "In this season the trade road between {{ourCity}} and {{theirCity}}, {{routeDistance}} tiles apart, was run from end to end. The record notes that the way between us and {{partner}} stands open."
+          "In this season the trade road between {{ourCity}} and {{theirCity}}, {{routeDistance}} tiles apart, was run from end to end, and the goods were delivered whole. The record notes that the way between us and {{partner}} stands open, and sets down the season of its opening."
         ],
         "weight": { "base": 1 }
       },
@@ -233,7 +233,7 @@
         "genre": "report",
         "headline": "A {{routeDistance}}-tile run, completed",
         "body": [
-          "That is a lot of map between two markets. The {{ourCity}} to {{theirCity}} route just finished the full {{routeDistance}}-tile run. Both ends are the richer for it."
+          "The {{ourCity}} to {{theirCity}} route just finished the full {{routeDistance}}-tile run. That's a lot of map between two markets, and the cargo saw every tile of it."
         ],
         "weight": { "base": 1 }
       }
@@ -249,7 +249,7 @@
         "id": "our-trade-route-plundered-account-report",
         "headline": "Our trade route plundered on the road",
         "body": [
-          "A trade route out of our territory has been plundered before it reached its destination. The run is lost, and with it whatever our side stood to gain."
+          "A trade route out of our territory has been plundered on the road, short of its destination. The run is lost, and with it the goods and the gain our side was owed for the journey."
         ],
         "weight": { "base": 1 }
       },
@@ -261,7 +261,7 @@
         "when": "plunderer !== null",
         "headline": "{{plunderer}} takes our trade on the road",
         "body": [
-          "Our route never reached its destination. {{plunderer}} plundered it on the way, and the loss lands here at home, where the trade was to earn its keep."
+          "Our caravan never made it. {{plunderer}} had it on the road, and the loss lands here at home, in the wages it was to earn and the stalls it was to supply. The men who sent it out are not the ones who are short tonight."
         ],
         "weight": { "base": 1 }
       },
@@ -273,9 +273,9 @@
         "when": "gold !== null",
         "headline": "The account of a plundered route",
         "body": [
-          "Route lost: one, outbound from our territory.",
-          "Gold taken: {{gold}}.",
-          "The entry closes against us."
+          "Route lost: one, out of our territory.",
+          "Gold carried off: {{gold}}.",
+          "Balance of the day: against us."
         ],
         "weight": { "base": 1 }
       },
@@ -287,7 +287,7 @@
         "when": "destination !== null",
         "headline": "Our route to {{destination}} is plundered",
         "body": [
-          "A trade route from our territory to {{destination}} has been plundered on the road. The run is lost. Both ends of the trade feel it, ours and {{destination}} alike."
+          "The road to {{destination}} has cost us a trade route tonight. Robbers took the run before it arrived. Our traders have lost the goods. {{destination}} has lost the market. Two cities, one theft."
         ],
         "weight": { "base": 1 }
       },
@@ -298,7 +298,7 @@
         "genre": "editorial",
         "headline": "Send the spears with the trade",
         "body": [
-          "One of our trade routes has been plundered on the road. Roads that make money will be robbed so long as robbery is cheap. The paper wants our trade guarded, and the robbers made to regret the road."
+          "Citizens, another of our caravans has been taken on the road, and the answer from the capital is the same silence as the last time. Robbery is cheap because we have made it cheap. Put guards on the roads and watch the price of robbery rise. We want our trade defended, and we want the next raider to meet somebody."
         ],
         "weight": { "base": 1 }
       }
@@ -312,9 +312,9 @@
     "variants": [
       {
         "id": "trade-network-opens-account-report",
-        "headline": "Our trade network opens",
+        "headline": "Our trade goes abroad",
         "body": [
-          "Our outgoing trade routes now number {{routes}}, where at the last count there were none. Our trade has begun to move beyond our own borders."
+          "Our outgoing trade routes now number {{routes}}, where at the last count there were none. The first caravans are out on the roads, and the goods they carry will come home again as coin."
         ],
         "weight": { "base": 1 }
       },
@@ -325,7 +325,7 @@
         "genre": "notice",
         "headline": "Hear it! Our trade goes abroad",
         "body": [
-          "Outgoing trade routes: {{routes}}, where before there were none! Our trade goes out to the world. Mark it well: our trade is on the move!"
+          "Hear it, people, hear it! The roads are open! {{routes}} trade routes of ours now go out to foreign markets, where before there were none! Our goods go out, our name goes with them, and the coin comes home! Mark it well!"
         ],
         "weight": { "base": 1 }
       },
@@ -334,9 +334,9 @@
         "voice": "press",
         "stance": "pro-government",
         "genre": "analysis",
-        "headline": "What an open trade network is worth",
+        "headline": "What the new trade routes are worth",
         "body": [
-          "We ran no outgoing trade routes at the last count; we now run {{routes}}. Routes do not found themselves; someone chose to send our trade out, and the nation is the richer for the choice. The paper counts that to the government's credit."
+          "We ran no outgoing trade routes at the last count; we now run {{routes}}. Caravans do not saddle themselves. Somebody in the ministry weighed the risk of the open road and chose it anyway, and the first receipts are starting to show why. The credit belongs where the decision was made."
         ],
         "weight": { "base": 1 }
       },
@@ -363,7 +363,7 @@
         "id": "we-plunder-foreign-trade-route-account-report",
         "headline": "We plunder a foreign trade route",
         "body": [
-          "Our forces have plundered a trade route out of foreign territory. The run is at an end."
+          "Our forces have plundered a trade route out of foreign territory, and the run is at an end. The goods it carried are ours now, and the road it used will be quiet for a while."
         ],
         "weight": { "base": 1 }
       },
@@ -375,7 +375,7 @@
         "when": "gold !== null",
         "headline": "{{gold}} gold taken from a foreign route",
         "body": [
-          "Our forces plundered a trade route out of foreign territory and took {{gold}} gold from the run. The coin is in our treasury now; the loss sits in another ledger."
+          "Our forces plundered a foreign trade route on the road and took {{gold}} gold from the run. The coin is in our treasury now. The loss sits in somebody else's books, and they know where to find us."
         ],
         "weight": { "base": 1 }
       },
@@ -387,7 +387,7 @@
         "when": "origin !== null && destination !== null",
         "headline": "A route from {{origin}} to {{destination}} is plundered",
         "body": [
-          "Our forces have plundered a trade route running from {{origin}} to {{destination}}, and the run is ended on the road. The taking is effective; whether it is dignified is another question. Orderly commerce remains the more profitable habit."
+          "Our forces have brought a trade route from {{origin}} to {{destination}} to an end on the road, and the goods are in our keeping. We do not doubt the taking was profitable. We note only that a nation of standing robs its neighbors' commerce on principle or not at all, and principle appears to have been absent here."
         ],
         "weight": { "base": 1 }
       },
@@ -410,7 +410,7 @@
         "byline": "A merchant",
         "headline": "Have we no merchants left?",
         "body": [
-          "Sir, the route our soldiers plundered set out from foreign ground, but trade is a habit between peoples, and habits break both ways. We will want open roads again one day. Robbery is a poor way to keep them."
+          "Sir, I have sold across borders all my working life, and my ledgers are full of names I would rather not rob. The route our soldiers took on the road was carrying, among other goods, the goodwill that lets the next caravan pass. We will want those roads again one day, and they will remember who was standing on them."
         ],
         "weight": { "base": 1 }
       }

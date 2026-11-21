@@ -10,16 +10,16 @@
         "when": "civilization !== null",
         "headline": "{{civilization}} enters the {{era}}",
         "body": [
-          "{{civilization}}, a friend of our nation, has passed out of the {{former}} and into the {{era}}."
+          "{{civilization}}, a friend of our nation, has left the {{former}} and entered the {{era}}. The change runs through everything they build, teach and trade."
         ],
         "weight": { "base": 1 }
       },
       {
         "id": "friend-enters-new-era-unnamed",
         "when": "civilization === null",
-        "headline": "A friendly nation enters the {{era}}",
+        "headline": "A friendly power enters the {{era}}",
         "body": [
-          "A friend of our nation has passed out of the {{former}} and into the {{era}}. The name has not reached our records."
+          "A friend of our nation has crossed from the {{former}} into the {{era}}, and the name has not reached us. The couriers brought the age before they brought the name."
         ],
         "weight": { "base": 1 }
       },
@@ -31,7 +31,7 @@
         "when": "civilization !== null",
         "headline": "A friend crosses into the {{era}}",
         "body": [
-          "Letters from friendly courts bring word that {{civilization}} has lately left the {{former}} for the {{era}}. A friend's progress is welcome news in any age, and this paper counts it so."
+          "Letters from the friendly courts bring word that {{civilization}} has lately passed from the {{former}} into the {{era}}. We offer congratulations without hesitation: a friend grown stronger in the learning of the age makes a better customer, a better teacher and a steadier neighbor, and we welcome all three."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -46,7 +46,7 @@
         "when": "civilization !== null",
         "headline": "A new age in {{civilization}}, they say",
         "body": [
-          "The traders say the roads out of {{civilization}} smell of fresh ink this season. Our friend has crossed into the {{era}}, and the story came home with the first travelers."
+          "The drovers brought it over the pass before any letter could: {{civilization}} has crossed into the {{era}}. They say the bells in their towns rang all evening."
         ],
         "weight": { "base": 1 }
       },
@@ -58,7 +58,7 @@
         "when": "civilization !== null && distance !== null",
         "headline": "Of {{civilization}}'s entry into the {{era}}",
         "body": [
-          "In this season {{civilization}}, whose nearest city lies {{distance}} tiles from our own, passed out of the {{former}} and into the {{era}}. The record notes the change and holds it without comment."
+          "In this season it came to pass that {{civilization}}, whose nearest city stands {{distance}} tiles from our own, left the {{former}} and entered the {{era}}. The chronicle sets the crossing down as it happened, and adds nothing to it."
         ],
         "weight": { "base": 1 }
       },
@@ -69,7 +69,7 @@
         "genre": "analysis",
         "headline": "What a friend's new era means",
         "body": [
-          "A nation does not move from the {{former}} to the {{era}} in a season; the crossing is the work of years. A friend standing in a new age is a friend with more to trade, more to teach and more to lean on."
+          "Nations do not stumble out of the {{former}} into the {{era}}; somebody lays the road, and our friend has laid it. New ages do not stay quiet: they trade differently, build differently and expect more of their friends. Good, we say. The same road lies open to us."
         ],
         "weight": { "base": 1 }
       }
@@ -86,7 +86,7 @@
         "when": "!team.includes(' and ')",
         "headline": "{{team}} gains {{tech}}",
         "body": [
-          "Reports from the border say {{team}} has gained {{tech}}. Its cities lie close to our own."
+          "Word from the frontier says {{team}} has gained {{tech}}. Their cities stand close to ours, and whatever the new knowledge does, it will do it near us."
         ],
         "weight": { "base": 1 }
       },
@@ -95,7 +95,7 @@
         "when": "team.includes(' and ')",
         "headline": "{{team}} gain {{tech}}",
         "body": [
-          "Reports from the border say {{team}} have gained {{tech}}. The two powers share one team, and their cities lie close to our own."
+          "Word from the frontier says {{team}} have gained {{tech}}, both of them together. Their scholars keep one house, their cities stand near ours, and the lesson reached both at once."
         ],
         "weight": { "base": 1 }
       },
@@ -106,7 +106,7 @@
         "genre": "analysis",
         "headline": "A neighbor's new learning",
         "body": [
-          "What a neighbor knows changes what a neighbor can do. {{tech}} now sits in the hands of {{team}}, a team whose lands run near ours. The ledger of the age has a new entry, and it is not in our handwriting."
+          "What a neighbor knows changes what a neighbor can do. {{team}}, whose lands run along ours, now knows {{tech}}. Somewhere across the border a workshop is already trying it out. The ledger of the age has a new entry, and it is not in our handwriting."
         ],
         "weight": { "base": 1 }
       },
@@ -117,7 +117,7 @@
         "genre": "notice",
         "headline": "Notice to the learned: {{tech}} abroad",
         "body": [
-          "{{tech}} is now held by {{team}}, a team with cities close to our own. The fact is set down as it reached the printer, neither more nor less."
+          "The printers advise the learned that the art of {{tech}} is now practiced by {{team}}, whose cities stand near ours. The fact is set down as it arrived, and correction is invited from any scholar who can show otherwise."
         ],
         "weight": { "base": 1 }
       },
@@ -128,7 +128,7 @@
         "genre": "anecdote",
         "headline": "New learning across the fence",
         "body": [
-          "At the border stalls they were asking what {{tech}} does. Nobody could say, but everyone agreed it belonged to {{team}} now, and the fence has never once stopped a rumor."
+          "At the border stalls the morning's argument was {{tech}}. The knife-grinder swore it would change everything and could not say what. By noon the market agreed on one thing only: it is {{team}}'s now, and the fence has never once stopped a rumor."
         ],
         "weight": { "base": 1 }
       },
@@ -155,7 +155,7 @@
         "id": "new-era-report",
         "headline": "Our nation enters the {{era}}",
         "body": [
-          "The chronicles will mark this season: we have left the old age behind and entered the {{era}}."
+          "The nation has passed into the {{era}}. What the old age built still stands; what the new age builds begins now."
         ],
         "weight": { "base": 1 }
       },
@@ -166,7 +166,7 @@
         "genre": "notice",
         "headline": "Hear it! The {{era}} is ours",
         "body": [
-          "Hear it, people! Our nation has entered the {{era}}. Say it in the streets and say it again: the {{era}} is ours."
+          "Hear it, hear it, people of the {{era}}! The old age is done with us, and the new one is ours. Every town, every farm, every one of us stands in it together. Say it in the streets and say it again: the {{era}} is ours!"
         ],
         "weight": { "base": 1 }
       },
@@ -175,9 +175,9 @@
         "voice": "broadcast",
         "stance": "ambitious",
         "genre": "report",
-        "headline": "We enter the {{era}}",
+        "headline": "The {{era}} begins tonight",
         "body": [
-          "Here is the news: our nation has entered the {{era}}. The old age is over. The new one starts now."
+          "The nation enters the {{era}} tonight. The old age ended this week. Bells are ringing across the country, and everyone is arguing about what gets built first."
         ],
         "weight": { "base": 1 }
       },
@@ -188,7 +188,7 @@
         "genre": "report",
         "headline": "The record of our passage into the {{era}}",
         "body": [
-          "In this year providence carried our nation out of the former age and into the {{era}}. The scribes set it down with thanks, and the shrines will do the same."
+          "In this year it was given to the nation to pass out of the former age and into the {{era}}. The scribes set it down with thanks. In the shrines the lamps will burn late this season; heaven carried us here, and the wardens mean to say so."
         ],
         "weight": { "base": 1 }
       },
@@ -200,7 +200,7 @@
         "headline": "The bells rang all morning",
         "byline": "A clerk of the capital",
         "body": [
-          "Madam Editor, the bells rang all morning for our entry into the {{era}}. Ages do not arrive by accident; they are built, and those who built this one deserve the city's thanks. I have sent mine."
+          "Madam Editor, the bells rang all morning for our entry into the {{era}}, and already I hear neighbors calling it the world turning. Worlds do not turn by themselves. This crossing was planned, paid for and finished by people who will never stand on a balcony about it, and the city owes them its thanks."
         ],
         "weight": { "base": 1 }
       }
@@ -216,7 +216,7 @@
         "id": "our-team-gains-technology-report",
         "headline": "Our nation gains {{tech}}",
         "body": [
-          "{{tech}} is now counted among the knowledge of our team. The record of what our people know grows by one name."
+          "Our scholars have finished {{tech}}. The knowledge is ours now, and the nation can do one more thing than it could last season."
         ],
         "weight": { "base": 1 }
       },
@@ -225,9 +225,9 @@
         "voice": "press",
         "stance": "rationalist",
         "genre": "analysis",
-        "headline": "{{tech}}: measured and gained",
+        "headline": "{{tech}}: asked, tested, ours",
         "body": [
-          "Our team has gained {{tech}}, and the measured sum of what this nation knows has risen by one. Credit belongs to the scholars and their method, kept through seasons when no one was watching: no omen ever finished a study."
+          "{{tech}} is finished, and it is ours. The sum of what this nation knows has risen by one, and it rose the only way such sums ever rise: a question asked, an answer tested, a result written down. No omen ever finished a study."
         ],
         "weight": { "base": 1 }
       },
@@ -238,7 +238,7 @@
         "genre": "report",
         "headline": "One more for the home team",
         "body": [
-          "We just gained {{tech}}. That is another one on the national count. Quiet progress, but progress."
+          "Our scholars just finished {{tech}}. No parade, no speech, no day off. Just one more thing this country can do that it couldn't last week."
         ],
         "weight": { "base": 1 }
       },
@@ -248,9 +248,9 @@
         "stance": "traditional",
         "genre": "notice",
         "when": "era !== null",
-        "headline": "Notice: our team gains {{tech}}",
+        "headline": "Notice: {{tech}} is finished",
         "body": [
-          "This paper records that {{tech}} is now counted among the knowledge of our team. The {{era}} continues what earlier ages began, one name at a time."
+          "The printers are advised that our scholars have brought {{tech}} to completion. The {{era}} continues what earlier ages began; each generation takes up the work where the last one laid it down, and this piece is now whole."
         ],
         "weight": { "base": 1 }
       },
@@ -261,7 +261,7 @@
         "genre": "anecdote",
         "headline": "At the market, the word is {{tech}}",
         "body": [
-          "The word at the market was {{tech}}, and the fish-seller had it first. What it does, nobody at the stalls could say. Whose it is, everyone could: ours."
+          "The fish-seller at the morning market had it before the mayor's man did: our scholars have finished {{tech}}. What it does, nobody at the stalls could say. That it was ours, nobody needed telling twice."
         ],
         "weight": { "base": 1 }
       }
@@ -278,7 +278,7 @@
         "when": "civilization !== null",
         "headline": "{{civilization}} crosses into the {{era}}",
         "body": [
-          "{{civilization}}, neither our friend nor our ally, has passed out of the {{former}} and into the {{era}}."
+          "{{civilization}}, neither our friend nor our ally, has left the {{former}} and entered the {{era}}. Every part of their nation crossed with them: its schools, its forges and its roads."
         ],
         "weight": { "base": 1 }
       },
@@ -287,7 +287,7 @@
         "when": "civilization === null",
         "headline": "A rival power enters the {{era}}",
         "body": [
-          "A power that is neither our friend nor our ally has passed out of the {{former}} and into the {{era}}. Which power it is, our records do not say."
+          "A power that is neither our friend nor our ally has crossed from the {{former}} into the {{era}}. The dispatches that carried the news managed to lose the name on the way."
         ],
         "weight": { "base": 1 }
       },
@@ -299,7 +299,7 @@
         "when": "civilization !== null",
         "headline": "A rival leaves the {{former}}",
         "body": [
-          "Advices from abroad state that {{civilization}}, no friend of ours, has lately passed from the {{former}} into the {{era}}. The paper reports the crossing as it came, and leaves the reader to weigh it."
+          "Advices from abroad state that {{civilization}}, no particular friend of ours, has lately passed from the {{former}} into the {{era}}. We report the crossing as it reached us. Whether it deserves congratulation or watchfulness we leave to readers better acquainted with that quarter."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -314,7 +314,7 @@
         "when": "civilization !== null && distance !== null",
         "headline": "Up the road, a new era",
         "body": [
-          "{{civilization}} has crossed into the {{era}}, and its nearest city stands {{distance}} tiles from ours. The border has not moved, but the country behind it just did."
+          "The map says nothing has changed. The map is wrong: {{civilization}} has crossed into the {{era}}, and its nearest city stands {{distance}} tiles from ours. The border has not moved, but the country behind it just did."
         ],
         "weight": { "base": 1 }
       },
@@ -338,7 +338,7 @@
         "when": "civilization !== null",
         "headline": "A rival enters the {{era}}. And us?",
         "body": [
-          "Citizens! {{civilization}} has entered the {{era}}. Every age is paid for somewhere, with coin, study or toil. Let the ministers say what we are paying, and for which age."
+          "Citizens! {{civilization}} has entered the {{era}}, and somewhere their ministers are being asked what it cost them. Ask ours the same question: what are we paying, and for which age? A government that cannot say is paying more than it admits."
         ],
         "weight": { "base": 1 }
       }
@@ -353,18 +353,18 @@
       {
         "id": "technology-leader-changes-report",
         "when": "civilization !== null",
-        "headline": "{{civilization}} now stands first in technologies",
+        "headline": "{{civilization}} now stands first in learning",
         "body": [
-          "No nation counts more technologies than {{civilization}}, which now holds {{count}} of them. A season past, others stood ahead of it."
+          "No nation now holds more learning than {{civilization}}, which counts {{count}} arts and sciences among its accomplishments. A season ago, others stood ahead of it."
         ],
         "weight": { "base": 1 }
       },
       {
         "id": "technology-leader-changes-unnamed",
         "when": "civilization === null",
-        "headline": "A new nation stands first in technologies",
+        "headline": "A new nation stands first in learning",
         "body": [
-          "No nation counts more technologies than the new front-runner, which now holds {{count}} of them. A season past, others stood ahead. Our records do not yet carry the name."
+          "First place in learning has changed hands. The new front-runner counts {{count}} arts and sciences, where a season ago others stood ahead. The name has not yet reached our records, and the couriers have been asked to hurry."
         ],
         "weight": { "base": 1 }
       },
@@ -374,11 +374,11 @@
         "stance": "rationalist",
         "genre": "ledger",
         "when": "civilization !== null",
-        "headline": "The technologies count, restated",
+        "headline": "The learning count, restated",
         "body": [
-          "Nation at the front: {{civilization}}",
-          "Technologies held: {{count}}",
-          "Nations counted ahead of it: none"
+          "First in learning: {{civilization}}",
+          "Arts and sciences held: {{count}}",
+          "Nations ahead of it: none"
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -393,7 +393,7 @@
         "when": "tied && civilization !== null",
         "headline": "First place, shared",
         "body": [
-          "{{civilization}} tops the technologies count at {{count}}. So does somebody else. The podium was built for one."
+          "The count says {{civilization}} leads the world in learning with {{count}} arts and sciences. The count also says somebody matched them. The podium was built for one."
         ],
         "weight": { "base": 1 }
       },
@@ -402,9 +402,9 @@
         "voice": "chronicle",
         "stance": "elitist",
         "genre": "analysis",
-        "headline": "What the front of the count means",
+        "headline": "What first place in learning means",
         "body": [
-          "The technologies count is a blunt instrument; it weighs a nation's learning by number, not by use. Still, the power now standing first, with {{count}} technologies, has done reading that others put off. The count will be argued over. The reading will not."
+          "A count of learning is a blunt instrument; it weighs a nation by the number of its arts, not by the use it makes of them. Still, the power now standing first, with {{count}} such arts, has done reading that others put off. The count will be argued over. The reading will not."
         ],
         "weight": { "base": 1 }
       }
