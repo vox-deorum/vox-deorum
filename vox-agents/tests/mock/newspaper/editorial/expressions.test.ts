@@ -10,8 +10,8 @@ describe('newspaper expressions', () => {
     it('should reject duplicate rule IDs before assigning expression slots', async () => {
       await expect(
         prepareTriggerExpressions([
-          { id: 'settler-departure', when: 'city.own' },
-          { id: 'settler-departure', when: 'city.population > 10' },
+          { id: 'settler-departure', tier: 'filler', when: 'city.own' },
+          { id: 'settler-departure', tier: 'filler', when: 'city.population > 10' },
         ])
       ).rejects.toThrow('settler-departure');
     });
@@ -19,14 +19,16 @@ describe('newspaper expressions', () => {
     it.each([
       ['when[1]', { when: ['city.own', 'city.'] }, 'city.'],
       ['values.lost', { values: { lost: 'city.population -' } }, 'city.population -'],
-      ['importance', { importance: '25; 50' }, '25; 50'],
+      ['tier', { tier: 'count >' }, 'count >'],
+      ['tier', { tier: 'routine); 1; (routine' }, 'routine); 1; (routine'],
+      ['adjust[1]', { adjust: ['3', '25; 50'] as string[] }, '25; 50'],
       ['urgent', { urgent: 'true) || (false' }, 'true) || (false'],
       ['group.by', { group: { by: ')' } }, ')'],
     ] as const)(
       'should report the rule, field and source for invalid %s',
       async (field, change, source) => {
         const error = prepareTriggerExpressions([
-          { id: 'settler-departure', when: 'city.own', ...change },
+          { id: 'settler-departure', tier: 'filler', when: 'city.own', ...change },
         ]);
         await expect(error).rejects.toThrow('settler-departure');
         await expect(error).rejects.toThrow(field);
@@ -38,9 +40,10 @@ describe('newspaper expressions', () => {
       const { runner, slots } = await prepareTriggerExpressions([
         {
           id: 'settler-departure',
+          tier: "count > 1 ? 'notable' : 'filler'",
           when: ['city.own', 'city.trained.some(event => settlers.includes(event.unit))'],
           values: { lost: 'city.before.population - city.population' },
-          importance: '30 + 10 * lost',
+          adjust: '10 * lost',
           urgent: 'lost > 1',
           group: { by: 'city.owner.id' },
         },
@@ -64,14 +67,14 @@ describe('newspaper expressions', () => {
             ],
           },
           {
-            expressions: [fields.importance!, fields.urgent!],
-            subjects: [{ lost: 2 }],
+            expressions: [fields.tier!, ...fields.adjust, fields.urgent!],
+            subjects: [{ lost: 2, count: 2 }],
           },
         ],
       });
       expect(results).toEqual([
         [[{ value: true }, { value: 2 }, { value: 4 }]],
-        [[{ value: 50 }, { value: true }]],
+        [[{ value: 'notable' }, { value: 20 }, { value: true }]],
       ]);
     });
 

@@ -8,7 +8,7 @@ const plot = (${plot.toString()});
 const nearestPlotPair = (${nearestPlotPair.toString()});
 
 // Keep data, source rows and wrapping in this closure. Rules receive only public views.
-function factRuntime(model, wrap, constants, shortcuts) {
+function factRuntime(model, wrap, constants, factDefinitions) {
   const views = new Map();
   const datedFacts = {
     event: new Map(model.events.map(event => [event.id, event])),
@@ -22,12 +22,13 @@ function factRuntime(model, wrap, constants, shortcuts) {
   const subjectInfo = new WeakMap();
   const printedSubjectKeys = new WeakMap();
   const expressionSubjects = new Map();
-  const shortcutsByKind = new Map();
+  const definitionsByKind = { shortcuts: new Map(), stakes: new Map() };
   const internalFields = new Set(['relations', 'technologyChanges']);
   const constantNames = new Set(Object.keys(constants ?? {}));
-  for (const [kind, name, test] of shortcuts) {
-    if (!shortcutsByKind.has(kind)) shortcutsByKind.set(kind, new Map());
-    shortcutsByKind.get(kind).set(name, test);
+  for (const [group, kind, name, evaluate] of factDefinitions) {
+    const definitions = definitionsByKind[group];
+    if (!definitions.has(kind)) definitions.set(kind, new Map());
+    definitions.get(kind).set(name, evaluate);
   }
   let hidden;
   let sources = new Map();
@@ -228,10 +229,13 @@ function factRuntime(model, wrap, constants, shortcuts) {
       if (cache.has(key)) return cache.get(key);
       const methods = Object.create(null);
       const segment = entry?.segment;
-      const subjectShortcuts = shortcutsByKind.get(kind);
-      let shortcutsView;
+      const subjectShortcuts = definitionsByKind.shortcuts.get(kind);
+      const subjectStakes = definitionsByKind.stakes.get(kind);
+      let shortcutsView, stakesView;
       if (subjectShortcuts)
-        method('is', undefined, () => shortcutsView ??= shortcutView(kind, date, result, subjectShortcuts));
+        method('is', undefined, () => shortcutsView ??= shortcutView(kind, date, result, subjectShortcuts, 'is'));
+      if (subjectStakes)
+        method('stake', undefined, () => stakesView ??= shortcutView(kind, date, result, subjectStakes, 'stake'));
       if (kind === 'player') {
         method('rank', Object.freeze(field => rank(id, date, fields, current, field)));
         method('relation', Object.freeze(other => relation(id, date, fields, other)));
@@ -362,18 +366,21 @@ function factRuntime(model, wrap, constants, shortcuts) {
       }
     }
 
-    // Rebind the shortcut to the actual dated subject, with this group's globals and constants.
-    function shortcutView(kind, date, subject, definitions) {
-      const path = kind + '.is';
+    // Evaluate each named calculation against the actual dated subject and the catalogue constants.
+    function shortcutView(kind, date, subject, definitions, namespace) {
+      const path = kind + '.' + namespace;
       const bindings = Object.freeze(Object.assign(Object.create(globals), { [kind]: subject }));
       const methods = Object.create(null);
       const active = new Set();
       for (const [name, test] of definitions) {
         const get = () => {
-          if (active.has(name)) throw new Error('Circular shortcut: ' + path + '.' + name);
+          if (active.has(name)) throw new Error('Circular fact expression: ' + path + '.' + name);
           active.add(name);
           try {
-            return !!test(bindings);
+            const value = test(bindings);
+            if (namespace === 'is') return !!value;
+            if (!Number.isFinite(value)) throw new Error('Expected a finite number from ' + path + '.' + name + '.');
+            return value;
           } finally {
             active.delete(name);
           }

@@ -9,6 +9,14 @@ const groupMatchSchema = z.strictObject({
   values: z.record(z.string(), scalarSchema),
 });
 const ratingFields = {
+  tier: z.string().optional(),
+  tierBase: z.number().finite().optional(),
+  adjustments: z.array(z.strictObject({
+    source: z.string(),
+    points: z.number().finite(),
+    error: z.string().optional(),
+    hidden: z.string().optional(),
+  })).optional(),
   importance: z.number().min(0).max(100).optional(),
   urgent: z.boolean().optional(),
 };
@@ -55,6 +63,7 @@ export const ruleDevelopmentSchema = z.strictObject({
   seriesKeys: z.array(z.string()),
   conflictKeys: z.array(z.string()).optional(),
   period: z.strictObject({ from: z.number().int().min(-1), to: z.number().int().nonnegative() }),
+  tier: z.string().min(1),
   importance: z.number().min(0).max(100),
   urgent: z.boolean(),
   tags: z.array(z.string()),

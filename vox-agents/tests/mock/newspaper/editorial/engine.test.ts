@@ -40,7 +40,7 @@ function withBriefs(catalogue: EditorialConfig, count: number): EditorialConfig 
   const briefs = Array.from({ length: count }, (_, index) => `fixture-brief-${index}`);
   return editorialConfigSchema.parse({
     ...catalogue,
-    triggers: [...briefs.map(id => ({ id, subject: 'world', when: 'true', importance: 1, repeat: 1 })), ...catalogue.triggers],
+    triggers: [...briefs.map(id => ({ id, subject: 'world', tier: 'filler', when: 'true', adjust: '-29', repeat: 1 })), ...catalogue.triggers],
     templates: [...catalogue.templates, ...briefs.map(id => ({
       id, triggers: [id], tags: [], weight: { base: 1 },
       variants: [{ id, headline: 'A brief update', body: ['A background report.'], weight: { base: 1 } }],
@@ -77,18 +77,18 @@ function historyItem(id: string, tags: string[], seriesKeys = ['trade/0/1']): Pu
 /** Let selection tests control developments without running or reproducing rule evaluation. */
 function development(definitionId: string, subject: string, importance = 50): RuleDevelopment {
   const id = `${definitionId}/${subject}`;
-  return { id, definitionId, subject, period: { from: 5, to: 10 }, seriesKeys: [id], importance, urgent: false,
+  return { id, definitionId, subject, period: { from: 5, to: 10 }, seriesKeys: [id], tier: 'routine', importance, urgent: false,
     tags: [definitionId], values: { amount: 20, $balance: 20 }, sources: [snapshot(0, 10, {}).source], fingerprint: id };
 }
 
 /** Build a selected candidate with explicit style variants for preference tests. */
 function styleCandidate(
   id: string, variants: EditorialCandidate['variants'],
-  facts: Partial<Pick<EditorialCandidate, 'importance' | 'urgent' | 'short' | 'tags'>> = {},
+  facts: Partial<Pick<EditorialCandidate, 'importance' | 'tier' | 'urgent' | 'short' | 'tags'>> = {},
 ): EditorialCandidate {
   return {
     id, subject: `player/${id}`, period: { from: 5, to: 10 }, triggerIds: [], ruleIds: [], templateIds: [],
-    seriesKeys: [], tags: facts.tags ?? [], importance: facts.importance ?? 50, urgent: facts.urgent ?? false,
+    seriesKeys: [], tier: facts.tier ?? 'routine', tags: facts.tags ?? [], importance: facts.importance ?? 50, urgent: facts.urgent ?? false,
     short: facts.short ?? false, weight: 1, variants,
     variantWeights: Object.fromEntries(variants.map(variant => [variant.id, 1])),
     variantSources: {}, variantBindings: {}, values: {}, sources: [], fingerprint: id,
@@ -132,9 +132,9 @@ describe('editorial engine', () => {
     config = editorialConfigSchema.parse({
       ...base,
       triggers: [
-        { id: 'ledger', subject: 'player', when: ['player.self', 'player.gold > 0'], values: { $balance: 'player.gold' }, importance: 70, urgent: '$balance >= 100' },
-        { id: 'culture', subject: 'player', when: ['!player.self', 'player.culturePerTurn > 0'], values: { amount: 'player.culturePerTurn' } },
-        { id: 'balance', subject: 'player', when: ['player.self', 'player.gold > 10'], values: { amount: 'player.gold - 10' }, importance: 65 },
+        { id: 'ledger', subject: 'player', tier: 'notable', when: ['player.self', 'player.gold > 0'], values: { $balance: 'player.gold' }, adjust: '10', urgent: '$balance >= 100' },
+        { id: 'culture', subject: 'player', tier: 'routine', adjust: '5', when: ['!player.self', 'player.culturePerTurn > 0'], values: { amount: 'player.culturePerTurn' } },
+        { id: 'balance', subject: 'player', tier: 'notable', when: ['player.self', 'player.gold > 10'], values: { amount: 'player.gold - 10' }, adjust: '5' },
       ],
       templates: [
         { id: 'ledger', triggers: ['ledger'], tags: ['economy'], weight: { base: 1 }, variants: [{ id: 'ledger', headline: 'Treasury: {{$balance}}', body: ['The account stood at {{$balance}} gold.'], weight: { base: 1 } }] },
@@ -367,7 +367,7 @@ describe('editorial engine', () => {
             multiplier: 4,
           }],
         },
-        triggers: [{ id: 'settlers', subject: 'city', when: 'city.own', importance: 70 }],
+        triggers: [{ id: 'settlers', subject: 'city', tier: 'notable', when: 'city.own', adjust: '10' }],
         templates: [{ id: 'settlers', triggers: ['settlers'], tags: [], weight: { base: 1 }, variants: [
           { ...prose, id: 'ineligible', stance: 'pro-government', genre: 'letter', when: 'false', weight: { base: 1000 } },
           { ...prose, id: 'supportive-letter', stance: 'pro-government', genre: 'letter' },
@@ -462,9 +462,9 @@ describe('editorial engine', () => {
         ...config,
         triggers: [
           config.triggers[0],
-          { id: 'roundup', subject: 'player', when: 'press.issues === 1 && printed("ledger") === null',
-            group: { by: '"news"' }, importance: 'press.lastIssueTurn + count + 50' },
-          { id: 'unused', subject: 'world', when: 'true' },
+          { id: 'roundup', subject: 'player', tier: 'filler', when: 'press.issues === 1 && printed("ledger") === null',
+            group: { by: '"news"' }, adjust: 'press.lastIssueTurn + count + 20' },
+          { id: 'unused', subject: 'world', tier: 'filler', when: 'true' },
         ],
         templates: [
           config.templates[0],
@@ -489,7 +489,7 @@ describe('editorial engine', () => {
         'printed("unused") === null && printed("observed") === null';
       const secondCatalogue = editorialConfigSchema.parse({
         ...config,
-        triggers: [{ id: 'follow-up', subject: 'player', when: ['player.self', 'player.is.hasPrinted'] }],
+        triggers: [{ id: 'follow-up', subject: 'player', tier: 'routine', when: ['player.self', 'player.is.hasPrinted'] }],
         constants: { ...config.constants, shortcuts: { ...config.constants.shortcuts,
           player: { ...config.constants.shortcuts.player, hasPrinted: memory } } },
         templates: [{ id: 'follow-up', triggers: ['follow-up'], tags: [], weight: { base: 1 },
@@ -636,13 +636,16 @@ describe('editorial engine', () => {
       expect(new Set(keys).size).toBe(keys.length);
     });
 
-    it('should omit a ready unplaced story from history, style choices and series', async () => {
-      const revised = {
-        ...config,
-        templates: [...config.templates, { ...config.templates[0], id: 'balance', triggers: ['balance'],
+    it('should keep an unprinted rule eligible and spend the repeat of a printed rule', async () => {
+      const withSupport = withBriefs(config, 4);
+      const revised: EditorialConfig = {
+        ...withSupport,
+        triggers: withSupport.triggers.map(rule =>
+          rule.id === 'fixture-brief-3' ? { ...rule, repeat: 'once' } : rule),
+        templates: [...withSupport.templates, { ...config.templates[0], id: 'balance', triggers: ['balance'],
           variants: [{ ...config.templates[0].variants[0], id: 'surplus', headline: 'Surplus', body: ['{{amount}} remained.'] }] }],
       };
-      const result = await check(fixture(), createInitialPublicationState(), revised, 'branch', 'campaign', 4);
+      const result = await check(fixture(), createInitialPublicationState(), revised, 'branch', 'campaign', 0);
       if (result.status !== 'published') throw new Error(result.reason);
       const printed = result.state.issues[0].items;
       expect(printed).toHaveLength(5);
@@ -650,7 +653,13 @@ describe('editorial engine', () => {
       expect(Object.keys(result.state.series).some(key => key.includes('fixture-brief-3'))).toBe(false);
       expect(Object.keys(result.decision.selectedStyles ?? {})).toEqual(printed.map(item => item.id));
       expect(result.state.reportingThroughTurn).toBe(10);
-      expect(result.state.triggerRepeats[ruleSubjectKey('fixture-brief-3', 'world')]).toEqual({ lastTurn: 10, armed: false });
+      expect(result.state.triggerRepeats[ruleSubjectKey('fixture-brief-3', 'world')]).toBeUndefined();
+      expect(result.state.triggerRepeats[ruleSubjectKey('ledger', 'player/0')]).toEqual({ lastTurn: 10, armed: false });
+
+      const next = await check(fixture(15, 10), result.state, revised, 'branch', 'campaign', 0);
+      const nextOutcome = (id: string) => next.decision.triggerAudit.find(entry => entry.rule === id)?.subjects[0]?.outcome;
+      expect(nextOutcome('fixture-brief-3')).toBe('fired');
+      expect(nextOutcome('ledger')).toBe('repeat');
     });
 
     it('should preserve issue presentation and the configuration snapshot after later catalogue changes', async () => {
@@ -755,7 +764,7 @@ describe('editorial engine', () => {
 
     it('should explain when exhausting the shared rule budget prevented presentation choices', async () => {
       const runawayRules = Array.from({ length: 8 }, (_, index) => ({
-        id: `runaway-${index}`, subject: 'world' as const, when: '(() => { while (true) {} })()',
+        id: `runaway-${index}`, subject: 'world' as const, tier: 'filler', when: '(() => { while (true) {} })()',
       }));
       const oneRunaway = editorialConfigSchema.parse({ ...config, triggers: [...config.triggers, runawayRules[0]] });
       const complete = await check(fixture(), createInitialPublicationState(), oneRunaway);
@@ -933,18 +942,19 @@ describe('editorial engine', () => {
       expect(selected[0].variantWeights).toEqual({ neutral: 2, supportive: 2, critical: 1 });
     });
 
-    it('should read the short and importance facts of each selected story', async () => {
+    it('should read the short, importance and tier facts of each selected story', async () => {
       const catalogue = styleCatalogue([
         { id: 'short', match: { genre: 'letter' }, when: 'story.short', multiplier: 2 },
         { id: 'important', match: { genre: 'letter' }, when: 'story.importance > 60', multiplier: 3 },
+        { id: 'crisis', match: { genre: 'letter' }, when: "story.tier === 'crisis'", multiplier: 5 },
       ]);
       const variants = catalogue.templates[0].variants;
       const { selected } = await applyRules(catalogue, [
         styleCandidate('short', variants, { short: true, importance: 10 }),
-        styleCandidate('important', variants, { importance: 70 }),
+        styleCandidate('important', variants, { importance: 70, tier: 'crisis' }),
         styleCandidate('ordinary', variants, { importance: 10 }),
       ]);
-      expect(selected.map(candidate => candidate.variantWeights.letter)).toEqual([2, 3, 1]);
+      expect(selected.map(candidate => candidate.variantWeights.letter)).toEqual([2, 15, 1]);
     });
 
     it('should read story tags in a preference condition', async () => {

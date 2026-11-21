@@ -2,8 +2,8 @@ import type { NewspaperEvidence, NewspaperEvent } from '../../../mcp-server/dist
 import { editorialConfigSchema, type EditorialConfig } from '../../src/newspaper/editorial/config/schema.js';
 
 export const editionBriefRule = {
-  id: 'fixture-edition-brief', subject: 'event', event: 'PlayerAdoptPolicyBranch',
-  when: 'event.branch?.startsWith("Fixture brief ")', importance: 1,
+  id: 'fixture-edition-brief', subject: 'event', tier: 'filler', event: 'PlayerAdoptPolicyBranch',
+  when: 'event.branch?.startsWith("Fixture brief ")', adjust: '-29',
 };
 
 export const editionBriefTemplate = {

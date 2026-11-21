@@ -42,6 +42,7 @@ export async function applyStylePreferences(
     subjects: [{
       ...bindings,
       story: {
+        tier: candidate.tier,
         importance: candidate.importance,
         urgent: candidate.urgent,
         short: candidate.short ?? false,

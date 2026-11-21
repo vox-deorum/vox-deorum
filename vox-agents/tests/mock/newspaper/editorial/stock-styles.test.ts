@@ -108,11 +108,11 @@ function variant(id: string, style: { voice?: string; stance?: string; genre?: s
 /** Build a selected candidate with explicit style variants and story facts. */
 function styleCandidate(
   id: string, variants: EditorialCandidate['variants'],
-  facts: Partial<Pick<EditorialCandidate, 'importance' | 'urgent' | 'short' | 'tags'>> = {},
+  facts: Partial<Pick<EditorialCandidate, 'importance' | 'tier' | 'urgent' | 'short' | 'tags'>> = {},
 ): EditorialCandidate {
   return {
     id, subject: `player/${id}`, period: { from: 5, to: 10 }, triggerIds: [], ruleIds: [], templateIds: [],
-    seriesKeys: [], tags: facts.tags ?? [], importance: facts.importance ?? 50, urgent: facts.urgent ?? false,
+    seriesKeys: [], tier: facts.tier ?? 'routine', tags: facts.tags ?? [], importance: facts.importance ?? 50, urgent: facts.urgent ?? false,
     short: facts.short ?? false, weight: 1, variants,
     variantWeights: Object.fromEntries(variants.map(item => [item.id, 1])),
     variantSources: {}, variantBindings: {}, values: {}, sources: [], fingerprint: id,

@@ -100,9 +100,9 @@ describe('newspaper civic vocabulary', () => {
       ...stock,
       civicTerms: sampleVocabulary,
       triggers: [
-        { id: 'anchor', subject: 'city', when: 'true' },
-        { id: 'notice', subject: 'world', when: 'true' },
-        { id: 'ledger', subject: 'world', when: 'true' },
+        { id: 'anchor', subject: 'city', tier: 'filler', when: 'true' },
+        { id: 'notice', subject: 'world', tier: 'filler', when: 'true' },
+        { id: 'ledger', subject: 'world', tier: 'filler', when: 'true' },
       ],
       templates: [
         { id: 'notice', triggers: ['notice'], weight, tags: [], variants: [{ id: 'notice', headline: 'Notice', body: ['Notice.'], weight }] },
@@ -145,7 +145,7 @@ describe('newspaper civic vocabulary', () => {
     const template = stock.templates.find(entry => entry.variants.some(variant => variant.id === id))!;
     const config = await parseEditorialConfig({
       ...stock,
-      triggers: [{ id: 'congress-new-proposals', subject: 'world', when: 'true', values: { ours: 'true' } }],
+      triggers: [{ id: 'congress-new-proposals', subject: 'world', tier: 'filler', when: 'true', values: { ours: 'true' } }],
       templates: [{ ...template, variants: template.variants.filter(variant => variant.id === id) }],
     });
     const home = player(0, 10, { PolicyBranches: { Fealty: ['A'] } });

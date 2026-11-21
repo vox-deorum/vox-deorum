@@ -90,7 +90,7 @@ describe('diplomacy rules in offline replay', () => {
       await Promise.all([
         writeFile(path.join(catalogue, 'triggers.json'), JSON.stringify([
           ...base.triggers.filter(rule => rule.id !== stalledRule).map(rule => ({ id: rule.id, enabled: false })),
-          { id: 'wide-war-window', subject: 'pair', window: 45, when: 'false' },
+          { id: 'wide-war-window', subject: 'pair', tier: 'filler', window: 45, when: 'false' },
           editionBriefRule,
         ])),
         writeFile(path.join(catalogue, 'templates.json'), JSON.stringify([editionBriefTemplate])),

@@ -12,7 +12,8 @@
     "values": {
       "deficit": "-self.goldPerTurn"
     },
-    "importance": 55,
+    "tier": "notable",
+    "adjust": "-5",
     "tags": ["politics", "domestic"]
   },
   {
@@ -28,7 +29,8 @@
       "gold": "self.gold",
       "gain": "self.gold - self.before.gold"
     },
-    "importance": 50,
+    "tier": "routine",
+    "adjust": "5",
     "repeat": "once",
     "tags": ["politics", "domestic"]
   },
@@ -48,7 +50,8 @@
       "deficit": "-self.goldPerTurn",
       "turnsLeft": "Math.floor(self.gold / -self.goldPerTurn)"
     },
-    "importance": 50,
+    "tier": "routine",
+    "adjust": "5",
     "tags": ["economy", "domestic"]
   },
   {
@@ -65,7 +68,8 @@
       "deficit": "-self.goldPerTurn",
       "turnsLeft": "Math.floor(self.gold / -self.goldPerTurn)"
     },
-    "importance": "turnsLeft <= recent ? 70 : 60",
+    "tier": "notable",
+    "adjust": "(turnsLeft <= recent ? 70 : 60) - 60",
     "tags": ["economy", "domestic"]
   },
   {
@@ -80,7 +84,7 @@
     "values": {
       "goldPerTurn": "self.goldPerTurn"
     },
-    "importance": 45,
+    "tier": "routine",
     "tags": ["politics", "domestic"]
   }
 ]

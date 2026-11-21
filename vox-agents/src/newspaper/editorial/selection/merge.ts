@@ -90,6 +90,7 @@ async function mergeCandidate(
   if (!variants.length) return undefined;
 
   const support = [anchor, ...members];
+  const strongest = support.reduce((best, member) => member.importance > best.importance ? member : best);
   /** Retain each provenance key once, starting with the anchor's keys. */
   const union = (read: (candidate: EditorialCandidate) => readonly string[]) =>
     [...new Set(support.flatMap(read))];
@@ -109,7 +110,8 @@ async function mergeCandidate(
     seriesKeys: [...new Set(consumed.flatMap(candidate => candidate.seriesKeys))],
     conflictKeys: [...new Set(consumed.flatMap(candidate => candidate.conflictKeys ?? []))],
     tags: union(candidate => candidate.tags),
-    importance: Math.max(...support.map(candidate => candidate.importance)),
+    tier: strongest.tier,
+    importance: strongest.importance,
     urgent: support.some(candidate => candidate.urgent),
     variants, variantWeights, variantSources, variantBindings: bindings, values: placeholders,
     sources: uniqueSources([...support.flatMap(candidate => candidate.sources), ...sources]),

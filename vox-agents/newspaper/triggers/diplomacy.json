@@ -11,7 +11,7 @@
     "values": {
       "master": "player.name"
     },
-    "importance": 90,
+    "tier": "crisis",
     "urgent": "true",
     "tags": ["politics", "international"]
   },
@@ -26,7 +26,8 @@
     "values": {
       "ally": "pair.other.name"
     },
-    "importance": 65,
+    "tier": "notable",
+    "adjust": "5",
     "tags": ["politics", "international"]
   },
   {
@@ -42,7 +43,8 @@
     "values": {
       "ally": "pair.other.name"
     },
-    "importance": 65,
+    "tier": "notable",
+    "adjust": "5",
     "tags": ["politics", "international"]
   },
   {
@@ -57,7 +59,7 @@
     "values": {
       "civilization": "player.name"
     },
-    "importance": 60,
+    "tier": "notable",
     "tags": ["politics", "international"]
   },
   {
@@ -74,9 +76,10 @@
     "values": {
       "otherTeam": "event.currentTeamId == self.teamId ? event.otherTeamId : event.currentTeamId",
       "stranger": "players.filter(p => !p.self && p.knows('teamId') && p.teamId === otherTeam && p.knows('name')).map(p => p.name).join(' and ')",
-      "major": "players.some(p => !p.self && p.knows('teamId') && p.teamId == otherTeam && p.knows('major') && p.major === true)"
+      "metMajor": "players.some(p => !p.self && p.knows('teamId') && p.teamId == otherTeam && p.knows('major') && p.major === true)"
     },
-    "importance": "major ? 70 : 45",
+    "tier": "notable",
+    "adjust": "(metMajor ? 70 : 45) - 60",
     "tags": ["politics", "international"]
   },
   {
@@ -93,7 +96,8 @@
       "withFriend": "(pair.a.knows('friend') && pair.a.friend === true) || (pair.b.knows('friend') && pair.b.friend === true)",
       "withEnemy": "(pair.a.knows('enemy') && pair.a.enemy === true) || (pair.b.knows('enemy') && pair.b.enemy === true)"
     },
-    "importance": "withEnemy ? 70 : withFriend ? 60 : 50",
+    "tier": "notable",
+    "adjust": "(withEnemy ? 70 : withFriend ? 60 : 50) - 60",
     "tags": ["politics", "international"]
   },
   {
@@ -110,7 +114,8 @@
       "withFriend": "(pair.a.knows('friend') && pair.a.friend === true) || (pair.b.knows('friend') && pair.b.friend === true)",
       "withEnemy": "(pair.a.knows('enemy') && pair.a.enemy === true) || (pair.b.knows('enemy') && pair.b.enemy === true)"
     },
-    "importance": "withEnemy ? 60 : withFriend ? 55 : 45",
+    "tier": "notable",
+    "adjust": "(withEnemy ? 60 : withFriend ? 55 : 45) - 60",
     "tags": ["politics", "international"]
   },
   {
@@ -128,7 +133,8 @@
     "values": {
       "friend": "pair.other.name"
     },
-    "importance": 55,
+    "tier": "notable",
+    "adjust": "-5",
     "tags": ["politics", "international"]
   },
   {
@@ -143,7 +149,7 @@
     "values": {
       "friend": "pair.other.name"
     },
-    "importance": 60,
+    "tier": "notable",
     "tags": ["politics", "international"]
   },
   {
@@ -158,7 +164,7 @@
     "values": {
       "vassal": "player.name"
     },
-    "importance": 75,
+    "tier": "major",
     "tags": ["politics", "international"]
   },
   {
@@ -173,7 +179,7 @@
     "values": {
       "vassal": "player.name"
     },
-    "importance": 75,
+    "tier": "major",
     "tags": ["politics", "international"]
   },
   {
@@ -192,7 +198,7 @@
     "values": {
       "civilization": "player.name"
     },
-    "importance": 60,
+    "tier": "notable",
     "tags": ["politics", "international"]
   },
   {
@@ -210,7 +216,7 @@
       "civilization": "player.name",
       "capital": "player.knows('capital') && player.capital.knows('name') ? player.capital.name : null"
     },
-    "importance": 45,
+    "tier": "routine",
     "tags": ["politics", "international"]
   },
   {
@@ -229,7 +235,7 @@
       "civilization": "player.name",
       "capital": "player.knows('capital') && player.capital.knows('name') ? player.capital.name : null"
     },
-    "importance": 45,
+    "tier": "routine",
     "tags": ["politics", "international"]
   },
   {
@@ -250,7 +256,8 @@
       "toGives": "event.knows('toGives') && Array.isArray(event.toGives) ? event.toGives.join(', ') : null",
       "ours": "event.fromPlayer.self || event.toPlayer.self"
     },
-    "importance": "ours ? 65 : 50",
+    "tier": "notable",
+    "adjust": "(ours ? 65 : 50) - 60",
     "tags": ["politics", "military", "international"]
   },
   {
@@ -270,7 +277,8 @@
       "toGives": "event.knows('toGives') && Array.isArray(event.toGives) ? event.toGives.join(', ') : null",
       "ours": "event.fromPlayer.self || event.toPlayer.self"
     },
-    "importance": "ours ? 70 : 55",
+    "tier": "notable",
+    "adjust": "(ours ? 70 : 55) - 60",
     "tags": ["politics", "military", "international"]
   },
   {
@@ -285,7 +293,8 @@
     "values": {
       "master": "player.name"
     },
-    "importance": 85,
+    "tier": "crisis",
+    "adjust": "-5",
     "tags": ["politics", "international"]
   },
   {
@@ -302,7 +311,7 @@
     "values": {
       "civilization": "player.name"
     },
-    "importance": 60,
+    "tier": "notable",
     "tags": ["politics", "international"]
   }
 ]

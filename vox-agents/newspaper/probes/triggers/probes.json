@@ -9,7 +9,8 @@
     "values": {
       "treasury": "player.gold"
     },
-    "importance": 65
+    "tier": "notable",
+    "adjust": "5"
   },
   {
     "id": "probe-huns-riding",
@@ -22,7 +23,8 @@
       "players.some(p => ['The Huns', 'Huns'].includes(p.name) && distance(event.player, p) <= neighboring)"
     ],
     "values": { "civilization": "event.player.name", "technology": "event.tech" },
-    "importance": 65
+    "tier": "notable",
+    "adjust": "5"
   },
   {
     "id": "probe-ideology-adopted",
@@ -30,7 +32,8 @@
     "event": "PlayerAdoptPolicyBranch",
     "when": ["ideologies.includes(event.branch)"],
     "values": { "civilization": "event.player.name", "ideology": "event.branch" },
-    "importance": 65
+    "tier": "notable",
+    "adjust": "5"
   },
   {
     "id": "probe-foreign-birth",
@@ -45,7 +48,8 @@
       "person": "event.person",
       "civilization": "event.player.name"
     },
-    "importance": 70
+    "tier": "major",
+    "adjust": "-5"
   },
   {
     "id": "probe-obituary",
@@ -57,7 +61,7 @@
       "kind": "event.kind",
       "civilization": "event.knows('player') && event.player.knows('name') ? event.player.name : 'their people'"
     },
-    "importance": 75
+    "tier": "major"
   },
   {
     "id": "probe-culture-opinion",
@@ -72,7 +76,8 @@
       "top": "city.unhappiness.top"
     },
     "tags": ["culture"],
-    "importance": 20
+    "tier": "filler",
+    "adjust": "-10"
   },
   {
     "id": "probe-peace",
@@ -80,7 +85,7 @@
     "when": ["pair.involvesSelf", "pair.atWar == false"],
     "values": { "other": "pair.other.name" },
     "tags": ["international"],
-    "importance": 60
+    "tier": "notable"
   },
   {
     "id": "probe-retraction",
@@ -95,7 +100,8 @@
       "sincePeace": "turn - printed('probe-peace', pair).turn"
     },
     "tags": ["international"],
-    "importance": 80
+    "tier": "major",
+    "adjust": "5"
   },
   {
     "id": "probe-hundredth-issue",
@@ -103,7 +109,7 @@
     "when": ["press.issues == 99"],
     "values": { "issue": "press.issues + 1" },
     "tags": ["domestic"],
-    "importance": 60
+    "tier": "notable"
   },
   {
     "id": "probe-quiet-spell",
@@ -112,7 +118,7 @@
     "values": { "gap": "turn - press.lastIssueTurn" },
     "chance": 0.25,
     "tags": ["domestic"],
-    "importance": 30
+    "tier": "filler"
   },
   {
     "id": "probe-spy-city-profile",
@@ -126,7 +132,7 @@
       "boredom": "city.unhappiness.culture"
     },
     "tags": ["international"],
-    "importance": 45
+    "tier": "routine"
   },
   {
     "id": "probe-inbound-diplomat",
@@ -139,7 +145,8 @@
     ],
     "values": { "civilization": "player.name" },
     "tags": ["international"],
-    "importance": 55
+    "tier": "notable",
+    "adjust": "-5"
   },
   {
     "id": "probe-foreign-policies",
@@ -156,7 +163,8 @@
       "policies": "player.policyBranches[policyBranch].join(', ')"
     },
     "tags": ["politics"],
-    "importance": 55
+    "tier": "notable",
+    "adjust": "-5"
   },
   {
     "id": "probe-espionage-tech",
@@ -172,7 +180,8 @@
       "operationSite": "event.knows('cityName') ? event.cityName : 'a foreign city'"
     },
     "tags": ["science"],
-    "importance": 70
+    "tier": "major",
+    "adjust": "-5"
   },
   {
     "id": "probe-spy-loss",
@@ -186,7 +195,8 @@
       "operationSite": "event.knows('cityName') ? event.cityName : 'a foreign city'"
     },
     "tags": ["military"],
-    "importance": 85
+    "tier": "crisis",
+    "adjust": "-5"
   },
   {
     "id": "probe-defender-report",
@@ -198,7 +208,7 @@
       "operationSite": "event.knows('cityName') ? event.cityName : 'our territory'"
     },
     "tags": ["international"],
-    "importance": 75
+    "tier": "major"
   },
   {
     "id": "probe-election-influence",
@@ -214,7 +224,8 @@
       "cityState": "event.knows('cityState') ? event.cityState : 'a city-state'"
     },
     "tags": ["international"],
-    "importance": 55
+    "tier": "notable",
+    "adjust": "-5"
   },
   {
     "id": "probe-front-zone",
@@ -233,7 +244,8 @@
       "counts": "Object.entries(player.tacticalZones[frontIndex].units).flatMap(([civilization, types]) => Object.entries(types).filter(([, count]) => count > 0).map(([type, count]) => civilization + ' ' + type + ': ' + count)).join('; ')"
     },
     "tags": ["international"],
-    "importance": 80
+    "tier": "major",
+    "adjust": "5"
   },
   {
     "id": "probe-ship-launch",
@@ -247,6 +259,7 @@
       "port": "city.trained[launchIndex].port"
     },
     "tags": ["military"],
-    "importance": 70
+    "tier": "major",
+    "adjust": "-5"
   }
 ]

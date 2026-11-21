@@ -18,7 +18,8 @@
       "former": "player.before.era",
       "distance": "player.knows('distance') ? player.distance : null"
     },
-    "importance": "distance !== null && distance <= neighboring ? 55 : 45",
+    "tier": "notable",
+    "adjust": "(distance !== null && distance <= neighboring ? 55 : 45) - 60",
     "tags": ["politics", "international"]
   },
   {
@@ -35,7 +36,7 @@
       "tech": "event.tech",
       "team": "event.players.filter(p => p.knows('major') && p.major === true && p.knows('name')).map(p => p.name).join(' and ')"
     },
-    "importance": 45,
+    "tier": "routine",
     "tags": ["science", "international"]
   },
   {
@@ -50,7 +51,8 @@
     "values": {
       "era": "self.era"
     },
-    "importance": 70,
+    "tier": "major",
+    "adjust": "-5",
     "tags": ["politics", "domestic"]
   },
   {
@@ -66,7 +68,8 @@
       "tech": "event.tech",
       "era": "self.knows('era') ? self.era : null"
     },
-    "importance": 55,
+    "tier": "notable",
+    "adjust": "-5",
     "tags": ["science", "domestic"]
   },
   {
@@ -88,7 +91,8 @@
       "former": "player.before.era",
       "distance": "player.knows('distance') ? player.distance : null"
     },
-    "importance": "distance !== null && distance <= neighboring ? 65 : 50",
+    "tier": "notable",
+    "adjust": "(distance !== null && distance <= neighboring ? 65 : 50) - 60",
     "tags": ["politics", "international"]
   },
   {
@@ -109,6 +113,7 @@
       "count": "player.technologies",
       "tied": "players.some(p => p.id !== player.id && p.knows('major') && p.major && p.knows('technologies') && p.technologies === player.technologies)"
     },
-    "importance": "player.self ? 70 : 50"
+    "tier": "notable",
+    "adjust": "(player.self ? 70 : 50) - 60"
   }
 ]

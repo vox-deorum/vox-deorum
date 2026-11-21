@@ -5,7 +5,7 @@ Use this guide to write or revise `vox-agents/newspaper/templates/`. Check the t
 ## Each story body should be about three sentences
 
 1. **Report the news.** Say what happened and name who or what it happened to. Put the main facts first. A crier can call the city by name. A pamphlet can open with “At last!”
-2. **Add one useful detail.** Explain what changed or show how people react. Use a scene or a quote if it tells readers something they need to know.
+2. **Add an useful detail.** Explain what changed or show how people react. Use a scene or a quote if it tells readers something they need to know.
 3. **Say what it means.** Follow up with a consequence, a judgment, a request, or a joke. The last sentence should add something the first two set up.
 
 ## Use everyday words and simple grammar structures
@@ -17,7 +17,7 @@ Use this guide to write or revise `vox-agents/newspaper/templates/`. Check the t
 
 ## Use concrete names when available
 
-At least for the first mention, use concrete names of a civilization, city, religion, leader, or other subject in the story. Write “peace with Rome” in place of “peace with a foreign power”.
+While "War Declared On Us" sounds like a good *headline*, use concrete names of a civilization, city, religion, leader, or other subject in the story body (at least for the first mention). Write “peace with Rome” in place of “peace with a foreign power”, use the civilization name instead of "this nation".
 
 - Use `{{terms.leader}}` for the reader's leader by name and `{{player.leader}}` for the leader of a player subject. List these in the template's `names` when they should be underlined.
 - Use `{{terms.civilization}}` for the reader's country and `{{terms.civilizationAdjective}}` for its adjective, as in “Rome” and “Roman.”

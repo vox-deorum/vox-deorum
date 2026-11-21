@@ -9,7 +9,7 @@ import { buildNewspaperFacts } from '../../../../../src/newspaper/editorial/fact
 import { evaluateTriggerRules, ruleHistoryTurns } from '../../../../../src/newspaper/editorial/rules/evaluate.js';
 
 const constants: EditorialConstants = {
-  distances: { neighboring: 7 },
+  distances: { neighboring: 7 }, tiers: { filler: 30, notable: 60 }, stakes: {},
   spans: { recent: 5, long: 40 }, sizes: {}, shares: {}, types: { settlers: ['Settler', 'Pioneer'] },
   shortcuts: { city: { neighbor: 'city.foreign && city.distance.own <= neighboring' } },
 };
@@ -105,11 +105,11 @@ describe('newspaper trigger rules', () => {
 
   describe('windows and repeat state', () => {
     it('should use the reporting period for event subjects and the configured horizon for globals', async () => {
-      const rule: EditorialTriggerRule = { id: 'events', subject: 'event', event: ['GreatPersonExpended'],
+      const rule: EditorialTriggerRule = { id: 'events', subject: 'event', tier: 'filler', event: ['GreatPersonExpended'],
         window: 45, when: 'true', values: { eventTurn: 'event.turn', observed: 'events.length' }, tags: [] };
       const run = await prepare([rule,
-        { id: 'pair', subject: 'pair', when: 'true', tags: [] },
-        { id: 'incident', subject: 'incident', when: 'true', tags: [] },
+        { id: 'pair', subject: 'pair', tier: 'filler', when: 'true', tags: [] },
+        { id: 'incident', subject: 'incident', tier: 'filler', when: 'true', tags: [] },
       ], 2);
       const input = facts({ events: [
         event(204, 20, 'GreatPersonExpended', {}),
@@ -125,7 +125,7 @@ describe('newspaper trigger rules', () => {
     });
 
     it('should distinguish groups of new events with the same key without keeping per-event repeat memory', async () => {
-      const run = await prepare([{ id: 'training', subject: 'event', event: 'CityTrained',
+      const run = await prepare([{ id: 'training', subject: 'event', tier: 'filler', event: 'CityTrained',
         when: 'true', group: { by: '"training"' }, tags: [] }]);
       const old = [event(301, 19, 'CityTrained', {}), event(302, 20, 'CityTrained', {})];
       const first = await run(facts({ events: old }));
@@ -139,8 +139,8 @@ describe('newspaper trigger rules', () => {
     });
     it('should keep repeated coverage of the same rule in a series separate from other rules on that subject', async () => {
       const run = await prepare([
-        { id: 'trade', subject: 'world', when: 'true', repeat: 2, tags: [] },
-        { id: 'politics', subject: 'world', when: 'true', repeat: 2, tags: [] },
+        { id: 'trade', subject: 'world', tier: 'filler', when: 'true', repeat: 2, tags: [] },
+        { id: 'politics', subject: 'world', tier: 'filler', when: 'true', repeat: 2, tags: [] },
       ]);
       const first = await run(facts());
       const next = await run(facts({ turn: 22, previous: 20 }), first.repeatState);
@@ -152,9 +152,9 @@ describe('newspaper trigger rules', () => {
     });
     it('should remember once, rearm after false, and measure a cooldown in scaled turns after restore', async () => {
       const run = await prepare([
-        { id: 'once', subject: 'world', when: 'turn !== 21', repeat: 'once', tags: [] },
-        { id: 'rearm', subject: 'world', when: 'turn !== 21', tags: [] },
-        { id: 'span', subject: 'world', when: 'true', repeat: 'recent', tags: [] },
+        { id: 'once', subject: 'world', tier: 'filler', when: 'turn !== 21', repeat: 'once', tags: [] },
+        { id: 'rearm', subject: 'world', tier: 'filler', when: 'turn !== 21', tags: [] },
+        { id: 'span', subject: 'world', tier: 'filler', when: 'true', repeat: 'recent', tags: [] },
       ], 2);
       const t20 = await run(facts());
       expect(t20.developments.map(d => d.definitionId)).toEqual(['once', 'rearm', 'span']);
@@ -172,12 +172,12 @@ describe('newspaper trigger rules', () => {
   describe('chance', () => {
     it('should skip only eligible subjects and groups without spending their repeat memory', async () => {
       const rejected: EditorialTriggerRule = {
-        id: 'rejected', subject: 'world', when: 'true', chance: 0, tags: [],
+        id: 'rejected', subject: 'world', tier: 'filler', when: 'true', chance: 0, tags: [],
         values: { broken: 'unknownValue()' },
       };
       const group: EditorialTriggerRule = {
-        id: 'group', subject: 'city', when: 'true', chance: 0, tags: [],
-        group: { by: 'city.population > 1 ? "large" : "small"' }, importance: 'unknownValue()',
+        id: 'group', subject: 'city', tier: 'filler', when: 'true', chance: 0, tags: [],
+        group: { by: 'city.population > 1 ? "large" : "small"' }, adjust: 'unknownValue()',
       };
       const rules = [
         rejected, { ...rejected, id: 'repeated' }, { ...rejected, id: 'false', when: 'false' },
@@ -203,11 +203,11 @@ describe('newspaper trigger rules', () => {
 
     it('should keep subject and group results stable when the catalogue and group membership change', async () => {
       const grouped: EditorialTriggerRule = {
-        id: 'grouped', subject: 'city', when: 'true', chance: 0.5,
+        id: 'grouped', subject: 'city', tier: 'filler', when: 'true', chance: 0.5,
         group: { by: '"area"' }, tags: [],
       };
       const subject: EditorialTriggerRule = {
-        id: 'subject', subject: 'city', when: 'true', chance: 0.5, tags: [],
+        id: 'subject', subject: 'city', tier: 'filler', when: 'true', chance: 0.5, tags: [],
       };
       const run = await prepare([grouped, subject]);
       const revised = await prepare([{ ...subject, id: 'other' }, subject, grouped]);
@@ -229,8 +229,8 @@ describe('newspaper trigger rules', () => {
   describe('derived values and groups', () => {
     it('should give groups of different subject kinds separate identities even when their keys match', async () => {
       const run = await prepare([
-        { id: 'towns', subject: 'city', when: 'true', group: { by: '"border"', min: 1 }, tags: [] },
-        { id: 'states', subject: 'player', when: 'true', group: { by: '"border"', min: 1 }, tags: [] },
+        { id: 'towns', subject: 'city', tier: 'filler', when: 'true', group: { by: '"border"', min: 1 }, tags: [] },
+        { id: 'states', subject: 'player', tier: 'filler', when: 'true', group: { by: '"border"', min: 1 }, tags: [] },
       ]);
       const result = await run(facts({ cities: [city(1, 1, 20, { Population: 4 })] }));
       expect(result.developments.map(({ subject }) => subject)).toEqual(['group/city/"border"', 'group/player/"border"']);
@@ -239,10 +239,10 @@ describe('newspaper trigger rules', () => {
     });
 
     it('should bind scalar values in order, clamp importance, and apply group ratings only above the minimum', async () => {
-      const rule: EditorialTriggerRule = { id: 'religion', subject: 'city', when: 'city.majorityReligion',
+      const rule: EditorialTriggerRule = { id: 'religion', subject: 'city', tier: 'filler', when: 'city.majorityReligion',
         values: { population: 'city.population', doubled: 'population * 2' },
         group: { by: 'doubled === 2 ? "singleton" : city.majorityReligion' },
-        importance: 'matches[0].values.doubled * 100 + count',
+        adjust: ['matches[0].values.doubled * 100', 'count'],
         urgent: 'key === "Buddhism" && count === 2 && typeof city === "undefined"', tags: [] };
       const cities = [
         city(3, 3, 20, { MajorityReligion: 'Buddhism', Population: 1 }),
@@ -268,39 +268,74 @@ describe('newspaper trigger rules', () => {
       expect(Object.keys(result.repeatState)).toHaveLength(2);
     });
 
+    it('should add usable points to the tier base while auditing hidden and failed adjustments', async () => {
+      const rule: EditorialTriggerRule = {
+        id: 'dispatch', subject: 'world', tier: 'turn > 10 ? "notable" : "filler"', when: 'true',
+        adjust: ['turn / 4', 'game.mapWidth', 'unknownPoints()', 'Infinity', '-2'], tags: [],
+      };
+      const run = await prepare([rule]);
+      const result = await run(facts());
+      const base = constants.tiers.notable;
+      expect(result.developments).toMatchObject([{ definitionId: 'dispatch', tier: 'notable', importance: base + 3 }]);
+      expect(result.audit[0].subjects[0]).toMatchObject({
+        outcome: 'fired', tier: 'notable', tierBase: base, importance: base + 3,
+        adjustments: [
+          { points: 5 }, { points: 0, hidden: 'game.mapWidth' },
+          { points: 0, error: expect.any(String) }, { points: 0, error: expect.any(String) },
+          { points: -2 },
+        ],
+      });
+    });
+
+    it('should keep derived bindings for adjustments after one adjustment times out', async () => {
+      const run = await prepare([{
+        id: 'interrupted', subject: 'world', tier: 'filler', when: 'true',
+        values: { bonus: 'turn / 2' },
+        adjust: ['(() => { while (true) {} })()', 'bonus'], tags: [],
+      }]);
+      const result = await run(facts());
+      expect(result.developments[0].importance).toBe(constants.tiers.filler + 10);
+      expect(result.audit[0].subjects[0].adjustments).toMatchObject([
+        { points: 0, error: expect.any(String) }, { points: 10 },
+      ]);
+    });
+
     it('should share the interruption cap across subject and grouped ratings', async () => {
       const timedOut: EditorialTriggerRule[] = Array.from({ length: 7 }, (_, index) => ({
-        id: `timeout-${index}`, subject: 'world', when: '(() => { while (true) {} })()', tags: [],
+        id: `timeout-${index}`, subject: 'world', tier: 'filler', when: '(() => { while (true) {} })()', tags: [],
       }));
       const group: EditorialTriggerRule = {
-        id: 'group', subject: 'world', when: 'true', group: { by: '"group"', min: 1 },
-        importance: '(() => { while (true) {} })()', urgent: 'true', tags: [],
+        id: 'group', subject: 'world', tier: '(() => { while (true) {} })()', when: 'true', group: { by: '"group"', min: 1 }, urgent: 'true', tags: [],
       };
       const earlier: EditorialTriggerRule = {
-        ...group, id: 'valid', importance: '100 * count',
+        ...group, id: 'valid', tier: 'count > 0 ? "notable" : "filler"',
       };
       const later: EditorialTriggerRule = {
-        ...group, id: 'skipped', importance: '100 * count',
+        ...group, id: 'skipped', tier: 'count > 0 ? "notable" : "filler"',
       };
       const run = await prepare([...timedOut, earlier, group, later]);
       const result = await run(facts());
       expect(result.developments.map(development => development.definitionId)).toEqual(['valid']);
-      expect(result.audit.at(-2)?.groups[0].expressions.map(expression => expression.field)).toEqual(['importance']);
+      expect(result.audit.at(-2)?.groups[0].expressions.map(expression => expression.field)).toEqual(['tier']);
       expect(result.audit.at(-1)?.groups[0]).toMatchObject({ outcome: 'error', expressions: [
-        { field: 'importance', error: expect.stringContaining('interruption limit') },
+        { field: 'tier', error: expect.stringContaining('interruption limit') },
       ] });
     });
     it('should stop at execution failures without evaluating later fields or exposing map metadata', async () => {
       const run = await prepare([
-        { id: 'invalid', subject: 'world', when: 'true', importance: 'true', urgent: 'game.mapWidth > 0', tags: [] },
-        { id: 'secret', subject: 'world', when: ['game.mapWidth', 'game.mapWrapX'], tags: [] },
-        { id: 'safe', subject: 'world', when: 'typeof mapWidth === "undefined" && !game.knows("mapWrapX")',
-          importance: -5, urgent: '"yes"', tags: [] },
+        { id: 'invalid', subject: 'world', tier: 'turn > 0 ? "unknownTier" : "filler"', when: 'true', tags: [] },
+        { id: 'broken', subject: 'world', tier: 'unknownFunction()', when: 'true', urgent: 'game.mapWidth > 0', tags: [] },
+        { id: 'secret', subject: 'world', tier: 'filler', when: ['game.mapWidth', 'game.mapWrapX'], tags: [] },
+        { id: 'safe', subject: 'world', tier: 'filler', when: 'typeof mapWidth === "undefined" && !game.knows("mapWrapX")',
+          adjust: '-50', urgent: '"yes"', tags: [] },
       ]);
       const result = await run(facts());
       expect(result.developments).toMatchObject([{ definitionId: 'safe', importance: 0, urgent: true }]);
-      expect(result.audit[0].subjects[0].expressions.map(expression => expression.field)).toEqual(['when', 'importance']);
-      expect(result.audit[1].subjects[0]).toMatchObject({ outcome: 'hidden', failedWhen: 0,
+      const invalid = result.audit[0].subjects[0];
+      expect(invalid.outcome).toBe('error');
+      expect(invalid.expressions.find(({ field }) => field === 'tier')?.error).toContain('unknownTier');
+      expect(result.audit[1].subjects[0].expressions.map(expression => expression.field)).toEqual(['when', 'tier']);
+      expect(result.audit[2].subjects[0]).toMatchObject({ outcome: 'hidden', failedWhen: 0,
         expressions: [{ hidden: 'game.mapWidth' }] });
     });
   });

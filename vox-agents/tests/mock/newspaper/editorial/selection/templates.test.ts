@@ -54,7 +54,7 @@ describe('newspaper template matching', () => {
     ['France', ['generic']],
   ] as const)('should offer the eligible regional variants to %s', async (receiverName, expected) => {
     const variant = { ...standard.variants[0], headline: 'News' };
-    const selected = await candidates(0, [{ id: 'report', subject: 'world', when: 'true' }], {
+    const selected = await candidates(0, [{ id: 'report', subject: 'world', tier: 'filler', when: 'true' }], {
       ...standard, triggers: ['report'],
       variants: [
         { ...variant, id: 'generic' },
@@ -68,8 +68,8 @@ describe('newspaper template matching', () => {
 
   it('should find a shared subject even after more than one hundred other rule matches', async () => {
     const selected = await candidates(130, [
-      { id: 'all', subject: 'city', when: 'true', values: { population: 'city.population' } },
-      { id: 'last', subject: 'city', when: 'city.id === 129' },
+      { id: 'all', subject: 'city', tier: 'filler', when: 'true', values: { population: 'city.population' } },
+      { id: 'last', subject: 'city', tier: 'filler', when: 'city.id === 129' },
     ], {
       ...standard, triggers: ['all', 'last'],
       when: 'period.from === 8 && values.population === city.population && subject.id === 129',
@@ -89,7 +89,7 @@ describe('newspaper template matching', () => {
   });
 
   it('should print and source a visible leader name in the body while preserving named links', async () => {
-    const triggers = [{ id: 'report', subject: 'city', when: 'true' }];
+    const triggers = [{ id: 'report', subject: 'city', tier: 'filler', when: 'true' }];
     const template = {
       ...standard, triggers: ['report'], names: ['city', 'city.owner.leader'],
       variants: [
@@ -117,7 +117,7 @@ describe('newspaper template matching', () => {
 
   it('should expose group totals and each member’s values without treating a member as the group', async () => {
     const selected = await candidates(3, [
-      { id: 'conversions', subject: 'city', when: 'true', values: { population: 'city.population' },
+      { id: 'conversions', subject: 'city', tier: 'filler', when: 'true', values: { population: 'city.population' },
         group: { by: 'city.majorityReligion', min: 3 } },
     ], {
       ...standard, triggers: ['conversions'],
@@ -139,7 +139,7 @@ describe('newspaper template matching', () => {
 
   it('should skip variants with invalid link destinations or direct reads of an unavailable subject name', async () => {
     const selected = await candidates(0, [
-      { id: 'generic', subject: 'world', when: 'true', values: { empty: '""' } },
+      { id: 'generic', subject: 'world', tier: 'filler', when: 'true', values: { empty: '""' } },
     ], {
       ...standard, triggers: ['generic'],
       variants: [
@@ -159,8 +159,8 @@ describe('newspaper template matching', () => {
 
   it('should give each grouped rule its own membership and suppress ambiguous group placeholders', async () => {
     const selected = await candidates(3, [
-      { id: 'conversions', subject: 'city', when: 'true', group: { by: 'city.majorityReligion', min: 2 } },
-      { id: 'growth', subject: 'city', when: 'city.population > 1', group: { by: 'city.majorityReligion', min: 2 } },
+      { id: 'conversions', subject: 'city', tier: 'filler', when: 'true', group: { by: 'city.majorityReligion', min: 2 } },
+      { id: 'growth', subject: 'city', tier: 'filler', when: 'city.population > 1', group: { by: 'city.majorityReligion', min: 2 } },
     ], {
       ...standard, triggers: ['conversions', 'growth'],
       when: 'typeof group === "undefined" && typeof count === "undefined" && triggerValues.growth.matches[0].city.id === 1',
@@ -181,8 +181,8 @@ describe('newspaper template matching', () => {
 
   it('should use qualified scalar names and match only intersecting rule windows', async () => {
     const rules = [
-      { id: 'ledger', subject: 'city', window: 5, when: 'true', values: { amount: '2' } },
-      { id: 'growth', subject: 'city', when: 'true', values: { amount: '3' } },
+      { id: 'ledger', subject: 'city', tier: 'filler', window: 5, when: 'true', values: { amount: '2' } },
+      { id: 'growth', subject: 'city', tier: 'filler', when: 'true', values: { amount: '3' } },
     ];
     const template = {
       ...standard, triggers: ['ledger', 'growth'],
@@ -239,7 +239,7 @@ describe('newspaper placeholder printing', () => {
       }],
     };
     const selected = await candidates(0, [{
-      id: 'report', subject: 'world', when: 'true', values: { turns: '2' },
+      id: 'report', subject: 'world', tier: 'filler', when: 'true', values: { turns: '2' },
     }], template);
     const [variant] = selected[0].variants;
     const nodes = inlineTextSchema.parse(
@@ -258,7 +258,7 @@ describe('newspaper placeholder printing', () => {
       }],
     };
     const selected = await candidates(0, [{
-      id: 'report', subject: 'world', when: 'true',
+      id: 'report', subject: 'world', tier: 'filler', when: 'true',
       values: { population: '12', happinessPercentage: '62', faminePopulation: '1', turns: '3', distance: '2' },
     }], template);
     const [variant] = selected[0].variants;

@@ -50,7 +50,7 @@ describe('durable replay publication', () => {
       writeFile(path.join(catalogue, 'defaults.json'), '{}'),
       writeFile(path.join(catalogue, 'triggers.json'), JSON.stringify([
         ...stock.triggers.map(rule => ({ id: rule.id, enabled: false })),
-        { id: 'fixture-branch', subject: 'event', event: 'PlayerAdoptPolicyBranch', when: 'true', repeat: 'once' },
+        { id: 'fixture-branch', subject: 'event', tier: 'filler', event: 'PlayerAdoptPolicyBranch', when: 'true', repeat: 'once' },
       ])),
       writeFile(path.join(catalogue, 'templates.json'), JSON.stringify([{
         id: 'fixture-branch-report', triggers: ['fixture-branch'], tags: ['economy'], weight: { base: 1 },
@@ -96,7 +96,7 @@ describe('durable replay publication', () => {
     await Promise.all([
       writeFile(path.join(catalogue, 'constants.json'), JSON.stringify({ types: { ideologies: ['Ordre'] } })),
       writeFile(path.join(catalogue, 'triggers.json'), JSON.stringify([{
-        id: 'fixture-research', subject: 'event', event: 'TeamTechResearched',
+        id: 'fixture-research', subject: 'event', tier: 'filler', event: 'TeamTechResearched',
         when: "self.ideology === 'Ordre' && event.tech === 'Printing Press'",
         values: { technology: 'event.tech', civilization: 'event.player.name' },
       }, editionBriefRule])),
@@ -495,7 +495,7 @@ describe('durable replay publication', () => {
     const base = await loadEditorialConfig();
     await writeFile(path.join(directory, 'triggers.json'), JSON.stringify([
       ...base.triggers.map(rule => ({ id: rule.id, enabled: false })),
-      { id: 'recorded-player', subject: 'player', window: 60, repeat: 'once', when: 'player.self' },
+      { id: 'recorded-player', subject: 'player', tier: 'filler', window: 60, repeat: 'once', when: 'player.self' },
     ]));
     const query = vi.fn(queryNewspaperEvidence);
     session = new ReplaySession({ query });

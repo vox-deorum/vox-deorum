@@ -96,6 +96,15 @@ describe('newspaper declaration coverage', () => {
     expect(result.state.issues).toHaveLength(0);
   });
 
+  it('should not count an unnamed attacker toward a declaration roundup', async () => {
+    const result = await check([{ player: 1 }, { player: 2 }, { player: 3 }],
+      { active: [1, 2, 3], hiddenNames: [3] });
+    expect(result.status).toBe('published');
+    const items = result.state.issues[0].items.filter(item => item.ruleIds?.includes('war-involving-us'));
+    expect(items).toHaveLength(2);
+    expect(items.every(item => !item.ruleIds?.some(id => id === 'incoming-war-wave' || id === 'war-on-three-fronts'))).toBe(true);
+  });
+
   it('prints two separate reports with their own allies and excludes defensive and unnamed allies from the copy', async () => {
     const result = await check([{ player: 1, ally: 10 }, { player: 2, ally: 11 }],
       { defensiveAlly: 12, hiddenNames: [11] }, stock, 3);

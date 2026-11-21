@@ -21,6 +21,13 @@
     "majority": 0.5,
     "dominant": 0.75
   },
+  "tiers": {
+    "crisis": 90,
+    "major": 75,
+    "notable": 60,
+    "routine": 45,
+    "filler": 30
+  },
   "terms": {
     "civilization": "self.knows('name') ? self.name.trim() || undefined : undefined",
     "leader": "self.knows('leader') ? self.leader.trim() || undefined : undefined",
@@ -35,6 +42,8 @@
       "Great Merchant", "Great Musician", "Great Prophet", "Great Scientist", "Great Writer"
     ],
     "defenses": ["Walls", "Castle", "Arsenal", "Military Base", "Walls of Babylon", "Qila", "Bastion Fort"],
+    "eras": ["Ancient", "Classical", "Medieval", "Renaissance", "Industrial", "Modern", "Atomic", "Information", "Future"],
+    "earlyBuildings": ["Monument", "Granary", "Shrine", "Council", "Barracks", "Well", "Water Mill"],
     "ideologies": ["Order", "Freedom", "Autocracy"],
     "worldProjects": [
       "World's Fair", "International Games", "International Space Station", "Global Wargames",
@@ -53,6 +62,23 @@
     "eastAsianCivilizations": ["China", "Japan", "Korea", "Mongolia"],
     "southeastAsianAndPacificCivilizations": ["Indonesia", "Polynesia", "Siam"],
     "eurasianSteppeCivilizations": ["Mongolia", "The Huns"]
+  },
+  "stakes": {
+    "player": {
+      "relation": "(() => { if (player.self) return 0; const relation = self.relation(player); const proximity = player.knows('distance') ? (player.distance <= neighboring ? 8 : player.distance <= nearby ? 4 : player.distance > regional ? -8 : 0) : 0; const ties = (relation.knows('war') && relation.war ? 10 : 0) + (relation.friend || relation.pact ? 6 : 0) + ((relation.knows('denouncedThem') && relation.denouncedThem) || (relation.knows('denouncedByThem') && relation.denouncedByThem) ? 6 : 0) + (relation.vassalOf || relation.masterOf ? 8 : 0); const cityState = player.knows('cityState') && player.cityState ? (player.is.alliedCityState ? 4 : -6) : 0; return Math.max(-15, Math.min(20, proximity + ties + cityState)); })()",
+      "front": "(() => { if (player.self) return 0; const relation = self.relation(player); if (!relation.knows('war') || !relation.war) return 0; const proximity = player.knows('cityState') && player.cityState ? -12 : player.knows('distance') ? (player.distance <= nearby ? 10 : player.distance > regional ? -10 : 0) : 0; const score = relation.knows('warScore') ? Math.abs(relation.warScore) : 0; return proximity + (score >= 50 ? 8 : score >= 25 ? 4 : 0) + (relation.knows('warWeariness') && relation.warWeariness >= 50 ? 6 : 0); })()",
+      "war": "(() => { if (!player.knows('wars') || !player.wars.length) return 0; const fronts = player.wars.filter(opponent => opponent.knows('major') && opponent.major); if (!fronts.length) return player.wars.every(opponent => opponent.knows('cityState') && opponent.cityState) ? -10 : 0; return Math.max(-10, Math.min(20, fronts.reduce((total, opponent) => total + opponent.stake.front, 0) + 4 * (fronts.length - 1))); })()"
+    },
+    "pair": {
+      "relation": "pair.involvesSelf ? pair.other.stake.relation : Math.max(pair.a.stake.relation, pair.b.stake.relation)"
+    },
+    "city": {
+      "place": "city.own ? (city.knows('isCapital') && city.isCapital ? 8 : 0) + (city.knows('population') && city.population >= largeCity ? 4 : 0) : city.distance.own <= adjacent ? 8 : city.distance.own <= neighboring ? 5 : city.distance.own <= nearby ? 2 : city.distance.own > regional ? -8 : 0"
+    },
+    "event": {
+      "place": "event.distance.own <= adjacent ? 8 : event.distance.own <= neighboring ? 5 : event.distance.own <= nearby ? 2 : event.distance.own > regional ? -8 : 0",
+      "building": "(() => { if (!event.knows('building')) return 0; const defense = defenses.includes(event.building) && self.knows('atWar') && self.atWar; const frontier = defense && event.knows('city') && event.city.is.knows('frontier') && event.city.is.frontier; const industrial = eras.indexOf('Industrial'); const late = industrial >= 0 && self.knows('era') && typeof self.era === 'string' && eras.indexOf(self.era.replace(/ Era$/, '')) >= industrial; return (defense ? 15 : 0) + (frontier ? 5 : 0) - (late && earlyBuildings.includes(event.building) ? 15 : 0); })()"
+    }
   },
   "shortcuts": {
     "city": {

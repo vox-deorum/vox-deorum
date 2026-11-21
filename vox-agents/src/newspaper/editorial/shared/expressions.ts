@@ -20,6 +20,8 @@ export type EditorialShortcutDefinitions = Readonly<Partial<Record<
   typeof editorialShortcutSubjects[number], Readonly<Record<string, string>>
 >>>;
 
+type FactDefinitions = { shortcuts?: EditorialShortcutDefinitions; stakes?: EditorialShortcutDefinitions };
+
 export interface EditorialExpression {
   rule: string;
   field: string;
@@ -47,6 +49,8 @@ export interface ExpressionBatch {
       limits?: readonly number[];
       /** Steps whose result must be a finite number. */
       numeric?: readonly number[];
+      /** Independent rating steps whose errors do not stop later steps. */
+      optional?: readonly number[];
     };
   }[];
 }
@@ -74,6 +78,8 @@ const memoryLimit = 64 * 1024 * 1024;
 const stackLimit = 256 * 1024;
 const interruptLimit = 2_000;
 const interruptionRecoveryLimit = 8;
+type ResumedBinding = { name: string; value?: ExpressionValue };
+
 type RawResult = { value?: ExpressionValue; error?: string; interrupted?: true; skipped?: true; budgetExhausted?: true; unreached?: true; hidden?: string; sources?: NewspaperSourceReference[] };
 type SandboxWasm = NonNullable<QuickJSOptions['wasm']>;
 // Node provides WebAssembly, but this package's TypeScript config excludes browser types.
@@ -144,7 +150,7 @@ function validateExpression(expression: EditorialExpression): void {
 // Kept as guest source so host compilation cannot rewrite the sandbox program.
 const startBatch = `
 // Evaluate the supplied expressions for each subject, group by group and in catalogue order.
-(function run(expressions, shortcuts, batch) {
+(function run(expressions, factDefinitions, batch) {
   'use strict';
   delete globalThis.editorialBatch;
   delete globalThis.queueMicrotask;
@@ -152,6 +158,7 @@ const startBatch = `
   const input = JSON.parse(batch.input);
   const disabled = new Set(JSON.parse(batch.disabled));
   const { begin, results } = batch;
+  const resumedBindings = JSON.parse(batch.resumedBindings);
   let skip = batch.skip;
 
   const frozen = new Set();
@@ -194,7 +201,7 @@ const startBatch = `
 ${unpackFactSource}
 ${factGuestSource}
   const facts = input.facts && factRuntime(
-    unpackFacts(input.facts), input.wrap ?? { x: 0, y: 0 }, input.constants, shortcuts
+    unpackFacts(input.facts), input.wrap ?? { x: 0, y: 0 }, input.constants, factDefinitions
   );
 
   // Authored expressions return scalars so results can be retrieved safely if the VM interrupts.
@@ -228,19 +235,27 @@ ${factGuestSource}
         : Object.freeze(Object.assign(Object.create(null), input.globals, subjects[index], input.constants));
       let bindings = base;
       const first = skip % slots.length;
-      // Resuming partway through this subject means an earlier ordered step timed out.
-      let stopped = !!ordered && first > 0;
+      // Only an interrupted optional step can resume an ordered subject.
+      let stopped = !!ordered && first > 0 && resumedBindings === null;
+      // Restore earlier values if an independent adjustment was interrupted.
+      if (first > 0 && resumedBindings)
+        for (const { name, value } of resumedBindings) bind(name, value);
       // Bind each successful scalar result for subsequent expressions.
+      function bind(name, value) {
+        bindings = Object.freeze(Object.defineProperty(Object.create(bindings), name, { value }));
+      }
       function step(offset, result) {
         if (!ordered) return;
-        if (result.error !== undefined || (offset < ordered.guardCount && !result.value)) {
+        if (result.error !== undefined) {
+          if (!ordered.optional?.includes(offset)) stopped = true;
+          return;
+        }
+        if (offset < ordered.guardCount && !result.value) {
           stopped = true;
           return;
         }
         const name = ordered.bind?.[offset];
-        if (name !== undefined) {
-          bindings = Object.freeze(Object.defineProperty(Object.create(bindings), name, { value: result.value }));
-        }
+        if (name !== undefined) bind(name, result.value);
       }
       for (let offset = first; offset < slots.length; offset++) {
         const slot = slots[offset];
@@ -286,17 +301,19 @@ ${source}
 function compileBatch(
   vm: QuickJS,
   expressions: readonly EditorialExpression[],
-  definitions: EditorialShortcutDefinitions | undefined
+  definitions: FactDefinitions
 ): Uint8Array {
-  const shortcuts = editorialShortcutSubjects.flatMap(kind => Object.entries(definitions?.[kind] ?? {}).map(
-    ([name, source]) => ({ kind, name, expression: { rule: 'constants', field: `shortcuts.${kind}.${name}`, source } })
-  ));
-  const sources = [...expressions, ...shortcuts.map(({ expression }) => expression)];
+  const facts = (['shortcuts', 'stakes'] as const).flatMap(group =>
+    editorialShortcutSubjects.flatMap(kind => Object.entries(definitions[group]?.[kind] ?? {}).map(
+      ([name, source]) => ({ group, kind, name, expression: { rule: 'constants', field: `${group}.${kind}.${name}`, source } }),
+    )),
+  );
+  const sources = [...expressions, ...facts.map(({ expression }) => expression)];
   for (const expression of sources) validateExpression(expression);
   const functions = sources.map(expressionFunction);
   const rules = functions.slice(0, expressions.length);
-  const getters = shortcuts.map(({ kind, name }, index) =>
-    `[${JSON.stringify(kind)}, ${JSON.stringify(name)}, ${functions[expressions.length + index]}]`
+  const getters = facts.map(({ group, kind, name }, index) =>
+    `[...${JSON.stringify([group, kind, name])}, ${functions[expressions.length + index]}]`
   );
   try {
     return vm.compile(startBatch + rules.join(',\n') + '], [\n' + getters.join(',\n') + endBatch, filename);
@@ -318,7 +335,8 @@ async function evaluateRemaining(
   input: string,
   bytecode: Uint8Array,
   skip: number,
-  disabled: ReadonlySet<number>
+  disabled: ReadonlySet<number>,
+  resumedBindings: ResumedBinding[] | null,
 ): Promise<{ results: RawResult[]; interrupted?: true }> {
   let started = 0;
   let remaining = interruptLimit * 16; // Allow the check to parse and freeze its input.
@@ -335,9 +353,11 @@ async function evaluateRemaining(
   using payload = vm.newString(input);
   using skipCount = vm.newNumber(skip);
   using disabledSlots = vm.newString(JSON.stringify([...disabled]));
+  using resumed = vm.newString(JSON.stringify(resumedBindings));
   vm.setProp(batch, 'input', payload);
   vm.setProp(batch, 'skip', skipCount);
   vm.setProp(batch, 'disabled', disabledSlots);
+  vm.setProp(batch, 'resumedBindings', resumed);
   vm.setProp(batch, 'begin', begin);
   vm.setProp(batch, 'results', results);
   vm.setProp(vm.global, 'editorialBatch', batch);
@@ -354,12 +374,23 @@ async function evaluateRemaining(
   }
 }
 
-/** Resolve an interrupted position back to its compiled expression across all groups. */
-function slotAt(batch: ExpressionBatch, ordinal: number): number {
-  for (const group of batch.groups) {
-    const slots = group.expressions;
-    const size = slots.length * group.subjects.length;
-    if (ordinal < size) return slots[ordinal % slots.length];
+/** Resolve an interruption and recover prior bindings when the step was optional. */
+function interruptionAt(batch: ExpressionBatch, results: readonly RawResult[]) {
+  let ordinal = results.length - 1;
+  for (const { expressions, subjects, ordered } of batch.groups) {
+    const size = expressions.length * subjects.length;
+    if (ordinal < size) {
+      const offset = ordinal % expressions.length;
+      const resume = ordered?.optional?.includes(offset) && offset + 1 < expressions.length;
+      const prior = resume ? results.slice(results.length - 1 - offset, -1) : [];
+      return {
+        slot: expressions[offset],
+        bindings: resume ? prior.flatMap(({ value, error }, index) => {
+          const name = ordered?.bind?.[index];
+          return name === undefined || error !== undefined ? [] : [{ name, value }];
+        }) : null,
+      };
+    }
     ordinal -= size;
   }
   throw new RangeError('Interrupted expression is outside the check.');
@@ -395,11 +426,14 @@ async function evaluateBatch(
   });
   const output: RawResult[] = [];
   const disabled = budget.interruptedSlots;
+  let resumedBindings: ResumedBinding[] | null = null;
   while (output.length < size && disabled.size < interruptionRecoveryLimit) {
-    const chunk = await evaluateRemaining(input, bytecode, output.length, disabled);
+    const chunk = await evaluateRemaining(input, bytecode, output.length, disabled, resumedBindings);
     for (const result of chunk.results) output.push(result);
     if (!chunk.interrupted) break;
-    disabled.add(slotAt(batch, output.length - 1));
+    const interruption = interruptionAt(batch, output);
+    resumedBindings = interruption.bindings;
+    disabled.add(interruption.slot);
   }
   let cursor = 0;
   return batch.groups.map(({ subjects, expressions: slots, ordered }) =>
@@ -413,7 +447,8 @@ async function evaluateBatch(
           skipped: true,
           budgetExhausted: true,
         });
-        if (ordered && (result.error !== undefined || (offset < ordered.guardCount && !result.value))) stopped = true;
+        if (ordered && ((result.error !== undefined && !ordered.optional?.includes(offset)) ||
+            (offset < ordered.guardCount && !result.value))) stopped = true;
         const sources = result.sources?.length ? { sources: result.sources } : {};
         return result.error === undefined
           ? { value: result.value, ...sources }
@@ -436,10 +471,10 @@ async function evaluateBatch(
 /** Prepare one catalogue's expressions, retaining only bytecode and source locations between checks. */
 export async function compileEditorialExpressions(
   definitions: readonly EditorialExpression[],
-  options: { shortcuts?: EditorialShortcutDefinitions } = {}
+  options: FactDefinitions = {}
 ): Promise<ExpressionRunner> {
   const expressions = definitions.map((definition) => ({ ...definition }));
   using vm = await createSandbox('compile');
-  const bytecode = compileBatch(vm, expressions, options.shortcuts);
+  const bytecode = compileBatch(vm, expressions, options);
   return { evaluate: (batch, budget = { interruptedSlots: new Set() }) => evaluateBatch(batch, expressions, bytecode, budget) };
 }

@@ -25,10 +25,10 @@ function createConfig(): EditorialConfig {
       seriesWeight: 1, noveltyBonus: 1, varietyBonus: 1,
       feedback: { window: 50, series: 3, tag: 1, bound: 10 },
     },
-    constants: { distances: {}, spans: { long: 40 }, sizes: {}, shares: {}, types: {}, shortcuts: {} },
+    constants: { distances: {}, spans: { long: 40 }, sizes: {}, shares: {}, types: {}, shortcuts: {}, stakes: {}, tiers: { filler: 30 } },
     triggers: [
-      { id: 'war', subject: 'world', when: 'true', tags: ['military', 'foreign'] },
-      { id: 'peace', subject: 'world', when: 'true', tags: ['diplomacy'] },
+      { id: 'war', subject: 'world', tier: 'filler', when: 'true', tags: ['military', 'foreign'] },
+      { id: 'peace', subject: 'world', tier: 'filler', when: 'true', tags: ['diplomacy'] },
     ],
     templates: [{
       id: 'coverage', triggers: ['war'], tags: ['military'], weight: { base: 1 },
@@ -57,7 +57,7 @@ function createCandidate(config: EditorialConfig, id: string, urgent = false): E
   return {
     id, subject: id, period: { from: 1, to: 5 }, triggerIds: [`trigger/${id}`], ruleIds: ['trigger'],
     templateIds: ['coverage'], seriesKeys: [`series/${id}`],
-    tags: [urgent ? 'military' : 'economy'], importance: urgent ? 1 : 20, urgent,
+    tags: [urgent ? 'military' : 'economy'], tier: 'filler', importance: urgent ? 1 : 20, urgent,
     short: false, weight: 1, variants: config.templates[0].variants, variantWeights: { first: 1, second: 2 }, variantSources: {},
     values: { name: id }, sources: [], fingerprint: id,
   };

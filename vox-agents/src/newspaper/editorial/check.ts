@@ -203,12 +203,16 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
       errors.push({ choice: 'editorial choices', field: 'evaluation', message: choiceLimitMessage });
     if (errors.length) decision.choiceErrors = errors;
   };
-  /** Keep observed resets, but leave matches and diplomacy available for the next check. */
+  /** Commit observed resets and spend repeats only for series that actually printed. */
+  const commitRepeats = (published: readonly PublishedItemRecord[]) => {
+    const printed = new Set(published.flatMap(item => item.seriesKeys.map(key => key.slice(scope.length + 1))));
+    state.triggerRepeats = { ...input.state.triggerRepeats };
+    for (const [key, current] of Object.entries(rules.repeatState))
+      if (current.armed || printed.has(key)) state.triggerRepeats[key] = current;
+  };
+  /** Leave matches and diplomacy available for the next check. */
   const skip = (reason: string): EditorialCheckResult => {
-    state.triggerRepeats = Object.fromEntries(Object.entries(input.state.triggerRepeats).map(([key, previous]) => {
-      const current = rules.repeatState[key];
-      return [key, current?.armed ? current : previous];
-    }));
+    commitRepeats([]);
     decision.reason = budget.choiceEvaluationIncomplete ? `${reason} ${choiceLimitMessage}` : reason;
     recordChoiceErrors();
     return { status: 'skipped', reason: decision.reason, state, decision };
@@ -288,7 +292,7 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
   });
   state.reportingThroughTurn = turn;
   state.diplomacy = diplomacy.memory;
-  state.triggerRepeats = rules.repeatState;
+  commitRepeats(records);
   state.series = advanceSeries(state.series, records, turn);
   state.issues.push({ issueId: issue.issueId, turn, items: records, designId: issue.publication.designId });
   decision.status = 'published';

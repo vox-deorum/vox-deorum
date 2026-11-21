@@ -27,8 +27,8 @@ function createConfig(): EditorialConfig {
       seriesWeight: 1, noveltyBonus: 1, varietyBonus: 1,
       feedback: { window: 50, series: 3, tag: 1, bound: 10 },
     },
-    constants: { distances: {}, spans: { long: 40 }, sizes: {}, shares: {}, types: {}, shortcuts: {} },
-    triggers: [{ id: 'coverage', subject: 'world', when: 'true', tags: ['economy'] }],
+    constants: { distances: {}, spans: { long: 40 }, sizes: {}, shares: {}, types: {}, shortcuts: {}, stakes: {}, tiers: { filler: 30 } },
+    triggers: [{ id: 'coverage', subject: 'world', tier: 'filler', when: 'true', tags: ['economy'] }],
     templates: [{
       id: 'coverage', triggers: ['coverage'], tags: ['economy'], weight: { base: 1 },
       variants: [{ id: 'standard', headline: 'Headline', body: ['Body'], weight: { base: 1 } }],
@@ -69,7 +69,7 @@ function withRules(rules: NonNullable<EditorialConfig['mastheadRules']>): Editor
 function createCandidate(config: EditorialConfig, id: string): EditorialCandidate {
   return {
     id, subject: id, period: { from: 1, to: 5 }, triggerIds: [`trigger/${id}`], ruleIds: ['coverage'],
-    templateIds: ['coverage'], seriesKeys: [`series/${id}`], tags: ['economy'], importance: 20,
+    templateIds: ['coverage'], seriesKeys: [`series/${id}`], tags: ['economy'], tier: 'filler', importance: 20,
     urgent: false, short: false, weight: 1, variants: config.templates[0].variants,
     variantWeights: { standard: 1 }, variantSources: {}, values: {}, sources: [], fingerprint: id,
   };

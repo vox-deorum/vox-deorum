@@ -17,7 +17,7 @@
       "weGive": "(event.fromPlayer.self ? event.fromGives : event.toGives).join(', ')",
       "weGet": "(event.fromPlayer.self ? event.toGives : event.fromGives).join(', ')"
     },
-    "importance": 60,
+    "tier": "notable",
     "tags": ["economy", "trade", "international"]
   },
   {
@@ -34,7 +34,8 @@
       "plunderer": "event.knows('plunderingPlayer') && event.plunderingPlayer.knows('name') ? event.plunderingPlayer.name : null",
       "gold": "event.knows('plunderGoldValue') && Number.isFinite(event.plunderGoldValue) ? event.plunderGoldValue : null"
     },
-    "importance": 55,
+    "tier": "notable",
+    "adjust": "-5",
     "tags": ["economy", "trade"]
   },
   {
@@ -50,7 +51,8 @@
     "values": {
       "routes": "self.before.outgoingTradeRouteCount"
     },
-    "importance": "55 + 5 * routes",
+    "tier": "notable",
+    "adjust": "(55 + 5 * routes) - 60",
     "tags": ["politics", "domestic"]
   },
   {
@@ -71,7 +73,8 @@
       "routeDistance": "distance(event.originCity, event.destinationCity)",
       "outgoing": "event.originPlayer.self === true"
     },
-    "importance": "outgoing ? 50 : 45",
+    "tier": "notable",
+    "adjust": "(outgoing ? 50 : 45) - 60",
     "tags": ["economy", "trade", "international"]
   },
   {
@@ -87,7 +90,8 @@
       "gold": "event.knows('plunderGoldValue') && Number.isFinite(event.plunderGoldValue) ? event.plunderGoldValue : null",
       "destination": "event.knows('destinationOwner') && event.destinationOwner.knows('name') ? event.destinationOwner.name : null"
     },
-    "importance": 70,
+    "tier": "major",
+    "adjust": "-5",
     "tags": ["economy", "trade"]
   },
   {
@@ -102,7 +106,8 @@
     "values": {
       "routes": "self.outgoingTradeRouteCount"
     },
-    "importance": 55,
+    "tier": "notable",
+    "adjust": "-5",
     "tags": ["economy", "trade"]
   },
   {
@@ -118,7 +123,8 @@
       "gold": "event.knows('plunderGoldValue') && Number.isFinite(event.plunderGoldValue) ? event.plunderGoldValue : null",
       "destination": "event.knows('destinationOwner') && event.destinationOwner.knows('name') ? event.destinationOwner.name : null"
     },
-    "importance": 55,
+    "tier": "notable",
+    "adjust": "-5",
     "tags": ["economy", "trade"]
   }
 ]

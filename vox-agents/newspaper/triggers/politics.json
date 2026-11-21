@@ -14,7 +14,8 @@
     "values": {
       "count": "players.filter(p => p.knows('major') && p.major === true && p.knows('score') && Number.isFinite(p.score)).length"
     },
-    "importance": 65,
+    "tier": "notable",
+    "adjust": "5",
     "tags": ["politics", "international"]
   },
   {
@@ -29,7 +30,8 @@
     "values": {
       "civilization": "event.player.name"
     },
-    "importance": 55,
+    "tier": "notable",
+    "adjust": "-5",
     "tags": ["politics", "international"]
   },
   {
@@ -44,7 +46,8 @@
     "values": {
       "civilization": "event.player.name"
     },
-    "importance": 40,
+    "tier": "routine",
+    "adjust": "-5",
     "tags": ["politics", "international"]
   },
   {
@@ -57,7 +60,8 @@
       "self.knows('atWar')",
       "self.atWar === false"
     ],
-    "importance": 55,
+    "tier": "notable",
+    "adjust": "-5",
     "tags": ["politics", "domestic"]
   },
   {
@@ -68,7 +72,7 @@
       "event.starting === false",
       "event.player.self === true"
     ],
-    "importance": 45,
+    "tier": "routine",
     "tags": ["politics", "domestic"]
   },
   {
@@ -83,7 +87,7 @@
     "values": {
       "enemies": "(() => { const names = self.wars.filter(p => p.knows('name')).map(p => p.name); return names.length <= 2 ? names.join(' and ') || 'our adversaries' : names.slice(0, -1).join(', ') + ', and ' + names[names.length - 1]; })()"
     },
-    "importance": 60
+    "tier": "notable"
   },
   {
     "id": "happiness-recovers",
@@ -97,7 +101,8 @@
     "values": {
       "happinessPercentage": "self.happinessPercentage"
     },
-    "importance": 50,
+    "tier": "routine",
+    "adjust": "5",
     "tags": ["politics", "domestic"]
   },
   {
@@ -111,7 +116,8 @@
     "values": {
       "ideology": "self.ideology"
     },
-    "importance": 85,
+    "tier": "crisis",
+    "adjust": "-5",
     "urgent": "true",
     "tags": ["politics", "domestic"]
   },
@@ -132,7 +138,8 @@
       "ideology": "event.newBranch",
       "ours": "event.player.self === true"
     },
-    "importance": "ours ? 85 : 65",
+    "tier": "notable",
+    "adjust": "(ours ? 85 : 65) - 60",
     "urgent": "ours",
     "tags": ["politics", "international"]
   },
@@ -152,7 +159,8 @@
       "civilization": "player.name",
       "lost": "player.before.cityCount - player.cityCount"
     },
-    "importance": "60 + 5 * lost",
+    "tier": "notable",
+    "adjust": "(60 + 5 * lost) - 60",
     "tags": ["politics", "international"]
   },
   {
@@ -166,7 +174,7 @@
     "values": {
       "policy": "event.policy"
     },
-    "importance": 45,
+    "tier": "routine",
     "tags": ["politics", "domestic"]
   },
   {
@@ -182,7 +190,7 @@
       "branch": "Object.keys(self.policyBranches).find(branch => !Object.keys(self.before.policyBranches).includes(branch))",
       "count": "Object.keys(self.policyBranches).length"
     },
-    "importance": 60,
+    "tier": "notable",
     "tags": ["politics", "domestic"]
   },
   {
@@ -198,7 +206,8 @@
     "values": {
       "happinessPercentage": "self.happinessPercentage"
     },
-    "importance": 55,
+    "tier": "notable",
+    "adjust": "-5",
     "tags": ["politics", "domestic"]
   },
   {
@@ -214,7 +223,8 @@
     "values": {
       "happiness": "self.happinessPercentage"
     },
-    "importance": 80,
+    "tier": "major",
+    "adjust": "5",
     "urgent": "true",
     "tags": ["politics", "domestic"]
   },
@@ -232,7 +242,8 @@
       "ideology": "player.ideology",
       "shared": "self.knows('ideology') && typeof self.ideology === 'string' && self.ideology === player.ideology"
     },
-    "importance": "self.knows('ideology') && typeof self.ideology === 'string' && self.ideology !== player.ideology ? 70 : 60",
+    "tier": "notable",
+    "adjust": "(self.knows('ideology') && typeof self.ideology === 'string' && self.ideology !== player.ideology ? 70 : 60) - 60",
     "tags": ["politics", "international"]
   },
   {
@@ -251,7 +262,8 @@
       "civilization": "player.name",
       "tied": "players.some(p => p.id !== player.id && p.knows('major') && p.major === true && p.knows('score') && p.score === player.score)"
     },
-    "importance": "player.self ? 75 : 55",
+    "tier": "notable",
+    "adjust": "(player.self ? 75 : 55) - 60",
     "tags": ["politics", "international"]
   },
   {
@@ -268,7 +280,7 @@
       "happiness": "self.happinessPercentage",
       "dropPoints": "self.before.happinessPercentage - self.happinessPercentage"
     },
-    "importance": 60,
+    "tier": "notable",
     "tags": ["politics", "domestic"]
   }
 ]

@@ -11,7 +11,8 @@
       "incident.target.at(turn - incident.turn + 1).is.alliedCityState"
     ],
     "values": { "ally": "incident.target.name", "aggressor": "incident.initiator.name" },
-    "importance": 80,
+    "tier": "major",
+    "adjust": "5",
     "tags": ["politics", "military"]
   },
   {
@@ -33,7 +34,8 @@
       "cityName": "event.knows('city') && event.city.knows('name') ? event.city.name : null",
       "distance": "event.knows('distance') ? event.distance.own : null"
     },
-    "importance": 85,
+    "tier": "crisis",
+    "adjust": "-5",
     "urgent": "event.knows('distance') && event.distance.own <= neighboring",
     "tags": ["politics", "military", "international"]
   },
@@ -48,7 +50,8 @@
       "event.minorPlayer.knows('distance') && event.minorPlayer.distance <= nearby"
     ],
     "values": { "cityState": "event.minorPlayer.name", "rival": "event.newAllyPlayer.name" },
-    "importance": "65"
+    "tier": "notable",
+    "adjust": "(65) - 60"
   },
   {
     "id": "city-state-ally-gained",
@@ -60,7 +63,8 @@
       "!(event.knows('oldAllyPlayer') && event.oldAllyPlayer.self)"
     ],
     "values": { "cityState": "event.minorPlayer.name", "distance": "event.minorPlayer.knows('distance') ? event.minorPlayer.distance : null", "replaced": "event.knows('oldAllyPlayer') && event.oldAllyPlayer.knows('name') ? event.oldAllyPlayer.name : null" },
-    "importance": "distance !== null && distance <= nearby ? 70 : 60",
+    "tier": "notable",
+    "adjust": "(distance !== null && distance <= nearby ? 70 : 60) - 60",
     "tags": ["politics", "international"]
   },
   {
@@ -76,7 +80,8 @@
       "cityState": "event.minorPlayer.name",
       "distance": "event.minorPlayer.knows('distance') ? event.minorPlayer.distance : null"
     },
-    "importance": "distance !== null && distance <= nearby ? 60 : 50",
+    "tier": "notable",
+    "adjust": "(distance !== null && distance <= nearby ? 60 : 50) - 60",
     "tags": ["politics", "international"]
   },
   {
@@ -95,7 +100,8 @@
       "friend": "event.newAllyPlayer.name",
       "distance": "event.minorPlayer.distance"
     },
-    "importance": "distance <= adjacent ? 60 : 55",
+    "tier": "notable",
+    "adjust": "(distance <= adjacent ? 60 : 55) - 60",
     "tags": ["politics", "international"]
   },
   {
@@ -112,7 +118,8 @@
       "began": "event.isNowFriend === true",
       "friendship": "event.knows('newFriendship') && Number.isFinite(event.newFriendship) ? event.newFriendship : null"
     },
-    "importance": "began ? 55 : 65",
+    "tier": "notable",
+    "adjust": "(began ? 55 : 65) - 60",
     "tags": ["politics", "international"]
   },
   {
@@ -133,7 +140,8 @@
       "previousDeadline": "Math.min(...player.before.questDeadlines.filter(deadline => Number.isSafeInteger(deadline) && deadline > turn && !player.questDeadlines.includes(deadline)))",
       "cityState": "player.name"
     },
-    "importance": 25,
+    "tier": "filler",
+    "adjust": "-5",
     "tags": ["politics", "international"]
   },
   {
@@ -150,7 +158,7 @@
       "turnsLeft": "(() => { const next = Math.min(...player.questDeadlines.filter(deadline => Number.isSafeInteger(deadline) && deadline >= turn && deadline <= turn + 3)); return next - turn; })()",
       "cityState": "player.name"
     },
-    "importance": 45,
+    "tier": "routine",
     "tags": ["politics", "international"]
   },
   {
@@ -169,7 +177,8 @@
       "turnsLeft": "Math.min(...player.questDeadlines.filter(deadline => deadline > turn + 3 && !player.before.questDeadlines.includes(deadline))) - turn",
       "cityState": "player.name"
     },
-    "importance": 35,
+    "tier": "filler",
+    "adjust": "5",
     "tags": ["politics", "international"]
   },
   {
@@ -188,7 +197,8 @@
       "distance": "event.minorPlayer.distance",
       "replaced": "event.knows('oldAllyPlayer') && event.oldAllyPlayer.knows('name') ? event.oldAllyPlayer.name : null"
     },
-    "importance": "distance <= adjacent ? 75 : 62",
+    "tier": "notable",
+    "adjust": "(distance <= adjacent ? 75 : 62) - 60",
     "tags": ["politics", "international"]
   },
   {
@@ -206,7 +216,7 @@
       "cityState": "incident.target.name",
       "aggressor": "incident.initiator.name"
     },
-    "importance": 60,
+    "tier": "notable",
     "tags": ["politics", "military", "international"]
   },
   {
@@ -228,7 +238,8 @@
       "cityName": "event.knows('city') && event.city.knows('name') ? event.city.name : null",
       "distance": "event.knows('distance') ? event.distance.own : null"
     },
-    "importance": 70,
+    "tier": "major",
+    "adjust": "-5",
     "tags": ["politics", "military", "international"]
   }
 ]

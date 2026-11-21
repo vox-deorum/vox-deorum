@@ -5,9 +5,10 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { NewspaperSnapshot } from '../../../../../../mcp-server/dist/newspaper/evidence.js';
 import { resolveEditorialSpan, scaleEditorialConstants } from '../../../../../src/newspaper/editorial/config/constants.js';
 import { prepareTriggerExpressions } from '../../../../../src/newspaper/editorial/config/expressions.js';
-import { loadEditorialConfig, parseEditorialConfig } from '../../../../../src/newspaper/editorial/config/load.js';
+import { getEditorialExpressions, loadEditorialConfig, parseEditorialConfig } from '../../../../../src/newspaper/editorial/config/load.js';
 import { buildNewspaperFacts } from '../../../../../src/newspaper/editorial/facts/index.js';
 import { reference } from '../../../../../src/newspaper/editorial/facts/model.js';
+import { evaluateTriggerRules } from '../../../../../src/newspaper/editorial/rules/evaluate.js';
 
 describe('editorial constants and shortcuts', () => {
   let directory: string;
@@ -36,7 +37,7 @@ describe('editorial constants and shortcuts', () => {
       request: { receiverPlayerID: 0, previousCheckTurn: 10, cutoffTurn: 12 },
       cities, players: [], comparisons: { cities: [], players: [] }, events: [],
     });
-    const rule = { id: 'report-neighbor', when: 'city.is.neighbor' };
+    const rule = { id: 'report-neighbor', tier: 'filler', when: 'city.is.neighbor' };
     for (const { constants, expected } of [
       { constants: base.constants, expected: false },
       { constants: modified.constants, expected: true },
@@ -55,6 +56,38 @@ describe('editorial constants and shortcuts', () => {
     });
   });
 
+  it('should apply overlay tier bases and numeric stakes and audit non-finite stakes', async () => {
+    await writeConstants({
+      tiers: { filler: 36 },
+      stakes: { player: { testPoints: 'self.gold / 2', invalidPoints: 'Infinity' } },
+    });
+    const base = await loadEditorialConfig(directory);
+    const config = await parseEditorialConfig({
+      ...base,
+      triggers: [{
+        id: 'test-stakes', subject: 'world', tier: 'filler', when: 'true',
+        adjust: ['self.stake.testPoints', 'self.stake.invalidPoints'],
+      }],
+      templates: [],
+    });
+    const facts = buildNewspaperFacts({
+      request: { receiverPlayerID: 0, previousCheckTurn: 10, cutoffTurn: 12 },
+      cities: [], comparisons: { cities: [], players: [] }, events: [],
+      players: [{
+        subjectID: 0, values: { Gold: 26 },
+        source: { table: 'PlayerSummaries', id: 1, turn: 12, createdAt: 1 },
+      }],
+    });
+    const result = await evaluateTriggerRules({
+      rules: config.triggers, compiled: await getEditorialExpressions(config),
+      constants: config.constants, facts, speedMultiplier: 1,
+    });
+    expect(result.developments).toMatchObject([{ definitionId: 'test-stakes', tier: 'filler', importance: 49 }]);
+    expect(result.audit[0].subjects[0]).toMatchObject({
+      tierBase: 36, adjustments: [{ points: 13 }, { points: 0, error: expect.any(String) }],
+    });
+  });
+
   it('should classify the bound player using visible identity and the current regional list', async () => {
     const base = await loadEditorialConfig();
     await writeConstants({ types: { eastAsianCivilizations: ['Egypt', 'Geneva'] } });
@@ -70,7 +103,7 @@ describe('editorial constants and shortcuts', () => {
       1: { name: 'China', major: true },
       22: { name: 'Geneva', major: false },
     } });
-    const rule = { id: 'report-east-asian', when: 'player.is.eastAsian' };
+    const rule = { id: 'report-east-asian', tier: 'filler', when: 'player.is.eastAsian' };
     const subjects = players.map(({ subjectID }) => ({ player: reference('player', subjectID) }));
     for (const { constants, expected } of [
       { constants: base.constants, expected: [false, true] },
@@ -108,6 +141,8 @@ describe('editorial constants and shortcuts', () => {
       { distances: { turn: 10 } },
       ...['values', 'triggerValues', 'group', 'subject', 'period', '$kind'].map(name => ({ sizes: { [name]: 1 } })),
       { sizes: { neighboring: 10 } },
+      { tiers: { neighboring: 10 } },
+      { tiers: { turn: 75 } },
       { spans: { recent: 0 } },
       { shares: { dominant: 1.1 } },
       { types: { workers: ['Worker', 2] } },

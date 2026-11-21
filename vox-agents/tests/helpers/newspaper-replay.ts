@@ -74,9 +74,9 @@ export async function writeReplayPublicationCatalogue(databasePath: string) {
   await mkdir(directory, { recursive: true });
   await Promise.all([
     writeFile(path.join(directory, 'triggers.json'), JSON.stringify([{
-      id: 'fixture-war-report', subject: 'event', event: 'DeclareWar', when: 'event.type === "DeclareWar"',
+      id: 'fixture-war-report', subject: 'event', tier: 'crisis', event: 'DeclareWar', when: 'event.type === "DeclareWar"',
       values: { eventTurn: 'event.turn' }, tags: ['military'],
-      importance: 100,
+      adjust: '10',
     }, editionBriefRule])),
     writeFile(path.join(directory, 'templates.json'), JSON.stringify([{
       id: 'fixture-war-article', triggers: ['fixture-war-report'], tags: ['military'], weight: { base: 1 },

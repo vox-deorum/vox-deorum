@@ -54,6 +54,7 @@ export interface EditorialCandidate {
   seriesKeys: string[];
   conflictKeys?: string[];
   tags: string[];
+  tier: string;
   importance: number;
   urgent: boolean;
   short: boolean;
@@ -94,8 +95,7 @@ function formatted(value: RuleScalar, format: string | undefined): string {
 
 /** Substitute authored placeholders, applying built-in units and any template overrides. */
 export function substitute(text: string, values: TemplateValues): string {
-  const declared = (values as TemplateValues & { [placeholderFormats]?: Record<string, string> })
-    [placeholderFormats];
+  const declared = (values as TemplateValues & { [placeholderFormats]?: Record<string, string> })[placeholderFormats];
   return text.replace(placeholderPattern, (whole, key: string) => {
     const [name, singular, plural, ...rest] = key.split('|');
     const value = Object.hasOwn(values, name) ? values[name] : undefined;
@@ -335,6 +335,7 @@ function candidate(
   variantBindings?: ExpressionBindings,
   mergeIdentity?: EditorialCandidate['mergeIdentity'],
 ): EditorialCandidate {
+  const strongest = parts.reduce((best, part) => part.importance > best.importance ? part : best);
   return {
     id: `${template.id}/${parts.map((part) => part.id).join('+')}`,
     subject: parts[0].subject,
@@ -345,7 +346,8 @@ function candidate(
     seriesKeys: [...new Set(parts.flatMap((part) => part.seriesKeys))],
     conflictKeys: [...new Set(parts.flatMap((part) => part.conflictKeys ?? []))],
     tags: [...new Set([...template.tags, ...parts.flatMap((part) => part.tags)])],
-    importance: Math.max(...parts.map((part) => part.importance)),
+    tier: strongest.tier,
+    importance: strongest.importance,
     urgent: parts.some((part) => part.urgent),
     short: template.short,
     weight: rating.weight,

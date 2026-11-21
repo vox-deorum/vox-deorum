@@ -51,11 +51,13 @@ export const editorialConstantsSchema = z.strictObject({
   sizes: z.record(constantNameSchema, z.number().int().nonnegative()),
   shares: z.record(constantNameSchema, z.number().min(0).max(1)),
   types: z.record(constantNameSchema, z.array(z.string().min(1))),
+  tiers: z.record(constantNameSchema, z.number().finite()),
+  stakes: z.partialRecord(z.enum(editorialShortcutSubjects), shortcutGroupSchema),
   shortcuts: z.partialRecord(z.enum(editorialShortcutSubjects), shortcutGroupSchema),
   terms: termGroupSchema.optional(),
 }).superRefine((constants, ctx) => {
   const seen = new Set<string>();
-  for (const group of ['distances', 'spans', 'sizes', 'shares', 'types'] as const) {
+  for (const group of ['distances', 'spans', 'sizes', 'shares', 'types', 'tiers'] as const) {
     for (const name of Object.keys(constants[group])) {
       if (seen.has(name)) ctx.addIssue({
         code: 'custom', path: [group, name], message: `Duplicate expression constant "${name}".`,
@@ -87,7 +89,7 @@ export function resolveEditorialSpan(
 /** Flatten constants for expressions without changing the saved Standard turn spans. */
 export function scaleEditorialConstants(constants: EditorialConstants, speedMultiplier: number): ScaledEditorialConstants {
   return {
-    ...constants.distances, ...constants.sizes, ...constants.shares, ...constants.types,
+    ...constants.distances, ...constants.sizes, ...constants.shares, ...constants.types, ...constants.tiers,
     ...Object.fromEntries(Object.keys(constants.spans).map(name => [
       name, resolveEditorialSpan(name, constants, speedMultiplier),
     ])),

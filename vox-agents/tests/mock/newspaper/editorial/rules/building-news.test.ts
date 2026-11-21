@@ -176,6 +176,26 @@ function placeholder(record: AuditSubject, field: string) {
 describe('stock building news', () => {
   beforeAll(async () => { config = await loadEditorialConfig(); });
 
+  it('should rate Walls higher during war and a Monument lower in the Industrial Era', async () => {
+    const wallsAtPeace = subject((await check(own('Walls', ['Walls']))).audit('city-defense-completed'));
+    const wartime = own('Walls', ['Walls']);
+    wartime.diplomacy!.history = [diplomacySnapshot(0, 10, [relationship(1, 'war')])];
+    const wallsAtWar = subject((await check(wartime)).audit('city-defense-completed'));
+
+    const early = own('Monument', ['Monument']);
+    const late = own('Monument', ['Monument']);
+    early.players[0].values.Era = 'Ancient Era';
+    late.players[0].values.Era = 'Industrial Era';
+    const earlyMonument = subject((await check(early)).audit('building-completed'));
+    const lateMonument = subject((await check(late)).audit('building-completed'));
+
+    for (const story of [wallsAtPeace, wallsAtWar, earlyMonument, lateMonument])
+      expect(story.outcome).toBe('fired');
+    expect(wallsAtWar.importance).toBeGreaterThan(wallsAtPeace.importance!);
+    expect(earlyMonument.importance).toBeGreaterThan(lateMonument.importance!);
+    expect(wallsAtWar.importance).toBeGreaterThan(lateMonument.importance!);
+  });
+
   it('should report a completed regular building at home with its city', async () => {
     const { audit } = await check(own('Granary', ['Granary']));
     const completed = subject(audit('building-completed'));

@@ -29,7 +29,7 @@ async function catalogue() {
         hidden: 'self.notARecordedFact',
       },
     },
-    triggers: [{ id: 'report', subject: 'world', when: 'true' }],
+    triggers: [{ id: 'report', subject: 'world', tier: 'filler', when: 'true' }],
     templates: [{
       id: 'report', triggers: ['report'], tags: [], weight: { base: 1 },
       variants: [

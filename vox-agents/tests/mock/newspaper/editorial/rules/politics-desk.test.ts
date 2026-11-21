@@ -89,11 +89,16 @@ function fixture({
 /** Build a continuous war pair with optional directional score and weariness readings. */
 function warEvidence(
   extra: Partial<NewspaperDiplomacySnapshot['relationships'][number]> = {},
+  distance = 4,
 ): NewspaperEvidence {
   const cutoff = 10;
   return fixture({
     cutoff, previous: 5,
     players: [playerRow(0, cutoff), playerRow(1, cutoff)],
+    cities: [
+      cityRow(10, cutoff, 0, 'Tours', { X: 0 }),
+      cityRow(20, cutoff, 1, 'Recife', { X: distance }),
+    ],
     diplomacy: [
       snapshot(0, cutoff, [relationship(1, 'war', extra)]),
       snapshot(1, cutoff, [relationship(0, 'war')]),
@@ -354,8 +359,13 @@ describe('stock politics desk', () => {
       const against = await check(warEvidence({ warScore: -30 }));
       const losing = firedSubjects(rule(against, 'war-turns-against-us'));
       expect(losing).toHaveLength(1);
-      expect(losing[0]).toMatchObject({ subject: 'pair/0/1', importance: 70 });
+      expect(losing[0]).toMatchObject({ subject: 'pair/0/1', tier: 'notable' });
       expect(subjectValue(losing[0], 'score')).toBe(-30);
+
+      const distant = await check(warEvidence({ warScore: -30 }, config.constants.distances.regional + 5));
+      const distantLoss = firedSubjects(rule(distant, 'war-turns-against-us'));
+      expect(distantLoss).toHaveLength(1);
+      expect(losing[0].importance).toBeGreaterThan(distantLoss[0].importance!);
 
       const forward = await check(warEvidence({ warScore: 30 }));
       const winning = firedSubjects(rule(forward, 'war-turns-our-way'));

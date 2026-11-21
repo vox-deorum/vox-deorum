@@ -35,8 +35,8 @@ describe('newspaper diplomacy trigger rules', () => {
   it('should fire a vassal story, keep the independent declaration and publish one account per incident', async () => {
     const base = await loadEditorialConfig();
     const summary = {
-      id: 'war-opening', subject: 'incident', window: 'long', when: "incident.kind == 'war'",
-      values: { initiator: 'incident.initiator.name' }, importance: 55,
+      id: 'war-opening', subject: 'incident', tier: 'filler', window: 'long', when: "incident.kind == 'war'",
+      values: { initiator: 'incident.initiator.name' }, adjust: '25',
     };
     const config = await parseEditorialConfig({
       ...base,

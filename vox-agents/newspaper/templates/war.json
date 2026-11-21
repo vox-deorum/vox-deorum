@@ -1679,12 +1679,12 @@
     "names": ["enemies"],
     "weight": { "base": 1 },
     "merge": {
-      "match": "member.incident?.is.incomingMajorDeclaration && self.wars.some(p => p.knows('id') && p.id === member.incident.initiator.id)",
+      "match": "member.incident?.is.incomingMajorDeclaration && member.incident.initiator.knows('name') && self.wars.some(p => p.knows('id') && p.id === member.incident.initiator.id)",
       "min": 1,
       "priority": 10,
       "values": {
-        "attackers": "(() => { const declarations = new Map(merge.members.map(({ incident }) => [incident.initiator.id, incident.initiator])); const named = [...declarations.values()].filter(p => p.knows('name')).map(p => p.name); const unknown = declarations.size - named.length; if (unknown) named.push(unknown === 1 ? 'one unnamed power' : unknown + ' unnamed powers'); return named.join(', '); })()",
-        "otherFronts": "(() => { const declarations = merge.members.map(m => m.incident); const fresh = new Set(declarations.map(i => i.initiator.id)); const first = declarations.reduce((a, b) => b.turn < a.turn ? b : a); const earlier = new Set(first.earlierWarOpponents.map(entry => entry.player.id)); const ongoing = [], other = []; for (const rival of self.wars) { if (!rival.knows('major') || !rival.major || !rival.knows('id') || fresh.has(rival.id)) continue; (earlier.has(rival.id) ? ongoing : other).push(rival.knows('name') ? rival.name : 'an unnamed power'); } return [ongoing.length ? 'Already at war with: ' + ongoing.join(', ') + '.' : '', other.length ? 'Other active fronts: ' + other.join(', ') + '.' : ''].filter(Boolean).join(' ') || 'These declarations account for all active major fronts.'; })()",
+        "attackers": "Array.from(new Map(merge.members.map(({ incident }) => [incident.initiator.id, incident.initiator.name])).values()).join(', ')",
+        "otherFronts": "(() => { const declarations = merge.members.map(m => m.incident); const fresh = new Set(declarations.map(i => i.initiator.id)); const first = declarations.reduce((a, b) => b.turn < a.turn ? b : a); const earlier = new Set(first.earlierWarOpponents.map(entry => entry.player.id)); const ongoing = [], other = []; for (const rival of self.wars) { if (!rival.knows('major') || !rival.major || !rival.knows('id') || fresh.has(rival.id)) continue; (earlier.has(rival.id) ? ongoing : other).push(rival.name); } return [ongoing.length ? 'Already at war with: ' + ongoing.join(', ') + '.' : '', other.length ? 'Other active fronts: ' + other.join(', ') + '.' : ''].filter(Boolean).join(' ') || 'These declarations account for all active major fronts.'; })()",
         "allies": "(() => { const named = new Map(); for (const { incident } of merge.members) for (const entry of incident.hostileCityStateAllies) if (entry.player.knows('name')) named.set(entry.player.id, entry.player.name); return named.size ? ' Hostile city-state allies: ' + [...named.values()].join(', ') + '.' : ''; })()"
       },
       "variants": [
@@ -1961,10 +1961,10 @@
     },
     "variants": [],
     "merge": {
-      "match": "member.incident?.is.incomingMajorDeclaration && member.incident.turn === lead.key",
+      "match": "member.incident?.is.incomingMajorDeclaration && member.incident.initiator.knows('name') && member.incident.turn === lead.key",
       "min": 3,
       "values": {
-        "attackers": "(() => { const declarations = new Map(merge.members.map(({ incident }) => [incident.initiator.id, incident.initiator])); const named = [...declarations.values()].filter(p => p.knows('name')).map(p => p.name); const unknown = declarations.size - named.length; if (unknown) named.push(unknown === 1 ? 'one unnamed power' : unknown + ' unnamed powers'); return named.join(', '); })()",
+        "attackers": "Array.from(new Map(merge.members.map(({ incident }) => [incident.initiator.id, incident.initiator.name])).values()).join(', ')",
         "distinctAttackers": "new Set(merge.members.map(m => m.incident.initiator.id)).size",
         "allies": "(() => { const named = new Map(); for (const { incident } of merge.members) for (const entry of incident.hostileCityStateAllies) if (entry.player.knows('name')) named.set(entry.player.id, entry.player.name); return named.size ? ' Hostile city-state allies: ' + [...named.values()].join(', ') + '.' : ''; })()"
       },

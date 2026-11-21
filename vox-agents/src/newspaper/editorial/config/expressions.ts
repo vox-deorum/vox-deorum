@@ -6,11 +6,11 @@ import {
   type ExpressionRunner,
 } from '../shared/expressions.js';
 import type { EditorialConstants } from './constants.js';
-import type { EditorialConfig, EditorialTriggerRule } from './schema.js';
+import { literalTierName, type EditorialConfig, type EditorialTriggerRule } from './schema.js';
 import type { ChoiceExpressions } from '../shared/eligibility.js';
 import type { StyleCatalogue } from './styles.js';
 
-type TriggerExpressionFields = Pick<EditorialTriggerRule, 'id' | 'values' | 'importance' | 'urgent' | 'group'> & {
+type TriggerExpressionFields = Pick<EditorialTriggerRule, 'id' | 'values' | 'tier' | 'adjust' | 'urgent' | 'group'> & {
   when: Readonly<EditorialTriggerRule['when']>;
 };
 
@@ -18,7 +18,9 @@ type TriggerExpressionFields = Pick<EditorialTriggerRule, 'id' | 'values' | 'imp
 export interface TriggerExpressionSlots {
   readonly when: readonly number[];
   readonly values: ReadonlyMap<string, number>;
-  readonly importance?: number;
+  readonly tier?: number;
+  readonly literalTier?: string;
+  readonly adjust: readonly number[];
   readonly urgent?: number;
   readonly groupBy?: number;
 }
@@ -69,7 +71,7 @@ export async function prepareTriggerExpressions(
   const terms = termSlots(constants?.terms, expressions);
   const slots = triggerSlots(rules, expressions);
   return {
-    runner: await compileEditorialExpressions(expressions, { shortcuts: constants?.shortcuts }),
+    runner: await compileEditorialExpressions(expressions, { shortcuts: constants?.shortcuts, stakes: constants?.stakes }),
     slots, terms,
   };
 }
@@ -96,6 +98,7 @@ function triggerSlots(rules: readonly TriggerExpressionFields[], expressions: Ed
     if (slots.has(rule.id)) throw new Error(`Duplicate trigger rule ID "${rule.id}".`);
     /** Register a field and its index in the shared evaluator. */
     const add = (field: string, source: string) => addExpression(expressions, rule.id, field, source);
+    const literalTier = literalTierName(rule.tier);
     slots.set(rule.id, {
       when:
         typeof rule.when === 'string'
@@ -107,8 +110,10 @@ function triggerSlots(rules: readonly TriggerExpressionFields[], expressions: Ed
           add(`values.${name}`, source),
         ])
       ),
-      importance:
-        typeof rule.importance === 'string' ? add('importance', rule.importance) : undefined,
+      tier: literalTier === undefined ? add('tier', rule.tier) : undefined,
+      literalTier,
+      adjust: typeof rule.adjust === 'string' ? [add('adjust', rule.adjust)] :
+        (rule.adjust ?? []).map((source, index) => add(`adjust[${index}]`, source)),
       urgent: rule.urgent === undefined ? undefined : add('urgent', rule.urgent),
       groupBy: rule.group && add('group.by', rule.group.by),
     });
@@ -163,6 +168,6 @@ export async function prepareEditorialExpressions(config: EditorialConfig): Prom
     ...rule, slot: addExpression(expressions, `style rule ${rule.id}`, 'when', rule.when),
   }));
 
-  const runner = await compileEditorialExpressions(expressions, { shortcuts: config.constants.shortcuts });
+  const runner = await compileEditorialExpressions(expressions, { shortcuts: config.constants.shortcuts, stakes: config.constants.stakes });
   return { runner, slots, terms, templates, pages, designs, mastheadRules, styleRules };
 }

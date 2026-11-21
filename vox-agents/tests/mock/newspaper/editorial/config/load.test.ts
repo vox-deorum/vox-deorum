@@ -282,7 +282,7 @@ describe('editorial catalogue files', () => {
       { id: 'first', triggers: ['custom-trigger'], tags: ['trade'], weight: { base: 1 }, variants: [] },
     ]);
     await writeDocument('triggers/trade.json', [{
-      id: 'custom-trigger', subject: 'world', importance: 2, when: 'true',
+      id: 'custom-trigger', subject: 'world', tier: 'filler', adjust: '-28', when: 'true',
     }]);
     await writeDocument('designs/custom.json', [{ id: design.id, title: 'Custom title' }]);
     await writeDocument('templates/notes.txt', 'Ignored non-JSON document');
@@ -294,7 +294,7 @@ describe('editorial catalogue files', () => {
       variants: [{ id: 'primary', headline: 'Original', body: ['Replacement'] }],
     });
     expect(loaded.templates.slice(base.templates.length).map(entry => entry.id)).toEqual(['local', 'first', 'last']);
-    expect(loaded.triggers.at(-1)).toMatchObject({ id: 'custom-trigger', importance: 2 });
+    expect(loaded.triggers.at(-1)).toMatchObject({ id: 'custom-trigger', tier: 'filler', adjust: '-28' });
     expect(loaded.designs.find(entry => entry.id === design.id)).toEqual({ ...design, title: 'Custom title' });
   });
 
@@ -315,7 +315,7 @@ describe('editorial catalogue files', () => {
     for (const change of [
       { detector: 'warTransition' }, { subject: 'event' }, { event: 'DealMade' },
       { subject: 'event', event: [] }, { window: 'unknown' }, { repeat: 'unknown' },
-      { repeat: 0 }, { when: [] }, { group: { by: 'city.owner.id', min: 0 } },
+      { repeat: 0 }, { when: [] }, { tier: undefined }, { tier: 'unknownTier' }, { importance: 10 }, { group: { by: 'city.owner.id', min: 0 } },
       { values: { city: 'true' } }, { values: { neighboring: 'true' } },
       ...['values', 'triggerValues', 'group', 'subject', 'period', '$kind', 'story'].map(name => ({ values: { [name]: '1' } })),
       ...['Math', 'undefined', 'NaN', 'JSON'].map(name => ({ values: { [name]: '1' } })),
@@ -337,10 +337,10 @@ describe('editorial catalogue files', () => {
 
   it('should require template triggers that can match the same subject', async () => {
     const base = await loadEditorialConfig();
-    const primary = { id: 'primary', subject: 'city', when: 'true', group: { by: 'city.owner.id' } };
+    const primary = { id: 'primary', subject: 'city', tier: 'filler', when: 'true', group: { by: 'city.owner.id' } };
     const report = { id: 'report', triggers: ['primary', 'secondary'], tags: [], weight: { base: 1 }, variants: [] };
     const scope = (secondary: { subject: string; group?: { by: string } }) => ({
-      ...base, templates: [report], triggers: [primary, { id: 'secondary', when: 'true', ...secondary }],
+      ...base, templates: [report], triggers: [primary, { id: 'secondary', tier: 'filler', when: 'true', ...secondary }],
     });
     await expect(parseEditorialConfig(scope({ subject: 'city', group: { by: 'city.owner.id' } }))).resolves.toBeDefined();
     for (const secondary of [{ subject: 'city' }, { subject: 'player', group: { by: 'player.id' } }]) {
@@ -365,7 +365,7 @@ describe('editorial catalogue files', () => {
 
   it('should allow documented local values named distance and count', async () => {
     const base = await loadEditorialConfig();
-    const rule = { id: 'rated', subject: 'world', when: 'true', values: { distance: '2', count: 'distance + 1' } };
+    const rule = { id: 'rated', subject: 'world', tier: 'filler', when: 'true', values: { distance: '2', count: 'distance + 1' } };
     await expect(parseEditorialConfig({ ...base, triggers: [rule], templates: [] })).resolves.toMatchObject({ triggers: [rule] });
   });
 

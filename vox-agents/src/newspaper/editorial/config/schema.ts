@@ -1,3 +1,4 @@
+import { parse } from 'acorn';
 import { z } from 'zod';
 import { presentationSchema } from '../../contracts/design.js';
 import { linkTargetSchema } from '../../contracts/issue.js';
@@ -32,6 +33,27 @@ export const authoredVariantSchema = eligibleSchema.extend({
   'Set voice, stance and genre together.',
 );
 export type AuthoredVariant = z.infer<typeof authoredVariantSchema>;
+/** Read a bare or quoted tier name; other expressions are resolved during rating. */
+export function literalTierName(source: string): string | undefined {
+  // Parse as one expression so comments, whitespace and parentheses match the evaluator.
+  try {
+    const prefix = '"use strict";\n';
+    const wrapped = `${prefix}(\n${source}\n)`;
+    const { body } = parse(wrapped, { ecmaVersion: 'latest', preserveParens: true });
+    const statement = body[1];
+    if (body.length !== 2 || statement?.type !== 'ExpressionStatement') return undefined;
+    let expr = statement.expression;
+    if (expr.type !== 'ParenthesizedExpression' || expr.start !== prefix.length || expr.end !== wrapped.length)
+      return undefined;
+    while (expr.type === 'ParenthesizedExpression') expr = expr.expression;
+    if (expr.type === 'Identifier') return expr.name;
+    if (expr.type === 'Literal' && typeof expr.value === 'string') return expr.value;
+  } catch {
+    // The expression compiler reports invalid JavaScript with its catalogue location.
+  }
+  return undefined;
+}
+
 const spanSchema = z.union([z.string().min(1), z.number().positive()]);
 const eventTypesSchema = z.union([z.string().min(1), z.array(z.string().min(1)).min(1)]);
 
@@ -43,7 +65,8 @@ export const editorialTriggerRuleSchema = z.strictObject({
   window: spanSchema.optional(),
   when: z.union([expressionSchema, z.array(expressionSchema).min(1)]),
   values: z.record(editorialValueNameSchema, expressionSchema).optional(),
-  importance: z.union([z.number(), expressionSchema]).optional(),
+  tier: expressionSchema,
+  adjust: z.union([expressionSchema, z.array(expressionSchema)]).optional(),
   urgent: expressionSchema.optional(),
   group: z.strictObject({ by: expressionSchema, min: z.number().int().positive().optional() }).optional(),
   chance: z.number().min(0).max(1).optional(),
@@ -77,7 +100,7 @@ const templateSchema = eligibleSchema.extend({
 });
 export type EditorialTemplate = z.infer<typeof templateSchema>;
 /** Version of the effective editorial catalogue saved with decisions. */
-export const editorialConfigVersion = 2;
+export const editorialConfigVersion = 3;
 
 const designSchema = eligibleSchema.extend({
   id: z.string().min(1),
@@ -191,6 +214,9 @@ export const editorialConfigSchema = z
     }
     const rulesById = new Map(config.triggers.map((rule) => [rule.id, rule]));
     config.triggers.forEach((rule, index) => {
+      const tier = literalTierName(rule.tier);
+      if (tier !== undefined && !Object.hasOwn(config.constants.tiers, tier))
+        ctx.addIssue({ code: 'custom', path: ['triggers', index, 'tier'], message: `Unknown editorial tier "${tier}".` });
       for (const field of ['window', 'repeat'] as const) {
         const span = rule[field];
         if (field === 'repeat' && (span === 'rearm' || span === 'once')) continue;
@@ -202,7 +228,7 @@ export const editorialConfigSchema = z
           });
       }
       for (const name of Object.keys(rule.values ?? {}))
-        if ((['distances', 'spans', 'sizes', 'shares', 'types'] as const).some(
+        if ((['distances', 'spans', 'sizes', 'shares', 'types', 'tiers'] as const).some(
           (group) => Object.hasOwn(config.constants[group], name)
         ))
           ctx.addIssue({

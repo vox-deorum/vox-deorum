@@ -14,7 +14,8 @@
       "allies": "incident.participants.filter(p => p.reason === 'pact' && p.side === incident.role && !p.player.self && p.player.knows('name')).map(p => p.player.name).join(', ')",
       "opponent": "incident.role === 'initiator' ? incident.target.name : incident.initiator.name"
     },
-    "importance": 80,
+    "tier": "major",
+    "adjust": "5",
     "tags": ["politics", "military", "international"]
   },
   {
@@ -30,7 +31,8 @@
       "barbarians": "city.tacticalZones()?.filter(z => z.knows('units') && Object.hasOwn(z.units, 'Barbarians')).flatMap(z => Object.values(z.units.Barbarians)).filter(n => Number.isFinite(n) && n > 0).reduce((sum, n) => sum + n, 0) ?? 0",
       "posture": "city.tacticalZones()?.find(z => z.knows('posture'))?.posture ?? null"
     },
-    "importance": "50 + Math.min(30, 5 * barbarians)",
+    "tier": "notable",
+    "adjust": "(50 + Math.min(30, 5 * barbarians)) - 60",
     "urgent": "barbarians >= 4",
     "tags": ["cities", "military"]
   },
@@ -45,7 +47,8 @@
     "values": {
       "damage": "(city.maxHitPoints - city.hitPoints) / city.maxHitPoints"
     },
-    "importance": "60 + 40 * damage",
+    "tier": "notable",
+    "adjust": "(60 + 40 * damage) - 60",
     "urgent": "damage >= 0.5"
   },
   {
@@ -68,7 +71,8 @@
       "wallStrength": "city.hitPoints",
       "maxWallStrength": "city.maxHitPoints"
     },
-    "importance": "50 + 30 * damage",
+    "tier": "notable",
+    "adjust": "(50 + 30 * damage) - 60",
     "tags": ["cities", "military", "international"]
   },
   {
@@ -90,7 +94,8 @@
       "previousPosture": "city.tacticalZones()[zoneIndex].previousPosture",
       "posture": "city.tacticalZones()[zoneIndex].posture"
     },
-    "importance": 55,
+    "tier": "notable",
+    "adjust": "-5",
     "tags": ["cities", "military", "international"]
   },
   {
@@ -112,7 +117,8 @@
       "previousPosture": "city.tacticalZones()[zoneIndex].previousPosture",
       "posture": "city.tacticalZones()[zoneIndex].posture"
     },
-    "importance": 40,
+    "tier": "routine",
+    "adjust": "-5",
     "tags": ["cities", "military", "international"]
   },
   {
@@ -131,7 +137,7 @@
       "previousPosture": "city.tacticalZones()[zoneIndex].previousPosture",
       "posture": "city.tacticalZones()[zoneIndex].posture"
     },
-    "importance": 45,
+    "tier": "routine",
     "tags": ["cities", "military", "international"]
   },
   {
@@ -146,7 +152,8 @@
       "cityName": "city.name",
       "enemies": "(() => { const zones = city.tacticalZones()?.filter(z => z.knows('units')) ?? []; return self.wars.filter(p => p.major && p.knows('name') && zones.some(z => Object.hasOwn(z.units, p.name))).map(p => p.name).join(', '); })()"
     },
-    "importance": 65,
+    "tier": "notable",
+    "adjust": "5",
     "tags": ["cities", "military", "domestic"]
   },
   {
@@ -168,7 +175,8 @@
       "by": "event.killedPlayer.id",
       "min": 3
     },
-    "importance": "Math.min(75, 40 + 10 * count)",
+    "tier": "notable",
+    "adjust": "(Math.min(75, 40 + 10 * count)) - 60",
     "tags": ["politics", "military"]
   },
   {
@@ -190,7 +198,8 @@
       "winner": "event.newOwner.name",
       "distance": "event.distance.own"
     },
-    "importance": "Math.max(50, 70 - distance)",
+    "tier": "notable",
+    "adjust": "(Math.max(50, 70 - distance)) - 60",
     "tags": ["politics", "military", "international"]
   },
   {
@@ -208,7 +217,8 @@
       "target": "incident.target.knows('name') ? incident.target.name : null",
       "nearestDistance": "Math.min(incident.initiator.knows('distance') ? incident.initiator.distance : Infinity, incident.target.knows('distance') ? incident.target.distance : Infinity)"
     },
-    "importance": "45 + nearby - nearestDistance",
+    "tier": "notable",
+    "adjust": "(45 + nearby - nearestDistance) - 60",
     "tags": ["politics", "military", "international"]
   },
   {
@@ -225,7 +235,8 @@
       "target": "incident.target.knows('name') ? incident.target.name : null",
       "nearestDistance": "Math.min(incident.initiator.knows('distance') ? incident.initiator.distance : Infinity, incident.target.knows('distance') ? incident.target.distance : Infinity)"
     },
-    "importance": "55 + nearby - nearestDistance",
+    "tier": "notable",
+    "adjust": "(55 + nearby - nearestDistance) - 60",
     "tags": ["politics", "military", "international"]
   },
   {
@@ -238,7 +249,8 @@
       "event.distance.own <= nearby"
     ],
     "values": { "loser": "event.oldOwner.name", "winner": "event.newOwner.name" },
-    "importance": "75"
+    "tier": "notable",
+    "adjust": "(75) - 60"
   },
   {
     "id": "nearby-city-captured",
@@ -256,7 +268,8 @@
       "winner": "event.newOwner.knows('name') ? event.newOwner.name : null",
       "distance": "event.distance.own"
     },
-    "importance": "65 - 2 * distance",
+    "tier": "notable",
+    "adjust": "(65 - 2 * distance) - 60",
     "tags": ["cities", "military"]
   },
   {
@@ -274,7 +287,8 @@
       "ourStrength": "self.militaryStrength",
       "theirStrength": "player.militaryStrength"
     },
-    "importance": "ourStrength > 0 ? 40 + 40 * (theirStrength / ourStrength - 1) : 80"
+    "tier": "notable",
+    "adjust": "(ourStrength > 0 ? 40 + 40 * (theirStrength / ourStrength - 1) : 80) - 60"
   },
   {
     "id": "our-army-overtakes-neighbor",
@@ -291,7 +305,8 @@
       "ourStrength": "self.militaryStrength",
       "theirStrength": "player.militaryStrength"
     },
-    "importance": "theirStrength > 0 ? 40 + Math.min(25, 25 * (ourStrength / theirStrength - 1)) : 65",
+    "tier": "notable",
+    "adjust": "(theirStrength > 0 ? 40 + Math.min(25, 25 * (ourStrength / theirStrength - 1)) : 65) - 60",
     "tags": ["politics", "military", "international"]
   },
   {
@@ -308,7 +323,8 @@
       "wallStrength": "city.hitPoints",
       "maxWallStrength": "city.maxHitPoints"
     },
-    "importance": "50 + 40 * damage",
+    "tier": "notable",
+    "adjust": "(50 + 40 * damage) - 60",
     "urgent": "damage >= 0.5",
     "tags": ["cities", "military", "domestic"]
   },
@@ -327,7 +343,8 @@
       "previousPosture": "city.tacticalZones()[zoneIndex].previousPosture",
       "posture": "city.tacticalZones()[zoneIndex].posture"
     },
-    "importance": 40,
+    "tier": "routine",
+    "adjust": "-5",
     "tags": ["cities", "military", "domestic"]
   },
   {
@@ -345,7 +362,7 @@
       "previousPosture": "city.tacticalZones()[zoneIndex].previousPosture",
       "posture": "city.tacticalZones()[zoneIndex].posture"
     },
-    "importance": 45,
+    "tier": "routine",
     "tags": ["cities", "military", "domestic"]
   },
   {
@@ -363,7 +380,8 @@
       "target": "incident.target.name",
       "role": "incident.knows('role') ? incident.role : null"
     },
-    "importance": "incident.knows('role') && incident.role !== 'none' ? 75 : 60",
+    "tier": "notable",
+    "adjust": "(incident.knows('role') && incident.role !== 'none' ? 75 : 60) - 60",
     "tags": ["politics", "military", "international"]
   },
   {
@@ -374,7 +392,8 @@
       "incident.knows('concessions') && Array.isArray(incident.concessions) && incident.concessions.length > 0"
     ],
     "values": { "concessions": "incident.concessions.join(', ')", "count": "incident.concessions.length", "role": "incident.knows('role') ? incident.role : null", "initiator": "incident.knows('initiator') && incident.initiator.knows('name') ? incident.initiator.name : null", "target": "incident.knows('target') && incident.target.knows('name') ? incident.target.name : null" },
-    "importance": "role !== null && role !== 'none' ? 75 : 50",
+    "tier": "notable",
+    "adjust": "(role !== null && role !== 'none' ? 75 : 50) - 60",
     "tags": ["politics", "military", "international"]
   },
   {
@@ -391,7 +410,8 @@
       "settled": "incident.role === 'initiator' ? incident.target.name : incident.initiator.name",
       "remaining": "self.wars.filter(p => p.major && p.knows('name') && p.id !== (incident.role === 'initiator' ? incident.target.id : incident.initiator.id)).map(p => p.name).join(', ')"
     },
-    "importance": 72,
+    "tier": "major",
+    "adjust": "-3",
     "tags": ["politics", "military", "international"]
   },
   {
@@ -403,7 +423,8 @@
       "self.knows('before')",
       "players.some(rival => !rival.self && rival.knows('major') && rival.major === true && rival.knows('before') && self.before.relation(rival).knows('war') && self.before.relation(rival).war === true)"
     ],
-    "importance": 70,
+    "tier": "major",
+    "adjust": "-5",
     "tags": ["politics", "military"]
   },
   {
@@ -423,7 +444,8 @@
       "by": "event.killerPlayer.id",
       "min": 3
     },
-    "importance": "Math.min(80, 45 + 10 * count)",
+    "tier": "notable",
+    "adjust": "(Math.min(80, 45 + 10 * count)) - 60",
     "tags": ["politics", "military"]
   },
   {
@@ -439,7 +461,8 @@
       "initiator": "incident.initiator.name",
       "target": "incident.target.name"
     },
-    "importance": "incident.role == 'none' ? 45 : 80",
+    "tier": "notable",
+    "adjust": "(incident.role == 'none' ? 45 : 80) - 60",
     "urgent": "incident.role == 'target'"
   },
   {
@@ -452,7 +475,8 @@
       "held(pair, s => Math.abs(s.warScore - pair.warScore) <= 5, short)"
     ],
     "values": { "opponent": "pair.other.name" },
-    "importance": "50",
+    "tier": "notable",
+    "adjust": "(50) - 60",
     "repeat": "medium"
   },
   {
@@ -471,7 +495,7 @@
       "first": "incident.initiator.name",
       "second": "incident.target.name"
     },
-    "importance": 60,
+    "tier": "notable",
     "tags": ["politics", "military", "international"]
   },
   {
@@ -486,7 +510,7 @@
       "opponent": "pair.other.knows('name') ? pair.other.name : null",
       "turns": "pair.warTurns"
     },
-    "importance": 60,
+    "tier": "notable",
     "tags": ["politics", "military"]
   },
   {
@@ -499,7 +523,8 @@
       "incident.knows('target') && incident.target.knows('name')"
     ],
     "values": { "role": "incident.role", "reason": "incident.knows('reason') ? incident.reason : null", "initiator": "incident.initiator.name", "target": "incident.target.name", "hostileAllies": "(() => { const names = incident.hostileCityStateAllies.filter(entry => entry.player.knows('name')).map(entry => entry.player.name); return names.length ? ' Hostile city-state allies: ' + names.join(', ') + '.' : ''; })()" },
-    "importance": "role == 'target' ? 95 : role == 'initiator' ? 85 : 75",
+    "tier": "notable",
+    "adjust": "(role == 'target' ? 95 : role == 'initiator' ? 85 : 75) - 60",
     "urgent": "role == 'target'",
     "tags": ["politics", "military"]
   },
@@ -509,13 +534,14 @@
     "when": [
       "self.knows('atWar') && self.atWar === true",
       "self.knows('wars') && Array.isArray(self.wars)",
-      "self.wars.filter(p => !p.self && p.knows('major') && p.major === true).length >= 3"
+      "(() => { const opponents = self.wars.filter(p => !p.self && p.knows('major') && p.major === true); return opponents.length >= 3 && opponents.every(p => p.knows('name')); })()"
     ],
     "values": {
       "count": "self.wars.filter(p => !p.self && p.knows('major') && p.major === true).length",
-      "enemies": "(() => { const names = self.wars.filter(p => !p.self && p.knows('major') && p.major === true && p.knows('name')).map(p => p.name); return names.length <= 2 ? names.join(' and ') : names.slice(0, -1).join(', ') + ', and ' + names[names.length - 1]; })()"
+      "enemies": "(() => { const names = self.wars.filter(p => !p.self && p.knows('major') && p.major === true).map(p => p.name); return names.slice(0, -1).join(', ') + ', and ' + names[names.length - 1]; })()"
     },
-    "importance": 80,
+    "tier": "major",
+    "adjust": "5",
     "repeat": "medium",
     "tags": ["politics", "military"]
   },
@@ -532,7 +558,8 @@
       "opponent": "pair.other.name",
       "score": "pair.warScore"
     },
-    "importance": 70,
+    "tier": "notable",
+    "adjust": ["pair.other.stake.front","Math.min(15, (-score - 25) / 3)"],
     "tags": ["politics", "military"]
   },
   {
@@ -548,7 +575,7 @@
       "opponent": "pair.other.name",
       "score": "pair.warScore"
     },
-    "importance": 60,
+    "tier": "notable",
     "tags": ["politics", "military"]
   },
   {
@@ -565,7 +592,8 @@
       "opponent": "pair.other.knows('name') ? pair.other.name : null",
       "weariness": "self.relation(pair.other).warWeariness"
     },
-    "importance": 50,
+    "tier": "routine",
+    "adjust": "5",
     "tags": ["politics", "military"]
   },
   {
@@ -581,18 +609,20 @@
       "opponent": "pair.other.name",
       "weariness": "self.relation(pair.other).warWeariness"
     },
-    "importance": 65,
+    "tier": "notable",
+    "adjust": "5",
     "tags": ["politics", "military"]
   },
   {
     "id": "incoming-war-wave",
     "subject": "incident",
-    "when": "incident.is.incomingMajorDeclaration",
+    "when": "incident.is.incomingMajorDeclaration && incident.knows('initiator') && incident.initiator.knows('name')",
     "group": {
       "by": "incident.turn",
       "min": 3
     },
-    "importance": 95,
+    "tier": "crisis",
+    "adjust": "5",
     "urgent": "true",
     "tags": [
       "politics",

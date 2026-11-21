@@ -12,7 +12,7 @@
       "founded": "self.foundedReligion",
       "majorityFaith": "self.majorityReligion"
     },
-    "importance": 60,
+    "tier": "notable",
     "tags": ["politics", "domestic"]
   },
   {
@@ -31,7 +31,8 @@
       "city.conversions.some(c => c.knows('religion') && c.religion === city.majorityReligion)"
     ],
     "values": { "cityState": "city.owner.name", "religion": "city.majorityReligion" },
-    "importance": 55,
+    "tier": "notable",
+    "adjust": "-5",
     "tags": ["politics", "international"]
   },
   {
@@ -55,7 +56,8 @@
       "religion": "city.majorityReligion",
       "distance": "city.distance.own"
     },
-    "importance": 55,
+    "tier": "notable",
+    "adjust": "-5",
     "tags": ["religion", "international"]
   },
   {
@@ -71,7 +73,8 @@
       "religion": "event.religion",
       "stage": "event.type === 'ReligionReformed' ? 'reformed' : 'enhanced'"
     },
-    "importance": "stage === 'reformed' ? 55 : 45",
+    "tier": "notable",
+    "adjust": "(stage === 'reformed' ? 55 : 45) - 60",
     "tags": ["religion", "international"]
   },
   {
@@ -89,7 +92,8 @@
       "civilization": "player.name",
       "religion": "player.majorityReligion"
     },
-    "importance": 65,
+    "tier": "notable",
+    "adjust": "5",
     "tags": ["politics", "international", "religion"]
   },
   {
@@ -105,7 +109,8 @@
       "religion": "event.religion",
       "holyCity": "event.knows('holyCity') && event.holyCity.knows('name') ? event.holyCity.name : null"
     },
-    "importance": 55,
+    "tier": "notable",
+    "adjust": "-5",
     "tags": ["politics", "international"]
   },
   {
@@ -123,7 +128,8 @@
       "former": "typeof self.before.majorityReligion === 'string' && self.before.majorityReligion.length > 0 ? self.before.majorityReligion : null",
       "founded": "self.is.hasFoundedReligion ? self.foundedReligion : null"
     },
-    "importance": 70,
+    "tier": "major",
+    "adjust": "-5",
     "tags": ["politics", "domestic", "religion"]
   },
   {
@@ -142,7 +148,7 @@
       "religion": "player.majorityReligion",
       "former": "player.before.majorityReligion"
     },
-    "importance": 60,
+    "tier": "notable",
     "tags": ["politics", "international", "religion"]
   },
   {
@@ -157,7 +163,8 @@
       "by": "city.majorityReligion",
       "min": 3
     },
-    "importance": "40 + 10 * count"
+    "tier": "notable",
+    "adjust": "(40 + 10 * count) - 60"
   },
   {
     "id": "our-faith-deepens",
@@ -174,7 +181,8 @@
       "religion": "event.religion",
       "stage": "event.type === 'ReligionReformed' ? 'reformed' : 'enhanced'"
     },
-    "importance": "stage === 'reformed' ? 70 : 60",
+    "tier": "notable",
+    "adjust": "(stage === 'reformed' ? 70 : 60) - 60",
     "tags": ["religion", "domestic"]
   },
   {
@@ -191,7 +199,8 @@
       "faithful": "self.cities.filter(c => c.own && c.knows('majorityReligion') && c.majorityReligion === self.foundedReligion).length",
       "others": "self.cities.filter(c => c.is.followsAnotherReligion).map(c => c.majorityReligion).filter((r, i, all) => all.indexOf(r) === i).join(', ')"
     },
-    "importance": "45 + Math.min(25, 5 * divided)",
+    "tier": "notable",
+    "adjust": "(45 + Math.min(25, 5 * divided)) - 60",
     "tags": ["politics", "domestic", "religion"]
   },
   {
@@ -207,7 +216,8 @@
       "religion": "city.majorityReligion",
       "ours": "self.knows('foundedReligion') && typeof self.foundedReligion === 'string' && city.majorityReligion === self.foundedReligion"
     },
-    "importance": "ours ? 55 : 65",
+    "tier": "notable",
+    "adjust": "(ours ? 55 : 65) - 60",
     "tags": ["cities", "domestic"]
   },
   {
@@ -224,7 +234,8 @@
       "cityName": "event.knows('city') && event.city.knows('name') ? event.city.name : null",
       "belief": "event.knows('beliefType') && typeof event.beliefType === 'string' ? event.beliefType : null"
     },
-    "importance": "ours ? 60 : 45",
+    "tier": "notable",
+    "adjust": "(ours ? 60 : 45) - 60",
     "tags": ["religion", "international"]
   },
   {
@@ -237,7 +248,7 @@
     "values": {
       "religion": "self.foundedReligion"
     },
-    "importance": 75,
+    "tier": "major",
     "tags": ["politics", "domestic"]
   }
 ]

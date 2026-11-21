@@ -31,7 +31,7 @@ type Group = ExpressionBatch['groups'][number];
 type Sources = RuleDevelopment['sources'];
 type AuditSubject = TriggerRuleAudit['subjects'][number];
 type AuditGroup = TriggerRuleAudit['groups'][number];
-type NamedStep = { slot: number | undefined; field: string; source: string; bind?: string; numeric?: true };
+type NamedStep = { slot: number | undefined; field: string; source: string; bind?: string; adjustment?: true };
 
 interface SubjectMatch extends RuleGroupMatch {
   sources: Sources;
@@ -53,14 +53,24 @@ export function ruleHistoryTurns(
   return longest;
 }
 
-/** Map rating fields to compiled steps; numeric and absent importance need no sandbox work. */
+/** Map rating fields to compiled steps; literal tiers need no sandbox work. */
 function ratingSteps(rule: EditorialTriggerRule, slots: TriggerExpressionSlots): NamedStep[] {
   const steps: NamedStep[] = [];
-  if (typeof rule.importance === 'string')
-    steps.push({ slot: slots.importance, field: 'importance', source: rule.importance, numeric: true });
+  if (slots.tier !== undefined)
+    steps.push({ slot: slots.tier, field: 'tier', source: rule.tier });
   if (rule.urgent !== undefined)
     steps.push({ slot: slots.urgent, field: 'urgent', source: rule.urgent });
+  const adjustments = typeof rule.adjust === 'string' ? [rule.adjust] : rule.adjust ?? [];
+  steps.push(...adjustments.map((source, index) => ({
+    slot: slots.adjust[index], field: typeof rule.adjust === 'string' ? 'adjust' : `adjust[${index}]`,
+    source, adjustment: true as const,
+  })));
   return steps;
+}
+
+/** Validate adjustments as finite numbers and evaluate their failures independently. */
+function adjustmentSlots(steps: readonly NamedStep[]): number[] {
+  return steps.flatMap((step, index) => step.adjustment ? [index] : []);
 }
 
 /** Select compiled indices for the authored fields; catalogue and runner must match. */
@@ -121,6 +131,7 @@ export async function evaluateTriggerRules({
     const rate = ratingSteps(rule, slots);
     const tail = rule.group ? [{ slot: slots.groupBy, field: 'group.by', source: rule.group.by }] : rate;
     const steps: NamedStep[] = [...guards, ...values, ...tail];
+    const adjustments = adjustmentSlots(steps);
     const batch: Group = {
       windowFromTurn: limit, expressions: indices(steps),
       subjects: subjects.map(subject => subject.bindings),
@@ -128,19 +139,20 @@ export async function evaluateTriggerRules({
         guardCount: guards.length,
         bind: Object.fromEntries(steps.flatMap((step, index) => step.bind === undefined ? [] : [[index, step.bind]])),
         limits: subjects.map((_, index) => allowed[index] && !chanceFailed[index] ? steps.length : guards.length),
-        numeric: steps.flatMap((step, index) => step.numeric ? [index] : []),
+        numeric: adjustments,
+        optional: adjustments,
       },
     };
     return {
       rule, subjects, conflictBySubject, policy, limit, keys, allowed, chanceFailed,
-      guards, values, rate, steps, batch,
+      guards, values, rate, steps, batch, literalTier: slots.literalTier,
     };
   });
   const checks = await compiled.runner.evaluate({ constants: scaled, facts, groups: plans.map(plan => plan.batch) }, budget);
   const pending: { batch: Group; complete(results: ExpressionResult[]): void }[] = [];
   const outcomes = plans.map((plan, planIndex) => {
     const { rule, subjects, conflictBySubject, policy, limit, keys, allowed, chanceFailed,
-      guards, values, rate, steps } = plan;
+      guards, values, rate, steps, literalTier } = plan;
     const developments: RuleDevelopment[] = [];
     const audit: TriggerRuleAudit = {
       rule: rule.id, windowFromTurn: limit, subjectCount: subjects.length, subjects: [], groups: [],
@@ -150,13 +162,32 @@ export async function evaluateTriggerRules({
     /** Create one development and remember only subjects that actually contributed to it. */
     function emit(subject: string, memberSubjects: string[], placeholders: RuleDevelopment['values'], sources: Sources,
       rating: readonly ExpressionResult[], record: AuditSubject | AuditGroup) {
-      const importanceStep = rate.findIndex(step => step.field === 'importance');
-      const urgentStep = rate.findIndex(step => step.field === 'urgent');
-      const importance = typeof rule.importance === 'number' ? rule.importance : scalar(rating[importanceStep]);
+      const tier = literalTier ?? scalar(rating[rate.findIndex(step => step.field === 'tier')]);
+      if (typeof tier !== 'string' || !Object.hasOwn(constants.tiers, tier)) {
+        const expression = record.expressions.find(step => step.field === 'tier');
+        const error = typeof tier === 'string' ? `Unknown editorial tier "${tier}".` : 'Expected an editorial tier name.';
+        if (expression) expression.error = error;
+        else record.expressions.push({ field: 'tier', source: rule.tier, error });
+        record.outcome = 'error';
+        return;
+      }
+      record.tier = tier;
+      record.tierBase = constants.tiers[tier];
+      record.adjustments = rate.flatMap(({ adjustment, source }, index) => {
+        if (!adjustment) return [];
+        const result = rating[index];
+        if ('error' in result) return [{
+          source, points: 0, error: result.error.message,
+          ...(result.error.hidden === undefined ? {} : { hidden: result.error.hidden }),
+        }];
+        return [{ source, points: result.value as number }];
+      });
+      record.importance = Math.min(100, Math.max(0,
+        record.adjustments.reduce((total, { points }) => total + points, record.tierBase)));
+      record.urgent = !!scalar(rating[rate.findIndex(step => step.field === 'urgent')]);
+      record.outcome = 'fired';
       const periodSubject = rule.subject === 'event' || rule.subject === 'incident';
       const fingerprint = JSON.stringify([rule.id, subject, ...(periodSubject ? memberSubjects : [facts.turn])]);
-      record.importance = typeof importance === 'number' ? Math.min(100, Math.max(0, importance)) : 50;
-      record.urgent = !!scalar(rating[urgentStep]);
       const seriesKeys = memberSubjects.map(member => ruleSubjectKey(rule.id, member));
       const conflictKeys = memberSubjects.flatMap(member => {
         const key = conflictBySubject.get(member);
@@ -165,7 +196,7 @@ export async function evaluateTriggerRules({
       developments.push({
         id: fingerprint, fingerprint, definitionId: rule.id, subject, seriesKeys,
         ...(conflictKeys.length ? { conflictKeys } : {}),
-        period: { from: limit, to: facts.turn }, importance: record.importance,
+        period: { from: limit, to: facts.turn }, tier, importance: record.importance,
         urgent: record.urgent, tags: [...(rule.tags ?? [])],
         values: placeholders, sources,
       });
@@ -198,7 +229,7 @@ export async function evaluateTriggerRules({
         record.outcome = 'chance';
         continue;
       }
-      const failure = results.find(result => 'error' in result);
+      const failure = results.find((result, offset) => 'error' in result && !steps[offset].adjustment);
       if (failure && 'error' in failure) {
         record.outcome = failure.error.hidden ? 'hidden' : 'error';
         continue;
@@ -207,7 +238,6 @@ export async function evaluateTriggerRules({
       const tail = results.slice(guards.length + values.length);
       if (!rule.group) {
         emit(subject.key, [subject.key], placeholders, sources, tail, record);
-        record.outcome = 'fired';
         if (nextState[keys[index]]) record.repeat = nextState[keys[index]];
         continue;
       }
@@ -245,18 +275,18 @@ export async function evaluateTriggerRules({
       const complete = (results: ExpressionResult[]) => {
         record.expressions = auditSteps(rate, results);
         record.sources = uniqueSources([...record.sources, ...expressionSources(record.expressions)]);
-        const error = results.find(result => 'error' in result);
+        const error = results.find((result, offset) => 'error' in result && !rate[offset].adjustment);
         if (error && 'error' in error) {
           record.outcome = error.error.hidden ? 'hidden' : 'error';
           return;
         }
         emit(subject, entries.map(entry => entry.subject), placeholders, record.sources, results, record);
-        record.outcome = 'fired';
       };
+      const adjustments = adjustmentSlots(rate);
       if (rate.length) pending.push({
         batch: {
           windowFromTurn: limit, expressions: indices(rate), subjects: [placeholders],
-          ordered: { guardCount: 0, numeric: rate.flatMap((step, index) => step.numeric ? [index] : []) },
+          ordered: { guardCount: 0, numeric: adjustments, optional: adjustments },
         },
         complete,
       });
