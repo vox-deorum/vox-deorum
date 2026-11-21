@@ -293,7 +293,7 @@
         "voice": "tabloid",
         "stance": "hawkish",
         "genre": "report",
-        "when": "civilization !== null && distance !== null",
+        "when": "distance !== null",
         "headline": "Up the road, a new era",
         "body": [
           "{{civilization}} is in the {{era}} as of this week, and its nearest city is only {{distance}} from our own gate. No army has crossed. No stone has moved. The neighbor simply knows more than it did last month, and that is usually how trouble begins."
@@ -305,7 +305,6 @@
         "voice": "spoken",
         "stance": "traditional",
         "genre": "anecdote",
-        "when": "civilization !== null",
         "headline": "It is told of {{civilization}}",
         "body": [
           "It is told that when the {{era}} reached {{civilization}}, the grandmothers hid the old seed jars in the rafters and would not say where. The young ones laughed and bought new ones. The jars are still up there, and the tellers say nobody has needed them yet."
@@ -317,7 +316,6 @@
         "voice": "pamphlet",
         "stance": "government-critical",
         "genre": "editorial",
-        "when": "civilization !== null",
         "headline": "A rival enters the {{era}}. And us?",
         "body": [
           "{{civilization}} has entered the {{era}}, {{terms.civic.people}}, and its {{player.civic.government}} will soon be telling anyone who listens how little it cost. Ask our own {{terms.civic.government}} the same question and watch the answer turn into a speech. What did we pay to keep pace, and whose purse was opened? A government that cannot show the bill should not ask for the credit."
@@ -335,19 +333,9 @@
     "variants": [
       {
         "id": "technology-leader-changes-report",
-        "when": "civilization !== null",
         "headline": "First in learning: {{civilization}}",
         "body": [
           "{{civilization}} now stands first in learning, with {{count|known technology|known technologies}} to its name. A bookseller here has cleared a shelf for the leading country's newest journals and put a card in the window before a single volume arrived. First place is a loan, not a gift, and the shelf remembers who earned it."
-        ],
-        "weight": { "base": 1 }
-      },
-      {
-        "id": "technology-leader-changes-unnamed",
-        "when": "civilization === null",
-        "headline": "A new nation stands first in learning",
-        "body": [
-          "A nation we cannot name has taken the lead in learning with {{count|known technology|known technologies}}, and the dispatch that brought the count left the name to rumor. The reading room has had a request for a journal nobody can order. The librarian has put a blank card in the catalogue and told her assistant to fill it in when the world says who."
         ],
         "weight": { "base": 1 }
       },
@@ -356,7 +344,6 @@
         "voice": "press",
         "stance": "rationalist",
         "genre": "ledger",
-        "when": "civilization !== null",
         "headline": "The learning count, restated",
         "body": [
           "At the top of the learning tally: {{civilization}}",
@@ -373,7 +360,7 @@
         "voice": "feed",
         "stance": "neutral",
         "genre": "joke",
-        "when": "tied && civilization !== null",
+        "when": "tied",
         "headline": "First place, shared",
         "body": [
           "{{civilization}} leads the world with {{count|art or science|arts and sciences}}. Someone else has the same number. The top step was not built for a crowd."

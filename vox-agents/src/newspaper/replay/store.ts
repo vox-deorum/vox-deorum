@@ -38,22 +38,24 @@ export class ReplayStore {
   private readonly db: Database.Database;
   private readonly revisions = new Map<string, number>();
 
-  /** Create only the offline output schema and reject incompatible databases. */
+  /** Open the output schema and rebuild older newspaper tables in place. */
   constructor(readonly filename: string) {
     mkdirSync(path.dirname(filename), { recursive: true });
     this.db = new Database(filename);
     try {
       this.db.pragma('foreign_keys = ON');
-      const version = this.db.pragma('user_version', { simple: true });
-      const tables = this.db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as { name: string }[];
-      if (version !== 0 && version !== offlineSchemaVersion) {
-        throw new Error('Unsupported offline newspaper database version. Regenerate from the same MCP recording using a fresh newspaper output path.');
-      }
-      if (version === 0 && tables.length) throw new Error('The output path contains a different database.');
-      if (version !== 0 && !['OfflineReplayRuns', 'OfflineReplayChecks', 'OfflineReplayIssues'].every(name => tables.some(table => table.name === name))) {
-        throw new Error('The output path is not an offline newspaper database.');
-      }
       this.db.transaction(() => {
+        const version = Number(this.db.pragma('user_version', { simple: true }));
+        const tables = this.db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as { name: string }[];
+        if (version === 0 ? tables.length > 0 : !['OfflineReplayRuns', 'OfflineReplayChecks', 'OfflineReplayIssues'].every(name => tables.some(table => table.name === name))) {
+          throw new Error('The output path contains a different database.');
+        }
+        if (version !== 0 && version !== offlineSchemaVersion) {
+          if (version < 1 || version > offlineSchemaVersion) {
+            throw new Error('This newspaper output uses an unsupported version. Choose another output path.');
+          }
+          this.db.exec('DROP TABLE OfflineReplayIssues; DROP TABLE OfflineReplayChecks; DROP TABLE OfflineReplayRuns;');
+        }
         this.db.exec(`
           CREATE TABLE IF NOT EXISTS OfflineReplayRuns (
             RunID TEXT NOT NULL, Receiver INTEGER NOT NULL, SourceIdentity TEXT NOT NULL,
@@ -89,7 +91,7 @@ export class ReplayStore {
   load(runId: string, receiver: number, sourceIdentity: string): ReplayCheckpoint {
     const row = this.db.prepare('SELECT SourceIdentity, Checkpoint, Revision FROM OfflineReplayRuns WHERE RunID = ? AND Receiver = ?')
       .get(runId, receiver) as { SourceIdentity: string; Checkpoint: string; Revision: number } | undefined;
-    if (!row) throw new Error('The requested replay run and receiver were not found.');
+    if (!row) throw new Error('The requested replay run and receiver were not found. Choose New run and Generate to regenerate editions from the recording.');
     if (row.SourceIdentity !== sourceIdentity) throw new Error('This run belongs to a different source recording.');
     const checkpoint = checkpointSchema.parse(JSON.parse(row.Checkpoint));
     this.revisions.set(JSON.stringify([runId, receiver]), row.Revision);

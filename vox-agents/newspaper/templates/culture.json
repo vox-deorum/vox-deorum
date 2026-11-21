@@ -377,14 +377,6 @@
         "weight": { "base": 1 }
       },
       {
-        "id": "enemy-wonder-nearby-unnamed",
-        "headline": "An enemy city completes a wonder near our border",
-        "body": [
-          "The {{wonder}} is finished in an enemy city near the border. A peddler who came through this week says the site is swept clean and the stone already weathered at the corners. He did not linger, and he advises others not to."
-        ],
-        "weight": { "base": 1 }
-      },
-      {
         "id": "enemy-wonder-nearby-analysis",
         "voice": "press",
         "stance": "hawkish",
@@ -437,7 +429,6 @@
     "variants": [
       {
         "id": "foreign-wonder-completed-report",
-        "when": "cityName !== null && civilization !== null",
         "headline": "{{cityName}} completes the {{wonder}}",
         "body": [
           "The {{wonder}} in {{cityName}} is finished, and the city answers to {{civilization}}. The scaffolding is barely down, and carters here already quote a fare to the gate. Innkeepers along the road are counting beds they do not yet have."
@@ -448,20 +439,10 @@
         "weight": { "base": 1 }
       },
       {
-        "id": "foreign-wonder-completed-unnamed",
-        "when": "cityName === null || civilization === null",
-        "headline": "A wonder finished abroad",
-        "body": [
-          "The {{wonder}} is done in a foreign city, and the news arrived before the paint on the doors was dry. A ferryman at the crossing says the road beyond his landing has been busy for a week. He has raised his fare and intends to raise it again."
-        ],
-        "weight": { "base": 1 }
-      },
-      {
         "id": "foreign-wonder-completed-analysis",
         "voice": "press",
         "stance": "ambitious",
         "genre": "analysis",
-        "when": "civilization !== null",
         "headline": "The {{wonder}} makes {{civilization}} hard to forget",
         "body": [
           "The {{wonder}} now stands finished in {{civilization}}, and its newspapers will be full of the story for a season. A stonecutter here read the account twice and then asked his foreman what our own yards might raise with the same will and better stone. The next great work should answer that question."
@@ -473,7 +454,6 @@
         "voice": "spoken",
         "stance": "neutral",
         "genre": "anecdote",
-        "when": "cityName !== null",
         "headline": "They will walk you through every stone",
         "body": [
           "The boards came down at {{cityName}} last week, and a carter who walked through the {{wonder}} says the crowd did it in silence. He has been describing the roof to anyone who will listen since he got back. Crowds do not usually go quiet."
@@ -488,7 +468,6 @@
         "voice": "gazette",
         "stance": "conciliatory",
         "genre": "report",
-        "when": "cityName !== null",
         "headline": "The {{wonder}} at {{cityName}} is complete",
         "body": [
           "Innkeepers in {{cityName}} report a busy season since the {{wonder}} opened, with guests from many nations, ours among them. A quarrel between courts does not close a good hall to travelers. May the road stay open and the crowds keep coming."
@@ -509,19 +488,9 @@
     "variants": [
       {
         "id": "great-person-born-report",
-        "when": "civilization !== null",
         "headline": "A name for the histories is born in {{civilization}}",
         "body": [
           "A crowd gathered in {{civilization}} for the birth of {{person}}, and the lane was full of small gifts wrapped in cloth. A bellringer who came late could not reach the door, so he rang a short peal from the corner. By morning the name was on every tongue in the market."
-        ],
-        "weight": { "base": 1 }
-      },
-      {
-        "id": "great-person-born-unnamed",
-        "when": "civilization === null",
-        "headline": "A name for the histories is born",
-        "body": [
-          "Couriers have been knocking at a house where {{person}} was born, and the family has not yet chosen which court to favour. A sealed letter is waiting in the yard with the second one behind it. More will follow before the week is out."
         ],
         "weight": { "base": 1 }
       },
@@ -530,7 +499,7 @@
         "voice": "chronicle",
         "stance": "traditional",
         "genre": "report",
-        "when": "civilization !== null && unit !== null",
+        "when": "unit !== null",
         "headline": "In this year a {{unit}} came to {{civilization}}",
         "body": [
           "In this year {{civilization}} received the {{unit}} {{person}}, and the register gives the title in full. The clerk ruled a fresh line for the name and left the next one empty. The page was left open until the ink had dried."
@@ -554,7 +523,7 @@
         "voice": "pamphlet",
         "stance": "hawkish",
         "genre": "report",
-        "when": "ours === false && civilization !== null",
+        "when": "ours === false",
         "headline": "Word for the {{terms.civic.people}}: a rival has a name we lack",
         "body": [
           "Mark this, {{terms.civic.people}}: {{civilization}} can point to {{person}} and say, this one is ours. Our own square has no such name to shout, and the masons have stopped asking when it will. A people that cannot raise its own great ones will borrow them from elsewhere."
@@ -822,14 +791,6 @@
         "weight": { "base": 1 }
       },
       {
-        "id": "our-wonder-completed-unnamed",
-        "headline": "A wonder of our own is finished",
-        "body": [
-          "Word came at dawn that the {{wonder}} is finished, and the gate stood open all morning while people walked in without asking leave. A baker set down his tray and did not pick it up until a neighbor called his name. The story will reach the next valley by market day."
-        ],
-        "weight": { "base": 1 }
-      },
-      {
         "id": "our-wonder-completed-notice",
         "voice": "crier",
         "stance": "national",
@@ -882,7 +843,6 @@
     "variants": [
       {
         "id": "tourism-output-leader-changes-report",
-        "when": "civilization !== null",
         "headline": "The visitors come to {{civilization}} first",
         "body": [
           "Tour groups in {{civilization}} are turning people away, and the coach yard fills before the sun is high. The visitors' table now has the country first at {{tourism}}, ahead of whoever held the lead last season. Innkeepers are already talking about next year."
@@ -893,20 +853,11 @@
         "weight": { "base": 1 }
       },
       {
-        "id": "tourism-output-leader-changes-unnamed",
-        "when": "civilization === null",
-        "headline": "A change at the top of the tourism table",
-        "body": [
-          "Someone new sits at the top of the visitors' table with a rating of {{tourism}}. A coach clerk says travelers now ask for a route they ignored last year, and she has stopped recommending the old one. The old leader has sent no protest."
-        ],
-        "weight": { "base": 1 }
-      },
-      {
         "id": "tourism-output-leader-changes-gazette",
         "voice": "gazette",
         "stance": "national",
         "genre": "report",
-        "when": "civilization !== null && tied === false",
+        "when": "tied === false",
         "headline": "The tourism lead goes to {{civilization}}",
         "body": [
           "We are credibly informed that {{civilization}} stands alone at the head of the visitors' table, rated {{tourism}}. An almanac editor here has already reserved his first page for the country and sent a boy to find a picture of the harbor. He expects the edition to sell out."
@@ -921,7 +872,7 @@
         "voice": "press",
         "stance": "neutral",
         "genre": "report",
-        "when": "civilization !== null && tied === true",
+        "when": "tied === true",
         "headline": "A share of first place for {{civilization}}",
         "body": [
           "The visitors' count now has {{civilization}} level with the leader at {{tourism}}, and no clerk will call the race finished. A booking agent has begun asking travelers what they like to see before naming a country. The answer decides more than it used to."
@@ -936,7 +887,6 @@
         "voice": "feed",
         "stance": "neutral",
         "genre": "report",
-        "when": "civilization !== null",
         "headline": "Tourism: No. 1 for {{civilization}}",
         "body": [
           "{{tourism}}. First on the visitors' table. Every guide in town already knows."

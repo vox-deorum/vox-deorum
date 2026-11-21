@@ -321,18 +321,6 @@
         "weight": { "base": 1 }
       },
       {
-        "id": "city-being-razed-unnamed",
-        "voice": "general",
-        "stance": "neutral",
-        "genre": "report",
-        "when": "cityName === null",
-        "headline": "A city held by {{civilization}} is being razed",
-        "body": [
-          "A city held by {{civilization}} is burning, and no name for it has reached this office. Smoke has been seen from the border road, and travelers say the work is deliberate. {{turns}} remain before the site is cleared."
-        ],
-        "weight": { "base": 1 }
-      },
-      {
         "id": "city-being-razed-population",
         "voice": "general",
         "stance": "neutral",
@@ -406,25 +394,10 @@
     "variants": [
       {
         "id": "city-capture-gained",
-        "when": "gained === true && formerOwner !== null",
+        "when": "gained === true",
         "headline": "{{cityName}} is ours",
         "body": [
           "Our soldiers took {{cityName}} from {{formerOwner}}, and our flag went up over the gate before the smoke cleared. The granaries, the walls and the people inside all passed to us with the city. The garrison that held it is gone, and the market has reopened."
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
-        ],
-        "weight": { "base": 1 }
-      },
-      {
-        "id": "city-capture-gained-unnamed",
-        "voice": "general",
-        "stance": "neutral",
-        "genre": "report",
-        "when": "gained === true && formerOwner === null",
-        "headline": "{{cityName}} is ours",
-        "body": [
-          "{{cityName}} has fallen to our troops, though no dispatch names the power that held it. The flag came down at the gate and ours went up. The clerks will fill in the rest of the story when the reports arrive."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -436,40 +409,13 @@
         "voice": "general",
         "stance": "neutral",
         "genre": "report",
-        "when": "gained === false && captor !== null",
+        "when": "gained === false",
         "headline": "{{cityName}} falls to {{captor}}",
         "body": [
           "{{captor}} has taken {{cityName}} from us. The garrison is broken, the gates stand open to their soldiers, and the oaths sworn there last season count for nothing. Runners carried the news out ahead of the closing roads."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
-        ],
-        "weight": { "base": 1 }
-      },
-      {
-        "id": "city-capture-lost-unnamed",
-        "voice": "general",
-        "stance": "neutral",
-        "genre": "report",
-        "when": "gained === false && captor === null",
-        "headline": "{{cityName}} is lost",
-        "body": [
-          "{{cityName}} no longer answers to us. No report names the power that took it, and no terms have come through. The loss is certain even where the details are not, and the road to the city is closed."
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
-        ],
-        "weight": { "base": 1 }
-      },
-      {
-        "id": "city-capture-unnamed",
-        "voice": "general",
-        "stance": "neutral",
-        "genre": "report",
-        "when": "cityName === null",
-        "headline": "A city changes hands",
-        "body": [
-          "A city has changed hands, and our soldiers were on one side of the gate. No dispatch names the place or the power, but somewhere a watch changed flags at dawn. The clerks will have the name soon; the families inside knew it before the sun rose."
         ],
         "weight": { "base": 1 }
       },
@@ -976,18 +922,6 @@
         "weight": { "base": 1 }
       },
       {
-        "id": "distant-colony-founded-unnamed",
-        "voice": "general",
-        "stance": "neutral",
-        "genre": "report",
-        "when": "cityName === null",
-        "headline": "A colony far from the capital",
-        "body": [
-          "A new settlement stands {{distance}} beyond the capital, and its name has not reached our records. No official has been sent to give it one. For now the settlers call it home, and the maps call it nothing."
-        ],
-        "weight": { "base": 1 }
-      },
-      {
         "id": "distant-colony-founded-analysis",
         "voice": "press",
         "stance": "ambitious",
@@ -1046,18 +980,6 @@
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
-        ],
-        "weight": { "base": 1 }
-      },
-      {
-        "id": "foreign-building-completed-unnamed",
-        "voice": "general",
-        "stance": "neutral",
-        "genre": "report",
-        "when": "cityName === null",
-        "headline": "New work near our border",
-        "body": [
-          "{{civilization}} has finished a {{building}} in one of the border cities, and no name for the place has reached us. The work is close enough to be seen from our side. The next report will likely name it."
         ],
         "weight": { "base": 1 }
       },
@@ -1124,18 +1046,6 @@
         "weight": { "base": 1 }
       },
       {
-        "id": "foreign-building-purchased-unnamed",
-        "voice": "general",
-        "stance": "neutral",
-        "genre": "report",
-        "when": "cityName === null",
-        "headline": "A purchase near our border",
-        "body": [
-          "{{civilization}} has bought a {{building}} outright in a city near our border, and no report gives the place a name. The price was paid in {{currency}}, and the work changed hands finished. The sum is the interesting part."
-        ],
-        "weight": { "base": 1 }
-      },
-      {
         "id": "foreign-building-purchased-press",
         "voice": "press",
         "stance": "hawkish",
@@ -1188,7 +1098,6 @@
     "variants": [
       {
         "id": "forward-settle-named",
-        "when": "ours !== null",
         "headline": "A new town on the doorstep of {{ours}}",
         "body": [
           "A new town called {{city}} now stands {{distance}} from {{ours}}, and {{player}} put it there. From the far field, our farmers can see its roofs and its smoke. The ground between the two towns is the first thing they will argue about."
@@ -1199,23 +1108,10 @@
         "weight": { "base": 1 }
       },
       {
-        "id": "forward-settle-location",
-        "voice": "general",
-        "stance": "neutral",
-        "genre": "report",
-        "when": "ours === null",
-        "headline": "A rival town rises close to home",
-        "body": [
-          "{{player}} has founded a town {{distance}} from one of our cities, on ground that lay open last season. The fences of a rival now cross it. Our nearest farmers will see the smoke before our council hears the news."
-        ],
-        "weight": { "base": 1 }
-      },
-      {
         "id": "forward-settle-analysis",
         "voice": "press",
         "stance": "hawkish",
         "genre": "analysis",
-        "when": "ours !== null",
         "headline": "{{player}} plants a town near {{ours}}",
         "body": [
           "{{player}} has placed {{city}} {{distance}} from {{ours}}, and the site was chosen with care. A settlement that close can watch our road, shelter their patrols and crowd our fields without a single soldier in sight. The answer to a post is another post, and ours has not been built."
@@ -1230,7 +1126,6 @@
         "voice": "pamphlet",
         "stance": "local",
         "genre": "editorial",
-        "when": "ours !== null",
         "headline": "{{city}} rises beside {{ours}}",
         "body": [
           "There is a new town called {{city}} {{distance}} from {{ours}}, and no one has told the farmers where their fields end. {{player}} drew the line on a map in some far room. Send surveyors before the harvest, or the first argument over a furrow will be settled with a scythe."
@@ -1245,7 +1140,6 @@
         "voice": "gazette",
         "stance": "conciliatory",
         "genre": "report",
-        "when": "ours !== null",
         "headline": "New neighbors at {{city}}",
         "body": [
           "We are informed that {{player}} has founded {{city}}, a town {{distance}} from {{ours}} and close enough for a morning's ride. Such neighbors try the patience, but they also bring a market where our merchants may sell. It is cheaper to trade across a border than to guard it."
@@ -1338,18 +1232,6 @@
         "weight": { "base": 1 }
       },
       {
-        "id": "occupied-city-resists-unnamed",
-        "voice": "general",
-        "stance": "neutral",
-        "genre": "report",
-        "when": "cityName === null",
-        "headline": "Resistance continues in an occupied city",
-        "body": [
-          "In one of the occupied cities, the day's orders go up on the wall and come down before the ink dries. The city is expected to resist for {{turns}} more, according to the last dispatch. No official will put a name to it."
-        ],
-        "weight": { "base": 1 }
-      },
-      {
         "id": "occupied-city-resists-population",
         "voice": "press",
         "stance": "government-critical",
@@ -1405,7 +1287,6 @@
     "variants": [
       {
         "id": "our-city-founded-report",
-        "when": "cityName !== null",
         "headline": "A new city: {{cityName}}",
         "body": [
           "The stakes went in at dawn, and by dusk {{cityName}} had a fire, a roped-off square and a name on the gate. Our settlers raised it under our flag. What comes next is the old list: houses, fields and walls."
@@ -1416,23 +1297,10 @@
         "weight": { "base": 1 }
       },
       {
-        "id": "our-city-founded-unnamed",
-        "voice": "general",
-        "stance": "neutral",
-        "genre": "report",
-        "when": "cityName === null",
-        "headline": "A new city is founded",
-        "body": [
-          "A new city stands on ground that was empty last season, and its name has not yet reached the records. Our settlers drove the stakes and raised the first roof. The clerks will catch up with the map in a week or two."
-        ],
-        "weight": { "base": 1 }
-      },
-      {
         "id": "our-city-founded-crier",
         "voice": "crier",
         "stance": "national",
         "genre": "notice",
-        "when": "cityName !== null",
         "headline": "Hear it! {{cityName}} is founded",
         "body": [
           "Word for every street and every stall: {{cityName}} is founded! Our settlers raised the flag at dawn, and there is a new city under it! {{terms.civic.people}}, say the name and say it again: {{cityName}}!"
@@ -1447,7 +1315,6 @@
         "voice": "press",
         "stance": "ambitious",
         "genre": "analysis",
-        "when": "cityName !== null",
         "headline": "{{cityName}} begins its story",
         "body": [
           "Every city begins as a promise that someone has to keep. {{cityName}} has the site, the settlers and the flag, and nothing else that a hard winter respects. Seed and tools sent this season will decide whether the town is a city in ten years."
@@ -1462,7 +1329,6 @@
         "voice": "gazette",
         "stance": "pro-government",
         "genre": "notice",
-        "when": "cityName !== null",
         "headline": "A new settlement at {{cityName}}",
         "body": [
           "It is with pleasure that we record the founding of {{cityName}} under the nation's flag. The {{terms.civic.government}} has pledged the town protection and a share of the next stores. Settlers bound for the site may register at the capital."
@@ -1477,7 +1343,6 @@
         "voice": "gazette",
         "stance": "local",
         "genre": "letter",
-        "when": "cityName !== null",
         "headline": "Who pays for the sign in {{cityName}}?",
         "byline": "A sign painter",
         "body": [
@@ -1634,18 +1499,6 @@
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
-        ],
-        "weight": { "base": 1 }
-      },
-      {
-        "id": "we-raze-a-city-unnamed",
-        "voice": "general",
-        "stance": "neutral",
-        "genre": "report",
-        "when": "cityName === null",
-        "headline": "A city is being razed",
-        "body": [
-          "Our troops are burning a city, and no report has given this office its name. The work is deliberate and the count is set: {{turns}} more. The clerks will have the name eventually, when there is nothing left to name."
         ],
         "weight": { "base": 1 }
       },

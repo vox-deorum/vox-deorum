@@ -356,6 +356,30 @@ describe('durable replay publication', () => {
     await expect(session.configure({ ...settings(), runId: 'legacy', mode: 'resume' })).rejects.toMatchObject({ status: 400 });
   });
 
+  it('should rebuild older newspaper output in place when generating a new run', async () => {
+    await session.configure(settings());
+    const original = await session.advance();
+    expect(original.check?.status).toBe('published');
+    await session.close();
+    const source = await readFile(recording.filename);
+    const sqlite = new Database(outputPath);
+    try {
+      sqlite.exec('CREATE TABLE unrelated (value INTEGER); INSERT INTO unrelated VALUES (42)');
+      sqlite.pragma('user_version = 5');
+    } finally { sqlite.close(); }
+    session = new ReplaySession();
+    const rebuilt = await session.configure({ ...settings(), mode: 'new' });
+    expect(rebuilt.outputPath).toBe(outputPath);
+    expect(rebuilt.cursor.cutoffTurn).toBeNull();
+    expect((await session.listIssues()).issues).toEqual([]);
+    expect((await session.advance()).check?.status).toBe('published');
+    expect((await session.listIssues()).issues).toHaveLength(1);
+    expect(await readFile(recording.filename)).toEqual(source);
+    const reopened = new Database(outputPath, { readonly: true });
+    try { expect(reopened.prepare('SELECT value FROM unrelated').get()).toEqual({ value: 42 }); }
+    finally { reopened.close(); }
+  });
+
   it.each([
     { file: 'pages', entries: [{ id: 'front', when: 'self.era === "Modern Era"' }] },
     { file: 'designs', entries: [{ id: 'oral-accounts', layouts: [{ id: 'account', weight: { base: 10, adjustments: [{ when: 'true', add: -10 }] } }] }] },

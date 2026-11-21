@@ -618,7 +618,7 @@ describe('stock politics desk', () => {
       expect(firedSubjects(rule(held, 'rival-adopts-ideology'))).toEqual([]);
     });
 
-    it('should report a new branch key and name it only when one key was added', async () => {
+    it('should report a policy branch opening only when the record shows a single new branch', async () => {
       const cutoff = 30;
       const opened = await check(fixture({
         cutoff, previous: 25,
@@ -637,9 +637,7 @@ describe('stock politics desk', () => {
         beforePlayers: [playerRow(0, 20, { PolicyBranches: { Tradition: [] } })],
       }));
       const severalFired = firedSubjects(rule(several, 'policy-branch-opened'));
-      expect(severalFired).toHaveLength(1);
-      expect(subjectValue(severalFired[0], 'branch')).toBeNull();
-      expect(subjectValue(severalFired[0], 'count')).toBe(3);
+      expect(severalFired).toEqual([]);
 
       const unchanged = await check(fixture({
         cutoff, previous: 25,

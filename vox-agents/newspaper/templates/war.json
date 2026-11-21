@@ -563,9 +563,10 @@
     "variants": [
       {
         "id": "foreign-capital-falls-report",
-        "headline": "A capital falls, far from home",
+        "when": "cityName !== null",
+        "headline": "{{cityName}} falls to {{winner}}",
         "body": [
-          "News has come that a capital abroad has been taken by force, {{distance}} from the nearest of our cities. The report arrived with a ship's cargo, and the customs clerk read it twice before entering the duty. The war is far away, but the prices it moves are not."
+          "News has come that {{winner}} has taken {{cityName}}, the capital of {{loser}}, by force, {{distance}} from the nearest of our cities. The report arrived with a ship's cargo, and the customs clerk read it twice before entering the duty. The war is far away, but the prices it moves are not."
         ],
         "weight": { "base": 1 }
       },
@@ -574,7 +575,7 @@
         "voice": "press",
         "stance": "neutral",
         "genre": "analysis",
-        "when": "cityName !== null && loser !== null && winner !== null",
+        "when": "cityName !== null",
         "headline": "After {{cityName}} falls, where do the envoys go?",
         "body": [
           "{{cityName}}, the seat of {{loser}}, now answers to {{winner}}. A state can lose its capital and keep its authority, or keep the buildings and lose the habit of command. Watch which envoys still call at which door, and the answer will show itself."
@@ -586,7 +587,6 @@
         "voice": "chronicle",
         "stance": "devout",
         "genre": "report",
-        "when": "loser !== null && winner !== null",
         "headline": "The fall of a capital",
         "body": [
           "The year's record states that {{winner}} took by arms the capital of {{loser}}, at a distance of {{distance}} from our own cities. The keeper of the rolls entered the fall beside the accounts of plague and drought. Prayer was ordered for the city's people, and no cause was written."
@@ -598,7 +598,6 @@
         "voice": "broadcast",
         "stance": "neutral",
         "genre": "report",
-        "when": "winner !== null",
         "headline": "Abroad tonight, a capital has fallen",
         "body": [
           "Abroad tonight, word comes that {{winner}} has seized a capital. That is {{distance}} from the closest of our cities. New maps will be needed by morning, and the embassies will be busy before the week ends."
@@ -740,7 +739,7 @@
         "genre": "analysis",
         "headline": "What {{winner}}'s capture means here",
         "body": [
-          "When {{winner}} took the capital of {{loser}}, it gained more than buildings. It gained the offices, the archives and the habit of obedience that gather in a capital. The question now is whether {{loser}} can govern from somewhere else, or whether the state follows the city."
+          "When {{winner}} took the capital of {{loser}}, it gained more than buildings. It gained the offices, the archives and the habit of obedience that gather in a capital. The question now is whether the displaced government can rule from another city."
         ],
         "weight": { "base": 1 }
       },
@@ -1616,10 +1615,10 @@
     "variants": [
       {
         "id": "war-involving-us-report",
-        "when": "role !== 'target' || initiator === null",
-        "headline": "The nation is at war",
+        "when": "role !== 'target'",
+        "headline": "War between {{initiator}} and {{target}}",
         "body": [
-          "The country is at war. Before the clerks had opened their ledgers, a line had formed at the recruiting office, and the first names were written in a borrowed hand. On the frontier, the watch fires burned until dawn.{{hostileAllies}}"
+          "War now stands between {{initiator}} and {{target}}. Before the clerks had opened their ledgers, a line had formed at the recruiting office, and the first names were written in a borrowed hand. On the frontier, the watch fires burned until dawn.{{hostileAllies}}"
         ],
         "weight": { "base": 1 }
       },
@@ -1628,7 +1627,7 @@
         "voice": "broadcast",
         "stance": "national",
         "genre": "report",
-        "when": "role === 'target' && initiator !== null",
+        "when": "role === 'target'",
         "headline": "{{initiator}} has attacked",
         "body": [
           "War, tonight. {{initiator}} has opened war on us. The reserves have been called in, and the frontier garrisons are standing to. We will bring you more as the dispatches arrive.{{hostileAllies}}"
@@ -1640,7 +1639,7 @@
         "voice": "crier",
         "stance": "national",
         "genre": "notice",
-        "when": "role === 'target' && initiator !== null",
+        "when": "role === 'target'",
         "headline": "Hear it! {{initiator}} makes war on us",
         "body": [
           "Hear it! {{initiator}} has brought war to our gates! Every man to his post, every gate barred, every storehouse counted! They chose this quarrel, and we will finish it!{{hostileAllies}}"
@@ -1652,7 +1651,7 @@
         "voice": "gazette",
         "stance": "pro-government",
         "genre": "report",
-        "when": "role === 'initiator' && target !== null",
+        "when": "role === 'initiator'",
         "headline": "A state of war with {{target}}",
         "body": [
           "This nation and {{target}} are now in a state of war. The {{terms.civic.government}} is said to have weighed the question at length before deciding. The first levy left the yard before this edition was set, and the couriers were still dusty when they passed the window. We hope the weighing was as careful as we are told.{{hostileAllies}}"
@@ -1664,7 +1663,7 @@
         "voice": "pamphlet",
         "stance": "government-critical",
         "genre": "editorial",
-        "when": "role === 'joined' && reason === 'pact' && initiator !== null && target !== null",
+        "when": "role === 'joined' && reason === 'pact'",
         "headline": "Their quarrel, our treaty",
         "body": [
           "A treaty has turned the quarrel between {{initiator}} and {{target}} into our own. A pact is a debt taken on in fair weather, and the collector is at the door. {{terms.civic.people}}, ask the council what this war is meant to buy, and ask before the ledgers are closed.{{hostileAllies}}"

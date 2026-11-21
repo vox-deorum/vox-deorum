@@ -59,9 +59,9 @@
     "variants": [
       {
         "id": "faith-reaches-city-state-report",
-        "headline": "{{city}} of {{cityState}} takes the faith we founded",
+        "headline": "Our faith takes root in {{cityState}}",
         "body": [
-          "{{city}}, a city of {{cityState}}, now keeps {{religion}}, the faith this nation founded, as the creed of its majority. Travelers found the shrine there using our prayers, with a local family teaching the words to neighbors. The city lies beyond the towns we call neighbors, and no envoy of ours carried the creed across."
+          "Most people in {{city}} now keep {{religion}}, the faith this nation founded. Travelers found the shrine there using our prayers, with a local family teaching the words to neighbors. The city lies beyond our neighbors."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -73,9 +73,9 @@
         "voice": "gazette",
         "stance": "conciliatory",
         "genre": "report",
-        "headline": "{{city}} of {{cityState}} receives the faith we founded",
+        "headline": "Dispatch from {{cityState}}: our faith finds new followers",
         "body": [
-          "We are informed from {{city}} in {{cityState}} that {{religion}}, the creed this nation founded, now holds a majority in that city. The account tells of a market where vendors of both customs kept their stalls open through the change, and of a priest who borrowed a bench from the other congregation rather than see his own go empty. Our envoys will find a warmer welcome in {{cityState}}, and the friendship of the two peoples now rests on something sturdier than a treaty."
+          "Letters from {{city}} tell us that {{religion}}, the creed this nation founded, now has a majority there. Vendors of both customs kept their market stalls open through the change. One priest lent a bench to the other congregation when its shrine ran out of seats."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -87,9 +87,9 @@
         "voice": "tabloid",
         "stance": "devout",
         "genre": "anecdote",
-        "headline": "Lamps in the windows at {{city}}",
+        "headline": "A traveler brings news of our faith from {{cityState}}",
         "body": [
-          "A salt hauler says the inn at {{city}} in {{cityState}} now sets a lamp in the window and keeps a blessing for travelers who ask. The city holds {{religion}} as its majority faith, and the innkeeper learned the words from her mother. By his third trip, the hauler could say the blessing too."
+          "A salt hauler says the inn at {{city}} now sets a lamp in the window and keeps a blessing for travelers who ask. Most people in the city follow {{religion}}. By his third trip, the hauler could say the blessing too."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -101,9 +101,9 @@
         "voice": "feed",
         "stance": "ambitious",
         "genre": "report",
-        "headline": "Our faith just took a city in a city-state",
+        "headline": "Our faith has a new foothold in {{cityState}}",
         "body": [
-          "{{city}}, a city of {{cityState}}, now calls {{religion}} its majority faith. That is a city-state past the ring of our neighbors, converted by its own people. Our creed arrived before our merchants did. Send the merchants."
+          "{{city}} now has a {{religion}} majority. That's well past our nearest neighbors. Our prayers have made the trip. Can our merchants?"
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }

@@ -107,11 +107,10 @@ describe('offline replay output store', () => {
     unrelated.exec('CREATE TABLE unrelated (value INTEGER)');
     unrelated.close();
     expect(() => new ReplayStore(unrelatedPath)).toThrow();
-    const futurePath = path.join(path.dirname(recording.filename), 'future.sqlite');
-    const future = new Database(futurePath);
+    const future = new Database(filename);
     future.pragma('user_version = 99');
     future.close();
-    expect(() => new ReplayStore(futurePath)).toThrow();
+    expect(() => new ReplayStore(filename)).toThrow();
   });
 
   it('should reject stale votes and roll back a competing check without losing the current checkpoint', async () => {
@@ -161,7 +160,7 @@ describe('offline replay output store', () => {
     saved.close();
   });
 
-  it.each([1, 3, 4, 5])('should reject version %s output without modifying it', async version => {
+  it.each([1, 2, 3, 4, 5])('should rebuild version %s output and allow its old run ID to be reused', async version => {
     const { checkpoint } = await checkFixture(false);
     const originalPath = path.join(path.dirname(recording.filename), `version-${version}.sqlite`);
     const original = new ReplayStore(originalPath);
@@ -171,9 +170,11 @@ describe('offline replay output store', () => {
     if (version === 1) sqlite.exec('ALTER TABLE OfflineReplayRuns DROP COLUMN Revision');
     sqlite.pragma(`user_version = ${version}`);
     sqlite.close();
-    const bytes = await readFile(originalPath);
-    expect(() => new ReplayStore(originalPath)).toThrow();
-    expect(await readFile(originalPath)).toEqual(bytes);
+    const rebuilt = new ReplayStore(originalPath);
+    try {
+      rebuilt.create('new-source', checkpoint);
+      expect(rebuilt.load('run-a', 0, 'new-source')).toEqual(checkpoint);
+    } finally { rebuilt.close(); }
   });
 
   it('should reject a stale duplicate commit while accepting a duplicate from the current writer', async () => {

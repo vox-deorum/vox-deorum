@@ -144,13 +144,14 @@
     "event": "UnitCreated",
     "when": [
       "event.knows('person')",
-      "event.knows('kind') && event.kind === 'born'"
+      "event.knows('kind') && event.kind === 'born'",
+      "event.knows('player') && event.player.knows('name')"
     ],
     "values": {
       "person": "event.person",
       "unit": "event.knows('unit') ? event.unit : null",
-      "civilization": "event.knows('player') && event.player.knows('name') ? event.player.name : null",
-      "ours": "event.knows('player') && event.player.self === true"
+      "civilization": "event.player.name",
+      "ours": "event.player.self === true"
     },
     "importance": "ours ? 60 : 50",
     "tags": ["politics", "domestic"]
@@ -179,6 +180,7 @@
     "subject": "event",
     "event": "GreatPersonExpended",
     "when": [
+      "event.knows('person') && typeof event.person === 'string' && event.person.length > 0",
       "event.knows('kind') && event.kind === 'expended'",
       "event.knows('player') && event.player.knows('name')"
     ],
@@ -234,7 +236,7 @@
     "when": [
       "event.knows('player') && event.player.self === true",
       "event.knows('building') && typeof event.building === 'string'",
-      "event.knows('city') && event.city.knows('wonders') && Array.isArray(event.city.wonders)",
+      "event.knows('city') && event.city.knows('name') && event.city.knows('wonders') && Array.isArray(event.city.wonders)",
       "event.city.wonders.includes(event.building)"
     ],
     "values": {
@@ -248,13 +250,13 @@
     "subject": "player",
     "window": "short",
     "when": [
-      "player.major && Number.isFinite(player.tourismPerTurn) && player.tourismPerTurn > 0",
+      "player.knows('name') && player.major && Number.isFinite(player.tourismPerTurn) && player.tourismPerTurn > 0",
       "player.knows('before') && Number.isFinite(player.before.tourismPerTurn) && player.before.rank('tourismPerTurn') > 1",
       "player.rank('tourismPerTurn') === 1",
       "players.some(p => p.id !== player.id && p.major && p.knows('tourismPerTurn') && Number.isFinite(p.tourismPerTurn))"
     ],
     "values": {
-      "civilization": "player.knows('name') ? player.name : null",
+      "civilization": "player.name",
       "tourism": "player.tourismPerTurn",
       "tied": "players.some(p => p.id !== player.id && p.knows('major') && p.major === true && p.knows('tourismPerTurn') && p.tourismPerTurn === player.tourismPerTurn)"
     },
