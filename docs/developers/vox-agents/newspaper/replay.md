@@ -10,7 +10,7 @@ Use the newspaper command from the repository root to replay a recording without
 npm run newspaper -w vox-agents -- --help
 ```
 
-Preview builds replace the shared `dist-newspaper` assets. Generate previews while VD is stopped, and rerun the command if a build is interrupted before restarting VD.
+PNG preview builds replace the shared `dist-newspaper` assets. Generate previews while VD is stopped, and rerun the command if a build is interrupted before restarting VD.
 
 This example checks a Standard pace Netherlands recording every five turns from 24 to 99. At turn 29, the stock catalogue prints the upbeat settler story from Amsterdam: “Good cheer in Amsterdam as settlers prepare to go.” The command previews that issue as a PNG and saves the audit for every check:
 
@@ -34,7 +34,7 @@ Open the output's `index.html` directly in a browser. The report opens with the 
 
 A requested preview turn that was skipped or falls outside the publication schedule appears in a note after the rendered issues instead of becoming an issue. `issue-<turn>.json` contains the publication, `audit-<turn>.json` records the editorial decision and article evidence, `run.json` indexes the run, and `replay.sqlite` retains its checks and history. Omit `--render-turns` for a faster text-and-JSON pass without a browser; every issue is then collapsed in the unrendered list.
 
-Before a requested preview run, the command builds dependencies and checks the installed browser. A failed build stops the command before replay creates output. Ctrl+C cancels the active build or replay and returns a nonzero exit code. Once replay starts, failures retain a failed manifest and report, including completed previews. A forced termination or disk-write failure can leave partial files; `replay.sqlite` is the authority for committed checks. To continue that history in VD, choose Resume with the same recording and player, the output's `replay.sqlite`, and run ID `examples`. The CLI creates new runs; use a new output directory to rerun after fixing rules, overlays, or rendering. Its entry point is `src/newspaper/console.ts`; `cli/` owns options, artifacts, and previews.
+Before a requested preview run, the command builds dependencies and checks the installed browser. A failed build stops the command before replay creates output. Ctrl+C cancels the active build or replay and returns a nonzero exit code. Once replay starts, failures retain a failed manifest and report, including completed previews. A forced termination or disk-write failure can leave partial files; `replay.sqlite` is the authority for committed checks. To continue that history in the browser, open Recorded, then Recording > Saved run, and choose Resume with the same recording and player, the output's `replay.sqlite`, and run ID `examples`. The CLI creates new runs; use a new output directory to rerun after fixing rules, overlays, or rendering. Its entry point is `src/newspaper/console.ts`; `cli/` owns options, artifacts, and previews.
 
 ### Stock catalogue reading examples
 
@@ -64,40 +64,71 @@ Always generate a fresh run after changing the catalogue: resuming an existing r
 
 ## Open a recording in the browser reader
 
-From the repository root:
+The newspaper has one browser reader for design mockups and recordings. The source preview and the normal VD server both serve it.
 
-1. Run `npm run build --workspace=mcp-server`. Replay imports MCP's compiled queries.
-2. Run `npm run build:newspaper --workspace=vox-agents` to build the browser assets.
-3. Start VD with `npm run dev --workspace=vox-agents` and open `/newspaper/` on the address reported by the server. The standalone Vite preview serves the shell but does not supply replay routes.
+From the repository root, run:
 
-Enter the database path as seen by the server, receiving player ID, and inclusive first and last turns. Publication frequency uses Standard-equivalent turns, defaults to five, and resolves to at least one recorded turn using the recording's pace. For example, five Standard turns become eight turns on Epic. The comparison duration uses the selected recorded or Standard duration unit; zero omits comparison history.
+```sh
+npm run newspaper:preview -w vox-agents
+```
 
-The server creates a run ID when one is omitted. Its default output is `.tmp/newspaper/replays.sqlite` relative to the server's working directory; `outputPath` selects another location. The output must be separate from the recording, including existing symbolic links and hardlinks. Keep the run ID and output path to resume later. A new run never overwrites an existing run. An explicit branch records its parent and starts fresh from the configured first turn.
+The command builds MCP's queries, then serves the source reader and replay API at `http://127.0.0.1:5600/` and opens a browser. Ctrl+C stops it. The old `/preview.html` address loads the same shell and keeps its `?fixture=` query. Relative recording, output, and editorial configuration paths resolve against the directory where you invoked npm.
 
-Pace uses a recognized recorded `gameSpeed` name first: Quick, Standard, Epic, or Marathon. Otherwise an explicit positive multiplier override applies. Missing or unrecognized names, including localized names, use a labelled Standard assumption when no override is supplied. The response retains the original name, multiplier, source, and label even when durations already use recorded turns.
+To use the reader on the normal VD server, build MCP and the browser assets, start VD, and open `/newspaper/`:
+
+```sh
+npm run build --workspace=mcp-server
+npm run build:newspaper --workspace=vox-agents
+npm run dev --workspace=vox-agents
+```
+
+Normal VD resolves relative paths against its server working directory. Running Vite alone serves the shell but does not supply replay routes.
+
+Both hosts open in Mockups. Its design, front page layout, and tint controls build sample stories from the built-in designs. A source checkout also accepts `?fixture=` links for the developer fixtures; installed builds provide only the packaged Victorian ordinary fixture. Switch to Recorded to generate or reopen editions.
+
+### Recorded controls
 
 | Control | Effect |
 | --- | --- |
-| Open recording | Starts a new run or resumes the requested run and receiving player. |
-| Inspect cutoff | Queries the current window without advancing. Before the first check, previews the configured first turn. |
-| Next check | Queries evidence, runs the editor, and atomically stores an issue or skipped check. The last check clamps to the configured end. |
-| Read issue | Opens saved prose and its original decision without rerunning selection. |
-| Vote | Assigns, replaces, or clears one article's preference across all its page appearances. |
-| Preferences | Changes frequency and the saved LLM preference for later checks. |
+| Recording | Set the MCP recording database, receiving Player ID, and inclusive first and last turns. A fresh form suggests the newest knowledge database under `mcp-server/archive/` when one exists. You can replace it with any recording path the host can read. |
+| Generate | Opens a new run, or an evidence-only session, and checks the full requested range one interval at a time. Each publication run stores every published or skipped check. |
+| Stop after current check | Finishes the check in progress, then stops the batch. Completed checks remain saved. |
+| Continue | Continues the open run from its cursor. It is hidden once the run is complete. |
+| Edition | Saved editions for the open run, newest first. Selecting one opens its stored prose and decision without generating again. The newest edition opens after a batch unless you selected or focused another edition. |
+| Saved run | Recording > Saved run reopens a run from its run ID and, when not the default, its output path. Enter the recording path and Player ID as well. |
+| Advanced | Holds the replay purpose, comparison duration, duration units, speed multiplier override, new or branch mode, parent run for a branch, editorial configuration directory, publication frequency, LLM preference, and Save preferences. |
 
-Events run after the previous completed check through the cutoff, including skipped checks. Comparison snapshots can reach before the first turn, bounded at turn zero. A frequency change schedules from the last completed check and leaves existing issues unchanged. Reloading the page restores the active session; restarting the server requires an explicit resume using its output path, run ID, source, and receiver. Resume verifies the source bytes and restores the saved catalogue snapshot and preferences.
+Generate starts at the configured first turn and clamps the last check to the configured end. Events run after the previous completed check through the cutoff, including skipped checks. Comparison snapshots can reach before the first turn, bounded at turn zero. Reloading the page restores the active session. A frequency change schedules from the last completed check and leaves existing issues unchanged. Save preferences requires an open run and applies the chosen frequency and LLM setting to later checks.
+
+Resume restores the saved schedule, cursor, catalogue snapshot, and preferences without generating an edition. It works in the source preview and normal VD with the same recording, receiver, run ID, and output path, including a store created by the offline command. Restarting the server requires this explicit resume, which verifies the source bytes. A new run creates a run ID when one is omitted. Its default output is `.tmp/newspaper/replays.sqlite` relative to the preview or server working directory; `outputPath` selects another location. The output must be separate from the recording, including existing symbolic links and hardlinks. Keep the run ID and output path to resume later. A new run never overwrites an existing run, and reusing its run ID returns a conflict with resume guidance. An explicit branch records its parent and starts fresh from the configured first turn.
+
+Publication frequency uses Standard-equivalent turns and defaults to five. It resolves to at least one recorded turn using the recording's pace. For example, five Standard turns become eight turns on Epic. The comparison duration uses the selected recorded or Standard duration unit; zero omits comparison history. Choose Inspect evidence only as the replay purpose to inspect a recording without publishing; the form then shows the evidence check interval, keeps no publication store or run ID, and leaves Save preferences disabled.
+
+Pace uses a recognized recorded `gameSpeed` name first: Quick, Standard, Epic, or Marathon. Otherwise an explicit positive multiplier override applies. Missing or unrecognized names, including localized names, use a labelled Standard assumption when no override is supplied. The response retains the original name, multiplier, source, and label even when durations already use recorded turns.
 
 Failed reads leave the cursor unchanged; concurrent changes run in arrival order. Invalid settings or failure to open a replacement keeps the previous session usable. If closing the previous source fails, replay clears the session and requires configuration again.
 
+### Replay diagnostics
+
+Replay diagnostics is a disclosure below the paper in Recorded mode. It starts collapsed and creates each block when opened.
+
+| Section | Contents |
+| --- | --- |
+| Skipped checks in this batch | Each cutoff that produced no edition and its recorded reason. A new batch clears the list. |
+| Selected edition | One disclosure per stored article with its evidence summary, template and trigger IDs, and sources, followed by the edition's stored editorial decision. |
+| Evidence at the current cutoff | The Inspect cutoff action and the evidence groups it returns. |
+
+Inspect cutoff queries the current evidence window without advancing. Before the first check, it previews the configured first turn. Evidence is not loaded automatically, is cleared when a run or batch changes, and belongs to the cutoff you inspected. The selected edition section describes what was stored with the issue on screen, not the current cutoff. Selecting an edition again, or following an article link to an earlier edition, reads the stored prose and decision without rerunning selection. Votes remain in the reader: a vote assigns, replaces, or clears one article's preference across all its page appearances.
+
 ## Inspect evidence
 
-The evidence panel lists national snapshots, cities, comparison versions, and supported events. Selecting a row shows its original table, insertion or event ID, recorded turn, timestamp, and permitted values. Inspection works even when no issue has been generated or fixture loading fails. The inspector shows the selected evidence fields; it does not grant access to restricted source fields.
+The Inspect cutoff action reports the recorded evidence behind a cutoff. It groups national snapshots, cities, events, tactical zones, receiver technologies, earlier players and cities, diplomacy baseline, history and gaps, and congress observations. Each group shows the original fields, identifiers, recorded turn, timestamp, and permitted values. Inspection works even when no edition has been generated or fixture loading fails. The diagnostics show the selected evidence fields; they do not grant access to restricted source fields.
 
-City snapshots retire when a visible recorded capture or raze event identifies their coordinates after the latest city row and through the cutoff. Comparison rows retain their original observations. An event before the requested event window can still retire a city. Unobserved removals cannot retire snapshots. The inspector displays evidence limitations: `cityLifecycleUnresolved` for missing lifecycle coordinates and `cityLifecycleOrderUnknown` for equal same-turn timestamps. Affected snapshots may remain stale. Replay does not infer city continuity from names or nested owner labels.
+City snapshots retire when a visible recorded capture or raze event identifies their coordinates after the latest city row and through the cutoff. Comparison rows retain their original observations. An event before the requested event window can still retire a city. Unobserved removals cannot retire snapshots. Inspect cutoff lists evidence limitations: `cityLifecycleUnresolved` for missing lifecycle coordinates and `cityLifecycleOrderUnknown` for equal same-turn timestamps. Affected snapshots may remain stale. Replay does not infer city continuity from names or nested owner labels.
 
 Replay uses the [recorded roster and network balance](triggers/facts.md#covert-presence-and-roster-points) to infer agent presence and access to detail. Event insight uses the latest roster from an earlier turn. Try the optional stories with `--config vox-agents/newspaper/probes`.
 
-Fixture selection and link destinations remain available alongside the persisted replay archive. `app/main.ts` coordinates the shell, `api.ts` validates HTTP responses, `replay.ts` owns controls, and `inspector.ts` owns fixture and evidence details. The shared publication reader remains in `reader/mount.ts`.
+`newspaper/src/app/main.ts` coordinates the source switch and reader mounts, `mockups.ts` builds design samples, `replay.ts` owns recording controls and batches, `inspector.ts` builds Replay diagnostics, and `api.ts` validates HTTP responses. `newspaper/src/preview/issue.ts` builds mockups from the built-in designs, and `src/newspaper/cli/preview.ts` hosts the source preview. The shared publication reader remains in `newspaper/src/reader/mount.ts`.
 
 ## Source and HTTP ownership
 
@@ -111,16 +142,18 @@ Fixture selection and link destinations remain available alongside the persisted
 | --- | --- | --- |
 | PUT `/` | Source settings plus optional output path, run ID, mode, and preferences | Session settings, run ID, output path, saved preferences, pace, and cursor |
 | GET `/` | None | Current session state |
+| GET `/latest-recording` | None | Latest archived knowledge database path, or `null` if none exists |
 | POST `/evidence` | Optional run/receiver scope | Session state and MCP evidence without cursor change |
 | POST `/advance` | Required run/receiver scope for publication runs | Session state, MCP evidence, and saved published or skipped check |
+| POST `/advance?view=summary` | Required run/receiver scope for publication runs | Session state and summary `check` with `status`, optional `reason`, and optional `issueId` |
 | GET `/issues` | Optional run/receiver query scope | Ordered issue index in `issues` |
 | GET `/issues/:issueId` | Optional run/receiver query scope | Immutable `issue`, `index`, `decision`, article evidence in `articles`, and current numeric `votes` |
 | PUT `/votes` | Required `runId`, `receiverPlayerID`, `itemId`, and `value` (-1, 0, or 1) | Current session state |
 | PUT `/preferences` | Required scope, `frequencyStandardTurns`, and `llmEnabled` | Updated session state |
 
-`contracts/replay.ts` defines source and timing fields `databasePath`, `receiverPlayerID`, `fromTurn`, `toTurn`, `publicationInterval`, `durationUnit`, `comparisonTurns`, and `speedMultiplierOverride`. Publication settings include `outputPath`, `runId`, `mode` (`new`, `resume`, or `branch`), `branchFromRunId`, `editorialConfigDirectory`, `frequencyStandardTurns`, and `llmEnabled`. Resume requires a run ID; branch requires a parent run ID. Publication frequency uses `frequencyStandardTurns`. In evidence-only mode (`publicationEnabled: false`), `publicationInterval` and `durationUnit` control the in-memory inspection schedule.
+`contracts/replay.ts` defines source and timing fields `databasePath`, `receiverPlayerID`, `fromTurn`, `toTurn`, `publicationInterval`, `durationUnit`, `comparisonTurns`, and `speedMultiplierOverride`. Publication settings include `outputPath`, `runId`, `mode` (`new`, `resume`, or `branch`), `branchFromRunId`, `editorialConfigDirectory`, `frequencyStandardTurns`, and `llmEnabled`. Resume requires a run ID; branch requires a parent run ID. Publication frequency uses `frequencyStandardTurns`. In evidence-only mode (`publicationEnabled: false`), `publicationInterval` and `durationUnit` control the in-memory inspection schedule. `replayAdvanceSummaryResponseSchema` defines the short advance result.
 
-Evidence responses pair `session` with `evidence`, reusing MCP's schemas; advances also return `check` when publication is enabled. Archive payloads in `contracts/archive.ts` reuse MCP's browser-safe `newspaper/protocol.ts`. Scope mismatches return 409. Errors use the common JSON envelope: invalid settings or source opening return 400, absent configuration or exhaustion return 409, missing archived articles or issues return 404, and shutdown returns 503. Query, editorial configuration, validation, and transaction errors leave the cursor unchanged for retry. A skipped result for unavailable eligible content or design completes the check and advances its boundary. Saved votes affect future checks; old content retains its original prose and decision.
+The Recorded batch calls the summary advance so each step returns only the saved status, skip reason, and issue ID. After a publication it refreshes the edition picker, and at the end of a batch it opens the newest edition when the selection is unchanged. The reader requests full evidence only through Inspect cutoff, and a selected edition is read from the store. Evidence responses pair `session` with `evidence`, reusing MCP's schemas; advances also return `check` when publication is enabled. Archive payloads in `contracts/archive.ts` reuse MCP's browser-safe `newspaper/protocol.ts`. Scope mismatches return 409. Errors use the common JSON envelope: invalid settings or source opening return 400, absent configuration or exhaustion return 409, missing archived articles or issues return 404, and shutdown returns 503. Query, editorial configuration, validation, and transaction errors leave the cursor unchanged for retry. A skipped result for unavailable eligible content or design completes the check and advances its boundary. Saved votes affect future checks; old content retains its original prose and decision.
 
 MCP's `newspaper/queries.ts` takes an explicit connection and recorded-turn request. It starts from the latest summaries before the requested window and folds bounded versions forward, retaining dated permission context for older national observations. Its `projection.ts` owns all historical visibility and field policy. Policy branches follow the live player report: basic access reveals branch counts, while full access or sufficient recorded diplomat strength reveals policies. Both access paths retain source references and decode JSON fields. Writable database setup adds a Turn-leading event index; replay can read older recordings without creating it.
 
@@ -155,11 +188,11 @@ The HTTP run assigned the same vote twice, stopped after cutoff 95, reopened bot
 
 An installed Edge browser (`157.0.8103.51`) opened the 81-issue archive, read the final issue, saved a vote, reloaded the page, and reopened identical prose with the saved vote selected. No page errors occurred. Focused browser tests additionally cover delayed votes before advancing, switching issues during queued saves, save failures, and font fallback. These automated checks leave editorial quality and broader in-game reading acceptance open.
 
-Local verification artifacts are under `.tmp/newspaper-plan3/`: `acceptance.json` identifies the output database, `browser-acceptance.json` records the browser result, and `browser-latest.png` shows the final issue. Use the command-line workflow above for reproducible new runs. To inspect the measured archive manually, choose Resume with that output path, run ID `netherlands-acceptance`, and receiver `7`.
+Local verification artifacts are under `.tmp/newspaper-plan3/`: `acceptance.json` identifies the output database, `browser-acceptance.json` records the browser result, and `browser-latest.png` shows the final issue. Use the command-line workflow above for reproducible new runs. To inspect the measured archive manually, open Recorded, then Recording > Saved run, and choose Resume with that output path, run ID `netherlands-acceptance`, and receiver `7`.
 
 ## Replaying private espionage reports
 
-Use the Netherlands recording below with the `vox-agents/newspaper/probes` overlay. Replay turn 216 for India (player 1) and the Ottomans (player 5). India's operation at Istanbul (row `216000196`) is followed by the team's Civil Service gain (`216000197`). The Ottoman report names India and cites the operation and its next recorded turn (`216000654`); the technology inference is private to India. The source inspector shows the original date and the report date when they differ. See [event facts](triggers/facts.md#event) for what these records can establish.
+Use the Netherlands recording below with the `vox-agents/newspaper/probes` overlay. Replay turn 216 for India (player 1) and the Ottomans (player 5). India's operation at Istanbul (row `216000196`) is followed by the team's Civil Service gain (`216000197`). The Ottoman report names India and cites the operation and its next recorded turn (`216000654`); the technology inference is private to India. The inspected cutoff evidence shows the original date and the report date when they differ. See [event facts](triggers/facts.md#event) for what these records can establish.
 
 ## Replaying front reports and ship launches
 
@@ -171,7 +204,7 @@ Use the same recording and the `vox-agents/newspaper/probes` overlay for the Net
 | 235 | The Stuttgart sea zone records a Withdraw assessment and sightings, including a German Galleass. | Tactical zone `2426` |
 | 282 | The Rotterdam report names a newly trained Frigate. | Training `282001079`, creation `282001078`, city `14913` |
 
-The evidence inspector lists tactical zones from the cutoff turn and shows the recorded counts and posture. See [tactical observations](triggers/facts.md#tactical-observations) and [inferred city facts](triggers/facts.md#inferred-city-facts) for the limits of the reports.
+The inspected cutoff evidence lists tactical zones from the cutoff turn and shows the recorded counts and posture. See [tactical observations](triggers/facts.md#tactical-observations) and [inferred city facts](triggers/facts.md#inferred-city-facts) for the limits of the reports.
 
 ## Historical evidence-query verification
 
@@ -201,7 +234,7 @@ Selected results below count all permitted subjects, including city-states. Even
 | 300 | 25 | 75 | 264 / 815 | 57 |
 | 440 | 25 | 74 | 141 / 750 | 113 |
 
-The source inspector exposes concrete inputs for rule authors:
+Inspect cutoff exposes concrete inputs for rule authors:
 
 | Example | Source | Recorded evidence |
 | --- | --- | --- |

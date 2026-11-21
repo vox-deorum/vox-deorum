@@ -7,12 +7,15 @@
 import type { z } from 'zod';
 import { newspaperArchiveScopeSchema, type NewspaperArchiveScope } from '../../../../mcp-server/dist/newspaper/protocol.js';
 import {
+  latestRecordingSchema,
+  replayAdvanceSummaryResponseSchema,
   replayEvidenceResponseSchema,
   replayPreferencesRequestSchema,
   replaySettingsSchema,
   replayStateSchema,
   type ReplaySettings,
   type ReplayState,
+  type ReplayAdvanceSummaryResponse,
   type ReplayEvidenceResponse,
 } from '../../../src/newspaper/contracts/replay.js';
 import {
@@ -39,7 +42,7 @@ async function request(method: string, suffix = '', body?: unknown): Promise<unk
   try {
     result = await response.json();
   } catch {
-    throw new ReplayApiError(`Replay host returned a non-JSON response (${response.status}). Start the normal VD server and open its /newspaper/ page.`, response.status);
+    throw new ReplayApiError(`Replay host returned a non-JSON response (${response.status}). Open the newspaper from the preview command or the Vox Deorum server.`, response.status);
   }
   if (!response.ok) throw new ReplayApiError(result.error ?? `Replay request failed (${response.status}).`, response.status);
   return result;
@@ -55,6 +58,12 @@ export async function getReplayState(): Promise<ReplayState> {
   return replayStateSchema.parse(await request('GET'));
 }
 
+/** Look up the newest archived recording without changing the active run. */
+export async function getLatestRecording(): Promise<string | null> {
+  const result = latestRecordingSchema.parse(await request('GET', '/latest-recording'));
+  return result.databasePath;
+}
+
 /** Open, resume, or branch a replay run with validated serialized settings. */
 export async function configureReplay(settings: ReplaySettings): Promise<ReplayState> {
   return replayStateSchema.parse(await request('PUT', '', replaySettingsSchema.parse(settings)));
@@ -65,9 +74,9 @@ export async function inspectReplay(scope?: NewspaperArchiveScope): Promise<Repl
   return replayEvidenceResponseSchema.parse(await request('POST', '/evidence', scope && newspaperArchiveScopeSchema.parse(scope)));
 }
 
-/** Advance one publication interval and receive evidence and any editorial check. */
-export async function advanceReplay(scope?: NewspaperArchiveScope): Promise<ReplayEvidenceResponse> {
-  return replayEvidenceResponseSchema.parse(await request('POST', '/advance', scope && newspaperArchiveScopeSchema.parse(scope)));
+/** Advance one publication interval without downloading evidence or the full audit. */
+export async function advanceReplay(scope?: NewspaperArchiveScope): Promise<ReplayAdvanceSummaryResponse> {
+  return replayAdvanceSummaryResponseSchema.parse(await request('POST', '/advance?view=summary', scope && newspaperArchiveScopeSchema.parse(scope)));
 }
 
 /** List generated issues for the active run and receiver. */

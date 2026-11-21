@@ -2,6 +2,8 @@ import express, { type Express, type ErrorRequestHandler, type RequestHandler } 
 import { ZodError } from 'zod';
 import { sendError } from '../../web/http-utils.js';
 import { errorMessage } from '../../utils/errors.js';
+import type { ReplayAdvanceSummaryResponse } from '../contracts/replay.js';
+import { latestRecording } from './recordings.js';
 import { ReplaySessionError, type ReplaySession } from './session.js';
 
 type ReplayHandlers = Pick<ReplaySession, 'configure' | 'getState' | 'evidence' | 'advance' | 'listIssues' | 'getIssue' | 'setVote' | 'setPreferences'>;
@@ -21,9 +23,21 @@ export function mountReplayRoutes(app: Express, session: () => ReplayHandlers): 
   const router = express.Router();
   router.use(express.json({ limit: '64kb' }));
   router.get('/', reply(() => session().getState()));
+  router.get('/latest-recording', reply(async () => ({ databasePath: await latestRecording() })));
   router.put('/', reply(body => session().configure(body)));
   router.post('/evidence', reply(body => session().evidence(body)));
-  router.post('/advance', reply(body => session().advance(body, true)));
+  router.post('/advance', reply(async (body, req) => {
+    const result = await session().advance(body, true);
+    if (req.query.view !== 'summary') return result;
+    return {
+      session: result.session,
+      check: result.check && {
+        status: result.check.status,
+        reason: result.check.reason,
+        issueId: result.check.issue?.issueId,
+      },
+    } satisfies ReplayAdvanceSummaryResponse;
+  }));
   router.get('/issues', reply((_body, req) => session().listIssues(queryScope(req))));
   router.get('/issues/:issueId', reply((_body, req) => session().getIssue(String(req.params.issueId), queryScope(req))));
   router.put('/votes', reply(body => session().setVote(body)));

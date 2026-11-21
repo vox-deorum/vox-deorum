@@ -47,7 +47,7 @@ async function publish(input: NewspaperEvidence, cities: NewspaperSnapshot[] = [
 
 /** Find a stock rule's account in the issue and verify the visible names made it into the story. */
 function expectStory(result: Awaited<ReturnType<typeof publish>>, id: string, names: string[]) {
-  const record = result.state.issues[0]?.items.find(item => item.templateIds.includes(`${id}-account`));
+  const record = result.state.issues[0]?.items.find(item => item.ruleIds?.includes(id));
   expect(record).toBeDefined();
   const item = result.issue?.items.find(item => item.id === record?.id);
   expect(item).toBeDefined();
@@ -74,7 +74,8 @@ describe('stock foreign desk', () => {
       event('CityCaptureComplete', 5, 9, 2, 1, { ...capture, CityX: 16 }),
     ], [snapshot(0, 8, [relationship(1), relationship(2)])]), [home, city(20, 10, 2, 'Rio de Janeiro', 4)]);
     expect(fired(result, 'nearby-capital-falls')).toEqual(['event/1']);
-    expectStory(result, 'nearby-capital-falls', ['Rio de Janeiro', 'Brazil', 'India']);
+    expectStory(result, 'nearby-capital-falls', ['Brazil', 'India']);
+    expect(result.decision.evidence).toContainEqual(expect.objectContaining({ table: 'GameEvents', id: 1 }));
   });
 
   it('should still report the capture when the capital itself has no readable city name', async () => {
@@ -85,13 +86,14 @@ describe('stock foreign desk', () => {
     expectStory(result, 'nearby-capital-falls', ['Brazil', 'India']);
   });
 
-  it('should print the city name only once in the headline when the former owner shares its name', async () => {
+  it('should avoid doubling a name when the capital and its former owner share it', async () => {
     const result = await publish(evidence([
       event('CityCaptureComplete', 1, 9, 11, 10,
         { IsCapital: true, IsConquest: true, OldOwnerID: 10, NewOwnerID: 11, CityX: 4, CityY: 0 }),
     ], [snapshot(0, 8, [relationship(10), relationship(11)])]), [home, city(20, 10, 11, 'Geneva', 4)]);
     const item = expectStory(result, 'nearby-capital-falls', ['Geneva', 'Sidon']);
-    expect(JSON.stringify(item.headline).match(/Geneva/g)).toHaveLength(1);
+    const copy = [item.headline, ...item.body].map(line => line.map(node => 'text' in node ? node.text : '').join('')).join(' ');
+    expect(copy.match(/Geneva/g)).toHaveLength(1);
   });
 
   it('should report a newly finished nearby wonder only when its city belongs to an enemy', async () => {
@@ -103,7 +105,7 @@ describe('stock foreign desk', () => {
       city(22, 8, 2, 'Delhi', 5), city(23, 8, 1, 'Salvador', 16),
     ]);
     expect(fired(result, 'enemy-wonder-nearby')).toEqual(['city/20']);
-    expectStory(result, 'enemy-wonder-nearby', ['Petra', 'Sao Paulo', 'Brazil']);
+    expectStory(result, 'enemy-wonder-nearby', ['Petra', 'Sao Paulo']);
   });
 
   it('should report Geneva changing sides and exclude a city-state that merely lost its ally', async () => {
@@ -191,9 +193,12 @@ describe('stock foreign desk', () => {
       snapshot(3, 10, [relationship(1, 'war', { warScore: 0 })]),
     ], 10, 9));
     expect(fired(result, 'vassals-join-war')).toEqual(['incident/war/10/1']);
-    expectStory(result, 'vassals-join-war', ['France', 'Brazil', 'Iroquois']);
     const related = result.state.issues[0].items.filter(item => item.seriesKeys.some(key => key.includes('incident/war/10/1')));
     expect(related).toHaveLength(1);
+    expect(result.decision.diplomacyInference).toEqual(expect.arrayContaining([
+      expect.objectContaining({ incidentId: 'war/10/1', participants: expect.arrayContaining([0, 1, 3]) }),
+      expect.objectContaining({ incidentId: 'war/10/3', participants: [5, 10] }),
+    ]));
   });
 
   it.each(['held', 'resumed'] as const)('should distinguish a stalled war advantage from one with %s movement', async trend => {

@@ -6,7 +6,7 @@
  * for all pages, and returns a readiness promise plus a disposal method.
  */
 import type { IssueDocument } from "../../../src/newspaper/contracts/issue.js";
-import type { ReaderAction, ReaderState } from "../../../src/newspaper/contracts/reader.js";
+import type { ReaderAction, ReaderState, VoteValue } from "../../../src/newspaper/contracts/reader.js";
 import type { RenderProfile } from "../../../src/newspaper/contracts/render.js";
 import {
   computeRenderLayout,
@@ -48,6 +48,8 @@ export interface ReaderHandle {
   getState(): ReaderState;
   getActivePageId(): string;
   selectPage(pageId: string): void;
+  /** Reconcile saved votes without rebuilding the paper or changing its reading position. */
+  replaceVotes(votes: Record<string, VoteValue>): void;
 }
 
 let instanceCounter = 0;
@@ -350,6 +352,14 @@ export function mountReader(
     },
     selectPage(pageId: string): void {
       selectPage(pageId, false);
+    },
+    replaceVotes(votes): void {
+      const next = normalizeReaderState(issue, { ...state, votes });
+      for (const itemId of itemById.keys()) {
+        const value = getVote(next, itemId);
+        if (value !== getVote(state, itemId)) applyVoteState(root, itemId, value, designId, assetBaseUrl);
+      }
+      state = next;
     },
   };
 }

@@ -4,6 +4,9 @@ import { newspaperArchiveScopeSchema } from '../../../../mcp-server/dist/newspap
 import { publicationPreferencesSchema, editorialDecisionRecordSchema } from './publication.js';
 import { issueDocumentSchema } from './issue.js';
 
+/** The optional recording used to prefill a new form. */
+export const latestRecordingSchema = z.object({ databasePath: z.string().min(1).nullable() });
+
 /** Source, offline run and preference settings; comparison durations resolve once at configuration. */
 export const replaySettingsSchema = z.object({
   databasePath: z.string().trim().min(1),
@@ -74,7 +77,16 @@ export const replayEvidenceResponseSchema = z.object({
   check: replayCheckSchema.optional(),
 });
 
+/** A completed batch step without the evidence or the full editorial decision. */
+export const replayAdvanceSummaryResponseSchema = z.object({
+  session: replayStateSchema,
+  check: replayCheckSchema.pick({ status: true, reason: true }).extend({
+    issueId: issueDocumentSchema.shape.issueId.optional(),
+  }).optional(),
+});
+
 export type ReplaySettings = z.infer<typeof replaySettingsSchema>;
 export type ReplaySpeed = z.infer<typeof replaySpeedSchema>;
 export type ReplayState = z.infer<typeof replayStateSchema>;
 export type ReplayEvidenceResponse = z.infer<typeof replayEvidenceResponseSchema>;
+export type ReplayAdvanceSummaryResponse = z.infer<typeof replayAdvanceSummaryResponseSchema>;

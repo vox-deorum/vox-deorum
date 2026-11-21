@@ -6,7 +6,7 @@ import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { Browser } from 'playwright-core';
+import type { Browser, Page } from 'playwright-core';
 import { launchInstalledBrowser, NewspaperBrowser } from '../../../../src/newspaper/export/browser.js';
 import { startNewspaperHost, readerDirectory } from '../../../../src/newspaper/export/http.js';
 import { renderIssue } from '../../../../src/newspaper/export/render.js';
@@ -18,6 +18,14 @@ import { mountReplayRoutes } from '../../../../src/newspaper/replay/http.js';
 import { createReplayRecording } from '../../../helpers/newspaper-replay.js';
 
 const fixtures = fileURLToPath(new URL('../../../../newspaper/fixtures/', import.meta.url));
+
+/** Wait for one mounted paper and its fonts and illustrations to settle before measuring. */
+async function waitForPaper(page: Page, issueId?: string): Promise<void> {
+  await page.locator(issueId ? `#reader-root[data-issue-id="${issueId}"]` : '#reader-root[data-issue-id]').waitFor();
+  await page.evaluate(() => document.fonts.ready.then(() => undefined));
+  await page.waitForFunction(() => Array.from(document.querySelectorAll<HTMLImageElement>('#reader-root img'))
+    .every(image => image.complete && image.naturalWidth > 0));
+}
 
 describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('newspaper browser integration', () => {
   let browser: Browser | undefined;
@@ -42,6 +50,10 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('newspape
     if (!browser) { context.skip(unavailable); return; }
     const recording = await createReplayRecording();
     const session = new ReplaySession();
+    await session.configure({
+      databasePath: recording.filename, receiverPlayerID: 0, fromTurn: 10, toTurn: 18,
+      publicationInterval: 5, comparisonTurns: 5, publicationEnabled: false,
+    });
     const replayHost = await startNewspaperHost({
       /** Host the real replay parser and session alongside the compiled application shell. */
       mountApplicationRoutes: app => mountReplayRoutes(app, () => session),
@@ -56,31 +68,25 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('newspape
         result.evidence.limitations = ['cityLifecycleUnresolved', 'cityLifecycleOrderUnknown'];
         await route.fulfill({ response, json: result });
       });
-      await page.goto(`${replayHost.url}/newspaper/`);
-      await page.locator('#reader-root [role=alert]').waitFor();
-      await page.waitForFunction(() => !document.querySelector<HTMLFieldSetElement>('#replay-form fieldset')!.disabled);
-      await page.locator('[name=databasePath]').fill(recording.filename);
-      await page.locator('[name=fromTurn]').fill('10');
-      await page.locator('[name=toTurn]').fill('18');
-      await page.locator('[name=publicationEnabled]').selectOption('false');
-      await page.getByRole('button', { name: 'Open recording', exact: true }).click();
+      await page.goto(`${replayHost.url}/newspaper/?fixture=victorian-ordinary`);
+      await page.locator('#preview-error:visible').waitFor();
+      await page.getByRole('button', { name: 'Recorded', exact: true }).click();
+      await page.locator('#replay-diagnostics > summary').click();
       await page.locator('[data-replay=inspect]:enabled').waitFor();
       await page.locator('[data-replay=inspect]').click();
-      const source = page.locator('#evidence-view button').first();
-      await source.click();
-      const inspected = JSON.parse((await page.locator('#source-view').textContent())!);
+      const players = page.locator('#evidence-view details').filter({ hasText: /^Players \(/ });
+      await players.locator('summary').click();
+      const observations = JSON.parse((await players.locator('pre').textContent())!);
+      const inspected = observations.find((observation: { source: { id: number } }) => observation.source.id === 3);
       expect(await page.locator('[data-evidence-limitations] li').allTextContents()).toEqual([
         'cityLifecycleUnresolved', 'cityLifecycleOrderUnknown'
       ]);
       expect(inspected.source).toEqual({ table: 'PlayerSummaries', id: 3, turn: 10, createdAt: 1010 });
       expect(inspected.values.OutgoingTradeRoutes).toEqual({ 'Home => Port (Civ1)': { FromGold: 0, ToFood: -1 } });
       expect((await session.getState()).cursor.cutoffTurn).toBeNull();
-      await page.locator('[data-replay=advance]').click();
-      await page.waitForFunction(() => !document.querySelector<HTMLFieldSetElement>('#replay-form fieldset')!.disabled);
-      expect((await session.getState()).cursor.cutoffTurn).toBe(10);
-      await page.locator('[data-replay=advance]').click();
-      await page.waitForFunction(() => !document.querySelector<HTMLFieldSetElement>('#replay-form fieldset')!.disabled);
-      expect((await session.getState()).cursor.cutoffTurn).toBe(15);
+      await page.locator('#replay-continue').click();
+      await page.locator('#replay-generate:enabled').waitFor();
+      expect((await session.getState()).cursor.cutoffTurn).toBe(18);
       expect(await readFile(recording.filename)).toEqual(recording.originalBytes);
     } finally {
       await page.close();
@@ -102,7 +108,7 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('newspape
     try {
       await page.route('**/newspaper/fixtures/victorian-ordinary.json', route => route.fulfill({ json: issue }));
       await page.goto(`${host.url}/newspaper/?fixture=victorian-ordinary`);
-      await page.waitForFunction(() => document.querySelector('#state-view')?.textContent?.includes('activePageId'));
+      await waitForPaper(page, issue.issueId);
       const firstTab = page.locator('[role=tab]').first();
       const secondTab = page.locator('[role=tab]').nth(1);
       const votes = page.locator('[data-vd-region=page]:not([hidden]) [data-vd-vote-value=up]');
@@ -118,10 +124,6 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('newspape
       await page.locator('[data-vd-region=page]:not([hidden])').evaluate(element => { element.scrollTop = 120; });
       const saved = await page.locator('[data-vd-region=page]:not([hidden])').evaluate(element => element.scrollTop);
       expect(saved).toBeGreaterThan(0);
-      await page.waitForFunction(() => {
-        const state = JSON.parse(document.querySelector('#state-view')!.textContent!);
-        return state.scrollByPage[state.activePageId] > 0;
-      });
       await secondTab.click();
       await firstTab.click();
       expect(await page.locator('[data-vd-region=page]:not([hidden])').evaluate(element => element.scrollTop)).toBe(saved);
@@ -147,7 +149,7 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('newspape
         for (const fixture of ['victorian-ordinary', 'victorian-breaking', 'victorian-analysis', 'wire-ordinary']) {
           const issue = parseIssueDocument(JSON.parse(await readFile(path.join(fixtures, `${fixture}.json`), 'utf8')));
           await page.goto(`${host.url}/newspaper/?fixture=${fixture}`);
-          await page.waitForFunction(() => document.querySelector('#state-view')?.textContent?.includes('activePageId'));
+          await waitForPaper(page, issue.issueId);
           await page.locator('#reader-root').evaluate((root, width) => {
             root.style.cssText = `flex:0 0 auto;width:${width}px;padding:0;`;
           }, width);
@@ -203,7 +205,7 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('newspape
     const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
     try {
       await page.goto(`${host.url}/newspaper/?fixture=victorian-ordinary`);
-      await page.waitForFunction(() => document.querySelector('#state-view')?.textContent?.includes('activePageId'));
+      await waitForPaper(page);
       const secondTab = page.locator('[role=tab]').nth(1);
       await secondTab.click();
       const pageId = await secondTab.getAttribute('data-vd-page-id');
@@ -246,7 +248,7 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('newspape
     } finally { await page.close(); }
   }, 60_000);
 
-  it('should retain votes cast while fixture media is still loading in the inspector', async context => {
+  it('should retain votes cast while fixture media is still loading', async context => {
     if (!browser) { context.skip(unavailable); return; }
     const page = await browser.newPage();
     let releaseFonts!: () => void;
@@ -260,9 +262,9 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('newspape
       await vote.evaluate(element => (element as HTMLElement).click());
       releaseFonts();
       await page.waitForLoadState('networkidle');
-      expect(await vote.getAttribute('aria-pressed')).toBe('true');
-      const state = JSON.parse((await page.locator('#state-view').textContent())!);
-      expect(state.votes[itemId!]).toBe('up');
+      const mounted = page.locator(`#reader-root[data-issue-id] [data-vd-vote-item="${itemId}"][data-vd-vote-value=up]`);
+      expect(await mounted.evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-pressed'))))
+        .toEqual(['true', 'true']);
     } finally { releaseFonts(); await page.close(); }
   }, 60_000);
 

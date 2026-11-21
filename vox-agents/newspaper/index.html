@@ -4,107 +4,98 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light" />
-    <title>Newspaper replay and fixtures | Vox Deorum</title>
+    <title>Newspaper preview | Vox Deorum</title>
     <link rel="icon" href="data:," />
     <link rel="stylesheet" href="/assets/fonts.css" />
   </head>
   <body>
-    <div class="host-shell">
-      <header class="host-toolbar">
-        <div class="host-brand">
-          <h1>Newspaper reader</h1>
-          <p>Read generated editions, vote on coverage, and inspect recorded evidence.</p>
+    <header class="host-toolbar">
+      <div class="host-toolbar-row">
+        <h1>Newspaper preview</h1>
+        <div class="host-mode" role="group" aria-label="Newspaper source">
+          <button id="mockups-mode" type="button" aria-pressed="true">Mockups</button>
+          <button id="recorded-mode" type="button" aria-pressed="false">Recorded</button>
         </div>
-        <div class="host-controls">
-          <label for="fixture-select">Fixture</label>
-          <select id="fixture-select"></select>
-          <button id="archive-button" type="button">Archive</button>
-          <button id="reset-button" type="button">Reset reading state</button>
+      </div>
+      <div id="mockup-controls">
+        <div class="host-toolbar-row">
+          <label>Design <select id="preview-design"></select></label>
+          <label>Front page layout <select id="preview-layout"></select></label>
+          <label>Tint <select id="preview-tint"></select></label>
+          <label>Custom tint <input id="preview-custom-tint" type="color" value="#6d2c91" /></label>
         </div>
-      </header>
-      <form id="replay-form" class="host-replay">
-        <fieldset>
-          <legend>Recording replay</legend>
-          <label>Database path <input name="databasePath" required placeholder="F:\recordings\game.db" /></label>
-          <label>Receiver <input name="receiverPlayerID" type="number" min="0" max="21" value="0" required /></label>
-          <label>First turn <input name="fromTurn" type="number" min="0" value="125" data-saved-setting required /></label>
-          <label>Last turn <input name="toTurn" type="number" min="0" value="175" data-saved-setting required /></label>
-          <label>Replay purpose <select name="publicationEnabled" data-saved-setting><option value="true">Generate publications</option><option value="false">Inspect evidence only</option></select></label>
-          <label data-evidence-interval hidden>Evidence check interval <input name="publicationInterval" type="number" min="1" value="5" data-saved-setting required /></label>
-          <label>Comparison duration <input name="comparisonTurns" type="number" min="0" value="10" data-saved-setting required /></label>
-          <label>Comparison and evidence interval units <select name="durationUnit" data-saved-setting><option value="recordedTurns">Recorded turns</option><option value="standardTurns">Standard pace turns</option></select></label>
-          <label>Speed multiplier override <input name="speedMultiplierOverride" type="number" min="0.01" step="any" placeholder="Optional" data-saved-setting /></label>
-          <label>Mode <select name="mode"><option value="new">New run</option><option value="resume">Resume run</option><option value="branch">Branch run</option></select></label>
-          <label>Run ID <input name="runId" placeholder="Required to resume" /></label>
-          <label>Branch from run ID <input name="branchFromRunId" placeholder="Required to branch" disabled /></label>
-          <label>Output path <input name="outputPath" placeholder="Optional publication store" /></label>
-          <label>Editorial config directory <input name="editorialConfigDirectory" placeholder="Optional configuration folder" data-saved-setting /></label>
-          <button type="submit">Open recording</button>
-          <button type="button" data-replay="inspect" disabled>Inspect cutoff</button>
-          <button type="button" data-replay="advance" disabled>Next check</button>
-        </fieldset>
-        <p data-replay-resume hidden>Resume restores saved settings. Use Save preferences to change publication preferences.</p>
-        <fieldset>
-          <legend>Publication preferences</legend>
-          <label>Publication frequency (Standard turns) <input name="frequencyStandardTurns" type="number" min="1" placeholder="Catalogue default" /></label>
-          <label>Allow LLM when available <select name="llmEnabled"><option value="">Use catalogue default</option><option value="false">No</option><option value="true">Yes</option></select></label>
-          <button type="button" data-replay="save-preferences" disabled>Save preferences</button>
-        </fieldset>
-        <output aria-live="polite">Choose a recording to begin replay.</output>
-        <p class="host-replay-error" data-replay-error role="alert" hidden></p>
-      </form>
-      <main class="host-main">
-        <div id="reader-root"></div>
-        <aside class="host-inspector" aria-label="Reader inspector">
+        <p id="preview-error" class="host-error" role="alert" hidden></p>
+      </div>
+      <div id="recorded-controls" hidden>
+        <div class="host-toolbar-row">
+          <label>Edition <select id="recorded-edition" disabled><option value="">No editions yet</option></select></label>
+          <button id="replay-generate" type="submit" form="replay-form">Generate</button>
+          <button id="replay-continue" type="button" hidden>Continue</button>
+          <button id="replay-stop" type="button" hidden>Stop after current check</button>
+          <output id="replay-status" aria-live="polite">Choose a recording to generate editions.</output>
+        </div>
+        <details id="recording-details" class="host-recording">
+          <summary>Recording</summary>
+          <form id="replay-form" class="host-replay">
+            <fieldset class="host-fields" aria-label="Recording and turn range">
+              <label>Recording database <input name="databasePath" required placeholder="F:\recordings\game.db" /></label>
+              <label>Player ID <input name="receiverPlayerID" type="number" min="0" max="21" value="0" required /></label>
+              <label>First turn <input name="fromTurn" type="number" min="0" required /></label>
+              <label>Last turn <input name="toTurn" type="number" min="0" required /></label>
+            </fieldset>
+            <details class="host-advanced">
+              <summary>Saved run</summary>
+              <fieldset class="host-fields" aria-label="Saved run">
+                <label>Run ID <input name="runId" placeholder="Required to resume" /></label>
+                <label>Output path <input name="outputPath" placeholder="Optional publication store" /></label>
+                <button id="replay-resume" type="submit" formnovalidate>Resume</button>
+              </fieldset>
+            </details>
+            <details class="host-advanced">
+              <summary>Advanced</summary>
+              <fieldset class="host-fields" aria-label="Advanced settings">
+                <label>Replay purpose <select name="publicationEnabled"><option value="true">Generate editions</option><option value="false">Inspect evidence only</option></select></label>
+                <label data-evidence-interval hidden>Evidence check interval <input name="publicationInterval" type="number" min="1" value="5" required /></label>
+                <label>Comparison duration <input name="comparisonTurns" type="number" min="0" value="10" required /></label>
+                <label>Duration units <select name="durationUnit"><option value="recordedTurns">Recorded turns</option><option value="standardTurns">Standard pace turns</option></select></label>
+                <label>Speed multiplier override <input name="speedMultiplierOverride" type="number" min="0.01" step="any" placeholder="Optional" /></label>
+                <label>Mode <select name="mode"><option value="new">New run</option><option value="branch">Branch run</option></select></label>
+                <label>Branch from run ID <input name="branchFromRunId" placeholder="Required to branch" disabled /></label>
+                <label>Editorial config directory <input name="editorialConfigDirectory" placeholder="Optional configuration folder" /></label>
+                <label>Publication frequency (standard turns) <input name="frequencyStandardTurns" type="number" min="1" placeholder="Catalogue default" /></label>
+                <label>Allow LLM when available <select name="llmEnabled"><option value="">Use catalogue default</option><option value="false">No</option><option value="true">Yes</option></select></label>
+                <button type="button" data-replay="save-preferences" disabled>Save preferences</button>
+              </fieldset>
+            </details>
+          </form>
+        </details>
+        <p class="host-error" data-replay-error role="alert" hidden></p>
+      </div>
+    </header>
+    <p id="reader-note" role="status"></p>
+    <main>
+      <div id="reader-root" aria-label="Newspaper edition"></div>
+      <details id="replay-diagnostics" class="host-diagnostics" hidden>
+        <summary>Replay diagnostics</summary>
+        <div class="host-diagnostic-sections">
           <section>
-            <h2>Evidence</h2>
+            <h2>Skipped checks in this batch</h2>
+            <div id="check-view"></div>
+          </section>
+          <section>
+            <h2>Selected edition</h2>
+            <div id="page-items"></div>
+            <div id="decision-view"></div>
+          </section>
+          <section>
+            <h2>Evidence at the current cutoff</h2>
+            <button type="button" data-replay="inspect" disabled>Inspect cutoff</button>
             <div id="evidence-view"></div>
           </section>
-          <section>
-            <h2>Replay check</h2>
-            <div id="check-view"><p>No check yet.</p></div>
-          </section>
-          <section>
-            <h2>Editorial decision</h2>
-            <pre id="decision-view">No decision recorded.</pre>
-          </section>
-          <section>
-            <h2>Source reference</h2>
-            <pre id="source-view">Select an evidence row to inspect its source and permitted values.</pre>
-          </section>
-          <section>
-            <h2>Last action</h2>
-            <pre id="action-log">No actions yet.</pre>
-          </section>
-          <section>
-            <h2>Reader state</h2>
-            <pre id="state-view">No state.</pre>
-          </section>
-          <section>
-            <h2>Issue</h2>
-            <pre id="issue-view">No issue mounted.</pre>
-          </section>
-          <section>
-            <h2>Page items</h2>
-            <div id="page-items"></div>
-          </section>
-          <section>
-            <h2>Detail</h2>
-            <div id="detail-view"></div>
-          </section>
-        </aside>
-      </main>
-    </div>
-    <dialog id="archive-dialog" aria-labelledby="archive-title">
-      <div class="archive-top">
-        <h2 id="archive-title">Archive</h2>
-        <button id="archive-close" type="button">Close</button>
-      </div>
-      <p>Fixtures are always available. Generated issues open from the current replay run without running another check.</p>
-      <p id="archive-status">Open a replay run to list generated issues.</p>
-      <div id="archive-list"></div>
-    </dialog>
-    <noscript>This fixture host needs JavaScript enabled.</noscript>
+        </div>
+      </details>
+    </main>
+    <noscript>The newspaper preview needs JavaScript enabled.</noscript>
     <script type="module" src="/src/app/main.ts"></script>
   </body>
 </html>

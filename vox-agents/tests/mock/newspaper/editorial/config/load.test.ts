@@ -234,7 +234,7 @@ describe('editorial catalogue files', () => {
 
   it('should reject malformed trigger rules and unknown span names', async () => {
     const base = await loadEditorialConfig();
-    const [rule] = base.triggers;
+    const rule = base.triggers.find(rule => rule.subject === 'city' && !rule.event)!;
     for (const change of [
       { detector: 'warTransition' }, { subject: 'event' }, { event: 'DealMade' },
       { subject: 'event', event: [] }, { window: 'unknown' }, { repeat: 'unknown' },
@@ -243,7 +243,7 @@ describe('editorial catalogue files', () => {
       ...['values', 'triggerValues', 'group', 'subject', 'period', '$kind', 'story'].map(name => ({ values: { [name]: '1' } })),
       ...['Math', 'undefined', 'NaN', 'JSON'].map(name => ({ values: { [name]: '1' } })),
     ])
-      expect(editorialConfigSchema.safeParse({ ...base, triggers: [{ ...rule, ...change }], templates: [] }).success).toBe(false);
+      expect(editorialConfigSchema.safeParse({ ...base, triggers: [{ ...rule, ...change }], templates: [] }).success, JSON.stringify(change)).toBe(false);
   });
 
   it('should reject listing the same required trigger twice in one template', async () => {

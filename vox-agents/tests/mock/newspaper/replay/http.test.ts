@@ -6,7 +6,7 @@ import { deferred } from '../../../helpers/deferred.js';
 import { startNewspaperHost } from '../../../../src/newspaper/export/http.js';
 import { mountReplayRoutes } from '../../../../src/newspaper/replay/http.js';
 import { ReplaySession } from '../../../../src/newspaper/replay/session.js';
-import { replayEvidenceResponseSchema, replayStateSchema } from '../../../../src/newspaper/contracts/replay.js';
+import { replayAdvanceSummaryResponseSchema, replayEvidenceResponseSchema, replayStateSchema } from '../../../../src/newspaper/contracts/replay.js';
 import { createReplayRecording, replaySettings as sourceSettings, writeReplayPublicationCatalogue } from '../../../helpers/newspaper-replay.js';
 
 /** Keep evidence-only lifecycle checks independent of the publication output store. */
@@ -53,6 +53,36 @@ describe('replay HTTP routes', () => {
     const invalid = await request(host.app).put('/api/newspaper/replay').send({}).expect(400);
     expect(invalid.body.error).toEqual(expect.any(String));
     await request(host.app).put('/api/newspaper/replay').send(replaySettings(`${recording.filename}.missing`)).expect(400);
+  });
+
+  it('should return a compact advance with no check for evidence-only sessions', async () => {
+    await request(host.app).put('/api/newspaper/replay').send(replaySettings(recording.filename)).expect(200);
+    const advanced = await request(host.app).post('/api/newspaper/replay/advance?view=summary').send({}).expect(200);
+    const summary = replayAdvanceSummaryResponseSchema.parse(advanced.body);
+    expect(summary.session.cursor.cutoffTurn).toBe(10);
+    expect(advanced.body).toEqual({ session: summary.session });
+  });
+
+  it('should return compact published and skipped outcomes while retaining the archived decision', async () => {
+    const scope = { runId: 'summary-run', receiverPlayerID: 0 };
+    await request(host.app).put('/api/newspaper/replay').send({
+      ...sourceSettings(recording.filename), fromTurn: 6, toTurn: 30, ...scope,
+      editorialConfigDirectory: await writeReplayPublicationCatalogue(recording.filename),
+      outputPath: path.join(path.dirname(recording.filename), 'summary-output.sqlite'),
+    }).expect(200);
+    const published = await request(host.app).post('/api/newspaper/replay/advance?view=summary').send(scope).expect(200);
+    const summary = replayAdvanceSummaryResponseSchema.parse(published.body);
+    const issueId = summary.check?.issueId;
+    expect(issueId).toEqual(expect.any(String));
+    expect(published.body).toEqual({ session: summary.session, check: { status: 'published', issueId } });
+    const detail = await request(host.app).get(`/api/newspaper/replay/issues/${encodeURIComponent(issueId!)}`).query(scope).expect(200);
+    expect(detail.body.issue.issueId).toBe(issueId);
+    expect(detail.body.decision.status).toBe('published');
+    const skipped = await request(host.app).post('/api/newspaper/replay/advance?view=summary').send(scope).expect(200);
+    expect(skipped.body).toEqual({
+      session: replayAdvanceSummaryResponseSchema.parse(skipped.body).session,
+      check: { status: 'skipped', reason: expect.any(String) },
+    });
   });
 
   it('should reject external origins before parsing or calling the session', async () => {

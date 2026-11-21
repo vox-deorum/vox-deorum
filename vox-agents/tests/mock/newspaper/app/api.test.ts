@@ -219,35 +219,33 @@ describe('replay browser API', () => {
     expect(result.evidence.request.receiverPlayerID).toBe(4);
   });
 
-  it('should accept an advance that includes a published check', async () => {
-    const issue = createNewspaperIssue();
+  it('should request a compact advance and return the published issue ID', async () => {
+    const issueId = 'issue-1';
     const scope = { runId: 'run-1', receiverPlayerID: 4 };
     const fetchMock = stubJson({
       session: replayState(),
-      evidence: replayEvidence(),
       check: {
         status: 'published',
-        issue,
-        decision: decisionRecord(),
+        issueId,
       },
     });
     const result = await advanceReplay(scope);
 
-    expect(fetchMock.mock.calls[0][0]).toBe('/api/newspaper/replay/advance');
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/newspaper/replay/advance?view=summary');
     expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: 'POST' });
     expect(requestBody(fetchMock)).toEqual(scope);
     expect(result.check?.status).toBe('published');
-    expect(result.check?.issue?.issueId).toBe('issue-1');
+    expect(result.check?.issueId).toBe(issueId);
     expect(result.session.cursor.cutoffTurn).toBe(15);
   });
 
   it('should accept evidence-only session state without publication scope or preferences', async () => {
     const { runId: _runId, outputPath: _outputPath, preferences: _preferences, ...state } = replayState();
     state.settings = { ...state.settings, publicationEnabled: false } as typeof state.settings;
-    const fetchMock = stubJson({ session: state, evidence: replayEvidence() });
+    const fetchMock = stubJson({ session: state });
     const result = await advanceReplay();
     expect(result.session.runId).toBeUndefined();
     expect(result.session.preferences).toBeUndefined();
-    expect(fetchMock.mock.calls[0]).toEqual(['/api/newspaper/replay/advance', { method: 'POST' }]);
+    expect(fetchMock.mock.calls[0]).toEqual(['/api/newspaper/replay/advance?view=summary', { method: 'POST' }]);
   });
 });

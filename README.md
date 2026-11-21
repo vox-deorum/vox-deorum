@@ -55,6 +55,8 @@ Can't set this thing up? Start with **[Getting Started](docs/players/getting-sta
 
 Want to understand or change the code? Start with **[Architecture](docs/developers/architecture.md)**: the components, how data flows between them, and why each layer exists. The [developer guide](docs/README.md) continues into setup, the end-to-end protocol, diplomacy, testing, operations, releasing, and a folder per component. Development needs Node.js 22.23.3 or newer; see [developer setup](docs/developers/setup.md).
 
+The [newspaper preview](docs/developers/vox-agents/newspaper/replay.md#open-a-recording-in-the-browser-reader) lets you compare designs and read editions generated from a recorded game.
+
 ## Where is the documentation
 
 All documentation lives under **[docs/](docs/README.md)**. Working rules for contributors and agents are in [AGENTS.md](AGENTS.md).

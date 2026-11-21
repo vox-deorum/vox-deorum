@@ -1,33 +1,32 @@
-/** Exercise browser vote ordering and saved article inspection against controlled HTTP responses. */
+/** Exercise shared newspaper reading and recording generation in an installed browser. */
 import { existsSync } from 'node:fs';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Browser, Page, Route } from 'playwright-core';
+import { createNewspaperPreview } from '../../../../src/newspaper/cli/preview.js';
+import type { ArchiveIssue } from '../../../../src/newspaper/contracts/archive.js';
+import type { ReplaySettings, ReplayState } from '../../../../src/newspaper/contracts/replay.js';
 import { launchInstalledBrowser } from '../../../../src/newspaper/export/browser.js';
 import { readerDirectory, startNewspaperHost } from '../../../../src/newspaper/export/http.js';
-import type { ReplaySettings, ReplayState } from '../../../../src/newspaper/contracts/replay.js';
-import type { ArchiveIssue } from '../../../../src/newspaper/contracts/archive.js';
-import { ReplaySession } from '../../../../src/newspaper/replay/session.js';
 import { mountReplayRoutes } from '../../../../src/newspaper/replay/http.js';
+import { ReplaySession } from '../../../../src/newspaper/replay/session.js';
 import { createNewspaperIssue } from '../../../helpers/newspaper-fixtures.js';
-import { createReplayRecording } from '../../../helpers/newspaper-replay.js';
+import { createReplayRecording, writeReplayPublicationCatalogue } from '../../../helpers/newspaper-replay.js';
 
-/** Create one run that already has a saved issue and can advance again. */
+/** Make an unfinished run ready to check its next cutoff. */
 function session(): ReplayState {
   return {
-    settings: { databasePath: 'controlled.db', receiverPlayerID: 0, fromTurn: 10, toTurn: 30, publicationInterval: 5, durationUnit: 'recordedTurns', comparisonTurns: 0 },
+    settings: { databasePath: 'controlled.db', receiverPlayerID: 0, fromTurn: 10, toTurn: 15, publicationInterval: 5, durationUnit: 'recordedTurns', comparisonTurns: 0 },
     runId: 'run-1', outputPath: 'controlled-output.db', preferences: { frequencyStandardTurns: 5, llmEnabled: false },
     speed: { multiplier: 1, source: 'assumedStandard', recordedName: null, label: 'Controlled pace' },
     publicationIntervalTurns: 5, comparisonTurns: 0, cursor: { cutoffTurn: 10, previousCheckTurn: 9, finished: false },
   };
 }
 
-/** Create stored article metadata independently of prose shown on the reading surface. */
+/** Create an edition with independent article provenance for the browser to display. */
 function savedIssue(): ArchiveIssue {
   const issue = createNewspaperIssue();
-  issue.publication.title = 'Controlled edition';
   return {
     issue,
     index: { issueId: issue.issueId, runId: 'run-1', receiverPlayerID: 0, cutoffTurn: 12, title: issue.publication.title, itemCount: 1 },
@@ -44,20 +43,28 @@ function savedIssue(): ArchiveIssue {
   };
 }
 
-/** Fulfill a browser request with the same JSON transport used by the real host. */
+/** Fulfill a request with the real host's transport. */
 async function json(route: Route, body: unknown, status = 200): Promise<void> {
-  await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+  await route.fulfill({ status, json: body });
 }
 
-/** Read the controlled archive issue through the visible browser controls. */
-async function openIssue(page: Page): Promise<void> {
-  await page.locator('#archive-button').click();
-  await page.locator('#archive-list button').filter({ hasText: 'Controlled edition' }).click();
-  await page.waitForFunction(() => document.querySelector<HTMLElement>('#reader-root')?.dataset.issueId === 'issue-1');
-  await page.waitForFunction(() => document.querySelector('#issue-view')?.textContent?.includes('Controlled edition'));
+/** Open the saved mode and wait for the currently selected edition. */
+async function openRecorded(page: Page): Promise<void> {
+  await page.getByRole('button', { name: 'Recorded', exact: true }).click();
+  await page.locator('#replay-generate:enabled').waitFor();
 }
 
-/** Send two quick user vote actions before either response is acknowledged. */
+/** Open Recording and a nested set of options when needed. */
+async function recordingOptions(page: Page, nested?: 'Advanced' | 'Saved run'): Promise<void> {
+  const settings = page.locator('#recording-details');
+  if ((await settings.getAttribute('open')) === null) await settings.locator(':scope > summary').click();
+  if (nested) {
+    const summary = settings.locator('summary').filter({ hasText: nested });
+    if (!(await summary.evaluate(node => (node.parentElement as HTMLDetailsElement).open))) await summary.click();
+  }
+}
+
+/** Tap two votes before either request can be acknowledged. */
 async function voteTwice(page: Page): Promise<void> {
   await page.evaluate(() => {
     const root = document.querySelector('[data-vd-region="page"]:not([hidden])')!;
@@ -66,7 +73,13 @@ async function voteTwice(page: Page): Promise<void> {
   });
 }
 
-describe.skipIf(!existsSync(`${readerDirectory}/index.html`))('replay browser workflow', () => {
+/** Wait for the current computation to finish or stop. */
+async function settled(page: Page): Promise<void> {
+  await page.locator('#replay-generate:enabled').waitFor();
+  expect(await page.locator('[data-replay-error]').isVisible()).toBe(false);
+}
+
+describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('replay browser workflow', () => {
   let browser: Browser | undefined;
   let unavailable: string | undefined;
   let host: Awaited<ReturnType<typeof startNewspaperHost>>;
@@ -80,165 +93,131 @@ describe.skipIf(!existsSync(`${readerDirectory}/index.html`))('replay browser wo
     await host?.close();
   });
 
-  it('should retain the draft evidence-only purpose after a failed resume returns to New', async context => {
-    if (!browser) { context.skip(unavailable); return; }
-    const page = await browser.newPage();
-    let resumeRequest: unknown;
-    await page.route('**/api/newspaper/replay', async route => {
-      if (route.request().method() === 'PUT') {
-        resumeRequest = route.request().postDataJSON();
-      }
-      return json(route, { error: 'Controlled missing run' }, 409);
-    });
-    try {
-      await page.goto(`${host.url}/newspaper/`);
-      await page.waitForFunction(() => !document.querySelector<HTMLFieldSetElement>('#replay-form fieldset')?.disabled);
-      await page.locator('[name=databasePath]').fill('controlled.db');
-      await page.locator('[name=publicationEnabled]').selectOption('false');
-      await page.locator('[name=mode]').selectOption('resume');
-      await page.locator('[name=runId]').fill('missing-run');
-      expect(await page.locator('[name=publicationEnabled]').inputValue()).toBe('true');
-      expect(await page.locator('[name=publicationEnabled]').isDisabled()).toBe(true);
-      await page.locator('#replay-form [type=submit]').click();
-      await page.waitForFunction(() => document.querySelector('[data-replay-error]')?.textContent?.includes('Controlled missing run'));
-      expect(resumeRequest).toMatchObject({ mode: 'resume', publicationEnabled: true });
-      await page.locator('[name=mode]').selectOption('new');
-      expect(await page.locator('[name=publicationEnabled]').inputValue()).toBe('false');
-      expect(await page.locator('[name=publicationEnabled]').isEnabled()).toBe(true);
-    } finally {
-      await page.close();
-    }
-  }, 60_000);
-
-  it('should inherit configured defaults for untouched new and branch forms and save deliberate overrides', async context => {
+  for (const kind of ['preview', 'built'] as const) {
+  it(`should generate, stop, continue and resume from the ${kind} host`, async context => {
     if (!browser) { context.skip(unavailable); return; }
     const recording = await createReplayRecording();
-    const directory = await mkdtemp(path.join(tmpdir(), 'vd-browser-preferences-'));
-    await writeFile(path.join(directory, 'defaults.json'), JSON.stringify({ frequencyStandardTurns: 3, llmEnabled: true }));
-    const replaySession = new ReplaySession();
-    const replayHost = await startNewspaperHost({ mountApplicationRoutes: app => mountReplayRoutes(app, () => replaySession) });
-    const page = await browser.newPage();
-    const opened: ReplaySettings[] = [];
+    const state = kind === 'built' ? new ReplaySession() : undefined;
+    const replayHost = state
+      ? await startNewspaperHost({ mountApplicationRoutes: app => mountReplayRoutes(app, () => state) })
+      : await createNewspaperPreview({ port: 0 });
+    const origin = replayHost.url;
+    const url = `${origin}${state ? '/newspaper/' : '/preview.html'}`;
+    const page = await browser.newPage({ viewport: { width: 390, height: 850 } });
+    const output = path.join(path.dirname(recording.filename), 'run.sqlite');
+    const catalogue = await writeReplayPublicationCatalogue(recording.filename);
+    let releaseFirst!: () => void;
+    let releaseSecond!: () => void;
+    const first = new Promise<void>(resolve => { releaseFirst = resolve; });
+    const second = new Promise<void>(resolve => { releaseSecond = resolve; });
+    let held = 0;
+    const cutoffs: number[] = [];
+    const configurations: ReplaySettings[] = [];
+    await page.route('**/api/newspaper/replay/advance?view=summary', async route => {
+      held += 1;
+      if (held === 1) await first;
+      if (held === 2) await second;
+      const response = await route.fetch();
+      const value = await response.json();
+      cutoffs.push(value.session.cursor.cutoffTurn);
+      await route.fulfill({ response, json: value });
+    });
     page.on('request', request => {
-      if (request.method() === 'PUT' && new URL(request.url()).pathname === '/api/newspaper/replay') opened.push(request.postDataJSON());
+      if (new URL(request.url()).pathname === '/api/newspaper/replay' && request.method() === 'PUT') configurations.push(request.postDataJSON());
     });
     try {
-      await page.goto(`${replayHost.url}/newspaper/`);
-      await page.waitForFunction(() => !document.querySelector<HTMLFieldSetElement>('#replay-form fieldset')?.disabled);
+      await page.goto(url);
+      await page.locator('#reader-root[data-issue-id^=preview-] .vd-headline').first().waitFor();
+      const design = page.locator('#preview-design');
+      await page.locator('#preview-tint').selectOption('#b22222');
+      await design.focus();
+      await page.keyboard.press('ArrowDown');
+      await page.locator('#reader-root[data-issue-id^=preview-] .vd-headline').first().waitFor();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+
+      await openRecorded(page);
+      await recordingOptions(page, 'Saved run');
       await page.locator('[name=databasePath]').fill(recording.filename);
-      await page.locator('[name=fromTurn]').fill('10');
-      await page.locator('[name=toTurn]').fill('18');
-      await page.locator('[name=outputPath]').fill(path.join(directory, 'publications.sqlite'));
-      await page.locator('[name=editorialConfigDirectory]').fill(directory);
-      expect(await page.locator('[name=frequencyStandardTurns]').inputValue()).toBe('');
-      expect(await page.locator('[name=llmEnabled]').inputValue()).toBe('');
-      await page.locator('#replay-form [type=submit]').click();
-      await page.locator('[data-replay=advance]:enabled').waitFor();
-      const original = await replaySession.getState();
-      expect(original.preferences).toEqual({ frequencyStandardTurns: 3, llmEnabled: true });
-      expect(opened[0]).not.toHaveProperty('frequencyStandardTurns');
-      expect(opened[0]).not.toHaveProperty('llmEnabled');
-      expect(await page.locator('[name=frequencyStandardTurns]').inputValue()).toBe('3');
-      expect(await page.locator('[name=llmEnabled]').inputValue()).toBe('true');
+      await page.locator('[name=outputPath]').fill(output);
+      await page.locator('[name=fromTurn]').fill('6');
+      await page.locator('[name=toTurn]').fill('23');
+      await recordingOptions(page, 'Advanced');
+      await page.locator('[name=editorialConfigDirectory]').fill(catalogue);
+      const firstRequest = page.waitForRequest(request => new URL(request.url()).pathname.endsWith('/advance'));
+      await page.locator('#replay-generate').click();
+      await firstRequest;
+      await page.locator('#replay-stop').click();
+      releaseFirst();
+      await settled(page);
+      expect(cutoffs).toEqual([6]);
+      await page.locator('.vd-headline').filter({ hasText: 'War declared' }).first().waitFor();
+      const firstId = await page.locator('#recorded-edition').inputValue();
+      const vote = page.locator('[data-vd-region=page]:not([hidden]) [data-vd-vote-value=up]').first();
+      await vote.click();
+      expect(await vote.getAttribute('aria-pressed')).toBe('true');
 
-      await page.locator('[name=mode]').selectOption('branch');
-      expect(await page.locator('[name=frequencyStandardTurns]').inputValue()).toBe('');
-      expect(await page.locator('[name=llmEnabled]').inputValue()).toBe('');
-      await page.locator('[name=branchFromRunId]').fill(original.runId!);
-      await page.locator('#replay-form [type=submit]').click();
-      await page.waitForFunction(() => !document.querySelector<HTMLFieldSetElement>('#replay-form fieldset')?.disabled);
-      const branch = await replaySession.getState();
-      expect(branch.runId).not.toBe(original.runId);
-      expect(branch.preferences).toEqual({ frequencyStandardTurns: 3, llmEnabled: true });
-      expect(opened[1]).not.toHaveProperty('frequencyStandardTurns');
-      expect(opened[1]).not.toHaveProperty('llmEnabled');
+      await page.locator('#replay-continue').click();
+      await page.getByRole('button', { name: 'Mockups', exact: true }).click();
+      await page.locator('#reader-root[data-issue-id^=preview-]').waitFor();
+      await openRecordedWhileGenerating(page);
+      await page.locator(`#reader-root[data-issue-id="${firstId}"]`).waitFor();
+      await page.locator('#recorded-edition').focus();
+      releaseSecond();
+      await settled(page);
+      expect(cutoffs).toEqual([6, 14, 22, 23]);
+      expect(await page.locator('#recorded-edition').inputValue()).toBe(firstId);
+      expect(await page.locator('#recorded-edition').evaluate(node => node === document.activeElement)).toBe(true);
+      expect(await page.locator('#replay-diagnostics').getAttribute('open')).toBeNull();
 
-      for (const name of ['fromTurn', 'toTurn', 'comparisonTurns', 'durationUnit', 'speedMultiplierOverride', 'publicationEnabled', 'editorialConfigDirectory']) {
-        expect(await page.locator(`[name=${name}]`).isDisabled()).toBe(true);
-      }
-      for (const name of ['databasePath', 'outputPath', 'runId', 'receiverPlayerID', 'frequencyStandardTurns', 'llmEnabled']) {
-        expect(await page.locator(`[name=${name}]`).isEnabled()).toBe(true);
-      }
-      expect(await page.locator('[name=branchFromRunId]').inputValue()).toBe('');
-      await page.locator('[name=mode]').selectOption('new');
-      await page.locator('[name=publicationEnabled]').selectOption('false');
-      await page.locator('[name=fromTurn]').fill('99');
-      await page.locator('[name=toTurn]').fill('1');
-      await page.locator('[name=publicationInterval]').fill('0');
-      await page.locator('[name=comparisonTurns]').fill('-1');
-      await page.locator('[name=speedMultiplierOverride]').fill('-1');
-      await page.locator('[name=editorialConfigDirectory]').fill(path.join(directory, 'absent-config'));
-      await page.locator('[name=mode]').selectOption('resume');
-      expect(await page.locator('[name=publicationEnabled]').inputValue()).toBe('true');
-      await page.locator('[name=frequencyStandardTurns]').fill('8');
-      await page.locator('[name=llmEnabled]').selectOption('false');
-      await page.locator('#replay-form [type=submit]').click();
-      await page.waitForFunction(() => !document.querySelector<HTMLFieldSetElement>('#replay-form fieldset')?.disabled);
-      expect(opened[2].mode).toBe('resume');
-      expect(opened[2]).not.toHaveProperty('frequencyStandardTurns');
-      expect(opened[2]).not.toHaveProperty('llmEnabled');
-      expect(opened[2]).not.toHaveProperty('branchFromRunId');
-      expect(opened[2]).not.toHaveProperty('speedMultiplierOverride');
-      expect(opened[2]).not.toHaveProperty('editorialConfigDirectory');
-      expect(opened[2].publicationEnabled).toBe(true);
-      const resumed = await replaySession.getState();
-      expect(resumed.runId).toBe(branch.runId);
-      expect(resumed.settings).toEqual(branch.settings);
-      expect(resumed.preferences).toEqual({ frequencyStandardTurns: 3, llmEnabled: true });
-
-      await page.locator('[name=mode]').selectOption('new');
-      expect(await page.locator('[name=frequencyStandardTurns]').inputValue()).toBe('');
-      expect(await page.locator('[name=llmEnabled]').inputValue()).toBe('');
-      expect(await page.locator('[name=branchFromRunId]').inputValue()).toBe('');
-      expect(await page.locator('[name=fromTurn]').isEnabled()).toBe(true);
-      expect(await page.locator('[name=editorialConfigDirectory]').isEnabled()).toBe(true);
-      expect(await page.locator('[name=publicationEnabled]').inputValue()).toBe('true');
-      await page.locator('[name=frequencyStandardTurns]').fill('7');
-      await page.locator('[name=llmEnabled]').selectOption('false');
-      await page.locator('#replay-form [type=submit]').click();
-      await page.waitForFunction(() => !document.querySelector<HTMLFieldSetElement>('#replay-form fieldset')?.disabled);
-      expect((await replaySession.getState()).preferences).toEqual({ frequencyStandardTurns: 7, llmEnabled: false });
-      expect(opened[3]).toMatchObject({ frequencyStandardTurns: 7, llmEnabled: false });
-      expect(opened[3]).not.toHaveProperty('branchFromRunId');
-
-      await page.locator('[name=frequencyStandardTurns]').fill('4');
-      await page.locator('[name=llmEnabled]').selectOption('true');
-      await page.locator('[data-replay=save-preferences]').click();
-      await page.waitForFunction(() => !document.querySelector<HTMLFieldSetElement>('#replay-form fieldset')?.disabled);
-      expect((await replaySession.getState()).preferences).toEqual({ frequencyStandardTurns: 4, llmEnabled: true });
+      await page.locator('#replay-diagnostics > summary').click();
+      await page.locator('[data-replay=inspect]').click();
+      await page.locator('#evidence-view').getByText('Inspected cutoff: turn 23.').waitFor();
+      await page.locator('#page-items summary').filter({ hasText: 'War declared' }).click();
+      await page.locator('[data-article-sources]').waitFor();
+      await recordingOptions(page, 'Saved run');
+      const runId = await page.locator('[name=runId]').inputValue();
+      expect(runId).toBeTruthy();
+      await page.locator('#replay-resume').click();
+      await settled(page);
+      expect(configurations.at(-1)).toMatchObject({ mode: 'resume', runId, outputPath: output });
+      expect(cutoffs).toHaveLength(4);
+      await page.locator('#recorded-edition').selectOption(firstId);
+      await page.locator(`#reader-root[data-issue-id="${firstId}"]`).waitFor();
+      expect(await vote.getAttribute('aria-pressed')).toBe('true');
+      expect(await readFile(recording.filename)).toEqual(recording.originalBytes);
     } finally {
+      releaseFirst();
+      releaseSecond();
       await page.close();
-      await replaySession.close();
+      await state?.close();
       await replayHost.close();
       await recording.cleanup();
-      await rm(directory, { recursive: true, force: true });
     }
   }, 60_000);
+  }
 
-  it('should keep queued votes across issue switches and finish them before the next check', async context => {
+  it('should drain queued votes in order before advancing even after switching to mockups', async context => {
     if (!browser) { context.skip(unavailable); return; }
     const page = await browser.newPage();
     const state = session();
     const detail = savedIssue();
     const requests: string[] = [];
     let releaseVote!: () => void;
-    const firstVote = new Promise<void>(resolve => { releaseVote = resolve; });
-    let votes = 0;
+    const votePending = new Promise<void>(resolve => { releaseVote = resolve; });
     await page.route('**/api/newspaper/replay**', async route => {
       const pathname = new URL(route.request().url()).pathname;
       if (pathname.endsWith('/votes')) {
         const input = route.request().postDataJSON();
         requests.push(`vote:${input.value}`);
-        votes += 1;
-        if (votes === 1) await firstVote;
+        if (requests.length === 1) await votePending;
         detail.votes[input.itemId] = input.value;
         return json(route, state);
       }
       if (pathname.endsWith('/advance')) {
         requests.push(`advance:${detail.votes['shared-item']}`);
         expect(route.request().postDataJSON()).toEqual({ runId: 'run-1', receiverPlayerID: 0 });
-        state.cursor.cutoffTurn = 15;
-        return json(route, { session: state, evidence: { request: { receiverPlayerID: 0, cutoffTurn: 15, previousCheckTurn: 10 }, players: [], cities: [], comparisons: { players: [], cities: [] }, events: [] } });
+        state.cursor = { cutoffTurn: 15, previousCheckTurn: 10, finished: true };
+        return json(route, { session: state, check: { status: 'skipped', reason: 'Controlled quiet turn' } });
       }
       if (pathname.endsWith('/issues')) return json(route, { issues: [detail.index] });
       if (pathname.includes('/issues/')) return json(route, detail);
@@ -246,28 +225,30 @@ describe.skipIf(!existsSync(`${readerDirectory}/index.html`))('replay browser wo
     });
     try {
       await page.goto(`${host.url}/newspaper/`);
-      await page.locator('[data-replay="advance"]:enabled').waitFor();
-      await openIssue(page);
-      expect(await page.locator('#page-items').textContent()).toContain(detail.articles[0].templateIds[0]);
-      expect(await page.locator('#page-items').textContent()).toContain(detail.articles[0].evidenceSummary);
-      expect(JSON.parse((await page.locator('[data-article-sources]').first().textContent())!)).toEqual({ triggers: detail.articles[0].triggerIds, sources: detail.articles[0].sources });
+      await openRecorded(page);
+      await page.locator('#reader-root[data-issue-id="issue-1"]').waitFor();
+      const firstRequest = page.waitForRequest(request => request.url().endsWith('/votes'));
       await voteTwice(page);
-      await page.locator('#fixture-select').selectOption('wire-ordinary');
-      await page.locator('[data-replay="advance"]').click();
-      await page.waitForFunction(() => document.querySelector<HTMLElement>('#reader-root')?.inert === true);
+      await firstRequest;
+      await page.locator('#replay-continue').click();
+      await page.getByRole('button', { name: 'Mockups', exact: true }).click();
+      await page.locator('#reader-root[data-issue-id^=preview-]').waitFor();
       expect(requests).toEqual(['vote:1']);
       releaseVote();
-      await page.waitForFunction(() => !document.querySelector<HTMLElement>('#reader-root')?.inert);
+      await openRecordedWhileGenerating(page);
+      await settled(page);
       expect(requests).toEqual(['vote:1', 'vote:-1', 'advance:-1']);
-      await openIssue(page);
-      expect(await page.locator('[data-vd-region="page"]:not([hidden]) [data-vd-vote-value="down"]').getAttribute('aria-pressed')).toBe('true');
+      expect(await page.locator('#replay-status').textContent()).toContain('No editions published');
+      await page.locator('#replay-diagnostics > summary').click();
+      await page.locator('#check-view').getByText('Turn 15: Controlled quiet turn').waitFor();
+      await page.locator('[data-vd-region=page]:not([hidden]) [data-vd-vote-value=down][aria-pressed=true]').waitFor();
     } finally {
       releaseVote();
       await page.close();
     }
   }, 60_000);
 
-  it('should let later rapid votes finish after a failure and restore server values once the queue drains', async context => {
+  it('should keep later rapid votes after a failure and restore server values', async context => {
     if (!browser) { context.skip(unavailable); return; }
     const page = await browser.newPage();
     const detail = savedIssue();
@@ -288,47 +269,21 @@ describe.skipIf(!existsSync(`${readerDirectory}/index.html`))('replay browser wo
     });
     try {
       await page.goto(`${host.url}/newspaper/`);
-      await page.locator('[data-replay="advance"]:enabled').waitFor();
-      await openIssue(page);
+      await openRecorded(page);
+      await page.locator('#reader-root[data-issue-id="issue-1"]').waitFor();
+      await page.getByRole('tab', { name: 'Analysis' }).click();
       await voteTwice(page);
-      await page.waitForFunction(() => document.querySelector('[data-replay-error]')?.textContent?.includes('Controlled save failure'));
-      await page.waitForFunction(() => !document.querySelector<HTMLElement>('#reader-root')?.inert);
-      await page.waitForFunction(() => document.querySelector('[data-vd-region="page"]:not([hidden]) [data-vd-vote-value="down"]')?.getAttribute('aria-pressed') === 'true');
+      await page.locator('#reader-note').getByText(/Controlled save failure/).waitFor();
+      await expect.poll(() => issueReads).toBe(2);
+      expect(await page.getByRole('tab', { name: 'Analysis' }).getAttribute('aria-selected')).toBe('true');
       expect(votes).toBe(2);
-      expect(issueReads).toBe(2);
       expect(detail.votes['shared-item']).toBe(-1);
-    } finally {
-      await page.close();
-    }
-  }, 60_000);
-
-  it('should allow evidence-only session controls without inventing a publication scope', async context => {
-    if (!browser) { context.skip(unavailable); return; }
-    const page = await browser.newPage();
-    const state = session();
-    delete state.runId;
-    delete state.outputPath;
-    delete state.preferences;
-    state.settings.publicationEnabled = false;
-    let advanced = false;
-    await page.route('**/api/newspaper/replay**', async route => {
-      if (new URL(route.request().url()).pathname.endsWith('/advance')) {
-        expect(route.request().postData()).toBeNull();
-        advanced = true;
-        return json(route, { session: state, evidence: { request: { receiverPlayerID: 0, cutoffTurn: 15, previousCheckTurn: 10 }, players: [], cities: [], comparisons: { players: [], cities: [] }, events: [] } });
-      }
-      return json(route, state);
-    });
-    try {
-      await page.goto(`${host.url}/newspaper/`);
-      await page.locator('[data-replay="advance"]:enabled').waitFor();
-      expect(await page.locator('[data-replay="save-preferences"]').isDisabled()).toBe(true);
-      expect(await page.locator('[data-evidence-interval]').isVisible()).toBe(true);
-      await page.locator('[data-replay="advance"]').click();
-      await page.waitForFunction(() => !document.querySelector<HTMLFieldSetElement>('#replay-form fieldset')?.disabled);
-      expect(advanced).toBe(true);
-    } finally {
-      await page.close();
-    }
+    } finally { await page.close(); }
   }, 60_000);
 });
+
+/** Switch back to recorded reading without waiting for the active batch to finish. */
+async function openRecordedWhileGenerating(page: Page): Promise<void> {
+  await page.getByRole('button', { name: 'Recorded', exact: true }).click();
+  await page.locator('#recorded-edition').waitFor();
+}

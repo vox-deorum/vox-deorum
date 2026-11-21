@@ -66,21 +66,24 @@ function createOrdinaryIssue(sentences: number[], family: RendererFamily = 'broa
   return issue;
 }
 
-/** Read every story box on the visible page relative to its story list. */
+/** Read every story box on the visible page relative to the inside of its story list. */
 function readStories(page: Page): Promise<StoryLayout> {
   return page.locator('[data-vd-region=page]:not([hidden]) .vd-storylist').evaluate(list => {
     const origin = list.getBoundingClientRect();
+    const style = getComputedStyle(list);
+    const left = origin.left + parseFloat(style.borderLeftWidth);
+    const right = origin.right - parseFloat(style.borderRightWidth);
     const region = list.closest<HTMLElement>('[data-vd-region=page]')!;
     return {
-      width: origin.width,
+      width: right - left,
       overflow: region.scrollWidth > region.clientWidth,
       stories: Array.from(list.querySelectorAll<HTMLElement>(':scope > article'), article => {
         const box = article.getBoundingClientRect();
         const content = article.querySelector('.vd-story-content')!.getBoundingClientRect();
         return {
           id: article.dataset.itemId!,
-          left: box.left - origin.left,
-          right: box.right - origin.left,
+          left: box.left - left,
+          right: box.right - left,
           top: box.top - origin.top,
           contentBottom: content.bottom - origin.top,
         };
@@ -176,7 +179,8 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'export.html')) || !exist
       await page.route('**/newspaper/fixtures/victorian-ordinary.json', route => route.fulfill({ json: issue }));
       for (const width of [1200, 1000, 600]) {
         await page.goto(`${host.url}/newspaper/?fixture=victorian-ordinary`);
-        await page.waitForFunction(() => document.querySelector('#state-view')?.textContent?.includes('activePageId'));
+        await page.locator(`#reader-root[data-issue-id="${issue.issueId}"]`).waitFor();
+        await page.evaluate(() => document.fonts.ready.then(() => undefined));
         await page.locator('#reader-root').evaluate((root, width) => {
           root.style.cssText = `flex:0 0 auto;width:${width}px;padding:0;`;
         }, width);

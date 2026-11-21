@@ -1172,9 +1172,6 @@
         "body": [
           "{{player}} has planted a town {{distance}} tiles from one of our cities. What was open ground between us is now their street and their claim."
         ],
-        "links": [
-          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
-        ],
         "weight": { "base": 1 }
       },
       {

@@ -25,7 +25,7 @@ Multiple pages can reference the same canonical item ID. Every appearance shares
 
 The developer fixtures in `newspaper/fixtures/` are complete input examples covering Victorian ordinary, breaking, and analysis issues plus a wire ordinary issue.
 
-To compare the built-in designs from a source checkout, run `npm run newspaper:preview -w vox-agents` from the repository root. It opens the preview at [localhost:5600/preview.html](http://localhost:5600/preview.html). Choose a design, one of its front page layouts, and a tint from the sample colors or a custom color to see the design with a different accent. The preview uses sample stories with the design's current masthead, colors, fonts, section labels, and first registered illustration, if any. The list follows `newspaper/designs/`, so new built-in designs appear automatically. You can use the preview without starting VD or opening a recording.
+To compare the built-in designs from a source checkout, run `npm run newspaper:preview -w vox-agents` from the repository root. The command builds MCP's queries, starts the source reader at [127.0.0.1:5600](http://127.0.0.1:5600/), and opens a browser. The reader starts in Mockups. Choose a design, one of its front page layouts, and a tint from the sample colors or a custom color to see the design with a different accent. The preview uses sample stories with the design's current masthead, colors, fonts, section labels, and first registered illustration, if any. The list follows `newspaper/designs/`, so new built-in designs appear automatically. The old `/preview.html` address loads the same shell and keeps its fixture query. You can use Mockups without starting VD or opening a recording, and you can switch to Recorded to read a recording as described in [recording replay](replay.md#open-a-recording-in-the-browser-reader). A source checkout also serves the developer fixtures through `?fixture=` links; installed builds include only the packaged Victorian ordinary sample.
 
 ### Store the presentation with the issue
 
@@ -50,7 +50,7 @@ Keep these related values separate:
 
 ## Open the browser reader
 
-The normal VD server hosts the reader and the export service. Start VD as usual and open the newspaper reader at the server's `/newspaper/` path. The reader opens the packaged Victorian ordinary sample. A source checkout also serves the other developer fixtures; installed builds include only the default sample. Section tabs wrap to keep every section visible. Each section retains its own scroll position, and the surrounding inspector reflects the reader's current votes and scroll state alongside actions and article evidence.
+The normal VD server hosts the reader and the export service. Start VD as usual and open the newspaper reader at the server's `/newspaper/` path. The same shell also runs in the source preview started by `npm run newspaper:preview -w vox-agents`. Mockups opens sample stories from the bundled fixtures. Recorded opens a recording, and its Replay diagnostics below the paper show the selected edition's article sources and decision plus any cutoff evidence you inspect. A source checkout also serves the other developer fixtures; installed builds provide only the packaged Victorian ordinary fixture. Section tabs wrap to keep every section visible. Each section retains its own scroll position.
 
 `npm run type-check:newspaper -w vox-agents` checks browser code separately from the Node backend. `npm run build:newspaper -w vox-agents` rebuilds `vox-agents/dist-newspaper`. The normal workspace build includes this step.
 
@@ -103,8 +103,10 @@ The source is divided by runtime and responsibility:
 | `src/newspaper/export/{http,service}.ts` | Server-mounted HTTP routes, reusable export queue, cache delivery, and shutdown |
 | `src/newspaper/{application,game-delivery}.ts` | Lazy renderer lifecycle, sample orchestration, and acknowledged MCP delivery to the active game reader |
 | `newspaper/src/reader/` | Plain DOM reader lifecycle, article construction, styling, actions, and layout measurement |
-| `newspaper/src/app/` | Fixture and replay controls, state inspection, and browser navigation |
-| `newspaper/src/export-bridge.ts` | Browser entry point used by texture export and CLI previews |
+| `newspaper/src/app/` | Mockup and recording controls, replay diagnostics, and browser navigation |
+| `newspaper/src/preview/` | Sample editions built from built-in designs and direct fixture selection |
+| `src/newspaper/cli/preview.ts` | Source preview host pairing the Vite reader with replay routes on loopback |
+| `newspaper/src/export-bridge.ts` | Browser entry point used by texture export and CLI PNG previews |
 | `civ5-mod/UI/Newspaper/VoxDeorumNewspaperData.lua` | Pure publication indexing and native text adapters |
 
 Contracts have no renderer imports. The renderer depends on contracts and stays free of DOM imports; DOM work belongs to `newspaper/src/`. The asset registry reads design-owned declarations through a small adapter: Node reads `newspaper/designs/*.json`, and the reader build swaps that specifier for the bundled JSON reader under `newspaper/src/`. The Node-only exporter consumes serialized render contracts and the browser bridge interfaces. Structural schemas live in contracts; issue parsing at the rendering boundary adds registered asset and kind checks, while profile and bundle consistency checks use renderer layout defaults.

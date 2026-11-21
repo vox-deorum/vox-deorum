@@ -10,7 +10,7 @@
     "build:newspaper": "npm run type-check:newspaper && vite build --config newspaper/vite.config.ts && node ../scripts/utilities/package-newspaper-sample.mjs",
     "acquire:texconv": "node ../scripts/utilities/acquire-texconv.mjs",
     "newspaper": "tsx src/newspaper/console.ts",
-    "newspaper:preview": "vite --config newspaper/vite.config.ts --open /preview.html",
+    "newspaper:preview": "tsx src/newspaper/preview-console.ts",
     "newspaper:triggers": "node ../scripts/utilities/list-newspaper-triggers.mjs",
     "newspaper:sort-triggers": "node ../scripts/utilities/sort-newspaper-triggers.mjs",
     "dev": "tsx watch --import ./src/instrumentation.ts src/index.ts",

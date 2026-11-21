@@ -1,465 +1,385 @@
-/**
- * Replay controls for opening, resuming, branching, checking, and preferences.
- *
- * The form owns its own serialized validation and local restore data. The host
- * wires evidence and saved-issue inspection through callbacks so controls stay
- * independent of the reader shell.
- */
-import { ZodError, type z } from 'zod';
+/** Connect the recording form and batch generation to the shared reader. */
+import { ZodError } from 'zod';
 import type { NewspaperEvidence } from '../../../../mcp-server/dist/newspaper/evidence.js';
 import type { NewspaperArchiveScope } from '../../../../mcp-server/dist/newspaper/protocol.js';
-import { replaySettingsSchema, type replayCheckSchema, type ReplaySettings, type ReplayState } from '../../../src/newspaper/contracts/replay.js';
-import { publicationPreferencesSchema, type PublicationPreferences } from '../../../src/newspaper/contracts/publication.js';
+import { replaySettingsSchema, type ReplaySettings, type ReplayState } from '../../../src/newspaper/contracts/replay.js';
+import { publicationPreferencesSchema } from '../../../src/newspaper/contracts/publication.js';
 import { errorMessage } from '../../../src/utils/errors.js';
-import {
-  advanceReplay,
-  configureReplay,
-  getReplayState,
-  inspectReplay,
-  ReplayApiError,
-  saveReplayPreferences,
-} from './api.js';
+import { advanceReplay, configureReplay, getLatestRecording, getReplayState, inspectReplay, ReplayApiError, saveReplayPreferences } from './api.js';
+import { element } from './dom.js';
 
-/** Host callbacks used by replay controls. */
-export interface ReplayControlCallbacks {
-  /** Show or clear inspected evidence. */
+interface ReplayControlCallbacks {
+  /** Accept a configured or restored run, and load its saved editions. */
+  onRun(state: ReplayState, openLatest: boolean): Promise<void>;
+  /** Add a new edition to the picker without reloading the archive. */
+  onPublished(issueId: string, turn: number): void;
+  /** Capture the current selection and open the latest edition at completion if unchanged. */
+  onBatchStart(): () => Promise<void>;
+  /** Set or clear inspected evidence. */
   onEvidence(evidence: NewspaperEvidence | null): void;
-  /** Report the current server session after any accepted operation. */
-  onSession(state: ReplayState): void;
-  /** Show or clear the editorial check returned by an advance. */
-  onCheck(check: z.infer<typeof replayCheckSchema> | null): void;
-  /** Notify the host that a generated issue may now appear in the archive. */
-  onPublished(): void;
-  /** Drain pending votes before a replay operation reads or changes editorial state. */
-  beforeOperation(): Promise<void>;
-  /** Prevent new reader actions while replay operations are in progress. */
-  onBusy(busy: boolean): void;
+  /** Clear or add skip reasons from the batch. */
+  onSkip(skip: ReplaySkip | null): void;
+  /** Hold votes from the old run while its replacement opens. */
+  onConfiguring(configuring: boolean): void;
+  /** Wait for earlier votes before a scoped write. */
+  flushVotes(): Promise<void>;
 }
 
-/** Controls exposed to the host after mounting. */
-export interface ReplayControls {
-  /** Return the current server-backed session, or null before one exists. */
-  getSession(): ReplayState | null;
-  /** Apply a session returned by another scoped operation such as a vote save. */
-  showSession(state: ReplayState): void;
-  /** Show an error without changing the current session. */
-  reportError(message: string): void;
-  /** Show a status message without changing the current session. */
-  reportStatus(message: string): void;
-}
-
-/** Locally stored settings used to refill the resume form after a restart. */
-interface StoredReplay {
-  settings: ReplaySettings;
-  runId: string;
-  outputPath: string;
+export interface ReplaySkip {
+  turn: number;
+  reason: string;
 }
 
 const storageKey = 'vox-deorum.newspaper.replay';
 
-/** Return a named input or select from the replay form. */
-function field<T extends HTMLInputElement | HTMLSelectElement>(form: HTMLFormElement, name: string): T {
-  const element = form.elements.namedItem(name);
-  if (element instanceof HTMLInputElement || element instanceof HTMLSelectElement) return element as T;
-  throw new Error(`Missing replay field ${name}.`);
+/** Read saved settings as a convenience for reopening a store after a server restart. */
+function readStored(): ReplaySettings | undefined {
+  try {
+    const result = replaySettingsSchema.safeParse(JSON.parse(localStorage.getItem(storageKey) ?? 'null')?.settings);
+    return result.success && result.data.runId ? result.data : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
-/** Read a trimmed text value from the form. */
-function textValue(form: HTMLFormElement, name: string): string {
-  const element = form.elements.namedItem(name);
-  return element instanceof HTMLInputElement || element instanceof HTMLSelectElement ? element.value.trim() : '';
+/** Remember how to resume the publication store without creating a new run. */
+function remember(state: ReplayState): void {
+  if (!state.runId) return;
+  const settings = { ...state.settings, ...state.preferences, runId: state.runId, outputPath: state.outputPath, mode: 'resume' };
+  try {
+    localStorage.setItem(storageKey, JSON.stringify({ settings }));
+  } catch {
+    // Replay still works when browser storage is unavailable.
+  }
 }
 
-/** Read an optional trimmed text value from the form. */
-function optionalText(form: HTMLFormElement, name: string): string | undefined {
-  const value = textValue(form, name);
-  return value ? value : undefined;
+/** Find the published archive addressed by a replay request. */
+function scope(state: ReplayState): NewspaperArchiveScope | undefined {
+  return state.runId ? { runId: state.runId, receiverPlayerID: state.settings.receiverPlayerID } : undefined;
 }
 
-/** Read a numeric value from the form. */
-function numberValue(form: HTMLFormElement, name: string): number {
-  return Number(textValue(form, name));
-}
-
-/** Format validation and API failures for the status area. */
+/** Report the first invalid field or the API's readable error. */
 function formatError(error: unknown): string {
-  if (error instanceof ZodError) return error.issues[0]?.message ?? 'Invalid replay settings.';
+  if (error instanceof ZodError) {
+    const issue = error.issues[0];
+    return issue ? [issue.path.join(' '), issue.message].filter(Boolean).join(': ') : 'Invalid replay settings.';
+  }
   return errorMessage(error);
 }
 
-/** Build validated settings from the current form values. */
-function readOpenSettings(form: HTMLFormElement): ReplaySettings {
-  const outputPath = optionalText(form, 'outputPath');
-  const runId = optionalText(form, 'runId');
-  const mode = textValue(form, 'mode');
-  const identity = {
-    databasePath: textValue(form, 'databasePath'),
-    receiverPlayerID: numberValue(form, 'receiverPlayerID'),
-    ...(outputPath ? { outputPath } : {}),
-    ...(runId ? { runId } : {}),
-    mode,
-  };
-  if (mode === 'resume') {
-    // The server restores the saved schedule; disabled form values cannot replace it.
+/** Mount controls and return a lazy initializer for the Recorded tab. */
+export function mountReplayControls(callbacks: ReplayControlCallbacks): () => void {
+  const form = element<HTMLFormElement>('#replay-form');
+  const fieldsets = [...form.querySelectorAll('fieldset')];
+  const status = element<HTMLOutputElement>('#replay-status');
+  const errorView = element('[data-replay-error]');
+  const generate = element<HTMLButtonElement>('#replay-generate');
+  const resume = element<HTMLButtonElement>('#replay-resume');
+  const proceed = element<HTMLButtonElement>('#replay-continue');
+  const stop = element<HTMLButtonElement>('#replay-stop');
+  const inspect = element<HTMLButtonElement>('[data-replay="inspect"]');
+  const savePreferences = element<HTMLButtonElement>('[data-replay="save-preferences"]');
+  const recording = element<HTMLDetailsElement>('#recording-details');
+  let current: ReplayState | undefined;
+  let busy = false;
+  let batching = false;
+  let stopRequested = false;
+  let restoreStopFocus = false;
+  let started = false;
+  let editedDatabasePath = false;
+
+  /** Return a named input or select from the replay form. */
+  function field(name: string): HTMLInputElement | HTMLSelectElement {
+    const control = form.elements.namedItem(name);
+    if (control instanceof HTMLInputElement || control instanceof HTMLSelectElement) return control;
+    throw new Error(`Missing replay field ${name}.`);
+  }
+
+  /** Read the trimmed value of a form control. */
+  function value(name: string): string {
+    return field(name).value.trim();
+  }
+
+  /** Keep actions aligned with the current run and settings. */
+  function updateControls(): void {
+    for (const fieldset of fieldsets) fieldset.disabled = busy;
+    const branchFrom = field('branchFromRunId');
+    branchFrom.disabled = value('mode') !== 'branch';
+    branchFrom.required = !branchFrom.disabled;
+    const evidenceOnly = value('publicationEnabled') === 'false';
+    element('[data-evidence-interval]').hidden = !evidenceOnly;
+    field('publicationInterval').disabled = !evidenceOnly;
+    generate.disabled = busy;
+    resume.disabled = busy;
+    proceed.hidden = !current || current.cursor.finished;
+    proceed.disabled = busy;
+    stop.hidden = !batching;
+    stop.disabled = stopRequested;
+    inspect.disabled = busy || !current;
+    savePreferences.disabled = busy || !current?.runId;
+  }
+
+  /** Translate the form into new, branch, or resume settings. */
+  function readSettings(resuming: boolean): ReplaySettings {
+    if (!value('databasePath') || !value('receiverPlayerID')) throw new Error('Enter a recording path and player.');
+    const identity = {
+      databasePath: value('databasePath'),
+      receiverPlayerID: Number(value('receiverPlayerID')),
+      outputPath: value('outputPath') || undefined,
+    };
+    if (resuming) {
+      if (!value('runId')) throw new Error('Enter the run ID to resume.');
+      return replaySettingsSchema.parse({
+        ...identity, mode: 'resume', runId: value('runId'), publicationEnabled: true,
+        fromTurn: 0, toTurn: 0, publicationInterval: 1, comparisonTurns: 0, durationUnit: 'recordedTurns',
+      });
+    }
+    const frequency = value('frequencyStandardTurns');
+    const llm = value('llmEnabled');
+    const override = value('speedMultiplierOverride');
     return replaySettingsSchema.parse({
-      ...identity, publicationEnabled: true, fromTurn: 0, toTurn: 0,
-      publicationInterval: 1, comparisonTurns: 0, durationUnit: 'recordedTurns',
+      ...identity,
+      mode: value('mode'),
+      branchFromRunId: value('mode') === 'branch' ? value('branchFromRunId') : undefined,
+      fromTurn: Number(value('fromTurn')),
+      toTurn: Number(value('toTurn')),
+      publicationEnabled: value('publicationEnabled') !== 'false',
+      publicationInterval: Number(value('publicationInterval')),
+      durationUnit: value('durationUnit'),
+      comparisonTurns: Number(value('comparisonTurns')),
+      frequencyStandardTurns: frequency ? Number(frequency) : undefined,
+      llmEnabled: llm ? llm === 'true' : undefined,
+      speedMultiplierOverride: override ? Number(override) : undefined,
+      editorialConfigDirectory: value('editorialConfigDirectory') || undefined,
     });
   }
-  const override = optionalText(form, 'speedMultiplierOverride');
-  const branchFromRunId = optionalText(form, 'branchFromRunId');
-  const editorialConfigDirectory = optionalText(form, 'editorialConfigDirectory');
-  const frequency = optionalText(form, 'frequencyStandardTurns');
-  const llm = optionalText(form, 'llmEnabled');
-  return replaySettingsSchema.parse({
-    ...identity,
-    fromTurn: numberValue(form, 'fromTurn'),
-    toTurn: numberValue(form, 'toTurn'),
-    publicationInterval: numberValue(form, 'publicationInterval'),
-    durationUnit: textValue(form, 'durationUnit'),
-    comparisonTurns: numberValue(form, 'comparisonTurns'),
-    ...(frequency ? { frequencyStandardTurns: Number(frequency) } : {}),
-    ...(llm !== undefined ? { llmEnabled: llm === 'true' } : {}),
-    publicationEnabled: textValue(form, 'publicationEnabled') !== 'false',
-    ...(override ? { speedMultiplierOverride: Number(override) } : {}),
-    ...(mode === 'branch' && branchFromRunId ? { branchFromRunId } : {}),
-    ...(editorialConfigDirectory ? { editorialConfigDirectory } : {}),
-  });
-}
 
-/** Build validated preferences from the current form values. */
-function readPreferences(form: HTMLFormElement): PublicationPreferences {
-  if (!optionalText(form, 'frequencyStandardTurns') || !optionalText(form, 'llmEnabled')) {
-    throw new Error('Choose a frequency and an LLM editor setting before saving preferences.');
-  }
-  return publicationPreferencesSchema.parse({
-    frequencyStandardTurns: numberValue(form, 'frequencyStandardTurns'),
-    llmEnabled: textValue(form, 'llmEnabled') === 'true',
-  });
-}
-
-/** Fill the form with settings from one session or stored resume data. */
-function fillForm(
-  form: HTMLFormElement,
-  settings: ReplaySettings,
-  runId: string,
-  outputPath: string,
-  mode: 'new' | 'resume',
-  preferences?: PublicationPreferences,
-): void {
-  field(form, 'databasePath').value = settings.databasePath;
-  field(form, 'publicationEnabled').value = String(settings.publicationEnabled !== false);
-  field(form, 'receiverPlayerID').value = String(settings.receiverPlayerID);
-  field(form, 'fromTurn').value = String(settings.fromTurn);
-  field(form, 'toTurn').value = String(settings.toTurn);
-  field(form, 'publicationInterval').value = String(settings.publicationInterval);
-  field(form, 'comparisonTurns').value = String(settings.comparisonTurns);
-  field(form, 'durationUnit').value = settings.durationUnit;
-  field(form, 'speedMultiplierOverride').value = settings.speedMultiplierOverride === undefined
-    ? '' : String(settings.speedMultiplierOverride);
-  field(form, 'mode').value = mode;
-  field(form, 'runId').value = runId;
-  field(form, 'branchFromRunId').value = settings.branchFromRunId ?? '';
-  field(form, 'outputPath').value = outputPath;
-  field(form, 'editorialConfigDirectory').value = settings.editorialConfigDirectory ?? '';
-  const frequency = preferences?.frequencyStandardTurns ?? settings.frequencyStandardTurns;
-  const llm = preferences?.llmEnabled ?? settings.llmEnabled;
-  field(form, 'frequencyStandardTurns').value = frequency === undefined ? '' : String(frequency);
-  field(form, 'llmEnabled').value = llm === undefined ? '' : String(llm);
-}
-
-/** Save the latest session settings so a restarted server can refill the resume form. */
-function writeStored(state: ReplayState): void {
-  if (!state.runId) return;
-  try {
-    const settings: ReplaySettings = {
-      ...state.settings,
-      mode: 'resume',
-      runId: state.runId,
-      ...(state.outputPath ? { outputPath: state.outputPath } : {}),
-      ...(state.preferences
-        ? {
-          frequencyStandardTurns: state.preferences.frequencyStandardTurns,
-          llmEnabled: state.preferences.llmEnabled,
-        }
-        : {}),
+  /** Refill settings from the store without locking them to a past run. */
+  function fillForm(settings: ReplaySettings): void {
+    const values = {
+      databasePath: settings.databasePath,
+      receiverPlayerID: settings.receiverPlayerID,
+      fromTurn: settings.fromTurn,
+      toTurn: settings.toTurn,
+      publicationEnabled: settings.publicationEnabled !== false,
+      publicationInterval: settings.publicationInterval,
+      durationUnit: settings.durationUnit,
+      comparisonTurns: settings.comparisonTurns,
+      speedMultiplierOverride: settings.speedMultiplierOverride,
+      mode: 'new',
+      runId: settings.runId,
+      branchFromRunId: undefined,
+      outputPath: settings.outputPath,
+      editorialConfigDirectory: settings.editorialConfigDirectory,
+      frequencyStandardTurns: settings.frequencyStandardTurns,
+      llmEnabled: settings.llmEnabled,
     };
-    localStorage.setItem(storageKey, JSON.stringify({
-      settings,
-      runId: state.runId,
-      outputPath: state.outputPath ?? '',
-    }));
-  } catch {
-    return;
-  }
-}
-
-/** Read locally stored resume settings, ignoring stale or malformed data. */
-function readStored(): StoredReplay | null {
-  try {
-    const raw: unknown = JSON.parse(localStorage.getItem(storageKey) ?? 'null');
-    if (!raw || typeof raw !== 'object') return null;
-    const record = raw as Record<string, unknown>;
-    const settings = replaySettingsSchema.safeParse(record.settings);
-    if (!settings.success) return null;
-    if (typeof record.runId !== 'string' || !record.runId.trim()) return null;
-    return {
-      settings: settings.data,
-      runId: record.runId.trim(),
-      outputPath: typeof record.outputPath === 'string' ? record.outputPath : settings.data.outputPath ?? '',
-    };
-  } catch {
-    return null;
-  }
-}
-
-/** Connect replay controls independently of fixture loading or publication generation. */
-export function mountReplayControls(
-  form: HTMLFormElement,
-  callbacks: ReplayControlCallbacks,
-): ReplayControls {
-  const status = form.querySelector<HTMLOutputElement>('output')!;
-  const errorView = form.querySelector<HTMLElement>('[data-replay-error]')!;
-  const fieldsets = [...form.querySelectorAll<HTMLFieldSetElement>('fieldset')];
-  const preview = form.querySelector<HTMLButtonElement>('[data-replay="inspect"]')!;
-  const next = form.querySelector<HTMLButtonElement>('[data-replay="advance"]')!;
-  const savePreferences = form.querySelector<HTMLButtonElement>('[data-replay="save-preferences"]')!;
-  const mode = field<HTMLSelectElement>(form, 'mode');
-  const runId = field<HTMLInputElement>(form, 'runId');
-  const branchFrom = field<HTMLInputElement>(form, 'branchFromRunId');
-  const purpose = field<HTMLSelectElement>(form, 'publicationEnabled');
-
-  let current: ReplayState | null = null;
-  let busy = false;
-  let operationGeneration = 0;
-  let previousMode = mode.value;
-  let nonResumePurpose = purpose.value;
-
-  /** Show a readable error without discarding the current session. */
-  function showError(message: string): void {
-    errorView.textContent = message;
-    errorView.hidden = false;
+    for (const [name, entry] of Object.entries(values)) field(name).value = entry === undefined ? '' : String(entry);
   }
 
-  /** Clear the previous error before a new operation. */
-  function clearError(): void {
-    errorView.textContent = '';
-    errorView.hidden = true;
-  }
-
-  /** Show a plain status message in the form output. */
-  function showStatus(message: string): void {
-    status.textContent = message;
-  }
-
-  /** Keep actions aligned with the current session, publication run, and finished cursor. */
-  function updateAvailability(): void {
-    preview.disabled = !current;
-    next.disabled = !current || current.cursor.finished;
-    savePreferences.disabled = !current?.runId;
-  }
-
-  /** Keep branch identity and saved settings aligned with the selected opening mode. */
-  function syncModeFields(): void {
-    branchFrom.disabled = mode.value !== 'branch';
-    branchFrom.required = mode.value === 'branch';
-    if (mode.value !== 'branch') branchFrom.value = '';
-    runId.required = mode.value === 'resume';
-    const resuming = mode.value === 'resume';
-    if (resuming) {
-      if (previousMode !== 'resume') nonResumePurpose = purpose.value;
-      purpose.value = 'true';
-    } else if (previousMode === 'resume') {
-      purpose.value = nonResumePurpose;
-    }
-    previousMode = mode.value;
-    for (const element of form.querySelectorAll<HTMLInputElement | HTMLSelectElement>('[data-saved-setting]')) element.disabled = resuming;
-    const resumeNote = form.querySelector<HTMLElement>('[data-replay-resume]');
-    if (resumeNote) resumeNote.hidden = !resuming;
-    const evidenceOnly = purpose.value === 'false';
-    const evidenceInterval = form.querySelector<HTMLElement>('[data-evidence-interval]');
-    if (evidenceInterval) evidenceInterval.hidden = !evidenceOnly;
-  }
-
-  /** Apply one accepted session to the form, status, and host callbacks. */
-  function applyState(state: ReplayState, fill: boolean): void {
-    current = state;
-    callbacks.onSession(state);
-    writeStored(state);
-    updateAvailability();
-    if (fill) {
-      fillForm(
-        form,
-        state.settings,
-        state.runId ?? '',
-        state.outputPath ?? '',
-        state.runId ? 'resume' : 'new',
-        state.preferences,
-      );
-      nonResumePurpose = purpose.value;
-    }
-    syncModeFields();
-    const cutoff = state.cursor.cutoffTurn === null
-      ? 'before first check'
-      : `turn ${state.cursor.cutoffTurn}`;
-    const run = state.runId ? ` Run: ${state.runId}.` : ' No publication run.';
-    showStatus(
-      `${state.speed.label}, multiplier ${state.speed.multiplier}. `
-      + (state.preferences ? `Publication frequency: ${state.preferences.frequencyStandardTurns} Standard turns (${state.publicationIntervalTurns} recorded turns). ` : `Evidence interval: ${state.publicationIntervalTurns} recorded turns. `)
-      + `Cutoff: ${cutoff}${state.cursor.finished ? ' (finished)' : ''}.`
-      + run,
-    );
-  }
-
-  /** Disable overlapping browser operations while preserving errors and the current session. */
-  async function run(operation: (generation: number) => Promise<void>): Promise<void> {
+  /** Serialize recording controls so form actions cannot overlap the active batch. */
+  async function run(operation: () => Promise<void>): Promise<void> {
     if (busy) return;
     busy = true;
-    const generation = ++operationGeneration;
-    clearError();
-    for (const element of fieldsets) element.disabled = true;
-    callbacks.onBusy(true);
+    updateControls();
+    errorView.hidden = true;
     try {
-      await callbacks.beforeOperation();
-      await operation(generation);
+      await operation();
     } catch (error) {
-      if (generation === operationGeneration) showError(formatError(error));
+      errorView.textContent = formatError(error);
+      errorView.hidden = false;
     } finally {
       busy = false;
-      callbacks.onBusy(false);
-      for (const element of fieldsets) element.disabled = false;
-      updateAvailability();
-      syncModeFields();
+      updateControls();
     }
   }
 
-  /** Parse user settings through the shared browser-safe contract and open the run. */
+  /** Adopt a run and list its editions before starting new work. */
+  async function setRun(state: ReplayState, openLatest: boolean, refill: boolean): Promise<void> {
+    current = state;
+    if (refill) fillForm({ ...state.settings, ...state.preferences, runId: state.runId, outputPath: state.outputPath });
+    else {
+      field('runId').value = state.runId ?? '';
+      field('outputPath').value = state.outputPath ?? '';
+    }
+    remember(state);
+    callbacks.onEvidence(null);
+    callbacks.onSkip(null);
+    updateControls();
+    await callbacks.onRun(state, openLatest);
+  }
+
+  /** Summarize the position and schedule of an open recording. */
+  function describe(state: ReplayState): string {
+    const cutoff = state.cursor.cutoffTurn === null ? 'Ready for first check' : `Checked through turn ${state.cursor.cutoffTurn}`;
+    return `${cutoff}${state.cursor.finished ? ' (complete)' : ''}. Every ${state.publicationIntervalTurns} recorded turns.`;
+  }
+
+  /** Check cutoffs one at a time, preserving each successful check if stopped. */
+  async function batch(state: ReplayState, finish: () => Promise<void>): Promise<void> {
+    batching = true;
+    stopRequested = false;
+    restoreStopFocus = false;
+    callbacks.onSkip(null);
+    callbacks.onEvidence(null);
+    updateControls();
+    let checked = 0;
+    let published = 0;
+    const label = state.runId ? 'editions' : 'evidence checks';
+    const finalTurn = state.settings.toTurn;
+    const nextTurn = state.cursor.cutoffTurn === null ? state.settings.fromTurn : Math.min(finalTurn, state.cursor.cutoffTurn + state.publicationIntervalTurns);
+    status.textContent = `Checking turn ${nextTurn} of ${finalTurn}…`;
+    try {
+      while (!state.cursor.finished && !stopRequested) {
+        await callbacks.flushVotes();
+        if (stopRequested) break;
+        const result = await advanceReplay(scope(state));
+        state = result.session;
+        current = state;
+        checked += 1;
+        const turn = state.cursor.cutoffTurn;
+        if (result.check?.status === 'skipped' && turn !== null) {
+          callbacks.onSkip({ turn, reason: result.check.reason ?? 'No reason recorded.' });
+        }
+        if (result.check?.status === 'published') {
+          published += 1;
+          if (result.check.issueId && turn !== null) callbacks.onPublished(result.check.issueId, turn);
+        }
+        status.textContent = `${stopRequested ? 'Stopping. ' : ''}Checked turn ${turn} of ${finalTurn} · ${state.runId ? published : checked} ${label}.`;
+      }
+      const prefix = state.cursor.finished ? 'Complete' : 'Stopped';
+      const outcome = state.runId
+        ? published === 0 ? 'No editions published.' : `${published} ${published === 1 ? 'edition' : 'editions'} published.`
+        : `${checked} evidence ${checked === 1 ? 'check' : 'checks'} completed.`;
+      status.textContent = `${prefix} · ${outcome}`;
+      if (published) await finish();
+    } catch (error) {
+      status.textContent = `Generation paused after ${checked} ${checked === 1 ? 'check' : 'checks'}.`;
+      throw error;
+    } finally {
+      const restoreFocus = restoreStopFocus || document.activeElement === stop;
+      batching = false;
+      updateControls();
+      if (restoreFocus) requestAnimationFrame(() => {
+        if (stop === document.activeElement || document.body === document.activeElement) {
+          (proceed.hidden ? generate : proceed).focus({ preventScroll: true });
+        }
+      });
+    }
+  }
+
+  form.addEventListener('invalid', event => {
+    if (!(event.target instanceof HTMLElement)) return;
+    for (let node = event.target.parentElement; node; node = node.parentElement) {
+      if (node instanceof HTMLDetailsElement) node.open = true;
+    }
+  }, true);
+  form.addEventListener('change', updateControls);
+  field('databasePath').addEventListener('input', () => { editedDatabasePath = true; });
+
+  /** Offer an archive path without replacing a typed path or delaying the form. */
+  async function suggestRecording(): Promise<void> {
+    try {
+      const path = await getLatestRecording();
+      if (path && !current && !editedDatabasePath && !value('databasePath')) field('databasePath').value = path;
+    } catch {
+      // A missing or unreadable archive still allows manual entry.
+    }
+  }
+
   form.addEventListener('submit', event => {
     event.preventDefault();
-    void run(async generation => {
-      const settings = readOpenSettings(form);
-      const state = await configureReplay(settings);
-      if (generation !== operationGeneration) return;
-      applyState(state, true);
-      callbacks.onEvidence(null);
-      callbacks.onCheck(null);
-    });
-  });
-
-  /** Keep evidence preview separate from the advancing check action. */
-  preview.addEventListener('click', () => {
-    void run(async generation => {
-      const session = current;
-      if (!session) throw new Error('Open a replay run before inspecting evidence.');
-      const scope: NewspaperArchiveScope | undefined = session.runId
-        ? { runId: session.runId, receiverPlayerID: session.settings.receiverPlayerID }
-        : undefined;
-      const result = await inspectReplay(scope);
-      if (generation !== operationGeneration) return;
-      applyState(result.session, false);
-      callbacks.onEvidence(result.evidence);
-    });
-  });
-
-  /** Display each accepted check and any issue or skip reason it returned. */
-  next.addEventListener('click', () => {
-    void run(async generation => {
-      const session = current;
-      if (!session) throw new Error('Open a replay run before advancing.');
-      const scope: NewspaperArchiveScope | undefined = session.runId
-        ? { runId: session.runId, receiverPlayerID: session.settings.receiverPlayerID }
-        : undefined;
-      const result = await advanceReplay(scope);
-      if (generation !== operationGeneration) return;
-      applyState(result.session, false);
-      callbacks.onEvidence(result.evidence);
-      callbacks.onCheck(result.check ?? null);
-      if (result.check?.status === 'published') callbacks.onPublished();
-      const cutoff = result.session.cursor.cutoffTurn === null
-        ? 'selected cutoff'
-        : `turn ${result.session.cursor.cutoffTurn}`;
-      if (result.check?.status === 'published') {
-        showStatus(`Published ${result.check.issue ? `issue ${result.check.issue.issueId}` : 'an issue'} at cutoff ${cutoff}.`);
-      } else if (result.check?.status === 'skipped') {
-        showStatus(`Check skipped at cutoff ${cutoff}: ${result.check.reason ?? 'no reason recorded'}.`);
-      } else {
-        showStatus(`Advanced to cutoff ${cutoff}.`);
+    const focusedResume = event.submitter === resume && document.activeElement === resume;
+    void run(async () => {
+      const resuming = event.submitter === resume;
+      const settings = readSettings(resuming);
+      const finish = callbacks.onBatchStart();
+      status.textContent = resuming ? 'Opening saved editions…' : 'Opening recording…';
+      let state: ReplayState;
+      callbacks.onConfiguring(true);
+      try {
+        await callbacks.flushVotes();
+        state = await configureReplay(settings);
+      } catch (error) {
+        status.textContent = current ? describe(current) : 'Choose a recording to get started.';
+        throw error;
+      } finally {
+        callbacks.onConfiguring(false);
       }
-    });
-  });
-
-  /** Save the edited frequency and LLM preferences for the current run. */
-  savePreferences.addEventListener('click', () => {
-    void run(async generation => {
-      if (!current?.runId) throw new Error('Open a publication run before saving preferences.');
-      const preferences = readPreferences(form);
-      const state = await saveReplayPreferences({
-        ...preferences,
-        runId: current.runId,
-        receiverPlayerID: current.settings.receiverPlayerID,
-      });
-      if (generation !== operationGeneration) return;
-      applyState(state, true);
-      showStatus(
-        `Preferences saved: ${state.preferences?.frequencyStandardTurns ?? preferences.frequencyStandardTurns} Standard turns, `
-        + `LLM ${(state.preferences?.llmEnabled ?? preferences.llmEnabled) ? 'allowed when available' : 'disabled'}.`,
-      );
-    });
-  });
-
-  /** Start new runs and branches with inherited defaults rather than a resumed run's choices. */
-  mode.addEventListener('change', () => {
-    if (mode.value !== 'resume') {
-      field(form, 'frequencyStandardTurns').value = '';
-      field(form, 'llmEnabled').value = '';
-      runId.value = '';
-    } else if (current?.runId) {
-      runId.value = current.runId;
-      field(form, 'frequencyStandardTurns').value = current.preferences ? String(current.preferences.frequencyStandardTurns) : '';
-      field(form, 'llmEnabled').value = current.preferences ? String(current.preferences.llmEnabled) : '';
-    }
-    syncModeFields();
-  });
-  purpose.addEventListener('change', syncModeFields);
-
-  /** Restore an existing session after reload, or refill the resume form without mutating it. */
-  void run(async () => {
-    try {
-      const state = await getReplayState();
-      applyState(state, true);
-    } catch (error) {
-      if (error instanceof ReplayApiError && error.status === 409) {
-        const stored = readStored();
-        if (stored) {
-          fillForm(form, stored.settings, stored.runId, stored.outputPath, 'resume');
-          syncModeFields();
-          showStatus('Saved replay settings are ready. Choose Open recording to resume.');
-        } else {
-          showStatus('Choose a recording to begin replay.');
+      await setRun(state, resuming, resuming);
+      if (resuming) {
+        recording.open = false;
+        if (focusedResume && (document.activeElement === document.body || document.activeElement === resume)) {
+          recording.querySelector('summary')?.focus({ preventScroll: true });
         }
-        return;
+        status.textContent = describe(current!);
+      } else {
+        recording.open = false;
+        await batch(current!, finish);
       }
-      showStatus(error instanceof ReplayApiError && error.status === 503
-        ? 'Start the normal VD server to use replay.'
-        : formatError(error));
-    }
+    });
   });
 
-  syncModeFields();
-  updateAvailability();
+  proceed.addEventListener('click', () => {
+    void run(async () => {
+      if (current && !current.cursor.finished) await batch(current, callbacks.onBatchStart());
+    });
+  });
 
-  return {
-    getSession(): ReplayState | null {
-      return current;
-    },
-    showSession(state: ReplayState): void {
-      applyState(state, false);
-    },
-    reportError(message: string): void {
-      showError(message);
-    },
-    reportStatus(message: string): void {
-      showStatus(message);
-    },
+  stop.addEventListener('click', () => {
+    restoreStopFocus = document.activeElement === stop;
+    stopRequested = true;
+    status.textContent = 'Stopping after the current check…';
+    updateControls();
+  });
+
+  inspect.addEventListener('click', () => {
+    void run(async () => {
+      if (!current) return;
+      const result = await inspectReplay(scope(current));
+      callbacks.onEvidence(result.evidence);
+    });
+  });
+
+  savePreferences.addEventListener('click', () => {
+    void run(async () => {
+      const archive = current && scope(current);
+      if (!archive) return;
+      const frequency = value('frequencyStandardTurns');
+      const llm = value('llmEnabled');
+      if (!frequency || !llm) throw new Error('Choose a frequency and whether to allow LLM editing.');
+      const preferences = publicationPreferencesSchema.parse({
+        frequencyStandardTurns: Number(frequency), llmEnabled: llm === 'true',
+      });
+      current = await saveReplayPreferences({ ...archive, ...preferences });
+      remember(current);
+      status.textContent = describe(current);
+    });
+  });
+
+  updateControls();
+
+  return function restoreRecording(): void {
+    if (started) return;
+    started = true;
+    void run(async () => {
+      try {
+        const state = await getReplayState();
+        await setRun(state, true, true);
+        status.textContent = describe(state);
+      } catch (error) {
+        if (!(error instanceof ReplayApiError) || error.status !== 409) throw error;
+        const saved = readStored();
+        if (saved) {
+          fillForm(saved);
+          updateControls();
+          status.textContent = 'Saved settings are ready. Open Recording and choose Resume.';
+        } else {
+          recording.open = true;
+          status.textContent = 'Choose a recording to get started.';
+          void suggestRecording();
+        }
+      }
+    });
   };
 }

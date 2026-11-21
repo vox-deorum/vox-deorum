@@ -16,16 +16,15 @@ function snapshot(subjectID: number, turn: number, values: NewspaperSnapshot['va
 /** Build dated and visible evidence for controlled domestic and foreign comparisons. */
 function fixture({
   populations = [10, 6, 5], strengths = [20, 20], oldStrengths = [20, 20],
-  technologies = [13, 12], oldTechnologies = [13, 12], happiness, goldenAge, atWar = true,
+  technologies = [13, 12], oldTechnologies = [13, 12], goldenAge, atWar = true,
 }: {
   populations?: number[]; strengths?: (number | null | undefined)[]; oldStrengths?: (number | undefined)[];
   technologies?: (number | undefined)[]; oldTechnologies?: number[];
-  happiness?: number | null; goldenAge?: boolean; atWar?: boolean;
+  goldenAge?: boolean; atWar?: boolean;
 } = {}): NewspaperEvidence {
   const players = [0, 1].map(id => snapshot(id, 30, {
     ...(strengths[id] === undefined ? {} : { MilitaryStrength: strengths[id] }),
     ...(technologies[id] === undefined ? {} : { Technologies: technologies[id] }),
-    ...(id === 0 && happiness !== undefined ? { HappinessPercentage: happiness } : {}),
   }));
   const earlier = [0, 1].map(id => snapshot(id, 10, {
     ...(oldStrengths[id] === undefined ? {} : { MilitaryStrength: oldStrengths[id] }),
@@ -53,12 +52,12 @@ function fixture({
 }
 
 /** Exercise the real editor with the shipped national rules and authored copy. */
-function check(evidence: NewspaperEvidence, state = createInitialPublicationState(), catalogue = config) {
+function check(evidence: NewspaperEvidence, state = createInitialPublicationState()) {
   const facts = buildNewspaperFacts(evidence, { playerIdentities: {
     0: { name: 'France', major: true }, 1: { name: 'Egypt', major: true },
   } });
   return runEditorialCheck({ campaignId: 'campaign', timelineId: 'branch', receiver: { playerId: 0, label: 'France' },
-    evidence, facts, speedMultiplier: 1, state, config: catalogue });
+    evidence, facts, speedMultiplier: 1, state, config });
 }
 
 describe('national desk', () => {
@@ -71,13 +70,16 @@ describe('national desk', () => {
 
   describe('population and military strength', () => {
     it.each([
-      [[10, 11, 9], 'capital-outgrown-single'],
-      [[10, 11, 11], 'capital-outgrown-tied'],
-    ])('should publish the population comparison for %j', async (populations, variant) => {
+      [[10, 11, 9], ['Paris', 'Tours']],
+      [[10, 11, 11], ['Paris', 'Tours', 'Lyon']],
+    ])('should publish the population comparison for %j', async (populations, cities) => {
       const evidence = fixture({ populations });
       const result = await check(evidence);
       expect(result.status).toBe('published');
-      expect(Object.values(result.decision.selectedVariants)).toEqual([variant]);
+      const items = result.issue?.items ?? [];
+      expect(items).toHaveLength(1);
+      const copy = JSON.stringify(items[0]);
+      for (const city of cities) expect(copy).toContain(city);
       expect(result.decision.evidence).toEqual(expect.arrayContaining(evidence.cities.slice(0, 3).map(city => city.source)));
       const next = { ...evidence, request: { ...evidence.request, previousCheckTurn: 30, cutoffTurn: 31 } };
       const repeated = await check(next, result.state);
@@ -91,7 +93,9 @@ describe('national desk', () => {
     it('should publish a measured crossing even when our measured strength is zero', async () => {
       const result = await check(fixture({ strengths: [0, 25] }));
       expect(result.status).toBe('published');
-      expect(Object.values(result.decision.selectedVariants)).toEqual(['neighbor-army-overtakes-report']);
+      expect(result.state.issues[0].items).toEqual([
+        expect.objectContaining({ ruleIds: ['neighbor-army-overtakes'] }),
+      ]);
     });
 
     it('should require a known baseline and present comparison for an overtake', async () => {
@@ -103,29 +107,28 @@ describe('national desk', () => {
 
   describe('research standings', () => {
     it.each([
-      [14, 'technology-leader-changes-single'],
-      [13, 'technology-leader-changes-tied'],
-    ])('should distinguish a sole lead from a tie with %i technologies', async (count, variant) => {
+      [14, false], [13, true],
+    ])('should distinguish a sole lead from a tie with %i technologies', async (count, tied) => {
       const result = await check(fixture({ technologies: [13, count] }));
       expect(result.status).toBe('published');
-      expect(Object.values(result.decision.selectedVariants)).toEqual([variant]);
-      expect(result.state.issues[0].items[0].tags).toContain('international');
+      expect(result.state.issues[0].items).toEqual([
+        expect.objectContaining({ subject: 'player/1', ruleIds: ['technology-leader-changes'] }),
+      ]);
+      expect(result.decision.triggerAudit.find(rule => rule.rule === 'technology-leader-changes')?.subjects)
+        .toContainEqual(expect.objectContaining({
+          subject: 'player/1', outcome: 'fired',
+          expressions: expect.arrayContaining([expect.objectContaining({ field: 'values.tied', value: tied })]),
+        }));
     });
 
-    it.each([
-      [14, 'technology-leader-changes-home-single'],
-      [13, 'technology-leader-changes-home-tied'],
-    ])('should cover our own rise to the lead at home with %i technologies', async (count, variant) => {
-      // Three domestic stories and two front-page slots give the home section extra coverage.
-      const result = await check(fixture({
-        populations: [10, 11, 9], technologies: [count, 13], oldTechnologies: [12, 13], goldenAge: true,
-      }), createInitialPublicationState(), { ...config, defaults: { ...config.defaults, frontPageItems: 2 } });
-      if (result.status !== 'published') throw new Error('Expected the home research story to publish.');
-      const story = result.state.issues[0].items.find(item => result.decision.selectedVariants[item.id] === variant);
-      if (!story) throw new Error('Expected the domestic variant in the published issue.');
-      expect(story.tags).toContain('domestic');
-      expect(story.tags).not.toContain('international');
-      expect(result.issue.pages.find(page => page.id === 'home')?.itemIds).toContain(story.id);
+    it.each([14, 13])('should report our own rise to the lead with %i technologies', async count => {
+      const evidence = fixture({ technologies: [count, 13], oldTechnologies: [12, 13] });
+      const result = await check(evidence);
+      expect(result.status).toBe('published');
+      expect(result.state.issues[0].items).toEqual([
+        expect.objectContaining({ subject: 'player/0', ruleIds: ['technology-leader-changes'] }),
+      ]);
+      expect(result.decision.evidence).toContainEqual(evidence.players[0].source);
     });
 
     it('should not claim a new leader with no readable contender', async () => {
@@ -134,14 +137,13 @@ describe('national desk', () => {
   });
 
   describe('wartime Golden Age', () => {
-    it.each([
-      [34, 'critical'], [35, 'neutral'], [50, 'neutral'], [51, 'supportive'],
-      [null, 'neutral'], [undefined, 'neutral'],
-    ])('should choose the edition voice at happiness %s', async (happiness, tone) => {
-      const evidence = fixture({ happiness, goldenAge: true });
+    it('should report a Golden Age beginning during a war even without a happiness reading', async () => {
+      const evidence = fixture({ goldenAge: true });
       const result = await check(evidence);
       expect(result.status).toBe('published');
-      expect(Object.values(result.decision.selectedVariants)).toEqual([`golden-age-in-wartime-${tone}`]);
+      expect(result.state.issues[0].items).toEqual([
+        expect.objectContaining({ ruleIds: ['golden-age-in-wartime'] }),
+      ]);
       expect(result.decision.evidence).toContainEqual(evidence.events[0].source);
     });
 
