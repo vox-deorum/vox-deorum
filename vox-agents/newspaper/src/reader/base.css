@@ -222,13 +222,9 @@
 }
 
 .vd-byline {
-  margin: -10px 0 25px;
+  margin: 0.8em 0 0;
   font: italic calc(16px * var(--vd-text-scale)) / 1.4 var(--vd-font-body);
   opacity: 0.7;
-}
-
-.vd-deck + .vd-byline {
-  margin-top: -16px;
 }
 
 .vd-prose {
@@ -454,10 +450,6 @@
 .vd-storylist[data-layout="analysis"] .vd-story--lead .vd-deck {
   padding-bottom: 24px;
   border-bottom: 1px solid var(--vd-ink);
-}
-
-.vd-storylist[data-layout="analysis"] .vd-story--lead .vd-byline {
-  margin-top: -18px;
 }
 
 .vd-analysis-columns {

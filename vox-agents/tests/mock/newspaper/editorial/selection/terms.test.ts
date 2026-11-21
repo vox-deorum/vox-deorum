@@ -7,6 +7,7 @@ import { scaleEditorialConstants } from '../../../../../src/newspaper/editorial/
 import { prepareEditorialExpressions } from '../../../../../src/newspaper/editorial/config/expressions.js';
 import { loadEditorialConfig, parseEditorialConfig } from '../../../../../src/newspaper/editorial/config/load.js';
 import { buildNewspaperFacts } from '../../../../../src/newspaper/editorial/facts/index.js';
+import { resolveMasthead } from '../../../../../src/newspaper/editorial/presentation/masthead.js';
 import { evaluateTriggerRules } from '../../../../../src/newspaper/editorial/rules/evaluate.js';
 import { matchTemplates } from '../../../../../src/newspaper/editorial/selection/templates.js';
 
@@ -52,6 +53,17 @@ async function catalogue() {
 }
 
 describe('printable terms', () => {
+  it('should capitalize terms that start a sentence in a masthead', () => {
+    const terms = new Map([['ruler', { value: 'the Party', sources: [] }]]);
+    const masthead = resolveMasthead({
+      title: '{{terms.ruler}} Dispatch',
+      motto: 'News from {{terms.ruler}}. {{terms.ruler}} listens.',
+    }, terms);
+    expect(masthead).toMatchObject({
+      title: 'The Party Dispatch', motto: 'News from the Party. The Party listens.',
+    });
+  });
+
   it('should evaluate usable terms once and merge them only into variants that print them', async () => {
     const config = await catalogue();
     const citySource = { table: 'CityInformations' as const, id: 201, turn: 10, createdAt: 10_000 };

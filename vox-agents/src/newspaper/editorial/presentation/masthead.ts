@@ -10,7 +10,7 @@ export function resolvePrintableTermText(
   text: string,
   terms: EditorialTerms = new Map()
 ): string | undefined {
-  const resolved = substitute(text, termPlaceholders(terms));
+  const resolved = substitute(text, termPlaceholders(terms), '');
   return resolved.trim().length > 0 && !resolved.match(placeholderPattern) ? resolved : undefined;
 }
 
@@ -45,8 +45,8 @@ export function resolveMasthead(
     return text.trim().length > 0 && !text.match(placeholderPattern);
   });
   const titleTemplate = localized ?? design.title;
-  const resolvedTitle = substitute(titleTemplate, values);
-  const motto = design.motto === undefined ? undefined : substitute(design.motto, values);
+  const resolvedTitle = substitute(titleTemplate, values, '');
+  const motto = design.motto === undefined ? undefined : substitute(design.motto, values, '');
   if (resolvedTitle.match(placeholderPattern) || motto?.match(placeholderPattern)) return undefined;
 
   const sources = uniqueSources([

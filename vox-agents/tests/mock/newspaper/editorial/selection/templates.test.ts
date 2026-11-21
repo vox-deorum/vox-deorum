@@ -208,6 +208,25 @@ describe('newspaper template matching', () => {
 });
 
 describe('newspaper placeholder printing', () => {
+  it('should capitalize terms according to where they print in the sentence', () => {
+    const body = '“{{terms.civic.people}} greet their {{office}}.” {{office}} makes an announcement.';
+    const variant = {
+      ...standard.variants[0],
+      links: [{
+        placeholder: 'office', label: '{{player.civic.government}}',
+        target: { type: 'city' as const, cityId: '{{terms.capitalId}}' },
+      }],
+    };
+    const nodes = renderAuthoredText(body, {
+      'terms.civic.people': 'citizens', 'player.civic.government': 'war council', 'terms.capitalId': 'city-a',
+    }, variant);
+
+    expect(nodes.map(node => node.text).join(''))
+      .toBe('“Citizens greet their war council.” War council makes an announcement.');
+    expect(nodes.filter(node => node.type === 'link').map(node => node.target))
+      .toEqual([{ type: 'city', cityId: 'city-a' }, { type: 'city', cityId: 'city-a' }]);
+  });
+
   it('should choose a singular or plural label from the value', () => {
     expect(substitute('{{count|branch|branches}}', { count: 1 })).toBe('1 branch');
     expect(substitute('{{count|branch|branches}}', { count: 3 })).toBe('3 branches');

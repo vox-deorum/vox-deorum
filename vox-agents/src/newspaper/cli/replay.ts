@@ -64,8 +64,8 @@ function articleHtml(item: IssueItem, archive: ArchiveIssue): string {
   const table = item.evidenceTable;
   return `<article id="article-${encodeURIComponent(item.id)}"><h4>${inlineHtml(item.headline)}</h4>
 ${item.subheadline ? `<p>${inlineHtml(item.subheadline)}</p>` : ''}
-${item.byline ? `<p><small>${inlineHtml(item.byline)}</small></p>` : ''}
 ${item.body.map(paragraph => `<p>${inlineHtml(paragraph)}</p>`).join('\n')}
+${item.byline ? `<p><small>${inlineHtml(item.byline)}</small></p>` : ''}
 ${table ? `<table><caption>${escapeHtml(table.title)}: ${escapeHtml(table.description)}</caption><thead><tr>${table.columns.map(column => `<th>${escapeHtml(column)}</th>`).join('')}</tr></thead><tbody>${table.rows.map(row => `<tr><th>${escapeHtml(row.label)}</th>${row.values.map(value => `<td>${escapeHtml(value)}</td>`).join('')}</tr>`).join('')}</tbody></table>${table.footnote ? `<p>${escapeHtml(table.footnote)}</p>` : ''}` : ''}
 <p><small>${inlineHtml(item.sourceNote)}</small></p>
 ${item.earlierReport ? `<p><a href="#article-${encodeURIComponent(item.earlierReport.target.itemId)}">${escapeHtml(item.earlierReport.label)}</a></p>${item.earlierReport.summary.map(paragraph => `<p>${inlineHtml(paragraph)}</p>`).join('')}` : ''}

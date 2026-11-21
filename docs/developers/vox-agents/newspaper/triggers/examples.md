@@ -1,12 +1,12 @@
 # Newspaper trigger examples
 
-Every stock trigger has a story template, including the Congress rules. Start with the settler overlay to change one report, or use the examples below to find a stock rule to adapt.
+Start with the settler overlay to tune a score and revise a report. The stock rules below show patterns to borrow.
 
 ## A city shrinks after sending settlers
 
-The stock [`settler-departure` rule](overview.md#a-first-example) supplies `lost`, the decrease in population. In [`settler-departure-account`](../../../../../vox-agents/newspaper/templates/cities.json), negative local happiness at the cutoff makes the strained report eligible and positive happiness makes the hopeful report eligible. Zero, null or unreadable happiness makes the neutral report eligible. An unconditional tabloid anecdote can also compete; it uses `{{lost}}` in its copy.
+The stock [`settler-departure` rule](overview.md#a-first-example) supplies `lost`, the decrease in population. To try a different score, add `settler-departure` to your overlay's `triggers/` folder with tier `routine` and adjustment `10 * lost`. A drop from eight to six scores 65 with the stock tier base.
 
-Save this as `<overlay>/templates/settler.json`:
+To edit the neutral report, save this as `<overlay>/templates/settler.json`:
 
 ```json
 [
@@ -23,7 +23,7 @@ Save this as `<overlay>/templates/settler.json`:
 ]
 ```
 
-Run a [fresh replay](../replay.md#iterate-on-a-rule-or-overlay) with that overlay. The neutral report keeps its condition and city link, so `{{town}}` still links to the city. The other variants stay eligible under their original conditions. Check the audit if the edited report does not print.
+Run a [fresh replay](../replay.md#iterate-on-a-rule-or-overlay) with the overlay. The report keeps its condition and city link. Check the audit to see the score and which variant printed.
 
 ## Cities and borders
 
@@ -34,7 +34,7 @@ Find the detailed expressions in the [city](../../../../../vox-agents/newspaper/
 | `neighbor-puppet-annexed` | Compare two snapshots of a foreign city within `neighboring`. Require the same owner to distinguish annexation from capture. |
 | `forward-settle` | Use `PlayerCityFounded` to report a rival within `adjacent` distance. Require the rival and both city names, and mark the story urgent at two tiles or less. |
 | `besieged-and-starving` | Combine the `besieged` and `starving` shortcuts for an own city. Half damage makes it urgent; default `rearm` waits for a check where the conditions are false. |
-| `neighbors-convert` | Group by majority religion when at least three foreign cities within `neighboring` gain the same majority religion in the `recent` window. |
+| `neighbors-convert` | Group neighboring foreign cities by their new majority religion. Require three matches in the `recent` window and raise the score as the group grows. |
 
 ## National affairs
 
@@ -50,6 +50,15 @@ Find the detailed expressions in the [city](../../../../../vox-agents/newspaper/
 | `city-state-ally-defects`, `city-state-ally-lost` | Separate a nearby city-state switching from us to a rival from a city-state becoming unallied. The latter requires the explicit no-ally ID in `SetAlly`. See the [city-state triggers](../../../../../vox-agents/newspaper/triggers/city-states.json). |
 | `city-state-quest-countdown-disappeared` | Compare two readable quest observations. If a deadline still in the future disappears, report the observation without treating it as an outcome. See [quest facts](facts.md#quest-deadlines-and-cultural-influence). |
 | `war-advantage-stalls` | Look for a score of at least 25 in the `long` window, then use `held` to require a continuous stretch of `short` turns within five points of the current score. `repeat: medium` allows a follow-up after 20 Standard turns. |
+| `war-turns-against-us` | Add the opponent's `pair.other.stake.front` and a separate adjustment for how far the war score has fallen below the threshold. |
+
+### A nearby offensive outranks a distant one
+
+The stock [`enemy-front-posture-offensive` rule](../../../../../vox-agents/newspaper/triggers/war.json) uses `city.tacticalZones()` to detect a shift to an offensive posture. Finding a zone does not apply the city's stake automatically.
+
+In an overlay's `triggers/war.json`, use the same rule ID and set `adjust` to `["-5", "city.stake.place"]`. This keeps the stock adjustment and adds the city's location score. With stock constants, the same offensive scores 60 at six tiles from our nearest city and 47 at 100 tiles.
+
+To weigh the offensive itself, add a separate adjustment for visible enemy units in the matching zone. The rule's `zoneIndex` identifies that zone, so the adjustment can count its units without mixing nearby land and sea observations.
 
 ### Vassals follow their master to war
 

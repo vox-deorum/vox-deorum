@@ -10,6 +10,8 @@ The **receiver** is the player the newspaper is written for. [Trigger rules](ove
 | [`pair`](#pair) | Two visible players with a known war or peace observation |
 | [`incident`](#incident) | Inferred declaration, settlement or observed war opening |
 
+Stock [stakes](constants.md#stakes) are available on city, player, pair and event facts. A rule can also read a stake through a linked subject, such as `pair.other.stake.front` when the receiver is in the pair.
+
 ## Naming
 
 | Rule | Example |
@@ -324,7 +326,9 @@ Pass an already scaled [named span](constants.md#spans) or a count of recorded t
 
 ## Hidden and missing facts
 
-Reading a hidden fact stops the rule for that subject and names the fact in the audit. Use `subject.knows(field)` to check first. For example, `city.knows('foodPerTurn') && city.foodPerTurn > 0` tests food only for cities with the required access. A player unknown on the requested turn has no readable relationship fact for that turn.
+Use `subject.knows(field)` before reading a fact that may be hidden. For example, `city.knows('foodPerTurn') && city.foodPerTurn > 0` tests food only for cities with the required access. A player unknown on the requested turn has no readable relationship fact for that turn.
+
+A hidden read in a condition, value, tier, or urgency expression stops the rule for that subject or group and names the fact in the audit. In an `adjust` expression, a hidden read contributes 0 points and the other adjustments still run. See [stakes](constants.md#stakes) for checking a shared calculation's inputs.
 
 The first sighting gives a baseline for later comparisons. If the receiver first saw a rival city on turn 8, `city.before` is unavailable for any earlier date. `city.founded` may estimate turn 8 if the loaded history reaches the recording's start and the observation begins after that start. For a story about a witnessed founding, require a founding event.
 

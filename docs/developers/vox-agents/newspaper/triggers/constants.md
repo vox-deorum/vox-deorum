@@ -1,4 +1,4 @@
-# Newspaper trigger constants and shortcuts
+# Newspaper trigger constants
 
 Use a name from [`constants.json`](../../../../../vox-agents/newspaper/constants.json) when several rules share the same threshold or test. For example, a rule can use `city.is.neighbor` to check whether a foreign city sits within `neighboring` distance. To try 9 tiles in place of the default 7, put `{"distances":{"neighboring":9}}` in an overlay's `constants.json`.
 
@@ -6,7 +6,9 @@ Use a name from [`constants.json`](../../../../../vox-agents/newspaper/constants
 | --- | --- |
 | `distances`, `spans`, `sizes`, `shares` | Named numbers such as `neighboring` or `recent` |
 | `types` | Named lists of recorded names, such as `settlers` |
-| `shortcuts` | Reusable fact tests, such as `city.is.neighbor` |
+| `tiers` | [Named base importance scores](overview.md#tiers-adjustments-and-stakes) |
+| `stakes` | [Reusable point calculations](#stakes), such as `event.stake.building` |
+| `shortcuts` | [Reusable fact tests](#shortcuts), such as `city.is.neighbor` |
 | `terms` | Printable values, such as `{{terms.civilization}}` |
 
 ## Distance
@@ -49,7 +51,7 @@ Numeric `window` and `repeat` fields also use Standard turns. Inside an expressi
 
 ## Type lists
 
-Use list membership to check a category. For example, `settlers.includes(t.unit)` matches Settler, Pioneer and Colonist. The stock file also defines `workers`, `missionaries`, `greatPeople`, `defenses`, `ideologies` and `worldProjects`. The `ideologies` list determines which branches can count toward `player.ideology`.
+Use list membership to check a category. For example, `settlers.includes(t.unit)` matches Settler, Pioneer and Colonist. The stock file also defines `workers`, `missionaries`, `greatPeople`, `defenses`, `ideologies` and `worldProjects`. The `ideologies` list determines which branches can count toward `player.ideology`. The building stake uses `eras` (ordered from Ancient to Future) and `earlyBuildings` (such as Monument and Granary).
 
 Names must match the text in the recording. If the recorded text uses a different language, adapt the affected lists.
 
@@ -86,9 +88,27 @@ To include a modded civilization, replace the whole membership list in an overla
 {"types":{"mesoamericanCivilizations":["The Aztecs","The Maya","The Zapotecs"]}}
 ```
 
+## Stakes
+
+A stake is a named expression that returns finite points from readable facts. A rule opts in by reading it in an [adjustment](overview.md#tiers-adjustments-and-stakes), for example `event.stake.building`. A subject has a `stake` view when the catalogue defines stakes for that subject type. Like shortcuts, stakes use the snapshot of the subject they are read from; globals still describe the current check.
+
+| Stock stake | What changes the score |
+| --- | --- |
+| `player.stake.relation` | For another player, combines distance, war, friendship or a pact, a denouncement in either direction, and a vassal or master tie. Allied city-states get a bonus; other city-states get a penalty. The result stays between -15 and 20; the receiver scores 0. |
+| `pair.stake.relation` | Uses the other player's relationship score if the receiver is in the pair; otherwise uses the higher of the two scores. |
+| `player.stake.front` | For a known opponent at war with the receiver, weighs distance, the magnitude of the war score, and war weariness. A city-state front gets a penalty in place of distance points. |
+| `player.stake.war` | For the receiver, adds the scores of known major fronts and 4 points for each major front after the first, within -10 to 20. Scores -10 when all known opponents are city-states. |
+| `city.stake.place` | Adds 8 points for the receiver's capital and 4 for an own city at least `largeCity` in size. A foreign city uses the same distance scale as an event. |
+| `event.stake.place` | Adds 8, 5 or 2 points at `adjacent`, `neighboring` or `nearby` distance from the receiver's nearest city. Beyond `regional`, subtracts 8; between `nearby` and `regional`, adds 0. Needs a readable distance. |
+| `event.stake.building` | Adds 15 for a listed defense while at war, plus 5 if the city is on the frontier. Subtracts 15 for listed early buildings in the Industrial Era or later. |
+
+A stake can handle missing inputs itself. For example, the relationship stake assigns 0 proximity points when distance is unavailable. If a stake directly reads a hidden fact, that read is hidden; `event.stake.knows('place')` checks whether the place calculation can read what it needs.
+
 ## Terms
 
 Terms are expressions for printed text or finite numbers. The editor evaluates them once per check against the globals. Use `{{terms.<name>}}` in copy or a masthead; conditions read the underlying facts. The evidence for a term is attached to the copy or masthead that prints it.
+
+The editor capitalizes a term, including civic vocabulary, when it opens a sentence or a text field. Elsewhere it keeps the term's original casing.
 
 The stock `civilization` and `civilizationAdjective` terms provide a name such as Sweden and an adjective such as Swedish. The [probe overlay](../../../../../vox-agents/newspaper/probes/constants.json) adds terms for the capital's name, a phrase based on ideology, and the name of an overlord. A failed, hidden or nonprintable result leaves the term unavailable. Copy that needs it is ineligible; see [masthead rules](../editorial.md#masthead-rules) for title and label fallbacks.
 
@@ -96,6 +116,6 @@ Government, people, and leader titles use the separate [civic vocabulary](../edi
 
 ## Change or add a name
 
-Edit the built-in file to change the default, or use an [overlay](overview.md#tune-with-an-overlay) to try a change for one replay. Constant groups merge by name. A type list with the same name replaces the whole list. Shortcuts merge by subject and name, and terms merge by name.
+Edit the built-in file to change the default, or use an [overlay](overview.md#tune-with-an-overlay) to try a change for one replay. Constant groups, including tiers and terms, merge by name. A type list with the same name replaces the whole list. Shortcuts and stakes merge by subject and name.
 
-New names must be valid JavaScript identifiers. Constants and terms cannot use reserved names such as `self` and `turn`. Shortcut names must avoid fact-view methods such as `knows`. A threshold used in only one rule can stay in that rule.
+New names must be valid JavaScript identifiers. Constants and terms cannot use reserved names such as `self` and `turn`. Shortcut and stake names must avoid fact-view methods such as `knows`. A threshold used in only one rule can stay in that rule.

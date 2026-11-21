@@ -490,6 +490,9 @@ local function openArticle(target)
 	for _, block in ipairs(item.body or {}) do
 		y = addTextBlock("TextInstance", Controls.DetailContent, 10, y, textWidth, inlineToText(block)) + 4
 	end
+	if type(item.byline) == "table" and #item.byline > 0 then
+		y = addTextBlock("DeckInstance", Controls.DetailContent, 10, y, textWidth, inlineToText(item.byline))
+	end
 	y = addTextBlock("TextInstance", Controls.DetailContent, 10, y, textWidth, inlineToText(item.sourceNote))
 	y = addLinkRow(Controls.DetailContent, 10, y + 4, textWidth, collectItemLinks(item))
 	Controls.DetailContent:SetSizeVal(contentWidth, math.max(1, y + 10))
@@ -819,10 +822,13 @@ local function renderTextItem(item, page, lead, x, y, width)
 	for _, block in ipairs(item.body or {}) do
 		y = addTextBlock("TextInstance", Controls.PageContent, x, y, width, inlineToText(block)) + 4
 	end
+	if type(item.byline) == "table" and #item.byline > 0 then
+		y = addTextBlock("DeckInstance", Controls.PageContent, x, y, width, inlineToText(item.byline)) + 4
+	end
 	if lead and page.layout == "analysis" and type(item.evidenceTable) == "table" then
 		y = renderTextEvidence(item.evidenceTable, x, y, width)
 	end
-	local visible = { headline = item.headline, subheadline = item.subheadline, body = item.body }
+	local visible = { headline = item.headline, subheadline = item.subheadline, body = item.body, byline = item.byline }
 	if type(item.earlierReport) == "table" then
 		visible.earlierReport = { label = item.earlierReport.label, target = item.earlierReport.target }
 	end

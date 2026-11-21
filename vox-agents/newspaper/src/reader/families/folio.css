@@ -29,7 +29,7 @@
     margin: 0 0 14px;
     font: italic calc(clamp(21px, 2.6cqi, 28px) * var(--vd-text-scale)) / 1.25 var(--vd-font-body);
   }
-  & .vd-storylist .vd-story--lead .vd-byline { margin: 0 0 13px; }
+  & .vd-storylist .vd-story--lead .vd-byline { margin: 13px 0 0; }
   & .vd-analysis-columns { gap: clamp(16px, 3cqi, 36px); }
   & .vd-evidence { align-self: start; border: 0; padding: 0; }
   & .vd-evidence th, & .vd-evidence td { padding-block: 8px; }

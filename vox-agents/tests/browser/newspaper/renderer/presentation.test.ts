@@ -121,7 +121,7 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('stored newspaper
     }
   }, 60_000);
 
-  it('should draw stored masthead and article credits beneath their headings', async context => {
+  it('should draw stored masthead and place the byline after the article prose', async context => {
     if (!browser) { context.skip(unavailable); return; }
     const issue = createNewspaperIssue();
     issue.publication.motto = 'All power to the Party';
@@ -135,7 +135,7 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('stored newspaper
         textScale: 1, rasterScale: 1, maxTextureWidth: 4096, maxTextureHeight: 2048, scrollbarGutter: 16,
       }), issue);
       expect(await page.locator('.vd-masthead .vd-title + .vd-motto').textContent()).toBe(issue.publication.motto);
-      expect(await page.locator('.vd-headline + .vd-deck + .vd-byline').first().textContent())
+      expect(await page.locator('.vd-prose ~ .vd-byline').first().textContent())
         .toBe('By the provincial desk');
     } finally {
       await page.close();

@@ -93,16 +93,31 @@ function formatted(value: RuleScalar, format: string | undefined): string {
   return `${String(value)} ${unit}`;
 }
 
-/** Substitute authored placeholders, applying built-in units and any template overrides. */
-export function substitute(text: string, values: TemplateValues): string {
+/** Capitalize a printed term at the start of a sentence, allowing for surrounding quotes. */
+function termSentenceCase(name: string, printed: string, precedingText: string): string {
+  if (!(name.startsWith('terms.') || civicPlaceholder(name))) return printed;
+  if (!/(?:^|[.!?][\p{Pe}\p{Pf}"']*\s+)[\s\p{Ps}\p{Pi}"']*$/u.test(precedingText)) return printed;
+  return printed.replace(/^([\s\p{Ps}\p{Pi}"']*)(\p{L})/u,
+    (_match, opening, letter) => opening + letter.toUpperCase());
+}
+
+/** Substitute placeholders and units. Pass the preceding prose when rendering display text. */
+export function substitute(text: string, values: TemplateValues, precedingText?: string): string {
   const declared = (values as TemplateValues & { [placeholderFormats]?: Record<string, string> })[placeholderFormats];
-  return text.replace(placeholderPattern, (whole, key: string) => {
+  let cursor = 0;
+  return text.replace(placeholderPattern, (whole, key: string, position: number) => {
     const [name, singular, plural, ...rest] = key.split('|');
     const value = Object.hasOwn(values, name) ? values[name] : undefined;
-    if (value == null) return whole;
-    const printed = formatted(value, declared?.[name] ?? defaultFormat(name));
-    if (singular === undefined || plural === undefined || rest.length) return printed;
-    return `${printed} ${Number(value) === 1 ? singular : plural}`;
+    let printed = value == null ? whole : formatted(value, declared?.[name] ?? defaultFormat(name));
+    if (value != null && singular !== undefined && plural !== undefined && !rest.length)
+      printed += ` ${Number(value) === 1 ? singular : plural}`;
+    if (precedingText !== undefined) {
+      precedingText += text.slice(cursor, position);
+      if (typeof value === 'string') printed = termSentenceCase(name, printed, precedingText);
+      precedingText += printed;
+      cursor = position + whole.length;
+    }
+    return printed;
   });
 }
 

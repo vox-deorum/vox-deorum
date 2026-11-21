@@ -102,7 +102,7 @@
   }
 
   & .vd-storylist[data-layout] .vd-byline {
-    margin: 0 0 12px;
+    margin: 12px 0 0;
     color: var(--vd-accent);
     text-align: left;
     opacity: 1;

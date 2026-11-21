@@ -32,25 +32,32 @@ export function renderAuthoredText(
 ): InlineText {
   const nodes: InlineText = [];
   let cursor = 0;
+  let precedingText = '';
   for (const match of text.matchAll(placeholderPattern)) {
     const position = match.index!;
-    if (position > cursor) nodes.push({ type: 'text', text: text.slice(cursor, position) });
+    if (position > cursor) {
+      const literal = text.slice(cursor, position);
+      nodes.push({ type: 'text', text: literal });
+      precedingText += literal;
+    }
     const key = placeholderName(match[1]);
     const link = variant.links.find((entry) => entry.placeholder === key);
     const name = names?.includes(key) ? { isName: true as const } : {};
+    const printed = substitute(link?.label ?? match[0], values, precedingText);
     if (link)
       nodes.push({
         type: 'link',
-        text: substitute(link.label, values),
+        text: printed,
         target: resolveLinkTarget(link.target, values),
         ...name,
       });
     else
       nodes.push({
         type: 'text',
-        text: substitute(match[0], values),
+        text: printed,
         ...name,
       });
+    precedingText += printed;
     cursor = position + match[0].length;
   }
   if (cursor < text.length) nodes.push({ type: 'text', text: text.slice(cursor) });

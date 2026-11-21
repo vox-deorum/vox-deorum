@@ -9,8 +9,8 @@ The stock catalogue is in `vox-agents/newspaper/`. To override a rule or story, 
 | File | Controls |
 | --- | --- |
 | `defaults.json` | Frequency, story limits and scoring, design selection, style repetition, and feedback coefficients |
-| `constants.json` | Named distances, spans, sizes, type lists and shortcuts, plus printable terms used by prose and mastheads. See [constants and shortcuts](triggers/constants.md). |
-| `triggers/*.json` | Trigger rules: subject, `when`, `values`, importance, repeat, grouping and tags. See the [trigger overview](triggers/overview.md). |
+| `constants.json` | Shared thresholds, lists, tiers, stakes, shortcuts, and printable terms. See the [constants reference](triggers/constants.md). |
+| `triggers/*.json` | Rules for what qualifies as news and how it scores. See [trigger entries](triggers/overview.md#trigger-entries). |
 | `templates/*.json` | Authored variants, typed links and short pieces, grouped by topic like triggers |
 | `civic-terms.json` | Government, people, and leader terms by policy and civilization |
 | `styles/` | Style tag IDs, optional writing guidance, and rules that adjust variant weights |
@@ -28,7 +28,7 @@ Templates, variants, pages, designs, layouts, and masthead rules can use `when` 
 - For choices with a `weight`, start with its `base` and add the amount from each true adjustment. False conditions and unavailable facts contribute nothing. If an adjustment is interrupted or skipped because of the execution budget, the choice is left out.
 - A final weight must be positive. Template weight adds to the story's score; variant, design, layout, and masthead weights affect their draws. Sections use their conditions and topic tags.
 
-A template names one or more rules in `triggers`. They must all fire for the same subject with overlapping evidence periods. For example, two city rules must match the same city. Grouped rules can combine with other grouped rules of the same subject kind and key. The editor uses the overlapping period, the highest importance and the combined tags.
+A template names one or more rules in `triggers`. All must fire for the same subject with overlapping evidence periods. For grouped rules, the subject kind and group key must match. The candidate uses the overlapping period, combined tags, and the score and tier of the highest scoring development. It's urgent if any development is urgent.
 
 | Template field | Meaning |
 | --- | --- |
@@ -42,7 +42,7 @@ A template names one or more rules in `triggers`. They must all fire for the sam
 | `names` | Optional list of placeholders that display names, such as `["cityName", "player.leader"]` |
 | `merge` | Optional rules and prose for combining selected stories |
 
-`id`, `triggers`, `tags`, `weight` and `variants` are required. Each variant requires `id`, `headline`, `body` and `weight`; `subheadline`, `byline`, `when` and `links` are optional. The reader draws the subheadline under the headline and the byline below it, so an opinion piece or a signed report can carry both.
+`id`, `triggers`, `tags`, `weight` and `variants` are required. Each variant requires `id`, `headline`, `body` and `weight`; `subheadline`, `byline`, `when` and `links` are optional. The reader draws the subheadline under the headline and the byline after the body, so an opinion piece or a signed report can carry both.
 
 The [news writing rules](writing.md) show how to turn visible game facts into entertaining stories, imagine what the news means to people in the world, and write in the chosen voice, stance, and genre.
 
@@ -68,7 +68,8 @@ A style rule's `when` can also read facts about the selected story:
 
 | Story fact | Meaning |
 | --- | --- |
-| `story.importance` | The candidate's importance on the same scale as trigger importance |
+| `story.tier` | The tier name from the highest scoring contribution to the story |
+| `story.importance` | The candidate's [tier score after adjustments](triggers/overview.md#tiers-adjustments-and-stakes), before selection bonuses. Use this when the score matters more to the style than the tier name. |
 | `story.urgent` | Whether the candidate is marked urgent |
 | `story.short` | Whether the candidate is a short filler story |
 | `story.tags` | The candidate's topic and scope tags |
@@ -146,9 +147,19 @@ The issue saves the chosen title, motto, and labels. Editor credits use that tit
 
 ## Developments, selection, and continuity
 
-The [trigger audit](triggers/overview.md#how-a-check-evaluates-triggers) shows which developments matched. To pick stories, the editor scores candidates by importance, decayed series history, novelty, variety, template weight, and reader feedback. A series follows one rule and subject and can appear in only one item per issue. A story supported by multiple rules contributes once to each of its series. Skips advance the schedule and decay series importance while leaving the reporting window open.
+The [trigger audit](triggers/overview.md#how-a-check-evaluates-triggers) shows which developments matched and how they scored. To rank candidates, the editor adds these amounts:
 
-The stock editor ranks up to ten stories. A combined article takes one slot, so five declarations can run as one headline when enough other articles remain to fill the front. Stories that find no place are left out of the issue and its history. Publishing still advances the reporting window and records fired trigger repeats, even for those stories.
+| Part | Stock calculation |
+| --- | --- |
+| Importance and template weight | The adjusted tier score plus the template's resolved weight |
+| Series history | 15% of the strongest series score. Scores accumulate printed importance and decay by a factor of 0.94 per recorded turn. |
+| Novelty | +6 when none of the story's series has printed |
+| Variety | +8 when the story adds a tag the editor has yet to select for this issue |
+| Votes | The [feedback adjustment](#votes-and-preferences), capped at ±25 |
+
+Urgent stories rank first. Within the same urgency, the last slot favors an eligible brief if none has been picked. Stories without urgency need a positive score. Each development, series (rule and subject), and applicable war or peace incident can support only one ranked story per issue.
+
+The stock editor ranks up to ten stories. A combined article takes one slot. Publication closes the reporting window and spends [repeat memory](triggers/overview.md#repeats) for the series carried by printed articles, including those combined into one. A skip advances the schedule and keeps the reporting window open. Series scores decay on both outcomes.
 
 The audit saves the seed, catalogue, scores, presentation, sources, feedback, and trigger results. Stock design and layout draws are independent of each other and of prose. `designSelection` explains the prior design, how many issues it ran (up to six), and the candidate weights used for the draw. `selectedVariants` and `selectedStyles` record each displayed article's wording and style by item ID. Replay reopens the stored issue without running the editor again.
 
@@ -170,6 +181,6 @@ Preferences default to five Standard turns and LLM editing off in `defaults.json
 
 ## Ownership and inputs
 
-Under `vox-agents/src/newspaper/editorial/`, `check.ts` takes the permitted facts, infers the diplomacy, evaluates rules, selects stories, and assembles the issue. `config/load.ts` loads and compiles the catalogue. The `selection/` and `presentation/` folders own decisions about stories and appearance. `vox-agents/src/newspaper/contracts/publication.ts` defines publication state (schema 6).
+Under `vox-agents/src/newspaper/editorial/`, `check.ts` runs a check from visible facts to a printed issue or skip. `config/load.ts` loads the catalogue, and `selection/` and `presentation/` handle stories and layout. Publication state is defined in `vox-agents/src/newspaper/contracts/publication.ts`.
 
 [Replay](replay.md#source-storage-and-api) commits issues and skips, including their decisions and audits. A query or validation error leaves the previous checkpoint available for retry. Use the [catalogue verification commands](triggers/overview.md#verify-changes) after changing rules or editorial code.

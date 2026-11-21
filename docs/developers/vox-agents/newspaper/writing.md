@@ -17,7 +17,7 @@ Use this guide to write or revise `vox-agents/newspaper/templates/`. Check the t
 
 ## Use concrete names when available
 
-While "War Declared On Us" sounds like a good *headline*, use concrete names of a civilization, city, religion, leader, or other subject in the story body (at least for the first mention). Write “peace with Rome” in place of “peace with a foreign power”, use the civilization name instead of "this nation".
+While "War Declared On Us" sounds like a good *headline*, use concrete names of a civilization, city, religion, leader, or other subject in the story body (at least for the first mention). The readers need to understand where a news is happening. Write “peace with Rome” in place of “peace with a foreign power”, use the civilization name instead of "this nation", use "Our scholars" or "Roman scholars" instead of "The scholars".
 
 - Use `{{terms.leader}}` for the reader's leader by name and `{{player.leader}}` for the leader of a player subject. List these in the template's `names` when they should be underlined.
 - Use `{{terms.civilization}}` for the reader's country and `{{terms.civilizationAdjective}}` for its adjective, as in “Rome” and “Roman.”
@@ -40,6 +40,7 @@ Following the same spirit, use relevant numbers that make sense in the game worl
 - Names containing `happiness` print `percent`, `population` print `million`, `points` print `point` or `points`, `turns` print `turn` or `turns`, and `distance` print `tile` or `tiles`.
 - Add `{{terms.civic.people}}` after population count, such as `Famine leaves {{faminePopulation}} {{terms.civic.people}} unhappy`.
 - Print a count and its noun together with `{{count|power|powers}}`. It writes the singular after 1 and the plural otherwise.
+- Use `regiment` for military units and `team` for civilian units.
 
 ## Examples
 

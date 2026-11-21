@@ -73,10 +73,10 @@ export function renderStory(
     credits.append(subheadline);
   }
 
+  let byline: HTMLElement | null = null;
   if (item.byline) {
-    const byline = createElement("p", "vd-byline");
+    byline = createElement("p", "vd-byline");
     appendInlineNodes(byline, item.byline, item.id, bindReaderAction);
-    credits.append(byline);
   }
 
   const prose = createElement("div", "vd-prose");
@@ -90,13 +90,16 @@ export function renderStory(
   if (lead && page.layout === "breaking" && figure) {
     const columns = createElement("div", "vd-breaking-columns");
     const main = createElement("div", "vd-column-main");
-    main.append(prose, footer);
+    main.append(prose);
+    if (byline) main.append(byline);
+    main.append(footer);
     columns.append(main, figure);
     content.append(columns);
   } else if (analysisEvidence && analysisMain) {
     const columns = createElement("div", "vd-analysis-columns");
     analysisMain.append(prose);
     if (evidenceFirst && figure) analysisMain.append(figure);
+    if (byline) analysisMain.append(byline);
     analysisMain.append(footer);
     const evidence = renderEvidence(analysisEvidence, evidenceFirst ? null : figure, evidenceFirst);
     if (evidenceFirst) columns.append(evidence, analysisMain);
@@ -106,6 +109,7 @@ export function renderStory(
     const account = registerEntry ? createElement("div", "vd-register-account") : content;
     account.append(prose);
     if (figure) account.append(figure);
+    if (byline) account.append(byline);
     account.append(footer);
     if (registerEntry) content.append(headingGroup, account);
   }

@@ -35,7 +35,7 @@
     margin: 0 0 10px;
     font: italic calc(20px * var(--vd-text-scale)) / 1.35 var(--vd-font-body);
   }
-  & .vd-story-content .vd-byline { margin: 0 0 10px; }
+  & .vd-story-content .vd-byline { margin: 10px 0 0; }
   & .vd-number { color: inherit; font-variant-numeric: lining-nums tabular-nums; font-weight: 700; }
   & .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-headline {
     font-size: calc(clamp(38px, 6.3cqi, 76px) * var(--vd-text-scale));

@@ -2,8 +2,8 @@
  * Feed newspaper family.
  *
  * A social news timeline: full-width posts between hairlines,
- * round source avatars, the byline as the post header and an action row of
- * votes under each post. One tint color carries the identity, so a
+ * round source avatars, the byline closing each post and an action row of
+ * votes under that post. One tint color carries the identity, so a
  * civilization's color can restyle the whole display. Red appears only on
  * breaking pages. Applies to [data-design="feed"].
  *
@@ -129,7 +129,7 @@
   background: var(--vd-feed-tint-fill);
 }
 
-/* Posts: avatar column, then the post with its header line first. */
+/* Posts: avatar column, then the post with its headline first. */
 
 .vd-newspaper[data-design="feed"] .vd-page {
   padding-top: 0;
@@ -163,18 +163,13 @@
 }
 
 .vd-newspaper[data-design="feed"] .vd-byline {
-  order: -1;
-  margin: 1px 0 3px;
+  margin: 10px 0 3px;
   color: var(--vd-ink);
   font: 700 calc(15px * var(--vd-text-scale)) / 1.35 var(--vd-font-body);
   letter-spacing: -0.005em;
   text-align: left;
   text-transform: none;
   opacity: 1;
-}
-
-.vd-newspaper[data-design="feed"] .vd-deck + .vd-byline {
-  margin-top: 1px;
 }
 
 .vd-newspaper[data-design="feed"] .vd-headline,
@@ -336,7 +331,7 @@
 }
 
 .vd-newspaper[data-design="feed"] .vd-storylist[data-layout] .vd-story--lead .vd-byline {
-  margin-top: 1px;
+  margin-top: 10px;
   text-align: left;
 }
 

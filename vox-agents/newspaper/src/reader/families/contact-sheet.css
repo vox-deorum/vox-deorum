@@ -59,7 +59,8 @@
   & .vd-storylist[data-layout] .vd-story--lead .vd-deck { padding-bottom: 0; border: 0; font-style: normal; }
   & .vd-story--lead .vd-story-content > .vd-prose { max-inline-size: 70ch; }
   & .vd-byline { font-family: var(--proof-mono); opacity: .85; }
-  & .vd-story--brief :is(.vd-deck, .vd-byline) { margin: 0 0 10px; }
+  & .vd-story--brief .vd-deck { margin: 0 0 10px; }
+  & .vd-story--brief .vd-byline { margin: 10px 0 0; }
   & .vd-evidence { padding: clamp(10px, 1.6cqi, 18px); border: 3px solid #373939; background: var(--proof-evidence-paper); }
   & .vd-evidence caption strong, & .vd-evidence td, & .vd-number { font-family: var(--proof-mono); }
   & .vd-vote { background: var(--vd-vote-background); }

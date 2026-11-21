@@ -5,22 +5,14 @@ A trigger spots a development in a game recording, such as one of our cities shr
 ## Add a trigger
 
 1. Describe the development in one sentence and pick its [subject](#subjects). A city-state switching allies is an `event`; a capital outgrown by another of our cities is a `world` comparison.
-2. Find the [facts](facts.md) and [thresholds](constants.md) the rule needs. If a fact is missing, see [how to add it](facts.md#add-a-fact).
-3. Add an entry to a topical JSON file under `vox-agents/newspaper/triggers/`. Put cheap conditions that rule out many subjects early in `when`. Check required facts there too: a report on a city-state changing allies needs both names. Leave facts used only in some variants, such as distance, to those variants.
+2. Find the [facts](facts.md) and [constants](constants.md) the rule needs. Choose a [tier](#tiers-adjustments-and-stakes) for the story and any adjustments that help it rank.
+3. Add the rule to a topical file under `vox-agents/newspaper/triggers/`. Start `when` with conditions that rule out many subjects. Require facts essential to the story there, such as both leaders' names in a report that needs them.
 4. Add a template under `vox-agents/newspaper/templates/`. Name the rule's ID in `triggers` and give the template and at least one eligible variant positive weight. To tune existing coverage, start with the [settler overlay](examples.md#a-city-shrinks-after-sending-settlers).
 5. Start a fresh [replay](../replay.md#iterate-on-a-rule-or-overlay). Read the issue and audit together to see what matched, what was eligible, and what printed.
 
 ## A first example
 
-The stock `settler-departure` rule checks one city at a time. Its `recent` window looks back five Standard turns.
-
-| Field | What the rule does |
-| --- | --- |
-| `when` | Requires an own city, lower population than `city.before.population`, a settler unit in `city.trained`, and positive food income. |
-| `values.lost` | Subtracts current population from the earlier population. The template can print `{{lost}}`. |
-| `importance` | Scores the development as `30 + 10 * lost`: a drop from 8 to 6 gives 50. |
-
-The same template can tell the story in several ways. The [worked overlay](examples.md#a-city-shrinks-after-sending-settlers) edits the neutral report and keeps its existing condition and city link.
+The stock `settler-departure` rule checks our cities for a population drop after training settlers within `recent` (five Standard turns). It also requires positive food income. The rule stores the population lost in `values.lost` so the template can print `{{lost}}` and the score can rise with the size of the loss. The [worked overlay](examples.md#a-city-shrinks-after-sending-settlers) shows how to tune both scoring and wording.
 
 ## Trigger entries
 
@@ -32,7 +24,8 @@ The same template can tell the story in several ways. The [worked overlay](examp
 | `window` | No | Lookback for `before`, `history`, `events`, and facts such as `city.trained`. A named span or number of Standard turns. Defaults to the open reporting period, which advances when an issue publishes. |
 | `when` | Yes | One JavaScript expression or a list whose entries must all pass. |
 | `values` | No | Named expressions. Non-null scalar results can become placeholders in an ungrouped story. |
-| `importance` | No | A number or expression; [defaults to 50](#importance). |
+| `tier` | Yes | A [tier name](#tiers-adjustments-and-stakes) or an expression that returns one. |
+| `adjust` | No | One expression or a list of expressions that add or subtract points from the tier base. |
 | `urgent` | No | Expression that can qualify the development for breaking front page coverage. |
 | `group` | No | [Combines](#grouping) matches by key. |
 | `repeat` | No | [Controls](#repeats) when a subject can fire again. |
@@ -57,7 +50,7 @@ An event or incident remains a subject if it is inside the reporting period even
 
 Each enabled rule tests its subjects against the same fact model. A `when` list runs in order and stops at the first false result, [hidden or missing fact](facts.md#hidden-and-missing-facts), or error. Conditions use JavaScript truthiness: for example, a readable nonempty `city.majorityReligion` passes.
 
-On a passing subject, the editor checks repeat eligibility. For an ungrouped rule, it applies `chance` before evaluating `values`, `importance` and `urgent`. For a grouped rule, it evaluates `values`, forms qualifying groups, then applies `chance` and rates each surviving group. The audit records where each subject or group stopped, expression results and errors, and the evidence behind them. A check that skips publication still records the audit.
+After `when` passes, the editor checks repeat eligibility. Ungrouped rules apply `chance` before evaluating `values` and scoring the match. Grouped rules evaluate `values`, form groups, then apply `chance` and score each surviving group. The audit includes results, errors, and evidence even if the check publishes nothing.
 
 ## Expressions and authored choices
 
@@ -66,31 +59,51 @@ All expressions can read the check's [globals](facts.md#globals). Other names de
 | Place | Additional bindings |
 | --- | --- |
 | Trigger `when` | The subject, such as `city` or `pair` |
-| Trigger `values`, `group.by`, and ungrouped `importance` and `urgent` | The subject and any earlier values |
-| Grouped `importance` and `urgent` | The [group bindings](#grouping) |
+| Trigger `values`, `group.by`, and ungrouped `tier`, `adjust`, and `urgent` | The subject and any earlier values |
+| Grouped `tier`, `adjust`, and `urgent` | The [group bindings](#grouping) |
 | Template and variant conditions and weight adjustments | The subject's visible facts, unambiguous value names, `values`, `triggerValues`, `subject`, `period`, and `group`, `key` and `count` for a single group |
 | Template `merge.match` | `lead` and `member`: the combining template's facts and a selected story's facts, with `member.templateIds` identifying its templates |
 | Merge values and variants | The combining template's bindings, plus `merge.members` and `merge.count`; variants also get the computed `merge.values` |
-| Style preferences | The variant bindings and `story`, with `importance`, `urgent`, `short` and `tags` |
+| Style preferences | The variant bindings and `story`, with `tier`, `importance`, `urgent`, `short`, and `tags` |
 | Page, design, layout, and masthead conditions and weight adjustments | No candidate bindings |
 
 See [authoring choices](../editorial.md#authoring-choices) for how these expressions control eligibility and weight.
 
-The shared QuickJS runner validates expressions and shortcuts when the catalogue loads. It has no filesystem, network, clock or random source. If an expression overruns its budget, the runner keeps completed results and skips that expression for the rest of the check. After eight distinct expressions overrun, it skips remaining evaluations.
+The QuickJS runner validates expressions, including shortcuts and stakes, when the catalogue loads. It has no filesystem, network, clock, or random source. It skips an expression that exceeds its budget for the rest of the check. After eight distinct expressions overrun, it skips remaining evaluations.
 
-## Importance
+## Tiers, adjustments, and stakes
 
-Importance is clamped to 0 through 100 and defaults to 50. A larger score helps a story compete, alongside [novelty, variety and votes](../editorial.md#developments-selection-and-continuity).
+Choose a tier for what happened, then adjust the score for how much it matters in this situation.
+
+| Tier | Stock base | Stock example |
+| --- | --- | --- |
+| `crisis` | 90 | We become a vassal |
+| `major` | 75 | We enter a new era |
+| `notable` | 60 | We gain a city-state ally |
+| `routine` | 45 | A city completes a defense |
+| `filler` | 30 | A city completes an ordinary building |
+
+A tier expression can distinguish stories of different kinds, for example `ours ? 'major' : 'notable'`. Use `adjust` for differences of degree. Each entry must return a finite number. A hidden fact or error contributes zero for that entry and is recorded in the audit; other entries can still count. A tier that cannot be resolved prevents the development from firing. The audit shows the tier, its base, each adjustment, and the final importance, clamped to 0 through 100.
+
+[Stakes](constants.md#stakes) are shared adjustments that a rule applies by name. They apply only where a rule uses them:
+
+| To weigh | What to use |
+| --- | --- |
+| A civilization's relationship to the reader | For a foreign wonder, use `city.owner.stake.relation`: a friend within seven tiles can add 14 points, while a distant neutral civilization can subtract 8. For news about two civilizations, use `pair.stake.relation`. |
+| The city itself | Use `city.stake.place`. A foreign city six tiles from our nearest city gets +5; one 100 tiles away gets −8. Use visible `city.isCapital` or `city.population` to add a separate bonus for a foreign capital or a large foreign city. |
+| A military zone | Use [tactical observations](facts.md#tactical-observations) from `city.tacticalZones()` or `self.tacticalZones`. The stock catalogue has no shared zone score. See [how to weigh a nearby offensive](examples.md#a-nearby-offensive-outranks-a-distant-one) using the city and the matching zone. |
+
+City location and the owner's relationship can count separately. Check whether you want proximity in both, since the relationship stake also considers distance. Adjustments help eligible stories compete alongside [novelty, variety, and votes](../editorial.md#developments-selection-and-continuity). Visibility and matching still follow the rule's facts and conditions.
 
 ## Repeats
 
 | Policy | When a stateful rule can fire again on the same subject |
 | --- | --- |
 | `rearm` (default) | After an intervening check where `when` was false. A hidden fact or evaluation error does not rearm it. |
-| `once` | Never, once the match has been recorded in repeat memory. |
-| A span such as `medium` | Once this many [Standard turns](constants.md#spans) have elapsed, even if the condition stayed true. |
+| `once` | Never, once a story for that rule and subject has printed. |
+| A span such as `medium` | After this many [Standard turns](constants.md#spans) have elapsed since publication, even if the condition stayed true. |
 
-When an issue publishes, the editor remembers every fired stateful rule and closes the reporting window, including for stories left out of the layout. A skipped check keeps the window open and can rearm an existing match without remembering new ones. Event and incident rules do not spend repeats. Their subjects come from the reporting period, and fingerprints keep previously printed developments from appearing twice.
+A stateful match spends its repeat only when it contributes to a printed story. A match left out can compete again if it still qualifies. A false condition can rearm an existing match even on a skipped check. Publication closes the reporting window; a skip keeps it open. Event and incident rules use the reporting period and fingerprints to avoid repeating printed developments.
 
 ## Publication memory
 
@@ -111,7 +124,7 @@ A qualifying subject or group passes when its seeded draw is below `chance`. The
 
 ## Grouping
 
-Set `group.by` to an expression such as `city.majorityReligion`. Equal keys merge, and each group needs at least `group.min` matches (default 2). The group's rating expressions read the globals and `count`, `key` and `matches`. Each match holds its subject key and evaluated values.
+To write a pattern rule, match each subject first, then group by what the matches have in common. The stock `neighbors-convert` rule groups neighboring foreign cities by their new majority religion and requires at least three matches. Set `group.by` to the common key and `group.min` to the minimum size (default 2). Rate the group with `count`, `key`, or `matches`, for example by adding more points as the group grows. Each match supplies its subject key and evaluated values.
 
 A template can print `{{count}}` and a non-null `{{key}}` for a single group. When combining groups from multiple rules, use the rule ID, as in `{{triggerValues.conversions.count}}`. See [placeholders](../editorial.md#placeholders-and-facts).
 
@@ -119,11 +132,11 @@ A template can print `{{count}}` and a non-null `{{key}}` for a single group. Wh
 
 Stock catalogue JSON lives under [`vox-agents/newspaper/`](../../../../../vox-agents/newspaper/). Rule evaluation and audit code live in `vox-agents/src/newspaper/editorial/rules/`, with catalogue validation and loading in `editorial/config/`. See [where facts come from](facts.md) before extending the evidence.
 
-From the repository root or `vox-agents/`, use `npm run --silent newspaper:triggers` to list stock IDs and `npm run newspaper:sort-triggers` to sort each stock file by ID. Neither command needs a build or a recording.
+From the repository root or `vox-agents/`, use `npm run --silent newspaper:triggers` to list stock IDs and their authored tiers, and `npm run newspaper:sort-triggers` to sort each stock file by ID. The list shows tier expressions as written; evaluating them takes a replay.
 
 ## Tune with an overlay
 
-Mirror the catalogue structure in a separate directory and supply the fields you want to change. Trigger entries merge by ID across files; lists such as `when` and `tags` replace the inherited lists. Use the same rule ID and `enabled: false` to switch a stock rule off. See [constant overrides](constants.md#change-or-add-a-name) and [catalogue merges](../editorial.md#catalogue-and-eligibility).
+Mirror the catalogue structure and keep the IDs of rules you want to change. Lists such as `when`, `adjust`, and `tags` replace the inherited lists. Use `enabled: false` to turn off a stock rule. Version 3 uses `tier` and `adjust` in place of the old `importance` field. See [constant overrides](constants.md#change-or-add-a-name) and [catalogue merges](../editorial.md#catalogue-and-eligibility).
 
 Follow the [replay workflow](../replay.md#iterate-on-a-rule-or-overlay) to load an overlay in a fresh run. In browser replay use **Recording > Advanced > Editorial config directory**.
 
