@@ -9,7 +9,7 @@
         "id": "treasury-falls-into-deficit-report",
         "headline": "The treasury slips into deficit",
         "body": [
-          "The nation's accounts have turned negative. Spending outruns income by {{deficit}} gold a turn, where the recent count held the books at or above balance."
+          "The treasury has slipped into deficit. Spending outruns income by {{deficit}} gold a season, where the last count held the books at balance or better, and the gap repeats each season until it is closed."
         ],
         "weight": { "base": 1 }
       },
@@ -18,11 +18,11 @@
         "voice": "gazette",
         "stance": "neutral",
         "genre": "ledger",
-        "headline": "The treasury's rate, in deficit",
+        "headline": "The books, newly behind",
         "body": [
-          "Rate in the recent count: at or above balance.",
-          "Rate now: in deficit.",
-          "Shortfall: {{deficit}} gold each turn."
+          "Last count: the books at balance or better.",
+          "This count: the books behind.",
+          "Behind by: {{deficit}} gold, every season."
         ],
         "weight": { "base": 1 }
       },
@@ -33,7 +33,7 @@
         "genre": "analysis",
         "headline": "A deficit that names no one",
         "body": [
-          "Income now trails spending by {{deficit}} gold a turn, where the recent count showed the books at or above balance. A shortfall like this repeats every turn until someone is asked to make it good, and the public has not been told who that will be. The paper is asking."
+          "Income trails spending by {{deficit}} gold a season, where the last count held the books at balance. A shortfall like that does not sit still: it repeats until someone is made to make it good, and nobody in office has said who that will be. The creditors already know the way to the side door."
         ],
         "weight": { "base": 1 }
       },
@@ -45,7 +45,7 @@
         "headline": "Sir, the treasury now outspends its income",
         "byline": "A stallholder",
         "body": [
-          "I keep a stall by the east gate, and when I spend more than I earn, my wife hears of it before the market closes. The treasury now spends {{deficit}} gold a turn more than it earns. When does the palace hear of it?"
+          "I keep a stall by the east gate. When I spend more than I take, my wife hears of it before the market closes, and the week after there is no honey on the table. The treasury now spends {{deficit}} gold a season more than it takes. Who at the palace hears of it, and what goes missing from their table?"
         ],
         "weight": { "base": 1 }
       }
@@ -59,9 +59,9 @@
     "variants": [
       {
         "id": "treasury-milestone-report",
-        "headline": "The treasury passes 1,000 gold",
+        "headline": "The treasury passes a thousand gold",
         "body": [
-          "The reserve has crossed the 1,000 gold mark and now stands at {{gold}}, having taken on {{gain}} gold since the recent count."
+          "The treasury has crossed the thousand-gold mark and now stands at {{gold}} gold, up {{gain}} gold since the last count."
         ],
         "weight": { "base": 1 }
       },
@@ -72,7 +72,7 @@
         "genre": "report",
         "headline": "The reserve passes the thousand mark",
         "body": [
-          "This paper notes with satisfaction that the treasury has lately passed the 1,000 gold mark and now holds {{gold}} gold. A full vault is the mark of a well-kept house, grown by {{gain}} gold in recent turns."
+          "It is a pleasure to record that the treasury has passed the thousand-gold mark and now holds {{gold}} gold, a store grown by {{gain}} gold in recent seasons. A full vault is the mark of a well-kept house, and of stewards who keep their counts before their comforts."
         ],
         "weight": { "base": 1 }
       },
@@ -83,7 +83,7 @@
         "genre": "notice",
         "headline": "Hear it! A thousand gold in the vault!",
         "body": [
-          "Hear it, merchants and magistrates! The treasury has passed the 1,000 gold mark and holds {{gold}} gold. A thousand gold, counted and kept!"
+          "Hear it, merchants and magistrates, hear it! The treasury has passed the thousand-gold mark and holds {{gold}} gold in the vault. A thousand gold and more, counted and kept, counted and kept!"
         ],
         "weight": { "base": 1 }
       },
@@ -94,7 +94,7 @@
         "genre": "report",
         "headline": "The treasury just crossed 1,000 gold",
         "body": [
-          "Reserve: {{gold}} gold, up {{gain}} gold in a few turns. The mark is passed, and the number is exact."
+          "Reserve: {{gold}} gold. Up {{gain}} gold over the last few seasons. The thousand mark is behind us, and the number is exact."
         ],
         "weight": { "base": 1 }
       }
@@ -110,7 +110,7 @@
         "id": "treasury-reserve-recovers-report",
         "headline": "The treasury gains time against the deficit",
         "body": [
-          "The shortfall continues, but the reserve behind it has grown. The {{gold}} gold on hand now covers {{turnsLeft}} turns at {{deficit}} gold a turn, where the recent count showed shorter cover."
+          "The deficit continues, but the reserve behind it has grown. The {{gold}} gold on hand now covers {{turnsLeft}} seasons at {{deficit}} gold a season, against shorter cover at the last count."
         ],
         "weight": { "base": 1 }
       },
@@ -121,7 +121,7 @@
         "genre": "analysis",
         "headline": "Time returns to the treasury",
         "body": [
-          "The shortfall holds at {{deficit}} gold a turn, yet the reserve now funds {{turnsLeft}} turns of it on {{gold}} gold. The recent count left less room. A deficit that can be carried this long is a problem with options, and options are what an administration needs."
+          "The shortfall holds at {{deficit}} gold a season, but the reserve has grown to {{gold}} gold, enough to carry {{turnsLeft}} seasons where the last count allowed fewer. A deficit that can be carried is a problem with choices, and choices are what an administration needs. The creditors still call, but these days they are seen in order and offered chairs."
         ],
         "weight": { "base": 1 }
       },
@@ -132,7 +132,7 @@
         "genre": "anecdote",
         "headline": "The count runs long at the money-changer's table",
         "body": [
-          "A few turns back, the money-changers were counting the treasury's remaining turns on their fingers. This morning the tally ran to {{turnsLeft}} turns of cover, {{gold}} gold against {{deficit}} a turn, and the talk over the coins turned easier."
+          "Not long ago, the money-changers were counting the treasury's remaining seasons on their fingers, and nobody liked the total. This morning the tally at the table ran to {{turnsLeft}} seasons of cover, {{gold}} gold against {{deficit}} a season, and the talk over the coins came easier. The oldest of them still kept his coat on. Habits."
         ],
         "weight": { "base": 1 }
       }
@@ -148,7 +148,7 @@
         "id": "treasury-reserve-runs-short-report",
         "headline": "The treasury reserve runs short",
         "body": [
-          "The deficit that showed in the recent count continues at {{deficit}} gold a turn, and the reserve behind it is wearing thin. The {{gold}} gold on hand covers {{turnsLeft}} full turns of spending at that rate."
+          "The deficit continues at {{deficit}} gold a season, and the reserve behind it is thinning. The {{gold}} gold on hand will cover {{turnsLeft}} more seasons of spending at that rate."
         ],
         "weight": { "base": 1 }
       },
@@ -159,9 +159,9 @@
         "genre": "ledger",
         "headline": "The treasury, counted",
         "body": [
-          "Reserve: {{gold}} gold.",
-          "Shortfall: {{deficit}} gold a turn.",
-          "Cover at this rate: {{turnsLeft}} full turns."
+          "The vault holds: {{gold}} gold.",
+          "The court spends beyond its income: {{deficit}} gold a season.",
+          "At this rate the vault answers for {{turnsLeft}} seasons, and no more."
         ],
         "weight": { "base": 1 }
       },
@@ -170,9 +170,9 @@
         "voice": "broadcast",
         "stance": "government-critical",
         "genre": "report",
-        "headline": "Treasury cover down to {{turnsLeft}} turns",
+        "headline": "Treasury cover: {{turnsLeft}} seasons left",
         "body": [
-          "The treasury holds {{gold}} gold. Spending outruns income by {{deficit}} gold a turn. That leaves {{turnsLeft}} turns of cover, and the shortfall is not new. The figures are public. The plan for them is not."
+          "The treasury holds {{gold}} gold tonight. Spending outruns income by {{deficit}} gold a season. That leaves {{turnsLeft}} seasons of cover, and the shortfall is not new. What nobody in the palace has said is what happens when the count reaches zero. We asked. There was no answer yet."
         ],
         "weight": { "base": 1 }
       },
@@ -183,7 +183,7 @@
         "genre": "editorial",
         "headline": "The old rule was a full store",
         "body": [
-          "Our grandparents kept a reserve against bad years, and bad years came all the same. The treasury now holds {{gold}} gold against a deficit of {{deficit}} gold a turn, {{turnsLeft}} turns from empty. The paper's view is the old one: fill the store before the store empties itself."
+          "Our grandparents kept a store against bad years, and the bad years came all the same. The treasury holds {{gold}} gold against a deficit of {{deficit}} gold a season, and that is {{turnsLeft}} seasons from empty. The old rule was plain: a full store first, arguments after. Fill it now, while there is still something to fill it from."
         ],
         "weight": { "base": 1 }
       }
@@ -199,7 +199,7 @@
         "id": "treasury-returns-to-surplus-report",
         "headline": "The deficit ends",
         "body": [
-          "The treasury's rate has climbed out of the red. Income now covers spending, with {{goldPerTurn}} gold a turn to spare after the recent shortfall."
+          "The treasury has returned to surplus. Income again covers spending, with {{goldPerTurn}} gold a season to spare where the recent count showed a shortfall."
         ],
         "weight": { "base": 1 }
       },
@@ -210,7 +210,7 @@
         "genre": "report",
         "headline": "The state pays its way",
         "body": [
-          "The treasury's rate stands at {{goldPerTurn}} gold a turn, at or above balance after the recent shortfall. Spending no longer takes more than income brings, and the state is paying its way."
+          "The books are back in the black: the treasury now clears {{goldPerTurn}} gold a season after the recent shortfall. Spending no longer outruns income, and the state is lending to its own future rather than borrowing from it."
         ],
         "weight": { "base": 1 }
       },
@@ -221,7 +221,7 @@
         "genre": "notice",
         "headline": "Notice: the accounts no longer run behind",
         "body": [
-          "The paper is glad to record that the deficit lately showing in the accounts has closed. The rate now reads {{goldPerTurn}} gold a turn, and good order in the treasury serves the whole nation."
+          "Notice is given that the deficit lately showing in the accounts has closed. The rate now reads {{goldPerTurn}} gold a season to the good, a correction made without panic. Good order in the treasury serves the whole nation, and the ministers concerned merit its thanks."
         ],
         "weight": { "base": 1 }
       },
@@ -242,9 +242,9 @@
         "stance": "populist",
         "genre": "notice",
         "when": "goldPerTurn > 0",
-        "headline": "Hear it! The treasury runs a surplus!",
+        "headline": "Hear it! The lean stretch is over!",
         "body": [
-          "Hear it, good people! Income beats spending by {{goldPerTurn}} gold a turn, and the deficit is done! The lean stretch is past us, past us!"
+          "Hear it, good people, hear it! Income now beats spending by {{goldPerTurn}} gold a season, and the deficit is done with! The lean stretch is behind us, behind us!"
         ],
         "weight": { "base": 1 }
       }

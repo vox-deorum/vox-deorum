@@ -40,13 +40,13 @@ function fixture(cities: NewspaperSnapshot[], before: NewspaperSnapshot[] = [], 
 }
 
 /** Run the complete stock editor and expose the audit alongside published articles. */
-async function check(evidence: NewspaperEvidence) {
+async function check(evidence: NewspaperEvidence, catalogue = config) {
   const facts = buildNewspaperFacts(evidence, { playerIdentities: {
     0: { name: 'France', major: true, teamId: 100 }, 1: { name: 'Brazil', major: true, teamId: 101 },
   } });
   const result = await runEditorialCheck({
     campaignId: 'fixture', timelineId: 'city-desk', receiver: { playerId: 0, label: 'France' },
-    evidence, facts, config, speedMultiplier: 1, state: createInitialPublicationState(),
+    evidence, facts, config: catalogue, speedMultiplier: 1, state: createInitialPublicationState(),
   });
   const audit = (id: string) => result.decision.triggerAudit.find(rule => rule.rule === id)!;
   const variants = Object.values(result.decision.selectedVariants);
@@ -64,7 +64,10 @@ const home = city(10, 10, 0, 0, 'Tours');
 const settlers = event(100, 'CityTrained', { PlayerID: 0, CityID: 10, CityX: 0, CityY: 2, Unit: 'Pioneer' });
 
 describe('stock city desk', () => {
-  beforeAll(async () => { config = await loadEditorialConfig(); });
+  beforeAll(async () => {
+    config = await loadEditorialConfig();
+    config.defaults.minItems = 1;
+  });
 
   it('should cover a neighboring annexation only when the owner remains the same', async () => {
     const annexed = city(20, 10, 4, 1, 'Recife', { IsPuppet: false, IsOccupied: true });
@@ -85,7 +88,10 @@ describe('stock city desk', () => {
     const before = city(10, 5, 0, 0, 'Tours', { Population: 8 });
     const now = { ...home, values: { ...home.values, Population: 6, FoodPerTurn: 2,
       ...(happiness === undefined ? {} : { HappinessDelta: happiness }) } };
-    const result = await check(fixture([now], [before], [settlers]));
+    const account = config.templates.find(template => template.id === 'settler-departure-account')!;
+    const happinessVariants = new Set(['settler-departure-strained', 'settler-departure-hopeful', 'settler-departure-report']);
+    const catalogue = { ...config, templates: [{ ...account, variants: account.variants.filter(entry => happinessVariants.has(entry.id)) }] };
+    const result = await check(fixture([now], [before], [settlers]), catalogue);
     expect(result.variants).toEqual([variant]);
     expect(result.items[0].headline).toContainEqual(expect.objectContaining({
       type: 'link', target: { type: 'city', cityId: '10' },

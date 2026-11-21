@@ -38,10 +38,12 @@ async function publish(input: NewspaperEvidence, cities: NewspaperSnapshot[] = [
       events: input.events, gaps: [],
     },
   };
+  const config = await loadEditorialConfig();
+  config.defaults.minItems = 1;
   return runEditorialCheck({
     campaignId: 'fixture', timelineId: 'foreign-desk', receiver: { playerId: 0, label: 'France' },
     evidence: projected, facts: buildNewspaperFacts(projected, { playerIdentities }),
-    config: await loadEditorialConfig(), context, speedMultiplier: 1, state: createInitialPublicationState(),
+    config, context, speedMultiplier: 1, state: createInitialPublicationState(),
   });
 }
 

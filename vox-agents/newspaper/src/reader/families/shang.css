@@ -7,7 +7,11 @@
   --cloud-scroll: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='54' height='16'%3E%3Cpath d='M0 13h24V3H5v6h13M54 3H30v10h19V7H36' fill='none' stroke='black' stroke-width='2'/%3E%3C/svg%3E");
 
   & .vd-header {
-    background: var(--bronze);
+    background:
+      radial-gradient(ellipse at 17% 15%, #a49c6830, transparent 38%),
+      radial-gradient(ellipse at 82% 92%, #46847555, transparent 43%),
+      repeating-linear-gradient(106deg, transparent 0 3px, #c4c29509 3px 4px),
+      var(--bronze);
     color: var(--vd-paper);
     padding-top: 8px;
     box-shadow: var(--casting-edge);
@@ -30,20 +34,17 @@
   & .vd-tab { color: var(--vd-paper); }
   &[data-mode="reader"] .vd-tab[aria-selected="true"] { color: #f4d498; }
   & .vd-tab:focus-visible { outline-color: var(--vd-paper); }
-  & .vd-page { box-shadow: var(--casting-edge); }
+  & .vd-page {
+    --shell-wash: color-mix(in srgb, var(--vd-paper) 55%, transparent);
+    background-image: linear-gradient(90deg, transparent, var(--shell-wash) 12% 88%, transparent),
+      url("./textures/turtle-shell.svg?inline");
+    background-attachment: local;
+    box-shadow: var(--casting-edge);
+  }
   & .vd-headline { font-weight: 400; letter-spacing: .005em; }
   & .vd-storylist .vd-story--lead .vd-headline { font-weight: 400; letter-spacing: .018em; }
   & .vd-storylist[data-layout="ordinary"] .vd-story--lead .vd-headline { text-align: center; }
-  & .vd-story--brief { border: none; padding-top: 0; }
-  & .vd-story--brief::before {
-    display: block;
-    height: 14px;
-    width: 100px;
-    margin: 0 auto 16px;
-    background: var(--vd-accent);
-    mask: var(--cloud-scroll) center / auto 100% repeat-x;
-    content: "";
-  }
+  & .vd-story--brief { border-top: 1px solid var(--rim); padding-top: 12px; }
   & .vd-storylist[data-layout="breaking"] .vd-story--lead {
     padding: clamp(12px, 3cqi, 36px);
     border: 3px double var(--bronze);
@@ -52,6 +53,11 @@
   & .vd-evidence { border-block: 3px double var(--bronze); padding-block: 12px; }
   & .vd-evidence thead { background: var(--bronze); color: var(--vd-paper); }
   & .vd-evidence td { font-family: var(--vd-font-body); }
-  & .vd-end-rule { height: 12px; background: var(--vd-accent); mask: var(--cloud-scroll) center / auto 100% repeat-x; }
+  & .vd-end-rule {
+    height: 14px; width: 108px; margin: 18px auto 0;
+    background: var(--vd-accent);
+    mask: var(--cloud-scroll) center / auto 100% repeat-x;
+  }
+  & .vd-end-rule::before, & .vd-end-rule::after { display: none; }
   & .vd-end-ornament { display: none; }
 }

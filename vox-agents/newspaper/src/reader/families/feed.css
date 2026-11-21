@@ -1,7 +1,7 @@
 /*
  * Feed newspaper family.
  *
- * A social news timeline: one centred column of posts between hairlines,
+ * A social news timeline: full-width posts between hairlines,
  * round source avatars, the byline as the post header and an action row of
  * votes under each post. One tint color carries the identity, so a
  * civilization's color can restyle the whole display. Red appears only on
@@ -27,7 +27,6 @@
     clamp(0, (0.65 - l) * 1000, 1) 0 0);
   --vd-feed-wash: color-mix(in srgb, var(--vd-accent) 6%, var(--vd-paper));
   --vd-feed-soft: color-mix(in srgb, var(--vd-accent) 12%, var(--vd-paper));
-  --vd-feed-column: 680px;
   --vd-font-display: "Inter", Arial, sans-serif;
   --vd-font-body: "Inter", Arial, sans-serif;
 }
@@ -52,8 +51,6 @@
 .vd-newspaper[data-design="feed"] .vd-tabs,
 .vd-newspaper[data-design="feed"] .vd-storylist {
   width: 100%;
-  max-width: var(--vd-feed-column);
-  margin-inline: auto;
   border-inline: 1px solid var(--vd-rule);
   background: var(--vd-paper);
 }
@@ -355,7 +352,7 @@
   flex-grow: 1;
 }
 
-/* Stories inside the column never split into side-by-side columns. */
+/* Stack attachments under the text on small screens. */
 
 .vd-newspaper[data-design="feed"] .vd-breaking-columns,
 .vd-newspaper[data-design="feed"] .vd-analysis-columns {
@@ -460,6 +457,26 @@
 
 .vd-newspaper[data-design="feed"] .vd-evidence .vd-story-art img {
   border-radius: 8px;
+}
+
+/* A wide post pairs the dispatch with its photo or data card. */
+@container newspaper (width > 760px) {
+  .vd-newspaper[data-design="feed"] {
+    & .vd-breaking-columns, & .vd-analysis-columns,
+    & .vd-story-content:has(> .vd-story-art) {
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+      column-gap: 24px;
+      align-items: start;
+    }
+    & .vd-breaking-columns .vd-story-art { order: 0; margin: 0; }
+    & .vd-story-content:has(> .vd-story-art) {
+      align-content: start;
+      grid-template-rows: auto auto auto auto 1fr;
+      & > * { grid-column: 1; }
+      & > .vd-story-art { grid-area: 1 / 2 / 6 / 3; margin: 0; }
+    }
+  }
 }
 
 /* Narrow papers: the column fills the sheet and drops its side hairlines. */

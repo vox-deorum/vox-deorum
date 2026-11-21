@@ -19,6 +19,12 @@ describe('publication memory', () => {
     expect(publicationStateSchema.parse(state)).toEqual(state);
   });
 
+  it('should resume older checkpoints after the last turn they already consumed', () => {
+    const { reportingThroughTurn: _bound, ...legacy } = createInitialPublicationState();
+    const state = publicationStateSchema.parse({ ...legacy, lastCheckTurn: 105 });
+    expect(state.reportingThroughTurn).toBe(105);
+  });
+
   it.each([1, 2, 3, 4, 5, 99])('should reject unsupported memory version %s', schemaVersion => {
     expect(publicationStateSchema.safeParse({ ...createInitialPublicationState(), schemaVersion }).success).toBe(false);
   });

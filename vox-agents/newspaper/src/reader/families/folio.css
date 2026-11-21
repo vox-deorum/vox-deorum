@@ -1,4 +1,4 @@
-/* A sequence of full-width panels, each with a single reading column. */
+/* Full-width story panels. Wide sheets have room for facing columns. */
 .vd-newspaper[data-design="folio"] {
   --vd-paper: #f5eddf;
   --vd-ink: #302721;
@@ -12,7 +12,6 @@
   & .vd-tabs { gap: 0 clamp(12px, 3cqi, 36px); }
   & .vd-tab { padding-block: 8px; }
   & .vd-title { font-size: calc(clamp(32px, 6.3cqi, 72px) * var(--vd-text-scale)); }
-  & .vd-story-content { max-width: 78ch; margin-inline: auto; }
   & .vd-story--brief { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--vd-rule); }
   & .vd-headline { margin-bottom: 10px; }
   & .vd-storylist .vd-story--lead .vd-headline {
@@ -23,17 +22,33 @@
     font-size: calc(clamp(39px, 7.2cqi, 84px) * var(--vd-text-scale));
   }
   & .vd-storylist[data-layout="analysis"] .vd-story--brief { max-width: none; }
+  & .vd-storylist[data-layout="analysis"] .vd-story--lead .vd-headline { max-width: none; }
   & .vd-story--brief .vd-headline { font-size: calc(clamp(23px, 3.2cqi, 32px) * var(--vd-text-scale)); }
   & .vd-storylist .vd-story--lead .vd-deck {
     margin: 0 0 14px;
     font: italic calc(clamp(21px, 2.6cqi, 28px) * var(--vd-text-scale)) / 1.25 var(--vd-font-body);
   }
   & .vd-storylist .vd-story--lead .vd-byline { margin: 0 0 13px; }
-  & .vd-analysis-columns { grid-template-columns: 1fr; gap: 24px; }
-  & .vd-evidence { border: 0; padding: 0; }
+  & .vd-analysis-columns { gap: clamp(16px, 3cqi, 36px); }
+  & .vd-evidence { align-self: start; border: 0; padding: 0; }
   & .vd-evidence th, & .vd-evidence td { padding-block: 8px; }
   & .vd-evidence td { font-size: calc(26px * var(--vd-text-scale)); font-variant-numeric: tabular-nums; }
   & .vd-evidence .vd-missing td { font: italic calc(16px * var(--vd-text-scale)) / 1.4 var(--vd-font-body); }
   & .vd-number { color: var(--vd-accent); font-variant-numeric: lining-nums tabular-nums; }
   & .vd-end-ornament { width: 80px; }
+}
+
+@container newspaper (width > 760px) {
+  .vd-newspaper[data-design="folio"] {
+    & .vd-story--lead .vd-story-content > .vd-prose {
+      columns: 24em 2;
+      column-gap: clamp(24px, 4cqi, 48px);
+    }
+    & .vd-storylist[data-layout="ordinary"] {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      column-gap: clamp(24px, 4cqi, 48px);
+    }
+    & .vd-story--lead, & .vd-story--brief:last-child:nth-child(even) { grid-column: 1 / -1; }
+  }
 }

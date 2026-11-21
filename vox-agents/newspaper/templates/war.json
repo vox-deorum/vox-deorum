@@ -7,9 +7,9 @@
     "variants": [
       {
         "id": "ally-joins-our-war-report",
-        "headline": "Allies answer the pact against {{opponent}}",
+        "headline": "Allies join the war against {{opponent}}",
         "body": [
-          "Our war against {{opponent}} is no longer ours alone. We have been joined by {{allies}}, called to our side by the pact between us, and what one nation carried now rests on several."
+          "The war against {{opponent}} is no longer ours alone. {{allies}} have answered the call of the pact between us, and what one nation carried now rests on several. Their banners move with ours from this week on."
         ],
         "weight": { "base": 1 }
       },
@@ -18,9 +18,9 @@
         "voice": "press",
         "stance": "national",
         "genre": "analysis",
-        "headline": "More banners against {{opponent}}",
+        "headline": "A longer line against {{opponent}}",
         "body": [
-          "The coalition against {{opponent}} has grown: our side now includes {{allies}}. A wider war spreads an enemy thin, and every front they must guard is a front where fewer of our men are needed."
+          "Our side against {{opponent}} now counts {{allies}} among its members, and the war they joined is no longer a private quarrel. It is a line of nations, and the line just got longer. {{opponent}} must now guard against all of us at once."
         ],
         "weight": { "base": 1 }
       },
@@ -29,9 +29,9 @@
         "voice": "gazette",
         "stance": "conciliatory",
         "genre": "report",
-        "headline": "Friends keep their word",
+        "headline": "The pact answered in arms",
         "body": [
-          "Word from the chancelleries is that the pact has been answered, and our side in the war against {{opponent}} now includes {{allies}}. Treaties honored in hard years are the ones worth signing in calm ones."
+          "We are credibly informed that the pact has been answered, and that the war against {{opponent}} now includes {{allies}} on our side. Treaties kept in hard years are the ones worth signing in calm ones, and this one has been kept. We congratulate the chancelleries on their constancy."
         ],
         "weight": { "base": 1 }
       },
@@ -42,7 +42,7 @@
         "genre": "notice",
         "headline": "Hear it! We do not fight alone",
         "body": [
-          "News from the war against {{opponent}}: the pact has been honored, and the strength of {{allies}} stands with us. We do not fight alone. Tell it in every street!"
+          "News from the war against {{opponent}}! The pact is honored, and {{allies}} stand at our side! We do not fight alone! We do not fight alone! Carry it to every street and every gate!"
         ],
         "weight": { "base": 1 }
       }
@@ -56,9 +56,9 @@
     "variants": [
       {
         "id": "barbarians-at-the-gates-report",
-        "headline": "Barbarians at the gates of {{cityName}}",
+        "headline": "Barbarians in sight of {{cityName}}",
         "body": [
-          "Scouts report {{barbarians}} barbarians in the country around {{cityName}}. The garrison has been warned; the walls and the herds are both being watched."
+          "Scouts count {{barbarians}} barbarians in the country around {{cityName}}. The garrison has been warned, and the herds have been brought in from the outlying fields."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -70,9 +70,9 @@
         "voice": "crier",
         "stance": "populist",
         "genre": "notice",
-        "headline": "Hear it, {{cityName}}! Barbarians are at the gates",
+        "headline": "Hear it, {{cityName}}! Raiders at the walls",
         "body": [
-          "The scouts count {{barbarians}} barbarians outside the walls. Bar the gates, mind the herds, and keep the children close!"
+          "The scouts count {{barbarians}} barbarians outside the walls! Bar your gates, mind the herds, and keep the children close! Keep the children close!"
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -84,9 +84,9 @@
         "voice": "tabloid",
         "stance": "local",
         "genre": "anecdote",
-        "headline": "The fields around {{cityName}} go quiet",
+        "headline": "The herdsmen reach {{cityName}} without the herds",
         "body": [
-          "The herdsmen saw them first and came in without the herds. {{barbarians}} barbarians now camp within reach of {{cityName}}, and nobody walks the evening roads."
+          "They saw the dust before the scouts did, and rode in with empty saddles. {{barbarians}} barbarians now camp within reach of {{cityName}}, and nobody walks the evening roads. The dogs know first, one of them said. The dogs are always first."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -98,9 +98,9 @@
         "voice": "press",
         "stance": "rationalist",
         "genre": "analysis",
-        "headline": "Counting the raiders at {{cityName}}",
+        "headline": "Counting raiders at {{cityName}}",
         "body": [
-          "The count near {{cityName}} is not rumor: {{barbarians}} barbarians stand in the surrounding country. A band that size can burn fields and carry off herds faster than a militia can pursue, and the men needed to root it out are men the harvest cannot spare."
+          "The scouts agree on the number, which is rare: {{barbarians}} barbarians in the country around {{cityName}}. A band that size does not wander, it feeds, and it will burn what it cannot carry. The men who hunt it down will be men the harvest wanted first."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -113,9 +113,9 @@
         "stance": "neutral",
         "genre": "report",
         "when": "posture !== null && posture !== 'NONE'",
-        "headline": "The garrison of {{cityName}} stands at {{posture}}",
+        "headline": "At {{cityName}}, the garrison answers: {{posture}}",
         "body": [
-          "It is set down in the record that {{barbarians}} barbarians were counted in the territory of {{cityName}}, and that the command there has answered with a {{posture}} posture."
+          "It is set down that {{barbarians}} barbarians were counted in the lands of {{cityName}}, and that the command there has entered its answer in the record: {{posture}}."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -132,9 +132,9 @@
     "variants": [
       {
         "id": "besieged-and-starving-report",
-        "headline": "{{city}} is besieged and starving",
+        "headline": "{{city}} besieged, and going hungry",
         "body": [
-          "Enemy forces have closed the roads into {{city}}. No grain is moving in, the granaries are running down, and the city is going hungry."
+          "Enemy forces have closed the roads into {{city}}. No grain is moving in, the granaries are running down, and the ration is smaller every week."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -146,9 +146,9 @@
         "voice": "press",
         "stance": "populist",
         "genre": "analysis",
-        "headline": "Who answers for {{city}}?",
+        "headline": "Who feeds {{city}} tonight?",
         "body": [
-          "A city under siege eats what it stores and then what it can find, and {{city}} has reached the second stage. The government owes the city a relief plan and a date, and it owes them in that order."
+          "A city under siege eats its stores first and its luck afterward, and {{city}} is well into the second course. The people there did not choose this war, and they cannot lift it by wanting bread less. Someone in the capital owes them a relief convoy and a date, and owes them soon."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -160,9 +160,9 @@
         "voice": "pamphlet",
         "stance": "populist",
         "genre": "anecdote",
-        "headline": "Bread lines in {{city}}",
+        "headline": "In {{city}}, the queue starts before dawn",
         "body": [
-          "Citizens of {{city}}, the siege has reached the table. The baker on the high street opens late and closes early, and the queue starts before his shutters do. No one needs to be told what an empty shelf means."
+          "Citizens of {{city}}, the siege has reached the table! The baker opens late and shuts early, and the line forms in the dark before his shutters do. When the loaf is smaller than the hand holding it, the war has come indoors."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -174,9 +174,9 @@
         "voice": "gazette",
         "stance": "devout",
         "genre": "notice",
-        "headline": "A call to {{city}} in its hunger",
+        "headline": "To the faithful of {{city}}: hold fast",
         "body": [
-          "The city is besieged and hungry. Keep the gates shut and the shrines open. Feed the poor where you can, and hold to one another. The trial is shared, and so must the bread be."
+          "The city is besieged and the cupboards are bare. Keep the gates shut and the shrines open, feed a neighbor where you can, and carry what you spare to those with nothing. The trial is shared; so is the bread."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -193,9 +193,9 @@
     "variants": [
       {
         "id": "enemy-city-takes-heavy-damage-report",
-        "headline": "Heavy damage to {{cityName}}",
+        "headline": "The walls of {{cityName}} are failing",
         "body": [
-          "The recent fighting has left {{cityName}} at {{hitPoints}} of {{maxHitPoints}} hit points. Half or more of its defenses are gone."
+          "The recent fighting has left the defenses of {{cityName}} at {{hitPoints}} of {{maxHitPoints}}. More than half of what guarded the city is gone, and the gap is visible from outside the walls."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -207,11 +207,11 @@
         "voice": "gazette",
         "stance": "neutral",
         "genre": "ledger",
-        "headline": "The state of {{cityName}}",
+        "headline": "An accounting of {{cityName}}",
         "body": [
           "City: {{cityName}}.",
-          "Defenses: {{hitPoints}} of {{maxHitPoints}} hit points.",
-          "Condition: heavily damaged in the recent fighting."
+          "Defenses remaining: {{hitPoints}} of {{maxHitPoints}}.",
+          "Assessment: the greater part is gone."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -223,9 +223,9 @@
         "voice": "broadcast",
         "stance": "neutral",
         "genre": "report",
-        "headline": "Abroad tonight, heavy damage at {{cityName}}",
+        "headline": "Abroad tonight: heavy damage at {{cityName}}",
         "body": [
-          "Abroad tonight. The city of {{cityName}} has taken heavy damage. Its defenses stand at {{hitPoints}} of {{maxHitPoints}} hit points."
+          "Abroad tonight. The city of {{cityName}} has taken heavy damage in the fighting. Its defenses stand at {{hitPoints}} of {{maxHitPoints}}."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -240,7 +240,7 @@
         "when": "civilization !== null",
         "headline": "The walls of a rival come down",
         "body": [
-          "{{cityName}}, held by {{civilization}}, stands at {{hitPoints}} of {{maxHitPoints}} hit points. Walls that far gone no longer protect what lies behind them; they only mark where the prize is."
+          "{{cityName}}, held by {{civilization}}, stands at {{hitPoints}} of {{maxHitPoints}}, and walls that far gone no longer guard a city. They mark the door. Our generals have spent the campaign learning where the doors are, and this one is coming off its hinges."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -259,7 +259,7 @@
         "id": "enemy-front-posture-offensive-report",
         "headline": "Our forces attack before {{cityName}}",
         "body": [
-          "Our command before {{cityName}}, a city of {{civilization}}, has gone over to the offensive. The new posture reads {{posture}}."
+          "Our command before {{cityName}}, a city of {{civilization}}, has gone over to the attack. The order that went out reads {{posture}}."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -272,9 +272,9 @@
         "stance": "rationalist",
         "genre": "analysis",
         "when": "previousPosture !== 'NONE'",
-        "headline": "From {{previousPosture}} to {{posture}}",
+        "headline": "From {{previousPosture}} to {{posture}}, by arithmetic",
         "body": [
-          "The front before {{cityName}} has moved from {{previousPosture}} to {{posture}}. A change of posture is not a change of mood; it is a conclusion reached by officers paid to reach conclusions. The conclusion says the opening is worth the cost."
+          "The front before {{cityName}} has moved from {{previousPosture}} to {{posture}}, and the change is not weather. It is arithmetic: officers paid to count costs have counted them, and the sum says the opening before the city is worth its price."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -286,9 +286,9 @@
         "voice": "chronicle",
         "stance": "neutral",
         "genre": "report",
-        "headline": "The record notes the offensive at {{cityName}}",
+        "headline": "The offensive at {{cityName}}, entered",
         "body": [
-          "It is set down that our command before {{cityName}}, a city held by {{civilization}}, has taken the posture {{posture}}."
+          "It is set down that our command before {{cityName}}, a city held by {{civilization}}, has passed to the assault, and that its stance is now given in the orders as {{posture}}."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -300,9 +300,9 @@
         "voice": "tabloid",
         "stance": "populist",
         "genre": "report",
-        "headline": "The war moves toward {{civilization}}'s streets",
+        "headline": "The war moves to {{civilization}}'s streets",
         "body": [
-          "The push at {{cityName}} has begun in earnest; the command there has set an offensive posture. Wars are dear to finish, and the last mile of one is always paid in somebody's street."
+          "The push at {{cityName}} has begun in earnest. After the waiting and the counting, our men are going forward, and going fast. Wars are dear to finish, and the last mile of one is always paid in somebody's street."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -319,9 +319,9 @@
     "variants": [
       {
         "id": "enemy-front-posture-regroup-report",
-        "headline": "Our forces return to the fight near {{cityName}}",
+        "headline": "Back in the fight near {{cityName}}",
         "body": [
-          "After a withdrawal, the command near {{cityName}} has taken up a new stance against {{civilization}}: {{posture}}. The front there is active again."
+          "After falling back, the command near {{cityName}} has taken up a new stance against {{civilization}}: {{posture}}. The front there is active again, and our soldiers are back at the line."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -335,7 +335,7 @@
         "genre": "analysis",
         "headline": "The pullback ends at {{cityName}}",
         "body": [
-          "Our forces had fallen back from {{cityName}}. The new posture, {{posture}}, ends that, and a withdrawal that ends was a repositioning. The ground given up is now ground to retake."
+          "Our forces had fallen back from {{cityName}}. The new stance, {{posture}}, ends that. A step back followed by a step forward was never a retreat; it was a run-up, and the ground given up is now ground to take back."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -347,9 +347,9 @@
         "voice": "broadcast",
         "stance": "neutral",
         "genre": "report",
-        "headline": "Our forces are back in position near {{cityName}}",
+        "headline": "Our forces are back at the line near {{cityName}}",
         "body": [
-          "Near {{cityName}} tonight, our forces are back at the line. The command has moved from withdrawal to {{posture}}."
+          "Near {{cityName}} tonight, our forces are back at the line. The command has moved from withdrawal to {{posture}}. Officers describe the front as active again."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -363,7 +363,7 @@
         "genre": "editorial",
         "headline": "The second try at {{cityName}}",
         "body": [
-          "The orders came down, and our men are walking forward again near {{cityName}}. A war that needs two tries at the same ground spends two armies' worth of boots and bread. The council should say what the first withdrawal bought."
+          "The orders came down, and our men are walking forward again near {{cityName}}. Two tries at the same ground means two issues of boots and bread, and it is not the council's boots on the road. Let them say what the first withdrawal bought, before they bill us for the second try."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -380,9 +380,9 @@
     "variants": [
       {
         "id": "enemy-front-posture-withdraw-report",
-        "headline": "Our forces pull back from {{cityName}}",
+        "headline": "The line comes back from {{cityName}}",
         "body": [
-          "Our command before {{cityName}}, a city of {{civilization}}, has shifted from {{previousPosture}} to {{posture}}. The units on that front are drawing back."
+          "Our command before {{cityName}}, a city of {{civilization}}, has shifted from {{previousPosture}} to {{posture}}. The line on that front is drawing back."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -396,7 +396,7 @@
         "genre": "analysis",
         "headline": "The withdrawal before {{cityName}}",
         "body": [
-          "The front before {{cityName}} has gone from {{previousPosture}} to {{posture}}. What the record shows is the change of stance; what it does not show is who ordered it, or what the ground given up was meant to buy. The country can be told both."
+          "The front before {{cityName}} has gone from {{previousPosture}} to {{posture}}, and with it our line has moved back. Someone gave that order, for a reason, at a price, and not one of the three has been explained. The country paid for the ground. It can be told what the payment bought."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -410,7 +410,7 @@
         "genre": "report",
         "headline": "Letters from the front: {{cityName}}",
         "body": [
-          "Letters from the front relate that our forces before {{cityName}} have gone from {{previousPosture}} to {{posture}}. The news reached the printer with the evening post, and he passes it on as it came."
+          "Letters from the front relate that our forces before {{cityName}} have gone from {{previousPosture}} to {{posture}}. The news reached the printer with the evening post, short and without explanation, and he passes it on as it came."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -422,9 +422,9 @@
         "voice": "tabloid",
         "stance": "local",
         "genre": "anecdote",
-        "headline": "The boys are coming back from {{cityName}}",
+        "headline": "The boys are off the front at {{cityName}}",
         "body": [
-          "Word came ahead of them: our men are off the front at {{cityName}}. Some houses will set a place at the table again. Others will ask, quietly, what the push there cost."
+          "Word came ahead of them, and the street heard it before the council did. Our men are coming off the front at {{cityName}}. Some houses here will set a place at the table again. Others will ask what the push cost, and wait longer for an answer."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -441,9 +441,9 @@
     "variants": [
       {
         "id": "enemy-troops-sighted-near-city-report",
-        "headline": "Enemy troops sighted near {{cityName}}",
+        "headline": "Enemy colors near {{cityName}}",
         "body": [
-          "Soldiers flying the colors of {{enemies}} have been counted near {{cityName}}. We are at war with them, and they are within reach of the walls."
+          "Soldiers flying the colors of {{enemies}} have been counted within reach of {{cityName}}. We are at war with them, and this is how close the war has come."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -457,7 +457,7 @@
         "genre": "notice",
         "headline": "Hear it, {{cityName}}! The enemy is near",
         "body": [
-          "Troops of {{enemies}} are sighted outside the walls. Stand to your posts, keep the watch, and leave the roads clear for the army."
+          "Troops of {{enemies}} are sighted outside the walls! Stand to your posts, keep the watch, and leave the roads clear for the army! Leave the roads clear!"
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -469,9 +469,9 @@
         "voice": "press",
         "stance": "hawkish",
         "genre": "analysis",
-        "headline": "What the sighting at {{cityName}} means",
+        "headline": "Three things an army near {{cityName}} can do",
         "body": [
-          "Troops of {{enemies}} within reach of {{cityName}} can besiege the city, burn its fields, or simply pin its garrison in place. Which of the three comes next will depend on their strength rather than their intentions, and their strength is the number our command should be counting."
+          "Troops of {{enemies}} stand within reach of {{cityName}}, and an army that close can do one of three things: besiege the walls, burn the fields, or pin the garrison in place while its friends strike elsewhere. Which it does depends on its strength, not its manners. That is the number to count first."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -485,7 +485,7 @@
         "genre": "report",
         "headline": "Enemy troops just showed up near {{cityName}}",
         "body": [
-          "The list: {{enemies}}. All of them are at war with us, and all of them are this close."
+          "The list: {{enemies}}. Every name on it is at war with us, and every one is this close. Yes, all of them."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -502,9 +502,9 @@
     "variants": [
       {
         "id": "enemy-units-lost-in-combat-report",
-        "headline": "{{count}} enemy units destroyed",
+        "headline": "{{count}} enemy units destroyed in the field",
         "body": [
-          "Our forces destroyed {{count}} units in the recent fighting, every one of them belonging to the same enemy power."
+          "Our forces destroyed {{count}} enemy units in the recent fighting, every one of them belonging to the same enemy army."
         ],
         "weight": { "base": 1 }
       },
@@ -516,8 +516,8 @@
         "headline": "The enemy's losses, counted",
         "body": [
           "Enemy units destroyed by our forces: {{count}}.",
-          "All from one enemy army.",
-          "Period: the recent fighting."
+          "Armies they came from: one.",
+          "The season's fighting, and the season's bill: theirs."
         ],
         "weight": { "base": 1 }
       },
@@ -528,7 +528,7 @@
         "genre": "report",
         "headline": "{{count}} enemy units destroyed in the fighting",
         "body": [
-          "Our forces destroyed {{count}} enemy units in the latest fighting. All of them belonged to a single enemy army."
+          "From the front tonight. Our forces have destroyed {{count}} enemy units in the latest fighting. Command says every one belonged to the same army."
         ],
         "weight": { "base": 1 }
       },
@@ -540,7 +540,7 @@
         "when": "count >= 5",
         "headline": "Hear it! {{count}} enemy units destroyed",
         "body": [
-          "The tally from the front is plain: {{count}} of the enemy's units destroyed by our arms. Let the count be told in every street!"
+          "The tally from the front is plain: {{count}} of the enemy's units destroyed by our arms! Sing it in the taverns and tell it in the streets! {{count}} of them, and the enemy knows the number too!"
         ],
         "weight": { "base": 1 }
       }
@@ -554,9 +554,9 @@
     "variants": [
       {
         "id": "foreign-capital-falls-report",
-        "headline": "A capital falls abroad",
+        "headline": "A capital falls, far from home",
         "body": [
-          "A foreign capital has fallen by conquest, {{distance}} tiles from our nearest city. The fighting never approached our borders, but the map has been redrawn all the same."
+          "A foreign capital has fallen by conquest, {{distance}} leagues from our nearest city. The fighting never approached our borders, but the balance of powers abroad has changed all the same."
         ],
         "weight": { "base": 1 }
       },
@@ -568,7 +568,7 @@
         "when": "cityName !== null && loser !== null && winner !== null",
         "headline": "A capital changes hands: {{cityName}}",
         "body": [
-          "{{cityName}}, the capital of {{loser}}, has fallen to {{winner}} by conquest. A capital is more than a city: whoever holds it holds the machinery of the state. {{winner}} now holds both."
+          "{{cityName}}, the capital of {{loser}}, has fallen to {{winner}} by conquest. A capital is more than a city: its ministries, its treasury and its archives sit behind one set of walls, and {{winner}} now sits inside all of them. The machinery of the state did not burn; it changed hands."
         ],
         "weight": { "base": 1 }
       },
@@ -580,7 +580,7 @@
         "when": "loser !== null && winner !== null",
         "headline": "The fall of a capital",
         "body": [
-          "It is set down that {{winner}} has taken the capital of {{loser}} by force of arms, {{distance}} tiles from our own cities. Providence writes long chapters, and this one is not finished."
+          "It is set down that {{winner}} has taken the capital of {{loser}} by force of arms, {{distance}} leagues from our own cities. The chronicles teach that providence moves in the fall of thrones, and that its meaning shows itself only later."
         ],
         "weight": { "base": 1 }
       },
@@ -592,7 +592,7 @@
         "when": "winner !== null",
         "headline": "Abroad tonight, a capital has fallen",
         "body": [
-          "Abroad tonight, a capital has fallen to {{winner}}. The city lies {{distance}} tiles from our frontier."
+          "Abroad tonight, a capital has fallen to {{winner}}. The city lies {{distance}} miles from our frontier. Observers expect the region's maps to be redrawn."
         ],
         "weight": { "base": 1 }
       }
@@ -608,7 +608,7 @@
         "id": "foreign-peace-nearby-report",
         "headline": "Peace near our borders",
         "body": [
-          "{{initiator}} and {{target}} have ended their war. The nearer of the two sits {{nearest}} tiles from our border, and the guns between them have gone quiet."
+          "{{initiator}} and {{target}} have ended their war. The nearer of the two sits {{nearest}} leagues from our border, and the roads between them are open to carts and couriers again."
         ],
         "weight": { "base": 1 }
       },
@@ -619,7 +619,7 @@
         "genre": "report",
         "headline": "Neighbors at peace again",
         "body": [
-          "Word reaches us that {{initiator}} and {{target}} have laid down their arms. The peace, concluded near our frontier, asked no visible price of either side. Quiet borders make good neighbors, and ours are quieter this week."
+          "Word reaches us that {{initiator}} and {{target}} have laid down their arms, and that the peace asked no visible price of either side. Quiet borders make good neighbors, and ours are the quieter for it. We wish both peoples a long and dull peace, the best kind there is."
         ],
         "weight": { "base": 1 }
       },
@@ -628,9 +628,9 @@
         "voice": "press",
         "stance": "rationalist",
         "genre": "analysis",
-        "headline": "The peace between {{initiator}} and {{target}}",
+        "headline": "The quiet between {{initiator}} and {{target}}",
         "body": [
-          "The war between {{initiator}} and {{target}} has ended with no concessions on the record and no capitulation. A peace without terms usually means both sides had spent what they meant to spend. Two neighbors have stopped paying for a quarrel, and the savings are theirs to count."
+          "The war between {{initiator}} and {{target}} has ended with no concessions and no capitulation, which is usually an accounting: both sides had spent what they meant to spend, and neither could buy more. The quarrel closes at a loss to everyone. That is the cheapest way left to close one."
         ],
         "weight": { "base": 1 }
       },
@@ -641,7 +641,7 @@
         "genre": "proverb",
         "headline": "When the neighbors' fire burns low",
         "body": [
-          "When the neighbors' fire burns low, your own roof rests easier. So it is with {{initiator}} and {{target}} at peace."
+          "When the neighbors' fire burns low, the whole street sleeps warmer. So it is with {{initiator}} and {{target}} at peace."
         ],
         "weight": { "base": 1 }
       }
@@ -657,7 +657,7 @@
         "id": "foreign-war-nearby-report",
         "headline": "War breaks out near our borders",
         "body": [
-          "{{initiator}} has opened a war against {{target}}. The nearer of the two sits {{nearest}} tiles from our nearest city, and the war is not ours."
+          "{{initiator}} has opened a war against {{target}}. The nearer of the two sits {{nearest}} leagues from our nearest city, and the war is not ours. Both of the belligerents, however, are neighbors of ours."
         ],
         "weight": { "base": 1 }
       },
@@ -668,7 +668,7 @@
         "genre": "analysis",
         "headline": "A war next door",
         "body": [
-          "The war between {{initiator}} and {{target}} has opened within {{nearest}} tiles of our border, and no war that close is a spectator's affair. Armies forage where they stand, borders close to trade, and both sides will soon be counting what our friendship is worth."
+          "The war between {{initiator}} and {{target}} has opened within {{nearest}} miles of our border, and no war that close stays other people's business for long. Armies forage where they stand, and markets close where armies forage. Both sides will soon be counting what our friendship is worth, and we should set the price before they do."
         ],
         "weight": { "base": 1 }
       },
@@ -679,7 +679,7 @@
         "genre": "report",
         "headline": "War abroad tonight",
         "body": [
-          "Abroad tonight: {{initiator}} has attacked {{target}}. The front lies as close as {{nearest}} tiles from our cities."
+          "Abroad tonight. {{initiator}} has attacked {{target}}. The front runs as close as {{nearest}} miles from our cities. The border markets are emptying, and the border roads are filling."
         ],
         "weight": { "base": 1 }
       },
@@ -690,7 +690,7 @@
         "genre": "editorial",
         "headline": "Their war, our doorstep",
         "body": [
-          "{{initiator}} and {{target}} are at war, {{nearest}} tiles from our farms. When the great quarrel this close, it is the neighbor's fence that gets trampled first. The council should say plainly what we mean to do about it."
+          "Citizens, {{initiator}} and {{target}} are at war, {{nearest}} leagues from our farms! When the great quarrel, it is the small fence that gets trampled, and ours is the smallest fence hereabouts. The council should say plainly what we mean to do about it, before the answer is chosen for us."
         ],
         "weight": { "base": 1 }
       },
@@ -699,9 +699,9 @@
         "voice": "chronicle",
         "stance": "neutral",
         "genre": "report",
-        "headline": "The record of a war nearby",
+        "headline": "A war nearby, set down",
         "body": [
-          "It is set down that {{initiator}} made war upon {{target}}, and that the nearer of the two lies {{nearest}} tiles from our lands. The record takes no side; it notes the distance."
+          "It is set down that {{initiator}} made war upon {{target}}, and that the nearer of the two lies {{nearest}} leagues from our lands. The entry takes no side. It notes only that the fighting is near, and that our own peace holds."
         ],
         "weight": { "base": 1 }
       }
@@ -715,9 +715,9 @@
     "variants": [
       {
         "id": "nearby-capital-falls-report",
-        "headline": "A capital falls close to home",
+        "headline": "A capital falls near our own border",
         "body": [
-          "{{winner}} has taken a capital from {{loser}} by conquest, close enough to our border to be our concern. The map at our doorstep has changed overnight."
+          "{{winner}} has taken a capital from {{loser}} by conquest, close enough to our border to be our concern. One neighbor has grown stronger, and another weaker."
         ],
         "weight": { "base": 1 }
       },
@@ -728,7 +728,7 @@
         "genre": "analysis",
         "headline": "What {{winner}}'s capture means here",
         "body": [
-          "A conquered capital makes {{winner}} a stronger presence on our border and {{loser}} a lesser one. A change of that size, this close, becomes our business whatever flag flies on the walls."
+          "A conquered capital makes {{winner}} a stronger presence on our border and {{loser}} a smaller one. Whoever holds the seat of a state holds its taxes, its roads and its treaties, and those now answer to {{winner}}. A change of that size, this close, becomes our business whatever flag flies on the walls."
         ],
         "weight": { "base": 1 }
       },
@@ -739,7 +739,7 @@
         "genre": "report",
         "headline": "The fall of a capital near our borders",
         "body": [
-          "In this season {{winner}} took the capital of {{loser}} by the sword. The news came swiftly, for it fell near our marches."
+          "In this season {{winner}} took the capital of {{loser}} by the sword. The news came swiftly, for it fell near our own marches. Our grandfathers' maps named that city under another hand, and our grandchildren's will name it under {{winner}}'s."
         ],
         "weight": { "base": 1 }
       },
@@ -750,7 +750,7 @@
         "genre": "report",
         "headline": "A capital just fell near us",
         "body": [
-          "{{winner}} has taken a capital from {{loser}}, and not far from us. Here is who got stronger today: not us."
+          "{{winner}} has taken a capital from {{loser}}, and not far from us. Who got stronger today? Not us."
         ],
         "weight": { "base": 1 }
       }
@@ -766,7 +766,7 @@
         "id": "nearby-city-captured-report",
         "headline": "A town changes hands near our border",
         "body": [
-          "A foreign town has changed hands by conquest {{distance}} tiles from our nearest city. Its old master is not us, and neither is its new one."
+          "A foreign town has changed hands by conquest, {{distance}} leagues from our nearest city. Neither its old master nor its new one is us, and the fighting stayed off our soil."
         ],
         "weight": { "base": 1 }
       },
@@ -778,7 +778,7 @@
         "when": "cityName !== null && loser !== null && winner !== null",
         "headline": "{{cityName}} falls to {{winner}}",
         "body": [
-          "{{cityName}}, lately belonging to {{loser}}, has been taken by {{winner}}. The town lies {{distance}} tiles from our nearest city, and its fields, roads and tolls now answer to another flag."
+          "{{cityName}}, lately belonging to {{loser}}, has been taken by {{winner}}. The town lies {{distance}} miles from our nearest city, and its fields, roads and tolls now answer to another flag. Whoever collects those tolls will want a friend on the border, and we are the border."
         ],
         "weight": { "base": 1 }
       },
@@ -790,7 +790,7 @@
         "when": "cityName !== null && winner !== null",
         "headline": "Notice from abroad: {{cityName}}",
         "body": [
-          "Notice to travelers and merchants: {{cityName}}, {{distance}} tiles from our cities, has passed to {{winner}} by conquest. Expect a new authority at the gate, and papers to match."
+          "Notice to travelers and merchants. {{cityName}}, {{distance}} leagues from our cities, has passed to {{winner}} by conquest. Expect a new authority at the gate, new papers to match, and old maps to be wrong."
         ],
         "weight": { "base": 1 }
       },
@@ -800,9 +800,9 @@
         "stance": "local",
         "genre": "report",
         "when": "loser !== null && winner !== null",
-        "headline": "A new flag {{distance}} tiles out",
+        "headline": "A new flag {{distance}} miles out",
         "body": [
-          "{{winner}} has taken a town from {{loser}}, {{distance}} tiles from our nearest city. Whoever holds it now, our border towns will be the first to meet them across the fence."
+          "{{winner}} has taken a town from {{loser}}, {{distance}} miles from our nearest city. To the mapmakers it is a line moving. To us it is the next town over, and our border towns will be the first to meet the new neighbors across the fence."
         ],
         "weight": { "base": 1 }
       }

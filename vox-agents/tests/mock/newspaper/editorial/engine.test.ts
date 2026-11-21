@@ -101,6 +101,7 @@ describe('editorial engine', () => {
     const base = await loadEditorialConfig();
     config = editorialConfigSchema.parse({
       ...base,
+      defaults: { ...base.defaults, minItems: 1 },
       triggers: [
         { id: 'ledger', subject: 'player', when: ['player.self', 'player.gold > 0'], values: { $balance: 'player.gold' }, importance: 70, urgent: '$balance >= 100' },
         { id: 'culture', subject: 'player', when: ['!player.self', 'player.culturePerTurn > 0'], values: { amount: 'player.culturePerTurn' } },
@@ -299,6 +300,7 @@ describe('editorial engine', () => {
       const stock = await loadEditorialConfig();
       const revised = editorialConfigSchema.parse({
         ...stock,
+        defaults: { ...stock.defaults, minItems: 1 },
         templates: [{
           id: 'pioneer-departure', triggers: ['settler-departure'], tags: ['home'],
           when: 'city.id === 10 && values.lost === 2 && period.to === 10',
@@ -332,7 +334,7 @@ describe('editorial engine', () => {
         fromTurn: -1, baseline: { cities: [], players: [] },
         snapshots: { cities: [past, city], players: evidence.players }, events: [training], gaps: [],
       };
-      const stockResult = await check(evidence, createInitialPublicationState(), stock);
+      const stockResult = await check(evidence, createInitialPublicationState(), { ...stock, defaults: { ...stock.defaults, minItems: 1 } });
       expect(stockResult.status).toBe('published');
       if (stockResult.status !== 'published') return;
       expect(stock.templates.find(template => template.id === 'settler-departure-account')?.variants.map(variant => variant.id))
@@ -456,7 +458,7 @@ describe('editorial engine', () => {
       expect(skipped.state.lastCheckTurn).toBe(15);
       expect(skipped.state.series[key].importance).toBeCloseTo(first.state.series[key].importance * config.defaults.decayPerTurn ** 5);
       expect(decaySeries(skipped.state.series, 15, config.defaults.decayPerTurn)).toEqual(skipped.state.series);
-      const later = await check(fixture(20, 15, 35), skipped.state);
+      const later = await check(fixture(20, 10, 35), skipped.state);
       expect(later.status).toBe('published');
       if (later.status !== 'published') return;
       expect(later.issue.items.find(item => item.seriesKeys.includes(key))?.earlierReport).toMatchObject({

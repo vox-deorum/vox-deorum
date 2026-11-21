@@ -30,6 +30,62 @@ describe('durable replay publication', () => {
     return { ...replaySettings(recording.filename), fromTurn: 6, toTurn: 40, outputPath, runId: 'main', editorialConfigDirectory: catalogue };
   }
 
+  it('should keep stories across a skipped check and apply the stock edition and front page limits', async () => {
+    const sqlite = new Database(recording.filename);
+    try {
+      sqlite.prepare('UPDATE GameMetadata SET Value = ? WHERE Key = ?').run('Standard', 'gameSpeed');
+      const insert = sqlite.prepare('INSERT INTO GameEvents (ID, Turn, CreatedAt, Player0, Type, Payload) VALUES (?, ?, ?, ?, ?, ?)');
+      let id = 200;
+      for (const [turn, count] of [[100, 4], [103, 2], [108, 2], [114, 11]]) {
+        for (let i = 0; i < count; i++) {
+          insert.run(id, turn, 10_000 + id, 1, 'PlayerAdoptPolicyBranch', JSON.stringify({ PlayerID: 0, BranchType: `Branch ${id}` }));
+          id++;
+        }
+      }
+    } finally { sqlite.close(); }
+    const stock = await loadEditorialConfig();
+    await Promise.all([
+      writeFile(path.join(catalogue, 'defaults.json'), '{}'),
+      writeFile(path.join(catalogue, 'triggers.json'), JSON.stringify([
+        ...stock.triggers.map(rule => ({ id: rule.id, enabled: false })),
+        { id: 'fixture-branch', subject: 'event', event: 'PlayerAdoptPolicyBranch', when: 'true', repeat: 'once' },
+      ])),
+      writeFile(path.join(catalogue, 'templates.json'), JSON.stringify([{
+        id: 'fixture-branch-report', triggers: ['fixture-branch'], tags: ['economy'], weight: { base: 1 },
+        variants: [{ id: 'notice', headline: 'New policy branch', body: ['The council has adopted a policy branch.'], weight: { base: 1 } }],
+      }])),
+    ]);
+    const configured = { ...settings(), fromTurn: 100, toTurn: 115 };
+    await session.configure(configured);
+    const first = await session.advance();
+    expect(first.check?.issue?.items).toHaveLength(4);
+    const skipped = await session.advance();
+    expect(skipped.check).toMatchObject({ status: 'skipped', decision: { cutoffTurn: 105 } });
+    expect(skipped.evidence.events.map(event => event.source.turn)).toEqual([103, 103]);
+
+    await session.close();
+    session = new ReplaySession();
+    await session.configure({ ...configured, mode: 'resume' });
+    const next = await session.advance();
+    expect(next.evidence.request).toMatchObject({ previousCheckTurn: 100, cutoffTurn: 110 });
+    expect(next.check?.issue?.items).toHaveLength(4);
+    const { articles } = await session.getIssue(next.check!.issue!.issueId);
+    const sourceIds = articles.flatMap(article => article.sources.filter(source => source.table === 'GameEvents').map(source => source.id));
+    expect(sourceIds.sort((a, b) => a - b)).toEqual([204, 205, 206, 207]);
+
+    const full = await session.advance();
+    expect(full.evidence.request).toMatchObject({ previousCheckTurn: 110, cutoffTurn: 115 });
+    expect(full.check?.issue?.items).toHaveLength(10);
+    expect(full.check?.issue?.pages[0].itemIds).toHaveLength(5);
+
+    await Promise.all([
+      writeFile(path.join(catalogue, 'defaults.json'), JSON.stringify({ frontPageItems: 3 })),
+      writeFile(path.join(catalogue, 'pages.json'), JSON.stringify([{ id: 'economy', when: 'false' }])),
+    ]);
+    await session.configure({ ...configured, runId: 'three-visible-stories' });
+    expect((await session.advance()).check?.status).toBe('skipped');
+  });
+
   it('should publish unwitnessed research by a met civilization using the configured ideology names', async () => {
     const sqlite = new Database(recording.filename);
     try {
@@ -123,7 +179,7 @@ describe('durable replay publication', () => {
     expect(resumed).toEqual(before);
     expect((await session.getIssue(issueId)).issue).toEqual(original.issue);
     const continued = await session.advance();
-    expect(continued.evidence.request).toMatchObject({ previousCheckTurn: 9, cutoffTurn: 12 });
+    expect(continued.evidence.request).toMatchObject({ previousCheckTurn: 6, cutoffTurn: 12 });
     const sqlite = new Database(outputPath, { readonly: true });
     expect(sqlite.prepare('SELECT COUNT(*) AS count FROM OfflineReplayChecks WHERE Cutoff = 6').get()).toEqual({ count: 1 });
     sqlite.close();
@@ -281,7 +337,7 @@ describe('durable replay publication', () => {
     } finally { competitor.close(); }
   });
 
-  it('should read one history window and keep repeat memory from a skipped check after resume', async () => {
+  it('should read one history window and reconsider an unpublished once-only rule after resume', async () => {
     const directory = path.join(path.dirname(recording.filename), 'repeat-catalogue');
     await mkdir(directory);
     const base = await loadEditorialConfig();
@@ -305,7 +361,8 @@ describe('durable replay publication', () => {
     session = new ReplaySession();
     await session.configure({ ...configured, mode: 'resume' });
     const next = await session.advance();
+    expect(next.evidence.request).toMatchObject({ previousCheckTurn: 99, cutoffTurn: 108 });
     expect(next.check?.decision.triggerAudit.find(audit => audit.rule === 'recorded-player')?.subjects)
-      .toEqual(expect.arrayContaining([expect.objectContaining({ subject: 'player/0', outcome: 'repeat' })]));
+      .toEqual(expect.arrayContaining([expect.objectContaining({ subject: 'player/0', outcome: 'fired' })]));
   });
 });

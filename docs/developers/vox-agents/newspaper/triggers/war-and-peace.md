@@ -145,4 +145,4 @@ To extend coverage:
 2. For a new fact, such as a new participation reason, add it to the inference and to the [incident](facts.md#incident) or [pair](facts.md#pair) table. Put relationship interpretation in the shared helpers when it is useful beyond the newspaper.
 3. Test the inference with independent wars, recursive responses, missing observations and a skipped check, then read the inference audit in replay.
 
-Skipped checks still advance pair history, so a later rule sees the scores from the skipped period. A pair that went unobserved for several turns has a gap there, and `held` is false across it. The inference audit is saved with each editorial decision and stays out of the article's prose.
+When a check skips, the next check rebuilds pair history across the open reporting period so earlier incidents and scores still count. A pair that went unobserved for several turns has a gap there, and `held` is false across it. Each editorial decision saves the inference audit.

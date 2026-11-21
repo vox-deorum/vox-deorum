@@ -102,6 +102,7 @@ export class ReplaySession {
               frequencyStandardTurns: settings.frequencyStandardTurns ?? nextConfig.defaults.frequencyStandardTurns,
               llmEnabled: settings.llmEnabled ?? nextConfig.defaults.llmEnabled,
             });
+            nextPublication.reportingThroughTurn = settings.fromTurn - 1;
             nextState.runId = settings.runId ?? randomUUID();
             nextState.outputPath = outputPath;
             nextState.preferences = nextPublication.preferences;
@@ -236,7 +237,8 @@ export class ReplaySession {
     const cutoffTurn = advance && cutoff !== null
       ? Math.min(state.settings.toTurn, cutoff + state.publicationIntervalTurns)
       : cutoff ?? state.settings.fromTurn;
-    const previousCheckTurn = advance ? cutoff ?? state.settings.fromTurn - 1 : state.cursor.previousCheckTurn;
+    const reportingBoundary = this.publication ? this.publication.reportingThroughTurn : cutoff;
+    const previousCheckTurn = advance ? reportingBoundary ?? state.settings.fromTurn - 1 : state.cursor.previousCheckTurn;
     const request: NewspaperEvidenceRequest = {
       receiverPlayerID: state.settings.receiverPlayerID, previousCheckTurn, cutoffTurn,
       ...(state.comparisonTurns > 0 ? { comparisonRange: { fromTurn: Math.max(0, cutoffTurn - state.comparisonTurns), toTurn: cutoffTurn } } : {}),

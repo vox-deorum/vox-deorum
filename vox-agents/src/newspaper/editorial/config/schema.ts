@@ -93,6 +93,7 @@ export const editorialConfigSchema = z
       frequencyStandardTurns: z.number().int().positive(),
       llmEnabled: z.boolean(),
       publicationTitle: z.string().min(1),
+      minItems: z.number().int().positive().optional(),
       maxItems: z.number().int().positive(),
       frontPageItems: z.number().int().min(2),
       importanceMax: z.number().positive(),
@@ -132,6 +133,8 @@ export const editorialConfigSchema = z
     styles: styleCatalogueSchema.optional(),
   })
   .superRefine((config, ctx) => {
+    if ((config.defaults.minItems ?? 1) > config.defaults.maxItems)
+      ctx.addIssue({ code: 'custom', path: ['defaults', 'minItems'], message: 'The edition minimum cannot exceed the edition cap.' });
     // Validate all catalogue identifiers before resolving references.
     for (const section of ['triggers', 'templates', 'pages', 'designs'] as const) {
       const ids = new Set<string>();

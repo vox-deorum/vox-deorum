@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="224" height="160" viewBox="0 0 224 160">
+  <!-- Long fibres lie across the face; the backing strips show faintly through them. -->
+  <filter id="strands" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency=".013 .43" numOctaves="2" stitchTiles="stitch"/>
+    <feColorMatrix values="0 0 0 0 .48  0 0 0 0 .32  0 0 0 0 .12  .50 0 0 0 -.15"/>
+  </filter>
+  <filter id="backing" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency=".16 .012" numOctaves="2" stitchTiles="stitch"/>
+    <feColorMatrix values="0 0 0 0 .64  0 0 0 0 .46  0 0 0 0 .22  .31 0 0 0 -.09"/>
+  </filter>
+  <path fill="#ac7f3d" opacity=".045" d="M0 18Q99 20 224 18V34Q123 37 0 34ZM0 98Q116 94 224 98V118Q89 115 0 118Z"/>
+  <path fill="#fff8e5" opacity=".24" d="M0 62Q82 65 224 62V69Q100 71 0 69Z"/>
+  <path fill="#a47a41" opacity=".045" d="M28 0H41Q38 87 41 160H28Q30 83 28 0ZM163 0H179Q177 60 179 160H163Q160 83 163 0Z"/>
+  <rect width="100%" height="100%" filter="url(#backing)" opacity=".25"/>
+  <rect width="100%" height="100%" filter="url(#strands)" opacity=".40"/>
+</svg>

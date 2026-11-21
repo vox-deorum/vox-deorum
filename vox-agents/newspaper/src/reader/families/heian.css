@@ -1,18 +1,14 @@
 /* A court letter on dyed paper. The title and signature share a left margin. */
 .vd-newspaper[data-publication-design="heian"] {
-  --letter-inset: clamp(0px, calc(11cqi - 40px), 92px);
-  --paper-wash: linear-gradient(115deg, #e9dce9, transparent 64%);
+  --washi: url("./textures/washi.svg?inline");
 
   & .vd-header {
-    background: var(--paper-wash),
-      repeating-linear-gradient(38deg, transparent 0 12px, #9d82a00b 12px 13px, transparent 13px 25px),
-      repeating-linear-gradient(-38deg, transparent 0 12px, #9d82a00b 12px 13px, transparent 13px 25px),
-      var(--vd-paper);
+    background: var(--washi), linear-gradient(115deg, #e9dce9, transparent 64%), var(--vd-paper);
     border-top: 5px solid #69566e;
     padding-top: 0;
   }
   & .vd-masthead {
-    padding: clamp(24px, 4cqi, 48px) 24% 14px var(--letter-inset);
+    padding: clamp(18px, 2.6cqi, 30px) 24% 14px 0;
     text-align: left;
   }
   & .vd-title {
@@ -29,21 +25,21 @@
     max-width: 340px;
     margin: 0;
   }
-  & .vd-publication:has(.vd-page:first-child[data-layout="breaking"]) .vd-ornament { visibility: hidden; }
+  & .vd-publication:has(.vd-page:first-child[data-layout="breaking"]) .vd-masthead { padding-right: 0; }
+  & .vd-publication:has(.vd-page:first-child[data-layout="breaking"]) .vd-ornament { display: none; }
   & .vd-tabs {
     justify-content: flex-start;
-    margin-left: var(--letter-inset);
     border-color: var(--vd-rule);
   }
   & .vd-tab { font-style: italic; }
-  & .vd-story-content { margin-inline: var(--letter-inset) auto; max-width: 70ch; }
+  & .vd-page { background-image: var(--washi); background-attachment: local; }
   & .vd-headline { letter-spacing: -.025em; }
   & .vd-story--brief { border: 0; padding-top: 0; }
   & .vd-story--brief::before {
     display: block;
     width: 38px;
     height: 1px;
-    margin: 0 0 18px var(--letter-inset);
+    margin: 0 0 12px;
     background: var(--vd-accent);
     content: "";
   }
@@ -54,12 +50,17 @@
   & .vd-storylist .vd-story--lead .vd-deck { border: 0; padding-bottom: 0; }
   & .vd-byline { color: var(--vd-accent); opacity: 1; }
   & .vd-evidence {
-    margin-inline: clamp(0px, 2cqi, 24px) 0;
     padding: clamp(12px, 2.5cqi, 25px);
     border-left: 2px solid #b69aac;
     background: color-mix(in srgb, var(--vd-paper), white 36%);
   }
-  & .vd-end-ornament { margin-right: 6%; width: 115px; }
+  /* A folded slip closes the letter; the flowering branch belongs to the masthead. */
+  & .vd-end-rule {
+    width: 44px; height: 16px; margin: 18px 0 0 auto;
+    background: var(--vd-accent);
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 44 16'%3E%3Cpath d='m2 11 13-9 27 3-12 9zm0 0 25-3 15-3M15 2l12 6 3 6' fill='none' stroke='black' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  }
+  & .vd-end-ornament { display: none; }
 }
 
 @container newspaper (max-width: 520px) {

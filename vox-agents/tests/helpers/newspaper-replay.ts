@@ -59,6 +59,7 @@ export async function writeReplayPublicationCatalogue(databasePath: string) {
   const directory = path.join(path.dirname(databasePath), 'publication-catalogue');
   await mkdir(directory, { recursive: true });
   await Promise.all([
+    writeFile(path.join(directory, 'defaults.json'), JSON.stringify({ minItems: 1 })),
     writeFile(path.join(directory, 'triggers.json'), JSON.stringify([{
       id: 'fixture-war-report', subject: 'event', event: 'DeclareWar', when: 'event.type === "DeclareWar"',
       values: { eventTurn: 'event.turn' }, tags: ['military'],

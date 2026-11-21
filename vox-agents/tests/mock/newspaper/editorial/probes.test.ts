@@ -246,6 +246,8 @@ describe('probe overlay', () => {
   beforeAll(async () => {
     defaultConfig = await loadEditorialConfig();
     probeConfig = await loadEditorialConfig(probeDirectory);
+    defaultConfig.defaults.minItems = 1;
+    probeConfig.defaults.minItems = 1;
     probeOnlyConfig = {
       ...probeConfig,
       designs: probeConfig.designs.filter((design) => design.id === probeDesignId),

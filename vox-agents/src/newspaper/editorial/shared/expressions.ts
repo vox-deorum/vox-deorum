@@ -33,7 +33,7 @@ export interface ExpressionBatch {
   /** One permission-filtered fact model, shared across trigger windows in this check. */
   facts?: NewspaperFactModel;
   groups: readonly {
-    /** Exclusive lower bound of this group, defaulting to the previous check. */
+    /** Exclusive lower bound of this group, defaulting to the reporting boundary. */
     windowFromTurn?: number;
     /** Zero-based indices in the list supplied at compile time. */
     expressions: readonly number[];

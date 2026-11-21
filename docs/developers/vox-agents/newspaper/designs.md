@@ -4,16 +4,14 @@ A newspaper design sets the colors, fonts, ornaments and page labels for an issu
 
 ## Principles
 
-1. **Content is fixed; decoration varies.** Every design shows the same elements: the masthead title and optional motto, section tabs, headline, deck, byline, prose, the earlier-report link, votes and the evidence table. A design adds no text of its own, such as dates, prices, volume numbers or a "Breaking" label. Emphasis comes from scale, color, rules, frames, ornaments and initials.
-2. **Keep text short.** Today's amount of text is the ceiling. A richer design adds decoration, not words.
-3. **Let the medium set the amount of decoration.** Cast bronze carries a patterned rim, a court letter needs only a flowering branch, and a modern feed relies on spacing and tint.
-4. **Base each design on real-world references.** Name the sources (see the table below) and take concrete devices from them, such as a frame shape, a rule style or a type choice.
-5. **Decoration frames the content.** Place ornaments at the edges of the sheet rather than between the masthead and the stories. For example, the ancient design runs a Greek key frieze along the top and bottom of the sheet and uses smaller margins, so it gains decoration and reading space at once.
-6. **An ornament is its own divider.** Where an ornament separates parts of the page, it does the job alone. Do not wrap it in extra rules or padding. The ancient design's Greek key frieze is the pattern itself with no lines above or below, and the ivy leaf between briefs stands without flanking rules. Every rule and margin spends space that the ornament already marks.
-7. **Draw decoration from color tokens.** Frames, friezes, dividers and initials are CSS pseudo-elements with inline SVG masks filled with the paper, ink and accent colors. They follow a design's colors and add no asset loads. Use image assets only for artwork that cannot be drawn this way, such as illustrations or the Victorian scrollwork.
-8. **Figures are styled.** The reader wraps every number in article text in a `vd-number` span, and each design gives figures their own treatment.
-9. **Tintable designs derive their palette from one color.** The feed family computes its whole palette from the accent color, so a civilization's color can restyle it. Derived colors must stay legible for any input, from near black to pale yellow: text colors darken pale tints and text on a solid fill switches between white and ink. Alert red is reserved for breaking pages and is never tinted.
-10. **Narrow papers drop crowding ornament first.** As the paper narrows, designs shrink or remove side ornaments (dovetail handles, medallions, column hairlines, inner frame lines) and scale display type down before touching reading text.
+1. **Keep the copy fixed.** Show the issue's masthead, tabs, stories, links, votes and evidence. Use typography and decoration for emphasis; omit invented dates, prices and “Breaking” labels.
+2. **Use the printable width.** Keep a modest outer margin. If a line becomes too long, use the space beside it for a second column, a brief, a photo or a table. Avoid a fixed-width article floating in an empty sheet. Let short briefs run as one paragraph.
+3. **Give each paper its own composition.** Start with a real reference and name the device you borrowed. A cast inscription can group stories inside a rim; a social feed can pair a dispatch with a photo. Change the arrangement as well as the type and colors.
+4. **Give each ornament a job.** A design can use several motifs. Reserve the most recognizable one for a particular place: the Ancient paper uses the Greek key at the sheet edges and a single palm above a breaking headline. A divider needs no extra rules or blank bands around it.
+5. **Use texture when it suits the material.** Crossed strips suggest papyrus, scattered fibres suggest handmade paper, and curved seams suggest turtle shell. Keep the grain faint behind print. Check the smallest text, links and table figures at phone width and on an exported page.
+6. **Use color tokens for simple marks.** Fill frames, dividers and initials with the paper, ink or accent color. Use a local image for more intricate artwork. Give the figures in article text (`vd-number`) a treatment appropriate to the design.
+7. **Keep tintable designs legible.** The feed derives its palette from one accent. Check both dark and pale tints, including text on a solid fill. Reserve red alerts for breaking pages.
+8. **Protect reading space on narrow papers.** Stack columns, shrink or remove side ornaments and scale display type before reducing body text. Keep section tabs and evidence readable.
 
 ## Families and designs
 
@@ -22,13 +20,13 @@ A renderer family is a layout structure that several designs can share. A design
 | Family | Structure | Stock design | Real-world references |
 | --- | --- | --- | --- |
 | `inscription` | Framed, centred notice board | `oral-accounts`, Accounts of the Settlements (ancient) | The Roman *Acta Diurna* notice board, painted election notices at Pompeii (red and black), Trajan's Column capitals (Cinzel), the *tabula ansata* panel for the masthead, Greek key friezes, and the *hedera* ivy leaf as divider |
-| `folio` | Framed writing field | `shang`, Records of the King’s House (Ancient China) | The paired eyes and symmetrical horns of a [Shang bronze cauldron](https://www.metmuseum.org/art/collection/search/60594) above spaced Marcellus capitals. A bronze frame encloses a breaking report; the analysis table reads like an inventory. |
-| `folio` | Stacked painted registers | `egypt`, The Two Lands (Ancient Egypt) | The [agricultural registers in Nakht’s chapel](https://www.metmuseum.org/art/collection/search/548438) inspire the horizontal bands. A winged sun crowns the masthead; ochre rules divide stories and evidence rows. |
-| `folio` | Single column of letters | `heian`, Letters from the Capital (Medieval Japan) | The dyed and patterned sheets of the [Gen’ei poetry manuscript](https://emuseum.nich.go.jp/detail?content_base_id=100171&content_part_id=000&langId=en) inspire the pale wisteria paper. The italic masthead sits beside a flowering branch. Urgent editions clear that corner; analysis sets the figures below the letter as an enclosure. |
+| `folio` | Framed writing field | `shang`, Records of the King’s House (Ancient China) | The paired eyes and symmetrical horns of a [Shang bronze cauldron](https://www.metmuseum.org/art/collection/search/60594) crown the masthead. Inside the bronze rim, pale seams and growth rings trace the plates of a turtle shell. |
+| `folio` | Stacked painted registers | `egypt`, The Two Lands (Ancient Egypt) | The [agricultural registers in Nakht’s chapel](https://www.metmuseum.org/art/collection/search/548438) inspire the horizontal bands. A winged sun and ochre rules sit on pale papyrus with fine horizontal fibres over broader vertical strips. |
+| `folio` | Letters on dyed paper | `heian`, Letters from the Capital (Medieval Japan) | The dyed sheets of the [Gen’ei poetry manuscript](https://emuseum.nich.go.jp/detail?content_base_id=100171&content_part_id=000&langId=en) inspire the wisteria tint. Fine grain and scattered fibres suggest handmade washi. A flowering branch opens the ordinary edition; a folded slip closes the page. |
 | `broadsheet` | Ruled multi-column print page | `victorian`, The Civic Chronicle (Classical era onward) | *The Illustrated London News* and *Harper's Weekly* mastheads with medallion ears, *The Times* Oxford rules, printers' factotum initials and fleurons, and *Le Petit Journal* for the breaking edition |
-| `feed` | Single timeline column of posts | `wire`, The Civic Wire (Modern era onward) | Social timelines such as Bluesky: a centred post column between hairlines, round avatars, the byline as the post header, an action row of votes, and one brand tint |
+| `feed` | Full-width timeline | `wire`, The Civic Wire (Modern era onward) | Social timelines such as Bluesky: round avatars, a byline above each post and an action row below. Wide posts put photos or data cards beside the text. |
 
-Every design has three front-page layouts. An ordinary page opens with one story followed by briefs. A breaking page gives the lead the most space. An analysis page pairs it with an evidence table; in the folio family, that table follows the prose in the same column.
+Every design has three front-page layouts. An ordinary page opens with one story followed by briefs. A breaking page gives the lead the most space. An analysis page pairs it with an evidence table. On a narrow sheet, the table follows the lead text.
 
 ## Rendering constraints
 

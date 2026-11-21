@@ -53,7 +53,7 @@ Entries live in JSON files under `vox-agents/newspaper/triggers/`. Files group r
 | `id` | Yes | Stable identity that templates name. Keep it when tuning. | `settler-departure` |
 | `subject` | Yes | What the rule runs once for: `city`, `player`, `pair`, `event`, `incident` or `world`. See [subjects](#subjects). | `city` |
 | `event` | For `subject: event` | The event type, or list of types, the rule runs on. | `CityCaptureComplete` |
-| `window` | No | How far back the rule looks: `before`, `history`, the `events` global and facts such as `city.trained`. A named span or a number of Standard turns. When omitted, the window is the **reporting period**, which starts at the previous newspaper check. | `recent` |
+| `window` | No | How far back `before`, `history`, the `events` global and facts such as `city.trained` look. Use a named span or a number of Standard turns. By default the rule uses the **reporting period**, which stays open until an edition publishes. | `recent` |
 | `when` | Yes | The rule. One expression, or a list of expressions that must all be true. | The four entries in the [first example](#a-first-example) |
 | `values` | No | Named expressions. Non-null scalar results become placeholders for ungrouped developments. | `lost: city.before.population - city.population` |
 | `importance` | No | A number or expression, kept within 0 to 100. Defaults to 50. | `30 + 10 * lost` |
@@ -145,7 +145,7 @@ Results below 0 become 0 and results above 100 become 100.
 | `once` | Never, for that subject in this game | Milestones, such as a city's first wonder |
 | A span, such as `medium` | At the first check after that many Standard turns where the rule is true, even when it stayed true throughout | Long-running situations worth a follow-up |
 
-Each event is its own subject, so an `event` rule fires once per event without any `repeat` setting. The publication fingerprint prevents the same development from being selected twice. Follow-up links and votes belong to a particular rule and subject: a trade story about a city stays separate from a political story about that city. Publication state schema 6 keeps the repeat state, so resuming a run preserves it. A skipped check still advances it.
+Each event is its own subject, so an `event` rule fires once per event in a check. The publication fingerprint prevents the same development from being published twice. Follow-up links and votes belong to a particular rule and subject: a trade story about a city stays separate from a political story about that city. A skipped check can rearm a previously matched rule. New matches do not count toward its repeat limit until an edition publishes.
 
 ## Publication memory
 

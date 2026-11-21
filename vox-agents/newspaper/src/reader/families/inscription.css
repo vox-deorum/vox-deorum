@@ -310,12 +310,12 @@
 }
 
 /*
- * Breaking layout: a proclamation. The lead sits in a red double frame with
- * Greek key bands above and below its headline.
+ * Breaking layout: a red proclamation with a single palm above the headline.
+ * The Greek key stays on the outer edges of the notice board.
  */
 
 .vd-newspaper[data-design="inscription"] .vd-storylist[data-layout="breaking"] .vd-story--lead {
-  padding: 30px 34px 28px;
+  padding: 18px clamp(16px, 2.5cqi, 30px) 22px;
   border: 2px solid var(--vd-accent);
   outline: 1px solid var(--vd-accent);
   outline-offset: 4px;
@@ -330,21 +330,14 @@
   letter-spacing: 0.05em;
 }
 
-.vd-newspaper[data-design="inscription"] .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-headline::before,
-.vd-newspaper[data-design="inscription"] .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-headline::after {
-  display: block;
-  height: var(--vd-ins-band-height);
-  background: var(--vd-accent);
-  mask: var(--vd-ins-band-mask);
-  content: "";
-}
-
 .vd-newspaper[data-design="inscription"] .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-headline::before {
-  margin-bottom: 26px;
-}
-
-.vd-newspaper[data-design="inscription"] .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-headline::after {
-  margin-top: 26px;
+  display: block;
+  width: 52px;
+  height: 18px;
+  margin: 0 auto 8px;
+  background: var(--vd-accent);
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 52 18'%3E%3Cpath d='M2 16Q25 14 49 2' fill='none' stroke='black' stroke-width='1.5'/%3E%3Cpath d='M10 15Q5 13 4 6q7 2 9 8m3-1Q12 9 13 3q6 3 7 9m4-1Q20 7 23 1q5 4 5 9m4-2q0-5 5-8 1 5-2 7m-24 8q9-4 14 0-7 4-14 0m12-4q7-3 14 0-6 4-14 0m13-5q7-3 14-1-5 4-14 1'/%3E%3C/svg%3E") center / contain no-repeat;
+  content: "";
 }
 
 .vd-newspaper[data-design="inscription"] .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-deck {
@@ -456,7 +449,15 @@
   }
 
   .vd-newspaper[data-design="inscription"] .vd-tabs {
-    gap: 0 18px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 8px;
+  }
+
+  .vd-newspaper[data-design="inscription"] .vd-tab {
+    padding: 10px 2px;
+    font-size: calc(12px * var(--vd-text-scale));
+    letter-spacing: .07em;
   }
 
   .vd-newspaper[data-design="inscription"] .vd-storylist[data-layout="ordinary"] .vd-story--lead .vd-headline,

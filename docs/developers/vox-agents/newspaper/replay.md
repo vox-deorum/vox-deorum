@@ -12,7 +12,7 @@ npm run newspaper -w vox-agents -- --help
 
 PNG preview builds replace the shared `dist-newspaper` assets. Generate previews while VD is stopped, and rerun the command if a build is interrupted before restarting VD.
 
-This example checks a Standard pace Netherlands recording every five turns from 24 to 99. At turn 29, the stock catalogue prints the upbeat settler story from Amsterdam: “Good cheer in Amsterdam as settlers prepare to go.” The command previews that issue as a PNG and saves the audit for every check:
+This example checks a Standard pace Netherlands recording every five turns from 24 to 99. It saves the audit for every check and requests a PNG preview if an issue publishes at turn 29:
 
 ```sh
 npm run newspaper -w vox-agents -- --database mcp-server/archive/self-play/0d749c4f-69a7-4682-81b3-8fa70f38c012_1794782175768.db --player 7 --from 24 --to 99 --every 5 --output .tmp/newspaper-examples/netherlands --render-turns 29
@@ -60,7 +60,7 @@ Rule and template entries merge by ID. Arrays without IDs, such as a rule's `whe
 
 If a story is missing, open the check's audit. The [trigger audit](triggers/overview.md) shows what each subject matched and which facts it used. `choiceErrors` lists runtime errors once per expression and records when the check's execution limit prevented further choices from running. False conditions and hidden facts are ordinary reasons to leave a choice out. The decision also shows which candidates competed for space.
 
-Always generate a fresh run after changing the catalogue: resuming an existing run restores its saved configuration. Keep the same source, receiver, range, and frequency when comparing edits, since these determine the series history.
+Generate a fresh run after changing the catalogue: resuming restores the saved configuration, including its article limits. An older run also starts its next reporting window after the last turn it already checked. Keep the same source, receiver, range, and frequency when comparing edits.
 
 ## Open a recording in the browser reader
 
@@ -98,7 +98,9 @@ Both hosts open in Mockups. Its design, front page layout, and tint controls bui
 | Saved run | Recording > Saved run reopens a run from its run ID and, when not the default, its output path. Enter the recording path and Player ID as well. |
 | Advanced | Holds the replay purpose, comparison duration, duration units, speed multiplier override, new or branch mode, parent run for a branch, editorial configuration directory, publication frequency, LLM preference, and Save preferences. |
 
-Generate starts at the configured first turn and clamps the last check to the configured end. Events run after the previous completed check through the cutoff, including skipped checks. Comparison snapshots can reach before the first turn, bounded at turn zero. Reloading the page restores the active session. A frequency change schedules from the last completed check and leaves existing issues unchanged. Save preferences requires an open run and applies the chosen frequency and LLM setting to later checks.
+Generate checks the configured first turn, then advances by the publication interval and checks again at the configured end if needed. Each check considers events after the last published edition through the cutoff, or from the configured first turn if no edition has published. For example, if turn 100 publishes and turn 105 skips, turn 110 covers turns 101 through 110. Evidence-only sessions use the preceding check as their boundary. Comparison snapshots can reach before the first turn, bounded at turn zero.
+
+Reloading the page restores the active session. Save preferences applies frequency and LLM changes to later checks. The next check is scheduled from the last completed check, including one that skipped.
 
 Resume restores the saved schedule, cursor, catalogue snapshot, and preferences without generating an edition. It works in the source preview and normal VD with the same recording, receiver, run ID, and output path, including a store created by the offline command. Restarting the server requires this explicit resume, which verifies the source bytes. A new run creates a run ID when one is omitted. Its default output is `.tmp/newspaper/replays.sqlite` relative to the preview or server working directory; `outputPath` selects another location. The output must be separate from the recording, including existing symbolic links and hardlinks. Keep the run ID and output path to resume later. A new run never overwrites an existing run, and reusing its run ID returns a conflict with resume guidance. An explicit branch records its parent and starts fresh from the configured first turn.
 

@@ -57,7 +57,7 @@ Every expression can read these, whatever its subject.
 | `printed(ruleId, subject?)` | `{turn, count}` for published articles a rule supported, or `null` when none. The optional `subject` limits the count to one city, player or pair. See [publication memory](overview.md#publication-memory). |
 | `distance(a, b)` | Hex distance between players, cities, plots or events. See [distance](constants.md#distance). |
 
-The **reporting period** runs from the previous newspaper check to the cutoff turn. A trigger's **window** is its `window` field, or the reporting period when the field is omitted. Inferred facts such as `owner` and `distance` describe the cutoff turn, including when an `event` rule reads them.
+The **reporting period** includes each turn after the last published edition through the cutoff. Before the first edition, it starts at the first replay turn. A trigger's **window** uses its `window` field when set and the reporting period otherwise. Inferred facts such as `owner` and `distance` describe the cutoff turn, including when an `event` rule reads them.
 
 ## City
 
@@ -143,7 +143,7 @@ Read `self.happinessPercentage` for the receiver's national happiness. Vox Popul
 
 The newspaper names the city only if it has a matching readable city observation. It lists counts for known civilizations, known city-states and barbarians. These checks control which labels can be shown; the labels and counts themselves come from the zone record.
 
-A posture such as `Withdraw` is the receiver AI's assessment during the observed turn. The recorder can read zones several times in one turn and only saves occupied zones, so an earlier sighting can remain after its units leave. If the same visible city and zone also had a receiver observation on the previous check turn, `previousPosture` carries that reading and cites its row. A missing zone does not establish a retreat. A sea zone can include land units.
+A posture such as `Withdraw` is the receiver AI's assessment during the observed turn. The recorder can read zones several times in one turn and only saves occupied zones, so an earlier sighting can remain after its units leave. If the receiver observed the same visible city and zone at the reporting boundary, `previousPosture` carries that reading and cites its row. A missing zone does not establish a retreat. A sea zone can include land units.
 
 To read the zones for a city at the cutoff, use `city.tacticalZones()`. It matches both the city name and the absolute zone ID, so land and sea zones can match the same city. It returns an empty list if the known zones do not match, or `undefined` if the city's identity or the receiver's observations are unavailable.
 
@@ -318,7 +318,7 @@ Only the spy's owner can infer a technology name. The query looks for one named 
 | --- | --- | --- |
 | `city.population` | The value at the cutoff turn | `city.population >= largeCity` |
 | `city.before` | The snapshot at the start of the trigger's `window` | `city.population < city.before.population` |
-| `city.previous` | The snapshot at the previous newspaper check | `!city.previous.isOccupied` |
+| `city.previous` | The snapshot at the reporting boundary, just before the first turn covered | `!city.previous.isOccupied` |
 | `city.at(span)` | The snapshot that many recorded turns ago, up to `long` | `city.at(long).owner.id != city.owner.id` |
 | `city.history` | Every snapshot inside the window, oldest first | `city.history.every(s => s.foodPerTurn < 0)` |
 

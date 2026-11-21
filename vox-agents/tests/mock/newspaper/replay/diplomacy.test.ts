@@ -28,6 +28,7 @@ describe('diplomacy rules in offline replay', () => {
         }
       } finally { sqlite.close(); }
       await mkdir(catalogue);
+      await writeFile(path.join(catalogue, 'defaults.json'), JSON.stringify({ minItems: 1 }));
       const base = await loadEditorialConfig();
       const stalledRule = 'war-advantage-stalls';
       await writeFile(path.join(catalogue, 'triggers.json'), JSON.stringify([
@@ -45,6 +46,7 @@ describe('diplomacy rules in offline replay', () => {
       expect(skipped.check?.decision.triggerAudit.find(rule => rule.rule === stalledRule)?.subjects)
         .toMatchObject([{ subject: 'pair/0/1', outcome: 'false', failedWhen: 2 }]);
       const uninterrupted = await session.advance();
+      expect(uninterrupted.check?.status).toBe('published');
       const stalled = uninterrupted.check?.decision.triggerAudit.find(rule => rule.rule === stalledRule);
       expect(uninterrupted.evidence.request).toMatchObject({ cutoffTurn: 50, historyFromTurn: 5 });
       expect(stalled).toMatchObject({ windowFromTurn: 10, subjects: [{

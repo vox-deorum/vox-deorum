@@ -64,7 +64,8 @@ describe('national desk', () => {
   beforeAll(async () => {
     const stock = await loadEditorialConfig();
     const ids = ['capital-outgrown', 'neighbor-army-overtakes', 'technology-leader-changes', 'golden-age-in-wartime'];
-    config = { ...stock, triggers: stock.triggers.filter(rule => ids.includes(rule.id)),
+    config = { ...stock, defaults: { ...stock.defaults, minItems: 1 },
+      triggers: stock.triggers.filter(rule => ids.includes(rule.id)),
       templates: stock.templates.filter(template => template.triggers.some(id => ids.includes(id))) };
   });
 

@@ -38,6 +38,7 @@ describe('newspaper diplomacy trigger rules', () => {
     };
     const config = await parseEditorialConfig({
       ...base,
+      defaults: { ...base.defaults, minItems: 1 },
       triggers: [...base.triggers.filter(rule => rule.id === 'vassals-join-war'), summary],
       templates: [
         ...base.templates.filter(template => template.id === 'vassals-join-war-account'),

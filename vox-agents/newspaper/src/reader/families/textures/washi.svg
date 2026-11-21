@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="232" height="184" viewBox="0 0 232 184">
+  <!-- Uneven pulp and a few embedded fibres catch the light in a dyed sheet. -->
+  <filter id="pulp" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency=".26 .31" numOctaves="3" stitchTiles="stitch"/>
+    <feColorMatrix values="0 0 0 0 .48  0 0 0 0 .36  0 0 0 0 .51  .66 0 0 0 -.25"/>
+  </filter>
+  <rect width="100%" height="100%" filter="url(#pulp)" opacity=".44"/>
+  <g fill="none" stroke-linecap="round">
+    <path stroke="#91768a" opacity=".18" stroke-width=".85" d="M7 31q6 2 12 1t9 0m30 39q5-1 8 2m41-61q5 1 10 6m15 91q7 1 11-4m47-54q8-5 14-5M12 145q6-4 10-4m35 28q5 1 12-2m111-20q9 2 15 0M88 95q2 1 4 1"/>
+    <path stroke="#fffcf9" opacity=".69" stroke-width="1.35" d="M19 73q6 0 12 3m8-61q3 1 9-1m40 32q4-2 9-2m57-17q8 1 14 5m38 60q7 0 12-3M36 112q7 2 13 1m47 31q7-2 14-7m42 36q4 1 9 0"/>
+  </g>
+</svg>

@@ -121,10 +121,10 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
   if (input.state.lastCheckTurn !== null && turn <= input.state.lastCheckTurn)
     throw new Error('The editorial cutoff must follow the last completed check.');
   if (
-    input.state.lastCheckTurn !== null &&
-    evidence.request.previousCheckTurn !== input.state.lastCheckTurn
+    input.state.reportingThroughTurn !== null &&
+    evidence.request.previousCheckTurn !== input.state.reportingThroughTurn
   )
-    throw new Error('Evidence must start after the last completed check.');
+    throw new Error('Evidence must start at the open reporting window.');
   const scope = `${encodeURIComponent(input.campaignId)}/${encodeURIComponent(input.timelineId)}/receiver/${input.receiver.playerId}`;
   const checkId = `${scope}/check/${turn}`;
   const identitySeed = `${encodeURIComponent(input.campaignId)}/receiver/${input.receiver.playerId}/${turn}`;
@@ -141,7 +141,6 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
     ...input.context,
     standardTurnsPerGameTurn: 1 / input.speedMultiplier,
   }, input.state.diplomacy, ruleHistoryTurns(config.triggers, config.constants, input.speedMultiplier));
-  state.diplomacy = diplomacy.memory;
   const compiled = await getEditorialExpressions(config);
   const choiceErrors = new Map<number, ChoiceExpressionError>();
   const budget: ExpressionCheckBudget = { interruptedSlots: new Set(), choiceErrors };
@@ -159,7 +158,6 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
     budget,
     identitySeed,
   });
-  state.triggerRepeats = rules.repeatState;
   const terms = await evaluateEditorialTerms(compiled, batch, budget);
   const triggers = rules.developments;
   const candidates = (await matchTemplates(triggers, config, compiled, batch, budget, terms)).map((candidate) => ({
@@ -196,13 +194,21 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
       errors.push({ choice: 'editorial choices', field: 'evaluation', message: choiceLimitMessage });
     if (errors.length) decision.choiceErrors = errors;
   };
-  /** Complete a skipped check with the same cursor and decay guarantees as a publication. */
+  /** Keep observed resets, but leave matches and diplomacy available for the next check. */
   const skip = (reason: string): EditorialCheckResult => {
+    state.triggerRepeats = Object.fromEntries(Object.entries(input.state.triggerRepeats).map(([key, previous]) => {
+      const current = rules.repeatState[key];
+      return [key, current?.armed ? current : previous];
+    }));
     decision.reason = budget.choiceEvaluationIncomplete ? `${reason} ${choiceLimitMessage}` : reason;
     recordChoiceErrors();
     return { status: 'skipped', reason: decision.reason, state, decision };
   };
   if (!selection.selected.length) return skip('No eligible new authored stories.');
+  const minimum = config.defaults.minItems ?? 1;
+  /** Explain how many eligible or displayable stories were available for this edition. */
+  const shortfall = (count: number) => skip(`Only ${count} of ${minimum} required stories are ready.`);
+  if (selection.selected.length < minimum) return shortfall(selection.selected.length);
   const streams = createEditorialStreams(identitySeed, config);
   const weights = await evaluatePresentation(config, compiled, batch, budget);
   const { selected, sources: styleSources } = await applyStylePreferences(selection.selected, compiled, batch, budget);
@@ -221,6 +227,7 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
     terms,
   });
   if (!presentation) return skip('No eligible design or visible authored content.');
+  if (presentation.issue.items.length < minimum) return shortfall(presentation.issue.items.length);
   const issue = validateEditorialIssue(presentation, config, weights);
   const records: PublishedItemRecord[] = issue.items.map((item) => {
     const candidate = presentation.itemCandidates.get(item.id)!;
@@ -241,6 +248,9 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
       fingerprint: candidate.fingerprint,
     };
   });
+  state.reportingThroughTurn = turn;
+  state.diplomacy = diplomacy.memory;
+  state.triggerRepeats = rules.repeatState;
   state.series = advanceSeries(state.series, records, turn);
   state.issues.push({ issueId: issue.issueId, turn, items: records });
   state.previousDesignId = issue.publication.designId;

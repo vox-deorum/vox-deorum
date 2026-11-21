@@ -64,17 +64,24 @@ const publicationSchemaVersion = 6;
 /** Current offline memory excludes decisions, which are stored with each completed check. */
 export const publicationStateSchema = z.object({
   schemaVersion: z.literal(publicationSchemaVersion), lastCheckTurn: z.number().int().nullable(),
+  /** Last covered turn, or the turn before a new replay begins. */
+  reportingThroughTurn: z.number().int().nullable().optional(),
   issues: z.array(publishedIssueRecordSchema), series: z.record(z.string(), seriesStateSchema),
   votes: z.record(z.string(), z.union([z.literal(-1), z.literal(0), z.literal(1)])),
   preferences: publicationPreferencesSchema, previousDesignId: z.string().nullable(),
   diplomacy: diplomacyMemorySchema,
   triggerRepeats: triggerRepeatStateSchema,
-});
+}).transform(({ reportingThroughTurn, ...state }) => ({
+  ...state,
+  // Legacy runs already consumed evidence and updated memory through their last check.
+  reportingThroughTurn: reportingThroughTurn === undefined ? state.lastCheckTurn : reportingThroughTurn,
+}));
 
 export type PublicationState = z.infer<typeof publicationStateSchema>;
 
 /** Create an empty receiver checkpoint with resolved publication preferences. */
 export function createInitialPublicationState(preferences: Partial<PublicationPreferences> = {}): PublicationState {
-  return { schemaVersion: publicationSchemaVersion, lastCheckTurn: null, issues: [], series: {}, votes: {}, diplomacy: { pairs: {} }, triggerRepeats: {},
+  return { schemaVersion: publicationSchemaVersion, lastCheckTurn: null, reportingThroughTurn: null,
+    issues: [], series: {}, votes: {}, diplomacy: { pairs: {} }, triggerRepeats: {},
     preferences: publicationPreferencesSchema.parse(preferences), previousDesignId: null };
 }
