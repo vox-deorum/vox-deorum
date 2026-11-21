@@ -9,8 +9,7 @@
   & .vd-masthead { text-align: left; border-bottom: 1px solid var(--vd-accent); }
   & .vd-title { font-style: italic; font-weight: 600; letter-spacing: -.035em; line-height: 1.05; }
   & .vd-tabs { justify-content: flex-start; }
-  & .vd-storylist[data-layout] { display: grid; grid-template-columns: minmax(0, 1fr); gap: clamp(14px, 2cqi, 26px); }
-  & .vd-storylist[data-layout] .vd-prose { columns: auto; }
+  & .vd-storylist[data-layout] { gap: clamp(14px, 2cqi, 26px); }
   & .vd-storylist[data-layout] > .vd-story {
     display: grid;
     grid-template-columns: 2.15em minmax(0, 1fr);
@@ -51,12 +50,7 @@
 
 @container newspaper (width > 760px) {
   .vd-newspaper[data-publication-design="court-dispatch"] {
-    & .vd-storylist[data-layout="ordinary"] {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      & .vd-prose { max-width: 66ch; }
-    }
-    & .vd-storylist:not([data-layout="ordinary"]) > .vd-story:nth-child(odd) { margin-inline-end: 2.5cqi; }
-    & .vd-storylist:not([data-layout="ordinary"]) > .vd-story:nth-child(even) { margin-inline-start: 3.5cqi; }
+    & .vd-storylist[data-layout="ordinary"] .vd-prose { max-width: 66ch; }
     & :is(.vd-storylist:not([data-layout="ordinary"]) > .vd-story, .vd-story--lead) .vd-story-content:has(> .vd-story-art) {
       display: grid;
       grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);

@@ -291,29 +291,10 @@
 
 @container newspaper (width > 760px) {
   .vd-newspaper[data-design="inscription"] .vd-storylist[data-layout="ordinary"] {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     column-gap: 50px;
   }
 
-  .vd-newspaper[data-design="inscription"] .vd-storylist[data-layout="ordinary"] > .vd-story--lead {
-    grid-column: 1 / -1;
-  }
-
-  /* The lead is the first child, so a lone brief at the end is an even child. */
-  .vd-newspaper[data-design="inscription"] .vd-storylist[data-layout="ordinary"] > .vd-story--brief:nth-child(even):last-child {
-    grid-column: 1 / -1;
-  }
-
-  .vd-newspaper[data-design="inscription"] .vd-storylist[data-layout="ordinary"] > .vd-story--lead .vd-prose,
-  .vd-newspaper[data-design="inscription"] .vd-storylist[data-layout="ordinary"] > .vd-story--brief:nth-child(even):last-child .vd-prose {
-    columns: 20em 2;
-    column-gap: 50px;
-    column-rule: 1px solid var(--vd-rule);
-  }
-
-  .vd-newspaper[data-design="inscription"] .vd-storylist[data-layout="ordinary"] > .vd-story--lead .vd-story-art img,
-  .vd-newspaper[data-design="inscription"] .vd-storylist[data-layout="ordinary"] > .vd-story--brief:nth-child(even):last-child .vd-story-art img {
+  .vd-newspaper[data-design="inscription"] .vd-storylist[data-layout="ordinary"] > .vd-story--lead .vd-story-art img {
     height: auto;
     aspect-ratio: 2 / 1;
   }

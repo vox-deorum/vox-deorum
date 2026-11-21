@@ -53,12 +53,7 @@
   }
 
   & .vd-storylist[data-layout] {
-    display: grid;
     gap: 24px;
-  }
-
-  & .vd-story--lead {
-    grid-column: 1 / -1;
   }
 
   & .vd-cover-art {
@@ -141,21 +136,6 @@
     padding: 14px 0 0;
     border: 0;
     border-top: 4px solid var(--vd-accent);
-  }
-
-  @container newspaper (width > 760px) {
-    & .vd-storylist[data-layout] {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    & .vd-story--brief:last-child:nth-child(even) {
-      grid-column: 1 / -1;
-    }
-
-    & .vd-story--lead:not(:has(.vd-analysis-columns)) .vd-prose {
-      columns: 22em 2;
-      column-gap: 32px;
-    }
   }
 
   @container newspaper (width <= 760px) {

@@ -175,11 +175,9 @@
 /*
  * Ordinary layouts
  *
- * Narrow papers stack every story in publication order. Wide papers run the
- * lead across the page, then fill rows of two briefs in reading order, so no
- * story waits for an unrelated story in another column to end. A brief left
- * alone in the last row takes the full width. Full-width stories set their
- * prose in two text columns that share the brief rows' centre rule.
+ * Narrow papers stack every story in publication order. Wide papers use the
+ * shared grid: the lead spans the row and briefs pair in reading order. The
+ * padding and rule below build a centre gutter between the paired briefs.
  */
 
 .vd-newspaper[data-design="broadsheet"] .vd-storylist[data-layout="ordinary"] .vd-story--brief .vd-headline::after {
@@ -193,12 +191,7 @@
 
 @container newspaper (width > 760px) {
   .vd-newspaper[data-design="broadsheet"] .vd-storylist[data-layout="ordinary"] {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  }
-
-  .vd-newspaper[data-design="broadsheet"] .vd-storylist[data-layout="ordinary"] > .vd-story--lead {
-    grid-column: 1 / -1;
+    column-gap: 0;
   }
 
   .vd-newspaper[data-design="broadsheet"] .vd-storylist[data-layout="ordinary"] > .vd-story--brief {
@@ -222,20 +215,7 @@
     border-left: 1px solid var(--vd-rule);
   }
 
-  .vd-newspaper[data-design="broadsheet"] .vd-storylist[data-layout="ordinary"] > .vd-story--brief:nth-child(even):last-child {
-    grid-column: 1 / -1;
-    padding-right: 0;
-  }
-
-  .vd-newspaper[data-design="broadsheet"] .vd-storylist[data-layout="ordinary"] > .vd-story--lead .vd-prose,
-  .vd-newspaper[data-design="broadsheet"] .vd-storylist[data-layout="ordinary"] > .vd-story--brief:nth-child(even):last-child .vd-prose {
-    columns: 20em 2;
-    column-gap: 50px;
-    column-rule: 1px solid var(--vd-rule);
-  }
-
-  .vd-newspaper[data-design="broadsheet"] .vd-storylist[data-layout="ordinary"] > .vd-story--lead .vd-story-art img,
-  .vd-newspaper[data-design="broadsheet"] .vd-storylist[data-layout="ordinary"] > .vd-story--brief:nth-child(even):last-child .vd-story-art img {
+  .vd-newspaper[data-design="broadsheet"] .vd-storylist[data-layout="ordinary"] > .vd-story--lead .vd-story-art img {
     height: auto;
     aspect-ratio: 2 / 1;
   }
@@ -244,7 +224,6 @@
 /* The lead opens with a factotum: a boxed initial on an engraved, hatched ground. */
 
 .vd-newspaper[data-design="broadsheet"] .vd-storylist[data-layout="ordinary"] .vd-story--lead .vd-prose p:first-child::first-letter {
-  /* Keep the initial with its opening lines when the paragraph spans columns. */
   initial-letter: 3;
   margin-right: 12px;
   padding: 0 9px;

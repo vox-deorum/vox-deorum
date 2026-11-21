@@ -10,8 +10,6 @@
   & .vd-tabs { justify-content: start; border: 0; }
   & .vd-page { padding-block-start: 0; }
   & .vd-storylist[data-layout] {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
     border-inline-start: 5px solid var(--cord-indigo);
   }
   & .vd-storylist[data-layout] > .vd-story {
@@ -47,7 +45,6 @@
 @container newspaper (width > 760px) {
   .vd-newspaper[data-publication-design="cord-register"] {
     & .vd-storylist[data-layout] {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
       align-items: start;
       column-gap: clamp(14px, 2.2cqi, 30px);
       border: 0;
@@ -58,7 +55,6 @@
         var(--cord-indigo) 5px 8px) 9;
     }
     & .vd-storylist[data-layout] > .vd-story {
-      grid-column: auto;
       padding: 26px 0 8px 16px;
       border-inline-start: 3px solid var(--pendant);
     }
@@ -69,30 +65,6 @@
       border-radius: 45%;
     }
     & .vd-storylist[data-layout] > .vd-story:nth-child(even) { padding-block-start: 44px; }
-    & .vd-storylist[data-layout] > .vd-story--lead { grid-column: var(--cord-lead-span, 1 / -1); }
-    & .vd-storylist[data-layout] > .vd-story--brief { border-block-start: var(--cord-brief-rule, 1px solid var(--pendant)); }
-    & .vd-storylist:is([data-layout="breaking"], [data-layout="analysis"]) > .vd-story--brief:nth-child(2):last-child {
-      grid-column: 1 / -1;
-      padding-block-start: 26px;
-      & .vd-story-content { max-inline-size: 70ch; }
-    }
-    & .vd-storylist[data-layout="ordinary"] .vd-story--lead .vd-prose { columns: var(--cord-prose, 24em 2); }
-
-    /* Only hang the lead beside briefs when the whole issue fits on the cord. */
-    & .vd-storylist[data-layout="ordinary"]:has(> .vd-story:nth-child(2):last-child) {
-      --cord-lead-span: auto;
-      --cord-brief-rule: 0;
-      --cord-prose: auto;
-      grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
-    }
-  }
-}
-
-@container newspaper (width > 1000px) {
-  .vd-newspaper[data-publication-design="cord-register"] .vd-storylist[data-layout="ordinary"]:has(> .vd-story:nth-child(3):last-child) {
-    --cord-lead-span: auto;
-    --cord-brief-rule: 0;
-    --cord-prose: auto;
-    grid-template-columns: minmax(0, 1.8fr) repeat(2, minmax(0, 1fr));
+    & .vd-storylist[data-layout] > .vd-story--brief { border-block-start: 1px solid var(--pendant); }
   }
 }

@@ -12,6 +12,7 @@
     letter-spacing: -.055em;
   }
   & .vd-tabs { justify-content: flex-start; border-block: 1px solid var(--vd-rule); }
+  & .vd-storylist[data-layout] { display: block; }
   & .vd-storylist[data-layout] .vd-story--lead .vd-headline {
     font-weight: 800;
     line-height: 1;
@@ -44,7 +45,6 @@
     & .vd-storylist[data-layout="ordinary"]:has(.vd-story--brief) {
       display: flow-root;
       & .vd-story--lead { float: left; width: calc((100% - var(--index-gap)) * .64); }
-      & .vd-story--lead .vd-story-content > .vd-prose { columns: auto; }
       & .vd-story--brief { margin: 0 0 18px calc(64% + var(--index-gap) * .36); }
     }
     & .vd-analysis-columns, & .vd-breaking-columns {

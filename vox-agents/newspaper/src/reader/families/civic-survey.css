@@ -15,7 +15,6 @@
   }
   /* Evidence sits above the report, so the lead's account reads in one column. */
   & .vd-analysis-columns { grid-template-columns: minmax(0, 1fr); gap: 18px; }
-  & .vd-storylist[data-layout="analysis"] .vd-prose { columns: auto; }
   & .vd-column-main > .vd-deck { padding-bottom: 0; border-bottom: 0; }
   & .vd-storylist[data-layout="analysis"] .vd-column-main > .vd-byline { margin: 0 0 13px; }
   & .vd-evidence {

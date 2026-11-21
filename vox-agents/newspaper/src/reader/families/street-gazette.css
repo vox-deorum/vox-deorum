@@ -38,7 +38,6 @@
   }
   & .vd-storylist[data-layout] .vd-story--lead .vd-byline { margin: 0 0 .55em; text-align: center; }
   & .vd-story--lead .vd-story-content > .vd-prose {
-    columns: auto;
     max-width: 64ch;
     margin-inline: auto;
   }
@@ -62,13 +61,5 @@
   .vd-newspaper[data-publication-design="street-gazette"] {
     & .vd-storylist[data-layout="ordinary"] .vd-story--brief:nth-child(-n+3) { border-top: 4px double var(--vd-ink); }
     & .vd-storylist[data-layout="ordinary"] .vd-story--brief .vd-prose { max-width: 64ch; }
-    & .vd-storylist:not([data-layout="ordinary"]) .vd-story--brief .vd-story-content {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 2.25fr);
-      column-gap: 1.5em;
-      align-items: start;
-      & > .vd-headline { grid-column: 1; grid-row: 1 / span 3; }
-      & > :not(.vd-headline) { grid-column: 2; }
-    }
   }
 }

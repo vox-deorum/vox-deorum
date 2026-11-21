@@ -86,7 +86,7 @@
 
 @container newspaper (width > 760px) {
   .vd-newspaper[data-publication-design="cable-desk"] {
-    & .vd-storylist[data-layout="ordinary"] .vd-prose { columns: auto; max-width: 66ch; }
+    & .vd-storylist[data-layout="ordinary"] .vd-prose { max-width: 66ch; }
     & .vd-storylist:not([data-layout="ordinary"]) .vd-story--brief .vd-story-content {
       display: grid;
       grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);

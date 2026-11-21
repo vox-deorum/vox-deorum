@@ -26,12 +26,7 @@
   & .vd-coffeehouse-imprint span:last-child { margin-inline-start: auto; text-align: end; }
   & .vd-tabs { border-bottom-color: var(--vd-rule); }
   & .vd-tab { padding-block: 5px; font-variant: small-caps; }
-  & .vd-storylist[data-layout] {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    column-gap: var(--essay-gutter);
-  }
-  & .vd-story--lead { grid-column: 1 / -1; }
+  & .vd-storylist[data-layout] { column-gap: var(--essay-gutter); }
   & .vd-storylist .vd-story--lead .vd-headline {
     max-width: 38ch;
     margin: 0 auto .35em;
@@ -60,24 +55,11 @@
   & :is(.vd-breaking-columns, .vd-analysis-columns) { grid-template-columns: minmax(0, 1fr); gap: 12px; }
   & .vd-evidence { border-block: 1px solid var(--vd-rule); padding-block: .5em; }
   & .vd-storylist[data-layout] .vd-story--brief {
-    grid-column: auto;
     margin-top: 1em;
     padding-top: .7em;
     border-top: 1px solid var(--vd-rule);
-  }
-  & .vd-storylist[data-layout] .vd-story--brief:last-child:nth-child(even) {
-    grid-column: 1 / -1;
   }
   & .vd-storylist[data-layout] .vd-story--brief .vd-headline { font-size: calc(clamp(19px, 2cqi, 25px) * var(--vd-text-scale)); }
   & .vd-end-rule { width: 5em; margin-inline: auto; }
 }
 
-/* The lead spans both text tracks on a wide sheet; narrow sheets keep one column. */
-@container newspaper (width > 760px) {
-  .vd-newspaper[data-publication-design="coffeehouse-essay"] .vd-story--lead .vd-story-content .vd-prose {
-    columns: 2;
-    column-gap: var(--essay-gutter);
-    orphans: 2;
-    widows: 2;
-  }
-}

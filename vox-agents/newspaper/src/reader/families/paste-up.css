@@ -15,6 +15,7 @@
     transform: rotate(-1.5deg);
   }
   & .vd-tabs { justify-content: flex-start; border-bottom: 3px solid var(--vd-ink); }
+  & .vd-storylist[data-layout] { display: block; }
   & .vd-storylist[data-layout] .vd-story--lead .vd-headline {
     display: inline;
     padding: 0 .14em .035em;
@@ -46,7 +47,6 @@
   .vd-newspaper[data-publication-design="paste-up"] .vd-storylist[data-layout="ordinary"]:has(.vd-story--brief) {
     display: flow-root;
     & .vd-story--lead { float: left; width: 61%; }
-    & .vd-story--lead .vd-story-content > .vd-prose { columns: auto; }
     & .vd-story--brief {
       margin: 0 0 16px 64%;
       padding: 0 0 0 clamp(12px, 1.7cqi, 24px);

@@ -61,7 +61,7 @@
     border-radius: 0;
     background: var(--vd-vote-background);
   }
-  & .vd-storylist[data-layout="ordinary"] { display: block; }
+  & .vd-storylist[data-layout] { display: block; }
   & .vd-storylist .vd-story--lead .vd-headline {
     padding: .21em .32em;
     color: var(--vd-ink);

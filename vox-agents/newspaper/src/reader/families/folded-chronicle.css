@@ -53,23 +53,12 @@
 @container newspaper (width > 760px) {
   .vd-newspaper[data-publication-design="folded-chronicle"] {
     & .vd-storylist[data-layout="ordinary"] {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 0;
-      background: var(--fold) left / calc(100% / 3) 100% repeat-x;
+      column-gap: 0;
+      background: var(--fold) left / calc(100% / 2) 100% repeat-x;
       border-block: 2px solid var(--vd-accent);
 
       & > .vd-story { margin: 0; padding: var(--panel-inset); }
-      & > .vd-story--lead { grid-column: span 2; }
-      & > .vd-story--brief { grid-column: span 1; }
       & > :nth-child(2) { border-top: 0; }
-      /* Two panels are used by the lead, so each later row starts at child 3, 6, 9... */
-      & > .vd-story:only-child, & > .vd-story:last-child:nth-child(3n) { grid-column: 1 / -1; }
-      & > .vd-story--brief:last-child:nth-child(3n + 1) { grid-column: span 2; }
-    }
-    & .vd-story--lead .vd-story-content > .vd-prose {
-      columns: 17em 2;
-      column-gap: calc(2 * var(--panel-inset));
-      column-rule: 1px solid var(--hinge);
     }
   }
 }

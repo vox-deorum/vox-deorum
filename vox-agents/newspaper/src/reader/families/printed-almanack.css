@@ -14,7 +14,6 @@
   & .vd-ornament { width: 96px; margin: 4px auto 0; }
   & .vd-motto { margin: 2px 0 0; }
   & .vd-tabs { border-bottom: 3px double var(--vd-ink); }
-  & .vd-storylist[data-layout] { display: block; }
   & .vd-storylist .vd-story {
     display: grid;
     grid-template-columns: clamp(72px, 9cqi, 110px) minmax(0, 1fr);
@@ -39,8 +38,6 @@
   }
   & .vd-story-content { min-width: 0; padding: 14px 0 16px clamp(12px, 2cqi, 28px); }
   & .vd-storylist .vd-story .vd-prose { line-height: 1.48; }
-  /* The date gutter is a separate track, so the lead's account reads in one column. */
-  & .vd-storylist .vd-story--lead .vd-prose { columns: auto; }
   & .vd-breaking-columns, & .vd-analysis-columns { display: block; }
   & .vd-evidence { margin-top: 16px; border-block: 3px double var(--vd-ink); padding-block: 10px; }
   & .vd-end-ornament { width: 100px; }

@@ -4,7 +4,7 @@ The player lived through the game. Give them a paper their citizens would want t
 
 Use this guide when you edit `vox-agents/newspaper/templates/`. Share it with any model drafting variants. Each example names its [voice, stance, and genre](editorial.md#variant-styles). Check the trigger and the [placeholder reference](editorial.md#placeholders-and-facts) before you draft. Use [regional shortcuts](triggers/constants.md#regional-shortcuts) when a variant is written for a group of civilizations.
 
-The [design sets the columns](designs.md#rendering-constraints): a headline in one column has a body in one column, even when the headline wraps.
+Each story reads in one column. A [two-column page](designs.md#rendering-constraints) places two separate briefs side by side.
 
 ## Get to the action early
 
@@ -118,9 +118,15 @@ Let the news raise a question. Why did this happen? Who might feel it next? Give
 
 **Voice:** `press` · **Stance:** `rationalist` · **Genre:** `analysis`
 
-Write:
+The same news can call for a different ending depending on the state of the empire. Here, the proposed split uses total religious unhappiness divided by total happiness.
 
-> {{majorityFaith}} has a majority in most of our cities. In the lane behind the dye works, some of its worshippers still bring oil to the shrine of {{founded}} and help patch its roof. Those families could keep the shrine open even if its congregation dwindles.
+Write when religious unrest is low:
+
+> {{terms.civilization}} founded {{founded}}, but {{majorityFaith}} is now the main faith in most of its cities. In one town, people from both faiths are fixing the roof of the old shrine. The shrine could stay open even if fewer people come to pray, as long as its neighbors still help.
+
+Write when religious unrest is high:
+
+> {{terms.civilization}} founded {{founded}}, but {{majorityFaith}} is now the main faith in most of its cities. In one town, neighbors who used to look after the old shrine together are arguing over who should lead prayers there. If they stop working together, even people who kept the old faith could lose their place to pray.
 
 Avoid:
 

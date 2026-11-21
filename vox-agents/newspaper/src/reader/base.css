@@ -235,9 +235,6 @@
   overflow-wrap: anywhere;
   font-size: calc(18px * var(--vd-text-scale));
   line-height: 1.65;
-  /* Let short paragraphs balance across columns when a design splits the prose. */
-  widows: 1;
-  orphans: 1;
 }
 
 .vd-prose p {
@@ -358,6 +355,30 @@
   user-select: none;
 }
 
+/*
+ * Standard story lists
+ *
+ * A lead fills the row and briefs pair as whole articles in reading order.
+ * A final unpaired brief keeps its grid slot. Designs with their own stream
+ * opt out through their family styles.
+ */
+
+.vd-newspaper:not([data-design="feed"]) .vd-storylist[data-layout] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@container newspaper (width > 760px) {
+  .vd-newspaper:not([data-design="feed"]) .vd-storylist[data-layout] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 32px;
+  }
+
+  .vd-newspaper:not([data-design="feed"]) .vd-storylist[data-layout] > .vd-story--lead {
+    grid-column: 1 / -1;
+  }
+}
+
 /* Ordinary layouts */
 
 .vd-storylist[data-layout="ordinary"] .vd-story--lead .vd-headline {
@@ -367,10 +388,6 @@
 }
 
 /* Breaking layout */
-
-.vd-storylist[data-layout="breaking"] {
-  display: block;
-}
 
 .vd-storylist[data-layout="breaking"] .vd-story--lead {
   border: 0;
@@ -422,10 +439,6 @@
 }
 
 /* Analysis layout */
-
-.vd-storylist[data-layout="analysis"] {
-  display: block;
-}
 
 .vd-storylist[data-layout="analysis"] .vd-story--lead {
   border: 0;

@@ -2,7 +2,7 @@
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Browser, Locator, Page } from 'playwright-core';
+import type { Browser, Page } from 'playwright-core';
 import type { IssueDocument, IssueItem } from '../../../../src/newspaper/contracts/issue.js';
 import type { RendererFamily } from '../../../../src/newspaper/contracts/design.js';
 import { loadEditorialConfig } from '../../../../src/newspaper/editorial/config/load.js';
@@ -137,18 +137,6 @@ function visualOrder(stories: StoryBox[]): string[] {
   return [...stories].sort((a, b) => Math.abs(a.top - b.top) <= 1 ? a.left - b.left : a.top - b.top).map(story => story.id);
 }
 
-/** Check whether the rendered text of a paragraph occupies both columns. */
-function readProseColumns(locator: Locator): Promise<{ left: boolean; right: boolean }> {
-  return locator.evaluate(prose => {
-    const box = prose.getBoundingClientRect();
-    const middle = box.left + box.width / 2;
-    const range = document.createRange();
-    range.selectNodeContents(prose.querySelector('p')!);
-    const lines = Array.from(range.getClientRects());
-    return { left: lines.some(line => line.right < middle), right: lines.some(line => line.left > middle) };
-  });
-}
-
 describe.skipIf(!existsSync(path.join(readerDirectory, 'export.html')) || !existsSync(path.join(readerDirectory, 'index.html')))('ordinary newspaper layout', () => {
   let browser: Browser | undefined;
   let unavailable: string | undefined;
@@ -226,14 +214,12 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'export.html')) || !exist
               expect(right.right, label).toBeCloseTo(layout.width, 1);
               previousBottom = Math.max(left.contentBottom, right.contentBottom);
             } else {
-              expect(left.right, label).toBeCloseTo(layout.width, 1);
+              if (width > 760) expect(left.right, label).toBeLessThanOrEqual(layout.width / 2 + 1);
+              else expect(left.right, label).toBeCloseTo(layout.width, 1);
               previousBottom = left.contentBottom;
             }
           }
           if (count === 4 && width === 1200) {
-            for (const story of ['.vd-story--lead', '.vd-story:last-child']) {
-              expect((await readProseColumns(page.locator(`${story} .vd-prose`))).right, label).toBe(false);
-            }
             const leadStory = page.locator('.vd-story--lead');
             const prose = (await leadStory.locator('.vd-prose').boundingBox())!;
             if (designId === 'port-register') {
@@ -273,38 +259,19 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'export.html')) || !exist
     } finally { await page.close(); }
   }, 60_000);
 
-  it.for(['inscription', 'broadsheet'] as const)('should balance a short unpaired brief across both %s columns', async (family, context) => {
+  it.for(['inscription', 'broadsheet'] as const)('should keep an unpaired brief in the left %s slot', async (family, context) => {
     if (!browser) { context.skip(unavailable); return; }
     const issue = createOrdinaryIssue([1, 1, 1, 1], family);
-    issue.items[3].body = [[{ type: 'text', text: 'Our settlers have founded Novgorod. The work begins now: first houses, first fields, first walls.' }]];
     const page = await browser.newPage();
     try {
       await page.goto(`${host.url}/newspaper/export.html`);
-      await exportStories(page, issue, 1200);
-      expect(await readProseColumns(page.locator('.vd-story:last-child .vd-prose'))).toEqual({ left: true, right: true });
+      const { stories } = await exportStories(page, issue, 1200);
+      expect(stories[3].left).toBeCloseTo(stories[1].left, 1);
+      expect(stories[3].right).toBeCloseTo(stories[1].right, 1);
     } finally { await page.close(); }
   });
 
-  it('should balance a short National Review lead beneath its full-width headline', async context => {
-    if (!browser) { context.skip(unavailable); return; }
-    const issue = createOrdinaryIssue([1], 'folio');
-    issue.publication.designId = 'national-review';
-    issue.publication.presentation.tokens = { bodyFontAssetId: 'font-libre-caslon-400', headingFontAssetId: 'font-inter-800' };
-    issue.items[0].headline = [{ type: 'text', text: '4 of our units lost in action' }];
-    issue.items[0].body = [[{ type: 'text', text: 'Our forces lost 4 units in the recent fighting, every one of them to the same enemy power.' }]];
-    const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
-    try {
-      await page.goto(`${host.url}/newspaper/export.html`);
-      for (const layout of ['ordinary', 'breaking', 'analysis'] as const) {
-        issue.pages[0].layout = layout;
-        await exportStories(page, issue, 1200);
-        const prose = page.locator('.vd-story--lead .vd-prose');
-        expect(await readProseColumns(prose), layout).toEqual({ left: true, right: true });
-      }
-    } finally { await page.close(); }
-  });
-
-  it('should keep the opening letter in the first column of a short lead', async context => {
+  it('should keep the opening letter inside a short lead', async context => {
     if (!browser) { context.skip(unavailable); return; }
     const issue = createOrdinaryIssue([1, 6, 2, 3]);
     issue.items[0].body = [[{ type: 'text', text: 'Our civilization and India concluded a deal at turn 116. Review the exchange in the diplomatic overview as you consider the next step in this relationship.' }]];
@@ -359,7 +326,7 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'export.html')) || !exist
           expect(image.left, label).toBeGreaterThanOrEqual(0);
           expect(image.right, label).toBeLessThanOrEqual(image.pageWidth + 0.01);
           expect(image.bottom, label).toBeLessThanOrEqual(image.pageHeight + 0.01);
-          if (width > 760 && ['story-1', 'story-4'].includes(image.id!)) {
+          if (width > 760 && image.id === 'story-1') {
             expect(image.retainedArea, label).toBeGreaterThanOrEqual(0.7);
             expect(image.width / image.height, label).toBeCloseTo(2, 1);
           } else {

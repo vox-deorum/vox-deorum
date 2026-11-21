@@ -165,12 +165,11 @@ export function mountReader(
     const [lead] = page.itemIds;
     let itemIds = page.itemIds;
     if (issue.publication.designId === "printed-almanack") {
-      // Breaking news and analysis open with their lead before the dated entries.
-      const fixed = page.layout === "ordinary" ? 0 : 1;
+      // Keep the lead first and sort the briefs by their observation dates.
       const undated = issue.cutoff.turn + 1;
-      const dated = page.itemIds.slice(fixed).sort((a, b) =>
+      const dated = page.itemIds.slice(1).sort((a, b) =>
         (itemById.get(a)?.observedTurn ?? undated) - (itemById.get(b)?.observedTurn ?? undated));
-      itemIds = [...page.itemIds.slice(0, fixed), ...dated];
+      itemIds = [...page.itemIds.slice(0, 1), ...dated];
     }
     itemIds.forEach((itemId) => {
       const item = itemById.get(itemId);

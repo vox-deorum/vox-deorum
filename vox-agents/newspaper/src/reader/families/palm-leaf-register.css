@@ -20,7 +20,7 @@
   & .vd-tab:is(:hover, [aria-selected="true"]) { color: inherit; }
   & .vd-tab:focus-visible { outline-color: currentColor; outline-offset: 0; }
   & .vd-page { padding-block-start: clamp(6px, 1cqi, 12px); }
-  & .vd-storylist[data-layout] { display: grid; grid-template-columns: minmax(0, 1fr); gap: clamp(6px, 1cqi, 12px); }
+  & .vd-storylist[data-layout] { gap: clamp(6px, 1cqi, 12px); }
   & .vd-storylist[data-layout] > .vd-story {
     position: relative;
     max-width: none;
@@ -61,8 +61,7 @@
 }
 
 @container newspaper (width > 760px) {
-  .vd-newspaper[data-publication-design="palm-leaf-register"] .vd-storylist[data-layout="ordinary"] {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    & .vd-prose { columns: auto; max-width: 66ch; }
+  .vd-newspaper[data-publication-design="palm-leaf-register"] .vd-storylist[data-layout="ordinary"] .vd-prose {
+    max-width: 66ch;
   }
 }

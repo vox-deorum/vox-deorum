@@ -13,7 +13,7 @@
   }
   & .vd-tabs { border-block: 2px solid var(--vd-ink); }
   & .vd-tab { font: 800 calc(14px * var(--vd-text-scale)) / 1.2 var(--vd-font-display); }
-  & .vd-storylist[data-layout] { display: grid; gap: 8px; }
+  & .vd-storylist[data-layout] { gap: 8px; }
   & .vd-storylist[data-layout] .vd-story {
     min-width: 0;
     margin: 0;
@@ -56,6 +56,5 @@
 @container newspaper (width > 760px) {
   .vd-newspaper[data-publication-design="sunday-colour"] .vd-storylist[data-layout] {
     grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr);
-    & .vd-story--lead, & .vd-story--brief:last-child:nth-child(even) { grid-column: 1 / -1; }
   }
 }

@@ -59,7 +59,6 @@
 
 @container newspaper (width > 760px) {
   .vd-newspaper[data-publication-design="clay-chronicle"] .vd-storylist[data-layout="ordinary"] .vd-prose {
-    columns: auto;
     max-width: 66ch;
   }
 }

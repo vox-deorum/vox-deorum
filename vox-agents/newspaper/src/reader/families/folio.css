@@ -1,4 +1,4 @@
-/* Full-width story panels. Wide sheets have room for facing columns. */
+/* Full-width story panels. Wider sheets use the shared brief grid. */
 .vd-newspaper[data-design="folio"] {
   --vd-paper: #f5eddf;
   --vd-ink: #302721;
@@ -11,6 +11,7 @@
   & .vd-page-viewport { flex-grow: 1; }
   & .vd-tabs { gap: 0 clamp(12px, 3cqi, 36px); }
   & .vd-tab { padding-block: 8px; }
+  & .vd-storylist[data-layout] { column-gap: clamp(24px, 4cqi, 48px); }
   & .vd-title { font-size: calc(clamp(32px, 6.3cqi, 72px) * var(--vd-text-scale)); }
   & .vd-story--brief { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--vd-rule); }
   & .vd-headline { margin-bottom: 10px; }
@@ -36,19 +37,4 @@
   & .vd-evidence .vd-missing td { font: italic calc(16px * var(--vd-text-scale)) / 1.4 var(--vd-font-body); }
   & .vd-number { color: var(--vd-accent); font-variant-numeric: lining-nums tabular-nums; }
   & .vd-end-ornament { width: 80px; }
-}
-
-@container newspaper (width > 760px) {
-  .vd-newspaper[data-design="folio"] {
-    & .vd-story--lead .vd-story-content > .vd-prose {
-      columns: 24em 2;
-      column-gap: clamp(24px, 4cqi, 48px);
-    }
-    & .vd-storylist[data-layout="ordinary"] {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      column-gap: clamp(24px, 4cqi, 48px);
-    }
-    & .vd-story--lead, & .vd-story--brief:last-child:nth-child(even) { grid-column: 1 / -1; }
-  }
 }
