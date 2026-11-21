@@ -1,0 +1,90 @@
+/* Each report hangs from the primary cord. Its length follows the copy. */
+.vd-newspaper[data-publication-design="cord-register"] {
+  --cord-indigo: var(--vd-accent);
+  --cord-red: #863843;
+  --cord-fiber: repeating-linear-gradient(97deg, transparent 0 5px, #8267490a 5px 6px, transparent 6px 10px);
+
+  & .vd-header, & .vd-page { background-image: var(--cord-fiber); }
+  & .vd-masthead { padding-inline: 0; padding-bottom: 8px; text-align: start; }
+  & .vd-title { letter-spacing: -.045em; }
+  & .vd-tabs { justify-content: start; border: 0; }
+  & .vd-page { padding-block-start: 0; }
+  & .vd-storylist[data-layout] {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    border-inline-start: 5px solid var(--cord-indigo);
+  }
+  & .vd-storylist[data-layout] > .vd-story {
+    --pendant: var(--cord-indigo);
+    position: relative;
+    min-width: 0;
+    margin: 0;
+    border: 0;
+    padding: 20px 0 12px clamp(18px, 3cqi, 32px);
+  }
+  & .vd-storylist > .vd-story:nth-child(even) { --pendant: var(--cord-red); }
+  & .vd-story::before {
+    content: "";
+    position: absolute;
+    inset: 32px auto auto 0;
+    width: 12px;
+    height: 3px;
+    background: var(--pendant);
+  }
+  & .vd-storylist[data-layout="breaking"] .vd-story--lead :is(.vd-headline, .vd-deck, .vd-byline) {
+    text-transform: none;
+    text-align: start;
+  }
+  & .vd-number { color: var(--cord-red); }
+  & .vd-evidence {
+    padding-inline-start: 12px;
+    border: 0;
+    border-inline-start: 3px solid var(--cord-red);
+  }
+  & .vd-evidence td { color: var(--cord-red); }
+}
+
+@container newspaper (width > 760px) {
+  .vd-newspaper[data-publication-design="cord-register"] {
+    & .vd-storylist[data-layout] {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      align-items: start;
+      column-gap: clamp(14px, 2.2cqi, 30px);
+      border: 0;
+      border-block-start: 9px solid var(--cord-indigo);
+      border-image: repeating-linear-gradient(57deg, #263551 0 3px, #51617c 3px 5px, #384a69 5px 8px) 9;
+    }
+    & .vd-storylist[data-layout] > .vd-story {
+      grid-column: auto;
+      padding: 26px 0 8px 16px;
+      border-inline-start: 3px solid var(--pendant);
+    }
+    & .vd-story::before {
+      inset: -4px auto auto -6px;
+      width: 9px;
+      height: 10px;
+      border-radius: 45%;
+    }
+    & .vd-storylist[data-layout] > .vd-story:nth-child(even) { padding-block-start: 44px; }
+    & .vd-storylist[data-layout] > .vd-story--lead { grid-column: var(--cord-lead-span, 1 / -1); }
+    & .vd-storylist[data-layout] > .vd-story--brief { border-block-start: var(--cord-brief-rule, 1px solid var(--pendant)); }
+    & .vd-storylist[data-layout="ordinary"] .vd-story--lead .vd-prose { columns: var(--cord-prose, 24em 2); }
+
+    /* Only hang the lead beside briefs when the whole issue fits on the cord. */
+    & .vd-storylist[data-layout="ordinary"]:has(> .vd-story:nth-child(2):last-child) {
+      --cord-lead-span: auto;
+      --cord-brief-rule: 0;
+      --cord-prose: auto;
+      grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+    }
+  }
+}
+
+@container newspaper (width > 1000px) {
+  .vd-newspaper[data-publication-design="cord-register"] .vd-storylist[data-layout="ordinary"]:has(> .vd-story:nth-child(3):last-child) {
+    --cord-lead-span: auto;
+    --cord-brief-rule: 0;
+    --cord-prose: auto;
+    grid-template-columns: minmax(0, 1.8fr) repeat(2, minmax(0, 1fr));
+  }
+}

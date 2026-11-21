@@ -147,14 +147,23 @@ Designs match the receiver’s era and, where relevant, their recorded civilizat
 | `clay-chronicle` | Babylon and Assyria only: Ancient (80) and Classical (50) |
 | `heian` | Japan from Classical through Renaissance, peaking in Medieval; a smaller chance in Korea and China over the same span |
 | `folded-chronicle` | The Maya only: Classical (50), Medieval (80) and Renaissance (35) |
-| `port-register` | Renaissance: 60 for England, The Netherlands, Portugal and Venice; 12 elsewhere. Industrial: 40 for those four only |
-| `victorian` | General option from Medieval through Atomic, peaking in Industrial |
+| `cord-register` | Classical through Renaissance: 66 for The Inca, 1 elsewhere |
+| `palm-leaf-register` | Medieval India only (65) |
 | `town-book` | General Medieval option |
+| `court-dispatch` | Medieval through Industrial, with extra weight in Renaissance |
+| `port-register` | Renaissance: 60 for England, The Netherlands, Portugal and Venice; 12 elsewhere. Industrial: 40 for those four only |
 | `printer-dispatch` | General Renaissance option |
+| `victorian` | General option from Medieval through Atomic, peaking in Industrial |
+| `city-extra` | Industrial and Modern: 50 for America, 16 elsewhere |
+| `street-gazette` | General option in Industrial and Modern (12) |
+| `sunday-colour` | General option in Industrial and Modern (18) |
 | `secession-review` | Industrial and Modern: 44 for Austria, 16 elsewhere |
 | `national-review` | General option in Modern and Atomic |
+| `civic-survey` | General option in Modern and Atomic (45) |
+| `civic-index` | General option in Atomic, Information and Future (50) |
 | `teletext-bulletin` | General option in Atomic and Information (60) |
-| `wire` | General option from Modern onward, gaining weight as the game advances; the sole stock design in Future |
+| `contact-sheet` | General option in Atomic and Information (16) |
+| `wire` | General option from Modern onward, gaining weight as the game advances |
 
 When adding a design, start around 50 to 100 for a strong fit, 10 to 25 for a general fallback, and 4 to 8 for an occasional alternative. Compare the combined weights in each overlapping era and keep a general option available for civilizations without a match.
 

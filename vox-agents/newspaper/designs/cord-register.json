@@ -1,0 +1,27 @@
+[
+  {
+    "id": "cord-register",
+    "version": "1",
+    "title": "The Cord Register",
+    "when": "['Classical', 'Medieval', 'Renaissance'].includes(self.era?.replace(' Era', ''))",
+    "weight": { "base": 1, "adjustments": [{ "when": "self.name === 'The Inca'", "add": 65 }] },
+    "presentation": {
+      "schemaVersion": 1,
+      "rendererFamily": "folio",
+      "tokens": {
+        "paperColor": "#e9ddc6",
+        "inkColor": "#312421",
+        "accentColor": "#304161",
+        "bodyFontAssetId": "font-literata-400",
+        "headingFontAssetId": "font-literata-700",
+        "mastheadFontAssetId": "font-libre-caslon-400"
+      }
+    },
+    "layouts": [
+      { "id": "hanging-records", "variant": "ordinary", "weight": { "base": 10 } },
+      { "id": "principal-record", "variant": "breaking", "weight": { "base": 10 } },
+      { "id": "accounts", "variant": "analysis", "weight": { "base": 3 } }
+    ],
+    "pageLabels": { "front": "Front", "home": "Cities", "economy": "Trade", "abroad": "Abroad" }
+  }
+]

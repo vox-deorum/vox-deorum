@@ -1,0 +1,71 @@
+/* A buff street sheet, with the biggest type reserved for the day's notice. */
+.vd-newspaper[data-publication-design="street-gazette"] {
+  & .vd-header, & .vd-page {
+    background-image: radial-gradient(ellipse at 2px 3px, #66370814 .65px, transparent 1px),
+      linear-gradient(96deg, #84562610, transparent 21% 72%, #84562615);
+    background-size: 9px 7px, 100% 100%;
+  }
+  & .vd-masthead { padding-block: 7px; border-block: 4px double var(--vd-ink); }
+  & .vd-title {
+    font-size: calc(clamp(21px, 3.4cqi, 39px) * var(--vd-text-scale));
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+  }
+  & .vd-tabs { gap: 0 1.25em; }
+  & .vd-tab { padding-block: 4px; }
+  & .vd-page { padding-block-start: clamp(13px, 2cqi, 23px); }
+  & .vd-storylist[data-layout] { display: block; }
+  & .vd-storylist[data-layout] .vd-story--lead .vd-headline {
+    max-width: 23ch;
+    margin: 0 auto .18em;
+    font-size: calc(clamp(35px, 6.8cqi, 80px) * var(--vd-text-scale));
+    font-weight: 700;
+    line-height: .98;
+    letter-spacing: -.045em;
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+  & .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-headline {
+    max-width: 20ch;
+    font-size: calc(clamp(40px, 7.7cqi, 92px) * var(--vd-text-scale));
+  }
+  & .vd-storylist[data-layout] .vd-story--lead .vd-deck {
+    margin: 0 auto .4em;
+    max-width: 44ch;
+    padding-bottom: 0;
+    border: 0;
+    text-align: center;
+  }
+  & .vd-storylist[data-layout] .vd-story--lead .vd-byline { margin: 0 0 .55em; text-align: center; }
+  & .vd-story--lead .vd-story-content > .vd-prose {
+    columns: auto;
+    max-width: 64ch;
+    margin-inline: auto;
+  }
+  & .vd-storylist[data-layout] .vd-story--brief {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--vd-ink);
+  }
+  & .vd-storylist[data-layout] .vd-story--lead + .vd-story--brief { border-top-style: double; border-top-width: 4px; }
+  & .vd-storylist[data-layout] .vd-story--brief .vd-headline {
+    margin-bottom: .2em;
+    font-size: calc(clamp(21px, 2.7cqi, 29px) * var(--vd-text-scale));
+  }
+  & .vd-story--brief .vd-deck, & .vd-story--brief .vd-byline { margin: 0 0 .4em; }
+  & .vd-evidence { border-block: 3px double var(--vd-ink); padding-block: .5em; }
+  & .vd-evidence caption { margin-bottom: .5em; }
+  & .vd-evidence th, & .vd-evidence td { padding-block: .25em; }
+}
+
+@container newspaper (width > 760px) {
+  .vd-newspaper[data-publication-design="street-gazette"] .vd-story--brief .vd-story-content {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2.25fr);
+    column-gap: 1.5em;
+    align-items: start;
+    & > .vd-headline { grid-column: 1; grid-row: 1 / span 3; }
+    & > :not(.vd-headline) { grid-column: 2; }
+  }
+}
