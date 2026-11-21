@@ -251,6 +251,8 @@ describe('probe overlay', () => {
     probeOnlyConfig = {
       ...probeConfig,
       designs: probeConfig.designs.filter((design) => design.id === probeDesignId),
+      // Keep the old People's Daily design fallback under test.
+      mastheadRules: [],
     };
     const repeatableTriggers = probeConfig.triggers.map((trigger) =>
       trigger.id === probeTriggerId ? { ...trigger, repeat: 1 } : trigger);

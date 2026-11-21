@@ -1,0 +1,55 @@
+/* Swiss editorial grid: compact nameplate, open lead and blue-ruled index. */
+.vd-newspaper[data-publication-design="civic-index"] {
+  --index-ink: oklch(from var(--vd-accent) min(l, .5) c h);
+  --vd-rule: color-mix(in srgb, var(--index-ink) 52%, var(--vd-paper));
+  --index-gap: clamp(20px, 3.5cqi, 42px);
+
+  & .vd-publication { --vd-accent: var(--index-ink); }
+  & .vd-masthead { padding: 8px 0 12px; text-align: left; }
+  & .vd-title {
+    font-size: calc(clamp(28px, 3.7cqi, 44px) * var(--vd-text-scale));
+    font-weight: 800;
+    letter-spacing: -.055em;
+  }
+  & .vd-tabs { justify-content: flex-start; border-block: 1px solid var(--vd-rule); }
+  & .vd-storylist[data-layout] .vd-story--lead .vd-headline {
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -.055em;
+    overflow-wrap: anywhere;
+    text-align: left;
+    text-transform: none;
+  }
+  & .vd-storylist[data-layout] .vd-story--lead .vd-deck {
+    border: 0;
+    padding: 0;
+    font-style: normal;
+    text-align: left;
+  }
+  & .vd-storylist[data-layout] .vd-story--lead .vd-byline { text-align: left; }
+  & .vd-storylist[data-layout="breaking"] .vd-story--lead {
+    border-top: 7px solid var(--vd-accent);
+    padding-top: 12px;
+  }
+  & .vd-story--brief { padding-top: 10px; border-color: var(--vd-rule); }
+  & .vd-story--brief .vd-headline { font-weight: 800; letter-spacing: -.035em; }
+  & .vd-storylist[data-layout="ordinary"] .vd-story--lead + .vd-story--brief,
+  & .vd-evidence { border-top: 5px solid var(--vd-accent); padding-top: 10px; }
+  & .vd-evidence caption strong { letter-spacing: -.035em; }
+  & .vd-evidence td { color: var(--vd-accent); font-size: calc(21px * var(--vd-text-scale)); }
+}
+
+@container newspaper (width > 760px) {
+  .vd-newspaper[data-publication-design="civic-index"] {
+    & .vd-storylist[data-layout="ordinary"]:has(.vd-story--brief) {
+      display: flow-root;
+      & .vd-story--lead { float: left; width: calc((100% - var(--index-gap)) * .64); }
+      & .vd-story--lead .vd-story-content > .vd-prose { columns: auto; }
+      & .vd-story--brief { margin: 0 0 18px calc(64% + var(--index-gap) * .36); }
+    }
+    & .vd-analysis-columns, & .vd-breaking-columns {
+      grid-template-columns: minmax(0, 1.78fr) minmax(0, 1fr);
+      gap: var(--index-gap);
+    }
+  }
+}

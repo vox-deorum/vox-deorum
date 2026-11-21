@@ -1,0 +1,49 @@
+/* Evening extra: the lead, rather than the masthead, carries the largest type. */
+.vd-newspaper[data-publication-design="city-extra"] {
+  --extra-accent: oklch(from var(--vd-accent) min(l, .5) c h);
+  & .vd-publication { --vd-accent: var(--extra-accent); }
+  & .vd-header, & .vd-page {
+    background-image: radial-gradient(ellipse at 1px 1px, #76502512 .6px, transparent 1px),
+      linear-gradient(95deg, #ab8b6020, transparent 14% 90%, #ab8b6017);
+    background-size: 7px 9px, 100% 100%;
+  }
+  & .vd-masthead { padding: 10px 0; border-top: 5px double var(--vd-ink); }
+  & .vd-title {
+    font-size: calc(clamp(25px, 3.8cqi, 44px) * var(--vd-text-scale));
+    font-weight: 700;
+    letter-spacing: -.04em;
+  }
+  & .vd-tabs { border-block: 1px solid var(--vd-ink); border-bottom-width: 4px; }
+  & .vd-tab { padding-block: 6px; }
+  & .vd-storylist[data-layout] .vd-story--lead .vd-headline {
+    width: 125%;
+    max-width: none;
+    transform: scaleX(.8);
+    transform-origin: left center;
+    font-size: calc(clamp(39px, 6.8cqi, 80px) * var(--vd-text-scale));
+    font-weight: 800;
+    line-height: .99;
+    letter-spacing: -.055em;
+    text-transform: uppercase;
+    overflow-wrap: anywhere;
+  }
+  & .vd-story--lead .vd-story-content { overflow-x: clip; }
+  & .vd-storylist[data-layout] .vd-story--lead { min-width: 0; padding-bottom: 14px; border-bottom: 4px solid var(--vd-ink); }
+  & .vd-storylist[data-layout="breaking"] .vd-story--lead { border-bottom: 6px solid #a82f22; }
+  & .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-headline {
+    font-size: calc(clamp(48px, 9cqi, 108px) * var(--vd-text-scale));
+  }
+  & .vd-story--brief { margin-top: 0; padding-top: 14px; min-width: 0; }
+  & .vd-story--lead + .vd-story--brief { border-top: 0; }
+  & .vd-story--brief .vd-headline { font-family: var(--vd-font-masthead); font-weight: 700; }
+  & .vd-number { font-weight: 700; }
+}
+
+@container newspaper (width > 760px) {
+  .vd-newspaper[data-publication-design="city-extra"] .vd-storylist[data-layout="ordinary"] {
+    column-gap: 0;
+    & .vd-story--brief { margin-top: 14px; padding-top: 0; border-top: 0; }
+    & .vd-story--brief:nth-child(even):not(:last-child) { padding-right: 1.4em; }
+    & .vd-story--brief:nth-child(odd) { padding-left: 1.4em; border-left: 1px solid var(--vd-ink); }
+  }
+}

@@ -172,10 +172,11 @@ export class MCPClient extends EventEmitter {
       this.healthUrl = new URL('/health', mcpUrl);
       this.transport = new StreamableHTTPClientTransport(mcpUrl, {
         fetch: (url, init) => {
-          init = init ?? {};
-          const method = (init.method ?? 'GET').toUpperCase();
+          const method = (init?.method ?? 'GET').toUpperCase();
           const dispatcher = method === 'POST' ? this.connectionPool : this.dispatcher;
-          return fetch(url, { ...init, dispatcher } as Parameters<typeof fetch>[1]);
+          const response = fetch(url, { ...init, dispatcher } as Parameters<typeof fetch>[1]);
+          // The SDK uses the shared Fetch API; the browser build's DOM headers additionally type their iterators as disposable.
+          return response as unknown as ReturnType<typeof globalThis.fetch>;
         },
         // SDK default maxRetries is 2, which is far too aggressive given Civ V
         // sessions routinely run for hours. We let the transport reconnect

@@ -160,6 +160,7 @@ export function mountReader(
           instancePrefix,
           designId,
           publicationDesignId: issue.publication.designId,
+          cutoffLabel: issue.cutoff.label,
           assetBaseUrl,
           vote: getVote(state, item.id),
         }),

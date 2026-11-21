@@ -51,6 +51,7 @@ export interface CompiledEditorialExpressions extends CompiledTriggerExpressions
   templates: ReadonlyMap<string, PreparedTemplate>;
   pages: ReadonlyMap<string, ChoiceExpressions>;
   designs: ReadonlyMap<string, PreparedDesign>;
+  mastheadRules: ReadonlyMap<string, ChoiceExpressions>;
   styleRules: readonly (StyleCatalogue['rules'][number] & { slot: number })[];
 }
 
@@ -141,10 +142,13 @@ export async function prepareEditorialExpressions(config: EditorialConfig): Prom
       layout.id, choice(`design ${design.id} / layout ${layout.id}`, layout),
     ])),
   }]));
+  const mastheadRules = new Map((config.mastheadRules ?? []).map(rule => [
+    rule.id, choice(`masthead rule ${rule.id}`, rule),
+  ]));
   const styleRules = (config.styles?.rules ?? []).map(rule => ({
     ...rule, slot: addExpression(expressions, `style rule ${rule.id}`, 'when', rule.when),
   }));
 
   const runner = await compileEditorialExpressions(expressions, { shortcuts: config.constants.shortcuts });
-  return { runner, slots, terms, templates, pages, designs, styleRules };
+  return { runner, slots, terms, templates, pages, designs, mastheadRules, styleRules };
 }

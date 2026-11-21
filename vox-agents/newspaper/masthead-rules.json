@@ -1,0 +1,88 @@
+[
+  {
+    "id": "order-workers-herald",
+    "title": "The Workers' Herald of {{terms.civilization}}",
+    "motto": "News from the workshops and fields",
+    "pageLabels": {
+      "abroad": "International Solidarity"
+    },
+    "when": "self.ideology === 'Order'",
+    "weight": {
+      "base": 10
+    }
+  },
+  {
+    "id": "order-workers-herald-wire",
+    "title": "The {{terms.civilizationAdjective}} Workers' Herald",
+    "motto": "News from the workshops and fields",
+    "pageLabels": {
+      "abroad": "International Solidarity"
+    },
+    "when": "self.ideology === 'Order'",
+    "weight": {
+      "base": 30
+    },
+    "designs": ["wire"]
+  },
+  {
+    "id": "order-five-year-herald",
+    "title": "The Five-Year Herald of {{terms.civilization}}",
+    "motto": "News from the workshops and fields",
+    "pageLabels": {
+      "abroad": "International Solidarity"
+    },
+    "when": "self.ideology === 'Order' && self.hasPolicy('Five-Year Plan')",
+    "weight": {
+      "base": 15
+    },
+    "designs": ["victorian", "national-review"]
+  },
+  {
+    "id": "freedom-free-press",
+    "title": "The Free Press of {{terms.civilization}}",
+    "motto": "All the news the citizen can print",
+    "pageLabels": {
+      "abroad": "Foreign Correspondence"
+    },
+    "when": "self.ideology === 'Freedom'",
+    "weight": {
+      "base": 10
+    }
+  },
+  {
+    "id": "freedom-free-press-wire",
+    "title": "The {{terms.civilizationAdjective}} Free Press",
+    "motto": "All the news the citizen can print",
+    "pageLabels": {
+      "abroad": "Foreign Correspondence"
+    },
+    "when": "self.ideology === 'Freedom'",
+    "weight": {
+      "base": 30
+    },
+    "designs": ["wire"]
+  },
+  {
+    "id": "autocracy-national-standard",
+    "title": "The National Standard of {{terms.civilization}}",
+    "pageLabels": {
+      "abroad": "External Affairs"
+    },
+    "when": "self.ideology === 'Autocracy'",
+    "weight": {
+      "base": 10
+    }
+  },
+  {
+    "id": "autocracy-national-standard-wire",
+    "title": "The {{terms.civilizationAdjective}} National Standard",
+    "pageLabels": {
+      "abroad": "External Affairs"
+    },
+    "when": "self.ideology === 'Autocracy'",
+    "weight": {
+      "base": 30
+    },
+    "designs": ["wire"]
+  }
+]

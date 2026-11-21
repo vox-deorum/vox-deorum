@@ -30,6 +30,7 @@ import { configurationHash, createEditorialStreams } from './shared/determinism.
 import { summarizeSources, uniqueSources } from './shared/sources.js';
 import { presentIssue } from './presentation/issue.js';
 import { evaluatePresentation } from './presentation/eligibility.js';
+import { selectMastheadRule } from './presentation/masthead-rules.js';
 import { validateEditorialIssue } from './presentation/validation.js';
 import { inferWarAndPeace } from './diplomacy/war-peace.js';
 
@@ -212,7 +213,7 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
   const streams = createEditorialStreams(identitySeed, config);
   const weights = await evaluatePresentation(config, compiled, batch, budget);
   const { selected, sources: styleSources } = await applyStylePreferences(selection.selected, compiled, batch, budget);
-  const presentation = presentIssue({
+  const presentation = await presentIssue({
     issueId: `${scope}/issue/${turn}`,
     campaignId: input.campaignId,
     timelineId: input.timelineId,
@@ -225,6 +226,16 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
     proseRandom: streams.prose,
     presentationRandom: streams.presentation,
     terms,
+    selectMasthead: (design) => selectMastheadRule({
+      campaignId: input.campaignId,
+      receiverPlayerId: input.receiver.playerId,
+      design,
+      rules: config.mastheadRules ?? [],
+      compiled,
+      batch,
+      budget,
+      terms,
+    }),
   });
   if (!presentation) return skip('No eligible design or visible authored content.');
   if (presentation.issue.items.length < minimum) return shortfall(presentation.issue.items.length);
@@ -268,6 +279,7 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
   decision.selectedVariants = presentation.variants;
   decision.selectedStyles = presentation.styles;
   decision.designId = issue.publication.designId;
+  if (presentation.mastheadRuleId !== undefined) decision.mastheadRuleId = presentation.mastheadRuleId;
   decision.layouts = presentation.layouts;
   recordChoiceErrors();
   return { status: 'published', issue, state, decision };

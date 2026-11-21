@@ -82,11 +82,11 @@ async function render(
 ) {
   const streams = createEditorialStreams(seed, config);
   const weights = await choices(config);
-  const result = presentIssue({
+  const result = (await presentIssue({
     issueId: 'issue/5', campaignId: 'campaign', timelineId: 'branch', receiver: { playerId: 0, label: 'Receiver' }, turn: 5,
     selected: candidates, state: createInitialPublicationState(), config, weights,
     proseRandom: streams.prose, presentationRandom: streams.presentation, terms,
-  })!;
+  }))!;
   return { ...result, weights };
 }
 
@@ -182,21 +182,21 @@ describe('editorial presentation', () => {
     candidates[1].variantWeights = candidates[2].variantWeights = { first: 1, second: 1 };
     const weights = await choices(config);
     /** Supply a draw between the adjusted and unadjusted thresholds to show the configured factor applies. */
-    function publish() {
+    async function publish() {
       const draws = [0.5, 0.4, 0.1];
-      return presentIssue({
+      return (await presentIssue({
         issueId: 'issue/5', campaignId: 'campaign', timelineId: 'branch', receiver: { playerId: 0, label: 'Receiver' }, turn: 5,
         selected: candidates, state: createInitialPublicationState(), config, weights,
         proseRandom: () => draws.shift()!, presentationRandom: () => 0,
-      })!;
+      }))!;
     }
     const styles = [
       { voice: 'general', stance: 'neutral', genre: 'report' },
       { voice: 'wire', stance: 'neutral', genre: 'letter' },
       { voice: 'general', stance: 'neutral', genre: 'report' },
     ];
-    expect(Object.values(publish().styles)).toEqual(styles);
-    expect(Object.values(publish().styles)).toEqual(styles);
+    expect(Object.values((await publish()).styles)).toEqual(styles);
+    expect(Object.values((await publish()).styles)).toEqual(styles);
   });
 
   it('should favor a voice already drawn when its repeat factor is above one', async () => {
@@ -211,11 +211,11 @@ describe('editorial presentation', () => {
     const weights = await choices(config);
     /** A draw at the midpoint selects the repeated voice once its weight is doubled. */
     const draws = [0.5, 0.5];
-    const result = presentIssue({
+    const result = (await presentIssue({
       issueId: 'issue/5', campaignId: 'campaign', timelineId: 'branch', receiver: { playerId: 0, label: 'Receiver' }, turn: 5,
       selected: candidates, state: createInitialPublicationState(), config, weights,
       proseRandom: () => draws.shift()!, presentationRandom: () => 0,
-    })!;
+    }))!;
     expect(Object.values(result.styles)).toEqual([
       { voice: 'general', stance: 'neutral', genre: 'report' },
       { voice: 'general', stance: 'neutral', genre: 'report' },
@@ -234,11 +234,11 @@ describe('editorial presentation', () => {
     const weights = await choices(config);
     /** The second draw sits just under the even split, so any discount on the repeated style would flip it. */
     const draws = [0.5, 0.45];
-    const result = presentIssue({
+    const result = (await presentIssue({
       issueId: 'issue/5', campaignId: 'campaign', timelineId: 'branch', receiver: { playerId: 0, label: 'Receiver' }, turn: 5,
       selected: candidates, state: createInitialPublicationState(), config, weights,
       proseRandom: () => draws.shift()!, presentationRandom: () => 0,
-    })!;
+    }))!;
     expect(Object.values(result.styles)).toEqual([
       { voice: 'general', stance: 'neutral', genre: 'report' },
       { voice: 'general', stance: 'neutral', genre: 'report' },

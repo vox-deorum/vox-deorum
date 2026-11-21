@@ -63,6 +63,7 @@ Source: "..\vox-agents\*"; DestDir: "{app}\vox-agents"; Flags: ignoreversion rec
 Source: "..\vox-agents\newspaper\constants.json"; DestDir: "{app}\vox-agents\newspaper"; Flags: ignoreversion
 Source: "..\vox-agents\newspaper\defaults.json"; DestDir: "{app}\vox-agents\newspaper"; Flags: ignoreversion
 Source: "..\vox-agents\newspaper\pages.json"; DestDir: "{app}\vox-agents\newspaper"; Flags: ignoreversion
+Source: "..\vox-agents\newspaper\masthead-rules.json"; DestDir: "{app}\vox-agents\newspaper"; Flags: ignoreversion
 Source: "..\vox-agents\newspaper\styles\*.json"; DestDir: "{app}\vox-agents\newspaper\styles"; Flags: ignoreversion
 Source: "..\vox-agents\newspaper\designs\*.json"; DestDir: "{app}\vox-agents\newspaper\designs"; Flags: ignoreversion
 Source: "..\vox-agents\newspaper\templates\*.json"; DestDir: "{app}\vox-agents\newspaper\templates"; Flags: ignoreversion

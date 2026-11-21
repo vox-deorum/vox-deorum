@@ -5,6 +5,26 @@ import type { EditorialDesign } from '../config/schema.js';
 import { placeholderPattern, substitute, termPlaceholders } from '../selection/templates.js';
 import { uniqueSources } from '../shared/sources.js';
 
+/** Substitute term placeholders and reject blank or unresolved authored text. */
+export function resolvePrintableTermText(
+  text: string,
+  terms: EditorialTerms = new Map()
+): string | undefined {
+  const resolved = substitute(text, termPlaceholders(terms));
+  return resolved.trim().length > 0 && !resolved.match(placeholderPattern) ? resolved : undefined;
+}
+
+/** Collect the evidence rows cited by term placeholders in printed authored text. */
+export function termTextSources(
+  text: string,
+  terms: EditorialTerms = new Map()
+): NewspaperSourceReference[] {
+  return [...text.matchAll(placeholderPattern)].flatMap(match => {
+    const key = match[1];
+    return key.startsWith('terms.') ? terms.get(key.slice('terms.'.length))?.sources ?? [] : [];
+  });
+}
+
 /** Choose the first printable title and cite the facts that determined the masthead. */
 export function resolveMasthead(
   design: Pick<EditorialDesign, 'title' | 'civilizationTitles' | 'motto'>,

@@ -66,7 +66,7 @@ A template names one or more rules in `triggers`. They must all fire for the sam
 
 `id`, `triggers`, `tags`, `weight` and `variants` are required. Each variant requires `id`, `headline`, `body` and `weight`; `subheadline`, `byline`, `when` and `links` are optional. The reader draws the subheadline under the headline and the byline below it, so an opinion piece or a signed report can carry both.
 
-The [news writing rules](writing.md) govern the prose itself. They put entertainment first, route rule hints through consequences, and keep instructions and contrastive definitions out of the copy.
+The [news writing rules](writing.md) show how to turn visible game facts into entertaining stories, imagine what the news means to people in the world, and write in the chosen voice, stance, and genre.
 
 ### Variant styles
 
@@ -177,7 +177,7 @@ To add a local asset:
 
 The editor picks a visual design, then looks for a title, motto, and section labels that fit the receiver. For example, a Roman paper under Order can call its `abroad` page *International Solidarity*, while a paper using the same design under Freedom can call it *Foreign Correspondence*. The page keeps the same ID and story criteria.
 
-In `masthead-rules.json`, give each rule an `id`, `title`, and `weight`. Use `designs` to restrict a rule to specific design IDs and `when` to check facts such as `self.ideology` or `self.hasPolicy('Five-Year Plan')`. Add a `motto` and a `pageLabels` map keyed by page IDs as needed. Local catalogues merge rules by ID. Set `when` to `false` to disable a stock rule.
+In `masthead-rules.json`, give each rule an `id`, `title`, and `weight`. Use `designs` to restrict a rule to specific design IDs and `when` to check facts such as `self.ideology` or `self.hasPolicy('Five-Year Plan')`. Add a `motto` and a `pageLabels` map keyed by page IDs as needed. Local catalogues merge rules by ID. Set `when` to the string `"false"` to disable a stock rule.
 
 The title, motto, and labels can use [terms](triggers/constants.md#terms) such as `{{terms.civilization}}` and `{{terms.civilizationAdjective}}`. An unprintable title or authored motto removes the rule from consideration. The weighted choice stays stable for the same campaign, receiver, and design while the eligible rules and weights stay the same. A winning rule without a motto leaves it out. Each displayed page uses the rule's printable label, then its design label, then the page default.
 

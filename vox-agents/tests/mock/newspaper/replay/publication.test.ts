@@ -202,6 +202,54 @@ describe('durable replay publication', () => {
     expect(continued.check!.decision.configurationId).toBe(first.check!.decision.configurationId);
   });
 
+  it('should resume the masthead choice and preserve earlier copy after an ideology switch', async () => {
+    const sqlite = new Database(recording.filename);
+    try {
+      const setIdeology = sqlite.prepare('UPDATE PlayerSummaries SET PolicyBranches = ? WHERE ID = ?');
+      for (const id of [1, 2, 3]) setIdeology.run('{"Fixture Order":[]}', id);
+      setIdeology.run('{"Fixture Freedom":[]}', 4);
+      const insert = sqlite.prepare('INSERT INTO GameEvents (ID, Turn, CreatedAt, Player0, Type, Payload) VALUES (?, ?, ?, ?, ?, ?)');
+      for (const turn of [14, 22]) {
+        insert.run(200 + turn, turn, 2000 + turn, 1, 'DeclareWar', '{"OriginatingPlayerID":1,"TargetTeamID":0,"IsAggressor":false}');
+      }
+    } finally { sqlite.close(); }
+    const mastheadPath = path.join(catalogue, 'masthead-rules.json');
+    const orderRules = ['a', 'b'].map(suffix => ({
+      id: `fixture-order-${suffix}`, when: "self.ideology === 'Fixture Order'", weight: { base: 2 },
+      title: `Order paper ${suffix}`, motto: `Order motto ${suffix}`, pageLabels: { front: `Order front ${suffix}` },
+    }));
+    const freedom = {
+      id: 'fixture-freedom', when: "self.ideology === 'Fixture Freedom'", weight: { base: 2 },
+      title: 'Freedom paper', motto: 'Freedom motto', pageLabels: { front: 'Freedom front' },
+    };
+    await Promise.all([
+      writeFile(path.join(catalogue, 'constants.json'), JSON.stringify({ types: { ideologies: ['Fixture Order', 'Fixture Freedom'] } })),
+      writeFile(mastheadPath, JSON.stringify([...orderRules, freedom])),
+    ]);
+    await session.configure(settings());
+    const first = (await session.advance()).check!;
+    const selected = orderRules.find(rule => rule.id === first.decision.mastheadRuleId)!;
+    expect(selected).toBeDefined();
+    const firstIssue = first.issue!;
+    expect(firstIssue.publication).toMatchObject({ title: selected.title, motto: selected.motto });
+    expect(firstIssue.pages[0].label).toBe(selected.pageLabels.front);
+
+    await session.close();
+    await writeFile(mastheadPath, JSON.stringify([{ ...selected, when: 'false' }]));
+    session = new ReplaySession();
+    await session.configure({ ...settings(), mode: 'resume' });
+    const continued = (await session.advance()).check!;
+    expect(continued.decision.mastheadRuleId).toBe(selected.id);
+    expect(continued.issue?.publication).toEqual(firstIssue.publication);
+    expect(continued.issue?.pages[0].label).toBe(selected.pageLabels.front);
+
+    const switched = (await session.advance()).check!;
+    expect(switched.decision.mastheadRuleId).toBe(freedom.id);
+    expect(switched.issue?.publication).toMatchObject({ title: freedom.title, motto: freedom.motto, designId: firstIssue.publication.designId });
+    expect(switched.issue?.pages[0].label).toBe(freedom.pageLabels.front);
+    expect((await session.getIssue(firstIssue.issueId)).issue).toEqual(firstIssue);
+  });
+
   it('should resume a catalogue saved before style tags without changing its prose draw', async () => {
     const initialized = await session.configure(settings());
     await session.close();

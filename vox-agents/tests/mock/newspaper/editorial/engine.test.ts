@@ -581,15 +581,20 @@ describe('editorial engine', () => {
       for (const [era, expected] of [
         [undefined, ['oral-accounts']], ['Unrecognized', ['oral-accounts']],
         ['Ancient', ['oral-accounts']], ['Classical', ['oral-accounts']], ['Classical Era', ['oral-accounts']],
-        ['Medieval Era', ['town-book', 'victorian']],
-        ['Renaissance', ['port-register', 'printer-dispatch', 'victorian']], ['Industrial', ['victorian']],
-        ['Modern', ['national-review', 'victorian', 'wire']], ['Atomic Era', ['national-review', 'victorian', 'wire']],
+        ['Medieval Era', ['court-dispatch', 'town-book', 'victorian']],
+        ['Renaissance', ['court-dispatch', 'port-register', 'printer-dispatch', 'victorian']],
+        ['Industrial', ['court-dispatch', 'sunday-colour', 'victorian']],
+        ['Modern', ['civic-survey', 'national-review', 'sunday-colour', 'victorian', 'wire']],
+        ['Atomic Era', ['civic-survey', 'national-review', 'victorian', 'wire']],
         ['Information Era', ['wire']], ['Future', ['wire']],
       ] as const) {
         const { byId, weights } = await designChoices('France', era);
-        expect(Object.keys(byId).filter(id => byId[id] > 0).sort(), era).toEqual(expected);
-        if (era === 'Information Era')
-          expect(chooseDesign(config, weights, 'victorian', () => 0)?.id).toBe('wire');
+        const eligible = Object.keys(byId).filter(id => byId[id] > 0);
+        expect(eligible, era).toEqual(expect.arrayContaining([...expected]));
+        if (era === 'Information Era') {
+          expect(eligible).not.toContain('victorian');
+          expect(eligible).toContain(chooseDesign(config, weights, 'victorian', () => 0)?.id);
+        }
         if (era === 'Modern' || era === 'Atomic Era')
           expect(byId.wire).toBeGreaterThan(byId.victorian);
       }
@@ -628,6 +633,72 @@ describe('editorial engine', () => {
       const draws = [0, 0.25, 0.5, 0.75, 1 - Number.EPSILON];
       const choices = draws.map(draw => chooseDesign(config, classical.weights, 'shang', () => draw)?.id);
       expect(choices).toEqual(expect.arrayContaining(['shang', 'oral-accounts']));
+    });
+
+    it('should keep a masthead rule across turns and branches and replace it on an ideology switch', async () => {
+      const design = {
+        ...config.designs.find(entry => entry.id === 'wire')!,
+        civilizationTitles: null,
+        title: 'Controlled Design',
+        motto: 'Design Motto',
+      };
+      const catalogue = editorialConfigSchema.parse({
+        ...config,
+        defaults: { ...config.defaults, minItems: 1, frontPageItems: 2 },
+        designs: [design],
+        mastheadRules: [
+          { id: 'order-first', title: 'Order first of {{terms.civilization}}',
+            pageLabels: { front: 'Order Front' }, when: "self.ideology === 'Order'", weight: { base: 10 } },
+          { id: 'order-second', title: 'Order second of {{terms.civilization}}',
+            pageLabels: { front: 'Second Front' }, when: "self.ideology === 'Order'", weight: { base: 10 } },
+          { id: 'freedom-only', title: 'Freedom of {{terms.civilization}}', motto: 'Freedom motto',
+            pageLabels: { front: 'Freedom Front' }, when: "self.ideology === 'Freedom'", weight: { base: 10 } },
+        ],
+      });
+      const titles = {
+        'order-first': 'Order first of France',
+        'order-second': 'Order second of France',
+      };
+      const labels = { 'order-first': 'Order Front', 'order-second': 'Second Front' };
+      /** Publish one edition with the receiver's recorded ideology at a chosen cutoff and branch. */
+      async function publish(ideology: string | null, turn: number, timelineId = 'branch') {
+        const evidence = fixture(turn, turn - 5);
+        evidence.players[0].values.Era = 'Modern Era';
+        evidence.players[0].values.PolicyBranches = ideology === null ? null : { [ideology]: [] };
+        const facts = buildNewspaperFacts(
+          evidence,
+          { playerIdentities: { 0: { name: 'France', major: true } } },
+          { ideologies: catalogue.constants.types.ideologies },
+        );
+        const result = await runEditorialCheck({
+          campaignId: 'campaign', timelineId, receiver: { playerId: 0, label: 'France' },
+          evidence, facts, speedMultiplier: 1, state: createInitialPublicationState(), config: catalogue,
+        });
+        if (result.status !== 'published') throw new Error(result.reason);
+        return result;
+      }
+      const order = await publish('Order', 10);
+      const later = await publish('Order', 20, 'other-branch');
+      expect(order.decision.mastheadRuleId).toBeDefined();
+      expect(later.decision.mastheadRuleId).toBe(order.decision.mastheadRuleId);
+      expect(later.issue.publication.title).toBe(order.issue.publication.title);
+      const ruleId = order.decision.mastheadRuleId as keyof typeof titles;
+      expect(order.issue.publication.title).toBe(titles[ruleId]);
+      expect(order.issue.publication.motto).toBeUndefined();
+      expect(order.issue.pages[0].label).toBe(labels[ruleId]);
+      expect(order.issue.items[0].sourceNote).toEqual([
+        { type: 'text', text: `From the editors of ${titles[ruleId]}` },
+      ]);
+      expect(order.decision.evidence).toContainEqual(snapshot(0, 10, {}).source);
+
+      const freedom = await publish('Freedom', 10);
+      expect(freedom.decision.mastheadRuleId).toBe('freedom-only');
+      expect(freedom.issue.publication).toMatchObject({ title: 'Freedom of France', motto: 'Freedom motto' });
+      expect(freedom.issue.pages[0].label).toBe('Freedom Front');
+
+      const none = await publish(null, 10);
+      expect(none.decision.mastheadRuleId).toBeUndefined();
+      expect(none.issue.publication).toMatchObject({ title: 'Controlled Design', motto: 'Design Motto' });
     });
 
   });

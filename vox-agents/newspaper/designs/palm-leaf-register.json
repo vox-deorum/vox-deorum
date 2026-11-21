@@ -1,0 +1,27 @@
+[
+  {
+    "id": "palm-leaf-register",
+    "version": "1",
+    "title": "The Palm Leaf Register",
+    "when": "self.name === 'India' && self.era?.replace(' Era', '') === 'Medieval'",
+    "weight": { "base": 65 },
+    "presentation": {
+      "schemaVersion": 1,
+      "rendererFamily": "folio",
+      "tokens": {
+        "paperColor": "#f4e7c8",
+        "inkColor": "#292416",
+        "accentColor": "#24534a",
+        "bodyFontAssetId": "font-cardo-400",
+        "headingFontAssetId": "font-cardo-700",
+        "mastheadFontAssetId": "font-libre-caslon-400"
+      }
+    },
+    "layouts": [
+      { "id": "bound-leaves", "variant": "ordinary", "weight": { "base": 10 } },
+      { "id": "opening-leaf", "variant": "breaking", "weight": { "base": 10 } },
+      { "id": "reckoning", "variant": "analysis", "weight": { "base": 3 } }
+    ],
+    "pageLabels": { "front": "Front", "home": "Cities", "economy": "Trade", "abroad": "Abroad" }
+  }
+]

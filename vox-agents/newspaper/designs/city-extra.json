@@ -1,0 +1,30 @@
+[
+  {
+    "id": "city-extra",
+    "version": "1",
+    "title": "The City Extra",
+    "when": "['Industrial', 'Modern'].includes(self.era?.replace(' Era', ''))",
+    "weight": {
+      "base": 16,
+      "adjustments": [{ "when": "self.name === 'America'", "add": 34 }]
+    },
+    "presentation": {
+      "schemaVersion": 1,
+      "rendererFamily": "folio",
+      "tokens": {
+        "paperColor": "#f1eadb",
+        "inkColor": "#221d17",
+        "accentColor": "#604936",
+        "bodyFontAssetId": "font-libre-caslon-400",
+        "headingFontAssetId": "font-inter-800",
+        "mastheadFontAssetId": "font-libre-caslon-700"
+      }
+    },
+    "layouts": [
+      { "id": "city-desk", "variant": "ordinary", "weight": { "base": 10 } },
+      { "id": "late-extra", "variant": "breaking", "weight": { "base": 10 } },
+      { "id": "city-figures", "variant": "analysis", "weight": { "base": 3 } }
+    ],
+    "pageLabels": { "front": "Front Page", "home": "City Desk", "abroad": "Foreign Desk" }
+  }
+]

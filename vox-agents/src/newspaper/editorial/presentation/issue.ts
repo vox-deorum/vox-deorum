@@ -18,7 +18,8 @@ import {
   placeholderPattern, substitute, resolveLinkTarget, type EditorialCandidate
 } from '../selection/templates.js';
 import type { PresentationWeights } from './eligibility.js';
-import { resolveMasthead } from './masthead.js';
+import { resolveMasthead, resolvePrintableTermText, termTextSources } from './masthead.js';
+import type { MastheadRuleSelection } from './masthead-rules.js';
 
 /** Render authored placeholders into text nodes and explicitly declared typed links. */
 export function renderAuthoredText(
@@ -90,10 +91,11 @@ export interface PresentationResult {
   layouts: Record<string, string>;
   itemCandidates: Map<string, EditorialCandidate>;
   mastheadSources: NewspaperSourceReference[];
+  mastheadRuleId?: string;
 }
 
 /** Write canonical articles, prioritize immediate threats, and adapt section pages to available content. */
-export function presentIssue(input: {
+export async function presentIssue(input: {
   issueId: string;
   campaignId: string;
   timelineId: string;
@@ -106,13 +108,16 @@ export function presentIssue(input: {
   proseRandom: () => number;
   presentationRandom: () => number;
   terms?: EditorialTerms;
-}): PresentationResult | undefined {
+  selectMasthead?: (design: EditorialDesign) => Promise<MastheadRuleSelection | undefined>;
+}): Promise<PresentationResult | undefined> {
   const { config, weights, state } = input;
   const terms = input.terms ?? new Map();
   const design = chooseDesign(config, weights, state.previousDesignId, input.presentationRandom, terms);
   if (!design || !input.selected.length) return undefined;
-  const masthead = resolveMasthead(design, terms, config.defaults.publicationTitle);
+  const selectedMasthead = input.selectMasthead ? await input.selectMasthead(design) : undefined;
+  const masthead = selectedMasthead ?? resolveMasthead(design, terms, config.defaults.publicationTitle);
   if (!masthead) return undefined;
+  const mastheadSources = [...masthead.sources];
   const variants: Record<string, string> = {};
   const styles: Record<string, VariantStyle> = {};
   const styleCounts = new Map(variantStyleKinds.map(kind => [kind, new Map<string, number>()] as const));
@@ -218,9 +223,18 @@ export function presentIssue(input: {
     );
     if (!layout) throw new Error(`No eligible layout for page ${page.id}.`);
     layouts[page.id] = layout.id;
+    let label = design.pageLabels[page.id] ?? page.label;
+    const authoredLabel = selectedMasthead?.rule.pageLabels[page.id];
+    if (authoredLabel !== undefined) {
+      const resolvedLabel = resolvePrintableTermText(authoredLabel, terms);
+      if (resolvedLabel !== undefined) {
+        label = resolvedLabel;
+        mastheadSources.push(...termTextSources(authoredLabel, terms));
+      }
+    }
     pages.push({
       id: page.id,
-      label: design.pageLabels[page.id] ?? page.label,
+      label,
       layout: layout.variant,
       itemIds: members.map((item) => item.id),
     });
@@ -251,6 +265,7 @@ export function presentIssue(input: {
     styles: Object.fromEntries(Object.entries(styles).filter(([id]) => displayed.has(id))),
     layouts,
     itemCandidates,
-    mastheadSources: masthead.sources,
+    mastheadSources: uniqueSources(mastheadSources),
+    ...(selectedMasthead === undefined ? {} : { mastheadRuleId: selectedMasthead.rule.id }),
   };
 }

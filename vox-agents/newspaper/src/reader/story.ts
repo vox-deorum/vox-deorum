@@ -21,6 +21,7 @@ export interface StoryRenderContext {
   instancePrefix: string;
   designId: RendererFamily;
   publicationDesignId: string;
+  cutoffLabel: string;
   assetBaseUrl: string;
   vote: VoteValue;
 }
@@ -32,7 +33,7 @@ export function renderStory(
   lead: boolean,
   context: StoryRenderContext,
 ): HTMLElement {
-  const { instancePrefix, designId, assetBaseUrl, vote } = context;
+  const { instancePrefix, designId, publicationDesignId, cutoffLabel, assetBaseUrl, vote } = context;
   const article = createElement(
     "article",
     `vd-story ${lead ? "vd-story--lead" : "vd-story--brief"}`,
@@ -42,11 +43,18 @@ export function renderStory(
   article.setAttribute("aria-labelledby", headingId);
 
   if (designId === "feed") article.append(renderAvatar(item));
+  if (publicationDesignId === "court-dispatch") {
+    article.append(createElement("div", "vd-dispatch-docket", cutoffLabel));
+  }
 
   const content = createElement("div", "vd-story-content");
   // A register entry has two cells: its heading and its account.
-  const registerEntry = context.publicationDesignId === "port-register" && page.layout === "ordinary";
+  const registerEntry = publicationDesignId === "port-register" && page.layout === "ordinary";
+  const analysisEvidence = lead && page.layout === "analysis" ? item.evidenceTable : undefined;
+  const evidenceFirst = publicationDesignId === "civic-survey" && analysisEvidence !== undefined;
   const headingGroup = registerEntry ? createElement("div", "vd-register-heading") : content;
+  const analysisMain = analysisEvidence ? createElement("div", "vd-column-main") : null;
+  const credits = evidenceFirst && analysisMain ? analysisMain : headingGroup;
   const heading = createElement("h2", "vd-headline");
   heading.id = headingId;
   appendInlineNodes(heading, item.headline, item.id, bindReaderAction);
@@ -55,19 +63,19 @@ export function renderStory(
   if (item.subheadline) {
     const subheadline = createElement("p", "vd-deck");
     appendInlineNodes(subheadline, item.subheadline, item.id, bindReaderAction);
-    headingGroup.append(subheadline);
+    credits.append(subheadline);
   }
 
   if (item.byline) {
     const byline = createElement("p", "vd-byline");
     appendInlineNodes(byline, item.byline, item.id, bindReaderAction);
-    headingGroup.append(byline);
+    credits.append(byline);
   }
 
   const prose = createElement("div", "vd-prose");
   appendParagraphs(prose, item.body, item.id, bindReaderAction);
   const footer = renderStoryFooter(item, vote, designId, assetBaseUrl);
-  const cover = lead && context.publicationDesignId === "national-review";
+  const cover = lead && publicationDesignId === "national-review";
   const image = renderStoryImage(item, assetBaseUrl);
   if (cover && image) {
     image.classList.add("vd-cover-art");
@@ -81,11 +89,14 @@ export function renderStory(
     main.append(prose, footer);
     columns.append(main, figure);
     content.append(columns);
-  } else if (lead && page.layout === "analysis" && item.evidenceTable) {
+  } else if (analysisEvidence && analysisMain) {
     const columns = createElement("div", "vd-analysis-columns");
-    const main = createElement("div", "vd-column-main");
-    main.append(prose, footer);
-    columns.append(main, renderEvidence(item.evidenceTable, figure));
+    analysisMain.append(prose);
+    if (evidenceFirst && figure) analysisMain.append(figure);
+    analysisMain.append(footer);
+    const evidence = renderEvidence(analysisEvidence, evidenceFirst ? null : figure, evidenceFirst);
+    if (evidenceFirst) columns.append(evidence, analysisMain);
+    else columns.append(analysisMain, evidence);
     content.append(columns);
   } else {
     const account = registerEntry ? createElement("div", "vd-register-account") : content;
@@ -174,8 +185,29 @@ function renderStoryFooter(
   return footer;
 }
 
-/** Render an analysis evidence table beside the lead text. */
-function renderEvidence(evidence: EvidenceTable, figure: HTMLElement | null): HTMLElement {
+/** Size bars for a single series of comparable percentages. Missing observations have no bar. */
+function evidenceShares(evidence: EvidenceTable): Array<number | null> | undefined {
+  if (evidence.columns.length !== 2) return undefined;
+  const shares: Array<number | null> = [];
+  let observations = 0;
+  for (const row of evidence.rows) {
+    if (row.hasMissingValues) {
+      shares.push(null);
+      continue;
+    }
+    const value = row.values[0].trim();
+    if (!/^\d+(?:\.\d+)?\s*%$/.test(value)) return undefined;
+    const share = Number.parseFloat(value);
+    if (share > 100) return undefined;
+    shares.push(share);
+    observations++;
+  }
+  return observations >= 2 ? shares : undefined;
+}
+
+/** Render an analysis evidence table, with optional bars on comparable percentages. */
+function renderEvidence(evidence: EvidenceTable, figure: HTMLElement | null, showBars: boolean): HTMLElement {
+  const shares = showBars ? evidenceShares(evidence) : undefined;
   const aside = createElement("aside", "vd-evidence");
   const table = createElement("table");
   const caption = createElement("caption");
@@ -195,7 +227,7 @@ function renderEvidence(evidence: EvidenceTable, figure: HTMLElement | null): HT
   table.append(head);
 
   const body = createElement("tbody");
-  for (const row of evidence.rows) {
+  for (const [index, row] of evidence.rows.entries()) {
     const tableRow = createElement("tr");
     if (row.hasMissingValues) tableRow.className = "vd-missing";
     const label = createElement("th");
@@ -204,7 +236,17 @@ function renderEvidence(evidence: EvidenceTable, figure: HTMLElement | null): HT
     tableRow.append(label);
     for (const value of row.values) {
       const cell = createElement("td");
-      cell.textContent = value;
+      const share = shares?.[index];
+      if (share != null) {
+        const reading = createElement("span", "vd-evidence-reading");
+        const bar = createElement("span", "vd-evidence-bar");
+        bar.setAttribute("aria-hidden", "true");
+        bar.style.setProperty("--vd-evidence-share", `${share}%`);
+        reading.append(bar, createElement("span", undefined, value));
+        cell.append(reading);
+      } else {
+        cell.textContent = value;
+      }
       tableRow.append(cell);
     }
     body.append(tableRow);

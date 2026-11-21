@@ -177,12 +177,13 @@ function stripBuiltInDesignAssets(design: unknown): unknown {
 export async function loadEditorialConfig(directory?: string): Promise<EditorialConfig> {
   const builtIn = builtInCatalogueDirectory();
   const result: Record<string, unknown> = { version: 1 };
-  for (const name of ['defaults', 'constants', 'triggers', 'templates', 'pages', 'designs']) {
+  for (const name of ['defaults', 'constants', 'triggers', 'templates', 'pages', 'designs', 'mastheadRules']) {
     const grouped = name === 'triggers' || name === 'templates' || name === 'designs';
+    const file = name === 'mastheadRules' ? 'masthead-rules' : name;
     const base = grouped
       ? await readCatalogueSection(builtIn, name)
-      : await readCatalogueFile(builtIn, name);
-    let custom = directory ? await readCatalogueFile(directory, name, true) : undefined;
+      : await readCatalogueFile(builtIn, file);
+    let custom = directory ? await readCatalogueFile(directory, file, true) : undefined;
     if (directory && grouped)
       custom = overlay(custom, await readCatalogueSection(directory, name, true));
     const settings = name === 'designs' && Array.isArray(base) ? base.map(stripBuiltInDesignAssets) : base;

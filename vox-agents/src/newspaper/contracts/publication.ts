@@ -44,6 +44,7 @@ export const editorialDecisionRecordSchema = z.object({
   fallbackReason: z.string().optional(), status: z.enum(['published', 'skipped']), reason: z.string().optional(),
   candidateScores: z.array(z.object({ id: z.string(), score: z.number(), selected: z.boolean() })),
   selectedVariants: z.record(z.string(), z.string()), designId: z.string().nullable(),
+  mastheadRuleId: z.string().optional(),
   selectedStyles: z.record(z.string(), variantStyleSchema).optional(),
   layouts: z.record(z.string(), z.string()), evidence: z.array(newspaperSourceReferenceSchema),
   feedback: feedbackRecordSchema,

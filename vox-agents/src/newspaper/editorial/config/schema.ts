@@ -85,6 +85,15 @@ const designSchema = eligibleSchema.extend({
   pageLabels: z.record(z.string(), z.string()).default({}),
 });
 export type EditorialDesign = z.infer<typeof designSchema>;
+/** Authored masthead alternatives available only to the Node editor and its selected design. */
+export const editorialMastheadRuleSchema = eligibleSchema.extend({
+  id: z.string().min(1),
+  title: z.string().trim().min(1),
+  motto: z.string().trim().min(1).optional(),
+  pageLabels: z.record(z.string(), z.string().trim().min(1)).default({}),
+  designs: z.array(z.string().min(1)).optional(),
+});
+export type EditorialMastheadRule = z.infer<typeof editorialMastheadRuleSchema>;
 /** Complete effective catalogue snapshot stored in editorial decisions. */
 export const editorialConfigSchema = z
   .object({
@@ -131,6 +140,7 @@ export const editorialConfigSchema = z
       )
       .min(1),
     designs: z.array(designSchema).min(1),
+    mastheadRules: z.array(editorialMastheadRuleSchema).optional(),
     styles: styleCatalogueSchema.optional(),
   })
   .superRefine((config, ctx) => {
@@ -226,6 +236,32 @@ export const editorialConfigSchema = z
           path: ['pages', index],
           message: 'The front page must be unconditional.',
         });
+    });
+    const designIds = new Set(config.designs.map((design) => design.id));
+    const mastheadRuleIds = new Set<string>();
+    config.mastheadRules?.forEach((rule, index) => {
+      if (mastheadRuleIds.has(rule.id))
+        ctx.addIssue({
+          code: 'custom',
+          path: ['mastheadRules', index, 'id'],
+          message: `Duplicate masthead rule id ${rule.id}`,
+        });
+      mastheadRuleIds.add(rule.id);
+      for (const id of Object.keys(rule.pageLabels))
+        if (!pageIds.has(id))
+          ctx.addIssue({
+            code: 'custom',
+            path: ['mastheadRules', index, 'pageLabels', id],
+            message: `Unknown page ${id}`,
+          });
+      rule.designs?.forEach((id, designIndex) => {
+        if (!designIds.has(id))
+          ctx.addIssue({
+            code: 'custom',
+            path: ['mastheadRules', index, 'designs', designIndex],
+            message: `Unknown design ${id}`,
+          });
+      });
     });
     config.templates.forEach((template, index) => {
       if (new Set(template.triggers).size !== template.triggers.length)
