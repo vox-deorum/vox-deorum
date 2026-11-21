@@ -15,9 +15,9 @@ function city(id: number, turn: number, x: number, owner: number, name: string, 
     source: { table: 'CityInformations', id: turn * 100 + id, turn, createdAt: turn * 1000 + 5 } };
 }
 
-/** Record a witnessed native event. */
-function event(id: number, type: string, values: NewspaperEvent['values']): NewspaperEvent {
-  return { type, values, source: { table: 'GameEvents', id, turn: 7, createdAt: 7001 } };
+/** Record a witnessed native event at the reporting turn. */
+function event(id: number, type: string, values: NewspaperEvent['values'], turn = 7): NewspaperEvent {
+  return { type, values, source: { table: 'GameEvents', id, turn, createdAt: turn * 1000 + 1 } };
 }
 
 /** Supply a continuous visible history and one known rival. */
@@ -51,13 +51,14 @@ async function check(evidence: NewspaperEvidence, catalogue = config) {
   const audit = (id: string) => result.decision.triggerAudit.find(rule => rule.rule === id)!;
   const variants = Object.values(result.decision.selectedVariants);
   const items = result.status === 'published' ? result.issue.items : [];
+  const archived = result.state.issues[0]?.items ?? [];
   expect(result.decision.choiceErrors ?? []).toEqual([]);
   /** Find printed articles whose archived evidence includes this rule. */
   function stories(rule: string) {
     const ids = result.state.issues[0]?.items.filter(item => item.ruleIds?.includes(rule)).map(item => item.id);
     return items.filter(item => ids?.includes(item.id));
   }
-  return { audit, items, variants, stories };
+  return { archived, audit, items, variants, stories };
 }
 
 const home = city(10, 10, 0, 0, 'Tours');
@@ -148,5 +149,36 @@ describe('stock city desk', () => {
     const split = await check(fixture([home, ...now.slice(0, 2), different], before));
     expect(split.stories('neighbors-convert')).toEqual([]);
     expect(split.audit('neighbors-convert').groups.map(group => group.outcome)).toEqual(['too-small', 'too-small']);
+  });
+
+  it('should keep one capture story per city when a plot changes hands repeatedly', async () => {
+    const rule = 'city-capture-involving-us';
+    const first = city(30, 10, 6, 0, 'Lyon');
+    const second = city(31, 10, 8, 0, 'Lyon');
+    const gained = event(201, 'CityCaptureComplete', {
+      OldOwnerID: 1, NewOwnerID: 0, CityX: 6, CityY: 2, IsConquest: true,
+    }, 6);
+    const lost = event(202, 'CityCaptureComplete', {
+      OldOwnerID: 0, NewOwnerID: 1, CityX: 6, CityY: 2, IsConquest: true,
+    }, 7);
+    const regained = event(203, 'CityCaptureComplete', {
+      OldOwnerID: 1, NewOwnerID: 0, CityX: 6, CityY: 2, IsConquest: true,
+    }, 8);
+    const elsewhere = event(204, 'CityCaptureComplete', {
+      OldOwnerID: 1, NewOwnerID: 0, CityX: 8, CityY: 2, IsConquest: true,
+    });
+    const result = await check(fixture([first, second], [], [gained, lost, regained, elsewhere]));
+    const stories = result.archived.filter(item => item.ruleIds?.includes(rule));
+    expect(stories).toHaveLength(2);
+    const cityIds = stories.flatMap(item => item.headline.flatMap(node =>
+      'target' in node && node.target.type === 'city' ? [node.target.cityId] : []));
+    expect(cityIds.sort()).toEqual(['30', '31']);
+    const repeated = stories.find(item => item.sources.some(source => source.table === 'GameEvents' && source.id === 201))!;
+    expect(repeated.headline).toContainEqual(expect.objectContaining({
+      type: 'link', target: expect.objectContaining({ type: 'city', cityId: '30' }),
+    }));
+    const eventIds = repeated.sources.filter(source => source.table === 'GameEvents').map(source => source.id);
+    expect(eventIds).toEqual(expect.arrayContaining([201, 202, 203]));
+    expect(eventIds).not.toContain(204);
   });
 });

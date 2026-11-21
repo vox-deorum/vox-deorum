@@ -82,9 +82,9 @@
       {
         "id": "our-diplomat-abroad-unnamed",
         "when": "civilization === null",
-        "headline": "A diplomat goes where the records do not",
+        "headline": "A diplomat goes abroad, and the office keeps the name",
         "body": [
-          "We have posted a diplomat to a foreign capital, one of the great powers. The records do not say which one, which is presumably how the foreign office likes it."
+          "We have posted a diplomat to the capital of a major power. At the foreign office, a porter roped a strapped trunk onto a coach and was reminded, twice, that he had not seen it. The envoy will speak for us at that court. The clerks who know which one have been given other work to do."
         ],
         "weight": { "base": 1 }
       },
@@ -191,7 +191,7 @@
         "when": "target !== null",
         "headline": "What {{target}} may hold back",
         "body": [
-          "The authorities in {{target}} know a spy was at work and have yet to trace the agent to us. That may spare our envoy a formal complaint. It also gives the ministries there a reason to look twice at the papers they normally share with foreigners. Our ministry may have made its diplomats' work harder even with the spy's employer still unknown."
+          "The authorities in {{target}} know a spy was at work and have not traced the agent to us. Our envoy may be spared a formal complaint. At the ministry there, clerks will be looking twice at the seals on pouches that used to travel unopened, and our diplomats will find the doors a little slower to open."
         ],
         "weight": { "base": 1 }
       },
@@ -465,7 +465,7 @@
         "when": "civilization !== null",
         "headline": "A diplomat of {{civilization}} arrives at our capital",
         "body": [
-          "A diplomat of {{civilization}} has taken up residence at our capital. The envoy opens a direct channel between the two governments, and the conversations have begun."
+          "The new envoy has taken up residence at our capital. At the foreign ministry, the gatekeeper has a new face to learn and a new name for the visitors' book. A question meant for {{civilization}} now has a door to knock on instead of a courier to wait for."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -477,7 +477,7 @@
         "when": "civilization === null",
         "headline": "A foreign diplomat arrives",
         "body": [
-          "A foreign diplomat has presented credentials at our capital, and our records do not say which power sent them. The channel between the two governments now runs direct, and the capital is full of the usual guesses."
+          "A foreign diplomat has taken up a post in the capital. At the council hall, a merchant carrying a customs bill asked a clerk how to arrange a meeting. “My cloth has sat on their quay for a month,” she said. “They send me a bill every week, so I know it's still there.”"
         ],
         "weight": { "base": 1 }
       },
@@ -504,7 +504,7 @@
         "when": "civilization !== null",
         "headline": "A listener at our table",
         "body": [
-          "A diplomat of {{civilization}} now sits at our capital, and a good guest listens more than speaks. Assume every conversation travels home in full and on time. Hospitality is right; carelessness is not. The paper's counsel stands: a warm welcome, and an open eye."
+          "A diplomat of {{civilization}} has taken rooms at our capital, and a good guest listens more than speaks. Hospitality is cheap; a map left on the dining room wall is not. Let the steward pour the wine and the clerks keep the papers in the study. A bored envoy writes a thin report home."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }

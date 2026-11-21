@@ -6,7 +6,13 @@
   --vd-page-background: #05090c;
   --vd-vote-background: #e2ecec;
 
-  & .vd-publication { --vd-accent: var(--teletext-signal); }
+  & .vd-publication {
+    --vd-accent: var(--teletext-signal);
+    --vd-font-body: var(--teletext-mono);
+    --vd-font-display: var(--teletext-mono);
+    --vd-font-masthead: var(--teletext-mono);
+    font-family: var(--teletext-mono);
+  }
   & .vd-masthead { padding: 0 0 14px; text-align: left; }
   & .vd-title {
     display: flex;
@@ -15,7 +21,7 @@
     font-weight: 800;
     line-height: .98;
     text-transform: uppercase;
-    letter-spacing: -.045em;
+    letter-spacing: normal;
     text-wrap: pretty;
   }
   & .vd-title::before {
@@ -61,6 +67,7 @@
     color: var(--vd-ink);
     background: #174a85;
     font-weight: 800;
+    letter-spacing: normal;
     text-align: left;
   }
   & .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-headline { background: #a02132; }
@@ -73,12 +80,19 @@
   }
   & .vd-story--brief .vd-headline {
     color: var(--teletext-amber);
-    font: bold calc(clamp(21px, 2.3cqi, 28px) * var(--vd-text-scale)) / 1.15 var(--teletext-mono);
+    font: bold calc(clamp(21px, 2.3cqi, 28px) * var(--vd-text-scale)) / 1.15 var(--vd-font-display);
+    letter-spacing: normal;
   }
   & .vd-story--brief .vd-deck, & .vd-story--brief .vd-byline { margin: 0 0 8px; }
-  & .vd-number, & .vd-evidence td { font-family: var(--teletext-mono); }
   & .vd-evidence thead { color: var(--teletext-amber); background: #182332; }
   & .vd-evidence td { color: var(--vd-accent); font-size: calc(clamp(18px, 2cqi, 24px) * var(--vd-text-scale)); }
+}
+
+@container newspaper (width <= 560px) {
+  .vd-newspaper[data-publication-design="teletext-bulletin"] .vd-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @container newspaper (width > 760px) {

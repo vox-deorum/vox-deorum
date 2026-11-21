@@ -9,7 +9,7 @@
         "id": "treasury-falls-into-deficit-report",
         "headline": "The treasury slips into deficit",
         "body": [
-          "The treasury has slipped into deficit. Spending outruns income by {{deficit}} gold a season, where the last count held the books at balance or better, and the gap repeats each season until it is closed."
+          "The treasury now spends {{deficit}} gold a season more than it takes in, after a count that held the books at balance or better. The gap repeats each season until it is closed. At the sailmaker's loft, the master has started cutting canvas for one order at a time. The next order waits until the last is paid."
         ],
         "weight": { "base": 1 }
       },
@@ -72,7 +72,7 @@
         "genre": "report",
         "headline": "The reserve passes the thousand mark",
         "body": [
-          "It is a pleasure to record that the treasury has passed the thousand-gold mark and now holds {{gold}} gold, a store grown by {{gain}} gold in recent seasons. A full vault is the mark of a well-kept house, and of stewards who keep their counts before their comforts."
+          "It is a pleasure to record that the treasury has passed the thousand-gold mark and now holds {{gold}} gold, a store grown by {{gain}} gold in recent seasons. At the counting house, the partners have moved the strongbox to the inner room and given the key to the eldest of them. The youngest still counts it twice."
         ],
         "weight": { "base": 1 }
       },
@@ -121,7 +121,7 @@
         "genre": "analysis",
         "headline": "What the treasury can do with more time",
         "body": [
-          "At a shortfall of {{deficit}} gold a season, the treasury now has enough in reserve for {{turnsLeft}} full seasons. That gives ministers time to collect money already owed before they have to consider a new tax in a hurry. The advantage lasts only while receipts and spending hold near today's figures."
+          "At a shortfall of {{deficit}} gold a season, the treasury now has enough in reserve for {{turnsLeft}} full seasons. At the tax office, a collector with a list of overdue accounts has time to knock on doors before the notices go up. If the list comes good, the council may get through the season without reaching for a new tax. The advantage lasts only while receipts and spending hold near today's figures."
         ],
         "weight": { "base": 1 }
       },
@@ -148,7 +148,7 @@
         "id": "treasury-reserve-runs-short-report",
         "headline": "The treasury reserve runs short",
         "body": [
-          "The deficit continues at {{deficit}} gold a season, and the reserve behind it is thinning. The {{gold}} gold on hand will cover {{turnsLeft}} more seasons of spending at that rate."
+          "The treasury holds {{gold}} gold against a deficit of {{deficit}} gold a season, enough to cover {{turnsLeft}} more seasons at the present rate. At the gate, a carter hauling stone for the walls has begun asking for his fee when the load is tipped rather than at the month's end. The clerk paid him from the chest by the door."
         ],
         "weight": { "base": 1 }
       },
@@ -210,7 +210,7 @@
         "genre": "report",
         "headline": "The state pays its way",
         "body": [
-          "The books are back in the black: the treasury now clears {{goldPerTurn}} gold a season after the recent shortfall. Spending no longer outruns income, and the state is lending to its own future rather than borrowing from it."
+          "The treasury now clears {{goldPerTurn}} gold a season, after a count that showed a shortfall. On the riverfront, a shipwright who had been taking payment in installments has taken a contract for a second hull and hired two more hands. The yard has work into the next season."
         ],
         "weight": { "base": 1 }
       },

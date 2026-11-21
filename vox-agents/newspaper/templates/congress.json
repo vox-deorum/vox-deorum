@@ -556,7 +556,7 @@
         "when": "ours === false",
         "headline": "The old faiths need no blessing",
         "body": [
-          "The Congress has enacted {{resolution}}, and no name in it is ours. The old faith fed our grandparents, married them and buried them honorably, all without a vote in any chamber. The blessing was not needed then. It is not needed now."
+          "The Congress has enacted {{resolution}}, and no name in it is ours. The old faith fed our grandparents, married them and buried them honorably, all without a vote in any chamber. The blessing was not needed then; it is not needed now."
         ],
         "weight": { "base": 1 }
       },

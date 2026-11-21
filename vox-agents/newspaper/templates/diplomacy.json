@@ -183,7 +183,7 @@
         "id": "denounced-by-major-report",
         "headline": "{{civilization}} denounces our nation",
         "body": [
-          "{{civilization}} has publicly denounced our nation. The declaration places their hostility toward our court on the public record. It is not a declaration of war."
+          "{{civilization}} has publicly denounced our nation. The declaration places their hostility toward our court on the public record."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }

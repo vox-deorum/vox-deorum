@@ -53,10 +53,12 @@
   }
   & .vd-cover-art:has(figcaption) + .vd-meiji-copy { margin-top: 8px; }
   & .vd-storylist[data-layout="ordinary"], & .vd-analysis-columns { display: block; }
-  & .vd-story .vd-story-content .vd-prose {
+  & .vd-story--lead .vd-story-content .vd-prose {
     columns: 2;
     column-gap: clamp(14px, 3cqi, 34px);
     column-rule: 1px solid var(--vd-rule);
+    orphans: 2;
+    widows: 2;
   }
   & .vd-story--brief { border-top: 3px double var(--vd-ink); }
   & .vd-evidence { margin-top: 16px; padding: 12px; border: 1px solid var(--vd-ink); background: #ecdbab; }

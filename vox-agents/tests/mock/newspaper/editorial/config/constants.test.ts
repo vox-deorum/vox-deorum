@@ -55,6 +55,39 @@ describe('editorial constants and shortcuts', () => {
     });
   });
 
+  it('should classify the bound player using visible identity and the current regional list', async () => {
+    const base = await loadEditorialConfig();
+    await writeConstants({ types: { eastAsianCivilizations: ['Egypt', 'Geneva'] } });
+    const modified = await loadEditorialConfig(directory);
+    const players: NewspaperSnapshot[] = [0, 1, 2, 22].map(id => ({
+      subjectID: id, source: { table: 'PlayerSummaries', id, turn: 12, createdAt: 1 }, values: {},
+    }));
+    const facts = buildNewspaperFacts({
+      request: { receiverPlayerID: 0, previousCheckTurn: 10, cutoffTurn: 12 },
+      cities: [], players, comparisons: { cities: [], players: [] }, events: [],
+    }, { playerIdentities: {
+      0: { name: 'Egypt', major: true },
+      1: { name: 'China', major: true },
+      22: { name: 'Geneva', major: false },
+    } });
+    const rule = { id: 'report-east-asian', when: 'player.is.eastAsian' };
+    const subjects = players.map(({ subjectID }) => ({ player: reference('player', subjectID) }));
+    for (const { constants, expected } of [
+      { constants: base.constants, expected: [false, true] },
+      { constants: modified.constants, expected: [true, false] },
+    ]) {
+      const { runner, slots } = await prepareTriggerExpressions([rule], constants);
+      const [[[receiver], [rival], [hidden], [cityState]]] = await runner.evaluate({
+        facts, constants: scaleEditorialConstants(constants, 1),
+        groups: [{ expressions: slots.get(rule.id)!.when, subjects }],
+      });
+      expect(receiver).toMatchObject({ value: expected[0] });
+      expect(rival).toMatchObject({ value: expected[1] });
+      expect(hidden).toMatchObject({ error: { hidden: expect.any(String) } });
+      expect(cityState).toMatchObject({ value: false });
+    }
+  });
+
   it('should scale named and literal spans in recorded turns while saving their Standard values', async () => {
     await writeConstants({ spans: { recent: 7, short: 0.5 } });
     const config = await loadEditorialConfig(directory);

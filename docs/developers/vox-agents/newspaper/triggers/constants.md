@@ -74,6 +74,18 @@ A shortcut is an expression attached to the fact it reads. A historical fact use
 
 At Standard speed, a city losing two food per turn with 10 stored is just outside `city.is.starving`: the reserve lasts exactly five turns. With nine stored it qualifies.
 
+### Regional shortcuts
+
+Use `"when": "self.is.mesoamerican"` on a variant written for Aztec and Maya readers. Leave a generic variant available to other readers. When a rule binds a player in the story, `player.is.eastAsian` checks that player's civilization. The same shortcuts work in weight adjustments.
+
+The [stock lists](../../../../../vox-agents/newspaper/constants.json) cover every stock major civilization. For example, Indonesia, Polynesia, and Siam share `southeastAsianAndPacific`. Membership follows the recorded civilization name wherever it starts on the map. A civilization can belong to more than one group, and a shortcut is unavailable if it needs an identity the player cannot see.
+
+To include a modded civilization, replace the whole membership list in an overlay's `constants.json`. This example keeps the two stock members and adds a civilization recorded as `The Zapotecs`:
+
+```json
+{"types":{"mesoamericanCivilizations":["The Aztecs","The Maya","The Zapotecs"]}}
+```
+
 ## Terms
 
 Terms are expressions for printed text or finite numbers. The editor evaluates them once per check against the globals. Use `{{terms.<name>}}` in copy or a masthead; conditions read the underlying facts. The evidence for a term is attached to the copy or masthead that prints it.

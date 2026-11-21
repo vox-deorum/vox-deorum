@@ -50,7 +50,7 @@ A template with `merge` can use its trigger match to combine stories already cho
 
 Merged prose uses `merge.variants`. Its conditions and `merge.values` expressions can read `merge.members` and `merge.count`. A scalar value named `attackers` can be printed as `{{merge.values.attackers}}`. Keep ordinary `variants` for a story that can also stand alone, or use an empty list for a template that only combines stories. An overlay can set `merge` to `null` to keep the ordinary choices only.
 
-A merge replaces its matching stories only when the combined copy is eligible. It keeps their evidence and urgency. See [war coverage](triggers/war-and-peace.md#combining-declaration-reports) for the stock example.
+A merge replaces its matching stories only when the combined copy is eligible. It keeps their evidence and urgency. If the editor also selected the combining template's standalone story, the merge replaces it and keeps its contribution to the edition minimum. See [war coverage](triggers/war-and-peace.md#combining-declaration-reports) for the stock example.
 
 ### Variant styles
 

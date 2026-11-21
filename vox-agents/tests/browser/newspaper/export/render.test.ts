@@ -135,9 +135,23 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('newspape
       }, { issue, profile: defaultRenderProfile });
       const exported = await page.locator('[data-vd-region=page]:not([hidden]) .vd-inline-link').evaluateAll(elements => elements.map(element => Array.from(element.getClientRects(), rect => ({ width: rect.width, height: rect.height }))));
       expect(exported).toEqual(interactive);
-      const measurement = await page.evaluate(() => (window as any).voxDeorumNewspaperExport.measurePage());
-      expect(measurement.actions.some((action: any) => action.rects.length > 1)).toBe(true);
+      const measurement = await page.evaluate(() => window.voxDeorumNewspaperExport!.measurePage());
+      expect(measurement.actions.some(action => action.rects.length > 1)).toBe(true);
       expect(measurement.capture.size.height).toBeGreaterThan(defaultRenderProfile.viewportHeight);
+      expect(measurement.voteSlots.length).toBeGreaterThan(0);
+      const exportVote = page.locator('[data-vd-region=page]:not([hidden]) .vd-vote-icon').first();
+      expect(await exportVote.isVisible()).toBe(false);
+      await page.evaluate(async ({ issue, profile }) => {
+        document.getElementById('newspaper-export-root')!.setAttribute('data-preview-screenshot', '');
+        await window.voxDeorumNewspaperExport!.mount(issue, profile);
+      }, { issue, profile: defaultRenderProfile });
+      expect(await exportVote.isVisible()).toBe(true);
+      expect(await exportVote.evaluate((icon: HTMLImageElement) => icon.naturalWidth)).toBeGreaterThan(0);
+      const previewMeasurement = await page.evaluate(() => window.voxDeorumNewspaperExport!.measurePage());
+      expect(previewMeasurement.capture).toEqual(measurement.capture);
+      expect(previewMeasurement.voteSlots).toEqual(measurement.voteSlots);
+      expect(previewMeasurement.actions.map(({ action, rects }) => ({ action, rects })))
+        .toEqual(measurement.actions.map(({ action, rects }) => ({ action, rects })));
     } finally { await page.close(); }
   }, 60_000);
 

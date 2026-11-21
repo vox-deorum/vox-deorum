@@ -27,6 +27,12 @@
     padding: var(--panel-inset);
     background: color-mix(in srgb, var(--vd-paper) 90%, var(--vd-accent));
   }
+  /* Show the fold hinges in an empty rule band above the copy. */
+  & .vd-storylist:is([data-layout="breaking"], [data-layout="analysis"]) {
+    border-top: 2px solid var(--vd-accent);
+    padding-top: calc(8px + var(--panel-inset));
+    background: var(--fold) left top / calc(100% / 3) 8px repeat-x;
+  }
   & .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-headline {
     border-block: 2px solid var(--vd-accent);
     padding-block: .22em .3em;

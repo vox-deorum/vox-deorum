@@ -38,11 +38,13 @@
     overflow-wrap: anywhere;
   }
   & .vd-story-content { min-width: 0; padding: 14px 0 16px clamp(12px, 2cqi, 28px); }
-  & .vd-storylist .vd-story .vd-prose {
+  & .vd-storylist .vd-story .vd-prose { line-height: 1.48; }
+  & .vd-storylist .vd-story--lead .vd-prose {
     columns: 2;
     column-gap: clamp(12px, 2.5cqi, 32px);
     column-rule: 1px solid var(--vd-rule);
-    line-height: 1.48;
+    orphans: 2;
+    widows: 2;
   }
   & .vd-breaking-columns, & .vd-analysis-columns { display: block; }
   & .vd-evidence { margin-top: 16px; border-block: 3px double var(--vd-ink); padding-block: 10px; }

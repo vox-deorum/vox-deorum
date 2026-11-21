@@ -8,9 +8,9 @@
       {
         "id": "friend-enters-new-era-report",
         "when": "civilization !== null",
-        "headline": "{{civilization}} enters the {{era}}",
+        "headline": "A friend in the {{era}}: {{civilization}}",
         "body": [
-          "{{civilization}}, a friend of our nation, has left the {{former}} and entered the {{era}}. The change runs through everything they build, teach and trade."
+          "The crossing from the {{former}} into the {{era}} is complete in {{civilization}}, a friend of our nation. In their towns, the schoolteachers have hung new charts beside the old ones, and the youngest pupils are learning them by heart. Their parents are hearing the new words at supper."
         ],
         "weight": { "base": 1 }
       },
@@ -84,9 +84,9 @@
       {
         "id": "nearby-team-gains-technology-report",
         "when": "!team.includes(' and ')",
-        "headline": "{{team}} gains {{tech}}",
+        "headline": "New learning on the frontier: {{tech}}",
         "body": [
-          "Word from the frontier says {{team}} has gained {{tech}}. Their cities stand close to ours, and whatever the new knowledge does, it will do it near us."
+          "Word from the frontier: {{tech}} is now known in {{team}}, whose cities stand close to ours. The border clerks have begun asking travelers what they have heard of it, and paying for the answers."
         ],
         "weight": { "base": 1 }
       },
@@ -95,7 +95,7 @@
         "when": "team.includes(' and ')",
         "headline": "New knowledge in {{team}}: {{tech}}",
         "body": [
-          "Word from abroad: {{tech}} has been added to the roll of arts and sciences in {{team}}."
+          "Word from abroad: {{tech}} now appears on the learned rolls of {{team}}. Their bookbinders have been asked for another copy before the first is dry."
         ],
         "weight": { "base": 1 }
       },
@@ -106,7 +106,7 @@
         "genre": "analysis",
         "headline": "A neighbor's new learning",
         "body": [
-          "What a neighbor knows changes what a neighbor can do. {{team}}, whose lands run along ours, now knows {{tech}}. Somewhere across the border a workshop is already trying it out. The ledger of the age has a new entry, and it is not in our handwriting."
+          "What a neighbor knows changes what a neighbor can do. {{team}}, whose lands run along ours, now knows {{tech}}. Somewhere across the border a workshop is already trying it out. The ledger of the age has a new entry, not in our handwriting."
         ],
         "weight": { "base": 1 }
       },
@@ -216,7 +216,7 @@
         "id": "our-team-gains-technology-report",
         "headline": "The scholars finish {{tech}}",
         "body": [
-          "Word from our scholars: work on {{tech}} is complete."
+          "Our scholars have finished {{tech}}. The first copy went to the council, the second to the printers, and the third is already missing from the shelf."
         ],
         "weight": { "base": 1 }
       },
@@ -227,7 +227,7 @@
         "genre": "analysis",
         "headline": "{{tech}}: asked, tested, ours",
         "body": [
-          "{{tech}} is finished, and it is ours. The sum of what this nation knows has risen by one, and it rose the only way such sums ever rise: a question asked, an answer tested, a result written down. No omen ever finished a study."
+          "{{tech}} is finished, and it is ours. The notes are still on the lecturer's desk, and the first student to read them has already found a question the lecturer cannot answer. That is how a nation learns: a question asked, an answer tested, a result written down. No omen ever finished a study."
         ],
         "weight": { "base": 1 }
       },
@@ -353,9 +353,9 @@
       {
         "id": "technology-leader-changes-report",
         "when": "civilization !== null",
-        "headline": "{{civilization}} now stands first in learning",
+        "headline": "First in learning: {{civilization}}",
         "body": [
-          "No nation now holds more learning than {{civilization}}, which counts {{count}} arts and sciences among its accomplishments. A season ago, others stood ahead of it."
+          "No nation now holds more learning than {{civilization}}, which counts {{count}} arts and sciences. Our bookseller has moved their scholars' books to the front table. A season ago, others stood ahead."
         ],
         "weight": { "base": 1 }
       },
@@ -364,7 +364,7 @@
         "when": "civilization === null",
         "headline": "A new nation stands first in learning",
         "body": [
-          "First place in learning has changed hands. The new front-runner counts {{count}} arts and sciences, where a season ago others stood ahead. The name has not yet reached our records, and the couriers have been asked to hurry."
+          "First place in learning has changed hands. The new front-runner counts {{count}} arts and sciences. In our reading room, the librarian has left the top line of the ledger blank and a candle burning beside it. The name will go in when the courier arrives."
         ],
         "weight": { "base": 1 }
       },

@@ -71,6 +71,11 @@
     & .vd-storylist[data-layout] > .vd-story:nth-child(even) { padding-block-start: 44px; }
     & .vd-storylist[data-layout] > .vd-story--lead { grid-column: var(--cord-lead-span, 1 / -1); }
     & .vd-storylist[data-layout] > .vd-story--brief { border-block-start: var(--cord-brief-rule, 1px solid var(--pendant)); }
+    & .vd-storylist:is([data-layout="breaking"], [data-layout="analysis"]) > .vd-story--brief:nth-child(2):last-child {
+      grid-column: 1 / -1;
+      padding-block-start: 26px;
+      & .vd-story-content { max-inline-size: 70ch; }
+    }
     & .vd-storylist[data-layout="ordinary"] .vd-story--lead .vd-prose { columns: var(--cord-prose, 24em 2); }
 
     /* Only hang the lead beside briefs when the whole issue fits on the cord. */

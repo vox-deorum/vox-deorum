@@ -378,6 +378,25 @@
     "triggers": ["city-capture-involving-us"],
     "tags": ["cities", "military", "international"],
     "weight": { "base": 1 },
+    "merge": {
+      "match": "member.templateIds.includes('city-capture-involving-us-account') && lead.event.knows('city') && member.event.knows('city') && lead.event.city.id === member.event.city.id",
+      "min": 1,
+      "values": {
+        "transfers": "(() => { const captures = [gained, ...merge.members.map(member => member.gained)]; const gains = captures.filter(Boolean).length; const losses = captures.length - gains; const times = n => n === 1 ? 'once' : n === 2 ? 'twice' : n + ' times'; return gains && losses ? 'We gained the city ' + times(gains) + ' and lost it ' + times(losses) + '.' : gains ? 'We gained the city ' + times(gains) + '.' : 'We lost the city ' + times(losses) + '.'; })()",
+        "holder": "event.city.own ? ' The latest report puts it under our flag.' : event.city.knows('owner') && event.city.owner.knows('name') ? ' At last report, it was held by ' + event.city.owner.name + '.' : ''"
+      },
+      "variants": [
+        {
+          "id": "city-capture-roundup",
+          "headline": "Flags change over {{cityName}}",
+          "body": ["{{merge.values.transfers}}{{merge.values.holder}}"],
+          "links": [
+            { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          ],
+          "weight": { "base": 1 }
+        }
+      ]
+    },
     "variants": [
       {
         "id": "city-capture-gained",

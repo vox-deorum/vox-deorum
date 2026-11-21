@@ -43,9 +43,9 @@ const tradeIllustrations = new Map<string, ItemImage>([
     altText: "Woodcut of a sailing barge beside a stone quay and riverside warehouses.",
   }],
   ["national-review", {
-    assetId: "wire.port",
-    altText: "Cranes loading containers onto a ship at dusk.",
-    caption: "Illustration of a modern cargo terminal.",
+    assetId: "national-review.harbor-tugs",
+    altText: "Two steam tugboats seen from above in New York Harbor.",
+    caption: "Two harbor tugs in New York, 1938. Photograph by Paul Vanderbilt.",
   }],
 ]);
 

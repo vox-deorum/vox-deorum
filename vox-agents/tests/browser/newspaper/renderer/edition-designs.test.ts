@@ -1,15 +1,38 @@
 /** Check how stock designs reflow across editions in the export reader. */
 import { existsSync } from 'node:fs';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Browser } from 'playwright-core';
+import type { Browser, Page } from 'playwright-core';
 import ordinary from '../../../../newspaper/fixtures/victorian-ordinary.json';
 import breaking from '../../../../newspaper/fixtures/victorian-breaking.json';
 import analysis from '../../../../newspaper/fixtures/victorian-analysis.json';
-import { issueDocumentSchema } from '../../../../src/newspaper/contracts/issue.js';
+import sections from '../../../../newspaper/pages.json';
+import { issueDocumentSchema, type IssueDocument } from '../../../../src/newspaper/contracts/issue.js';
 import { loadEditorialConfig } from '../../../../src/newspaper/editorial/config/load.js';
 import { launchInstalledBrowser } from '../../../../src/newspaper/export/browser.js';
 import { startNewspaperHost, readerDirectory } from '../../../../src/newspaper/export/http.js';
 import { defaultRenderProfile } from '../../../../src/newspaper/renderer/layout.js';
+
+/** Mount fixture stories with the catalogue masthead, type and section labels. */
+async function designIssue(id: string, sample: unknown): Promise<IssueDocument> {
+  const design = (await loadEditorialConfig()).designs.find(candidate => candidate.id === id)!;
+  const issue = issueDocumentSchema.parse(sample);
+  const front = issue.pages[0];
+  issue.publication = { title: design.title, designId: id, designVersion: design.version, presentation: design.presentation };
+  issue.pages = sections.map((section, index) => ({
+    id: section.id,
+    label: design.pageLabels[section.id] ?? section.label,
+    layout: index === 0 ? front.layout : 'ordinary',
+    itemIds: index === 0 ? front.itemIds : front.itemIds.slice(1),
+  }));
+  return issue;
+}
+
+/** Set the physical paper width before reading the rendered layout. */
+async function mount(page: Page, issue: IssueDocument, paperWidth: number): Promise<void> {
+  await page.evaluate(async ({ issue, profile }) => {
+    await window.voxDeorumNewspaperExport!.mount(issue, profile);
+  }, { issue, profile: { ...defaultRenderProfile, paperWidth } });
+}
 
 describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('newspaper design editions', () => {
   let browser: Browser | undefined;
@@ -88,4 +111,107 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('newspaper design
       } finally { await page.close(); }
     }, 60_000,
   );
+
+  it('should keep the stock section tabs in aligned rows on narrow paper', async context => {
+    if (!browser) { context.skip(unavailable); return; }
+    const page = await browser.newPage();
+    try {
+      await page.goto(`${host.url}/newspaper/export.html`);
+      for (const [id, width] of [
+        ['victorian', 360], ['secession-review', 360], ['shang', 360],
+        ['teletext-bulletin', 360], ['oral-accounts', 360], ['oral-accounts', 1000],
+      ] as const) {
+        const issue = await designIssue(id, ordinary);
+        if (id === 'teletext-bulletin') issue.publication.title = 'The International Teletext Bulletin for Constantinople';
+        await mount(page, issue, width);
+        if (id === 'teletext-bulletin') {
+          expect(await page.locator('.vd-title').evaluate(title => title.scrollWidth <= title.clientWidth)).toBe(true);
+        }
+        const tabs = await page.locator('.vd-tab').evaluateAll(nodes => nodes.map(node => {
+          const box = node.getBoundingClientRect();
+          const text = node.firstChild!;
+          const range = document.createRange();
+          const wholeWords = Array.from((text.textContent ?? '').matchAll(/\S+/g)).every(word => {
+            range.setStart(text, word.index);
+            range.setEnd(text, word.index + word[0].length);
+            return range.getClientRects().length === 1;
+          });
+          return { left: box.left, right: box.right, top: box.top, width: box.width, wholeWords, fits: node.scrollWidth <= node.clientWidth };
+        }));
+        const label = `${id} at ${width}px`;
+        expect(tabs, label).toHaveLength(4);
+        expect(tabs.every(tab => tab.fits && tab.wholeWords), label).toBe(true);
+        if (width === 1000) {
+          expect(tabs.every(tab => tab.top === tabs[0].top), label).toBe(true);
+        } else {
+          expect(tabs[0].top, label).toBe(tabs[1].top);
+          expect(tabs[2].top, label).toBe(tabs[3].top);
+          expect(tabs[2].top, label).toBeGreaterThan(tabs[1].top);
+          expect(tabs[1].left, label).toBeGreaterThan(tabs[0].right);
+          expect(tabs[2].left, label).toBeCloseTo(tabs[0].left);
+          expect(tabs[3].left, label).toBeCloseTo(tabs[1].left);
+          for (const tab of tabs) expect(tab.width, label).toBeCloseTo(tabs[0].width, 1);
+        }
+      }
+    } finally { await page.close(); }
+  }, 60_000);
+
+  it('should use two columns for the lead while leaving each brief in one column', async context => {
+    if (!browser) { context.skip(unavailable); return; }
+    const page = await browser.newPage();
+    try {
+      await page.goto(`${host.url}/newspaper/export.html`);
+      for (const id of ['meiji-picture-sheet', 'printed-almanack', 'coffeehouse-essay']) {
+        const issue = await designIssue(id, breaking);
+        const sentence = ' The provisional report compares the two observations and records how the accounts changed.';
+        for (const item of issue.items) {
+          item.body = [[{ type: 'text', text: sentence.repeat(8).trim() }]];
+        }
+        for (const width of [360, 1200]) {
+          await mount(page, issue, width);
+          const columns = await page.locator('.vd-page:not([hidden]) .vd-prose').evaluateAll(nodes => nodes.map(node => {
+            const box = node.getBoundingClientRect();
+            const range = document.createRange();
+            range.selectNodeContents(node.querySelector('p')!);
+            const lines = Array.from(range.getClientRects());
+            return lines.some(line => line.left > box.left + box.width / 2);
+          }));
+          expect(columns, `${id} at ${width}px`).toEqual([true, false]);
+        }
+      }
+    } finally { await page.close(); }
+  }, 60_000);
+
+  it('should give a lone urgent brief the full row and keep ordinary briefs paired', async context => {
+    if (!browser) { context.skip(unavailable); return; }
+    const page = await browser.newPage();
+    try {
+      await page.goto(`${host.url}/newspaper/export.html`);
+      for (const id of ['contact-sheet', 'cord-register']) {
+        const articles = page.locator('.vd-page:not([hidden]) .vd-story');
+        for (const sample of [breaking, analysis]) {
+          const issue = await designIssue(id, sample);
+          for (const width of [760, 761, 1200]) {
+            await mount(page, issue, width);
+            const boxes = await articles.evaluateAll(nodes => nodes.map(node => ({
+              width: node.getBoundingClientRect().width,
+              copyWidth: node.querySelector('.vd-prose')!.getBoundingClientRect().width,
+            })));
+            const label = `${id} ${issue.pages[0].layout} at ${width}px`;
+            expect(boxes, label).toHaveLength(2);
+            expect(boxes[1].width, label).toBeCloseTo(boxes[0].width, 1);
+            if (width === 1200) expect(boxes[1].copyWidth, label).toBeLessThan(boxes[1].width * .8);
+          }
+        }
+        await mount(page, await designIssue(id, ordinary), 900);
+        const boxes = await articles.evaluateAll(nodes => nodes.map(node => {
+          const { left, right, top } = node.getBoundingClientRect();
+          return { left, right, top };
+        }));
+        expect(boxes, id).toHaveLength(3);
+        expect(boxes[1].top, id).toBeCloseTo(boxes[2].top, 1);
+        expect(boxes[2].left, id).toBeGreaterThan(boxes[1].right);
+      }
+    } finally { await page.close(); }
+  }, 60_000);
 });

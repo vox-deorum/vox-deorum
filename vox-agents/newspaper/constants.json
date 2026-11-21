@@ -38,7 +38,20 @@
     "worldProjects": [
       "World's Fair", "International Games", "International Space Station", "Global Wargames",
       "Treasure Fleet", "United Nations"
-    ]
+    ],
+    "northAmericanCivilizations": ["America", "The Iroquois", "The Shoshone"],
+    "mesoamericanCivilizations": ["The Aztecs", "The Maya"],
+    "southAmericanCivilizations": ["Brazil", "The Inca"],
+    "northwesternEuropeanCivilizations": ["Denmark", "England", "France", "Sweden", "The Celts", "The Netherlands"],
+    "centralAndEasternEuropeanCivilizations": ["Austria", "Germany", "Poland", "Russia"],
+    "southernEuropeanCivilizations": ["Byzantium", "Greece", "Portugal", "Rome", "Spain", "Venice"],
+    "northAfricanCivilizations": ["Carthage", "Egypt", "Morocco", "Nubia"],
+    "subSaharanAfricanCivilizations": ["Ethiopia", "Songhai", "The Zulus"],
+    "westAsianCivilizations": ["Arabia", "Assyria", "Babylon", "Persia", "The Ottomans"],
+    "southAsianCivilizations": ["India"],
+    "eastAsianCivilizations": ["China", "Japan", "Korea", "Mongolia"],
+    "southeastAsianAndPacificCivilizations": ["Indonesia", "Polynesia", "Siam"],
+    "eurasianSteppeCivilizations": ["Mongolia", "The Huns"]
   },
   "shortcuts": {
     "city": {
@@ -57,7 +70,20 @@
       "alliedCityState": "player.knows('majorAlly') && player.majorAlly !== null && player.majorAlly.self === true",
       "friendlyCityState": "player.knows('cityState') && player.cityState === true && player.knows('majorAlly') && !player.is.alliedCityState && player.relation(self).friend === true",
       "hasFoundedReligion": "player.knows('foundedReligion') && typeof player.foundedReligion === 'string' && player.foundedReligion.length > 0",
-      "hasMajorityReligion": "player.knows('majorityReligion') && typeof player.majorityReligion === 'string' && player.majorityReligion.length > 0"
+      "hasMajorityReligion": "player.knows('majorityReligion') && typeof player.majorityReligion === 'string' && player.majorityReligion.length > 0",
+      "northAmerican": "player.major && northAmericanCivilizations.includes(player.name)",
+      "mesoamerican": "player.major && mesoamericanCivilizations.includes(player.name)",
+      "southAmerican": "player.major && southAmericanCivilizations.includes(player.name)",
+      "northwesternEuropean": "player.major && northwesternEuropeanCivilizations.includes(player.name)",
+      "centralAndEasternEuropean": "player.major && centralAndEasternEuropeanCivilizations.includes(player.name)",
+      "southernEuropean": "player.major && southernEuropeanCivilizations.includes(player.name)",
+      "northAfrican": "player.major && northAfricanCivilizations.includes(player.name)",
+      "subSaharanAfrican": "player.major && subSaharanAfricanCivilizations.includes(player.name)",
+      "westAsian": "player.major && westAsianCivilizations.includes(player.name)",
+      "southAsian": "player.major && southAsianCivilizations.includes(player.name)",
+      "eastAsian": "player.major && eastAsianCivilizations.includes(player.name)",
+      "southeastAsianAndPacific": "player.major && southeastAsianAndPacificCivilizations.includes(player.name)",
+      "eurasianSteppe": "player.major && eurasianSteppeCivilizations.includes(player.name)"
     },
     "pair": {
       "foreignWar": "pair.atWar && !pair.involvesSelf && pair.majors"

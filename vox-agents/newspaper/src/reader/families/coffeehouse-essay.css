@@ -57,6 +57,8 @@
   & .vd-story--lead .vd-story-content .vd-prose {
     columns: 2;
     column-gap: var(--essay-gutter);
+    orphans: 2;
+    widows: 2;
   }
   & .vd-prose { font-size: calc(clamp(15px, 1.7cqi, 18px) * var(--vd-text-scale)); line-height: 1.55; }
   & .vd-prose p { margin-bottom: 0; }
@@ -71,7 +73,6 @@
   }
   & .vd-storylist[data-layout] .vd-story--brief:last-child:nth-child(even) {
     grid-column: 1 / -1;
-    & .vd-prose { columns: 2; column-gap: var(--essay-gutter); }
   }
   & .vd-storylist[data-layout] .vd-story--brief .vd-headline { font-size: calc(clamp(19px, 2cqi, 25px) * var(--vd-text-scale)); }
   & .vd-end-rule { width: 5em; margin-inline: auto; }

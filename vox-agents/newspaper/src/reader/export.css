@@ -60,6 +60,11 @@
   visibility: hidden;
 }
 
+/* Preview screenshots show the icons in their existing slots. */
+.vd-newspaper[data-mode="export"][data-preview-screenshot] .vd-vote-icon {
+  visibility: visible;
+}
+
 .vd-newspaper[data-mode="export"] .vd-vote[aria-pressed="true"] {
   border-color: transparent;
   background: none;

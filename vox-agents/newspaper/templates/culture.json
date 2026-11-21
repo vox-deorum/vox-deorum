@@ -237,7 +237,7 @@
         "id": "cultural-influence-trend-turns-incoming-report",
         "headline": "Foreign influence over us turns {{trend}}",
         "body": [
-          "The influence a rival nation holds over our people has turned {{trend}}, after {{previousTrend}}. The count stands at {{percentage}} percent, graded {{level}}."
+          "The influence a rival nation holds over our people has turned {{trend}}, after {{previousTrend}}. The count stands at {{percentage}} percent, graded {{level}}. At the print shop, the compositor has set the new count in larger type than the old, and the master let it stand."
         ],
         "weight": { "base": 1 }
       },
@@ -293,7 +293,7 @@
         "id": "cultural-influence-trend-turns-outgoing-report",
         "headline": "Our influence abroad turns {{trend}}",
         "body": [
-          "Our influence over a rival people has turned {{trend}}, after {{previousTrend}}. The count stands at {{percentage}} percent, graded {{level}}."
+          "Our influence over a rival people has turned {{trend}}, after {{previousTrend}}. The count stands at {{percentage}} percent, graded {{level}}. At the export house, the clerk has last season's order book open beside this one and runs a finger down both columns before he quotes a price."
         ],
         "weight": { "base": 1 }
       },
@@ -346,7 +346,7 @@
         "genre": "analysis",
         "headline": "Culture is a front line too",
         "body": [
-          "Our influence over a rival has turned {{trend}}, resting at the {{level}} grade. Strength is counted in soldiers and coin, and in whose stories the other side tells itself at night. A falling count is ground lost without a battle. A rising one is ground taken without a shot, and cheaper at the price."
+          "Our influence over a rival has turned {{trend}}, resting at the {{level}} grade. The officers at the border posts have a use for that number. In a village that knows our songs and buys our pots, a patrol can ask the way to the ford and get an answer. In one that knows neither, every stranger is watched from the doorway. A column that has to pass through the second kind of village loses a day before it ever sees the enemy."
         ],
         "weight": { "base": 1 }
       }
@@ -382,9 +382,9 @@
         "voice": "press",
         "stance": "hawkish",
         "genre": "analysis",
-        "headline": "The {{wonder}} at {{city}} will pay for spears",
+        "headline": "The {{wonder}} at {{city}} frees its masons for war",
         "body": [
-          "A wonder draws travelers, travelers draw coin, and coin keeps armies in the field. The enemy's new {{wonder}} there will do all three for a nation we are at war with. The commanders should weigh it as they would a fortress, because in time that is what it is."
+          "The {{wonder}} at {{city}} is finished, and the masons who raised it are looking for their next wages. A nation at war has work for hands like those. A yard that can set a course of stone that true can set a rampart just as well. Where the enemy sends them next, a wall will follow."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -704,9 +704,9 @@
         "voice": "press",
         "stance": "national",
         "genre": "analysis",
-        "headline": "What {{total}} works buy {{city}}",
+        "headline": "A longer visit to the galleries of {{city}}",
         "body": [
-          "A collection is a city's hold on the world's attention, and {{city}} has just strengthened its grip: {{added}} new works, {{total}} in all. Each one is a reason for a traveler to stop, and an answer to a rival's galleries. No treaty buys that kind of standing."
+          "{{city}} has added {{added}} works to its collection, bringing it to {{total}}. For visitors who used to see the collection before lunch, the new works may be worth an afternoon. The innkeeper who has pinned the gallery hours beside her room rates is betting on a second morning."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }

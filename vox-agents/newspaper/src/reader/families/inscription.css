@@ -169,6 +169,16 @@
   text-transform: uppercase;
 }
 
+@container newspaper (width > 560px) {
+  .vd-newspaper[data-publication-design="oral-accounts"] .vd-tabs {
+    gap: 0 16px;
+  }
+
+  .vd-newspaper[data-publication-design="oral-accounts"] .vd-tab {
+    letter-spacing: .1em;
+  }
+}
+
 .vd-newspaper[data-design="inscription"] .vd-tab[aria-selected="true"]::after {
   height: 2px;
 }

@@ -61,3 +61,11 @@
   & .vd-end-rule::before, & .vd-end-rule::after { display: none; }
   & .vd-end-ornament { display: none; }
 }
+
+@container newspaper (width <= 560px) {
+  .vd-newspaper[data-publication-design="shang"] .vd-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 8px;
+  }
+}

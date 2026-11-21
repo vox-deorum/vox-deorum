@@ -343,7 +343,15 @@
   }
 
   .vd-newspaper[data-design="broadsheet"] .vd-tabs {
-    gap: 18px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 8px;
+  }
+
+  .vd-newspaper[data-design="broadsheet"] .vd-tab {
+    padding-block: 11px;
+    font-size: calc(12px * var(--vd-text-scale));
+    letter-spacing: .07em;
   }
 
   .vd-newspaper[data-design="broadsheet"] .vd-storylist[data-layout="ordinary"] .vd-story--lead .vd-headline,

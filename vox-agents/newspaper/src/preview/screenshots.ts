@@ -56,6 +56,7 @@ async function main(): Promise<void> {
       page.on('requestfailed', request => { failed.add(request.url()); });
       page.on('response', response => { if (response.status() >= 400) failed.add(response.url()); });
       await page.goto(`${origin}/export.html`);
+      await page.locator('#newspaper-export-root').evaluate(root => { root.setAttribute('data-preview-screenshot', ''); });
       const samples = await page.evaluate(async ({ moduleUrl, designId }) => {
         const { createPreviewIssue, readPreviewDesigns }: typeof import('./issue.js') = await import(moduleUrl);
         return readPreviewDesigns().filter(design => designId === undefined || design.id === designId).flatMap(design =>

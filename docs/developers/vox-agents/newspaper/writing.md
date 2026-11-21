@@ -2,11 +2,15 @@
 
 The player lived through the game. Give them a paper their citizens would want to read.
 
-Use this guide when editing `vox-agents/newspaper/templates/`, and give it to any model writing variants. Each example names its [voice, stance, and genre](editorial.md#variant-styles). Check the trigger for the [placeholders](editorial.md#placeholders-and-facts) it supplies.
+Use this guide when you edit `vox-agents/newspaper/templates/`. Share it with any model drafting variants. Each example names its [voice, stance, and genre](editorial.md#variant-styles). Check the trigger and the [placeholder reference](editorial.md#placeholders-and-facts) before you draft. Use [regional shortcuts](triggers/constants.md#regional-shortcuts) when a variant is written for a group of civilizations.
+
+## Get to the action early
+
+Keep the subject and verb close. If prepositional phrases pile up, cut the ones the reader can spare and let the strongest detail follow the action. When two clipped sentences split a thought, let one sentence carry the action and its consequence.
 
 ## Entertain first
 
-Give the reader a reason to linger over news they already know. A joke can do it in two lines; a grim story might need just one image. Read variants side by side. If every story opens at a market or ends on a quip, change the angle or the rhythm.
+Give readers a reason to linger over news they already know. A joke might take two lines; a grim story might need one image. Read the variants together. If every story opens at a market or ends on a quip, change the angle or the rhythm.
 
 **Voice:** `tabloid` · **Stance:** `populist` · **Genre:** `anecdote`
 
@@ -30,9 +34,9 @@ Avoid:
 
 ## Show what the news changes
 
-Imagine what the news does to somebody's work, supper, or plans. Invent the people and scenes freely; let them hope, guess, and get things wrong. Take outcomes, figures, dates, and official decisions from the game record the player can see.
+Imagine whose workday, supper, or plans the news changes. Invent people and scenes freely; let people hope, guess, and get things wrong. Take game outcomes, figures, dates, and official decisions from the player's visible record.
 
-An empty shelf or a merchant turning back can hint at a game rule. Let the story work even for readers who miss the hint.
+An empty shelf or a merchant turning back can hint at a game rule. The story should still work if readers miss the hint.
 
 **Voice:** `crier` · **Stance:** `local` · **Genre:** `notice`
 
@@ -54,11 +58,25 @@ Avoid:
 
 > It was one road, and it carried everything we sent abroad. It ran through seasons of war and seasons of peace, and it ran until this one, when it ran no more.
 
-The [trade trigger](../../../../vox-agents/newspaper/triggers/trade.json) tells us the outgoing routes have ended. The person putting away the weights is the [obituary writer's invention](../../../../vox-agents/newspaper/templates/trade.json).
+The [`last-trade-route-ends` trigger](../../../../vox-agents/newspaper/triggers/trade.json) tells us the outgoing routes fell to zero. The [obituary](../../../../vox-agents/newspaper/templates/trade.json) supplies the keeper and the wool.
+
+## Give the reader something to see
+
+Find a detail that shows what the news changes for somebody: a charge circled on a bill, a queue spilling down the courthouse steps.
+
+**Voice:** `press` · **Stance:** `national` · **Genre:** `analysis`
+
+Write:
+
+> {{city}} has added {{added}} works to its collection, bringing it to {{total}}. The neighboring town gallery has offered to send its wagon, with freshly made crates, for a winter loan. A loan on those terms could let small towns show works they can't afford to buy.
+
+Avoid:
+
+> A collection is a city's hold on the world's attention, and {{city}} has just strengthened its grip: {{added}} new works, {{total}} in all. Each one is a reason for a traveler to stop, and an answer to a rival's galleries. No treaty buys that kind of standing.
 
 ## Write from inside the world
 
-Picture the neighbors close enough to hear the crier or the councilor opening the morning paper. A crier can ask for bread; an editorial can demand an account of a city's fall. Name who speaks, who acts, and who owes an answer. Use “our delegates” where “they” would leave readers guessing. Leave the player's next move to the player.
+Picture the neighbors who hear the crier, or the councilor opening the morning paper. A crier can ask for bread; an editorial can demand that the council explain a city's fall. Name who speaks, who acts, and who owes an answer. Write “our delegates” if “they” would leave readers guessing. Leave the next move to the player.
 
 **Voice:** `pamphlet` · **Stance:** `government-critical` · **Genre:** `editorial`
 
@@ -82,7 +100,7 @@ Avoid:
 
 ## Give each genre a job
 
-An editorial takes a side on a public question. Give a skeptical reader a reason to agree. When the paper calls for action, name who can act and say what you want them to do.
+An editorial takes a side on a public question. Give skeptical readers a reason to agree. If you call for action, name who can take it and say what they should do.
 
 **Voice:** `press` · **Stance:** `national` · **Genre:** `editorial`
 
@@ -94,7 +112,7 @@ Avoid:
 
 > Keep him a place to come back to. The country will have earned its golden age if the people who went out to fight can share in it when they come home.
 
-Analysis starts with a question raised by the news. Why did this happen? Who might feel it next? Give readers your best answer and show what led you there. If the evidence reaches only as far as one street, keep the claim there.
+Let the news raise a question. Why did this happen? Who might feel it next? Give readers your best answer and show your evidence. If the evidence covers only one street, keep the claim there.
 
 **Voice:** `press` · **Stance:** `rationalist` · **Genre:** `analysis`
 
@@ -108,9 +126,9 @@ Avoid:
 
 ## Let people speak
 
-Invent quotes when they suit the piece. A shopkeeper hears what customers ask for; a witness saw the gates give way; a professor can argue that the figures leave something out. Give each speaker a name or a role, and words they would say out loud. A customer can swear. So can a crier. Keep official statements, decisions, and game facts tied to the record, whoever is speaking.
+Invent quotes when they suit the piece. A shopkeeper hears what customers want; a witness saw the gates give way; a professor can spot what the figures leave out. Name each speaker or say what they do. Give them words they'd say aloud. A customer can swear. So can a crier. Whoever speaks, take official statements, decisions, and game facts from the record.
 
-In a report, lead with the news. Then give someone who has to live with it a word. An opinion piece can quote the person it means to answer.
+A report leads with the news. Someone who has to live with it can have the next word. An opinion piece can quote the person it means to answer.
 
 **Voice:** `broadcast` · **Stance:** `national` · **Genre:** `report`
 
@@ -124,7 +142,7 @@ Avoid:
 
 ## Make contrasts count
 
-When a sentence says “X is A, not B,” ask who thought it was B. If nobody did, state the fact and move on. A contrast can make the joke, sharpen an argument, or settle a dispute. If the details already show the difference, give readers room to see it.
+When you write “X is A, not B,” ask who thought it was B. If nobody did, state the fact and move on. A contrast can make a joke land, sharpen an argument, or settle a dispute. Trust readers to spot a difference the details already show.
 
 **Voice:** `press` · **Stance:** `rationalist` · **Genre:** `analysis`
 
@@ -138,7 +156,7 @@ Avoid:
 
 ## Name the civilization
 
-Name a civilization when it first matters to the story. After that, a shorter reference will usually do. Use the catalogue's adjective for the reader's own civilization where it sounds natural. If you have no adjective for a foreign civilization, write the sentence around its name. Save “a foreign power” for a fallback with no name to print.
+Name a civilization as soon as it matters. Shorten later references where you can. For the reader's civilization, use `{{terms.civilizationAdjective}}` where it sounds natural. Use a foreign civilization's name if you lack its adjective. If you lack a name, “a foreign diplomat” may suffice. Mention the gap only if the uncertainty is itself news.
 
 **Voice:** `gazette` · **Stance:** `conciliatory` · **Genre:** `letter`
 
@@ -154,13 +172,25 @@ Avoid:
 >
 > A dyer writing to the editor
 
+**Voice:** `general` · **Stance:** `neutral` · **Genre:** `report`
+
+Write:
+
+> A foreign diplomat has taken up a post in the capital. At the council hall, a merchant carrying a customs bill asked a clerk how to arrange a meeting. “My cloth has sat on their quay for a month,” she said. “They send me a bill every week, so I know it's still there.”
+
+Avoid:
+
+> A foreign diplomat has presented credentials at our capital, and our records do not say which power sent them. The channel between the two governments now runs direct, and the capital is full of the usual guesses.
+
 ## Before it goes to print
 
 - Does the first sentence make me want the second?
-- Whose day changes because of this news? How?
-- Can I trace each claim about the game to a fact the player can see?
-- Would I still enjoy the piece if I missed the hint about the rules?
-- Do the voice, stance, and genre come through on the page?
-- Is it clear who is speaking, who they mean, and who they want to hear them?
+- Whose day does the news change? How?
+- Does the sentence reach its verb before the details pile up?
+- What can the reader picture, and what does that detail tell them?
+- Can I trace each game claim to a fact the player can see?
+- Would I still enjoy the piece if I missed the hint?
+- Do the voice, stance, and genre come through?
+- Can I tell who speaks, who they mean, and who should hear them?
 - What does each quote add?
-- If the news comes round again, what will the next version give the reader?
+- If the news comes round again, what will the next version add?

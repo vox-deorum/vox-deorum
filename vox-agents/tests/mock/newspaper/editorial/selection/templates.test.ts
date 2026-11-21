@@ -14,7 +14,10 @@ const standard = {
 
 /** Exercise authored eligibility against the same visible facts and compiled catalogue as a check. */
 async function candidates(totalCities: number, triggers: unknown[], template: unknown,
-  adjust?: (developments: RuleDevelopment[]) => RuleDevelopment[]) {
+  { adjust, receiverName = 'France' }: {
+    adjust?: (developments: RuleDevelopment[]) => RuleDevelopment[];
+    receiverName?: string;
+  } = {}) {
   const base = await loadEditorialConfig();
   const config = await parseEditorialConfig({ ...base, triggers, templates: [template] });
   const cities: NewspaperEvidence['cities'] = Array.from({ length: totalCities }, (_, id) => ({
@@ -30,7 +33,7 @@ async function candidates(totalCities: number, triggers: unknown[], template: un
     players: [owner], cities, events: [], comparisons: { players: [], cities: [] },
     history: { fromTurn: 5, baseline: { players: [], cities: [] },
       snapshots: { players: [owner], cities }, events: [], gaps: [] },
-  }, { playerIdentities: { 0: { name: 'France', major: true } } });
+  }, { playerIdentities: { 0: { name: receiverName, major: true } } });
   const compiled = await getEditorialExpressions(config);
   const rules = await evaluateTriggerRules({
     rules: config.triggers, compiled, facts, constants: config.constants, speedMultiplier: 1,
@@ -40,6 +43,26 @@ async function candidates(totalCities: number, triggers: unknown[], template: un
 }
 
 describe('newspaper template matching', () => {
+  it.each([
+    ['The Aztecs', ['generic', 'mesoamerican']],
+    ['The Maya', ['generic', 'mesoamerican']],
+    ['Indonesia', ['generic', 'southeastAsianAndPacific']],
+    ['Polynesia', ['generic', 'southeastAsianAndPacific']],
+    ['France', ['generic']],
+  ] as const)('should offer the eligible regional variants to %s', async (receiverName, expected) => {
+    const variant = { ...standard.variants[0], headline: 'News' };
+    const selected = await candidates(0, [{ id: 'report', subject: 'world', when: 'true' }], {
+      ...standard, triggers: ['report'],
+      variants: [
+        { ...variant, id: 'generic' },
+        { ...variant, id: 'mesoamerican', when: 'self.is.mesoamerican' },
+        { ...variant, id: 'southeastAsianAndPacific', when: 'self.is.southeastAsianAndPacific' },
+      ],
+    }, { receiverName });
+    expect(selected).toHaveLength(1);
+    expect(selected[0].variants.map(({ id }) => id)).toEqual(expected);
+  });
+
   it('should find a shared subject even after more than one hundred other rule matches', async () => {
     const selected = await candidates(130, [
       { id: 'all', subject: 'city', when: 'true', values: { population: 'city.population' } },
@@ -145,9 +168,11 @@ describe('newspaper template matching', () => {
       values: { 'triggerValues.ledger.amount': 2, 'triggerValues.growth.amount': 3 } });
     expect(overlapping[0].variants.map((variant) => variant.id)).toEqual(['qualified']);
 
-    const adjacent = await candidates(1, rules, template, (developments) => developments.map((development) =>
-      development.definitionId === 'ledger' ? { ...development, period: { from: 5, to: 8 } } : development
-    ));
+    const adjacent = await candidates(1, rules, template, {
+      adjust: (developments) => developments.map((development) =>
+        development.definitionId === 'ledger' ? { ...development, period: { from: 5, to: 8 } } : development
+      ),
+    });
     expect(adjacent).toEqual([]);
   });
 });

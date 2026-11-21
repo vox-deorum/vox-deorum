@@ -20,6 +20,10 @@ When the paper is due to report **War on N fronts**, that story can absorb selec
 
 The edition counts the selected stories before [combining them](../editorial.md#combining-stories). A combined report keeps links to the original decisions and evidence in replay.
 
+## When a city changes hands again
+
+The paper combines capture reports involving the receiver when the events can be linked to the same city at the cutoff. The combined report counts the gains and losses it covers and identifies the holder in the latest readable report when known. A lone capture still has its own story.
+
 ## Pair facts in rules
 
 To report an advantage in the receiver's war, use a `short` window with `pair.involvesSelf && pair.atWar`, `crossed(pair.warScore, pair.before.warScore, 25)` and `held(pair, s => s.warScore >= 25, 2)`. At turn 100 on Standard speed, `before` is turn 90. The last condition checks turns 98 through 100, inclusive.

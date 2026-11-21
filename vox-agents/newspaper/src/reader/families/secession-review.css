@@ -1,4 +1,4 @@
-/* A square cover plate and a single green impression across its ruled edge. */
+/* A fitted cover plate and a single green impression across its ruled edge. */
 .vd-newspaper[data-publication-design="secession-review"] {
   --branch: url("./textures/secession-botanical.svg?inline");
 
@@ -24,7 +24,6 @@
   & .vd-storylist[data-layout="ordinary"] .vd-story--lead .vd-headline {
     --print-width: clamp(84px, 15cqi, 176px);
     padding-top: calc(var(--print-width) * .62 + 6px);
-    align-content: end;
     font-size: calc(clamp(36px, 5.3cqi, 70px) * var(--vd-text-scale));
   }
   & .vd-storylist[data-layout="ordinary"] .vd-story--lead .vd-headline::after {
@@ -50,13 +49,21 @@
   & .vd-number { font-weight: 700; }
 }
 
+@container newspaper (width <= 560px) {
+  .vd-newspaper[data-publication-design="secession-review"] .vd-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 8px;
+  }
+}
+
 @container newspaper (width > 760px) {
   .vd-newspaper[data-publication-design="secession-review"] {
     & .vd-storylist[data-layout="ordinary"]:has(.vd-story--brief) {
       display: flow-root;
       & .vd-story--lead { float: left; width: 55%; }
-      & .vd-story--lead .vd-headline { aspect-ratio: 1.14; }
-      & .vd-story--lead .vd-headline::after { right: -2.4cqi; }
+      & .vd-story--lead .vd-headline { --print-width: clamp(118px, 17cqi, 196px); }
+      & .vd-story--lead .vd-headline::after { top: -8px; right: -2.4cqi; }
       & .vd-story--lead .vd-story-content > .vd-prose { columns: auto; }
       & .vd-story--brief {
         margin: 0 0 20px 61%;
