@@ -44,7 +44,8 @@
 
 .vd-newspaper[data-design="inscription"] .vd-publication::after {
   position: absolute;
-  inset: 12px calc(12px + var(--vd-scrollbar-gutter)) 12px 12px;
+  --vd-ins-frame: calc(var(--vd-paper-padding) * 0.25);
+  inset: var(--vd-ins-frame) calc(var(--vd-ins-frame) + var(--vd-scrollbar-gutter)) var(--vd-ins-frame) var(--vd-ins-frame);
   z-index: 2;
   border: 1px solid var(--vd-ink);
   outline: 1px solid color-mix(in srgb, var(--vd-ink) 55%, transparent);
@@ -75,6 +76,7 @@
   font: 700 calc(44px * var(--vd-text-scale)) / 1.18 var(--vd-font-display);
   letter-spacing: 0.1em;
   text-transform: uppercase;
+  overflow-wrap: break-word;
 }
 
 .vd-newspaper[data-design="inscription"] .vd-title::before,
@@ -179,7 +181,6 @@
   border: 1px solid var(--vd-ink);
   outline: 1px solid var(--vd-ink);
   outline-offset: -9px;
-  filter: sepia(0.35) saturate(0.85);
 }
 
 .vd-newspaper[data-design="inscription"] .vd-text-link {
@@ -296,7 +297,7 @@
   display: block;
   height: 24px;
   background: var(--vd-accent);
-  mask: var(--vd-ins-key) left center / auto 100% repeat-x;
+  mask: var(--vd-ins-key) center / auto 100% round no-repeat;
   content: "";
 }
 
@@ -380,6 +381,24 @@
 /* Narrow papers drop the dovetail handles and scale the capitals down. */
 
 @container newspaper (max-width: 760px) {
+  .vd-newspaper[data-design="inscription"] .vd-publication::after {
+    outline: 0;
+  }
+
+  .vd-newspaper[data-design="inscription"] .vd-title {
+    max-width: calc(100% - 76px);
+    padding: 12px 22px 10px;
+    font-size: calc(30px * var(--vd-text-scale));
+    letter-spacing: 0.07em;
+  }
+
+  .vd-newspaper[data-design="inscription"] .vd-title::before,
+  .vd-newspaper[data-design="inscription"] .vd-title::after {
+    width: 26px;
+    height: 42px;
+    margin-top: -21px;
+  }
+
   .vd-newspaper[data-design="inscription"] .vd-evidence {
     margin-top: 10px;
   }
@@ -389,7 +408,7 @@
   .vd-newspaper[data-design="inscription"] .vd-title {
     max-width: 100%;
     padding: 12px 16px 10px;
-    font-size: calc(28px * var(--vd-text-scale));
+    font-size: calc(26px * var(--vd-text-scale));
     letter-spacing: 0.06em;
   }
 

@@ -223,6 +223,10 @@
   background: #d9ece1;
 }
 
+.vd-newspaper[data-design="feed"] .vd-storylist[data-layout] .vd-story--brief .vd-headline {
+  font-size: calc(21px * var(--vd-text-scale));
+}
+
 /* Lead card: bigger avatar, headline and full-width image. */
 
 .vd-newspaper[data-design="feed"] .vd-storylist .vd-story--lead {
@@ -240,7 +244,7 @@
 .vd-newspaper[data-design="feed"] .vd-storylist[data-layout] .vd-story--lead .vd-headline {
   margin-bottom: 12px;
   font: 800 calc(32px * var(--vd-text-scale)) / 1.12 var(--vd-font-display);
-  letter-spacing: -0.04em;
+  letter-spacing: -0.03em;
   text-align: left;
   text-transform: none;
 }
@@ -347,10 +351,6 @@
   font: 700 calc(30px * var(--vd-text-scale)) / 1 var(--vd-font-display);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.03em;
-}
-
-.vd-newspaper[data-design="feed"] .vd-evidence tbody tr:first-child td {
-  color: var(--vd-accent);
 }
 
 .vd-newspaper[data-design="feed"] .vd-evidence .vd-missing td {

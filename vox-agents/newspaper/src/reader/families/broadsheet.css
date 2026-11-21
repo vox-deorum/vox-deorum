@@ -34,7 +34,8 @@
 
 .vd-newspaper[data-design="broadsheet"] .vd-publication::after {
   position: absolute;
-  inset: 14px calc(14px + var(--vd-scrollbar-gutter)) 14px 14px;
+  --vd-bs-frame: calc(var(--vd-paper-padding) * 0.3);
+  inset: var(--vd-bs-frame) calc(var(--vd-bs-frame) + var(--vd-scrollbar-gutter)) var(--vd-bs-frame) var(--vd-bs-frame);
   z-index: 2;
   border: 3px solid var(--vd-ink);
   outline: 1px solid var(--vd-ink);
@@ -157,7 +158,6 @@
 .vd-newspaper[data-design="broadsheet"] .vd-story-art img {
   padding: 4px;
   border: 1px solid var(--vd-ink);
-  filter: grayscale(0.55) sepia(0.4) contrast(1.06);
 }
 
 /* A printers' flower closes every story. */
@@ -256,6 +256,15 @@
 }
 
 @container newspaper (max-width: 760px) {
+  .vd-newspaper[data-design="broadsheet"] .vd-publication::after {
+    border-width: 2px;
+    outline: 0;
+  }
+
+  .vd-newspaper[data-design="broadsheet"] .vd-evidence {
+    border-left: 0;
+  }
+
   .vd-newspaper[data-design="broadsheet"] .vd-storylist[data-layout="ordinary"] .vd-story--brief {
     margin-top: 25px;
     padding-top: 25px;

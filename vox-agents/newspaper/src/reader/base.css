@@ -492,6 +492,10 @@
   text-transform: uppercase;
 }
 
+.vd-evidence thead th:not(:first-child) {
+  text-align: right;
+}
+
 .vd-evidence tbody th {
   font-size: calc(16px * var(--vd-text-scale));
   font-weight: 400;
