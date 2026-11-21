@@ -2,12 +2,16 @@
   {
     "id": "clay-chronicle",
     "version": "1",
-    "title": "The Clay Chronicle",
+    "label": "Clay Tablet",
+    "title": "The Palace Tablets",
     "when": "['Babylon', 'Assyria'].includes(self.name) && ['Ancient', 'Classical'].includes(self.era?.replace(' Era', ''))",
     "weight": {
-      "base": 50,
+      "base": 62,
       "adjustments": [
-        { "when": "self.era?.replace(' Era', '') === 'Ancient'", "add": 30 }
+        {
+          "when": "self.era?.replace(' Era', '') === 'Ancient'",
+          "add": 18
+        }
       ]
     },
     "presentation": {

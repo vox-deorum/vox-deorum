@@ -2,9 +2,12 @@
   {
     "id": "contact-sheet",
     "version": "1",
+    "label": "Darkroom Contact Sheet",
     "title": "The Contact Sheet",
     "when": "['Atomic', 'Information'].includes(self.era?.replace(' Era', ''))",
-    "weight": { "base": 16 },
+    "weight": {
+      "base": 35
+    },
     "presentation": {
       "schemaVersion": 1,
       "rendererFamily": "folio",

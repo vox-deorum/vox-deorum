@@ -251,11 +251,55 @@ describe('durable replay publication', () => {
     expect((await session.getIssue(firstIssue.issueId)).issue).toEqual(firstIssue);
   });
 
-  it('should resume a catalogue saved before style tags without changing its prose draw', async () => {
+  it('should restore a design run across a skip and resume with the same choices', async () => {
+    const sqlite = new Database(recording.filename);
+    try {
+      const insert = sqlite.prepare('INSERT INTO GameEvents (ID, Turn, CreatedAt, Player0, Type, Payload) VALUES (?, ?, ?, ?, ?, ?)');
+      for (const turn of [22, 30, 38, 46])
+        insert.run(200 + turn, turn, 2000 + turn, 1, 'DeclareWar', '{"OriginatingPlayerID":1,"TargetTeamID":0,"IsAggressor":false}');
+    } finally { sqlite.close(); }
+    const config = await loadEditorialConfig(catalogue);
+    const opening = config.designs.find(design => design.id === 'oral-accounts')!;
+    const triggerPath = path.join(catalogue, 'triggers.json');
+    const triggers = JSON.parse(await readFile(triggerPath, 'utf8'));
+    await Promise.all([
+      writeFile(path.join(catalogue, 'designs.json'), JSON.stringify([
+        { ...opening, id: 'fixture-alternate', title: 'Another paper', civilizationTitles: null },
+      ])),
+      writeFile(triggerPath, JSON.stringify([
+        ...config.triggers.filter(rule => rule.id !== 'fixture-war-report').map(rule => ({ id: rule.id, enabled: false })),
+        ...triggers,
+      ])),
+    ]);
+    const configured = { ...settings(), toTurn: 46 };
+    await session.configure(configured);
+    const first = (await session.advance()).check!;
+    expect(first.status).toBe('published');
+    expect((await session.advance()).check?.status).toBe('skipped');
+    expect((await session.advance()).check?.decision).toMatchObject({
+      designId: first.decision.designId, designSelection: { priorRunLength: 1 },
+    });
+    expect((await session.advance()).check?.decision).toMatchObject({
+      designId: first.decision.designId, designSelection: { priorRunLength: 2 },
+    });
+    await session.close();
+    session = new ReplaySession();
+    await session.configure({ ...configured, mode: 'resume' });
+    const resumed = [(await session.advance()).check, (await session.advance()).check];
+    expect(resumed[0]?.decision.designSelection?.priorRunLength).toBe(3);
+    expect((await session.getIssue(first.issue!.issueId)).issue).toEqual(first.issue);
+
+    await session.configure({ ...configured, outputPath: path.join(path.dirname(outputPath), 'uninterrupted.sqlite') });
+    for (let check = 0; check < 4; check++) await session.advance();
+    expect([(await session.advance()).check, (await session.advance()).check]).toEqual(resumed);
+  });
+
+  it('should resume a catalogue saved before design runs and style tags with the legacy draws', async () => {
     const initialized = await session.configure(settings());
     await session.close();
     const identity = await replaySourceIdentity(recording.filename);
     const { styles: _styles, ...legacy } = await loadEditorialConfig(catalogue);
+    delete legacy.defaults.designSelection;
     const template = legacy.templates.find(entry => entry.id === 'fixture-war-article')!;
     template.variants.push({ ...template.variants[0], id: 'dispatch', headline: 'A new dispatch' });
     legacy.templates = [template];
@@ -273,6 +317,7 @@ describe('durable replay publication', () => {
     expect(result.check?.status).toBe('published');
     const decision = result.check!.decision;
     expect(decision.configurationSnapshot).toEqual(legacy);
+    expect(decision.designSelection).toBeUndefined();
     expect(Object.values(decision.selectedVariants)).toEqual([draw < 0.5 ? 'notice' : 'dispatch']);
     expect(Object.values(decision.selectedStyles!)).toEqual([{ voice: 'general', stance: 'neutral', genre: 'report' }]);
   });

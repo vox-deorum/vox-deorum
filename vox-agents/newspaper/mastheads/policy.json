@@ -4,78 +4,89 @@
     "title": "The Diplomatic Post",
     "motto": "Dispatches from every quarter",
     "pageLabels": {
+      "home": "The Diplomatic Quarter",
+      "economy": "Treaties and Tariffs",
       "abroad": "Embassy Dispatches"
     },
     "when": "self.hasPolicy('Foreign Service') && self.ideology === null",
     "weight": {
       "base": 7
     },
-    "designs": ["port-register", "victorian", "national-review"]
+    "designs": ["cable-desk"]
   },
   {
     "id": "policy-labor-ledger",
     "title": "The Labor Ledger",
-    "motto": "Wages, hours, and the work of the nation",
+    "motto": "What the work is worth",
     "pageLabels": {
-      "economy": "Wages and Workshops"
+      "home": "The Working Town",
+      "economy": "Wages and Workshops",
+      "abroad": "The Working World"
     },
     "when": "self.hasPolicy('Division of Labor') && self.ideology === null",
     "weight": {
       "base": 7
     },
-    "designs": ["street-gazette", "sunday-colour", "cable-desk", "victorian"]
+    "designs": ["street-gazette"]
   },
   {
     "id": "policy-arts-review",
-    "title": "The Arts Review",
-    "motto": "Letters, pictures, and the life of the mind",
+    "title": "The Salon Review",
+    "motto": "Pictures, letters, and good argument",
     "pageLabels": {
-      "home": "Life and Letters"
+      "home": "Life and Letters",
+      "economy": "Patrons and Prices",
+      "abroad": "Affairs Abroad"
     },
     "when": "self.hasPolicy('Refinement') && self.ideology === null",
     "weight": {
       "base": 6
     },
-    "designs": ["court-dispatch", "sunday-colour", "victorian"]
+    "designs": ["sunday-colour"]
   },
   {
     "id": "policy-colonial-dispatch",
-    "title": "The Colonial Dispatch",
-    "motto": "News from far shores and home",
+    "title": "The Far Shore Dispatch",
+    "motto": "Word from the far stations",
     "pageLabels": {
+      "home": "The Home Station",
       "economy": "Trade and Concessions",
-      "abroad": "Foreign Dispatches"
+      "abroad": "Dispatches from Abroad"
     },
     "when": "self.hasPolicy('Colonialism') && self.ideology === null",
     "weight": {
       "base": 7
     },
-    "designs": ["port-register", "victorian", "national-review", "secession-review"]
+    "designs": ["port-register"]
   },
   {
     "id": "policy-common-reader",
     "title": "The Common Reader",
     "motto": "A paper for every household",
     "pageLabels": {
-      "home": "The Public Page"
+      "home": "The Public Page",
+      "economy": "The Household Budget",
+      "abroad": "The World Beyond"
     },
     "when": "self.hasPolicy('Mass Education') && self.ideology === null",
     "weight": {
       "base": 6
     },
-    "designs": ["national-review", "civic-survey", "cable-desk", "victorian"]
+    "designs": ["civic-survey"]
   },
   {
     "id": "policy-manor-rolls",
     "title": "The Manor Rolls",
-    "motto": "Land, duty, and the order of the realm",
+    "motto": "Who holds the land, and what it owes",
     "pageLabels": {
-      "economy": "Rents and Market Dues"
+      "home": "The Great House",
+      "economy": "Rents and Market Dues",
+      "abroad": "Marches and Neighbours"
     },
     "when": "self.hasPolicy('Fiefdoms') && self.ideology === null",
     "weight": {
       "base": 6
     },
-    "designs": ["town-book", "stitched-chronicle", "court-dispatch", "victorian"]
+    "designs": ["town-book"]
   }
 ]

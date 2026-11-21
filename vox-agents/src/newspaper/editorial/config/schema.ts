@@ -112,6 +112,7 @@ export const editorialConfigSchema = z
       noveltyBonus: z.number().nonnegative(),
       varietyBonus: z.number().nonnegative(),
       designStickiness: z.number().min(0).max(1),
+      designSelection: z.enum(['legacy', 'pressRun']).optional(),
       styleRepeat: z.strictObject({
         voice: z.number().finite().positive(),
         stance: z.number().finite().positive(),

@@ -2,9 +2,12 @@
   {
     "id": "street-gazette",
     "version": "1",
-    "title": "The Street Gazette",
+    "label": "Letterpress Street Sheet",
+    "title": "News from the Square",
     "when": "['Industrial', 'Modern'].includes(self.era?.replace(' Era', ''))",
-    "weight": { "base": 12 },
+    "weight": {
+      "base": 36
+    },
     "presentation": {
       "schemaVersion": 1,
       "rendererFamily": "folio",

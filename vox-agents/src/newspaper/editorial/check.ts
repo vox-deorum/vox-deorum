@@ -214,6 +214,7 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
   const weights = await evaluatePresentation(config, compiled, batch, budget);
   const { selected, sources: styleSources } = await applyStylePreferences(selection.selected, compiled, batch, budget);
   const presentation = await presentIssue({
+    checkId,
     issueId: `${scope}/issue/${turn}`,
     campaignId: input.campaignId,
     timelineId: input.timelineId,
@@ -225,6 +226,7 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
     weights,
     proseRandom: streams.prose,
     presentationRandom: streams.presentation,
+    recordDesignSelection: (audit) => { decision.designSelection = audit; },
     terms,
     selectMasthead: (design) => selectMastheadRule({
       campaignId: input.campaignId,
@@ -263,7 +265,7 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
   state.diplomacy = diplomacy.memory;
   state.triggerRepeats = rules.repeatState;
   state.series = advanceSeries(state.series, records, turn);
-  state.issues.push({ issueId: issue.issueId, turn, items: records });
+  state.issues.push({ issueId: issue.issueId, turn, items: records, designId: issue.publication.designId });
   state.previousDesignId = issue.publication.designId;
   decision.status = 'published';
   const displayedCandidates = new Set(records.map((item) => presentation.itemCandidates.get(item.id)!.id));

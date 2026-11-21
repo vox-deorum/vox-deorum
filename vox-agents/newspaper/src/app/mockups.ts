@@ -17,7 +17,7 @@ export function mountMockupControls(
   const layoutSelect = element<HTMLSelectElement>('#preview-layout');
   const alert = element('#preview-error');
   const designs = new Map(readPreviewDesigns().map(design => [design.id, design]));
-  designSelect.replaceChildren(...Array.from(designs.values(), design => new Option(design.title, design.id)));
+  designSelect.replaceChildren(...Array.from(designs.values(), design => new Option(design.label ?? design.title, design.id)));
   const readTint = mountTintControls('preview', showSample);
 
   /** Keep valid layouts selected when the design changes. */

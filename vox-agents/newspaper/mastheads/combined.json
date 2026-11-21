@@ -15,9 +15,10 @@
   },
   {
     "id": "combined-english-mercantile",
-    "title": "The Mercantile Gazette",
-    "motto": "Shipping, markets, and news from every port",
+    "title": "The Baltick Shipping Gazette",
+    "motto": "Prices, cargoes, and the tide of trade",
     "pageLabels": {
+      "home": "Town and Country",
       "economy": "Prices and Cargoes",
       "abroad": "Foreign Intelligence"
     },
@@ -25,11 +26,11 @@
     "weight": {
       "base": 11
     },
-    "designs": ["port-register", "street-gazette", "cable-desk", "victorian"]
+    "designs": ["port-register"]
   },
   {
     "id": "combined-venetian-mercury",
-    "title": "The Venetian Mercury",
+    "title": "Il Mercurio di San Marco",
     "motto": "From the counting house to the council chamber",
     "pageLabels": {
       "home": "Council Affairs",
@@ -39,7 +40,7 @@
     "weight": {
       "base": 10
     },
-    "designs": ["port-register", "printer-dispatch", "court-dispatch"]
+    "designs": ["port-register"]
   },
   {
     "id": "combined-order-shift-report",
@@ -53,7 +54,7 @@
     "weight": {
       "base": 12
     },
-    "designs": ["national-review", "street-gazette", "cable-desk", "victorian", "wire"]
+    "designs": ["paste-up"]
   },
   {
     "id": "combined-freedom-daily-citizen",
@@ -61,26 +62,42 @@
     "motto": "The news belongs to the reader",
     "pageLabels": {
       "home": "The Public Square",
-      "abroad": "Foreign Correspondence"
+      "economy": "The Citizen's Share",
+      "abroad": "The Open World"
     },
     "when": "self.ideology === 'Freedom' && self.hasPolicy('Civil Society')",
     "weight": {
       "base": 12
     },
-    "designs": ["national-review", "street-gazette", "victorian", "civic-survey", "wire"]
+    "designs": ["civic-survey"]
+  },
+  {
+    "id": "combined-freedom-open-signal",
+    "title": "The Open Signal",
+    "motto": "Clear word for an open world",
+    "pageLabels": {
+      "home": "The Public Record",
+      "economy": "Free Exchange",
+      "abroad": "The World in Brief"
+    },
+    "when": "self.ideology === 'Freedom' && ['Information', 'Future'].includes(self.era?.replace(' Era', ''))",
+    "weight": {
+      "base": 7
+    },
+    "designs": ["wire"]
   },
   {
     "id": "combined-autocracy-national-sentinel",
     "title": "The National Sentinel",
     "motto": "A watch on every frontier",
     "pageLabels": {
-      "home": "Home Front",
-      "abroad": "External Affairs"
+      "home": "The Home Watch",
+      "abroad": "The Frontier Desk"
     },
     "when": "self.ideology === 'Autocracy' && ['Modern', 'Atomic'].includes(self.era?.replace(' Era', ''))",
     "weight": {
       "base": 12
     },
-    "designs": ["national-review", "street-gazette", "cable-desk", "victorian", "wire"]
+    "designs": ["national-review"]
   }
 ]

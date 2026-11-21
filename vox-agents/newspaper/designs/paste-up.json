@@ -2,9 +2,18 @@
   {
     "id": "paste-up",
     "version": "1",
+    "label": "Photocopied Fanzine",
     "title": "The Paste-Up",
     "when": "['Atomic', 'Information'].includes(self.era?.replace(' Era', ''))",
-    "weight": { "base": 50 },
+    "weight": {
+      "base": 42,
+      "adjustments": [
+        {
+          "when": "self.era?.replace(' Era', '') === 'Atomic'",
+          "add": 6
+        }
+      ]
+    },
     "presentation": {
       "schemaVersion": 1,
       "rendererFamily": "folio",

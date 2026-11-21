@@ -2,9 +2,12 @@
   {
     "id": "printer-dispatch",
     "version": "1",
-    "title": "The Printer’s Dispatch",
+    "label": "Woodcut News Sheet",
+    "title": "The Printer’s Mercury",
     "when": "self.era?.replace(' Era', '') === 'Renaissance'",
-    "weight": { "base": 40 },
+    "weight": {
+      "base": 52
+    },
     "presentation": {
       "schemaVersion": 1,
       "rendererFamily": "folio",

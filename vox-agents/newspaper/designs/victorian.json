@@ -2,33 +2,19 @@
   {
     "id": "victorian",
     "version": "1",
-    "title": "The Civic Chronicle",
+    "label": "Victorian Broadsheet",
+    "title": "The Morning Ledger",
     "civilizationTitles": {
-      "*": "Chronicle of {{terms.civilization}}"
+      "The Netherlands": "The Dutch Morning Ledger",
+      "*": "The Morning Ledger of {{terms.civilization}}"
     },
-    "when": "['Medieval', 'Renaissance', 'Industrial', 'Modern', 'Atomic'].includes(self.era?.replace(' Era', ''))",
+    "when": "['Industrial', 'Modern'].includes(self.era?.replace(' Era', ''))",
     "weight": {
-      "base": 0,
+      "base": 40,
       "adjustments": [
         {
-          "when": "self.era?.replace(' Era', '') === 'Medieval'",
-          "add": 15
-        },
-        {
-          "when": "self.era?.replace(' Era', '') === 'Renaissance'",
-          "add": 25
-        },
-        {
           "when": "self.era?.replace(' Era', '') === 'Industrial'",
-          "add": 60
-        },
-        {
-          "when": "self.era?.replace(' Era', '') === 'Modern'",
-          "add": 30
-        },
-        {
-          "when": "self.era?.replace(' Era', '') === 'Atomic'",
-          "add": 15
+          "add": 20
         }
       ]
     },

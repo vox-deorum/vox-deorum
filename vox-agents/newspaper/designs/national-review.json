@@ -2,9 +2,18 @@
   {
     "id": "national-review",
     "version": "1",
-    "title": "The National Review",
+    "label": "Photo Weekly",
+    "title": "The National Pictorial",
     "when": "['Modern', 'Atomic'].includes(self.era?.replace(' Era', ''))",
-    "weight": { "base": 60 },
+    "weight": {
+      "base": 52,
+      "adjustments": [
+        {
+          "when": "self.era?.replace(' Era', '') === 'Modern'",
+          "add": 3
+        }
+      ]
+    },
     "presentation": {
       "schemaVersion": 1,
       "rendererFamily": "folio",

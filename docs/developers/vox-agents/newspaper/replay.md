@@ -42,6 +42,8 @@ Choose **Inspect evidence only** to check a source without an output database or
 
 Expand **Replay diagnostics** below the paper. **Skipped checks in this batch** lists each skipped cutoff and its reason. **Selected edition** shows the saved decision and the evidence, sources, and trigger and template IDs for each article. Opening an older edition or following a link to it loads its saved prose and decision. Votes are saved separately and can influence future checks.
 
+Use **Editorial decision** to explain a design change. `designSelection` shows the previous design, its run length, why the editor kept it or drew again, and each candidate's raw weight and weight in that draw. A zero draw weight means the editor kept the old design without drawing or left that candidate out. `mastheadRuleId` names a rule that supplied the printed title; without one the design supplied it. Changing the appearance in this tab keeps the saved masthead.
+
 Click **Inspect cutoff** to query the current window without advancing. The result stays tied to the inspected cutoff and can differ from the cutoff of the edition on screen. It shows the original dates, row IDs, and permitted values for national and city summaries, events, tactical zones, receiver technologies, comparison rows, diplomacy, and congress observations.
 
 ## Generate examples from the command line
@@ -73,7 +75,7 @@ Open `index.html` directly in a browser. Rendered issues appear first; expand th
 
 Mirror the catalogue paths in an overlay directory. For example, place a copy of `vox-agents/newspaper/triggers/cities.json` under `triggers/` in the overlay, edit a rule there, and add `--config .tmp/newspaper-overlay` to the command. Run it with a new `--output` and keep the same source, player, range, and frequency. See [catalogue merging](editorial.md#catalogue-and-eligibility) for which fields carry over.
 
-If a story is missing, read the [trigger audit](triggers/overview.md) for matched subjects and their evidence. The decision shows eligible candidates and how they competed for space. `choiceErrors` records expression failures and whether the check hit its execution limit. See the [editorial guide](editorial.md#authoring-choices) for eligibility and weights.
+If a story is missing, read the [trigger audit](triggers/overview.md) for matched subjects and their evidence. The decision shows eligible candidates and how they competed for space. `choiceErrors` records expression failures and whether the check hit its execution limit. For [design weights](designs.md#which-design-runs), compare runs with the same recording, receiver, and first cutoff. Use matching shorter windows if a long replay reaches its memory limit; a fresh window starts with no publication history.
 
 ### Stock catalogue reading examples
 

@@ -2,21 +2,26 @@
   {
     "id": "order-workers-herald",
     "title": "The Workers' Herald of {{terms.civilization}}",
-    "motto": "News from the workshops and fields",
+    "motto": "The working day, reported in full",
     "pageLabels": {
-      "abroad": "International Solidarity"
+      "home": "Everyday Life",
+      "economy": "Work and Its Rewards",
+      "abroad": "Solidarity Abroad"
     },
     "when": "self.ideology === 'Order'",
     "weight": {
       "base": 10
-    }
+    },
+    "designs": ["victorian"]
   },
   {
     "id": "order-workers-herald-wire",
-    "title": "The {{terms.civilizationAdjective}} Workers' Herald",
-    "motto": "News from the workshops and fields",
+    "title": "The Workers' Wire of {{terms.civilization}}",
+    "motto": "Dispatches for the working day",
     "pageLabels": {
-      "abroad": "International Solidarity"
+      "home": "Life at Home",
+      "economy": "Output and Quotas",
+      "abroad": "The International Line"
     },
     "when": "self.ideology === 'Order'",
     "weight": {
@@ -27,62 +32,121 @@
   {
     "id": "order-five-year-herald",
     "title": "The Five-Year Herald of {{terms.civilization}}",
-    "motto": "News from the workshops and fields",
+    "motto": "The plan, measured to the last ton",
     "pageLabels": {
-      "abroad": "International Solidarity"
+      "home": "The Plan at Work",
+      "economy": "Targets and Returns",
+      "abroad": "The Wider Movement"
     },
     "when": "self.ideology === 'Order' && self.hasPolicy('Five-Year Plan')",
     "weight": {
       "base": 15
     },
-    "designs": ["victorian", "national-review"]
+    "designs": ["national-review"]
+  },
+  {
+    "id": "order-red-banner",
+    "title": "The Red Banner",
+    "motto": "The work of the nation, on the record",
+    "pageLabels": {
+      "home": "The Common Good",
+      "economy": "The Plan and Its Costs",
+      "abroad": "The Wider World"
+    },
+    "when": "self.ideology === 'Order'",
+    "weight": {
+      "base": 6
+    },
+    "designs": ["national-review"]
   },
   {
     "id": "freedom-free-press",
     "title": "The Free Press of {{terms.civilization}}",
-    "motto": "All the news the citizen can print",
+    "motto": "All the news a citizen can print",
     "pageLabels": {
-      "abroad": "Foreign Correspondence"
+      "home": "The Public Square",
+      "economy": "Open Markets",
+      "abroad": "The World at Large"
     },
     "when": "self.ideology === 'Freedom'",
     "weight": {
       "base": 10
-    }
+    },
+    "designs": ["victorian"]
   },
   {
     "id": "freedom-free-press-wire",
-    "title": "The {{terms.civilizationAdjective}} Free Press",
-    "motto": "All the news the citizen can print",
+    "title": "The Free Press Wire",
+    "motto": "The reader's dispatch, sent at once",
     "pageLabels": {
-      "abroad": "Foreign Correspondence"
+      "home": "City Desk",
+      "economy": "Markets in Brief",
+      "abroad": "The Wired World"
     },
     "when": "self.ideology === 'Freedom'",
     "weight": {
       "base": 30
     },
     "designs": ["wire"]
+  },
+  {
+    "id": "freedom-open-ledger",
+    "title": "The Open Ledger",
+    "motto": "The public's business, printed in public",
+    "pageLabels": {
+      "home": "Civic Life",
+      "economy": "The Public Accounts",
+      "abroad": "The World in View"
+    },
+    "when": "self.ideology === 'Freedom'",
+    "weight": {
+      "base": 6
+    },
+    "designs": ["civic-index"]
   },
   {
     "id": "autocracy-national-standard",
     "title": "The National Standard of {{terms.civilization}}",
+    "motto": "The nation's account, kept straight",
     "pageLabels": {
+      "home": "The Home Front",
+      "economy": "The Nation's Stores",
       "abroad": "External Affairs"
     },
     "when": "self.ideology === 'Autocracy'",
     "weight": {
       "base": 10
-    }
+    },
+    "designs": ["victorian"]
   },
   {
     "id": "autocracy-national-standard-wire",
-    "title": "The {{terms.civilizationAdjective}} National Standard",
+    "title": "The Standard Wire of {{terms.civilization}}",
+    "motto": "Word from the capital, first",
     "pageLabels": {
-      "abroad": "External Affairs"
+      "home": "The Capital Desk",
+      "economy": "Production and Supply",
+      "abroad": "The Official Line"
     },
     "when": "self.ideology === 'Autocracy'",
     "weight": {
       "base": 30
     },
     "designs": ["wire"]
+  },
+  {
+    "id": "autocracy-state-courier",
+    "title": "The State Courier",
+    "motto": "News the state stands behind",
+    "pageLabels": {
+      "home": "Order at Home",
+      "economy": "The National Output",
+      "abroad": "The State Abroad"
+    },
+    "when": "self.ideology === 'Autocracy'",
+    "weight": {
+      "base": 6
+    },
+    "designs": ["national-review"]
   }
 ]

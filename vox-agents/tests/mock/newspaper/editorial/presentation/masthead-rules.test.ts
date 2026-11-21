@@ -215,6 +215,7 @@ describe('masthead presentation', () => {
       sources: [conditionSource, titleSource],
     };
     const result = (await presentIssue({
+      checkId: 'check/10',
       issueId: 'issue/10', campaignId: 'campaign', timelineId: 'branch',
       receiver: { playerId: 0, label: 'France' }, turn: 10,
       selected: [
@@ -248,6 +249,7 @@ describe('masthead presentation', () => {
   it('should keep the design title, motto and page labels when no rule wins', async () => {
     const config = createConfig();
     const result = (await presentIssue({
+      checkId: 'check/10',
       issueId: 'issue/10', campaignId: 'campaign', timelineId: 'branch',
       receiver: { playerId: 0, label: 'France' }, turn: 10,
       selected: [

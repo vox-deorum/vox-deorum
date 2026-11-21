@@ -8,6 +8,7 @@ import { getEditorialExpressions, loadEditorialConfig, parseEditorialConfig } fr
 import { editorialConfigSchema } from '../../../../../src/newspaper/editorial/config/schema.js';
 import { buildNewspaperFacts } from '../../../../../src/newspaper/editorial/facts/index.js';
 import { reference } from '../../../../../src/newspaper/editorial/facts/model.js';
+import { configurationHash } from '../../../../../src/newspaper/editorial/shared/determinism.js';
 import { evaluateChoices } from '../../../../../src/newspaper/editorial/shared/eligibility.js';
 
 describe('editorial catalogue files', () => {
@@ -41,6 +42,15 @@ describe('editorial catalogue files', () => {
     expect(base.designs.every(design => !Object.hasOwn(design, 'assetDefinitions'))).toBe(true);
     const victorian = base.designs.find(design => design.id === 'victorian');
     expect(victorian?.presentation.assets?.ornamentAssetId).toBe('victorian.scrollwork');
+  });
+
+  it('should exclude browser-only design labels from the effective catalogue', async () => {
+    const base = await loadEditorialConfig();
+    const design = base.designs[0];
+    await writeDocument('designs/override.json', [{ id: design.id, label: 'Preview label' }]);
+    const loaded = await loadEditorialConfig(directory);
+    expect(loaded.designs).toEqual(base.designs);
+    expect(configurationHash(loaded)).toBe(configurationHash(base));
   });
 
   it('should reject asset declarations in a design overlay', async () => {

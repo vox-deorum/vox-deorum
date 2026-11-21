@@ -2,9 +2,18 @@
   {
     "id": "civic-index",
     "version": "1",
-    "title": "The Civic Index",
+    "label": "Swiss Grid",
+    "title": "The Daily Index",
     "when": "['Atomic', 'Information', 'Future'].includes(self.era?.replace(' Era', ''))",
-    "weight": { "base": 50 },
+    "weight": {
+      "base": 50,
+      "adjustments": [
+        {
+          "when": "self.era?.replace(' Era', '') === 'Future'",
+          "add": -5
+        }
+      ]
+    },
     "presentation": {
       "schemaVersion": 1,
       "rendererFamily": "folio",

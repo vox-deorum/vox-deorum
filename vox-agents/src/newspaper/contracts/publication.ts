@@ -24,6 +24,7 @@ export type PublishedItemRecord = z.infer<typeof publishedItemRecordSchema>;
 /** Compact history needed by feedback and series continuity. */
 export const publishedIssueRecordSchema = z.object({
   issueId: z.string(), turn: z.number().int(), items: z.array(publishedItemRecordSchema),
+  designId: z.string().optional(),
 });
 export type PublishedIssueRecord = z.infer<typeof publishedIssueRecordSchema>;
 /** Trace of votes and the corpus used to compute their current effect. */
@@ -37,6 +38,16 @@ export type FeedbackRecord = z.infer<typeof feedbackRecordSchema>;
 /** Runtime authoring errors kept with the editorial audit. */
 const choiceExpressionErrorSchema = z.object({ choice: z.string(), field: z.string(), message: z.string() });
 export type ChoiceExpressionError = z.infer<typeof choiceExpressionErrorSchema>;
+/** Press run history and the weights available for the design draw. */
+const designSelectionSchema = z.object({
+  previousId: z.string().nullable(),
+  priorRunLength: z.number().int().min(0).max(6),
+  reason: z.enum(['opening', 'protected', 'weighted', 'run-limit', 'weak-incumbent', 'ineligible-incumbent', 'no-eligible']),
+  candidates: z.array(z.object({
+    id: z.string(), rawWeight: z.number().positive(), drawWeight: z.number().nonnegative(),
+  })),
+});
+export type DesignSelection = z.infer<typeof designSelectionSchema>;
 /** Reproducible choices and supporting evidence for one completed check. */
 export const editorialDecisionRecordSchema = z.object({
   checkId: z.string(), cutoffTurn: z.number().int(), configurationId: z.string(),
@@ -45,6 +56,7 @@ export const editorialDecisionRecordSchema = z.object({
   candidateScores: z.array(z.object({ id: z.string(), score: z.number(), selected: z.boolean() })),
   selectedVariants: z.record(z.string(), z.string()), designId: z.string().nullable(),
   mastheadRuleId: z.string().optional(),
+  designSelection: designSelectionSchema.optional(),
   selectedStyles: z.record(z.string(), variantStyleSchema).optional(),
   layouts: z.record(z.string(), z.string()), evidence: z.array(newspaperSourceReferenceSchema),
   feedback: feedbackRecordSchema,

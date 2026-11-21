@@ -1,128 +1,226 @@
 [
   {
     "id": "civilization-rome-forum",
-    "title": "The Forum Record",
-    "motto": "What the city says and does",
+    "title": "Tabulae Fori",
+    "motto": "From the rostra to the market stalls",
     "pageLabels": {
-      "home": "Forum Notices",
-      "economy": "Market Accounts"
+      "home": "In the Forum",
+      "economy": "Stalls and Storehouses"
     },
     "when": "self.name === 'Rome' && self.ideology === null",
     "weight": {
       "base": 7
     },
-    "designs": ["victorian", "court-dispatch", "port-register", "oral-accounts"]
+    "designs": ["oral-accounts"]
   },
   {
     "id": "civilization-babylon-chronicle",
-    "title": "The Babylonian Chronicle",
-    "motto": "Marks in clay, year by year",
+    "title": "The Esagil Tablets",
+    "motto": "Babylon set down in fresh clay",
     "pageLabels": {
-      "home": "The City Tablet",
-      "economy": "Measures and Rations"
+      "home": "Tablets of the City",
+      "economy": "Grain and Silver"
     },
     "when": "self.name === 'Babylon' && self.ideology === null",
     "weight": {
       "base": 7
     },
-    "designs": ["clay-chronicle", "oral-accounts"]
+    "designs": ["clay-chronicle"]
   },
   {
     "id": "civilization-england-courant",
-    "title": "The English Courant",
-    "motto": "Intelligence by post and packet",
+    "title": "The Fleet Street Courant",
+    "motto": "By the first post and the last tide",
     "pageLabels": {
       "home": "Home Intelligence",
-      "abroad": "Foreign Letters"
+      "abroad": "By Foreign Post"
     },
     "when": "self.name === 'England' && self.ideology === null",
     "weight": {
       "base": 7
     },
-    "designs": ["printer-dispatch", "port-register", "street-gazette", "cable-desk"]
+    "designs": ["port-register"]
   },
   {
     "id": "civilization-venice-avvisi",
-    "title": "Avvisi di Venezia",
-    "motto": "Letters from home and from every port",
+    "title": "Foglio del Rialto",
+    "motto": "News of the lagoon, struck into type",
     "pageLabels": {
-      "economy": "Merchants' Letters",
-      "abroad": "Dispatches by Sea and Land"
+      "economy": "The Rialto Exchange",
+      "abroad": "Beyond the Lagoon"
     },
     "when": "self.name === 'Venice' && self.ideology === null",
     "weight": {
       "base": 7
     },
-    "designs": ["port-register", "printer-dispatch", "court-dispatch"]
+    "designs": ["printer-dispatch"]
   },
   {
     "id": "civilization-siam-gazette",
-    "title": "The Siam Gazette",
-    "motto": "Public notices and news from the provinces",
+    "title": "Rachakitchanubeksah",
+    "motto": "The royal gazette of Siam",
     "pageLabels": {
-      "home": "Public Notices",
-      "abroad": "Foreign Affairs"
+      "home": "Court and Provinces",
+      "abroad": "News from Other Courts"
     },
     "when": "self.name === 'Siam' && self.ideology === null",
     "weight": {
       "base": 6
     },
-    "designs": ["street-gazette", "cable-desk", "national-review"]
+    "designs": ["street-gazette"]
   },
   {
     "id": "civilization-korea-court-gazette",
-    "title": "The Court Gazette",
-    "motto": "The day's dispatches, set down by the scribes",
+    "title": "Jobo",
+    "motto": "The court's business in the morning ink",
     "pageLabels": {
       "home": "Memorials and Petitions",
-      "abroad": "Reports from Envoys"
+      "abroad": "The Envoys' Road"
     },
-    "when": "self.name === 'Korea' && self.ideology === null",
+    "when": "self.name === 'Korea' && self.era?.replace(' Era', '') === 'Renaissance' && self.ideology === null",
     "weight": {
       "base": 6
     },
-    "designs": ["heian", "court-dispatch", "printer-dispatch"]
+    "designs": ["heian"]
   },
   {
     "id": "civilization-polynesia-star-compass",
-    "title": "The Star Compass",
-    "motto": "By stars and swells, word reaches shore",
+    "title": "Hōkūleʻa",
+    "motto": "By the guiding star, news finds its way home",
     "pageLabels": {
-      "home": "News from Home Shores",
+      "home": "Along Our Shores",
       "abroad": "Beyond the Horizon"
     },
     "when": "self.name === 'Polynesia' && self.ideology === null",
     "weight": {
       "base": 6
     },
-    "designs": ["oral-accounts", "port-register", "victorian"]
+    "designs": ["oral-accounts"]
   },
   {
     "id": "civilization-germany-neue-zeitung",
-    "title": "Neue Zeitung",
-    "motto": "New tidings from town and country",
+    "title": "Berliner Tageblatt",
+    "motto": "The capital's news in street and square",
     "pageLabels": {
-      "home": "Town and Country",
-      "abroad": "Tidings from Abroad"
+      "home": "Berlin and the Provinces",
+      "abroad": "Foreign Telegrams"
     },
     "when": "self.name === 'Germany' && self.ideology === null",
     "weight": {
       "base": 6
     },
-    "designs": ["printer-dispatch", "street-gazette", "cable-desk"]
+    "designs": ["street-gazette"]
   },
   {
     "id": "civilization-brazil-correio",
-    "title": "Correio das Cidades",
-    "motto": "Letters and news for the public reader",
+    "title": "O Cruzeiro",
+    "motto": "Brazil in view, the world in focus",
     "pageLabels": {
-      "home": "Letters from the Cities",
-      "abroad": "Letters from Abroad"
+      "home": "Cities and Interior",
+      "abroad": "The World in Pictures"
     },
     "when": "self.name === 'Brazil' && self.ideology === null",
     "weight": {
       "base": 7
     },
-    "designs": ["port-register", "street-gazette", "cable-desk", "national-review"]
+    "designs": ["national-review"]
+  },
+  {
+    "id": "civilization-germany-printers-news",
+    "title": "Newe Zeytung",
+    "motto": "Fresh from the press, from town and market",
+    "pageLabels": {
+      "home": "Town and Country",
+      "abroad": "Beyond the Borders"
+    },
+    "when": "self.name === 'Germany' && self.ideology === null",
+    "weight": {
+      "base": 6
+    },
+    "designs": ["printer-dispatch"]
+  },
+  {
+    "id": "civilization-brazil-london-correio",
+    "title": "Correio Braziliense",
+    "motto": "News travels farther than the postmark",
+    "pageLabels": {
+      "home": "City and Interior",
+      "abroad": "The World by Post"
+    },
+    "when": "self.name === 'Brazil' && self.era?.replace(' Era', '') === 'Industrial' && self.ideology === null",
+    "weight": {
+      "base": 7
+    },
+    "designs": ["victorian"]
+  },
+  {
+    "id": "civilization-china-jiagu",
+    "title": "Jiǎgǔ of Yin",
+    "motto": "The Shang court's questions, cut into turtle bone",
+    "pageLabels": {
+      "home": "Matters of the Court",
+      "economy": "Harvests and Stores"
+    },
+    "when": "self.name === 'China' && self.ideology === null",
+    "weight": {
+      "base": 7
+    },
+    "designs": ["shang"]
+  },
+  {
+    "id": "civilization-egypt-set-maat",
+    "title": "The Set Maat Ostraca",
+    "motto": "News of the Nile, in ink on limestone",
+    "pageLabels": {
+      "home": "Along the Nile",
+      "economy": "Rations and Reckonings"
+    },
+    "when": "self.name === 'Egypt' && self.ideology === null",
+    "weight": {
+      "base": 7
+    },
+    "designs": ["egypt"]
+  },
+  {
+    "id": "civilization-japan-heian-dayori",
+    "title": "Heian-kyō Dayori",
+    "motto": "A brush puts the capital's news to paper",
+    "pageLabels": {
+      "home": "At Court and in Town",
+      "abroad": "Letters from Other Lands"
+    },
+    "when": "self.name === 'Japan' && self.era?.replace(' Era', '') === 'Medieval' && self.ideology === null",
+    "weight": {
+      "base": 7
+    },
+    "designs": ["heian"]
+  },
+  {
+    "id": "civilization-inca-tawantinsuyu",
+    "title": "The Khipu of Tawantinsuyu",
+    "motto": "The roads bring word, the cords hold the count",
+    "pageLabels": {
+      "home": "Word from the Quarters",
+      "economy": "Storehouse Accounts"
+    },
+    "when": "self.name === 'The Inca' && self.ideology === null",
+    "weight": {
+      "base": 7
+    },
+    "designs": ["cord-register"]
+  },
+  {
+    "id": "civilization-netherlands-tydinghen",
+    "title": "Tydinghen uyt vele Quartieren",
+    "motto": "From the packet boat to the printer's forme",
+    "pageLabels": {
+      "economy": "The Bourse",
+      "abroad": "Letters from Afar"
+    },
+    "when": "self.name === 'The Netherlands' && self.era?.replace(' Era', '') === 'Renaissance' && self.ideology === null",
+    "weight": {
+      "base": 7
+    },
+    "designs": ["port-register"]
   }
 ]

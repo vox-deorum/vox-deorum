@@ -2,9 +2,12 @@
   {
     "id": "sunday-colour",
     "version": "1",
+    "label": "Sunday Comic Supplement",
     "title": "The Sunday Colour",
     "when": "['Industrial', 'Modern'].includes(self.era?.replace(' Era', ''))",
-    "weight": { "base": 18 },
+    "weight": {
+      "base": 37
+    },
     "presentation": {
       "schemaVersion": 1,
       "rendererFamily": "folio",

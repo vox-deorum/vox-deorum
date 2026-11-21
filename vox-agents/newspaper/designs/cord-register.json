@@ -2,9 +2,12 @@
   {
     "id": "cord-register",
     "version": "1",
-    "title": "The Cord Register",
-    "when": "['Classical', 'Medieval', 'Renaissance'].includes(self.era?.replace(' Era', ''))",
-    "weight": { "base": 1, "adjustments": [{ "when": "self.name === 'The Inca'", "add": 65 }] },
+    "label": "Knotted Inca Cords",
+    "title": "The Keeper’s Account",
+    "when": "self.name === 'The Inca' && ['Classical', 'Medieval', 'Renaissance'].includes(self.era?.replace(' Era', ''))",
+    "weight": {
+      "base": 76
+    },
     "presentation": {
       "schemaVersion": 1,
       "rendererFamily": "folio",

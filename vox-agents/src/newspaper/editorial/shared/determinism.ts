@@ -28,6 +28,16 @@ export function stableDraw(identitySeed: string, ruleId: string, subject: string
   return digest.readUInt32BE(0) / 0x100000000;
 }
 
+/** Draw a design using only the identity of the current check. */
+export function pressRunDesignDraw(checkId: string): number {
+  return stableDraw(checkId, 'press-run-design', '');
+}
+
+/** Give each page an independent draw for the selected design. */
+export function pressRunLayoutDraw(checkId: string, designId: string, pageId: string): number {
+  return stableDraw(checkId, 'press-run-layout', JSON.stringify([designId, pageId]));
+}
+
 /** Bind independent streams only to the configuration sections that affect their choices. */
 export function createEditorialStreams(
   identitySeed: string,

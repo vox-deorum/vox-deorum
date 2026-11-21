@@ -2,18 +2,15 @@
   {
     "id": "shang",
     "version": "1",
+    "label": "Shang Oracle Shell",
     "title": "Records of the Shang Court",
     "when": "self.name === 'China' && ['Ancient', 'Classical'].includes(self.era?.replace(' Era', ''))",
     "weight": {
-      "base": 0,
+      "base": 55,
       "adjustments": [
         {
           "when": "self.era?.replace(' Era', '') === 'Ancient'",
-          "add": 80
-        },
-        {
-          "when": "self.era?.replace(' Era', '') === 'Classical'",
-          "add": 8
+          "add": 25
         }
       ]
     },

@@ -2,9 +2,12 @@
   {
     "id": "civic-survey",
     "version": "1",
-    "title": "The Civic Survey",
+    "label": "Isotype Bulletin",
+    "title": "The Common Measure",
     "when": "['Modern', 'Atomic'].includes(self.era?.replace(' Era', ''))",
-    "weight": { "base": 45 },
+    "weight": {
+      "base": 45
+    },
     "presentation": {
       "schemaVersion": 1,
       "rendererFamily": "folio",

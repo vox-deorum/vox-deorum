@@ -2,12 +2,15 @@
   {
     "id": "town-book",
     "version": "1",
+    "label": "Illuminated Town Book",
     "title": "The Town Book",
     "civilizationTitles": {
       "*": "The Town Book of {{terms.civilization}}"
     },
     "when": "self.era?.replace(' Era', '') === 'Medieval'",
-    "weight": { "base": 45 },
+    "weight": {
+      "base": 50
+    },
     "presentation": {
       "schemaVersion": 1,
       "rendererFamily": "folio",

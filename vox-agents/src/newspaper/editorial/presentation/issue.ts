@@ -7,11 +7,12 @@ import {
   type InlineText,
   type IssueReceiver,
 } from '../../contracts/issue.js';
-import type { PublicationState } from '../../contracts/publication.js';
+import type { DesignSelection, PublicationState } from '../../contracts/publication.js';
 import { variantStyleKinds, type VariantStyle } from '../../contracts/style.js';
 import type { EditorialConfig, EditorialDesign, AuthoredVariant } from '../config/schema.js';
 import type { EditorialTerms } from '../config/expressions.js';
 import { resolveVariantStyle } from '../config/styles.js';
+import { pressRunDesignDraw, pressRunLayoutDraw } from '../shared/determinism.js';
 import { chooseWeighted } from '../shared/weights.js';
 import { uniqueSources } from '../shared/sources.js';
 import {
@@ -50,14 +51,12 @@ export function renderAuthoredText(
   return nodes.length ? nodes : [{ type: 'text', text }];
 }
 
-/** Choose a design with a printable masthead and eligible positive layouts, retaining the earlier identity while competitive. */
-export function chooseDesign(
+/** Require a printable masthead and both ordinary and breaking layouts for every eligible design. */
+function eligibleDesigns(
   config: EditorialConfig,
   weights: PresentationWeights,
-  previousId: string | null,
-  random: () => number,
-  terms: EditorialTerms = new Map()
-): EditorialDesign | undefined {
+  terms: EditorialTerms,
+): EditorialDesign[] {
   const eligible = config.designs.filter((design) =>
     (weights.get(design) ?? 0) > 0 && resolveMasthead(design, terms) !== undefined
   );
@@ -71,6 +70,18 @@ export function chooseDesign(
         throw new Error(`Eligible design ${design.id} has no available ${variant} layout.`);
       }
   }
+  return eligible;
+}
+
+/** Choose a design using legacy stickiness and the original shared presentation draw. */
+export function chooseDesign(
+  config: EditorialConfig,
+  weights: PresentationWeights,
+  previousId: string | null,
+  random: () => number,
+  terms: EditorialTerms = new Map()
+): EditorialDesign | undefined {
+  const eligible = eligibleDesigns(config, weights, terms);
   const strongest = Math.max(
     0,
     ...eligible.map((design) => weights.get(design)!)
@@ -82,6 +93,53 @@ export function chooseDesign(
   )
     return previous;
   return chooseWeighted(eligible, (design) => weights.get(design)!, random);
+}
+
+const protectedIssues = 3;
+const maximumIssues = 6;
+
+/** Keep a competitive incumbent through three issues and force it out after six when an alternative fits. */
+export function choosePressRunDesign(
+  config: EditorialConfig,
+  weights: PresentationWeights,
+  state: PublicationState,
+  random: () => number,
+  terms: EditorialTerms = new Map(),
+): { design: EditorialDesign | undefined; audit: DesignSelection } {
+  const eligible = eligibleDesigns(config, weights, terms);
+  // Use a fixed code point order so catalogue ordering and the process locale cannot change the draw.
+  eligible.sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+  const strongest = Math.max(0, ...eligible.map((design) => weights.get(design)!));
+  const competitive = eligible.filter((design) => weights.get(design)! >= strongest / 2);
+  const previousId = state.issues.at(-1)?.designId ?? null;
+  let priorRunLength = 0;
+  if (previousId !== null) {
+    for (let offset = 1; offset <= maximumIssues; offset++) {
+      if (state.issues.at(-offset)?.designId !== previousId) break;
+      priorRunLength++;
+    }
+  }
+  const incumbent = competitive.find((design) => design.id === previousId);
+  const keep = incumbent !== undefined && priorRunLength < protectedIssues;
+  const forceSwitch = incumbent !== undefined && priorRunLength === maximumIssues && competitive.length > 1;
+  let reason: DesignSelection['reason'];
+  if (!eligible.length) reason = 'no-eligible';
+  else if (keep) reason = 'protected';
+  else if (forceSwitch) reason = 'run-limit';
+  else if (incumbent) reason = 'weighted';
+  else if (previousId === null) reason = 'opening';
+  else reason = eligible.some((design) => design.id === previousId) ? 'weak-incumbent' : 'ineligible-incumbent';
+  const pool = keep ? [] : competitive.filter((design) => !forceSwitch || design !== incumbent);
+  const drawWeights = new Map(pool.map((design) => [design, weights.get(design)!]));
+  return {
+    design: keep ? incumbent : chooseWeighted(pool, (design) => drawWeights.get(design)!, random),
+    audit: {
+      previousId, priorRunLength, reason,
+      candidates: eligible.map((design) => ({
+        id: design.id, rawWeight: weights.get(design)!, drawWeight: drawWeights.get(design) ?? 0,
+      })),
+    },
+  };
 }
 
 export interface PresentationResult {
@@ -96,6 +154,7 @@ export interface PresentationResult {
 
 /** Write canonical articles, prioritize immediate threats, and adapt section pages to available content. */
 export async function presentIssue(input: {
+  checkId: string;
   issueId: string;
   campaignId: string;
   timelineId: string;
@@ -107,12 +166,20 @@ export async function presentIssue(input: {
   weights: PresentationWeights;
   proseRandom: () => number;
   presentationRandom: () => number;
+  recordDesignSelection?: (audit: DesignSelection) => void;
   terms?: EditorialTerms;
   selectMasthead?: (design: EditorialDesign) => Promise<MastheadRuleSelection | undefined>;
 }): Promise<PresentationResult | undefined> {
   const { config, weights, state } = input;
   const terms = input.terms ?? new Map();
-  const design = chooseDesign(config, weights, state.previousDesignId, input.presentationRandom, terms);
+  const pressRun = config.defaults.designSelection === 'pressRun';
+  const choice = pressRun
+    ? choosePressRunDesign(config, weights, state, () => pressRunDesignDraw(input.checkId), terms)
+    : undefined;
+  if (choice) input.recordDesignSelection?.(choice.audit);
+  const design = choice
+    ? choice.design
+    : chooseDesign(config, weights, state.previousDesignId, input.presentationRandom, terms);
   if (!design || !input.selected.length) return undefined;
   const selectedMasthead = input.selectMasthead ? await input.selectMasthead(design) : undefined;
   const masthead = selectedMasthead ?? resolveMasthead(design, terms, config.defaults.publicationTitle);
@@ -219,7 +286,7 @@ export async function presentIssue(input: {
     const layout = chooseWeighted(
       choices,
       (choice) => weights.get(choice) ?? 0,
-      input.presentationRandom
+      pressRun ? () => pressRunLayoutDraw(input.checkId, design.id, page.id) : input.presentationRandom
     );
     if (!layout) throw new Error(`No eligible layout for page ${page.id}.`);
     layouts[page.id] = layout.id;

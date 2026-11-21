@@ -2,9 +2,11 @@
   {
     "id": "era-ancient-first-telling",
     "title": "The First Telling",
-    "motto": "Remembered for those who come after",
+    "motto": "Word kept from the fireside",
     "pageLabels": {
-      "home": "Life in the Settlements"
+      "home": "Life in the Settlements",
+      "economy": "Gathering and Trade",
+      "abroad": "Word from Other Lands"
     },
     "when": "self.era?.replace(' Era', '') === 'Ancient' && self.ideology === null",
     "weight": {
@@ -15,9 +17,11 @@
   {
     "id": "era-classical-book-of-days",
     "title": "The Book of Days",
-    "motto": "The deeds and accounts of the cities",
+    "motto": "The city's deeds, set down while fresh",
     "pageLabels": {
-      "economy": "Stores and Markets"
+      "home": "Public Life",
+      "economy": "Stores and Markets",
+      "abroad": "Tidings from the Roads"
     },
     "when": "self.era?.replace(' Era', '') === 'Classical' && self.ideology === null",
     "weight": {
@@ -27,80 +31,107 @@
   },
   {
     "id": "era-medieval-register",
-    "title": "The {{terms.civilizationAdjective}} Register",
-    "motto": "A faithful record of the town's affairs",
+    "title": "The {{terms.civilizationAdjective}} Town Book",
+    "motto": "Fairs, feuds, and the town's business",
     "pageLabels": {
-      "economy": "Fairs and Tolls"
+      "home": "Streets and Hearths",
+      "economy": "Fairs and Tolls",
+      "abroad": "Reports from the Shires"
     },
     "when": "self.era?.replace(' Era', '') === 'Medieval' && self.ideology === null",
     "weight": {
       "base": 4
     },
-    "designs": ["town-book", "stitched-chronicle", "court-dispatch"]
+    "designs": ["town-book"]
   },
   {
     "id": "era-renaissance-printers-post",
     "title": "The Printer's Post",
-    "motto": "Intelligence from press and post",
+    "motto": "The world, freshly printed",
     "pageLabels": {
+      "home": "Town and Court",
+      "economy": "Prices and Pamphlets",
       "abroad": "Letters from Abroad"
     },
     "when": "self.era?.replace(' Era', '') === 'Renaissance' && self.ideology === null",
     "weight": {
       "base": 5
     },
-    "designs": ["printer-dispatch", "court-dispatch", "port-register"]
+    "designs": ["printer-dispatch"]
   },
   {
     "id": "era-industrial-daily",
-    "title": "The {{terms.civilizationAdjective}} Daily",
-    "motto": "All the news of the day",
+    "title": "The {{terms.civilizationAdjective}} Steam Press",
+    "motto": "All the works of the age, in print",
     "pageLabels": {
-      "economy": "Commerce and Industry"
+      "home": "The Works and the Town",
+      "economy": "Commerce and Industry",
+      "abroad": "News by Rail and Sea"
     },
     "when": "self.era?.replace(' Era', '') === 'Industrial' && self.ideology === null",
     "weight": {
       "base": 5
     },
-    "designs": ["street-gazette", "sunday-colour", "city-extra", "cable-desk", "port-register", "victorian"]
+    "designs": ["city-extra"]
+  },
+  {
+    "id": "era-industrial-iron-pen",
+    "title": "The Iron Pen",
+    "motto": "The age of iron, set in type",
+    "pageLabels": {
+      "home": "Town and Workshop",
+      "economy": "Iron and Freight",
+      "abroad": "Dispatches by Rail"
+    },
+    "when": "self.era?.replace(' Era', '') === 'Industrial' && self.ideology === null",
+    "weight": {
+      "base": 4
+    },
+    "designs": ["street-gazette"]
   },
   {
     "id": "era-modern-evening-news",
-    "title": "The {{terms.civilizationAdjective}} Evening News",
-    "motto": "The day's news, gathered by wire",
+    "title": "The {{terms.civilizationAdjective}} Evening Post",
+    "motto": "The city's day, put to press",
     "pageLabels": {
+      "home": "The Nation at Home",
+      "economy": "Money and Trade",
       "abroad": "The Cable Desk"
     },
     "when": "self.era?.replace(' Era', '') === 'Modern' && self.ideology === null",
     "weight": {
       "base": 4
     },
-    "designs": ["national-review", "civic-survey", "cable-desk", "street-gazette", "city-extra", "victorian"]
+    "designs": ["city-extra"]
   },
   {
     "id": "era-atomic-daily-star",
-    "title": "The {{terms.civilizationAdjective}} Daily Star",
-    "motto": "Our times in news and pictures",
+    "title": "The {{terms.civilizationAdjective}} Pictorial",
+    "motto": "The age in photographs and plain words",
     "pageLabels": {
-      "home": "Around the Nation"
+      "home": "Around the Nation",
+      "economy": "Industry and the Atom",
+      "abroad": "The World in Focus"
     },
     "when": "self.era?.replace(' Era', '') === 'Atomic' && self.ideology === null",
     "weight": {
       "base": 4
     },
-    "designs": ["contact-sheet", "paste-up", "teletext-bulletin", "civic-index"]
+    "designs": ["national-review"]
   },
   {
     "id": "era-information-bulletin",
-    "title": "The {{terms.civilizationAdjective}} Bulletin",
-    "motto": "News as it happens, where it happens",
+    "title": "The {{terms.civilizationAdjective}} Horizon",
+    "motto": "Word of the world as it changes",
     "pageLabels": {
+      "home": "Life in Motion",
+      "economy": "Trade and Invention",
       "abroad": "World Desk"
     },
     "when": "['Information', 'Future'].includes(self.era?.replace(' Era', '')) && self.ideology === null",
     "weight": {
       "base": 4
     },
-    "designs": ["wire", "teletext-bulletin", "civic-index", "contact-sheet"]
+    "designs": ["civic-index"]
   }
 ]

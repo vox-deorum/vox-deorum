@@ -12,7 +12,7 @@ import { computeFeedback, candidateFeedback } from '../../../../src/newspaper/ed
 import { decaySeries } from '../../../../src/newspaper/editorial/selection/series.js';
 import { selectHeuristic } from '../../../../src/newspaper/editorial/selection/heuristic.js';
 import { runEditorialCheck } from '../../../../src/newspaper/editorial/check.js';
-import { chooseDesign } from '../../../../src/newspaper/editorial/presentation/issue.js';
+import { choosePressRunDesign } from '../../../../src/newspaper/editorial/presentation/issue.js';
 import { evaluatePresentation } from '../../../../src/newspaper/editorial/presentation/eligibility.js';
 import { createEditorialStreams } from '../../../../src/newspaper/editorial/shared/determinism.js';
 
@@ -490,9 +490,9 @@ describe('editorial engine', () => {
       expect(result.decision.fallbackReason).toBeTruthy();
     });
 
-    it('should retain the wire design when a published Modern Era run reaches the Future Era', async () => {
+    it('should retain the wire design when a published Information Era run reaches the Future Era', async () => {
       const wireOnly = { ...config, designs: config.designs.filter(design => design.id === 'wire') };
-      const first = await check(fixture(10, 5, 0, 'Modern Era'), createInitialPublicationState(), wireOnly);
+      const first = await check(fixture(10, 5, 0, 'Information Era'), createInitialPublicationState(), wireOnly);
       expect(first.status).toBe('published');
       expect(first.state.previousDesignId).toBe('wire');
       const future = await check(fixture(20, 10, 25, 'Future Era'), first.state);
@@ -578,38 +578,22 @@ describe('editorial engine', () => {
       expect(retried.state.lastCheckTurn).toBe(20);
     });
 
-    it('should cover every era for a civilization without a regional design', async () => {
-      for (const [era, expected] of [
-        [undefined, ['oral-accounts']], ['Unrecognized', ['oral-accounts']],
-        ['Ancient', ['oral-accounts']], ['Classical', ['oral-accounts']], ['Classical Era', ['oral-accounts']],
-        ['Medieval Era', ['court-dispatch', 'town-book', 'victorian']],
-        ['Renaissance', ['court-dispatch', 'port-register', 'printer-dispatch', 'victorian']],
-        ['Industrial', ['court-dispatch', 'sunday-colour', 'victorian']],
-        ['Modern', ['civic-survey', 'national-review', 'sunday-colour', 'victorian', 'wire']],
-        ['Atomic Era', ['civic-survey', 'national-review', 'victorian', 'wire']],
-        ['Information Era', ['wire']], ['Future', ['wire']],
-      ] as const) {
-        const { byId, weights } = await designChoices('France', era);
-        const eligible = Object.keys(byId).filter(id => byId[id] > 0);
-        expect(eligible, era).toEqual(expect.arrayContaining([...expected]));
-        if (era === 'Information Era') {
-          expect(eligible).not.toContain('victorian');
-          expect(eligible).toContain(chooseDesign(config, weights, 'victorian', () => 0)?.id);
-        }
-        if (era === 'Modern' || era === 'Atomic Era')
-          expect(byId.wire).toBeGreaterThan(byId.victorian);
-      }
+    it('should introduce the social news feed in Information and keep it in Future', async () => {
+      for (const era of ['Modern', 'Atomic Era'])
+        expect((await designChoices('France', era)).byId.wire).toBe(0);
+      for (const era of ['Information Era', 'Future'])
+        expect((await designChoices('France', era)).byId.wire).toBeGreaterThan(0);
     });
 
-    it('should favor Heian in Japan and make it an occasional choice in Korea and China', async () => {
+    it('should favor Heian in Japan while keeping it competitive in Korea and China', async () => {
       for (const [era, general] of [
-        ['Classical Era', 'oral-accounts'], ['Medieval', 'victorian'], ['Renaissance Era', 'victorian'],
+        ['Classical Era', 'oral-accounts'], ['Medieval', 'town-book'], ['Renaissance Era', 'printer-dispatch'],
       ] as const) {
         const japan = (await designChoices('Japan', era)).byId;
         expect(japan.heian, era).toBeGreaterThan(japan[general]);
         for (const name of ['Korea', 'China']) {
           const { byId } = await designChoices(name, era);
-          expect(byId.heian, `${name}, ${era}`).toBeGreaterThan(0);
+          expect(byId.heian, `${name}, ${era}`).toBeGreaterThanOrEqual(Math.max(...Object.values(byId)) / 2);
           expect(byId.heian, `${name}, ${era}`).toBeLessThan(byId[general]);
         }
       }
@@ -617,7 +601,7 @@ describe('editorial engine', () => {
       expect((await designChoices('Japan', 'Industrial')).byId.heian).toBe(0);
     });
 
-    it('should offer Egypt to Nubia and let China draw again when Shang loses weight in Classical', async () => {
+    it('should offer a Nubian edition and keep the notice board competitive with Shang in Classical', async () => {
       for (const era of ['Ancient Era', 'Classical']) {
         const egypt = (await designChoices('Egypt', era)).byId;
         const nubia = (await designChoices('Nubia', era)).byId;
@@ -631,8 +615,10 @@ describe('editorial engine', () => {
       expect(ancient.byId.shang).toBeGreaterThan(ancient.byId['oral-accounts']);
       expect(classical.byId.shang).toBeGreaterThan(0);
       expect(classical.byId.shang).toBeLessThan(ancient.byId.shang);
+      const state = createInitialPublicationState();
+      state.issues = [1, 2, 3].map(turn => ({ issueId: `issue-${turn}`, turn, items: [], designId: 'shang' }));
       const draws = [0, 0.25, 0.5, 0.75, 1 - Number.EPSILON];
-      const choices = draws.map(draw => chooseDesign(config, classical.weights, 'shang', () => draw)?.id);
+      const choices = draws.map(draw => choosePressRunDesign(config, classical.weights, state, () => draw).design?.id);
       expect(choices).toEqual(expect.arrayContaining(['shang', 'oral-accounts']));
     });
 
@@ -664,7 +650,7 @@ describe('editorial engine', () => {
       /** Publish one edition with the receiver's recorded ideology at a chosen cutoff and branch. */
       async function publish(ideology: string | null, turn: number, timelineId = 'branch') {
         const evidence = fixture(turn, turn - 5);
-        evidence.players[0].values.Era = 'Modern Era';
+        evidence.players[0].values.Era = 'Information Era';
         evidence.players[0].values.PolicyBranches = ideology === null ? null : { [ideology]: [] };
         const facts = buildNewspaperFacts(
           evidence,

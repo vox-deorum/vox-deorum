@@ -2,9 +2,12 @@
   {
     "id": "stitched-chronicle",
     "version": "1",
-    "title": "The Stitched Chronicle",
+    "label": "Embroidered Frieze",
+    "title": "The Hall Frieze",
     "when": "self.era?.replace(' Era', '') === 'Medieval'",
-    "weight": { "base": 14 },
+    "weight": {
+      "base": 36
+    },
     "presentation": {
       "schemaVersion": 1,
       "rendererFamily": "folio",

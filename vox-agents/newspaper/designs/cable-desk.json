@@ -2,9 +2,12 @@
   {
     "id": "cable-desk",
     "version": "1",
-    "title": "The Cable Desk",
+    "label": "Telegram Form",
+    "title": "By Cable",
     "when": "['Industrial', 'Modern'].includes(self.era?.replace(' Era', ''))",
-    "weight": { "base": 18 },
+    "weight": {
+      "base": 36
+    },
     "presentation": {
       "schemaVersion": 1,
       "rendererFamily": "folio",

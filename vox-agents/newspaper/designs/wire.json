@@ -2,29 +2,18 @@
   {
     "id": "wire",
     "version": "1",
-    "title": "The Civic Wire",
+    "label": "Social News Feed",
+    "title": "Public Signal",
     "civilizationTitles": {
-      "*": "{{terms.civilization}} Wire"
+      "*": "{{terms.civilization}} Signal"
     },
-    "when": "['Modern', 'Atomic', 'Information', 'Future'].includes(self.era?.replace(' Era', ''))",
+    "when": "['Information', 'Future'].includes(self.era?.replace(' Era', ''))",
     "weight": {
-      "base": 0,
+      "base": 55,
       "adjustments": [
         {
-          "when": "self.era?.replace(' Era', '') === 'Modern'",
-          "add": 60
-        },
-        {
-          "when": "self.era?.replace(' Era', '') === 'Atomic'",
-          "add": 80
-        },
-        {
           "when": "self.era?.replace(' Era', '') === 'Information'",
-          "add": 100
-        },
-        {
-          "when": "self.era?.replace(' Era', '') === 'Future'",
-          "add": 100
+          "add": 5
         }
       ]
     },

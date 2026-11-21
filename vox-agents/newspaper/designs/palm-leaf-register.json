@@ -2,9 +2,12 @@
   {
     "id": "palm-leaf-register",
     "version": "1",
-    "title": "The Palm Leaf Register",
+    "label": "Bound Palm Leaves",
+    "title": "The Book of Leaves",
     "when": "self.name === 'India' && self.era?.replace(' Era', '') === 'Medieval'",
-    "weight": { "base": 65 },
+    "weight": {
+      "base": 72
+    },
     "presentation": {
       "schemaVersion": 1,
       "rendererFamily": "folio",

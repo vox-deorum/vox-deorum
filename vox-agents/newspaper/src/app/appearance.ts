@@ -39,7 +39,7 @@ export function mountRecordedAppearance(onChange: () => void) {
   const designs = new Map(readPreviewDesigns().map(design => [design.id, design]));
   designSelect.replaceChildren(
     new Option('As published', ''),
-    ...Array.from(designs.values(), design => new Option(design.title, design.id)),
+    ...Array.from(designs.values(), design => new Option(design.label ?? design.title, design.id)),
   );
   layoutSelect.replaceChildren(
     new Option('As published', ''),

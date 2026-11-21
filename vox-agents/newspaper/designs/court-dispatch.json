@@ -2,15 +2,27 @@
   {
     "id": "court-dispatch",
     "version": "1",
-    "title": "The Court Dispatch",
-    "civilizationTitles": { "*": "Court Dispatches of {{terms.civilization}}" },
+    "label": "Court Dispatch Slips",
+    "title": "The Palace Post",
+    "civilizationTitles": {
+      "*": "The Palace Post of {{terms.civilization}}"
+    },
     "when": "['Medieval', 'Renaissance', 'Industrial'].includes(self.era?.replace(' Era', ''))",
     "weight": {
-      "base": 8,
+      "base": 34,
       "adjustments": [
-        { "when": "self.era?.replace(' Era', '') === 'Renaissance'", "add": 20 },
-        { "when": "self.name === 'India'", "add": 12 },
-        { "when": "['Persia', 'Ottomans'].includes(self.name)", "add": 5 }
+        {
+          "when": "self.era?.replace(' Era', '') === 'Renaissance'",
+          "add": 8
+        },
+        {
+          "when": "self.name === 'India'",
+          "add": 14
+        },
+        {
+          "when": "['Persia', 'The Ottomans'].includes(self.name)",
+          "add": 8
+        }
       ]
     },
     "presentation": {

@@ -8,13 +8,13 @@ The stock catalogue is in `vox-agents/newspaper/`. To override a rule or story, 
 
 | File | Controls |
 | --- | --- |
-| `defaults.json` | Frequency, selection limits, decay, novelty, variety, stickiness, style repeat factors, and feedback coefficients |
+| `defaults.json` | Frequency, story limits and scoring, design selection, style repetition, and feedback coefficients |
 | `constants.json` | Named distances, spans, sizes, type lists and shortcuts, plus printable terms used by prose and mastheads. See [constants and shortcuts](triggers/constants.md). |
 | `triggers/*.json` | Trigger rules: subject, `when`, `values`, importance, repeat, grouping and tags. See the [trigger overview](triggers/overview.md). |
 | `templates/*.json` | Authored variants, typed links and short pieces, grouped by topic like triggers |
 | `styles/` | Style tag IDs, optional writing guidance, and rules that adjust variant weights |
 | `pages.json` | Front page, section membership, and section minimums |
-| `designs/*.json` | Renderer families, tokens, assets, layouts, eligibility, and fallback titles, mottoes, and section labels |
+| `designs/*.json` | Browser labels, renderer families, tokens, assets, layouts, eligibility, and fallback mastheads |
 | `mastheads/*.json` | Titles, mottoes, and section labels selected using the chosen design and visible game facts |
 
 The loader reads grouped files in filename order. Entries and authored variants merge by ID; arrays of values such as tags, conditions, or paragraphs replace the inherited array. Defaults and constants merge as objects. [Style rules](#variant-styles) have their own merge behavior. Replay validates the effective catalogue and saves it for resume.
@@ -95,15 +95,15 @@ For a single group, prose can print `{{key}}` and `{{count}}`. Expressions can r
 
 The front page is always eligible. Other sections can have conditions and must meet their minimums, with at least one story that does not appear on the front page. The stock sections collect domestic, international, and economic coverage by topic tag.
 
-Each design needs an unconditional ordinary layout and an unconditional breaking layout with positive constant weights. See [adding a design](designs.md#add-or-change-a-design) for the selection rules and asset setup.
+Each design needs an unconditional ordinary layout and an unconditional breaking layout with positive constant weights. The editor rotates among competitive designs after a run of issues. See [design selection](designs.md#which-design-runs) for the weights, fallback, and legacy behavior.
 
 ### Masthead rules
 
-The editor picks a visual design, then looks for a title, motto, and section labels that fit the receiver. For example, a Roman paper under Order can call its `abroad` page *International Solidarity*, while a paper using the same design under Freedom can call it *Foreign Correspondence*. The page keeps the same ID and story criteria.
+The editor picks a visual design, then looks for a title, motto, and section labels that fit the receiver. For example, Rome's *Workers' Herald* under Order can call its `abroad` page *Solidarity Abroad*, while its *Free Press* under Freedom can call the same page *The World at Large*. The page keeps the same ID and story criteria.
 
-The stock rules in `mastheads/` are grouped by civilization, era, policy, ideology, and combinations of these facts. The stock rules without an ideology theme are eligible only when the record shows no ideology. Generic era rules apply to selected designs so formats with their own title can keep it.
+The stock rules in `mastheads/` are grouped by civilization, era, policy, ideology, and combinations of these facts. Civilization titles draw on local records and publications. *The Khipu of Tawantinsuyu* pairs the Inca masthead with the cord register design, while *Correio Braziliense* takes its name from an early Brazilian paper. Stock rules without an ideology theme are eligible only when the record shows no ideology. Era rules apply to selected designs so other formats can keep their own titles.
 
-Give each rule an `id`, `title`, and `weight`. Use `designs` to restrict it to specific designs and `when` to check facts such as `self.name`, `self.era`, or `self.hasPolicy('Five-Year Plan')`. Add a `motto` and a `pageLabels` map keyed by page IDs as needed.
+Give each rule an `id`, `title`, and `weight`. Use `when` to check visible facts such as `self.name`, `self.era`, or `self.hasPolicy('Five-Year Plan')`. Limit a title to the design it suits with `designs` so rotation can bring a different masthead. For example, Order can use *The Workers' Herald* on a broadsheet and *The Workers' Wire* on the feed. Omit `designs` if a custom rule should apply everywhere, or supply a new list to replace a stock rule's scope. Add a `motto` and a `pageLabels` map keyed by page IDs as needed.
 
 Rule IDs must be unique within each `mastheads/` folder. Local rules override stock rules by ID, and local folder entries apply after any older flat `masthead-rules.json` overlay. Set `when` to the string `"false"` to disable a stock rule.
 
@@ -119,7 +119,7 @@ The [trigger audit](triggers/overview.md#how-a-check-evaluates-triggers) shows w
 
 The stock paper needs four distinct stories, allows up to ten, and puts at most five on the front page. A selected urgent story leads a breaking front page. An article appearing on two pages still counts as one item with one vote.
 
-Prose and presentation draws use separate seeded streams. The audit saves the seed, catalogue, scores, chosen designs and layouts, sources, feedback, and trigger results. `selectedVariants` and `selectedStyles` record each displayed article's wording and style choices by item ID. Replay reopens the stored issue without running the editor again.
+The audit saves the seed, catalogue, scores, presentation, sources, feedback, and trigger results. Stock design and layout draws are independent of each other and of prose. `designSelection` explains the prior design, how many issues it ran (up to six), and the candidate weights used for the draw. `selectedVariants` and `selectedStyles` record each displayed article's wording and style by item ID. Replay reopens the stored issue without running the editor again.
 
 ## Votes and preferences
 

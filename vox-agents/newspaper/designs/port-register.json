@@ -2,30 +2,28 @@
   {
     "id": "port-register",
     "version": "1",
-    "title": "The Port Register",
+    "label": "Port Ledger",
+    "title": "The Shipping List",
     "civilizationTitles": {
-      "England": "The English Port Register",
-      "The Netherlands": "The Dutch Port Register",
-      "Portugal": "The Portuguese Port Register",
-      "Venice": "The Venetian Port Register"
+      "England": "The English Shipping List",
+      "The Netherlands": "The Dutch Shipping List",
+      "Portugal": "The Portuguese Shipping List",
+      "Venice": "The Venetian Shipping List"
     },
     "weight": {
-      "base": 0,
+      "base": 30,
       "adjustments": [
         {
-          "when": "self.era?.replace(' Era', '') === 'Renaissance'",
-          "add": 12
+          "when": "['England', 'The Netherlands', 'Portugal', 'Venice'].includes(self.name)",
+          "add": 35
         },
         {
           "when": "self.era?.replace(' Era', '') === 'Renaissance' && ['England', 'The Netherlands', 'Portugal', 'Venice'].includes(self.name)",
-          "add": 48
-        },
-        {
-          "when": "self.era?.replace(' Era', '') === 'Industrial' && ['England', 'The Netherlands', 'Portugal', 'Venice'].includes(self.name)",
-          "add": 40
+          "add": 5
         }
       ]
     },
+    "when": "self.era?.replace(' Era', '') === 'Renaissance' || (self.era?.replace(' Era', '') === 'Industrial' && ['England', 'The Netherlands', 'Portugal', 'Venice'].includes(self.name))",
     "presentation": {
       "schemaVersion": 1,
       "rendererFamily": "folio",

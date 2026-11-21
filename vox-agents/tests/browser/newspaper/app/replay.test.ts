@@ -98,10 +98,14 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('replay b
     const page = await browser.newPage({ viewport: { width: 390, height: 850 } });
     try {
       await page.goto(`${host.url}/newspaper/`);
-      await page.locator('#preview-design').selectOption('wire');
+      const designs = page.locator('#preview-design');
+      await designs.selectOption('wire');
       const masthead = page.locator('[data-publication-design="wire"] .vd-title');
       const civilization = page.getByRole('textbox', { name: 'Civilization' });
       const defaultTitle = await masthead.innerText();
+      const designLabel = await designs.locator('option:checked').innerText();
+      expect(designLabel).toBeTruthy();
+      expect(designLabel).not.toBe(defaultTitle);
       const sampleName = 'New Zealand';
       await civilization.fill(sampleName);
       await civilization.press('Tab');
@@ -243,6 +247,9 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('replay b
       const layout = page.locator('#recorded-layout');
       const tint = page.locator('#recorded-tint');
       await design.selectOption('shang');
+      expect(await design.locator('option:checked').textContent()).toBe(
+        await page.locator('#preview-design option[value="shang"]').textContent()
+      );
       await layout.selectOption('breaking');
       const customTint = '#123456';
       await page.locator('#recorded-custom-tint').fill(customTint);

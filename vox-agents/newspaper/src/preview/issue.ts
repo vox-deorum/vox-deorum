@@ -18,6 +18,7 @@ import pages from "../../pages.json";
 const previewDesignSchema = issuePublicationSchema.omit({ designId: true, designVersion: true }).extend({
   id: z.string().min(1),
   version: z.string().min(1),
+  label: z.string().trim().min(1).optional(),
   civilizationTitles: z.record(z.string(), z.string()).nullable().optional(),
   layouts: z.array(z.object({ variant: newspaperLayoutVariantSchema })).min(1),
   pageLabels: z.record(z.string(), z.string()).default({}),

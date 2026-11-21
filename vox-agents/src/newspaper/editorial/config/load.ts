@@ -165,11 +165,11 @@ export function getEditorialExpressions(config: EditorialConfig): Promise<Compil
   return prepared;
 }
 
-/** Keep asset declarations out of the effective editorial catalogue. */
-function stripBuiltInDesignAssets(design: unknown): unknown {
+/** Remove design fields that the editorial catalogue does not use before validation. */
+function withoutDesignFields(design: unknown, fields: readonly string[]): unknown {
   if (!isRecord(design)) return design;
   const settings = { ...design };
-  delete settings.assetDefinitions;
+  for (const field of fields) delete settings[field];
   return settings;
 }
 
@@ -213,7 +213,11 @@ export async function loadEditorialConfig(directory?: string): Promise<Editorial
     let custom = directory ? await readCatalogueFile(directory, name, true) : undefined;
     if (directory && grouped)
       custom = overlay(custom, await readCatalogueSection(directory, name, true));
-    const settings = name === 'designs' && Array.isArray(base) ? base.map(stripBuiltInDesignAssets) : base;
+    if (name === 'designs' && Array.isArray(custom))
+      custom = custom.map((design) => withoutDesignFields(design, ['label']));
+    const settings = name === 'designs' && Array.isArray(base)
+      ? base.map((design) => withoutDesignFields(design, ['assetDefinitions', 'label']))
+      : base;
     result[name] = overlay(settings, custom);
   }
   result.mastheadRules = await loadMastheadRules(builtIn, directory);

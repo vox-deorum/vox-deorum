@@ -1,6 +1,8 @@
 /** Check configurable presentation decisions with controlled authored inputs. */
 import { describe, expect, it } from 'vitest';
-import { createInitialPublicationState } from '../../../../../src/newspaper/contracts/publication.js';
+import {
+  createInitialPublicationState, editorialDecisionRecordSchema, publicationStateSchema,
+} from '../../../../../src/newspaper/contracts/publication.js';
 import { editorialConfigSchema, type EditorialConfig } from '../../../../../src/newspaper/editorial/config/schema.js';
 import {
   prepareEditorialExpressions, type EditorialTerms,
@@ -10,7 +12,8 @@ import { evaluatePresentation } from '../../../../../src/newspaper/editorial/pre
 import { computeFeedback } from '../../../../../src/newspaper/editorial/selection/feedback.js';
 import { selectHeuristic } from '../../../../../src/newspaper/editorial/selection/heuristic.js';
 import { createEditorialStreams } from '../../../../../src/newspaper/editorial/shared/determinism.js';
-import { chooseDesign, presentIssue } from '../../../../../src/newspaper/editorial/presentation/issue.js';
+import { chooseDesign, choosePressRunDesign, presentIssue } from '../../../../../src/newspaper/editorial/presentation/issue.js';
+import { runEditorialCheck } from '../../../../../src/newspaper/editorial/check.js';
 import type { EditorialCandidate } from '../../../../../src/newspaper/editorial/selection/templates.js';
 import { validateEditorialIssue } from '../../../../../src/newspaper/editorial/presentation/validation.js';
 
@@ -83,6 +86,7 @@ async function render(
   const streams = createEditorialStreams(seed, config);
   const weights = await choices(config);
   const result = (await presentIssue({
+    checkId: seed,
     issueId: 'issue/5', campaignId: 'campaign', timelineId: 'branch', receiver: { playerId: 0, label: 'Receiver' }, turn: 5,
     selected: candidates, state: createInitialPublicationState(), config, weights,
     proseRandom: streams.prose, presentationRandom: streams.presentation, terms,
@@ -100,6 +104,170 @@ describe('editorial eligibility', () => {
     expect(chooseDesign(config, unknown, null, () => 0.99)?.id).toBe('early-account');
     const modern = await choices(config, 'Modern Era');
     expect(chooseDesign(config, modern, null, () => 0.99)?.id).toBe('modern-journal');
+  });
+});
+
+describe('press run design selection', () => {
+  /** Provide a lead, an alternative at exactly half its weight, and a weaker printable alternative. */
+  function catalogue() {
+    const config = createConfig();
+    config.defaults.designSelection = 'pressRun';
+    const [account] = config.designs;
+    account.weight.base = 80;
+    config.designs.push(
+      { ...structuredClone(account), id: 'town-book', weight: { base: 40, adjustments: [] } },
+      { ...structuredClone(account), id: 'dispatch', weight: { base: 39, adjustments: [] } },
+    );
+    return config;
+  }
+
+  /** Simulate saved issues without populating unrelated article or series records. */
+  function history(...ids: (string | undefined)[]) {
+    const state = createInitialPublicationState();
+    state.issues = ids.map((designId, turn) => ({ issueId: `issue/${turn}`, turn, items: [], designId }));
+    return publicationStateSchema.parse(state);
+  }
+
+  it('should protect the first three published issues and use proportional weights afterward', async () => {
+    const config = catalogue();
+    const weights = await choices(config);
+    const strong = 'early-account';
+    expect(choosePressRunDesign(config, weights, history(), () => 0.99).design?.id).toBe('town-book');
+    for (const count of [1, 2]) {
+      const result = choosePressRunDesign(config, weights, history(...Array(count).fill(strong)), () => {
+        throw new Error('A protected issue should not draw.');
+      });
+      expect(result.design?.id).toBe(strong);
+      expect(result.audit).toMatchObject({ previousId: strong, priorRunLength: count, reason: 'protected' });
+      expect(result.audit.candidates.every(candidate => candidate.drawWeight === 0)).toBe(true);
+    }
+    const state = history(strong, strong, strong);
+    const continuation = choosePressRunDesign(config, weights, state, () => 0.65);
+    expect(continuation.design?.id).toBe(strong);
+    expect(continuation.audit).toMatchObject({
+      reason: 'weighted',
+      candidates: [
+        { id: 'dispatch', rawWeight: 39, drawWeight: 0 },
+        { id: strong, rawWeight: 80, drawWeight: 80 },
+        { id: 'town-book', rawWeight: 40, drawWeight: 40 },
+      ],
+    });
+    expect(choosePressRunDesign(config, weights, state, () => 0.7).design?.id).toBe('town-book');
+  });
+
+  it('should require a switch after six issues only when another design fits', async () => {
+    const config = catalogue();
+    const weights = await choices(config);
+    const strong = 'early-account';
+    const state = history(...Array(8).fill(strong));
+    const result = choosePressRunDesign(config, weights, state, () => 0);
+    expect(result.design?.id).toBe('town-book');
+    expect(result.audit).toMatchObject({ priorRunLength: 6, reason: 'run-limit' });
+    expect(result.audit.candidates.find(candidate => candidate.id === strong)?.drawWeight).toBe(0);
+
+    // A title whose terms cannot be printed does not qualify even at a competitive weight.
+    config.designs[1].title = '{{terms.unknown}}';
+    const singleton = choosePressRunDesign(config, weights, state, () => 0.99);
+    expect(singleton.design?.id).toBe(strong);
+    expect(singleton.audit.candidates.map(candidate => candidate.id)).toEqual(['dispatch', strong]);
+  });
+
+  it('should redraw for weak or ineligible incumbents and stop counting at old history without an ID', async () => {
+    const config = catalogue();
+    const weights = await choices(config);
+    const weak = choosePressRunDesign(config, weights, history('dispatch'), () => 0);
+    expect(weak.design?.id).toBe('early-account');
+    expect(weak.audit.reason).toBe('weak-incumbent');
+    const ineligible = choosePressRunDesign(config, weights, history('unavailable'), () => 0);
+    expect(ineligible.design?.id).toBe('early-account');
+    expect(ineligible.audit.reason).toBe('ineligible-incumbent');
+
+    const mixed = history('early-account', 'early-account', undefined, 'early-account');
+    expect(choosePressRunDesign(config, weights, mixed, () => 0.99).audit.priorRunLength).toBe(1);
+    const old = history(undefined);
+    old.previousDesignId = 'early-account';
+    expect(choosePressRunDesign(config, weights, old, () => 0.99).design?.id).toBe('town-book');
+  });
+
+  it('should keep design and page draws stable when masthead copy and catalogue order change', async () => {
+    const config = catalogue();
+    for (const design of config.designs) {
+      design.layouts.push({ id: 'analysis', variant: 'analysis', weight: { base: 1, adjustments: [] } });
+    }
+    const revised = structuredClone(config);
+    revised.designs.reverse();
+    for (const design of revised.designs) {
+      design.title = `Revised ${design.title}`;
+      design.motto = 'Updated masthead';
+    }
+    revised.pages.splice(1, 0, {
+      ...structuredClone(revised.pages[1]), id: 'extra', order: 0,
+    });
+    const seen = new Set();
+    for (const seed of ['a', 'b', 'c', 'd', 'e', 'f']) {
+      const candidates = ['home', 'trade', 'culture', 'war'].map(id => createCandidate(config, id));
+      candidates[3].tags = ['military'];
+      const before = await render(config, candidates, seed);
+      const after = await render(revised, candidates, seed);
+      seen.add(before.issue.publication.designId);
+      expect(after.issue.publication.designId).toBe(before.issue.publication.designId);
+      expect(after.issue.publication.title).not.toBe(before.issue.publication.title);
+      expect(after.layouts).toMatchObject(before.layouts);
+      expect(after.layouts).toHaveProperty('extra');
+      expect(after.variants).toEqual(before.variants);
+    }
+    expect(seen).toEqual(new Set(['early-account', 'town-book']));
+  });
+
+  it('should save published designs and retain a skipped check audit without spending a slot', async () => {
+    const config = catalogue();
+    config.triggers[0].repeat = 1;
+    for (const variant of config.templates[0].variants) {
+      variant.headline = 'Printable headline';
+      variant.body = ['Printable article.'];
+    }
+    /** Run a check with fresh eligible stories, or make every design ineligible for the skip. */
+    async function check(turn: number, state: ReturnType<typeof history>, printable: boolean) {
+      const current = structuredClone(config);
+      if (!printable) current.designs.forEach(design => { design.when = 'false'; });
+      const evidence = {
+        request: { receiverPlayerID: 0, previousCheckTurn: state.reportingThroughTurn ?? 0, cutoffTurn: turn },
+        players: [], cities: [], comparisons: { players: [], cities: [] }, events: [],
+      };
+      return runEditorialCheck({
+        campaignId: 'campaign', timelineId: 'branch', receiver: { playerId: 0, label: 'Receiver' },
+        evidence, facts: buildNewspaperFacts(evidence), speedMultiplier: 1, state, config: current,
+      });
+    }
+    const first = await check(5, history(), true);
+    expect(first.status).toBe('published');
+    expect(first.state.issues[0].designId).toBe(first.decision.designId);
+    expect(first.decision.designSelection).toMatchObject({ reason: 'opening', priorRunLength: 0 });
+    const skipped = await check(10, first.state, false);
+    expect(skipped.status).toBe('skipped');
+    expect(skipped.state.issues).toEqual(first.state.issues);
+    expect(editorialDecisionRecordSchema.parse(skipped.decision).designSelection).toEqual({
+      previousId: first.decision.designId, priorRunLength: 1, reason: 'no-eligible', candidates: [],
+    });
+    const next = await check(15, publicationStateSchema.parse(skipped.state), true);
+    expect(next.status).toBe('published');
+    expect(next.decision.designId).toBe(first.decision.designId);
+    expect(next.decision.designSelection).toMatchObject({ reason: 'protected', priorRunLength: 1 });
+  });
+
+  it('should keep the saved catalogue presentation stream when legacy is selected explicitly', async () => {
+    const saved = catalogue();
+    delete saved.defaults.designSelection;
+    const explicit = structuredClone(saved);
+    explicit.defaults.designSelection = 'legacy';
+    for (const seed of ['one', 'two', 'three']) {
+      const selected = [createCandidate(saved, 'home')];
+      const before = await render(saved, selected, seed);
+      const after = await render(explicit, selected, seed);
+      expect(after.issue).toEqual(before.issue);
+      expect(after.layouts).toEqual(before.layouts);
+      expect(after.variants).toEqual(before.variants);
+    }
   });
 });
 
@@ -185,6 +353,7 @@ describe('editorial presentation', () => {
     async function publish() {
       const draws = [0.5, 0.4, 0.1];
       return (await presentIssue({
+        checkId: 'check/5',
         issueId: 'issue/5', campaignId: 'campaign', timelineId: 'branch', receiver: { playerId: 0, label: 'Receiver' }, turn: 5,
         selected: candidates, state: createInitialPublicationState(), config, weights,
         proseRandom: () => draws.shift()!, presentationRandom: () => 0,
@@ -212,6 +381,7 @@ describe('editorial presentation', () => {
     /** A draw at the midpoint selects the repeated voice once its weight is doubled. */
     const draws = [0.5, 0.5];
     const result = (await presentIssue({
+      checkId: 'check/5',
       issueId: 'issue/5', campaignId: 'campaign', timelineId: 'branch', receiver: { playerId: 0, label: 'Receiver' }, turn: 5,
       selected: candidates, state: createInitialPublicationState(), config, weights,
       proseRandom: () => draws.shift()!, presentationRandom: () => 0,
@@ -235,6 +405,7 @@ describe('editorial presentation', () => {
     /** The second draw sits just under the even split, so any discount on the repeated style would flip it. */
     const draws = [0.5, 0.45];
     const result = (await presentIssue({
+      checkId: 'check/5',
       issueId: 'issue/5', campaignId: 'campaign', timelineId: 'branch', receiver: { playerId: 0, label: 'Receiver' }, turn: 5,
       selected: candidates, state: createInitialPublicationState(), config, weights,
       proseRandom: () => draws.shift()!, presentationRandom: () => 0,

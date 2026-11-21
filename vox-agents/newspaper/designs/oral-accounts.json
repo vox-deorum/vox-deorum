@@ -2,20 +2,17 @@
   {
     "id": "oral-accounts",
     "version": "1",
-    "title": "Settlement Annals",
+    "label": "Cast Notice Board",
+    "title": "The Public Board",
     "civilizationTitles": {
-      "*": "Annals of {{terms.civilization}}"
+      "*": "Public Notices of {{terms.civilization}}"
     },
     "weight": {
-      "base": 10,
+      "base": 42,
       "adjustments": [
         {
-          "when": "self.era?.replace(' Era', '') === 'Classical'",
-          "add": 5
-        },
-        {
           "when": "['Medieval', 'Renaissance', 'Industrial', 'Modern', 'Atomic', 'Information', 'Future'].includes(self.era?.replace(' Era', ''))",
-          "add": -10
+          "add": -42
         }
       ]
     },

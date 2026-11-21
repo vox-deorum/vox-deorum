@@ -2,11 +2,17 @@
   {
     "id": "secession-review",
     "version": "1",
+    "label": "Secession Magazine",
     "title": "The Secession Review",
     "when": "['Industrial', 'Modern'].includes(self.era?.replace(' Era', ''))",
     "weight": {
-      "base": 16,
-      "adjustments": [{ "when": "self.name === 'Austria'", "add": 28 }]
+      "base": 36,
+      "adjustments": [
+        {
+          "when": "self.name === 'Austria'",
+          "add": 34
+        }
+      ]
     },
     "presentation": {
       "schemaVersion": 1,
