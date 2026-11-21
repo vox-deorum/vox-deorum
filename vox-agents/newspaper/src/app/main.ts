@@ -66,7 +66,7 @@ const fixtures: FixtureEntry[] = [
     description: "A quieter lead with an evidence table and missing observation.",
   },
   {
-    id: "modern-ordinary",
+    id: "wire-ordinary",
     label: "Modern ordinary",
     description: "The compact feed with avatars and a shared economy vote.",
   },

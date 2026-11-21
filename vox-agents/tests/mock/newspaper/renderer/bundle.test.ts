@@ -22,7 +22,7 @@ function createStrip(
   };
 }
 
-/** Build a complete bundle for the controlled modern profile. */
+/** Build a complete bundle for the controlled feed profile. */
 function createBundle(): RenderBundle {
   return {
     ...createNewspaperBundle(),
@@ -89,8 +89,8 @@ function createBundle(): RenderBundle {
             value: "up",
             region: { kind: "page", pageId: "front" },
             rect: { x: 60, y: 8, width: 16, height: 16 },
-            neutralAssetId: "vote-modern-up-neutral",
-            selectedAssetId: "vote-modern-up-selected",
+            neutralAssetId: "vote-feed-up-neutral",
+            selectedAssetId: "vote-feed-up-selected",
           },
         ],
       },
@@ -172,7 +172,7 @@ describe("newspaper render bundle validation", () => {
     expect(() => validateRenderBundle(iconName)).toThrow();
   });
 
-  it.each(["unknown-icon", "vote-victorian-up-neutral", "vote-modern-down-neutral"])(
+  it.each(["unknown-icon", "vote-broadsheet-up-neutral", "vote-feed-down-neutral"])(
     "should reject a vote icon outside the slot's design and direction: %s", (assetId) => {
       const bundle = createBundle();
       bundle.pages[0].voteSlots[0].neutralAssetId = assetId;

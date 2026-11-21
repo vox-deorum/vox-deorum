@@ -40,7 +40,7 @@ export function renderStory(
   const headingId = `${instancePrefix}-heading-${page.id}-${item.id}`;
   article.setAttribute("aria-labelledby", headingId);
 
-  if (designId === "modern") article.append(renderAvatar(item));
+  if (designId === "feed") article.append(renderAvatar(item));
 
   const content = createElement("div", "vd-story-content");
   const heading = createElement("h2", "vd-headline");
@@ -87,7 +87,7 @@ export function renderStory(
   return article;
 }
 
-/** Build the modern feed avatar, using the headline initial when needed. */
+/** Build the feed avatar, using the headline initial when needed. */
 function renderAvatar(item: IssueItem): HTMLElement {
   const avatar = createElement("div", `vd-avatar vd-avatar--${item.avatar?.tone ?? "slate"}`);
   avatar.setAttribute("aria-hidden", "true");

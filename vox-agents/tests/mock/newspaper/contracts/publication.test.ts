@@ -13,7 +13,7 @@ describe('publication memory', () => {
   it('should retain current memory with the cursor, votes, preferences and series', () => {
     const state = createInitialPublicationState({ frequencyStandardTurns: 3, llmEnabled: true });
     state.lastCheckTurn = 25;
-    state.previousDesignId = 'modern';
+    state.previousDesignId = 'wire';
     state.votes['published-item'] = 1;
     state.series['city/3/growth'] = { importance: 20, evaluatedTurn: 25, lastPublishedTurn: 20, lastIssueId: 'old-issue', lastItemId: 'published-item' };
     expect(publicationStateSchema.parse(state)).toEqual(state);

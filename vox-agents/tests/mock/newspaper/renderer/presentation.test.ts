@@ -25,7 +25,7 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('stored newspaper
     const issue = createNewspaperIssue();
     issue.publication.designId = 'early-account';
     issue.publication.presentation = {
-      schemaVersion: 1, rendererFamily: 'victorian',
+      schemaVersion: 1, rendererFamily: 'broadsheet',
       tokens: { paperColor: '#f0e0c0', inkColor: '#202020', accentColor: '#554433', bodyFontAssetId: 'font-libre-caslon-400', headingFontAssetId: 'font-bodoni-moda-700', mastheadFontAssetId: 'font-unifrakturmaguntia-400' },
       assets: { ornamentAssetId: 'victorian.scrollwork' },
     };
@@ -53,7 +53,7 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('stored newspaper
           faces: [...document.fonts].filter(font => font.family.startsWith('vd-reader-')).map(font => ({ family: font.family, weight: font.weight, style: font.style, status: font.status })),
         };
       });
-      expect(styles).toMatchObject({ family: 'victorian', paper: 'rgb(240, 224, 192)', ink: 'rgb(32, 32, 32)', accent: '#554433', fontsLoaded: true });
+      expect(styles).toMatchObject({ family: 'broadsheet', paper: 'rgb(240, 224, 192)', ink: 'rgb(32, 32, 32)', accent: '#554433', fontsLoaded: true });
       expect(styles.font).toContain('-body');
       expect(styles.headingFont).toContain('-display');
       expect(styles.mastheadFont).toContain('-masthead');
@@ -65,7 +65,7 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('stored newspaper
         { weight: '400', style: 'normal' }, { weight: '700', style: 'normal' }, { weight: '900', style: 'normal' }, { weight: '400', style: 'italic' },
       ]));
       expect(styles.faces.every(face => face.status === 'loaded')).toBe(true);
-      await expect(page.locator('.vd-masthead .vd-ornament').getAttribute('src')).resolves.toContain('assets/ornaments/victorian.svg');
+      await expect(page.locator('.vd-masthead .vd-ornament').getAttribute('src')).resolves.toContain('assets/designs/victorian/scrollwork.svg');
       await page.evaluate(() => window.voxDeorumNewspaperExport!.dispose());
       expect(await page.locator('#newspaper-export-root').getAttribute('style')).not.toContain('--vd-paper:');
       expect(await page.evaluate(() => [...document.fonts].filter(font => font.family.startsWith('vd-reader-')).length)).toBe(0);
@@ -77,7 +77,7 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('stored newspaper
   it('should preserve the family masthead when the snapshot only selects a display font', async context => {
     if (!browser) { context.skip(unavailable); return; }
     const issue = createNewspaperIssue();
-    issue.publication.presentation = { schemaVersion: 1, rendererFamily: 'victorian', tokens: { headingFontAssetId: 'font-bodoni-moda-700' } };
+    issue.publication.presentation = { schemaVersion: 1, rendererFamily: 'broadsheet', tokens: { headingFontAssetId: 'font-bodoni-moda-700' } };
     const page = await browser.newPage();
     try {
       await page.goto(`${host.url}/newspaper/export.html`);
@@ -116,7 +116,7 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('stored newspaper
   it('should keep a readable fallback and release instance faces when registered font files cannot load', async context => {
     if (!browser) { context.skip(unavailable); return; }
     const issue = createNewspaperIssue();
-    issue.publication.presentation = { schemaVersion: 1, rendererFamily: 'modern', tokens: { bodyFontAssetId: 'font-inter-400', headingFontAssetId: 'font-inter-800' } };
+    issue.publication.presentation = { schemaVersion: 1, rendererFamily: 'feed', tokens: { bodyFontAssetId: 'font-inter-400', headingFontAssetId: 'font-inter-800' } };
     const page = await browser.newPage();
     const errors: string[] = [];
     page.on('pageerror', error => errors.push(error.message));

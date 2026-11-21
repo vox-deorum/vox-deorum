@@ -1,0 +1,348 @@
+/*
+ * Broadsheet newspaper family.
+ *
+ * A mid-19th-century illustrated broadsheet: blackletter masthead between
+ * engraved medallions, thick-and-thin Oxford rules, boxed factotum initials
+ * and printers' flowers. Applies to [data-design="broadsheet"].
+ *
+ * Decorations are pseudo-elements. Shapes come from inline SVG masks filled
+ * with the design's color tokens, so they need no extra assets during export.
+ */
+
+.vd-newspaper[data-design="broadsheet"] {
+  --vd-paper: #f1e8d4;
+  --vd-ink: #1f1b16;
+  --vd-accent: #7a2a1e;
+  --vd-rule: #8c8270;
+  --vd-page-background: #cfc8b8;
+  --vd-font-display: "Bodoni Moda", Georgia, serif;
+  --vd-font-body: "Libre Caslon Text", Georgia, serif;
+  --vd-bs-medallion: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none' stroke='black'%3E%3Ccircle cx='50' cy='50' r='47' stroke-width='2.4'/%3E%3Ccircle cx='50' cy='50' r='42.5' stroke-width='.8'/%3E%3Ccircle cx='50' cy='50' r='39.5' stroke-width='2' stroke-dasharray='.1 4.1' stroke-linecap='round'/%3E%3Ccircle cx='50' cy='50' r='36' stroke-width='.8'/%3E%3Ccircle cx='50' cy='50' r='23' stroke-width='16' stroke-dasharray='1.1 2.9'/%3E%3Ccircle cx='50' cy='50' r='34' stroke-width='.4'/%3E%3Ccircle cx='50' cy='50' r='32' stroke-width='.4'/%3E%3Ccircle cx='50' cy='50' r='8' stroke-width='6'/%3E%3Ccircle cx='50' cy='50' r='14.5' stroke-width='1'/%3E%3C/svg%3E");
+  --vd-bs-fleuron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 16'%3E%3Cpath d='m24 2.5 5.5 5.5-5.5 5.5-5.5-5.5z'/%3E%3Cpath d='M17 8C13 2.5 7.5 2.5 3 8 7.5 13.5 13 13.5 17 8ZM31 8C35 2.5 40.5 2.5 45 8 40.5 13.5 35 13.5 31 8Z'/%3E%3Ccircle cx='1.5' cy='8' r='1.3'/%3E%3Ccircle cx='46.5' cy='8' r='1.3'/%3E%3C/svg%3E");
+  --vd-bs-hatch: repeating-linear-gradient(
+    -45deg,
+    transparent 0 2.5px,
+    color-mix(in srgb, var(--vd-ink) 26%, transparent) 2.5px 3.5px
+  );
+}
+
+/* The sheet: a thick-and-thin engraved border inside the paper edge. */
+
+.vd-newspaper[data-design="broadsheet"] .vd-publication {
+  position: relative;
+}
+
+.vd-newspaper[data-design="broadsheet"] .vd-publication::after {
+  position: absolute;
+  inset: 14px calc(14px + var(--vd-scrollbar-gutter)) 14px 14px;
+  z-index: 2;
+  border: 3px solid var(--vd-ink);
+  outline: 1px solid var(--vd-ink);
+  outline-offset: -8px;
+  pointer-events: none;
+  content: "";
+}
+
+/* Masthead: blackletter title between two engraved ears, then the scrollwork. */
+
+.vd-newspaper[data-design="broadsheet"] .vd-header {
+  padding-top: 38px;
+}
+
+.vd-newspaper[data-design="broadsheet"] .vd-masthead {
+  padding: 4px 25px 18px;
+}
+
+.vd-newspaper[data-design="broadsheet"] .vd-title {
+  font-family: var(--vd-font-masthead, "UnifrakturMaguntia"), "Bodoni Moda", Georgia, serif;
+  font-size: calc(78px * var(--vd-text-scale));
+}
+
+.vd-newspaper[data-design="broadsheet"] .vd-motto {
+  margin-top: 4px;
+  color: var(--vd-ink);
+  font-size: calc(17px * var(--vd-text-scale));
+}
+
+.vd-newspaper[data-design="broadsheet"] .vd-ornament {
+  width: 78%;
+  margin-top: 10px;
+}
+
+@container newspaper (width > 900px) {
+  .vd-newspaper[data-design="broadsheet"] .vd-masthead {
+    padding-inline: 120px;
+  }
+
+  .vd-newspaper[data-design="broadsheet"] .vd-masthead::before,
+  .vd-newspaper[data-design="broadsheet"] .vd-masthead::after {
+    position: absolute;
+    top: 6px;
+    width: 92px;
+    height: 92px;
+    background: var(--vd-ink);
+    mask: var(--vd-bs-medallion) center / contain no-repeat;
+    content: "";
+  }
+
+  .vd-newspaper[data-design="broadsheet"] .vd-masthead::before {
+    left: 4px;
+  }
+
+  .vd-newspaper[data-design="broadsheet"] .vd-masthead::after {
+    right: 4px;
+  }
+}
+
+/* Tabs: small capitals in a band of Oxford rules, thick outside and thin inside. */
+
+.vd-newspaper[data-design="broadsheet"] .vd-tabs {
+  gap: 34px;
+  border-top: 3px solid var(--vd-ink);
+  border-bottom: 3px solid var(--vd-ink);
+  background:
+    linear-gradient(var(--vd-ink), var(--vd-ink)) left 3px / 100% 1px no-repeat,
+    linear-gradient(var(--vd-ink), var(--vd-ink)) left calc(100% - 3px) / 100% 1px no-repeat;
+}
+
+.vd-newspaper[data-design="broadsheet"] .vd-tab {
+  padding: 15px 2px 14px;
+  font: 400 calc(13px * var(--vd-text-scale)) / 1.4 var(--vd-font-body);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.vd-newspaper[data-design="broadsheet"] .vd-tab[aria-selected="true"]::after {
+  bottom: 8px;
+  height: 4px;
+  border-block: 1px solid currentColor;
+  background: none;
+}
+
+/* Stories */
+
+.vd-newspaper[data-design="broadsheet"] .vd-headline {
+  text-align: center;
+}
+
+.vd-newspaper[data-design="broadsheet"] .vd-deck,
+.vd-newspaper[data-design="broadsheet"] .vd-byline {
+  text-align: center;
+}
+
+.vd-newspaper[data-design="broadsheet"] .vd-byline {
+  font-size: calc(14px * var(--vd-text-scale));
+  letter-spacing: 0.04em;
+  opacity: 0.8;
+}
+
+.vd-newspaper[data-design="broadsheet"] .vd-prose {
+  text-align: justify;
+  hyphens: auto;
+}
+
+.vd-newspaper[data-design="broadsheet"] .vd-number {
+  font-family: var(--vd-font-display);
+  font-size: 1.04em;
+  font-weight: 700;
+  font-variant-numeric: oldstyle-nums;
+}
+
+.vd-newspaper[data-design="broadsheet"] .vd-headline .vd-number {
+  font-size: inherit;
+  font-weight: inherit;
+  color: var(--vd-accent);
+}
+
+.vd-newspaper[data-design="broadsheet"] .vd-story-art img {
+  padding: 4px;
+  border: 1px solid var(--vd-ink);
+  filter: grayscale(0.55) sepia(0.4) contrast(1.06);
+}
+
+/* A printers' flower closes every story. */
+
+.vd-newspaper[data-design="broadsheet"] .vd-story-content::after {
+  display: block;
+  width: 48px;
+  height: 16px;
+  margin: 20px auto 0;
+  background: var(--vd-ink);
+  mask: var(--vd-bs-fleuron) center / contain no-repeat;
+  content: "";
+}
+
+/*
+ * Ordinary layouts
+ *
+ * Narrow papers stack every story in publication order. Wide papers run the
+ * lead across the page, then fill rows of two briefs in reading order, so no
+ * story waits for an unrelated story in another column to end. A brief left
+ * alone in the last row takes the full width. Full-width stories set their
+ * prose in two text columns that share the brief rows' centre rule.
+ */
+
+.vd-newspaper[data-design="broadsheet"] .vd-storylist[data-layout="ordinary"] .vd-story--brief .vd-headline::after {
+  display: block;
+  width: 56px;
+  height: 4px;
+  margin: 14px auto 0;
+  border-block: 1px solid var(--vd-ink);
+  content: "";
+}
+
+@container newspaper (width > 760px) {
+  .vd-newspaper[data-design="broadsheet"] .vd-storylist[data-layout="ordinary"] {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .vd-newspaper[data-design="broadsheet"] .vd-storylist[data-layout="ordinary"] > .vd-story--lead {
+    grid-column: 1 / -1;
+  }
+
+  .vd-newspaper[data-design="broadsheet"] .vd-storylist[data-layout="ordinary"] > .vd-story--brief {
+    margin-top: 25px;
+    padding-top: 25px;
+    border-top: 1px solid var(--vd-ink);
+  }
+
+  .vd-newspaper[data-design="broadsheet"] .vd-storylist[data-layout="ordinary"] > .vd-story--brief:nth-child(2),
+  .vd-newspaper[data-design="broadsheet"] .vd-storylist[data-layout="ordinary"] > .vd-story--brief:nth-child(3) {
+    border-top: 3px double var(--vd-ink);
+  }
+
+  /* The lead is the first child, so even children open a row and odd children close it. */
+  .vd-newspaper[data-design="broadsheet"] .vd-storylist[data-layout="ordinary"] > .vd-story--brief:nth-child(even) {
+    padding-right: 25px;
+  }
+
+  .vd-newspaper[data-design="broadsheet"] .vd-storylist[data-layout="ordinary"] > .vd-story--brief:nth-child(odd) {
+    padding-left: 25px;
+    border-left: 1px solid var(--vd-rule);
+  }
+
+  .vd-newspaper[data-design="broadsheet"] .vd-storylist[data-layout="ordinary"] > .vd-story--brief:nth-child(even):last-child {
+    grid-column: 1 / -1;
+    padding-right: 0;
+  }
+
+  .vd-newspaper[data-design="broadsheet"] .vd-storylist[data-layout="ordinary"] > .vd-story--lead .vd-prose,
+  .vd-newspaper[data-design="broadsheet"] .vd-storylist[data-layout="ordinary"] > .vd-story--brief:nth-child(even):last-child .vd-prose {
+    columns: 20em 2;
+    column-gap: 50px;
+    column-rule: 1px solid var(--vd-rule);
+  }
+
+  .vd-newspaper[data-design="broadsheet"] .vd-storylist[data-layout="ordinary"] > .vd-story--lead .vd-story-art img,
+  .vd-newspaper[data-design="broadsheet"] .vd-storylist[data-layout="ordinary"] > .vd-story--brief:nth-child(even):last-child .vd-story-art img {
+    height: auto;
+    aspect-ratio: 2 / 1;
+  }
+}
+
+/* The lead opens with a factotum: a boxed initial on an engraved, hatched ground. */
+
+.vd-newspaper[data-design="broadsheet"] .vd-storylist[data-layout="ordinary"] .vd-story--lead .vd-prose p:first-child::first-letter {
+  /* Keep the initial with its opening lines when the paragraph spans columns. */
+  initial-letter: 3;
+  margin-right: 12px;
+  padding: 0 9px;
+  border: 3px double var(--vd-ink);
+  background: var(--vd-bs-hatch);
+  color: var(--vd-ink);
+  font-family: var(--vd-font-display);
+  font-weight: 900;
+}
+
+@container newspaper (max-width: 760px) {
+  .vd-newspaper[data-design="broadsheet"] .vd-storylist[data-layout="ordinary"] .vd-story--brief {
+    margin-top: 25px;
+    padding-top: 25px;
+    border-top: 1px solid var(--vd-ink);
+  }
+}
+
+/* Breaking layout: Bodoni black capitals in oxblood between heavy bars. */
+
+.vd-newspaper[data-design="broadsheet"] .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-headline {
+  padding: 22px 0 18px;
+  border-block: 7px solid var(--vd-ink);
+  background:
+    linear-gradient(var(--vd-ink), var(--vd-ink)) left 4px / 100% 1px no-repeat,
+    linear-gradient(var(--vd-ink), var(--vd-ink)) left calc(100% - 4px) / 100% 1px no-repeat;
+  color: var(--vd-accent);
+}
+
+.vd-newspaper[data-design="broadsheet"] .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-deck {
+  border-bottom: 3px double var(--vd-ink);
+}
+
+.vd-newspaper[data-design="broadsheet"] .vd-storylist[data-layout="breaking"] .vd-story--brief {
+  border-top: 3px double var(--vd-ink);
+}
+
+/* Analysis layout: the evidence is a ledger with double rules. */
+
+.vd-newspaper[data-design="broadsheet"] .vd-storylist[data-layout="analysis"] .vd-story--lead .vd-deck {
+  border-bottom: 3px double var(--vd-ink);
+}
+
+.vd-newspaper[data-design="broadsheet"] .vd-evidence {
+  border-left: 3px double var(--vd-rule);
+}
+
+.vd-newspaper[data-design="broadsheet"] .vd-evidence table {
+  border-top: 3px solid var(--vd-ink);
+  border-bottom: 3px double var(--vd-ink);
+}
+
+.vd-newspaper[data-design="broadsheet"] .vd-evidence caption {
+  text-align: center;
+}
+
+.vd-newspaper[data-design="broadsheet"] .vd-evidence caption strong {
+  font-weight: 900;
+}
+
+.vd-newspaper[data-design="broadsheet"] .vd-evidence thead th {
+  border-bottom: 3px double var(--vd-ink);
+  font-family: var(--vd-font-body);
+  letter-spacing: 0.14em;
+}
+
+.vd-newspaper[data-design="broadsheet"] .vd-evidence td {
+  font-weight: 700;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.vd-newspaper[data-design="broadsheet"] .vd-evidence .vd-missing td {
+  font-weight: 400;
+}
+
+.vd-newspaper[data-design="broadsheet"] .vd-storylist[data-layout="analysis"] .vd-story--brief {
+  border-top: 3px double var(--vd-ink);
+}
+
+@container newspaper (max-width: 560px) {
+  .vd-newspaper[data-design="broadsheet"] .vd-title {
+    font-size: calc(48px * var(--vd-text-scale));
+  }
+
+  .vd-newspaper[data-design="broadsheet"] .vd-ornament {
+    width: 100%;
+  }
+
+  .vd-newspaper[data-design="broadsheet"] .vd-tabs {
+    gap: 18px;
+  }
+
+  .vd-newspaper[data-design="broadsheet"] .vd-storylist[data-layout="ordinary"] .vd-story--lead .vd-headline,
+  .vd-newspaper[data-design="broadsheet"] .vd-storylist[data-layout="analysis"] .vd-story--lead .vd-headline {
+    font-size: calc(36px * var(--vd-text-scale));
+  }
+
+  .vd-newspaper[data-design="broadsheet"] .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-headline {
+    font-size: calc(48px * var(--vd-text-scale));
+  }
+}

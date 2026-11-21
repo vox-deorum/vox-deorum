@@ -21,8 +21,8 @@ describe('newspaper responsive layout', () => {
     expect(profile.textScale).toBe(1);
     expect(profile.viewportHeight).toBe(defaultRenderProfile.viewportHeight);
     expect(profile.viewportWidth * profile.rasterScale).toBeGreaterThanOrEqual(Math.ceil(paperWidth * profile.rasterScale / 4) * 4);
-    validateRenderProfileForDesign(profile, 'victorian');
-    validateRenderProfileForDesign(profile, 'modern');
+    validateRenderProfileForDesign(profile, 'broadsheet');
+    validateRenderProfileForDesign(profile, 'feed');
   });
 
   it('should reuse expanded publication pixels and cache identity when only the game view height changes', () => {
@@ -36,8 +36,8 @@ describe('newspaper responsive layout', () => {
 
   it.each([
     [480, 16, 16], [480.015625, 24, 24], [760, 24, 24], [760.015625, 48, 32],
-  ])('should derive content from outer width %s and responsive margins', (paperWidth, victorianPadding, modernPadding) => {
-    for (const [design, padding] of [['victorian', victorianPadding], ['modern', modernPadding]] as const) {
+  ])('should derive content from outer width %s and responsive margins', (paperWidth, broadsheetPadding, feedPadding) => {
+    for (const [design, padding] of [['broadsheet', broadsheetPadding], ['feed', feedPadding]] as const) {
       const profile = { ...defaultRenderProfile, paperWidth };
       const layout = computeRenderLayout(design, profile);
       expect(layout.regionWidth).toBe(paperWidth);
@@ -47,9 +47,9 @@ describe('newspaper responsive layout', () => {
   });
 
   it('should reject profiles with no content space, inadequate capture space, or alignment beyond texture limits', () => {
-    expect(() => computeRenderLayout('modern', { ...defaultRenderProfile, paperWidth: 48 })).toThrow();
-    expect(() => validateRenderProfileForDesign({ ...defaultRenderProfile, paperWidth: 600.015625, viewportWidth: 601 }, 'modern')).toThrow();
-    expect(() => validateRenderProfileForDesign({ ...defaultRenderProfile, paperWidth: 600.015625, maxTextureWidth: 1202 }, 'modern')).toThrow();
+    expect(() => computeRenderLayout('feed', { ...defaultRenderProfile, paperWidth: 48 })).toThrow();
+    expect(() => validateRenderProfileForDesign({ ...defaultRenderProfile, paperWidth: 600.015625, viewportWidth: 601 }, 'feed')).toThrow();
+    expect(() => validateRenderProfileForDesign({ ...defaultRenderProfile, paperWidth: 600.015625, maxTextureWidth: 1202 }, 'feed')).toThrow();
     expect(() => parseRenderProfile({ ...defaultRenderProfile, paperWidth: undefined, contentWidth: 900 })).toThrow();
     expect(() => parseRenderProfile({ ...defaultRenderProfile, displayScale: undefined })).toThrow();
   });

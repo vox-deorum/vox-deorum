@@ -1,6 +1,6 @@
 [
   {
-    "id": "modern",
+    "id": "wire",
     "version": "1",
     "title": "The Civic Wire",
     "when": "['Modern', 'Atomic', 'Information', 'Future'].includes(self.era?.replace(' Era', ''))",
@@ -9,11 +9,11 @@
     },
     "presentation": {
       "schemaVersion": 1,
-      "rendererFamily": "modern",
+      "rendererFamily": "feed",
       "tokens": {
-        "paperColor": "#f4f4f0",
-        "inkColor": "#232b30",
-        "accentColor": "#37697c",
+        "paperColor": "#ffffff",
+        "inkColor": "#14191f",
+        "accentColor": "#1b5fae",
         "bodyFontAssetId": "font-inter-400",
         "headingFontAssetId": "font-inter-800"
       }
@@ -22,7 +22,7 @@
       {
         "id": "port",
         "kind": "image",
-        "path": "assets/images/modern-port.png",
+        "path": "assets/designs/wire/port.png",
         "mediaType": "image/png",
         "width": 1536,
         "height": 1024,

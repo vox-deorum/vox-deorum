@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "issueId": "modern-ordinary-225",
+  "issueId": "wire-ordinary-225",
   "campaignId": "fixture-campaign",
   "timelineId": "fixture-timeline-main",
   "receiver": {
@@ -14,11 +14,11 @@
   },
   "publication": {
     "title": "Your world.",
-    "designId": "modern",
+    "designId": "wire",
     "designVersion": "1.0.0",
     "presentation": {
       "schemaVersion": 1,
-      "rendererFamily": "modern"
+      "rendererFamily": "feed"
     }
   },
   "pages": [
@@ -72,7 +72,7 @@
         }
       ],
       "image": {
-        "assetId": "modern.port",
+        "assetId": "wire.port",
         "altText": "Container cranes and a cargo ship at blue hour."
       },
       "avatar": { "initials": "B", "tone": "slate" },
@@ -80,7 +80,7 @@
         "label": "Earlier report on Atlantic trade",
         "target": {
           "type": "article",
-          "issueId": "modern-ordinary-211",
+          "issueId": "wire-ordinary-211",
           "itemId": "trade"
         },
         "summary": [

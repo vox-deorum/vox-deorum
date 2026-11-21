@@ -18,7 +18,7 @@
     "designVersion": "1.0.0",
     "presentation": {
       "schemaVersion": 1,
-      "rendererFamily": "victorian",
+      "rendererFamily": "broadsheet",
       "assets": { "ornamentAssetId": "victorian.scrollwork" }
     }
   },

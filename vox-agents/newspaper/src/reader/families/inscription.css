@@ -1,0 +1,417 @@
+/*
+ * Inscription newspaper family.
+ *
+ * A public notice painted in black and red ochre on a lime-plastered board,
+ * framed like a Roman inscription. Applies to [data-design="inscription"].
+ *
+ * Decorations are pseudo-elements. Shapes come from inline SVG masks filled
+ * with the design's color tokens, so they need no extra assets during export.
+ * Selected-tab decoration is limited to reader mode because the game draws
+ * the selected tab itself.
+ */
+
+.vd-newspaper[data-design="inscription"] {
+  --vd-paper: #ece3d1;
+  --vd-ink: #231a14;
+  --vd-accent: #9b2f1f;
+  --vd-rule: #a5937a;
+  --vd-page-background: #c9bca4;
+  --vd-font-display: "Cinzel", Georgia, serif;
+  --vd-font-body: "Cardo", Georgia, serif;
+  --vd-ins-plaster: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .32 0 0 0 0 .24 0 0 0 0 .15 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)' opacity='.16'/%3E%3C/svg%3E");
+  --vd-ins-ansa: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 64'%3E%3Cpath d='M38 32 2 3v58z' fill='none' stroke='black' stroke-width='2.2' stroke-linejoin='round'/%3E%3Cpath d='M29 32 7.5 14.5v35z' fill='none' stroke='black' stroke-width='1'/%3E%3Ccircle cx='13' cy='32' r='3'/%3E%3C/svg%3E");
+  --vd-ins-hedera: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 24'%3E%3Cpath d='M22 12C17 12 13 10 11 7 9 4 4.5 4.5 4.5 8 4.5 11 9 11 9 8.5' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round'/%3E%3Cpath d='M37 12C31 5 26 2 22.5 4 19 6 19 10 22 12 19 14 19 18 22.5 20 26 22 31 19 37 12Z'/%3E%3C/svg%3E");
+  --vd-ins-key: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='30' height='36' viewBox='0 0 30 36'%3E%3Cpath d='M0 1H30M0 35H30' stroke='black' stroke-width='1.2'/%3E%3Cpath d='M0 30H30M30 30V6H6V25H25V12H12V19H19' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='square'/%3E%3C/svg%3E");
+}
+
+/* The sheet: plaster texture and a double inset frame like the margin of a stele. */
+
+.vd-newspaper[data-design="inscription"] .vd-publication {
+  position: relative;
+  box-shadow: 0 16px 44px rgb(60 38 18 / 20%);
+}
+
+.vd-newspaper[data-design="inscription"] .vd-publication,
+.vd-newspaper[data-design="inscription"] .vd-header,
+.vd-newspaper[data-design="inscription"] .vd-page {
+  background-color: var(--vd-paper);
+  background-image: var(--vd-ins-plaster);
+}
+
+.vd-newspaper[data-design="inscription"] .vd-page {
+  background-attachment: local;
+}
+
+.vd-newspaper[data-design="inscription"] .vd-publication::after {
+  position: absolute;
+  inset: 12px calc(12px + var(--vd-scrollbar-gutter)) 12px 12px;
+  z-index: 2;
+  border: 1px solid var(--vd-ink);
+  outline: 1px solid color-mix(in srgb, var(--vd-ink) 55%, transparent);
+  outline-offset: -6px;
+  pointer-events: none;
+  content: "";
+}
+
+/* Masthead: the title sits in a tabula ansata, a panel with dovetail handles. */
+
+.vd-newspaper[data-design="inscription"] .vd-header {
+  padding-top: 40px;
+}
+
+.vd-newspaper[data-design="inscription"] .vd-masthead {
+  padding: 6px 0 18px;
+}
+
+.vd-newspaper[data-design="inscription"] .vd-title {
+  position: relative;
+  width: fit-content;
+  max-width: calc(100% - 112px);
+  margin: 0 auto;
+  padding: 16px 40px 14px;
+  border: 2px solid var(--vd-ink);
+  outline: 1px solid var(--vd-ink);
+  outline-offset: 4px;
+  font: 700 calc(44px * var(--vd-text-scale)) / 1.18 var(--vd-font-display);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.vd-newspaper[data-design="inscription"] .vd-title::before,
+.vd-newspaper[data-design="inscription"] .vd-title::after {
+  position: absolute;
+  top: 50%;
+  width: 40px;
+  height: 64px;
+  margin-top: -32px;
+  background: var(--vd-ink);
+  mask: var(--vd-ins-ansa) center / contain no-repeat;
+  content: "";
+}
+
+.vd-newspaper[data-design="inscription"] .vd-title::before {
+  right: calc(100% + 7px);
+}
+
+.vd-newspaper[data-design="inscription"] .vd-title::after {
+  left: calc(100% + 7px);
+  transform: scaleX(-1);
+}
+
+.vd-newspaper[data-design="inscription"] .vd-motto {
+  margin-top: 16px;
+  font-size: calc(19px * var(--vd-text-scale));
+}
+
+.vd-newspaper[data-design="inscription"] .vd-ornament {
+  width: 100%;
+  margin-top: 20px;
+}
+
+/* Tabs: tracked capitals over a double rule; the selected tab gets a red lozenge. */
+
+.vd-newspaper[data-design="inscription"] .vd-tabs {
+  gap: 36px;
+  border-bottom: 3px double var(--vd-ink);
+}
+
+.vd-newspaper[data-design="inscription"] .vd-tab {
+  padding: 15px 2px 13px;
+  font: 400 calc(14px * var(--vd-text-scale)) / 1.4 var(--vd-font-display);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.vd-newspaper[data-design="inscription"] .vd-tab[aria-selected="true"]::after {
+  height: 2px;
+}
+
+.vd-newspaper[data-design="inscription"][data-mode="reader"] .vd-tab[aria-selected="true"]::before {
+  position: absolute;
+  top: 3px;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  margin-left: -3px;
+  background: currentColor;
+  transform: rotate(45deg);
+  content: "";
+}
+
+/* Stories: centred capitals over justified prose. */
+
+.vd-newspaper[data-design="inscription"] .vd-headline {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.vd-newspaper[data-design="inscription"] .vd-deck {
+  font: italic calc(24px * var(--vd-text-scale)) / 1.3 var(--vd-font-body);
+  text-align: center;
+}
+
+.vd-newspaper[data-design="inscription"] .vd-byline {
+  font: 400 calc(13px * var(--vd-text-scale)) / 1.5 var(--vd-font-display);
+  letter-spacing: 0.16em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.vd-newspaper[data-design="inscription"] .vd-prose {
+  font-size: calc(19px * var(--vd-text-scale));
+  line-height: 1.6;
+  text-align: justify;
+  hyphens: auto;
+}
+
+.vd-newspaper[data-design="inscription"] .vd-number {
+  color: var(--vd-accent);
+  font-family: var(--vd-font-display);
+  font-size: 0.92em;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.vd-newspaper[data-design="inscription"] .vd-story-art img {
+  padding: 5px;
+  border: 1px solid var(--vd-ink);
+  outline: 1px solid var(--vd-ink);
+  outline-offset: -9px;
+  filter: sepia(0.35) saturate(0.85);
+}
+
+.vd-newspaper[data-design="inscription"] .vd-text-link {
+  font-size: calc(15px * var(--vd-text-scale));
+}
+
+.vd-newspaper[data-design="inscription"] .vd-end-rule {
+  margin-top: 36px;
+}
+
+/*
+ * Ordinary layouts
+ *
+ * The lead runs across the page with a red headline and a painted initial.
+ * Wide papers then set briefs in rows of two; each brief opens with a rule
+ * broken by a hedera, the ivy-leaf stop of Latin inscriptions.
+ */
+
+.vd-newspaper[data-design="inscription"] .vd-storylist[data-layout="ordinary"] .vd-story--lead .vd-headline {
+  color: var(--vd-accent);
+  font-size: calc(46px * var(--vd-text-scale));
+  font-weight: 700;
+  line-height: 1.12;
+  letter-spacing: 0.05em;
+}
+
+.vd-newspaper[data-design="inscription"] .vd-storylist[data-layout="ordinary"] .vd-story--lead .vd-prose p:first-child::first-letter {
+  initial-letter: 3;
+  margin-right: 10px;
+  color: var(--vd-accent);
+  font-family: var(--vd-font-display);
+  font-weight: 700;
+}
+
+.vd-newspaper[data-design="inscription"] .vd-storylist[data-layout="ordinary"] > .vd-story--brief {
+  position: relative;
+  margin-top: 30px;
+  padding-top: 34px;
+  background:
+    linear-gradient(var(--vd-rule), var(--vd-rule)) left top / calc(50% - 30px) 1px no-repeat,
+    linear-gradient(var(--vd-rule), var(--vd-rule)) right top / calc(50% - 30px) 1px no-repeat;
+}
+
+.vd-newspaper[data-design="inscription"] .vd-storylist[data-layout="ordinary"] > .vd-story--brief::before {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  width: 40px;
+  height: 24px;
+  margin-left: -20px;
+  background: var(--vd-accent);
+  mask: var(--vd-ins-hedera) center / contain no-repeat;
+  content: "";
+}
+
+.vd-newspaper[data-design="inscription"] .vd-storylist[data-layout="ordinary"] .vd-story--brief .vd-headline {
+  font-size: calc(25px * var(--vd-text-scale));
+  line-height: 1.2;
+}
+
+@container newspaper (width > 760px) {
+  .vd-newspaper[data-design="inscription"] .vd-storylist[data-layout="ordinary"] {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 50px;
+  }
+
+  .vd-newspaper[data-design="inscription"] .vd-storylist[data-layout="ordinary"] > .vd-story--lead {
+    grid-column: 1 / -1;
+  }
+
+  /* The lead is the first child, so a lone brief at the end is an even child. */
+  .vd-newspaper[data-design="inscription"] .vd-storylist[data-layout="ordinary"] > .vd-story--brief:nth-child(even):last-child {
+    grid-column: 1 / -1;
+  }
+
+  .vd-newspaper[data-design="inscription"] .vd-storylist[data-layout="ordinary"] > .vd-story--lead .vd-prose,
+  .vd-newspaper[data-design="inscription"] .vd-storylist[data-layout="ordinary"] > .vd-story--brief:nth-child(even):last-child .vd-prose {
+    columns: 20em 2;
+    column-gap: 50px;
+    column-rule: 1px solid var(--vd-rule);
+  }
+
+  .vd-newspaper[data-design="inscription"] .vd-storylist[data-layout="ordinary"] > .vd-story--lead .vd-story-art img,
+  .vd-newspaper[data-design="inscription"] .vd-storylist[data-layout="ordinary"] > .vd-story--brief:nth-child(even):last-child .vd-story-art img {
+    height: auto;
+    aspect-ratio: 2 / 1;
+  }
+}
+
+/*
+ * Breaking layout: a proclamation. The lead sits in a red double frame with
+ * Greek key bands above and below its headline.
+ */
+
+.vd-newspaper[data-design="inscription"] .vd-storylist[data-layout="breaking"] .vd-story--lead {
+  padding: 30px 34px 28px;
+  border: 2px solid var(--vd-accent);
+  outline: 1px solid var(--vd-accent);
+  outline-offset: 4px;
+  margin: 5px;
+}
+
+.vd-newspaper[data-design="inscription"] .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-headline {
+  color: var(--vd-accent);
+  font-size: calc(72px * var(--vd-text-scale));
+  font-weight: 900;
+  line-height: 1.04;
+  letter-spacing: 0.05em;
+}
+
+.vd-newspaper[data-design="inscription"] .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-headline::before,
+.vd-newspaper[data-design="inscription"] .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-headline::after {
+  display: block;
+  height: 24px;
+  background: var(--vd-accent);
+  mask: var(--vd-ins-key) left center / auto 100% repeat-x;
+  content: "";
+}
+
+.vd-newspaper[data-design="inscription"] .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-headline::before {
+  margin-bottom: 26px;
+}
+
+.vd-newspaper[data-design="inscription"] .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-headline::after {
+  margin-top: 26px;
+}
+
+.vd-newspaper[data-design="inscription"] .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-deck {
+  padding-bottom: 0;
+  border-bottom: 0;
+  font-size: calc(26px * var(--vd-text-scale));
+}
+
+.vd-newspaper[data-design="inscription"] .vd-storylist[data-layout="breaking"] .vd-story--brief {
+  border-top: 3px double var(--vd-ink);
+}
+
+.vd-newspaper[data-design="inscription"] .vd-storylist[data-layout="breaking"] .vd-story--brief .vd-headline {
+  font-size: calc(28px * var(--vd-text-scale));
+}
+
+/* Analysis layout: the evidence is a carved tally on a framed tablet. */
+
+.vd-newspaper[data-design="inscription"] .vd-storylist[data-layout="analysis"] .vd-story--lead .vd-headline {
+  max-width: none;
+  font-size: calc(46px * var(--vd-text-scale));
+  letter-spacing: 0.05em;
+}
+
+.vd-newspaper[data-design="inscription"] .vd-storylist[data-layout="analysis"] .vd-story--lead .vd-deck {
+  border-bottom: 3px double var(--vd-ink);
+}
+
+.vd-newspaper[data-design="inscription"] .vd-evidence {
+  align-self: start;
+  margin: 5px;
+  padding: 22px 24px;
+  border: 1px solid var(--vd-ink);
+  outline: 1px solid var(--vd-ink);
+  outline-offset: 4px;
+  background: color-mix(in srgb, var(--vd-paper) 90%, var(--vd-ink));
+}
+
+.vd-newspaper[data-design="inscription"] .vd-evidence caption {
+  text-align: center;
+}
+
+.vd-newspaper[data-design="inscription"] .vd-evidence caption strong {
+  font-size: calc(24px * var(--vd-text-scale));
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.vd-newspaper[data-design="inscription"] .vd-evidence thead th {
+  border-bottom: 2px solid var(--vd-accent);
+  color: var(--vd-accent);
+  font-family: var(--vd-font-display);
+  letter-spacing: 0.16em;
+}
+
+.vd-newspaper[data-design="inscription"] .vd-evidence tbody th {
+  font-size: calc(17px * var(--vd-text-scale));
+}
+
+.vd-newspaper[data-design="inscription"] .vd-evidence td {
+  font: 400 calc(32px * var(--vd-text-scale)) / 1 var(--vd-font-display);
+}
+
+.vd-newspaper[data-design="inscription"] .vd-evidence .vd-missing td {
+  font: italic calc(16px * var(--vd-text-scale)) / 1.4 var(--vd-font-body);
+}
+
+.vd-newspaper[data-design="inscription"] .vd-storylist[data-layout="analysis"] .vd-story--brief {
+  border-top: 3px double var(--vd-ink);
+}
+
+/* Narrow papers drop the dovetail handles and scale the capitals down. */
+
+@container newspaper (max-width: 760px) {
+  .vd-newspaper[data-design="inscription"] .vd-evidence {
+    margin-top: 10px;
+  }
+}
+
+@container newspaper (max-width: 560px) {
+  .vd-newspaper[data-design="inscription"] .vd-title {
+    max-width: 100%;
+    padding: 12px 16px 10px;
+    font-size: calc(28px * var(--vd-text-scale));
+    letter-spacing: 0.06em;
+  }
+
+  .vd-newspaper[data-design="inscription"] .vd-title::before,
+  .vd-newspaper[data-design="inscription"] .vd-title::after {
+    display: none;
+  }
+
+  .vd-newspaper[data-design="inscription"] .vd-tabs {
+    gap: 18px;
+  }
+
+  .vd-newspaper[data-design="inscription"] .vd-storylist[data-layout="ordinary"] .vd-story--lead .vd-headline,
+  .vd-newspaper[data-design="inscription"] .vd-storylist[data-layout="analysis"] .vd-story--lead .vd-headline {
+    font-size: calc(32px * var(--vd-text-scale));
+  }
+
+  .vd-newspaper[data-design="inscription"] .vd-storylist[data-layout="breaking"] .vd-story--lead {
+    padding: 20px 18px;
+  }
+
+  .vd-newspaper[data-design="inscription"] .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-headline {
+    font-size: calc(40px * var(--vd-text-scale));
+  }
+}

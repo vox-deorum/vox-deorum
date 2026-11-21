@@ -9,11 +9,11 @@
     },
     "presentation": {
       "schemaVersion": 1,
-      "rendererFamily": "victorian",
+      "rendererFamily": "broadsheet",
       "tokens": {
-        "paperColor": "#f2ead7",
-        "inkColor": "#241d18",
-        "accentColor": "#74513a",
+        "paperColor": "#f1e8d4",
+        "inkColor": "#1f1b16",
+        "accentColor": "#7a2a1e",
         "bodyFontAssetId": "font-libre-caslon-400",
         "headingFontAssetId": "font-bodoni-moda-700",
         "mastheadFontAssetId": "font-unifrakturmaguntia-400"
@@ -26,17 +26,17 @@
       {
         "id": "scrollwork",
         "kind": "ornament",
-        "path": "assets/ornaments/victorian.svg",
+        "path": "assets/designs/victorian/scrollwork.svg",
         "mediaType": "image/svg+xml",
         "width": 900,
         "height": 70,
         "license": "Vox Deorum project asset",
-        "attribution": "Authored SVG scrollwork for the Victorian prototype."
+        "attribution": "Authored SVG scrollwork cartouche for the Victorian design."
       },
       {
         "id": "harbour",
         "kind": "image",
-        "path": "assets/images/victorian-harbour.png",
+        "path": "assets/designs/victorian/harbour.png",
         "mediaType": "image/png",
         "width": 1536,
         "height": 1024,

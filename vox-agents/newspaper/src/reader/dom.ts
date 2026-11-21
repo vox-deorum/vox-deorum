@@ -46,6 +46,25 @@ export function paragraphsToText(paragraphs: InlineNode[][]): string {
   return paragraphs.map((paragraph) => inlineNodesToText(paragraph)).join("\n\n");
 }
 
+/**
+ * Numbers in prose: an optional sign, digits with optional thousands separators
+ * or a decimal point, and an optional percent sign. Digits joined to letters,
+ * such as "B2" or "3rd", stay plain text.
+ */
+const numberPattern = /(?<![\p{L}\p{N}_])[+\-\u2212]?\d(?:[\d,.]*\d)?%?(?![\p{L}\p{N}_])/gu;
+
+/** Append text, wrapping each number in a `vd-number` span that designs can style. */
+export function appendText(container: HTMLElement, text: string): void {
+  let cursor = 0;
+  for (const match of text.matchAll(numberPattern)) {
+    const start = match.index ?? 0;
+    if (start > cursor) container.append(document.createTextNode(text.slice(cursor, start)));
+    container.append(createElement("span", "vd-number", match[0]));
+    cursor = start + match[0].length;
+  }
+  if (cursor < text.length) container.append(document.createTextNode(text.slice(cursor)));
+}
+
 /** Append inline nodes to a container, binding links through the reader. */
 export function appendInlineNodes(
   container: HTMLElement,
@@ -58,22 +77,21 @@ export function appendInlineNodes(
       container.append(document.createElement("br"));
       continue;
     }
-    if (node.type === "strong") {
-      container.append(createElement("strong", undefined, node.text));
-      continue;
-    }
-    if (node.type === "emphasis") {
-      container.append(createElement("em", undefined, node.text));
+    if (node.type === "strong" || node.type === "emphasis") {
+      const element = createElement(node.type === "strong" ? "strong" : "em");
+      appendText(element, node.text);
+      container.append(element);
       continue;
     }
     if (node.type === "link") {
-      const link = createElement("a", "vd-inline-link", node.text);
+      const link = createElement("a", "vd-inline-link");
+      appendText(link, node.text);
       link.href = "#";
       bindAction(link, { type: "follow-link", itemId, target: node.target });
       container.append(link);
       continue;
     }
-    container.append(document.createTextNode(node.text));
+    appendText(container, node.text);
   }
 }
 

@@ -10,18 +10,18 @@ describe("newspaper renderer issue validation", () => {
     const issue = createNewspaperIssue();
     issue.publication.designId = "early-account";
     issue.publication.presentation = {
-      schemaVersion: 1, rendererFamily: "modern",
+      schemaVersion: 1, rendererFamily: "feed",
       tokens: { headingFontAssetId: "font-bodoni-moda-700", bodyFontAssetId: "font-inter-400" },
     };
     const saved = parseIssueDocument(issue);
-    expect(saved.publication.presentation.rendererFamily).toBe("modern");
+    expect(saved.publication.presentation.rendererFamily).toBe("feed");
     expect(saved.publication.presentation.assets?.ornamentAssetId).toBeUndefined();
     expect(saved.publication.presentation).toEqual(issue.publication.presentation);
   });
 
   it.each(["bodyFontAssetId", "headingFontAssetId", "mastheadFontAssetId"] as const)("should reject a non-font presentation reference for %s", (role) => {
     const issue = createNewspaperIssue();
-    issue.publication.presentation = { schemaVersion: 1, rendererFamily: "modern", tokens: { bodyFontAssetId: "font-inter-400", [role]: "modern.port" } };
+    issue.publication.presentation = { schemaVersion: 1, rendererFamily: "feed", tokens: { bodyFontAssetId: "font-inter-400", [role]: "wire.port" } };
     expect(() => parseIssueDocument(issue)).toThrowError(expect.objectContaining({
       issues: expect.arrayContaining([expect.objectContaining({ path: ["publication", "presentation", "tokens", role] })]),
     }));
@@ -29,7 +29,7 @@ describe("newspaper renderer issue validation", () => {
 
   it("should accept registered snapshot ornaments", () => {
     const issue = createNewspaperIssue();
-    issue.publication.presentation = { schemaVersion: 1, rendererFamily: "victorian", assets: { ornamentAssetId: "victorian.scrollwork" } };
+    issue.publication.presentation = { schemaVersion: 1, rendererFamily: "broadsheet", assets: { ornamentAssetId: "victorian.scrollwork" } };
     expect(parseIssueDocument(issue).publication.presentation.assets?.ornamentAssetId).toBe("victorian.scrollwork");
   });
 
@@ -46,7 +46,7 @@ describe("newspaper renderer issue validation", () => {
     },
   );
 
-  it.each(["unregistered-ornament", "modern.port", "vote-modern-up-neutral"])(
+  it.each(["unregistered-ornament", "wire.port", "vote-feed-up-neutral"])(
     "should reject an unknown or non-ornament publication asset: %s", (assetId) => {
       const issue = createNewspaperIssue();
       issue.publication.presentation.assets = { ornamentAssetId: assetId };
@@ -57,11 +57,11 @@ describe("newspaper renderer issue validation", () => {
 
   it("should accept a registered article image with alternative text", () => {
     const issue = createNewspaperIssue();
-    issue.items[0].image = { assetId: "modern.port", altText: "Ships at a port" };
+    issue.items[0].image = { assetId: "wire.port", altText: "Ships at a port" };
     expect(parseIssueDocument(issue).items[0].image).toEqual(issue.items[0].image);
   });
 
-  it.each(["victorian-ordinary", "victorian-breaking", "victorian-analysis", "modern-ordinary"])(
+  it.each(["victorian-ordinary", "victorian-breaking", "victorian-analysis", "wire-ordinary"])(
     "should accept the complete renderer fixture: %s", async (fixture) => {
       const input = JSON.parse(await readFile(new URL(`../../../../newspaper/fixtures/${fixture}.json`, import.meta.url), "utf8"));
       const issue = parseIssueDocument(input);

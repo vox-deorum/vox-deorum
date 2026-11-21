@@ -1,0 +1,386 @@
+/*
+ * Feed newspaper family.
+ *
+ * A contemporary wire feed: one sans family, hierarchy by weight and size, a
+ * single signal color, and short items beside source avatars. Red appears only
+ * on breaking pages. Applies to [data-design="feed"].
+ */
+
+.vd-newspaper[data-design="feed"] {
+  --vd-paper: #ffffff;
+  --vd-ink: #14191f;
+  --vd-accent: #1b5fae;
+  --vd-alert: #c8362b;
+  --vd-muted: #5b6672;
+  --vd-rule: #e1e6ea;
+  --vd-page-background: #eef1f4;
+  --vd-font-display: "Inter", Arial, sans-serif;
+  --vd-font-body: "Inter", Arial, sans-serif;
+}
+
+.vd-newspaper[data-design="feed"] .vd-publication {
+  outline: 1px solid var(--vd-rule);
+  outline-offset: -1px;
+  box-shadow: 0 10px 34px rgb(20 30 45 / 8%);
+}
+
+/* Masthead: a signal bar across the top and a square mark beside the title. */
+
+.vd-newspaper[data-design="feed"] .vd-header {
+  padding-top: 30px;
+  box-shadow: inset 0 6px 0 var(--vd-accent);
+}
+
+.vd-newspaper[data-design="feed"] .vd-masthead {
+  padding: 0 2px 18px;
+  text-align: left;
+}
+
+.vd-newspaper[data-design="feed"] .vd-title {
+  font: 800 calc(38px * var(--vd-text-scale)) / 1.1 var(--vd-font-display);
+  letter-spacing: -0.045em;
+  text-wrap: initial;
+}
+
+.vd-newspaper[data-design="feed"] .vd-title::before {
+  display: inline-block;
+  width: 0.56em;
+  height: 0.56em;
+  margin-right: 0.32em;
+  border-radius: 2px;
+  background: var(--vd-accent);
+  vertical-align: 0.02em;
+  content: "";
+}
+
+.vd-newspaper[data-design="feed"] .vd-motto {
+  margin-top: 6px;
+  color: var(--vd-muted);
+  font: 500 calc(15px * var(--vd-text-scale)) / 1.4 var(--vd-font-body);
+}
+
+/* Tabs: a left-aligned row with a thick rounded underline on the selected tab. */
+
+.vd-newspaper[data-design="feed"] .vd-tabs {
+  justify-content: flex-start;
+  gap: 6px;
+  border-bottom: 1px solid var(--vd-rule);
+}
+
+.vd-newspaper[data-design="feed"] .vd-tab {
+  padding: 14px 12px 16px;
+  color: var(--vd-muted);
+  font: 600 calc(15px * var(--vd-text-scale)) / 1.4 var(--vd-font-display);
+  letter-spacing: -0.01em;
+}
+
+.vd-newspaper[data-design="feed"] .vd-tab:first-child {
+  margin-left: -12px;
+}
+
+.vd-newspaper[data-design="feed"] .vd-tab:hover,
+.vd-newspaper[data-design="feed"] .vd-tab[aria-selected="true"] {
+  color: var(--vd-ink);
+}
+
+.vd-newspaper[data-design="feed"] .vd-tab[aria-selected="true"]::after {
+  right: 12px;
+  left: 12px;
+  height: 4px;
+  border-radius: 4px 4px 0 0;
+  background: var(--vd-accent);
+}
+
+/* Feed items: avatar column, then the story. */
+
+.vd-newspaper[data-design="feed"] .vd-page {
+  padding-top: 4px;
+}
+
+.vd-newspaper[data-design="feed"] .vd-storylist {
+  display: block;
+}
+
+.vd-newspaper[data-design="feed"] .vd-story,
+.vd-newspaper[data-design="feed"] .vd-story--lead,
+.vd-newspaper[data-design="feed"] .vd-story--brief + .vd-story--brief {
+  display: grid;
+  grid-row: auto;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 18px;
+  max-width: none;
+  margin: 0;
+  padding: 26px 0;
+  border: 0;
+  border-bottom: 1px solid var(--vd-rule);
+}
+
+.vd-newspaper[data-design="feed"] .vd-story-content {
+  min-width: 0;
+}
+
+.vd-newspaper[data-design="feed"] .vd-headline {
+  margin-bottom: 10px;
+  font: 700 calc(21px * var(--vd-text-scale)) / 1.2 var(--vd-font-display);
+  letter-spacing: -0.03em;
+  text-wrap: pretty;
+}
+
+.vd-newspaper[data-design="feed"] .vd-deck {
+  margin: 0 0 12px;
+  color: var(--vd-muted);
+  font: 400 calc(17px * var(--vd-text-scale)) / 1.45 var(--vd-font-body);
+  text-align: left;
+}
+
+.vd-newspaper[data-design="feed"] .vd-byline {
+  margin: 0 0 14px;
+  color: var(--vd-muted);
+  font: 600 calc(12px * var(--vd-text-scale)) / 1.5 var(--vd-font-body);
+  letter-spacing: 0.06em;
+  text-align: left;
+  text-transform: uppercase;
+  opacity: 1;
+}
+
+.vd-newspaper[data-design="feed"] .vd-deck + .vd-byline {
+  margin-top: 0;
+}
+
+.vd-newspaper[data-design="feed"] .vd-prose {
+  font-size: calc(17px * var(--vd-text-scale));
+  line-height: 1.58;
+  letter-spacing: -0.012em;
+}
+
+.vd-newspaper[data-design="feed"] .vd-prose a {
+  font-weight: 600;
+  text-decoration-color: color-mix(in srgb, var(--vd-accent) 40%, transparent);
+}
+
+.vd-newspaper[data-design="feed"] .vd-number {
+  font-variant-numeric: tabular-nums;
+}
+
+.vd-newspaper[data-design="feed"] .vd-prose .vd-number,
+.vd-newspaper[data-design="feed"] .vd-deck .vd-number {
+  color: var(--vd-accent);
+  font-weight: 600;
+}
+
+.vd-newspaper[data-design="feed"] .vd-story-art {
+  margin: 18px 0 0;
+}
+
+.vd-newspaper[data-design="feed"] .vd-story-art img {
+  height: 235px;
+  border-radius: 12px;
+}
+
+.vd-newspaper[data-design="feed"] .vd-story-footer {
+  font-size: calc(17px * var(--vd-text-scale));
+}
+
+.vd-newspaper[data-design="feed"] .vd-text-link {
+  color: var(--vd-accent);
+  font: 600 calc(13px * var(--vd-text-scale)) / 1.5 var(--vd-font-body);
+  text-decoration: none;
+}
+
+.vd-newspaper[data-design="feed"] .vd-votes {
+  margin-left: auto;
+}
+
+.vd-newspaper[data-design="feed"] .vd-vote {
+  border-radius: 999px;
+}
+
+.vd-newspaper[data-design="feed"] .vd-end-rule {
+  display: none;
+}
+
+.vd-newspaper[data-design="feed"] .vd-avatar {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  place-items: center;
+  font: 700 calc(17px * var(--vd-text-scale)) / 1 var(--vd-font-display);
+}
+
+.vd-newspaper[data-design="feed"] .vd-avatar--slate {
+  color: #ffffff;
+  background: #24415a;
+}
+
+.vd-newspaper[data-design="feed"] .vd-avatar--rose {
+  color: #6d3049;
+  background: #f4dde6;
+}
+
+.vd-newspaper[data-design="feed"] .vd-avatar--sage {
+  color: #29513f;
+  background: #d9ece1;
+}
+
+/* Lead card: bigger avatar, headline and full-width image. */
+
+.vd-newspaper[data-design="feed"] .vd-storylist .vd-story--lead {
+  grid-template-columns: 52px minmax(0, 1fr);
+  padding-top: 30px;
+  padding-bottom: 30px;
+}
+
+.vd-newspaper[data-design="feed"] .vd-story--lead .vd-avatar {
+  width: 52px;
+  height: 52px;
+  font-size: calc(20px * var(--vd-text-scale));
+}
+
+.vd-newspaper[data-design="feed"] .vd-storylist[data-layout] .vd-story--lead .vd-headline {
+  margin-bottom: 12px;
+  font: 800 calc(32px * var(--vd-text-scale)) / 1.12 var(--vd-font-display);
+  letter-spacing: -0.04em;
+  text-align: left;
+  text-transform: none;
+}
+
+.vd-newspaper[data-design="feed"] .vd-storylist[data-layout] .vd-story--lead .vd-deck {
+  padding-bottom: 0;
+  border-bottom: 0;
+  font-size: calc(19px * var(--vd-text-scale));
+  text-align: left;
+}
+
+.vd-newspaper[data-design="feed"] .vd-storylist[data-layout] .vd-story--lead .vd-byline {
+  margin-top: 0;
+  text-align: left;
+}
+
+.vd-newspaper[data-design="feed"] .vd-storylist[data-layout="ordinary"] .vd-story--lead .vd-story-art img {
+  height: auto;
+  aspect-ratio: 2 / 1;
+  border-radius: 14px;
+}
+
+/* Breaking layout: a red signal bar over the lead and a red dot before its headline. */
+
+.vd-newspaper[data-design="feed"] .vd-storylist[data-layout="breaking"] .vd-story--lead {
+  margin-top: 22px;
+  padding-top: 26px;
+  border-top: 4px solid var(--vd-alert);
+}
+
+.vd-newspaper[data-design="feed"] .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-headline {
+  font-size: calc(36px * var(--vd-text-scale));
+}
+
+.vd-newspaper[data-design="feed"] .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-headline::before {
+  display: inline-block;
+  width: 0.36em;
+  height: 0.36em;
+  margin-right: 0.28em;
+  border-radius: 50%;
+  background: var(--vd-alert);
+  box-shadow: 0 0 0 0.12em color-mix(in srgb, var(--vd-alert) 22%, transparent);
+  vertical-align: 0.14em;
+  content: "";
+}
+
+.vd-newspaper[data-design="feed"] .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-avatar {
+  color: #ffffff;
+  background: var(--vd-alert);
+}
+
+.vd-newspaper[data-design="feed"] .vd-breaking-columns {
+  gap: 24px;
+}
+
+.vd-newspaper[data-design="feed"] .vd-breaking-columns .vd-story-art img {
+  height: 300px;
+}
+
+/* Analysis layout: the evidence is a data card with large tabular figures. */
+
+.vd-newspaper[data-design="feed"] .vd-analysis-columns {
+  gap: 28px;
+}
+
+.vd-newspaper[data-design="feed"] .vd-evidence {
+  align-self: start;
+  padding: 22px 22px 18px;
+  border: 0;
+  border-radius: 14px;
+  background: #f4f7fa;
+  box-shadow: inset 0 4px 0 var(--vd-accent);
+}
+
+.vd-newspaper[data-design="feed"] .vd-evidence caption strong {
+  color: var(--vd-ink);
+  font: 700 calc(19px * var(--vd-text-scale)) / 1.25 var(--vd-font-display);
+  letter-spacing: -0.02em;
+}
+
+.vd-newspaper[data-design="feed"] .vd-evidence caption {
+  color: var(--vd-muted);
+  font-size: calc(14px * var(--vd-text-scale));
+}
+
+
+.vd-newspaper[data-design="feed"] .vd-evidence th,
+.vd-newspaper[data-design="feed"] .vd-evidence td {
+  padding: 12px 4px;
+  border-bottom-color: #dfe5ea;
+}
+
+.vd-newspaper[data-design="feed"] .vd-evidence thead th {
+  color: var(--vd-muted);
+  font: 600 calc(11px * var(--vd-text-scale)) / 1.4 var(--vd-font-body);
+  letter-spacing: 0.08em;
+}
+
+.vd-newspaper[data-design="feed"] .vd-evidence tbody th {
+  font: 500 calc(15px * var(--vd-text-scale)) / 1.35 var(--vd-font-body);
+}
+
+.vd-newspaper[data-design="feed"] .vd-evidence td {
+  font: 700 calc(30px * var(--vd-text-scale)) / 1 var(--vd-font-display);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+}
+
+.vd-newspaper[data-design="feed"] .vd-evidence tbody tr:first-child td {
+  color: var(--vd-accent);
+}
+
+.vd-newspaper[data-design="feed"] .vd-evidence .vd-missing td {
+  color: var(--vd-muted);
+  font: 400 calc(14px * var(--vd-text-scale)) / 1.4 var(--vd-font-body);
+}
+
+.vd-newspaper[data-design="feed"] .vd-evidence-note {
+  color: var(--vd-muted);
+  font: 400 calc(12px * var(--vd-text-scale)) / 1.5 var(--vd-font-body);
+}
+
+.vd-newspaper[data-design="feed"] .vd-evidence .vd-story-art img {
+  border-radius: 10px;
+}
+
+@container newspaper (max-width: 560px) {
+  .vd-newspaper[data-design="feed"] .vd-title {
+    font-size: calc(30px * var(--vd-text-scale));
+  }
+
+  .vd-newspaper[data-design="feed"] .vd-tab {
+    padding-inline: 9px;
+  }
+
+  .vd-newspaper[data-design="feed"] .vd-tab:first-child {
+    margin-left: -9px;
+  }
+
+  .vd-newspaper[data-design="feed"] .vd-storylist[data-layout] .vd-story--lead .vd-headline {
+    font-size: calc(26px * var(--vd-text-scale));
+  }
+}

@@ -54,10 +54,13 @@ function createStory(id: string, sentences: number): IssueItem {
   };
 }
 
+/** Built-in design ids that carry each renderer family. */
+const designIds: Record<RendererFamily, string> = { inscription: 'oral-accounts', broadsheet: 'victorian', feed: 'wire' };
+
 /** Build a one-page ordinary issue whose stories have the given lengths. */
-function createOrdinaryIssue(sentences: number[], family: RendererFamily = 'victorian'): IssueDocument {
+function createOrdinaryIssue(sentences: number[], family: RendererFamily = 'broadsheet'): IssueDocument {
   const issue = createNewspaperIssue();
-  issue.publication = { title: 'The Civic Chronicle', designId: family, designVersion: '1', presentation: { schemaVersion: 1, rendererFamily: family } };
+  issue.publication = { title: 'The Civic Chronicle', designId: designIds[family], designVersion: '1', presentation: { schemaVersion: 1, rendererFamily: family } };
   issue.items = sentences.map((count, index) => createStory(`story-${index + 1}`, count));
   issue.pages = [{ id: 'front', label: 'Front Page', layout: 'ordinary', itemIds: issue.items.map(item => item.id) }];
   return issue;
@@ -251,9 +254,9 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'export.html')) || !exist
     } finally { await page.close(); }
   }, 60_000);
 
-  it('should keep the modern feed as one full-width column', async context => {
+  it('should keep the feed as one full-width column', async context => {
     if (!browser) { context.skip(unavailable); return; }
-    const issue = createOrdinaryIssue([1, 6, 2, 3], 'modern');
+    const issue = createOrdinaryIssue([1, 6, 2, 3], 'feed');
     const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
     try {
       await page.goto(`${host.url}/newspaper/export.html`);

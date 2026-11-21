@@ -108,3 +108,51 @@
   font-weight: 800;
   src: url("./fonts/inter-normal-800.ttf") format("truetype");
 }
+
+@font-face {
+  font-family: "Cinzel";
+  font-display: swap;
+  font-style: normal;
+  font-weight: 400;
+  src: url("./fonts/cinzel-normal-400.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Cinzel";
+  font-display: swap;
+  font-style: normal;
+  font-weight: 700;
+  src: url("./fonts/cinzel-normal-700.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Cinzel";
+  font-display: swap;
+  font-style: normal;
+  font-weight: 900;
+  src: url("./fonts/cinzel-normal-900.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Cardo";
+  font-display: swap;
+  font-style: normal;
+  font-weight: 400;
+  src: url("./fonts/cardo-normal-400.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Cardo";
+  font-display: swap;
+  font-style: normal;
+  font-weight: 700;
+  src: url("./fonts/cardo-normal-700.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Cardo";
+  font-display: swap;
+  font-style: italic;
+  font-weight: 400;
+  src: url("./fonts/cardo-italic-400.ttf") format("truetype");
+}

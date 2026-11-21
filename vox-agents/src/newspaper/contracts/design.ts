@@ -2,7 +2,7 @@
 import { z } from 'zod';
 
 /** Fixed renderer families available to configurable publication designs. */
-export const rendererFamilySchema = z.enum(['victorian', 'modern']);
+export const rendererFamilySchema = z.enum(['inscription', 'broadsheet', 'feed']);
 /** A visual family supported by the shared renderer. */
 export type RendererFamily = z.infer<typeof rendererFamilySchema>;
 /** Immutable visual settings stored with an issue. */

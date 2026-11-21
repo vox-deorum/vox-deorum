@@ -144,7 +144,7 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('newspape
     const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
     try {
       for (const width of [360, 600, 900, 1200, 600.5]) {
-        for (const fixture of ['victorian-ordinary', 'victorian-breaking', 'victorian-analysis', 'modern-ordinary']) {
+        for (const fixture of ['victorian-ordinary', 'victorian-breaking', 'victorian-analysis', 'wire-ordinary']) {
           const issue = parseIssueDocument(JSON.parse(await readFile(path.join(fixtures, `${fixture}.json`), 'utf8')));
           await page.goto(`${host.url}/newspaper/?fixture=${fixture}`);
           await page.waitForFunction(() => document.querySelector('#state-view')?.textContent?.includes('activePageId'));
@@ -280,8 +280,8 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('newspape
         const bridge = (window as any).voxDeorumNewspaperExport;
         await bridge.mount(issue, profile);
         const header = await bridge.measureHeader();
-        await bridge.mountVoteIcon('vote-victorian-up-neutral');
-        await bridge.mountVoteIcon('vote-victorian-up-selected');
+        await bridge.mountVoteIcon('vote-broadsheet-up-neutral');
+        await bridge.mountVoteIcon('vote-broadsheet-up-selected');
         await bridge.selectPage(issue.pages[1].id);
         const measured = await bridge.measurePage();
         const afterIcons = await bridge.measureHeader();

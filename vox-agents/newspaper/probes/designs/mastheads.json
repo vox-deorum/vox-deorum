@@ -8,7 +8,7 @@
     },
     "presentation": {
       "schemaVersion": 1,
-      "rendererFamily": "victorian",
+      "rendererFamily": "broadsheet",
       "tokens": {
         "paperColor": "#f2ead7",
         "inkColor": "#241d18",
@@ -48,7 +48,7 @@
     },
     "presentation": {
       "schemaVersion": 1,
-      "rendererFamily": "victorian",
+      "rendererFamily": "broadsheet",
       "tokens": {
         "paperColor": "#f2ead7",
         "inkColor": "#241d18",

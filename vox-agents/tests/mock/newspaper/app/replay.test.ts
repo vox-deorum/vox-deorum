@@ -34,7 +34,7 @@ function savedIssue(): ArchiveIssue {
     votes: {},
     decision: {
       checkId: 'controlled-check', cutoffTurn: 12, configurationId: 'controlled', configurationSnapshot: {}, seed: 'controlled', editor: 'heuristic', status: 'published',
-      candidateScores: [], selectedVariants: {}, designId: 'modern', layouts: {}, evidence: [], diplomacyInference: [], triggerAudit: [], evidenceRequest: { cutoffTurn: 12, previousCheckTurn: 11, receiverPlayerID: 0 },
+      candidateScores: [], selectedVariants: {}, designId: 'wire', layouts: {}, evidence: [], diplomacyInference: [], triggerAudit: [], evidenceRequest: { cutoffTurn: 12, previousCheckTurn: 11, receiverPlayerID: 0 },
       feedback: { revision: '0', windowItemIds: [], votes: {}, tagCounts: {}, seriesAdjustments: {}, tagAdjustments: {}, coefficients: { series: 1, tag: 1, bound: 10, window: 50 } },
     },
     articles: [{
@@ -252,7 +252,7 @@ describe.skipIf(!existsSync(`${readerDirectory}/index.html`))('replay browser wo
       expect(await page.locator('#page-items').textContent()).toContain(detail.articles[0].evidenceSummary);
       expect(JSON.parse((await page.locator('[data-article-sources]').first().textContent())!)).toEqual({ triggers: detail.articles[0].triggerIds, sources: detail.articles[0].sources });
       await voteTwice(page);
-      await page.locator('#fixture-select').selectOption('modern-ordinary');
+      await page.locator('#fixture-select').selectOption('wire-ordinary');
       await page.locator('[data-replay="advance"]').click();
       await page.waitForFunction(() => document.querySelector<HTMLElement>('#reader-root')?.inert === true);
       expect(requests).toEqual(['vote:1']);

@@ -16,7 +16,7 @@ export const newspaperTestProfile: RenderProfile = {
 };
 
 export const newspaperTestRegionWidth = newspaperTestProfile.paperWidth;
-export const newspaperTestContentWidth = computeRenderLayout("modern", newspaperTestProfile).contentWidth;
+export const newspaperTestContentWidth = computeRenderLayout("feed", newspaperTestProfile).contentWidth;
 
 /** Build a small issue whose two pages share one item. */
 export function createNewspaperIssue(): IssueDocument {
@@ -29,9 +29,9 @@ export function createNewspaperIssue(): IssueDocument {
     cutoff: { turn: 12, label: "Turn 12" },
     publication: {
       title: "The Daily Deorum",
-      designId: "modern",
+      designId: "wire",
       designVersion: "1",
-      presentation: { schemaVersion: 1, rendererFamily: "modern" },
+      presentation: { schemaVersion: 1, rendererFamily: "feed" },
     },
     pages: [
       {
@@ -81,7 +81,7 @@ export function createNewspaperBundle(): RenderBundle {
     issueId: "issue-1",
     campaignId: "campaign-1",
     timelineId: "timeline-1",
-    designId: "modern",
+    designId: "feed",
     designVersion: "1",
     profile: { ...newspaperTestProfile },
     header: {

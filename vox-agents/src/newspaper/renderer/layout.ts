@@ -22,11 +22,15 @@ export const defaultMaxTextureEdge = 2048;
 
 /** Design-specific layout defaults used by the browser reader and exporter. */
 export const newspaperDesignDefaults = {
-  victorian: {
+  inscription: {
     paperPadding: 48,
     scrollbarGutter: 16,
   },
-  modern: {
+  broadsheet: {
+    paperPadding: 48,
+    scrollbarGutter: 16,
+  },
+  feed: {
     paperPadding: 32,
     scrollbarGutter: 16,
   },

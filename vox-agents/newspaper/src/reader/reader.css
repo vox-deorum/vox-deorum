@@ -6,6 +6,7 @@
  */
 
 @import "./base.css";
-@import "./families/victorian.css";
-@import "./families/modern.css";
+@import "./families/inscription.css";
+@import "./families/broadsheet.css";
+@import "./families/feed.css";
 @import "./export.css";

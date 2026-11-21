@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 70" width="900" height="70">
+  <defs>
+    <g id="half" fill="none" stroke="#1f1b16" stroke-linecap="round" stroke-linejoin="round">
+      <!-- Oxford rule running out to the margin. -->
+      <path d="M-236 32.6H-428" stroke-width="2.2"/>
+      <path d="M-236 38.4H-428" stroke-width=".7"/>
+      <path d="m-446 35.5 6-5 6 5-6 5z" fill="#1f1b16" stroke="none"/>
+      <circle cx="-424" cy="35.5" r="1.6" fill="#1f1b16" stroke="none"/>
+      <!-- Inner C-scroll and volute beside the cartouche. -->
+      <path d="M-37 35C-52 35-58 29-62 22-67 14-77 11-83 17-89 24-83 32-76 30-71 28-72 22-77 22" stroke-width="1.5"/>
+      <path d="M-41 37C-60 43-80 53-100 51-114 50-119 39-111 34-105 31-98 36-101 41-103 44-108 44-108 40" stroke-width="1.5"/>
+      <!-- Acanthus leaves. -->
+      <path d="M-47 33C-55 22-66 19-73 24-64 26-56 29-47 33Z" fill="#1f1b16" stroke="none"/>
+      <path d="M-49 39C-59 47-73 51-82 47-72 46-62 43-49 39Z" fill="#1f1b16" stroke="none"/>
+      <path d="M-86 16C-92 8-101 7-106 11-99 12-93 13-86 16Z" fill="#1f1b16" stroke="none"/>
+      <path d="M-114 37C-122 31-131 31-136 35-128 36-121 36-114 37Z" fill="#1f1b16" stroke="none"/>
+      <!-- Outer scroll pair that tapers into the rule. -->
+      <path d="M-112 31C-130 22-148 22-162 27-175 32-178 44-169 46-162 48-159 41-164 39" stroke-width="1.3"/>
+      <path d="M-120 44C-145 50-176 44-196 38-210 34-222 34-236 35" stroke-width="1.3"/>
+      <path d="M-182 34C-190 26-201 24-208 28-200 29-193 31-182 34Z" fill="#1f1b16" stroke="none"/>
+      <path d="M-200 41C-209 47-219 48-225 44-217 43-209 42-200 41Z" fill="#1f1b16" stroke="none"/>
+      <circle cx="-122" cy="22" r="1.8" fill="#1f1b16" stroke="none"/>
+      <circle cx="-140" cy="50" r="1.6" fill="#1f1b16" stroke="none"/>
+      <circle cx="-188" cy="47" r="1.3" fill="#1f1b16" stroke="none"/>
+      <!-- Engraved hatching under the inner scroll. -->
+      <path d="M-64 27-60 31M-68 27-63 32M-72 28-67 33" stroke-width=".6"/>
+    </g>
+  </defs>
+  <g transform="translate(450 0)">
+    <use href="#half"/>
+    <use href="#half" transform="scale(-1 1)"/>
+    <!-- Central cartouche with a four-petal rosette. -->
+    <ellipse cx="0" cy="35" rx="34" ry="22" fill="none" stroke="#1f1b16" stroke-width="1.8"/>
+    <ellipse cx="0" cy="35" rx="29" ry="17.5" fill="none" stroke="#1f1b16" stroke-width=".6"/>
+    <ellipse cx="0" cy="35" rx="25" ry="14" fill="none" stroke="#1f1b16" stroke-width=".9" stroke-dasharray=".1 3.2" stroke-linecap="round"/>
+    <g fill="#1f1b16">
+      <ellipse cx="0" cy="35" rx="10" ry="3.4"/>
+      <ellipse cx="0" cy="35" rx="10" ry="3.4" transform="rotate(90 0 35)"/>
+      <ellipse cx="0" cy="35" rx="7" ry="2.4" transform="rotate(45 0 35)"/>
+      <ellipse cx="0" cy="35" rx="7" ry="2.4" transform="rotate(-45 0 35)"/>
+    </g>
+    <circle cx="0" cy="35" r="2.6" fill="#f1e8d4"/>
+    <path d="m0 4 4 5-4 5-4-5zM0 56l4 5-4 5-4-5z" fill="#1f1b16"/>
+  </g>
+</svg>

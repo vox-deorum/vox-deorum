@@ -476,13 +476,13 @@ describe('editorial engine', () => {
       expect(result.decision.fallbackReason).toBeTruthy();
     });
 
-    it('should retain the modern design when a published Modern Era run reaches the Future Era', async () => {
-      const modernOnly = { ...config, designs: config.designs.filter(design => design.id === 'modern') };
-      const first = await check(fixture(10, 5, 0, 'Modern Era'), createInitialPublicationState(), modernOnly);
+    it('should retain the wire design when a published Modern Era run reaches the Future Era', async () => {
+      const wireOnly = { ...config, designs: config.designs.filter(design => design.id === 'wire') };
+      const first = await check(fixture(10, 5, 0, 'Modern Era'), createInitialPublicationState(), wireOnly);
       expect(first.status).toBe('published');
-      expect(first.state.previousDesignId).toBe('modern');
+      expect(first.state.previousDesignId).toBe('wire');
       const future = await check(fixture(20, 10, 25, 'Future Era'), first.state);
-      expect(future.status === 'published' && future.issue.publication.designId).toBe('modern');
+      expect(future.status === 'published' && future.issue.publication.designId).toBe('wire');
     });
 
     it('should save a skipped check when no design is eligible', async () => {

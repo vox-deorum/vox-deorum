@@ -54,7 +54,7 @@ function decisionRecord() {
     status: 'published',
     candidateScores: [],
     selectedVariants: {},
-    designId: 'modern',
+    designId: 'wire',
     layouts: { front: 'ordinary' },
     evidence: [],
     diplomacyInference: [], triggerAudit: [], evidenceRequest: { cutoffTurn: 12, previousCheckTurn: 11, receiverPlayerID: 4 },

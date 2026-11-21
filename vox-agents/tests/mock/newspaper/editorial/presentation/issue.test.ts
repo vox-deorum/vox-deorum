@@ -42,7 +42,7 @@ function createConfig(): EditorialConfig {
     ],
     designs: [{
       id: 'early-account', version: '1', title: 'Account', weight: { base: 1 },
-      presentation: { schemaVersion: 1, rendererFamily: 'victorian', tokens: { paperColor: '#eeeecc' } },
+      presentation: { schemaVersion: 1, rendererFamily: 'broadsheet', tokens: { paperColor: '#eeeecc' } },
       layouts: [
         { id: 'ordinary', variant: 'ordinary', weight: { base: 1 } },
         { id: 'breaking', variant: 'breaking', weight: { base: 1 } },

@@ -30,9 +30,9 @@ describe('newspaper export service', () => {
     const { service, lookup } = createService();
     const issue = createNewspaperIssue();
     issue.publication.designId = 'early-account';
-    issue.publication.presentation = { schemaVersion: 1, rendererFamily: 'modern', tokens: { paperColor: '#ffffff' } };
+    issue.publication.presentation = { schemaVersion: 1, rendererFamily: 'feed', tokens: { paperColor: '#ffffff' } };
     await service.exportIssue(issue);
-    expect(lookup.mock.calls[0][2]).toMatchObject({ designId: 'modern' });
+    expect(lookup.mock.calls[0][2]).toMatchObject({ designId: 'feed' });
     const firstKey = lookup.mock.calls[0][0];
     issue.publication.presentation.tokens!.paperColor = '#ffeed0';
     await service.exportIssue(issue);

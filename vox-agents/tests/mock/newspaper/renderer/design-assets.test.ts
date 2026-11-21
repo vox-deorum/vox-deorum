@@ -27,15 +27,15 @@ describe("newspaper design assets", () => {
   it("should resolve assets migrated onto the built-in designs", () => {
     expect(getNewspaperAsset("victorian.scrollwork")).toMatchObject({
       kind: "ornament",
-      path: "assets/ornaments/victorian.svg",
+      path: "assets/designs/victorian/scrollwork.svg",
     });
     expect(getNewspaperAsset("victorian.harbour")).toMatchObject({
       kind: "image",
-      path: "assets/images/victorian-harbour.png",
+      path: "assets/designs/victorian/harbour.png",
     });
-    expect(getNewspaperAsset("modern.port")).toMatchObject({
+    expect(getNewspaperAsset("wire.port")).toMatchObject({
       kind: "image",
-      path: "assets/images/modern-port.png",
+      path: "assets/designs/wire/port.png",
     });
   });
 
