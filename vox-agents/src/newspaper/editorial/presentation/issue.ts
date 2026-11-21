@@ -223,8 +223,9 @@ export async function presentIssue(input: {
     );
     if (!layout) throw new Error(`No eligible layout for page ${page.id}.`);
     layouts[page.id] = layout.id;
-    let label = design.pageLabels[page.id] ?? page.label;
-    const authoredLabel = selectedMasthead?.rule.pageLabels[page.id];
+    let label = Object.hasOwn(design.pageLabels, page.id) ? design.pageLabels[page.id] : page.label;
+    const ruleLabels = selectedMasthead?.rule.pageLabels;
+    const authoredLabel = ruleLabels && Object.hasOwn(ruleLabels, page.id) ? ruleLabels[page.id] : undefined;
     if (authoredLabel !== undefined) {
       const resolvedLabel = resolvePrintableTermText(authoredLabel, terms);
       if (resolvedLabel !== undefined) {

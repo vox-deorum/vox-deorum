@@ -68,6 +68,9 @@ describe('masthead rule catalogue', () => {
   it('should reject duplicate IDs, unknown references and blank authored copy', async () => {
     const base = await loadEditorialConfig();
     const rule = { id: 'trial', title: 'Trial', when: 'true', weight: { base: 1 } };
+    const stockId = base.mastheadRules![0].id;
+    await writeDocument('masthead-rules.json', [{ id: stockId, title: 'A local title' }, { id: stockId, when: 'false' }]);
+    await expect(loadEditorialConfig(directory)).rejects.toThrow(`Duplicate masthead rule id "${stockId}"`);
     await expect(parseEditorialConfig({ ...base, mastheadRules: [rule, rule] })).rejects.toMatchObject({
       issues: expect.arrayContaining([expect.objectContaining({ path: ['mastheadRules', 1, 'id'] })]),
     });

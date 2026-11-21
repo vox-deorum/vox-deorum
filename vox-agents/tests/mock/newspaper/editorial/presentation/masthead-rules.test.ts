@@ -195,7 +195,7 @@ describe('masthead rule selection', () => {
 });
 
 describe('masthead presentation', () => {
-  it('should use the winner title, motto and displayed page labels without inheriting a design motto', async () => {
+  it('should print the winning masthead and use fallbacks for missing page labels', async () => {
     const config = withRules([
       {
         id: 'winner', title: '{{terms.civilization}} Rule', motto: 'Rule Motto',
@@ -203,6 +203,7 @@ describe('masthead presentation', () => {
         when: 'true', weight: { base: 1 },
       },
     ]);
+    config.pages.push({ ...config.pages[1], id: 'constructor', label: 'Page Default', order: 3 });
     const conditionSource = { table: 'PlayerSummaries' as const, id: 801, turn: 10, createdAt: 8001 };
     const titleSource = { table: 'PlayerSummaries' as const, id: 802, turn: 10, createdAt: 8002 };
     const frontSource = { table: 'PlayerSummaries' as const, id: 803, turn: 10, createdAt: 8003 };
@@ -234,6 +235,7 @@ describe('masthead presentation', () => {
     expect(result.issue.pages.map(page => [page.id, page.label])).toEqual([
       ['front', 'Rule Front'],
       ['desk', 'Design Desk'],
+      ['constructor', 'Page Default'],
     ]);
     expect(result.mastheadRuleId).toBe('winner');
     expect(result.mastheadSources).toEqual([conditionSource, titleSource, frontSource]);

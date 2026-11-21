@@ -49,13 +49,10 @@ export function resolveMasthead(
   const motto = design.motto === undefined ? undefined : substitute(design.motto, values);
   if (resolvedTitle.match(placeholderPattern) || motto?.match(placeholderPattern)) return undefined;
 
-  const used = [
-    ...(resolvedTitle ? [titleTemplate] : []),
-    ...(motto ? [design.motto!] : []),
-  ].flatMap(text => [...text.matchAll(placeholderPattern)].map(match => match[1]));
   const sources = uniqueSources([
     ...(localized ? civilization?.sources ?? [] : []),
-    ...used.flatMap(key => key.startsWith('terms.') ? terms.get(key.slice('terms.'.length))?.sources ?? [] : []),
+    ...(resolvedTitle ? termTextSources(titleTemplate, terms) : []),
+    ...(motto ? termTextSources(design.motto!, terms) : []),
   ]);
   return { title: resolvedTitle || defaultTitle, ...(motto ? { motto } : {}), sources };
 }

@@ -173,6 +173,18 @@ function stripBuiltInDesignAssets(design: unknown): unknown {
   return settings;
 }
 
+/** Reject duplicates in one masthead rules file before ID overlay can hide them. */
+function checkMastheadRuleIds(rules: unknown, directory: string): void {
+  if (!Array.isArray(rules)) return;
+  const ids = new Set<string>();
+  for (const rule of rules) {
+    if (!isRecord(rule) || typeof rule.id !== 'string') continue;
+    if (ids.has(rule.id))
+      throw new Error(`Duplicate masthead rule id "${rule.id}" in ${path.join(directory, 'masthead-rules.json')}.`);
+    ids.add(rule.id);
+  }
+}
+
 /** Load grouped built-ins and optional flat or grouped overrides, then validate together. */
 export async function loadEditorialConfig(directory?: string): Promise<EditorialConfig> {
   const builtIn = builtInCatalogueDirectory();
@@ -186,6 +198,10 @@ export async function loadEditorialConfig(directory?: string): Promise<Editorial
     let custom = directory ? await readCatalogueFile(directory, file, true) : undefined;
     if (directory && grouped)
       custom = overlay(custom, await readCatalogueSection(directory, name, true));
+    if (name === 'mastheadRules') {
+      checkMastheadRuleIds(base, builtIn);
+      if (directory) checkMastheadRuleIds(custom, directory);
+    }
     const settings = name === 'designs' && Array.isArray(base) ? base.map(stripBuiltInDesignAssets) : base;
     result[name] = overlay(settings, custom);
   }

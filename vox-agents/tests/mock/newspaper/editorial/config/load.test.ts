@@ -328,9 +328,9 @@ describe('editorial catalogue files', () => {
       expect(editorialConfigSchema.safeParse({ ...base, templates: [{ ...template, ...change }] }).success).toBe(false);
     }
     const [design] = base.designs;
-    expect(editorialConfigSchema.safeParse({ ...base, designs: [{ ...design, condition: legacy }] }).success).toBe(false);
+    expect(editorialConfigSchema.safeParse({ ...base, mastheadRules: [], designs: [{ ...design, condition: legacy }] }).success).toBe(false);
     const layouts = design.layouts.map(layout => ({ ...layout, condition: legacy }));
-    expect(editorialConfigSchema.safeParse({ ...base, designs: [{ ...design, layouts }] }).success).toBe(false);
+    expect(editorialConfigSchema.safeParse({ ...base, mastheadRules: [], designs: [{ ...design, layouts }] }).success).toBe(false);
     const pages = base.pages.map(page => ({ ...page, condition: legacy }));
     expect(editorialConfigSchema.safeParse({ ...base, pages }).success).toBe(false);
   });
@@ -346,7 +346,7 @@ describe('editorial catalogue files', () => {
       { weight: { base: 0 } },
     ]) {
       const layouts = design.layouts.map(layout => layout.variant === 'breaking' ? { ...layout, ...change } : layout);
-      expect(editorialConfigSchema.safeParse({ ...base, designs: [{ ...design, layouts }] }).success).toBe(false);
+      expect(editorialConfigSchema.safeParse({ ...base, mastheadRules: [], designs: [{ ...design, layouts }] }).success).toBe(false);
     }
   });
 
@@ -358,7 +358,7 @@ describe('editorial catalogue files', () => {
         id: 'trial-layout', variant: 'ordinary', weight: { base: 1, adjustments: [{ add: 3, when: 'turn >' }] },
       }],
     };
-    const invalid = { ...base, designs: [{ ...base.designs[0], ...trial }] };
+    const invalid = { ...base, mastheadRules: [], designs: [{ ...base.designs[0], ...trial }] };
     await expect(parseEditorialConfig(invalid)).rejects.toThrow(/trial-layout.*adjustments\[0\].when/);
   });
 

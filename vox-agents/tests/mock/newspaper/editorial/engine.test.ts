@@ -518,6 +518,7 @@ describe('editorial engine', () => {
       const [design] = config.designs;
       const revised = editorialConfigSchema.parse({
         ...config,
+        mastheadRules: [],
         designs: [{ ...design, when: '(() => { throw new Error("design failure"); })()' }],
       });
       const result = await check(fixture(), createInitialPublicationState(), revised);
