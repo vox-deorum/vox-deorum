@@ -88,7 +88,7 @@ An editorial takes a side on a public question. Give a skeptical reader a reason
 
 Write:
 
-> Our golden age has begun with soldiers still at the front. A joiner can keep a bench for his son only so long before he has to hire another pair of hands. The council should give returning soldiers first claim on public work. The country has asked enough of those men without sending them from shop to shop for a day's wage.
+> Our golden age has begun with the army still in the field. The council should open talks with {{enemies}} while we can afford to turn down a bad offer. If another campaign drains the treasury, the other side can name its price.
 
 Avoid:
 
@@ -116,7 +116,7 @@ In a report, lead with the news. Then give someone who has to live with it a wor
 
 Write:
 
-> At the World Congress, {{count}} proposals are on the agenda for the next session. Outside the hall, a printer says the people buying agendas keep asking how our delegates will vote. “If I knew that, I'd charge extra.”
+> At the World Congress, {{count}} proposals are on the agenda for the next session. Back home, one civics class is voting on the same proposals. “I ask the pupils why they voted that way,” their teacher says. “I'd like to put that question to our delegates.”
 
 Avoid:
 
