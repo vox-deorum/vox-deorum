@@ -24,7 +24,7 @@
         "genre": "obituary",
         "headline": "An era of our own counsel, concluded",
         "body": [
-          "So ends the account of the years our court answered in its own name. As of this entry we stand as vassals to {{master}}. The keeper of the record has put a ribbon at this page for the next person who has to find where it ended."
+          "So ends the account of the years our {{terms.civic.government}} answered in its own name. As of this entry we stand as vassals to {{master}}. The keeper of the record has put a ribbon at this page for the next person who has to find where it ended."
         ],
         "links": [
           { "placeholder": "master", "label": "{{master}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -38,7 +38,7 @@
         "genre": "editorial",
         "headline": "Tell us what protection we bought",
         "body": [
-          "We are now vassals of {{master}}, and their wars can become ours. The council should give its account of the bargain in the square. If our young people can be sent to fight for their towns, their families have a right to hear what protection there is for ours."
+          "We are now vassals of {{master}}, and their wars can become ours. The {{terms.civic.government}} should give its account of the bargain in the square. If our young people can be sent to fight for their towns, their families have a right to hear what protection there is for ours."
         ],
         "links": [
           { "placeholder": "master", "label": "{{master}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -52,7 +52,7 @@
         "genre": "analysis",
         "headline": "Our neighbors have a new court to bargain with",
         "body": [
-          "As a vassal of {{master}}, our nation loses the right to declare war on other powers. A neighbor with a dispute over a field or a fishing ground can now afford to hold out longer for terms. It depends how much interest the court of {{master}} takes in a quarrel over somebody else's land."
+          "As a vassal of {{master}}, our nation loses the right to declare war on other powers. A neighbor with a dispute over a field or a fishing ground can now afford to hold out longer for terms. It depends how much interest the {{player.civic.government}} of {{master}} takes in a quarrel over somebody else's land."
         ],
         "links": [
           { "placeholder": "master", "label": "{{master}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -146,7 +146,7 @@
         "when": "ally !== null",
         "headline": "Hear it! We stand with {{ally}}",
         "body": [
-          "Hear it, people of the nation! A defensive pact is signed with {{ally}}, and it holds from this day. A hand raised against either of us answers to both. Say it at your doors: an attack on {{ally}} is an attack on us!"
+          "Hear it, {{terms.civic.people}} of the nation! A defensive pact is signed with {{ally}}, and it holds from this day. A hand raised against either of us answers to both. Say it at your doors: an attack on {{ally}} is an attack on us!"
         ],
         "weight": { "base": 1 }
       },
@@ -156,9 +156,9 @@
         "stance": "populist",
         "genre": "editorial",
         "when": "ally !== null",
-        "headline": "A pact for the palace, a question for the street",
+        "headline": "A pact for the {{terms.civic.government}}, a question for the street",
         "body": [
-          "The court has promised that if a hand is raised against {{ally}}, our banners march. Perhaps that is wisdom, and perhaps it is our sons who will make good on it. Read the terms aloud in the square before anyone cheers, and let the men who would march hear what they are marching for."
+          "The {{terms.civic.government}} has promised that if a hand is raised against {{ally}}, our banners march. Perhaps that is wisdom, and perhaps it is our sons who will make good on it. Read the terms aloud in the square before anyone cheers, and let the men who would march hear what they are marching for."
         ],
         "weight": { "base": 1 }
       },
@@ -168,9 +168,9 @@
         "stance": "conciliatory",
         "genre": "report",
         "when": "ally !== null",
-        "headline": "Letters from the court: a pact with {{ally}}",
+        "headline": "Letters from the {{terms.civic.government}}: a pact with {{ally}}",
         "body": [
-          "Letters from the court relate that a defensive pact has lately been concluded between our nation and {{ally}}. Two peoples who stand together in war are seldom asked to prove it, which all men of goodwill will welcome."
+          "Letters from the {{terms.civic.government}} relate that a defensive pact has lately been concluded between our nation and {{ally}}. Two peoples who stand together in war are seldom asked to prove it, which all men of goodwill will welcome."
         ],
         "weight": { "base": 1 }
       }
@@ -229,7 +229,7 @@
         "genre": "report",
         "headline": "In this year, {{civilization}} spoke against us",
         "body": [
-          "{{player.leader}}, ruler of {{civilization}}, has denounced our nation. The scribe enters the denunciation under this year."
+          "{{player.leader}}, {{player.civic.leaderTitle}} of {{civilization}}, has denounced our nation. The scribe enters the denunciation under this year."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -435,7 +435,7 @@
         "when": "friend !== null",
         "headline": "Hear it! Friendship with {{friend}}",
         "body": [
-          "Good news, good people! Friendship is declared with {{friend}}, and the word is official. Say it at your doors and say it twice: friendship with {{friend}}, declared and public!"
+          "Good news, {{terms.civic.people}}! Friendship is declared with {{friend}}, and the word is official. Say it at your doors and say it twice: friendship with {{friend}}, declared and public!"
         ],
         "weight": { "base": 1 }
       },
@@ -528,7 +528,7 @@
         "id": "gains-vassal-report",
         "headline": "Our court takes {{vassal}} as a vassal",
         "body": [
-          "{{vassal}} has become a vassal of our court. A merchant who supplies our garrisons says he has started asking what the roads are like between our towns and theirs."
+          "{{vassal}} has become a vassal of our {{terms.civic.government}}. A merchant who supplies our garrisons says he has started asking what the roads are like between our towns and theirs."
         ],
         "links": [
           { "placeholder": "vassal", "label": "{{vassal}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -542,7 +542,7 @@
         "genre": "report",
         "headline": "{{vassal}} entered in the roll of vassals",
         "body": [
-          "In this season {{vassal}} came under the protection of our realm. Its court remained in its own seat, and in the rolls it was entered as our vassal."
+          "In this season {{vassal}} came under the protection of our realm. Its {{player.civic.government}} remained in its own seat, and in the rolls it was entered as our vassal."
         ],
         "links": [
           { "placeholder": "vassal", "label": "{{vassal}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -570,7 +570,7 @@
         "genre": "editorial",
         "headline": "Let the magistrates of {{vassal}} set out what they can pay",
         "body": [
-          "Our court can set the tribute for {{vassal}}. Let the council hear from the magistrates there before it names a sum. They already collect the taxes and know what the districts can pay. By all means take the tribute; have the sense to take it at a rate that can be collected."
+          "Our {{terms.civic.government}} can set the tribute for {{vassal}}. Let it hear from the magistrates there before it names a sum. They already collect the taxes and know what the districts can pay. By all means take the tribute; have the sense to take it at a rate that can be collected."
         ],
         "links": [
           { "placeholder": "vassal", "label": "{{vassal}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -641,7 +641,7 @@
         "id": "mutual-denunciation-report",
         "headline": "We and {{civilization}} denounce each other",
         "body": [
-          "{{civilization}} and our court have denounced each other in public. A merchant who keeps an agent abroad says he asked for both declarations before he sent out his next set of instructions."
+          "{{civilization}} and our {{terms.civic.government}} have denounced each other in public. A merchant who keeps an agent abroad says he asked for both declarations before he sent out his next set of instructions."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -683,7 +683,7 @@
         "genre": "editorial",
         "headline": "Who pays for the shouting?",
         "body": [
-          "Our court and {{civilization}} have denounced each other. In the foreign quarter, a cooper is wondering whether the customers who ordered his barrels will still come for them. Let the ministers tell the square what they're prepared to do if they don't."
+          "Our {{terms.civic.government}} and {{civilization}} have denounced each other. In the foreign quarter, a cooper is wondering whether the customers who ordered his barrels will still come for them. Let it tell the square what it is prepared to do if they don't."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -910,7 +910,7 @@
         "when": "master !== null",
         "headline": "Our vassalage to {{master}} is over",
         "body": [
-          "At the palace gate, a guard has taken down {{master}}'s pennant and folded it into a chest. The vassalage is ended, and our court's word is its last word again."
+          "At the palace gate, a guard has taken down {{master}}'s pennant and folded it into a chest. The vassalage is ended, and our {{terms.civic.government}}'s word is its last word again."
         ],
         "weight": { "base": 1 }
       },
@@ -931,7 +931,7 @@
         "when": "master !== null",
         "headline": "Hear it! We bow no more",
         "body": [
-          "Hear it, people of the nation! The vassalage to {{master}} is ended, and the word is official. Our court answers to no throne but our own. Say it in the square, say it at your doors, and say it twice!"
+          "Hear it, {{terms.civic.people}} of the nation! The vassalage to {{master}} is ended, and the word is official. Our {{terms.civic.government}} answers to no throne but our own. Say it in the square, say it at your doors, and say it twice!"
         ],
         "weight": { "base": 1 }
       },
@@ -955,7 +955,7 @@
         "when": "master !== null",
         "headline": "Free, and with work to do",
         "body": [
-          "People, our word is ours again. If the council sends another envoy to {{master}}, let it read his instructions in the square. We have a right to hear what will be said in our name."
+          "Mark it, {{terms.civic.people}}: our word is ours again. If the {{terms.civic.government}} sends another envoy to {{master}}, let it read his instructions in the square. We have a right to hear what will be said in our name."
         ],
         "weight": { "base": 1 }
       }
@@ -972,7 +972,7 @@
         "id": "we-denounce-major-report",
         "headline": "We denounce {{civilization}}",
         "body": [
-          "Our court has publicly denounced {{civilization}}. A correspondent waiting for a copy said other capitals would now have our words in full when they asked where we stood."
+          "Our {{terms.civic.government}} has publicly denounced {{civilization}}. A correspondent waiting for a copy said other capitals would now have our words in full when they asked where we stood."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -1001,7 +1001,7 @@
         "byline": "A reader who trades across that border",
         "headline": "Sir, was there no quieter road?",
         "body": [
-          "I read that our court has denounced {{civilization}}, and I think of the carts that cross that border both ways each week. Quarrels are cheap to declare and dear to keep, and it is rarely the quarrellers who pay. If a word can be taken back with honor, I ask the court to weigh whether it should be."
+          "I read that our {{terms.civic.government}} has denounced {{civilization}}, and I think of the carts that cross that border both ways each week. Quarrels are cheap to declare and dear to keep, and it is rarely the quarrellers who pay. If a word can be taken back with honor, I ask the {{terms.civic.government}} to weigh whether it should be."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -1015,7 +1015,7 @@
         "genre": "report",
         "headline": "In this year, we spoke against {{civilization}}",
         "body": [
-          "In this year the court set down a denunciation against {{civilization}}, where none stood before. The scribe notes the fact and the season; the judgment belongs to later hands."
+          "In this year the {{terms.civic.government}} set down a denunciation against {{civilization}}, where none stood before. The scribe notes the fact and the season; the judgment belongs to later hands."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }

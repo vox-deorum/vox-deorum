@@ -52,7 +52,7 @@
         "genre": "analysis",
         "headline": "Another job for the builders of {{cityName}}",
         "body": [
-          "{{cityName}} has finished the {{building}}, and the foreman still has her whole crew on the wage sheet. If the council has another job ready, it can start while the people who know the work are still in town."
+          "{{cityName}} has finished the {{building}}, and the foreman still has her whole crew on the wage sheet. If the {{terms.civic.government}} has another job ready, it can start while the people who know the work are still in town."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -114,7 +114,7 @@
         "genre": "notice",
         "headline": "Hear it, {{cityName}}! Coin speeds the {{building}}",
         "body": [
-          "Hear it, good people! Coin is down on the {{building}}, and the work does not stop at dusk! Lamps burn on the scaffold, and the {{building}} comes sooner!"
+          "Hear it, {{terms.civic.people}}! Coin is down on the {{building}}, and the work does not stop at dusk! Lamps burn on the scaffold, and the {{building}} comes sooner!"
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -221,7 +221,7 @@
         "when": "!tied",
         "headline": "{{largest}} now outweighs {{capital}}",
         "body": [
-          "The latest count puts {{largest}} ahead of {{capital}} in population. The petitions still have to go to {{capital}}, where the council sits. In the larger city, the clerk who wraps them for dispatch has begun asking for a second bag."
+          "The latest count puts {{largest}} ahead of {{capital}} in population. The petitions still have to go to {{capital}}, where the {{terms.civic.government}} sits. In the larger city, the clerk who wraps them for dispatch has begun asking for a second bag."
         ],
         "weight": { "base": 1 }
       },
@@ -272,7 +272,7 @@
         "genre": "analysis",
         "headline": "One problem, {{count}} cities",
         "body": [
-          "{{key}} now leads the complaints in {{count}} of our cities at once, which is past the point where bad luck explains it. One city's trouble can be misfortune. The same trouble in every quarter is a pattern, and a pattern has an author somewhere in the government's choices."
+          "{{key}} now leads the complaints in {{count}} of our cities at once, which is past the point where bad luck explains it. One city's trouble can be misfortune. The same trouble in every quarter is a pattern, and a pattern has an author somewhere in the {{terms.civic.government}}'s choices."
         ],
         "weight": { "base": 1 }
       },
@@ -544,7 +544,7 @@
         "genre": "notice",
         "headline": "{{cityName}} is ready for a siege",
         "body": [
-          "Hear it, people of {{cityName}}! The {{building}} stands complete. Our walls are the stronger for it. Our walls are the stronger!"
+          "Hear it, {{terms.civic.people}} of {{cityName}}! The {{building}} stands complete. Our walls are the stronger for it. Our walls are the stronger!"
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -558,7 +558,7 @@
         "genre": "notice",
         "headline": "A stronger {{cityName}}",
         "body": [
-          "We are advised that the {{building}} at {{cityName}} is complete, the council's provision for the city's safety standing finished. {{cityName}} rests tonight behind stouter walls, and the foresight belongs where it was earned."
+          "We are advised that the {{building}} at {{cityName}} is complete, the {{terms.civic.government}}'s provision for the city's safety standing finished. {{cityName}} rests tonight behind stouter walls, and the foresight belongs where it was earned."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -731,7 +731,7 @@
         "genre": "notice",
         "headline": "{{cityName}} has grown to {{population}}!",
         "body": [
-          "Hear it, good people! {{cityName}} now numbers {{population}} souls, and is counted a {{milestone}} among our cities. Say it loud: a {{milestone}} is among us!"
+          "Hear it, {{terms.civic.people}}! {{cityName}} now numbers {{population}} souls, and is counted a {{milestone}} among our cities. Say it loud: a {{milestone}} is among us!"
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -906,7 +906,7 @@
         "genre": "notice",
         "headline": "{{cityName}} holds against the siege",
         "body": [
-          "Hear it, people of {{cityName}}! The enemy stands at the gates, and the city has not fallen. The walls stand at {{hitPoints}} of {{maxHitPoints}}. Hold fast! The walls hold! The walls hold!"
+          "Hear it, {{terms.civic.people}} of {{cityName}}! The enemy stands at the gates, and the city has not fallen. The walls stand at {{hitPoints}} of {{maxHitPoints}}. Hold fast! The walls hold! The walls hold!"
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1435,7 +1435,7 @@
         "when": "cityName !== null",
         "headline": "Hear it! {{cityName}} is founded",
         "body": [
-          "Hear it, good people! Our settlers have founded {{cityName}}, and a new city stands on the map of the realm. Carry the name abroad: {{cityName}}!"
+          "Hear it, {{terms.civic.people}}! Our settlers have founded {{cityName}}, and a new city stands on the map of the realm. Carry the name abroad: {{cityName}}!"
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1465,7 +1465,7 @@
         "when": "cityName !== null",
         "headline": "A new settlement at {{cityName}}",
         "body": [
-          "We are pleased to record that our settlers have founded {{cityName}}. The new town begins under the nation's protection, with the government's intentions for its care said to be settled and generous."
+          "We are pleased to record that our settlers have founded {{cityName}}. The new town begins under the nation's protection, with the {{terms.civic.government}}'s intentions for its care said to be settled and generous."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }

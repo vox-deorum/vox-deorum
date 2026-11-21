@@ -3,6 +3,7 @@ import type { NewspaperSourceReference } from '../../../../../mcp-server/dist/ne
 import { linkTargetSchema } from '../../contracts/issue.js';
 import type { RuleDevelopment, RuleScalar } from '../../contracts/triggers.js';
 import type { CompiledEditorialExpressions, EditorialTerms } from '../config/expressions.js';
+import type { EditorialCivicTerms } from '../config/civic-terms.js';
 import type { EditorialConfig, EditorialTemplate, AuthoredVariant } from '../config/schema.js';
 import { storyIdentity, storySubject } from '../facts/story.js';
 import { evaluateChoices } from '../shared/eligibility.js';
@@ -120,10 +121,11 @@ function supportingMatch(ids: readonly string[], rules: ReadonlyMap<string, Rule
 
 /** Build candidate bindings and printable values without flattening members of a group. */
 function templateFacts(
-  parts: readonly RuleDevelopment[], period: Period, facts?: BatchFacts['facts'], terms?: EditorialTerms
+  parts: readonly RuleDevelopment[], period: Period, facts?: BatchFacts['facts'], terms?: EditorialTerms,
+  civicTerms?: EditorialCivicTerms
 ) {
   const subject = storySubject(parts[0].subject, facts);
-  const identity = storyIdentity(subject, facts);
+  const identity = storyIdentity(subject, facts, civicTerms);
   const triggerValues: Record<string, ExpressionBindings> = Object.create(null);
   const values: TemplateValues = Object.create(null);
   const qualified: TemplateValues = Object.create(null);
@@ -186,16 +188,31 @@ function templateFacts(
   return { bindings, placeholders, identity };
 }
 
+/** List the placeholder names used by one authored text. */
+function textPlaceholders(text: string): string[] {
+  return [...text.matchAll(placeholderPattern)].map((match) => match[1]);
+}
+
+/** Whether a placeholder prints civic vocabulary rather than a legacy term or identity. */
+function civicPlaceholder(key: string): boolean {
+  return key.startsWith('civic.') || key.includes('.civic.');
+}
+
 /** Find source rows for the visible identities actually printed by a variant. */
 export function placeholderSources(
   variant: AuthoredVariant,
   choice: Pick<ReturnType<typeof templateFacts>, 'identity' | 'placeholders'>,
   terms?: EditorialTerms
 ): NewspaperSourceReference[] {
+  const proseKeys = new Set(variantText(variant).flatMap(textPlaceholders));
   const used = [
-    ...variantText(variant),
-    ...variant.links.flatMap((link) => [link.label, ...Object.values(link.target)]),
-  ].flatMap((text) => [...text.matchAll(placeholderPattern)].map((match) => match[1]));
+    ...proseKeys,
+    ...variant.links.flatMap((link) => {
+      const keys = [link.label, ...Object.values(link.target)].flatMap(textPlaceholders);
+      // A declared link that never prints still supports a legacy identity or named term.
+      return proseKeys.has(link.placeholder) ? keys : keys.filter((key) => !civicPlaceholder(key));
+    }),
+  ];
   return used.flatMap((key) => {
     if (key.startsWith('terms.')) return terms?.get(key.slice('terms.'.length))?.sources ?? [];
     const field = choice.identity[key];
@@ -226,7 +243,7 @@ export async function matchTemplates(
     for (const rules of bySubject.values()) {
       const match = supportingMatch(template.triggers, rules);
       if (!match) continue;
-      const choice = templateFacts(match.parts, match.period, batch.facts, terms);
+      const choice = templateFacts(match.parts, match.period, batch.facts, terms, config.civicTerms);
       const variants = template.variants.filter((variant) => printable(variant, choice.placeholders));
       if (variants.length || template.merge) plans.push({ template, prepared, ...match, choice, variants });
     }

@@ -9,7 +9,7 @@
         "id": "treasury-falls-into-deficit-report",
         "headline": "The treasury slips into deficit",
         "body": [
-          "The treasury now takes in {{deficit}} gold less than it spends each turn. A sailmaker who fills government orders says he is cutting only as much canvas as the first installment will cover."
+          "The treasury now takes in {{deficit}} gold less than it spends each turn. A sailmaker who fills orders from the {{terms.civic.government}} says he is cutting only as much canvas as the first installment will cover."
         ],
         "weight": { "base": 1 }
       },
@@ -45,7 +45,7 @@
         "headline": "Sir, the treasury now outspends its income",
         "byline": "A stallholder",
         "body": [
-          "I keep a stall by the east gate. When I spend more than I take, my wife hears of it before the market closes, and the week after there is no honey on the table. The treasury now spends {{deficit}} gold a season more than it takes. Who at the palace hears of it, and what goes missing from their table?"
+          "I keep a stall by the east gate. When I spend more than I take, my wife hears of it before the market closes, and the week after there is no honey on the table. The treasury now spends {{deficit}} gold a season more than it takes. Who in the {{terms.civic.government}} hears of it, and what goes missing from their table?"
         ],
         "weight": { "base": 1 }
       }
@@ -83,7 +83,7 @@
         "genre": "notice",
         "headline": "Hear it! A thousand gold in the vault!",
         "body": [
-          "Hear it, merchants and magistrates, hear it! The treasury has passed the thousand-gold mark and holds {{gold}} gold in the vault. A thousand gold and more, counted and kept, counted and kept!"
+          "Hear it, {{terms.civic.people}}, hear it! The treasury has passed the thousand-gold mark and holds {{gold}} gold in the vault. A thousand gold and more, counted and kept, counted and kept!"
         ],
         "weight": { "base": 1 }
       },
@@ -121,7 +121,7 @@
         "genre": "analysis",
         "headline": "What the treasury can do with more time",
         "body": [
-          "At a shortfall of {{deficit}} gold a season, the treasury now has enough in reserve for {{turnsLeft}} full seasons. At the tax office, a collector with a list of overdue accounts has time to knock on doors before the notices go up. If the list comes good, the council may get through the season without reaching for a new tax. The advantage lasts only while receipts and spending hold near today's figures."
+          "At a shortfall of {{deficit}} gold a season, the treasury now has enough in reserve for {{turnsLeft}} full seasons. At the tax office, a collector with a list of overdue accounts has time to knock on doors before the notices go up. If the list comes good, the {{terms.civic.government}} may get through the season without reaching for a new tax. The advantage lasts only while receipts and spending hold near today's figures."
         ],
         "weight": { "base": 1 }
       },
@@ -172,7 +172,7 @@
         "genre": "report",
         "headline": "Treasury cover: {{turnsLeft}} full turns left",
         "body": [
-          "A woman who brings grain to the public stores has one question for the council: who gets paid first if the money runs out? The treasury holds {{gold}} gold tonight, and with spending ahead of revenue by {{deficit}} gold a turn, that is {{turnsLeft}} full turns of cover at the current rate."
+          "A woman who brings grain to the public stores has one question for the {{terms.civic.government}}: who gets paid first if the money runs out? The treasury holds {{gold}} gold tonight, and with spending ahead of revenue by {{deficit}} gold a turn, that is {{turnsLeft}} full turns of cover at the current rate."
         ],
         "weight": { "base": 1 }
       },
@@ -244,7 +244,7 @@
         "when": "goldPerTurn > 0",
         "headline": "Hear it! The lean stretch is over!",
         "body": [
-          "Hear it, good people, hear it! Income now beats spending by {{goldPerTurn}} gold a season, and the deficit is done with! The lean stretch is behind us, behind us!"
+          "Hear it, {{terms.civic.people}}, hear it! Income now beats spending by {{goldPerTurn}} gold a season, and the deficit is done with! The lean stretch is behind us, behind us!"
         ],
         "weight": { "base": 1 }
       }

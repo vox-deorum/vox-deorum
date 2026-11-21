@@ -45,7 +45,7 @@
         "when": "partner !== null",
         "headline": "Hear it! Terms are struck with {{partner}}",
         "body": [
-          "Mark it, good people, mark it: terms are struck with {{partner}}! We give {{weGive}}. We take {{weGet}}. Gold is moving, and when gold moves, the market stalls feel it first. Mark the prices this week, and mark them well!"
+          "Mark it, {{terms.civic.people}}, mark it: terms are struck with {{partner}}! We give {{weGive}}. We take {{weGet}}. Gold is moving, and when gold moves, the market stalls feel it first. Mark the prices this week, and mark them well!"
         ],
         "weight": { "base": 1 }
       },
@@ -57,7 +57,7 @@
         "when": "partner !== null",
         "headline": "The envoys earn their keep",
         "body": [
-          "Citizens, we have a bargain with {{partner}}: we give {{weGive}}, we take {{weGet}}, and gold is in the terms. Striking one is slow, unglamorous work, done by envoys who get blamed when it fails and forgotten when it holds. This one holds. Remember the office that made it so."
+          "Mark it, {{terms.civic.people}}: we have a bargain with {{partner}}. We give {{weGive}}, we take {{weGet}}, and gold is in the terms. Striking one is slow, unglamorous work, done by envoys who get blamed when it fails and forgotten when it holds. This one holds. Remember the {{terms.civic.government}} that made it so."
         ],
         "weight": { "base": 1 }
       }
@@ -109,7 +109,7 @@
         "genre": "editorial",
         "headline": "Trade needs a guarded road",
         "body": [
-          "Raiders have plundered a route bound for our merchants. If the council means to keep the trade, it owes shippers an answer before they load the next cargo: who is to escort it, and how far will they go?"
+          "Raiders have plundered a route bound for our merchants. If the {{terms.civic.government}} means to keep the trade, it owes shippers an answer before they load the next cargo: who is to escort it, and how far will they go?"
         ],
         "weight": { "base": 1 }
       },
@@ -302,7 +302,7 @@
         "genre": "editorial",
         "headline": "Send the spears with the trade",
         "body": [
-          "Citizens, another of our caravans has been taken on the road, and the answer from the capital is the same silence as the last time. Robbery is cheap because we have made it cheap. Put guards on the roads and watch the price of robbery rise. We want our trade defended, and we want the next raider to meet somebody."
+          "Mark it, {{terms.civic.people}}: another of our caravans has been taken on the road, and the answer from the capital is the same silence as the last time. Robbery is cheap because we have made it cheap. Put guards on the roads and watch the price of robbery rise. We want our trade defended, and we want the next raider to meet somebody."
         ],
         "weight": { "base": 1 }
       }
@@ -329,7 +329,7 @@
         "genre": "notice",
         "headline": "Hear it! Our trade goes abroad",
         "body": [
-          "Hear it, people, hear it! The roads are open! {{routes}} trade routes of ours now go out to foreign markets, where before there were none! Our goods go out, our name goes with them, and the coin comes home! Mark it well!"
+          "Hear it, {{terms.civic.people}}, hear it! The roads are open! {{routes}} trade routes of ours now go out to foreign markets, where before there were none! Our goods go out, our name goes with them, and the coin comes home! Mark it well!"
         ],
         "weight": { "base": 1 }
       },
@@ -340,7 +340,7 @@
         "genre": "analysis",
         "headline": "What a new market can do for one kiln",
         "body": [
-          "The government's new trade network has {{routes}} routes abroad. A potter who used to fire a half-empty kiln for the home market can spend less on fuel per bowl if buyers in a second town help her sell a whole batch. A market abroad could make bowls cheaper here at home."
+          "The {{terms.civic.government}}'s new trade network has {{routes}} routes abroad. A potter who used to fire a half-empty kiln for the home market can spend less on fuel per bowl if buyers in a second town help her sell a whole batch. A market abroad could make bowls cheaper here at home."
         ],
         "weight": { "base": 1 }
       },

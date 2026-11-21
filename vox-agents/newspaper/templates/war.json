@@ -165,7 +165,7 @@
         "genre": "anecdote",
         "headline": "In {{city}}, the queue starts before dawn",
         "body": [
-          "Citizens of {{city}}, the siege has reached the table! The baker opens late and shuts early, and the line forms in the dark before his shutters do. When the loaf is smaller than the hand holding it, the war has come indoors."
+          "To the {{terms.civic.people}} of {{city}}: the siege has reached the table! The baker opens late and shuts early, and the line forms in the dark before his shutters do. When the loaf is smaller than the hand holding it, the war has come indoors."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -369,7 +369,7 @@
         "genre": "editorial",
         "headline": "The second try at {{cityName}}",
         "body": [
-          "The orders came down, and our men are walking forward again near {{cityName}}. Two tries at the same ground means two issues of boots and bread, and it is not the council's boots on the road. Let them say what the first withdrawal bought, before they bill us for the second try."
+          "The orders came down, and our men are walking forward again near {{cityName}}. Two tries at the same ground means two issues of boots and bread, and it is not the {{terms.civic.government}}'s boots on the road. Let them say what the first withdrawal bought, before they bill us for the second try."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -431,7 +431,7 @@
         "genre": "anecdote",
         "headline": "The boys are off the front at {{cityName}}",
         "body": [
-          "Word came ahead of them, and the street heard it before the council did. Our men are coming off the front at {{cityName}}. Some houses here will set a place at the table again. Others will ask what the push cost, and wait longer for an answer."
+          "Word came ahead of them, and the street heard it before the {{terms.civic.government}} did. Our men are coming off the front at {{cityName}}. Some houses here will set a place at the table again. Others will ask what the push cost, and wait longer for an answer."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -701,7 +701,7 @@
         "genre": "editorial",
         "headline": "Their war, our doorstep",
         "body": [
-          "Citizens, {{initiator}} and {{target}} are at war, {{nearest}} leagues from our farms! When the great quarrel, it is the small fence that gets trampled, and ours is the smallest fence hereabouts. The council should say plainly what we mean to do about it, before the answer is chosen for us."
+          "Mark it, {{terms.civic.people}}: {{initiator}} and {{target}} are at war, {{nearest}} leagues from our farms! When the great quarrel, it is the small fence that gets trampled, and ours is the smallest fence hereabouts. The {{terms.civic.government}} should say plainly what we mean to do about it, before the answer is chosen for us."
         ],
         "weight": { "base": 1 }
       },
@@ -862,7 +862,7 @@
         "genre": "editorial",
         "headline": "Ask why {{neighbor}}'s army passed ours",
         "body": [
-          "Citizens, the army of {{neighbor}} is now the stronger, and no one in the council will say when that was allowed to happen. Ask the border sentries what they hear drilling at night. A gap left unmeasured gets measured later, in land."
+          "Mark it, {{terms.civic.people}}: the army of {{neighbor}} is now the stronger, and no one in the {{terms.civic.government}} will say when that was allowed to happen. Ask the border sentries what they hear drilling at night. A gap left unmeasured gets measured later, in land."
         ],
         "links": [
           { "placeholder": "neighbor", "label": "{{neighbor}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -1224,7 +1224,7 @@
         "when": "role === 'initiator' && target !== null",
         "headline": "Who owes what in the peace with {{target}}?",
         "body": [
-          "The peace with {{target}} lists concessions by kind: {{concessions}}. Before the council draws up its next budget, the public should be able to tell a debt from a windfall. Let the negotiators print the terms in two columns: what we gave and what we got."
+          "The peace with {{target}} lists concessions by kind: {{concessions}}. Before the {{terms.civic.government}} draws up its next budget, the public should be able to tell a debt from a windfall. Let the negotiators print the terms in two columns: what we gave and what we got."
         ],
         "weight": { "base": 1 }
       },
@@ -1264,7 +1264,7 @@
         "genre": "analysis",
         "headline": "One account closes, others stay open",
         "body": [
-          "The settlement with {{settled}} closes one account and leaves the rest open. The wars against {{remaining}} continue. Watch the roads rather than the speeches: the regiments coming off the quiet front will be marched to the loud one, and where they land will say which enemy the council fears most."
+          "The settlement with {{settled}} closes one account and leaves the rest open. The wars against {{remaining}} continue. Watch the roads rather than the speeches: the regiments coming off the quiet front will be marched to the loud one, and where they land will say which enemy the {{terms.civic.government}} fears most."
         ],
         "weight": { "base": 1 }
       },
@@ -1286,7 +1286,7 @@
         "genre": "editorial",
         "headline": "Bells for one front, drums for the others",
         "body": [
-          "The bells have rung for peace with {{settled}}, while we are still at war with {{remaining}}. At the rope yard, a wagoner listened until the bells stopped and then asked which load was his. Let the council tell the people still packing the wagons why the fighting goes on elsewhere."
+          "The bells have rung for peace with {{settled}}, while we are still at war with {{remaining}}. At the rope yard, a wagoner listened until the bells stopped and then asked which load was his. Let the {{terms.civic.government}} tell the people still packing the wagons why the fighting goes on elsewhere."
         ],
         "weight": { "base": 1 }
       }
@@ -1448,7 +1448,7 @@
         "genre": "editorial",
         "headline": "Small kings, big wars",
         "body": [
-          "The quarrel of {{initiator}} and {{target}} now marches {{vassals}} to the front, none of them asked their view and none of them paid to have one. When the great quarrel, the small bleed. Citizens, note how these arrangements are made, and note who never appears in them.{{hostileAllies}}"
+          "The quarrel of {{initiator}} and {{target}} now marches {{vassals}} to the front, none of them asked their view and none of them paid to have one. When the great quarrel, the small bleed. Mark it, {{terms.civic.people}}: note how these arrangements are made, and note who never appears in them.{{hostileAllies}}"
         ],
         "weight": { "base": 1 }
       }
@@ -1655,7 +1655,7 @@
         "when": "role === 'initiator' && target !== null",
         "headline": "A state of war with {{target}}",
         "body": [
-          "A state of war now exists between the nation and {{target}}. The government's decision, we are assured, was weighed long before it was made. At the war office, the order for the first levy has gone out, and the couriers were still saddling when the news reached this paper. This paper presumes the weighing was sound.{{hostileAllies}}"
+          "A state of war now exists between the nation and {{target}}. The {{terms.civic.government}}'s decision, we are assured, was weighed long before it was made. At the war office, the order for the first levy has gone out, and the couriers were still saddling when the news reached this paper. This paper presumes the weighing was sound.{{hostileAllies}}"
         ],
         "weight": { "base": 1 }
       },
@@ -1667,7 +1667,7 @@
         "when": "role === 'joined' && reason === 'pact' && initiator !== null && target !== null",
         "headline": "Their quarrel, our treaty",
         "body": [
-          "The war between {{initiator}} and {{target}} is now ours by treaty. Pacts are signed in calm years and honored in hard ones; that is their worth and their price. Citizens, we are owed an accounting of what the paying buys, and we should ask for it now, while the ledgers are still open.{{hostileAllies}}"
+          "The war between {{initiator}} and {{target}} is now ours by treaty. Pacts are signed in calm years and honored in hard ones; that is their worth and their price. Mark it, {{terms.civic.people}}: we are owed an accounting of what the paying buys, and we should ask for it now, while the ledgers are still open.{{hostileAllies}}"
         ],
         "weight": { "base": 1 }
       }
@@ -1718,7 +1718,7 @@
         "genre": "analysis",
         "headline": "Count the fronts",
         "body": [
-          "We are at war on {{count}} fronts, against {{enemies}}. Every soldier sent to one is a soldier the others go without, and the government has yet to say which front it means to win. A nation that means to win them all has not yet chosen."
+          "We are at war on {{count}} fronts, against {{enemies}}. Every soldier sent to one is a soldier the others go without, and the {{terms.civic.government}} has yet to say which front it means to win. A nation that means to win them all has not yet chosen."
         ],
         "weight": { "base": 1 }
       },
@@ -1766,7 +1766,7 @@
         "voice": "press",
         "stance": "government-critical",
         "genre": "analysis",
-        "headline": "The number nobody in the council quotes",
+        "headline": "The number nobody in the {{terms.civic.government}} quotes",
         "body": [
           "The tally against {{opponent}} stands at {{score}}, and no minister has said a word about it in a fortnight. A number that far below even is not misfortune; it is a description of how the fighting has gone. The country can bear the truth, and it is owed one."
         ],
@@ -1920,7 +1920,7 @@
         "genre": "report",
         "headline": "A weary nation, and no statement",
         "body": [
-          "Weariness with the war against {{opponent}} stands at {{weariness}}, past the halfway mark. The council has offered no statement on what the number is to be answered with, and we are obliged to observe that the silence is itself a statement."
+          "Weariness with the war against {{opponent}} stands at {{weariness}}, past the halfway mark. The {{terms.civic.government}} has offered no statement on what the number is to be answered with, and we are obliged to observe that the silence is itself a statement."
         ],
         "weight": { "base": 1 }
       },

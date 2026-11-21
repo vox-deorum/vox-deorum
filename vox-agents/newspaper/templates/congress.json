@@ -32,7 +32,7 @@
         "when": "ours === true",
         "headline": "Hear it! Our name is on the agenda",
         "body": [
-          "Hear it, citizens! Our delegates have brought new business before the World Congress. If you meet a delegate in the square, ask what we've put before the world. Our proposal, in our name!"
+          "Hear it, {{terms.civic.people}}! Our delegates have brought new business before the World Congress. If you meet a delegate in the square, ask what we've put before the world. Our proposal, in our name!"
         ],
         "weight": { "base": 1 }
       },
@@ -179,7 +179,7 @@
         "id": "congress-sanctions-on-us-report",
         "headline": "The World Congress has sanctioned us",
         "body": [
-          "{{resolution}} is in force, and it names us. At the harbor, a shipping clerk is asking which cargoes the chamber's law will let him load. The money-changers will feel it before the palace does."
+          "{{resolution}} is in force, and it names us. At the harbor, a shipping clerk is asking which cargoes the chamber's law will let him load. The money-changers will feel it before the {{terms.civic.government}} does."
         ],
         "weight": { "base": 1 }
       },
@@ -190,7 +190,7 @@
         "genre": "notice",
         "headline": "Hear it! The Congress has set its hand against us",
         "body": [
-          "Hear it, people! {{resolution}} is the law of the chamber, and it is aimed at us! We are sanctioned, and we are not silenced! The realm stood before the chamber sat, and the realm will stand after it rises!"
+          "Hear it, {{terms.civic.people}}! {{resolution}} is the law of the chamber, and it is aimed at us! We are sanctioned, and we are not silenced! The realm stood before the chamber sat, and the realm will stand after it rises!"
         ],
         "weight": { "base": 1 }
       },
@@ -201,7 +201,7 @@
         "genre": "editorial",
         "headline": "Tell merchants what the sanction stops",
         "body": [
-          "The Congress has sanctioned us. A merchant fitting out a ship now needs to know which routes can still take its cargo. An answer when the ship is already at sea will be worth very little. Our ministers should post the rules at the docks before the next cargo is loaded."
+          "The Congress has sanctioned us. A merchant fitting out a ship now needs to know which routes can still take its cargo. An answer when the ship is already at sea will be worth very little. Our {{terms.civic.government}} should post the rules at the docks before the next cargo is loaded."
         ],
         "weight": { "base": 1 }
       },
@@ -329,7 +329,7 @@
         "when": "count === 1",
         "headline": "Hear it! One matter before the world's chamber",
         "body": [
-          "Hear it, people! The Congress sits on the next turn, and a single proposal waits for the delegates! One question, one count, and the world has its answer! You will hear it here whether you like it or not!"
+          "Hear it, {{terms.civic.people}}! The Congress sits on the next turn, and a single proposal waits for the delegates! One question, one count, and the world has its answer! You will hear it here whether you like it or not!"
         ],
         "weight": { "base": 1 }
       }
@@ -464,7 +464,7 @@
         "when": "ours === false",
         "headline": "A creed not ours is crowned",
         "body": [
-          "The Congress has enacted {{resolution}}, and no name in it is ours. The chamber can bless a creed; it cannot choose what a household believes at its own hearth. Let the faithful hold fast, and let the government say plainly where it stands, before somebody says it for them."
+          "The Congress has enacted {{resolution}}, and no name in it is ours. The chamber can bless a creed; it cannot choose what a household believes at its own hearth. Let the faithful hold fast, and let the {{terms.civic.government}} say plainly where it stands, before somebody says it for them."
         ],
         "weight": { "base": 1 }
       },

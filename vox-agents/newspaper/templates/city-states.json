@@ -56,7 +56,7 @@
         "when": "ally !== null",
         "headline": "An ally is at war. What is our answer?",
         "body": [
-          "Citizens, war has been declared on {{ally}}. Our council should tell the ally what it can send, and when; a town that needs grain and timber for its defenses has no use for a promise that comes after the roads close."
+          "Mark it, {{terms.civic.people}}: war has been declared on {{ally}}. Our {{terms.civic.government}} should tell the ally what it can send, and when; a town that needs grain and timber for its defenses has no use for a promise that comes after the roads close."
         ],
         "weight": { "base": 1 }
       }
@@ -119,7 +119,7 @@
         "when": "cityState !== null && captor !== null",
         "headline": "Tell our allies when help can reach them",
         "body": [
-          "Our ally {{cityState}} has fallen to {{captor}}. Before the next city counts on our protection, the council should tell it what help we can send and how fast. A town that knows when to expect us can decide whether it can afford to hold out."
+          "Our ally {{cityState}} has fallen to {{captor}}. Before the next city counts on our protection, the {{terms.civic.government}} should tell it what help we can send and how fast. A town that knows when to expect us can decide whether it can afford to hold out."
         ],
         "weight": { "base": 1 }
       },
@@ -246,7 +246,7 @@
         "when": "cityState !== null && replaced !== null",
         "headline": "Notice: our envoys succeed in {{cityState}}",
         "body": [
-          "Notice is given that {{cityState}} has ended its alliance with {{replaced}} and named this nation in its place. The government's envoys, backed with patience and coin, are owed the credit. Traders bound for its market should call at the foreign office for a letter of introduction."
+          "Notice is given that {{cityState}} has ended its alliance with {{replaced}} and named this nation in its place. The {{terms.civic.government}}'s envoys, backed with patience and coin, are owed the credit. Traders bound for its market should call at the foreign office for a letter of introduction."
         ],
         "weight": { "base": 1 }
       },
@@ -258,7 +258,7 @@
         "when": "cityState !== null",
         "headline": "Hear it! {{cityState}} stands with us",
         "body": [
-          "Hear it, people of the court and the road! {{cityState}} has named this nation its ally! Its friendship stands with our flag! {{cityState}} stands with us! Let the news carry to every gate!"
+          "Hear it, {{terms.civic.people}} of the court and the road! {{cityState}} has named this nation its ally! Its friendship stands with our flag! {{cityState}} stands with us! Let the news carry to every gate!"
         ],
         "weight": { "base": 1 }
       }
@@ -678,9 +678,9 @@
         "stance": "hawkish",
         "genre": "report",
         "when": "cityState !== null && civilization !== null",
-        "headline": "Citizens! {{civilization}} wins a neighbor",
+        "headline": "Hear it, {{terms.civic.people}}: {{civilization}} wins a neighbor",
         "body": [
-          "Citizens, {{civilization}} now has an ally in nearby {{cityState}}. The carters at our end are asking whose men they'll meet when they bring in the wool. Our court owes them an answer before they're left to find out at the gate."
+          "Mark it, {{terms.civic.people}}: {{civilization}} now has an ally in nearby {{cityState}}. The carters at our end are asking whose men they'll meet when they bring in the wool. Our {{terms.civic.government}} owes them an answer before they're left to find out at the gate."
         ],
         "weight": { "base": 1 }
       },
@@ -755,7 +755,7 @@
         "when": "cityState !== null && aggressor !== null",
         "headline": "War reaches {{cityState}}",
         "body": [
-          "Notice to traders: {{aggressor}} has opened hostilities against {{cityState}}, a small power that counts us friend. Those bound for its market should take another road. The war has not asked for our arms, and the government has offered none."
+          "Notice to traders: {{aggressor}} has opened hostilities against {{cityState}}, a small power that counts us friend. Those bound for its market should take another road. The war has not asked for our arms, and the {{terms.civic.government}} has offered none."
         ],
         "weight": { "base": 1 }
       }

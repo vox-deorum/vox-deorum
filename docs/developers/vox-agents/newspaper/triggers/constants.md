@@ -92,6 +92,8 @@ Terms are expressions for printed text or finite numbers. The editor evaluates t
 
 The stock `civilization` and `civilizationAdjective` terms provide a name such as Sweden and an adjective such as Swedish. The [probe overlay](../../../../../vox-agents/newspaper/probes/constants.json) adds terms for the capital's name, a phrase based on ideology, and the name of an overlord. A failed, hidden or nonprintable result leaves the term unavailable. Copy that needs it is ineligible; see [masthead rules](../editorial.md#masthead-rules) for title and label fallbacks.
 
+Government, people, and leader titles use the separate [civic vocabulary](../editorial.md#civic-vocabulary). Change those phrases in `civic-terms.json` without writing a new expression or variant.
+
 ## Change or add a name
 
 Edit the built-in file to change the default, or use an [overlay](overview.md#tune-with-an-overlay) to try a change for one replay. Constant groups merge by name. A type list with the same name replaces the whole list. Shortcuts merge by subject and name, and terms merge by name.

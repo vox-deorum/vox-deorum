@@ -205,12 +205,13 @@ async function loadMastheadRules(builtIn: string, directory?: string): Promise<u
 export async function loadEditorialConfig(directory?: string): Promise<EditorialConfig> {
   const builtIn = builtInCatalogueDirectory();
   const result: Record<string, unknown> = { version: 1 };
-  for (const name of ['defaults', 'constants', 'triggers', 'templates', 'pages', 'designs']) {
+  for (const name of ['defaults', 'constants', 'triggers', 'templates', 'pages', 'designs', 'civicTerms']) {
     const grouped = name === 'triggers' || name === 'templates' || name === 'designs';
+    const file = name === 'civicTerms' ? 'civic-terms' : name;
     const base = grouped
       ? await readCatalogueSection(builtIn, name)
-      : await readCatalogueFile(builtIn, name);
-    let custom = directory ? await readCatalogueFile(directory, name, true) : undefined;
+      : await readCatalogueFile(builtIn, file, name === 'civicTerms');
+    let custom = directory ? await readCatalogueFile(directory, file, true) : undefined;
     if (directory && grouped)
       custom = overlay(custom, await readCatalogueSection(directory, name, true));
     if (name === 'designs' && Array.isArray(custom))
@@ -218,7 +219,9 @@ export async function loadEditorialConfig(directory?: string): Promise<Editorial
     const settings = name === 'designs' && Array.isArray(base)
       ? base.map((design) => withoutDesignFields(design, ['assetDefinitions', 'label']))
       : base;
-    result[name] = overlay(settings, custom);
+    const merged = overlay(settings, custom);
+    // Ordinary files always exist, but a civic vocabulary file is optional in both layers.
+    if (merged !== undefined) result[name] = merged;
   }
   result.mastheadRules = await loadMastheadRules(builtIn, directory);
   const stock = await readStyleCatalogue(builtIn);

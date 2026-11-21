@@ -32,7 +32,7 @@
         "when": "success && cityState !== null",
         "headline": "The election in {{cityState}} goes our way",
         "body": [
-          "We are informed that the election in {{cityState}} has gone our government's way. A merchant who often calls at the council hall says the canvassers are already bringing back the stools they borrowed while taking names at the door."
+          "We are informed that the election in {{cityState}} has gone our {{terms.civic.government}}'s way. A merchant who often calls at the council hall says the canvassers are already bringing back the stools they borrowed while taking names at the door."
         ],
         "weight": { "base": 1 }
       },
@@ -257,7 +257,7 @@
         "genre": "notice",
         "headline": "Notice: the watch is awake",
         "body": [
-          "This paper learns that our watchers have marked a foreign agent at work inside our borders. The employer is not yet named. At the watch house, the duty sergeant has put a second man on the archive door, and he says the government's counter-work proceeds without panic."
+          "This paper learns that our watchers have marked a foreign agent at work inside our borders. The employer is not yet named. At the watch house, the duty sergeant has put a second man on the archive door, and he says the {{terms.civic.government}}'s counter-work proceeds without panic."
         ],
         "weight": { "base": 1 }
       },
@@ -411,7 +411,7 @@
         "id": "spy-posted-abroad-report",
         "headline": "One of ours has taken rooms in {{cityName}}",
         "body": [
-          "One of our spies is now stationed in {{cityName}}, a city of {{civilization}}. A room has been taken above a chandler's shop, with a window on the gate and a back stair to the alley."
+          "One of our spies is now stationed in {{cityName}}, a city of {{civilization}}. The {{city.owner.civic.government}} keeps its own hours there. A room has been taken above a chandler's shop, with a window on the gate and a back stair to the alley."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }

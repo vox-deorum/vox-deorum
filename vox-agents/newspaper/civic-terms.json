@@ -1,0 +1,159 @@
+{
+  "defaults": {
+    "government": "government",
+    "people": "people",
+    "leaderTitle": "leader",
+    "leaderAddress": "Your Excellency"
+  },
+  "branches": {
+    "Tradition": {
+      "tier": 1,
+      "terms": {
+        "government": "council",
+        "people": "kinsmen",
+        "leaderTitle": "elder",
+        "leaderAddress": "Honored Elder"
+      }
+    },
+    "Progress": {
+      "tier": 1,
+      "terms": {
+        "government": "assembly",
+        "people": "citizens",
+        "leaderTitle": "speaker",
+        "leaderAddress": "Speaker"
+      }
+    },
+    "Authority": {
+      "tier": 1,
+      "terms": {
+        "government": "war council",
+        "people": "clans",
+        "leaderTitle": "warchief",
+        "leaderAddress": "Warchief"
+      }
+    },
+    "Fealty": {
+      "tier": 2,
+      "terms": {
+        "government": "court",
+        "people": "subjects",
+        "leaderTitle": "sovereign",
+        "leaderAddress": "Your Royal Highness"
+      }
+    },
+    "Statecraft": {
+      "tier": 2,
+      "terms": {
+        "government": "chancery",
+        "people": "merchants",
+        "leaderTitle": "chancellor",
+        "leaderAddress": "Chancellor"
+      }
+    },
+    "Artistry": {
+      "tier": 2,
+      "terms": {
+        "government": "academy",
+        "people": "artists",
+        "leaderTitle": "patron",
+        "leaderAddress": "Patron"
+      }
+    },
+    "Industry": {
+      "tier": 3,
+      "terms": {
+        "government": "board",
+        "people": "workers",
+        "leaderTitle": "director",
+        "leaderAddress": "Director"
+      }
+    },
+    "Imperialism": {
+      "tier": 3,
+      "terms": {
+        "government": "office",
+        "people": "settlers",
+        "leaderTitle": "governor",
+        "leaderAddress": "Governor"
+      }
+    },
+    "Rationalism": {
+      "tier": 3,
+      "terms": {
+        "government": "society",
+        "people": "scholars",
+        "leaderTitle": "rector",
+        "leaderAddress": "Rector"
+      }
+    }
+  },
+  "ideologies": {
+    "Freedom": {
+      "terms": {
+        "government": "government",
+        "people": "citizens",
+        "leaderTitle": "president",
+        "leaderAddress": "President"
+      }
+    },
+    "Order": {
+      "terms": {
+        "government": "committee",
+        "people": "comrades",
+        "leaderTitle": "chairman",
+        "leaderAddress": "Chairman"
+      }
+    },
+    "Autocracy": {
+      "terms": {
+        "government": "government",
+        "people": "citizens",
+        "leaderTitle": "marshal",
+        "leaderAddress": "Marshal"
+      }
+    }
+  },
+  "civilizations": {
+    "Rome": {
+      "branches": {
+        "Tradition": {
+          "government": "senate",
+          "people": "citizens",
+          "leaderTitle": "consul",
+          "leaderAddress": "Consul"
+        },
+        "Progress": {
+          "leaderTitle": "tribune",
+          "leaderAddress": "Tribune"
+        }
+      },
+      "ideologies": {
+        "Autocracy": {
+          "leaderTitle": "dictator",
+          "leaderAddress": "Dictator"
+        }
+      }
+    },
+    "Greece": {
+      "branches": {
+        "Progress": {
+          "leaderTitle": "archon",
+          "leaderAddress": "Archon"
+        },
+        "Rationalism": {
+          "leaderTitle": "philosopher",
+          "leaderAddress": "Philosopher"
+        }
+      }
+    },
+    "Japan": {
+      "branches": {
+        "Authority": {
+          "leaderTitle": "shogun",
+          "leaderAddress": "Shogun"
+        }
+      }
+    }
+  }
+}

@@ -37,6 +37,33 @@ describe('editorial catalogue files', () => {
     expect(base.designs[0].layouts.map(layout => layout.variant)).toEqual(expect.arrayContaining(['ordinary', 'breaking']));
   });
 
+  it('should layer civic vocabulary by slot and keep snapshots without it unchanged', async () => {
+    const base = await loadEditorialConfig();
+    const { civicTerms, ...older } = base;
+    expect(civicTerms?.branches?.Fealty).toBeDefined();
+    const restored = await parseEditorialConfig(JSON.parse(JSON.stringify(older)));
+    expect(Object.hasOwn(restored, 'civicTerms')).toBe(false);
+    expect(configurationHash(restored)).toBe(configurationHash(older));
+
+    await writeDocument('civic-terms.json', {
+      defaults: { messenger: 'envoy' },
+      branches: { Fealty: { terms: { government: 'crown council', messenger: 'herald' } }, Artistry: null },
+      civilizations: { 'Local Kingdom': { branches: { Fealty: { messenger: 'royal courier' } } } },
+    });
+    const loaded = (await loadEditorialConfig(directory)).civicTerms!;
+    expect(loaded.branches?.Fealty).toMatchObject({
+      tier: 2, terms: { government: 'crown council', people: 'subjects', messenger: 'herald' },
+    });
+    expect(loaded.branches?.Artistry).toBeNull();
+    expect(loaded.defaults.messenger).toBe('envoy');
+    expect(loaded.civilizations?.['Local Kingdom']?.branches?.Fealty.messenger).toBe('royal courier');
+
+    await writeDocument('civic-terms.json', { branches: { Fealty: { terms: { goverment: 'crown council' } } } });
+    await expect(loadEditorialConfig(directory)).rejects.toMatchObject({
+      issues: expect.arrayContaining([expect.objectContaining({ path: expect.arrayContaining(['Fealty', 'goverment']) })]),
+    });
+  });
+
   it('should strip built-in design asset metadata after discovery', async () => {
     const base = await loadEditorialConfig();
     expect(base.designs.every(design => !Object.hasOwn(design, 'assetDefinitions'))).toBe(true);

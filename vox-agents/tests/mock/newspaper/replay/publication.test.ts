@@ -113,6 +113,43 @@ describe('durable replay publication', () => {
     expect(article?.sources).toContainEqual(expect.objectContaining({ table: 'GameEvents', id: 104 }));
   });
 
+  it('should replay a stock foreign report with civilization vocabulary and with neutral wording', async () => {
+    const sqlite = new Database(recording.filename);
+    try {
+      sqlite.prepare('UPDATE PlayerSummaries SET PolicyBranches = ? WHERE ID = 6').run('{"Order":["Policy A"]}');
+      sqlite.prepare('INSERT INTO GameEvents (ID, Turn, CreatedAt, Player0, Type, Payload) VALUES (?, ?, ?, ?, ?, ?)')
+        .run(104, 6, 2007, 1, 'IdeologySwitched', '{"PlayerID":1,"OldBranchType":"Freedom","NewBranchType":"Order"}');
+    } finally { sqlite.close(); }
+
+    const stock = await loadEditorialConfig();
+    const id = 'ideology-switched-report';
+    const template = stock.templates.find(entry => entry.variants.some(variant => variant.id === id))!;
+    await Promise.all([
+      writeFile(path.join(catalogue, 'triggers.json'), JSON.stringify(
+        stock.triggers.filter(rule => rule.id !== 'ideology-switched').map(rule => ({ id: rule.id, enabled: false })),
+      )),
+      writeFile(path.join(catalogue, 'templates.json'), JSON.stringify([{
+        id: template.id,
+        variants: template.variants.filter(variant => variant.id !== id).map(variant => ({ id: variant.id, weight: { base: 0 } })),
+      }])),
+      writeFile(path.join(catalogue, 'civic-terms.json'), JSON.stringify({
+        civilizations: { Civ1: { ideologies: { Order: { government: 'workers’ hall' } } } },
+      })),
+    ]);
+    await session.configure(settings());
+    const styled = await session.advance();
+
+    await writeFile(path.join(catalogue, 'civic-terms.json'), '{"ideologies":{"Order":null}}');
+    await session.configure({ ...settings(), runId: 'neutral' });
+    const neutral = await session.advance();
+    for (const [replay, term] of [[styled, 'workers’ hall'], [neutral, 'government']] as const) {
+      expect(replay.check?.status).toBe('published');
+      expect(Object.values(replay.check?.decision.selectedVariants ?? {})).toEqual([id]);
+      expect(replay.check?.issue?.items[0].body.flat()).toContainEqual({ type: 'text', text: term });
+      expect(replay.check?.decision.evidence).toContainEqual(expect.objectContaining({ table: 'PlayerSummaries', id: 6 }));
+    }
+  });
+
   it('should print a foreign birth without its location and one obituary when a great person is used', async () => {
     const sqlite = new Database(recording.filename);
     try {

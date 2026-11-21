@@ -3,6 +3,7 @@ import { presentationSchema } from '../../contracts/design.js';
 import { newspaperLayoutVariantSchema, linkTargetSchema } from '../../contracts/issue.js';
 import { variantStyleKinds, variantStyleSchema } from '../../contracts/style.js';
 import { getNewspaperAsset } from '../../renderer/assets.js';
+import { editorialCivicTermsSchema } from './civic-terms.js';
 import { editorialConstantsSchema, editorialValueNameSchema } from './constants.js';
 import { defaultVariantStyle, styleCatalogueSchema, styleMatchTags } from './styles.js';
 
@@ -151,6 +152,7 @@ export const editorialConfigSchema = z
     designs: z.array(designSchema).min(1),
     mastheadRules: z.array(editorialMastheadRuleSchema).optional(),
     styles: styleCatalogueSchema.optional(),
+    civicTerms: editorialCivicTermsSchema.optional(),
   })
   .superRefine((config, ctx) => {
     if ((config.defaults.minItems ?? 1) > config.defaults.maxItems)

@@ -366,7 +366,7 @@
         "when": "founded !== null && religion === founded",
         "headline": "Hear it! Our own faith leads the nation",
         "body": [
-          "Hear it, households of the nation! {{religion}}, the faith we founded, now has a majority in most of our cities. Ring it out where there's a bell to ring. The faith we founded leads at home!"
+          "Hear it, {{terms.civic.people}}, hear it! {{religion}}, the faith we founded, now has a majority in most of our cities. Ring it out where there's a bell to ring. The faith we founded leads at home!"
         ],
         "weight": { "base": 1 }
       },
@@ -538,7 +538,7 @@
         "genre": "notice",
         "headline": "Hear it! The national faith is deepened",
         "body": [
-          "Hear it, households of the nation! {{religion}}, the faith we founded, has gained a new article of belief! A broader creed for the whole people! Carry it with you, from market to market!"
+          "Hear it, {{terms.civic.people}}, hear it! {{religion}}, the faith we founded, has gained a new article of belief! A broader creed for the whole people! Carry it with you, from market to market!"
         ],
         "weight": { "base": 1 }
       }

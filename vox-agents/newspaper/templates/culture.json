@@ -80,7 +80,7 @@
         "when": "rival !== null",
         "headline": "Hear it! {{rival}} knows our jokes",
         "body": [
-          "Hear it, people! Our influence over {{rival}} has reached the Influential mark at {{percentage}} percent. Their players are telling our jokes, and their crowds are laughing in the right places. They know the jokes, neighbors!"
+          "Hear it, {{terms.civic.people}}! Our influence over {{rival}} has reached the Influential mark at {{percentage}} percent. Their players are telling our jokes, and their crowds are laughing in the right places. They know the jokes, neighbors!"
         ],
         "links": [
           { "placeholder": "rival", "label": "{{rival}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -196,7 +196,7 @@
         "when": "rival !== null",
         "headline": "Where our influence slipped in {{rival}}",
         "body": [
-          "Our influence over {{rival}} has slipped from {{previousLevel}} to {{level}}. A printer who once sent new plays abroad has a shelf of unsold copies, and the council ought to ask whether booksellers there stopped ordering them or simply found a cheaper way to print their own."
+          "Our influence over {{rival}} has slipped from {{previousLevel}} to {{level}}. A printer who once sent new plays abroad has a shelf of unsold copies, and the {{terms.civic.government}} ought to ask whether booksellers there stopped ordering them or simply found a cheaper way to print their own."
         ],
         "links": [
           { "placeholder": "rival", "label": "{{rival}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -555,9 +555,9 @@
         "stance": "hawkish",
         "genre": "report",
         "when": "ours === false && civilization !== null",
-        "headline": "Citizens! A rival has a name we lack",
+        "headline": "Word for the {{terms.civic.people}}: a rival has a name we lack",
         "body": [
-          "Citizens, mark it: {{civilization}} counts {{person}} among its own, and we do not. Their gates have a new name to carve over them, and ours have none. Say what you like about friendship; the ledger does not read speeches."
+          "Mark it, {{terms.civic.people}}: {{civilization}} counts {{person}} among its own, and we do not. Their gates have a new name to carve over them, and ours have none. Say what you like about friendship; the ledger does not read speeches."
         ],
         "weight": { "base": 1 }
       }
@@ -780,7 +780,7 @@
         "genre": "editorial",
         "headline": "Print the names of the missing works",
         "body": [
-          "The new count of great works in {{city}} is down by {{lost}}. If the works were sent away, let the council say where we can see them. If they are lost, let it print their names. A reader might know where a missing work went, if we can tell her which one it is."
+          "The new count of great works in {{city}} is down by {{lost}}. If the works were sent away, let the {{terms.civic.government}} say where we can see them. If they are lost, let it print their names. A reader might know where a missing work went, if we can tell her which one it is."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -834,7 +834,7 @@
         "voice": "crier",
         "stance": "national",
         "genre": "notice",
-        "headline": "Hear it, people of {{city}}! The {{wonder}} is done",
+        "headline": "Hear it, {{terms.civic.people}} of {{city}}! The {{wonder}} is done",
         "body": [
           "The scaffolds are down! The {{wonder}} stands, finished and ours! Say it at the well, say it at the gate: it is ours, it is ours! Let the neighbors come and see what we build, and let them carry the sight home with them!"
         ],

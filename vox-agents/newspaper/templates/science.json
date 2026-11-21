@@ -169,7 +169,7 @@
         "genre": "notice",
         "headline": "Hear it! The {{era}} is ours",
         "body": [
-          "Hear it, hear it, people of the {{era}}! The old age is done with us, and the new one is ours. Every town, every farm, every one of us stands in it together. Say it in the streets and say it again: the {{era}} is ours!"
+          "Hear it, hear it, {{terms.civic.people}} of the {{era}}! The old age is done with us, and the new one is ours. Every town, every farm, every one of us stands in it together. Say it in the streets and say it again: the {{era}} is ours!"
         ],
         "weight": { "base": 1 }
       },
@@ -220,7 +220,7 @@
         "id": "our-team-gains-technology-report",
         "headline": "The scholars finish {{tech}}",
         "body": [
-          "Our scholars have finished {{tech}}. The first copy went to the council, the second to the printers, and the third is already missing from the shelf."
+          "Our scholars have finished {{tech}}. The first copy went to the {{terms.civic.government}}, the second to the printers, and the third is already missing from the shelf."
         ],
         "weight": { "base": 1 }
       },
@@ -343,7 +343,7 @@
         "when": "civilization !== null",
         "headline": "A rival enters the {{era}}. And us?",
         "body": [
-          "Citizens! {{civilization}} has entered the {{era}}, and somewhere their ministers are being asked what it cost them. Ask ours the same question: what are we paying, and for which age? A government that cannot say is paying more than it admits."
+          "Mark it, {{terms.civic.people}}: {{civilization}} has entered the {{era}}, and somewhere its {{player.civic.government}} is being asked what it cost. Ask ours the same question: what are we paying, and for which age? A {{terms.civic.government}} that cannot say is paying more than it admits."
         ],
         "weight": { "base": 1 }
       }

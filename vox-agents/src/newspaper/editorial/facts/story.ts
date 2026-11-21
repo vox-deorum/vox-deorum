@@ -1,4 +1,6 @@
 /** Project names and IDs for authored prose from the same subjects expressions can read. */
+import type { EditorialCivicTerms } from '../config/civic-terms.js';
+import { resolveCivicVocabulary } from './civic-terms.js';
 import type { NewspaperFactModel } from './index.js';
 import { fact, reference, type FactField, type FactKind, type FactObject, type FactReference } from './model.js';
 
@@ -52,8 +54,25 @@ function readIdentity(fields: FactObject | undefined, key: typeof playerIdentity
   return fact(field.value, [...(link?.sources ?? []), ...(field.sources ?? [])]);
 }
 
+/** Read one visible player's civic slots as prose fields, adding the link that reached them. */
+function civicIdentity(
+  fields: FactObject | undefined,
+  civic: EditorialCivicTerms | undefined,
+  link?: FactField
+): Record<string, FactField> {
+  const result: Record<string, FactField> = Object.create(null);
+  if (!civic || !fields) return result;
+  for (const [slot, term] of resolveCivicVocabulary(fields, civic))
+    result[`civic.${slot}`] = fact(term.value, [...(link?.sources ?? []), ...term.sources]);
+  return result;
+}
+
 /** Add qualified identity fields and short name and ID aliases for the visible subjects. */
-export function storyIdentity(subject: StorySubject, facts?: NewspaperFactModel): Record<string, FactField> {
+export function storyIdentity(
+  subject: StorySubject,
+  facts?: NewspaperFactModel,
+  civic?: EditorialCivicTerms
+): Record<string, FactField> {
   const fields: Record<string, FactField> = Object.create(null);
   for (const key of subject.kind === 'player' ? playerIdentityKeys : identityKeys) {
     const field = readIdentity(subject.fields, key);
@@ -61,18 +80,28 @@ export function storyIdentity(subject: StorySubject, facts?: NewspaperFactModel)
     fields['subject.' + key] = fields[subject.kind + '.' + key] = field;
     if (key !== 'leader') fields[key === 'name' ? subject.kind : subject.kind + 'Id'] = field;
   }
+  if (subject.kind === 'player')
+    for (const [key, field] of Object.entries(civicIdentity(subject.fields, civic))) {
+      fields[key] = fields['subject.' + key] = fields['player.' + key] = field;
+    }
   if (!facts) return fields;
   for (const [name, link] of Object.entries(subject.fields ?? {})) {
     const value = link.value;
     if (typeof value !== 'object' || value === null || !('$kind' in value) || value.$kind !== 'reference') continue;
     const ref = value as FactReference;
     const target = storyFields(ref, facts);
+    if (!target) continue;
     for (const key of ref.kind === 'player' ? playerIdentityKeys : identityKeys) {
       const field = readIdentity(target, key, link);
       if (!field) continue;
       fields[subject.kind + '.' + name + '.' + key] = field;
       if (key !== 'leader') fields[key === 'name' ? name : name + 'Id'] = field;
     }
+    if (ref.kind === 'player')
+      for (const [key, field] of Object.entries(civicIdentity(target, civic, link))) {
+        fields[subject.kind + '.' + name + '.' + key] = field;
+        fields[name + '.' + key] = field;
+      }
   }
   return fields;
 }

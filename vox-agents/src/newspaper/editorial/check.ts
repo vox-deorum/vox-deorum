@@ -15,6 +15,7 @@ import type {
 } from './config/expressions.js';
 import { getEditorialExpressions } from './config/load.js';
 import { scaleEditorialConstants } from './config/constants.js';
+import { resolveCivicVocabulary } from './facts/civic-terms.js';
 import { addDiplomacyFacts, addPressFacts, type NewspaperFactModel } from './facts/index.js';
 import { evaluateTriggerRules, ruleHistoryTurns } from './rules/evaluate.js';
 import { buildPress } from './rules/press.js';
@@ -160,7 +161,13 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
     budget,
     identitySeed,
   });
-  const terms = await evaluateEditorialTerms(compiled, batch, budget);
+  const terms = new Map(await evaluateEditorialTerms(compiled, batch, budget));
+  if (config.civicTerms)
+    for (const [slot, term] of resolveCivicVocabulary(
+      facts.players[input.receiver.playerId]?.current,
+      config.civicTerms
+    ))
+      terms.set(`civic.${slot}`, term);
   const triggers = rules.developments;
   const candidates = (await matchTemplates(triggers, config, compiled, batch, budget, terms)).map((candidate) => ({
     ...candidate,

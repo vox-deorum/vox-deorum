@@ -12,6 +12,7 @@ The stock catalogue is in `vox-agents/newspaper/`. To override a rule or story, 
 | `constants.json` | Named distances, spans, sizes, type lists and shortcuts, plus printable terms used by prose and mastheads. See [constants and shortcuts](triggers/constants.md). |
 | `triggers/*.json` | Trigger rules: subject, `when`, `values`, importance, repeat, grouping and tags. See the [trigger overview](triggers/overview.md). |
 | `templates/*.json` | Authored variants, typed links and short pieces, grouped by topic like triggers |
+| `civic-terms.json` | Government, people, and leader terms by policy and civilization |
 | `styles/` | Style tag IDs, optional writing guidance, and rules that adjust variant weights |
 | `pages.json` | Front page, section membership, and section minimums |
 | `designs/*.json` | Browser labels, renderer families, tokens, assets, layouts, eligibility, and fallback mastheads |
@@ -104,6 +105,22 @@ List name placeholders in the template's `names` array without braces. For examp
 The adjective comes from the recorded English short name. For a modded or localized name outside the built-in list, override the term in your catalogue or offer a variant without it.
 
 For a single group, prose can print `{{key}}` and `{{count}}`. Expressions can read each member, for example `group.matches[0].city.name` and `group.matches[0].values`. If two rules grouped cities by the same religion, they may have counted different cities. Name the rule in the placeholder, such as `{{triggerValues.conversions.count}}`, or read its members with `triggerValues.conversions.matches`. When two ungrouped rules supply the same value name, qualify it the same way. An ambiguous bare placeholder leaves that variant out.
+
+### Civic vocabulary
+
+Print `{{terms.civic.government}}`, `{{terms.civic.people}}`, `{{terms.civic.leaderTitle}}`, or `{{terms.civic.leaderAddress}}` for the reader's civilization. Qualify the term to write about a visible player or direct reference, such as `{{player.civic.leaderTitle}}`, `{{city.owner.civic.people}}`, or `{{event.player.civic.government}}`. Ordinary references use the reporting cutoff; explicitly dated references use their own date. A visible civilization without policy data can use defaults. An unresolved foreign reference stays unavailable.
+
+The active ideology takes precedence. Otherwise the highest branch tier wins: tier 3 (Industry, Imperialism, Rationalism), tier 2 (Fealty, Statecraft, Artistry), then tier 1 (Tradition, Progress, Authority). Within the winning tier, the most recorded policies win. Break ties alphabetically; if any count is missing in that tier, use alphabetical order alone. The stock branches can outlast their starting eras.
+
+An overlay's `civic-terms.json` can change one word without copying any prose:
+
+| Field | What to change |
+| --- | --- |
+| `defaults` | Neutral terms. Add a new slot here before overriding it in a profile. |
+| `branches`, `ideologies` | Profiles keyed by recorded name, each with a `terms` map. Branches need a positive integer `tier`. An optional `eras` list restricts a profile to those recorded era names. |
+| `civilizations` | Key by exact recorded civilization name. Its `terms` apply generally, and its `branches` and `ideologies` maps can refine individual winning profiles. For example, set `civilizations.Rome.branches.Progress.government` to “senate.” |
+
+Terms layer from defaults to the winning profile, then to civilization terms and finally the civilization's overrides for the winner. Use `null` to disable an inherited branch, ideology, or civilization entry. These words describe how the paper speaks; they do not establish that the civilization has a particular office or constitution. See the [writing guide](writing.md#use-concrete-names-when-available) for articles, plural wording, and forms of address.
 
 ### Pages and designs
 
