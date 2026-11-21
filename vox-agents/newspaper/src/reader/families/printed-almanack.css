@@ -12,7 +12,6 @@
     letter-spacing: .025em;
   }
   & .vd-ornament { width: 96px; margin: 4px auto 0; }
-  & .vd-motto { margin: 2px 0 0; }
   & .vd-tabs { border-bottom: 3px double var(--vd-ink); }
   & .vd-storylist .vd-story {
     display: grid;

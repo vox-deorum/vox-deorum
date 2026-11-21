@@ -2,7 +2,7 @@
 .vd-newspaper[data-publication-design="coffeehouse-essay"] {
   --essay-gutter: clamp(14px, 3cqi, 36px);
 
-  & .vd-masthead, & .vd-tabs, & .vd-storylist {
+  & .vd-masthead, & .vd-tabs, & .vd-storylist, & .vd-motto {
     max-width: 58rem;
     margin-inline: auto;
   }
@@ -42,16 +42,13 @@
   }
   & .vd-storylist .vd-story--lead :is(.vd-deck, .vd-byline) {
     max-width: 54ch;
+    margin: 0 auto .7em;
     padding: 0;
     border: 0;
     text-align: center;
     text-wrap: balance;
   }
-  & .vd-storylist .vd-story--lead .vd-deck {
-    margin: 0 auto .7em;
-    font-size: calc(19px * var(--vd-text-scale));
-  }
-  & .vd-storylist .vd-story--lead .vd-byline { margin: .8em auto 0; }
+  & .vd-storylist .vd-story--lead .vd-deck { font-size: calc(19px * var(--vd-text-scale)); }
   & .vd-prose { font-size: calc(clamp(15px, 1.7cqi, 18px) * var(--vd-text-scale)); line-height: 1.55; }
   & .vd-prose p { margin-bottom: 0; }
   & .vd-prose p + p { text-indent: 1.25em; }

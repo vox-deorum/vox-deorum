@@ -19,7 +19,7 @@
       "distance": "player.knows('distance') ? player.distance : null"
     },
     "tier": "notable",
-    "adjust": "(distance !== null && distance <= neighboring ? 55 : 45) - 60",
+    "adjust": "player.stake.relation",
     "tags": ["politics", "international"]
   },
   {
@@ -52,7 +52,6 @@
       "era": "self.era"
     },
     "tier": "major",
-    "adjust": "-5",
     "tags": ["politics", "domestic"]
   },
   {
@@ -69,7 +68,6 @@
       "era": "self.knows('era') ? self.era : null"
     },
     "tier": "notable",
-    "adjust": "-5",
     "tags": ["science", "domestic"]
   },
   {
@@ -92,7 +90,7 @@
       "distance": "player.knows('distance') ? player.distance : null"
     },
     "tier": "notable",
-    "adjust": "(distance !== null && distance <= neighboring ? 65 : 50) - 60",
+    "adjust": "player.stake.relation",
     "tags": ["politics", "international"]
   },
   {
@@ -113,7 +111,6 @@
       "count": "player.technologies",
       "tied": "players.some(p => p.id !== player.id && p.knows('major') && p.major && p.knows('technologies') && p.technologies === player.technologies)"
     },
-    "tier": "notable",
-    "adjust": "(player.self ? 70 : 50) - 60"
+    "tier": "player.self ? 'major' : 'notable'"
   }
 ]

@@ -32,7 +32,7 @@
     ],
     "values": { "cityState": "city.owner.name", "religion": "city.majorityReligion" },
     "tier": "notable",
-    "adjust": "-5",
+    "adjust": "city.owner.stake.relation",
     "tags": ["politics", "international"]
   },
   {
@@ -57,7 +57,7 @@
       "distance": "city.distance.own"
     },
     "tier": "notable",
-    "adjust": "-5",
+    "adjust": "city.owner.stake.relation",
     "tags": ["religion", "international"]
   },
   {
@@ -73,8 +73,8 @@
       "religion": "event.religion",
       "stage": "event.type === 'ReligionReformed' ? 'reformed' : 'enhanced'"
     },
-    "tier": "notable",
-    "adjust": "(stage === 'reformed' ? 55 : 45) - 60",
+    "tier": "stage === 'reformed' ? 'notable' : 'routine'",
+    "adjust": "event.player.stake.relation",
     "tags": ["religion", "international"]
   },
   {
@@ -93,7 +93,7 @@
       "religion": "player.majorityReligion"
     },
     "tier": "notable",
-    "adjust": "5",
+    "adjust": "player.stake.relation",
     "tags": ["politics", "international", "religion"]
   },
   {
@@ -110,7 +110,7 @@
       "holyCity": "event.knows('holyCity') && event.holyCity.knows('name') ? event.holyCity.name : null"
     },
     "tier": "notable",
-    "adjust": "-5",
+    "adjust": "event.player.stake.relation",
     "tags": ["politics", "international"]
   },
   {
@@ -129,7 +129,6 @@
       "founded": "self.is.hasFoundedReligion ? self.foundedReligion : null"
     },
     "tier": "major",
-    "adjust": "-5",
     "tags": ["politics", "domestic", "religion"]
   },
   {
@@ -149,6 +148,7 @@
       "former": "player.before.majorityReligion"
     },
     "tier": "notable",
+    "adjust": "player.stake.relation",
     "tags": ["politics", "international", "religion"]
   },
   {
@@ -164,7 +164,7 @@
       "min": 3
     },
     "tier": "notable",
-    "adjust": "(40 + 10 * count) - 60"
+    "adjust": "Math.min(15, 5 * (count - 3))"
   },
   {
     "id": "our-faith-deepens",
@@ -181,8 +181,7 @@
       "religion": "event.religion",
       "stage": "event.type === 'ReligionReformed' ? 'reformed' : 'enhanced'"
     },
-    "tier": "notable",
-    "adjust": "(stage === 'reformed' ? 70 : 60) - 60",
+    "tier": "stage === 'reformed' ? 'major' : 'notable'",
     "tags": ["religion", "domestic"]
   },
   {
@@ -200,7 +199,7 @@
       "others": "self.cities.filter(c => c.is.followsAnotherReligion).map(c => c.majorityReligion).filter((r, i, all) => all.indexOf(r) === i).join(', ')"
     },
     "tier": "notable",
-    "adjust": "(45 + Math.min(25, 5 * divided)) - 60",
+    "adjust": "Math.min(15, 5 * divided)",
     "tags": ["politics", "domestic", "religion"]
   },
   {
@@ -216,8 +215,7 @@
       "religion": "city.majorityReligion",
       "ours": "self.knows('foundedReligion') && typeof self.foundedReligion === 'string' && city.majorityReligion === self.foundedReligion"
     },
-    "tier": "notable",
-    "adjust": "(ours ? 55 : 65) - 60",
+    "tier": "ours ? 'routine' : 'notable'",
     "tags": ["cities", "domestic"]
   },
   {
@@ -234,8 +232,8 @@
       "cityName": "event.knows('city') && event.city.knows('name') ? event.city.name : null",
       "belief": "event.knows('beliefType') && typeof event.beliefType === 'string' ? event.beliefType : null"
     },
-    "tier": "notable",
-    "adjust": "(ours ? 60 : 45) - 60",
+    "tier": "ours ? 'notable' : 'routine'",
+    "adjust": "event.player.stake.relation",
     "tags": ["religion", "international"]
   },
   {

@@ -230,7 +230,7 @@ describe('cultural influence facts', () => {
       }, [0, 1, 2]));
       const outgoing = firedSubjects(rule(outgoingAudit, 'cultural-influence-becomes-influential-outgoing'));
       expect(outgoing).toHaveLength(1);
-      expect(outgoing[0]).toMatchObject({ subject: 'player/1', importance: 75 });
+      expect(outgoing[0]).toMatchObject({ subject: 'player/1', tier: 'major' });
       expect(subjectValue(outgoing[0], 'rival')).toBe('Brazil');
       expect(subjectValue(outgoing[0], 'direction')).toBe('outgoing');
       expect(subjectValue(outgoing[0], 'level')).toBe('Influential');
@@ -249,7 +249,7 @@ describe('cultural influence facts', () => {
       }));
       const incoming = firedSubjects(rule(incomingAudit, 'cultural-influence-becomes-influential-incoming'));
       expect(incoming).toHaveLength(1);
-      expect(incoming[0]).toMatchObject({ subject: 'player/1', importance: 80 });
+      expect(incoming[0]).toMatchObject({ subject: 'player/1', tier: 'major' });
       expect(subjectValue(incoming[0], 'direction')).toBe('incoming');
       expect(subjectValue(incoming[0], 'percentage')).toBe(110);
       expect(firedSubjects(rule(incomingAudit, 'cultural-influence-becomes-influential-outgoing'))).toEqual([]);
@@ -302,7 +302,7 @@ describe('cultural influence facts', () => {
       }));
       const incoming = firedSubjects(rule(incomingAudit, 'cultural-influence-trend-turns-incoming'));
       expect(incoming).toHaveLength(1);
-      expect(incoming[0]).toMatchObject({ subject: 'player/1', importance: 50 });
+      expect(incoming[0]).toMatchObject({ subject: 'player/1', tier: 'routine' });
       expect(subjectValue(incoming[0], 'rival')).toBe('Brazil');
       expect(subjectValue(incoming[0], 'direction')).toBe('incoming');
       expect(subjectValue(incoming[0], 'percentage')).toBe(80);

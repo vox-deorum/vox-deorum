@@ -31,7 +31,6 @@
     text-transform: uppercase;
     overflow-wrap: anywhere;
   }
-  & .vd-motto { grid-column: 1 / -1; margin: 0; padding: .3em .65em; background: var(--vd-paper); }
   & .vd-tabs { gap: 0; border: 2px solid var(--vd-ink); border-top: 0; }
   & .vd-tab {
     flex: 1 0 auto;

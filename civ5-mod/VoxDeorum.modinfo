@@ -45,9 +45,9 @@
     <File md5="8CCAC2C06A361B4B8B8DBC8481C1C7CB" import="1">UI/Diplomacy/VoxDeorumDiploTransport.lua</File>
     <File md5="BF571FECA7F47FB03AEBE533712B755B" import="1">UI/Diplomacy/VoxDeorumDiploPanelMock.lua</File>
     <File md5="0021CB5006F184E32DAAFBA0107A509B" import="0">UI/Diplomacy/VoxDeorumDiploPanel.xml</File>
-    <File md5="99F48F853332AC7C66061E37DE53525A" import="1">UI/Newspaper/VoxDeorumNewspaper.lua</File>
+    <File md5="E180A0D253AE7804B2F6A77C05CB1289" import="1">UI/Newspaper/VoxDeorumNewspaper.lua</File>
     <File md5="3474713AA3D227447F83793455DC9B09" import="1">UI/Newspaper/VoxDeorumNewspaper.xml</File>
-    <File md5="B1257AE38C8A59641DB177821F1C458E" import="1">UI/Newspaper/VoxDeorumNewspaperData.lua</File>
+    <File md5="3F059BD156588148E53D4C4C7FAF4A48" import="1">UI/Newspaper/VoxDeorumNewspaperData.lua</File>
     <File md5="D808E04A81C1115BAD4CE6611A929C58" import="1">UI/Shared/VoxDeorumDealUtils.lua</File>
     <File md5="EC48B14766F3D2F6DC0EC6DA97B3808A" import="1">UI/Deals/VoxDeorumDealScreen.lua</File>
     <File md5="8681F1C34A43277397BBB7603232AF64" import="1">UI/Deals/VoxDeorumDealTransport.lua</File>

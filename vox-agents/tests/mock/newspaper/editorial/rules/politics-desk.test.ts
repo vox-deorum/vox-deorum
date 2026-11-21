@@ -169,7 +169,7 @@ describe('stock politics desk', () => {
       }));
       const denouncement = firedSubjects(rule(denounced, 'denounced-by-major'));
       expect(denouncement).toHaveLength(1);
-      expect(denouncement[0]).toMatchObject({ subject: 'player/1', importance: 60 });
+      expect(denouncement[0].subject).toBe('player/1');
       expect(subjectValue(denouncement[0], 'civilization')).toBe('Brazil');
 
       const becomes = await check(fixture({
@@ -219,7 +219,7 @@ describe('stock politics desk', () => {
       }));
       const last = firedSubjects(rule(trailing, 'falls-to-last-place'));
       expect(last).toHaveLength(1);
-      expect(last[0]).toMatchObject({ subject: 'world', importance: 65 });
+      expect(last[0].subject).toBe('world');
       expect(subjectValue(last[0], 'count')).toBe(3);
 
       const smallField = await check(fixture({
@@ -431,7 +431,7 @@ describe('stock politics desk', () => {
       }));
       const session = firedSubjects(rule(imminent, 'congress-session-imminent'));
       expect(session).toHaveLength(1);
-      expect(session[0]).toMatchObject({ subject: 'world', importance: 55 });
+      expect(session[0].subject).toBe('world');
       expect(subjectValue(session[0], 'league')).toBe('World Congress');
       expect(subjectValue(session[0], 'count')).toBe(0);
 
@@ -440,7 +440,8 @@ describe('stock politics desk', () => {
     });
 
     it('should report newly introduced proposals and rank our own higher', async () => {
-      const audit = await check(fixture({
+      /** Supply the same new proposal with a different sponsor. */
+      const withProposal = (proposer: string) => fixture({
         cutoff, previous,
         players: [playerRow(0, cutoff)],
         congress: {
@@ -450,18 +451,23 @@ describe('stock politics desk', () => {
           observations: [congressObservation(cutoff, 12, {
             proposals: [
               { name: 'Arts Funding', isEnact: true },
-              { name: 'World Religion', isEnact: true, proposer: 'France' },
+              { name: 'World Religion', isEnact: true, proposer },
             ],
           })],
         },
-      }));
-      const record = rule(audit, 'congress-new-proposals');
+      });
+      const record = rule(await check(withProposal('France')), 'congress-new-proposals');
       const fired = firedSubjects(record);
       expect(fired).toHaveLength(1);
-      expect(fired[0]).toMatchObject({ subject: 'world', importance: 70 });
+      expect(fired[0].subject).toBe('world');
       expect(subjectValue(fired[0], 'count')).toBe(1);
       expect(subjectValue(fired[0], 'proposal')).toBe('World Religion');
       expect(subjectValue(fired[0], 'ours')).toBe(true);
+
+      const foreign = firedSubjects(rule(await check(withProposal('Brazil')), 'congress-new-proposals'));
+      expect(foreign).toHaveLength(1);
+      expect(subjectValue(foreign[0], 'ours')).toBe(false);
+      expect(fired[0].importance).toBeGreaterThan(foreign[0].importance!);
     });
 
     it('should distinguish a passed resolution from a defeated one and prefer our own proposal', async () => {
@@ -478,7 +484,7 @@ describe('stock politics desk', () => {
       const passRecord = rule(passing, 'congress-resolution-passed');
       const passedFired = firedSubjects(passRecord);
       expect(passedFired).toHaveLength(1);
-      expect(passedFired[0]).toMatchObject({ subject: 'event/900', importance: 75 });
+      expect(passedFired[0].subject).toBe('event/900');
       expect(subjectValue(passedFired[0], 'resolution')).toBe('World Religion');
       expect(subjectValue(passedFired[0], 'isEnact')).toBe(true);
       expect(subjectValue(passedFired[0], 'proposer')).toBe('France');
@@ -497,7 +503,8 @@ describe('stock politics desk', () => {
       }));
       const failedFired = firedSubjects(rule(defeating, 'congress-resolution-defeated'));
       expect(failedFired).toHaveLength(1);
-      expect(failedFired[0]).toMatchObject({ subject: 'event/901', importance: 50 });
+      expect(failedFired[0].subject).toBe('event/901');
+      expect(passedFired[0].importance).toBeGreaterThan(failedFired[0].importance!);
       expect(subjectValue(failedFired[0], 'resolution')).toBe('Embargo City-States');
       expect(subjectValue(failedFired[0], 'isEnact')).toBe(false);
       expect(subjectValue(failedFired[0], 'proposer')).toBe('Brazil');
@@ -517,27 +524,24 @@ describe('stock politics desk', () => {
       const sanctions = rule(await check(withAgenda([{ name: 'Sanction (France)' }])), 'congress-sanctions-on-us');
       const sanctionFired = firedSubjects(sanctions);
       expect(sanctionFired).toHaveLength(1);
-      expect(sanctionFired[0]).toMatchObject({ subject: 'world', importance: 85, urgent: true });
+      expect(sanctionFired[0]).toMatchObject({ subject: 'world', urgent: true });
       expect(subjectValue(sanctionFired[0], 'resolution')).toBe('Sanction (France)');
 
       const ideology = rule(await check(withAgenda([{ name: 'World Ideology: Order' }])), 'congress-world-ideology');
       const ideologyFired = firedSubjects(ideology);
       expect(ideologyFired).toHaveLength(1);
-      expect(ideologyFired[0].importance).toBe(70);
       expect(subjectValue(ideologyFired[0], 'resolution')).toBe('World Ideology: Order');
       expect(subjectValue(ideologyFired[0], 'ours')).toBe(true);
 
       const religion = rule(await check(withAgenda([{ name: 'World Religion: Buddhism' }])), 'congress-world-religion');
       const religionFired = firedSubjects(religion);
       expect(religionFired).toHaveLength(1);
-      expect(religionFired[0].importance).toBe(65);
       expect(subjectValue(religionFired[0], 'resolution')).toBe('World Religion: Buddhism');
       expect(subjectValue(religionFired[0], 'ours')).toBe(true);
 
       const project = rule(await check(withAgenda([{ name: "World's Fair" }])), 'congress-world-project');
       const projectFired = firedSubjects(project);
       expect(projectFired).toHaveLength(1);
-      expect(projectFired[0].importance).toBe(55);
       expect(subjectValue(projectFired[0], 'project')).toBe("World's Fair");
 
       const proposal = fixture({

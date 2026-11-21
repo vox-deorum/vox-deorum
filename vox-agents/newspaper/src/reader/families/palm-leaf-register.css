@@ -15,7 +15,7 @@
     text-align: left;
   }
   & .vd-masthead { padding-block: clamp(14px, 2.6cqi, 30px) 4px; border-radius: 7px 3px 0 0; }
-  & .vd-title, & .vd-motto { color: inherit; }
+  & .vd-title { color: inherit; }
   & .vd-tabs { justify-content: start; border: 0; border-radius: 0 0 5px 8px; }
   & .vd-tab:is(:hover, [aria-selected="true"]) { color: inherit; }
   & .vd-tab:focus-visible { outline-color: currentColor; outline-offset: 0; }

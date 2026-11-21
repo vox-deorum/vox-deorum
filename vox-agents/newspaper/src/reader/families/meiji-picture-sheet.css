@@ -21,7 +21,6 @@
     letter-spacing: -.045em;
     box-shadow: 3px 3px var(--vd-ink);
   }
-  & .vd-motto { background: var(--vd-paper); }
   & .vd-tabs { border-block: 1px solid var(--vd-ink); }
   & .vd-story--lead {
     padding: clamp(12px, 2.4cqi, 28px);

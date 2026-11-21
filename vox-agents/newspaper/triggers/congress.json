@@ -13,8 +13,7 @@
       "proposal": "game.congress.newProposals[0].name",
       "ours": "self.knows('name') && game.congress.newProposals.some(p => p.knows('proposer') && p.proposer === self.name)"
     },
-    "tier": "notable",
-    "adjust": "(ours ? 70 : 50) - 60",
+    "tier": "ours ? 'notable' : 'routine'",
     "tags": ["international", "congress"]
   },
   {
@@ -32,8 +31,7 @@
       "proposer": "event.knows('proposerName') ? event.proposerName : null",
       "ours": "event.knows('player') && event.player.self === true"
     },
-    "tier": "notable",
-    "adjust": "(ours ? 75 : 50) - 60",
+    "tier": "ours ? 'notable' : 'routine'",
     "tags": ["international", "congress"]
   },
   {
@@ -51,8 +49,7 @@
       "proposer": "event.knows('proposerName') ? event.proposerName : null",
       "ours": "event.knows('player') && event.player.self === true"
     },
-    "tier": "notable",
-    "adjust": "(ours ? 75 : 60) - 60",
+    "tier": "ours ? 'major' : 'notable'",
     "tags": ["international", "congress"]
   },
   {
@@ -69,7 +66,6 @@
       "resolution": "game.congress.activeResolutions.find(r => r.name.startsWith('Sanction') && r.name.includes(self.name)).name"
     },
     "tier": "crisis",
-    "adjust": "-5",
     "urgent": "true",
     "tags": ["international", "congress"]
   },
@@ -90,8 +86,8 @@
       "turnsUntil": "game.congress.expectedSessionTurn - turn",
       "count": "game.congress.knows('proposals') ? game.congress.proposals.length : 0"
     },
-    "tier": "notable",
-    "adjust": "(40 + Math.max(0, 15 - turnsUntil)) - 60",
+    "tier": "routine",
+    "adjust": "Math.round(10 * (recent - turnsUntil) / recent)",
     "tags": ["international", "congress"]
   },
   {
@@ -108,7 +104,6 @@
       "count": "game.congress.knows('proposals') ? game.congress.proposals.length : 0"
     },
     "tier": "notable",
-    "adjust": "-5",
     "tags": ["international", "congress"]
   },
   {
@@ -127,8 +122,7 @@
       "previous": "self.before.votes",
       "change": "self.votes - self.before.votes"
     },
-    "tier": "notable",
-    "adjust": "(Math.abs(change) >= 2 ? 65 : 55) - 60",
+    "tier": "Math.abs(change) >= 2 ? 'notable' : 'routine'",
     "tags": ["international", "congress"]
   },
   {
@@ -157,7 +151,6 @@
       "ours": "self.knows('ideology') && typeof self.ideology === 'string' && resolution.includes(self.ideology)"
     },
     "tier": "major",
-    "adjust": "-5",
     "tags": ["international", "congress"]
   },
   {
@@ -172,7 +165,6 @@
       "project": "(() => { const active = game.congress.knows('activeResolutions') ? game.congress.activeResolutions.find(r => worldProjects.includes(r.name)) : undefined; const proposal = game.congress.knows('proposals') ? game.congress.proposals.find(p => worldProjects.includes(p.name)) : undefined; return active ? active.name : proposal.name; })()"
     },
     "tier": "notable",
-    "adjust": "-5",
     "tags": ["international", "congress"]
   },
   {
@@ -186,7 +178,6 @@
       "ours": "(self.knows('foundedReligion') && typeof self.foundedReligion === 'string' && resolution.includes(self.foundedReligion)) || (self.knows('majorityReligion') && typeof self.majorityReligion === 'string' && resolution.includes(self.majorityReligion))"
     },
     "tier": "notable",
-    "adjust": "5",
     "tags": ["international", "congress"]
   },
   {
@@ -201,7 +192,6 @@
       "resolution": "game.congress.newProposals.find(p => p.isEnact === true && p.name.startsWith('Sanction')).name"
     },
     "tier": "major",
-    "adjust": "-3",
     "tags": ["international", "congress"]
   },
   {
@@ -230,7 +220,6 @@
       "proposer": "(() => { const p = game.congress.newProposals.find(p => p.isEnact && p.name.startsWith('Travel Ban')); return p.knows('proposer') ? p.proposer : null; })()"
     },
     "tier": "notable",
-    "adjust": "5",
     "tags": ["international", "congress", "culture"]
   },
   {
@@ -245,7 +234,6 @@
       "proposer": "(() => { const p = game.congress.newProposals.find(p => p.isEnact === false && p.name.startsWith('Travel Ban')); return p.knows('proposer') ? p.proposer : null; })()"
     },
     "tier": "notable",
-    "adjust": "-5",
     "tags": ["international", "congress", "culture"]
   }
 ]

@@ -27,7 +27,6 @@
   }
 
   & .vd-motto {
-    margin-block: 8px 0;
     color: var(--vd-ink);
   }
 
@@ -102,7 +101,7 @@
   }
 
   & .vd-storylist[data-layout] .vd-byline {
-    margin: 12px 0 0;
+    margin: 0 0 12px;
     color: var(--vd-accent);
     text-align: left;
     opacity: 1;

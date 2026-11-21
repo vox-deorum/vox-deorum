@@ -239,6 +239,21 @@ describe('stock zone posture triggers', () => {
       expect(value(result, 'enemy-front-posture-offensive', 'city/20', 'values.posture')).toBe('Steamroll');
     });
 
+    it('should rank the same offensive higher at a closer city of the same enemy', async () => {
+      const near = city(16, 1, 'Near City');
+      const far = city(110, 1, 'Far City');
+      const zones = [near, far].map(({ subjectID, values }) => zone({
+        zoneID: subjectID, city: String(values.Name), domain: 'Land', posture: 'Steamroll', previousPosture: 'Attrition',
+      }));
+      const result = await check(fixture({ cities: [home, near, far], zones, state: 'war' }));
+      const nearReport = audit(result, 'enemy-front-posture-offensive', 'city/16');
+      const farReport = audit(result, 'enemy-front-posture-offensive', 'city/110');
+
+      expect(nearReport).toMatchObject({ outcome: 'fired', tier: 'notable' });
+      expect(farReport).toMatchObject({ outcome: 'fired', tier: 'notable' });
+      expect(nearReport?.importance).toBeGreaterThan(farReport!.importance!);
+    });
+
     it('should report a sea zone independently', async () => {
       const sea = zone({
         zoneID: -20, city: 'Persepolis', domain: 'Sea', posture: 'Surgical City Strike', previousPosture: 'Exploit Flanks',

@@ -38,7 +38,7 @@
       "cityName": "event.city.name"
     },
     "tier": "filler",
-    "adjust": "-5",
+    "adjust": "event.stake.building",
     "tags": ["cities", "domestic"]
   },
   {
@@ -60,7 +60,7 @@
       "currency": "event.knows('isGoldPurchase') && event.isGoldPurchase === true ? 'gold' : 'faith'"
     },
     "tier": "filler",
-    "adjust": "5",
+    "adjust": "event.stake.building",
     "tags": ["cities", "domestic"]
   },
   {
@@ -91,7 +91,7 @@
       "min": 3
     },
     "tier": "notable",
-    "adjust": "(40 + 10 * count) - 60",
+    "adjust": "10 * (count - 3)",
     "tags": ["cities", "domestic"]
   },
   {
@@ -109,7 +109,7 @@
       "distance": "city.knows('distance') && city.distance.knows('own') ? city.distance.own : null"
     },
     "tier": "notable",
-    "adjust": "(distance === null ? 55 : Math.max(45, 75 - 2 * distance)) - 60",
+    "adjust": "city.stake.place",
     "tags": ["cities", "military", "international"]
   },
   {
@@ -129,8 +129,8 @@
       "capital": "event.knows('isCapital') ? event.isCapital : null",
       "conquest": "event.knows('isConquest') ? event.isConquest : null"
     },
-    "tier": "notable",
-    "adjust": "(gained ? (capital ? 90 : 78) : (capital ? 98 : 92)) - 60",
+    "tier": "!gained || capital ? 'crisis' : 'major'",
+    "adjust": "!gained && capital ? 5 : 0",
     "urgent": "event.knows('oldOwner') && event.oldOwner.self === true && event.knows('isConquest') && event.isConquest === true",
     "tags": ["cities", "military"]
   },
@@ -163,6 +163,7 @@
       "faminePopulation": "city.unhappiness.famine"
     },
     "tier": "notable",
+    "adjust": "city.stake.place",
     "tags": ["cities", "domestic"]
   },
   {
@@ -180,8 +181,7 @@
       "newOwner": "event.newOwner.name",
       "gained": "event.newOwner.self === true"
     },
-    "tier": "notable",
-    "adjust": "(gained ? 75 : 90) - 60",
+    "tier": "gained ? 'major' : 'crisis'",
     "tags": ["cities", "politics"]
   },
   {
@@ -199,8 +199,7 @@
       "population": "city.population",
       "cityName": "city.name"
     },
-    "tier": "notable",
-    "adjust": "(milestone === 'metropolis' ? 55 : 40) - 60",
+    "tier": "milestone === 'metropolis' ? 'notable' : 'routine'",
     "tags": ["cities", "domestic"]
   },
   {
@@ -216,8 +215,7 @@
       "liberated": "event.liberatedPlayer.name",
       "returned": "event.liberatedPlayer.self"
     },
-    "tier": "notable",
-    "adjust": "(returned ? 85 : 75) - 60",
+    "tier": "returned ? 'crisis' : 'major'",
     "urgent": "returned",
     "tags": ["politics", "military", "international"]
   },
@@ -233,6 +231,7 @@
       "pillagedPopulation": "city.unhappiness.pillaged"
     },
     "tier": "notable",
+    "adjust": "city.stake.place",
     "tags": ["cities", "domestic"]
   },
   {
@@ -253,7 +252,7 @@
       "maxWallStrength": "city.maxHitPoints"
     },
     "tier": "notable",
-    "adjust": "(55 + 45 * damage) - 60",
+    "adjust": ["city.stake.place", "50 * (damage - 0.25)"],
     "urgent": "damage >= 0.5",
     "tags": ["cities", "military", "domestic"]
   },
@@ -272,7 +271,7 @@
       "distance": "event.city.distance.capital"
     },
     "tier": "notable",
-    "adjust": "(50 + Math.min(20, event.city.distance.capital - nearby)) - 60",
+    "adjust": "Math.min(20, distance - nearby)",
     "tags": ["cities", "domestic"]
   },
   {
@@ -296,7 +295,7 @@
       "civilization": "event.city.owner.name"
     },
     "tier": "filler",
-    "adjust": "-10",
+    "adjust": "event.stake.place",
     "tags": ["cities", "international"]
   },
   {
@@ -320,7 +319,7 @@
       "currency": "event.knows('isGoldPurchase') && event.isGoldPurchase === true ? 'gold' : 'faith'"
     },
     "tier": "filler",
-    "adjust": "-5",
+    "adjust": "event.stake.place",
     "tags": ["cities", "international"]
   },
   {
@@ -337,7 +336,7 @@
       "distance": "event.distance.own"
     },
     "tier": "notable",
-    "adjust": "(90 - 10 * distance) - 60",
+    "adjust": "5 * (adjacent - distance)",
     "urgent": "distance <= 2"
   },
   {
@@ -354,7 +353,7 @@
       "distance": "city.distance.own"
     },
     "tier": "notable",
-    "adjust": "(70 - 3 * distance) - 60"
+    "adjust": "city.stake.place"
   },
   {
     "id": "occupied-city-resists",
@@ -372,7 +371,7 @@
       "unrestPoints": "city.knows('happinessDelta') && Number.isFinite(city.happinessDelta) ? city.happinessDelta : null"
     },
     "tier": "notable",
-    "adjust": "(Math.min(70, 45 + 5 * turns)) - 60",
+    "adjust": ["city.stake.place", "Math.min(10, 2 * turns)"],
     "tags": ["cities", "domestic"]
   },
   {
@@ -387,7 +386,6 @@
       "cityName": "event.city.name"
     },
     "tier": "routine",
-    "adjust": "5",
     "tags": ["cities", "domestic"]
   },
   {
@@ -403,8 +401,8 @@
     "values": {
       "lost": "city.before.population - city.population"
     },
-    "tier": "notable",
-    "adjust": "(30 + 10 * lost) - 60"
+    "tier": "routine",
+    "adjust": "10 * lost"
   },
   {
     "id": "starvation-without-siege",
@@ -423,7 +421,7 @@
       "shortfall": "-city.foodPerTurn"
     },
     "tier": "notable",
-    "adjust": "(50 + Math.min(30, 10 * shortfall)) - 60",
+    "adjust": ["city.stake.place", "Math.min(20, 5 * shortfall)"],
     "tags": ["cities", "domestic"]
   },
   {

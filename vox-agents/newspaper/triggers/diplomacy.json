@@ -27,7 +27,7 @@
       "ally": "pair.other.name"
     },
     "tier": "notable",
-    "adjust": "5",
+    "adjust": "pair.stake.relation",
     "tags": ["politics", "international"]
   },
   {
@@ -44,7 +44,7 @@
       "ally": "pair.other.name"
     },
     "tier": "notable",
-    "adjust": "5",
+    "adjust": "pair.stake.relation",
     "tags": ["politics", "international"]
   },
   {
@@ -60,6 +60,7 @@
       "civilization": "player.name"
     },
     "tier": "notable",
+    "adjust": "player.stake.relation",
     "tags": ["politics", "international"]
   },
   {
@@ -78,8 +79,7 @@
       "stranger": "players.filter(p => !p.self && p.knows('teamId') && p.teamId === otherTeam && p.knows('name')).map(p => p.name).join(' and ')",
       "metMajor": "players.some(p => !p.self && p.knows('teamId') && p.teamId == otherTeam && p.knows('major') && p.major === true)"
     },
-    "tier": "notable",
-    "adjust": "(metMajor ? 70 : 45) - 60",
+    "tier": "metMajor ? 'notable' : 'routine'",
     "tags": ["politics", "international"]
   },
   {
@@ -97,7 +97,7 @@
       "withEnemy": "(pair.a.knows('enemy') && pair.a.enemy === true) || (pair.b.knows('enemy') && pair.b.enemy === true)"
     },
     "tier": "notable",
-    "adjust": "(withEnemy ? 70 : withFriend ? 60 : 50) - 60",
+    "adjust": "pair.stake.relation",
     "tags": ["politics", "international"]
   },
   {
@@ -115,7 +115,7 @@
       "withEnemy": "(pair.a.knows('enemy') && pair.a.enemy === true) || (pair.b.knows('enemy') && pair.b.enemy === true)"
     },
     "tier": "notable",
-    "adjust": "(withEnemy ? 60 : withFriend ? 55 : 45) - 60",
+    "adjust": "pair.stake.relation",
     "tags": ["politics", "international"]
   },
   {
@@ -134,7 +134,7 @@
       "friend": "pair.other.name"
     },
     "tier": "notable",
-    "adjust": "-5",
+    "adjust": "pair.stake.relation",
     "tags": ["politics", "international"]
   },
   {
@@ -150,6 +150,7 @@
       "friend": "pair.other.name"
     },
     "tier": "notable",
+    "adjust": "pair.stake.relation",
     "tags": ["politics", "international"]
   },
   {
@@ -165,6 +166,7 @@
       "vassal": "player.name"
     },
     "tier": "major",
+    "adjust": "player.stake.relation",
     "tags": ["politics", "international"]
   },
   {
@@ -180,6 +182,7 @@
       "vassal": "player.name"
     },
     "tier": "major",
+    "adjust": "player.stake.relation",
     "tags": ["politics", "international"]
   },
   {
@@ -199,6 +202,7 @@
       "civilization": "player.name"
     },
     "tier": "notable",
+    "adjust": "player.stake.relation",
     "tags": ["politics", "international"]
   },
   {
@@ -217,6 +221,7 @@
       "capital": "player.knows('capital') && player.capital.knows('name') ? player.capital.name : null"
     },
     "tier": "routine",
+    "adjust": "player.stake.relation",
     "tags": ["politics", "international"]
   },
   {
@@ -236,6 +241,7 @@
       "capital": "player.knows('capital') && player.capital.knows('name') ? player.capital.name : null"
     },
     "tier": "routine",
+    "adjust": "player.stake.relation",
     "tags": ["politics", "international"]
   },
   {
@@ -256,8 +262,7 @@
       "toGives": "event.knows('toGives') && Array.isArray(event.toGives) ? event.toGives.join(', ') : null",
       "ours": "event.fromPlayer.self || event.toPlayer.self"
     },
-    "tier": "notable",
-    "adjust": "(ours ? 65 : 50) - 60",
+    "tier": "ours ? 'notable' : 'routine'",
     "tags": ["politics", "military", "international"]
   },
   {
@@ -277,8 +282,7 @@
       "toGives": "event.knows('toGives') && Array.isArray(event.toGives) ? event.toGives.join(', ') : null",
       "ours": "event.fromPlayer.self || event.toPlayer.self"
     },
-    "tier": "notable",
-    "adjust": "(ours ? 70 : 55) - 60",
+    "tier": "ours ? 'major' : 'notable'",
     "tags": ["politics", "military", "international"]
   },
   {
@@ -294,7 +298,6 @@
       "master": "player.name"
     },
     "tier": "crisis",
-    "adjust": "-5",
     "tags": ["politics", "international"]
   },
   {
@@ -312,6 +315,7 @@
       "civilization": "player.name"
     },
     "tier": "notable",
+    "adjust": "player.stake.relation",
     "tags": ["politics", "international"]
   }
 ]

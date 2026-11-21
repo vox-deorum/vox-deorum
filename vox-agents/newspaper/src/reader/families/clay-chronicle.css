@@ -18,7 +18,6 @@
     font-size: calc(clamp(28px, 4.8cqi, 56px) * var(--vd-text-scale));
     letter-spacing: -.025em;
   }
-  & .vd-motto { grid-column: 1; }
   & .vd-masthead .vd-ornament {
     grid-area: 1 / 2;
     align-self: center;

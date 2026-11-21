@@ -13,7 +13,6 @@
       "deficit": "-self.goldPerTurn"
     },
     "tier": "notable",
-    "adjust": "-5",
     "tags": ["politics", "domestic"]
   },
   {
@@ -30,7 +29,6 @@
       "gain": "self.gold - self.before.gold"
     },
     "tier": "routine",
-    "adjust": "5",
     "repeat": "once",
     "tags": ["politics", "domestic"]
   },
@@ -51,7 +49,6 @@
       "turnsLeft": "Math.floor(self.gold / -self.goldPerTurn)"
     },
     "tier": "routine",
-    "adjust": "5",
     "tags": ["economy", "domestic"]
   },
   {
@@ -68,8 +65,7 @@
       "deficit": "-self.goldPerTurn",
       "turnsLeft": "Math.floor(self.gold / -self.goldPerTurn)"
     },
-    "tier": "notable",
-    "adjust": "(turnsLeft <= recent ? 70 : 60) - 60",
+    "tier": "turnsLeft <= recent ? 'major' : 'notable'",
     "tags": ["economy", "domestic"]
   },
   {

@@ -12,8 +12,7 @@
       "cityState": "event.cityState",
       "influence": "event.knows('influenceChange') ? event.influenceChange : null"
     },
-    "tier": "notable",
-    "adjust": "(success ? 55 : 45) - 60",
+    "tier": "success ? 'notable' : 'routine'",
     "tags": ["politics", "international"]
   },
   {
@@ -30,7 +29,7 @@
       "capital": "player.knows('capital') && player.capital.knows('name') ? player.capital.name : null"
     },
     "tier": "routine",
-    "adjust": "5",
+    "adjust": "player.stake.relation",
     "tags": ["politics", "international"]
   },
   {
@@ -45,8 +44,7 @@
       "result": "event.spyResult",
       "cityName": "event.knows('cityName') ? event.cityName : null"
     },
-    "tier": "notable",
-    "adjust": "(event.spyResult === 'Killed' ? 70 : 60) - 60",
+    "tier": "event.spyResult === 'Killed' ? 'major' : 'notable'",
     "tags": ["politics", "international"]
   },
   {
@@ -63,8 +61,7 @@
       "target": "event.knows('targetPlayer') && event.targetPlayer.knows('name') ? event.targetPlayer.name : null",
       "possibleTechnology": "event.knows('tech') && typeof event.tech === 'string' ? event.tech : null"
     },
-    "tier": "notable",
-    "adjust": "(possibleTechnology ? 55 : 45) - 60",
+    "tier": "possibleTechnology ? 'notable' : 'routine'",
     "tags": ["politics", "international"]
   },
   {
@@ -79,8 +76,7 @@
       "result": "event.spyResult",
       "cityName": "event.knows('cityName') ? event.cityName : null"
     },
-    "tier": "notable",
-    "adjust": "(result === 'KilledNotIdentified' ? 60 : 50) - 60",
+    "tier": "result === 'KilledNotIdentified' ? 'notable' : 'routine'",
     "tags": ["politics", "international"]
   },
   {
@@ -97,8 +93,7 @@
       "target": "event.knows('targetPlayer') && event.targetPlayer.knows('name') ? event.targetPlayer.name : null",
       "possibleTechnology": "event.knows('tech') && typeof event.tech === 'string' ? event.tech : null"
     },
-    "tier": "notable",
-    "adjust": "(result === 'Identified' ? 60 : 70) - 60",
+    "tier": "result === 'Identified' ? 'notable' : 'major'",
     "tags": ["politics", "international"]
   },
   {
@@ -116,7 +111,6 @@
       "target": "event.knows('targetPlayer') && event.targetPlayer.knows('name') ? event.targetPlayer.name : null"
     },
     "tier": "notable",
-    "adjust": "5",
     "tags": ["politics", "international"]
   },
   {
@@ -133,6 +127,7 @@
       "civilization": "city.owner.name"
     },
     "tier": "routine",
+    "adjust": "city.stake.place",
     "tags": ["politics", "international"]
   },
   {
@@ -148,6 +143,7 @@
       "civilization": "player.name"
     },
     "tier": "routine",
+    "adjust": "player.stake.relation",
     "tags": ["politics", "international"]
   }
 ]

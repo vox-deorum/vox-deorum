@@ -83,8 +83,7 @@
     font: bold calc(clamp(21px, 2.3cqi, 28px) * var(--vd-text-scale)) / 1.15 var(--vd-font-display);
     letter-spacing: normal;
   }
-  & .vd-story--brief .vd-deck { margin: 0 0 8px; }
-  & .vd-story--brief .vd-byline { margin: 8px 0 0; }
+  & .vd-story--brief .vd-deck, & .vd-story--brief .vd-byline { margin: 0 0 8px; }
   & .vd-evidence thead { color: var(--teletext-amber); background: #182332; }
   & .vd-evidence td { color: var(--vd-accent); font-size: calc(clamp(18px, 2cqi, 24px) * var(--vd-text-scale)); }
 }

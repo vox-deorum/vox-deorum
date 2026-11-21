@@ -15,7 +15,6 @@
   }
   & .vd-ornament { order: -1; width: clamp(25px, 4.5cqi, 48px); margin: 0; }
   & .vd-title { font-size: calc(clamp(24px, 4.4cqi, 52px) * var(--vd-text-scale)); font-weight: 700; }
-  & .vd-motto { flex-basis: 100%; }
   & .vd-tabs { border-block: 1px solid var(--vd-ink); }
   & .vd-tab { padding-block: 5px; font-variant: small-caps; }
   & .vd-storylist .vd-story--lead .vd-headline {
@@ -33,13 +32,12 @@
     font-size: calc(clamp(40px, 7.3cqi, 88px) * var(--vd-text-scale));
   }
   & .vd-storylist .vd-story--lead :is(.vd-deck, .vd-byline) {
+    margin: 0 auto .65em;
     border: 0;
     padding: 0;
     text-align: center;
     text-wrap: balance;
   }
-  & .vd-storylist .vd-story--lead .vd-deck { margin: 0 auto .65em; }
-  & .vd-storylist .vd-story--lead .vd-byline { margin: .65em auto 0; }
   & .vd-story-art { margin: 8px 0 18px; }
   & .vd-story-art img { height: auto; max-height: 370px; object-fit: contain; }
   & .vd-story--lead .vd-story-content:has(> .vd-story-art) {

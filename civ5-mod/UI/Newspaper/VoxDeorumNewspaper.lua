@@ -486,12 +486,9 @@ local function openArticle(target)
 	Controls.DetailScroll:SetSizeVal(contentWidth, detailHeight)
 	Controls.DetailBar:SetSizeY(math.max(1, detailHeight - 42))
 	local textWidth = math.max(1, contentWidth - 20)
-	local y = 4
+	local y = addTextBlock("DeckInstance", Controls.DetailContent, 10, 4, textWidth, inlineToText(item.byline))
 	for _, block in ipairs(item.body or {}) do
 		y = addTextBlock("TextInstance", Controls.DetailContent, 10, y, textWidth, inlineToText(block)) + 4
-	end
-	if type(item.byline) == "table" and #item.byline > 0 then
-		y = addTextBlock("DeckInstance", Controls.DetailContent, 10, y, textWidth, inlineToText(item.byline))
 	end
 	y = addTextBlock("TextInstance", Controls.DetailContent, 10, y, textWidth, inlineToText(item.sourceNote))
 	y = addLinkRow(Controls.DetailContent, 10, y + 4, textWidth, collectItemLinks(item))
@@ -819,11 +816,9 @@ local function renderTextItem(item, page, lead, x, y, width)
 	local headline = inlineToText(item.headline)
 	y = addTextBlock("HeadlineInstance", Controls.PageContent, x, y, width, headline)
 	y = addTextBlock("DeckInstance", Controls.PageContent, x, y, width, inlineToText(item.subheadline))
+	y = addTextBlock("DeckInstance", Controls.PageContent, x, y, width, inlineToText(item.byline))
 	for _, block in ipairs(item.body or {}) do
 		y = addTextBlock("TextInstance", Controls.PageContent, x, y, width, inlineToText(block)) + 4
-	end
-	if type(item.byline) == "table" and #item.byline > 0 then
-		y = addTextBlock("DeckInstance", Controls.PageContent, x, y, width, inlineToText(item.byline)) + 4
 	end
 	if lead and page.layout == "analysis" and type(item.evidenceTable) == "table" then
 		y = renderTextEvidence(item.evidenceTable, x, y, width)
@@ -838,15 +833,20 @@ local function renderTextItem(item, page, lead, x, y, width)
 	return y + 8
 end
 
--- Draw every item on the active page from structured issue data.
+-- Draw the active page and its closing motto from structured issue data.
 local function renderTextPage(page)
 	local y = 12
+	local width = m_contentWidth - 32
 	for index, itemId in ipairs(page.itemIds or {}) do
 		local item = m_itemsById[itemId]
 		if item ~= nil then
-			y = renderTextItem(item, page, index == 1, PAGE_TEXT_LEFT, y, (m_contentWidth - 32))
-			y = addRule(Controls.PageContent, PAGE_TEXT_LEFT, y, (m_contentWidth - 32))
+			y = renderTextItem(item, page, index == 1, PAGE_TEXT_LEFT, y, width)
+			y = addRule(Controls.PageContent, PAGE_TEXT_LEFT, y, width)
 		end
+	end
+	local publication = m_issue.publication
+	if type(publication) == "table" then
+		y = addTextBlock("DeckInstance", Controls.PageContent, PAGE_TEXT_LEFT, y, width, publication.motto)
 	end
 	Controls.PageContent:SetSizeVal(m_contentWidth, math.max(1, y + 12))
 end

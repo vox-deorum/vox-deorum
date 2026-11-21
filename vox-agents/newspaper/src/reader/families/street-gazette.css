@@ -36,7 +36,7 @@
     border: 0;
     text-align: center;
   }
-  & .vd-storylist[data-layout] .vd-story--lead .vd-byline { margin: .55em 0 0; text-align: center; }
+  & .vd-storylist[data-layout] .vd-story--lead .vd-byline { margin: 0 0 .55em; text-align: center; }
   & .vd-story--lead .vd-story-content > .vd-prose {
     max-width: 64ch;
     margin-inline: auto;
@@ -51,8 +51,7 @@
     margin-bottom: .2em;
     font-size: calc(clamp(21px, 2.7cqi, 29px) * var(--vd-text-scale));
   }
-  & .vd-story--brief .vd-deck { margin: 0 0 .4em; }
-  & .vd-story--brief .vd-byline { margin: .4em 0 0; }
+  & .vd-story--brief .vd-deck, & .vd-story--brief .vd-byline { margin: 0 0 .4em; }
   & .vd-evidence { border-block: 3px double var(--vd-ink); padding-block: .5em; }
   & .vd-evidence caption { margin-bottom: .5em; }
   & .vd-evidence th, & .vd-evidence td { padding-block: .25em; }

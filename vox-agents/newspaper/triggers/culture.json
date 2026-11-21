@@ -15,7 +15,7 @@
       "tourismCultureRatio": "(() => { const c = player.knows('culturalInfluenceChanges') ? player.culturalInfluenceChanges.find(c => c.direction === 'incoming' && c.reachedInfluential === true) : undefined; return c && c.knows('tourismCultureRatio') ? c.tourismCultureRatio : null; })()"
     },
     "tier": "major",
-    "adjust": "5",
+    "adjust": "player.stake.relation",
     "tags": ["culture", "international"]
   },
   {
@@ -34,6 +34,7 @@
       "tourismCultureRatio": "(() => { const c = player.knows('culturalInfluenceChanges') ? player.culturalInfluenceChanges.find(c => c.direction === 'outgoing' && c.reachedInfluential === true) : undefined; return c && c.knows('tourismCultureRatio') ? c.tourismCultureRatio : null; })()"
     },
     "tier": "major",
+    "adjust": "player.stake.relation",
     "tags": ["culture", "international"]
   },
   {
@@ -51,7 +52,7 @@
       "percentage": "(() => { const c = player.culturalInfluenceChanges[changeIndex]; return c ? c.percentage : null; })()"
     },
     "tier": "major",
-    "adjust": "-5",
+    "adjust": "player.stake.relation",
     "tags": ["culture", "international"]
   },
   {
@@ -69,7 +70,7 @@
       "percentage": "(() => { const c = player.culturalInfluenceChanges[changeIndex]; return c ? c.percentage : null; })()"
     },
     "tier": "notable",
-    "adjust": "5",
+    "adjust": "player.stake.relation",
     "tags": ["culture", "international"]
   },
   {
@@ -89,7 +90,7 @@
       "tourismCultureRatio": "(() => { const c = player.knows('culturalInfluenceChanges') ? player.culturalInfluenceChanges.find(c => c.direction === 'incoming' && c.trendChanged === true && (c.trend === 'Rising' || c.trend === 'Falling')) : undefined; return c && c.knows('tourismCultureRatio') ? c.tourismCultureRatio : null; })()"
     },
     "tier": "routine",
-    "adjust": "5",
+    "adjust": "player.stake.relation",
     "tags": ["culture", "international"]
   },
   {
@@ -109,7 +110,7 @@
       "tourismCultureRatio": "(() => { const c = player.knows('culturalInfluenceChanges') ? player.culturalInfluenceChanges.find(c => c.direction === 'outgoing' && c.trendChanged === true && (c.trend === 'Rising' || c.trend === 'Falling')) : undefined; return c && c.knows('tourismCultureRatio') ? c.tourismCultureRatio : null; })()"
     },
     "tier": "routine",
-    "adjust": "5",
+    "adjust": "player.stake.relation",
     "tags": ["culture", "international"]
   },
   {
@@ -124,7 +125,7 @@
     ],
     "values": { "wonder": "city.built.find(b => city.wonders.includes(b.building)).building" },
     "tier": "notable",
-    "adjust": "(55) - 60"
+    "adjust": "city.owner.stake.relation"
   },
   {
     "id": "foreign-wonder-completed",
@@ -142,7 +143,7 @@
       "cityName": "city.name"
     },
     "tier": "notable",
-    "adjust": "-5",
+    "adjust": "city.owner.stake.relation",
     "tags": ["culture", "international"]
   },
   {
@@ -160,8 +161,8 @@
       "civilization": "event.player.name",
       "ours": "event.player.self === true"
     },
-    "tier": "notable",
-    "adjust": "(ours ? 60 : 50) - 60",
+    "tier": "ours ? 'notable' : 'routine'",
+    "adjust": "event.player.stake.relation",
     "tags": ["politics", "domestic"]
   },
   {
@@ -180,8 +181,8 @@
       "ours": "event.player.self === true",
       "killer": "event.knows('attackingPlayer') && event.attackingPlayer.knows('name') ? event.attackingPlayer.name : null"
     },
-    "tier": "notable",
-    "adjust": "(ours ? 60 : 50) - 60",
+    "tier": "ours ? 'notable' : 'routine'",
+    "adjust": "event.player.stake.relation",
     "tags": ["politics", "military", "international"]
   },
   {
@@ -199,8 +200,8 @@
       "civilization": "event.player.name",
       "ours": "event.player.self === true"
     },
-    "tier": "notable",
-    "adjust": "(ours ? 55 : 45) - 60",
+    "tier": "ours ? 'notable' : 'routine'",
+    "adjust": "event.player.stake.relation",
     "tags": ["politics"]
   },
   {
@@ -219,7 +220,7 @@
       "total": "city.greatWorkCount"
     },
     "tier": "notable",
-    "adjust": "(40 + 10 * added) - 60",
+    "adjust": "Math.min(15, 5 * added)",
     "tags": ["cities", "domestic"]
   },
   {
@@ -238,7 +239,7 @@
       "total": "city.greatWorkCount"
     },
     "tier": "notable",
-    "adjust": "(45 + 10 * lost) - 60",
+    "adjust": "Math.min(15, 5 * lost)",
     "tags": ["cities", "domestic"]
   },
   {
@@ -255,7 +256,6 @@
       "wonder": "event.building"
     },
     "tier": "major",
-    "adjust": "-5",
     "tags": ["cities", "domestic"]
   },
   {
@@ -273,8 +273,7 @@
       "tourism": "player.tourismPerTurn",
       "tied": "players.some(p => p.id !== player.id && p.knows('major') && p.major === true && p.knows('tourismPerTurn') && p.tourismPerTurn === player.tourismPerTurn)"
     },
-    "tier": "notable",
-    "adjust": "(player.self ? 65 : 50) - 60",
+    "tier": "player.self ? 'notable' : 'routine'",
     "tags": ["culture", "international"]
   }
 ]

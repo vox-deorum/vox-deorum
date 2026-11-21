@@ -121,11 +121,10 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('stored newspaper
     }
   }, 60_000);
 
-  it('should draw stored masthead and place the byline after the article prose', async context => {
+  it('should put bylines before the prose and close each section with the saved motto', async context => {
     if (!browser) { context.skip(unavailable); return; }
     const issue = createNewspaperIssue();
     issue.publication.motto = 'All power to the Party';
-    issue.items[0].subheadline = [{ type: 'text', text: 'A report from the provinces' }];
     issue.items[0].byline = [{ type: 'text', text: 'By the provincial desk' }];
     const page = await browser.newPage();
     try {
@@ -134,9 +133,21 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('stored newspaper
         viewportWidth: 1280, viewportHeight: 720, paperWidth: 1200, displayScale: 1,
         textScale: 1, rasterScale: 1, maxTextureWidth: 4096, maxTextureHeight: 2048, scrollbarGutter: 16,
       }), issue);
-      expect(await page.locator('.vd-masthead .vd-title + .vd-motto').textContent()).toBe(issue.publication.motto);
-      expect(await page.locator('.vd-prose ~ .vd-byline').first().textContent())
-        .toBe('By the provincial desk');
+      expect(await page.locator('.vd-header .vd-motto').count()).toBe(0);
+      for (const section of issue.pages) {
+        await page.evaluate(pageId => window.voxDeorumNewspaperExport!.selectPage(pageId), section.id);
+        const active = page.locator('.vd-page:not([hidden])');
+        const motto = active.locator('.vd-motto');
+        expect(await motto.textContent()).toBe(issue.publication.motto);
+        const stories = await active.locator('.vd-storylist').boundingBox();
+        expect((await motto.boundingBox())!.y).toBeGreaterThanOrEqual(stories!.y + stories!.height);
+        if (section === issue.pages[0]) {
+          const lead = active.locator('.vd-story--lead');
+          const byline = (await lead.locator('.vd-byline').boundingBox())!;
+          const prose = (await lead.locator('.vd-prose').boundingBox())!;
+          expect(byline.y + byline.height).toBeLessThanOrEqual(prose.y);
+        }
+      }
     } finally {
       await page.close();
     }

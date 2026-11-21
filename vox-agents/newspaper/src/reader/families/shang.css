@@ -29,7 +29,6 @@
     letter-spacing: .11em;
     text-transform: uppercase;
   }
-  & .vd-motto { color: var(--rim); }
   & .vd-tabs { border-top: 1px solid var(--rim); border-bottom: none; }
   & .vd-tab { color: var(--vd-paper); }
   &[data-mode="reader"] .vd-tab[aria-selected="true"] { color: #f4d498; }

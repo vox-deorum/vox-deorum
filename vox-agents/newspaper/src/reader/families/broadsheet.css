@@ -60,7 +60,6 @@
 }
 
 .vd-newspaper[data-design="broadsheet"] .vd-motto {
-  margin-top: 4px;
   color: var(--vd-ink);
   font-size: calc(17px * var(--vd-text-scale));
 }

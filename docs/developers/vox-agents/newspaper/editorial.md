@@ -42,7 +42,7 @@ A template names one or more rules in `triggers`. All must fire for the same sub
 | `names` | Optional list of placeholders that display names, such as `["cityName", "player.leader"]` |
 | `merge` | Optional rules and prose for combining selected stories |
 
-`id`, `triggers`, `tags`, `weight` and `variants` are required. Each variant requires `id`, `headline`, `body` and `weight`; `subheadline`, `byline`, `when` and `links` are optional. The reader draws the subheadline under the headline and the byline after the body, so an opinion piece or a signed report can carry both.
+`id`, `triggers`, `tags`, `weight` and `variants` are required. Each variant requires `id`, `headline`, `body` and `weight`; `subheadline`, `byline`, `when` and `links` are optional. The subheadline and byline appear before the article body.
 
 The [news writing rules](writing.md) show how to turn visible game facts into entertaining stories, imagine what the news means to people in the world, and write in the chosen voice, stance, and genre.
 
@@ -143,7 +143,7 @@ The title, motto, and labels can use [terms](triggers/constants.md#terms) such a
 
 With no winning rule, the design supplies the title and motto. For `civilizationTitles`, the editor tries the exact recorded name, then `"*"`, then `title`, skipping any civilization title with unresolved terms. An overlay can set `civilizationTitles` to `null` to use only the base title. An unresolved placeholder in the final design title or motto makes the design ineligible, and an empty resolved base title uses `defaults.publicationTitle`.
 
-The issue saves the chosen title, motto, and labels. Editor credits use that title, and article bylines stay with their stories. The decision records the winning rule and its evidence. To preview rules, generate an issue in [Recorded replay](replay.md); static Mockups show the design fallbacks.
+The issue saves the chosen title, motto, and labels. The motto appears below the stories on each section page. The decision records the winning rule and its evidence. To preview rules, generate an issue in [Recorded replay](replay.md); static Mockups show the design fallbacks.
 
 ## Developments, selection, and continuity
 
