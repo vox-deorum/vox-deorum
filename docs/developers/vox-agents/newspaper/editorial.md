@@ -131,7 +131,7 @@ For a single group, prose can print `{{key}}` and `{{count}}`. Expressions can r
 
 The front page is unconditional. Each design needs one unconditional ordinary layout and one unconditional breaking layout, both with a constant positive weight. Other pages can use `when`; designs and extra layouts can also adjust their weights. Section labels must name configured pages, and fonts and ornaments are validated against registered renderer assets, including assets declared by built-in designs.
 
-The stock designs choose by `self.era`. `victorian` runs from the Classical through Future eras, `modern` from Modern through Future, and `oral-accounts` is the fallback for Ancient or unknown eras. Published issues save their presentation settings and refer to artwork by its bundled asset ID.
+The stock designs choose by `self.era`. `victorian` runs from the Classical through Future eras, `wire` from Modern through Future, and `oral-accounts` is the fallback for Ancient or unknown eras. Published issues save their presentation settings and refer to artwork by its bundled asset ID.
 
 ### Design assets
 
@@ -141,7 +141,7 @@ Define assets in built-in `newspaper/designs/*.json` files. Replay overlays can 
 
 To add a local asset:
 
-1. Put the file under `vox-agents/newspaper/public/assets/` and keep its path relative, such as `assets/images/new-illustration.png`.
+1. Put the file under `vox-agents/newspaper/public/assets/designs/<design id>/` and keep its path relative, such as `assets/designs/victorian/new-illustration.png`.
 2. Add its `assetDefinitions` entry to the matching built-in design file. Derived IDs must be unique, paths must stay under `assets/` without dot segments or URL syntax, and the metadata must be complete.
 3. Reference the derived ID in `presentation.assets.ornamentAssetId` for ornaments or `image.assetId` on an illustrated article.
 4. Rebuild the reader with `npm run build:newspaper -w vox-agents` so the browser bundles the design JSON and copies the asset.

@@ -1,14 +1,22 @@
 # Newspaper reader assets
 
-The registry in `vox-agents/src/newspaper/renderer/assets.ts` holds fonts and vote icons shared by every design. Illustrations and ornaments are declared by the built-in files under `vox-agents/newspaper/designs/`. The renderer registers each design-local definition as `<design id>.<local id>`. Vite copies this directory into the compiled reader.
+The registry in `vox-agents/src/newspaper/renderer/assets.ts` holds shared fonts and per-family vote icons. Built-in designs under `vox-agents/newspaper/designs/` declare their own ornaments and illustrations, and the renderer registers each design-local definition as `<design id>.<local id>`. Vite copies this directory into the compiled reader.
 
-The thirteen font faces come from the prototype assets. Bodoni Moda, Libre Caslon Text, Inter, and UnifrakturMaguntia retain their SIL Open Font License texts in `licenses/`.
+Folders group assets by owner:
 
-The harbour and container-port illustrations were generated with image_gen for the newspaper prototypes. The Victorian scrollwork follows the prototype ornament. The vote icons provide separate neutral and selected states for each design. These project artwork assets follow the repository license.
+| Folder | Owner | Contents |
+| --- | --- | --- |
+| `fonts/`, `licenses/` | Shared | Font faces and their OFL license texts for Bodoni Moda, Libre Caslon Text, Inter, UnifrakturMaguntia, Cinzel, and Cardo |
+| `families/<family>/` | Renderer family | Vote icons: `vote-up-neutral.svg`, `vote-up-selected.svg`, `vote-down-neutral.svg`, `vote-down-selected.svg`, registered as `vote-<family>-<direction>-<state>` |
+| `designs/<design id>/` | One design | Ornaments and illustrations used by that design |
+
+Cinzel supplies weights 400, 700 and 900. Cardo supplies 400, 700 and 400 italic. Both come from Google Fonts and keep their OFL texts in `licenses/` as `cinzel-OFL.txt` and `cardo-OFL.txt`. The other font families retain their existing license files.
+
+The generated illustrations are `designs/victorian/harbour.png` (`victorian.harbour`) and `designs/wire/port.png` (`wire.port`). The authored SVG ornaments are the Greek key band in `designs/oral-accounts/meander.svg` (`oral-accounts.meander`) and the redrawn scrollwork cartouche in `designs/victorian/scrollwork.svg` (`victorian.scrollwork`). Each renderer family owns its neutral and selected vote icons. These project artwork assets follow the repository license. Family stylesheets draw decorations as pseudo-elements with inline SVG masks, so they add no asset loads.
 
 To add an illustration or ornament:
 
-1. Add the file under `public/assets/` and use its path relative to `public/`.
+1. Add the file under `public/assets/designs/<design id>/` and use its path relative to `public/`, such as `assets/designs/victorian/new-illustration.png`.
 2. Add an `assetDefinitions` entry to the design that owns it under `vox-agents/newspaper/designs/`. Use `kind` `image` or `ornament` and include the media type, both dimensions, license, and attribution. Authored definitions belong to built-in designs.
 3. Reference the derived ID, such as `victorian.scrollwork`, from the design's presentation or, for an illustration, an article.
 4. Rebuild the reader with `npm run build:newspaper -w vox-agents`.

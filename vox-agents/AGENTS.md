@@ -34,6 +34,7 @@ Backend LLM agent framework. For UI development, see `ui/AGENTS.md`.
 | `npm run test:game` | Live Civilization V tests |
 | `npm run test:obs` | Live OBS tests |
 | `npm run test:claude-code` | Live check of Claude Code native tools against the real CLI |
+| `npm run test:newspaper:browser` | Newspaper reader and export tests in an installed browser |
 | `npm run test:coverage` | Coverage report for the mock tier |
 | `npm run test:ui` | Vitest browser UI |
 
@@ -44,6 +45,7 @@ Backend LLM agent framework. For UI development, see `ui/AGENTS.md`.
 - **Game** (`tests/live/game/**`): Live Civilization V tier. Launches Civilization V with long timeouts and sequential execution through `singleFork: true`.
 - **OBS** (`tests/live/obs/**`): Live OBS tier. Requires OBS Studio with its WebSocket server and skips gracefully when OBS is unreachable.
 - **Claude Code** (`tests/live/claude-code/**`): Live Claude Code tier. Requires a logged-in Claude Code CLI and uses a little subscription usage. Rerun it after upgrading the Agent SDK or the Claude Code provider.
+- **Newspaper browser** (`tests/browser/newspaper/**`): Opt-in tests for reader layout, replay controls, and image export. See [renderer testing](../docs/developers/vox-agents/newspaper/renderer.md#run-the-tests) for setup.
 
 ### Test Rules
 
@@ -76,7 +78,7 @@ Backend LLM agent framework. For UI development, see `ui/AGENTS.md`.
 
 `export/` owns Node capture, conversion, cache delivery, the queue in `service.ts`, and host routes in `http.ts`. `replay/` owns the read-only source adapter, serialized operations, replay routes with their own JSON parser, and a versioned offline SQLite output in `store.ts`. Keep source recordings separate from this writable output. Atomically save each published or skipped check, its cursor, editorial state, rule repeat memory and audit, immutable documents, decisions, and article evidence. Runs and feedback are scoped by run ID and receiver; explicit resume restores saved configuration, preferences, and rule repeat memory. These offline tables do not implement live game-save checkpoints. Reuse MCP's compiled `queryNewspaperEvidence` and the shared database and metadata helpers. `knowledge/game-speed.ts` resolves metadata-only pace, recorded in replay responses. The normal VD server injects replay routes through `mountApplicationRoutes` before fallbacks and the general parser. Shutdown drains accepted operations and closes both replay databases alongside the export application's separate shutdown.
 
-`newspaper/src/reader/` owns the plain DOM publication renderer. Keep family-specific styles in `reader/families/`, scoped to the family's `data-design` value. The shared CSS entry loads these styles before the export overrides. `newspaper/src/app/` owns fixture and replay orchestration in `main.ts`, the API client in `api.ts`, controls in `replay.ts`, and fixture, link and evidence/source inspection in `inspector.ts`. Evidence inspection works without generated issues. `src/export-bridge.ts` is the export entry point. Assets and developer fixtures stay under `newspaper/`, which builds independently to `dist-newspaper/`; compiled reader assets and one packaged sample ship. The Debug page's Show newspaper action delivers that sample to the loaded game. Tests under `tests/mock/newspaper/` mirror these boundaries. See [the newspaper docs](../docs/developers/vox-agents/newspaper/overview.md).
+`newspaper/src/reader/` owns the plain DOM publication renderer. Keep family-specific styles in `reader/families/`, scoped to the family's `data-design` value. Family names describe layout structure (inscription, broadsheet, feed), and a design id names one variant. The shared CSS entry loads these styles before the export overrides. `newspaper/src/app/` owns fixture and replay orchestration in `main.ts`, the API client in `api.ts`, controls in `replay.ts`, and fixture, link and evidence/source inspection in `inspector.ts`. Evidence inspection works without generated issues. `src/export-bridge.ts` is the export entry point. Assets and developer fixtures stay under `newspaper/`, which builds independently to `dist-newspaper/`; compiled reader assets and one packaged sample ship. The Debug page's Show newspaper action delivers that sample to the loaded game. Tests under `tests/mock/newspaper/` mirror these boundaries, and `tests/browser/newspaper/` holds the real-browser checks for the reader and export. See [the newspaper docs](../docs/developers/vox-agents/newspaper/overview.md).
 
 ## Build
 

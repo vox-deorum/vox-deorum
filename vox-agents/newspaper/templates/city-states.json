@@ -19,7 +19,7 @@
         "when": "ally === null || aggressor === null",
         "headline": "An allied city-state under attack",
         "body": [
-          "A city-state allied to us has been drawn into a war. The reports that reached us do not name every party to the fighting."
+          "A city-state allied to us has been drawn into a war. The dispatches that reached us leave some of the combatants unnamed."
         ],
         "weight": { "base": 1 }
       },
@@ -41,9 +41,9 @@
         "stance": "neutral",
         "genre": "notice",
         "when": "ally !== null && aggressor !== null",
-        "headline": "War reaches {{ally}}",
+        "headline": "{{aggressor}} opens war on {{ally}}",
         "body": [
-          "We are informed that {{aggressor}} has opened hostilities against {{ally}}, a city-state in alliance with this nation. Our own part in the war remains none."
+          "This paper learns that {{aggressor}} has opened hostilities against {{ally}}, a city-state in alliance with this nation. The fighting has not drawn us in."
         ],
         "weight": { "base": 1 }
       },
@@ -81,7 +81,7 @@
         "when": "cityState === null || captor === null",
         "headline": "An allied city-state is taken",
         "body": [
-          "A city-state allied to us has fallen to a foreign army. The conquest removes an ally from the map, and the reports before us do not name every party."
+          "A city-state allied to us has fallen to a foreign army. The conquest removes an ally from the map; the dispatches before us do not carry every name."
         ],
         "weight": { "base": 1 }
       },
@@ -93,7 +93,7 @@
         "when": "cityState !== null && captor !== null",
         "headline": "The loss of {{cityState}}",
         "body": [
-          "An ally's capture is more than a change of flags. {{captor}} now holds {{cityState}} and the position it guarded. A nation that loses an ally loses the ground the friendship stood on, and the map now shows whose army holds it."
+          "An ally's capture is more than a change of flags. {{captor}} now holds {{cityState}} and the position it guarded. A nation that loses an ally loses the ground the friendship stood on, and the map now shows whose."
         ],
         "weight": { "base": 1 }
       },
@@ -117,7 +117,7 @@
         "when": "cityState !== null && captor !== null",
         "headline": "We let an ally fall",
         "body": [
-          "The government counted {{cityState}} an ally and watched it fall to {{captor}}. The paper wants an accounting: what was done before the walls came down, and who decided that it was enough?"
+          "The government counted {{cityState}} an ally and watched it fall to {{captor}}. The paper wants an accounting of what was done before the walls came down, and of who decided that watching was enough."
         ],
         "weight": { "base": 1 }
       },
@@ -146,7 +146,7 @@
         "when": "cityState !== null && rival !== null",
         "headline": "{{cityState}} defects to {{rival}}",
         "body": [
-          "A nearby city-state has ended its alliance with us and named {{rival}} in our place. The change leaves our former ally standing with a power that is neither our friend nor our partner."
+          "{{cityState}}, a city-state near our borders, has ended its alliance with us and named {{rival}} in its place. A rival power now holds the friendship we counted ours."
         ],
         "weight": { "base": 1 }
       },
@@ -242,7 +242,7 @@
         "when": "cityState !== null && replaced !== null",
         "headline": "Notice: our envoys succeed in {{cityState}}",
         "body": [
-          "We are informed that {{cityState}} has ended the alliance of {{replaced}} and named this nation in its place. The patient work of our envoys is credited on all sides."
+          "Notice is given that {{cityState}} has ended the alliance of {{replaced}} and named this nation in its place. The patient work of our envoys is credited on all sides."
         ],
         "weight": { "base": 1 }
       },
@@ -254,7 +254,7 @@
         "when": "cityState !== null",
         "headline": "Hear it! {{cityState}} stands with us",
         "body": [
-          "Hear it, people of the court and the road! A city-state has taken our side! {{cityState}} names us ally, and its friendship answers to our flag. Let the news carry."
+          "Hear it, people of the court and the road! {{cityState}} has taken our side! The city-state names this nation its ally, and its friendship stands with our flag. Let the news carry!"
         ],
         "weight": { "base": 1 }
       }
@@ -368,7 +368,7 @@
         "when": "cityState !== null && friend !== null",
         "headline": "Notice of a new ally in {{cityState}}",
         "body": [
-          "We are informed that {{cityState}}, {{distance}} tiles from our nearest city, has named {{friend}} its ally. Our own alliance with the city-state has ended in {{friend}}'s favor."
+          "It is noted for the record that {{cityState}}, {{distance}} tiles from our nearest city, has named {{friend}} its ally. Our own alliance with the city-state has ended in {{friend}}'s favor."
         ],
         "weight": { "base": 1 }
       },
@@ -430,7 +430,7 @@
         "when": "began === false",
         "headline": "We let a friendship lapse",
         "body": [
-          "Friendship with a city-state is kept by attention, and ours with {{cityState}} has been found short. The envoys have some explaining to do about how a neighbor's regard was left to cool."
+          "Friendship with a city-state is kept by attention, and ours with {{cityState}} has fallen short. The envoys have some explaining to do about how a neighbor's regard was left to cool."
         ],
         "weight": { "base": 1 }
       },
@@ -480,7 +480,7 @@
         "when": "cityState !== null",
         "headline": "Notice: the {{cityState}} quest is off the books",
         "body": [
-          "We are informed that a quest of {{cityState}} no longer carries a countdown. Merchants and others with a stake in it should govern themselves accordingly."
+          "For the information of merchants and travelers: a quest of {{cityState}} no longer carries a countdown. Those with a stake in it should govern themselves accordingly."
         ],
         "links": [
           { "placeholder": "cityState", "label": "{{cityState}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -560,7 +560,7 @@
         "when": "cityState !== null && turnsLeft > 0",
         "headline": "Hear it! {{cityState}} counts {{turnsLeft}} turns",
         "body": [
-          "A quest of {{cityState}} ends in {{turnsLeft}} turns! Let those with a stake in it hurry, for the count will not wait."
+          "Hear it, all with a stake in the {{cityState}} quest! It ends in {{turnsLeft}} turns! The count will not wait, and neither should you!"
         ],
         "links": [
           { "placeholder": "cityState", "label": "{{cityState}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -707,7 +707,7 @@
         "when": "cityState === null || aggressor === null",
         "headline": "A friendly city-state under attack",
         "body": [
-          "War has reached one of the city-states that call us friend. Not every party to the fighting is named in the reports that reached us."
+          "War has reached one of the city-states that call us friend. The reports name the fighting but not every banner in it."
         ],
         "weight": { "base": 1 }
       },
@@ -743,7 +743,7 @@
         "when": "cityState !== null && aggressor !== null",
         "headline": "War reaches {{cityState}}",
         "body": [
-          "We are informed that {{aggressor}} has opened hostilities against {{cityState}}, a city-state in friendship with this nation. Our own part in the war remains none."
+          "We are informed that {{aggressor}} has opened hostilities against {{cityState}}, a city-state in friendship with this nation. The war has not asked for our arms."
         ],
         "weight": { "base": 1 }
       }
@@ -760,7 +760,7 @@
         "when": "cityState !== null && captor !== null",
         "headline": "{{cityState}} falls to {{captor}}",
         "body": [
-          "{{captor}} has taken {{cityState}} by conquest. The city-state counted us a friend, and its territory now answers to a foreign power."
+          "{{captor}} has taken {{cityState}} by conquest. The city-state counted this nation a friend, and a friend's ground now answers to a foreign power."
         ],
         "weight": { "base": 1 }
       },
@@ -769,7 +769,7 @@
         "when": "cityState === null || captor === null",
         "headline": "A friendly city-state is taken",
         "body": [
-          "A city-state in friendship with us has fallen to a foreign army. The conquest removes a friend from the map, and the reports before us do not name every party."
+          "A city-state in friendship with us has fallen to a foreign army. Our reports lack some of the names, but a friend is gone from the map either way."
         ],
         "weight": { "base": 1 }
       },
@@ -781,7 +781,7 @@
         "when": "cityState !== null",
         "headline": "The passing of {{cityState}}",
         "body": [
-          "In the record of the small powers, {{cityState}} held its place among the friendliest. It kept our friendship to the end and lost its independence by the sword. Its people pass under another rule, and its name passes into the record."
+          "In the record of the small powers, {{cityState}} held its place among the friendliest. It kept our friendship to the end and lost its independence by the sword. Its altars stand under another hand now; may they be allowed to burn."
         ],
         "weight": { "base": 1 }
       },

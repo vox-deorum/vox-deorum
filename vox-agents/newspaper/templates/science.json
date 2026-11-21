@@ -31,7 +31,7 @@
         "when": "civilization !== null",
         "headline": "A friend crosses into the {{era}}",
         "body": [
-          "We are informed that {{civilization}}, a friendly power, has lately left the {{former}} for the {{era}}. A friend's progress is welcome news in any age."
+          "Letters from friendly courts bring word that {{civilization}} has lately left the {{former}} for the {{era}}. A friend's progress is welcome news in any age, and this paper counts it so."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -46,7 +46,7 @@
         "when": "civilization !== null",
         "headline": "A new age in {{civilization}}, they say",
         "body": [
-          "The traders say the roads out of {{civilization}} smell of fresh ink this season. Our friend has crossed into the {{era}}, and the story came with the first travelers."
+          "The traders say the roads out of {{civilization}} smell of fresh ink this season. Our friend has crossed into the {{era}}, and the story came home with the first travelers."
         ],
         "weight": { "base": 1 }
       },
@@ -86,7 +86,7 @@
         "when": "!team.includes(' and ')",
         "headline": "{{team}} gains {{tech}}",
         "body": [
-          "{{team}}, a nearby power, has gained {{tech}}, according to reports from the border. Its cities lie close to our own."
+          "Reports from the border say {{team}} has gained {{tech}}. Its cities lie close to our own."
         ],
         "weight": { "base": 1 }
       },
@@ -95,7 +95,7 @@
         "when": "team.includes(' and ')",
         "headline": "{{team}} gain {{tech}}",
         "body": [
-          "{{team}}, nearby powers acting as one team, have gained {{tech}}, according to reports from the border. Their cities lie close to our own."
+          "Reports from the border say {{team}} have gained {{tech}}. The two powers share one team, and their cities lie close to our own."
         ],
         "weight": { "base": 1 }
       },
@@ -117,7 +117,7 @@
         "genre": "notice",
         "headline": "Notice to the learned: {{tech}} abroad",
         "body": [
-          "We are informed that {{tech}} is now held by {{team}}, a team with cities close to our own. The fact is reported as it reached the printer."
+          "{{tech}} is now held by {{team}}, a team with cities close to our own. The fact is set down as it reached the printer, neither more nor less."
         ],
         "weight": { "base": 1 }
       },
@@ -200,7 +200,7 @@
         "headline": "The bells rang all morning",
         "byline": "A clerk of the capital",
         "body": [
-          "Madam Editor, the bells rang all morning for our entry into the {{era}}. Ages do not arrive by accident; they are built, and the men who built this one deserve the city's thanks. I have sent mine."
+          "Madam Editor, the bells rang all morning for our entry into the {{era}}. Ages do not arrive by accident; they are built, and those who built this one deserve the city's thanks. I have sent mine."
         ],
         "weight": { "base": 1 }
       }
@@ -238,7 +238,7 @@
         "genre": "report",
         "headline": "One more for the home team",
         "body": [
-          "We just gained {{tech}}. That's the nation's count of technologies up again. You love to see it."
+          "We just gained {{tech}}. That is another one on the national count. Quiet progress, but progress."
         ],
         "weight": { "base": 1 }
       },
@@ -250,7 +250,7 @@
         "when": "era !== null",
         "headline": "Notice: our team gains {{tech}}",
         "body": [
-          "We are informed that {{tech}} is now counted among the knowledge of our team. The {{era}} continues what earlier ages began, one name at a time."
+          "This paper records that {{tech}} is now counted among the knowledge of our team. The {{era}} continues what earlier ages began, one name at a time."
         ],
         "weight": { "base": 1 }
       },
@@ -261,7 +261,7 @@
         "genre": "anecdote",
         "headline": "At the market, the word is {{tech}}",
         "body": [
-          "They asked at the stalls what {{tech}} does. The best answer anyone gave was that it is ours, and at the market that was answer enough."
+          "The word at the market was {{tech}}, and the fish-seller had it first. What it does, nobody at the stalls could say. Whose it is, everyone could: ours."
         ],
         "weight": { "base": 1 }
       }
@@ -287,7 +287,7 @@
         "when": "civilization === null",
         "headline": "A rival power enters the {{era}}",
         "body": [
-          "A power that is neither our friend nor our ally has passed out of the {{former}} and into the {{era}}. The name has not reached our records."
+          "A power that is neither our friend nor our ally has passed out of the {{former}} and into the {{era}}. Which power it is, our records do not say."
         ],
         "weight": { "base": 1 }
       },
@@ -299,7 +299,7 @@
         "when": "civilization !== null",
         "headline": "A rival leaves the {{former}}",
         "body": [
-          "We are informed that {{civilization}}, no friend of ours, has lately passed from the {{former}} into the {{era}}. The news is set down as it arrived, neither better nor worse for the telling."
+          "Advices from abroad state that {{civilization}}, no friend of ours, has lately passed from the {{former}} into the {{era}}. The paper reports the crossing as it came, and leaves the reader to weigh it."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -364,7 +364,7 @@
         "when": "civilization === null",
         "headline": "A new nation stands first in technologies",
         "body": [
-          "No nation counts more technologies than the new front-runner, which now holds {{count}} of them. A season past, others stood ahead. The name has not reached our records."
+          "No nation counts more technologies than the new front-runner, which now holds {{count}} of them. A season past, others stood ahead. Our records do not yet carry the name."
         ],
         "weight": { "base": 1 }
       },

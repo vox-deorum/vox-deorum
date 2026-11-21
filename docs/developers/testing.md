@@ -43,7 +43,7 @@ The default `npm test` and `npm run test:mock` run the in-process mock tier. Too
 
 `npm run test:real` runs `mcp-server/tests/real/`, booting the real MCP server against the real bridge service in mock-DLL mode through `tests/real.setup.ts`. That stack needs no copy of Civilization V, but the existing real-tier tests were written for a live game and still need adaptation before the tier passes reliably.
 
-### Vox agents: five tiers
+### Vox agents: six tiers
 
 `vox-agents/vitest.config.ts` picks a tier from `TEST_TIER` (or from `USE_MOCK=false`) and includes only `tests/<tier>/**`:
 
@@ -54,6 +54,9 @@ The default `npm test` and `npm run test:mock` run the in-process mock tier. Too
 | **Game** | `npm run test:game` | The live Civilization V tier in `tests/live/game/**`. It needs Windows and Civ V, runs sequentially with long timeouts, and is excluded from the default suite. |
 | **OBS** | `npm run test:obs` | The live OBS tier in `tests/live/obs/**`. It needs OBS Studio with its WebSocket server, and is excluded from the default suite. |
 | **Claude Code** | `npm run test:claude-code` | The live Claude Code tier in `tests/live/claude-code/**`. A short run against the real CLI checks that tools are called natively, their results reach the model, and one query spans the run. It needs a logged-in Claude Code CLI, uses a little subscription usage, and is excluded from the default suite. Rerun it after upgrading the Agent SDK or the Claude Code provider. |
+| **Newspaper browser** | `npm run test:newspaper:browser` | Opt-in tests in `tests/browser/newspaper/**` for reader layout, replay controls, and image export. See [renderer testing](vox-agents/newspaper/renderer.md#run-the-tests) for setup. |
+
+Run the browser tier from the repository root with `npm run test:newspaper:browser -w vox-agents`, or run the command in the table from `vox-agents`. Root `npm run test:all` and mock coverage use the default mock tier for Vox Agents.
 
 Because the game and OBS suites are environment-heavy and slow, the convention is firm: **don't touch the OBS tests unless you're changing OBS code, and don't touch the game tests unless you're changing the game-launch or process code.**
 
@@ -68,7 +71,7 @@ Its scripts are `npm test`, `npm run test:watch`, and `npm run test:coverage`, r
 Nothing checks this for you, so run it yourself:
 
 1. `npm run build:all` from the repo root. This also builds `vox-agents/ui`, since the vox-agents build recurses into it.
-2. `npm run test:all` from the repo root, covering all four suites.
+2. `npm run test:all` from the repo root. For changes to newspaper layout, browser interactions, or export, also run the newspaper browser suite.
 3. `npm run lint:all` from the repo root. Each of `bridge-service`, `mcp-server`, and `vox-agents` defines its own `lint` script over `src`. The UI has no lint script; use its `type-check` instead.
 4. **For C++ changes only:** build the DLL under both MSVC and clang and confirm no new warnings. That mirrors the submodule's own CI in `civ5-dll/.github/workflows/build_vp.yml`, which compiles the gamecore both ways. `civ5-dll/.github/workflows/cppcheck.yml` adds a static-analysis pass, triggered manually. If a DLL CI run fails, those two files are where to look.
 

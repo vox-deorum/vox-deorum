@@ -9,7 +9,7 @@
         "id": "treasury-falls-into-deficit-report",
         "headline": "The treasury slips into deficit",
         "body": [
-          "The nation's accounts have turned negative. Spending now outruns income by {{deficit}} gold a turn, after the books held at or above balance in the recent count."
+          "The nation's accounts have turned negative. Spending outruns income by {{deficit}} gold a turn, where the recent count held the books at or above balance."
         ],
         "weight": { "base": 1 }
       },
@@ -33,7 +33,7 @@
         "genre": "analysis",
         "headline": "A deficit that names no one",
         "body": [
-          "Income now trails spending by {{deficit}} gold a turn, where the recent count showed the accounts at or above balance. A shortfall that arrives without a decision attached still repeats every turn, and the ledger does not say who will be asked to make it good."
+          "Income now trails spending by {{deficit}} gold a turn, where the recent count showed the books at or above balance. A shortfall like this repeats every turn until someone is asked to make it good, and the public has not been told who that will be. The paper is asking."
         ],
         "weight": { "base": 1 }
       },
@@ -61,7 +61,7 @@
         "id": "treasury-milestone-report",
         "headline": "The treasury passes 1,000 gold",
         "body": [
-          "The reserve has crossed the 1,000 gold mark and now stands at {{gold}}. It took on {{gain}} gold since the recent count."
+          "The reserve has crossed the 1,000 gold mark and now stands at {{gold}}, having taken on {{gain}} gold since the recent count."
         ],
         "weight": { "base": 1 }
       },
@@ -72,7 +72,7 @@
         "genre": "report",
         "headline": "The reserve passes the thousand mark",
         "body": [
-          "We are informed that the treasury has lately passed the 1,000 gold mark and now holds {{gold}} gold. A full vault is the mark of a well-kept house, grown by {{gain}} gold in recent turns."
+          "This paper notes with satisfaction that the treasury has lately passed the 1,000 gold mark and now holds {{gold}} gold. A full vault is the mark of a well-kept house, grown by {{gain}} gold in recent turns."
         ],
         "weight": { "base": 1 }
       },
@@ -110,7 +110,7 @@
         "id": "treasury-reserve-recovers-report",
         "headline": "The treasury gains time against the deficit",
         "body": [
-          "The shortfall continues, but the treasury has more room against it. The reserve of {{gold}} gold now covers {{turnsLeft}} turns at {{deficit}} gold a turn, where the recent count showed shorter cover."
+          "The shortfall continues, but the reserve behind it has grown. The {{gold}} gold on hand now covers {{turnsLeft}} turns at {{deficit}} gold a turn, where the recent count showed shorter cover."
         ],
         "weight": { "base": 1 }
       },
@@ -172,7 +172,7 @@
         "genre": "report",
         "headline": "Treasury cover down to {{turnsLeft}} turns",
         "body": [
-          "The treasury holds {{gold}} gold. Spending outruns income by {{deficit}} gold a turn. That leaves {{turnsLeft}} turns of cover, and the shortfall is not new. The figures do not say who is minding the store."
+          "The treasury holds {{gold}} gold. Spending outruns income by {{deficit}} gold a turn. That leaves {{turnsLeft}} turns of cover, and the shortfall is not new. The figures are public. The plan for them is not."
         ],
         "weight": { "base": 1 }
       },
@@ -199,7 +199,7 @@
         "id": "treasury-returns-to-surplus-report",
         "headline": "The deficit ends",
         "body": [
-          "The treasury's rate has climbed out of the red. Income now covers spending, leaving {{goldPerTurn}} gold a turn to spare after the recent shortfall."
+          "The treasury's rate has climbed out of the red. Income now covers spending, with {{goldPerTurn}} gold a turn to spare after the recent shortfall."
         ],
         "weight": { "base": 1 }
       },
@@ -221,7 +221,7 @@
         "genre": "notice",
         "headline": "Notice: the accounts no longer run behind",
         "body": [
-          "We are informed that the deficit lately showing in the accounts has closed. The rate now reads {{goldPerTurn}} gold a turn, and good order in the treasury serves the whole nation."
+          "The paper is glad to record that the deficit lately showing in the accounts has closed. The rate now reads {{goldPerTurn}} gold a turn, and good order in the treasury serves the whole nation."
         ],
         "weight": { "base": 1 }
       },
@@ -232,7 +232,7 @@
         "genre": "proverb",
         "headline": "The purse that stopped leaking",
         "body": [
-          "They say a stopped leak fills no purse, but it empties none. The treasury's leak has stopped; what comes in now meets what goes out."
+          "They say a stopped leak is the first gold in the purse. The treasury's leak has stopped."
         ],
         "weight": { "base": 1 }
       },

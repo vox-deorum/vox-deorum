@@ -31,6 +31,7 @@
     "test:game": "cross-env TEST_TIER=live/game vitest run",
     "test:obs": "cross-env TEST_TIER=live/obs vitest run",
     "test:claude-code": "cross-env TEST_TIER=live/claude-code vitest run",
+    "test:newspaper:browser": "cross-env USE_MOCK=true TEST_TIER=browser/newspaper vitest run",
     "archivist": "npm run build && npm run archivist:dist --",
     "archivist:dist": "node --import ./dist/instrumentation.js dist/archivist/console.js",
     "archivist:cluster": "tsx src/archivist/cluster-console.ts",
