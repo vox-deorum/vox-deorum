@@ -133,6 +133,15 @@ onMounted(loadStatus);
           v-tooltip.bottom="'Open the newspaper sample in Civ 5'"
           @click="showNewspaper"
         />
+        <Button
+          as="router-link"
+          to="/debug/writing-desk"
+          icon="pi pi-pencil"
+          label="Writing Desk"
+          size="small"
+          severity="secondary"
+          outlined
+        />
       </div>
       <TabPanels class="tab-panels">
         <TabPanel value="live" class="tab-panel">

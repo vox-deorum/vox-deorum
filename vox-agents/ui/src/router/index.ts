@@ -42,6 +42,11 @@ const router = createRouter({
       component: () => import('../views/DebugView.vue')
     },
     {
+      path: '/debug/writing-desk',
+      name: 'writing-desk',
+      component: () => import('../views/WritingDeskView.vue')
+    },
+    {
       path: '/logs',
       redirect: '/debug'
     },

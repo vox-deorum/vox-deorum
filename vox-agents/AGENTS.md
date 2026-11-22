@@ -64,6 +64,7 @@ Backend LLM agent framework. For UI development, see `ui/AGENTS.md`.
 - `npm run archivist -- -a <archive-path> -o <output.duckdb> [-n <limit>] [-m <model>] [--stories [--story-turns <count>] [--seed <seed>]]`: Archivist batch pipeline (archivist/console.ts)
 - `npm run newspaper -- --help`: Offline newspaper examples from a saved MCP recording, with catalogue overrides, audit JSON, and optional PNG previews. See `docs/developers/vox-agents/newspaper/replay.md` from the repository root.
 - `npm run newspaper:preview`: Build MCP's queries, then serve the newspaper reader at `127.0.0.1:5600` for built-in design mockups and recorded replay. See `docs/developers/vox-agents/newspaper/replay.md`.
+- **Debug → Writing Desk**: Draft and settle stock newspaper variants in a source checkout. The routes and writer live in `src/newspaper/desk/`.
 - Each workflow has a dedicated entry point with shared instrumentation (loaded via `--import`)
 
 ## Build

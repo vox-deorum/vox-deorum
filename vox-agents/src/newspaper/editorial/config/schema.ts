@@ -18,6 +18,7 @@ export const authoredVariantSchema = eligibleSchema.extend({
   subheadline: z.string().min(1).optional(),
   byline: z.string().min(1).optional(),
   body: z.array(z.string().min(1)).min(1),
+  settled: z.boolean().optional(),
   links: z
     .array(
       z.object({
@@ -81,7 +82,7 @@ export const editorialTriggerRuleSchema = z.strictObject({
 });
 export type EditorialTriggerRule = z.infer<typeof editorialTriggerRuleSchema>;
 /** Templates explicitly name supported triggers and any placeholder format overrides. */
-const templateSchema = eligibleSchema.extend({
+export const templateSchema = eligibleSchema.extend({
   id: z.string().min(1),
   triggers: z.array(z.string().min(1)).min(1),
   tags: z.array(z.string().min(1)),

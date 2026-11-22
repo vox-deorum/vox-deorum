@@ -11,7 +11,7 @@ These rules are the current guide for the stock newspaper catalogue.
 ## Placeholder primer
 
 - Use only the variables listed for that variant. Every other placeholder makes the story unprintable.
-- A counted noun writes the singular form after 1 and the plural form otherwise.
+- A counted noun placeholder puts the count, singular and plural forms separated by pipes inside double braces, and prints the singular after 1.
 - Names ending in points, turns, distance and population print their units. A template's `formats` map adds more unit rules.
 - An unknown placeholder makes the story unprintable.
 - A variable marked "may be empty" drops the story unless the variant's condition guarantees a value.
@@ -47,6 +47,7 @@ Headline: {{headline}}
 ### {{templateId}} / {{variantId}}
 
 - Template tags: {{tags}}
+- Template names: {{names}}
 - Trigger summary: {{triggerSummary}}
 
 #### Triggers
@@ -110,8 +111,8 @@ Headline: {{headline}}
 Return one JSON object with a `variants` array. Include every variant from the request exactly once. Each entry has the variant's `templateId`, its `variantId`, and a `choices` array of exactly {{choices}} objects. Each choice has these fields:
 
 - `headline`: the headline, using only listed placeholders.
-- `subheadline`: optional, when necessary.
-- `byline`: optional, when necessary.
+- `subheadline`: a subheadline if needed, otherwise `null`.
+- `byline`: a byline if needed, otherwise `null`.
 - `body`: one or more paragraphs, using only listed placeholders.
 
 Example shape:
@@ -125,6 +126,8 @@ Example shape:
       "choices": [
         {
           "headline": "A headline",
+          "subheadline": null,
+          "byline": null,
           "body": ["A first paragraph.", "A second paragraph."]
         }
       ]

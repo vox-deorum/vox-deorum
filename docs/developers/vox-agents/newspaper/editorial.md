@@ -42,7 +42,7 @@ A template names one or more rules in `triggers`. All must fire for the same sub
 | `names` | Optional list of placeholders that display names, such as `["cityName", "player.leader"]` |
 | `merge` | Optional rules and prose for combining selected stories |
 
-`id`, `triggers`, `tags`, `weight` and `variants` are required. Each variant requires `id`, `headline`, `body` and `weight`; `subheadline`, `byline`, `when` and `links` are optional. The subheadline and byline appear before the article body.
+`id`, `triggers`, `tags`, `weight` and `variants` are required. Each variant requires `id`, `headline`, `body` and `weight`; `subheadline`, `byline`, `when` and `links` are optional. The subheadline and byline appear before the article body. The optional `settled` mark records review in the Writing Desk and has no effect on story selection.
 
 The [news writing rules](writing.md) show how to turn visible game facts into entertaining stories, imagine what the news means to people in the world, and write in the chosen voice, stance, and genre.
 

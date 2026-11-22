@@ -27,6 +27,8 @@ import { mountNewspaperRoutes } from '../newspaper/export/http.js';
 import { createNewspaperDebugRoutes } from './routes/newspaper.js';
 import { ReplaySession } from '../newspaper/replay/session.js';
 import { mountReplayRoutes } from '../newspaper/replay/http.js';
+import { mountDeskRoutes } from '../newspaper/desk/http.js';
+import { stopJob as stopDeskJob } from '../newspaper/desk/generate.js';
 
 // Get __dirname in ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -91,6 +93,7 @@ async function closeWebServer(): Promise<void> {
   }
 
   const server = activeServer;
+  stopDeskJob();
   try {
     const drained = await Promise.allSettled([replay.close(), newspaper.close()]);
     const failure = drained.find(result => result.status === 'rejected');
@@ -122,8 +125,11 @@ app.use(cors({ origin: allowLoopbackCorsOrigin }));
 // Protect every API and shutdown route from cross-origin and DNS-rebinding requests.
 app.use(['/api', '/shutdown'], requireLoopbackRequest);
 mountNewspaperRoutes(app, {
-  /** Mount replay parsing and domain handlers ahead of the newspaper API fallback. */
-  mountApplicationRoutes: app => mountReplayRoutes(app, () => replay),
+  /** Mount application handlers ahead of the newspaper API fallback. */
+  mountApplicationRoutes: app => {
+    mountReplayRoutes(app, () => replay);
+    mountDeskRoutes(app);
+  },
   /** Keep arbitrary exports separate from game activation and expose only the public bundle. */
   exportIssue: async input => {
     const { key, bundle } = await newspaper.exportIssue(input);

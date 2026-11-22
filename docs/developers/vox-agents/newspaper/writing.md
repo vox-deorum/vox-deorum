@@ -93,3 +93,11 @@ High unrest:
 - Does the record back the claims? Do the numbers make sense in the story?
 - Does the ending follow from the news and fit the genre?
 - If this news comes up again, does the next version add something new?
+
+## Draft with the Writing Desk
+
+Open **Debug → Writing Desk** from a writable source checkout. The desk checks every unsettled stock variant by default. Use **Clear selection** to pick a smaller batch, then choose your models and drafts per variant and click **Generate**. A batch can use up to 200 model requests. Settle the current copy or a draft to write it back to the template file. Use **Unsettle** to reopen it.
+
+The desk groups variants by voice, stance, and genre. Each request includes relevant settled examples, favoring the same voice and template. Drafts disappear when Vox Agents restarts. Merge variants and templates reserved for the newspaper editor are outside the desk.
+
+The UI starts at `WritingDeskView.vue`. The catalogue, writer briefs, and save logic live in `vox-agents/src/newspaper/desk/`.

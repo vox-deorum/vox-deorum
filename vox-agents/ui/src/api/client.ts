@@ -62,9 +62,22 @@ import type {
   DebugStatusResponse,
   SetCivLoggingRequest,
   SetCivLoggingResponse,
-  ShowNewspaperResponse
+  ShowNewspaperResponse,
+  DeskCatalogueResponse,
+  DeskGenerateRequest,
+  DeskJob,
+  DeskRef,
+  DeskSettleRequest,
+  DeskVariantDetail
 } from '../utils/types';
 import type { TextStreamPart, ToolSet } from 'ai';
+
+const writingDeskPath = '/api/newspaper/desk';
+
+/** Build the route for a variant whose ID is scoped to its template. */
+function deskVariantPath(ref: DeskRef): string {
+  return writingDeskPath + '/templates/' + encodeURIComponent(ref.templateId) + '/variants/' + encodeURIComponent(ref.variantId);
+}
 
 /** Categories returned by model discovery so the wizard can explain the next action. */
 export type ModelDiscoveryErrorKind = DiscoveryErrorResponse['kind'];
@@ -742,6 +755,47 @@ class ApiClient {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(request)
+    });
+  }
+
+  /** List the stock templates and configured writers. */
+  getDeskCatalogue(): Promise<DeskCatalogueResponse> {
+    return this.fetchJson(this.baseUrl + writingDeskPath);
+  }
+
+  /** Read the current copy, variables, and candidates for a variant. */
+  getDeskVariant(ref: DeskRef): Promise<DeskVariantDetail> {
+    return this.fetchJson(this.baseUrl + deskVariantPath(ref));
+  }
+
+  /** Generate alternatives for the checked variants. */
+  startDeskJob(request: DeskGenerateRequest): Promise<DeskJob> {
+    return this.fetchJson(this.baseUrl + writingDeskPath + '/jobs', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(request),
+    });
+  }
+
+  /** Get the active batch or its most recent result. */
+  getDeskJob(): Promise<DeskJob | null> {
+    return this.fetchJson(this.baseUrl + writingDeskPath + '/jobs/current');
+  }
+
+  /** Stop dispatching work and discard results that arrive after the stop. */
+  stopDeskJob(): Promise<DeskJob | null> {
+    return this.fetchJson(this.baseUrl + writingDeskPath + '/jobs/current/stop', { method: 'POST' });
+  }
+
+  /** Save the chosen copy to the stock template. */
+  settleDeskVariant(ref: DeskRef, request: DeskSettleRequest): Promise<DeskVariantDetail> {
+    return this.fetchJson(this.baseUrl + deskVariantPath(ref) + '/settle', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(request),
+    });
+  }
+
+  /** Reopen a settled variant for drafting. */
+  unsettleDeskVariant(ref: DeskRef, revision: string): Promise<DeskVariantDetail> {
+    return this.fetchJson(this.baseUrl + deskVariantPath(ref) + '/unsettle', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ revision }),
     });
   }
 

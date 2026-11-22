@@ -714,3 +714,111 @@ export interface DebugLogFileResponse {
   /** File text, starting at a whole line. */
   content: string;
 }
+
+/** A variant ID is unique within its template. */
+export interface DeskRef {
+  templateId: string;
+  variantId: string;
+}
+
+/** The editable copy of an authored variant. */
+export interface DeskText {
+  headline: string;
+  subheadline?: string;
+  byline?: string;
+  body: string[];
+}
+
+/** The three style axes used to group requests. */
+export interface DeskStyle {
+  voice: string;
+  stance: string;
+  genre: string;
+}
+
+/** A placeholder available to the writer. */
+export interface DeskVariable {
+  group: 'trigger' | 'group' | 'subject' | 'reference' | 'period' | 'reader' | 'link' | 'sibling';
+  name: string;
+  source: string;
+  mayBeEmpty: boolean;
+  keep: boolean;
+}
+
+/** Trigger context for the current variant. */
+export interface DeskTrigger {
+  id: string;
+  subject: string;
+  when?: string | string[];
+  values?: object;
+  group?: object;
+}
+
+/** Proposed copy held in memory until it is settled or discarded. */
+export interface DeskCandidate extends DeskText {
+  id: string;
+  model: string;
+  warnings: string[];
+  createdAt: string;
+}
+
+/** Compact variant information for filtering and selecting batches. */
+export interface DeskVariantSummary {
+  id: string;
+  style: DeskStyle;
+  headline: string;
+  settled: boolean;
+  candidateCount: number;
+}
+
+/** One template in the stock catalogue. */
+export interface DeskTemplateSummary {
+  id: string;
+  file: string;
+  tags: string[];
+  triggerSummary: string;
+  variants: DeskVariantSummary[];
+}
+
+/** GET /api/newspaper/desk response. */
+export interface DeskCatalogueResponse {
+  available: boolean;
+  reason?: string;
+  models: string[];
+  templates: DeskTemplateSummary[];
+}
+
+/** Current and proposed copy with the revision needed for a save. */
+export interface DeskVariantDetail extends DeskRef {
+  text: DeskText;
+  revision: string;
+  settled: boolean;
+  style: DeskStyle;
+  triggers: DeskTrigger[];
+  variables: DeskVariable[];
+  siblings: { id: string; text: DeskText }[];
+  candidates: DeskCandidate[];
+}
+
+/** Start one batch across the selected variants and configured model names. */
+export interface DeskGenerateRequest {
+  refs: DeskRef[];
+  models: string[];
+  choices: number;
+}
+
+/** State of the current or most recent batch. */
+export interface DeskJob {
+  id: string;
+  status: 'running' | 'done' | 'stopped';
+  total: number;
+  done: number;
+  failed: number;
+  tokens: { input: number; output: number };
+  errors: { model: string; refs: DeskRef[]; message: string }[];
+}
+
+/** Save a variant's copy only against the revision the user edited. */
+export interface DeskSettleRequest extends DeskText {
+  revision: string;
+}
