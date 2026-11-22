@@ -2,7 +2,7 @@ import { computed, onScopeDispose, ref, watch } from 'vue';
 import { api } from '@/api/client';
 import { errorMessage } from '@/utils/errors';
 import type {
-  DeskCandidate, DeskCatalogueResponse, DeskJob, DeskRef, DeskStyle, DeskTemplateSummary, DeskText,
+  DeskCandidate, DeskCatalogueResponse, DeskJob, DeskRef, DeskSettleManyRequest, DeskStyle, DeskTemplateSummary, DeskText,
   DeskVariantDetail, DeskVariantSummary,
 } from '@/utils/types';
 import { createPoller } from '@/utils/polling';
@@ -22,6 +22,12 @@ interface EditDraft {
   row: string;
   revision: string;
   text: DeskText;
+}
+
+export interface DeskApprovalSnapshot {
+  target: DeskRef;
+  revision: string;
+  copies: { id: string; label: string; text: DeskText }[];
 }
 
 /** Copy only the fields that can be edited and saved. */
@@ -206,6 +212,46 @@ export function useWritingDesk() {
     }
   }
 
+  /** Capture the visible copies and their revision before polling can change them. */
+  function approvalSnapshot(): DeskApprovalSnapshot | undefined {
+    const current = detail.value;
+    if (!current || current.settled || !current.candidates.length || saving.value || clearing.value) return;
+    const editing = draft.value;
+    const rows = [
+      { id: deskCurrentRow, label: 'Current copy', text: current.text },
+      ...current.candidates.map((candidate, index) => ({
+        id: candidate.id, label: `Draft ${index + 1} · ${candidate.model}`, text: candidate,
+      })),
+    ];
+    return {
+      target: { templateId: current.templateId, variantId: current.variantId },
+      revision: editing?.revision ?? current.revision,
+      copies: rows.map(row => ({
+        id: row.id,
+        label: editing?.row === row.id ? `${row.label} (edited)` : row.label,
+        text: copyText(editing?.row === row.id ? editing.text : row.text),
+      })),
+    };
+  }
+
+  /** Save a snapshot and refresh the list to pick up the newly added siblings. */
+  async function saveMany(target: DeskRef, request: DeskSettleManyRequest) {
+    saving.value = true;
+    error.value = '';
+    try {
+      const result = await api.settleDeskVariants(target, request);
+      if (disposed) return;
+      applySave(result);
+      try {
+        await loadCatalogue();
+      } catch (cause) {
+        error.value = errorMessage(cause);
+      }
+    } finally {
+      saving.value = false;
+    }
+  }
+
   /** Refresh counts and the visible proposals when a request finishes. */
   async function refreshCandidates() {
     const target = selected.value;
@@ -322,6 +368,6 @@ export function useWritingDesk() {
   return {
     catalogue, tags, show, search, groups, eligible, checked, selected, detail, draft, job, models, availableModels,
     choices, requestCount, candidateCount, error, detailLoading, saving, starting, stopping, clearing, busy,
-    load, select, check, toggleAll, edit, save, generate, stop, clearDrafts, addModel,
+    load, select, check, toggleAll, edit, save, approvalSnapshot, saveMany, generate, stop, clearDrafts, addModel,
   };
 }

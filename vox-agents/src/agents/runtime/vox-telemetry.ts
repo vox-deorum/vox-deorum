@@ -12,7 +12,7 @@
  */
 
 import { SpanStatusCode } from '@opentelemetry/api';
-import type { Span, Tracer } from '@opentelemetry/api';
+import type { Context, Span, Tracer } from '@opentelemetry/api';
 import type winston from 'winston';
 import type { AgentParameters } from "./vox-agent.js";
 import type { Model } from "../../types/index.js";
@@ -71,24 +71,26 @@ export interface ExecutionHost<TParameters extends AgentParameters> {
  *
  * @param host - The execution host providing the tracer and context id
  * @param agentName - The agent being executed (names the span and fills agent.name)
- * @param turn - The active run's game turn (stringified into game.turn)
+ * @param turn - The active run's game turn, if the agent runs in a game
  * @param input - The agent input, JSON-stringified into agent.input when truthy
+ * @param parent - Override the active context, for example to start an independent trace
  * @returns The started span (not yet activated in the context)
  */
-export function openAgentSpan<TParameters extends AgentParameters>(
-  host: ExecutionHost<TParameters>,
+export function openAgentSpan(
+  host: Pick<ExecutionHost<AgentParameters>, 'id' | 'tracer'>,
   agentName: string,
-  turn: number,
-  input: unknown
+  turn: number | undefined,
+  input: unknown,
+  parent?: Context,
 ): Span {
   return host.tracer.startSpan(`agent.${agentName}`, {
     attributes: {
       'vox.context.id': host.id,
-      'game.turn': String(turn),
+      'game.turn': turn === undefined ? undefined : String(turn),
       'agent.name': agentName,
       'agent.input': input ? JSON.stringify(input) : undefined
     }
-  });
+  }, parent);
 }
 
 /**
@@ -97,24 +99,26 @@ export function openAgentSpan<TParameters extends AgentParameters>(
  *
  * @param host - The execution host providing the tracer and context id
  * @param agentName - The agent being executed (names the span and fills agent.name)
- * @param turn - The active run's game turn (stringified into game.turn)
+ * @param turn - The active run's game turn, if the agent runs in a game
  * @param stepNumber - The 1-based step number within the execution
+ * @param parent - Override the active context to parent the step explicitly
  * @returns The started span (not yet activated in the context)
  */
-export function openStepSpan<TParameters extends AgentParameters>(
-  host: ExecutionHost<TParameters>,
+export function openStepSpan(
+  host: Pick<ExecutionHost<AgentParameters>, 'id' | 'tracer'>,
   agentName: string,
-  turn: number,
-  stepNumber: number
+  turn: number | undefined,
+  stepNumber: number,
+  parent?: Context,
 ): Span {
   return host.tracer.startSpan(`agent.${agentName}.step.${stepNumber}`, {
     attributes: {
       'vox.context.id': host.id,
-      'game.turn': String(turn),
+      'game.turn': turn === undefined ? undefined : String(turn),
       'agent.name': agentName,
       'step.number': stepNumber
     }
-  });
+  }, parent);
 }
 
 /**

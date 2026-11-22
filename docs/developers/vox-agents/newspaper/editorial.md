@@ -18,7 +18,9 @@ The stock catalogue is in `vox-agents/newspaper/`. To override a rule or story, 
 | `designs/*.json` | Browser labels, renderer families, tokens, assets, layouts and article counts, eligibility, and fallback mastheads |
 | `mastheads/*.json` | Titles, mottoes, and section labels selected using the chosen design and visible game facts |
 
-The loader reads grouped files in filename order. Entries and authored variants merge by ID; arrays of values such as tags, conditions, or paragraphs replace the inherited array. Defaults and constants merge as objects. [Style rules](#variant-styles) have their own merge behavior. Replay validates the effective catalogue and saves it for resume.
+The loader reads grouped files in filename order. A stock template file can have a companion such as `war-variants.json` for extra variants of templates in `war.json`. Each companion entry names the template by `id` and lists its additional `variants`. Its variant IDs must differ from all regular and merge IDs in that template. To favor regional wording, tune the extra variants' `when` and `weight` in that file or override just those variants in your local `templates/war-variants.json`.
+
+When applying an override, entries and authored variants merge by ID; arrays of values such as tags, conditions, or paragraphs replace the inherited array. Defaults and constants merge as objects. [Style rules](#variant-styles) have their own merge behavior. Replay validates the effective catalogue and saves it for resume.
 
 ## Authoring choices
 

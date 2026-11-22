@@ -16,6 +16,7 @@ import { stripJsonFence } from '../../agents/models/text-cleaning.js';
 import { streamTextWithConcurrency, withModelConfig } from '../../agents/models/concurrency.js';
 import type { ConcurrencyContext } from '../../agents/models/concurrency.js';
 import type { StepTokenUsage } from '../../agents/telemetry/model-usage.js';
+import { openAgentSpan, openStepSpan, recordSpanError } from '../../agents/runtime/vox-telemetry.js';
 import type {
   DeskCandidate,
   DeskGenerateRequest,
@@ -28,8 +29,7 @@ import { createLogger } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errors.js';
 import { Output } from 'ai';
 import type { ModelMessage, StepResult, ToolSet } from 'ai';
-import { ROOT_CONTEXT, SpanStatusCode, trace } from '@opentelemetry/api';
-import type { Context } from '@opentelemetry/api';
+import { context, ROOT_CONTEXT, SpanStatusCode, trace } from '@opentelemetry/api';
 import { deskTracer } from '../../instrumentation.js';
 import { z } from 'zod';
 // @ts-expect-error - jaison doesn't have type definitions
@@ -44,7 +44,7 @@ import { deskChoicesLimit, deskRefKey } from './batch.js';
 import { DeskError, readDeskCatalogue } from './catalogue.js';
 import type { DeskCatalogue } from './catalogue.js';
 import { normalizeParagraphs } from './paragraphs.js';
-import { deskMessages, deskTelemetryContextId, recordDeskReply, recordDeskUsage, sumDeskUsage } from './telemetry.js';
+import { deskMessages, deskTelemetryContextId, recordDeskReply, recordDeskUsage } from './telemetry.js';
 import type { DeskRequestOutcome } from './telemetry.js';
 import { candidateWarnings, templateVariables } from './variables.js';
 
@@ -96,6 +96,8 @@ export class DeskJobRunningError extends DeskError {
 }
 
 const logger = createLogger('newspaper-desk');
+const telemetryHost = { tracer: deskTracer, id: deskTelemetryContextId };
+const writerAgentName = 'newspaper-writer';
 
 const structuredChoiceSchema = z.object({
   headline: z.string(),
@@ -311,25 +313,28 @@ async function runTask(
   generationsAtStart: ReadonlyMap<string, number>,
   signal: AbortSignal,
   writer: DeskWriter,
-  parent: Context,
-): Promise<{ outcome: DeskRequestOutcome; usage: Partial<StepTokenUsage> }> {
+): Promise<void> {
   const messages = deskMessages(task.prompt);
-  const span = deskTracer.startSpan('Writing Desk request', {
-    attributes: {
-      'vox.context.id': deskTelemetryContextId,
-      'desk.job.id': job.id,
-      'desk.model.alias': task.model,
-      'desk.variant.ids': task.chunk.map(ref => `${ref.templateId}/${ref.variantId}`),
-      'desk.choices': task.choices,
-      'step.messages': JSON.stringify(messages),
-    },
-  }, parent);
+  const run = openAgentSpan(telemetryHost, writerAgentName, undefined, {
+    refs: task.chunk, choices: task.choices, model: task.model,
+  }, ROOT_CONTEXT);
+  const step = openStepSpan(telemetryHost, writerAgentName, undefined, 1, trace.setSpan(ROOT_CONTEXT, run));
+  const spans = [run, step];
+  const attributes = {
+    'desk.job.id': job.id,
+    'desk.model.alias': task.model,
+    'desk.variant.ids': task.chunk.map(ref => `${ref.templateId}/${ref.variantId}`),
+    'desk.choices': task.choices,
+  };
+  for (const span of spans) span.setAttributes(attributes);
+  step.setAttribute('step.messages', JSON.stringify(messages));
   let outcome: DeskRequestOutcome = 'canceled';
   let usage: Partial<StepTokenUsage> | undefined;
   try {
     signal.throwIfAborted();
-    span.setAttribute('model', formatModelReference(getModelConfig(task.model)));
-    const reply = await writer({
+    const model = formatModelReference(getModelConfig(task.model));
+    for (const span of spans) span.setAttribute('model', model);
+    const reply = await context.with(trace.setSpan(ROOT_CONTEXT, step), () => writer({
       model: task.model,
       refs: task.chunk,
       choices: task.choices,
@@ -337,14 +342,14 @@ async function runTask(
       signal,
       messages,
       /** Capture the provider reply at the application boundary, before parsing. */
-      recordReply: step => {
+      recordReply: result => {
         try {
-          usage = recordDeskReply(span, messages, step);
+          usage = recordDeskReply(step, messages, result);
         } catch (error) {
           logger.warn('Could not record the Writing Desk reply', { job: job.id, error: errorMessage(error) });
         }
       },
-    });
+    }));
     usage ??= { inputTokens: reply.tokens?.input, outputTokens: reply.tokens?.output };
     if (!signal.aborted) {
       if (reply.tokens) {
@@ -352,23 +357,26 @@ async function runTask(
         job.tokens.output += reply.tokens.output ?? 0;
       }
       outcome = applyReply(job, task, catalogue, generationsAtStart, reply);
-      span.setStatus({ code: SpanStatusCode.OK });
+      step.setAttribute('step.should_stop', true);
+      for (const span of spans) span.setStatus({ code: SpanStatusCode.OK });
     }
   } catch (error) {
     if (!signal.aborted) {
       outcome = 'failed';
       const message = errorMessage(error);
-      span.setStatus({ code: SpanStatusCode.ERROR, message });
+      for (const span of spans) recordSpanError(span, error);
       job.failed++;
       job.errors.push({ model: task.model, refs: [...task.chunk], message });
     }
   } finally {
     if (job.status === 'running') job.done++;
-    if (usage) recordDeskUsage(span, usage);
-    span.setAttribute('desk.outcome', outcome);
-    span.end();
+    for (const span of spans) {
+      if (usage) recordDeskUsage(span, usage);
+      span.setAttribute('desk.outcome', outcome);
+    }
+    step.end();
+    run.end();
   }
-  return { outcome, usage: usage ?? {} };
 }
 
 /** Run the prepared requests without letting one failure cancel the others. */
@@ -380,35 +388,8 @@ async function runTasks(
   signal: AbortSignal,
   writer: DeskWriter,
 ): Promise<void> {
-  const batch = deskTracer.startSpan('Writing Desk batch', { attributes: {
-    'vox.context.id': deskTelemetryContextId,
-    'desk.job.id': job.id,
-    'desk.model.aliases': [...new Set(tasks.map(task => task.model))],
-    'desk.requests': tasks.length,
-  } }, ROOT_CONTEXT);
-  const parent = trace.setSpan(ROOT_CONTEXT, batch);
-  try {
-    const results = await Promise.allSettled(tasks.map(task =>
-      runTask(job, task, catalogue, generationsAtStart, signal, writer, parent)));
-    const counts: Record<DeskRequestOutcome, number> = { complete: 0, partial: 0, failed: 0, canceled: 0, discarded: 0 };
-    const usage: Partial<StepTokenUsage> = {};
-    for (const result of results) {
-      if (result.status === 'rejected') {
-        counts.failed++;
-      } else {
-        counts[result.value.outcome]++;
-        sumDeskUsage(usage, result.value.usage);
-      }
-    }
-    recordDeskUsage(batch, usage);
-    for (const [outcome, count] of Object.entries(counts)) batch.setAttribute(`desk.requests.${outcome}`, count);
-    if (job.status === 'running') job.status = 'done';
-    batch.setAttribute('desk.job.status', job.status);
-    if (counts.failed) batch.setStatus({ code: SpanStatusCode.ERROR, message: `${counts.failed} failed requests` });
-    else if (job.status === 'done') batch.setStatus({ code: SpanStatusCode.OK });
-  } finally {
-    batch.end();
-  }
+  await Promise.allSettled(tasks.map(task => runTask(job, task, catalogue, generationsAtStart, signal, writer)));
+  if (job.status === 'running') job.status = 'done';
 }
 
 /** Build the model calls for one job without running them. */

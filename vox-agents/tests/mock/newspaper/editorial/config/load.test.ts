@@ -305,6 +305,20 @@ describe('editorial catalogue files', () => {
     await expect(loadEditorialConfig(directory)).rejects.toBeInstanceOf(SyntaxError);
   });
 
+  it('should let a local variant override omit the corresponding stock template file', async () => {
+    const stock = await loadEditorialConfig();
+    const template = stock.templates.find(entry => entry.variants.length > 0)!;
+    const original = template.variants[0];
+    await writeDocument('templates/war-variants.json', [{
+      id: template.id, variants: [{ id: original.id, weight: { base: 0 } }],
+    }]);
+    const loaded = await loadEditorialConfig(directory);
+    const changed = loaded.templates.find(entry => entry.id === template.id)!;
+    expect(changed.variants).toEqual([
+      { ...original, weight: { ...original.weight, base: 0 } }, ...template.variants.slice(1),
+    ]);
+  });
+
   it('should reject malformed trigger rules and unknown span names', async () => {
     const base = await loadEditorialConfig();
     const rule = base.triggers.find(rule => rule.subject === 'city' && !rule.event)!;

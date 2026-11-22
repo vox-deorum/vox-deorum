@@ -17,6 +17,7 @@ import { unzipSync } from 'fflate';
 import telemetryRoutes from '../../../../src/web/routes/telemetry.js';
 import { sqliteExporter } from '../../../../src/instrumentation.js';
 import { WorkspaceStore } from '../../../../src/agents/workspace/workspace-store.js';
+import { deskTelemetryContextId, deskTelemetryDatabase } from '../../../../src/newspaper/desk/telemetry.js';
 import { createTelemetryDb } from '../../../helpers/telemetry-db.js';
 
 function makeApp() {
@@ -147,6 +148,29 @@ describe('telemetry routes', () => {
       const res = await request(app).get('/api/telemetry/db/missing.db/traces');
       expect(res.status).toBe(404);
       expect(res.body).toHaveProperty('error');
+    });
+
+    it('should list an old batch once even when its root never finished', async () => {
+      const legacy = { contextId: deskTelemetryContextId, turn: null, name: 'Writing Desk request' };
+      const rows = [
+        { ...legacy, traceId: 'incomplete', spanId: 'first', parentSpanId: 'missing' },
+        { ...legacy, traceId: 'incomplete', spanId: 'second', parentSpanId: 'missing' },
+        { ...legacy, traceId: 'intact', spanId: 'saved-child', parentSpanId: 'saved-root' },
+        { ...legacy, traceId: 'intact', spanId: 'saved-root', name: 'Writing Desk batch' },
+        { ...legacy, traceId: 'new-pending', spanId: 'step', parentSpanId: 'pending-root', name: 'agent.newspaper-writer.step.1' },
+      ];
+      vi.spyOn(sqliteExporter, 'openDatabaseFile').mockImplementation(() => createTelemetryDb(rows).db);
+      const desk = `/api/telemetry/db/${encodeURIComponent(deskTelemetryDatabase)}`;
+      const list = await request(app).get(`${desk}/traces`).expect(200);
+      expect(list.body.traces.map((span: { spanId: string }) => span.spanId)).toEqual(['saved-root', 'first']);
+      const paged = await request(app).get(`${desk}/traces?limit=1&offset=1`).expect(200);
+      expect(paged.body.traces).toEqual([expect.objectContaining({ spanId: 'first' })]);
+      const detail = await request(app).get(`${desk}/trace/incomplete/spans`).expect(200);
+      expect(detail.body.spans).toEqual([
+        expect.objectContaining({ spanId: 'first' }), expect.objectContaining({ spanId: 'second' }),
+      ]);
+      const other = await request(app).get('/api/telemetry/db/other.db/traces').expect(200);
+      expect(other.body.traces).toEqual([expect.objectContaining({ spanId: 'saved-root' })]);
     });
   });
 

@@ -1,13 +1,13 @@
 import express, { type Express, type ErrorRequestHandler, type RequestHandler } from 'express';
 import { z, ZodError } from 'zod';
-import type { DeskCatalogueResponse, DeskRef, DeskSettleRequest, DeskVariantDetail } from '../../types/api.js';
+import type { DeskCatalogueResponse, DeskRef, DeskSettleManyRequest, DeskSettleRequest, DeskVariantDetail } from '../../types/api.js';
 import { errorMessage } from '../../utils/errors.js';
 import { sendError } from '../../web/http-utils.js';
 import { deskChoicesLimit } from './batch.js';
 import { DeskError, deskTriggers, readDeskCatalogue } from './catalogue.js';
 import { deskVariantStyle, findDeskVariant } from './brief.js';
 import { clearAllCandidates, clearCandidates, deskModelNames, getCandidates, getCurrentJob, startJob, stopJob, type DeskWriter } from './generate.js';
-import { settleVariant, unsettleVariant } from './settle.js';
+import { settleManyVariants, settleVariant, unsettleVariant } from './settle.js';
 import { templateVariables } from './variables.js';
 
 const refSchema = z.object({ templateId: z.string().min(1), variantId: z.string().min(1) });
@@ -17,11 +17,16 @@ const batchSchema = z.object({
   choices: z.number().int().min(1).max(deskChoicesLimit),
 });
 const revisionSchema = z.object({ revision: z.string().min(1) });
-const copySchema = revisionSchema.extend({
+const textSchema = z.object({
   headline: z.string(),
   subheadline: z.string().optional(),
   byline: z.string().optional(),
   body: z.array(z.string()),
+});
+const copySchema = revisionSchema.extend(textSchema.shape);
+const settleManySchema = revisionSchema.extend({
+  primary: textSchema,
+  siblings: z.array(textSchema).min(1),
 });
 
 /** Adapt a desk operation to the common JSON error boundary. */
@@ -86,6 +91,12 @@ async function updateVariant(ref: DeskRef, request: DeskSettleRequest | { revisi
   return variantDetail(ref);
 }
 
+/** Save the primary copy with new siblings, then return the existing settle response shape. */
+async function settleMany(ref: DeskRef, request: DeskSettleManyRequest): Promise<DeskVariantDetail> {
+  await settleManyVariants(ref, request, { onChange: clearCandidates });
+  return variantDetail(ref);
+}
+
 /** Install desk handlers and their JSON parser ahead of the newspaper API fallback. */
 export function mountDeskRoutes(app: Express, writer?: DeskWriter): void {
   const router = express.Router();
@@ -98,6 +109,7 @@ export function mountDeskRoutes(app: Express, writer?: DeskWriter): void {
   router.get('/jobs/current', reply(getCurrentJob));
   router.post('/jobs/current/stop', reply(stopJob));
   router.post(variantPath + '/settle', reply(req => updateVariant(refFrom(req), copySchema.parse(req.body))));
+  router.post(variantPath + '/settle-many', reply(req => settleMany(refFrom(req), settleManySchema.parse(req.body))));
   router.post(variantPath + '/unsettle', reply(req => updateVariant(refFrom(req), revisionSchema.parse(req.body))));
 
   /** Return parser failures in the same format as desk errors. */

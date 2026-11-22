@@ -55,7 +55,7 @@ const deskSpanProcessor = new SimpleSpanProcessor({
 });
 const deskTracerProvider = new NodeTracerProvider({ spanProcessors: [deskSpanProcessor] });
 
-/** Tracer for Writing Desk batches and requests. */
+/** Tracer for Writing Desk requests and their model steps. */
 export const deskTracer = deskTracerProvider.getTracer('newspaper-desk');
 
 /** Wait for ended Writing Desk spans to reach SQLite. */

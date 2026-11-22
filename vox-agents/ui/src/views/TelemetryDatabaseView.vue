@@ -32,11 +32,14 @@ import {
 const route = useRoute();
 const router = useRouter();
 const toast = useToast();
+const tracePageSize = 1000;
 
 // State
 const loading = ref(false);
 const error = ref<string | null>(null);
 const traces = ref<Span[]>([]);
+const nextOffset = ref(0);
+const hasOlder = ref(false);
 const searchQuery = ref('');
 const first = ref(0); // PrimeVue Paginator uses 'first' for the first row index
 const rows = ref(20); // Number of rows per page
@@ -106,18 +109,27 @@ function goBack() {
 }
 
 /**
- * Load traces from the database
+ * Show the latest database page on refresh, or append older traces on demand.
  */
-async function loadTraces() {
+async function loadTraces(older = false) {
+  if (loading.value) return;
   loading.value = true;
   error.value = null;
 
   try {
-    // Load all traces (root spans) from the database
-    // Using a high limit to get all traces for frontend filtering
-    const response = await api.getDatabaseTraces(filename.value, 1000, 0);
-
-    traces.value = response.traces.map(parseSpanAttributes);
+    const offset = older ? nextOffset.value : 0;
+    const response = await api.getDatabaseTraces(filename.value, tracePageSize, offset);
+    const page = response.traces.map(parseSpanAttributes);
+    if (older) {
+      // New requests can finish between pages and shift rows into this page.
+      const known = new Set(traces.value.map(trace => trace.traceId));
+      traces.value.push(...page.filter(trace => !known.has(trace.traceId)));
+    } else {
+      traces.value = page;
+    }
+    nextOffset.value = offset + page.length;
+    hasOlder.value = page.length === tracePageSize;
+    if (first.value >= filteredTraces.value.length) first.value = 0;
   } catch (err) {
     error.value = errorMessage(err, 'Failed to load traces');
     console.error('Error loading traces:', err);
@@ -177,10 +189,14 @@ onMounted(() => {
         />
         <h1>{{ filename }}</h1>
       </div>
+      <div class="page-header-controls">
+        <Button label="Refresh" icon="pi pi-refresh" severity="secondary" outlined :loading="loading" aria-label="Refresh traces"
+          @click="loadTraces()" />
+      </div>
     </div>
 
     <!-- Loading State -->
-    <div v-if="loading" class="loading-container">
+    <div v-if="loading && !traces.length" class="loading-container">
       <ProgressSpinner />
       <p>Loading traces...</p>
     </div>
@@ -189,14 +205,14 @@ onMounted(() => {
     <div v-else-if="error" class="error-container">
       <i class="pi pi-exclamation-triangle"></i>
       <p>{{ error }}</p>
-      <Button label="Retry" @click="loadTraces" />
+      <Button label="Retry" @click="loadTraces()" />
     </div>
 
     <!-- Traces List -->
     <div v-else class="panel-container">
       <Toolbar>
         <template #start>
-          <Tag :value="`${filteredTraces.length} traces`" />
+          <Tag :value="`${filteredTraces.length} ${hasOlder ? 'loaded ' : ''}traces`" />
         </template>
         <template #end>
           <span class="p-input-icon-left search-box">
@@ -314,6 +330,9 @@ onMounted(() => {
           :rowsPerPageOptions="[10, 20, 50]"
           class="traces-paginator"
         />
+        <div v-if="hasOlder" class="flex justify-content-center p-2">
+          <Button label="Load older traces" severity="secondary" text :loading="loading" @click="loadTraces(true)" />
+        </div>
       </div>
     </div>
 

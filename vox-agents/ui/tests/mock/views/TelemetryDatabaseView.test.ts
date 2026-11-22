@@ -93,4 +93,17 @@ describe('TelemetryDatabaseView turn requests', () => {
     await flushPromises();
     wrapper.unmount();
   });
+
+  it('should show traces completed since the database was opened after Refresh', async () => {
+    vi.mocked(api.getDatabaseTraces).mockResolvedValueOnce({ traces: [] }).mockResolvedValueOnce({ traces: [{
+      ...createTrace('request', 'writer-root'), name: 'agent.newspaper-writer', turn: null,
+    }] });
+    const wrapper = mountView();
+    await flushPromises();
+    expect(wrapper.text()).toContain('No traces found');
+    await wrapper.get('[aria-label="Refresh traces"]').trigger('click');
+    await flushPromises();
+    expect(wrapper.text()).toContain('agent.newspaper-writer');
+    wrapper.unmount();
+  });
 });

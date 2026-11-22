@@ -7,6 +7,7 @@ import { isRecord } from '../../../utils/guards.js';
 import { variantStyleKinds } from '../../contracts/style.js';
 import { prepareEditorialExpressions, type CompiledEditorialExpressions } from './expressions.js';
 import { editorialConfigSchema, editorialConfigVersion, type EditorialConfig } from './schema.js';
+import { readTemplateSources } from './template-sources.js';
 
 /** Resolve built-in files from both source and installed dist directory layouts. */
 export function builtInCatalogueDirectory(): string {
@@ -208,9 +209,9 @@ export async function loadEditorialConfig(directory?: string): Promise<Editorial
   for (const name of ['defaults', 'constants', 'triggers', 'templates', 'pages', 'designs', 'civicTerms']) {
     const grouped = name === 'triggers' || name === 'templates' || name === 'designs';
     const file = name === 'civicTerms' ? 'civic-terms' : name;
-    const base = grouped
-      ? await readCatalogueSection(builtIn, name)
-      : await readCatalogueFile(builtIn, file, name === 'civicTerms');
+    const base = name === 'templates'
+      ? (await readTemplateSources(path.join(builtIn, name))).flatMap(source => source.templates)
+      : grouped ? await readCatalogueSection(builtIn, name) : await readCatalogueFile(builtIn, file, name === 'civicTerms');
     let custom = directory ? await readCatalogueFile(directory, file, true) : undefined;
     if (directory && grouped)
       custom = overlay(custom, await readCatalogueSection(directory, name, true));

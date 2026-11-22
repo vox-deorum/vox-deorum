@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import { config } from '../../../../src/agents/config/load.js';
-import type { DeskCatalogueResponse, DeskVariantDetail } from '../../../../src/types/api.js';
+import type { DeskCatalogueResponse, DeskRef, DeskVariantDetail } from '../../../../src/types/api.js';
 import { clearCandidates, stopJob, waitForJob, type DeskWriter } from '../../../../src/newspaper/desk/generate.js';
 import { mountDeskRoutes } from '../../../../src/newspaper/desk/http.js';
 import { startNewspaperHost } from '../../../../src/newspaper/export/http.js';
@@ -111,6 +111,78 @@ describe('Writing Desk HTTP routes', () => {
       expect(current.body).toMatchObject({ id: running.id, status: 'stopped' });
     } finally {
       for (const ref of refs) clearCandidates(ref);
+    }
+  });
+
+  /** Pick the first unsettled stock variant and its encoded route from the served catalogue. */
+  async function findUnsettledVariant(): Promise<{ ref: DeskRef; route: string }> {
+    const result = await request(host.app).get('/api/newspaper/desk').expect(200);
+    const catalogue = result.body as DeskCatalogueResponse;
+    for (const template of catalogue.templates) {
+      const variant = template.variants.find(item => !item.settled);
+      if (!variant) continue;
+      const route = '/api/newspaper/desk/templates/' + encodeURIComponent(template.id) +
+        '/variants/' + encodeURIComponent(variant.id);
+      return { ref: { templateId: template.id, variantId: variant.id }, route };
+    }
+    throw new Error('The stock catalogue has no unsettled variant to test.');
+  }
+
+  it('should require at least one sibling for a multiple settle', async () => {
+    const { route } = await findUnsettledVariant();
+    const detail = (await request(host.app).get(route).expect(200)).body as DeskVariantDetail;
+    await request(host.app).post(route + '/settle-many').send({
+      revision: detail.revision,
+      primary: detail.text,
+      siblings: [],
+    }).expect(400);
+  });
+
+  it('should reject an invalid sibling copy and keep its drafts', async () => {
+    const { ref, route } = await findUnsettledVariant();
+    try {
+      await request(host.app).post('/api/newspaper/desk/jobs').send({ refs: [ref], models: [model], choices: 1 }).expect(200);
+      await waitForJob();
+      const detail = (await request(host.app).get(route).expect(200)).body as DeskVariantDetail;
+      expect(detail.settled).toBe(false);
+      expect(detail.candidates).toHaveLength(1);
+
+      await request(host.app).post(route + '/settle-many').send({
+        revision: detail.revision,
+        primary: detail.text,
+        siblings: [{ ...detail.text, headline: detail.text.headline + ' {{mystery}}' }],
+      }).expect(400);
+
+      const after = (await request(host.app).get(route).expect(200)).body as DeskVariantDetail;
+      expect(after.candidates).toEqual(detail.candidates);
+      expect(after.revision).toBe(detail.revision);
+      expect(after.settled).toBe(false);
+    } finally {
+      clearCandidates(ref);
+    }
+  });
+
+  it('should reject a stale revision for a multiple settle and keep its drafts', async () => {
+    const { ref, route } = await findUnsettledVariant();
+    try {
+      await request(host.app).post('/api/newspaper/desk/jobs').send({ refs: [ref], models: [model], choices: 1 }).expect(200);
+      await waitForJob();
+      const detail = (await request(host.app).get(route).expect(200)).body as DeskVariantDetail;
+      expect(detail.settled).toBe(false);
+      expect(detail.candidates).toHaveLength(1);
+
+      await request(host.app).post(route + '/settle-many').send({
+        revision: 'stale-revision',
+        primary: detail.text,
+        siblings: [detail.text],
+      }).expect(409);
+
+      const after = (await request(host.app).get(route).expect(200)).body as DeskVariantDetail;
+      expect(after.candidates).toEqual(detail.candidates);
+      expect(after.revision).toBe(detail.revision);
+      expect(after.settled).toBe(false);
+    } finally {
+      clearCandidates(ref);
     }
   });
 });

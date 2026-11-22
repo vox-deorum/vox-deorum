@@ -89,11 +89,11 @@ The routes live under `/api/debug` in `src/web/routes/debug.ts`; log reads accep
 
 Open **Debug → Writing Desk** from a writable source checkout. The desk checks every unsettled stock variant by default. **Generate** uses the checked variants that match the current filters. Choose models and drafts per variant in the toolbar. Use **More models…** in the model field to browse a saved provider connection and add a model for this visit.
 
-Settle the current copy or a draft to write it back to the template file. Use **Unsettle** to reopen it. To start a new round after approving some drafts, stop any running batch and choose **Clear drafts**. This removes generated candidates across the desk, including filtered variants. Current copy and settled examples remain available for the next batch.
+Settle the current copy or a draft to save it. To keep several copies, choose **Settle multiple…** and pick which one keeps the original variant ID and file. The others get the next available suffixes (`-1`, `-2`, and so on) in a companion file such as `war-variants.json`. Each is a settled example and a separate publication choice with the original's style, eligibility, and weight. Use **Unsettle** to reopen any of them. To start a new round, stop any running batch and choose **Clear drafts** to remove generated candidates across the desk while keeping the saved copies.
 
 The desk groups variants by voice, stance, and genre, and sends up to eight variants per request. Each request includes relevant settled examples, favoring the same voice and template. Merge variants and templates reserved for the newspaper editor are outside the desk.
 
-In **Telemetry**, open the `newspaper-desk` database and select a **Writing Desk batch** trace. The full prompts and replies are stored locally in `newspaper/newspaper-desk-player-0.db` under the configured telemetry directory. Restarting Vox Agents clears the in-memory desk candidates, but recorded replies remain in that database.
+In **Telemetry**, open the `newspaper-desk` database and select an `agent.newspaper-writer` trace. Its model step shows the prompt and available reply. Use **Refresh** for newly completed requests and **Load older traces** to see more. Search the loaded traces by variant ID or model. Older batches remain available in the same local database (`newspaper/newspaper-desk-player-0.db`). Recorded replies survive a restart; unapproved drafts in the desk do not.
 
 The desk shows the provider's token totals. Telemetry shows visible output and reasoning separately.
 

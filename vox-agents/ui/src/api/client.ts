@@ -68,6 +68,7 @@ import type {
   DeskJob,
   DeskRef,
   DeskSettleRequest,
+  DeskSettleManyRequest,
   DeskVariantDetail
 } from '../utils/types';
 import type { TextStreamPart, ToolSet } from 'ai';
@@ -793,6 +794,13 @@ class ApiClient {
   /** Save the chosen copy to the stock template. */
   settleDeskVariant(ref: DeskRef, request: DeskSettleRequest): Promise<DeskVariantDetail> {
     return this.fetchJson(this.baseUrl + deskVariantPath(ref) + '/settle', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(request),
+    });
+  }
+
+  /** Save multiple approved copies in one stock template update. */
+  settleDeskVariants(ref: DeskRef, request: DeskSettleManyRequest): Promise<DeskVariantDetail> {
+    return this.fetchJson(this.baseUrl + deskVariantPath(ref) + '/settle-many', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(request),
     });
   }

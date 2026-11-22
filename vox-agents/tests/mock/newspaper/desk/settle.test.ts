@@ -1,16 +1,25 @@
-import { chmod, copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { chmod, copyFile, link, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { DeskRef } from '../../../../src/types/api.js';
 import type { AuthoredVariant } from '../../../../src/newspaper/editorial/config/schema.js';
-import { builtInCatalogueDirectory } from '../../../../src/newspaper/editorial/config/load.js';
-import { printable } from '../../../../src/newspaper/editorial/selection/templates.js';
+import { scaleEditorialConstants } from '../../../../src/newspaper/editorial/config/constants.js';
+import { builtInCatalogueDirectory, getEditorialExpressions, loadEditorialConfig } from '../../../../src/newspaper/editorial/config/load.js';
+import { buildNewspaperFacts } from '../../../../src/newspaper/editorial/facts/index.js';
+import { evaluateTriggerRules } from '../../../../src/newspaper/editorial/rules/evaluate.js';
+import { matchTemplates, printable } from '../../../../src/newspaper/editorial/selection/templates.js';
+import { pickExamples } from '../../../../src/newspaper/desk/brief.js';
 import type { DeskCatalogue, DeskVariant } from '../../../../src/newspaper/desk/catalogue.js';
 import { DeskError, readDeskCatalogue } from '../../../../src/newspaper/desk/catalogue.js';
 import type { DeskSettleOptions } from '../../../../src/newspaper/desk/settle.js';
-import { settleVariant, unsettleVariant } from '../../../../src/newspaper/desk/settle.js';
+import { settleManyVariants, settleVariant, unsettleVariant } from '../../../../src/newspaper/desk/settle.js';
 import { templateVariables } from '../../../../src/newspaper/desk/variables.js';
+
+vi.mock('node:fs/promises', async (importOriginal) => {
+  const fs = await importOriginal<typeof import('node:fs/promises')>();
+  return { ...fs, link: vi.fn(fs.link) };
+});
 
 const templateSource = `[
   {
@@ -50,6 +59,54 @@ const secondVariantSource = `      {
         "weight": { "base": 1 }
       }`;
 
+const multiTemplateSource = `[
+  {
+    "id": "fixture-multi",
+    "triggers": ["fixture-era"],
+    "tags": ["science"],
+    "names": ["civilization", "era"],
+    "weight": { "base": 1 },
+    "merge": {
+      "match": "true",
+      "min": 1,
+      "variants": [
+        {
+          "id": "draft-1",
+          "headline": "Merged draft",
+          "body": ["Merged body."],
+          "weight": { "base": 1 }
+        }
+      ]
+    },
+    "variants": [
+      {
+        "id": "draft",
+        "when": "true",
+        "voice": "gazette",
+        "stance": "neutral",
+        "genre": "report",
+        "headline": "A friend enters the {{era}}",
+        "subheadline": "Source deck",
+        "byline": "Staff",
+        "body": [
+          "Letters say {{civilization}} has entered the {{era}}."
+        ],
+        "links": [
+          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+        ],
+        "weight": { "base": 1, "adjustments": [{ "when": "true", "add": 2 }] }
+      },
+      {
+        "id": "draft-2",
+        "headline": "Occupied suffix",
+        "body": ["Occupied body."],
+        "weight": { "base": 1 }
+      }
+    ]
+  }
+]
+`;
+
 const triggerSource = `[
   {
     "id": "fixture-era",
@@ -71,19 +128,26 @@ interface Fixture {
   directory: string;
   writingPath: string;
   templatePath: string;
+  companionPath: string;
   ref: DeskRef;
   secondRef: DeskRef;
 }
 
 interface ParsedTemplate {
   id: string;
+  merge?: unknown;
   variants: Record<string, unknown>[];
 }
 
 const directories: string[] = [];
 
-/** Build an isolated stock catalogue with two variants in one template. */
-async function createFixture(): Promise<Fixture> {
+/** Build an isolated stock catalogue with two source variants in one template. */
+async function createFixture(
+  source = templateSource,
+  templateId = 'fixture-news',
+  variantId = 'draft',
+  secondVariantId = 'second',
+): Promise<Fixture> {
   const directory = await mkdtemp(path.join(tmpdir(), 'vd-desk-settle-'));
   directories.push(directory);
   const templates = path.join(directory, 'templates');
@@ -94,7 +158,7 @@ async function createFixture(): Promise<Fixture> {
   const stock = builtInCatalogueDirectory();
   for (const file of ['constants.json', 'civic-terms.json', 'styles/voice.json', 'styles/stance.json', 'styles/genre.json'])
     await copyFile(path.join(stock, file), path.join(directory, file));
-  await writeFile(path.join(templates, 'fixture.json'), templateSource, 'utf8');
+  await writeFile(path.join(templates, 'fixture.json'), source, 'utf8');
   await writeFile(path.join(triggers, 'fixture.json'), triggerSource, 'utf8');
   const writingPath = path.join(directory, 'writing.md');
   await writeFile(writingPath, writingRules, 'utf8');
@@ -102,8 +166,9 @@ async function createFixture(): Promise<Fixture> {
     directory,
     writingPath,
     templatePath: path.join(templates, 'fixture.json'),
-    ref: { templateId: 'fixture-news', variantId: 'draft' },
-    secondRef: { templateId: 'fixture-news', variantId: 'second' },
+    companionPath: path.join(templates, 'fixture-variants.json'),
+    ref: { templateId, variantId },
+    secondRef: { templateId, variantId: secondVariantId },
   };
 }
 
@@ -360,5 +425,218 @@ describe('newspaper desk settle', () => {
     } finally {
       await chmod(fixture.templatePath, 0o666);
     }
+  });
+});
+
+describe('newspaper desk settle many', () => {
+  afterEach(async () => {
+    vi.restoreAllMocks();
+    await Promise.all(directories.splice(0).map((directory) =>
+      rm(directory, { recursive: true, force: true })));
+  });
+
+  it('should keep the primary in place and publish companion copies as separate choices', async () => {
+    const fixture = await createFixture(multiTemplateSource, 'fixture-multi', 'draft', 'draft-2');
+    const draft = findVariant(await readCatalogue(fixture), fixture.ref);
+    const original = await readParsed(fixture.templatePath);
+    const sourceRow = original[0].variants[0];
+    await writeFile(fixture.companionPath, JSON.stringify([{ id: fixture.ref.templateId, variants: [{
+      id: 'draft-3', headline: 'Earlier sibling', body: ['Earlier story.'], weight: { base: 1 },
+    }] }]), 'utf8');
+    const onChange = vi.fn();
+    await settleManyVariants(fixture.ref, {
+      revision: draft.revision,
+      primary: {
+        headline: 'Primary {{era}}',
+        subheadline: 'Fresh deck',
+        body: ['Primary body for {{civilization}}.'],
+      },
+      siblings: [
+        { headline: 'First sibling {{era}}', body: ['First sibling body for {{civilization}}.'] },
+        { headline: 'Second sibling {{era}}', byline: 'Staff', body: ['Second sibling body for {{civilization}}.'] },
+      ],
+    }, { ...options(fixture), onChange });
+    expect(onChange).toHaveBeenCalledWith(fixture.ref);
+
+    const after = await readParsed(fixture.templatePath);
+    const rows = after[0].variants;
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toMatchObject({
+      id: 'draft',
+      settled: true,
+      headline: 'Primary {{era}}',
+      subheadline: 'Fresh deck',
+      body: ['Primary body for {{civilization}}.'],
+    });
+    expect(rows[0]).not.toHaveProperty('byline');
+    expect(rows[0]).toMatchObject({
+      when: sourceRow.when,
+      voice: sourceRow.voice,
+      stance: sourceRow.stance,
+      genre: sourceRow.genre,
+      weight: sourceRow.weight,
+      links: sourceRow.links,
+    });
+    expect(rows[1]).toEqual(original[0].variants[1]);
+    expect(after[0].merge).toEqual(original[0].merge);
+
+    const [extra] = await readParsed(fixture.companionPath);
+    expect(extra.id).toBe(fixture.ref.templateId);
+    expect(extra.variants.map(row => row.id)).toEqual(['draft-3', 'draft-4', 'draft-5']);
+    for (const row of extra.variants.slice(1)) {
+      expect(row).toMatchObject({
+        settled: true,
+        when: sourceRow.when,
+        voice: sourceRow.voice,
+        stance: sourceRow.stance,
+        genre: sourceRow.genre,
+        weight: sourceRow.weight,
+        links: sourceRow.links,
+      });
+    }
+    expect(extra.variants[1]).toMatchObject({
+      headline: 'First sibling {{era}}',
+      body: ['First sibling body for {{civilization}}.'],
+    });
+    expect(extra.variants[1]).not.toHaveProperty('subheadline');
+    expect(extra.variants[1]).not.toHaveProperty('byline');
+    expect(extra.variants[2]).toMatchObject({ headline: 'Second sibling {{era}}', byline: 'Staff' });
+    expect(extra.variants[2]).not.toHaveProperty('subheadline');
+
+    const catalogue = await readCatalogue(fixture);
+    const firstSibling = findVariant(catalogue, { templateId: 'fixture-multi', variantId: 'draft-4' });
+    expect(firstSibling.settled).toBe(true);
+    expect(firstSibling.text).toMatchObject({
+      headline: 'First sibling {{era}}',
+      body: ['First sibling body for {{civilization}}.'],
+    });
+    expect(firstSibling.links).toEqual(sourceRow.links);
+    expect(pickExamples(fixture.secondRef, catalogue, 3).map(example => example.variantId)).toEqual(['draft', 'draft-4', 'draft-5']);
+
+    const config = await loadEditorialConfig(fixture.directory);
+    const compiled = await getEditorialExpressions(config);
+    const facts = buildNewspaperFacts({
+      request: { receiverPlayerID: 0, previousCheckTurn: 1, cutoffTurn: 5 },
+      players: [{ subjectID: 0, values: { Era: 'Renaissance Era' },
+        source: { table: 'PlayerSummaries', id: 1, turn: 5, createdAt: 1 } }],
+      cities: [], comparisons: { players: [], cities: [] }, events: [],
+    }, { playerIdentities: { 0: { name: 'Rome', major: true } } });
+    const rules = await evaluateTriggerRules({
+      rules: config.triggers.filter(rule => rule.id === 'fixture-era'), compiled, facts, constants: config.constants, speedMultiplier: 1,
+    });
+    const matches = await matchTemplates(rules.developments, config, compiled, { facts, constants: scaleEditorialConstants(config.constants, 1) });
+    expect(matches.find(match => match.templateIds.includes(fixture.ref.templateId))?.variantWeights)
+      .toMatchObject({ draft: 3, 'draft-4': 3, 'draft-5': 3 });
+  });
+
+  it('should create numbered siblings and let the desk edit them in the companion', async () => {
+    const fixture = await createFixture();
+    const { revision } = findVariant(await readCatalogue(fixture), fixture.ref);
+    const copy = { headline: 'Latest news', body: ['News from {{civilization}}.'] };
+    vi.mocked(link).mockRejectedValueOnce(Object.assign(new Error('No hard links'), { code: 'ENOTSUP' }));
+    await settleManyVariants(fixture.ref, { revision, primary: copy, siblings: [copy, { ...copy, headline: 'Other news' }] }, options(fixture));
+    const [extra] = await readParsed(fixture.companionPath);
+    expect(extra.variants.map(variant => variant.id)).toEqual(['draft-1', 'draft-2']);
+
+    const ref = { ...fixture.ref, variantId: 'draft-1' };
+    const sibling = findVariant(await readCatalogue(fixture), ref);
+    const base = await readFile(fixture.templatePath, 'utf8');
+    await unsettleVariant(ref, sibling.revision, options(fixture));
+    const reopened = findVariant(await readCatalogue(fixture), ref);
+    expect(reopened.settled).toBe(false);
+    await settleManyVariants(ref, {
+      revision: reopened.revision, primary: { ...copy, headline: 'Revised companion' }, siblings: [copy],
+    }, options(fixture));
+    expect(await readFile(fixture.templatePath, 'utf8')).toBe(base);
+    expect((await readParsed(fixture.companionPath))[0].variants.map(variant => [variant.id, variant.headline])).toEqual([
+      ['draft-1', 'Revised companion'], ['draft-2', 'Other news'], ['draft-1-1', 'Latest news'],
+    ]);
+  });
+
+  it('should keep a companion another editor creates during the save', async () => {
+    const fixture = await createFixture();
+    const original = await readFile(fixture.templatePath, 'utf8');
+    const { revision } = findVariant(await readCatalogue(fixture), fixture.ref);
+    const copy = { headline: 'Latest news', body: ['News from {{civilization}}.'] };
+    const companion = '[\n]\n';
+    vi.mocked(link).mockImplementationOnce(async (_temporary, file) => {
+      await writeFile(file, companion);
+      throw Object.assign(new Error('Companion already exists'), { code: 'EEXIST' });
+    });
+    await expect(settleManyVariants(fixture.ref, { revision, primary: copy, siblings: [copy] }, options(fixture)))
+      .rejects.toMatchObject({ status: 409 });
+    expect(await readFile(fixture.templatePath, 'utf8')).toBe(original);
+    expect(await readFile(fixture.companionPath, 'utf8')).toBe(companion);
+  });
+
+  it.each([false, true])('should restore the base and companion after validation fails (existing companion: %s)', async (existing) => {
+    const fixture = await createFixture();
+    const original = await readFile(fixture.templatePath, 'utf8');
+    const companion = '[\n]\n';
+    if (existing) await writeFile(fixture.companionPath, companion, 'utf8');
+    const { revision } = findVariant(await readCatalogue(fixture), fixture.ref);
+    const copy = { headline: 'Latest news', body: ['News from {{civilization}}.'] };
+    const onChange = vi.fn();
+    await expect(settleManyVariants(fixture.ref, { revision, primary: copy, siblings: [copy] }, {
+      ...options(fixture), onChange,
+      validate: async () => { throw new Error('Invalid catalogue'); },
+    })).rejects.toMatchObject({ status: 400 });
+    expect(await readFile(fixture.templatePath, 'utf8')).toBe(original);
+    if (existing) expect(await readFile(fixture.companionPath, 'utf8')).toBe(companion);
+    else await expect(readFile(fixture.companionPath, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('should reject an invalid sibling without touching the file or clearing drafts', async () => {
+    const fixture = await createFixture(multiTemplateSource, 'fixture-multi', 'draft', 'draft-2');
+    const draft = findVariant(await readCatalogue(fixture), fixture.ref);
+    const original = await readFile(fixture.templatePath, 'utf8');
+    const onChange = vi.fn();
+    const error = await rejection(settleManyVariants(fixture.ref, {
+      revision: draft.revision,
+      primary: { headline: 'Primary {{era}}', body: ['Primary body for {{civilization}}.'] },
+      siblings: [
+        { headline: 'Valid sibling {{era}}', body: ['Valid body for {{civilization}}.'] },
+        { headline: 'A mystery in {{mystery}}', body: ['Invalid body.'] },
+      ],
+    }, { ...options(fixture), onChange }));
+    expect(error.status).toBe(400);
+    expect(error.message).toContain('mystery');
+    expect(onChange).not.toHaveBeenCalled();
+    expect(await readFile(fixture.templatePath, 'utf8')).toBe(original);
+  });
+
+  it('should reject a stale revision without touching the file or clearing drafts', async () => {
+    const fixture = await createFixture(multiTemplateSource, 'fixture-multi', 'draft', 'draft-2');
+    const original = await readFile(fixture.templatePath, 'utf8');
+    const onChange = vi.fn();
+    const error = await rejection(settleManyVariants(fixture.ref, {
+      revision: 'stale-revision',
+      primary: { headline: 'Primary {{era}}', body: ['Primary body for {{civilization}}.'] },
+      siblings: [{ headline: 'Sibling {{era}}', body: ['Sibling body for {{civilization}}.'] }],
+    }, { ...options(fixture), onChange }));
+    expect(error.status).toBe(409);
+    expect(onChange).not.toHaveBeenCalled();
+    expect(await readFile(fixture.templatePath, 'utf8')).toBe(original);
+  });
+
+  it('should refuse a multiple save after the source variant is settled', async () => {
+    const fixture = await createFixture(multiTemplateSource, 'fixture-multi', 'draft', 'draft-2');
+    const draft = findVariant(await readCatalogue(fixture), fixture.ref);
+    await settleVariant(
+      fixture.ref,
+      { headline: 'Primary {{era}}', body: ['Primary body for {{civilization}}.'] },
+      draft.revision,
+      options(fixture),
+    );
+    const settled = findVariant(await readCatalogue(fixture), fixture.ref);
+    const original = await readFile(fixture.templatePath, 'utf8');
+    const error = await rejection(settleManyVariants(fixture.ref, {
+      revision: settled.revision,
+      primary: { headline: 'Another {{era}}', body: ['Another body for {{civilization}}.'] },
+      siblings: [{ headline: 'Sibling {{era}}', body: ['Sibling body for {{civilization}}.'] }],
+    }, options(fixture)));
+    expect(error.status).toBe(409);
+    expect(await readFile(fixture.templatePath, 'utf8')).toBe(original);
   });
 });

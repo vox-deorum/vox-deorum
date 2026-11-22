@@ -822,3 +822,10 @@ export interface DeskJob {
 export interface DeskSettleRequest extends DeskText {
   revision: string;
 }
+
+/** Save a primary copy plus at least one new sibling copy for the same source variant. */
+export interface DeskSettleManyRequest {
+  revision: string;
+  primary: DeskText;
+  siblings: DeskText[];
+}

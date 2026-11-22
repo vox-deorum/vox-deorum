@@ -17,7 +17,7 @@ import { errorMessage } from '../../utils/errors.js';
 import { WorkspaceStore } from '../../agents/workspace/workspace-store.js';
 import { materialize } from '../../agents/workspace/materialize.js';
 import { zipSink } from '../../agents/workspace/materialize-zip.js';
-import { deskTelemetryContextId } from '../../newspaper/desk/telemetry.js';
+import { deskTelemetryContextId, deskTelemetryDatabase } from '../../newspaper/desk/telemetry.js';
 import type {
   TelemetryDatabasesResponse,
   TelemetryMetadata,
@@ -324,11 +324,30 @@ router.get('/db/:filename(*)/traces', async (req: Request<{ filename: string }>,
     }
 
     try {
-      // Get root spans (traces - spans without parent)
+      const deskDatabase = path.normalize(filename) === path.normalize(deskTelemetryDatabase);
       const dbTraces = await db.selectFrom('spans')
         .selectAll()
-        .where('parentSpanId', 'is', null)
+        .where(eb => {
+          const root = eb('spans.parentSpanId', 'is', null);
+          if (!deskDatabase) return root;
+          // Old batches can have stored requests without a root. List one entry per batch.
+          const firstRequest = eb.selectFrom('spans as request').select('request.id')
+            .whereRef('request.traceId', '=', 'spans.traceId')
+            .where('request.contextId', '=', deskTelemetryContextId)
+            .where('request.name', '=', 'Writing Desk request')
+            .where('request.parentSpanId', 'is not', null)
+            .orderBy('request.id').limit(1);
+          const storedRoot = eb.selectFrom('spans as root').select('root.id')
+            .whereRef('root.traceId', '=', 'spans.traceId').where('root.parentSpanId', 'is', null);
+          return eb.or([root, eb.and([
+            eb('spans.contextId', '=', deskTelemetryContextId),
+            eb('spans.name', '=', 'Writing Desk request'),
+            eb('spans.id', '=', firstRequest),
+            eb.not(eb.exists(storedRoot)),
+          ])]);
+        })
         .orderBy('startTime', 'desc')
+        .orderBy('id', 'desc')
         .limit(parseInt(limit as string))
         .offset(parseInt(offset as string))
         .execute();

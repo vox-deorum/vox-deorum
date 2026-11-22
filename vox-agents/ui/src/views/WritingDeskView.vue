@@ -1,25 +1,64 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import Button from 'primevue/button';
+import Checkbox from 'primevue/checkbox';
 import Dialog from 'primevue/dialog';
 import InputText from 'primevue/inputtext';
 import MultiSelect from 'primevue/multiselect';
+import RadioButton from 'primevue/radiobutton';
 import SelectButton from 'primevue/selectbutton';
 import { useToast } from 'primevue/usetoast';
 import DeskVariantList from '@/components/newspaper/DeskVariantList.vue';
 import DeskWritingRows from '@/components/newspaper/DeskWritingRows.vue';
 import DeskBatchBar from '@/components/newspaper/DeskBatchBar.vue';
-import { useWritingDesk, type DeskShow } from '@/stores/writing-desk';
+import { useWritingDesk, type DeskApprovalSnapshot, type DeskShow } from '@/stores/writing-desk';
+import { errorMessage } from '@/utils/errors';
 import type { DeskText } from '@/utils/types';
 
 const {
   catalogue, tags, show, search, groups, eligible, checked, selected, detail, draft, job, models, availableModels,
   choices, requestCount, candidateCount, error, detailLoading, saving, starting, stopping, clearing, busy,
-  load, select, check, toggleAll, edit, save, generate, stop, clearDrafts, addModel,
+  load, select, check, toggleAll, edit, save, approvalSnapshot, saveMany, generate, stop, clearDrafts, addModel,
 } = useWritingDesk();
 const confirmClear = ref(false);
+const approving = ref(false);
+const approval = ref<DeskApprovalSnapshot>();
+const approved = ref<string[]>([]);
+const primary = ref<string>();
+const approvalError = ref('');
 const toast = useToast();
 let clearConfirmed = false;
+
+/** Freeze the copies shown in the approval dialog, including the open edit. */
+function openApproval() {
+  approval.value = approvalSnapshot();
+  if (!approval.value) return;
+  approved.value = [];
+  primary.value = undefined;
+  approvalError.value = '';
+  approving.value = true;
+}
+
+/** Save the chosen primary and siblings, keeping selections on rejection. */
+async function confirmApproval() {
+  const snapshot = approval.value;
+  if (!snapshot || saving.value) return;
+  const selectedCopies = snapshot.copies.filter(copy => approved.value.includes(copy.id));
+  const original = selectedCopies.find(copy => copy.id === primary.value);
+  if (!original || selectedCopies.length < 2) return;
+  approvalError.value = '';
+  try {
+    await saveMany(snapshot.target, {
+      revision: snapshot.revision,
+      primary: original.text,
+      siblings: selectedCopies.filter(copy => copy !== original).map(copy => copy.text),
+    });
+    approving.value = false;
+    toast.add({ severity: 'success', summary: `${selectedCopies.length} copies settled`, life: 4000 });
+  } catch (cause) {
+    approvalError.value = errorMessage(cause);
+  }
+}
 
 /** Close the confirmation and clear unapproved drafts. */
 async function confirmClearDrafts() {
@@ -112,7 +151,11 @@ onMounted(load);
             </div>
             <h2 v-else>Article copy</h2>
             <span v-if="detail?.settled" class="desk-review-state"><i class="pi pi-check-circle" aria-hidden="true" /> Settled</span>
-            <span v-else-if="detail" class="text-muted">{{ detail.candidates.length }} {{ detail.candidates.length === 1 ? 'candidate' : 'candidates' }}</span>
+            <div v-else-if="detail" class="flex flex-wrap align-items-center justify-content-end gap-2">
+              <span class="text-muted">{{ detail.candidates.length }} {{ detail.candidates.length === 1 ? 'candidate' : 'candidates' }}</span>
+              <Button v-if="detail.candidates.length" label="Settle multiple…" size="small" severity="secondary" outlined
+                :disabled="saving || clearing || detailLoading" @click="openApproval" />
+            </div>
           </header>
           <div v-if="detailLoading" class="table-empty" role="status">Loading the variant…</div>
           <div v-else-if="detail" class="desk-rows">
@@ -127,6 +170,39 @@ onMounted(load);
         </section>
       </div>
     </section>
+    <Dialog v-model:visible="approving" header="Settle multiple copies" modal :style="{ width: '34rem', maxWidth: '95vw' }"
+      :closable="!saving" :close-on-escape="!saving" @after-hide="approval = undefined">
+      <p v-if="approval">Approve at least two copies. Choose which keeps the ID <strong>{{ approval.target.variantId }}</strong>.
+        The other copies get numbered IDs in a companion file.</p>
+      <div v-if="approvalError" class="desk-error" role="alert">{{ approvalError }}</div>
+      <ul class="list-none p-0 m-0">
+        <li v-for="(copy, index) in approval?.copies" :key="copy.id" class="flex flex-wrap gap-2 align-items-start py-2">
+          <Checkbox v-model="approved" :input-id="`desk-approve-${index}`" :value="copy.id" :disabled="saving" />
+          <div class="flex-1 min-w-0">
+            <label :for="`desk-approve-${index}`" class="block">
+              <span class="text-muted block">{{ copy.label }}</span>
+              <strong>{{ copy.text.headline }}</strong>
+            </label>
+            <details class="mt-1 text-sm">
+              <summary>Read copy</summary>
+              <p v-if="copy.text.subheadline">{{ copy.text.subheadline }}</p>
+              <p v-if="copy.text.byline"><em>{{ copy.text.byline }}</em></p>
+              <p v-for="(paragraph, paragraphIndex) in copy.text.body" :key="paragraphIndex">{{ paragraph }}</p>
+            </details>
+          </div>
+          <div v-if="approved.includes(copy.id)" class="flex align-items-center gap-2">
+            <RadioButton v-model="primary" :input-id="`desk-primary-${index}`" name="desk-primary"
+              :value="copy.id" :disabled="saving" :aria-label="`Keep original ID for ${copy.label}`" />
+            <label :for="`desk-primary-${index}`">Keep ID</label>
+          </div>
+        </li>
+      </ul>
+      <template #footer>
+        <Button label="Cancel" severity="secondary" text :disabled="saving" @click="approving = false" />
+        <Button :label="`Settle ${approved.length} copies`" :loading="saving"
+          :disabled="approved.length < 2 || !primary || !approved.includes(primary) || saving" @click="confirmApproval" />
+      </template>
+    </Dialog>
     <Dialog v-model:visible="confirmClear" header="Clear generated drafts?" modal :style="{ maxWidth: '28rem' }"
       @after-hide="finishClearDialog">
       <p>This clears drafts across the Writing Desk, including variants hidden by filters. Current copy and settled examples will stay.</p>

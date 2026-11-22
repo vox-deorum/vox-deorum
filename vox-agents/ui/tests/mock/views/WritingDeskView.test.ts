@@ -14,6 +14,7 @@ const api = vi.hoisted(() => ({
   stopDeskJob: vi.fn(),
   clearDeskCandidates: vi.fn(),
   settleDeskVariant: vi.fn(),
+  settleDeskVariants: vi.fn(),
   unsettleDeskVariant: vi.fn(),
 }));
 vi.mock('@/api/client', () => ({ api }));
@@ -159,6 +160,45 @@ describe('WritingDeskView', () => {
     await action('Settle candidate: Second account').trigger('click');
     expect(api.settleDeskVariant).toHaveBeenCalledWith(expect.objectContaining({ variantId: 'gazette' }),
       expect.objectContaining({ headline: 'My headline', body: ['Another paragraph'], revision: 'r1' }));
+  });
+
+  it('should keep multiple approval choices after rejection and refresh siblings after saving', async () => {
+    await selectVariant('gazette');
+    await row('second').get('.desk-copy').trigger('click');
+    await row('second').get('textarea').setValue('Edited second account');
+    await action('Settle multiple…').trigger('click');
+
+    document.querySelector<HTMLInputElement>('#desk-approve-0')!.click();
+    await flushPromises();
+    document.querySelector<HTMLInputElement>('#desk-approve-2')!.click();
+    await flushPromises();
+    expect(dialogAction('Settle 2 copies').disabled).toBe(true);
+    document.querySelector<HTMLInputElement>('#desk-primary-2')!.click();
+    await flushPromises();
+    expect(dialogAction('Settle 2 copies').disabled).toBe(false);
+
+    api.settleDeskVariants.mockRejectedValueOnce(new Error('Template file could not be saved'));
+    dialogAction('Settle 2 copies').click();
+    await flushPromises();
+    expect(document.querySelector('[role="dialog"] [role="alert"]')?.textContent).toContain('Template file could not be saved');
+    expect(document.querySelector<HTMLInputElement>('#desk-primary-2')?.checked).toBe(true);
+    expect(document.querySelector<HTMLInputElement>('#desk-approve-0')?.checked).toBe(true);
+
+    const primary = { headline: 'Edited second account', body: ['Another paragraph'] };
+    api.settleDeskVariants.mockResolvedValueOnce({ ...initial, settled: true, candidates: [], text: primary });
+    const next = structuredClone(catalogue);
+    const summaries = next.templates[0]!.variants;
+    summaries[0] = { ...summaries[0]!, headline: primary.headline, settled: true, candidateCount: 0 };
+    summaries.push({ ...summaries[0]!, id: 'gazette-1', headline: original.headline });
+    api.getDeskCatalogue.mockResolvedValueOnce(next);
+    dialogAction('Settle 2 copies').click();
+    await flushPromises();
+
+    expect(api.settleDeskVariants).toHaveBeenLastCalledWith({ templateId: 'era', variantId: 'gazette' },
+      { revision: 'r1', primary, siblings: [original] });
+    expect(wrapper.get('.desk-overall').text()).toBe('3/3 settled');
+    expect(wrapper.findAll('.desk-variant-id').map(variant => variant.text())).toContain('gazette-1');
+    expect(row('current').text()).toContain(primary.headline);
   });
 
   it('should reopen the settled current copy', async () => {

@@ -13,6 +13,7 @@ import { editorialConstantsSchema } from '../editorial/config/constants.js';
 import { builtInCatalogueDirectory } from '../editorial/config/load.js';
 import { editorialTriggerRuleSchema, templateSchema, type AuthoredVariant, type EditorialTemplate, type EditorialTriggerRule } from '../editorial/config/schema.js';
 import { resolveVariantStyle, styleCatalogueSchema, type StyleCatalogue } from '../editorial/config/styles.js';
+import { readTemplateSources } from '../editorial/config/template-sources.js';
 
 export type DeskLink = AuthoredVariant['links'][number];
 export type DeskTriggerDefinition = Pick<EditorialTriggerRule, 'id' | 'subject' | 'when' | 'values' | 'group'>;
@@ -21,6 +22,8 @@ export type DeskStyleCatalogue = Pick<StyleCatalogue, 'voice' | 'stance' | 'genr
 /** One authored variant with the revision of the original file entry. */
 export interface DeskVariant {
   id: string;
+  /** Source file if this variant lives in the template's companion. */
+  file?: string;
   style?: DeskStyle;
   text: DeskText;
   settled: boolean;
@@ -113,7 +116,7 @@ export function deskTriggers(template: DeskTemplate, catalogue: DeskCatalogue): 
 }
 
 /** Keep editable text and the raw revision without keeping the entire source in memory. */
-function readTemplate(raw: unknown, template: EditorialTemplate, file: string): DeskTemplate {
+function readTemplate(raw: unknown, template: EditorialTemplate, file: string, baseCount: number, companion?: string): DeskTemplate {
   const { id, tags, triggers, formats, names, when } = template;
   const rawVariants = asRecord(raw)?.variants as unknown[];
   return {
@@ -121,6 +124,7 @@ function readTemplate(raw: unknown, template: EditorialTemplate, file: string): 
     triggerSummary: triggers.map(id => id.replaceAll('-', ' ')).join(', '),
     variants: template.variants.map((variant, index) => ({
       id: variant.id,
+      ...(index >= baseCount && companion ? { file: companion } : {}),
       style: resolveVariantStyle(variant),
       text: { headline: variant.headline, subheadline: variant.subheadline, byline: variant.byline, body: variant.body },
       settled: variant.settled === true,
@@ -143,12 +147,11 @@ export async function readDeskCatalogue(options: DeskCatalogueOptions = {}): Pro
     await requireWritable(writingPath, 'The writing guide');
     const templates: DeskTemplate[] = [];
     const seenTemplates = new Set<string>();
-    const files = await readSection(templatesDirectory);
-    if (!files.length) throw new Error('No stock template files were found.');
-    for (const file of files) {
-      const location = path.join(templatesDirectory, file);
-      await requireWritable(location, 'Template file ' + file);
-      const raw = z.array(z.unknown()).parse(await readJson(location));
+    const sources = await readTemplateSources(templatesDirectory, {
+      beforeRead: file => requireWritable(path.join(templatesDirectory, file), 'Template file ' + file),
+    });
+    if (!sources.length) throw new Error('No stock template files were found.');
+    for (const { file, base, templates: raw, companion } of sources) {
       const parsed = z.array(templateSchema).parse(raw);
       for (const [index, template] of parsed.entries()) {
         if (seenTemplates.has(template.id)) throw new Error('Duplicate template ID: ' + template.id);
@@ -156,7 +159,9 @@ export async function readDeskCatalogue(options: DeskCatalogueOptions = {}): Pro
         if (template.mode === 'llmOnly' || !template.variants.length) continue;
         const variantIds = new Set(template.variants.map(variant => variant.id));
         if (variantIds.size !== template.variants.length) throw new Error('Duplicate variant IDs in ' + template.id);
-        templates.push(readTemplate(raw[index], template, file));
+        const baseVariants = asRecord(base[index])?.variants;
+        const baseCount = Array.isArray(baseVariants) ? baseVariants.length : 0;
+        templates.push(readTemplate(raw[index], template, file, baseCount, companion));
       }
     }
     const byId = new Map<string, DeskTriggerDefinition>();
