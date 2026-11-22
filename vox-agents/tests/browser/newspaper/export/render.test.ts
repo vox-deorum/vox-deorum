@@ -96,7 +96,7 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('newspape
     }
   }, 60_000);
 
-  it('should keep line geometry stable between interactive and export modes and retain local votes and scroll', async context => {
+  it('should scroll the whole paper together, retain votes and scroll, and preserve export geometry', async context => {
     if (!browser) { context.skip(unavailable); return; }
     const issue = parseIssueDocument(JSON.parse(await readFile(path.join(fixtures, 'victorian-ordinary.json'), 'utf8')));
     issue.items[0].body.push([{
@@ -122,12 +122,21 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('newspape
       await sectionVote.click();
       await firstTab.click();
       expect(await votes.first().getAttribute('aria-pressed')).toBe('true');
-      await page.locator('[data-vd-region=page]:not([hidden])').evaluate(element => { element.scrollTop = 120; });
-      const saved = await page.locator('[data-vd-region=page]:not([hidden])').evaluate(element => element.scrollTop);
-      expect(saved).toBeGreaterThan(0);
-      await secondTab.click();
-      await firstTab.click();
-      expect(await page.locator('[data-vd-region=page]:not([hidden])').evaluate(element => element.scrollTop)).toBe(saved);
+      const paper = page.locator('[data-publication-design]');
+      const newspaperParts = paper.locator('.vd-masthead, .vd-tabs, .vd-page:not([hidden]) .vd-headline');
+      /** Read their vertical positions relative to the browser window. */
+      const positions = () => newspaperParts.evaluateAll(parts => parts.map(part => part.getBoundingClientRect().top));
+      const viewport = paper.locator('.vd-reader-viewport');
+      await viewport.evaluate(element => { element.scrollTop = 0; });
+      await paper.locator('.vd-masthead').hover();
+      const before = await positions();
+      await page.mouse.wheel(0, 120);
+      await expect.poll(() => viewport.evaluate(element => element.scrollTop)).toBe(120);
+      expect(await positions()).toEqual(before.map(top => top - 120));
+      // Click without Playwright scrolling the tabs back into view first.
+      await secondTab.evaluate((tab: HTMLButtonElement) => tab.click());
+      await firstTab.evaluate((tab: HTMLButtonElement) => tab.click());
+      expect(await viewport.evaluate(element => element.scrollTop)).toBe(120);
       const interactive = await page.locator('[data-vd-region=page]:not([hidden]) .vd-inline-link').evaluateAll(elements => elements.map(element => Array.from(element.getClientRects(), rect => ({ width: rect.width, height: rect.height }))));
       expect(interactive.some(rects => rects.length > 1)).toBe(true);
       await page.goto(`${host.url}/newspaper/export.html`);

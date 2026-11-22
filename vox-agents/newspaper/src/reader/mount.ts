@@ -99,6 +99,7 @@ export function mountReader(
   let state = normalizeReaderState(issue, parseReaderState(stateInput));
   let disposed = false;
 
+  const viewport = mode === "reader" ? createElement("div", "vd-reader-viewport") : null;
   const publication = createElement("div", "vd-publication");
   const header = createElement("header", "vd-header");
   header.dataset.vdRegion = "header";
@@ -145,7 +146,7 @@ export function mountReader(
   header.append(masthead, tabs);
   publication.append(header);
 
-  const pageViewport = createElement("div", "vd-page-viewport");
+  const pages = createElement("div", "vd-pages");
   for (const page of issue.pages) {
     const section = createElement("section", "vd-page");
     section.id = `${instancePrefix}-page-${page.id}`;
@@ -198,21 +199,15 @@ export function mountReader(
     content.append(renderEndRule(issue, assetBaseUrl));
     section.append(content);
     section.hidden = page.id !== state.activePageId;
-    section.addEventListener(
-      "scroll",
-      () => {
-        if (section.hidden || disposed) return;
-        state = setPageScroll(state, page.id, section.scrollTop);
-      },
-      { passive: true },
-    );
 
-    pageViewport.append(section);
+    pages.append(section);
     pageElements.set(page.id, section);
   }
 
-  publication.append(pageViewport);
-  root.replaceChildren(publication);
+  publication.append(pages);
+  if (viewport) viewport.append(publication);
+  const mounted = viewport ?? publication;
+  root.replaceChildren(mounted);
   root.classList.add("vd-newspaper");
   root.dataset.design = designId;
   root.dataset.publicationDesign = issue.publication.designId;
@@ -227,7 +222,6 @@ export function mountReader(
     root.style.setProperty("--vd-paper-padding", `${layout.paperPadding}px`);
     root.style.setProperty("--vd-scrollbar-gutter", `${layout.scrollbarGutter}px`);
     root.style.setProperty("--vd-region-width", `${layout.regionWidth}px`);
-    root.style.setProperty("--vd-viewport-height", `${layout.viewportHeight}px`);
     root.style.setProperty("--vd-text-scale", String(layout.textScale));
   }
 
@@ -250,15 +244,10 @@ export function mountReader(
     const previousPageId = state.activePageId;
     if (previousPageId === pageId) return;
 
-    const previous = pageElements.get(previousPageId);
-    if (previous && !previous.hidden) {
-      state = setPageScroll(state, previousPageId, previous.scrollTop);
-    }
-
+    if (viewport) state = setPageScroll(state, previousPageId, viewport.scrollTop);
     state = setActivePage(state, pageId);
     updatePageVisibility();
-    const next = pageElements.get(pageId);
-    if (next) next.scrollTop = state.scrollByPage[pageId] ?? 0;
+    if (viewport) viewport.scrollTop = state.scrollByPage[pageId] ?? 0;
 
     if (announce) {
       onAction({ type: "select-page", pageId, previousPageId });
@@ -339,9 +328,9 @@ export function mountReader(
   tabs.addEventListener("keydown", handleTabKeydown);
 
   const ready = presentation.ready.then(() => waitForMedia(publication)).then(() => {
-    if (disposed) return;
-    const active = pageElements.get(state.activePageId);
-    if (active) active.scrollTop = state.scrollByPage[state.activePageId] ?? 0;
+    if (!disposed && viewport?.scrollTop === 0) {
+      viewport.scrollTop = state.scrollByPage[state.activePageId] ?? 0;
+    }
   });
 
   return {
@@ -353,7 +342,7 @@ export function mountReader(
       window.removeEventListener("resize", resizeReader);
       root.removeEventListener("click", handleClick);
       tabs.removeEventListener("keydown", handleTabKeydown);
-      if (publication.parentElement !== root) return;
+      if (mounted.parentElement !== root) return;
       presentation.dispose();
       root.replaceChildren();
       root.classList.remove("vd-newspaper");
@@ -366,17 +355,17 @@ export function mountReader(
         "--vd-paper-padding",
         "--vd-scrollbar-gutter",
         "--vd-region-width",
-        "--vd-viewport-height",
         "--vd-text-scale",
       ]) {
         root.style.removeProperty(property);
       }
     },
     getState(): ReaderState {
+      const current = viewport ? setPageScroll(state, state.activePageId, viewport.scrollTop) : state;
       return {
-        activePageId: state.activePageId,
-        scrollByPage: { ...state.scrollByPage },
-        votes: { ...state.votes },
+        activePageId: current.activePageId,
+        scrollByPage: { ...current.scrollByPage },
+        votes: { ...current.votes },
       };
     },
     getActivePageId(): string {

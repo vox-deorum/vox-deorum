@@ -39,7 +39,7 @@
   background: var(--vd-feed-wash);
 }
 
-.vd-newspaper[data-design="feed"] .vd-publication {
+.vd-newspaper[data-design="feed"] .vd-reader-viewport {
   box-shadow: 0 10px 34px rgb(15 20 25 / 8%);
 }
 
@@ -346,10 +346,6 @@
 
 .vd-newspaper[data-design="feed"] .vd-storylist {
   flex: 1 0 auto;
-}
-
-.vd-newspaper[data-design="feed"][data-mode="reader"] .vd-page-viewport {
-  flex-grow: 1;
 }
 
 /* Stack attachments under the text on small screens. */

@@ -8,7 +8,6 @@
   --vd-font-body: Georgia, serif;
   --vd-font-display: Georgia, serif;
 
-  & .vd-page-viewport { flex-grow: 1; }
   & .vd-tabs { gap: 0 clamp(12px, 3cqi, 36px); }
   & .vd-tab { padding-block: 8px; }
   & .vd-storylist[data-layout] { column-gap: clamp(24px, 4cqi, 48px); }

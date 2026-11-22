@@ -1,10 +1,20 @@
 /* Controls and diagnostics around the shared newspaper reader. */
 
 body {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
   margin: 0;
   color: #26302c;
   background: #edece7;
   font: 14px/1.5 "Inter", Arial, sans-serif;
+}
+
+main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .host-toolbar,
@@ -176,6 +186,11 @@ body {
 
 #reader-root {
   min-width: 0;
+}
+
+#reader-root.vd-newspaper {
+  flex: 1;
+  min-height: 360px;
 }
 
 .host-reader-empty {

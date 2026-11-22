@@ -5,7 +5,7 @@
  * specificity for every design.
  */
 
-/* Export mode expands the section for full-page strips without a viewport. */
+/* Export uses the natural height of the paper for full-page strips. */
 
 .vd-newspaper[data-mode="export"] {
   display: block;
@@ -13,24 +13,6 @@
   padding: 0 4px 4px 0;
   overflow: visible;
   background: var(--vd-paper);
-}
-
-.vd-newspaper[data-mode="export"] .vd-publication {
-  min-height: 0;
-  box-shadow: none;
-}
-
-.vd-newspaper[data-mode="export"] .vd-page-viewport {
-  height: auto;
-}
-
-.vd-newspaper[data-mode="export"] .vd-page {
-  position: static;
-  width: var(--vd-region-width);
-  height: auto;
-  padding-right: calc(var(--vd-paper-padding) + var(--vd-scrollbar-gutter));
-  overflow: visible;
-  scrollbar-gutter: auto;
 }
 
 .vd-newspaper[data-mode="export"] * {

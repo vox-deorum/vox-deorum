@@ -31,6 +31,9 @@
 
 .vd-newspaper[data-design="inscription"] .vd-publication {
   position: relative;
+}
+
+.vd-newspaper[data-design="inscription"] .vd-reader-viewport {
   box-shadow: 0 16px 44px rgb(60 38 18 / 20%);
 }
 
@@ -39,10 +42,6 @@
 .vd-newspaper[data-design="inscription"] .vd-page {
   background-color: var(--vd-paper);
   background-image: var(--vd-ins-plaster);
-}
-
-.vd-newspaper[data-design="inscription"] .vd-page {
-  background-attachment: local;
 }
 
 .vd-newspaper[data-design="inscription"] .vd-publication::after {
@@ -59,9 +58,8 @@
 
 /*
  * Friezes: a Greek key band runs along the top of the sheet and another along
- * the bottom, like the architrave and base of a stele. In reader mode the
- * bottom band stays fixed below the scrolling page. Export pages close with
- * the same band instead, because the game frames the page itself.
+ * the bottom, like the architrave and base of a stele. The reader puts the
+ * bottom band on the sheet. Each exported page closes with the same band.
  */
 
 .vd-newspaper[data-design="inscription"] .vd-header::before,
@@ -88,10 +86,6 @@
   bottom: calc(var(--vd-paper-padding) * 0.25 + 12px);
   left: var(--vd-paper-padding);
   content: "";
-}
-
-.vd-newspaper[data-design="inscription"][data-mode="reader"] .vd-page-viewport {
-  flex-grow: 1;
 }
 
 .vd-newspaper[data-design="inscription"] .vd-end-rule {

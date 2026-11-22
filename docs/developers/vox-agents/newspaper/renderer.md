@@ -1,6 +1,6 @@
 # Newspaper reader and renderer
 
-Open `/newspaper/` on the normal Vox Deorum server to read a sample in the browser. For a source checkout, see [how to start the preview](replay.md#open-a-recording-in-the-browser-reader) and switch between mockups and recorded editions. The browser and export service share a reader, so the game can display the same layout as DDS textures with clickable links, tabs, and votes.
+Open `/newspaper/` on the normal Vox Deorum server to read a sample in the browser. For a source checkout, see [how to start the preview](replay.md#open-a-recording-in-the-browser-reader) and switch between mockups and recorded editions. The masthead, tabs, and articles scroll together in the browser and in the game. Both use the same layout, with clickable links, tabs, and votes.
 
 ## Show an issue in the game
 
