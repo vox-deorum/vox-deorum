@@ -13,7 +13,7 @@ import { pickExamples } from '../../../../src/newspaper/desk/brief.js';
 import type { DeskCatalogue, DeskVariant } from '../../../../src/newspaper/desk/catalogue.js';
 import { DeskError, readDeskCatalogue } from '../../../../src/newspaper/desk/catalogue.js';
 import type { DeskSettleOptions } from '../../../../src/newspaper/desk/settle.js';
-import { settleManyVariants, settleVariant, unsettleVariant } from '../../../../src/newspaper/desk/settle.js';
+import { settleManyVariants, settleVariant, unsettleVariant, updateVariantStyle } from '../../../../src/newspaper/desk/settle.js';
 import { templateVariables } from '../../../../src/newspaper/desk/variables.js';
 
 vi.mock('node:fs/promises', async (importOriginal) => {
@@ -238,6 +238,36 @@ describe('newspaper desk settle', () => {
     expect(after[0].variants[0]).not.toHaveProperty('byline');
     expect(after[0].variants[0].links).toEqual(original[0].variants[0].links);
     expect(after[0].variants[0].weight).toEqual(original[0].variants[0].weight);
+  });
+
+  it('should save all three tags when correcting the style of a variant with implicit defaults', async () => {
+    const fixture = await createFixture();
+    const before = await readParsed(fixture.templatePath);
+    const variant = findVariant(await readCatalogue(fixture), fixture.ref);
+    const style = { voice: 'general', stance: 'government-critical', genre: 'report' };
+    await updateVariantStyle(fixture.ref, { revision: variant.revision, style }, options(fixture));
+
+    const after = await readParsed(fixture.templatePath);
+    expect(after[0].variants).toEqual([{ ...before[0].variants[0], ...style }, before[0].variants[1]]);
+    const saved = findVariant(await readCatalogue(fixture), fixture.ref);
+    expect(saved).toMatchObject({ text: variant.text, settled: false, style });
+    expect(saved.revision).not.toBe(variant.revision);
+    await expect(updateVariantStyle(fixture.ref, { revision: variant.revision, style }, options(fixture)))
+      .rejects.toMatchObject({ status: 409 });
+  });
+
+  it('should keep companion copy and review status when changing the style', async () => {
+    const fixture = await createFixture(multiTemplateSource, 'fixture-multi');
+    const base = await readFile(fixture.templatePath, 'utf8');
+    const siblingRef = { templateId: fixture.ref.templateId, variantId: 'companion-draft' };
+    const sibling = { ...JSON.parse(base)[0].variants[0], id: siblingRef.variantId, settled: true };
+    await writeFile(fixture.companionPath, JSON.stringify([{ id: siblingRef.templateId, variants: [sibling] }]));
+    const variant = findVariant(await readCatalogue(fixture), siblingRef);
+    const style = { voice: 'press', stance: 'populist', genre: 'analysis' };
+    await updateVariantStyle(siblingRef, { revision: variant.revision, style }, options(fixture));
+
+    expect((await readParsed(fixture.companionPath))[0].variants).toEqual([{ ...sibling, ...style }]);
+    expect(await readFile(fixture.templatePath, 'utf8')).toBe(base);
   });
 
   it('should reject a stale revision without touching the file', async () => {

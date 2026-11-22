@@ -84,40 +84,49 @@
         "id": "building-investment-report",
         "headline": "{{cityName}} puts money behind the {{building}}",
         "body": [
-          "Carts of dressed stone began arriving at the {{building}} in {{cityName}} before the frost was off the road. The city has paid into the work, and the crew now keeps two shifts on the scaffold. Shopkeepers along the lane say the noise starts earlier and ends later than it did last month."
+          "The city has put money into the {{building}} at {{cityName}}, and work has picked up. Extra carts have arrived at the site while crews keep two shifts on the scaffold. Nearby shopkeepers say the building work starts earlier and runs later."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
         ],
-        "weight": { "base": 1 }
+        "weight": {
+          "base": 1
+        },
+        "settled": true
       },
       {
         "id": "building-investment-notice",
         "voice": "gazette",
         "stance": "neutral",
         "genre": "notice",
-        "headline": "{{cityName}} funds the {{building}}",
+        "headline": "City funds for the {{building}}",
         "body": [
-          "Word from {{cityName}}: the {{building}} has received a fresh sum from the city chest, and wages will be paid through the winter. The stewards will post the account at the site each week. Tradesmen with stone or timber to sell should apply at the gate."
+          "Word from {{cityName}} says that a new payment has been assigned to the {{building}}, and the workmen are to be paid through winter. The stewards will display the accounts at the site each week. Material suppliers should inquire at the site."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
         ],
-        "weight": { "base": 1 }
+        "weight": {
+          "base": 1
+        },
+        "settled": true
       },
       {
-        "id": "building-investment-analysis",
+        "id": "building-investment-critique",
         "voice": "press",
-        "stance": "neutral",
+        "stance": "government-critical",
         "genre": "analysis",
-        "headline": "Why {{cityName}} is paying for the {{building}}",
+        "headline": "The price of haste in {{cityName}}",
         "body": [
-          "Money has gone into the {{building}} at {{cityName}}, and the first thing it bought was speed. The scaffold holds twice the hands it did a month ago, and the keeper now speaks of an opening day. The city chest is lighter for it, and the next project will wait its turn."
+          "{{cityName}} has put money into its {{building}}, and the work has quickened. More hands now crowd the scaffold, while the keeper talks of an opening day. The faster schedule comes at a cost: the city chest is lighter, and another project must wait."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
         ],
-        "weight": { "base": 1 }
+        "weight": {
+          "base": 1
+        },
+        "settled": true
       },
       {
         "id": "building-investment-notice-crier",

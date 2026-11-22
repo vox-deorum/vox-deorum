@@ -84,7 +84,7 @@ export async function listReplayIssues(runId: string, receiverPlayerID: number):
   return archiveListSchema.parse(await request('GET', `/issues?${scopeQuery(runId, receiverPlayerID)}`));
 }
 
-/** Read one saved issue with the votes and decision stored for its run. */
+/** Read one saved issue with its article provenance and current votes. */
 export async function getReplayIssue(issueId: string, runId: string, receiverPlayerID: number): Promise<ArchiveIssue> {
   return archiveIssueSchema.parse(await request('GET', `/issues/${encodeURIComponent(issueId)}?${scopeQuery(runId, receiverPlayerID)}`));
 }

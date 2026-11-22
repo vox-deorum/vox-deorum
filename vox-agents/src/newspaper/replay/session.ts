@@ -5,7 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { getGameMetadataValue } from '../../knowledge/database.js';
 import { resolveGameSpeedMultiplier } from '../../knowledge/game-speed.js';
 import { errorMessage } from '../../utils/errors.js';
-import { replaySettingsSchema, replayStateSchema, replayPreferencesRequestSchema, type ReplayEvidenceResponse, type ReplaySpeed, type ReplayState } from '../contracts/replay.js';
+import { replayCheckSchema, replaySettingsSchema, replayStateSchema, replayPreferencesRequestSchema, type ReplayEvidenceResponse, type ReplaySpeed, type ReplayState } from '../contracts/replay.js';
 import { archiveVoteRequestSchema, type ArchiveIssue, type ArchiveList } from '../contracts/archive.js';
 import { createInitialPublicationState, publicationStateSchema, type PublicationState } from '../contracts/publication.js';
 import { loadEditorialConfig, parseEditorialConfig } from '../editorial/config/load.js';
@@ -169,7 +169,7 @@ export class ReplaySession {
     });
   }
 
-  /** Reopen stored prose and its original editorial choices. */
+  /** Reopen a published edition with its article sources and current votes. */
   getIssue(issueId: string, scope?: unknown): Promise<ArchiveIssue> {
     return this.run(async () => {
       this.checkScope(scope);
@@ -254,9 +254,6 @@ export class ReplaySession {
     if (advance) {
       state.cursor = { cutoffTurn, previousCheckTurn, finished: cutoffTurn === state.settings.toTurn };
       if (this.store && this.publication && this.config && factOptions) {
-        if (this.store.hasCheck(state.runId!, state.settings.receiverPlayerID, cutoffTurn)) {
-          throw new ReplaySessionError('This cutoff is already completed; resume the saved run.', 409);
-        }
         const { evidence, facts } = await readReplayFacts(this.db!, request, factOptions, query);
         const visiblePlayers = new Set(evidence.players.map(player => String(player.subjectID)));
         visiblePlayers.add(String(state.settings.receiverPlayerID));
@@ -272,7 +269,10 @@ export class ReplaySession {
           receiver: { playerId: state.settings.receiverPlayerID, label: this.context?.receiverOwnerName ?? `Player ${state.settings.receiverPlayerID}`, civilizationId: this.context?.civilization },
           evidence, facts, speedMultiplier, state: publicationStateSchema.parse(this.publication), config: this.config, context,
         });
-        const check = this.store.commit({ session: state, publication: result.state, configuration: this.config }, result);
+        const check = replayCheckSchema.parse(result);
+        if (check.decision.cutoffTurn !== cutoffTurn) throw new Error('Check and checkpoint cutoffs must agree.');
+        if ((check.status === 'published') !== !!check.issue) throw new Error('Published checks require an issue; skipped checks cannot carry one.');
+        this.store.commit({ session: state, publication: result.state, configuration: this.config }, check.issue);
         this.publication = result.state;
         this.state = state;
         return { session: this.snapshot(), evidence: inspectorEvidence(evidence), check };

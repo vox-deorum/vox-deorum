@@ -37,6 +37,7 @@ describe('Writing Desk HTTP routes', () => {
     const result = await request(host.app).get('/api/newspaper/desk').expect(200);
     const catalogue: DeskCatalogueResponse = result.body;
     expect(catalogue.available).toBe(true);
+    expect(catalogue.styles.voice).toContainEqual(expect.objectContaining({ id: 'gazette' }));
     const template = catalogue.templates.find(item => item.id === 'friend-enters-new-era-account')!;
     const variant = template.variants.find(item => item.style.voice === 'gazette')!;
     const path = '/api/newspaper/desk/templates/' + template.id + '/variants/' + variant.id;
@@ -59,6 +60,23 @@ describe('Writing Desk HTTP routes', () => {
     const { revision } = (await request(host.app).get(path).expect(200)).body as DeskVariantDetail;
     await request(host.app).post(path + '/settle')
       .send({ revision, headline: 'The news', body: ['', ' '] }).expect(400);
+  });
+
+  it('should reject an unknown style tag and keep the current revision and drafts', async () => {
+    const { ref, route } = await findUnsettledVariant();
+    try {
+      await request(host.app).post('/api/newspaper/desk/jobs')
+        .send({ refs: [ref], models: [model], choices: 1 }).expect(200);
+      await waitForJob();
+      const before = (await request(host.app).get(route).expect(200)).body as DeskVariantDetail;
+      expect(before.candidates).toHaveLength(1);
+      await request(host.app).put(route + '/style')
+        .send({ revision: before.revision, style: { ...before.style, genre: 'unknown-test-genre' } }).expect(400);
+      const after = (await request(host.app).get(route).expect(200)).body as DeskVariantDetail;
+      expect(after).toEqual(before);
+    } finally {
+      clearCandidates(ref);
+    }
   });
 
   it('should generate and serve a candidate from the configured writer alias', async () => {

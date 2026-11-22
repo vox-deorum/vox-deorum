@@ -69,9 +69,6 @@ export const editorialDecisionRecordSchema = z.object({
 });
 export type EditorialDecisionRecord = z.infer<typeof editorialDecisionRecordSchema>;
 
-/** Historical choices kept with an edition. The catalogue lives in the run checkpoint. */
-export const archivedDecisionSchema = editorialDecisionRecordSchema.omit({ configurationSnapshot: true, triggerAudit: true });
-
 /** Importance is dated so each elapsed turn is decayed exactly once. */
 export const seriesStateSchema = z.object({
   importance: z.number().finite().nonnegative(), evaluatedTurn: z.number().int(),
@@ -80,7 +77,7 @@ export const seriesStateSchema = z.object({
 export type SeriesState = z.infer<typeof seriesStateSchema>;
 const publicationSchemaVersion = 7;
 
-/** Current offline memory excludes decisions, which are stored with published editions. */
+/** Current receiver memory kept in the latest checkpoint. Editions and their article evidence live in the archive. */
 export const publicationStateSchema = z.object({
   schemaVersion: z.literal(publicationSchemaVersion), lastCheckTurn: z.number().int().nullable(),
   /** Last covered turn, or the turn before a new replay begins. */

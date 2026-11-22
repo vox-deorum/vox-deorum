@@ -6,6 +6,7 @@ import Dialog from 'primevue/dialog';
 import InputText from 'primevue/inputtext';
 import MultiSelect from 'primevue/multiselect';
 import RadioButton from 'primevue/radiobutton';
+import Select from 'primevue/select';
 import SelectButton from 'primevue/selectbutton';
 import { useToast } from 'primevue/usetoast';
 import DeskVariantList from '@/components/newspaper/DeskVariantList.vue';
@@ -13,13 +14,25 @@ import DeskWritingRows from '@/components/newspaper/DeskWritingRows.vue';
 import DeskBatchBar from '@/components/newspaper/DeskBatchBar.vue';
 import { useWritingDesk, type DeskApprovalSnapshot, type DeskShow } from '@/stores/writing-desk';
 import { errorMessage } from '@/utils/errors';
-import type { DeskText } from '@/utils/types';
+import type { DeskRef, DeskStyle, DeskStyleRequest, DeskText } from '@/utils/types';
 
 const {
   catalogue, tags, show, search, groups, eligible, checked, selected, detail, draft, job, models, availableModels,
   choices, requestCount, candidateCount, error, detailLoading, saving, starting, stopping, clearing, busy,
-  load, select, check, toggleAll, edit, save, approvalSnapshot, saveMany, generate, stop, clearDrafts, addModel,
+  load, select, check, toggleAll, edit, save, saveStyle, approvalSnapshot, saveMany, generate, stop, clearDrafts, addModel,
 } = useWritingDesk();
+const styleFields = [
+  { key: 'voice', label: 'Voice' },
+  { key: 'stance', label: 'Stance' },
+  { key: 'genre', label: 'Genre' },
+] as const;
+const editingStyle = ref(false);
+const styleEdit = ref<{ target: DeskRef; original: DeskStyle; request: DeskStyleRequest }>();
+const styleError = ref('');
+const styleChanged = computed(() => {
+  const edit = styleEdit.value;
+  return edit && styleFields.some(({ key }) => edit.request.style[key] !== edit.original[key]);
+});
 const confirmClear = ref(false);
 const approving = ref(false);
 const approval = ref<DeskApprovalSnapshot>();
@@ -28,6 +41,28 @@ const primary = ref<string>();
 const approvalError = ref('');
 const toast = useToast();
 let clearConfirmed = false;
+
+/** Open the style editor with the variant and revision currently shown. */
+function openStyle() {
+  if (!detail.value) return;
+  const { templateId, variantId, style, revision } = detail.value;
+  styleEdit.value = { target: { templateId, variantId }, original: style, request: { style: { ...style }, revision } };
+  styleError.value = '';
+  editingStyle.value = true;
+}
+
+/** Keep the chosen tags available for correction if the save fails. */
+async function confirmStyle() {
+  const edit = styleEdit.value;
+  if (!edit || !styleChanged.value || saving.value || clearing.value) return;
+  styleError.value = '';
+  try {
+    await saveStyle(edit.target, edit.request);
+    editingStyle.value = false;
+  } catch (cause) {
+    styleError.value = errorMessage(cause);
+  }
+}
 
 /** Freeze the copies shown in the approval dialog, including the open edit. */
 function openApproval() {
@@ -143,11 +178,15 @@ onMounted(load);
                 <span class="text-muted">{{ detail.templateId }} /</span>
                 <h2>{{ detail.variantId }}</h2>
               </div>
-              <dl class="desk-variant-style" aria-label="Variant style">
-                <div><dt class="text-muted">Voice</dt><dd>{{ detail.style.voice }}</dd></div>
-                <div><dt class="text-muted">Stance</dt><dd>{{ detail.style.stance }}</dd></div>
-                <div><dt class="text-muted">Genre</dt><dd>{{ detail.style.genre }}</dd></div>
-              </dl>
+              <div class="flex flex-wrap align-items-center gap-2">
+                <dl class="desk-variant-style" aria-label="Variant style">
+                  <div v-for="{ key, label } in styleFields" :key="key">
+                    <dt class="text-muted">{{ label }}</dt><dd>{{ detail.style[key] }}</dd>
+                  </div>
+                </dl>
+                <Button label="Edit style" size="small" severity="secondary" text
+                  :disabled="saving || clearing || detailLoading" @click="openStyle" />
+              </div>
             </div>
             <h2 v-else>Article copy</h2>
             <span v-if="detail?.settled" class="desk-review-state"><i class="pi pi-check-circle" aria-hidden="true" /> Settled</span>
@@ -170,6 +209,25 @@ onMounted(load);
         </section>
       </div>
     </section>
+    <Dialog v-model:visible="editingStyle" header="Edit variant style" modal :style="{ width: '34rem', maxWidth: '95vw' }"
+      :closable="!saving" :close-on-escape="!saving" @after-hide="styleEdit = undefined">
+      <div v-if="styleEdit && catalogue" class="flex flex-column gap-3">
+        <div v-if="styleError" class="desk-error" role="alert">{{ styleError }}</div>
+        <div v-for="{ key, label } in styleFields" :key="key">
+          <span :id="`desk-style-${key}`" class="block mb-1">{{ label }}</span>
+          <Select v-model="styleEdit.request.style[key]" :options="catalogue.styles[key]" option-label="id" option-value="id"
+            :aria-labelledby="`desk-style-${key}`" size="small" fluid :disabled="saving" />
+          <p class="text-sm text-muted mt-1 mb-0">
+            {{ catalogue.styles[key].find(tag => tag.id === styleEdit?.request.style[key])?.guidance }}
+          </p>
+        </div>
+        <p v-if="detail && !detail.settled" class="text-sm text-muted m-0">Saving clears generated drafts for this variant.</p>
+      </div>
+      <template #footer>
+        <Button label="Cancel" severity="secondary" text :disabled="saving" @click="editingStyle = false" />
+        <Button label="Save style" :loading="saving" :disabled="!styleChanged || saving || clearing" @click="confirmStyle" />
+      </template>
+    </Dialog>
     <Dialog v-model:visible="approving" header="Settle multiple copies" modal :style="{ width: '34rem', maxWidth: '95vw' }"
       :closable="!saving" :close-on-escape="!saving" @after-hide="approval = undefined">
       <p v-if="approval">Approve at least two copies. Choose which keeps the ID <strong>{{ approval.target.variantId }}</strong>.

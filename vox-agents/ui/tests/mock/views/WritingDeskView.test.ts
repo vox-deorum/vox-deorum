@@ -13,6 +13,7 @@ const api = vi.hoisted(() => ({
   startDeskJob: vi.fn(),
   stopDeskJob: vi.fn(),
   clearDeskCandidates: vi.fn(),
+  updateDeskVariantStyle: vi.fn(),
   settleDeskVariant: vi.fn(),
   settleDeskVariants: vi.fn(),
   unsettleDeskVariant: vi.fn(),
@@ -36,6 +37,11 @@ const settled: DeskVariantDetail = {
 };
 const catalogue: DeskCatalogueResponse = {
   available: true, models: ['default', 'another'],
+  styles: {
+    voice: [{ id: 'gazette' }, { id: 'press' }],
+    stance: [{ id: 'neutral' }, { id: 'friendly' }],
+    genre: [{ id: 'report' }, { id: 'analysis' }],
+  },
   templates: [{
     id: 'era', file: 'science.json', tags: ['science'], triggerSummary: 'A friend enters a new era',
     variants: [initial, settled].map(value => ({
@@ -95,6 +101,7 @@ describe('WritingDeskView', () => {
       unobserve = vi.fn();
       disconnect = vi.fn();
     });
+    vi.stubGlobal('matchMedia', vi.fn(() => ({ addEventListener: vi.fn(), removeEventListener: vi.fn() })));
     api.getDeskCatalogue.mockResolvedValue(structuredClone(catalogue));
     api.getDeskVariant.mockImplementation(({ variantId }: { variantId: string }) =>
       Promise.resolve(structuredClone(variantId === 'report' ? settled : initial)));
@@ -133,6 +140,40 @@ describe('WritingDeskView', () => {
     await flushPromises();
     expect(visibleStyle()).toEqual({ Voice: 'press', Stance: 'friendly', Genre: 'analysis' });
     expect(wrapper.get('.desk-review-state').text()).toBe('Settled');
+  });
+
+  it('should save style changes, clear old candidates and keep an open edit to the current copy', async () => {
+    await selectVariant('gazette');
+    await row('current').get('.desk-copy').trigger('click');
+    await row('current').get('textarea').setValue('My current headline');
+    await action('Edit style').trigger('click');
+    expect(dialogAction('Save style').disabled).toBe(true);
+
+    const nextStyle = { voice: 'press', stance: 'friendly', genre: 'analysis' };
+    for (const [field, value] of Object.entries(nextStyle)) {
+      document.querySelector<HTMLElement>(`[role="combobox"][aria-labelledby="desk-style-${field}"]`)!.click();
+      await flushPromises();
+      document.querySelector<HTMLElement>(`[role="option"][aria-label="${value}"]`)!
+        .dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      await flushPromises();
+    }
+    const saved = { ...initial, revision: 'r3', style: nextStyle, candidates: [] };
+    api.updateDeskVariantStyle.mockResolvedValueOnce(saved);
+    dialogAction('Save style').click();
+    await flushPromises();
+
+    expect(api.updateDeskVariantStyle).toHaveBeenCalledWith(
+      { templateId: 'era', variantId: 'gazette' },
+      { revision: 'r1', style: nextStyle },
+    );
+    expect(wrapper.get('.desk-variant-style').text()).toContain('friendly');
+    expect(wrapper.find('[data-row="first"]').exists()).toBe(false);
+    expect(row('current').get('textarea').element.value).toBe('My current headline');
+
+    api.settleDeskVariant.mockResolvedValueOnce({ ...saved, settled: true });
+    await action('Settle current copy').trigger('click');
+    expect(api.settleDeskVariant).toHaveBeenCalledWith(expect.objectContaining({ variantId: 'gazette' }),
+      expect.objectContaining({ revision: 'r3', headline: 'My current headline' }));
   });
 
   it('should send unchanged text when settling a collapsed candidate and show the settled state', async () => {

@@ -42,34 +42,6 @@ function replayState() {
   };
 }
 
-/** Build a complete editorial decision record for saved issue and check responses. */
-function decisionRecord() {
-  return {
-    checkId: 'check-1',
-    cutoffTurn: 12,
-    configurationId: 'defaults',
-    configurationSnapshot: {},
-    seed: 'seed-1',
-    editor: 'heuristic',
-    status: 'published',
-    candidateScores: [],
-    selectedVariants: {},
-    designId: 'wire',
-    layouts: { front: 'ordinary' },
-    evidence: [],
-    diplomacyInference: [], triggerAudit: [], evidenceRequest: { cutoffTurn: 12, previousCheckTurn: 11, receiverPlayerID: 4 },
-    feedback: {
-      revision: '1',
-      windowItemIds: [],
-      votes: {},
-      tagCounts: {},
-      seriesAdjustments: {},
-      tagAdjustments: {},
-      coefficients: { series: 0.5, tag: 0.25, bound: 1, window: 50 },
-    },
-  };
-}
-
 /** Build the empty evidence envelope accepted by the shared MCP contract. */
 function replayEvidence() {
   return {
@@ -154,7 +126,7 @@ describe('replay browser API', () => {
     expect(result.issues[0]).toMatchObject({ issueId: 'issue-1', receiverPlayerID: 4, itemCount: 1 });
   });
 
-  it('should scope and encode saved issue reads with stored votes and decision', async () => {
+  it('should scope and encode saved issue reads with stored votes and article provenance', async () => {
     const issue = createNewspaperIssue();
     const article = {
       id: 'shared-item', issueId: issue.issueId, turn: 12, tags: ['economy'], seriesKeys: [],
@@ -168,7 +140,6 @@ describe('replay browser API', () => {
       },
       issue,
       votes: { 'shared-item': -1 },
-      decision: decisionRecord(),
       articles: [article],
     });
     const detail = await getReplayIssue('issue/1', 'run-1', 4);
@@ -179,7 +150,6 @@ describe('replay browser API', () => {
     ]);
     expect(detail.votes).toEqual({ 'shared-item': -1 });
     expect(detail.index).toMatchObject({ runId: 'run-1', receiverPlayerID: 4 });
-    expect(detail.decision).toMatchObject({ checkId: 'check-1' });
     expect(detail.articles).toEqual([article]);
   });
 

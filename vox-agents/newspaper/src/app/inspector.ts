@@ -34,7 +34,6 @@ function jsonView(value: unknown): HTMLPreElement {
 export function createDiagnostics(panel: HTMLDetailsElement) {
   const skipView = element('#check-view');
   const articles = element('#page-items');
-  const decision = element('#decision-view');
   const cutoff = element('#evidence-view');
   let skips: ReplaySkip[] = [];
   let edition: ArchiveIssue | undefined;
@@ -56,16 +55,15 @@ export function createDiagnostics(panel: HTMLDetailsElement) {
     skipView.replaceChildren(list);
   }
 
-  /** Expose the stored article sources and editor decision for the paper on screen. */
+  /** Expose the stored article sources for the paper on screen. */
   function renderEdition(): void {
     if (!panel.open || panel.hidden) return;
     articles.replaceChildren();
-    decision.replaceChildren();
     if (!edition) {
       articles.textContent = 'Open a recorded edition to see its sources.';
       return;
     }
-    const { issue, articles: records, decision: audit } = edition;
+    const { issue, articles: records } = edition;
     const byId = new Map(issue.items.map(item => [item.id, item]));
     for (const record of records) {
       const item = byId.get(record.id);
@@ -77,7 +75,6 @@ export function createDiagnostics(panel: HTMLDetailsElement) {
         details.append(note, sources);
       }));
     }
-    decision.append(disclosure('Editorial decision', details => { details.append(jsonView(audit)); }));
   }
 
   /** Show only the evidence selected by the explicit current cutoff inspection. */

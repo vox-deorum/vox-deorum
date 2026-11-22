@@ -215,18 +215,17 @@ describe('durable replay publication', () => {
     expect(article.evidenceSummary).toMatch(/\b6\b/);
     expect(article.evidenceSummary).not.toContain('fixture-war-report');
     expect((await session.getIssue(issueId)).issue).toEqual(original.issue);
-    expect((await session.getIssue(issueId)).decision).toEqual(original.decision);
     const before = await session.getState();
     await session.close();
     session = new ReplaySession();
     const resumed = await session.configure({ ...settings(), mode: 'resume', frequencyStandardTurns: 99, llmEnabled: false });
     expect(resumed).toEqual(before);
-    expect((await session.getIssue(issueId)).issue).toEqual(original.issue);
+    const reopened = await session.getIssue(issueId);
+    expect(reopened.issue).toEqual(original.issue);
+    expect(reopened.articles).toEqual(original.articles);
+    expect(reopened.votes[itemId]).toBe(1);
     const continued = await session.advance();
     expect(continued.evidence.request).toMatchObject({ previousCheckTurn: 6, cutoffTurn: 12 });
-    const sqlite = new Database(outputPath, { readonly: true });
-    expect(sqlite.prepare('SELECT COUNT(*) AS count FROM OfflineReplayChecks WHERE Cutoff = 6').get()).toEqual({ count: 1 });
-    sqlite.close();
     expect(await readFile(recording.filename)).toEqual(recording.originalBytes);
   });
 
@@ -438,9 +437,6 @@ describe('durable replay publication', () => {
       await session.configure({ ...settings(), mode: 'resume' });
       expect((await session.getState()).cursor.cutoffTurn).toBe(22);
       expect((await session.getIssue(issueId)).votes[itemId]).toBe(1);
-      const sqlite = new Database(outputPath, { readonly: true });
-      expect(sqlite.prepare('SELECT COUNT(*) AS count FROM OfflineReplayChecks WHERE Cutoff = 22').get()).toEqual({ count: 1 });
-      sqlite.close();
     } finally { await competitor.close(); }
   });
 
@@ -480,7 +476,8 @@ describe('durable replay publication', () => {
           previousCheckTurn: input.evidence.request.previousCheckTurn,
           finished: false,
         };
-        competitor.commit({ session: competitorSession, publication: winning.state, configuration: input.config }, winning);
+        competitor.commit({ session: competitorSession, publication: winning.state, configuration: input.config },
+          winning.status === 'published' ? winning.issue : undefined);
         return result;
       } });
       await session.configure({ ...settings(), mode: 'resume' });

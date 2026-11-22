@@ -147,7 +147,7 @@ The title, motto, and labels can use [terms](triggers/constants.md#terms) such a
 
 With no winning rule, the design supplies the title and motto. For `civilizationTitles`, the editor tries the exact recorded name, then `"*"`, then `title`, skipping any civilization title with unresolved terms. An overlay can set `civilizationTitles` to `null` to use only the base title. An unresolved placeholder in the final design title or motto makes the design ineligible, and an empty resolved base title uses `defaults.publicationTitle`.
 
-The issue saves the chosen title, motto, and labels. The motto appears below the stories on each section page. The decision records the winning rule and its evidence. To preview rules, generate an issue in [Recorded replay](replay.md); static Mockups show the design fallbacks.
+The issue saves the chosen title, motto, and labels. The motto appears below the stories on each section page. The CLI audit records the winning rule and its evidence. To preview rules, generate an issue in [Recorded replay](replay.md); static Mockups show the design fallbacks.
 
 ## Developments, selection, and continuity
 
@@ -165,11 +165,11 @@ Urgent stories rank first. Within the same urgency, the last slot favors an elig
 
 The stock editor ranks up to ten stories. A combined article takes one slot. Publication closes the reporting window and spends [repeat memory](triggers/overview.md#repeats) for the series carried by printed articles, including those combined into one. A skip advances the schedule and keeps the reporting window open. Series scores decay on both outcomes.
 
-The full check audit includes the seed, catalogue, scores, presentation, sources, feedback, and trigger results. Replay keeps the catalogue once per run and saves editorial choices with each edition so it can reopen without running the editor. Use the [CLI audit](replay.md#generate-examples-from-the-command-line) for the full trigger trace. Stock design and layout draws are independent of each other and of prose. `designSelection` explains the prior design, how many issues it ran (up to six), and the candidate weights. `selectedVariants` and `selectedStyles` identify each displayed article's wording and style.
+The full check audit includes the seed, catalogue, scores, presentation, sources, feedback, and trigger results. Replay keeps the catalogue and latest checkpoint for resume, and editions keep their article evidence so they can reopen without running the editor. Use the [CLI audit](replay.md#generate-examples-from-the-command-line) for the full editorial decision and trigger trace. Stock design and layout draws are independent of each other and of prose. `selectedVariants` and `selectedStyles` identify each displayed article's wording and style.
 
 ## Votes and preferences
 
-Each unique item has one current vote: -1, 0, or +1. Assigning the same vote again has no additional effect. Replacing or clearing it removes its previous contribution at the next check. Votes do not change past issues or their decisions, and article importance does not multiply votes.
+Each unique item has one current vote: -1, 0, or +1. Assigning the same vote again has no additional effect. Replacing or clearing it removes its previous contribution at the next check. Votes do not change past issues, and article importance does not multiply votes.
 
 | Adjustment | Computation |
 | --- | --- |
@@ -179,12 +179,12 @@ Each unique item has one current vote: -1, 0, or +1. Assigning the same vote aga
 | Tag bonus | Sum each carrying item's vote divided by its number of distinct tags, then multiply by distinctiveness and the tag coefficient. |
 | Candidate adjustment | Add its series adjustments to the mean bonus for its distinct tags, then apply the configured bound. |
 
-The decision records the corpus, votes, tag counts, coefficients, and resolved adjustments used for that check. This preserves an explanation even after votes change.
+The check's decision record includes the corpus, votes, tag counts, coefficients, and resolved adjustments used for that check. This preserves an explanation even after votes change.
 
-Preferences default to five Standard turns and LLM editing off in `defaults.json`; saved receiver settings take precedence. Frequency changes are scheduled from the last completed check. The editor uses authored stories even when LLM editing is requested and records that fallback in the decision. See [offline evaluation](evaluation.md) for the planned model comparison.
+Preferences default to five Standard turns and LLM editing off in `defaults.json`; saved receiver settings take precedence. Frequency changes are scheduled from the last completed check. The editor uses authored stories even when LLM editing is requested and records that fallback in the check's decision record. See [offline evaluation](evaluation.md) for the planned model comparison.
 
 ## Ownership and inputs
 
 Under `vox-agents/src/newspaper/editorial/`, `check.ts` runs a check from visible facts to a printed issue or skip. `config/load.ts` loads the catalogue, and `selection/` and `presentation/` handle stories and layout. Publication state is defined in `vox-agents/src/newspaper/contracts/publication.ts`.
 
-[Replay](replay.md#source-storage-and-api) saves completed cutoffs and published editions with the current checkpoint. A query or validation error leaves the previous checkpoint available for retry. Use the [catalogue verification commands](triggers/overview.md#verify-changes) after changing rules or editorial code.
+[Replay](replay.md#source-storage-and-api) saves published editions with their article evidence and the latest checkpoint. A query or validation error leaves the previous checkpoint available for retry. Use the [catalogue verification commands](triggers/overview.md#verify-changes) after changing rules or editorial code.

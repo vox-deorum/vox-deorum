@@ -2,7 +2,7 @@ import { computed, onScopeDispose, ref, watch } from 'vue';
 import { api } from '@/api/client';
 import { errorMessage } from '@/utils/errors';
 import type {
-  DeskCandidate, DeskCatalogueResponse, DeskJob, DeskRef, DeskSettleManyRequest, DeskStyle, DeskTemplateSummary, DeskText,
+  DeskCandidate, DeskCatalogueResponse, DeskJob, DeskRef, DeskSettleManyRequest, DeskStyle, DeskStyleRequest, DeskTemplateSummary, DeskText,
   DeskVariantDetail, DeskVariantSummary,
 } from '@/utils/types';
 import { createPoller } from '@/utils/polling';
@@ -174,7 +174,7 @@ export function useWritingDesk() {
   }
 
   /** Reconcile a successful save, ignoring reads started before it. */
-  function applySave(result: DeskVariantDetail) {
+  function applySave(result: DeskVariantDetail, styleRevision?: string) {
     ++catalogueRequest;
     const key = deskRefKey(result);
     const summary = catalogue.value?.templates.find(template => template.id === result.templateId)
@@ -182,13 +182,32 @@ export function useWritingDesk() {
     if (summary) {
       summary.headline = result.text.headline;
       summary.settled = result.settled;
+      summary.style = result.style;
       summary.candidateCount = result.candidates.length;
     }
     if (selected.value && deskRefKey(selected.value) === key) {
       ++detailRequest;
       detailLoading.value = false;
+      // A style save leaves the current copy intact, so its editor can stay open.
+      if (draft.value?.row === deskCurrentRow && draft.value.revision === styleRevision) {
+        if (JSON.stringify(detail.value?.text) === JSON.stringify(result.text))
+          draft.value.revision = result.revision;
+      } else {
+        draft.value = undefined;
+      }
       detail.value = result;
-      draft.value = undefined;
+    }
+  }
+
+  /** Save style separately from the copy and refresh grouping and candidates. */
+  async function saveStyle(target: DeskRef, request: DeskStyleRequest) {
+    saving.value = true;
+    error.value = '';
+    try {
+      const result = await api.updateDeskVariantStyle(target, request);
+      if (!disposed) applySave(result, request.revision);
+    } finally {
+      saving.value = false;
     }
   }
 
@@ -330,7 +349,7 @@ export function useWritingDesk() {
   /** Start drafting with the selected models and checked variants that match the filters. */
   async function generate() {
     const count = choices.value;
-    if (busy.value || !requestCount.value ||
+    if (busy.value || saving.value || !requestCount.value ||
       count === null || !Number.isInteger(count) || count < 1 || count > deskChoicesLimit) return;
     starting.value = true;
     ++jobVersion;
@@ -368,6 +387,6 @@ export function useWritingDesk() {
   return {
     catalogue, tags, show, search, groups, eligible, checked, selected, detail, draft, job, models, availableModels,
     choices, requestCount, candidateCount, error, detailLoading, saving, starting, stopping, clearing, busy,
-    load, select, check, toggleAll, edit, save, approvalSnapshot, saveMany, generate, stop, clearDrafts, addModel,
+    load, select, check, toggleAll, edit, save, saveStyle, approvalSnapshot, saveMany, generate, stop, clearDrafts, addModel,
   };
 }

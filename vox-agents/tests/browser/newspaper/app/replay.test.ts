@@ -31,11 +31,6 @@ function savedIssue(): ArchiveIssue {
     issue,
     index: { issueId: issue.issueId, runId: 'run-1', receiverPlayerID: 0, cutoffTurn: 12, title: issue.publication.title, itemCount: issue.items.length },
     votes: {},
-    decision: {
-      checkId: 'controlled-check', cutoffTurn: 12, configurationId: 'controlled', configurationSnapshot: {}, seed: 'controlled', editor: 'heuristic', status: 'published',
-      candidateScores: [], selectedVariants: {}, designId: 'wire', layouts: {}, evidence: [], diplomacyInference: [], triggerAudit: [], evidenceRequest: { cutoffTurn: 12, previousCheckTurn: 11, receiverPlayerID: 0 },
-      feedback: { revision: '0', windowItemIds: [], votes: {}, tagCounts: {}, seriesAdjustments: {}, tagAdjustments: {}, coefficients: { series: 1, tag: 1, bound: 10, window: 50 } },
-    },
     articles: issue.items.map(item => ({
       id: item.id, issueId: issue.issueId, turn: 12, tags: item.tags, seriesKeys: item.seriesKeys, templateIds: ['controlled-template'], triggerIds: ['controlled-trigger'],
       importance: 5, headline: item.headline, evidenceSummary: 'Controlled evidence summary', sources: [{ table: 'PlayerSummaries', id: 3, turn: 12, createdAt: 123 }], fingerprint: `controlled/12/${item.id}`,

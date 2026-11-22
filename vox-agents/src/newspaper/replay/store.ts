@@ -3,11 +3,12 @@ import { mkdirSync, realpathSync, statSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { z } from 'zod';
 import { archiveIssueSchema, type ArchiveIssue, type ArchiveList } from '../contracts/archive.js';
-import { replayStateSchema, replayCheckSchema, type ReplayCheck } from '../contracts/replay.js';
-import { archivedDecisionSchema, publicationStateSchema, type PublicationState } from '../contracts/publication.js';
+import { replayStateSchema } from '../contracts/replay.js';
+import { publicationStateSchema, type PublicationState } from '../contracts/publication.js';
+import type { IssueDocument } from '../contracts/issue.js';
 
 /** Offline output schema version written to SQLite `user_version`. */
-const offlineSchemaVersion = 8;
+const offlineSchemaVersion = 9;
 
 const checkpointSchema = z.object({ session: replayStateSchema, publication: publicationStateSchema, configuration: z.unknown().optional() });
 export type ReplayCheckpoint = z.infer<typeof checkpointSchema>;
@@ -32,7 +33,7 @@ export function resolveReplayOutput(sourcePath: string, outputPath?: string): st
   return output;
 }
 
-/** Versioned offline publication storage. Live game checkpoints belong to Plan 5. */
+/** Store the latest checkpoint and published editions for each offline run. */
 export class ReplayStore {
   private readonly db: Database.Database;
   private readonly revisions = new Map<string, number>();
@@ -46,7 +47,7 @@ export class ReplayStore {
       this.db.transaction(() => {
         const version = Number(this.db.pragma('user_version', { simple: true }));
         const tables = this.db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as { name: string }[];
-        if (version === 0 ? tables.length > 0 : !['OfflineReplayRuns', 'OfflineReplayChecks', 'OfflineReplayIssues'].every(name => tables.some(table => table.name === name))) {
+        if (version === 0 ? tables.length > 0 : !['OfflineReplayRuns', 'OfflineReplayIssues'].every(name => tables.some(table => table.name === name))) {
           throw new Error('The output path contains a different database.');
         }
         if (version !== 0 && version !== offlineSchemaVersion) {
@@ -57,16 +58,11 @@ export class ReplayStore {
             RunID TEXT NOT NULL, Receiver INTEGER NOT NULL, SourceIdentity TEXT NOT NULL,
             ParentRunID TEXT, Checkpoint TEXT NOT NULL, Revision INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (RunID, Receiver)
           );
-          CREATE TABLE IF NOT EXISTS OfflineReplayChecks (
-            RunID TEXT NOT NULL, Receiver INTEGER NOT NULL, Cutoff INTEGER NOT NULL,
-            PRIMARY KEY (RunID, Receiver, Cutoff),
-            FOREIGN KEY (RunID, Receiver) REFERENCES OfflineReplayRuns(RunID, Receiver)
-          );
           CREATE TABLE IF NOT EXISTS OfflineReplayIssues (
             RunID TEXT NOT NULL, Receiver INTEGER NOT NULL, IssueID TEXT NOT NULL,
-            Cutoff INTEGER NOT NULL, Document TEXT NOT NULL, Decision TEXT NOT NULL, Evidence TEXT NOT NULL,
+            Cutoff INTEGER NOT NULL, Document TEXT NOT NULL, Evidence TEXT NOT NULL,
             PRIMARY KEY (RunID, Receiver, IssueID), UNIQUE (RunID, Receiver, Cutoff),
-            FOREIGN KEY (RunID, Receiver, Cutoff) REFERENCES OfflineReplayChecks(RunID, Receiver, Cutoff)
+            FOREIGN KEY (RunID, Receiver) REFERENCES OfflineReplayRuns(RunID, Receiver)
           );
         `);
         this.db.pragma(`user_version = ${offlineSchemaVersion}`);
@@ -94,39 +90,33 @@ export class ReplayStore {
     return checkpoint;
   }
 
-  /** Identify a completed cutoff without loading an issue or invoking the editor. */
-  hasCheck(runId: string, receiver: number, cutoff: number): boolean {
-    return this.db.prepare('SELECT 1 FROM OfflineReplayChecks WHERE RunID = ? AND Receiver = ? AND Cutoff = ?')
-      .get(runId, receiver, cutoff) !== undefined;
-  }
-
-  /** Save the cutoff and any edition with its checkpoint, then return the full audit to the caller. */
-  commit(checkpoint: ReplayCheckpoint, result: ReplayCheck): ReplayCheck {
+  /** Advance the run and save any edition and its evidence in the same transaction. */
+  commit(checkpoint: ReplayCheckpoint, issue?: IssueDocument): void {
     const next = checkpointSchema.parse(checkpoint);
-    const check = replayCheckSchema.parse(structuredClone(result));
     const runId = next.session.runId!;
     const receiver = next.session.settings.receiverPlayerID;
-    const cutoff = next.session.cursor.cutoffTurn!;
-    if (check.decision.cutoffTurn !== cutoff || next.publication.lastCheckTurn !== cutoff) throw new Error('Check and checkpoint cutoffs must agree.');
-    if ((check.status === 'published') !== !!check.issue) throw new Error('Published checks require an issue; skipped checks cannot carry one.');
-    return this.db.transaction(() => {
+    const cutoff = next.session.cursor.cutoffTurn;
+    if (cutoff === null || next.publication.lastCheckTurn !== cutoff) throw new Error('Check and checkpoint cutoffs must agree.');
+    this.db.transaction(() => {
       const revision = this.revisions.get(JSON.stringify([runId, receiver]));
-      const current = this.db.prepare('SELECT Revision FROM OfflineReplayRuns WHERE RunID = ? AND Receiver = ?')
-        .get(runId, receiver) as { Revision: number } | undefined;
-      if (revision === undefined || current?.Revision !== revision) {
+      const current = this.db.prepare(`
+        SELECT Revision, json_extract(Checkpoint, '$.publication.lastCheckTurn') AS LastCheckTurn
+        FROM OfflineReplayRuns WHERE RunID = ? AND Receiver = ?
+      `).get(runId, receiver) as { Revision: number; LastCheckTurn: number | null } | undefined;
+      if (!current || current.Revision !== revision) {
         throw new ReplayStoreConflictError('This replay run changed in another session. Resume the run to reload its latest checks and votes.');
       }
-      const inserted = this.db.prepare('INSERT INTO OfflineReplayChecks VALUES (?, ?, ?) ON CONFLICT DO NOTHING').run(runId, receiver, cutoff);
-      if (inserted.changes !== 1) throw new ReplayStoreConflictError('This cutoff is already completed; resume the saved run.');
-      if (check.issue) {
-        if (check.issue.receiver.playerId !== receiver || check.issue.timelineId !== runId || check.issue.cutoff.turn !== cutoff) throw new Error('Issue identity does not match its replay checkpoint.');
-        const evidence = next.publication.issues.find(issue => issue.issueId === check.issue!.issueId);
+      if (current.LastCheckTurn !== null && cutoff <= current.LastCheckTurn) {
+        throw new ReplayStoreConflictError('This cutoff has already been reached; resume the saved run.');
+      }
+      if (issue) {
+        if (issue.receiver.playerId !== receiver || issue.timelineId !== runId || issue.cutoff.turn !== cutoff) throw new Error('Issue identity does not match its replay checkpoint.');
+        const evidence = next.publication.issues.find(record => record.issueId === issue.issueId);
         if (!evidence) throw new Error('Published issue evidence is missing from the checkpoint.');
-        this.db.prepare('INSERT INTO OfflineReplayIssues VALUES (?, ?, ?, ?, ?, ?, ?)')
-          .run(runId, receiver, check.issue.issueId, cutoff, JSON.stringify(check.issue), JSON.stringify(archivedDecisionSchema.parse(check.decision)), JSON.stringify(evidence));
+        this.db.prepare('INSERT INTO OfflineReplayIssues VALUES (?, ?, ?, ?, ?, ?)')
+          .run(runId, receiver, issue.issueId, cutoff, JSON.stringify(issue), JSON.stringify(evidence));
       }
       this.save(next);
-      return check;
     }).immediate();
   }
 
@@ -152,15 +142,15 @@ export class ReplayStore {
     }) };
   }
 
-  /** Read stored prose and decisions and overlay today's votes for its unique articles. */
+  /** Read an edition and its sources with the current votes for its articles. */
   get(runId: string, receiver: number, issueId: string, publication: PublicationState): ArchiveIssue | undefined {
-    const row = this.db.prepare('SELECT Document, Decision, Evidence FROM OfflineReplayIssues WHERE RunID = ? AND Receiver = ? AND IssueID = ?')
-      .get(runId, receiver, issueId) as { Document: string; Decision: string; Evidence: string } | undefined;
+    const row = this.db.prepare('SELECT Document, Evidence FROM OfflineReplayIssues WHERE RunID = ? AND Receiver = ? AND IssueID = ?')
+      .get(runId, receiver, issueId) as { Document: string; Evidence: string } | undefined;
     if (!row) return undefined;
     const issue = JSON.parse(row.Document) as ArchiveIssue['issue'];
     return archiveIssueSchema.parse({
       index: { issueId, runId, receiverPlayerID: receiver, cutoffTurn: issue.cutoff.turn, title: issue.publication.title, itemCount: issue.items.length },
-      issue, articles: JSON.parse(row.Evidence).items, decision: JSON.parse(row.Decision), votes: Object.fromEntries(issue.items.map(item => [item.id, publication.votes[item.id] ?? 0])),
+      issue, articles: JSON.parse(row.Evidence).items, votes: Object.fromEntries(issue.items.map(item => [item.id, publication.votes[item.id] ?? 0])),
     });
   }
 

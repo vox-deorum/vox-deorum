@@ -5,19 +5,18 @@ import { access, readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { z } from 'zod';
 import { voxAgentsRoot } from '../../agents/prompts/prompt-files.js';
-import type { DeskStyle, DeskText } from '../../types/api.js';
+import type { DeskStyle, DeskStyleCatalogue, DeskText } from '../../types/api.js';
 import { asRecord } from '../../utils/guards.js';
 import { errorMessage } from '../../utils/errors.js';
 import { editorialCivicTermsSchema } from '../editorial/config/civic-terms.js';
 import { editorialConstantsSchema } from '../editorial/config/constants.js';
 import { builtInCatalogueDirectory } from '../editorial/config/load.js';
 import { editorialTriggerRuleSchema, templateSchema, type AuthoredVariant, type EditorialTemplate, type EditorialTriggerRule } from '../editorial/config/schema.js';
-import { resolveVariantStyle, styleCatalogueSchema, type StyleCatalogue } from '../editorial/config/styles.js';
+import { resolveVariantStyle, styleCatalogueSchema } from '../editorial/config/styles.js';
 import { readTemplateSources } from '../editorial/config/template-sources.js';
 
 export type DeskLink = AuthoredVariant['links'][number];
 export type DeskTriggerDefinition = Pick<EditorialTriggerRule, 'id' | 'subject' | 'when' | 'values' | 'group'>;
-export type DeskStyleCatalogue = Pick<StyleCatalogue, 'voice' | 'stance' | 'genre'>;
 
 /** One authored variant with the revision of the original file entry. */
 export interface DeskVariant {

@@ -3,11 +3,12 @@ import { z, ZodError } from 'zod';
 import type { DeskCatalogueResponse, DeskRef, DeskSettleManyRequest, DeskSettleRequest, DeskVariantDetail } from '../../types/api.js';
 import { errorMessage } from '../../utils/errors.js';
 import { sendError } from '../../web/http-utils.js';
+import { variantStyleSchema } from '../contracts/style.js';
 import { deskChoicesLimit } from './batch.js';
 import { DeskError, deskTriggers, readDeskCatalogue } from './catalogue.js';
 import { deskVariantStyle, findDeskVariant } from './brief.js';
 import { clearAllCandidates, clearCandidates, deskModelNames, getCandidates, getCurrentJob, startJob, stopJob, type DeskWriter } from './generate.js';
-import { settleManyVariants, settleVariant, unsettleVariant } from './settle.js';
+import { settleManyVariants, settleVariant, unsettleVariant, updateVariantStyle } from './settle.js';
 import { templateVariables } from './variables.js';
 
 const refSchema = z.object({ templateId: z.string().min(1), variantId: z.string().min(1) });
@@ -17,6 +18,7 @@ const batchSchema = z.object({
   choices: z.number().int().min(1).max(deskChoicesLimit),
 });
 const revisionSchema = z.object({ revision: z.string().min(1) });
+const styleSchema = revisionSchema.extend({ style: variantStyleSchema });
 const textSchema = z.object({
   headline: z.string(),
   subheadline: z.string().optional(),
@@ -48,10 +50,11 @@ function refFrom(req: express.Request): DeskRef {
 
 /** Return the list without shipping article bodies, siblings, or candidate text. */
 async function catalogueSummary(): Promise<DeskCatalogueResponse> {
-  const { available, reason, templates } = await readDeskCatalogue();
+  const { available, reason, templates, styles } = await readDeskCatalogue();
   return {
     available, reason,
     models: available ? deskModelNames() : [],
+    styles: styles ?? { voice: [], stance: [], genre: [] },
     templates: templates.map(({ id, file, tags, triggerSummary, variants }) => ({
       id, file, tags, triggerSummary,
       variants: variants.map(variant => ({
@@ -111,6 +114,11 @@ export function mountDeskRoutes(app: Express, writer?: DeskWriter): void {
   router.post(variantPath + '/settle', reply(req => updateVariant(refFrom(req), copySchema.parse(req.body))));
   router.post(variantPath + '/settle-many', reply(req => settleMany(refFrom(req), settleManySchema.parse(req.body))));
   router.post(variantPath + '/unsettle', reply(req => updateVariant(refFrom(req), revisionSchema.parse(req.body))));
+  router.put(variantPath + '/style', reply(async req => {
+    const ref = refFrom(req);
+    await updateVariantStyle(ref, styleSchema.parse(req.body), { onChange: clearCandidates });
+    return variantDetail(ref);
+  }));
 
   /** Return parser failures in the same format as desk errors. */
   const parserError: ErrorRequestHandler = (error, _req, res, _next) => {

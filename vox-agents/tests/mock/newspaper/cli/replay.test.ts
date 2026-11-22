@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import Database from 'better-sqlite3';
 import { createReplayCliOptions, laterIssueLinkingTo, savedArchives } from '../../../helpers/newspaper-cli-replay.js';
 import { createReplayRecording } from '../../../helpers/newspaper-replay.js';
 import type { NewspaperCliOptions } from '../../../../src/newspaper/cli/options.js';
@@ -26,7 +25,7 @@ describe('newspaper replay command artifacts', () => {
   });
   afterEach(async () => { vi.restoreAllMocks(); await recording.cleanup(); });
 
-  it('should persist sequential editorial checks, original articles and resumable history without changing the source', async () => {
+  it('should export editorial audits and save editions for resume without changing the source', async () => {
     const result = await runNewspaperReplay(options);
     const manifest = JSON.parse(await readFile(path.join(options.output, 'run.json'), 'utf8')) as NewspaperRunManifest;
     expect(manifest).toEqual(result);
@@ -38,14 +37,25 @@ describe('newspaper replay command artifacts', () => {
     expect(manifest.images).toEqual([]);
     const session = new ReplaySession();
     try {
-      await session.configure({ ...manifest.session!.settings, mode: 'resume' });
+      const resumed = await session.configure({ ...manifest.session!.settings, mode: 'resume' });
+      expect(resumed.cursor).toMatchObject({ cutoffTurn: 18, finished: true });
+      const { issues } = await session.listIssues();
+      expect(issues.map(issue => issue.issueId)).toEqual(manifest.checks.flatMap(check => check.issueId ? [check.issueId] : []));
       for (const summary of manifest.checks) {
         const audit = JSON.parse(await readFile(path.join(options.output, summary.audit), 'utf8'));
-        expect(audit).toMatchObject({ status: summary.status, decision: { cutoffTurn: summary.turn, configurationId: summary.configurationId } });
+        expect(audit).toMatchObject({
+          status: summary.status,
+          decision: {
+            cutoffTurn: summary.turn, configurationId: summary.configurationId,
+            configurationSnapshot: expect.any(Object),
+            triggerAudit: expect.arrayContaining([expect.objectContaining({ rule: expect.any(String) })]),
+          },
+        });
         if (summary.issue) {
           const issue = issueDocumentSchema.parse(JSON.parse(await readFile(path.join(options.output, summary.issue), 'utf8')));
           const archive = await session.getIssue(summary.issueId!);
           expect(issue).toEqual(archive.issue);
+          expect(archive).not.toHaveProperty('decision');
           expect(audit.articles).toEqual(archive.articles);
           expect(archive.articles.map(article => article.id)).toEqual(archive.issue.items.map(item => item.id));
           const html = await readFile(path.join(options.output, 'index.html'), 'utf8');
@@ -62,9 +72,6 @@ describe('newspaper replay command artifacts', () => {
       }
     } finally { await session.close(); }
     expect(await readFile(recording.filename)).toEqual(recording.originalBytes);
-    const db = new Database(path.join(options.output, 'replay.sqlite'), { readonly: true });
-    try { expect(db.prepare('SELECT COUNT(*) AS count FROM OfflineReplayChecks').get()).toEqual({ count: manifest.counts.checks }); }
-    finally { db.close(); }
   });
 
   it('should show rendered pages before any disclosure and keep diagnostics and issue text collapsed', async () => {

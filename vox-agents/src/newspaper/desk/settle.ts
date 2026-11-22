@@ -2,13 +2,14 @@
 import { randomUUID } from 'node:crypto';
 import { constants, copyFile, link, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { applyEdits, modify, type FormattingOptions, type JSONPath } from 'jsonc-parser';
-import type { DeskRef, DeskSettleManyRequest, DeskText, DeskVariable } from '../../types/api.js';
+import type { DeskRef, DeskSettleManyRequest, DeskStyle, DeskStyleRequest, DeskText, DeskVariable } from '../../types/api.js';
 import { errorMessage } from '../../utils/errors.js';
 import { asRecord, isRecord } from '../../utils/guards.js';
+import { variantStyleKinds } from '../contracts/style.js';
 import { loadEditorialConfig } from '../editorial/config/load.js';
 import { templateSchema } from '../editorial/config/schema.js';
 import { mergeTemplateVariants, templateVariantIds, variantCompanionFilename } from '../editorial/config/template-sources.js';
-import { findDeskVariant } from './brief.js';
+import { deskVariantStyle, findDeskVariant } from './brief.js';
 import { DeskError, deskTemplateFilePath, deskVariantRevision, readDeskCatalogue, type DeskCatalogueOptions, type DeskVariant } from './catalogue.js';
 import { templateVariables, variantWarnings } from './variables.js';
 
@@ -186,8 +187,8 @@ function appendSiblings(text: string, templateId: string, siblings: Record<strin
     modify(edited, [index, 'variants', count + offset], row, { formattingOptions })), text);
 }
 
-/** Edit the primary in its own file and save siblings in the template's companion. */
-async function updateVariant(ref: DeskRef, revision: string, options: DeskSettleOptions, change?: DeskCopyChange) {
+/** Edit the primary in its own file and save any new siblings in the companion. */
+async function updateVariant(ref: DeskRef, revision: string, options: DeskSettleOptions, change?: DeskCopyChange | DeskStyle) {
   const catalogue = await readDeskCatalogue(options);
   if (!catalogue.available) throw new DeskError(503, catalogue.reason ?? 'The stock newspaper catalogue is unavailable.');
   const found = findDeskVariant(catalogue, ref);
@@ -211,7 +212,7 @@ async function updateVariant(ref: DeskRef, revision: string, options: DeskSettle
 
   let fields: Record<string, string | string[] | boolean | undefined> = { settled: undefined };
   const siblingRows: Record<string, unknown>[] = [];
-  if (change) {
+  if (change && 'primary' in change) {
     const { primary, siblings } = change;
     if (siblings.length > 0 && variant.settled)
       throw new DeskError(409, 'This variant is already settled. Reopen it before adding copies.');
@@ -232,6 +233,14 @@ async function updateVariant(ref: DeskRef, revision: string, options: DeskSettle
         siblingRows.push(siblingRow(entry, `${variant.id}-${next++}`, siblingCopy));
       }
     }
+  } else if (change) {
+    const current = deskVariantStyle(variant);
+    for (const kind of variantStyleKinds) {
+      if (!catalogue.styles?.[kind].some(tag => tag.id === change[kind]))
+        throw new DeskError(400, `Unknown ${kind} tag "${change[kind]}".`);
+    }
+    if (variantStyleKinds.every(kind => change[kind] === current[kind])) return;
+    fields = { ...change };
   }
 
   let edited = original;
@@ -279,4 +288,9 @@ export function settleManyVariants(
 /** Remove the review mark without editing the copy. */
 export function unsettleVariant(ref: DeskRef, revision: string, options: DeskSettleOptions = {}): Promise<void> {
   return serializeWrite(() => updateVariant(ref, revision, options));
+}
+
+/** Change only the style tags of an authored variant. */
+export function updateVariantStyle(ref: DeskRef, request: DeskStyleRequest, options: DeskSettleOptions = {}): Promise<void> {
+  return serializeWrite(() => updateVariant(ref, request.revision, options, request.style));
 }

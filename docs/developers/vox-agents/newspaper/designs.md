@@ -29,7 +29,7 @@ For a layout review, capture at 360, 1000, and 1200 pixels in separate folders. 
 
 Once there are enough stories to publish, the editor draws among designs with positive weight, a printable fallback title, and an eligible layout for the edition. An eligible design competes when its weight is at least half the strongest one. A competitive design stays for its first three published issues, then joins a weighted draw at each check. After six issues, the next draw leaves it out if another competitive design is eligible. Skipped checks do not advance the run.
 
-Use `when` to rule out a format that would be out of place. Knotted Inca Cords, for example, fits The Inca from Classical through Renaissance. Set weights relative to the other designs that can appear at the same time: an option needs 40 to compete with a weight of 80. Keep a general option for each era and a fallback if the era is missing. Check the [replay decision](replay.md#read-replay-diagnostics) before tuning weights.
+Use `when` to rule out a format that would be out of place. Knotted Inca Cords, for example, fits The Inca from Classical through Renaissance. Set weights relative to the other designs that can appear at the same time: an option needs 40 to compete with a weight of 80. Keep a general option for each era and a fallback if the era is missing. Check `designSelection` in the [CLI replay audit](replay.md#iterate-on-a-rule-or-overlay) before tuning weights.
 
 The [editor](editorial.md#pages-and-designs) sets the story count and chooses whether a story leads. Layouts choose how those stories look. Breaking layouts are for the front only. Each design needs an unconditional ordinary and breaking layout with positive constant weights. Resizing rearranges the same articles.
 

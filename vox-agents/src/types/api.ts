@@ -736,6 +736,9 @@ export interface DeskStyle {
   genre: string;
 }
 
+/** Available tags and their writing guidance, grouped by style field. */
+export type DeskStyleCatalogue = Record<keyof DeskStyle, { id: string; guidance?: string }[]>;
+
 /** A placeholder available to the writer. */
 export interface DeskVariable {
   group: 'trigger' | 'group' | 'subject' | 'reference' | 'period' | 'reader' | 'link' | 'sibling';
@@ -785,6 +788,7 @@ export interface DeskCatalogueResponse {
   available: boolean;
   reason?: string;
   models: string[];
+  styles: DeskStyleCatalogue;
   templates: DeskTemplateSummary[];
 }
 
@@ -821,6 +825,12 @@ export interface DeskJob {
 /** Save a variant's copy only against the revision the user edited. */
 export interface DeskSettleRequest extends DeskText {
   revision: string;
+}
+
+/** Save the style tags against the revision the user opened. */
+export interface DeskStyleRequest {
+  revision: string;
+  style: DeskStyle;
 }
 
 /** Save a primary copy plus at least one new sibling copy for the same source variant. */

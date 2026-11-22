@@ -69,6 +69,7 @@ import type {
   DeskRef,
   DeskSettleRequest,
   DeskSettleManyRequest,
+  DeskStyleRequest,
   DeskVariantDetail
 } from '../utils/types';
 import type { TextStreamPart, ToolSet } from 'ai';
@@ -767,6 +768,13 @@ class ApiClient {
   /** Read the current copy, variables, and candidates for a variant. */
   getDeskVariant(ref: DeskRef): Promise<DeskVariantDetail> {
     return this.fetchJson(this.baseUrl + deskVariantPath(ref));
+  }
+
+  /** Save the tags that describe the variant's style. */
+  updateDeskVariantStyle(ref: DeskRef, request: DeskStyleRequest): Promise<DeskVariantDetail> {
+    return this.fetchJson(this.baseUrl + deskVariantPath(ref) + '/style', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(request),
+    });
   }
 
   /** Generate alternatives for the checked variants. */

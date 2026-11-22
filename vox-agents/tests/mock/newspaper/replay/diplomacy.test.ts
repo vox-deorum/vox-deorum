@@ -53,7 +53,7 @@ describe('diplomacy rules in offline replay', () => {
       session = new ReplaySession();
       await session.configure({ ...settings, mode: 'resume' });
       const archived = await session.getIssue(issue!.issueId);
-      expect(archived.decision.candidateScores.filter(candidate => candidate.mergedInto)).toEqual(absorbed);
+      expect(archived.issue).toEqual(issue);
       const lead = archived.articles.find(article => article.id === archived.issue.pages[0].itemIds[0])!;
       expect(lead.ruleIds).toContain('war-on-three-fronts');
       expect(lead.sources.filter(source => source.table === 'GameEvents').map(source => source.id))

@@ -88,6 +88,5 @@ export const replayAdvanceSummaryResponseSchema = z.object({
 export type ReplaySettings = z.infer<typeof replaySettingsSchema>;
 export type ReplaySpeed = z.infer<typeof replaySpeedSchema>;
 export type ReplayState = z.infer<typeof replayStateSchema>;
-export type ReplayCheck = z.infer<typeof replayCheckSchema>;
 export type ReplayEvidenceResponse = z.infer<typeof replayEvidenceResponseSchema>;
 export type ReplayAdvanceSummaryResponse = z.infer<typeof replayAdvanceSummaryResponseSchema>;

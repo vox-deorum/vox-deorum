@@ -18,7 +18,7 @@ Each independent declaration keeps its incident. An incoming war story can name 
 
 When the paper is due to report **War on N fronts**, that story can absorb selected declarations by major civs still at war with the reader. It identifies the new attackers and separates the other active fronts. If that overview is unavailable, three or more distinct major civs declaring on the same turn can share a breaking headline. One or two declarations can still run separately, with each attacker's allies reported in the same story. The rules count distinct major declarers and can name their shared city-state allies once.
 
-The editor [combines reports](../editorial.md#combining-stories) when enough articles still remain to fill the front. A combined report uses one slot and keeps links to the original decisions and evidence in replay.
+The editor [combines reports](../editorial.md#combining-stories) when enough articles still remain to fill the front. A combined report uses one slot and keeps the original sources. The CLI audit shows which candidates merged into it.
 
 ## When a city changes hands again
 
@@ -62,6 +62,6 @@ Use the parser and relationship checks in `mcp-server/src/diplomacy/relationship
 | `editorial/facts/diplomacy.ts` | Fields exposed to triggers |
 | `contracts/diplomacy.ts` | Pair memory and inference audit contracts |
 
-The relative paths start in `vox-agents/src/newspaper/`. For another story angle, add a [trigger and template](overview.md). For a new fact, extend the inference and update the [fact reference](facts.md). Test independent wars, recursive calls, gaps and skipped checks; inspect the inference audit in replay.
+The relative paths start in `vox-agents/src/newspaper/`. For another story angle, add a [trigger and template](overview.md). For a new fact, extend the inference and update the [fact reference](facts.md). Test independent wars, recursive calls, gaps and skipped checks with the [CLI replay audit](../replay.md#generate-examples-from-the-command-line).
 
-Every check records the inference audit. Publication commits the pair memory and advances the reporting boundary. A skipped check keeps both at the previous publication, so the next check can rebuild history across the open reporting period and consider the earlier incident again.
+Publication saves the pair memory and advances the reporting boundary. A skipped check keeps both at the previous publication, so the next check can rebuild history across the open reporting period and consider the earlier incident again.

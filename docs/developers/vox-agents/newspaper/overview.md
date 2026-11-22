@@ -1,6 +1,6 @@
 # Newspaper
 
-The newspaper turns a Civilization V recording into a publication for one player. For example, a city that shrank after training settlers can get a story about their departure if it still has food to spare. The editor uses evidence visible to the receiving player. Replay saves each issue, its editorial choices and sources, and reader votes in a separate database.
+The newspaper turns a Civilization V recording into a publication for one player. For example, a city that shrank after training settlers can get a story about their departure if it still has food to spare. The editor uses evidence visible to the receiving player. Replay saves each issue, its article sources, and reader votes in a separate database.
 
 With [workspace dependencies](../../setup.md) installed, run from the repository root: `npm run newspaper:preview -w vox-agents`. Open **Mockups** to browse designs or **Recorded** to open an MCP recording. The [replay guide](replay.md) also covers the command line, evidence inspection, and resuming a run.
 

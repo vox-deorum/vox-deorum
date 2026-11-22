@@ -84,7 +84,7 @@ const progressLabel = computed(() => {
       outlined :disabled="busy || saving" :loading="clearing" :title="job?.status === 'running' ? 'Stop the batch before clearing drafts' : undefined"
       @click="emit('clear')" />
     <Button label="Generate" icon="pi pi-sparkles" size="small" :loading="starting"
-      :disabled="busy || !requestCount || !choices" @click="emit('generate')" />
+       :disabled="busy || saving || !requestCount || !choices" @click="emit('generate')" />
     <Button v-if="job?.status === 'running'" label="Stop" icon="pi pi-stop" size="small" severity="secondary"
       outlined :loading="stopping" @click="emit('stop')" />
   </div>

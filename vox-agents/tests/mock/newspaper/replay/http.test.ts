@@ -63,7 +63,7 @@ describe('replay HTTP routes', () => {
     expect(advanced.body).toEqual({ session: summary.session });
   });
 
-  it('should return compact published and skipped outcomes while retaining the archived decision', async () => {
+  it('should return compact outcomes and reopen a published edition with its sources', async () => {
     const scope = { runId: 'summary-run', receiverPlayerID: 0 };
     await request(host.app).put('/api/newspaper/replay').send({
       ...sourceSettings(recording.filename), fromTurn: 6, toTurn: 30, ...scope,
@@ -77,7 +77,10 @@ describe('replay HTTP routes', () => {
     expect(published.body).toEqual({ session: summary.session, check: { status: 'published', issueId } });
     const detail = await request(host.app).get(`/api/newspaper/replay/issues/${encodeURIComponent(issueId!)}`).query(scope).expect(200);
     expect(detail.body.issue.issueId).toBe(issueId);
-    expect(detail.body.decision.status).toBe('published');
+    expect(detail.body.articles).toEqual(expect.arrayContaining([
+      expect.objectContaining({ issueId, sources: expect.any(Array) }),
+    ]));
+    expect(detail.body).not.toHaveProperty('decision');
     const skipped = await request(host.app).post('/api/newspaper/replay/advance?view=summary').send(scope).expect(200);
     expect(skipped.body).toEqual({
       session: replayAdvanceSummaryResponseSchema.parse(skipped.body).session,
