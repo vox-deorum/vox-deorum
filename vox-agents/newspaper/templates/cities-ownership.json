@@ -275,6 +275,40 @@
     ]
   },
   {
+    "id": "city-puppet-annexed-account",
+    "triggers": ["city-puppet-annexed"],
+    "tags": ["cities", "domestic"],
+    "names": ["city"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "city-puppet-annexed-report",
+        "headline": "{{city}} comes under direct rule",
+        "body": [
+          "The capital has taken over the administration of {{city}}, until now a puppet. The city remains under occupation."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-puppet-annexed-analysis",
+        "voice": "press",
+        "stance": "neutral",
+        "genre": "analysis",
+        "headline": "Direct rule for {{city}}",
+        "body": [
+          "{{city}} has moved from puppet to province. The capital now gives the city its orders directly, while the city remains occupied and its people live under the same flag. Direct rule may bring clearer decisions, but the occupation continues."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
     "id": "occupied-city-resists-account",
     "triggers": ["occupied-city-resists"],
     "tags": ["cities", "domestic"],

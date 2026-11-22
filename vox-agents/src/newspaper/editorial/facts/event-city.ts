@@ -63,7 +63,7 @@ export function eventCityTargets(event: NewspaperEvent): { main?: CityTarget; na
   const main = {
     plot,
     ...(type === 'CityCaptureComplete' ? { id: recordedId(values.CityID), owner: recordedId(values.NewOwnerID) } : {}),
-    ...(isFounding(event) || type === 'CityRazed' ? { owner: recordedId(values.PlayerID) } : {}),
+    ...(isFounding(event) || type === 'CityRazed' || type === 'CityBeginsWLTKD' ? { owner: recordedId(values.PlayerID) } : {}),
     ...(type === 'CityConvertsReligion' ? { owner: recordedId(values.OwnerID) } : {}),
   };
   return { main, named };

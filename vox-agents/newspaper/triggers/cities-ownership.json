@@ -75,6 +75,21 @@
     "adjust": "city.stake.place"
   },
   {
+    "id": "city-puppet-annexed",
+    "subject": "city",
+    "window": "recent",
+    "when": [
+      "city.knows('name') && city.knows('own') && city.own === true",
+      "city.knows('owner') && city.owner.knows('id')",
+      "city.knows('before') && city.before.knows('owner') && city.before.owner.knows('id') && city.before.owner.id == city.owner.id",
+      "city.before.knows('isPuppet') && city.before.isPuppet === true",
+      "city.knows('isPuppet') && city.isPuppet === false && city.knows('isOccupied') && city.isOccupied === true"
+    ],
+    "tier": "notable",
+    "adjust": "city.stake.place",
+    "tags": ["cities", "domestic"]
+  },
+  {
     "id": "occupied-city-resists",
     "subject": "city",
     "when": [

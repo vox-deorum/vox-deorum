@@ -267,5 +267,39 @@
         "weight": { "base": 1 }
       }
     ]
+  },
+  {
+    "id": "city-courthouse-completed-account",
+    "triggers": ["city-courthouse-completed"],
+    "tags": ["cities", "domestic"],
+    "names": ["building", "city"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "city-courthouse-completed-report",
+        "headline": "The {{building}} opens in {{city}}",
+        "body": [
+          "The {{building}} has opened in {{city}}, lifting the penalty of occupation. The city is now integrated into our territory."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-courthouse-completed-analysis",
+        "voice": "press",
+        "stance": "neutral",
+        "genre": "analysis",
+        "headline": "{{city}} takes its place in the realm",
+        "body": [
+          "We have governed {{city}} as a conquered city. With the {{building}} in service, it can now be administered on the same footing as our other cities."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
   }
 ]

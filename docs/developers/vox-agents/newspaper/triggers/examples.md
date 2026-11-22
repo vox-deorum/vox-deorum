@@ -33,7 +33,9 @@ Foreign reports use events and the basic city snapshots already visible to the r
 
 | Rule | What to borrow |
 | --- | --- |
-| `neighbor-puppet-annexed` | Compare two snapshots of a foreign city within `neighboring`. Require the same owner to distinguish annexation from capture. |
+| `city-puppet-annexed`, `neighbor-puppet-annexed` | Compare two snapshots of an own city or a foreign city within `neighboring`. The city goes from puppet to occupied under the same owner. |
+| `city-courthouse-completed`, `foreign-city-courthouse-completed` | Use a witnessed Courthouse or Satrap's Court completion or purchase in an occupied, non-puppet city. This ends the occupation unhappiness penalty; the game's occupation flag can remain set. |
+| `city-celebration-begins`, `foreign-city-celebration-begins` | Use the witnessed `CityBeginsWLTKD` event and a readable city linked to its owner. A nearby foreign celebration needs the same evidence as a domestic one. |
 | `forward-settle` | Use `PlayerCityFounded` or `UnitCityFounded`, and prefer `PlayerCityFounded` when both report the same settlement. The rule covers rival settlements within `adjacent` of our nearest city, so `foreign-city-founded` leaves them alone. Urgency stays at two tiles or less. |
 | `foreign-city-founded` | Report any other eligible local founding within `nearby` (15 tiles). Require a readable city name and owner, and skip a `UnitCityFounded` duplicate of a `PlayerCityFounded` event. |
 | `foreign-building-investment-made` | Require the witnessed `CityInvestedBuilding` event for a nearby foreign city with a readable name. Name the building and owner, and suppress the report for a later completion or purchase with the same recorded building name in the reporting window. |
@@ -41,7 +43,8 @@ Foreign reports use events and the basic city snapshots already visible to the r
 | `besieged-and-starving` | Combine the `besieged` and `starving` shortcuts for an own city. Half damage makes it urgent; default `rearm` waits for a check where the conditions are false. |
 | `neighbors-convert` | Group neighboring foreign cities by their new majority religion. Require three matches in the `recent` window and raise the score as the group grows. |
 | `foreign-city-hardship`, `foreign-city-raises-settlers` | Hardship runs at any distance when the observation carries the detail: print the readable cause (`famine` or `pillaged`), or a food shortage built from readable `foodPerTurn` and `foodStored` figures. Settler training needs a linked `CityTrained` settler, a population drop and readable positive `foodPerTurn`. Leave out any cause or figure the snapshot does not carry. |
-| `foreign-city-flips`, `foreign-city-liberated`, `foreign-occupied-city-resists`, `foreign-city-takes-heavy-damage` | Report ownership changes from `CityFlipped` and `PlayerLiberated`. When a same-turn capture covers the same transfer, let `nearby-city-captured` print one account instead. Resistance needs occupied status and positive `resistanceTurns`; heavy damage crosses the majority threshold from basic hit points during a war that does not involve the reader. |
+| `foreign-city-flips`, `foreign-city-liberated`, `foreign-occupied-city-resists` | Report ownership changes from `CityFlipped` and `PlayerLiberated`. When a same-turn capture covers the same transfer, let `nearby-city-captured` print one account instead. Resistance needs occupied status and positive `resistanceTurns`. |
+| `foreign-city-takes-heavy-damage` | Compare nearby non-enemy cities' hit points before and after they cross half damage. Use the war variant only when a war involving the owner is known. The readings do not identify the attacker or prove a blockade. |
 
 ## National affairs
 

@@ -78,7 +78,6 @@
     "when": [
       "city.foreign === true && city.knows('name')",
       "city.knows('owner') && city.owner.knows('id') && city.owner.knows('name')",
-      "city.owner.knows('atWar') && city.owner.atWar === true",
       "city.owner.knows('enemy') && city.owner.enemy === false",
       "city.is.nearby",
       "city.knows('hitPoints') && Number.isFinite(city.hitPoints) && city.knows('maxHitPoints') && Number.isFinite(city.maxHitPoints) && city.maxHitPoints > 0",
@@ -89,6 +88,7 @@
       "!(city.knows('razingTurns') && Number.isFinite(city.razingTurns) && city.razingTurns > 0)"
     ],
     "values": {
+      "knownWar": "city.owner.knows('atWar') && city.owner.atWar === true",
       "damage": "(city.maxHitPoints - city.hitPoints) / city.maxHitPoints"
     },
     "tier": "notable",

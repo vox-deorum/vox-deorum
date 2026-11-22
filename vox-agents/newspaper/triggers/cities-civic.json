@@ -118,5 +118,35 @@
     "tier": "notable",
     "adjust": "city.stake.place",
     "tags": ["cities", "international"]
+  },
+  {
+    "id": "city-celebration-begins",
+    "subject": "event",
+    "event": "CityBeginsWLTKD",
+    "when": [
+      "event.knows('player') && event.player.knows('id') && event.player.self === true",
+      "event.knows('city') && event.city.knows('id') && event.city.knows('name') && event.city.knows('owner') && event.city.owner.knows('id') && event.city.own === true",
+      "event.player.id === event.city.owner.id"
+    ],
+    "tier": "filler",
+    "adjust": "event.city.stake.place",
+    "tags": ["cities", "domestic"]
+  },
+  {
+    "id": "foreign-city-celebration-begins",
+    "subject": "event",
+    "event": "CityBeginsWLTKD",
+    "when": [
+      "event.knows('player') && event.player.knows('id') && event.player.knows('name') && event.player.self === false",
+      "event.knows('city') && event.city.knows('id') && event.city.knows('name') && event.city.knows('owner') && event.city.owner.knows('id') && event.city.owner.knows('name') && event.city.foreign === true",
+      "event.player.id === event.city.owner.id",
+      "event.city.is.nearby"
+    ],
+    "values": {
+      "owner": "event.city.owner.name"
+    },
+    "tier": "filler",
+    "adjust": "event.city.stake.place",
+    "tags": ["cities", "international"]
   }
 ]

@@ -337,6 +337,7 @@ export const newspaperEventConfigs: Record<string, NewspaperEventConfig> = {
     fields: ['PlayerID', 'CityID', 'BuildingClass', 'Invested'],
     subjects: playerSubject, cityIDs: { CityID: 'PlayerID' }
   },
+  CityBeginsWLTKD: { fields: ['PlayerID', 'CityX', 'CityY'], subjects: playerSubject },
   PlayerCityFounded: { fields: ['PlayerID', 'PlotX', 'PlotY'], subjects: playerSubject },
   UnitCityFounded: { fields: ['PlayerID', 'UnitID', 'UnitType', 'PlotX', 'PlotY'], subjects: playerSubject },
   CityPuppeted: { fields: ['PlayerID', 'CityID'], subjects: playerSubject, cityIDs: { CityID: 'PlayerID' } },

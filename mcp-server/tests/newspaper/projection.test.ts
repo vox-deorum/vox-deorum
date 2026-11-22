@@ -326,6 +326,16 @@ describe('newspaper field projection', () => {
     expect(projectNewspaperEvent({ ...row, Player0: 0 }, context())).toBeUndefined();
   });
 
+  it('reports a celebration start only to a witness who knows the owner', () => {
+    const row = { ID: 91, Turn: 10, CreatedAt: 3010, Type: 'CityBeginsWLTKD', Player0: 1,
+      Payload: { PlayerID: 1, CityX: 0, CityY: 4, Change: 8 } } as any;
+    expect(projectNewspaperEvent(row, context())?.values).toEqual({ PlayerID: 1, CityX: 0, CityY: 4 });
+    expect(projectNewspaperEvent({ ...row, Player0: 0 }, context())).toBeUndefined();
+    expect(projectNewspaperEvent({ ...row, Payload: { ...row.Payload, PlayerID: 3 } }, context())).toBeUndefined();
+    expect(projectNewspaperEvent({ ...row, Player0: 2, Payload: { ...row.Payload, PlayerID: 0 } }, context())?.values)
+      .toEqual({ PlayerID: 0, CityX: 0, CityY: 4 });
+  });
+
   it.each([
     [{ Starting: false, TurnChange: 10 }, true],
     [{ Starting: false, TurnChange: 0 }, false],

@@ -303,5 +303,39 @@
         "weight": { "base": 1 }
       }
     ]
+  },
+  {
+    "id": "city-celebration-begins-account",
+    "triggers": ["city-celebration-begins"],
+    "tags": ["cities", "domestic"],
+    "names": ["city"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "city-celebration-begins-report",
+        "headline": "A celebration begins in {{city}}",
+        "body": [
+          "A citywide celebration is under way in {{city}}."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-celebration-begins-notice",
+        "voice": "gazette",
+        "stance": "neutral",
+        "genre": "notice",
+        "headline": "From the city pages: {{city}} celebrates",
+        "body": [
+          "Readers in {{city}} may mark the start of a citywide celebration on their calendars."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
   }
 ]

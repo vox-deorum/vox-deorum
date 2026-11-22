@@ -132,9 +132,10 @@
     "variants": [
       {
         "id": "foreign-city-takes-heavy-damage-report",
+        "when": "knownWar === true",
         "headline": "{{city}} is badly damaged",
         "body": [
-          "{{city}} has taken heavy damage. Whole streets near the wall are empty, and families are carrying their bedding deeper into the city. {{owner}} has not said how long the repairs will take, and the market has moved into the narrow lanes behind the gate."
+          "The defenses of {{city}} have fallen to half strength or less. Repairs are now another demand on {{owner}} while it is at war."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -146,9 +147,37 @@
         "voice": "press",
         "stance": "neutral",
         "genre": "analysis",
+        "when": "knownWar === true",
         "headline": "The cost of a battered {{city}}",
         "body": [
-          "Heavy damage at {{city}} leaves {{owner}} with a city that must be rebuilt before it can be held. Walls, wells and storehouses all cost money, and a shaken population costs more. The bill will reach the capital before the repairs are finished."
+          "At {{city}}, {{owner}} has to weigh repairs against the demands of its war. Delaying either comes at a cost."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-city-takes-heavy-damage-repair-report",
+        "when": "knownWar === false",
+        "headline": "Heavy damage at {{city}}",
+        "body": [
+          "The defenses of {{city}} have fallen to half strength or less. {{owner}} has substantial repairs ahead."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-city-takes-heavy-damage-repair-analysis",
+        "voice": "press",
+        "stance": "neutral",
+        "genre": "analysis",
+        "when": "knownWar === false",
+        "headline": "What repairing {{city}} will cost {{owner}}",
+        "body": [
+          "Restoring {{city}} will take resources that {{owner}} might otherwise have spent elsewhere. The damage is clear; the scale of the repair bill is still unknown."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -505,6 +534,74 @@
         "headline": "A settler party is raised at {{city}}",
         "body": [
           "A settler party has been raised at {{city}}, and {{owner}} did not gather it for nothing. A town that can spare that many people is a town with plans for more ground. The treasury's next move is the one to watch."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "foreign-city-courthouse-completed-account",
+    "triggers": ["foreign-city-courthouse-completed"],
+    "tags": ["cities", "international"],
+    "names": ["building", "city", "owner"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "foreign-city-courthouse-completed-report",
+        "headline": "{{owner}} opens a {{building}} in {{city}}",
+        "body": [
+          "The {{building}} has opened in {{city}}. The city is now integrated into {{owner}}'s territory and no longer bears the penalty of occupation."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-city-courthouse-completed-analysis",
+        "voice": "press",
+        "stance": "neutral",
+        "genre": "analysis",
+        "headline": "{{owner}} integrates {{city}}",
+        "body": [
+          "The new {{building}} gives {{owner}} a settled basis for governing {{city}}. For its neighbors, that is a sign that {{owner}} now treats the former conquest as part of its territory."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "foreign-city-celebration-begins-account",
+    "triggers": ["foreign-city-celebration-begins"],
+    "tags": ["cities", "international"],
+    "names": ["city", "owner"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "foreign-city-celebration-begins-report",
+        "headline": "{{city}} begins a citywide celebration",
+        "body": [
+          "In {{owner}}, the city of {{city}} has begun a local celebration."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-city-celebration-begins-notice",
+        "voice": "gazette",
+        "stance": "neutral",
+        "genre": "notice",
+        "headline": "From beyond the border: a celebration in {{city}}",
+        "body": [
+          "News from {{owner}}: a celebration is under way in {{city}}."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }

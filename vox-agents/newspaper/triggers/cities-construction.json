@@ -11,6 +11,7 @@
       "event.city.knows('importantBuildings') && Array.isArray(event.city.importantBuildings)",
       "event.city.importantBuildings.includes(event.building)",
       "event.knows('isGoldPurchase') && event.isGoldPurchase === false && event.knows('isFaithPurchase') && event.isFaithPurchase === false",
+      "!event.is.courthouseIntegration",
       "!events.some(e => (e.type === 'PlayerCityFounded' || e.type === 'UnitCityFounded') && e.turn === event.turn && e.knows('plot') && event.knows('plot') && e.plot.x === event.plot.x && e.plot.y === event.plot.y)"
     ],
     "values": {
@@ -52,7 +53,8 @@
       "event.knows('building') && !defenses.includes(event.building)",
       "event.city.knows('importantBuildings') && Array.isArray(event.city.importantBuildings)",
       "event.city.importantBuildings.includes(event.building)",
-      "(event.knows('isGoldPurchase') && event.isGoldPurchase === true) || (event.knows('isFaithPurchase') && event.isFaithPurchase === true)"
+      "(event.knows('isGoldPurchase') && event.isGoldPurchase === true) || (event.knows('isFaithPurchase') && event.isFaithPurchase === true)",
+      "!event.is.courthouseIntegration"
     ],
     "values": {
       "building": "event.building",
@@ -81,6 +83,23 @@
     "tags": ["cities", "military", "domestic"]
   },
   {
+    "id": "city-courthouse-completed",
+    "subject": "event",
+    "event": "CityConstructed",
+    "when": [
+      "event.knows('player') && event.player.knows('id') && event.player.self === true",
+      "event.knows('city') && event.city.knows('id') && event.city.knows('name') && event.city.knows('owner') && event.city.owner.knows('id') && event.city.own === true",
+      "event.player.id === event.city.owner.id",
+      "event.is.courthouseIntegration"
+    ],
+    "values": {
+      "building": "event.building"
+    },
+    "tier": "notable",
+    "adjust": "event.city.stake.place",
+    "tags": ["cities", "domestic"]
+  },
+  {
     "id": "foreign-building-completed",
     "subject": "event",
     "event": "CityConstructed",
@@ -93,6 +112,7 @@
       "event.city.knows('importantBuildings') && Array.isArray(event.city.importantBuildings)",
       "event.city.importantBuildings.includes(event.building)",
       "event.knows('isGoldPurchase') && event.isGoldPurchase === false && event.knows('isFaithPurchase') && event.isFaithPurchase === false",
+      "!event.is.courthouseIntegration",
       "!events.some(e => (e.type === 'PlayerCityFounded' || e.type === 'UnitCityFounded') && e.turn === event.turn && e.knows('plot') && event.knows('plot') && e.plot.x === event.plot.x && e.plot.y === event.plot.y)"
     ],
     "values": {
@@ -116,7 +136,8 @@
       "event.knows('building') && !defenses.includes(event.building)",
       "event.city.knows('importantBuildings') && Array.isArray(event.city.importantBuildings)",
       "event.city.importantBuildings.includes(event.building)",
-      "(event.knows('isGoldPurchase') && event.isGoldPurchase === true) || (event.knows('isFaithPurchase') && event.isFaithPurchase === true)"
+      "(event.knows('isGoldPurchase') && event.isGoldPurchase === true) || (event.knows('isFaithPurchase') && event.isFaithPurchase === true)",
+      "!event.is.courthouseIntegration"
     ],
     "values": {
       "building": "event.building",
@@ -168,5 +189,24 @@
     "tier": "routine",
     "adjust": "event.stake.place",
     "tags": ["cities", "military", "international"]
+  },
+  {
+    "id": "foreign-city-courthouse-completed",
+    "subject": "event",
+    "event": "CityConstructed",
+    "when": [
+      "event.knows('player') && event.player.knows('id') && event.player.knows('name') && event.player.self === false",
+      "event.knows('city') && event.city.knows('id') && event.city.knows('name') && event.city.knows('owner') && event.city.owner.knows('id') && event.city.owner.knows('name') && event.city.foreign === true",
+      "event.player.id === event.city.owner.id",
+      "event.city.is.nearby",
+      "event.is.courthouseIntegration"
+    ],
+    "values": {
+      "building": "event.building",
+      "owner": "event.city.owner.name"
+    },
+    "tier": "notable",
+    "adjust": "event.city.stake.place",
+    "tags": ["cities", "international"]
   }
 ]

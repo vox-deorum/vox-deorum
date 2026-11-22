@@ -139,6 +139,27 @@ describe('stock foreign city desk', () => {
   });
 
   describe('construction', () => {
+    it.each([
+      { owner: 0, name: 'Tours', building: 'Courthouse', rule: 'city-courthouse-completed', generic: 'building-purchased' },
+      { owner: 1, name: 'Recife', building: "Satrap's Court", rule: 'foreign-city-courthouse-completed', generic: 'foreign-building-purchased' },
+    ])('should give an integrating $building one account and keep ordinary construction separate', async ({ owner, name, building, rule, generic }) => {
+      const prior = city(20, 5, 10, owner, name, { IsPuppet: false, IsOccupied: true });
+      const occupied = city(20, 10, 10, owner, name, { IsPuppet: false, IsOccupied: true, ImportantBuildings: [building] });
+      const completion = gameEvent(113, 'CityConstructed', 9, {
+        OwnerID: owner, CityID: 20, CityX: 10, CityY: 2, Building: building, IsGoldPurchase: true,
+      });
+      const base = owner === 0 ? [] : [home];
+      const integrated = await check(fixture([...base, occupied], [prior], [completion]));
+      expect(integrated.fired(rule)).toEqual(['event/113']);
+      expect(integrated.fired(generic)).toEqual([]);
+      expectStory(integrated, rule, [name, building, ...(owner === 1 ? ['Brazil'] : [])]);
+
+      const ordinary = { ...occupied, values: { ...occupied.values, IsOccupied: false } };
+      const genericResult = await check(fixture([...base, ordinary], [prior], [completion]));
+      expect(genericResult.fired(rule)).toEqual([]);
+      expect(genericResult.fired(generic)).toEqual(['event/113']);
+    });
+
     it('should read a nearby investment from a basic snapshot and drop it after a matching completion', async () => {
       const earlier = city(20, 5, 10, 1, 'Recife');
       const town = city(20, 10, 10, 1, 'Recife');
@@ -175,6 +196,23 @@ describe('stock foreign city desk', () => {
   });
 
   describe('civic life', () => {
+    it.each([
+      { owner: 0, name: 'Tours', rule: 'city-celebration-begins' },
+      { owner: 1, name: 'Recife', rule: 'foreign-city-celebration-begins' },
+    ])('should report a witnessed celebration in $name from the recorded start', async ({ owner, name, rule }) => {
+      const earlier = city(20, 5, 10, owner, name);
+      const town = city(20, 10, 10, owner, name);
+      const celebration = gameEvent(114, 'CityBeginsWLTKD', 9, { PlayerID: owner, CityX: 10, CityY: 2 });
+      const base = owner === 0 ? [] : [home];
+      const result = await check(fixture([...base, town], [earlier], [celebration]));
+      expect(result.fired(rule)).toEqual(['event/114']);
+      const story = expectStory(result, rule, [name, ...(owner === 1 ? ['Brazil'] : [])]);
+      expect(story.record.sources).toContainEqual(expect.objectContaining({ table: 'GameEvents', id: 114 }));
+
+      const wrongOwner = { ...celebration, values: { ...celebration.values, PlayerID: 2 } };
+      expect((await check(fixture([...base, town], [earlier], [wrongOwner]))).fired(rule)).toEqual([]);
+    });
+
     it('should require a same-owner population baseline for a foreign growth milestone', async () => {
       const before = city(20, 5, 10, 1, 'Recife', { Population: 14 });
       const grown = city(20, 10, 10, 1, 'Recife', { Population: 25 });
@@ -222,6 +260,18 @@ describe('stock foreign city desk', () => {
   });
 
   describe('ownership and conflict', () => {
+    it('should report the same owner bringing a puppet under direct rule', async () => {
+      const puppet = city(20, 5, 5, 0, 'Orléans', { IsPuppet: true, IsOccupied: false });
+      const occupied = city(20, 10, 5, 0, 'Orléans', { IsPuppet: false, IsOccupied: true });
+      const result = await check(fixture([home, occupied], [puppet]));
+      expect(result.fired('city-puppet-annexed')).toEqual(['city/20']);
+      expectStory(result, 'city-puppet-annexed', ['Orléans']);
+
+      const otherPuppet = { ...puppet, values: { ...puppet.values, OwnerID: 1 } };
+      expect((await check(fixture([home, occupied], [otherPuppet]))).fired('city-puppet-annexed')).toEqual([]);
+      expect((await check(fixture([home, occupied]))).fired('city-puppet-annexed')).toEqual([]);
+    });
+
     it('should give an overlapping flip and conquest one account and leave resistance to a quiet transfer', async () => {
       const occupied = city(20, 10, 5, 1, 'Recife', { IsOccupied: true, ResistanceTurns: 3 });
       const transfer = { CityX: 5, CityY: 2, OldOwnerID: 2, NewOwnerID: 1 };
@@ -244,13 +294,19 @@ describe('stock foreign city desk', () => {
       expectStory(flipped, 'foreign-city-flips', ['Recife', 'Brazil', 'India']);
     });
 
-    it('should read heavy damage from basic observations during a third-party war', async () => {
+    it('should use different coverage for heavy damage with and without a known foreign war', async () => {
       const before = city(20, 5, 10, 1, 'Recife', { HitPoints: 120, MaxHitPoints: 200 });
       const damaged = city(20, 10, 10, 1, 'Recife', { HitPoints: 90, MaxHitPoints: 200 });
 
       const result = await check(fixture([home, damaged], [before], [], true));
       expect(result.fired('foreign-city-takes-heavy-damage')).toEqual(['city/20']);
-      expectStory(result, 'foreign-city-takes-heavy-damage', ['Recife', 'Brazil']);
+      const wartime = expectStory(result, 'foreign-city-takes-heavy-damage', ['Recife', 'Brazil']);
+
+      const noKnownWar = await check(fixture([home, damaged], [before]));
+      expect(noKnownWar.fired('foreign-city-takes-heavy-damage')).toEqual(['city/20']);
+      const neutral = expectStory(noKnownWar, 'foreign-city-takes-heavy-damage', ['Recife', 'Brazil']);
+      expect(noKnownWar.result.decision.selectedVariants[neutral.item.id])
+        .not.toBe(result.result.decision.selectedVariants[wartime.item.id]);
 
       const lighter = city(20, 10, 10, 1, 'Recife', { HitPoints: 110, MaxHitPoints: 200 });
       expect((await check(fixture([home, lighter], [before], [], true)))
