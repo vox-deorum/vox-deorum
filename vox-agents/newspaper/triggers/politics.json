@@ -80,10 +80,11 @@
     "when": [
       "event.starting",
       "event.player.self",
-      "self.atWar"
+      "self.atWar",
+      "self.knows('wars') && self.wars.some(p => p.knows('name') && p.name)"
     ],
     "values": {
-      "enemies": "(() => { const names = self.wars.filter(p => p.knows('name')).map(p => p.name); return names.length <= 2 ? names.join(' and ') || 'our adversaries' : names.slice(0, -1).join(', ') + ', and ' + names[names.length - 1]; })()"
+      "enemies": "(() => { const names = self.wars.filter(p => p.knows('name') && p.name).map(p => p.name); return names.length <= 2 ? names.join(' and ') : names.slice(0, -1).join(', ') + ', and ' + names[names.length - 1]; })()"
     },
     "tier": "notable"
   },
@@ -248,11 +249,13 @@
       "player.knows('score') && Number.isFinite(player.score)",
       "player.before.knows('score')",
       "player.rank('score') === 1",
-      "player.before.rank('score') > 1"
+      "player.before.rank('score') > 1",
+      "players.every(p => p.id === player.id || !p.knows('major') || p.major !== true || !p.knows('score') || p.score !== player.score || (p.knows('name') && p.name))"
     ],
     "values": {
       "civilization": "player.name",
-      "tied": "players.some(p => p.id !== player.id && p.knows('major') && p.major === true && p.knows('score') && p.score === player.score)"
+      "tiedName": "players.filter(p => p.id !== player.id && p.knows('major') && p.major === true && p.knows('score') && p.score === player.score).map(p => p.name).join(', ')",
+      "tied": "tiedName !== ''"
     },
     "tier": "player.self ? 'major' : 'notable'",
     "tags": ["politics", "international"]

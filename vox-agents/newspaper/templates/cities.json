@@ -427,7 +427,7 @@
         "when": "gained === true",
         "headline": "What {{cityName}} adds",
         "body": [
-          "{{cityName}} brings walls, wells and a stretch of high ground, and it brings a people who did not choose us. Holding it means manning the gate, feeding the streets and watching the old loyalties for a season or two. An army can take a city in a morning; keeping it is the campaign that follows."
+          "{{cityName}}, taken from {{formerOwner}}, brings walls, wells and a stretch of high ground, and it brings a people who did not choose us. Holding it means manning the gate, feeding the streets and watching the old loyalties for a season or two. An army can take a city in a morning; keeping it is the campaign that follows."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -442,7 +442,7 @@
         "when": "gained === false",
         "headline": "Who is taking names for {{cityName}}?",
         "body": [
-          "{{cityName}} is gone, and no one in authority has said who is to blame. On our street, a woman whose mother still lives there has asked the watch three times when the city will be ours again, and no one can give her a day. {{terms.civic.leaderAddress}}, say how you mean to take it back, or say that you will not."
+          "{{cityName}} has fallen to {{captor}}, and no one in authority has said who is to blame. On our street, a woman whose mother still lives there has asked the watch three times when the city will be ours again, and no one can give her a day. {{terms.civic.leaderAddress}}, say how you mean to take it back, or say that you will not."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -735,7 +735,7 @@
         "when": "returned === false",
         "headline": "{{liberated}} is free again",
         "body": [
-          "{{liberated}} governs itself again. The nation that lived under a foreign banner raised its own this week, and its council has taken up the ordinary work of law and taxes. Messengers carried word through the streets that had waited for the old flag to return."
+          "{{liberated}} governs itself again. {{liberator}} cleared away the foreign garrison, and the nation raised its own flag this week after living under an occupier's banner. Its council has taken up the ordinary work of law and taxes, and messengers carried word through the streets that had waited for the old flag to return."
         ],
         "weight": { "base": 1 }
       },
@@ -1018,7 +1018,7 @@
         "genre": "anecdote",
         "headline": "A neighbor's new work",
         "body": [
-          "A carter who came through {{cityName}} last week swears the {{building}} was not there in spring. He has told the story in three markets, and each time the building gets taller. The people of the city only shrug and say it was finished before the rains."
+          "A carter who came through {{cityName}} last week swears that {{civilization}}'s new {{building}} was not there in spring. He has told the story in three markets, and each time the building gets taller. The people of the city only shrug and say it was finished before the rains."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }

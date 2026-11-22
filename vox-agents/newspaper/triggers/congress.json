@@ -9,12 +9,13 @@
       "game.congress.newProposals.some(p => p.knows('proposer') && p.proposer.trim())"
     ],
     "values": {
-      "motions": "game.congress.newProposals.filter(p => p.knows('proposer') && p.proposer.trim()).map(p => ({ name: p.name, proposer: p.proposer }))",
-      "count": "motions.length",
-      "proposal": "motions[0].name",
-      "proposer": "motions[0].proposer",
-      "ourProposal": "self.knows('name') ? motions.find(p => p.proposer === self.name)?.name ?? null : null",
-      "ours": "ourProposal !== null"
+      "motionIndex": "game.congress.newProposals.findIndex(p => p.knows('proposer') && p.proposer.trim())",
+      "count": "game.congress.newProposals.filter(p => p.knows('proposer') && p.proposer.trim()).length",
+      "proposal": "game.congress.newProposals[motionIndex].name",
+      "proposer": "game.congress.newProposals[motionIndex].proposer",
+      "ourProposal": "self.knows('name') ? game.congress.newProposals.find(p => p.knows('proposer') && p.proposer === self.name)?.name ?? null : null",
+      "ours": "ourProposal !== null",
+      "ourProposer": "ours ? self.name : null"
     },
     "tier": "ours ? 'notable' : 'routine'",
     "tags": ["international", "congress"]
@@ -89,7 +90,7 @@
     "values": {
       "league": "game.congress.knows('league') ? game.congress.league : null",
       "turnsUntil": "game.congress.expectedSessionTurn - turn",
-      "count": "game.congress.knows('proposals') ? game.congress.proposals.length : 0"
+      "count": "game.congress.knows('proposals') ? game.congress.proposals.length : null"
     },
     "tier": "routine",
     "tags": ["international", "congress"]
@@ -105,7 +106,7 @@
     ],
     "values": {
       "league": "game.congress.knows('league') ? game.congress.league : null",
-      "count": "game.congress.knows('proposals') ? game.congress.proposals.length : 0"
+      "count": "game.congress.knows('proposals') ? game.congress.proposals.length : null"
     },
     "tier": "notable",
     "tags": ["international", "congress"]
@@ -139,7 +140,7 @@
     ],
     "values": {
       "league": "game.congress.knows('league') ? game.congress.league : null",
-      "count": "game.congress.knows('proposals') ? game.congress.proposals.length : 0"
+      "count": "game.congress.knows('proposals') ? game.congress.proposals.length : null"
     },
     "tier": "notable",
     "tags": ["international", "congress"]
@@ -152,7 +153,7 @@
     ],
     "values": {
       "resolution": "activeResolution('World Ideology')?.name",
-      "ours": "self.knows('ideology') && typeof self.ideology === 'string' && resolution.includes(self.ideology)"
+      "ours": "self.knows('ideology') ? typeof self.ideology === 'string' && resolution.includes(self.ideology) : null"
     },
     "tier": "major",
     "tags": ["international", "congress"]
@@ -167,9 +168,9 @@
     ],
     "values": {
       "activeProject": "game.congress.knows('activeResolutions') ? game.congress.activeResolutions.find(r => worldProjects.includes(r.name))?.name ?? null : null",
-      "motion": "activeProject !== null ? null : (() => { const p = game.congress.proposals.find(p => p.isEnact && worldProjects.includes(p.name) && p.knows('proposer') && p.proposer.trim()); return { name: p.name, proposer: p.proposer }; })()",
-      "project": "activeProject ?? motion.name",
-      "proposer": "motion?.proposer ?? null"
+      "motionIndex": "activeProject === null ? game.congress.proposals.findIndex(p => p.isEnact && worldProjects.includes(p.name) && p.knows('proposer') && p.proposer.trim()) : null",
+      "project": "activeProject ?? game.congress.proposals[motionIndex].name",
+      "proposer": "motionIndex === null ? null : game.congress.proposals[motionIndex].proposer"
     },
     "tier": "notable",
     "tags": ["international", "congress"]
@@ -182,7 +183,7 @@
     ],
     "values": {
       "resolution": "activeResolution('World Religion')?.name",
-      "ours": "(self.knows('foundedReligion') && typeof self.foundedReligion === 'string' && resolution.includes(self.foundedReligion)) || (self.knows('majorityReligion') && typeof self.majorityReligion === 'string' && resolution.includes(self.majorityReligion))"
+      "ours": "((self.knows('foundedReligion') && typeof self.foundedReligion === 'string' && resolution.includes(self.foundedReligion)) || (self.knows('majorityReligion') && typeof self.majorityReligion === 'string' && resolution.includes(self.majorityReligion))) ? true : self.knows('foundedReligion') && self.knows('majorityReligion') ? false : null"
     },
     "tier": "notable",
     "tags": ["international", "congress"]
@@ -196,9 +197,9 @@
       "game.congress.newProposals.some(p => p.isEnact === true && p.name.startsWith('Sanction') && p.knows('proposer') && p.proposer.trim())"
     ],
     "values": {
-      "motion": "(() => { const p = game.congress.newProposals.find(p => p.isEnact === true && p.name.startsWith('Sanction') && p.knows('proposer') && p.proposer.trim()); return { name: p.name, proposer: p.proposer }; })()",
-      "resolution": "motion.name",
-      "proposer": "motion.proposer"
+      "motionIndex": "game.congress.newProposals.findIndex(p => p.isEnact === true && p.name.startsWith('Sanction') && p.knows('proposer') && p.proposer.trim())",
+      "resolution": "game.congress.newProposals[motionIndex].name",
+      "proposer": "game.congress.newProposals[motionIndex].proposer"
     },
     "tier": "major",
     "tags": ["international", "congress"]
@@ -212,9 +213,9 @@
       "game.congress.newProposals.some(p => p.isEnact === false && p.name.startsWith('Sanction') && p.knows('proposer') && p.proposer.trim())"
     ],
     "values": {
-      "motion": "(() => { const p = game.congress.newProposals.find(p => p.isEnact === false && p.name.startsWith('Sanction') && p.knows('proposer') && p.proposer.trim()); return { name: p.name, proposer: p.proposer }; })()",
-      "resolution": "motion.name",
-      "proposer": "motion.proposer"
+      "motionIndex": "game.congress.newProposals.findIndex(p => p.isEnact === false && p.name.startsWith('Sanction') && p.knows('proposer') && p.proposer.trim())",
+      "resolution": "game.congress.newProposals[motionIndex].name",
+      "proposer": "game.congress.newProposals[motionIndex].proposer"
     },
     "tier": "notable",
     "tags": ["international", "congress"]
@@ -227,9 +228,9 @@
       "game.congress.knows('newProposals') && game.congress.newProposals.some(p => p.isEnact && p.name.startsWith('Travel Ban') && p.knows('proposer') && p.proposer.trim())"
     ],
     "values": {
-      "motion": "(() => { const p = game.congress.newProposals.find(p => p.isEnact && p.name.startsWith('Travel Ban') && p.knows('proposer') && p.proposer.trim()); return { name: p.name, proposer: p.proposer }; })()",
-      "resolution": "motion.name",
-      "proposer": "motion.proposer"
+      "motionIndex": "game.congress.newProposals.findIndex(p => p.isEnact && p.name.startsWith('Travel Ban') && p.knows('proposer') && p.proposer.trim())",
+      "resolution": "game.congress.newProposals[motionIndex].name",
+      "proposer": "game.congress.newProposals[motionIndex].proposer"
     },
     "tier": "notable",
     "tags": ["international", "congress", "culture"]
@@ -242,9 +243,9 @@
       "game.congress.knows('newProposals') && game.congress.newProposals.some(p => p.isEnact === false && p.name.startsWith('Travel Ban') && p.knows('proposer') && p.proposer.trim())"
     ],
     "values": {
-      "motion": "(() => { const p = game.congress.newProposals.find(p => p.isEnact === false && p.name.startsWith('Travel Ban') && p.knows('proposer') && p.proposer.trim()); return { name: p.name, proposer: p.proposer }; })()",
-      "resolution": "motion.name",
-      "proposer": "motion.proposer"
+      "motionIndex": "game.congress.newProposals.findIndex(p => p.isEnact === false && p.name.startsWith('Travel Ban') && p.knows('proposer') && p.proposer.trim())",
+      "resolution": "game.congress.newProposals[motionIndex].name",
+      "proposer": "game.congress.newProposals[motionIndex].proposer"
     },
     "tier": "notable",
     "tags": ["international", "congress", "culture"]

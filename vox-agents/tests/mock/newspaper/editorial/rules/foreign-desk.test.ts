@@ -76,16 +76,16 @@ describe('stock foreign desk', () => {
       event('CityCaptureComplete', 5, 9, 2, 1, { ...capture, CityX: 16 }),
     ], [snapshot(0, 8, [relationship(1), relationship(2)])]), [home, city(20, 10, 2, 'Rio de Janeiro', 4)]);
     expect(fired(result, 'nearby-capital-falls')).toEqual(['event/1']);
-    expectStory(result, 'nearby-capital-falls', ['Brazil', 'India']);
+    expectStory(result, 'nearby-capital-falls', ['Rio de Janeiro', 'Brazil', 'India']);
     expect(result.decision.evidence).toContainEqual(expect.objectContaining({ table: 'GameEvents', id: 1 }));
   });
 
-  it('should still report the capture when the capital itself has no readable city name', async () => {
+  it('should skip the capture when the capital has no readable city name', async () => {
     const result = await publish(evidence([
       event('CityCaptureComplete', 1, 9, 2, 1,
         { IsCapital: true, IsConquest: true, OldOwnerID: 1, NewOwnerID: 2, CityX: 4, CityY: 0 }),
     ], [snapshot(0, 8, [relationship(1), relationship(2)])]), [home]);
-    expectStory(result, 'nearby-capital-falls', ['Brazil', 'India']);
+    expect(fired(result, 'nearby-capital-falls')).toEqual([]);
   });
 
   it('should avoid doubling a name when the capital and its former owner share it', async () => {
@@ -188,7 +188,7 @@ describe('stock foreign desk', () => {
   });
 
   it('should distinguish outgoing and incoming trade losses from our own plunder', async () => {
-    const plunders = [[1, 0, 2], [1, 2, 0], [0, 2, 0], [1, 2, 3]];
+    const plunders = [[1, 0, 2], [1, 2, 0], [0, 2, 0], [1, 2, 3], [22, 0, 2]];
     const result = await publish(evidence(plunders.map(([plunderer, origin, destination], index) =>
       event('PlayerPlunderedTradeRoute', index + 1, 9, plunderer, origin, {
         PlunderingPlayerID: plunderer, OriginOwnerID: origin, DestinationOwnerID: destination,

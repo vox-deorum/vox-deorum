@@ -21,6 +21,7 @@
         "genre": "ledger",
         "headline": "The terms of the bargain",
         "body": [
+          "Party: {{partner}}.",
           "Outgoing: {{weGive}}.",
           "Incoming: {{weGet}}.",
           "The gold entry is inked and witnessed, with a blank line left beneath it for the next reckoning."
@@ -60,9 +61,9 @@
     "variants": [
       {
         "id": "incoming-trade-route-plundered-account-report",
-        "headline": "A trade route bound for us is plundered",
+        "headline": "A caravan from {{origin}} is plundered",
         "body": [
-          "Raiders fell on a caravan carrying goods for our market before it reached the gate, and its load is gone. In the cloth rows, a draper has moved three bolts to the back shelf and told her regulars the price holds only until the shelf is bare. What the road loses, the counter pays for."
+          "Raiders under {{plunderer}} fell on a caravan from {{origin}} carrying goods for our market before it reached the gate, and its load is gone. In the cloth rows, a draper has moved three bolts to the back shelf and told her regulars the price holds only until the shelf is bare. What the road loses, the counter pays for."
         ],
         "weight": { "base": 1 }
       },
@@ -71,10 +72,9 @@
         "voice": "press",
         "stance": "hawkish",
         "genre": "report",
-        "when": "plunderer !== null",
         "headline": "{{plunderer}} robs the road to our gates",
         "body": [
-          "{{plunderer}}'s raiders fell on a caravan bound for our gates and carried off the load. They struck where the road dips out of sight of the gate, a spot any patient band would choose. A captain who rides that stretch says the next caravan should not travel it without spears."
+          "{{plunderer}}'s raiders fell on a caravan from {{origin}} bound for our gates and carried off the load. They struck where the road dips out of sight of the gate, a spot any patient band would choose. A captain who rides that stretch says the next caravan should not travel it without spears."
         ],
         "weight": { "base": 1 }
       },
@@ -86,7 +86,7 @@
         "when": "gold !== null",
         "headline": "Payday for the raiders",
         "body": [
-          "The raiders who hit a caravan bound for us rode off with {{gold}} gold. At the unloading yard, a porter turned his slate face down and told the foreman he would not stand the gate road after dark for the same copper. His neighbor has begun sending her children to the well in pairs."
+          "Raiders under {{plunderer}} hit a caravan from {{origin}} bound for us and rode off with {{gold}} gold. At the unloading yard, a porter turned his slate face down and told the foreman he would not stand the gate road after dark for the same copper. His neighbor has begun sending her children to the well in pairs."
         ],
         "weight": { "base": 1 }
       },
@@ -97,7 +97,7 @@
         "genre": "editorial",
         "headline": "Trade needs a guarded road",
         "body": [
-          "Raiders emptied a caravan meant for our merchants on the road, and the shippers are asking what the {{terms.civic.government}} intends for the next one. The answer so far is that guarding a road is expensive, as though the cost of losing the goods were nothing. Either put armed men beside the bales or tell the merchant plainly that the road is his own risk."
+          "Raiders under {{plunderer}} emptied a caravan from {{origin}} meant for our merchants on the road, and the shippers are asking what the {{terms.civic.government}} intends for the next one. The answer so far is that guarding a road is expensive, as though the cost of losing the goods were nothing. Either put armed men beside the bales or tell the merchant plainly that the road is his own risk."
         ],
         "weight": { "base": 1 }
       },
@@ -106,10 +106,9 @@
         "voice": "spoken",
         "stance": "neutral",
         "genre": "report",
-        "when": "origin !== null",
         "headline": "The road from {{origin}} is robbed",
         "body": [
-          "Word came up the road that the caravan from {{origin}} never arrived. Thieves met it at dusk, they say, and the drivers walked home with empty carts and a story they will tell all winter. Our market grows thin at the edges, the merchants in {{origin}} grow quiet, and somewhere a band is drinking to a fine week."
+          "Word came up the road that the caravan from {{origin}} never arrived. Thieves under {{plunderer}} met it at dusk, they say, and the drivers walked home with empty carts and a story they will tell all winter. Our market grows thin at the edges, the merchants in {{origin}} grow quiet, and somewhere a band is drinking to a fine week."
         ],
         "weight": { "base": 1 }
       }
@@ -239,9 +238,9 @@
     "variants": [
       {
         "id": "our-trade-route-plundered-account-report",
-        "headline": "Raiders cut short an outgoing trade route",
+        "headline": "Raiders cut short the road to {{destination}}",
         "body": [
-          "Raiders stripped one of our outbound caravans on the road, and its cargo will never reach a buyer. The dispatch yard spent the morning returning fees to merchants who had paid for space, and the clerk marked each name with a small cross. Nothing on that road has grown safer for the next load."
+          "Raiders under {{plunderer}} stripped one of our outbound caravans on the road to {{destination}}, and its cargo will never reach a buyer. The dispatch yard spent the morning returning fees to merchants who had paid for space, and the clerk marked each name with a small cross. Nothing on that road has grown safer for the next load."
         ],
         "weight": { "base": 1 }
       },
@@ -250,10 +249,9 @@
         "voice": "tabloid",
         "stance": "populist",
         "genre": "report",
-        "when": "plunderer !== null",
         "headline": "{{plunderer}} takes our trade on the road",
         "body": [
-          "{{plunderer}} took one of our caravans apart on the road and kept the goods. The drivers walked back with empty hands and a full story. The carters and the stallkeepers will feel this week's loss; the men who signed the papers will feel none of it."
+          "{{plunderer}} took one of our caravans apart on the road to {{destination}} and kept the goods. The drivers walked back with empty hands and a full story. The carters and the stallkeepers will feel this week's loss; the men who signed the papers will feel none of it."
         ],
         "weight": { "base": 1 }
       },
@@ -266,7 +264,9 @@
         "headline": "The account of a plundered route",
         "body": [
           "Caravans lost: one, and it left from our own soil.",
-          "Gold taken by the raiders: {{gold}}.",
+          "Raiders: {{plunderer}}.",
+          "Route: ours, bound for {{destination}}.",
+          "Gold taken: {{gold}}.",
           "Cargo: gone. The loss is entered beside the road that closed."
         ],
         "weight": { "base": 1 }
@@ -276,10 +276,9 @@
         "voice": "broadcast",
         "stance": "conciliatory",
         "genre": "report",
-        "when": "destination !== null",
         "headline": "Trade route to {{destination}} plundered",
         "body": [
-          "Raiders robbed a caravan of ours on the road to {{destination}}. In the dispatch yard this evening, a merchant is folding a letter to the buyers who were promised the load. \"Tell them plainly,\" she says. \"A late cart is better than a rumor.\""
+          "Raiders under {{plunderer}} robbed a caravan of ours on the road to {{destination}}. In the dispatch yard this evening, a merchant is folding a letter to the buyers who were promised the load. \"Tell them plainly,\" she says. \"A late cart is better than a rumor.\""
         ],
         "weight": { "base": 1 }
       },
@@ -290,7 +289,7 @@
         "genre": "editorial",
         "headline": "Send the spears with the trade",
         "body": [
-          "Another of our caravans is gone, {{terms.civic.people}}, and the robbers are already counting the profit. A thief weighs the purse against the guard, and on our roads the guard is a rumor. Put spears beside the bales and robbery will cost more than it pays."
+          "Another of our caravans on the road to {{destination}} is gone, {{terms.civic.people}}, and {{plunderer}} is already counting the profit. A thief weighs the purse against the guard, and on our roads the guard is a rumor. Put spears beside the bales and robbery will cost more than it pays."
         ],
         "weight": { "base": 1 }
       }
@@ -354,9 +353,9 @@
     "variants": [
       {
         "id": "we-plunder-foreign-trade-route-account-report",
-        "headline": "We plunder a foreign trade route",
+        "headline": "We plunder a caravan from {{origin}}",
         "body": [
-          "A foreign caravan met our soldiers on the road and did not continue its journey. The wagons came back to our depot, where a quartermaster is now weighing sacks that still carry another ruler's seal. The load will feed the stores or fill the market, and the merchants who sent it will hear only that the road swallowed their goods."
+          "A caravan from {{origin}} met our soldiers on the road and did not continue its journey. The wagons came back to our depot, where a quartermaster is now weighing sacks that still carry another ruler's seal. The load will feed the stores or fill the market, and the merchants who sent it will hear only that the road swallowed their goods."
         ],
         "weight": { "base": 1 }
       },
@@ -368,7 +367,7 @@
         "when": "gold !== null",
         "headline": "{{gold}} gold taken from a foreign route",
         "body": [
-          "Our soldiers took {{gold}} gold from a foreign caravan along with its cargo. At the pay table, a clerk is weighing coin stamped with another sovereign's face and setting it in a separate pile. The sum will help balance this month's books; the merchants who lost it will remember the road and the men who held it."
+          "Our soldiers took {{gold}} gold from a caravan out of {{origin}} along with its cargo. At the pay table, a clerk is weighing coin stamped with another sovereign's face and setting it in a separate pile. The sum will help balance this month's books; the merchants who lost it will remember the road and the men who held it."
         ],
         "weight": { "base": 1 }
       },
@@ -377,7 +376,7 @@
         "voice": "gazette",
         "stance": "elitist",
         "genre": "report",
-        "when": "origin !== null && destination !== null",
+        "when": "destination !== null",
         "headline": "A route from {{origin}} to {{destination}} is plundered",
         "body": [
           "Letters from the frontier relate that our soldiers stopped a caravan bound from {{origin}} to {{destination}} and brought it in with its goods. The cargo will sell well at our markets, and the officers may expect their share of praise. A great power takes what it intends to keep, and this cargo we intend to keep."
@@ -391,7 +390,7 @@
         "genre": "joke",
         "headline": "Foreign trade turns a profit",
         "body": [
-          "Merchants wait years for a foreign market to pay. A soldier with a good road can collect the same profit before supper."
+          "Merchants wait years for trade with {{origin}} to pay. A soldier with a good road can collect the same profit before supper."
         ],
         "weight": { "base": 1 }
       },
@@ -403,7 +402,7 @@
         "byline": "A merchant",
         "headline": "Have we no merchants left?",
         "body": [
-          "Sir, I have spent my working life on roads like the one our soldiers just closed, and I know the families at both ends. The loss is not only the goods in the wagon but the handshake that sent it out. When we want that road again, the men at the far end will remember whose flag stopped their carts."
+          "Sir, I have spent my working life on roads like the one from {{origin}} that our soldiers just closed, and I know the families at both ends. The loss is not only the goods in the wagon but the handshake that sent it out. When we want that road again, the men at the far end will remember whose flag stopped their carts."
         ],
         "weight": { "base": 1 }
       }

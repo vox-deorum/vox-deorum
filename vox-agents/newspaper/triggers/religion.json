@@ -102,12 +102,13 @@
     "event": "ReligionFounded",
     "when": [
       "event.knows('player') && !event.player.self && event.player.major && event.player.knows('name')",
-      "event.knows('religion') && typeof event.religion === 'string' && event.religion.length > 0"
+      "event.knows('religion') && typeof event.religion === 'string' && event.religion.length > 0",
+      "event.knows('holyCity') && event.holyCity.knows('name')"
     ],
     "values": {
       "civilization": "event.player.name",
       "religion": "event.religion",
-      "holyCity": "event.knows('holyCity') && event.holyCity.knows('name') ? event.holyCity.name : null"
+      "holyCity": "event.holyCity.name"
     },
     "tier": "notable",
     "adjust": "event.player.stake.relation",
@@ -225,13 +226,15 @@
     "event": "PantheonFounded",
     "when": [
       "event.knows('player') && event.player.knows('name')",
-      "event.player.knows('major') && event.player.major === true"
+      "event.player.knows('major') && event.player.major === true",
+      "event.knows('city') && event.city.knows('name')",
+      "event.knows('beliefType') && typeof event.beliefType === 'string' && event.beliefType.trim().length > 0"
     ],
     "values": {
       "civilization": "event.player.name",
       "ours": "event.player.self === true",
-      "cityName": "event.knows('city') && event.city.knows('name') ? event.city.name : null",
-      "belief": "event.knows('beliefType') && typeof event.beliefType === 'string' ? event.beliefType : null"
+      "cityName": "event.city.name",
+      "belief": "event.beliefType"
     },
     "tier": "ours ? 'notable' : 'routine'",
     "adjust": "event.player.stake.relation",

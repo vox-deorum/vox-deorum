@@ -146,7 +146,7 @@ describe('newspaper civic vocabulary', () => {
     const config = await parseEditorialConfig({
       ...stock,
       triggers: [{ id: 'congress-new-proposals', subject: 'world', tier: 'filler', when: 'true',
-        values: { ours: 'true', proposal: '"Merchant Passage"' } }],
+        values: { ours: 'true', ourProposal: '"Merchant Passage"', ourProposer: '"France"' } }],
       templates: [{ ...template, variants: template.variants.filter(variant => variant.id === id) }],
     });
     const home = player(0, 10, { PolicyBranches: { Fealty: ['A'] } });

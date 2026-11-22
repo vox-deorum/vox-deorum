@@ -441,9 +441,9 @@ describe('stock politics desk', () => {
       expect(firedSubjects(rule(voting, 'congress-voting-opens')).map(subject => subject.subject)).toEqual(['world']);
     });
 
-    it('should report newly introduced proposals and rank our own higher', async () => {
+    it('should report named new proposals and rank our own higher', async () => {
       /** Supply the same new proposal with a different sponsor. */
-      const withProposal = (proposer: string) => fixture({
+      const withProposal = (proposer?: string) => fixture({
         cutoff, previous,
         players: [playerRow(0, cutoff)],
         congress: {
@@ -453,6 +453,7 @@ describe('stock politics desk', () => {
           observations: [congressObservation(cutoff, 12, {
             proposals: [
               { name: 'Arts Funding', isEnact: true },
+              { name: 'Unattributed Motion', isEnact: true },
               { name: 'World Religion', isEnact: true, proposer },
             ],
           })],
@@ -464,12 +465,14 @@ describe('stock politics desk', () => {
       expect(fired[0].subject).toBe('world');
       expect(subjectValue(fired[0], 'count')).toBe(1);
       expect(subjectValue(fired[0], 'proposal')).toBe('World Religion');
+      expect(subjectValue(fired[0], 'proposer')).toBe('France');
       expect(subjectValue(fired[0], 'ours')).toBe(true);
 
       const foreign = firedSubjects(rule(await check(withProposal('Brazil')), 'congress-new-proposals'));
       expect(foreign).toHaveLength(1);
       expect(subjectValue(foreign[0], 'ours')).toBe(false);
       expect(fired[0].importance).toBeGreaterThan(foreign[0].importance!);
+      expect(firedSubjects(rule(await check(withProposal()), 'congress-new-proposals'))).toEqual([]);
     });
 
     it('should distinguish a passed resolution from a defeated one and prefer our own proposal', async () => {
@@ -497,11 +500,14 @@ describe('stock politics desk', () => {
         ProposerPlayerID: 1, ProposerName: 'Brazil', Decision: 2,
       });
       const unresolved = eventRow('ResolutionResult', 902, 19, { IsEnact: false, Passed: false, ResolutionType: 5 });
+      const unnamed = eventRow('ResolutionResult', 903, 19, {
+        IsEnact: false, Passed: false, ResolutionType: 'Travel Ban',
+      });
       const defeating = await check(fixture({
         cutoff, previous,
         players: [playerRow(0, cutoff), playerRow(1, cutoff)],
         beforePlayers: [playerRow(0, previous), playerRow(1, previous)],
-        events: [defeated, unresolved],
+        events: [defeated, unresolved, unnamed],
       }));
       const failedFired = firedSubjects(rule(defeating, 'congress-resolution-defeated'));
       expect(failedFired).toHaveLength(1);
@@ -546,17 +552,20 @@ describe('stock politics desk', () => {
       expect(projectFired).toHaveLength(1);
       expect(subjectValue(projectFired[0], 'project')).toBe("World's Fair");
 
-      const proposal = fixture({
+      /** Record a pending project with or without a named proposer. */
+      const proposal = (proposer?: string) => fixture({
         cutoff, previous, players: [player],
         congress: {
           observations: [congressObservation(cutoff, 14, {
-            proposals: [{ name: 'Treasure Fleet', isEnact: true }],
+            proposals: [{ name: 'Treasure Fleet', isEnact: true, proposer }],
           })],
         },
       });
-      const proposedFired = firedSubjects(rule(await check(proposal), 'congress-world-project'));
+      const proposedFired = firedSubjects(rule(await check(proposal('Brazil')), 'congress-world-project'));
       expect(proposedFired).toHaveLength(1);
       expect(subjectValue(proposedFired[0], 'project')).toBe('Treasure Fleet');
+      expect(subjectValue(proposedFired[0], 'proposer')).toBe('Brazil');
+      expect(firedSubjects(rule(await check(proposal()), 'congress-world-project'))).toEqual([]);
 
       const unrelated = await check(withAgenda([{ name: 'Open Borders' }]));
       expect(firedSubjects(rule(unrelated, 'congress-world-project'))).toEqual([]);

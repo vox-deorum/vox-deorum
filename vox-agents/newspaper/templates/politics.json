@@ -286,7 +286,7 @@
         "genre": "anecdote",
         "headline": "A partner for the next dance",
         "body": [
-          "The dancing master opened his hall for the golden age, and the war had emptied the men's side of it. A seamstress who had not danced since her wedding took a young clerk by the arm and told him to mind her toes. They were still at it when the last lamp went down."
+          "The dancing master opened his hall for the golden age, and the war against {{enemies}} had emptied the men's side of it. A seamstress who had not danced since her wedding took a young clerk by the arm and told him to mind her toes. They were still at it when the last lamp went down."
         ],
         "weight": { "base": 1 }
       }
@@ -719,7 +719,7 @@
     "id": "score-leader-changes-account",
     "triggers": ["score-leader-changes"],
     "tags": ["politics", "international"],
-    "names": ["civilization"],
+    "names": ["civilization", "tiedName"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -742,8 +742,8 @@
         "headline": "First place, shared",
         "body": [
           "First place: {{civilization}}",
-          "Also first: another power, level on the count",
-          "Two names, one line, no daylight between them."
+          "Also first: {{tiedName}}, level on the count",
+          "One line, no daylight between the names."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }

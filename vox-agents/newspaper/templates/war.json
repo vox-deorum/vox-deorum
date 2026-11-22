@@ -223,7 +223,7 @@
         "id": "peace-concessions-report",
         "headline": "A peace with visible terms",
         "body": [
-          "The peace terms include {{count}} concessions: {{concessions}}. A broker at the exchange copied the list into his book before he would name a price for anything. The market has taken the paper at its word, which is more than the parties have done."
+          "The peace between {{initiator}} and {{target}} includes {{count}} concessions: {{concessions}}. A broker at the exchange copied the list into his book before he would name a price for anything. The market has taken the paper at its word, which is more than the parties have done."
         ],
         "weight": { "base": 1 }
       },
@@ -232,7 +232,6 @@
         "voice": "gazette",
         "stance": "neutral",
         "genre": "ledger",
-        "when": "initiator !== null && target !== null",
         "headline": "The terms between {{initiator}} and {{target}}",
         "body": [
           "Signed by: {{initiator}} and {{target}}.",
@@ -246,7 +245,7 @@
         "voice": "press",
         "stance": "government-critical",
         "genre": "editorial",
-        "when": "role === 'initiator' && target !== null",
+        "when": "role === 'initiator'",
         "headline": "Who owes what in the peace with {{target}}?",
         "body": [
           "The peace with {{target}} lists {{concessions}} among its concessions. Each concession is either a payment or a promise, and every household that helps pay can tell the two apart. Let the {{terms.civic.government}} print the full terms, what we gave and what we got, before it asks for another levy."
@@ -258,7 +257,6 @@
         "voice": "broadcast",
         "stance": "neutral",
         "genre": "report",
-        "when": "initiator !== null && target !== null",
         "headline": "A peace with terms tonight",
         "body": [
           "Peace has been concluded between {{initiator}} and {{target}}. The settlement lists {{count}} concessions. A clerk read the pages aloud at the exchange, and the crowd heard every one."
@@ -540,7 +538,7 @@
         "id": "war-duration-milestone-report",
         "headline": "The war runs long",
         "body": [
-          "This war has now lasted {{turns}}. At the joinery, the master has stopped promising delivery dates, because the men who used to finish the work are still away. He planes the boards himself now, and the shavings pile up by the door."
+          "The war with {{opponent}} has now lasted {{turns}}. At the joinery, the master has stopped promising delivery dates, because the men who used to finish the work are still away. He planes the boards himself now, and the shavings pile up by the door."
         ],
         "weight": { "base": 1 }
       },
@@ -549,7 +547,6 @@
         "voice": "press",
         "stance": "neutral",
         "genre": "analysis",
-        "when": "opponent !== null",
         "headline": "The long stretch of the war with {{opponent}}",
         "body": [
           "The war with {{opponent}} has lasted {{turns}}, and a war of that age is no longer the one its makers declared. The men change, the money changes, and the purpose shifts quietly with them. Whatever is signed at the end will answer a question nobody asked at the start."
@@ -563,7 +560,7 @@
         "genre": "report",
         "headline": "The record of a long war",
         "body": [
-          "The town book sets down the war's length at {{turns}}. In the muster yard, the sergeant now writes down recruits who were not born when the fighting began. The record offers no judgment, only the count."
+          "The town book sets down the length of the war with {{opponent}} at {{turns}}. In the muster yard, the sergeant now writes down recruits who were not born when the fighting began. The record offers no judgment, only the count."
         ],
         "weight": { "base": 1 }
       },
@@ -572,7 +569,6 @@
         "voice": "tabloid",
         "stance": "populist",
         "genre": "report",
-        "when": "opponent !== null",
         "headline": "The war with {{opponent}} is {{turns}} old",
         "body": [
           "The bakery has taken down the board where it marked the count. The war with {{opponent}} is {{turns}} old, and nobody at the counter remembers how it started. Everyone knows someone still out there."
@@ -831,7 +827,7 @@
         "id": "war-weariness-eases-report",
         "headline": "The war sits lighter on the country",
         "body": [
-          "The country's weariness has fallen to {{wearinessPercent}}. On the high street, people talk about roof tiles and the state of the road instead of the front. The shops have more customers than they did a month ago."
+          "The country's weariness with the war against {{opponent}} has fallen to {{wearinessPercent}}. On the high street, people talk about roof tiles and the state of the road instead of the front. The shops have more customers than they did a month ago."
         ],
         "weight": { "base": 1 }
       },
@@ -840,7 +836,6 @@
         "voice": "gazette",
         "stance": "conciliatory",
         "genre": "report",
-        "when": "opponent !== null",
         "headline": "Weariness eases in the war with {{opponent}}",
         "body": [
           "The country's mood has improved: weariness with the war against {{opponent}} stands at {{wearinessPercent}}. At the coach office, travelers have begun asking after the southern road again, and the morning coach has gone out full all week. A people that can look past a war may yet be able to end it."
@@ -852,7 +847,6 @@
         "voice": "press",
         "stance": "national",
         "genre": "analysis",
-        "when": "opponent !== null",
         "headline": "The number behind the mood",
         "body": [
           "The nation's weariness with the war against {{opponent}} has fallen to {{wearinessPercent}}, after a season above the halfway mark. Patience is a store like grain or coin, and this one has just been replenished. What empties or fills that store, more than any battle, sets the length of a war."
@@ -866,7 +860,7 @@
         "genre": "report",
         "headline": "Down to {{wearinessPercent}}: the country exhales",
         "body": [
-          "We are still at war, but the country's weariness has fallen to {{wearinessPercent}}. The barber says the morning passed without one word about the front. His first complaint was a haircut."
+          "We are still at war with {{opponent}}, but the country's weariness has fallen to {{wearinessPercent}}. The barber says the morning passed without one word about the front. His first complaint was a haircut."
         ],
         "weight": { "base": 1 }
       }

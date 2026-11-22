@@ -10,7 +10,7 @@
         "id": "cultural-influence-becomes-influential-incoming-report",
         "headline": "Foreign scrollwork sets the fashion in our streets",
         "body": [
-          "The pull of foreign ways on our people has reached Influential, at {{percentage}} percent. A cabinetmaker on the river road has begun copying a foreign chair leg though no customer asked for one, and his apprentices now sand the curve without being told. The old square leg sits in the corner like a visitor."
+          "The pull of {{rival}} on our people has reached Influential, at {{percentage}} percent. A cabinetmaker on the river road has begun copying a foreign chair leg though no customer asked for one, and his apprentices now sand the curve without being told. The old square leg sits in the corner like a visitor."
         ],
         "weight": { "base": 1 }
       },
@@ -19,7 +19,6 @@
         "voice": "chronicle",
         "stance": "traditional",
         "genre": "report",
-        "when": "rival !== null",
         "headline": "In this year the voice of {{rival}} grew strong",
         "body": [
           "The record of this year puts the customs of {{rival}} at the Influential mark, at {{percentage}} percent. In the joiners' yard the apprentices now shape a foreign curve first, and the old square joint waits its turn. The guild keeps both patterns in the same chest."
@@ -34,7 +33,6 @@
         "voice": "pamphlet",
         "stance": "government-critical",
         "genre": "editorial",
-        "when": "rival !== null",
         "headline": "What the children are singing",
         "body": [
           "{{rival}} now holds Influential rank in our own market square, and no council vote was ever taken on it. Walk past the fountain any evening and count the tunes: the foreign airs outnumber ours. Councilors, pay a local ballad seller to stand there for a season and see whether the crowd comes back."
@@ -51,7 +49,7 @@
         "genre": "analysis",
         "headline": "The teacher stops correcting the words",
         "body": [
-          "The clerks put the foreign share of our habits at {{percentage}} percent, the point they now call Influential. A potter's wife on the east lane has sold her mother's jug shape for a foreign handle because buyers reached for it first. It is only a count of taste, and taste can be counted again next season."
+          "The clerks put the share of our habits held by {{rival}} at {{percentage}} percent, the point they now call Influential. A potter's wife on the east lane has sold her mother's jug shape for a foreign handle because buyers reached for it first. It is only a count of taste, and taste can be counted again next season."
         ],
         "weight": { "base": 1 }
       }
@@ -68,7 +66,7 @@
         "id": "cultural-influence-becomes-influential-outgoing-report",
         "headline": "Our blue bolt sets the fashion across the border",
         "body": [
-          "Our standing across the border has reached Influential, at {{percentage}} percent. A bookbinder near the west gate has taken a second apprentice for the foreign orders, and the carrier who leaves each week now returns with a satchel of letters where his bag went out empty. Our taste, it seems, travels farther than our merchants do."
+          "Our standing in {{rival}} has reached Influential, at {{percentage}} percent. A bookbinder near the west gate has taken a second apprentice for the foreign orders, and the carrier who leaves each week now returns with a satchel of letters where his bag went out empty. Our taste, it seems, travels farther than our merchants do."
         ],
         "weight": { "base": 1 }
       },
@@ -77,7 +75,6 @@
         "voice": "crier",
         "stance": "national",
         "genre": "notice",
-        "when": "rival !== null",
         "headline": "Hear it! {{rival}} knows our jokes",
         "body": [
           "Hear it, {{terms.civic.people}}! Our songs hold the Influential mark in {{rival}}, and the tally stands at {{percentage}} percent. Their taverns sing the chorus now, and their children get the last line right. Our songs, neighbors, sung back to us from over the hill!"
@@ -92,7 +89,6 @@
         "voice": "press",
         "stance": "ambitious",
         "genre": "analysis",
-        "when": "rival !== null",
         "headline": "Our books could go farther through {{rival}}",
         "body": [
           "Traders back from {{rival}} report our influence there at Influential, with the count at {{percentage}} percent. A theatre manager in that country has asked what our playwrights would charge for a season of new work. Send the plays, and let the next border find our name already on the bill."
@@ -109,7 +105,7 @@
         "genre": "anecdote",
         "headline": "Full houses, and the applause is sincere",
         "body": [
-          "Our choir sang to a foreign hall last month and left latecomers standing in the aisle. The clerks there call our influence Influential. 'They asked for the old hymn twice,' our correspondent writes."
+          "Our choir sang to a hall in {{rival}} last month and left latecomers standing in the aisle. The clerks there call our influence Influential. 'They asked for the old hymn twice,' our correspondent writes."
         ],
         "weight": { "base": 1 }
       }
@@ -126,7 +122,7 @@
         "id": "cultural-influence-loses-influential-incoming-report",
         "headline": "The dancing master changes steps: our pull slips to {{level}}",
         "body": [
-          "The hold of a foreign fashion on our taste has slipped from {{previousLevel}} to {{level}}, down to {{percentage}} percent. On the mill street a dancing master has put away the foreign measure and brought back the local round. His older pupils grumbled, then found they still remembered the steps."
+          "The hold of {{rival}} on our taste has slipped from {{previousLevel}} to {{level}}, down to {{percentage}} percent. On the mill street a dancing master has put away the foreign measure and brought back the local round. His older pupils grumbled, then found they still remembered the steps."
         ],
         "weight": { "base": 1 }
       },
@@ -135,7 +131,6 @@
         "voice": "press",
         "stance": "national",
         "genre": "analysis",
-        "when": "rival !== null",
         "headline": "{{rival}} loses its grip on our tastes",
         "body": [
           "The playhouse will open its season with a local comedy in the slot that {{rival}} held for years. The grip of {{rival}} on our taste has loosened from {{previousLevel}} to {{level}}. If the first night sells out, other houses will follow, and the nation will have its own bill to print."
@@ -150,7 +145,6 @@
         "voice": "pamphlet",
         "stance": "populist",
         "genre": "editorial",
-        "when": "rival !== null",
         "headline": "The market remembers its own",
         "body": [
           "Two winters ago the foreign cups sold faster than the potter could copy them; this week the hold of {{rival}} has fallen to {{level}}, and the potter is throwing her own again. She asks every customer at her stall what they want next, which the big shops never do. Buy local while the buying is good."
@@ -167,7 +161,7 @@
         "genre": "report",
         "headline": "In this year the foreign fashion faded",
         "body": [
-          "The scribes of this year set down that the customs of a foreign people loosened their hold on our town, falling from {{previousLevel}} to {{level}}. The school register shows more children learning the old songs than at any time in a generation. The elders have said nothing, which is their way of approving."
+          "The scribes of this year set down that the customs of {{rival}} loosened their hold on our town, falling from {{previousLevel}} to {{level}}. The school register shows more children learning the old songs than at any time in a generation. The elders have said nothing, which is their way of approving."
         ],
         "weight": { "base": 1 }
       }
@@ -184,7 +178,7 @@
         "id": "cultural-influence-loses-influential-outgoing-report",
         "headline": "Our cloth moves back as influence eases to {{level}}",
         "body": [
-          "The clerks have marked our standing abroad down from {{previousLevel}} to {{level}}, to {{percentage}} percent. A singing teacher who once sent students abroad now keeps a list of empty benches. The next concert may have to be paid for before it is sung."
+          "The clerks have marked our standing in {{rival}} down from {{previousLevel}} to {{level}}, to {{percentage}} percent. A singing teacher who once sent students abroad now keeps a list of empty benches. The next concert may have to be paid for before it is sung."
         ],
         "weight": { "base": 1 }
       },
@@ -193,7 +187,6 @@
         "voice": "press",
         "stance": "government-critical",
         "genre": "analysis",
-        "when": "rival !== null",
         "headline": "Where our influence slipped in {{rival}}",
         "body": [
           "Our porcelain no longer sells in {{rival}} as it did, and our influence there has slipped from {{previousLevel}} to {{level}}. A dealer who shipped there for years now stacks unsold crates in his back room. The {{terms.civic.government}} should send someone to ask whether the buyers changed or the prices did."
@@ -208,7 +201,6 @@
         "voice": "gazette",
         "stance": "traditional",
         "genre": "report",
-        "when": "rival !== null",
         "headline": "Our fashions carry less weight in {{rival}}",
         "body": [
           "Our furniture has lost its place in the best houses of {{rival}}, according to letters from that country, and the clerks record our influence falling from {{previousLevel}} to {{level}}. A cabinetmaker in the capital there, long faithful to our drawer and leg, has taken up a heavier style of his own. Old customers are not replaced in a season, and the workshops at home will feel the loss before the courts hear the reason."
@@ -225,7 +217,7 @@
         "genre": "anecdote",
         "headline": "They've stopped singing our songs",
         "body": [
-          "A fiddler who played the border towns came home with a purse of their coin and a complaint. 'They clap for our tunes,' he said, 'then ask for something of their own.' Our pull abroad is down to {{level}}."
+          "A fiddler who played the border towns of {{rival}} came home with a purse of their coin and a complaint. 'They clap for our tunes,' he said, 'then ask for something of their own.' Our pull abroad is down to {{level}}."
         ],
         "weight": { "base": 1 }
       }
@@ -242,7 +234,7 @@
         "id": "cultural-influence-trend-turns-incoming-report",
         "headline": "Foreign influence over us turns {{trend}}",
         "body": [
-          "After a long spell of running {{previousTrend}}, foreign influence over our people has turned {{trend}}. The clerks put the share at {{percentage}} percent, which holds the {{level}} grade. At the sign painter's shop the new order went up on the board before the old one was dry."
+          "After a long spell of running {{previousTrend}}, the influence of {{rival}} over our people has turned {{trend}}. The clerks put the share at {{percentage}} percent, which holds the {{level}} grade. At the sign painter's shop the new order went up on the board before the old one was dry."
         ],
         "weight": { "base": 1 }
       },
@@ -254,7 +246,7 @@
         "when": "turnsToInfluential !== null",
         "headline": "Foreign influence has {{turnsToInfluential}} to Influential, a printer bets",
         "body": [
-          "The trend of foreign influence over us has turned {{trend}}, and the clerks give it {{turnsToInfluential}} to reach Influential. A printer has set a new foreign songbook in type and will not say how many copies he has run. If the forecast is wrong, the sheets will wrap fish by winter."
+          "The trend of influence from {{rival}} over us has turned {{trend}}, and the clerks give it {{turnsToInfluential}} to reach Influential. A printer has set a new foreign songbook in type and will not say how many copies he has run. If the forecast is wrong, the sheets will wrap fish by winter."
         ],
         "weight": { "base": 1 }
       },
@@ -263,7 +255,6 @@
         "voice": "spoken",
         "stance": "traditional",
         "genre": "anecdote",
-        "when": "rival !== null",
         "headline": "The net menders knew before the scribes did",
         "body": [
           "They say the net menders and the ferrymen have been wagering on the foreign fashion since the ice broke. The scribes have now sent their count, and the pull of {{rival}} on us has turned {{trend}}. The ferrymen are collecting, and the net menders say the wager was never fair."
@@ -280,7 +271,7 @@
         "genre": "ledger",
         "headline": "The influence ledger",
         "body": [
-          "Reach of a foreign people on our taste: {{level}}",
+          "Reach of {{rival}} on our taste: {{level}}",
           "Share at the latest reckoning: {{percentage}} percent",
           "Movement: {{trend}}, where it ran {{previousTrend}} before"
         ],
@@ -299,7 +290,7 @@
         "id": "cultural-influence-trend-turns-outgoing-report",
         "headline": "Our influence abroad turns {{trend}}",
         "body": [
-          "The tally of our standing abroad has moved {{trend}} this season, after running {{previousTrend}} before. It now reads {{percentage}} percent, a grade of {{level}}. A ferryman on the south crossing says passengers now ask about our theatres before they ask about the road, and he keeps a handbill under the seat."
+          "The tally of our standing in {{rival}} has moved {{trend}} this season, after running {{previousTrend}} before. It now reads {{percentage}} percent, a grade of {{level}}. A ferryman on the south crossing says passengers now ask about our theatres before they ask about the road, and he keeps a handbill under the seat."
         ],
         "weight": { "base": 1 }
       },
@@ -311,7 +302,7 @@
         "when": "turnsToInfluential !== null",
         "headline": "Forecast: {{turnsToInfluential}} to Influential",
         "body": [
-          "The trend abroad has turned {{trend}} tonight. Forecasters count {{turnsToInfluential}} before we reach Influential. At the playhouse, the box office has opened a second window."
+          "The trend in {{rival}} has turned {{trend}} tonight. Forecasters count {{turnsToInfluential}} before we reach Influential. At the playhouse, the box office has opened a second window."
         ],
         "weight": { "base": 1 }
       },
@@ -320,7 +311,7 @@
         "voice": "gazette",
         "stance": "ambitious",
         "genre": "report",
-        "when": "rival !== null && trend === 'Rising'",
+        "when": "trend === 'Rising'",
         "headline": "Our fashions rise again in {{rival}}",
         "body": [
           "Our plays have found their way back into the theatres of {{rival}}, and the court there has sent for more scripts. Our influence stands Rising, at the {{level}} grade. A countess is reported to have wept at the last act, which is a conquest no treasury pays for."
@@ -335,7 +326,7 @@
         "voice": "chronicle",
         "stance": "traditional",
         "genre": "report",
-        "when": "rival !== null && trend === 'Falling'",
+        "when": "trend === 'Falling'",
         "headline": "In this year our word carried less weight",
         "body": [
           "In this year the clerks marked our influence over {{rival}} as Falling and wrote the {{level}} grade in the next column. Fewer of their sons came to our schools, and the masters noted empty benches without comment. The page keeps a white space where the next entry will go."
@@ -352,7 +343,7 @@
         "genre": "analysis",
         "headline": "Culture is a front line too",
         "body": [
-          "The {{level}} grade marks how far our speech now carries among a rival people, and the trend has swung {{trend}}. A mapmaker in the capital has begun marking the roads where our words are understood, and the marks stop well short of the frontier. Where the marks stop, a scout walks blind, and a blind scout costs a column."
+          "The {{level}} grade marks how far our speech now carries in {{rival}}, and the trend has swung {{trend}}. A mapmaker in the capital has begun marking the roads where our words are understood, and the marks stop well short of the frontier. Where the marks stop, a scout walks blind, and a blind scout costs a column."
         ],
         "weight": { "base": 1 }
       }

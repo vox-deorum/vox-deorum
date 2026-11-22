@@ -3,7 +3,7 @@
     "id": "congress-new-proposals-account",
     "triggers": ["congress-new-proposals"],
     "tags": ["international", "congress"],
-    "names": ["proposal", "proposer", "ourProposal", "terms.civilization"],
+    "names": ["proposal", "proposer", "ourProposal", "ourProposer"],
     "weight": { "base": 1 },
     "variants": [
       {
@@ -38,7 +38,7 @@
         "when": "ours === true",
         "headline": "Hear it! Our name is on the agenda",
         "body": [
-          "Hear it, {{terms.civic.people}} of {{terms.civilization}}! Our motion on {{ourProposal}} stands before the Congress, and the clerks have read it aloud! Find a delegate in the square and ask what we have proposed to the world. Every capital will hear of it before the week is out!"
+          "Hear it, {{terms.civic.people}} of {{ourProposer}}! Our motion on {{ourProposal}} stands before the Congress, and the clerks have read it aloud! Find a delegate in the square and ask what we have proposed to the world. Every capital will hear of it before the week is out!"
         ],
         "weight": { "base": 1 }
       },

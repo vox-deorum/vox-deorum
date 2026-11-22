@@ -345,7 +345,8 @@
     "subject": "city",
     "window": "recent",
     "when": [
-      "city.is.neighbor",
+      "city.is.neighbor && city.knows('name')",
+      "city.knows('owner') && city.owner.knows('name')",
       "city.before.isPuppet",
       "!city.isPuppet && city.isOccupied",
       "city.before.owner.id == city.owner.id"

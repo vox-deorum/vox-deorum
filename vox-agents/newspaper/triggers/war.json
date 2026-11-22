@@ -78,9 +78,11 @@
     "subject": "incident",
     "when": [
       "incident.kind === 'peace'",
+      "incident.knows('initiator') && incident.initiator.knows('name')",
+      "incident.knows('target') && incident.target.knows('name')",
       "incident.knows('concessions') && Array.isArray(incident.concessions) && incident.concessions.length > 0"
     ],
-    "values": { "concessions": "incident.concessions.join(', ')", "count": "incident.concessions.length", "role": "incident.knows('role') ? incident.role : null", "initiator": "incident.knows('initiator') && incident.initiator.knows('name') ? incident.initiator.name : null", "target": "incident.knows('target') && incident.target.knows('name') ? incident.target.name : null" },
+    "values": { "concessions": "incident.concessions.join(', ')", "count": "incident.concessions.length", "role": "incident.knows('role') ? incident.role : null", "initiator": "incident.initiator.name", "target": "incident.target.name" },
     "tier": "role !== null && role !== 'none' ? 'major' : 'routine'",
     "tags": ["politics", "military", "international"]
   },
@@ -169,11 +171,12 @@
     "subject": "pair",
     "when": [
       "pair.involvesSelf && pair.majors && pair.atWar",
+      "pair.other.knows('name')",
       "Number.isFinite(pair.warTurns) && Number.isFinite(pair.before.warTurns)",
       "crossed(pair.warTurns, pair.before.warTurns, medium)"
     ],
     "values": {
-      "opponent": "pair.other.knows('name') ? pair.other.name : null",
+      "opponent": "pair.other.name",
       "turns": "pair.warTurns"
     },
     "tier": "notable",
@@ -252,12 +255,13 @@
     "window": "recent",
     "when": [
       "pair.involvesSelf && pair.majors && pair.atWar === true",
+      "pair.other.knows('name')",
       "pair.knows('warTurns') && pair.warTurns >= recent",
       "self.relation(pair.other).knows('warWeariness') && self.relation(pair.other).warWeariness < 50",
       "self.knows('before') && self.before.relation(pair.other).knows('warWeariness') && self.before.relation(pair.other).warWeariness >= 50"
     ],
     "values": {
-      "opponent": "pair.other.knows('name') ? pair.other.name : null",
+      "opponent": "pair.other.name",
       "wearinessPercent": "self.relation(pair.other).warWeariness"
     },
     "tier": "routine",
@@ -269,6 +273,7 @@
     "subject": "pair",
     "when": [
       "pair.involvesSelf && pair.atWar === true",
+      "pair.other.knows('name')",
       "self.relation(pair.other).knows('warWeariness')",
       "Number.isFinite(self.relation(pair.other).warWeariness)",
       "self.relation(pair.other).warWeariness >= 50"

@@ -27,12 +27,13 @@
     "event": "PlayerPlunderedTradeRoute",
     "when": [
       "event.knows('destinationOwner') && event.destinationOwner.self === true",
-      "event.knows('originOwner') && event.originOwner.self === false",
-      "event.knows('plunderingPlayerId') && event.plunderingPlayerId !== self.id"
+      "event.knows('originOwner') && event.originOwner.self === false && event.originOwner.knows('name')",
+      "event.knows('plunderingPlayerId') && event.plunderingPlayerId !== self.id",
+      "event.knows('plunderingPlayer') && event.plunderingPlayer.knows('name')"
     ],
     "values": {
-      "origin": "event.originOwner.knows('name') ? event.originOwner.name : null",
-      "plunderer": "event.knows('plunderingPlayer') && event.plunderingPlayer.knows('name') ? event.plunderingPlayer.name : null",
+      "origin": "event.originOwner.name",
+      "plunderer": "event.plunderingPlayer.name",
       "gold": "event.knows('plunderGoldValue') && Number.isFinite(event.plunderGoldValue) ? event.plunderGoldValue : null"
     },
     "tier": "notable",
@@ -83,12 +84,14 @@
     "event": "PlayerPlunderedTradeRoute",
     "when": [
       "event.knows('originOwner') && event.originOwner.self === true",
-      "event.knows('plunderingPlayerId') && event.plunderingPlayerId !== self.id"
+      "event.knows('plunderingPlayerId') && event.plunderingPlayerId !== self.id",
+      "event.knows('plunderingPlayer') && event.plunderingPlayer.knows('name')",
+      "event.knows('destinationOwner') && event.destinationOwner.knows('name')"
     ],
     "values": {
-      "plunderer": "event.knows('plunderingPlayer') && event.plunderingPlayer.knows('name') ? event.plunderingPlayer.name : null",
+      "plunderer": "event.plunderingPlayer.name",
       "gold": "event.knows('plunderGoldValue') && Number.isFinite(event.plunderGoldValue) ? event.plunderGoldValue : null",
-      "destination": "event.knows('destinationOwner') && event.destinationOwner.knows('name') ? event.destinationOwner.name : null"
+      "destination": "event.destinationOwner.name"
     },
     "tier": "major",
     "adjust": "event.plunderingPlayer.stake.relation",
@@ -115,10 +118,10 @@
     "event": "PlayerPlunderedTradeRoute",
     "when": [
       "event.knows('plunderingPlayerId') && event.plunderingPlayerId === self.id",
-      "event.knows('originOwner') && event.originOwner.self === false"
+      "event.knows('originOwner') && event.originOwner.self === false && event.originOwner.knows('name')"
     ],
     "values": {
-      "origin": "event.originOwner.knows('name') ? event.originOwner.name : null",
+      "origin": "event.originOwner.name",
       "gold": "event.knows('plunderGoldValue') && Number.isFinite(event.plunderGoldValue) ? event.plunderGoldValue : null",
       "destination": "event.knows('destinationOwner') && event.destinationOwner.knows('name') ? event.destinationOwner.name : null"
     },

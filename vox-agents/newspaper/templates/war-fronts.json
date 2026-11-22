@@ -201,7 +201,7 @@
         "id": "enemy-city-takes-heavy-damage-report",
         "headline": "The walls of {{cityName}} are failing",
         "body": [
-          "Half of the wall of {{cityName}} is down, and its rubble lies in the streets. A carter who passed beneath the gate said he could see the sky through the breach. The defenders have not begun repairs, which suggests they have given up on the outer wall."
+          "Half of the wall of {{cityName}}, held by {{civilization}}, is down, and its rubble lies in the streets. A carter who passed beneath the gate said he could see the sky through the breach. The defenders have not begun repairs, which suggests they have given up on the outer wall."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -215,7 +215,7 @@
         "genre": "ledger",
         "headline": "An accounting of {{cityName}}",
         "body": [
-          "City examined: {{cityName}}.",
+          "City examined: {{cityName}}, held by {{civilization}}.",
           "Wall standing: half of it at best.",
           "Verdict: the next storm will finish what the siege began."
         ],
@@ -231,7 +231,7 @@
         "genre": "report",
         "headline": "Abroad tonight: heavy damage at {{cityName}}",
         "body": [
-          "Word from abroad tonight: half of {{cityName}}'s wall is down. Engineers say the breach is wide enough to march through. The city still flies its flag, but the stone no longer argues for it."
+          "Word from abroad tonight: half of {{cityName}}'s wall, held by {{civilization}}, is down. Engineers say the breach is wide enough to march through. The city still flies its flag, but the stone no longer argues for it."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -243,7 +243,6 @@
         "voice": "press",
         "stance": "hawkish",
         "genre": "analysis",
-        "when": "civilization !== null",
         "headline": "The walls of a rival come down",
         "body": [
           "{{cityName}} belongs to {{civilization}}, and half of its wall is down. Stone in that condition turns a battle into a question of nerve, because the defenders must now choose where to make their fight. If {{civilization}} has a reserve, this is the week to show it."
@@ -565,7 +564,6 @@
     "variants": [
       {
         "id": "foreign-capital-falls-report",
-        "when": "cityName !== null",
         "headline": "{{cityName}} falls to {{winner}}",
         "body": [
           "News has come that {{winner}} has taken {{cityName}}, the capital of {{loser}}, by force, {{distance}} from the nearest of our cities. The report arrived with a ship's cargo, and the customs clerk read it twice before entering the duty. The war is far away, but the prices it moves are not."
@@ -577,7 +575,6 @@
         "voice": "press",
         "stance": "neutral",
         "genre": "analysis",
-        "when": "cityName !== null",
         "headline": "After {{cityName}} falls, where do the envoys go?",
         "body": [
           "{{cityName}}, the seat of {{loser}}, now answers to {{winner}}. A state can lose its capital and keep its authority, or keep the buildings and lose the habit of command. Watch which envoys still call at which door, and the answer will show itself."
@@ -591,7 +588,7 @@
         "genre": "report",
         "headline": "The fall of a capital",
         "body": [
-          "The year's record states that {{winner}} took by arms the capital of {{loser}}, at a distance of {{distance}} from our own cities. The keeper of the rolls entered the fall beside the accounts of plague and drought. Prayer was ordered for the city's people, and no cause was written."
+          "The year's record states that {{winner}} took by arms {{cityName}}, the capital of {{loser}}, at a distance of {{distance}} from our own cities. The keeper of the rolls entered the fall beside the accounts of plague and drought. Prayer was ordered for the city's people, and no cause was written."
         ],
         "weight": { "base": 1 }
       },
@@ -600,9 +597,9 @@
         "voice": "broadcast",
         "stance": "neutral",
         "genre": "report",
-        "headline": "Abroad tonight, a capital has fallen",
+        "headline": "Abroad tonight: {{cityName}} falls",
         "body": [
-          "Abroad tonight, {{winner}} has seized the capital of {{loser}}. The city lies {{distance}} from the closest of our cities. New maps will be needed by morning, and the embassies will be busy before the week ends."
+          "Abroad tonight, {{winner}} has seized {{cityName}}, the capital of {{loser}}. The city lies {{distance}} from the closest of our cities. New maps will be needed by morning, and the embassies will be busy before the week ends."
         ],
         "weight": { "base": 1 }
       }
@@ -612,14 +609,14 @@
     "id": "nearby-capital-falls-account",
     "triggers": ["nearby-capital-falls"],
     "tags": ["military"],
-    "names": ["loser", "winner"],
+    "names": ["capitalDescription", "winner"],
     "weight": { "base": 1 },
     "variants": [
       {
         "id": "nearby-capital-falls-report",
         "headline": "A capital falls near our own border",
         "body": [
-          "A capital has fallen near our border: {{winner}} has taken the seat of {{loser}}. Refugees have already been seen on the road, carrying what they could tie to a cart. Our frontier posts are counting them as they pass."
+          "A capital has fallen near our border: {{winner}} has taken {{capitalDescription}}. Refugees have already been seen on the road, carrying what they could tie to a cart. Our frontier posts are counting them as they pass."
         ],
         "weight": { "base": 1 }
       },
@@ -630,7 +627,7 @@
         "genre": "analysis",
         "headline": "What {{winner}}'s capture means here",
         "body": [
-          "When {{winner}} took the capital of {{loser}}, it gained more than buildings. It gained the offices, the archives and the habit of obedience that gather in a capital. The question now is whether the displaced government can rule from another city."
+          "When {{winner}} took {{capitalDescription}}, it gained more than buildings. It gained the offices, the archives and the habit of obedience that gather in a capital. The question now is whether the displaced government can rule from another city."
         ],
         "weight": { "base": 1 }
       },
@@ -641,7 +638,7 @@
         "genre": "report",
         "headline": "The fall of a capital near our borders",
         "body": [
-          "The annals record that {{winner}} captured the capital of {{loser}} in this year. The court scribe wrote the entry in a steady hand and left a space beside it for the terms. That space remains empty, and the border has been quiet since."
+          "The annals record that {{winner}} captured {{capitalDescription}} in this year. The court scribe wrote the entry in a steady hand and left a space beside it for the terms. That space remains empty, and the border has been quiet since."
         ],
         "weight": { "base": 1 }
       },
@@ -652,7 +649,7 @@
         "genre": "report",
         "headline": "A capital just fell near us",
         "body": [
-          "Capital down: {{winner}} has taken {{loser}}'s seat. It is close to us. Watch the roads."
+          "Capital down: {{winner}} has taken {{capitalDescription}}. It is close to us. Watch the roads."
         ],
         "weight": { "base": 1 }
       }
@@ -667,9 +664,9 @@
     "variants": [
       {
         "id": "nearby-city-captured-report",
-        "headline": "A town changes hands near our border",
+        "headline": "{{cityName}} changes hands near our border",
         "body": [
-          "A town near our border has changed hands. The fighting took place {{distance}} from our own fields, and a different banner hung over its gate by evening. Our patrols have been told to hold their line and watch."
+          "{{cityName}}, a town near our border, has changed hands. {{winner}} took it from {{loser}}, and the fighting took place {{distance}} from our own fields. A different banner hung over its gate by evening. Our patrols have been told to hold their line and watch."
         ],
         "weight": { "base": 1 }
       },
@@ -678,7 +675,6 @@
         "voice": "press",
         "stance": "neutral",
         "genre": "analysis",
-        "when": "cityName !== null && loser !== null && winner !== null",
         "headline": "{{cityName}} falls to {{winner}}",
         "body": [
           "{{cityName}} has passed from {{loser}} to {{winner}}, at a distance of {{distance}} from our border. A town that close is a market, a road junction and a warning, depending on who holds it. The flag has changed; the garrison {{winner}} leaves behind will decide the road and the market in the seasons ahead."
@@ -690,10 +686,9 @@
         "voice": "gazette",
         "stance": "neutral",
         "genre": "notice",
-        "when": "cityName !== null && winner !== null",
         "headline": "Notice from abroad: {{cityName}}",
         "body": [
-          "Notice is given that {{cityName}}, {{distance}} from our frontier, is now held by {{winner}}. Travelers should expect new guards and new questions at its gate. Merchants with goods in its warehouses should present their papers before the week is out."
+          "Notice is given that {{cityName}}, formerly held by {{loser}}, {{distance}} from our frontier, is now held by {{winner}}. Travelers should expect new guards and new questions at its gate. Merchants with goods in its warehouses should present their papers before the week is out."
         ],
         "weight": { "base": 1 }
       },
@@ -702,10 +697,9 @@
         "voice": "tabloid",
         "stance": "local",
         "genre": "report",
-        "when": "loser !== null && winner !== null",
         "headline": "A new flag {{distance}} out",
         "body": [
-          "{{distance}} from our farms, the flag over the town has changed. {{winner}} took it from {{loser}}, and the market opened the next morning as if nothing had happened. The stallholders have seen conquerors before."
+          "{{distance}} from our farms, the flag over {{cityName}} has changed. {{winner}} took it from {{loser}}, and the market opened the next morning as if nothing had happened. The stallholders have seen conquerors before."
         ],
         "weight": { "base": 1 }
       }

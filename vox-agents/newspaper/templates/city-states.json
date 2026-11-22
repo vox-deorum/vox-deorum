@@ -43,7 +43,7 @@
         "genre": "editorial",
         "headline": "An ally is at war. What is our answer?",
         "body": [
-          "Mark it, {{terms.civic.people}}: {{ally}} is at war, and its people are watching the road for the help we promised them. Our {{terms.civic.government}} should name the wagons, the men and the day they leave, because a promise that arrives after the gates close is only an apology. An ally left to fight alone learns to choose a different friend."
+          "Mark it, {{terms.civic.people}}: {{aggressor}} is at war with {{ally}}, and its people are watching the road for the help we promised them. Our {{terms.civic.government}} should name the wagons, the men and the day they leave, because a promise that arrives after the gates close is only an apology. An ally left to fight alone learns to choose a different friend."
         ],
         "weight": { "base": 1 }
       }
@@ -82,7 +82,7 @@
         "genre": "obituary",
         "headline": "{{cityState}}, faithful to the last",
         "body": [
-          "Be it set down in the record that {{cityState}} kept faith with {{terms.civilization}} to the last, and asked no reward for it. The city held its own council, its own gate, and its own name among the small powers until a stronger army came and took all three. What remains is the example, which no conqueror can garrison."
+          "Be it set down in the record that {{cityState}} kept faith with {{terms.civilization}} to the last, and asked no reward for it. The city held its own council, its own gate, and its own name among the small powers until {{captor}}'s army came and took all three. What remains is the example, which no conqueror can garrison."
         ],
         "weight": { "base": 1 }
       },
@@ -649,7 +649,7 @@
         "genre": "obituary",
         "headline": "The passing of {{cityState}}",
         "body": [
-          "The record of the small powers will show that {{cityState}} kept faith with {{terms.civilization}} until the swords reached its streets. Its altars stood open to every traveler, and its people gave what they had to the poor. Its holy fires are in other hands now, and the faithful can only hope they are still burning."
+          "{{cityState}} kept faith with {{terms.civilization}} until the swords of {{captor}} reached its streets. Its altars stood open to every traveler, and its people gave what they had to the poor. Its holy fires are in other hands now, and the faithful can only hope they are still burning."
         ],
         "weight": { "base": 1 }
       },

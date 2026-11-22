@@ -253,9 +253,9 @@
     "variants": [
       {
         "id": "foreign-religion-founded-report",
-        "headline": "{{civilization}} founds a religion",
+        "headline": "{{civilization}} founds a religion in {{holyCity}}",
         "body": [
-          "{{civilization}} has founded a new faith called {{religion}}. The first gathering met in a borrowed courtyard, and the speaker had to repeat the opening words three times as latecomers crowded in. The name is already on travelers' lips, and the towns along the road will hear it soon enough."
+          "{{civilization}} has founded a new faith called {{religion}} in {{holyCity}}. The first gathering met in a borrowed courtyard, and the speaker had to repeat the opening words three times as latecomers crowded in. The name is already on travelers' lips, and the towns along the road will hear it soon enough."
         ],
         "weight": { "base": 1 }
       },
@@ -264,7 +264,6 @@
         "voice": "chronicle",
         "stance": "neutral",
         "genre": "ledger",
-        "when": "holyCity !== null",
         "headline": "Entered in the record: a new creed",
         "body": [
           "Founder of the creed: {{civilization}}",
@@ -279,9 +278,9 @@
         "voice": "broadcast",
         "stance": "hawkish",
         "genre": "report",
-        "headline": "A new creed is on the map",
+        "headline": "A new creed is on the map in {{holyCity}}",
         "body": [
-          "A new faith has a name tonight: {{religion}}. It is founded in {{civilization}}, and its first shrine is already standing room only. A creed is a border that moves without soldiers. Watch the map."
+          "A new faith has a name tonight: {{religion}}. It is founded in {{civilization}}, and its first shrine in {{holyCity}} is already standing room only. A creed is a border that moves without soldiers. Watch the map."
         ],
         "weight": { "base": 1 }
       }
@@ -617,9 +616,9 @@
     "variants": [
       {
         "id": "pantheon-founded-report",
-        "headline": "{{civilization}} founds a pantheon",
+        "headline": "{{civilization}} founds a pantheon in {{cityName}}",
         "body": [
-          "{{civilization}} has raised its first pantheon, and the ceremony lasted from noon until the lamps were lit. Families came forward one at a time to name the power they would honor, and the list grew longer with each household. A people who can name what they worship has taken the first step toward a common faith."
+          "{{civilization}} has raised its first pantheon in {{cityName}}, and the ceremony lasted from noon until the lamps were lit. Families came forward one at a time to name the power they would honor, and the list grew longer with each household. The name they set above the rest was {{belief}}. A people who can name what they worship has taken the first step toward a common faith."
         ],
         "weight": { "base": 1 }
       },
@@ -629,9 +628,9 @@
         "stance": "devout",
         "genre": "report",
         "when": "ours === true",
-        "headline": "They say the first altars are ours",
+        "headline": "They say the first altars at {{cityName}} are ours",
         "body": [
-          "They say {{civilization}} has raised a pantheon, and the smoke from our first altar could be seen from the next valley. Our elders spoke the names of the old powers out loud, in a voice that reached the back of the crowd. The children will learn those names now, and that is worth more to us than a good harvest."
+          "They say {{civilization}} has raised a pantheon in {{cityName}}, and the smoke from our first altar could be seen from the next valley. Our elders spoke the names of the old powers out loud in a voice that reached the back of the crowd, and {{belief}} was the first they named. The children will learn those names now, and that is worth more to us than a good harvest."
         ],
         "weight": { "base": 1 }
       },
@@ -643,7 +642,7 @@
         "when": "ours === false",
         "headline": "A pantheon entered in the foreign record",
         "body": [
-          "The people of {{civilization}} raised a pantheon this year, and their elders named the powers in a ceremony that lasted a full day. Our record notes the date, the place, and the number of households that came forward. The meaning of the rites is theirs to keep; the count is ours to preserve."
+          "The people of {{civilization}} raised a pantheon in {{cityName}} this year, and their elders chose {{belief}} as the first teaching in a ceremony that lasted a full day. Our record notes the date, the place, and the number of households that came forward. The meaning of the rites is theirs to keep; the count is ours to preserve."
         ],
         "weight": { "base": 1 }
       },
@@ -652,7 +651,6 @@
         "voice": "gazette",
         "stance": "neutral",
         "genre": "notice",
-        "when": "cityName !== null && belief !== null",
         "headline": "Notice to travelers: a new pantheon at {{cityName}}",
         "body": [
           "Travelers bound for {{cityName}} should know that {{civilization}} has founded a pantheon there, and that its first teaching is called {{belief}}. Visitors are welcome at the rites if they come in good order. The road past the altar remains open to those who would rather not stop."
