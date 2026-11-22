@@ -8,42 +8,51 @@
     "variants": [
       {
         "id": "building-completed-report",
-        "headline": "{{cityName}} completes the {{building}}",
+        "headline": "The {{building}} opens in {{cityName}}",
         "body": [
-          "Work on the {{building}} in {{cityName}} ended this week, and the crew has already cleared the site. The keeper walked the empty rooms at dusk, counting doors and trying keys. The work is in use from today."
+          "Work on {{cityName}}'s {{building}} is complete. Residents watched the builders remove their final scaffolds, then gathered at the entrance as the keeper unlocked the doors. The new building is now in service."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
         ],
-        "weight": { "base": 1 }
+        "weight": {
+          "base": 1
+        },
+        "settled": true
       },
       {
         "id": "building-completed-notice",
         "voice": "gazette",
         "stance": "neutral",
         "genre": "notice",
-        "headline": "Notice from {{cityName}}: the {{building}} is ready",
+        "headline": "Notice from {{cityName}}: the {{building}} opens",
         "body": [
-          "Notice is given to all with business at the {{building}} in {{cityName}}: the work is finished and the doors open at first light. Visitors should come before dark until the lamps are hung. The keeper will keep a list for the upper floor."
+          "We are informed that work on the {{building}} in {{cityName}} is finished, and its doors will open at first light. The keeper asks visitors to arrive before dusk. Those attending to business there may now make their arrangements."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
         ],
-        "weight": { "base": 1 }
+        "weight": {
+          "base": 1
+        },
+        "settled": true
       },
       {
         "id": "building-completed-anecdote",
         "voice": "tabloid",
         "stance": "local",
         "genre": "anecdote",
-        "headline": "Now fix the gutter",
+        "headline": "The {{building}} opens, and the neighbors peek in",
         "body": [
-          "The scaffolding around the {{building}} in {{cityName}} came down on a wet morning, and half the street came out to watch. A girl in the crowd asked the foreman whether the roof would keep her dry. He said it had kept him dry all week, and she took that as a promise."
+          "The {{building}} is complete in {{cityName}}, and the last ladder came down at sunrise. Mrs. Vale brought her grandson to watch the workers sweep the steps; he asked if they could come back tomorrow. They will have no work here, but the doors are ready."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
         ],
-        "weight": { "base": 1 }
+        "weight": {
+          "base": 1
+        },
+        "settled": true
       },
       {
         "id": "building-completed-analysis",
@@ -57,7 +66,10 @@
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
         ],
-        "weight": { "base": 1 }
+        "weight": {
+          "base": 1
+        },
+        "settled": true
       }
     ]
   },

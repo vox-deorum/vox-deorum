@@ -254,8 +254,9 @@ export class ReplaySession {
     if (advance) {
       state.cursor = { cutoffTurn, previousCheckTurn, finished: cutoffTurn === state.settings.toTurn };
       if (this.store && this.publication && this.config && factOptions) {
-        const existing = this.store.getCheck(state.runId!, state.settings.receiverPlayerID, cutoffTurn);
-        if (existing) throw new ReplaySessionError('This cutoff is already completed; resume the saved run.', 409);
+        if (this.store.hasCheck(state.runId!, state.settings.receiverPlayerID, cutoffTurn)) {
+          throw new ReplaySessionError('This cutoff is already completed; resume the saved run.', 409);
+        }
         const { evidence, facts } = await readReplayFacts(this.db!, request, factOptions, query);
         const visiblePlayers = new Set(evidence.players.map(player => String(player.subjectID)));
         visiblePlayers.add(String(state.settings.receiverPlayerID));

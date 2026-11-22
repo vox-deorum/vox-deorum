@@ -1,15 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import Database from 'better-sqlite3';
-import { readFile, link } from 'node:fs/promises';
+import { readFile, link, stat } from 'node:fs/promises';
 import path from 'node:path';
-import { ReplayStore, ReplayStoreConflictError, resolveReplayOutput, type ReplayCheckpoint, type StoredReplayCheck } from '../../../../src/newspaper/replay/store.js';
-import { replayStateSchema } from '../../../../src/newspaper/contracts/replay.js';
+import { ReplayStore, ReplayStoreConflictError, resolveReplayOutput, type ReplayCheckpoint } from '../../../../src/newspaper/replay/store.js';
+import { replayStateSchema, type ReplayCheck } from '../../../../src/newspaper/contracts/replay.js';
 import { issueDocumentSchema } from '../../../../src/newspaper/contracts/issue.js';
 import { createInitialPublicationState, type EditorialDecisionRecord } from '../../../../src/newspaper/contracts/publication.js';
 import { createReplayRecording, replaySettings } from '../../../helpers/newspaper-replay.js';
 
 /** Build one valid audited check with optional fixture prose, independently of editorial selection. */
-async function checkFixture(published = true): Promise<{ checkpoint: ReplayCheckpoint; check: StoredReplayCheck }> {
+async function checkFixture(published = true): Promise<{ checkpoint: ReplayCheckpoint; check: ReplayCheck }> {
   const issue = issueDocumentSchema.parse(JSON.parse(await readFile(new URL('../../../../newspaper/fixtures/victorian-ordinary.json', import.meta.url), 'utf8')));
   issue.timelineId = 'run-a';
   issue.cutoff.turn = 10;
@@ -55,7 +55,7 @@ describe('offline replay output store', () => {
     sqlite.exec("CREATE TRIGGER fail_checkpoint BEFORE UPDATE ON OfflineReplayRuns BEGIN SELECT RAISE(ABORT, 'save failed'); END");
     expect(() => store.commit(checkpoint, check)).toThrow('save failed');
     expect(store.list('run-a', 0).issues).toEqual([]);
-    expect(store.getCheck('run-a', 0, 10)).toBeUndefined();
+    expect(store.hasCheck('run-a', 0, 10)).toBe(false);
     expect(store.load('run-a', 0, 'source')).toEqual(initial);
     sqlite.exec('DROP TRIGGER fail_checkpoint');
     sqlite.close();
@@ -64,32 +64,44 @@ describe('offline replay output store', () => {
     expect(store.list('run-a', 0).issues).toHaveLength(1);
   });
 
-  it('should retain immutable issues and evidence across restart and commit a cutoff once', async () => {
+  it('should keep issues and their editorial choices across restart without storing the full audit', async () => {
     const { checkpoint, check } = await checkFixture();
+    const largeDiagnostic = 'diagnostic'.repeat(30_000);
+    check.decision.configurationSnapshot = { catalogue: largeDiagnostic };
+    check.decision.triggerAudit = [{
+      rule: 'controlled', windowFromTurn: 9, subjectCount: 1, groups: [],
+      subjects: [{ subject: 'city:1', outcome: 'false', expressions: [{ field: 'when', source: largeDiagnostic, value: false }], sources: [] }],
+    }];
     store.create('source', checkpoint);
-    store.commit(checkpoint, check);
+    expect(store.commit(checkpoint, check).decision).toMatchObject({
+      configurationSnapshot: check.decision.configurationSnapshot, triggerAudit: check.decision.triggerAudit,
+    });
     const original = store.get('run-a', 0, check.issue!.issueId, checkpoint.publication)!;
     check.issue!.publication.title = 'Changed retry';
-    expect(store.commit(checkpoint, check).issue!.publication.title).toBe(original.issue.publication.title);
+    expect(() => store.commit(checkpoint, check)).toThrow(ReplayStoreConflictError);
+    expect((await stat(filename)).size).toBeLessThan(largeDiagnostic.length);
     store.close();
     store = new ReplayStore(filename);
     expect(store.list('run-a', 0).issues).toHaveLength(1);
-    expect(store.get('run-a', 0, original.issue.issueId, checkpoint.publication)).toEqual(original);
+    const reopened = store.get('run-a', 0, original.issue.issueId, checkpoint.publication)!;
+    expect(reopened).toEqual(original);
+    expect(reopened.decision).toMatchObject({ configurationId: check.decision.configurationId, designId: check.decision.designId });
+    expect(reopened.decision).not.toHaveProperty('triggerAudit');
+    expect(reopened.decision).not.toHaveProperty('configurationSnapshot');
+    expect(reopened.articles[0]).toMatchObject({ templateIds: ['fixture'], evidenceSummary: 'Recorded observations' });
     expect(() => store.load('run-a', 1, 'source')).toThrow();
     expect(() => store.load('run-a', 0, 'other-source')).toThrow();
     expect(store.get('other-run', 0, original.issue.issueId, checkpoint.publication)).toBeUndefined();
-    const sqlite = new Database(filename, { readonly: true });
-    const row = sqlite.prepare('SELECT Evidence FROM OfflineReplayIssues').get() as { Evidence: string };
-    expect(JSON.parse(row.Evidence).items[0]).toMatchObject({ templateIds: ['fixture'], evidenceSummary: 'Recorded observations' });
-    sqlite.close();
   });
 
   it('should durably complete quiet checks without adding an issue', async () => {
     const { checkpoint, check } = await checkFixture(false);
     store.create('source', checkpoint);
     store.commit(checkpoint, check);
+    store.close();
+    store = new ReplayStore(filename);
     expect(store.load('run-a', 0, 'source').publication.lastCheckTurn).toBe(10);
-    expect(store.getCheck('run-a', 0, 10)?.status).toBe('skipped');
+    expect(store.hasCheck('run-a', 0, 10)).toBe(true);
     expect(store.list('run-a', 0).issues).toEqual([]);
   });
 
@@ -132,7 +144,7 @@ describe('offline replay output store', () => {
       future.publication.lastCheckTurn = 15;
       const decision = { ...check.decision, cutoffTurn: 15, checkId: 'check-15', status: 'skipped' as const };
       expect(() => competitor.commit(future, { status: 'skipped', decision, reason: 'Quiet' })).toThrow(ReplayStoreConflictError);
-      expect(store.getCheck('run-a', 0, 15)).toBeUndefined();
+      expect(store.hasCheck('run-a', 0, 15)).toBe(false);
       expect(store.load('run-a', 0, 'source')).toEqual(checkpoint);
 
       const refreshed = competitor.load('run-a', 0, 'source');
@@ -155,12 +167,12 @@ describe('offline replay output store', () => {
     restored.publication.preferences.llmEnabled = true;
     store.save(restored);
     const saved = new Database(filename, { readonly: true });
-    expect(saved.pragma('user_version', { simple: true })).toBe(7);
+    expect(saved.pragma('user_version', { simple: true })).toBe(8);
     expect(saved.prepare('SELECT Revision FROM OfflineReplayRuns').get()).toEqual({ Revision: 1 });
     saved.close();
   });
 
-  it.each([1, 2, 3, 4, 5, 6])('should reject version %s output without changing its saved run', async version => {
+  it.each([1, 2, 3, 4, 5, 6, 7])('should reject version %s output without changing its saved run', async version => {
     const { checkpoint } = await checkFixture(false);
     const originalPath = path.join(path.dirname(recording.filename), `version-${version}.sqlite`);
     const original = new ReplayStore(originalPath);
@@ -183,7 +195,7 @@ describe('offline replay output store', () => {
     } finally { fresh.close(); }
   });
 
-  it('should reject a stale duplicate commit while accepting a duplicate from the current writer', async () => {
+  it('should reject a stale duplicate commit without changing the saved checkpoint', async () => {
     const { checkpoint, check } = await checkFixture(false);
     const initial = structuredClone(checkpoint);
     initial.session.cursor.cutoffTurn = null;
@@ -192,14 +204,13 @@ describe('offline replay output store', () => {
     const competitor = new ReplayStore(filename);
     try {
       competitor.load('run-a', 0, 'source');
-      expect(competitor.getCheck('run-a', 0, 10)).toBeUndefined();
+      expect(competitor.hasCheck('run-a', 0, 10)).toBe(false);
       store.commit(checkpoint, check);
       const unsaved = structuredClone(checkpoint);
       unsaved.publication.preferences.llmEnabled = true;
       expect(() => competitor.commit(unsaved, check)).toThrow(ReplayStoreConflictError);
-      expect(store.commit(checkpoint, check)).toEqual(check);
       expect(store.load('run-a', 0, 'source')).toEqual(checkpoint);
-      expect(store.getCheck('run-a', 0, 10)).toEqual(check);
+      expect(store.hasCheck('run-a', 0, 10)).toBe(true);
     } finally { competitor.close(); }
   });
 });

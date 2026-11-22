@@ -165,7 +165,7 @@ Urgent stories rank first. Within the same urgency, the last slot favors an elig
 
 The stock editor ranks up to ten stories. A combined article takes one slot. Publication closes the reporting window and spends [repeat memory](triggers/overview.md#repeats) for the series carried by printed articles, including those combined into one. A skip advances the schedule and keeps the reporting window open. Series scores decay on both outcomes.
 
-The audit saves the seed, catalogue, scores, presentation, sources, feedback, and trigger results. Stock design and layout draws are independent of each other and of prose. `designSelection` explains the prior design, how many issues it ran (up to six), and the candidate weights used for the draw. `selectedVariants` and `selectedStyles` record each displayed article's wording and style by item ID. Replay reopens the stored issue without running the editor again.
+The full check audit includes the seed, catalogue, scores, presentation, sources, feedback, and trigger results. Replay keeps the catalogue once per run and saves editorial choices with each edition so it can reopen without running the editor. Use the [CLI audit](replay.md#generate-examples-from-the-command-line) for the full trigger trace. Stock design and layout draws are independent of each other and of prose. `designSelection` explains the prior design, how many issues it ran (up to six), and the candidate weights. `selectedVariants` and `selectedStyles` identify each displayed article's wording and style.
 
 ## Votes and preferences
 
@@ -187,4 +187,4 @@ Preferences default to five Standard turns and LLM editing off in `defaults.json
 
 Under `vox-agents/src/newspaper/editorial/`, `check.ts` runs a check from visible facts to a printed issue or skip. `config/load.ts` loads the catalogue, and `selection/` and `presentation/` handle stories and layout. Publication state is defined in `vox-agents/src/newspaper/contracts/publication.ts`.
 
-[Replay](replay.md#source-storage-and-api) commits issues and skips, including their decisions and audits. A query or validation error leaves the previous checkpoint available for retry. Use the [catalogue verification commands](triggers/overview.md#verify-changes) after changing rules or editorial code.
+[Replay](replay.md#source-storage-and-api) saves completed cutoffs and published editions with the current checkpoint. A query or validation error leaves the previous checkpoint available for retry. Use the [catalogue verification commands](triggers/overview.md#verify-changes) after changing rules or editorial code.

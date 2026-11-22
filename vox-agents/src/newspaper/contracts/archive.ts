@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { newspaperArchiveIndexSchema, newspaperArchiveScopeSchema } from '../../../../mcp-server/dist/newspaper/protocol.js';
 import { issueDocumentSchema } from './issue.js';
-import { editorialDecisionRecordSchema, publishedItemRecordSchema } from './publication.js';
+import { archivedDecisionSchema, publishedItemRecordSchema } from './publication.js';
 
 /** Stored current coverage preference, independent of a particular page placement. */
 export const archiveVoteSchema = z.union([z.literal(-1), z.literal(0), z.literal(1)]);
@@ -14,7 +14,7 @@ export const archiveIssueSchema = z.object({
   index: newspaperArchiveIndexSchema,
   issue: issueDocumentSchema,
   votes: z.record(z.string(), archiveVoteSchema),
-  decision: editorialDecisionRecordSchema,
+  decision: archivedDecisionSchema,
   articles: z.array(publishedItemRecordSchema),
 });
 

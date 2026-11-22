@@ -3,15 +3,14 @@ import { mkdirSync, realpathSync, statSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { z } from 'zod';
 import { archiveIssueSchema, type ArchiveIssue, type ArchiveList } from '../contracts/archive.js';
-import { replayStateSchema, replayCheckSchema } from '../contracts/replay.js';
-import { publicationStateSchema, type PublicationState } from '../contracts/publication.js';
+import { replayStateSchema, replayCheckSchema, type ReplayCheck } from '../contracts/replay.js';
+import { archivedDecisionSchema, publicationStateSchema, type PublicationState } from '../contracts/publication.js';
 
 /** Offline output schema version written to SQLite `user_version`. */
-const offlineSchemaVersion = 7;
+const offlineSchemaVersion = 8;
 
 const checkpointSchema = z.object({ session: replayStateSchema, publication: publicationStateSchema, configuration: z.unknown().optional() });
 export type ReplayCheckpoint = z.infer<typeof checkpointSchema>;
-export type StoredReplayCheck = z.infer<typeof replayCheckSchema>;
 
 /** A saved run changed elsewhere and must be resumed before another write is accepted. */
 export class ReplayStoreConflictError extends Error {}
@@ -60,14 +59,14 @@ export class ReplayStore {
           );
           CREATE TABLE IF NOT EXISTS OfflineReplayChecks (
             RunID TEXT NOT NULL, Receiver INTEGER NOT NULL, Cutoff INTEGER NOT NULL,
-            Result TEXT NOT NULL, PRIMARY KEY (RunID, Receiver, Cutoff),
+            PRIMARY KEY (RunID, Receiver, Cutoff),
             FOREIGN KEY (RunID, Receiver) REFERENCES OfflineReplayRuns(RunID, Receiver)
           );
           CREATE TABLE IF NOT EXISTS OfflineReplayIssues (
             RunID TEXT NOT NULL, Receiver INTEGER NOT NULL, IssueID TEXT NOT NULL,
             Cutoff INTEGER NOT NULL, Document TEXT NOT NULL, Decision TEXT NOT NULL, Evidence TEXT NOT NULL,
             PRIMARY KEY (RunID, Receiver, IssueID), UNIQUE (RunID, Receiver, Cutoff),
-            FOREIGN KEY (RunID, Receiver) REFERENCES OfflineReplayRuns(RunID, Receiver)
+            FOREIGN KEY (RunID, Receiver, Cutoff) REFERENCES OfflineReplayChecks(RunID, Receiver, Cutoff)
           );
         `);
         this.db.pragma(`user_version = ${offlineSchemaVersion}`);
@@ -95,15 +94,14 @@ export class ReplayStore {
     return checkpoint;
   }
 
-  /** Return a previously committed cutoff without invoking the editor again. */
-  getCheck(runId: string, receiver: number, cutoff: number): StoredReplayCheck | undefined {
-    const row = this.db.prepare('SELECT Result FROM OfflineReplayChecks WHERE RunID = ? AND Receiver = ? AND Cutoff = ?')
-      .get(runId, receiver, cutoff) as { Result: string } | undefined;
-    return row ? replayCheckSchema.parse(JSON.parse(row.Result)) : undefined;
+  /** Identify a completed cutoff without loading an issue or invoking the editor. */
+  hasCheck(runId: string, receiver: number, cutoff: number): boolean {
+    return this.db.prepare('SELECT 1 FROM OfflineReplayChecks WHERE RunID = ? AND Receiver = ? AND Cutoff = ?')
+      .get(runId, receiver, cutoff) !== undefined;
   }
 
-  /** Commit immutable content, evidence, decision, cursor and editorial memory in one transaction. */
-  commit(checkpoint: ReplayCheckpoint, result: StoredReplayCheck): StoredReplayCheck {
+  /** Save the cutoff and any edition with its checkpoint, then return the full audit to the caller. */
+  commit(checkpoint: ReplayCheckpoint, result: ReplayCheck): ReplayCheck {
     const next = checkpointSchema.parse(checkpoint);
     const check = replayCheckSchema.parse(structuredClone(result));
     const runId = next.session.runId!;
@@ -118,15 +116,14 @@ export class ReplayStore {
       if (revision === undefined || current?.Revision !== revision) {
         throw new ReplayStoreConflictError('This replay run changed in another session. Resume the run to reload its latest checks and votes.');
       }
-      const previous = this.getCheck(runId, receiver, cutoff);
-      if (previous) return previous;
-      this.db.prepare('INSERT INTO OfflineReplayChecks VALUES (?, ?, ?, ?)').run(runId, receiver, cutoff, JSON.stringify(check));
+      const inserted = this.db.prepare('INSERT INTO OfflineReplayChecks VALUES (?, ?, ?) ON CONFLICT DO NOTHING').run(runId, receiver, cutoff);
+      if (inserted.changes !== 1) throw new ReplayStoreConflictError('This cutoff is already completed; resume the saved run.');
       if (check.issue) {
         if (check.issue.receiver.playerId !== receiver || check.issue.timelineId !== runId || check.issue.cutoff.turn !== cutoff) throw new Error('Issue identity does not match its replay checkpoint.');
         const evidence = next.publication.issues.find(issue => issue.issueId === check.issue!.issueId);
         if (!evidence) throw new Error('Published issue evidence is missing from the checkpoint.');
         this.db.prepare('INSERT INTO OfflineReplayIssues VALUES (?, ?, ?, ?, ?, ?, ?)')
-          .run(runId, receiver, check.issue.issueId, cutoff, JSON.stringify(check.issue), JSON.stringify(check.decision), JSON.stringify(evidence));
+          .run(runId, receiver, check.issue.issueId, cutoff, JSON.stringify(check.issue), JSON.stringify(archivedDecisionSchema.parse(check.decision)), JSON.stringify(evidence));
       }
       this.save(next);
       return check;

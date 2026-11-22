@@ -57,7 +57,7 @@ export const replayStateSchema = z.object({
   preferences: publicationPreferencesSchema.optional(),
 });
 
-/** Accepted editorial outcome saved with an advance, including quiet skipped periods. */
+/** Immediate editorial outcome of an advance, including the full audit for debugging. */
 export const replayCheckSchema = z.object({
   status: z.enum(['published', 'skipped']),
   issue: issueDocumentSchema.optional(),
@@ -88,5 +88,6 @@ export const replayAdvanceSummaryResponseSchema = z.object({
 export type ReplaySettings = z.infer<typeof replaySettingsSchema>;
 export type ReplaySpeed = z.infer<typeof replaySpeedSchema>;
 export type ReplayState = z.infer<typeof replayStateSchema>;
+export type ReplayCheck = z.infer<typeof replayCheckSchema>;
 export type ReplayEvidenceResponse = z.infer<typeof replayEvidenceResponseSchema>;
 export type ReplayAdvanceSummaryResponse = z.infer<typeof replayAdvanceSummaryResponseSchema>;
