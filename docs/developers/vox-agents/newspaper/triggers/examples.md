@@ -27,7 +27,7 @@ Run a [fresh replay](../replay.md#iterate-on-a-rule-or-overlay) with the overlay
 
 ## Cities and borders
 
-Find the detailed expressions in the [city](../../../../../vox-agents/newspaper/triggers/cities.json), [religion](../../../../../vox-agents/newspaper/triggers/religion.json) and [war](../../../../../vox-agents/newspaper/triggers/war.json) rules.
+Find the detailed expressions in the [city](../../../../../vox-agents/newspaper/triggers/cities.json), [religion](../../../../../vox-agents/newspaper/triggers/religion.json), [war](../../../../../vox-agents/newspaper/triggers/war.json) and [war fronts](../../../../../vox-agents/newspaper/triggers/war-fronts.json) rules.
 
 | Rule | What to borrow |
 | --- | --- |
@@ -54,7 +54,7 @@ Find the detailed expressions in the [city](../../../../../vox-agents/newspaper/
 
 ### A nearby offensive outranks a distant one
 
-In [`enemy-front-posture-offensive`](../../../../../vox-agents/newspaper/triggers/war.json), find the latest shift to an offensive posture during the reporting period and check that the city belonged to a wartime opponent when it happened. Give the shift the `notable` tier and use [`city.stake.place`](constants.md#stakes). It scores 65 at a city six tiles from our nearest city and 52 at 100 tiles.
+In [`enemy-front-posture-offensive`](../../../../../vox-agents/newspaper/triggers/war-fronts.json), find the latest shift to an offensive posture during the reporting period and check that the city belonged to a wartime opponent when it happened. Give the shift the `notable` tier and use [`city.stake.place`](constants.md#stakes). It scores 65 at a city six tiles from our nearest city and 52 at 100 tiles.
 
 `active-war-zone-analysis` can cover a front even when its posture has not changed. It needs at least two observed units on each side in the same zone, excluding settlers, workers, religious units, and great people. It leaves 20 Standard turns between published updates at the same city. Use the counts to describe the sighting; fighting strength also depends on factors such as position and support.
 

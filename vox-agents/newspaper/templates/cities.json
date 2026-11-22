@@ -1176,7 +1176,7 @@
         "genre": "analysis",
         "headline": "{{owner}} tightens its hold on {{city}}",
         "body": [
-          "A puppet bargains; a province obeys. {{city}} has just changed from one to the other, and {{owner}} now runs it from the capital. Lying {{distance}} from our nearest city, the change means decisions that once took a season may now take a week."
+          "A puppet bargains; a province obeys. {{city}} has just changed from one to the other, and {{owner}} now rules it from the capital. It lies {{distance}} from our nearest city, so a decision that once took a season of bargaining will now take a week."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1269,7 +1269,7 @@
         "when": "unrestPoints !== null",
         "headline": "Mood darkens in occupied {{cityName}}",
         "body": [
-          "The occupation of {{cityName}} is entering another season, and the city's books put local happiness at {{unrestPoints}}. Patrols in the old quarter have been doubled. The prefect says {{turns}} more must pass before the city settles, a phrase he has used before."
+          "The occupation of {{cityName}} is entering another season, and the city's books record a change of {{unrestPoints}} in local happiness. Patrols in the old quarter have been doubled. The prefect says {{turns}} more must pass before the city settles, a phrase he has used before."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1431,7 +1431,7 @@
         "id": "starvation-without-siege-report",
         "headline": "{{city}} is eating into its stores",
         "body": [
-          "The chalk line on the granary door in {{city}} drops a little every morning. The city holds {{foodStored}} and gives up {{shortfall}} of that each day, with no army outside to blame. The keeper has stopped chalking the good weeks, because there are none."
+          "The granary in {{city}} holds {{foodStored}} of grain and gives up {{shortfall}} of it each day, with no army outside to blame. The chalk line on the door drops a little every morning. The keeper has stopped chalking the good weeks, because there are none."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -1459,7 +1459,7 @@
         "genre": "anecdote",
         "headline": "The granary at {{city}} is emptying",
         "body": [
-          "A baker on the high street in {{city}} now cuts every loaf in two before she opens the shop. The granary holds {{foodStored}}, and it loses {{shortfall}} a day. She has stopped taking orders for next week, and her customers have stopped asking."
+          "A baker on the high street in {{city}} now cuts every loaf in two before she opens the shop. The granary that feeds her ovens holds {{foodStored}} of grain and loses {{shortfall}} of that a day. She has stopped taking orders for next week, and her customers have stopped asking."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }

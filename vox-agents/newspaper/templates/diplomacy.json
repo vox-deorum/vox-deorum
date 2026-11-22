@@ -375,7 +375,7 @@
         "genre": "notice",
         "headline": "Hear it! Friendship with {{friend}}",
         "body": [
-          "Hear it, {{terms.civic.people}}! {{friend}} stands as a friend of this nation, and the declaration is signed. A friend at the gate, a friend at the market, a friend when the road is long! Pass the word to the back of the crowd!"
+          "Hear it, {{terms.civic.people}}! {{friend}} stands as a friend of {{terms.civilization}}, and the declaration is signed. A friend at the gate, a friend at the market, a friend when the road is long! Pass the word to the back of the crowd!"
         ],
         "weight": { "base": 1 }
       },

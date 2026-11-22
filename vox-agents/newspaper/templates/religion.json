@@ -10,7 +10,7 @@
         "id": "faith-drifts-report",
         "headline": "Most of our cities now keep {{majorityFaith}}",
         "body": [
-          "{{majorityFaith}} now holds the majority in most of our cities, and the creed this nation founded, {{founded}}, no longer leads. At the old shrine in the capital, the keeper still unlocks the door at first light, though some mornings he finds the steps swept and the benches empty. The count has moved; the building has not, and that is the whole of the story."
+          "{{majorityFaith}} now holds the majority in most of our cities, and {{founded}}, the faith {{terms.civilization}} founded, has slipped into second place. At the old shrine in the capital, the keeper still unlocks the door at first light and finds the benches half empty. Both faiths keep their doors open, and the record shows no quarrel between them."
         ],
         "weight": { "base": 1 }
       },
@@ -61,7 +61,7 @@
         "id": "faith-reaches-city-state-report",
         "headline": "Our faith takes root in {{cityState}}",
         "body": [
-          "Most people in {{city}} now keep {{religion}}, the faith this nation founded. Travelers found the shrine there using our prayers, with a local family teaching the words to neighbors. The city lies beyond our neighbors."
+          "Most people in {{city}}, a town of {{cityState}}, now keep {{religion}}, the faith {{terms.civilization}} founded. The keeper there writes that the shrine has added our prayers to its morning reading and has room for both customs. {{city}} lies beyond our nearest neighbors, so the news reached us the slow way the prayers did."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -75,7 +75,7 @@
         "genre": "report",
         "headline": "Dispatch from {{cityState}}: our faith finds new followers",
         "body": [
-          "Letters from {{city}} tell us that {{religion}}, the creed this nation founded, now has a majority there. Vendors of both customs kept their market stalls open through the change. One priest lent a bench to the other congregation when its shrine ran out of seats."
+          "Letters from {{city}} relate that {{religion}} now holds the majority there, and it is the faith {{terms.civilization}} founded. The candle seller in the market keeps two sizes on his shelf, one for each feast, and says both sell out. The two congregations still draw water at the same well, and that is the news we like best."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -134,8 +134,7 @@
         "genre": "analysis",
         "headline": "Our creed gains a distant majority",
         "body": [
-          "{{cityName}} now gives {{religion}} a majority in {{civilization}}, a foothold inside another power's lands at {{distance}} from our nearest city. That is farther than the towns we call neighbors, and no soldier of ours set foot there to win it.",
-          "The gain was made by preachers and neighbors, not by treaties. A shrine that teaches our prayers can shape how a town sees us for a generation, long after the last sermon. The harder question is whether the goodwill of those worshippers can survive their ruler's suspicion."
+          "{{cityName}} has given {{religion}} a majority inside {{civilization}}, which puts our faith on firm ground {{distance}} from our nearest city. That is farther than any town we call a neighbor, and preachers won the ground with a hymn book. Our {{terms.civic.government}} should count those worshippers as a road into {{civilization}} and keep that road watched, because their ruler will not forget that our prayers got there first."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -221,7 +220,7 @@
         "genre": "analysis",
         "headline": "Will pilgrims from {{civilization}} visit our shrines?",
         "body": [
-          "The news from {{civilization}} is worth a second reading: {{religion}} now leads in most of its cities, and our shrines have become the oldest houses of a faith shared across a border. Pilgrims will come looking for the rooms where the first prayers were said, and they will judge the road, the inn and the welcome before they judge the doctrine. Our councils should decide now whether they mean to be good hosts."
+          "{{religion}} now leads in most of the cities of {{civilization}}, and that makes our own shrines the oldest houses of a faith we founded. Pilgrims will come looking for the room where the first prayers were said, and they will judge our roads and our welcome before they judge our doctrine. Our {{terms.civic.government}} would do well to decide now, while the news is still good, whether it means to be a generous host."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -333,7 +332,7 @@
         "when": "founded === null || religion !== founded",
         "headline": "A new majority, an old day of rest",
         "body": [
-          "The new majority for {{religion}} will be felt first in the weekly calendar, not in the temple. Shops that have closed on the same day for generations now face arguments about which day is holy, and those arguments will be settled at the counter by people who know their customers. A nation can share a government and still disagree about when to rest, and that disagreement is usually the more honest one."
+          "{{religion}} has become the majority faith across our cities, and people will feel it first on the weekly day of rest. Shops that have shut on the same day for generations now hear arguments about which day is holy, and those arguments get settled at the counter by people who know their customers. Our {{terms.civic.government}} can write one rule for the calendar, and {{terms.civic.people}} will keep the old day at home anyway."
         ],
         "weight": { "base": 1 }
       }
@@ -499,7 +498,7 @@
         "id": "own-cities-divided-by-faith-report",
         "headline": "Our cities keep more than one faith",
         "body": [
-          "{{faithful}} of our cities keep {{founded}}, the faith this nation founded, while {{divided}} follow other creeds: {{others}}. In one river town, the two congregations share a well and a ladder, and the keeper of the old shrine has learned the newer prayers well enough to lend a hand. The arrangement holds because nobody has asked the law to settle it."
+          "{{faithful}} of our cities keep {{founded}}, which {{terms.civilization}} founded, and {{divided}} more cities follow other creeds: {{others}}. In one river town, the two congregations share a well and a ladder, and the keeper of the older shrine has learned enough of the newer prayers to lend a hand. The arrangement holds because nobody has asked the law to settle it."
         ],
         "weight": { "base": 1 }
       },
@@ -510,8 +509,8 @@
         "genre": "editorial",
         "headline": "A founded faith, unevenly kept",
         "body": [
-          "A nation that founded a faith should be able to say how many of its own cities still keep it. The count is {{faithful}} for {{founded}} and {{divided}} for other creeds, and that second figure is the one the ministry should answer for.",
-          "The ministry has published no account of what it spends on shrines or where those shrines stand. Until it does, every town that changed its prayers is a bill the public cannot read."
+          "{{terms.civilization}} founded {{founded}}, and only {{faithful}} of our cities still keep it. The other {{divided}} cities follow {{others}}.",
+          "A faith born on this soil and carried around the world deserves better than to thin out where it was born. Before the next count, our {{terms.civic.government}} should say what it intends for {{founded}} and for the towns that still keep it."
         ],
         "weight": { "base": 1 }
       },
@@ -523,8 +522,8 @@
         "headline": "Madam, on the counting of divided cities",
         "byline": "A Keeper of a Small Shrine",
         "body": [
-          "Madam, your paper counts the cities that keep other creeds as though each number were a debt against the nation. My shrine stands at the end of a lane where half the doors now open to a different prayer, and the lane has not fallen into ruin.",
-          "Print this too: {{founded}} is kept by people who choose it, not by a column in a ledger, and the neighbors still knock on my door when the hour is late."
+          "Madam, your paper counts {{divided}} cities that keep {{others}} as though each number were a debt owed by the rest of us. My lane has half its doors open to a different prayer now, and we still share one well.",
+          "Print this too: {{founded}} stands in my lane because the neighbors chose it, and they knock at my door when the hour is late."
         ],
         "weight": { "base": 1 }
       },
@@ -570,7 +569,7 @@
         "when": "ours === true",
         "headline": "Good news, people of {{city}}",
         "body": [
-          "People of {{city}}, hear the good news! {{religion}}, the faith our nation founded, now leads in your own streets. Bring a neighbor to the shrine this feast day and let the whole town see how many doors have opened!"
+          "Neighbors of {{city}}, {{religion}} now leads in your streets, and {{terms.civilization}} founded it. The shrine door that stood half shut now stands open, and the keeper has stopped counting who comes. Bring a neighbor this feast day and let the road see the crowd!"
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -585,8 +584,8 @@
         "when": "ours === false",
         "headline": "A creed not of our founding leads in {{city}}",
         "body": [
-          "{{religion}}, a creed this nation did not found, now holds the majority in {{city}}. The conversions of recent months went its way, and the new congregation has begun to ring a bell at hours the old one never used.",
-          "The shrine by the east gate still opens on the old feast, but the keeper has stopped counting families aloud. Last week he lent the front benches to a carter's family for a wedding, and the old hall was full for an afternoon."
+          "{{religion}}, a faith our own people did not found, now holds the majority in {{city}}. The conversions of recent months went its way, and its congregation rings a bell at hours this town has never used.",
+          "The shrine by the east gate still opens on the old feast day. Its keeper lent the front benches to a carter's family for a wedding last week, and the old hall was full for an afternoon."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -632,7 +631,7 @@
         "when": "ours === true",
         "headline": "They say the first altars are ours",
         "body": [
-          "They say the smoke from our first altar could be seen from the next valley. Our people raised a pantheon this season, and the elders spoke the names of the old powers in a voice that carried to the back of the crowd. The children will learn those names now, and that is worth more than a good harvest."
+          "They say {{civilization}} has raised a pantheon, and the smoke from our first altar could be seen from the next valley. Our elders spoke the names of the old powers out loud, in a voice that reached the back of the crowd. The children will learn those names now, and that is worth more to us than a good harvest."
         ],
         "weight": { "base": 1 }
       },
@@ -673,7 +672,7 @@
         "id": "religion-founded-report",
         "headline": "This nation has founded {{religion}}",
         "body": [
-          "This nation has founded {{religion}}, and the first prayers were said in a borrowed room with the door left open for anyone who came. By the third evening, the keeper had run out of seats and the neighbors were bringing their own. A faith born in one town has already begun to ask where it will stand next."
+          "{{terms.civilization}} has founded {{religion}}, and the first prayers were said in a borrowed room with the door left open for anyone who came. By the third evening the keeper had run out of seats, and neighbors brought their own stools from home. A faith that began in one town has started to ask where it will stand next."
         ],
         "weight": { "base": 1 }
       },
@@ -695,8 +694,8 @@
         "genre": "analysis",
         "headline": "What a founded faith carries with it",
         "body": [
-          "The founding of {{religion}} gives this nation a voice that carries past its borders, and it cost nothing but belief. Our own citizens are its first teachers, and our own streets heard its first prayers.",
-          "On a road where strangers may be enemies, that is worth something. A trader who shares our prayers will open his door before he asks for papers, and a town that sings our hymns will remember our name when our envoy arrives. The faith is a road, and it runs both ways."
+          "{{terms.civilization}} founded {{religion}} at no cost beyond belief, and the faith now travels on its own.",
+          "A trader who shares our prayers will open his door before he asks for papers, and a town that sings our hymns will remember our name when our envoy arrives. Every household abroad that keeps {{religion}} is a voice speaking for us in a foreign town."
         ],
         "weight": { "base": 1 }
       },

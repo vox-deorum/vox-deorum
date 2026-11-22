@@ -32,7 +32,7 @@
         "when": "ours === true",
         "headline": "Hear it! Our name is on the agenda",
         "body": [
-          "Hear it, {{terms.civic.people}}! Our name is on a paper before the Congress, and the clerks have read it aloud. Find a delegate in the square and make him tell you what we have asked of the world. Every capital will hear of it before the week is out!"
+          "Hear it, {{terms.civic.people}}! Our motion on {{proposal}} stands before the Congress, and the clerks have read it aloud! Find a delegate in the square and make him tell you what we have asked of the world. Every capital will hear of it before the week is out!"
         ],
         "weight": { "base": 1 }
       },
@@ -55,7 +55,7 @@
         "when": "count > 1",
         "headline": "The Congress docket grows",
         "body": [
-          "New on the Congress docket: {{count}}.",
+          "New proposals on the Congress docket: {{count}}.",
           "First in line: {{proposal}}."
         ],
         "weight": { "base": 1 }
@@ -96,7 +96,7 @@
         "when": "isEnact === false",
         "headline": "The Congress keeps {{resolution}} in force",
         "body": [
-          "The repeal has failed, and the old law stands. Its opponents had spent weeks counting votes and came up short when the clerk reached the end of the roll. They will need a new session and better arithmetic before they try again."
+          "The vote to repeal {{resolution}} has failed in the Congress, and the old law stands. Its opponents spent weeks counting votes and came up short when the clerk reached the end of the roll. They will need a new session and better arithmetic before they try again."
         ],
         "weight": { "base": 1 }
       },
@@ -108,7 +108,7 @@
         "when": "ours === true",
         "headline": "The chamber turns away our proposal on {{resolution}}",
         "body": [
-          "We sent a proposal to the Congress, and the chamber sent it back in pieces. The count was a lesson in how few friends we have in that hall. The {{terms.civic.government}} should write down the names of those who stood with us, and send word to the others before the next sitting."
+          "We took {{resolution}} to the Congress, and the chamber sent it back in pieces. Citizens, that count was a lesson in how few friends we have in that hall. The {{terms.civic.government}} should write down the names of those who stood with us, and send word to the others before the next sitting."
         ],
         "weight": { "base": 1 }
       }
@@ -161,7 +161,7 @@
         "when": "ours === true",
         "headline": "Hear it! Our motion on {{resolution}} has passed",
         "body": [
-          "Our paper carried the day! The Congress has voted it through, and the count fell on our side! Take the news to the gate and the market, and let every town hear what our delegates have won!"
+          "Hear it, {{terms.civic.people}}! Our motion on {{resolution}} has carried the Congress, and the count fell on our side! Take the news to the gate and the market, and let every town hear what our delegates have won!"
         ],
         "weight": { "base": 1 }
       }
@@ -200,7 +200,7 @@
         "genre": "editorial",
         "headline": "Tell merchants what the sanction stops",
         "body": [
-          "The Congress has voted us into disgrace, and the wharves will know the price before the counting houses do. A skipper with a hold full of goods needs a straight answer about which ports will still take him, and he needs it before he weighs anchor. Our {{terms.civic.government}} should nail the terms to the customs house door where every hand can read them."
+          "The Congress has voted {{resolution}} against us, and the wharves will know the price before the counting houses do. A skipper with a hold full of goods needs a straight answer about which ports will still take him, and he needs it before he weighs anchor. Our {{terms.civic.government}} should nail the terms to the customs house door where every hand can read them."
         ],
         "weight": { "base": 1 }
       },
@@ -211,7 +211,7 @@
         "genre": "analysis",
         "headline": "The sanction, and the silence around it",
         "body": [
-          "{{resolution}} is law now, and it follows our envoys into every foreign room. They sit down already marked, and both sides know what that costs. No ministry has offered a route out. No one has named a price the treasury would accept. If the ministry had a plan, we would have heard it by now."
+          "{{resolution}} is law now, and it follows our envoys into every foreign room. They sit down already marked, and both sides know what that costs. Our {{terms.civic.government}} has offered no route out and named no price it would pay to have the mark lifted. If there were a plan, we would have heard of it by now."
         ],
         "weight": { "base": 1 }
       }
@@ -238,7 +238,7 @@
         "when": "turnsUntil < 2",
         "headline": "The World Congress sits at any moment",
         "body": [
-          "Any moment now, the gavel will fall. The agenda is already on the table, the galleries are full, and half the world is holding its breath. The first name called will settle more than the room expects."
+          "Any moment now, the Congress opens and the gavel will fall. The agenda is already on the table, the galleries are full, and half the world is holding its breath. The first name called will settle more than the room expects."
         ],
         "weight": { "base": 1 }
       },
@@ -344,7 +344,7 @@
         "id": "congress-votes-changed-report",
         "headline": "Our votes in the Congress change",
         "body": [
-          "Our delegation now holds {{votes|vote|votes}} in the Congress, where {{previous}} stood at the last tally. The change has been entered in the delegation's book, in a hand that pressed harder than usual. The old figure is crossed out but still legible, which is how the clerk prefers it."
+          "Our delegation now holds {{votes|vote|votes}} in the Congress, against {{previous|vote|votes}} at the last tally. The change has been entered in the delegation's book, in a hand that pressed harder than usual. The old figure is crossed out but still legible, which is how the clerk prefers it."
         ],
         "weight": { "base": 1 }
       },
@@ -356,7 +356,7 @@
         "when": "change > 0",
         "headline": "Our voice in the Congress grows",
         "body": [
-          "Our tally in the Congress has risen to {{votes|vote|votes}} from {{previous}}. Delegations that walked past us last season will find a reason to call this week. In that hall, a delegate counts heads before he counts principles."
+          "Our tally in the Congress has risen to {{votes|vote|votes}} from {{previous|vote|votes}}. Delegations that walked past us last season will find a reason to call this week. In that hall, a delegate counts heads before he counts principles."
         ],
         "weight": { "base": 1 }
       },
@@ -368,7 +368,7 @@
         "when": "change < 0",
         "headline": "Our voice in the Congress shrinks",
         "body": [
-          "Our strength in the Congress has fallen from {{previous|vote|votes}} to {{votes|vote|votes}}. A short list of delegations explains the gap, and the foreign ministry knows the names. The minister should read them out and say what he means to offer before the next ballot."
+          "Our strength in the Congress has fallen from {{previous|vote|votes}} to {{votes|vote|votes}}. A short list of delegations explains the gap, and our delegates in that hall can put a name to every vote we lost. {{terms.civic.leaderAddress}}, read that list to the nation and say what we mean to offer before the next ballot."
         ],
         "weight": { "base": 1 }
       }
@@ -422,7 +422,7 @@
         "headline": "The Congress vote is live",
         "body": [
           "Voting is live at the Congress.",
-          "{{count|proposal|proposals}} on the ballot. None of them are yours, but all of them are binding."
+          "{{count|proposal|proposals}} on the ballot. All of them bind you, whichever way the count falls."
         ],
         "weight": { "base": 1 }
       }
@@ -594,7 +594,7 @@
         "id": "sanction-proposed-report",
         "headline": "A sanctions proposal reaches the Congress",
         "body": [
-          "A motion now sits before the Congress to bar one nation from ordinary trade. Its name is {{resolution}}, and every foreign office has already written for a copy of the text. Merchants in the ports are asking the same question: whose ships will be turned away first?"
+          "The Congress has taken up {{resolution}}, a motion to shut one nation out of ordinary trade. Every delegation in the chamber has asked the clerks for a copy of the text. Down at the port, merchants are asking a harder question: whose ships will be turned away first?"
         ],
         "weight": { "base": 1 }
       },

@@ -183,7 +183,7 @@
         "genre": "editorial",
         "headline": "The old rule was a full store",
         "body": [
-          "Our grandparents kept a full granary and slept through the winter. This treasury holds {{gold}} gold, sends {{deficit}} gold out the door every season, and can answer for {{turnsLeft}} more. Councilors, lay the pay rolls and the grain bills on the table before you vote a single further expense, so the trades that fill this city know what work they may take."
+          "Our grandparents kept a full granary and slept through the winter. This treasury holds {{gold}} gold, sends {{deficit}} gold out the door every season, and can answer for {{turnsLeft}} more. {{terms.civic.leaderAddress}}, lay the pay rolls and the grain bills on the table before you approve a single further expense, so the trades that fill this city know what work they may take."
         ],
         "weight": { "base": 1 }
       }

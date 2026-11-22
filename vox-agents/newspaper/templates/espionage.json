@@ -56,7 +56,7 @@
         "when": "influence !== null",
         "headline": "One number from {{cityState}}'s murky business",
         "body": [
-          "Strip away the speeches and one figure remains: our standing in {{cityState}} shifted by {{influence}}. Agents will quarrel over which favors were bought and which promises were merely spoken. The ledger records only the difference the count produced, and every future proposal will be measured against it."
+          "One number out of {{cityState}} is worth more than all the speeches: our standing there shifted by {{influence|point|points}}. Agents will go on arguing which favors were bought and which promises were merely made. The figure stands in the ledger, and every request we make in that town will be measured against it."
         ],
         "weight": { "base": 1 }
       }
@@ -132,7 +132,7 @@
         "when": "result === 'Killed'",
         "headline": "A foreign spy is killed in our streets",
         "body": [
-          "Agents of a foreign power lost one of their own inside our borders this week, and he was buried before the sun rose. Our {{terms.civic.government}} has traced him to the service that employed him, though his people at home will hear only of a death abroad. The watch keeps the rest of the matter sealed."
+          "Our watch killed a foreign spy inside our borders this week, and he was buried before the sun rose. Our {{terms.civic.government}} has traced him to the service that employed him, though his people at home will hear only of a death abroad. The watch keeps the rest of the matter sealed."
         ],
         "weight": { "base": 1 }
       },
@@ -347,7 +347,7 @@
         "id": "spy-may-gain-technology-report",
         "headline": "Our spy may have gained {{possibleTechnology}}",
         "body": [
-          "The job abroad is done, and no alarm was raised. Early word from the service says {{possibleTechnology}} may have come home with our agent. Should the reports prove true, the workshops will show the difference before the season changes."
+          "Our spy finished his work abroad and slipped out without raising an alarm. Early word from the service says {{possibleTechnology}} may have come home with him. Should the reports prove true, our workshops will show the difference before the season changes."
         ],
         "weight": { "base": 1 }
       },

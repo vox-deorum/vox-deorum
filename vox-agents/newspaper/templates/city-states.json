@@ -415,7 +415,7 @@
         "genre": "report",
         "headline": "The missing date on {{cityState}}'s board",
         "body": [
-          "The errand that {{cityState}} had posted for day {{previousDeadline}} has been struck from its board, though the day itself is still to come. A workman who had saved his good boots for the trip now says he will wear the old pair until someone tells him the job is real. The board offers no explanation, only a blank space where a date used to be."
+          "{{cityState}} has struck an errand from its board before day {{previousDeadline}}, and that day is still to come. A workman who had saved his good boots for the trip now says he will wear the old pair until someone tells him the job is real. The board offers no explanation, only a blank space where a date used to be."
         ],
         "links": [
           { "placeholder": "cityState", "label": "{{cityState}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }

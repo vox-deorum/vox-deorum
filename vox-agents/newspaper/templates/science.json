@@ -146,7 +146,7 @@
         "id": "new-era-report",
         "headline": "Our nation enters the {{era}}",
         "body": [
-          "Our nation is in the {{era}} now, and the change shows first in small rooms rather than great halls. At the land office, a clerk has been copying the same map for years, and this week he was told the old sheet will no longer do. He has not thrown it away."
+          "{{terms.civilization}} is in the {{era}} now, and the change shows first in small rooms rather than great halls. At the land office, a clerk has been copying the same map for years, and this week he was told the old sheet will no longer do. He has not thrown it away."
         ],
         "weight": { "base": 1 }
       },
@@ -168,7 +168,7 @@
         "genre": "report",
         "headline": "The {{era}} begins tonight",
         "body": [
-          "Tonight the country is in the {{era}}. In workshops and kitchens, people are trying out words that were strange last month. A girl in the capital asked her father what he would make first, and he said he did not know yet. The whole age is waiting for his answer."
+          "Tonight {{terms.civilization}} is in the {{era}}. In workshops and kitchens, people are trying out words that were strange last month. A girl in the capital asks her father what he will make first. He says he does not know yet, and the whole age is waiting for his answer."
         ],
         "weight": { "base": 1 }
       },
@@ -179,7 +179,7 @@
         "genre": "report",
         "headline": "The record of our passage into the {{era}}",
         "body": [
-          "In this year the nation entered the {{era}}, and the bells were rung at every shrine before the proclamation was read. The keeper of the chief shrine gave thanks for the scholars who labored unseen and asked the congregation to remember them in prayer. The scribes set down the date twice, so that no later hand might shorten it."
+          "In this year {{terms.civilization}} entered the {{era}}, and the bells were rung at every shrine before the proclamation was read. The keeper of the chief shrine gave thanks for our scholars who labored unseen and asked the congregation to remember them in prayer. The scribes set down the date twice, so that no later hand might shorten it."
         ],
         "weight": { "base": 1 }
       },
@@ -208,7 +208,7 @@
         "id": "our-team-gains-technology-report",
         "headline": "The scholars finish {{tech}}",
         "body": [
-          "The scholars have finished {{tech}}, and the {{terms.civic.government}} had the first written account on its table before noon. A second copy went to the printer, and a third has gone missing between the lecture hall and the archive. The archivist has pinned a note to the door, though she has not named the borrower."
+          "Our scholars have finished {{tech}}, and the {{terms.civic.government}} had the first written account on its table before noon. A second copy went to the printer, and a third has gone missing between the lecture hall and the archive. The archivist has pinned a note to the door, though she has not named the borrower."
         ],
         "weight": { "base": 1 }
       },
@@ -335,7 +335,7 @@
         "id": "technology-leader-changes-report",
         "headline": "First in learning: {{civilization}}",
         "body": [
-          "{{civilization}} now stands first in learning, with {{count|known technology|known technologies}} to its name. A bookseller here has cleared a shelf for the leading country's newest journals and put a card in the window before a single volume arrived. First place is a loan, not a gift, and the shelf remembers who earned it."
+          "{{civilization}} now stands first in learning, with {{count|known technology|known technologies}} to its name. A bookseller here has cleared a shelf for the leading country's newest journals and put a card in the window before a single volume arrived. First place is a loan, and the shelf remembers who earned it."
         ],
         "weight": { "base": 1 }
       },
@@ -374,7 +374,7 @@
         "genre": "analysis",
         "headline": "Two ways to count learning",
         "body": [
-          "The nation at the top of the tally can claim {{count|art or science|arts and sciences}}, but a count of works says little about a school. Walk into one old academy and you will find the lecture hall crowded for a subject the tally barely notices, while the room for a celebrated art stands empty. A rival further down may be filling more benches in the arts we share, and the ledger will never show it."
+          "{{civilization}} stands at the top of the tally with {{count|art or science|arts and sciences}}, though a count of works says little about a school. In the record of one old academy, the lecture hall runs crowded for a subject the tally barely notices, while the room for a celebrated art stands empty. A rival further down may be filling more benches in the arts we share, and the ledger will never show it."
         ],
         "weight": { "base": 1 }
       }
