@@ -384,11 +384,12 @@ describe('editorial catalogue files', () => {
     const saved = JSON.parse(JSON.stringify(config));
     const restored = await parseEditorialConfig(saved);
     const prepared = await getEditorialExpressions(config);
+    const recompiled = await getEditorialExpressions(restored);
 
     expect(await getEditorialExpressions(config)).toBe(prepared);
-    expect(await getEditorialExpressions(restored)).not.toBe(prepared);
+    expect(recompiled).not.toBe(prepared);
     expect(saved).toEqual(config);
-    expect(prepared.slots.get('neighbor-puppet-annexed')?.when).toHaveLength(4);
+    expect(recompiled.slots.get('neighbor-puppet-annexed')).toEqual(prepared.slots.get('neighbor-puppet-annexed'));
   });
 
   it('should reject invalid trigger expressions in overlays and saved snapshots during loading', async () => {

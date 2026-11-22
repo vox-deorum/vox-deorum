@@ -113,6 +113,8 @@ Name: "{app}\node"
 Type: filesandordirs; Name: "{app}\node_modules"
 ; Delete civ5-dll directory on reinstall to ensure clean installation
 Type: filesandordirs; Name: "{app}\civ5-dll"
+; Remove the retired stock template left by older installs so its IDs do not duplicate the replacement templates.
+Type: files; Name: "{app}\vox-agents\newspaper\templates\cities.json"
 
 [Icons]
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\scripts\vox-deorum.cmd"; IconFilename: "{app}\scripts\install\vox-deorum.ico"

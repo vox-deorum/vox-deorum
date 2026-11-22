@@ -90,6 +90,10 @@
       "conquered": "city.isOccupied || city.isPuppet",
       "followsAnotherReligion": "city.own && city.knows('majorityReligion') && typeof city.majorityReligion === 'string' && city.majorityReligion.length > 0 && city.majorityReligion !== self.foundedReligion"
     },
+    "event": {
+      "forwardSettle": "event.knows('player') && event.player.is.rival && event.player.knows('name') && event.knows('city') && event.city.knows('name') && event.city.knows('nearestOwn') && event.city.nearestOwn.knows('name') && event.knows('distance') && event.distance.knows('own') && event.distance.own <= adjacent",
+      "preferredFounding": "event.type === 'PlayerCityFounded' || !event.knows('plot') || !events.some(e => e.type === 'PlayerCityFounded' && e.turn === event.turn && e.knows('player') && e.player.knows('id') && e.player.id === event.player.id && e.knows('plot') && e.plot.x === event.plot.x && e.plot.y === event.plot.y && e.knows('city') && e.city.knows('name'))"
+    },
     "player": {
       "neighbor": "!player.self && player.distance <= neighboring",
       "nearby": "!player.self && player.distance <= nearby",

@@ -1,0 +1,336 @@
+[
+  {
+    "id": "distant-colony-founded-account",
+    "triggers": ["distant-colony-founded"],
+    "tags": ["cities", "domestic"],
+    "names": ["cityName"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "distant-colony-founded-report",
+        "headline": "A new colony {{distance}} from the capital",
+        "body": [
+          "The flag went up at {{cityName}} this week, {{distance}} from the capital and a long road from any help. The settlers spent their first night around a single fire, dividing the ground by rope and argument. The town will remember that first fire longer than it remembers us."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "distant-colony-founded-analysis",
+        "voice": "press",
+        "stance": "ambitious",
+        "genre": "analysis",
+        "headline": "{{cityName}} is a long way from home",
+        "body": [
+          "{{cityName}} is {{distance}} from the capital, and that distance is now the town's chief fact. Grain, orders and soldiers will all come the same long way, and all will arrive late. A road will follow the settlers in time, and the road will bring the next town with it."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "distant-colony-founded-report-pamphlet",
+        "voice": "pamphlet",
+        "stance": "local",
+        "genre": "report",
+        "headline": "A new town, {{distance}} out",
+        "body": [
+          "They have founded a town called {{cityName}}, {{distance}} out from home, and nobody asked the rest of us whether we wished to pay for it. The settlers are brave, or desperate, or both. This paper wishes them well and will be watching the accounts."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "distant-colony-founded-notice",
+        "voice": "gazette",
+        "stance": "neutral",
+        "genre": "notice",
+        "headline": "A colony at {{cityName}}",
+        "body": [
+          "Advice reaches this office of {{cityName}}, founded {{distance}} from the capital and now open to trade. The settlement has a cleared site, a few shelters and little else as yet. Traders bound that way should ask the market office for the route and the return load."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "forward-settle-account",
+    "triggers": ["forward-settle"],
+    "tags": ["cities", "international"],
+    "names": ["city", "ours", "player"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "forward-settle-named",
+        "headline": "A new town on the doorstep of {{ours}}",
+        "body": [
+          "A new town called {{city}} now stands {{distance}} from {{ours}}, and {{player}} put it there. From the far field, our farmers can see its roofs and its smoke. The ground between the two towns is the first thing they will argue about."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "forward-settle-analysis",
+        "voice": "press",
+        "stance": "hawkish",
+        "genre": "analysis",
+        "headline": "{{player}} plants a town near {{ours}}",
+        "body": [
+          "{{player}} has placed {{city}} {{distance}} from {{ours}}, and the site was chosen with care. A settlement that close can watch our road, shelter their patrols and crowd our fields without a single soldier in sight. The answer to a post is another post, and ours has not been built."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "forward-settle-editorial",
+        "voice": "pamphlet",
+        "stance": "local",
+        "genre": "editorial",
+        "headline": "{{city}} rises beside {{ours}}",
+        "body": [
+          "There is a new town called {{city}} {{distance}} from {{ours}}, and no one has told the farmers where their fields end. {{player}} drew the line on a map in some far room. Send surveyors before the harvest, or the first argument over a furrow will be settled with a scythe."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "forward-settle-gazette",
+        "voice": "gazette",
+        "stance": "conciliatory",
+        "genre": "report",
+        "headline": "New neighbors at {{city}}",
+        "body": [
+          "We are informed that {{player}} has founded {{city}}, a town {{distance}} from {{ours}} and close enough for a morning's ride. Such neighbors try the patience, but they also bring a market where our merchants may sell. It is cheaper to trade across a border than to guard it."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "our-city-founded-account",
+    "triggers": ["our-city-founded"],
+    "tags": ["cities", "domestic"],
+    "names": ["cityName"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "our-city-founded-report",
+        "headline": "A new city: {{cityName}}",
+        "body": [
+          "The stakes went in at dawn, and by dusk {{cityName}} had a fire, a roped-off square and a name on the gate. Our settlers raised it under our flag. What comes next is the old list: houses, fields and walls."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "our-city-founded-crier",
+        "voice": "crier",
+        "stance": "national",
+        "genre": "notice",
+        "headline": "Hear it! {{cityName}} is founded",
+        "body": [
+          "Word for every street and every stall: {{cityName}} is founded! Our settlers raised the flag at dawn, and there is a new city under it! {{terms.civic.people}}, say the name and say it again: {{cityName}}!"
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "our-city-founded-analysis",
+        "voice": "press",
+        "stance": "ambitious",
+        "genre": "analysis",
+        "headline": "{{cityName}} begins its story",
+        "body": [
+          "Every city begins as a promise that someone has to keep. {{cityName}} has the site, the settlers and the flag, and nothing else that a hard winter respects. Seed and tools sent this season will decide whether the town is a city in ten years."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "our-city-founded-notice",
+        "voice": "gazette",
+        "stance": "pro-government",
+        "genre": "notice",
+        "headline": "A new settlement at {{cityName}}",
+        "body": [
+          "It is with pleasure that we record the founding of {{cityName}} under the nation's flag. The {{terms.civic.government}} has pledged the town protection and a share of the next stores. Settlers bound for the site may register at the capital."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "our-city-founded-sign-painter",
+        "voice": "gazette",
+        "stance": "local",
+        "genre": "letter",
+        "headline": "Who pays for the sign in {{cityName}}?",
+        "byline": "A sign painter",
+        "body": [
+          "Madam, my son has gone out to {{cityName}} and wants a sign for its first shop. The town, he writes, already speaks of itself as the equal of any in the country. Before I paint, tell me who settles its accounts, so the bill goes to a desk that will pay it."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "settler-departure-account",
+    "triggers": ["settler-departure"],
+    "tags": ["cities", "domestic"],
+    "names": ["town"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "settler-departure-report",
+        "when": "!city.knows('happinessDelta') || !(city.happinessDelta < 0 || city.happinessDelta > 0)",
+        "headline": "Settlers ready as {{town}} grows smaller",
+        "body": [
+          "The carts are loaded at the edge of {{town}} and the count is down. A settler party is ready to go, and the neighbors are already dividing the work the leavers will not do. Nobody has said aloud which families will be missed most."
+        ],
+        "links": [
+          { "placeholder": "town", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "settler-departure-strained",
+        "voice": "press",
+        "stance": "government-critical",
+        "genre": "report",
+        "when": "city.knows('happinessDelta') && city.happinessDelta < 0",
+        "headline": "Settlers ready, spirits low in {{town}}",
+        "body": [
+          "{{town}} is smaller this week, and its temper is worse. The settler party took families out through the gate, and those who stayed find the streets no easier for the empty rooms. The council has offered no explanation."
+        ],
+        "links": [
+          { "placeholder": "town", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "settler-departure-hopeful",
+        "voice": "press",
+        "stance": "pro-government",
+        "genre": "report",
+        "when": "city.knows('happinessDelta') && city.happinessDelta > 0",
+        "headline": "Good cheer in {{town}} as settlers prepare to go",
+        "body": [
+          "The settler carts left {{town}} this week, and the town is in good cheer. Tables are less crowded, the lanes are quieter, and the council points to the mood as proof the plan worked. It may even be true."
+        ],
+        "links": [
+          { "placeholder": "town", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "settler-departure-anecdote",
+        "voice": "tabloid",
+        "stance": "populist",
+        "genre": "anecdote",
+        "headline": "One more thing to pack in {{town}}",
+        "body": [
+          "The carts on the east lane of {{town}} stand loaded past the axles, and the count is down by {{lost}}. A woman at the last door is giving away the pots she cannot carry and keeping one lid. Her neighbor, who has taken the hens, asks only that she take the rooster with her."
+        ],
+        "links": [
+          { "placeholder": "town", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "foreign-city-founded-account",
+    "triggers": ["foreign-city-founded"],
+    "tags": ["cities", "international"],
+    "names": ["city", "owner"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "foreign-city-founded-report",
+        "headline": "{{owner}} founds {{city}}",
+        "body": [
+          "A new town called {{city}} now stands under {{owner}}'s flag. The first shelters are up, and a market square has been marked out with rope. Our maps will need a new line on that side of the border."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-city-founded-dispatch",
+        "voice": "gazette",
+        "stance": "neutral",
+        "genre": "report",
+        "headline": "From beyond the border: {{city}} is founded",
+        "body": [
+          "Word reaches this office that {{owner}} has founded {{city}}, {{distance}} from our nearest city. The town has a name, a flag and little else as yet. A new neighbor that close is worth watching, if only to see what it draws away from our trade."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "foreign-city-raises-settlers-account",
+    "triggers": ["foreign-city-raises-settlers"],
+    "tags": ["cities", "international"],
+    "names": ["city", "owner"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "foreign-city-raises-settlers-report",
+        "headline": "{{city}} raises a settler party",
+        "body": [
+          "{{owner}} has raised a settler party at {{city}}. The wagons are loaded, and the town's count is already smaller by the people in the party. A neighbor that can spare that many is a neighbor worth watching."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-city-raises-settlers-analysis",
+        "voice": "press",
+        "stance": "hawkish",
+        "genre": "analysis",
+        "headline": "A settler party is raised at {{city}}",
+        "body": [
+          "A settler party has been raised at {{city}}, and {{owner}} did not gather it for nothing. A town that can spare that many people is a town with plans for more ground. The treasury's next move is the one to watch."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  }
+]

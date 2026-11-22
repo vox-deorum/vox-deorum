@@ -326,11 +326,10 @@
   {
     "id": "forward-settle",
     "subject": "event",
-    "event": "PlayerCityFounded",
+    "event": ["PlayerCityFounded", "UnitCityFounded"],
     "when": [
-      "event.knows('player') && event.player.is.rival && event.player.knows('name')",
-      "event.knows('city') && event.city.knows('name') && event.city.knows('nearestOwn') && event.city.nearestOwn.knows('name')",
-      "event.distance.own <= adjacent"
+      "event.is.forwardSettle",
+      "event.is.preferredFounding"
     ],
     "values": {
       "ours": "event.city.nearestOwn.name",

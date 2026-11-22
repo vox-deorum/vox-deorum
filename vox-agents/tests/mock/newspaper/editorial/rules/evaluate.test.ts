@@ -50,7 +50,8 @@ function facts({ cities = [], history = cities, events = [], turn = 20, previous
       events, gaps: [] },
   };
   return buildNewspaperFacts(evidence, { mapWidth: 64, mapHeight: 32, mapWrapX: true,
-    playerIdentities: { 0: { major: true }, 1: { major: true }, 2: { major: false } } });
+    playerIdentities: { 0: { name: 'Home', major: true }, 1: { name: 'Portland', major: true },
+      2: { name: 'Rival', major: false } } });
 }
 
 /** Compile once and share the prepared catalogue between checks. */
@@ -89,7 +90,7 @@ describe('newspaper trigger rules', () => {
     });
 
     it.each([
-      ['false', 3, undefined, undefined], ['hidden', 1, 'city.before', 'city.foodPerTurn'],
+      ['false', 4, undefined, undefined], ['hidden', 2, 'city.before', 'city.foodPerTurn'],
     ] as const)('should stop each rule when a predicate is %s', async (status, portIndex, portHidden, homeHidden) => {
       const result = await runExamples(examples(status));
       expect(result.developments).toEqual([]);

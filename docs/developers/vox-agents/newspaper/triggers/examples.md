@@ -27,14 +27,18 @@ Run a [fresh replay](../replay.md#iterate-on-a-rule-or-overlay) with the overlay
 
 ## Cities and borders
 
-Find the detailed expressions in the [city](../../../../../vox-agents/newspaper/triggers/cities.json), [religion](../../../../../vox-agents/newspaper/triggers/religion.json), [war](../../../../../vox-agents/newspaper/triggers/war.json) and [war fronts](../../../../../vox-agents/newspaper/triggers/war-fronts.json) rules.
+Find the detailed expressions in the [city](../../../../../vox-agents/newspaper/triggers/cities.json) and companion [foreign city](../../../../../vox-agents/newspaper/triggers/foreign-cities.json) rules. Related patterns sit in the [religion](../../../../../vox-agents/newspaper/triggers/religion.json), [war](../../../../../vox-agents/newspaper/triggers/war.json) and [war fronts](../../../../../vox-agents/newspaper/triggers/war-fronts.json) rules. The city templates live in five catalogues under `vox-agents/newspaper/templates`: [cities-construction.json](../../../../../vox-agents/newspaper/templates/cities-construction.json), [cities-settlement.json](../../../../../vox-agents/newspaper/templates/cities-settlement.json), [cities-civic.json](../../../../../vox-agents/newspaper/templates/cities-civic.json), [cities-ownership.json](../../../../../vox-agents/newspaper/templates/cities-ownership.json) and [cities-conflict.json](../../../../../vox-agents/newspaper/templates/cities-conflict.json).
 
 | Rule | What to borrow |
 | --- | --- |
 | `neighbor-puppet-annexed` | Compare two snapshots of a foreign city within `neighboring`. Require the same owner to distinguish annexation from capture. |
-| `forward-settle` | Use `PlayerCityFounded` to report a rival within `adjacent` distance. Require the rival and both city names, and mark the story urgent at two tiles or less. |
+| `forward-settle` | Use `PlayerCityFounded` or `UnitCityFounded`, and prefer `PlayerCityFounded` when both report the same settlement. The rule reserves rival settlements within `adjacent` of our nearest city, so `foreign-city-founded` leaves them alone. Urgency stays at two tiles or less. |
+| `foreign-city-founded` | Report any other eligible local founding within `nearby` (15 tiles). Require a readable city name and owner, and skip a `UnitCityFounded` duplicate of a `PlayerCityFounded` event. |
+| `foreign-building-investment-made` | Require the witnessed `CityInvestedBuilding` event for a nearby foreign city with a readable name. Name the building and owner, and suppress the report for a later completion or purchase with the same recorded building name in the reporting window. |
+| `foreign-city-growth-milestone`, `foreign-city-defense-completed` | Rate growth from population snapshots and defense from completed construction. Both are public observations; national rankings such as `capital-outgrown` stay domestic. |
 | `besieged-and-starving` | Combine the `besieged` and `starving` shortcuts for an own city. Half damage makes it urgent; default `rearm` waits for a check where the conditions are false. |
 | `neighbors-convert` | Group neighboring foreign cities by their new majority religion. Require three matches in the `recent` window and raise the score as the group grows. |
+| `foreign-city-hardship` | Runs at any distance when the observation carries the detail. Print the readable cause (`famine` or `pillaged`), or a food shortage built from readable `foodPerTurn` and `foodStored` figures. Leave out any cause or figure the snapshot does not carry. |
 
 ## National affairs
 

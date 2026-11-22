@@ -1,0 +1,438 @@
+[
+  {
+    "id": "city-capture-involving-us-account",
+    "triggers": ["city-capture-involving-us"],
+    "tags": ["cities", "military", "international"],
+    "names": ["captor", "cityName", "formerOwner"],
+    "weight": { "base": 1 },
+    "merge": {
+      "match": "member.templateIds.includes('city-capture-involving-us-account') && lead.event.knows('city') && member.event.knows('city') && lead.event.city.id === member.event.city.id",
+      "min": 1,
+      "values": {
+        "transfers": "(() => { const captures = [gained, ...merge.members.map(member => member.gained)]; const gains = captures.filter(Boolean).length; const losses = captures.length - gains; const times = n => n === 1 ? 'once' : n === 2 ? 'twice' : n + ' times'; return gains && losses ? 'We gained the city ' + times(gains) + ' and lost it ' + times(losses) + '.' : gains ? 'We gained the city ' + times(gains) + '.' : 'We lost the city ' + times(losses) + '.'; })()",
+        "holder": "event.city.own ? ' The latest report puts it under our flag.' : event.city.knows('owner') && event.city.owner.knows('name') ? ' At last report, it was held by ' + event.city.owner.name + '.' : ''"
+      },
+      "variants": [
+        {
+          "id": "city-capture-roundup",
+          "headline": "Flags change over {{cityName}}",
+          "body": ["This office has reported {{cityName}} changing hands more than once, and each report went to print as it arrived. {{merge.values.transfers}}{{merge.values.holder}} Folk there have learned to leave the gate unpainted until they are sure who holds it next."],
+          "links": [
+            { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          ],
+          "weight": { "base": 1 }
+        }
+      ]
+    },
+    "variants": [
+      {
+        "id": "city-capture-gained",
+        "when": "gained === true",
+        "headline": "{{cityName}} is ours",
+        "body": [
+          "Our soldiers took {{cityName}} from {{formerOwner}}, and our flag went up over the gate before the smoke cleared. The granaries, the walls and the people inside all passed to us with the city. The garrison that held it is gone, and the market has reopened."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-capture-lost",
+        "voice": "general",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "gained === false",
+        "headline": "{{cityName}} falls to {{captor}}",
+        "body": [
+          "{{captor}} has taken {{cityName}} from us. The garrison is broken, the gates stand open to their soldiers, and the oaths sworn there last season count for nothing. Runners carried the news out ahead of the closing roads."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-capture-gained-analysis",
+        "voice": "press",
+        "stance": "hawkish",
+        "genre": "analysis",
+        "when": "gained === true",
+        "headline": "What {{cityName}} adds",
+        "body": [
+          "{{cityName}}, taken from {{formerOwner}}, brings walls, wells and a stretch of high ground, and it brings a people who did not choose us. Holding it means manning the gate, feeding the streets and watching the old loyalties for a season or two. An army can take a city in a morning; keeping it is the campaign that follows."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-capture-lost-editorial",
+        "voice": "pamphlet",
+        "stance": "government-critical",
+        "genre": "editorial",
+        "when": "gained === false",
+        "headline": "Who is taking names for {{cityName}}?",
+        "body": [
+          "{{cityName}} has fallen to {{captor}}, and no one in authority has said who is to blame. On our street, a woman whose mother still lives there has asked the watch three times when the city will be ours again, and no one can give her a day. {{terms.civic.leaderAddress}}, say how you mean to take it back, or say that you will not."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "city-flips-account",
+    "triggers": ["city-flips"],
+    "tags": ["cities", "politics", "international"],
+    "names": ["cityName", "formerOwner", "newOwner"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "city-flips-report",
+        "headline": "{{cityName}} changes allegiance",
+        "body": [
+          "The flag over {{cityName}} came down in the night and another went up by morning. The city has turned from {{formerOwner}} to {{newOwner}} without a treaty or a siege. Clerks at the town hall are already cutting new seals and scraping the old ones off the forms."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-flips-analysis",
+        "voice": "press",
+        "stance": "neutral",
+        "genre": "analysis",
+        "headline": "Old orders under a new flag in {{cityName}}",
+        "body": [
+          "{{cityName}} turned from {{formerOwner}} to {{newOwner}} without a battle, and the people there had no more say in it than the weather. A town that wakes up in a new country is a harder thing to govern than a town taken by storm. Expect {{newOwner}} to rule gently for a season or two; soft words are cheap, and they are the safest way to keep a town that changed hands once from changing again."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-flips-letter",
+        "voice": "gazette",
+        "stance": "conciliatory",
+        "genre": "letter",
+        "headline": "Madam, we are {{newOwner}} now",
+        "byline": "A resident of {{cityName}}",
+        "body": [
+          "Madam, the flag above our square is {{newOwner}}'s now, and the clerks have already changed the headings on every form. The people of {{cityName}} did not move: the same bakers, the same boatmen, the same children in the lane. We ask {{newOwner}} to encourage our trade and to be gentle with our taxes. The quarrel with {{formerOwner}} was never ours."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-flips-anecdote",
+        "voice": "tabloid",
+        "stance": "local",
+        "genre": "anecdote",
+        "headline": "The flag changed overnight in {{cityName}}",
+        "body": [
+          "The watchman on the east gate of {{cityName}} hauled down one flag and ran up another before breakfast, then went home to sleep. By noon the square held two crowds, one cheering {{newOwner}} and one muttering about {{formerOwner}}. The same baker sold bread to both and said nothing."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "city-liberated-account",
+    "triggers": ["city-liberated"],
+    "tags": ["cities", "politics", "international"],
+    "names": ["liberated", "liberator"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "city-liberated-report",
+        "headline": "{{liberator}} liberates {{liberated}}",
+        "body": [
+          "{{liberator}} drove the occupiers out of {{liberated}}, and the nation raised its own flag again before the day was over. A crowd gathered at the council hall and sang the old anthem twice, badly. The guard outside the door wears the nation's colors this morning."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-liberated-returned",
+        "voice": "press",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "returned === true",
+        "headline": "Our independence is restored",
+        "body": [
+          "Our long occupation is over. {{liberator}} restored the nation to its own government, and the council chamber that answered to a foreign governor answers to us again. The guard at the door has changed colors, and the first session is already called."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-liberated-other",
+        "voice": "press",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "returned === false",
+        "headline": "{{liberated}} is free again",
+        "body": [
+          "{{liberated}} governs itself again. {{liberator}} cleared away the foreign garrison, and the nation raised its own flag this week after living under an occupier's banner. Its council has taken up the ordinary work of law and taxes, and messengers carried word through the streets that had waited for the old flag to return."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-liberated-gazette",
+        "voice": "gazette",
+        "stance": "conciliatory",
+        "genre": "report",
+        "when": "returned === false",
+        "headline": "A nation restored: {{liberated}} is free",
+        "body": [
+          "We are informed from {{liberated}} that the nation has taken up its own government once more, {{liberator}} having cleared away the foreign garrison. At the council hall a new seal was cut and the old one broken in the same hour. The returned government has sent its thanks, and our merchants may look for the roads to open."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "city-liberated-editorial",
+        "voice": "pamphlet",
+        "stance": "national",
+        "genre": "editorial",
+        "when": "returned === false",
+        "headline": "Freedom for {{liberated}}",
+        "body": [
+          "{{liberated}} flies its own flag again, and {{liberator}} made that possible. A nation restored is a friend for a generation; a nation swallowed whole is a grievance that outlives the men who ordered it. Remember which of the two {{liberator}} chose, and remember it the next time a map is redrawn."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "neighbor-puppet-annexed-account",
+    "triggers": ["neighbor-puppet-annexed"],
+    "tags": ["cities", "international"],
+    "names": ["city", "owner"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "neighbor-puppet-annexed-report",
+        "headline": "{{city}} comes under direct rule",
+        "body": [
+          "{{city}} has stopped being a puppet and become a province, ruled directly from {{owner}}. The flag above the gate is the same, but every order now comes from the capital. The first sign will be the tax collectors, who no longer need to ask."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "neighbor-puppet-annexed-analysis",
+        "voice": "press",
+        "stance": "national",
+        "genre": "analysis",
+        "headline": "{{owner}} tightens its hold on {{city}}",
+        "body": [
+          "A puppet bargains; a province obeys. {{city}} has just changed from one to the other, and {{owner}} now rules it from the capital. It lies {{distance}} from our nearest city, so a decision that once took a season of bargaining will now take a week."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "neighbor-puppet-annexed-press",
+        "voice": "press",
+        "stance": "hawkish",
+        "genre": "report",
+        "headline": "A puppet no more: {{city}} answers to {{owner}}",
+        "body": [
+          "{{owner}} has folded {{city}} into its direct rule, and the city's men and grain now answer to the capital without the old bargaining. There was no ceremony worth reporting and no garrison change. The difference is in how fast an order travels."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "neighbor-puppet-annexed-notice",
+        "voice": "gazette",
+        "stance": "neutral",
+        "genre": "notice",
+        "headline": "A change of rule in {{city}}",
+        "body": [
+          "Word is given that {{city}}, lately a puppet, now answers to {{owner}} directly. The garrison has not changed and the ceremonies were brief. What has changed is who may give orders, and how quickly they arrive."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "occupied-city-resists-account",
+    "triggers": ["occupied-city-resists"],
+    "tags": ["cities", "domestic"],
+    "names": ["cityName", "formerOwner"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "occupied-city-resists-report",
+        "headline": "Resistance continues in {{cityName}}",
+        "body": [
+          "{{cityName}} is ours on the map, and nowhere else. Its clerks send out orders and then file them away when nothing happens, and the prefect expects {{turns}} more of the same. He has stopped promising an early end."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "occupied-city-resists-population",
+        "voice": "press",
+        "stance": "government-critical",
+        "genre": "analysis",
+        "when": "population !== null",
+        "headline": "{{population}} people in an occupied {{cityName}}",
+        "body": [
+          "There are {{population}} people inside {{cityName}}, and the city has not accepted the flag above the gate. The city is expected to resist for {{turns}} more, which makes the occupation a campaign with no enemy to fight. The men who ordered it owe the treasury an account of how it ends."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "occupied-city-resists-anecdote",
+        "voice": "tabloid",
+        "stance": "populist",
+        "genre": "anecdote",
+        "when": "formerOwner !== null",
+        "headline": "The old loyalty runs deep in {{cityName}}",
+        "body": [
+          "In the market at {{cityName}}, a fishwife still gives her prices in {{formerOwner}}'s coin. Nobody in the queue corrects her, and the prefect's men walk past without a word. She says the city will need {{turns}} more of our rule before she learns the new money, and she does not sound hurried."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "occupied-city-resists-unrest",
+        "voice": "press",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "unrestPoints !== null",
+        "headline": "Mood darkens in occupied {{cityName}}",
+        "body": [
+          "The occupation of {{cityName}} is entering another season, and the city's books record a change of {{unrestPoints}} in local happiness. Patrols in the old quarter have been doubled. The prefect says {{turns}} more must pass before the city settles, a phrase he has used before."
+        ],
+        "links": [
+          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "foreign-city-flips-account",
+    "triggers": ["foreign-city-flips"],
+    "tags": ["cities", "politics", "international"],
+    "names": ["city", "owner", "oldOwner"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "foreign-city-flips-report",
+        "headline": "{{city}} turns from {{oldOwner}} to {{owner}}",
+        "body": [
+          "The flag over {{city}} has changed hands. The city now answers to {{owner}} instead of {{oldOwner}}, and the clerks at its town hall are cutting new seals. The old ones are already being scraped off the forms."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-city-flips-analysis",
+        "voice": "press",
+        "stance": "neutral",
+        "genre": "analysis",
+        "headline": "A change of rule in {{city}}",
+        "body": [
+          "{{city}} has passed from {{oldOwner}} to {{owner}}. A town that changes flags is a test of both governments. {{owner}} will need to win the city's trust before it can count on its taxes."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "foreign-city-liberated-account",
+    "triggers": ["foreign-city-liberated"],
+    "tags": ["cities", "politics", "international"],
+    "names": ["owner", "liberatedOwner"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "foreign-city-liberated-report",
+        "headline": "A city is returned to {{liberatedOwner}} by {{owner}}",
+        "body": [
+          "{{owner}} has returned a city to {{liberatedOwner}}. The occupiers have gone, and the city's own officials have taken up its business again. A crowd gathered at the council hall to hear the change read aloud, and the guard outside the door wears {{liberatedOwner}}'s colors this morning."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-city-liberated-analysis",
+        "voice": "press",
+        "stance": "national",
+        "genre": "analysis",
+        "headline": "What a returned city may mean for {{owner}}",
+        "body": [
+          "{{owner}} has returned a city to {{liberatedOwner}}. A government that gives a city back may earn goodwill that proves useful later, or it may find the gift soon forgotten. The next time a map is redrawn, {{owner}} may have one more claim on {{liberatedOwner}}'s attention."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "foreign-occupied-city-resists-account",
+    "triggers": ["foreign-occupied-city-resists"],
+    "tags": ["cities", "politics", "international"],
+    "names": ["city", "owner"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "foreign-occupied-city-resists-report",
+        "headline": "{{city}} resists {{owner}}'s rule",
+        "body": [
+          "{{city}} is held by {{owner}}, and the city has not accepted the flag above its gate. Orders go out from the prefect's office and then go nowhere. The market keeps its old hours, and the clerks keep their old habits."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "foreign-occupied-city-resists-dispatch",
+        "voice": "gazette",
+        "stance": "neutral",
+        "genre": "report",
+        "headline": "From beyond the border: trouble in {{city}}",
+        "body": [
+          "Word from {{city}} says the occupation under {{owner}} has not settled the city. Its people answer questions briefly and gather in small groups, and the prefect has asked for more patrols. An occupation that needs more soldiers is an occupation that has not ended."
+        ],
+        "links": [
+          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  }
+]
