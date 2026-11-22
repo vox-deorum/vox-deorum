@@ -473,7 +473,7 @@
         "genre": "report",
         "headline": "Stuck: the war with {{opponent}}",
         "body": [
-          "The line has not moved again this week. The same camps keep sending the same bills."
+          "The line against {{opponent}} has not moved again this week. The same camps keep sending the same bills."
         ],
         "weight": { "base": 1 }
       }
@@ -866,7 +866,7 @@
         "genre": "report",
         "headline": "Down to {{wearinessPercent}}: the country exhales",
         "body": [
-          "Still at war. The barber says the morning passed without one word about the front. His first complaint was a haircut."
+          "We are still at war, but the country's weariness has fallen to {{wearinessPercent}}. The barber says the morning passed without one word about the front. His first complaint was a haircut."
         ],
         "weight": { "base": 1 }
       }

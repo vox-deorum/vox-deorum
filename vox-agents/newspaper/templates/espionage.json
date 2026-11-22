@@ -359,8 +359,8 @@
         "headline": "The quiet account",
         "body": [
           "Entered in the ledger of the service:",
-          "Watchmen roused: none. Goods carried home: {{possibleTechnology}}.",
-          "On the other side of the page: the long years of study we saved."
+          "Watchmen roused: none. Goods carried home, report unverified: {{possibleTechnology}}.",
+          "On the other side of the page: the long years of study we may have saved."
         ],
         "weight": { "base": 1 }
       },

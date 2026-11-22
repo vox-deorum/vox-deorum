@@ -156,6 +156,7 @@ const startBatch = `
   delete globalThis.queueMicrotask;
   delete Math.random;
   const input = JSON.parse(batch.input);
+  delete batch.input;
   const disabled = new Set(JSON.parse(batch.disabled));
   const { begin, results } = batch;
   const resumedBindings = JSON.parse(batch.resumedBindings);
@@ -277,7 +278,6 @@ ${factGuestSource}
       skip = 0;
     }
   }
-  return JSON.stringify(results);
 })([
 `;
 const endBatch = `], globalThis.editorialBatch);`;
@@ -350,11 +350,14 @@ async function evaluateRemaining(
   });
   using results = vm.newArray();
   using batch = vm.newObject();
-  using payload = vm.newString(input);
+  // Let the dispatcher release the encoded input as soon as it parses it.
+  {
+    using payload = vm.newString(input);
+    vm.setProp(batch, 'input', payload);
+  }
   using skipCount = vm.newNumber(skip);
   using disabledSlots = vm.newString(JSON.stringify([...disabled]));
   using resumed = vm.newString(JSON.stringify(resumedBindings));
-  vm.setProp(batch, 'input', payload);
   vm.setProp(batch, 'skip', skipCount);
   vm.setProp(batch, 'disabled', disabledSlots);
   vm.setProp(batch, 'resumedBindings', resumed);
@@ -362,8 +365,7 @@ async function evaluateRemaining(
   vm.setProp(batch, 'results', results);
   vm.setProp(vm.global, 'editorialBatch', batch);
   try {
-    using result = vm.evalBytecode(bytecode);
-    return { results: JSON.parse(result.toString()) };
+    vm.evalBytecode(bytecode).dispose();
   } catch (error) {
     if (!interrupted || !started) throw error;
     const completed = vm.dump(results) as RawResult[];
@@ -372,6 +374,8 @@ async function evaluateRemaining(
     completed.push({ error: 'Expression exceeded its execution allowance.', interrupted: true });
     return { results: completed, interrupted: true };
   }
+  // Transfer the results without allocating a second copy as JSON inside the sandbox.
+  return { results: vm.dump(results) as RawResult[] };
 }
 
 /** Resolve an interruption and recover prior bindings when the step was optional. */

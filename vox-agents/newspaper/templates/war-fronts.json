@@ -181,7 +181,7 @@
         "genre": "notice",
         "headline": "To the faithful of {{city}}: hold fast",
         "body": [
-          "To the faithful in the besieged city: the granaries are nearly bare and the gates must remain shut. Throw open the shrines to anyone without a warm room, and share what bread you can spare. The season will turn, and what is given now will not be forgotten."
+          "To the faithful in {{city}}: the granaries are nearly bare and the gates must remain shut. Throw open the shrines to anyone without a warm room, and share what bread you can spare. The season will turn, and what is given now will not be forgotten."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -514,7 +514,7 @@
         "id": "enemy-units-lost-in-combat-report",
         "headline": "{{count|enemy unit|enemy units}} destroyed in the field",
         "body": [
-          "The latest fighting cost the enemy {{count|regiment|regiments}}, every one of them marching under the same standard. Our soldiers have stacked the captured colors beside the gate, and the pile reaches a man's shoulder. The enemy will need a season to replace what fell in an afternoon."
+          "The latest fighting cost {{victim}} {{count|regiment|regiments}}, every one of them marching under the same standard. Our soldiers have stacked the captured colors beside the gate, and the pile reaches a man's shoulder. {{victim}} will need a season to replace what fell in an afternoon."
         ],
         "weight": { "base": 1 }
       },
@@ -525,7 +525,7 @@
         "genre": "ledger",
         "headline": "The enemy's losses, counted",
         "body": [
-          "Enemy formations destroyed: {{count}}.",
+          "{{victim}} regiments destroyed: {{count}}.",
           "Standards taken: one design, repeated.",
           "Balance of the season: entered in our favor."
         ],
@@ -538,7 +538,7 @@
         "genre": "report",
         "headline": "{{count|enemy unit|enemy units}} destroyed in the fighting",
         "body": [
-          "From the front tonight: our troops have destroyed {{count|enemy regiment|enemy regiments}}. Every one of them marched under the same flag, and that flag now hangs in our camp. A season of recruiting will not replace what an afternoon took."
+          "From the front tonight: our troops have destroyed {{count|regiment|regiments}} of {{victim}}. Every one of them marched under the same flag, and that flag now hangs in our camp. A season of recruiting will not replace what an afternoon took."
         ],
         "weight": { "base": 1 }
       },
@@ -550,7 +550,7 @@
         "when": "count >= 5",
         "headline": "Hear it! {{count|enemy unit|enemy units}} destroyed",
         "body": [
-          "Gather and hear the count! {{count}} enemy formations are broken on the field! Their banners fill a cart, and their families will learn the number soon enough! Tell it in the square and sing it in every tavern!"
+          "Gather and hear the count! {{count}} regiments of {{victim}} are broken on the field! Their banners fill a cart, and their families will learn the number soon enough! Tell it in the square and sing it in every tavern!"
         ],
         "weight": { "base": 1 }
       }
@@ -693,7 +693,7 @@
         "when": "cityName !== null && winner !== null",
         "headline": "Notice from abroad: {{cityName}}",
         "body": [
-          "Notice is given that {{cityName}}, {{distance}} from our frontier, is now held by {{winner}}. Travelers should expect new tolls and new questions at its gate. Merchants with goods in its warehouses should present their papers before the week is out."
+          "Notice is given that {{cityName}}, {{distance}} from our frontier, is now held by {{winner}}. Travelers should expect new guards and new questions at its gate. Merchants with goods in its warehouses should present their papers before the week is out."
         ],
         "weight": { "base": 1 }
       },
@@ -752,7 +752,7 @@
         "genre": "editorial",
         "headline": "Ask why {{neighbor}}'s army passed ours",
         "body": [
-          "{{neighbor}} has passed us in the count of arms, and the {{terms.civic.government}} has not explained how. The {{terms.civic.people}} pay for every company we raise, and they are entitled to know what our money bought. Either the count is wrong or the policy is."
+          "{{neighbor}} has passed us in the count of arms, and the {{terms.civic.government}} has not explained how. The {{terms.civic.people}} pay for every regiment we raise, and they are entitled to know what our money bought. Either the count is wrong or the policy is."
         ],
         "links": [
           { "placeholder": "neighbor", "label": "{{neighbor}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -766,7 +766,7 @@
         "genre": "report",
         "headline": "The balance of arms has turned",
         "body": [
-          "In this season the army of {{neighbor}} exceeded our own in number. The war office entered the change without comment, as it enters the weather. The frontier companies were ordered to stand their ground and report."
+          "In this season the army of {{neighbor}} exceeded our own in number. The war office entered the change without comment, as it enters the weather. The frontier regiments were ordered to stand their ground and report."
         ],
         "links": [
           { "placeholder": "neighbor", "label": "{{neighbor}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -1033,9 +1033,9 @@
     "variants": [
       {
         "id": "units-lost-in-combat-report",
-        "headline": "{{count}} of our companies lost in action",
+        "headline": "{{count}} of our regiments lost in action",
         "body": [
-          "The latest fighting cost us {{count|company|companies}}. The news reached the war office in a single dispatch, and the clerk who copied it left the room without speaking. The lists of names will take longer to prepare than the count did."
+          "The latest fighting with {{killer}} cost us {{count|regiment|regiments}}. The news reached the war office in a single dispatch, and the clerk who copied it left the room without speaking. The lists of names will take longer to prepare than the count did."
         ],
         "weight": { "base": 1 }
       },
@@ -1046,7 +1046,7 @@
         "genre": "ledger",
         "headline": "Our losses, counted",
         "body": [
-          "Companies lost: {{count}}.",
+          "Regiments lost to {{killer}}: {{count}}.",
           "Names entered: still being copied.",
           "The account: not yet closed."
         ],
@@ -1059,7 +1059,7 @@
         "genre": "anecdote",
         "headline": "The empty bunks",
         "body": [
-          "At the barracks, the sergeant walked down the row of bunks and did not stop at {{count|company|companies}} of them. The blankets are folded and the kits are gone, and he has not yet asked for replacements. He says the room is quieter than it used to be."
+          "At the barracks, the sergeant walked down the row of bunks and did not stop at {{count|regiment|regiments}} of them, every one lost to {{killer}}. The blankets are folded and the kits are gone, and he has not yet asked for replacements. He says the room is quieter than it used to be."
         ],
         "weight": { "base": 1 }
       },
@@ -1070,7 +1070,7 @@
         "genre": "report",
         "headline": "The count from the fighting",
         "body": [
-          "They say the fighting took {{count}} of our companies. I heard it from a man who was there, and he would not say more than the number. The families will hear the rest soon enough."
+          "They say {{killer}} took {{count}} of our regiments. I heard it from a man who was there, and he would not say more than the number. The families will hear the rest soon enough."
         ],
         "weight": { "base": 1 }
       }

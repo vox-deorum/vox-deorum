@@ -190,7 +190,7 @@
         "genre": "editorial",
         "headline": "Let the denunciation be answered",
         "body": [
-          "{{civilization}} has called us out by name, and every court in the world has heard it. Fine words will not unsay the insult; a stronger guard on the frontier might. Let the ministers answer with a muster, not a memorandum."
+          "{{civilization}} has called us out by name, and every court in the world has heard it. Fine words will not unsay the insult; a stronger guard on the frontier might. Let the ministers answer with a muster that every neighboring court can count."
         ],
         "links": [
           { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -297,7 +297,7 @@
         "genre": "analysis",
         "headline": "The pact between {{first}} and {{second}} redraws the arithmetic",
         "body": [
-          "The pact between {{first}} and {{second}} has changed what a war on that frontier would cost. A campaign against either court must now expect a second army from an unexpected direction. That may keep the peace through fear, or gather several small quarrels into one large one. The answer will be written at a border, not at a signing table."
+          "The pact between {{first}} and {{second}} has changed what a war on that frontier would cost. A campaign against either court must now expect a second army from an unexpected direction. That may keep the peace through fear, or gather several small quarrels into one great war; the answer will be written at a border."
         ],
         "weight": { "base": 1 }
       },

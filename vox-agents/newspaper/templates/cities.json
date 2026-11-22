@@ -313,7 +313,7 @@
         "id": "city-being-razed-report",
         "headline": "{{cityName}} is being razed",
         "body": [
-          "Fire has been set to {{cityName}} by {{civilization}}, and the burning is deliberate. At the present pace, {{turns}} will pass before the walls are down and the site is bare. The roads that led there will be the only thing left."
+          "{{civilization}} has set fire to {{cityName}}, and the burning is deliberate. At the present pace, {{turns}} will pass before the walls are down and the site is bare. The roads that led there will be the only thing left."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -442,7 +442,7 @@
         "when": "gained === false",
         "headline": "Who is taking names for {{cityName}}?",
         "body": [
-          "{{cityName}} is gone, and no one in authority has said who is to blame. On our street, a laundress asked three carters the price of carrying a letter across the new border; all three named a sum and none would promise delivery. Open a desk where families may leave letters, and use the road you found so quickly when there were taxes to collect."
+          "{{cityName}} is gone, and no one in authority has said who is to blame. On our street, a woman whose mother still lives there has asked the watch three times when the city will be ours again, and no one can give her a day. {{terms.civic.leaderAddress}}, say how you mean to take it back, or say that you will not."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -600,7 +600,7 @@
         "genre": "analysis",
         "headline": "Old orders under a new flag in {{cityName}}",
         "body": [
-          "{{cityName}} changed hands without a battle, and the bill for that is usually paid at the customs house. Merchants hauling goods between {{formerOwner}} and {{newOwner}} now must learn a new set of duties, seals and officials. The first cart held at the gate will say more about the new order than any speech from the square."
+          "{{cityName}} turned from {{formerOwner}} to {{newOwner}} without a battle, and the people there had no more say in it than the weather. A town that wakes up in a new country is a harder thing to govern than a town taken by storm. Expect {{newOwner}} to rule gently for a season or two; soft words are cheap, and they are the safest way to keep a town that changed hands once from changing again."
         ],
         "links": [
           { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }

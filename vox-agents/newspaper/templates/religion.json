@@ -10,7 +10,7 @@
         "id": "faith-drifts-report",
         "headline": "Most of our cities now keep {{majorityFaith}}",
         "body": [
-          "{{majorityFaith}} now holds the majority in most of our cities, and {{founded}}, the faith {{terms.civilization}} founded, has slipped into second place. At the old shrine in the capital, the keeper still unlocks the door at first light and finds the benches half empty. Both faiths keep their doors open, and the record shows no quarrel between them."
+          "{{majorityFaith}} now holds the majority in most of our cities, and {{founded}}, the faith {{terms.civilization}} founded, now trails it. At the old shrine in the capital, the keeper still unlocks the door at first light and finds the benches half empty. Both faiths keep their doors open, and the record shows no quarrel between them."
         ],
         "weight": { "base": 1 }
       },
@@ -123,7 +123,7 @@
         "id": "faith-reaches-distant-city-report",
         "headline": "Our faith reaches {{cityName}}",
         "body": [
-          "{{cityName}}, a city of {{civilization}} about {{distance}} from our nearest town, now keeps {{religion}} as its majority faith. The change came from the city's own people, and the shrine there has added our prayers to its morning reading. A creed that crosses that many leagues without an army has found something worth keeping."
+          "{{cityName}}, a city of {{civilization}} about {{distance}} from our nearest town, now keeps {{religion}} as its majority faith. The change came from the city's own people, and the shrine there has added our prayers to its morning reading. A creed that travels that far without an army has found something worth keeping."
         ],
         "weight": { "base": 1 }
       },
@@ -148,7 +148,7 @@
         "genre": "anecdote",
         "headline": "They sing of a far city keeping our faith",
         "body": [
-          "They tell it at the well: a city {{distance}} from the last market we know has taken up {{religion}}, the faith of our own hearths. The road is long, so travelers cut the tale down to a verse and passed it on. The singers have given it a tune the children already know."
+          "They tell it at the well: {{cityName}}, a city {{distance}} from the last market we know, has taken up {{religion}}, the faith of our own hearths. The road is long, so travelers cut the tale down to a verse and passed it on. The singers have given it a tune the children already know."
         ],
         "weight": { "base": 1 }
       }
@@ -255,7 +255,7 @@
         "id": "foreign-religion-founded-report",
         "headline": "{{civilization}} founds a religion",
         "body": [
-          "A new faith called {{religion}} has been founded in {{civilization}}. The first gathering met in a borrowed courtyard, and the speaker had to repeat the opening words three times as latecomers crowded in. The name is already on travelers' lips, and the towns along the road will hear it soon enough."
+          "{{civilization}} has founded a new faith called {{religion}}. The first gathering met in a borrowed courtyard, and the speaker had to repeat the opening words three times as latecomers crowded in. The name is already on travelers' lips, and the towns along the road will hear it soon enough."
         ],
         "weight": { "base": 1 }
       },
@@ -498,7 +498,7 @@
         "id": "own-cities-divided-by-faith-report",
         "headline": "Our cities keep more than one faith",
         "body": [
-          "{{faithful}} of our cities keep {{founded}}, which {{terms.civilization}} founded, and {{divided}} more cities follow other creeds: {{others}}. In one river town, the two congregations share a well and a ladder, and the keeper of the older shrine has learned enough of the newer prayers to lend a hand. The arrangement holds because nobody has asked the law to settle it."
+          "{{founded}}, the faith {{terms.civilization}} founded, leads in {{faithful|city|cities}}, and {{divided|city|cities}} more follow other creeds: {{others}}. In one river town, the two congregations share a well and a ladder, and the keeper of the older shrine has learned enough of the newer prayers to lend a hand. The arrangement holds because nobody has asked the law to settle it."
         ],
         "weight": { "base": 1 }
       },
@@ -509,7 +509,7 @@
         "genre": "editorial",
         "headline": "A founded faith, unevenly kept",
         "body": [
-          "{{terms.civilization}} founded {{founded}}, and only {{faithful}} of our cities still keep it. The other {{divided}} cities follow {{others}}.",
+          "{{terms.civilization}} founded {{founded}}, with only {{faithful|city|cities}} of ours still keeping it. The other {{divided|city|cities}} follow {{others}}.",
           "A faith born on this soil and carried around the world deserves better than to thin out where it was born. Before the next count, our {{terms.civic.government}} should say what it intends for {{founded}} and for the towns that still keep it."
         ],
         "weight": { "base": 1 }

@@ -210,7 +210,7 @@
         "genre": "report",
         "headline": "The state pays its way",
         "body": [
-          "After a run of seasons in arrears, the state now clears {{goldPerTurn}} gold a season. The pay office has cleared its backlog of small warrants, and a ship's agent on the exchange held his prices and still found buyers after seasons of cutting to move cargo. When the country pays its way, credit follows the coin."
+          "After a run of seasons in arrears, {{terms.civilization}} now clears {{goldPerTurn}} gold a season. The pay office has cleared its backlog of small warrants, and a ship's agent on the exchange held his prices and still found buyers after seasons of cutting to move cargo. When the country pays its way, credit follows the coin."
         ],
         "weight": { "base": 1 }
       },

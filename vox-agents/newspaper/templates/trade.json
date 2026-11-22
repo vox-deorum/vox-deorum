@@ -62,7 +62,7 @@
         "id": "incoming-trade-route-plundered-account-report",
         "headline": "A trade route bound for us is plundered",
         "body": [
-          "A caravan carrying goods for our market was set upon before it reached the gate, and its load is gone. In the cloth rows, a draper has moved three bolts to the back shelf and told her regulars the price holds only until the shelf is bare. What the road loses, the counter pays for."
+          "Raiders fell on a caravan carrying goods for our market before it reached the gate, and its load is gone. In the cloth rows, a draper has moved three bolts to the back shelf and told her regulars the price holds only until the shelf is bare. What the road loses, the counter pays for."
         ],
         "weight": { "base": 1 }
       },
@@ -97,7 +97,7 @@
         "genre": "editorial",
         "headline": "Trade needs a guarded road",
         "body": [
-          "A caravan meant for our merchants was emptied on the road, and the shippers are asking what the {{terms.civic.government}} intends for the next one. The answer so far is that guarding a road is expensive, as though the cost of losing the goods were nothing. Either put armed men beside the bales or tell the merchant plainly that the road is his own risk."
+          "Raiders emptied a caravan meant for our merchants on the road, and the shippers are asking what the {{terms.civic.government}} intends for the next one. The answer so far is that guarding a road is expensive, as though the cost of losing the goods were nothing. Either put armed men beside the bales or tell the merchant plainly that the road is his own risk."
         ],
         "weight": { "base": 1 }
       },
@@ -241,7 +241,7 @@
         "id": "our-trade-route-plundered-account-report",
         "headline": "Raiders cut short an outgoing trade route",
         "body": [
-          "One of our outbound caravans has been stripped on the road, and its cargo will never reach a buyer. The dispatch yard spent the morning returning fees to merchants who had paid for space, and the clerk marked each name with a small cross. Nothing on that road has grown safer for the next load."
+          "Raiders stripped one of our outbound caravans on the road, and its cargo will never reach a buyer. The dispatch yard spent the morning returning fees to merchants who had paid for space, and the clerk marked each name with a small cross. Nothing on that road has grown safer for the next load."
         ],
         "weight": { "base": 1 }
       },
@@ -279,7 +279,7 @@
         "when": "destination !== null",
         "headline": "Trade route to {{destination}} plundered",
         "body": [
-          "A caravan of ours headed for {{destination}} has been robbed on the road. In the dispatch yard this evening, a merchant is folding a letter to the buyers who were promised the load. \"Tell them plainly,\" she says. \"A late cart is better than a rumor.\""
+          "Raiders robbed a caravan of ours on the road to {{destination}}. In the dispatch yard this evening, a merchant is folding a letter to the buyers who were promised the load. \"Tell them plainly,\" she says. \"A late cart is better than a rumor.\""
         ],
         "weight": { "base": 1 }
       },

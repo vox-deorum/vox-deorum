@@ -108,7 +108,7 @@
         "when": "ours === true",
         "headline": "The chamber turns away our proposal on {{resolution}}",
         "body": [
-          "We took {{resolution}} to the Congress, and the chamber sent it back in pieces. Citizens, that count was a lesson in how few friends we have in that hall. The {{terms.civic.government}} should write down the names of those who stood with us, and send word to the others before the next sitting."
+          "We took {{resolution}} to the Congress, and the chamber sent it back in pieces. {{terms.civic.people}}, that count was a lesson in how few friends we have in that hall. The {{terms.civic.government}} should write down the names of those who stood with us, and send word to the others before the next sitting."
         ],
         "weight": { "base": 1 }
       }
@@ -577,7 +577,7 @@
         "byline": "A Neighbor",
         "headline": "One altar blessed, many houses standing",
         "body": [
-          "To the editor: the news has reached our street that the Congress chose {{resolution}}. My household keeps a different faith, and so do the two houses beside mine. We lend each other tools and share one well, and no delegate granted us leave. Let the chamber bless what it likes. On this street, we will keep lending the ladder and sharing the well."
+          "To the editor: the news has reached our street that the Congress chose {{resolution}}. My household keeps a different faith, and so do the two houses beside mine. We lend each other tools and share one well, and no delegate granted us leave. Let the chamber bless what it likes."
         ],
         "weight": { "base": 1 }
       }

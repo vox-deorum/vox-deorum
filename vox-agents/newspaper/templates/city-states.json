@@ -21,7 +21,7 @@
         "genre": "analysis",
         "headline": "Why the attack on {{ally}} matters",
         "body": [
-          "The attack on {{ally}} is a message addressed to larger neighbors, and {{aggressor}} is counting on us to read it at its leisure. A power that spends soldiers on a small state is testing how much the rest of us will pay to keep our promises. Our soldiers are not in this fight, but the next town that asks for our protection will want to know what our word is worth."
+          "The attack on {{ally}} is a message addressed to larger neighbors, and {{aggressor}} expects us to read it. A power that spends soldiers on a small state is testing how much the rest of us will pay to keep our promises. Our soldiers are not in this fight, but the next town that asks for our protection will want to know what our word is worth."
         ],
         "weight": { "base": 1 }
       },
@@ -661,7 +661,7 @@
         "when": "distance !== null",
         "headline": "{{cityState}} falls to {{captor}}",
         "body": [
-          "News at this hour: {{cityState}} has fallen to {{captor}}. A new banner hangs over its gate tonight. The city stands {{distance}} from our nearest. That is near enough for worry, and this border needs watching."
+          "News at this hour: {{cityState}} has fallen to {{captor}}. A new banner hangs over its gate tonight. The city stands {{distance}} from our nearest town. That is near enough for worry, and this border needs watching."
         ],
         "weight": { "base": 1 }
       },

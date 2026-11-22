@@ -296,7 +296,7 @@
         "when": "distance !== null",
         "headline": "Up the road, a new era",
         "body": [
-          "{{civilization}} is in the {{era}} as of this week, and its nearest city is only {{distance}} from our own gate. No army has crossed. No stone has moved. The neighbor simply knows more than it did last month, and that is usually how trouble begins."
+          "{{civilization}} is in the {{era}} as of this week, and its nearest city is only {{distance}} from our own gate. The old soldiers at the border tavern keep asking for a column on the road or a banner on the wall to point at, and the road gives them nothing, which is what makes them grumble. A neighbor that adds to its learning adds to its strength, and that neighbor is two doors down."
         ],
         "weight": { "base": 1 }
       },

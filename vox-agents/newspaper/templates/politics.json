@@ -94,7 +94,7 @@
         "genre": "proverb",
         "headline": "The neighbor's granary is full",
         "body": [
-          "Let the neighbor's barn swell; keep your own roof sound."
+          "Let {{civilization}}'s barn swell; keep your own roof sound."
         ],
         "weight": { "base": 1 }
       }

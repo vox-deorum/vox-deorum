@@ -22,7 +22,7 @@
         "when": "rival !== null",
         "headline": "In this year the voice of {{rival}} grew strong",
         "body": [
-          "The record of this year puts the customs of {{rival}} at the Influential mark, their count {{percentage}} percent. In the joiners' yard the apprentices now shape a foreign curve first, and the old square joint waits its turn. The guild keeps both patterns in the same chest."
+          "The record of this year puts the customs of {{rival}} at the Influential mark, at {{percentage}} percent. In the joiners' yard the apprentices now shape a foreign curve first, and the old square joint waits its turn. The guild keeps both patterns in the same chest."
         ],
         "links": [
           { "placeholder": "rival", "label": "{{rival}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
@@ -369,7 +369,7 @@
         "id": "enemy-wonder-nearby-report",
         "headline": "{{city}} completes the {{wonder}} under an enemy flag",
         "body": [
-          "Smoke from the charcoal pit went up thin and straight, and its keeper saw the last rope come down from the {{wonder}} inside {{city}}. The work went up while the war went on below, and the war left it alone. From the ridge the new roof catches the light like a shield turned toward us."
+          "Smoke from the charcoal pit went up thin and straight, and its keeper saw the last rope come down from the {{wonder}} inside {{city}}. The work went up while the war went on below. From the ridge the new roof catches the light like a shield turned toward us."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -659,7 +659,7 @@
         "id": "great-works-added-report",
         "headline": "New works on the walls of {{city}}",
         "body": [
-          "The gallery in {{city}} has taken on {{added|new work|new works}}, and its collection now holds {{total}} pieces in all. A carter unloaded the crates before the curator had finished his breakfast, and the curator spent the morning measuring walls and sighing at the plaster. Some of the new pieces will have to lean against the old ones until the walls are made to match."
+          "The gallery in {{city}} has taken on {{added|new work|new works}}, and its collection now holds {{total|piece|pieces}} in all. A carter unloaded the crates before the curator had finished his breakfast, and the curator spent the morning measuring walls and sighing at the plaster. Some of the new pieces will have to lean against the old ones until the walls are made to match."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -721,7 +721,7 @@
         "id": "great-works-lost-report",
         "headline": "Great works lost from the galleries of {{city}}",
         "body": [
-          "The gallery at {{city}} keeps {{total}} works now, {{lost}} fewer than the last reckoning. A curator has moved the remaining pieces along the wall to hide the bare patches, and the gaps still show. Visitors have begun asking which ones are missing."
+          "The gallery at {{city}} keeps {{total|work|works}} now, {{lost}} fewer than the last reckoning. A curator has moved the remaining pieces along the wall to hide the bare patches, and the gaps still show. Visitors have begun asking which ones are missing."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
@@ -749,7 +749,7 @@
         "genre": "editorial",
         "headline": "Print the names of the missing works",
         "body": [
-          "{{city}} is {{lost}} works poorer, and the {{terms.civic.government}} has not published a list. Visitors stop at the empty hooks and ask what stood there, but the attendants have nothing to tell them. Name the pieces, name the place they went, and let the public judge the loss."
+          "{{city}} has lost {{lost|great work|great works}}, and the {{terms.civic.government}} has not published a list. Visitors stop at the empty hooks and ask what stood there, but the attendants have nothing to tell them. Name the pieces, name the place they went, and let the public judge the loss."
         ],
         "links": [
           { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
