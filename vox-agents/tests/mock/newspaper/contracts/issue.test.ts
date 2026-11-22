@@ -11,8 +11,19 @@ describe("newspaper issue contracts", () => {
     const { presentation: _presentation, ...publication } = issue.publication;
     expect(issueDocumentSchema.safeParse({ ...issue, publication }).success).toBe(false);
     expect(issueDocumentSchema.safeParse({ ...issue, schemaVersion: 1 }).success).toBe(false);
-    expect(issueDocumentSchema.safeParse({ ...issue, schemaVersion: 2 }).success).toBe(false);
+    expect(issueDocumentSchema.safeParse({ ...issue, schemaVersion: 3 }).success).toBe(false);
     expect(issueDocumentSchema.safeParse({ ...issue, schemaVersion: 99 }).success).toBe(false);
+  });
+
+  it("should require a lead decision on each page and a lead on breaking pages", () => {
+    const issue = createNewspaperIssue();
+    const [front, ...otherPages] = issue.pages;
+    const { hasLead: _hasLead, ...missingLead } = front;
+    expect(issueDocumentSchema.safeParse({ ...issue, pages: [missingLead, ...otherPages] }).success).toBe(false);
+    front.hasLead = false;
+    expect(issueDocumentSchema.parse(issue).pages[0].hasLead).toBe(false);
+    front.layout = "breaking";
+    expect(issueDocumentSchema.safeParse(issue).success).toBe(false);
   });
 
   it("should keep a publication motto when present", () => {

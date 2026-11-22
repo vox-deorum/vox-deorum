@@ -20,9 +20,9 @@
       }
     },
     "layouts": [
-      { "id": "proof-strip", "variant": "ordinary", "frontSlots": 5, "sectionSlots": 3, "weight": { "base": 10 } },
-      { "id": "enlargement", "variant": "breaking", "frontSlots": 5, "weight": { "base": 10 } },
-      { "id": "working-print", "variant": "analysis", "frontSlots": 5, "sectionSlots": 3, "weight": { "base": 3 } }
+      { "id": "proof-strip", "variant": "ordinary", "weight": { "base": 10 } },
+      { "id": "enlargement", "variant": "breaking", "weight": { "base": 10 } },
+      { "id": "working-print", "variant": "analysis", "weight": { "base": 3 } }
     ],
     "pageLabels": { "front": "First Frame", "home": "At Home", "abroad": "Abroad" }
   }

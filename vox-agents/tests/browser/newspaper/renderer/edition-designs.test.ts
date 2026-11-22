@@ -13,16 +13,17 @@ import { startNewspaperHost, readerDirectory } from '../../../../src/newspaper/e
 import { defaultRenderProfile } from '../../../../src/newspaper/renderer/layout.js';
 
 /** Use a fixture's lead and briefs to test a design's front page at a given size. */
-function designIssue(design: EditorialDesign, sample: unknown, frontSlots?: number): IssueDocument {
+function designIssue(design: EditorialDesign, sample: unknown, count?: number): IssueDocument {
   const issue = issueDocumentSchema.parse(sample);
-  const layout = design.layouts.find(layout => layout.variant === issue.pages[0].layout)!;
+  const front = issue.pages[0];
   issue.publication = { title: design.title, designId: design.id, designVersion: design.version, presentation: design.presentation };
-  issue.items = issue.items.slice(0, frontSlots ?? layout.frontSlots);
+  const itemIds = front.itemIds.slice(0, count);
+  issue.items = issue.items.filter(item => itemIds.includes(item.id));
   issue.pages = [{
+    ...front,
     id: 'front',
     label: design.pageLabels.front ?? 'The Record',
-    layout: layout.variant,
-    itemIds: issue.items.map(item => item.id),
+    itemIds,
   }];
   return issue;
 }
@@ -41,8 +42,9 @@ function measureEdition(page: Page) {
       const { left, right, top, bottom, width } = story.getBoundingClientRect();
       return { id: story.dataset.itemId, left, right, top, bottom, width };
     });
-    const prose = region.querySelector('.vd-analysis-columns .vd-prose')?.getBoundingClientRect();
-    const evidence = region.querySelector('.vd-evidence')?.getBoundingClientRect();
+    const evidenceBlock = region.querySelector('.vd-evidence');
+    const prose = evidenceBlock?.closest('.vd-story')?.querySelector('.vd-prose')?.getBoundingClientRect();
+    const evidence = evidenceBlock?.getBoundingClientRect();
     return {
       stories,
       overflow: region.scrollWidth > region.clientWidth,
@@ -130,7 +132,7 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('newspaper design
         const sectionItems = issueDocumentSchema.parse(sample).items.slice(-2);
         if (layout === 'analysis') sectionItems[0].evidenceTable = issue.items[0].evidenceTable;
         issue.items.push(...sectionItems);
-        const section = { id: 'home', label: design.pageLabels.home, layout, itemIds: sectionItems.map(item => item.id) };
+        const section = { id: 'home', label: design.pageLabels.home, layout, hasLead: false, itemIds: sectionItems.map(item => item.id) };
         issue.pages.push(section);
         for (const paperWidth of [360, 1200]) {
           await mount(page, issue, paperWidth);
@@ -169,7 +171,7 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('newspaper design
           ['home', 'At Home'], ['economy', 'Trade and Livelihood'], ['abroad', 'Beyond Our Borders'],
         ].entries()) {
           issue.pages.push({
-            id: pageId, label: design.pageLabels[pageId] ?? label, layout: 'ordinary',
+            id: pageId, label: design.pageLabels[pageId] ?? label, layout: 'ordinary', hasLead: false,
             itemIds: [issue.items[issue.items.length - 3 + index].id],
           });
         }

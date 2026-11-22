@@ -57,10 +57,12 @@ export function renderStory(
   // A register entry has two cells: its heading and its account.
   const registerEntry = (publicationDesignId === "port-register" && page.layout === "ordinary")
     || (publicationDesignId === "cable-desk" && !lead);
-  const analysisEvidence = lead && page.layout === "analysis" ? item.evidenceTable : undefined;
-  const evidenceFirst = publicationDesignId === "civic-survey" && analysisEvidence !== undefined;
+  // Evidence belongs to any analysis story. Leads use the two-column treatment; briefs stack it below.
+  const analysisEvidence = page.layout === "analysis" ? item.evidenceTable : undefined;
+  const analysisLead = lead && analysisEvidence !== undefined;
+  const evidenceFirst = publicationDesignId === "civic-survey" && analysisLead;
   const headingGroup = registerEntry ? createElement("div", "vd-register-heading") : content;
-  const analysisMain = analysisEvidence ? createElement("div", "vd-column-main") : null;
+  const analysisMain = analysisLead ? createElement("div", "vd-column-main") : null;
   const credits = evidenceFirst && analysisMain ? analysisMain : headingGroup;
   const heading = createElement("h2", "vd-headline");
   heading.id = headingId;
@@ -93,7 +95,7 @@ export function renderStory(
     main.append(prose, footer);
     columns.append(main, figure);
     content.append(columns);
-  } else if (analysisEvidence && analysisMain) {
+  } else if (analysisLead && analysisMain && analysisEvidence) {
     const columns = createElement("div", "vd-analysis-columns");
     analysisMain.append(prose);
     if (evidenceFirst && figure) analysisMain.append(figure);
@@ -106,6 +108,8 @@ export function renderStory(
     const account = registerEntry ? createElement("div", "vd-register-account") : content;
     account.append(prose);
     if (figure) account.append(figure);
+    // A brief stacks its evidence in the account, which also keeps a register entry's cells intact.
+    if (analysisEvidence) account.append(renderEvidence(analysisEvidence, null, false));
     account.append(footer);
     if (registerEntry) content.append(headingGroup, account);
   }

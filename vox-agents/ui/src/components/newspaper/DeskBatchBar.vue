@@ -5,7 +5,7 @@ import InputNumber from 'primevue/inputnumber';
 import MultiSelect from 'primevue/multiselect';
 import ProgressBar from 'primevue/progressbar';
 import type { DeskJob } from '@/utils/types';
-import { deskChoicesLimit, deskJobRequestLimit } from '@vox/newspaper/desk/batch.js';
+import { deskChoicesLimit } from '@vox/newspaper/desk/batch.js';
 
 const props = defineProps<{
   checked: number;
@@ -34,8 +34,8 @@ const progressLabel = computed(() => {
 </script>
 
 <template>
-  <footer class="desk-batch" aria-label="Draft batch">
-    <span class="desk-checked"><i class="pi pi-check-square" aria-hidden="true" /> {{ checked }} checked</span>
+  <div class="panel-toolbar desk-toolbar desk-batch" role="group" aria-label="Draft batch">
+    <span class="desk-checked text-muted">{{ checked }} checked</span>
     <div class="desk-batch-models">
       <InputNumber v-model="choices" input-id="desk-choices" size="small" :min="1" :max="deskChoicesLimit"
         :disabled="busy" :use-grouping="false" :input-style="{ width: '3rem', textAlign: 'center' }"
@@ -44,17 +44,17 @@ const progressLabel = computed(() => {
       <MultiSelect v-model="models" :options="availableModels" display="chip" size="small"
         placeholder="Choose models" aria-label="Models" :disabled="busy" :show-toggle-all="false" />
     </div>
-    <Button label="Generate" icon="pi pi-sparkles" size="small" :loading="starting"
-      :disabled="busy || !requestCount || requestCount > deskJobRequestLimit || !choices" @click="emit('generate')" />
     <span v-if="!busy && requestCount" class="text-small text-muted" role="status">
-      {{ requestCount }} {{ requestCount === 1 ? 'request' : 'requests' }}<span v-if="requestCount > deskJobRequestLimit">.
-        Select fewer variants or models ({{ deskJobRequestLimit }} maximum).</span>
+      {{ requestCount }} {{ requestCount === 1 ? 'request' : 'requests' }}
     </span>
+    <span class="toolbar-spacer" aria-hidden="true" />
     <div v-if="job" class="desk-batch-progress" :title="progressLabel">
       <span class="text-muted">{{ completed }}/{{ job.total }} requests<span v-if="job.status === 'stopped'"> · stopped</span></span>
       <ProgressBar :value="progress" :show-value="false" :aria-label="progressLabel" />
     </div>
+    <Button label="Generate" icon="pi pi-sparkles" size="small" :loading="starting"
+      :disabled="busy || !requestCount || !choices" @click="emit('generate')" />
     <Button v-if="job?.status === 'running'" label="Stop" icon="pi pi-stop" size="small" severity="secondary"
       outlined :loading="stopping" @click="emit('stop')" />
-  </footer>
+  </div>
 </template>

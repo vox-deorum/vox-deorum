@@ -10,27 +10,11 @@ const weightSchema = z.strictObject({
 /** An authored setting with an optional condition and a weight. */
 export const eligibleSchema = z.strictObject({ when: expressionSchema.optional(), weight: weightSchema });
 
-/** Smallest front page a design can print. */
-export const minimumFrontSlots = 4;
-const frontLayoutSchema = eligibleSchema.extend({
+/** A page layout; breaking layouts are reserved for the front page. */
+export const editorialLayoutSchema = eligibleSchema.extend({
   id: z.string().min(1),
-  frontSlots: z.number().int().min(minimumFrontSlots),
+  variant: z.enum(['ordinary', 'breaking', 'analysis']),
 });
-
-/** A front layout can also serve as an interior layout unless it is breaking. */
-export const editorialLayoutSchema = z.discriminatedUnion('variant', [
-  frontLayoutSchema.extend({
-    variant: z.literal('breaking'),
-    sectionSlots: z.never().optional(),
-  }),
-  frontLayoutSchema.extend({
-    variant: z.enum(['ordinary', 'analysis']),
-    sectionSlots: z.number().int().positive(),
-  }),
-]).refine(
-  layout => layout.variant !== 'breaking' || !Object.hasOwn(layout, 'sectionSlots'),
-  { path: ['sectionSlots'], message: 'Breaking layouts cannot define sectionSlots.' },
-);
 export type EditorialLayout = z.infer<typeof editorialLayoutSchema>;
 
 /** Defines the order, tags, and eligibility for a page. */

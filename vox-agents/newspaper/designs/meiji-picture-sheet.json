@@ -26,9 +26,9 @@
       }
     ],
     "layouts": [
-      { "id": "picture-sheet", "variant": "ordinary", "frontSlots": 5, "sectionSlots": 3, "weight": { "base": 10 } },
-      { "id": "extra-sheet", "variant": "breaking", "frontSlots": 5, "weight": { "base": 10 } },
-      { "id": "survey-sheet", "variant": "analysis", "frontSlots": 5, "sectionSlots": 3, "weight": { "base": 3 } }
+      { "id": "picture-sheet", "variant": "ordinary", "weight": { "base": 10 } },
+      { "id": "extra-sheet", "variant": "breaking", "weight": { "base": 10 } },
+      { "id": "survey-sheet", "variant": "analysis", "weight": { "base": 3 } }
     ],
     "pageLabels": { "front": "Dispatches", "home": "City & Province", "economy": "Trade", "abroad": "Overseas" }
   }

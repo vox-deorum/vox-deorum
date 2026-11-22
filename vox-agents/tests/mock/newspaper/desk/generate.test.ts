@@ -159,6 +159,23 @@ describe('newspaper desk generation', () => {
     }
   });
 
+  it('should finish large batches without a total request cap', async () => {
+    const large = template('large-batch', ['science'], Array.from({ length: 101 }, (_, index) =>
+      variant(`report-${index}`, { ...report, stance: `stance-${index}` })));
+    mocks.catalogue = { ...catalogue(), templates: [large] };
+    const refs = large.variants.map(({ id }) => ({ templateId: large.id, variantId: id }));
+    const writer = vi.fn<DeskWriter>(async input => replyFor(input));
+    try {
+      const job = await startJob(request(refs, 1, [modelA, modelB]), writer);
+      await waitForJob();
+      expect(job).toMatchObject({ status: 'done', total: 202, done: 202, failed: 0 });
+      expect(writer).toHaveBeenCalledTimes(202);
+      expect(getCandidates(refs.at(-1)!)).toHaveLength(2);
+    } finally {
+      for (const ref of refs) clearCandidates(ref);
+    }
+  });
+
   it('should reject a model that is not a configured chat alias', async () => {
     const ref = { templateId: 'press-news', variantId: 'one' };
     await expect(startJob(request([ref], 1, ['desk-test-missing']), async request => replyFor(request)))

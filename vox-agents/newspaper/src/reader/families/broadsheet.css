@@ -177,6 +177,8 @@
  * Narrow papers stack every story in publication order. Wide papers use the
  * shared grid: the lead spans the row and briefs pair in reading order. The
  * padding and rule below build a centre gutter between the paired briefs.
+ * Briefs are counted among themselves so a page without a lead pairs its
+ * first two briefs the same way a lead page pairs the briefs below the lead.
  */
 
 .vd-newspaper[data-design="broadsheet"] .vd-storylist[data-layout="ordinary"] .vd-story--brief .vd-headline::after {
@@ -199,17 +201,16 @@
     border-top: 1px solid var(--vd-ink);
   }
 
-  .vd-newspaper[data-design="broadsheet"] .vd-storylist[data-layout="ordinary"] > .vd-story--brief:nth-child(2),
-  .vd-newspaper[data-design="broadsheet"] .vd-storylist[data-layout="ordinary"] > .vd-story--brief:nth-child(3) {
+  .vd-newspaper[data-design="broadsheet"] .vd-storylist[data-layout="ordinary"] > .vd-story--brief:nth-child(-n + 2 of .vd-story--brief) {
     border-top: 3px double var(--vd-ink);
   }
 
-  /* The lead is the first child, so even children open a row and odd children close it. */
-  .vd-newspaper[data-design="broadsheet"] .vd-storylist[data-layout="ordinary"] > .vd-story--brief:nth-child(even) {
+  /* Odd briefs open a row and even briefs close it, with or without a lead above them. */
+  .vd-newspaper[data-design="broadsheet"] .vd-storylist[data-layout="ordinary"] > .vd-story--brief:nth-child(odd of .vd-story--brief) {
     padding-right: 25px;
   }
 
-  .vd-newspaper[data-design="broadsheet"] .vd-storylist[data-layout="ordinary"] > .vd-story--brief:nth-child(odd) {
+  .vd-newspaper[data-design="broadsheet"] .vd-storylist[data-layout="ordinary"] > .vd-story--brief:nth-child(even of .vd-story--brief) {
     padding-left: 25px;
     border-left: 1px solid var(--vd-rule);
   }

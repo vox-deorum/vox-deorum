@@ -34,7 +34,7 @@ import {
   findDeskVariant,
   renderBrief,
 } from './brief.js';
-import { deskChoicesLimit, deskJobRequestLimit, deskRefKey } from './batch.js';
+import { deskChoicesLimit, deskRefKey } from './batch.js';
 import { DeskError, readDeskCatalogue } from './catalogue.js';
 import type { DeskCatalogue } from './catalogue.js';
 import { candidateWarnings, templateVariables } from './variables.js';
@@ -323,9 +323,6 @@ function prepareTasks(
   const refs = new Map<string, DeskRef>();
   for (const ref of request.refs) refs.set(deskRefKey(ref), ref);
   const chunks = chunkByStyle([...refs.values()], catalogue);
-  const total = chunks.length * request.models.length;
-  if (total > deskJobRequestLimit)
-    throw new DeskError(400, `This batch needs ${total} requests; the desk allows at most ${deskJobRequestLimit}.`);
   return chunks.flatMap(chunk => {
     const prompt = renderBrief(briefView(chunk, catalogue, request.choices));
     return request.models.map(model => ({ model, chunk, choices: request.choices, prompt }));

@@ -144,6 +144,27 @@ describe('editorial engine', () => {
   });
 
   describe('authored selection and history', () => {
+    it('should publish four briefs when an eligible merge closes the importance gap', async () => {
+      const catalogue = editorialConfigSchema.parse({
+        ...config,
+        templates: [...config.templates, {
+          id: 'roundup', triggers: ['balance'], tags: ['roundup'], weight: { base: 1 }, variants: [],
+          merge: {
+            match: "member.templateIds.includes('culture')", min: 1,
+            variants: [{ id: 'combined', headline: 'Roundup', body: ['Reports combined.'], weight: { base: 1 } }],
+          },
+        }],
+      });
+      const evidence = fixture();
+      const unmerged = await check(evidence, undefined, config, 'branch', 'campaign', 2);
+      expect(unmerged.status).toBe('skipped');
+      const merged = await check(evidence, undefined, catalogue, 'branch', 'campaign', 2);
+      if (merged.status !== 'published') throw new Error(merged.reason);
+      expect(merged.issue.pages[0].hasLead).toBe(false);
+      expect(merged.issue.pages[0].itemIds).toHaveLength(4);
+      expect(Object.values(merged.decision.selectedVariants)).toContain('combined');
+    });
+
     it('should give one merged story credit for its displayed originals and preserve their history', async () => {
       const catalogue = editorialConfigSchema.parse({
         ...config,
@@ -163,12 +184,27 @@ describe('editorial engine', () => {
           },
         }],
       });
+      // The same stories without the merge have no leader and print a four brief front.
+      const withoutMerge = editorialConfigSchema.parse({
+        ...catalogue,
+        templates: catalogue.templates.map(template => template.id === 'roundup' ? {
+          ...template, merge: null,
+          variants: [{ id: 'roundup', headline: 'Roundup', body: ['Reports combined.'], weight: { base: 1 } }],
+        } : template),
+      });
+      const leadless = await check(fixture(), undefined, withoutMerge, 'branch', 'campaign', 4);
+      if (leadless.status !== 'published') throw new Error(leadless.reason);
+      expect(leadless.issue.pages[0].hasLead).toBe(false);
+      expect(leadless.issue.pages[0].itemIds).toHaveLength(4);
+
       const result = await check(fixture(), undefined, catalogue, 'branch', 'campaign', 4);
       expect(result.status).toBe('published');
       if (result.status !== 'published') return;
       expect(result.issue.items).toHaveLength(5);
+      expect(result.issue.pages[0].hasLead).toBe(true);
       expect(result.issue.items[0].headline).toContainEqual({ type: 'text', text: '32' });
       const item = result.state.issues[0].items.find(item => item.coveredFingerprints)!;
+      expect(item.importance).toBe(70);
       expect(item.ruleIds).toEqual(expect.arrayContaining(['balance', 'ledger', 'culture']));
       expect(item.sources.map(source => source.id)).toEqual(expect.arrayContaining([1000, 1001]));
       const fingerprints = publicationStateSchema.parse(result.state).issues[0].items[0].coveredFingerprints!;
@@ -222,7 +258,7 @@ describe('editorial engine', () => {
       expect(result.status).toBe('published');
       if (result.status !== 'published') return;
       const records = result.state.issues[0].items;
-      expect(records).toHaveLength(5);
+      expect(records).toHaveLength(4);
       const merged = records.find(record => record.coveredFingerprints)!;
       const [balanceSeries] = records.find(record => record.templateIds.includes('balance-report'))!.seriesKeys;
       expect(merged.ruleIds).toContain('balance');
@@ -241,13 +277,18 @@ describe('editorial engine', () => {
           },
         }],
       });
-      const ready = await check(fixture(), undefined, catalogue);
+      // A clear leader makes the front need a fifth story even when the merge cannot print.
+      const leadCatalogue = editorialConfigSchema.parse({
+        ...catalogue,
+        triggers: catalogue.triggers.map(trigger => trigger.id === 'ledger' ? { ...trigger, adjust: '25' } : trigger),
+      });
+      const ready = await check(fixture(), undefined, leadCatalogue);
       expect(ready.status).toBe('published');
       if (ready.status !== 'published') return;
       expect(ready.issue.items).toHaveLength(5);
       expect(ready.decision.candidateScores.filter(score => score.selected)).toHaveLength(5);
       expect(ready.decision.candidateScores.every(score => !score.mergedInto)).toBe(true);
-      const lacking = await check(fixture(10, 5, 0), undefined, catalogue);
+      const lacking = await check(fixture(10, 5, 0), undefined, leadCatalogue);
       expect(lacking.status).toBe('skipped');
       expect(lacking.decision.reason).toMatch(/\b4\b.*\b5\b/);
       expect(lacking.state.reportingThroughTurn).toBeNull();
@@ -305,9 +346,9 @@ describe('editorial engine', () => {
           {
             id: 'broad-roundup', triggers: ['balance'], tags: [], weight: { base: 1 }, variants: [],
             merge: {
-              priority: 10, min: 3,
-              match: "member.templateIds.some(id => ['culture', 'fixture-brief-0', 'fixture-brief-1'].includes(id))",
-              variants: [{ id: 'too-many', headline: 'Three reports', body: ['Combined coverage.'], weight: { base: 1 } }],
+              priority: 10, min: 4,
+              match: "member.templateIds.some(id => ['culture', 'fixture-brief-0', 'fixture-brief-1', 'fixture-brief-2'].includes(id))",
+              variants: [{ id: 'too-many', headline: 'Four reports', body: ['Combined coverage.'], weight: { base: 1 } }],
             },
           },
         ],
@@ -326,11 +367,11 @@ describe('editorial engine', () => {
       const catalogue = editorialConfigSchema.parse({
         ...config,
         mastheadRules: [],
-        designs: [{
-          ...wire, when: undefined, weight: { base: 1 },
-          layouts: wire.layouts.map(layout => layout.variant === 'breaking' ? { ...layout, frontSlots: 5 } : layout),
-        }],
-        triggers: config.triggers.map(trigger => trigger.id === 'balance' ? { ...trigger, urgent: 'true' } : trigger),
+        designs: [{ ...wire, when: undefined, weight: { base: 1 } }],
+        // A near tie keeps the regular front at four stories, so only the urgent merge needs a fifth.
+        triggers: config.triggers.map(trigger =>
+          trigger.id === 'balance' ? { ...trigger, urgent: 'true' } :
+            trigger.id === 'culture' ? { ...trigger, adjust: '20' } : trigger),
         templates: [...config.templates, {
           id: 'urgent-roundup', triggers: ['balance'], tags: [], weight: { base: 1 }, variants: [],
           merge: {
@@ -648,7 +689,7 @@ describe('editorial engine', () => {
       const result = await check(fixture(), createInitialPublicationState(), revised, 'branch', 'campaign', 0);
       if (result.status !== 'published') throw new Error(result.reason);
       const printed = result.state.issues[0].items;
-      expect(printed).toHaveLength(5);
+      expect(printed).toHaveLength(4);
       expect(printed.flatMap(item => item.templateIds)).not.toContain('fixture-brief-3');
       expect(Object.keys(result.state.series).some(key => key.includes('fixture-brief-3'))).toBe(false);
       expect(Object.keys(result.decision.selectedStyles ?? {})).toEqual(printed.map(item => item.id));
@@ -726,11 +767,12 @@ describe('editorial engine', () => {
 
     it('should retain the wire design when a published Information Era run reaches the Future Era', async () => {
       const wireOnly = { ...config, mastheadRules: [], designs: config.designs.filter(design => design.id === 'wire') };
-      const first = await check(fixture(10, 5, 0, 'Information Era'), createInitialPublicationState(), wireOnly);
+      const first = await check(fixture(10, 5, 0, 'Information Era'), createInitialPublicationState(), wireOnly, 'branch', 'campaign', 4);
       expect(first.status).toBe('published');
       expect(first.state.issues[0].designId).toBe('wire');
-      const future = await check(fixture(20, 10, 25, 'Future Era'), first.state);
-      expect(future.status === 'published' && future.issue.publication.designId).toBe('wire');
+      const future = await check(fixture(20, 10, 25, 'Future Era'), first.state, config, 'branch', 'campaign', 4);
+      if (future.status !== 'published') throw new Error(future.reason);
+      expect(future.issue.publication.designId).toBe('wire');
     });
 
     it('should save a skipped check when no design is eligible', async () => {
@@ -806,7 +848,7 @@ describe('editorial engine', () => {
       const skipped = await check(evidence, first.state, unprintable, 'branch', 'campaign', 4);
       expect(skipped.status).toBe('skipped');
       expect(skipped.decision.designSelection).toMatchObject({ reason: 'no-eligible', candidates: [] });
-      expect(skipped.decision.reason).toMatch(/breaking.*\b5\b/);
+      expect(skipped.decision.reason).toMatch(/no eligible breaking front layout/i);
       expect(skipped.state.reportingThroughTurn).toBe(first.state.reportingThroughTurn);
       expect(skipped.state.triggerRepeats).toEqual(first.state.triggerRepeats);
       expect(first.state).toEqual(preserved);
@@ -855,7 +897,7 @@ describe('editorial engine', () => {
       const state = createInitialPublicationState();
       state.issues = [1, 2, 3].map(turn => ({ issueId: `issue-${turn}`, turn, items: [], designId: 'shang' }));
       const draws = [0, 0.25, 0.5, 0.75, 1 - Number.EPSILON];
-      const choices = draws.map(draw => choosePressRunDesign([...fittingFrontLayouts(prepareFrontLayouts(config, classical.weights), 5, false).keys()], classical.weights, state, () => draw).design?.id);
+      const choices = draws.map(draw => choosePressRunDesign([...fittingFrontLayouts(prepareFrontLayouts(config, classical.weights), false).keys()], classical.weights, state, () => draw).design?.id);
       expect(choices).toEqual(expect.arrayContaining(['shang', 'oral-accounts']));
     });
 

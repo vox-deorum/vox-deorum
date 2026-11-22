@@ -20,6 +20,7 @@ import {
 } from '../selection/templates.js';
 import { fittingFrontLayouts, prepareFrontLayouts, type FrontLayouts, type PresentationWeights } from './eligibility.js';
 import { placeArticles } from './placement.js';
+import { planPage } from './page-plan.js';
 import { resolveMasthead, resolvePrintableTermText, termTextSources } from './masthead.js';
 import type { MastheadRuleSelection } from './masthead-rules.js';
 
@@ -141,8 +142,10 @@ export async function presentIssue(input: {
 }): Promise<PresentationResult | undefined> {
   const { config, weights, state } = input;
   const terms = input.terms ?? new Map();
+  const plan = planPage(input.selected, true);
+  if (input.selected.length < plan.count) return undefined;
   const fitting = input.fittingFronts ?? fittingFrontLayouts(
-    prepareFrontLayouts(config, weights, terms), input.selected.length, input.selected.some(candidate => candidate.urgent),
+    prepareFrontLayouts(config, weights, terms), plan.breaking,
   );
   const { design, audit } = choosePressRunDesign([...fitting.keys()], weights, state, () => pressRunDesignDraw(input.checkId));
   input.recordDesignSelection?.(audit);
@@ -242,7 +245,7 @@ export async function presentIssue(input: {
   }
   const pages: IssueDocument['pages'] = [];
   const layouts: Record<string, string> = {};
-  for (const { page, layout, itemIds } of placement) {
+  for (const { page, layout, itemIds, hasLead } of placement) {
     layouts[page.id] = layout.id;
     let label = Object.hasOwn(design.pageLabels, page.id) ? design.pageLabels[page.id] : page.label;
     const ruleLabels = selectedMasthead?.rule.pageLabels;
@@ -258,6 +261,7 @@ export async function presentIssue(input: {
       id: page.id,
       label,
       layout: layout.variant,
+      hasLead,
       itemIds: itemIds.map(id => publishedIds.get(id)!),
     });
   }

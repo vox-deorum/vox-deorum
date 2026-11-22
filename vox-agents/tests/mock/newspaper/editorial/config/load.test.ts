@@ -48,31 +48,27 @@ describe('editorial catalogue files', () => {
     await expect(loadEditorialConfig(directory)).rejects.toThrow(field);
   });
 
-  it('should reject a section minimum because the layout owns its size', async () => {
+  it('should reject an obsolete page minimum because the front policy fixes page sizes', async () => {
     await writeDocument('pages.json', [{ id: 'home', minimum: 2 }]);
     await expect(loadEditorialConfig(directory)).rejects.toThrow('minimum');
   });
 
-  it.each([
-    { variant: 'ordinary', frontSlots: undefined, sectionSlots: 2, field: 'frontSlots' },
-    { variant: 'ordinary', frontSlots: 3, sectionSlots: 2, field: 'frontSlots' },
-    { variant: 'ordinary', frontSlots: 4, sectionSlots: undefined, field: 'sectionSlots' },
-    { variant: 'analysis', frontSlots: 4, sectionSlots: 0, field: 'sectionSlots' },
-    { variant: 'breaking', frontSlots: 4, sectionSlots: 2, field: 'sectionSlots' },
-  ])('should reject invalid $field for a new $variant layout', async ({ field, ...layout }) => {
+  it.each(['frontSlots', 'sectionSlots'])('should reject the retired layout field %s', async field => {
     await writeDocument('designs.json', [{
       id: 'wire',
-      layouts: [{ id: 'custom-layout', weight: { base: 1 }, ...layout }],
+      layouts: [{ id: 'custom-layout', variant: 'ordinary', [field]: 4, weight: { base: 1 } }],
     }]);
     await expect(loadEditorialConfig(directory)).rejects.toThrow(field);
   });
 
-  it('should reject a front layout beyond the ranked story cap', async () => {
+  it('should require room for a five story front', async () => {
     await writeDocument('defaults.json', { maxItems: 4 });
-    await expect(loadEditorialConfig(directory)).rejects.toThrow('frontSlots');
+    await expect(loadEditorialConfig(directory)).rejects.toThrow('maxItems');
+    await writeDocument('defaults.json', { maxItems: 5 });
+    expect((await loadEditorialConfig(directory)).defaults.maxItems).toBe(5);
   });
 
-  it('should reject snapshots that predate layout slots', async () => {
+  it('should reject snapshots that predate the current catalogue version', async () => {
     const loaded = await loadEditorialConfig();
     await expect(parseEditorialConfig({ ...loaded, version: editorialConfigVersion - 1 })).rejects.toThrow('version');
   });
@@ -432,7 +428,7 @@ describe('editorial catalogue files', () => {
     const trial = {
       id: 'trial-design', when: 'true', weight: { base: 1 },
       layouts: [...base.designs[0].layouts, {
-        id: 'trial-layout', variant: 'ordinary', frontSlots: 4, sectionSlots: 2,
+        id: 'trial-layout', variant: 'ordinary',
         weight: { base: 1, adjustments: [{ add: 3, when: 'turn >' }] },
       }],
     };

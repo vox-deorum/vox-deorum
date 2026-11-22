@@ -1,6 +1,6 @@
 <template>
   <div class="log-pane">
-    <div class="log-toolbar">
+    <div class="panel-toolbar">
       <SelectButton
         v-model="selectedLevel"
         :options="levelOptions"

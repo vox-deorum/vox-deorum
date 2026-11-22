@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "issueId": "victorian-ordinary-225",
   "campaignId": "fixture-campaign",
   "timelineId": "fixture-timeline-main",
@@ -27,12 +27,14 @@
       "id": "headlines",
       "label": "Headlines",
       "layout": "ordinary",
+      "hasLead": true,
       "itemIds": ["trade", "paris", "york", "reservoir", "ledger"]
     },
     {
       "id": "abroad",
       "label": "Foreign Correspondence",
       "layout": "ordinary",
+      "hasLead": true,
       "itemIds": ["canal", "convoy", "embassy"]
     }
   ],

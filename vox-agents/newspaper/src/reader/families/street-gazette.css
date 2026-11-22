@@ -59,7 +59,7 @@
 
 @container newspaper (width > 760px) {
   .vd-newspaper[data-publication-design="street-gazette"] {
-    & .vd-storylist[data-layout] .vd-story--brief:nth-child(-n+3) { border-top: 4px double var(--vd-ink); }
+    & .vd-storylist[data-layout] .vd-story--brief:nth-child(-n + 2 of .vd-story--brief) { border-top: 4px double var(--vd-ink); }
     & .vd-storylist[data-layout="ordinary"] .vd-story--brief .vd-prose { max-width: 64ch; }
   }
 }

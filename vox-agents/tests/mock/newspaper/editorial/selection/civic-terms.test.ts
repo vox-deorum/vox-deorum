@@ -145,7 +145,8 @@ describe('newspaper civic vocabulary', () => {
     const template = stock.templates.find(entry => entry.variants.some(variant => variant.id === id))!;
     const config = await parseEditorialConfig({
       ...stock,
-      triggers: [{ id: 'congress-new-proposals', subject: 'world', tier: 'filler', when: 'true', values: { ours: 'true' } }],
+      triggers: [{ id: 'congress-new-proposals', subject: 'world', tier: 'filler', when: 'true',
+        values: { ours: 'true', proposal: '"Merchant Passage"' } }],
       templates: [{ ...template, variants: template.variants.filter(variant => variant.id === id) }],
     });
     const home = player(0, 10, { PolicyBranches: { Fealty: ['A'] } });

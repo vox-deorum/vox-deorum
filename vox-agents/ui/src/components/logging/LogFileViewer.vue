@@ -1,6 +1,6 @@
 <template>
   <div class="log-pane">
-    <div class="log-toolbar">
+    <div class="panel-toolbar">
       <Select
         v-model="selectedFile"
         :options="files"

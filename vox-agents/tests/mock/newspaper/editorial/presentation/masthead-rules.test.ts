@@ -43,8 +43,8 @@ function createConfig(): EditorialConfig {
         id: 'wire', version: '1', title: 'Design Title', motto: 'Design Motto', weight: { base: 1 },
         presentation: { schemaVersion: 1, rendererFamily: 'feed', tokens: { paperColor: '#ffffff' } },
         layouts: [
-          { id: 'ordinary', variant: 'ordinary', frontSlots: 4, sectionSlots: 2, weight: { base: 1 } },
-          { id: 'breaking', variant: 'breaking', frontSlots: 4, weight: { base: 1 } },
+          { id: 'ordinary', variant: 'ordinary', weight: { base: 1 } },
+          { id: 'breaking', variant: 'breaking', weight: { base: 1 } },
         ],
         pageLabels: { desk: 'Design Desk' },
       },
@@ -52,8 +52,8 @@ function createConfig(): EditorialConfig {
         id: 'victorian', version: '1', title: 'Other Title', weight: { base: 0 },
         presentation: { schemaVersion: 1, rendererFamily: 'broadsheet', tokens: { paperColor: '#eeeecc' } },
         layouts: [
-          { id: 'broadsheet', variant: 'ordinary', frontSlots: 4, sectionSlots: 2, weight: { base: 1 } },
-          { id: 'war-edition', variant: 'breaking', frontSlots: 4, weight: { base: 1 } },
+          { id: 'broadsheet', variant: 'ordinary', weight: { base: 1 } },
+          { id: 'war-edition', variant: 'breaking', weight: { base: 1 } },
         ],
       },
     ],
@@ -234,6 +234,7 @@ describe('masthead presentation', () => {
       ['desk', 'Design Desk'],
       ['constructor', 'Page Default'],
     ]);
+    expect(result.issue.pages.map(page => page.hasLead)).toEqual([false, false, false]);
     expect(result.mastheadRuleId).toBe('winner');
     expect(result.mastheadSources).toEqual([conditionSource, titleSource, frontSource]);
     expect(result.mastheadSources).not.toContainEqual(unusedSource);
@@ -258,6 +259,7 @@ describe('masthead presentation', () => {
       ['front', 'Front'],
       ['desk', 'Design Desk'],
     ]);
+    expect(result.issue.pages.map(page => page.hasLead)).toEqual([false, false]);
     expect(result.mastheadRuleId).toBeUndefined();
     expect(result.mastheadSources).toEqual([]);
   });

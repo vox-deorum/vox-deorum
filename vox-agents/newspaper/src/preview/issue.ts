@@ -9,11 +9,12 @@ import {
 } from "../../../src/newspaper/contracts/issue.js";
 import { editorialLayoutSchema, editorialPageSchema, type EditorialLayout } from "../../../src/newspaper/editorial/config/layouts.js";
 import { resolveMasthead } from "../../../src/newspaper/editorial/presentation/masthead.js";
+import { leadImportanceMargin } from "../../../src/newspaper/editorial/presentation/page-plan.js";
 import { placeArticles } from "../../../src/newspaper/editorial/presentation/placement.js";
 import { readBuiltInDesignDocuments } from "../design-assets-source.js";
-import ordinaryFixture from "../../fixtures/victorian-ordinary.json";
 import breakingFixture from "../../fixtures/victorian-breaking.json";
 import analysisFixture from "../../fixtures/victorian-analysis.json";
+import ordinaryFixture from "../../fixtures/wire-ordinary.json";
 import pages from "../../pages.json";
 
 const previewDesignSchema = issuePublicationSchema.omit({ designId: true, designVersion: true }).extend({
@@ -56,12 +57,22 @@ export function readPreviewDesigns(): PreviewDesign[] {
   return readBuiltInDesignDocuments().flatMap(document => z.array(previewDesignSchema).parse(document));
 }
 
-/** Use the matching artwork for a sample issue's lead story. */
+/** Use the matching artwork for a sample issue's first front story. */
 function previewIllustration(design: PreviewDesign, layout: NewspaperLayoutVariant): ItemImage | undefined {
   const tradeIllustration = tradeIllustrations.get(design.id);
   if (tradeIllustration) return layout === "breaking" ? undefined : tradeIllustration;
   const image = design.assetDefinitions.find(asset => asset.kind === "image");
   return image ? { assetId: `${design.id}.${image.id}`, altText: "Sample illustration" } : undefined;
+}
+
+/** Space the sample scores so each fixture's chosen lead stands out on its own page. */
+function previewImportance(sample: IssueDocument): Map<string, number> {
+  const frontIds = new Set(sample.pages[0].itemIds);
+  const importance = new Map(sample.items.map(item => [item.id, frontIds.has(item.id) ? leadImportanceMargin : 0]));
+  for (const [pageIndex, page] of sample.pages.entries()) {
+    if (page.hasLead) importance.set(page.itemIds[0], (pageIndex === 0 ? 2 : 1) * leadImportanceMargin);
+  }
+  return importance;
 }
 
 /** Use fixture stories with the chosen design, sample civilization and accent. */
@@ -74,12 +85,17 @@ export function createPreviewIssue(
   const sample = samples[layout.variant];
   const leadId = sample.pages[0].itemIds[0];
   const image = previewIllustration(design, layout.variant);
+  const importance = previewImportance(sample);
   const name = civilizationName?.trim();
   const masthead = resolveMasthead(design, new Map(name ? [["civilization", { value: name, sources: [] }]] : []));
   if (!masthead) throw new Error(`The masthead for ${design.id} needs terms the mockup cannot supply.`);
   const placements = placeArticles({
     entries: sample.items.map(item => ({
-      id: item.id, tags: item.tags, subject: item.id, urgent: layout.variant === "breaking" && item.id === leadId,
+      id: item.id,
+      tags: item.tags,
+      subject: item.id,
+      urgent: layout.variant === "breaking" && item.id === leadId,
+      importance: importance.get(item.id) ?? 0,
     })),
     frontPage,
     frontLayout: layout,
@@ -90,6 +106,8 @@ export function createPreviewIssue(
     sectionDraw: () => 0,
   });
   const placedIds = new Set(placements.flatMap(({ itemIds }) => itemIds));
+  // The first front story carries the artwork, whether it is a lead or a brief.
+  const artworkItemId = placements[0]?.itemIds[0];
   return {
     ...sample,
     issueId: `preview-${design.id}-${layout.id}`,
@@ -103,17 +121,18 @@ export function createPreviewIssue(
         ? { ...design.presentation, tokens: { ...design.presentation.tokens, accentColor } }
         : design.presentation,
     },
-    pages: placements.map(({ page, layout, itemIds }) => ({
+    pages: placements.map(({ page, layout, itemIds, hasLead }) => ({
       id: page.id,
       label: Object.hasOwn(design.pageLabels, page.id) ? design.pageLabels[page.id] : page.label,
       layout: layout.variant,
+      hasLead,
       itemIds,
     })),
     items: sample.items.filter(item => placedIds.has(item.id)).map((item, index) => ({
       ...item,
       // Sample dates are illustrative; live almanacks use recorded observations.
       ...(design.id === "printed-almanack" && { observedTurn: sample.cutoff.turn - 3 * index }),
-      image: item.id === leadId ? image : undefined,
+      image: item.id === artworkItemId ? image : undefined,
     })),
   };
 }

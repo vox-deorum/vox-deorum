@@ -31,8 +31,6 @@
       {
         "id": "account",
         "variant": "ordinary",
-        "frontSlots": 5,
-        "sectionSlots": 3,
         "weight": {
           "base": 10
         }
@@ -40,7 +38,6 @@
       {
         "id": "urgent-account",
         "variant": "breaking",
-        "frontSlots": 5,
         "weight": {
           "base": 10
         }
@@ -48,8 +45,6 @@
       {
         "id": "comparison",
         "variant": "analysis",
-        "frontSlots": 5,
-        "sectionSlots": 3,
         "weight": {
           "base": 2
         }

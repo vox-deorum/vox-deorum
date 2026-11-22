@@ -20,9 +20,9 @@
       }
     },
     "layouts": [
-      { "id": "news-index", "variant": "ordinary", "frontSlots": 4, "sectionSlots": 2, "weight": { "base": 10 } },
-      { "id": "newsflash", "variant": "breaking", "frontSlots": 4, "weight": { "base": 10 } },
-      { "id": "data-service", "variant": "analysis", "frontSlots": 4, "sectionSlots": 2, "weight": { "base": 3 } }
+      { "id": "news-index", "variant": "ordinary", "weight": { "base": 10 } },
+      { "id": "newsflash", "variant": "breaking", "weight": { "base": 10 } },
+      { "id": "data-service", "variant": "analysis", "weight": { "base": 3 } }
     ],
     "pageLabels": {
       "front": "Headlines",

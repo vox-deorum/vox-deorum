@@ -7,7 +7,7 @@ import type {
   EditorialDecisionRecord,
   PublishedItemRecord,
 } from '../contracts/publication.js';
-import { minimumFrontSlots, type EditorialConfig } from './config/schema.js';
+import type { EditorialConfig } from './config/schema.js';
 import type {
   CompiledTriggerExpressions,
   EditorialTerm,
@@ -32,6 +32,7 @@ import { configurationHash, createProseDraw } from './shared/determinism.js';
 import { summarizeSources, uniqueSources } from './shared/sources.js';
 import { presentIssue } from './presentation/issue.js';
 import { evaluatePresentation, fittingFrontLayouts, prepareFrontLayouts } from './presentation/eligibility.js';
+import { frontBriefCount, planPage } from './presentation/page-plan.js';
 import { selectMastheadRule } from './presentation/masthead-rules.js';
 import { validateEditorialIssue } from './presentation/validation.js';
 import { inferWarAndPeace } from './diplomacy/war-peace.js';
@@ -219,16 +220,21 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
     recordChoiceErrors();
     return { status: 'skipped', reason: decision.reason, state, decision };
   };
-  if (selection.selected.length < minimumFrontSlots)
-    return skip(`Only ${selection.selected.length} of ${minimumFrontSlots} required front articles are ready.`);
+  if (selection.selected.length < frontBriefCount)
+    return skip(`Only ${selection.selected.length} of ${frontBriefCount} required front articles are ready.`);
   const weights = await evaluatePresentation(config, compiled, batch, budget);
   const fronts = prepareFrontLayouts(config, weights, terms);
   const merged = await mergeSelectedStories(
     selection.selected, candidates, config, compiled, batch, budget, publishedFingerprints(state),
-    (count, urgent) => fittingFrontLayouts(fronts, count, urgent).size > 0, terms,
+    (prospective) => {
+      const plan = planPage(prospective, true);
+      return prospective.length >= plan.count && fittingFrontLayouts(fronts, plan.breaking).size > 0;
+    }, terms,
   );
-  const urgent = merged.some(candidate => candidate.urgent);
-  const fittingFronts = fittingFrontLayouts(fronts, merged.length, urgent);
+  const plan = planPage(merged, true);
+  if (merged.length < plan.count)
+    return skip(`Only ${merged.length} of ${plan.count} required front articles are ready.`);
+  const fittingFronts = fittingFrontLayouts(fronts, plan.breaking);
   let styleSources = new Map<string, NewspaperSourceReference[]>();
   const presentation = await presentIssue({
     checkId,
@@ -261,15 +267,8 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
       terms,
     }),
   });
-  if (!presentation) {
-    const slots = [...fronts.values()].flatMap(layouts => layouts
-      .filter(layout => (layout.variant === 'breaking') === urgent)
-      .map(layout => layout.frontSlots));
-    const kind = urgent ? 'breaking' : 'regular';
-    return slots.length
-      ? skip(`Only ${merged.length} of ${Math.min(...slots)} required ${kind} front articles are ready.`)
-      : skip(`No eligible ${kind} front layout for ${merged.length} ready articles.`);
-  }
+  if (!presentation)
+    return skip(`No eligible ${plan.breaking ? 'breaking' : 'regular'} front layout for ${merged.length} ready articles.`);
   const issue = validateEditorialIssue(presentation, config, weights);
   const records: PublishedItemRecord[] = issue.items.map((item) => {
     const candidate = presentation.itemCandidates.get(item.id)!;

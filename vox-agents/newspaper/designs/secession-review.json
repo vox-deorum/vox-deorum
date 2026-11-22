@@ -27,9 +27,9 @@
       }
     },
     "layouts": [
-      { "id": "cover", "variant": "ordinary", "frontSlots": 5, "sectionSlots": 3, "weight": { "base": 10 } },
-      { "id": "extra", "variant": "breaking", "frontSlots": 5, "weight": { "base": 10 } },
-      { "id": "survey", "variant": "analysis", "frontSlots": 5, "sectionSlots": 3, "weight": { "base": 3 } }
+      { "id": "cover", "variant": "ordinary", "weight": { "base": 10 } },
+      { "id": "extra", "variant": "breaking", "weight": { "base": 10 } },
+      { "id": "survey", "variant": "analysis", "weight": { "base": 3 } }
     ],
     "pageLabels": { "front": "Cover", "home": "At Home", "abroad": "Correspondence" }
   }

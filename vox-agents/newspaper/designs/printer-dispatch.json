@@ -36,9 +36,9 @@
       }
     ],
     "layouts": [
-      { "id": "sheet", "variant": "ordinary", "frontSlots": 5, "sectionSlots": 3, "weight": { "base": 10 } },
-      { "id": "dispatch", "variant": "breaking", "frontSlots": 5, "weight": { "base": 10 } },
-      { "id": "returns", "variant": "analysis", "frontSlots": 5, "sectionSlots": 3, "weight": { "base": 3 } }
+      { "id": "sheet", "variant": "ordinary", "weight": { "base": 10 } },
+      { "id": "dispatch", "variant": "breaking", "weight": { "base": 10 } },
+      { "id": "returns", "variant": "analysis", "weight": { "base": 3 } }
     ],
     "pageLabels": { "front": "The Sheet", "home": "Home Tidings", "economy": "Trade", "abroad": "Foreign Tidings" }
   }

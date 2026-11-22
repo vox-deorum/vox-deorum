@@ -27,11 +27,11 @@ export function prepareFrontLayouts(
   return fronts;
 }
 
-/** Keep only designs with enough ready articles for the required front layout kind. */
-export function fittingFrontLayouts(fronts: FrontLayouts, readyCount: number, urgent: boolean): FrontLayouts {
+/** Keep only front layouts of the required kind: breaking or regular. */
+export function fittingFrontLayouts(fronts: FrontLayouts, breaking: boolean): FrontLayouts {
   const fitting = new Map<EditorialDesign, EditorialLayout[]>();
   for (const [design, layouts] of fronts) {
-    const choices = layouts.filter(layout => (layout.variant === 'breaking') === urgent && layout.frontSlots <= readyCount);
+    const choices = layouts.filter(layout => (layout.variant === 'breaking') === breaking);
     if (choices.length) fitting.set(design, choices);
   }
   return fitting;

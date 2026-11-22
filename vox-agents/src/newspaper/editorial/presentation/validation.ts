@@ -4,8 +4,9 @@ import { parseIssueDocument } from '../../renderer/validation.js';
 import type { EditorialConfig } from '../config/schema.js';
 import type { PresentationWeights } from './eligibility.js';
 import type { PresentationResult } from './issue.js';
+import { frontBriefCount, sectionBriefCount } from './page-plan.js';
 
-/** Enforce canonical series, threat prominence, evidence dates and exact layout slots. */
+/** Enforce canonical series, threat prominence, evidence dates and required lead counts. */
 export function validateEditorialIssue(
   { issue, itemCandidates: candidates, layouts, variants }: PresentationResult,
   config: EditorialConfig,
@@ -35,7 +36,7 @@ export function validateEditorialIssue(
   const urgent = parsed.items.filter((item) => candidates.get(item.id)?.urgent);
   if (
     urgent.length &&
-    (!urgent.some((item) => item.id === front.itemIds[0]) || front.layout !== 'breaking')
+    (!front.hasLead || front.layout !== 'breaking' || !urgent.some((item) => item.id === front.itemIds[0]))
   )
     throw new Error('An urgent development must lead a breaking front page.');
   const subjects = new Set(parsed.items.map((item) => candidates.get(item.id)?.subject));
@@ -46,12 +47,14 @@ export function validateEditorialIssue(
     if (!definition || (weights.get(definition) ?? 0) <= 0)
       throw new Error('Unknown or ineligible page.');
     const layout = design.layouts.find((entry) => entry.id === layouts[page.id]);
-    const isBreaking = definition.front && page.itemIds.some((id) => candidates.get(id)?.urgent);
-    if (!layout || layout.variant !== page.layout || (weights.get(layout) ?? 0) <= 0 ||
-        (layout.variant === 'breaking') !== isBreaking)
+    if (!layout || layout.variant !== page.layout || (weights.get(layout) ?? 0) <= 0)
       throw new Error('Unknown or ineligible layout.');
-    if (page.itemIds.length !== (definition.front ? layout.frontSlots : layout.sectionSlots))
-      throw new Error(`Page ${page.id} does not fill its configured layout slots.`);
+    const lead = candidates.get(page.itemIds[0]);
+    if (page.layout === 'breaking' && (!definition.front || !page.hasLead || !lead?.urgent))
+      throw new Error('A breaking page requires an urgent lead.');
+    const required = (definition.front ? frontBriefCount : sectionBriefCount) + (page.hasLead ? 1 : 0);
+    if (page.itemIds.length !== required)
+      throw new Error(`Page ${page.id} does not fill its required ${required} articles.`);
     if (
       !definition.front &&
       page.itemIds.some(

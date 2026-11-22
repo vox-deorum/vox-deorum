@@ -31,7 +31,7 @@ The issue saves a presentation snapshot with its renderer family and optional co
 
 The browser fits the paper to its host, up to 1200 CSS pixels wide. `paperWidth` includes the margins and scrollbar gutter. At widths through 480 pixels, margins are 16 pixels per side; through 760 they are 24. Wider papers use the family defaults in `renderer/layout.ts`: 32 for inscription and feed, 40 for folio, and 48 for broadsheet.
 
-Every story reads in one column. On narrow pages the stories stack in publication order. Above 760 pixels, [historical designs](designs.md#rendering-constraints) give the lead a full row and place the briefs two across. The feed keeps a single stream.
+Every story reads in one column. On narrow pages the stories stack in reading order. Above 760 pixels, most [historical designs](designs.md#rendering-constraints) place briefs two across, below a full row for the lead when there is one. The feed keeps a single stream.
 
 For the game, export fits the paper width to the available physical width at the requested zoom, with the same 1200 CSS-pixel cap. `displayScale` controls how the game places strips and actions; raster scale controls texture resolution. Defaults are raster scale 2 and a 4096 by 2048 pixel texture limit. The runtime uses uncompressed BGRA; the exporter also supports BC1. A height change alone can reuse the same export because the reader captures the full section at a fixed capture viewport height.
 

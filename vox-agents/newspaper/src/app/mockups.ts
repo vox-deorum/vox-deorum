@@ -27,9 +27,9 @@ export function mountMockupControls(
     const layouts = design?.layouts ?? [];
     const previousVariant = layoutSelect.selectedOptions[0]?.dataset.variant;
     const previous = layoutSelect.value;
-    layoutSelect.replaceChildren(...layouts.map(({ id, variant, frontSlots }) => {
+    layoutSelect.replaceChildren(...layouts.map(({ id, variant }) => {
       const label = variant[0].toUpperCase() + variant.slice(1);
-      const option = new Option(`${label} · ${id} (${frontSlots} articles)`, id);
+      const option = new Option(`${label} · ${id}`, id);
       option.dataset.variant = variant;
       return option;
     }));

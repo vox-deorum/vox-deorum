@@ -38,7 +38,7 @@ describe('durable replay publication', () => {
       sqlite.prepare('UPDATE GameMetadata SET Value = ? WHERE Key = ?').run('Standard', 'gameSpeed');
       const insert = sqlite.prepare('INSERT INTO GameEvents (ID, Turn, CreatedAt, Player0, Type, Payload) VALUES (?, ?, ?, ?, ?, ?)');
       let id = 200;
-      for (const [turn, count] of [[100, 5], [103, 2], [108, 3], [114, 11]]) {
+      for (const [turn, count] of [[100, 4], [103, 2], [108, 2], [114, 11]]) {
         for (let i = 0; i < count; i++) {
           insert.run(id, turn, 10_000 + id, 1, 'PlayerAdoptPolicyBranch', JSON.stringify({ PlayerID: 0, BranchType: `Branch ${id}` }));
           id++;
@@ -60,7 +60,7 @@ describe('durable replay publication', () => {
     const configured = { ...settings(), fromTurn: 100, toTurn: 115 };
     await session.configure(configured);
     const first = await session.advance();
-    expect(first.check?.issue?.items).toHaveLength(5);
+    expect(first.check?.issue?.items).toHaveLength(4);
     const skipped = await session.advance();
     expect(skipped.check).toMatchObject({ status: 'skipped', decision: { cutoffTurn: 105 } });
     expect(skipped.evidence.events.map(event => event.source.turn)).toEqual([103, 103]);
@@ -70,20 +70,22 @@ describe('durable replay publication', () => {
     await session.configure({ ...configured, mode: 'resume' });
     const next = await session.advance();
     expect(next.evidence.request).toMatchObject({ previousCheckTurn: 100, cutoffTurn: 110 });
-    expect(next.check?.issue?.items).toHaveLength(5);
+    expect(next.check?.issue?.items).toHaveLength(4);
     const { articles } = await session.getIssue(next.check!.issue!.issueId);
     const sourceIds = articles.flatMap(article => article.sources.filter(source => source.table === 'GameEvents').map(source => source.id));
-    expect(sourceIds.sort((a, b) => a - b)).toEqual([205, 206, 207, 208, 209]);
+    expect(sourceIds.sort((a, b) => a - b)).toEqual([204, 205, 206, 207]);
 
     const full = await session.advance();
     expect(full.evidence.request).toMatchObject({ previousCheckTurn: 110, cutoffTurn: 115 });
     expect(full.check?.decision.candidateScores).toHaveLength(11);
-    expect(full.check?.decision.candidateScores.filter(score => score.selected)).toHaveLength(8);
+    expect(full.check?.decision.candidateScores.filter(score => score.selected)).toHaveLength(6);
     const pages = full.check!.issue!.pages;
-    expect(pages.map(page => [page.id, page.itemIds.length])).toEqual([['front', 5], ['economy', 3]]);
-    expect(new Set(pages.flatMap(page => page.itemIds)).size).toBe(8);
+    expect(pages.map(page => [page.id, page.hasLead, page.itemIds.length])).toEqual([
+      ['front', false, 4], ['economy', false, 2],
+    ]);
+    expect(new Set(pages.flatMap(page => page.itemIds)).size).toBe(6);
     const archived = await session.getIssue(full.check!.issue!.issueId);
-    expect(archived.articles).toHaveLength(8);
+    expect(archived.articles).toHaveLength(6);
   });
 
   it('should publish unwitnessed research by a met civilization using the configured ideology names', async () => {
@@ -356,7 +358,7 @@ describe('durable replay publication', () => {
     await expect(session.configure({ ...settings(), runId: 'legacy', mode: 'resume' })).rejects.toMatchObject({ status: 400 });
   });
 
-  it('should rebuild older newspaper output in place when generating a new run', async () => {
+  it('should reject older newspaper output without changing it and regenerate at a fresh path', async () => {
     await session.configure(settings());
     const original = await session.advance();
     expect(original.check?.status).toBe('published');
@@ -368,16 +370,21 @@ describe('durable replay publication', () => {
       sqlite.pragma('user_version = 5');
     } finally { sqlite.close(); }
     session = new ReplaySession();
-    const rebuilt = await session.configure({ ...settings(), mode: 'new' });
-    expect(rebuilt.outputPath).toBe(outputPath);
-    expect(rebuilt.cursor.cutoffTurn).toBeNull();
+    await expect(session.configure({ ...settings(), mode: 'new' })).rejects.toMatchObject({ status: 400 });
+    const retained = new Database(outputPath, { readonly: true });
+    try {
+      expect(retained.pragma('user_version', { simple: true })).toBe(5);
+      expect(retained.prepare('SELECT COUNT(*) AS count FROM OfflineReplayIssues').get()).toEqual({ count: 1 });
+      expect(retained.prepare('SELECT value FROM unrelated').get()).toEqual({ value: 42 });
+    } finally { retained.close(); }
+    const freshPath = path.join(path.dirname(outputPath), 'fresh.sqlite');
+    const regenerated = await session.configure({ ...settings(), mode: 'new', outputPath: freshPath });
+    expect(regenerated.outputPath).toBe(freshPath);
+    expect(regenerated.cursor.cutoffTurn).toBeNull();
     expect((await session.listIssues()).issues).toEqual([]);
     expect((await session.advance()).check?.status).toBe('published');
     expect((await session.listIssues()).issues).toHaveLength(1);
     expect(await readFile(recording.filename)).toEqual(source);
-    const reopened = new Database(outputPath, { readonly: true });
-    try { expect(reopened.prepare('SELECT value FROM unrelated').get()).toEqual({ value: 42 }); }
-    finally { reopened.close(); }
   });
 
   it.each([

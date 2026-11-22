@@ -90,11 +90,11 @@ describe('national desk', () => {
       expect(result.decision.evidence).toEqual(expect.arrayContaining(evidence.cities.slice(0, 3).map(city => city.source)));
       const next = { ...evidence, request: { ...evidence.request, previousCheckTurn: 30, cutoffTurn: 31 } };
       const repeated = await check(next, result.state);
-      expect(repeated.status).toBe('skipped');
+      expect(repeated.records).toEqual([]);
     });
 
     it('should leave a capital tied for the largest population out of the news', async () => {
-      expect((await check(fixture({ populations: [10, 10, 9] }))).status).toBe('skipped');
+      expect((await check(fixture({ populations: [10, 10, 9] }))).records).toEqual([]);
     });
 
     it('should publish a measured crossing even when our measured strength is zero', async () => {
@@ -106,9 +106,9 @@ describe('national desk', () => {
     });
 
     it('should require a known baseline and present comparison for an overtake', async () => {
-      expect((await check(fixture({ strengths: [20, 25], oldStrengths: [20, 25] }))).status).toBe('skipped');
-      expect((await check(fixture({ strengths: [20, 25], oldStrengths: [20, undefined] }))).status).toBe('skipped');
-      expect((await check(fixture({ strengths: [null, 25] }))).status).toBe('skipped');
+      expect((await check(fixture({ strengths: [20, 25], oldStrengths: [20, 25] }))).records).toEqual([]);
+      expect((await check(fixture({ strengths: [20, 25], oldStrengths: [20, undefined] }))).records).toEqual([]);
+      expect((await check(fixture({ strengths: [null, 25] }))).records).toEqual([]);
     });
   });
 
@@ -139,7 +139,7 @@ describe('national desk', () => {
     });
 
     it('should not claim a new leader with no readable contender', async () => {
-      expect((await check(fixture({ technologies: [undefined, 14] }))).status).toBe('skipped');
+      expect((await check(fixture({ technologies: [undefined, 14] }))).records).toEqual([]);
     });
   });
 
@@ -155,8 +155,8 @@ describe('national desk', () => {
     });
 
     it('should leave a Golden Age ending or a peacetime award out of the wartime report', async () => {
-      expect((await check(fixture({ goldenAge: false }))).status).toBe('skipped');
-      expect((await check(fixture({ goldenAge: true, atWar: false }))).status).toBe('skipped');
+      expect((await check(fixture({ goldenAge: false }))).records).toEqual([]);
+      expect((await check(fixture({ goldenAge: true, atWar: false }))).records).toEqual([]);
     });
   });
 });

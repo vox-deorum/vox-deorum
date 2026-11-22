@@ -25,9 +25,9 @@
       }
     ],
     "layouts": [
-      { "id": "calendar", "variant": "ordinary", "frontSlots": 5, "sectionSlots": 3, "weight": { "base": 10 } },
-      { "id": "notice", "variant": "breaking", "frontSlots": 5, "weight": { "base": 10 } },
-      { "id": "tables", "variant": "analysis", "frontSlots": 5, "sectionSlots": 3, "weight": { "base": 3 } }
+      { "id": "calendar", "variant": "ordinary", "weight": { "base": 10 } },
+      { "id": "notice", "variant": "breaking", "weight": { "base": 10 } },
+      { "id": "tables", "variant": "analysis", "weight": { "base": 3 } }
     ],
     "pageLabels": { "front": "The Calendar", "home": "Domestic Notices", "economy": "Accounts", "abroad": "Foreign Affairs" }
   }

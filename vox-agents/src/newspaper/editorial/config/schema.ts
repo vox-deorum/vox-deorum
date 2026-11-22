@@ -9,7 +9,7 @@ import { editorialConstantsSchema, editorialValueNameSchema } from './constants.
 import { editorialLayoutSchema, editorialPageSchema, eligibleSchema, expressionSchema } from './layouts.js';
 import { defaultVariantStyle, styleCatalogueSchema, styleMatchTags } from './styles.js';
 
-export { editorialLayoutSchema, editorialPageSchema, minimumFrontSlots, type EditorialLayout } from './layouts.js';
+export { editorialLayoutSchema, editorialPageSchema, type EditorialLayout } from './layouts.js';
 /** Authored prose uses named placeholders and explicit typed link destinations. */
 export const authoredVariantSchema = eligibleSchema.extend({
   id: z.string().min(1),
@@ -132,7 +132,8 @@ export const editorialConfigSchema = z
       frequencyStandardTurns: z.number().int().positive(),
       llmEnabled: z.boolean(),
       publicationTitle: z.string().min(1),
-      maxItems: z.number().int().positive(),
+      /** Ranked stories available to the paper; the front needs four briefs and possibly a lead. */
+      maxItems: z.number().int().min(5),
       importanceMax: z.number().positive(),
       decayPerTurn: z.number().min(0).max(1),
       seriesWeight: z.number().nonnegative(),
@@ -319,14 +320,6 @@ export const editorialConfigSchema = z
       if (template.merge) checkVariants(template.merge.variants, ['merge', 'variants']);
     });
     config.designs.forEach((design, index) => {
-      design.layouts.forEach((layout, layoutIndex) => {
-        if (layout.frontSlots > config.defaults.maxItems)
-          ctx.addIssue({
-            code: 'custom',
-            path: ['designs', index, 'layouts', layoutIndex, 'frontSlots'],
-            message: 'Front slots cannot exceed defaults.maxItems.',
-          });
-      });
       for (const variant of ['ordinary', 'breaking']) {
         if (
           !design.layouts.some(

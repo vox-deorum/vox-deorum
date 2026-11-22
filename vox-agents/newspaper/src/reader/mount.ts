@@ -161,15 +161,17 @@ export function mountReader(
     const storyList = createElement("div", "vd-storylist");
     storyList.dataset.layout = page.layout;
 
-    const [lead] = page.itemIds;
     let itemIds = page.itemIds;
     if (issue.publication.designId === "printed-almanack") {
-      // Keep the lead first and sort the briefs by their observation dates.
+      // Almanack pages read by observation date. Keep a designated lead first when the page has one.
       const undated = issue.cutoff.turn + 1;
-      const dated = page.itemIds.slice(1).sort((a, b) =>
-        (itemById.get(a)?.observedTurn ?? undated) - (itemById.get(b)?.observedTurn ?? undated));
-      itemIds = [...page.itemIds.slice(0, 1), ...dated];
+      const byDate = (a: string, b: string) =>
+        (itemById.get(a)?.observedTurn ?? undated) - (itemById.get(b)?.observedTurn ?? undated);
+      itemIds = page.hasLead
+        ? [page.itemIds[0], ...page.itemIds.slice(1).sort(byDate)]
+        : [...page.itemIds].sort(byDate);
     }
+    const lead = page.hasLead ? itemIds[0] : undefined;
     // The ordinary Swiss front flows down each stack before crossing the gutter.
     const splitSwissFront = issue.publication.designId === "civic-index"
       && page === issue.pages[0] && page.layout === "ordinary" && itemIds.length > 1;

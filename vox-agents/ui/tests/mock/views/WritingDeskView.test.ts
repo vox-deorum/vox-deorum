@@ -162,7 +162,55 @@ describe('WritingDeskView', () => {
     expect(action('Generate').element.disabled).toBe(true);
   });
 
-  it('should show when a batch exceeds the request limit and enable a smaller batch', async () => {
+  it('should count and generate only checked variants matching the filters', async () => {
+    const science = catalogue.templates[0]!;
+    const extra = { id: 'dispatch', headline: 'A border dispatch', settled: false, candidateCount: 0,
+      style: { ...style, voice: 'press' } };
+    const market = { id: 'market', headline: 'Markets trade', settled: false, candidateCount: 0,
+      style: { ...style, voice: 'tabloid' } };
+    wrapper.unmount();
+    api.getDeskCatalogue.mockResolvedValue({
+      ...catalogue,
+      templates: [
+        { ...science, variants: [...science.variants, extra] },
+        { ...science, id: 'trade', tags: ['trade'], variants: [market] },
+      ],
+    });
+    wrapper = mountView();
+    await flushPromises();
+    expect(wrapper.get('.desk-checked').text()).toContain('3 checked');
+    expect(wrapper.get('.desk-batch [role="status"]').text()).toContain('3 requests');
+
+    await action('Settled').trigger('click');
+    expect(wrapper.findAll('.desk-variant-id').map(variant => variant.text())).toEqual(['report']);
+    expect(wrapper.find('.desk-batch').exists()).toBe(false);
+    await action('All').trigger('click');
+    wrapper.getComponent({ name: 'MultiSelect' }).vm.$emit('update:modelValue', ['science']);
+    await flushPromises();
+    expect(wrapper.get('.desk-checked').text()).toContain('2 checked');
+    expect(wrapper.get('.desk-batch [role="status"]').text()).toContain('2 requests');
+
+    const search = wrapper.get('input[aria-label="Search templates or variants"]');
+    await search.setValue('border');
+    expect(wrapper.findAll('.desk-variant-id').map(variant => variant.text())).toEqual(['dispatch']);
+    expect(wrapper.get('.desk-checked').text()).toContain('1 checked');
+    expect(wrapper.get('.desk-batch [role="status"]').text()).toContain('1 request');
+    await wrapper.get('input[aria-label="Check all variants of era"]').setValue(false);
+    await search.setValue('');
+    expect(wrapper.get('input[aria-label="Check era / gazette"]').element).toHaveProperty('checked', true);
+    expect(wrapper.get('input[aria-label="Check era / dispatch"]').element).toHaveProperty('checked', false);
+    await search.setValue('border');
+    await action('Select matching unsettled').trigger('click');
+
+    api.startDeskJob.mockResolvedValue(running);
+    await action('Generate').trigger('click');
+    expect(api.startDeskJob).toHaveBeenCalledWith({
+      refs: [{ templateId: 'era', variantId: 'dispatch' }],
+      choices: 3, models: ['default'],
+    });
+  });
+
+  it('should submit all checked variants in a large batch', async () => {
     const largeCatalogue = {
       ...catalogue,
       templates: Array.from({ length: 201 }, (_, index) => ({
@@ -177,11 +225,13 @@ describe('WritingDeskView', () => {
     wrapper = mountView();
     await flushPromises();
     expect(wrapper.get('.desk-batch [role="status"]').text()).toContain('201');
-    expect(action('Generate').element.disabled).toBe(true);
-    await action('Clear selection').trigger('click');
-    await wrapper.get('input[aria-label="Check all variants of era-0"]').setValue(true);
-    expect(wrapper.get('.desk-batch [role="status"]').text()).toContain('1');
     expect(action('Generate').element.disabled).toBe(false);
+    api.startDeskJob.mockResolvedValue(running);
+    await action('Generate').trigger('click');
+    expect(api.startDeskJob).toHaveBeenCalledWith({
+      refs: largeCatalogue.templates.map(template => ({ templateId: template.id, variantId: 'report' })),
+      choices: 3, models: ['default'],
+    });
   });
 
   it('should preserve the draft and its starting revision through a poll refresh', async () => {

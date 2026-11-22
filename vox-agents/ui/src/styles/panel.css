@@ -19,7 +19,8 @@
   min-height: 0;
 }
 
-.log-toolbar {
+/* Shared controls above the content of a panel. */
+.panel-toolbar {
   display: flex;
   align-items: center;
   flex-wrap: wrap;

@@ -131,7 +131,7 @@ export async function mergeSelectedStories(
   batch: MergeBatch,
   budget: ExpressionCheckBudget,
   published: ReadonlySet<string>,
-  frontFits: (readyCount: number, urgent: boolean) => boolean,
+  frontFits: (prospective: EditorialCandidate[]) => boolean,
   terms?: EditorialTerms,
 ): Promise<EditorialCandidate[]> {
   const definitions = new Map(config.templates.flatMap(template => template.merge ? [[template.id, template.merge]] : []));
@@ -140,23 +140,19 @@ export async function mergeSelectedStories(
     const definition = definitions.get(anchor.templateIds[0]);
     return definition && !published.has(anchor.fingerprint) ? [{ anchor, definition }] : [];
   }).sort((a, b) => (b.definition.priority ?? 0) - (a.definition.priority ?? 0) || a.anchor.id.localeCompare(b.anchor.id));
-  const consumed = new Map<string, EditorialCandidate>();
-  let readyCount = selected.length;
-  let urgent = selected.some(candidate => candidate.urgent);
+  let consumed = new Map<string, EditorialCandidate>();
+  /** Project the ranked slate with each consumed original replaced by its merge. */
+  const project = (replacements: ReadonlyMap<string, EditorialCandidate>) =>
+    [...new Set(selected.map(candidate => replacements.get(candidate.id) ?? candidate))];
   for (const { anchor, definition } of anchors) {
     if (consumed.has(anchor.id)) continue;
     const merged = await mergeCandidate(
       anchor, selected.filter(candidate => !consumed.has(candidate.id)), definition, compiled, batch, budget, terms,
     );
     if (!merged) continue;
-    const members = merged.mergedCandidateIds!;
-    const resultingCount = readyCount - members.length + 1;
-    // Every merged article inherits urgency from its members and can gain it from the anchor.
-    const resultingUrgency = urgent || merged.urgent;
-    if (!frontFits(resultingCount, resultingUrgency)) continue;
-    for (const id of members) consumed.set(id, merged);
-    readyCount = resultingCount;
-    urgent = resultingUrgency;
+    const update = new Map(consumed);
+    for (const id of merged.mergedCandidateIds!) update.set(id, merged);
+    if (frontFits(project(update))) consumed = update;
   }
-  return [...new Set(selected.map(candidate => consumed.get(candidate.id) ?? candidate))];
+  return project(consumed);
 }

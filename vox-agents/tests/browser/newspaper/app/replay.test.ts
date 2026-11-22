@@ -280,6 +280,42 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('replay b
     } finally { await page.close(); }
   }, 60_000);
 
+  it('should reset the Breaking appearance when switching to an edition without a lead', async context => {
+    if (!browser) { context.skip(unavailable); return; }
+    const page = await browser.newPage();
+    const withLead = savedIssue();
+    const withoutLead = savedIssue();
+    withoutLead.issue.issueId = 'brief-edition';
+    withoutLead.index.issueId = withoutLead.issue.issueId;
+    withoutLead.issue.pages[0].hasLead = false;
+    for (const article of withoutLead.articles) article.issueId = withoutLead.issue.issueId;
+    await page.route('**/api/newspaper/replay**', async route => {
+      const { pathname } = new URL(route.request().url());
+      if (pathname.endsWith('/issues')) return json(route, { issues: [withoutLead.index, withLead.index] });
+      if (pathname.endsWith(`/issues/${withoutLead.issue.issueId}`)) return json(route, withoutLead);
+      if (pathname.includes('/issues/')) return json(route, withLead);
+      return json(route, session());
+    });
+    try {
+      await page.goto(`${host.url}/newspaper/`);
+      await openRecorded(page);
+      const editions = page.locator('#recorded-edition');
+      const layout = page.locator('#recorded-layout');
+      await editions.selectOption(withLead.issue.issueId);
+      await page.locator(`#reader-root[data-issue-id="${withLead.issue.issueId}"]`).waitFor();
+      await layout.selectOption('breaking');
+      await editions.selectOption(withoutLead.issue.issueId);
+      const front = page.locator(`#reader-root[data-issue-id="${withoutLead.issue.issueId}"] [data-vd-page-id=front][role=tabpanel]`);
+      await front.waitFor();
+      expect(await layout.locator('option[value=breaking]').isDisabled()).toBe(true);
+      expect(await layout.inputValue()).toBe('');
+      expect(await front.getAttribute('data-layout')).toBe('ordinary');
+      await layout.selectOption('analysis');
+      expect(await front.getAttribute('data-layout')).toBe('analysis');
+      expect(await front.locator('.vd-story--lead').count()).toBe(0);
+    } finally { await page.close(); }
+  }, 60_000);
+
   it('should drain queued votes in order before advancing even after switching to mockups', async context => {
     if (!browser) { context.skip(unavailable); return; }
     const page = await browser.newPage();

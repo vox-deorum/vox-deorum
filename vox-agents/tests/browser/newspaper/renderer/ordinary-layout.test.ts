@@ -66,7 +66,7 @@ function createOrdinaryIssue(sentences: number[], family: RendererFamily = 'broa
   const issue = createNewspaperIssue();
   issue.publication = { title: 'The Civic Chronicle', designId: designIds[family], designVersion: '1', presentation: { schemaVersion: 1, rendererFamily: family } };
   issue.items = sentences.map((count, index) => createStory(`story-${index + 1}`, count));
-  issue.pages = [{ id: 'front', label: 'Front Page', layout: 'ordinary', itemIds: issue.items.map(item => item.id) }];
+  issue.pages = [{ id: 'front', label: 'Front Page', layout: 'ordinary', hasLead: true, itemIds: issue.items.map(item => item.id) }];
   return issue;
 }
 
@@ -149,6 +149,28 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'export.html')) || !exist
   afterAll(async () => {
     await browser?.close();
     await host?.close();
+  });
+
+  it('should give four equal briefs two rows on wide paper and stack them on narrow paper', async context => {
+    if (!browser) { context.skip(unavailable); return; }
+    const page = await browser.newPage();
+    try {
+      await page.goto(`${host.url}/newspaper/export.html`);
+      const issue = createOrdinaryIssue([1, 6, 2, 3]);
+      issue.pages[0].hasLead = false;
+      const narrow = await exportStories(page, issue, 760);
+      const wide = await exportStories(page, issue, 1000);
+      expect(await page.locator('.vd-story--lead').count()).toBe(0);
+      expect(visualOrder(wide.stories)).toEqual(issue.pages[0].itemIds);
+      const [first, second, third, fourth] = wide.stories;
+      expect(second.top).toBeCloseTo(first.top, 1);
+      expect(second.left).toBeGreaterThanOrEqual(first.right);
+      expect(fourth.top).toBeCloseTo(third.top, 1);
+      expect(third.top).toBeGreaterThanOrEqual(Math.max(first.contentBottom, second.contentBottom));
+      expect(fourth.left).toBeCloseTo(second.left, 1);
+      expect(visualOrder(narrow.stories)).toEqual(issue.pages[0].itemIds);
+      expect(narrow.stories.filter(story => story.left < 1 && story.right > narrow.width - 1)).toHaveLength(4);
+    } finally { await page.close(); }
   });
 
   it('should start each story directly after the stories it follows for one to six stories of varied length', async context => {

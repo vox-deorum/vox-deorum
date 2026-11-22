@@ -2,9 +2,7 @@
 import type { DeskRef, DeskStyle } from '../../types/api.js';
 
 /** Variants of the same style included in each model request. */
-export const deskChunkSize = 4;
-/** Total model requests allowed in one batch. */
-export const deskJobRequestLimit = 200;
+export const deskChunkSize = 8;
 /** Choices requested per variant from each model. */
 export const deskChoicesLimit = 30;
 

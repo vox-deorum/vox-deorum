@@ -26,9 +26,9 @@
       }
     },
     "layouts": [
-      { "id": "clippings", "variant": "ordinary", "frontSlots": 4, "sectionSlots": 2, "weight": { "base": 12 } },
-      { "id": "cover-story", "variant": "breaking", "frontSlots": 4, "weight": { "base": 8 } },
-      { "id": "cuttings-file", "variant": "analysis", "frontSlots": 4, "sectionSlots": 2, "weight": { "base": 5 } }
+      { "id": "clippings", "variant": "ordinary", "weight": { "base": 12 } },
+      { "id": "cover-story", "variant": "breaking", "weight": { "base": 8 } },
+      { "id": "cuttings-file", "variant": "analysis", "weight": { "base": 5 } }
     ],
     "pageLabels": { "front": "Front", "home": "Cities", "economy": "Trade", "abroad": "Abroad" }
   }

@@ -8,8 +8,9 @@ import {
   prepareEditorialExpressions, type EditorialTerms,
 } from '../../../../../src/newspaper/editorial/config/expressions.js';
 import { buildNewspaperFacts } from '../../../../../src/newspaper/editorial/facts/index.js';
-import { evaluatePresentation, fittingFrontLayouts, prepareFrontLayouts } from '../../../../../src/newspaper/editorial/presentation/eligibility.js';
+import { evaluatePresentation, prepareFrontLayouts } from '../../../../../src/newspaper/editorial/presentation/eligibility.js';
 import { createProseDraw } from '../../../../../src/newspaper/editorial/shared/determinism.js';
+import { planPage } from '../../../../../src/newspaper/editorial/presentation/page-plan.js';
 import { choosePressRunDesign, presentIssue } from '../../../../../src/newspaper/editorial/presentation/issue.js';
 import { runEditorialCheck } from '../../../../../src/newspaper/editorial/check.js';
 import type { EditorialCandidate } from '../../../../../src/newspaper/editorial/selection/templates.js';
@@ -45,8 +46,8 @@ function createConfig(): EditorialConfig {
       id: 'early-account', version: '1', title: 'Account', weight: { base: 1 },
       presentation: { schemaVersion: 1, rendererFamily: 'broadsheet', tokens: { paperColor: '#eeeecc' } },
       layouts: [
-        { id: 'ordinary', variant: 'ordinary', frontSlots: 4, sectionSlots: 2, weight: { base: 1 } },
-        { id: 'breaking', variant: 'breaking', frontSlots: 4, weight: { base: 1 } },
+        { id: 'ordinary', variant: 'ordinary', weight: { base: 1 } },
+        { id: 'breaking', variant: 'breaking', weight: { base: 1 } },
       ],
     }],
   });
@@ -79,9 +80,12 @@ async function choices(config: EditorialConfig, receiverEra?: string) {
 /** Use the real presentation boundary with deterministic independent choice streams. */
 async function render(
   config: EditorialConfig, candidates: EditorialCandidate[], seed = 'campaign/receiver/5',
-  terms: EditorialTerms = new Map(),
+  terms: EditorialTerms = new Map(), pad = true,
 ) {
-  const ready = [...candidates, ...['market', 'schools', 'science', 'industry'].slice(candidates.length).map(id => createCandidate(config, id))];
+  const ready = [...candidates];
+  // Add independent briefs until the planned front is fillable, including a discretionary or urgent lead.
+  for (const id of (pad ? ['market', 'schools', 'science', 'industry', 'travel', 'weather'] : []))
+    if (ready.length < planPage(ready, true).count) ready.push(createCandidate(config, id));
   const weights = await choices(config);
   const result = (await presentIssue({
     checkId: seed,
@@ -91,6 +95,39 @@ async function render(
   }))!;
   return { ...result, weights };
 }
+
+describe('page plan', () => {
+  /** Describe a story for the page policy without building a full candidate. */
+  function entry(id: string, importance: number, urgent = false) {
+    return { id, importance, urgent };
+  }
+
+  it('should require four briefs when the front has no clear leader', () => {
+    expect(planPage([entry('a', 30), entry('b', 29), entry('c', 20), entry('d', 10), entry('e', 0)], true))
+      .toEqual({ leadId: undefined, breaking: false, count: 4 });
+  });
+
+  it('should add a fifth front story only when the leader is fifteen points ahead', () => {
+    const stories = [entry('lead', 45), entry('runner-up', 30), entry('third', 20), entry('fourth', 10), entry('fifth', 0)];
+    expect(planPage(stories, true)).toEqual({ leadId: 'lead', breaking: false, count: 5 });
+    const nearTie = stories.map(story => story.id === 'runner-up' ? entry('runner-up', 31) : story);
+    expect(planPage(nearTie, true)).toEqual({ leadId: undefined, breaking: false, count: 4 });
+  });
+
+  it('should lead an urgent front with a breaking page regardless of the raw scores', () => {
+    const stories = [entry('quiet', 90), entry('urgent', 1, true), entry('third', 20), entry('fourth', 10), entry('fifth', 0)];
+    expect(planPage(stories, true)).toEqual({ leadId: 'urgent', breaking: true, count: 5 });
+  });
+
+  it('should require two inside briefs and add a lead only at the importance margin', () => {
+    expect(planPage([entry('lead', 40), entry('brief', 25)], false))
+      .toEqual({ leadId: 'lead', breaking: false, count: 3 });
+    expect(planPage([entry('lead', 40), entry('brief', 26)], false))
+      .toEqual({ leadId: undefined, breaking: false, count: 2 });
+    expect(planPage([entry('urgent', 1, true), entry('brief', 0)], false))
+      .toEqual({ leadId: undefined, breaking: false, count: 2 });
+  });
+});
 
 describe('editorial eligibility', () => {
   it('should require a visible receiver era before selecting the modern design', async () => {
@@ -186,7 +223,7 @@ describe('press run design selection', () => {
   it('should keep design and page draws stable when masthead copy and catalogue order change', async () => {
     const config = catalogue();
     for (const design of config.designs) {
-      design.layouts.push({ id: 'analysis', variant: 'analysis', frontSlots: 4, sectionSlots: 2, weight: { base: 1, adjustments: [] } });
+      design.layouts.push({ id: 'analysis', variant: 'analysis', weight: { base: 1, adjustments: [] } });
     }
     const revised = structuredClone(config);
     revised.designs.reverse();
@@ -419,40 +456,36 @@ describe('editorial presentation', () => {
 
     const result = await render(config, candidates);
     expect(result.issue.pages.map(page => page.id)).toEqual(['front', foreignId]);
+    expect(result.issue.pages.map(page => page.hasLead)).toEqual([false, false]);
     const placed = result.issue.pages.map(page => page.itemIds.map(id => result.itemCandidates.get(id)?.id));
     expect(placed).toEqual([['home', 'trade', 'science', 'front-war'], ['cross-tag', 'foreign']]);
     expect([...result.itemCandidates.values()].map(candidate => candidate.id)).not.toContain('culture');
     expect(() => validateEditorialIssue(result, config, result.weights)).not.toThrow();
 
-    const ordinary = config.designs[0].layouts.find(layout => layout.variant === 'ordinary')!;
-    ordinary.sectionSlots = 3;
-    expect(() => validateEditorialIssue(result, config, result.weights)).toThrow();
-    ordinary.sectionSlots = 2;
-    ordinary.frontSlots = 5;
-    const longer = await render(config, candidates);
+    // A story fifteen points above the runner-up adds a lead and takes the section's stories.
+    const leading = candidates.map((candidate, index) => index === 0 ? { ...candidate, importance: 40 } : candidate);
+    const longer = await render(config, leading);
     expect(longer.issue.pages.map(page => page.id)).toEqual(['front']);
+    expect(longer.issue.pages[0]).toMatchObject({ hasLead: true });
     expect(longer.issue.pages[0].itemIds).toHaveLength(5);
     expect(() => validateEditorialIssue(longer, config, longer.weights)).not.toThrow();
-    expect(() => validateEditorialIssue(result, config, result.weights)).toThrow();
   });
 
-  it('should remove a protected incumbent if its front cannot fit', async () => {
+  it('should keep a protected incumbent when its layout fits the planned front', async () => {
     const config = createConfig();
     const [short] = config.designs;
     const long = structuredClone(short);
     long.id = 'larger';
-    long.layouts.forEach(layout => { layout.frontSlots = 5; });
     config.designs.push(long);
     const weights = await choices(config);
     const state = createInitialPublicationState();
     state.issues.push({ issueId: 'prior', turn: 1, items: [], designId: long.id });
 
     const prepared = prepareFrontLayouts(config, weights);
-    const choice = choosePressRunDesign([...fittingFrontLayouts(prepared, 4, false).keys()], weights, state, () => 0);
-    expect(choice.design?.id).toBe(short.id);
-    expect(choice.audit).toMatchObject({ reason: 'ineligible-incumbent', candidates: [{ id: short.id }] });
-    const protectedChoice = choosePressRunDesign([...fittingFrontLayouts(prepared, 5, false).keys()], weights, state, () => 0);
-    expect(protectedChoice.design?.id).toBe(long.id);
+    expect([...prepared.keys()].map(design => design.id)).toEqual([short.id, long.id]);
+    const choice = choosePressRunDesign([...prepared.keys()], weights, state, () => 0);
+    expect(choice.design?.id).toBe(long.id);
+    expect(choice.audit).toMatchObject({ reason: 'protected' });
   });
 
   it('should omit unpublished section items when the section condition cannot read a visible fact', async () => {
@@ -499,7 +532,7 @@ describe('editorial presentation', () => {
     const tuned = structuredClone(original);
     tuned.designs[0].layouts = [
       ...tuned.designs[0].layouts,
-      { id: 'analysis', variant: 'analysis', frontSlots: 4, sectionSlots: 2, weight: { base: 1000, adjustments: [] } },
+      { id: 'analysis', variant: 'analysis', weight: { base: 1000, adjustments: [] } },
     ];
     tuned.pages[1].order = 20;
     for (const seed of ['first-seed', 'second-seed', 'third-seed']) {
@@ -513,6 +546,18 @@ describe('editorial presentation', () => {
     }
   });
 
+  it('should decline a front that needs a lead when only four stories are ready', async () => {
+    const config = createConfig();
+    const candidates = ['lead', 'second', 'third', 'fourth'].map(id => createCandidate(config, id));
+    candidates[0].importance = 40;
+    expect(await presentIssue({
+      checkId: 'check/5',
+      issueId: 'issue/5', campaignId: 'campaign', timelineId: 'branch', receiver: { playerId: 0, label: 'Receiver' }, turn: 5,
+      selected: candidates, state: createInitialPublicationState(), config, weights: await choices(config),
+      proseRandom: () => 0,
+    })).toBeUndefined();
+  });
+
   it('should place an incoming threat ahead of higher scoring domestic coverage on a breaking front page', async () => {
     const config = createConfig();
     const candidates = [createCandidate(config, 'domestic'), createCandidate(config, 'war', true)];
@@ -520,15 +565,16 @@ describe('editorial presentation', () => {
     const front = result.issue.pages[0];
     expect(result.itemCandidates.get(front.itemIds[0])?.id).toBe('war');
     expect(front.layout).toBe('breaking');
-    expect(new Set(front.itemIds.map(id => result.itemCandidates.get(id)?.subject)).size).toBe(4);
+    expect(front.hasLead).toBe(true);
+    expect(new Set(front.itemIds.map(id => result.itemCandidates.get(id)?.subject)).size).toBe(5);
     expect(() => validateEditorialIssue(result, config, result.weights)).not.toThrow();
   });
 
   it('should reject conditional or nonpositive layouts even when their base selection weight dominates', async () => {
     const config = createConfig();
     config.designs[0].layouts.push(
-      { id: 'unavailable', variant: 'analysis', frontSlots: 4, sectionSlots: 2, when: 'false', weight: { base: 10000, adjustments: [] } },
-      { id: 'disabled', variant: 'analysis', frontSlots: 4, sectionSlots: 2, weight: { base: 10000, adjustments: [{ when: 'self.id === 0', add: -10000 }] } },
+      { id: 'unavailable', variant: 'analysis', when: 'false', weight: { base: 10000, adjustments: [] } },
+      { id: 'disabled', variant: 'analysis', weight: { base: 10000, adjustments: [{ when: 'self.id === 0', add: -10000 }] } },
     );
     const result = await render(config, [createCandidate(config, 'domestic')]);
     expect(result.issue.pages[0].layout).toBe('ordinary');

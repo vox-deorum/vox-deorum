@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "issueId": "wire-ordinary-225",
   "campaignId": "fixture-campaign",
   "timelineId": "fixture-timeline-main",
@@ -26,12 +26,14 @@
       "id": "headlines",
       "label": "Headlines",
       "layout": "ordinary",
+      "hasLead": false,
       "itemIds": ["trade", "paris", "york", "reservoir"]
     },
     {
       "id": "economy",
       "label": "Economy",
       "layout": "ordinary",
+      "hasLead": false,
       "itemIds": ["convoy", "embassy"]
     }
   ],

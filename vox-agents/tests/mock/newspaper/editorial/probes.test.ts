@@ -122,14 +122,14 @@ function check(
   });
 }
 
-/** Run a four-slot edition with three unrelated briefs alongside the probe. */
+/** Supply four unrelated briefs so the probe has room to lead. */
 function checkWithBriefs(
   projected: NewspaperEvidence,
   catalogue: EditorialConfig,
   state?: PublicationState,
   campaignId?: string,
 ) {
-  const { evidence, config } = withEditionBriefs(projected, catalogue, 3);
+  const { evidence, config } = withEditionBriefs(projected, catalogue);
   return check(evidence, config, state, campaignId);
 }
 
@@ -317,6 +317,16 @@ describe('probe overlay', () => {
     );
     opinionConfig.designs = opinionConfig.designs.filter(design => design.id === 'probe-capital-masthead');
     opinionConfig.mastheadRules = [];
+    opinionConfig = editorialConfigSchema.parse({
+      ...opinionConfig,
+      triggers: [...opinionConfig.triggers, {
+        id: 'fixture-opinion', subject: 'world', tier: 'filler', adjust: '-10', when: 'true',
+      }],
+      templates: [...opinionConfig.templates, {
+        id: 'fixture-opinion', triggers: ['fixture-opinion'], tags: ['opinion'], weight: { base: 1 },
+        variants: [{ id: 'comment', headline: 'Letters to the editor', body: ['Readers wrote to the paper.'], weight: { base: 1 } }],
+      }],
+    });
     opinionOnlyConfig = probeCatalogue(
       ['probe-culture-opinion'], ['probe-culture-opinion-account'],
     );
@@ -532,7 +542,7 @@ describe('probe overlay', () => {
         relationships: [relationship(1, 'war')],
       }), peaceConfig);
 
-      expect(result.status).toBe('skipped');
+      expect(publishedItem(result.state, 'probe-retraction-account')).toBeUndefined();
       expect(auditSubject(result, 'probe-retraction', 'pair/0/1')?.outcome).toBe('false');
     });
 
@@ -544,7 +554,7 @@ describe('probe overlay', () => {
         turn: 30, previous: 10, relationships: [relationship(1, 'war')],
       }), peaceConfig, peace.state);
 
-      expect(result.status).toBe('skipped');
+      expect(publishedItem(result.state, 'probe-retraction-account')).toBeUndefined();
       expect(auditSubject(result, 'probe-retraction', 'pair/0/1')?.outcome).toBe('false');
     });
   });
@@ -562,17 +572,17 @@ describe('probe overlay', () => {
       expect(headlineText(printed!.body[0])).toContain('100');
 
       const early = await checkWithBriefs(probeEvidence(), milestoneConfig, pastIssues(98));
-      expect(early.status).toBe('skipped');
+      expect(publishedItem(early.state, 'probe-hundredth-issue-account')).toBeUndefined();
       expect(auditSubject(early, 'probe-hundredth-issue', 'world')?.outcome).toBe('false');
     });
 
     it('should leave the quiet-spell story out when there is no issue or the gap is short', async () => {
       const never = await checkWithBriefs(probeEvidence({ turn: 30, previous: 5 }), quietConfig);
-      expect(never.status).toBe('skipped');
+      expect(publishedItem(never.state, 'probe-quiet-spell-account')).toBeUndefined();
       expect(auditSubject(never, 'probe-quiet-spell', 'world')?.outcome).toBe('false');
 
       const early = await checkWithBriefs(probeEvidence(), quietConfig, lastIssueState(5));
-      expect(early.status).toBe('skipped');
+      expect(publishedItem(early.state, 'probe-quiet-spell-account')).toBeUndefined();
       expect(auditSubject(early, 'probe-quiet-spell', 'world')?.outcome).toBe('false');
     });
 
@@ -582,14 +592,14 @@ describe('probe overlay', () => {
       for (const campaignId of campaigns)
         results.push(await checkWithBriefs(probeEvidence({ turn: 30, previous: 5 }), quietConfig,
           lastIssueState(5), campaignId));
-      const passed = results.find((result) => result.status === 'published');
+      const passed = results.find((result) => publishedItem(result.state, 'probe-quiet-spell-account'));
       const failed = results.find((result) =>
         auditSubject(result, 'probe-quiet-spell', 'world')?.outcome === 'chance');
       const repeatKey = JSON.stringify(['probe-quiet-spell', 'world']);
 
       expect(passed).toBeDefined();
       expect(failed).toBeDefined();
-      expect(failed!.status).toBe('skipped');
+      expect(publishedItem(failed!.state, 'probe-quiet-spell-account')).toBeUndefined();
       expect(failed!.state.triggerRepeats[repeatKey]).toBeUndefined();
       expect(passed!.state.triggerRepeats[repeatKey]?.lastTurn).toBe(30);
       const record = publishedItem(passed!.state, 'probe-quiet-spell-account');

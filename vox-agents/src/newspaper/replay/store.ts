@@ -7,7 +7,7 @@ import { replayStateSchema, replayCheckSchema } from '../contracts/replay.js';
 import { publicationStateSchema, type PublicationState } from '../contracts/publication.js';
 
 /** Offline output schema version written to SQLite `user_version`. */
-const offlineSchemaVersion = 6;
+const offlineSchemaVersion = 7;
 
 const checkpointSchema = z.object({ session: replayStateSchema, publication: publicationStateSchema, configuration: z.unknown().optional() });
 export type ReplayCheckpoint = z.infer<typeof checkpointSchema>;
@@ -38,7 +38,7 @@ export class ReplayStore {
   private readonly db: Database.Database;
   private readonly revisions = new Map<string, number>();
 
-  /** Open the output schema and rebuild older newspaper tables in place. */
+  /** Open the current output schema and reject any other version without changing it. */
   constructor(readonly filename: string) {
     mkdirSync(path.dirname(filename), { recursive: true });
     this.db = new Database(filename);
@@ -51,10 +51,7 @@ export class ReplayStore {
           throw new Error('The output path contains a different database.');
         }
         if (version !== 0 && version !== offlineSchemaVersion) {
-          if (version < 1 || version > offlineSchemaVersion) {
-            throw new Error('This newspaper output uses an unsupported version. Choose another output path.');
-          }
-          this.db.exec('DROP TABLE OfflineReplayIssues; DROP TABLE OfflineReplayChecks; DROP TABLE OfflineReplayRuns;');
+          throw new Error('This newspaper output uses an unsupported version. Choose another output path.');
         }
         this.db.exec(`
           CREATE TABLE IF NOT EXISTS OfflineReplayRuns (

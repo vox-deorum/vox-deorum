@@ -230,7 +230,7 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('newspape
     try {
       await page.goto(`${host.url}/newspaper/`);
       for (const [design, layout, frontCount, sectionCount] of [
-        ['victorian', 'broadsheet', 5, 3],
+        ['victorian', 'broadsheet', 4, 2],
         ['victorian', 'war-edition', 5, 3],
         ['victorian', 'dispatch', 5, 3],
         ['wire', 'feed', 4, 2],
@@ -243,6 +243,7 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('newspape
         );
         expect(sections.map(items => items.length)).toEqual([frontCount, sectionCount]);
         expect(new Set(sections.flat()).size).toBe(frontCount + sectionCount);
+        expect(await page.locator('.vd-story--lead').count()).toBe(frontCount === 5 ? 2 : 0);
       }
     } finally { await page.close(); }
   }, 60_000);

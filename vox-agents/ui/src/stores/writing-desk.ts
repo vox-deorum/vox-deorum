@@ -1,13 +1,22 @@
 import { computed, onScopeDispose, ref, watch } from 'vue';
 import { api } from '@/api/client';
 import { errorMessage } from '@/utils/errors';
-import type { DeskCandidate, DeskCatalogueResponse, DeskJob, DeskRef, DeskStyle, DeskText, DeskVariantDetail } from '@/utils/types';
+import type {
+  DeskCandidate, DeskCatalogueResponse, DeskJob, DeskRef, DeskStyle, DeskTemplateSummary, DeskText,
+  DeskVariantDetail, DeskVariantSummary,
+} from '@/utils/types';
 import { createPoller } from '@/utils/polling';
-import { chunkDeskVariants, deskChoicesLimit, deskJobRequestLimit, deskRefKey } from '@vox/newspaper/desk/batch.js';
+import { chunkDeskVariants, deskChoicesLimit, deskRefKey } from '@vox/newspaper/desk/batch.js';
 
 export const deskPollIntervalMs = 1000;
 export const deskCurrentRow = 'current';
 export type DeskShow = 'all' | 'unsettled' | 'settled';
+
+export interface DeskVariantGroup {
+  template: DeskTemplateSummary;
+  variants: DeskVariantSummary[];
+  eligible: (DeskRef & { style: DeskStyle })[];
+}
 
 interface EditDraft {
   row: string;
@@ -28,15 +37,27 @@ export function useWritingDesk() {
   const show = ref<DeskShow>('all');
   const search = ref('');
   const unchecked = ref(new Set<string>());
+  const groups = computed<DeskVariantGroup[]>(() => {
+    const term = search.value.trim().toLowerCase();
+    return (catalogue.value?.templates ?? []).flatMap(template => {
+      if (tags.value.length && !template.tags.some(tag => tags.value.includes(tag))) return [];
+      const matchesTemplate = template.id.toLowerCase().includes(term);
+      const variants = template.variants.filter(variant =>
+        (show.value === 'all' || variant.settled === (show.value === 'settled')) &&
+        (matchesTemplate || [variant.id, variant.headline, variant.style.voice].some(value => value.toLowerCase().includes(term))),
+      );
+      if (!variants.length) return [];
+      const eligible = variants.filter(variant => !variant.settled)
+        .map(variant => ({ templateId: template.id, variantId: variant.id, style: variant.style }));
+      return [{ template, variants, eligible }];
+    });
+  });
+  const eligible = computed(() => groups.value.flatMap(group => group.eligible));
   const checked = computed(() => {
-    const refs = new Map<string, DeskRef & { style: DeskStyle }>();
-    for (const template of catalogue.value?.templates ?? []) {
-      for (const variant of template.variants) {
-        if (variant.settled) continue;
-        const target = { templateId: template.id, variantId: variant.id };
-        const key = deskRefKey(target);
-        if (!unchecked.value.has(key)) refs.set(key, { ...target, style: variant.style });
-      }
+    const refs = new Map<string, DeskVariantGroup['eligible'][number]>();
+    for (const target of eligible.value) {
+      const key = deskRefKey(target);
+      if (!unchecked.value.has(key)) refs.set(key, target);
     }
     return refs;
   });
@@ -116,10 +137,10 @@ export function useWritingDesk() {
     }
   }
 
-  /** Clear all current selections or restore the unsettled defaults. */
+  /** Clear or restore the checks for variants that match the filters. */
   function toggleAll() {
     if (checked.value.size) check([...checked.value.values()], false);
-    else unchecked.value.clear();
+    else check(eligible.value, true);
   }
 
   /** Open a row with a fresh copy or close it if it is already open. */
@@ -216,10 +237,10 @@ export function useWritingDesk() {
     }
   }
 
-  /** Start drafting with the selected model names and variant references. */
+  /** Start drafting with the selected models and checked variants that match the filters. */
   async function generate() {
     const count = choices.value;
-    if (busy.value || !requestCount.value || requestCount.value > deskJobRequestLimit ||
+    if (busy.value || !requestCount.value ||
       count === null || !Number.isInteger(count) || count < 1 || count > deskChoicesLimit) return;
     starting.value = true;
     ++jobVersion;
@@ -255,7 +276,7 @@ export function useWritingDesk() {
   }
 
   return {
-    catalogue, tags, show, search, checked, selected, detail, draft, job, models, choices, requestCount,
+    catalogue, tags, show, search, groups, eligible, checked, selected, detail, draft, job, models, choices, requestCount,
     error, detailLoading, saving, starting, stopping, busy, load, select, check, toggleAll, edit, save, generate, stop,
   };
 }

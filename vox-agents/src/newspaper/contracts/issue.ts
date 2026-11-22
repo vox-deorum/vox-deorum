@@ -3,7 +3,7 @@ import { z } from "zod";
 import { presentationSchema } from "./design.js";
 
 /** Version of the stored issue document shape. */
-export const newspaperIssueSchemaVersion = 3;
+export const newspaperIssueSchemaVersion = 4;
 
 /** Layout variants available for a page. */
 export const newspaperLayoutVariants = ["ordinary", "breaking", "analysis"] as const;
@@ -274,6 +274,8 @@ export const issuePageSchema = z.object({
   label: z.string().min(1),
   /** Layout used to present the selected items. */
   layout: newspaperLayoutVariantSchema,
+  /** Whether the page prints a lead story before its briefs. */
+  hasLead: z.boolean(),
   /** Item identifiers in reading order. */
   itemIds: z.array(z.string().min(1)).min(1),
 });
@@ -376,6 +378,13 @@ export const issueDocumentSchema = z
         });
       }
       pageIds.add(page.id);
+      if (page.layout === "breaking" && !page.hasLead) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["pages", pageIndex, "hasLead"],
+          message: `Breaking page "${page.id}" requires a lead.`,
+        });
+      }
       page.itemIds.forEach((itemId, itemIndex) => {
         if (placedItemIds.has(itemId)) {
           ctx.addIssue({

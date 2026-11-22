@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "issueId": "victorian-breaking-230",
   "campaignId": "fixture-campaign",
   "timelineId": "fixture-timeline-main",
@@ -27,12 +27,14 @@
       "id": "front",
       "label": "Headlines",
       "layout": "breaking",
+      "hasLead": true,
       "itemIds": ["war", "york", "reservoir", "ledger", "mill"]
     },
     {
       "id": "abroad",
       "label": "Foreign Correspondence",
       "layout": "ordinary",
+      "hasLead": true,
       "itemIds": ["canal", "convoy", "embassy"]
     }
   ],

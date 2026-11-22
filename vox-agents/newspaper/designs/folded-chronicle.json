@@ -34,8 +34,6 @@
       {
         "id": "folio",
         "variant": "ordinary",
-        "frontSlots": 5,
-        "sectionSlots": 3,
         "weight": {
           "base": 10
         }
@@ -43,7 +41,6 @@
       {
         "id": "dispatch",
         "variant": "breaking",
-        "frontSlots": 5,
         "weight": {
           "base": 10
         }
@@ -51,8 +48,6 @@
       {
         "id": "review",
         "variant": "analysis",
-        "frontSlots": 5,
-        "sectionSlots": 3,
         "weight": {
           "base": 3
         }

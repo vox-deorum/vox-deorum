@@ -20,9 +20,9 @@
       }
     },
     "layouts": [
-      { "id": "field-report", "variant": "ordinary", "frontSlots": 5, "sectionSlots": 3, "weight": { "base": 8 } },
-      { "id": "special-report", "variant": "breaking", "frontSlots": 5, "weight": { "base": 6 } },
-      { "id": "statistical-plate", "variant": "analysis", "frontSlots": 5, "sectionSlots": 3, "weight": { "base": 5 } }
+      { "id": "field-report", "variant": "ordinary", "weight": { "base": 8 } },
+      { "id": "special-report", "variant": "breaking", "weight": { "base": 6 } },
+      { "id": "statistical-plate", "variant": "analysis", "weight": { "base": 5 } }
     ],
     "pageLabels": { "front": "Survey", "home": "Home Affairs", "abroad": "World Affairs" }
   }

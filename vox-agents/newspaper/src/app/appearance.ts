@@ -45,12 +45,16 @@ export function mountRecordedAppearance(onChange: () => void) {
     new Option('As published', ''),
     ...newspaperLayoutVariants.map(variant => new Option(variant[0].toUpperCase() + variant.slice(1), variant)),
   );
+  const breakingOption = layoutSelect.querySelector<HTMLOptionElement>('option[value="breaking"]')!;
   const readTint = mountTintControls('recorded', onChange);
   designSelect.addEventListener('change', onChange);
   layoutSelect.addEventListener('change', onChange);
 
   /** Override the visual design, front page layout and accent while retaining the published copy. */
   return function styleIssue(issue: IssueDocument): IssueDocument {
+    const front = issue.pages[0];
+    breakingOption.disabled = !front.hasLead;
+    if (breakingOption.disabled && layoutSelect.value === 'breaking') layoutSelect.value = '';
     const design = designs.get(designSelect.value);
     const layout = newspaperLayoutVariants.find(variant => variant === layoutSelect.value);
     const tint = readTint();
@@ -70,7 +74,7 @@ export function mountRecordedAppearance(onChange: () => void) {
           tokens: { ...publication.presentation.tokens, accentColor: tint },
         },
       } : publication,
-      pages: layout ? [{ ...issue.pages[0], layout }, ...issue.pages.slice(1)] : issue.pages,
+      pages: layout ? [{ ...front, layout }, ...issue.pages.slice(1)] : issue.pages,
     };
   };
 }

@@ -125,9 +125,9 @@ Terms layer from defaults to the winning profile, then to civilization terms and
 
 ### Pages and designs
 
-The editor picks a [design and front layout](designs.md#which-design-runs) it can fill, then places exactly the number of articles specified by the layout. An urgent article leads a breaking front. If no eligible front can be filled, the editor skips the issue and keeps the reporting window open.
+Every front page needs four briefs. A lead adds a fifth story. Urgent news always leads a breaking front. Otherwise, the editor gives the lead to a story whose importance is at least 15 points above the runner-up, before ranking bonuses or votes. The editor checks the story count after combining related reports and keeps the reporting window open if it cannot fill the front. The [visual design](designs.md#which-design-runs) determines how the chosen stories look.
 
-Sections try to fill in the order set by `pages.json`, using only unplaced articles that match their topic tags. A section that cannot fill an eligible layout is omitted and leaves its articles available to later sections. For example, a five-article front can leave three articles for the international tab, but the tab opens only if all three match and an eligible layout takes three. Every published article appears on one tab.
+Inside tabs use the same importance rule with two briefs and an optional third story as the lead. The editor tries tabs in the order set by `pages.json`, using unplaced stories that match their topic tags. If a tab cannot fill its pair of briefs, it leaves its stories available to later tabs. Every published article appears on one tab.
 
 ### Masthead rules
 

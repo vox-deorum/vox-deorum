@@ -43,7 +43,7 @@
   .vd-newspaper[data-publication-design="city-extra"] .vd-storylist[data-layout="ordinary"] {
     column-gap: 0;
     & .vd-story--brief { margin-top: 14px; padding-top: 0; border-top: 0; }
-    & .vd-story--brief:nth-child(even) { padding-right: 1.4em; }
-    & .vd-story--brief:nth-child(odd) { padding-left: 1.4em; border-left: 1px solid var(--vd-ink); }
+    & .vd-story--brief:nth-child(odd of .vd-story--brief) { padding-right: 1.4em; }
+    & .vd-story--brief:nth-child(even of .vd-story--brief) { padding-left: 1.4em; border-left: 1px solid var(--vd-ink); }
   }
 }

@@ -155,12 +155,12 @@ describe('offline replay output store', () => {
     restored.publication.preferences.llmEnabled = true;
     store.save(restored);
     const saved = new Database(filename, { readonly: true });
-    expect(saved.pragma('user_version', { simple: true })).toBe(6);
+    expect(saved.pragma('user_version', { simple: true })).toBe(7);
     expect(saved.prepare('SELECT Revision FROM OfflineReplayRuns').get()).toEqual({ Revision: 1 });
     saved.close();
   });
 
-  it.each([1, 2, 3, 4, 5])('should rebuild version %s output and allow its old run ID to be reused', async version => {
+  it.each([1, 2, 3, 4, 5, 6])('should reject version %s output without changing its saved run', async version => {
     const { checkpoint } = await checkFixture(false);
     const originalPath = path.join(path.dirname(recording.filename), `version-${version}.sqlite`);
     const original = new ReplayStore(originalPath);
@@ -170,11 +170,17 @@ describe('offline replay output store', () => {
     if (version === 1) sqlite.exec('ALTER TABLE OfflineReplayRuns DROP COLUMN Revision');
     sqlite.pragma(`user_version = ${version}`);
     sqlite.close();
-    const rebuilt = new ReplayStore(originalPath);
+    expect(() => new ReplayStore(originalPath)).toThrow(/unsupported version/i);
+    const retained = new Database(originalPath, { readonly: true });
+    expect(retained.pragma('user_version', { simple: true })).toBe(version);
+    expect(retained.prepare('SELECT RunID, SourceIdentity FROM OfflineReplayRuns').all())
+      .toEqual([{ RunID: 'run-a', SourceIdentity: 'source' }]);
+    retained.close();
+    const fresh = new ReplayStore(path.join(path.dirname(recording.filename), `fresh-${version}.sqlite`));
     try {
-      rebuilt.create('new-source', checkpoint);
-      expect(rebuilt.load('run-a', 0, 'new-source')).toEqual(checkpoint);
-    } finally { rebuilt.close(); }
+      fresh.create('source', checkpoint);
+      expect(fresh.load('run-a', 0, 'source')).toEqual(checkpoint);
+    } finally { fresh.close(); }
   });
 
   it('should reject a stale duplicate commit while accepting a duplicate from the current writer', async () => {

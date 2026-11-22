@@ -20,9 +20,9 @@
       "assets": {}
     },
     "layouts": [
-      { "id": "essay", "variant": "ordinary", "frontSlots": 5, "sectionSlots": 3, "weight": { "base": 10 } },
-      { "id": "postscript", "variant": "breaking", "frontSlots": 5, "weight": { "base": 10 } },
-      { "id": "inquiry", "variant": "analysis", "frontSlots": 5, "sectionSlots": 3, "weight": { "base": 4 } }
+      { "id": "essay", "variant": "ordinary", "weight": { "base": 10 } },
+      { "id": "postscript", "variant": "breaking", "weight": { "base": 10 } },
+      { "id": "inquiry", "variant": "analysis", "weight": { "base": 4 } }
     ],
     "pageLabels": { "front": "The Essay", "home": "Town", "economy": "Exchange", "abroad": "Letters" }
   }
