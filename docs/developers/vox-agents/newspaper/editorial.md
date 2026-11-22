@@ -12,6 +12,7 @@ The stock catalogue is in `vox-agents/newspaper/`. To override a rule or story, 
 | `constants.json` | Shared thresholds, lists, tiers, stakes, shortcuts, and printable terms. See the [constants reference](triggers/constants.md). |
 | `triggers/*.json` | Rules for what qualifies as news and how it scores. See [trigger entries](triggers/overview.md#trigger-entries). |
 | `templates/*.json` | Authored variants, typed links and short pieces, grouped by topic like triggers |
+| `root-templates.json` | Named link lists shared by story templates |
 | `civic-terms.json` | Government, people, and leader terms by policy and civilization |
 | `styles/` | Style tag IDs, optional writing guidance, and rules that adjust variant weights |
 | `pages.json` | Front page, section order, topic tags, and eligibility |
@@ -41,7 +42,8 @@ A template names one or more rules in `triggers`. All must fire for the same sub
 | `short` | Lets the editor reserve the last slot for a brief |
 | `weight` | Base weight and conditional adjustments |
 | `variants` | Authored prose choices with an ID, text, links, eligibility, weight, and style tags |
-| `names` | Optional list of placeholders that display names, such as `["cityName", "player.leader"]` |
+| `names` | Optional list of placeholders that display names, such as `["city", "player.leader"]` |
+| `extends`, `links` | Optional root template ID and link list to share with variants |
 | `merge` | Optional rules and prose for combining selected stories |
 
 `id`, `triggers`, `tags`, `weight` and `variants` are required. Each variant requires `id`, `headline`, `body` and `weight`; `subheadline`, `byline`, `when` and `links` are optional. The subheadline and byline appear before the article body. The optional `settled` mark records review in the Writing Desk and has no effect on story selection.
@@ -90,7 +92,7 @@ Prose and typed link values use `{{name}}` placeholders. Headlines, subheadlines
 
 | Placeholder | Value |
 | --- | --- |
-| `{{city}}`, `{{cityId}}`, `{{owner}}` | Short aliases for the subject name, subject ID, and a named reference field on the subject, such as a city owner |
+| `{{city}}`, `{{cityId}}`, `{{owner}}` | The city name and ID for a city subject or an event's city, and the owner name for a city subject |
 | `{{subject.name}}`, `{{subject.id}}` | The visible subject's name and ID |
 | `{{period.from}}`, `{{period.to}}` | The matched rules' shared window: exclusive lower bound and inclusive cutoff turn |
 | `{{city.owner.name}}` | A namespaced reference, here the owner of a city subject |
@@ -103,13 +105,23 @@ Prose and typed link values use `{{name}}` placeholders. Headlines, subheadlines
 
 Use qualified names such as `{{city.owner.name}}` and `{{subject.id}}` for recorded identities. Require the facts that define the story in the trigger's `when`, and skip the story when any of them is unknown. For example, a Congress motion or vote result requires a named proposer. Apply the same filter before choosing or counting items in a roundup. Don't write a fallback variant for the missing fact or repeat its presence check in each variant.
 
-Variants can differ in supporting details. If an optional detail is missing, its placeholder remains unresolved and that variant cannot print. An empty link label or invalid link destination also makes a variant unprintable. The editor evaluates terms once per check and each variant cites the rows behind the terms it prints.
+Variants can differ in supporting details. If an optional detail is missing, its placeholder remains unresolved and that variant cannot print. The editor evaluates terms once per check and each variant cites the rows behind the terms it prints.
 
 List name placeholders in the template's `names` array without braces. For example, add `terms.leader` to the array when the body uses `{{terms.leader}}`. The reader underlines the resolved name with the `vd-name` CSS class, and any declared link stays clickable.
 
 The adjective comes from the recorded English short name. For modded or localized names outside the built-in list, use the civilization name or supply the adjective in your catalogue.
 
 For a single group, prose can print `{{key}}` and `{{count}}`. Expressions can read each member, for example `group.matches[0].city.name` and `group.matches[0].values`. If two rules grouped cities by the same religion, they may have counted different cities. Name the rule in the placeholder, such as `{{triggerValues.conversions.count}}`, or read its members with `triggerValues.conversions.matches`. When two ungrouped rules supply the same value name, qualify it the same way. An ambiguous bare placeholder leaves that variant out.
+
+### Sharing links
+
+Give a story template `"extends": "city"` to use the stock city link. It links `{{city}}` to the city identified by `{{cityId}}`. Ordinarily, leave `links` off variants so they inherit the template's list. This also works for merge variants and variants in a companion file.
+
+Add a `links` list to a story template to set its own default, or to a variant to replace that default for one piece of copy. Each list replaces the whole parent list. Use `[]` to disable links at that level. In an overlay, omitting a field keeps its stock setting; set `links` to `null` to drop a stock list and inherit again, or set `extends` to `null` to clear the stock root reference.
+
+Define shared roots in `root-templates.json` as entries with an `id` and a `links` list. Give each root a unique ID within the file. A local root with the same ID as a stock root replaces it. Roots only supply links; they do not publish stories or extend other roots.
+
+Each link names a prose placeholder, display label, and typed destination. Every effective link must have a printable label and a valid destination for its variant to print. The Writing Desk uses the same lists to check copy, and saved replays include the resolved lists.
 
 ### Civic vocabulary
 

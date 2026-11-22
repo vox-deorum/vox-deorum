@@ -11,8 +11,9 @@ import { errorMessage } from '../../utils/errors.js';
 import { editorialCivicTermsSchema } from '../editorial/config/civic-terms.js';
 import { editorialConstantsSchema } from '../editorial/config/constants.js';
 import { builtInCatalogueDirectory } from '../editorial/config/load.js';
-import { editorialTriggerRuleSchema, templateSchema, type AuthoredVariant, type EditorialTemplate, type EditorialTriggerRule } from '../editorial/config/schema.js';
+import { editorialTriggerRuleSchema, type AuthoredVariant, type EditorialTemplate, type EditorialTriggerRule } from '../editorial/config/schema.js';
 import { resolveVariantStyle, styleCatalogueSchema } from '../editorial/config/styles.js';
+import { readRootTemplates, resolveTemplateLinks } from '../editorial/config/template-links.js';
 import { readTemplateSources } from '../editorial/config/template-sources.js';
 
 export type DeskLink = AuthoredVariant['links'][number];
@@ -150,8 +151,9 @@ export async function readDeskCatalogue(options: DeskCatalogueOptions = {}): Pro
       beforeRead: file => requireWritable(path.join(templatesDirectory, file), 'Template file ' + file),
     });
     if (!sources.length) throw new Error('No stock template files were found.');
+    const roots = await readRootTemplates(directory);
     for (const { file, base, templates: raw, companion } of sources) {
-      const parsed = z.array(templateSchema).parse(raw);
+      const parsed = resolveTemplateLinks(raw, roots);
       for (const [index, template] of parsed.entries()) {
         if (seenTemplates.has(template.id)) throw new Error('Duplicate template ID: ' + template.id);
         seenTemplates.add(template.id);

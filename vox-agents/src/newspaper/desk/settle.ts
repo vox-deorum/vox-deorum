@@ -7,7 +7,7 @@ import { errorMessage } from '../../utils/errors.js';
 import { asRecord, isRecord } from '../../utils/guards.js';
 import { variantStyleKinds } from '../contracts/style.js';
 import { loadEditorialConfig } from '../editorial/config/load.js';
-import { templateSchema } from '../editorial/config/schema.js';
+import { authoredTemplateSchema } from '../editorial/config/schema.js';
 import { mergeTemplateVariants, templateVariantIds, variantCompanionFilename } from '../editorial/config/template-sources.js';
 import { deskVariantStyle, findDeskVariant } from './brief.js';
 import { DeskError, deskTemplateFilePath, deskVariantRevision, readDeskCatalogue, type DeskCatalogueOptions, type DeskVariant } from './catalogue.js';
@@ -259,7 +259,7 @@ async function updateVariant(ref: DeskRef, revision: string, options: DeskSettle
     edits.push({ file: companionFile, before: companionText, after: nextCompanion });
   if (edits.length) {
     const combined = mergeForSave(nextBase, nextCompanion, companionName);
-    const parsed = templateSchema.safeParse(combined.find(item => asRecord(item)?.id === ref.templateId));
+    const parsed = authoredTemplateSchema.safeParse(combined.find(item => asRecord(item)?.id === ref.templateId));
     if (!parsed.success) throw new DeskError(400, errorMessage(parsed.error));
     await saveFiles(edits, options);
   }

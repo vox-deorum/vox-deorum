@@ -465,6 +465,45 @@ describe('newspaper desk settle many', () => {
       rm(directory, { recursive: true, force: true })));
   });
 
+  it('should keep inherited links when settling a draft and copying it to the companion', async () => {
+    const [template] = JSON.parse(templateSource) as ParsedTemplate[];
+    const { links, ...source } = template.variants[0];
+    const fixture = await createFixture(JSON.stringify([{
+      ...template, extends: 'fixture-civilization', variants: [source, { ...template.variants[1], links: [] }],
+    }]));
+    await writeFile(path.join(fixture.directory, 'root-templates.json'), JSON.stringify([
+      { id: 'fixture-civilization', links },
+    ]));
+    const initial = await readCatalogue(fixture);
+    const draft = findVariant(initial, fixture.ref);
+    expect(draft.links).toEqual(links);
+    expect(findVariant(initial, fixture.secondRef).links).toEqual([]);
+    const original = await readFile(fixture.templatePath, 'utf8');
+    const copy = { headline: 'News from {{civilization}}', body: ['The {{era}} begins.'] };
+    const invalid = { headline: 'News from abroad', body: copy.body };
+
+    await expect(settleManyVariants(fixture.ref, {
+      revision: draft.revision, primary: copy, siblings: [invalid],
+    }, options(fixture))).rejects.toMatchObject({ status: 400, message: expect.stringContaining('civilization') });
+    expect(await readFile(fixture.templatePath, 'utf8')).toBe(original);
+    await expect(readFile(fixture.companionPath, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+
+    await settleManyVariants(fixture.ref, {
+      revision: draft.revision, primary: copy, siblings: [draft.text],
+    }, options(fixture));
+    const [base] = await readParsed(fixture.templatePath);
+    const [companion] = await readParsed(fixture.companionPath);
+    expect(base).toHaveProperty('extends', 'fixture-civilization');
+    expect(base.variants[0]).not.toHaveProperty('links');
+    expect(companion.variants[0]).not.toHaveProperty('links');
+
+    const sibling = { ...fixture.ref, variantId: String(companion.variants[0].id) };
+    expect(findVariant(await readCatalogue(fixture), sibling).links).toEqual(links);
+    const config = await loadEditorialConfig(fixture.directory);
+    expect(config.templates.find(entry => entry.id === sibling.templateId)?.variants
+      .find(variant => variant.id === sibling.variantId)?.links).toEqual(links);
+  });
+
   it('should keep the primary in place and publish companion copies as separate choices', async () => {
     const fixture = await createFixture(multiTemplateSource, 'fixture-multi', 'draft', 'draft-2');
     const draft = findVariant(await readCatalogue(fixture), fixture.ref);

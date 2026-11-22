@@ -7,6 +7,7 @@ import { isRecord } from '../../../utils/guards.js';
 import { variantStyleKinds } from '../../contracts/style.js';
 import { prepareEditorialExpressions, type CompiledEditorialExpressions } from './expressions.js';
 import { editorialConfigSchema, editorialConfigVersion, type EditorialConfig } from './schema.js';
+import { readRootTemplates, resolveTemplateLinks } from './template-links.js';
 import { readTemplateSources } from './template-sources.js';
 
 /** Resolve built-in files from both source and installed dist directory layouts. */
@@ -224,6 +225,11 @@ export async function loadEditorialConfig(directory?: string): Promise<Editorial
     // Ordinary files always exist, but a civic vocabulary file is optional in both layers.
     if (merged !== undefined) result[name] = merged;
   }
+  const [stockRoots, customRoots] = await Promise.all([
+    readRootTemplates(builtIn),
+    directory ? readRootTemplates(directory) : undefined,
+  ]);
+  result.templates = resolveTemplateLinks(result.templates, new Map([...stockRoots, ...(customRoots ?? [])]));
   result.mastheadRules = await loadMastheadRules(builtIn, directory);
   const stock = await readStyleCatalogue(builtIn);
   const custom = directory ? await readStyleCatalogue(directory, true) : undefined;

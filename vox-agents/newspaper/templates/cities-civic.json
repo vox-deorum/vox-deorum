@@ -122,15 +122,13 @@
     "tags": ["cities", "domestic"],
     "names": ["city"],
     "weight": { "base": 1 },
+    "extends": "city",
     "variants": [
       {
         "id": "city-famine-unrest-report",
         "headline": "Famine grips {{city}}",
         "body": [
           "The bakeries of {{city}} are closing before noon, and the queues outside them form earlier each week. Famine now leads every other complaint in the city, leaving {{faminePopulation}} {{terms.civic.people}} unhappy. By the time the bread is gone, the square is empty."
-        ],
-        "links": [
-          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
         ],
         "weight": { "base": 1 }
       },
@@ -143,9 +141,6 @@
         "body": [
           "{{city}} cannot feed itself, and the city's own count puts famine ahead of every other grievance. {{faminePopulation}} {{terms.civic.people}} are unhappy because of it. Granaries do not empty on their own; someone set the harvest, the stores and the roads, and someone should explain the result."
         ],
-        "links": [
-          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
-        ],
         "weight": { "base": 1 }
       },
       {
@@ -156,9 +151,6 @@
         "headline": "Empty stalls in {{city}}",
         "body": [
           "A woman in {{city}} keeps a chipped bowl by her door for the bread cart. Last winter the cart came twice a day; now it comes once and is empty before she reaches the corner. She has stopped hurrying, she says, because hurrying does not bake bread."
-        ],
-        "links": [
-          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
         ],
         "weight": { "base": 1 }
       },
@@ -171,9 +163,6 @@
         "body": [
           "The faithful of {{city}} are asked to bring what they can spare to the shrine steps before dark. Famine is the city's heaviest burden, and the stores must stretch to the next harvest. A loaf left at the shrine tonight will be on a table before morning."
         ],
-        "links": [
-          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
-        ],
         "weight": { "base": 1 }
       }
     ]
@@ -182,17 +171,15 @@
     "id": "city-growth-milestone-account",
     "triggers": ["city-growth-milestone"],
     "tags": ["cities", "domestic"],
-    "names": ["cityName"],
+    "names": ["city"],
     "weight": { "base": 1 },
+    "extends": "city",
     "variants": [
       {
         "id": "city-growth-milestone-report",
-        "headline": "{{cityName}} reaches {{population}} people",
+        "headline": "{{city}} reaches {{population}} people",
         "body": [
-          "A new lane has opened on the edge of {{cityName}}, and the washing lines are already up. The city now counts {{population}} people, which makes it a {{milestone}}. The council has begun to argue about where the next well should be dug."
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "A new lane has opened on the edge of {{city}}, and the washing lines are already up. The city now counts {{population}} people, which makes it a {{milestone}}. The council has begun to argue about where the next well should be dug."
         ],
         "weight": { "base": 1 }
       },
@@ -201,12 +188,9 @@
         "voice": "press",
         "stance": "ambitious",
         "genre": "analysis",
-        "headline": "{{cityName}} crosses {{population}}",
+        "headline": "{{city}} crosses {{population}}",
         "body": [
-          "{{cityName}} is now a {{milestone}} at {{population}} people, and the size changes what the city can ask of the realm. Its market runs past the afternoon bell, and the potters have fired a second kiln. More hands mean more trade, more noise and louder demands for roads and wells, and a city that answers those demands will not stay this size for long."
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "{{city}} is now a {{milestone}} at {{population}} people, and the size changes what the city can ask of the realm. Its market runs past the afternoon bell, and the potters have fired a second kiln. More hands mean more trade, more noise and louder demands for roads and wells, and a city that answers those demands will not stay this size for long."
         ],
         "weight": { "base": 1 }
       },
@@ -215,12 +199,9 @@
         "voice": "crier",
         "stance": "national",
         "genre": "notice",
-        "headline": "{{cityName}} has grown to {{population}}!",
+        "headline": "{{city}} has grown to {{population}}!",
         "body": [
-          "{{terms.civic.people}} of {{cityName}}, all hear it! The city counts {{population}} souls and stands now as a {{milestone}}! Count the chimneys and count the carts! Say the name aloud: {{cityName}}!"
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "{{terms.civic.people}} of {{city}}, all hear it! The city counts {{population}} souls and stands now as a {{milestone}}! Count the chimneys and count the carts! Say the name aloud: {{city}}!"
         ],
         "weight": { "base": 1 }
       },
@@ -229,12 +210,9 @@
         "voice": "gazette",
         "stance": "traditional",
         "genre": "report",
-        "headline": "A milestone for {{cityName}}",
+        "headline": "A milestone for {{city}}",
         "body": [
-          "We are informed that {{cityName}} has reached {{population}} people and is now reckoned a {{milestone}}. The older families will tell you the walk to the well has grown longer and the crowd at the market larger still. Such growth comes slowly, and the city is the sounder for it."
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "We are informed that {{city}} has reached {{population}} people and is now reckoned a {{milestone}}. The older families will tell you the walk to the well has grown longer and the crowd at the market larger still. Such growth comes slowly, and the city is the sounder for it."
         ],
         "weight": { "base": 1 }
       }
@@ -246,15 +224,13 @@
     "tags": ["cities", "domestic"],
     "names": ["city"],
     "weight": { "base": 1 },
+    "extends": "city",
     "variants": [
       {
         "id": "starvation-without-siege-report",
         "headline": "{{city}} is eating into its stores",
         "body": [
           "The granary in {{city}} holds {{foodStored}} of grain and gives up {{shortfall}} of it each day, with no army outside to blame. The chalk line on the door drops a little every morning. The keeper has stopped chalking the good weeks, because there are none."
-        ],
-        "links": [
-          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
         ],
         "weight": { "base": 1 }
       },
@@ -267,9 +243,6 @@
         "body": [
           "There is no siege at {{city}}, no raiders in the fields and no enemy at the gate. Yet the city loses {{shortfall}} of food a day from a store of {{foodStored}}, and the granary books say so plainly. Peacetime hunger is somebody's decision, and somebody should be asked to explain it."
         ],
-        "links": [
-          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
-        ],
         "weight": { "base": 1 }
       },
       {
@@ -280,9 +253,6 @@
         "headline": "The granary at {{city}} is emptying",
         "body": [
           "A baker on the high street in {{city}} now cuts every loaf in two before she opens the shop. The granary that feeds her ovens holds {{foodStored}} of grain and loses {{shortfall}} of that a day. She has stopped taking orders for next week, and her customers have stopped asking."
-        ],
-        "links": [
-          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
         ],
         "weight": { "base": 1 }
       },
@@ -297,9 +267,6 @@
           "Lost each day: {{shortfall}}.",
           "Siege: none. Battle: none. The store still falls."
         ],
-        "links": [
-          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
-        ],
         "weight": { "base": 1 }
       }
     ]
@@ -310,15 +277,13 @@
     "tags": ["cities", "domestic"],
     "names": ["city"],
     "weight": { "base": 1 },
+    "extends": "city",
     "variants": [
       {
         "id": "city-celebration-begins-report",
         "headline": "A celebration begins in {{city}}",
         "body": [
           "A citywide celebration is under way in {{city}}."
-        ],
-        "links": [
-          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
         ],
         "weight": { "base": 1 }
       },
@@ -330,9 +295,6 @@
         "headline": "From the city pages: {{city}} celebrates",
         "body": [
           "Readers in {{city}} may mark the start of a citywide celebration on their calendars."
-        ],
-        "links": [
-          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
         ],
         "weight": { "base": 1 }
       }

@@ -68,15 +68,13 @@
     "tags": ["politics", "international"],
     "names": ["capital", "civilization"],
     "weight": { "base": 1 },
+    "extends": "civilization",
     "variants": [
       {
         "id": "our-diplomat-abroad-report",
         "headline": "Our diplomat takes up post in {{civilization}}",
         "body": [
           "An envoy of ours now keeps a post in {{civilization}}. His trunks went into the coach before first light, and the dispatch case rode on the seat beside him. Letters to that court will no longer wait on a willing traveler."
-        ],
-        "links": [
-          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
         ],
         "weight": { "base": 1 }
       },
@@ -90,9 +88,6 @@
         "body": [
           "In this year the court of {{civilization}} admitted our envoy at {{capital}}. The porters were paid their customary fees, and a first letter went home within the week. The practice of stationing a voice abroad, kept by our fathers, is thus maintained."
         ],
-        "links": [
-          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
-        ],
         "weight": { "base": 1 }
       },
       {
@@ -103,9 +98,6 @@
         "headline": "A diplomat goes to {{civilization}}",
         "body": [
           "In {{civilization}} tonight, our envoy has taken his post. He will dine at their table and listen to every toast. One ear in that hall is worth a regiment, and the treasury pays a fraction for it."
-        ],
-        "links": [
-          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
         ],
         "weight": { "base": 1 }
       }
@@ -393,17 +385,15 @@
     "id": "spy-posted-abroad-account",
     "triggers": ["spy-posted-abroad"],
     "tags": ["politics", "international"],
-    "names": ["cityName", "civilization"],
+    "names": ["city", "civilization"],
     "weight": { "base": 1 },
+    "extends": "city",
     "variants": [
       {
         "id": "spy-posted-abroad-report",
-        "headline": "One of ours has taken rooms in {{cityName}}",
+        "headline": "One of ours has taken rooms in {{city}}",
         "body": [
-          "One of our quiet people has settled into {{cityName}}, a city of {{civilization}}. The room he rents above a shop looks down on the gate and opens onto a back stair. The {{city.owner.civic.government}} keeps its own hours, and he intends to learn every one."
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "One of our quiet people has settled into {{city}}, a city of {{civilization}}. The room he rents above a shop looks down on the gate and opens onto a back stair. The {{city.owner.civic.government}} keeps its own hours, and he intends to learn every one."
         ],
         "weight": { "base": 1 }
       },
@@ -412,12 +402,9 @@
         "voice": "gazette",
         "stance": "national",
         "genre": "notice",
-        "headline": "A quiet posting to {{cityName}}",
+        "headline": "A quiet posting to {{city}}",
         "body": [
-          "Notice is given that a trusted servant of ours has taken a place in {{cityName}}, a city of {{civilization}}. Correspondence sent along the usual road will find him. His first letter home will describe those parts of the city that visitors are never invited to see."
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "Notice is given that a trusted servant of ours has taken a place in {{city}}, a city of {{civilization}}. Correspondence sent along the usual road will find him. His first letter home will describe those parts of the city that visitors are never invited to see."
         ],
         "weight": { "base": 1 }
       },
@@ -426,12 +413,9 @@
         "voice": "spoken",
         "stance": "national",
         "genre": "anecdote",
-        "headline": "One of ours goes to {{cityName}}",
+        "headline": "One of ours goes to {{city}}",
         "body": [
-          "They say a quiet man of ours has gone down the road to {{cityName}}, in the land of {{civilization}}. He will keep a stall in that market, and the gate will learn his face. When the wind shifts, word will come back along the same road."
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "They say a quiet man of ours has gone down the road to {{city}}, in the land of {{civilization}}. He will keep a stall in that market, and the gate will learn his face. When the wind shifts, word will come back along the same road."
         ],
         "weight": { "base": 1 }
       },
@@ -440,12 +424,9 @@
         "voice": "press",
         "stance": "hawkish",
         "genre": "analysis",
-        "headline": "A room inside {{cityName}}",
+        "headline": "A room inside {{city}}",
         "body": [
-          "From a window in {{cityName}}, our agent sees what no dispatch from {{civilization}} will ever admit. He counts the wagons at the gate each morning, and the tally tells him what {{civilization}} is moving before any announcement. The question is whether that traffic is ordinary trade or the supplies for a road being built in secret. Either answer is worth the rent."
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "From a window in {{city}}, our agent sees what no dispatch from {{civilization}} will ever admit. He counts the wagons at the gate each morning, and the tally tells him what {{civilization}} is moving before any announcement. The question is whether that traffic is ordinary trade or the supplies for a road being built in secret. Either answer is worth the rent."
         ],
         "weight": { "base": 1 }
       }
@@ -457,15 +438,13 @@
     "tags": ["politics", "international"],
     "names": ["civilization"],
     "weight": { "base": 1 },
+    "extends": "civilization",
     "variants": [
       {
         "id": "their-diplomat-arrives-report",
         "headline": "A diplomat of {{civilization}} arrives at our capital",
         "body": [
           "A diplomat from {{civilization}} has moved into a house near our capital's ministry. The gatekeeper has one more face to learn and one more name for the visitors' book. Matters that once waited on a courier can now be raised at a door."
-        ],
-        "links": [
-          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
         ],
         "weight": { "base": 1 }
       },
@@ -478,9 +457,6 @@
         "body": [
           "It is with satisfaction that we note the arrival of an envoy from {{civilization}} at our capital. The reception ledger has a new page, and his name is written there in ink not yet dry. A message carried by a diplomat arrives with fewer bruises than one carried by rumor, and honest words are welcome at this court."
         ],
-        "links": [
-          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
-        ],
         "weight": { "base": 1 }
       },
       {
@@ -491,9 +467,6 @@
         "headline": "A listener at our table",
         "body": [
           "{{civilization}} has planted an envoy in our capital, and we should count the cost of courtesy. Wine is cheap; an unlocked study is not. Let the steward pour freely and let the clerks lock every drawer before the guest arrives. A visitor who knows he is watched writes a careful report, and a careful report serves his masters poorly."
-        ],
-        "links": [
-          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
         ],
         "weight": { "base": 1 }
       }

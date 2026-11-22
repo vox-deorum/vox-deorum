@@ -3,17 +3,15 @@
     "id": "city-being-razed-account",
     "triggers": ["city-being-razed"],
     "tags": ["cities", "military", "international"],
-    "names": ["cityName", "civilization"],
+    "names": ["city", "civilization"],
     "weight": { "base": 1 },
+    "extends": "city",
     "variants": [
       {
         "id": "city-being-razed-report",
-        "headline": "{{cityName}} is being razed",
+        "headline": "{{city}} is being razed",
         "body": [
-          "{{civilization}} has set fire to {{cityName}}, and the burning is deliberate. At the present pace, {{turns}} will pass before the walls are down and the site is bare. The roads that led there will be the only thing left."
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "{{civilization}} has set fire to {{city}}, and the burning is deliberate. At the present pace, {{turns}} will pass before the walls are down and the site is bare. The roads that led there will be the only thing left."
         ],
         "weight": { "base": 1 }
       },
@@ -23,12 +21,9 @@
         "stance": "neutral",
         "genre": "report",
         "when": "population !== null",
-        "headline": "{{population}} people remain as {{cityName}} is razed",
+        "headline": "{{population}} people remain as {{city}} is razed",
         "body": [
-          "{{population}} people are still inside {{cityName}} while {{civilization}} burns it street by street. No order has come to spare the place, and the fire has {{turns}} more to run. Families at the gate have stacked their bundles by the road and wait for a gap in the flames."
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "{{population}} people are still inside {{city}} while {{civilization}} burns it street by street. No order has come to spare the place, and the fire has {{turns}} more to run. Families at the gate have stacked their bundles by the road and wait for a gap in the flames."
         ],
         "weight": { "base": 1 }
       },
@@ -40,10 +35,7 @@
         "when": "distance !== null",
         "headline": "A city burns {{distance}} from our nearest city",
         "body": [
-          "Word from the frontier says {{civilization}} is burning {{cityName}}, {{distance}} from the nearest of our towns. Travelers from that country speak of smoke lying flat across the fields at noon. This office will print the next dispatch as soon as a rider reaches us."
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "Word from the frontier says {{civilization}} is burning {{city}}, {{distance}} from the nearest of our towns. Travelers from that country speak of smoke lying flat across the fields at noon. This office will print the next dispatch as soon as a rider reaches us."
         ],
         "weight": { "base": 1 }
       },
@@ -52,12 +44,9 @@
         "voice": "press",
         "stance": "devout",
         "genre": "obituary",
-        "headline": "The end of {{cityName}}",
+        "headline": "The end of {{city}}",
         "body": [
-          "{{cityName}} has {{turns}} before the last of it is gone, and the fire is the work of {{civilization}}. The city had its shrines and its market days, and both will end together. The prayers once said there will be said elsewhere, by people who remember the stones."
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "{{city}} has {{turns}} before the last of it is gone, and the fire is the work of {{civilization}}. The city had its shrines and its market days, and both will end together. The prayers once said there will be said elsewhere, by people who remember the stones."
         ],
         "weight": { "base": 1 }
       }
@@ -67,17 +56,15 @@
     "id": "city-under-siege-account",
     "triggers": ["city-under-siege"],
     "tags": ["cities", "military"],
-    "names": ["cityName"],
+    "names": ["city"],
     "weight": { "base": 1 },
+    "extends": "city",
     "variants": [
       {
         "id": "city-under-siege-report",
-        "headline": "{{cityName}} holds with damaged defenses",
+        "headline": "{{city}} holds with damaged defenses",
         "body": [
-          "{{cityName}} still stands, though its walls are badly broken. Families near the rampart have carried their bedding to relatives deeper in the city, and the market has moved into the narrow streets behind the wall. The gate is barred, and the watch does not sleep."
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "{{city}} still stands, though its walls are badly broken. Families near the rampart have carried their bedding to relatives deeper in the city, and the market has moved into the narrow streets behind the wall. The gate is barred, and the watch does not sleep."
         ],
         "weight": { "base": 1 }
       },
@@ -86,12 +73,9 @@
         "voice": "crier",
         "stance": "national",
         "genre": "notice",
-        "headline": "{{cityName}} holds against the siege",
+        "headline": "{{city}} holds against the siege",
         "body": [
-          "Hear me, {{terms.civic.people}} of {{cityName}}! The enemy is at the gate and the wall is battered, but it still stands! Bring water to the rampart and keep your fires low! Stand fast. The wall holds!"
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "Hear me, {{terms.civic.people}} of {{city}}! The enemy is at the gate and the wall is battered, but it still stands! Bring water to the rampart and keep your fires low! Stand fast. The wall holds!"
         ],
         "weight": { "base": 1 }
       },
@@ -100,12 +84,9 @@
         "voice": "press",
         "stance": "government-critical",
         "genre": "analysis",
-        "headline": "Can {{cityName}} repair its walls under siege?",
+        "headline": "Can {{city}} repair its walls under siege?",
         "body": [
-          "{{cityName}} can hold for a while, but its wall cannot be repaired while the road is closed. Stone, lime and timber all come from outside, and an army at the gate takes the road first. The garrison's quiet days are its only chance to haul and mix, and it should spend them that way."
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "{{city}} can hold for a while, but its wall cannot be repaired while the road is closed. Stone, lime and timber all come from outside, and an army at the gate takes the road first. The garrison's quiet days are its only chance to haul and mix, and it should spend them that way."
         ],
         "weight": { "base": 1 }
       },
@@ -114,12 +95,9 @@
         "voice": "tabloid",
         "stance": "local",
         "genre": "anecdote",
-        "headline": "Life inside besieged {{cityName}}",
+        "headline": "Life inside besieged {{city}}",
         "body": [
-          "In {{cityName}} the bakers have moved their ovens to the back rooms and the money is kept in aprons. Prices are chalked fresh at dawn and paid without argument. At night the city listens to one sound, the gate creaking on its hinges as the watch walks above it."
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "In {{city}} the bakers have moved their ovens to the back rooms and the money is kept in aprons. Prices are chalked fresh at dawn and paid without argument. At night the city listens to one sound, the gate creaking on its hinges as the watch walks above it."
         ],
         "weight": { "base": 1 }
       },
@@ -128,12 +106,9 @@
         "voice": "gazette",
         "stance": "pro-government",
         "genre": "notice",
-        "headline": "The defense of {{cityName}} continues",
+        "headline": "The defense of {{city}} continues",
         "body": [
-          "We are advised that {{cityName}} remains under siege, its walls sorely battered but still holding. The watch relieves itself without a gap, and runners are moving at all hours. Citizens are asked to keep the streets clear for them."
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "We are advised that {{city}} remains under siege, its walls sorely battered but still holding. The watch relieves itself without a gap, and runners are moving at all hours. Citizens are asked to keep the streets clear for them."
         ],
         "weight": { "base": 1 }
       }
@@ -145,15 +120,13 @@
     "tags": ["cities", "domestic", "military"],
     "names": ["city"],
     "weight": { "base": 1 },
+    "extends": "city",
     "variants": [
       {
         "id": "city-pillaged-unrest-report",
         "headline": "Pillaged land weighs on {{city}}",
         "body": [
           "Raiders stripped the land around {{city}} and left the farmsteads empty. Pillage is now the city's leading grievance, and it leaves {{pillagedPopulation}} {{terms.civic.people}} unhappy. The road that once carried vegetables to market carries dust."
-        ],
-        "links": [
-          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
         ],
         "weight": { "base": 1 }
       },
@@ -166,9 +139,6 @@
         "body": [
           "The count of {{city}} puts pillage first among its troubles, with {{pillagedPopulation}} {{terms.civic.people}} unhappy. A raid takes a night; rebuilding takes seed, hands and a season. The officers who decide where the garrison stands should be asked why these fields were left open."
         ],
-        "links": [
-          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
-        ],
         "weight": { "base": 1 }
       },
       {
@@ -179,9 +149,6 @@
         "headline": "The road to {{city}} is empty now",
         "body": [
           "The cart track south of {{city}} used to be busy before daybreak. Now the ruts are dry and the farms along it stand open to the wind, their doors gone for firewood. The families who worked them sleep inside the walls and walk out each morning to look at what is left."
-        ],
-        "links": [
-          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
         ],
         "weight": { "base": 1 }
       },
@@ -194,9 +161,6 @@
         "body": [
           "Word from {{city}}: pillaged land is now the heaviest burden on the city, and {{pillagedPopulation}} {{terms.civic.people}} are unhappy because of it. Towns with wagons, seed or labor to spare should send word to the council."
         ],
-        "links": [
-          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
-        ],
         "weight": { "base": 1 }
       }
     ]
@@ -205,17 +169,15 @@
     "id": "we-raze-a-city-account",
     "triggers": ["we-raze-a-city"],
     "tags": ["cities", "domestic"],
-    "names": ["cityName"],
+    "names": ["city"],
     "weight": { "base": 1 },
+    "extends": "city",
     "variants": [
       {
         "id": "we-raze-a-city-report",
-        "headline": "{{cityName}} is being razed",
+        "headline": "{{city}} is being razed",
         "body": [
-          "Our soldiers began pulling down the walls of {{cityName}} this week, and the smoke has not lifted since. {{turns}} will see the last of it. The road to the site is already quieter than it was."
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "Our soldiers began pulling down the walls of {{city}} this week, and the smoke has not lifted since. {{turns}} will see the last of it. The road to the site is already quieter than it was."
         ],
         "weight": { "base": 1 }
       },
@@ -224,12 +186,9 @@
         "voice": "press",
         "stance": "national",
         "genre": "analysis",
-        "headline": "The decision to raze {{cityName}}",
+        "headline": "The decision to raze {{city}}",
         "body": [
-          "The destruction of {{cityName}} will take {{turns}}, and when it is done the realm will have one fewer gate to hold and one more open field to watch. A razed city costs less to keep and more to explain. The order was ours; so is the empty ground."
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "The destruction of {{city}} will take {{turns}}, and when it is done the realm will have one fewer gate to hold and one more open field to watch. A razed city costs less to keep and more to explain. The order was ours; so is the empty ground."
         ],
         "weight": { "base": 1 }
       },
@@ -238,12 +197,9 @@
         "voice": "press",
         "stance": "devout",
         "genre": "obituary",
-        "headline": "The end of {{cityName}}",
+        "headline": "The end of {{city}}",
         "body": [
-          "{{cityName}} has {{turns}} before the last wall comes down and the ground is cleared. Its market days and its prayers will end in the same hour. The gods it served will have to remember it, because the fields will not."
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "{{city}} has {{turns}} before the last wall comes down and the ground is cleared. Its market days and its prayers will end in the same hour. The gods it served will have to remember it, because the fields will not."
         ],
         "weight": { "base": 1 }
       },
@@ -253,12 +209,9 @@
         "stance": "populist",
         "genre": "report",
         "when": "population !== null",
-        "headline": "{{population}} people and {{turns}} left in {{cityName}}",
+        "headline": "{{population}} people and {{turns}} left in {{city}}",
         "body": [
-          "There are still {{population}} people inside {{cityName}}, and our soldiers are burning it around them. {{turns}} will empty the place one way or another. The busiest street in the city is the road out."
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "There are still {{population}} people inside {{city}}, and our soldiers are burning it around them. {{turns}} will empty the place one way or another. The busiest street in the city is the road out."
         ],
         "weight": { "base": 1 }
       }

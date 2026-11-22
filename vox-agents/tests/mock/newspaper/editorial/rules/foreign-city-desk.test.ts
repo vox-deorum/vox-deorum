@@ -158,6 +158,10 @@ describe('stock foreign city desk', () => {
       const genericResult = await check(fixture([...base, ordinary], [prior], [completion]));
       expect(genericResult.fired(rule)).toEqual([]);
       expect(genericResult.fired(generic)).toEqual(['event/113']);
+      const { item } = expectStory(genericResult, generic, [name, building]);
+      expect([...item.headline, ...item.body.flat()]).toContainEqual(expect.objectContaining({
+        type: 'link', text: name, target: { type: 'city', cityId: '20' },
+      }));
     });
 
     it('should read a nearby investment from a basic snapshot and drop it after a matching completion', async () => {

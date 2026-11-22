@@ -25,6 +25,7 @@ Write the three sentences in the same paragraph, unless you *really* want to for
 While "War Declared On Us" sounds like a good *headline*, use concrete names of a civilization, city, religion, leader, or other subject in the story body (at least for the first mention). The readers need to understand where a news is happening. Write “peace with Rome” in place of “peace with a foreign power”, use the civilization name instead of "this nation", use "Our scholars" or "Roman scholars" instead of "The scholars".
 
 - Use `{{terms.leader}}` for the reader's leader by name and `{{player.leader}}` for the leader of a player subject. List these in the template's `names` when they should be underlined.
+- Use `{{city}}` for the main city. If it should be clickable, [inherit the city link](editorial.md#sharing-links).
 - Use `{{terms.civilization}}` for the reader's country and `{{terms.civilizationAdjective}}` for its adjective, as in “Rome” and “Roman.”
 - Use [civic terms](editorial.md#civic-vocabulary) for words that vary by government: “our `{{terms.civic.government}}`,” “the `{{terms.civic.leaderTitle}}`,” or “your `{{terms.civic.people}}`” (plural). Use `{{terms.civic.leaderAddress}}` as a full phrase when speaking to the leader. Keep names like the World Congress.
 - Use [regional shortcuts](triggers/constants.md#regional-shortcuts) when writing for a group of civilizations.
@@ -61,7 +62,7 @@ Following the same spirit, use relevant numbers that make sense in the game worl
 
 **Pamphlet · Government-critical · Editorial.** Lead with the loss and let a local voice say what's at stake.
 
-> {{term.civilization}} lost {{cityName}} on our {{terms.civic.government}}'s watch. In neighboring towns, people are checking their gates and watchtowers. “Send us soldiers,” said a local councilman, “or we will have to swear loyalty to {{captor}} tomorrow.”
+> {{terms.civilization}} lost {{city}} on our {{terms.civic.government}}'s watch. In neighboring towns, people are checking their gates and watchtowers. “Send us soldiers,” said a local councilman, “or we will have to swear loyalty to {{captor}} tomorrow.”
 
 **Pamphlet · National · Editorial.** Speak to the leader in the mood of the crowd.
 

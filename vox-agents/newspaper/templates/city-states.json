@@ -385,6 +385,7 @@
     "tags": ["politics", "international"],
     "names": ["cityState"],
     "weight": { "base": 1 },
+    "extends": "city-state",
     "variants": [
       {
         "id": "city-state-quest-countdown-disappeared-report",
@@ -392,6 +393,7 @@
         "body": [
           "A dated errand is gone from {{cityState}}'s board before the day it named. A traveler who had saved coin for the road says she will hold it a week and see what the board says next. The board keeps its reasons to itself."
         ],
+        "links": [],
         "weight": { "base": 1 }
       },
       {
@@ -402,9 +404,6 @@
         "headline": "Notice: an errand ends in {{cityState}}",
         "body": [
           "Merchants and travelers should know that a dated errand is gone from {{cityState}}'s board before its deadline. Workmen who priced the job should call at the gatehouse before spending more coin on travel."
-        ],
-        "links": [
-          { "placeholder": "cityState", "label": "{{cityState}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
         ],
         "weight": { "base": 1 }
       },
@@ -417,9 +416,6 @@
         "body": [
           "{{cityState}} has struck an errand from its board before day {{previousDeadline}}, and that day is still to come. A workman who had saved his good boots for the trip now says he will wear the old pair until someone tells him the job is real. The board offers no explanation, only a blank space where a date used to be."
         ],
-        "links": [
-          { "placeholder": "cityState", "label": "{{cityState}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
-        ],
         "weight": { "base": 1 }
       }
     ]
@@ -430,6 +426,7 @@
     "tags": ["politics", "international"],
     "names": ["cityState"],
     "weight": { "base": 1 },
+    "extends": "city-state",
     "variants": [
       {
         "id": "city-state-quest-deadline-approaching-report",
@@ -438,6 +435,7 @@
         "body": [
           "An errand on {{cityState}}'s board comes due in {{turnsLeft}}. A hauler has loaded the last of his goods and means to be inside the gate before the board is cleared. The road is short, but the clock is shorter."
         ],
+        "links": [],
         "weight": { "base": 1 }
       },
       {
@@ -447,6 +445,7 @@
         "body": [
           "Today is the last day for the errand {{cityState}} posted. When the sun goes down, the work will be finished or the chance will be gone. The board has no patience for second thoughts."
         ],
+        "links": [],
         "weight": { "base": 1 }
       },
       {
@@ -458,9 +457,6 @@
         "headline": "The {{cityState}} clock hits zero",
         "body": [
           "Last day for the {{cityState}} errand. Finish it or leave it. The board clears at sundown."
-        ],
-        "links": [
-          { "placeholder": "cityState", "label": "{{cityState}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
         ],
         "weight": { "base": 1 }
       },
@@ -474,9 +470,6 @@
         "body": [
           "Hear it, all who carry goods or tools for {{cityState}}! The errand closes in {{turnsLeft}}, and the sand is already low! {{turnsLeft}}, I say! Be at the gate before the last sand falls!"
         ],
-        "links": [
-          { "placeholder": "cityState", "label": "{{cityState}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
-        ],
         "weight": { "base": 1 }
       }
     ]
@@ -487,6 +480,7 @@
     "tags": ["politics", "international"],
     "names": ["cityState"],
     "weight": { "base": 1 },
+    "extends": "city-state",
     "variants": [
       {
         "id": "city-state-timed-quest-observed-report",
@@ -494,6 +488,7 @@
         "body": [
           "{{cityState}} has posted a new errand and given it {{turnsLeft}}. A tanner read the notice twice, then went looking for his partner, since the work would take two pairs of hands. If he finds his partner, they will have to start while the offer still stands."
         ],
+        "links": [],
         "weight": { "base": 1 }
       },
       {
@@ -505,9 +500,6 @@
         "body": [
           "News from {{cityState}} this evening: another errand is up. The board gives it {{turnsLeft}} to be finished. The count began the moment the notice went up."
         ],
-        "links": [
-          { "placeholder": "cityState", "label": "{{cityState}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
-        ],
         "weight": { "base": 1 }
       },
       {
@@ -518,9 +510,6 @@
         "headline": "A clock worth beating",
         "body": [
           "The new errand in {{cityState}} has {{turnsLeft}} to be finished, which is time enough to do the work properly. A prize with a clock beside it is still a prize, and the first to start usually takes it. {{terms.civilization}} should be first to start."
-        ],
-        "links": [
-          { "placeholder": "cityState", "label": "{{cityState}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
         ],
         "weight": { "base": 1 }
       }

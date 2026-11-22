@@ -5,6 +5,7 @@
     "tags": ["politics", "international"],
     "names": ["civilization", "era", "former"],
     "weight": { "base": 1 },
+    "extends": "civilization",
     "variants": [
       {
         "id": "friend-enters-new-era-report",
@@ -12,6 +13,7 @@
         "body": [
           "Word from {{civilization}} says the {{former}} is behind it and the {{era}} has begun. Its envoy in our capital spent the morning answering the same question from every merchant: what will the new workshops sell, and when? Our guilds should send a buyer before the first crates are spoken for."
         ],
+        "links": [],
         "weight": { "base": 1 }
       },
       {
@@ -22,9 +24,6 @@
         "headline": "A friend crosses into the {{era}}",
         "body": [
           "Letters from a friendly court inform us that {{civilization}} has passed out of the {{former}} and into the {{era}}, and that its scholars are already borrowing books they once thought beyond them. We are told the first public lecture drew a crowd that filled the hall and part of the street. A neighbor who learns in the open like that is a neighbor worth keeping."
-        ],
-        "links": [
-          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
         ],
         "weight": { "base": 1 }
       },
@@ -37,6 +36,7 @@
         "body": [
           "They say {{civilization}} has entered the {{era}}, and the traders say its clerks now reckon faster than ours. One boy brought home a counting board marked in a way his father could not read. The father kept the board on the shelf and told the boy to learn the markings before the traders changed their minds."
         ],
+        "links": [],
         "weight": { "base": 1 }
       },
       {
@@ -49,6 +49,7 @@
         "body": [
           "In this season {{civilization}} set aside the {{former}} and took up the {{era}}, and its nearest city stands {{distance}} from our own according to the rolls. The warden of the boundary road was asked to count the wagons passing in a week and found more than he expected. He entered the number without comment, as the custom is."
         ],
+        "links": [],
         "weight": { "base": 1 }
       },
       {
@@ -60,6 +61,7 @@
         "body": [
           "The {{era}} has reached {{civilization}}'s workshops, and the {{former}} is now a thing its apprentices study from old drawings. The ceremony matters less than what follows it: our professors have begun asking for places at its schools, and its scholars have begun asking for ours. A friendship that trades students as well as goods will outlast any treaty signed in a hall."
         ],
+        "links": [],
         "weight": { "base": 1 }
       }
     ]
@@ -265,6 +267,7 @@
     "tags": ["politics", "international"],
     "names": ["civilization", "era", "former"],
     "weight": { "base": 1 },
+    "extends": "civilization",
     "variants": [
       {
         "id": "rival-enters-new-era-report",
@@ -272,6 +275,7 @@
         "body": [
           "{{civilization}} has put the {{former}} behind it and entered the {{era}}, and the first sign here was a price list. A cloth merchant found that her agent there had raised his rates before the proclamation was even dry. She has kept the old list pinned above the new one, she says, to remind herself what caution costs."
         ],
+        "links": [],
         "weight": { "base": 1 }
       },
       {
@@ -282,9 +286,6 @@
         "headline": "A rival leaves the {{former}}",
         "body": [
           "We are advised from abroad that {{civilization}}, whose friendship we do not claim, has quitted the {{former}} for the {{era}}. A professor here has already ordered its new treatises for the university shelf, saying a rival's book is cheaper than a rival's mistake. Whether the crossing deserves our envy or our attention, the reader may judge."
-        ],
-        "links": [
-          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
         ],
         "weight": { "base": 1 }
       },
@@ -298,6 +299,7 @@
         "body": [
           "{{civilization}} is in the {{era}} as of this week, and its nearest city is only {{distance}} from our own gate. The old soldiers at the border tavern keep asking for a column on the road or a banner on the wall to point at, and the road gives them nothing, which is what makes them grumble. A neighbor that adds to its learning adds to its strength, and that neighbor is two doors down."
         ],
+        "links": [],
         "weight": { "base": 1 }
       },
       {
@@ -309,6 +311,7 @@
         "body": [
           "It is told that when the {{era}} reached {{civilization}}, the grandmothers hid the old seed jars in the rafters and would not say where. The young ones laughed and bought new ones. The jars are still up there, and the tellers say nobody has needed them yet."
         ],
+        "links": [],
         "weight": { "base": 1 }
       },
       {
@@ -320,6 +323,7 @@
         "body": [
           "{{civilization}} has entered the {{era}}, {{terms.civic.people}}, and its {{player.civic.government}} will soon be telling anyone who listens how little it cost. Ask our own {{terms.civic.government}} the same question and watch the answer turn into a speech. What did we pay to keep pace, and whose purse was opened? A government that cannot show the bill should not ask for the credit."
         ],
+        "links": [],
         "weight": { "base": 1 }
       }
     ]
@@ -330,6 +334,7 @@
     "tags": ["science"],
     "names": ["civilization"],
     "weight": { "base": 1 },
+    "extends": "civilization",
     "variants": [
       {
         "id": "technology-leader-changes-report",
@@ -337,6 +342,7 @@
         "body": [
           "{{civilization}} now stands first in learning, with {{count|known technology|known technologies}} to its name. A bookseller here has cleared a shelf for the leading country's newest journals and put a card in the window before a single volume arrived. First place is a loan, and the shelf remembers who earned it."
         ],
+        "links": [],
         "weight": { "base": 1 }
       },
       {
@@ -350,9 +356,6 @@
           "Works counted: {{count}}",
           "Rivals ahead: none"
         ],
-        "links": [
-          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
-        ],
         "weight": { "base": 1 }
       },
       {
@@ -365,6 +368,7 @@
         "body": [
           "{{civilization}} leads the world with {{count|art or science|arts and sciences}}. Someone else has the same number. The top step was not built for a crowd."
         ],
+        "links": [],
         "weight": { "base": 1 }
       },
       {
@@ -376,6 +380,7 @@
         "body": [
           "{{civilization}} stands at the top of the tally with {{count|art or science|arts and sciences}}, though a count of works says little about a school. In the record of one old academy, the lecture hall runs crowded for a subject the tally barely notices, while the room for a celebrated art stands empty. A rival further down may be filling more benches in the arts we share, and the ledger will never show it."
         ],
+        "links": [],
         "weight": { "base": 1 }
       }
     ]

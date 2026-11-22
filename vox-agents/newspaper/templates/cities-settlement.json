@@ -3,17 +3,15 @@
     "id": "distant-colony-founded-account",
     "triggers": ["distant-colony-founded"],
     "tags": ["cities", "domestic"],
-    "names": ["cityName"],
+    "names": ["city"],
     "weight": { "base": 1 },
+    "extends": "city",
     "variants": [
       {
         "id": "distant-colony-founded-report",
         "headline": "A new colony {{distance}} from the capital",
         "body": [
-          "The flag went up at {{cityName}} this week, {{distance}} from the capital and a long road from any help. The settlers spent their first night around a single fire, dividing the ground by rope and argument. The town will remember that first fire longer than it remembers us."
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "The flag went up at {{city}} this week, {{distance}} from the capital and a long road from any help. The settlers spent their first night around a single fire, dividing the ground by rope and argument. The town will remember that first fire longer than it remembers us."
         ],
         "weight": { "base": 1 }
       },
@@ -22,12 +20,9 @@
         "voice": "press",
         "stance": "ambitious",
         "genre": "analysis",
-        "headline": "{{cityName}} is a long way from home",
+        "headline": "{{city}} is a long way from home",
         "body": [
-          "{{cityName}} is {{distance}} from the capital, and that distance is now the town's chief fact. Grain, orders and soldiers will all come the same long way, and all will arrive late. A road will follow the settlers in time, and the road will bring the next town with it."
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "{{city}} is {{distance}} from the capital, and that distance is now the town's chief fact. Grain, orders and soldiers will all come the same long way, and all will arrive late. A road will follow the settlers in time, and the road will bring the next town with it."
         ],
         "weight": { "base": 1 }
       },
@@ -38,10 +33,7 @@
         "genre": "report",
         "headline": "A new town, {{distance}} out",
         "body": [
-          "They have founded a town called {{cityName}}, {{distance}} out from home, and nobody asked the rest of us whether we wished to pay for it. The settlers are brave, or desperate, or both. This paper wishes them well and will be watching the accounts."
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "They have founded a town called {{city}}, {{distance}} out from home, and nobody asked the rest of us whether we wished to pay for it. The settlers are brave, or desperate, or both. This paper wishes them well and will be watching the accounts."
         ],
         "weight": { "base": 1 }
       },
@@ -50,12 +42,9 @@
         "voice": "gazette",
         "stance": "neutral",
         "genre": "notice",
-        "headline": "A colony at {{cityName}}",
+        "headline": "A colony at {{city}}",
         "body": [
-          "Advice reaches this office of {{cityName}}, founded {{distance}} from the capital and now open to trade. The settlement has a cleared site, a few shelters and little else as yet. Traders bound that way should ask the market office for the route and the return load."
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "Advice reaches this office of {{city}}, founded {{distance}} from the capital and now open to trade. The settlement has a cleared site, a few shelters and little else as yet. Traders bound that way should ask the market office for the route and the return load."
         ],
         "weight": { "base": 1 }
       }
@@ -67,15 +56,13 @@
     "tags": ["cities", "international"],
     "names": ["city", "ours", "player"],
     "weight": { "base": 1 },
+    "extends": "city",
     "variants": [
       {
         "id": "forward-settle-named",
         "headline": "A new town on the doorstep of {{ours}}",
         "body": [
           "A new town called {{city}} now stands {{distance}} from {{ours}}, and {{player}} put it there. From the far field, our farmers can see its roofs and its smoke. The ground between the two towns is the first thing they will argue about."
-        ],
-        "links": [
-          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
         ],
         "weight": { "base": 1 }
       },
@@ -88,9 +75,6 @@
         "body": [
           "{{player}} has placed {{city}} {{distance}} from {{ours}}, and the site was chosen with care. A settlement that close can watch our road, shelter their patrols and crowd our fields without a single soldier in sight. The answer to a post is another post, and ours has not been built."
         ],
-        "links": [
-          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
-        ],
         "weight": { "base": 1 }
       },
       {
@@ -101,9 +85,6 @@
         "headline": "{{city}} rises beside {{ours}}",
         "body": [
           "There is a new town called {{city}} {{distance}} from {{ours}}, and no one has told the farmers where their fields end. {{player}} drew the line on a map in some far room. Send surveyors before the harvest, or the first argument over a furrow will be settled with a scythe."
-        ],
-        "links": [
-          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
         ],
         "weight": { "base": 1 }
       },
@@ -116,9 +97,6 @@
         "body": [
           "We are informed that {{player}} has founded {{city}}, a town {{distance}} from {{ours}} and close enough for a morning's ride. Such neighbors try the patience, but they also bring a market where our merchants may sell. It is cheaper to trade across a border than to guard it."
         ],
-        "links": [
-          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
-        ],
         "weight": { "base": 1 }
       }
     ]
@@ -127,17 +105,15 @@
     "id": "our-city-founded-account",
     "triggers": ["our-city-founded"],
     "tags": ["cities", "domestic"],
-    "names": ["cityName"],
+    "names": ["city"],
     "weight": { "base": 1 },
+    "extends": "city",
     "variants": [
       {
         "id": "our-city-founded-report",
-        "headline": "A new city: {{cityName}}",
+        "headline": "A new city: {{city}}",
         "body": [
-          "The stakes went in at dawn, and by dusk {{cityName}} had a fire, a roped-off square and a name on the gate. Our settlers raised it under our flag. What comes next is the old list: houses, fields and walls."
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "The stakes went in at dawn, and by dusk {{city}} had a fire, a roped-off square and a name on the gate. Our settlers raised it under our flag. What comes next is the old list: houses, fields and walls."
         ],
         "weight": { "base": 1 }
       },
@@ -146,12 +122,9 @@
         "voice": "crier",
         "stance": "national",
         "genre": "notice",
-        "headline": "Hear it! {{cityName}} is founded",
+        "headline": "Hear it! {{city}} is founded",
         "body": [
-          "Word for every street and every stall: {{cityName}} is founded! Our settlers raised the flag at dawn, and there is a new city under it! {{terms.civic.people}}, say the name and say it again: {{cityName}}!"
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "Word for every street and every stall: {{city}} is founded! Our settlers raised the flag at dawn, and there is a new city under it! {{terms.civic.people}}, say the name and say it again: {{city}}!"
         ],
         "weight": { "base": 1 }
       },
@@ -160,12 +133,9 @@
         "voice": "press",
         "stance": "ambitious",
         "genre": "analysis",
-        "headline": "{{cityName}} begins its story",
+        "headline": "{{city}} begins its story",
         "body": [
-          "Every city begins as a promise that someone has to keep. {{cityName}} has the site, the settlers and the flag, and nothing else that a hard winter respects. Seed and tools sent this season will decide whether the town is a city in ten years."
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "Every city begins as a promise that someone has to keep. {{city}} has the site, the settlers and the flag, and nothing else that a hard winter respects. Seed and tools sent this season will decide whether the town is a city in ten years."
         ],
         "weight": { "base": 1 }
       },
@@ -174,12 +144,9 @@
         "voice": "gazette",
         "stance": "pro-government",
         "genre": "notice",
-        "headline": "A new settlement at {{cityName}}",
+        "headline": "A new settlement at {{city}}",
         "body": [
-          "It is with pleasure that we record the founding of {{cityName}} under the nation's flag. The {{terms.civic.government}} has pledged the town protection and a share of the next stores. Settlers bound for the site may register at the capital."
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "It is with pleasure that we record the founding of {{city}} under the nation's flag. The {{terms.civic.government}} has pledged the town protection and a share of the next stores. Settlers bound for the site may register at the capital."
         ],
         "weight": { "base": 1 }
       },
@@ -188,13 +155,10 @@
         "voice": "gazette",
         "stance": "local",
         "genre": "letter",
-        "headline": "Who pays for the sign in {{cityName}}?",
+        "headline": "Who pays for the sign in {{city}}?",
         "byline": "A sign painter",
         "body": [
-          "Madam, my son has gone out to {{cityName}} and wants a sign for its first shop. The town, he writes, already speaks of itself as the equal of any in the country. Before I paint, tell me who settles its accounts, so the bill goes to a desk that will pay it."
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "Madam, my son has gone out to {{city}} and wants a sign for its first shop. The town, he writes, already speaks of itself as the equal of any in the country. Before I paint, tell me who settles its accounts, so the bill goes to a desk that will pay it."
         ],
         "weight": { "base": 1 }
       }
@@ -204,18 +168,16 @@
     "id": "settler-departure-account",
     "triggers": ["settler-departure"],
     "tags": ["cities", "domestic"],
-    "names": ["town"],
+    "names": ["city"],
     "weight": { "base": 1 },
+    "extends": "city",
     "variants": [
       {
         "id": "settler-departure-report",
         "when": "!city.knows('happinessDelta') || !(city.happinessDelta < 0 || city.happinessDelta > 0)",
-        "headline": "Settlers ready as {{town}} grows smaller",
+        "headline": "Settlers ready as {{city}} grows smaller",
         "body": [
-          "The carts are loaded at the edge of {{town}} and the count is down. A settler party is ready to go, and the neighbors are already dividing the work the leavers will not do. Nobody has said aloud which families will be missed most."
-        ],
-        "links": [
-          { "placeholder": "town", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "The carts are loaded at the edge of {{city}} and the count is down. A settler party is ready to go, and the neighbors are already dividing the work the leavers will not do. Nobody has said aloud which families will be missed most."
         ],
         "weight": { "base": 1 }
       },
@@ -225,12 +187,9 @@
         "stance": "government-critical",
         "genre": "report",
         "when": "city.knows('happinessDelta') && city.happinessDelta < 0",
-        "headline": "Settlers ready, spirits low in {{town}}",
+        "headline": "Settlers ready, spirits low in {{city}}",
         "body": [
-          "{{town}} is smaller this week, and its temper is worse. The settler party took families out through the gate, and those who stayed find the streets no easier for the empty rooms. The council has offered no explanation."
-        ],
-        "links": [
-          { "placeholder": "town", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "{{city}} is smaller this week, and its temper is worse. The settler party took families out through the gate, and those who stayed find the streets no easier for the empty rooms. The council has offered no explanation."
         ],
         "weight": { "base": 1 }
       },
@@ -240,12 +199,9 @@
         "stance": "pro-government",
         "genre": "report",
         "when": "city.knows('happinessDelta') && city.happinessDelta > 0",
-        "headline": "Good cheer in {{town}} as settlers prepare to go",
+        "headline": "Good cheer in {{city}} as settlers prepare to go",
         "body": [
-          "The settler carts left {{town}} this week, and the town is in good cheer. Tables are less crowded, the lanes are quieter, and the council points to the mood as proof the plan worked. It may even be true."
-        ],
-        "links": [
-          { "placeholder": "town", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "The settler carts left {{city}} this week, and the town is in good cheer. Tables are less crowded, the lanes are quieter, and the council points to the mood as proof the plan worked. It may even be true."
         ],
         "weight": { "base": 1 }
       },
@@ -254,12 +210,9 @@
         "voice": "tabloid",
         "stance": "populist",
         "genre": "anecdote",
-        "headline": "One more thing to pack in {{town}}",
+        "headline": "One more thing to pack in {{city}}",
         "body": [
-          "The carts on the east lane of {{town}} stand loaded past the axles, and the count is down by {{lost}}. A woman at the last door is giving away the pots she cannot carry and keeping one lid. Her neighbor, who has taken the hens, asks only that she take the rooster with her."
-        ],
-        "links": [
-          { "placeholder": "town", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "The carts on the east lane of {{city}} stand loaded past the axles, and the count is down by {{lost}}. A woman at the last door is giving away the pots she cannot carry and keeping one lid. Her neighbor, who has taken the hens, asks only that she take the rooster with her."
         ],
         "weight": { "base": 1 }
       }

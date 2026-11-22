@@ -56,15 +56,13 @@
     "tags": ["politics", "international"],
     "names": ["city", "cityState", "religion"],
     "weight": { "base": 1 },
+    "extends": "city",
     "variants": [
       {
         "id": "faith-reaches-city-state-report",
         "headline": "Our faith takes root in {{cityState}}",
         "body": [
           "Most people in {{city}}, a town of {{cityState}}, now keep {{religion}}, the faith {{terms.civilization}} founded. The keeper there writes that the shrine has added our prayers to its morning reading and has room for both customs. {{city}} lies beyond our nearest neighbors, so the news reached us the slow way the prayers did."
-        ],
-        "links": [
-          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
         ],
         "weight": { "base": 1 }
       },
@@ -77,9 +75,6 @@
         "body": [
           "Letters from {{city}} relate that {{religion}} now holds the majority there, and it is the faith {{terms.civilization}} founded. The candle seller in the market keeps two sizes on his shelf, one for each feast, and says both sell out. The two congregations still draw water at the same well, and that is the news we like best."
         ],
-        "links": [
-          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
-        ],
         "weight": { "base": 1 }
       },
       {
@@ -90,9 +85,6 @@
         "headline": "A traveler brings news of our faith from {{cityState}}",
         "body": [
           "A salt hauler says the inn at {{city}} now sets a lamp in the window and keeps a blessing for travelers who ask. Most people in the city follow {{religion}}. By his third trip, the hauler could say the blessing too."
-        ],
-        "links": [
-          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
         ],
         "weight": { "base": 1 }
       },
@@ -105,9 +97,6 @@
         "body": [
           "{{city}} now has a {{religion}} majority. That's well past our nearest neighbors. Our prayers have made the trip. Can our merchants?"
         ],
-        "links": [
-          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
-        ],
         "weight": { "base": 1 }
       }
     ]
@@ -116,15 +105,17 @@
     "id": "faith-reaches-distant-city-account",
     "triggers": ["faith-reaches-distant-city"],
     "tags": ["religion", "international"],
-    "names": ["cityName", "civilization", "religion"],
+    "names": ["city", "civilization", "religion"],
     "weight": { "base": 1 },
+    "extends": "city",
     "variants": [
       {
         "id": "faith-reaches-distant-city-report",
-        "headline": "Our faith reaches {{cityName}}",
+        "headline": "Our faith reaches {{city}}",
         "body": [
-          "{{cityName}}, a city of {{civilization}} about {{distance}} from our nearest town, now keeps {{religion}} as its majority faith. The change came from the city's own people, and the shrine there has added our prayers to its morning reading. A creed that travels that far without an army has found something worth keeping."
+          "{{city}}, a city of {{civilization}} about {{distance}} from our nearest town, now keeps {{religion}} as its majority faith. The change came from the city's own people, and the shrine there has added our prayers to its morning reading. A creed that travels that far without an army has found something worth keeping."
         ],
+        "links": [],
         "weight": { "base": 1 }
       },
       {
@@ -134,10 +125,7 @@
         "genre": "analysis",
         "headline": "Our creed gains a distant majority",
         "body": [
-          "{{cityName}} has given {{religion}} a majority inside {{civilization}}, which puts our faith on firm ground {{distance}} from our nearest city. That is farther than any town we call a neighbor, and preachers won the ground with a hymn book. Our {{terms.civic.government}} should count those worshippers as a road into {{civilization}} and keep that road watched, because their ruler will not forget that our prayers got there first."
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "{{city}} has given {{religion}} a majority inside {{civilization}}, which puts our faith on firm ground {{distance}} from our nearest city. That is farther than any town we call a neighbor, and preachers won the ground with a hymn book. Our {{terms.civic.government}} should count those worshippers as a road into {{civilization}} and keep that road watched, because their ruler will not forget that our prayers got there first."
         ],
         "weight": { "base": 1 }
       },
@@ -148,8 +136,9 @@
         "genre": "anecdote",
         "headline": "They sing of a far city keeping our faith",
         "body": [
-          "They tell it at the well: {{cityName}}, a city {{distance}} from the last market we know, has taken up {{religion}}, the faith of our own hearths. The road is long, so travelers cut the tale down to a verse and passed it on. The singers have given it a tune the children already know."
+          "They tell it at the well: {{city}}, a city {{distance}} from the last market we know, has taken up {{religion}}, the faith of our own hearths. The road is long, so travelers cut the tale down to a verse and passed it on. The singers have given it a tune the children already know."
         ],
+        "links": [],
         "weight": { "base": 1 }
       }
     ]
@@ -201,15 +190,13 @@
     "tags": ["politics", "international", "religion"],
     "names": ["civilization", "religion"],
     "weight": { "base": 1 },
+    "extends": "civilization",
     "variants": [
       {
         "id": "foreign-major-adopts-our-faith-report",
         "headline": "Our faith takes most cities of {{civilization}}",
         "body": [
           "{{religion}}, the faith we founded, now leads in most cities of {{civilization}}. A bookbinder in one of its market towns reports orders for our prayer book outrunning his supply of thread. The change was made by the people of that country, quietly, one household at a time."
-        ],
-        "links": [
-          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
         ],
         "weight": { "base": 1 }
       },
@@ -222,9 +209,6 @@
         "body": [
           "{{religion}} now leads in most of the cities of {{civilization}}, and that makes our own shrines the oldest houses of a faith we founded. Pilgrims will come looking for the room where the first prayers were said, and they will judge our roads and our welcome before they judge our doctrine. Our {{terms.civic.government}} would do well to decide now, while the news is still good, whether it means to be a generous host."
         ],
-        "links": [
-          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
-        ],
         "weight": { "base": 1 }
       },
       {
@@ -236,9 +220,6 @@
         "byline": "A Trader of the Long Roads",
         "body": [
           "Sir, I trade in salt and cloth along the roads into {{civilization}}, and this season the orders have changed. Drivers there ask for prayer books before they ask for either, now that {{religion}} leads in most of their cities. A potter on my street now packs a bowl with every book sold, and if your readers have copies to spare, send them to me at the inn by the north gate."
-        ],
-        "links": [
-          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
         ],
         "weight": { "base": 1 }
       }
@@ -343,15 +324,13 @@
     "tags": ["politics", "international", "religion"],
     "names": ["civilization", "former", "religion"],
     "weight": { "base": 1 },
+    "extends": "civilization",
     "variants": [
       {
         "id": "neighbor-majority-faith-changed-report",
         "headline": "{{religion}} takes most cities in {{civilization}}",
         "body": [
           "Across the border in {{civilization}}, {{religion}} has taken the majority from {{former}}. The border market now opens a day later than it did last season, and our carters have been caught with loaded wagons and nowhere to sell. Traders who learn the new calendar first will take the best pitches."
-        ],
-        "links": [
-          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
         ],
         "weight": { "base": 1 }
       },
@@ -364,9 +343,6 @@
         "body": [
           "Letters from {{civilization}} relate that {{religion}} has gained a majority in most of its cities, where {{former}} was lately first. A binder there marks each prayer book with a different colored thread, so a customer can find his own without reading the title. He says the two colors sell in equal numbers, and he has stopped guessing which will win."
         ],
-        "links": [
-          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
-        ],
         "weight": { "base": 1 }
       },
       {
@@ -378,6 +354,7 @@
         "body": [
           "Border towns, take note: {{religion}} now leads in most cities across the line, where {{former}} held the count. The feast has moved, and the fair has moved with it. Load your cart for the new day, or sell to empty benches."
         ],
+        "links": [],
         "weight": { "base": 1 }
       }
     ]
@@ -548,15 +525,13 @@
     "tags": ["cities", "domestic"],
     "names": ["city", "religion"],
     "weight": { "base": 1 },
+    "extends": "city",
     "variants": [
       {
         "id": "own-city-converts-report",
         "headline": "{{city}} turns to {{religion}}",
         "body": [
           "{{religion}} now holds a majority in {{city}}. The baker on the corner has started closing an hour early on the new feast day, and his old customers have learned to buy their bread in the morning. Nobody has taken down the shrine by the gate; the town simply walks past it on a different day."
-        ],
-        "links": [
-          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
         ],
         "weight": { "base": 1 }
       },
@@ -569,9 +544,6 @@
         "headline": "Good news, people of {{city}}",
         "body": [
           "Neighbors of {{city}}, {{religion}} now leads in your streets, and {{terms.civilization}} founded it. The shrine door that stood half shut now stands open, and the keeper has stopped counting who comes. Bring a neighbor this feast day and let the road see the crowd!"
-        ],
-        "links": [
-          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
         ],
         "weight": { "base": 1 }
       },
@@ -586,9 +558,6 @@
           "{{religion}}, a faith our own people did not found, now holds the majority in {{city}}. The conversions of recent months went its way, and its congregation rings a bell at hours this town has never used.",
           "The shrine by the east gate still opens on the old feast day. Its keeper lent the front benches to a carter's family for a wedding last week, and the old hall was full for an afternoon."
         ],
-        "links": [
-          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
-        ],
         "weight": { "base": 1 }
       },
       {
@@ -600,9 +569,6 @@
         "body": [
           "In {{city}}, the rooming-house keeper says the singing now comes over the back wall before the wash water is warm. The city's majority faith is {{religion}}, and the new hymns have spread from the shrine to the tenements. \"I liked the old ones better,\" she says, and hums the new one anyway."
         ],
-        "links": [
-          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
-        ],
         "weight": { "base": 1 }
       }
     ]
@@ -611,14 +577,14 @@
     "id": "pantheon-founded-account",
     "triggers": ["pantheon-founded"],
     "tags": ["religion", "international"],
-    "names": ["belief", "cityName", "civilization"],
+    "names": ["belief", "city", "civilization"],
     "weight": { "base": 1 },
     "variants": [
       {
         "id": "pantheon-founded-report",
-        "headline": "{{civilization}} founds a pantheon in {{cityName}}",
+        "headline": "{{civilization}} founds a pantheon in {{city}}",
         "body": [
-          "{{civilization}} has raised its first pantheon in {{cityName}}, and the ceremony lasted from noon until the lamps were lit. Families came forward one at a time to name the power they would honor, and the list grew longer with each household. The name they set above the rest was {{belief}}. A people who can name what they worship has taken the first step toward a common faith."
+          "{{civilization}} has raised its first pantheon in {{city}}, and the ceremony lasted from noon until the lamps were lit. Families came forward one at a time to name the power they would honor, and the list grew longer with each household. The name they set above the rest was {{belief}}. A people who can name what they worship has taken the first step toward a common faith."
         ],
         "weight": { "base": 1 }
       },
@@ -628,9 +594,9 @@
         "stance": "devout",
         "genre": "report",
         "when": "ours === true",
-        "headline": "They say the first altars at {{cityName}} are ours",
+        "headline": "They say the first altars at {{city}} are ours",
         "body": [
-          "They say {{civilization}} has raised a pantheon in {{cityName}}, and the smoke from our first altar could be seen from the next valley. Our elders spoke the names of the old powers out loud in a voice that reached the back of the crowd, and {{belief}} was the first they named. The children will learn those names now, and that is worth more to us than a good harvest."
+          "They say {{civilization}} has raised a pantheon in {{city}}, and the smoke from our first altar could be seen from the next valley. Our elders spoke the names of the old powers out loud in a voice that reached the back of the crowd, and {{belief}} was the first they named. The children will learn those names now, and that is worth more to us than a good harvest."
         ],
         "weight": { "base": 1 }
       },
@@ -642,7 +608,7 @@
         "when": "ours === false",
         "headline": "A pantheon entered in the foreign record",
         "body": [
-          "The people of {{civilization}} raised a pantheon in {{cityName}} this year, and their elders chose {{belief}} as the first teaching in a ceremony that lasted a full day. Our record notes the date, the place, and the number of households that came forward. The meaning of the rites is theirs to keep; the count is ours to preserve."
+          "The people of {{civilization}} raised a pantheon in {{city}} this year, and their elders chose {{belief}} as the first teaching in a ceremony that lasted a full day. Our record notes the date, the place, and the number of households that came forward. The meaning of the rites is theirs to keep; the count is ours to preserve."
         ],
         "weight": { "base": 1 }
       },
@@ -651,9 +617,9 @@
         "voice": "gazette",
         "stance": "neutral",
         "genre": "notice",
-        "headline": "Notice to travelers: a new pantheon at {{cityName}}",
+        "headline": "Notice to travelers: a new pantheon at {{city}}",
         "body": [
-          "Travelers bound for {{cityName}} should know that {{civilization}} has founded a pantheon there, and that its first teaching is called {{belief}}. Visitors are welcome at the rites if they come in good order. The road past the altar remains open to those who would rather not stop."
+          "Travelers bound for {{city}} should know that {{civilization}} has founded a pantheon there, and that its first teaching is called {{belief}}. Visitors are welcome at the rites if they come in good order. The road past the altar remains open to those who would rather not stop."
         ],
         "weight": { "base": 1 }
       }

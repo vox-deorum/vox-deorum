@@ -319,6 +319,95 @@ describe('editorial catalogue files', () => {
     ]);
   });
 
+  describe('template links', () => {
+    const city = { placeholder: 'city', label: '{{city}}', target: { type: 'city', cityId: '{{cityId}}' } };
+    const owner = { placeholder: 'owner', label: '{{owner}}', target: { type: 'civilization', civilizationId: '{{playerId}}' } };
+    const localCity = { ...city, target: { ...city.target, cityId: '{{seatCityId}}' } };
+    const story = { headline: '{{city}} and {{owner}}', body: ['News from {{city}}.'], weight: { base: 1 } };
+    const report = { id: 'link-test', triggers: ['link-test-trigger'], tags: [], weight: { base: 1 } };
+
+    beforeEach(async () => {
+      await writeDocument('triggers.json', [{ id: 'link-test-trigger', subject: 'world', tier: 'routine', when: 'true' }]);
+    });
+
+    it('should replace stock roots by ID and take the nearest link list for each variant', async () => {
+      await writeDocument('root-templates.json', [{ id: 'city', links: [localCity] }]);
+      await writeDocument('templates.json', [{
+        ...report, extends: 'city', variants: [
+          { ...story, id: 'root' },
+          { ...story, id: 'own', links: [owner] },
+          { ...story, id: 'plain', links: [] },
+        ],
+        merge: { match: 'true', min: 2, variants: [{ ...story, id: 'combined' }] },
+      }, {
+        ...report, id: 'link-test-template-list', extends: 'city', links: [owner], variants: [{ ...story, id: 'template' }],
+      }, {
+        ...report, id: 'link-test-template-empty', extends: 'city', links: [], variants: [{ ...story, id: 'template' }],
+      }]);
+
+      const loaded = await loadEditorialConfig(directory);
+      const fromRoot = loaded.templates.find(template => template.id === report.id)!;
+      expect(fromRoot.variants.map(variant => variant.links)).toEqual([[localCity], [owner], []]);
+      expect(fromRoot.merge?.variants[0].links).toEqual([localCity]);
+      expect(loaded.templates.find(template => template.id === 'link-test-template-list')?.variants[0].links).toEqual([owner]);
+      expect(loaded.templates.find(template => template.id === 'link-test-template-empty')?.variants[0].links).toEqual([]);
+
+      expect(fromRoot).not.toHaveProperty('extends');
+      expect(loaded.templates.find(template => template.id === 'link-test-template-list')).not.toHaveProperty('links');
+      expect(loaded).not.toHaveProperty('rootTemplates');
+      await rm(path.join(directory, 'root-templates.json'));
+      const replay = await parseEditorialConfig(JSON.parse(JSON.stringify(loaded)));
+      expect(replay.templates).toEqual(loaded.templates);
+      expect(configurationHash(replay)).toBe(configurationHash(loaded));
+    });
+
+    it('should keep previous values on omission and resume inheritance on null', async () => {
+      await writeDocument('root-templates.json', [{ id: 'link-test-root', links: [city] }]);
+      await writeDocument('templates.json', [{
+        ...report, extends: 'link-test-root', links: [city, owner], variants: [
+          { ...story, id: 'plain', links: [] },
+          { ...story, id: 'reset', links: [owner] },
+          { ...story, id: 'explicit', links: [owner] },
+        ],
+        merge: { match: 'true', min: 2, variants: [{ ...story, id: 'combined', links: [owner] }] },
+      }]);
+      await writeDocument('templates/links.json', [{
+        id: report.id, links: null, variants: [
+          { id: 'plain', weight: { base: 2 } },
+          { id: 'reset', links: null },
+        ],
+        merge: { variants: [{ id: 'combined', links: null }] },
+      }]);
+      const inherited = (await loadEditorialConfig(directory)).templates.find(template => template.id === report.id)!;
+      expect(inherited.variants.map(variant => variant.links)).toEqual([[], [city], [owner]]);
+      expect(inherited.merge?.variants[0].links).toEqual([city]);
+
+      await writeDocument('templates/z-clear.json', [{ id: report.id, extends: null }]);
+      const cleared = (await loadEditorialConfig(directory)).templates.find(template => template.id === report.id)!;
+      expect(cleared.variants.map(variant => variant.links)).toEqual([[], [], [owner]]);
+      expect(cleared.merge?.variants[0].links).toEqual([]);
+    });
+
+    it.each([
+      ['a non-array document', { id: 'link-test-root', links: [] }, undefined],
+      ['a root extending another root', [{ id: 'link-test-root', links: [], extends: 'city' }], 'extends'],
+      ['a root without its own links', [{ id: 'link-test-root' }], 'links'],
+      ['a malformed link destination', [{ id: 'link-test-root', links: [{ ...city, target: { type: 'city' } }] }], 'cityId'],
+      ['duplicate IDs in one file', [{ id: 'link-test-root', links: [city] }, { id: 'link-test-root', links: [] }], 'link-test-root'],
+    ])('should reject %s', async (_label, document, detail) => {
+      await writeDocument('root-templates.json', document);
+      await expect(loadEditorialConfig(directory)).rejects.toThrow(detail);
+    });
+
+    it('should reject an unresolved root after applying overlays', async () => {
+      await writeDocument('templates.json', [{ ...report, extends: 'unresolved-link-root', variants: [{ ...story, id: 'root' }] }]);
+      await expect(loadEditorialConfig(directory)).rejects.toThrow('unresolved-link-root');
+      await writeDocument('templates/links.json', [{ id: report.id, extends: null }]);
+      const loaded = await loadEditorialConfig(directory);
+      expect(loaded.templates.find(template => template.id === report.id)?.variants[0].links).toEqual([]);
+    });
+  });
+
   it('should reject malformed trigger rules and unknown span names', async () => {
     const base = await loadEditorialConfig();
     const rule = base.triggers.find(rule => rule.subject === 'city' && !rule.event)!;

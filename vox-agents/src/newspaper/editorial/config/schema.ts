@@ -10,8 +10,15 @@ import { editorialLayoutSchema, editorialPageSchema, eligibleSchema, expressionS
 import { defaultVariantStyle, styleCatalogueSchema, styleMatchTags } from './styles.js';
 
 export { editorialLayoutSchema, editorialPageSchema, type EditorialLayout } from './layouts.js';
-/** Authored prose uses named placeholders and explicit typed link destinations. */
-export const authoredVariantSchema = eligibleSchema.extend({
+/** A link list names the prose placeholder, display label and typed destination. */
+const templateLinksSchema = z.array(z.object({
+  placeholder: z.string().min(1),
+  label: z.string().min(1),
+  target: linkTargetSchema,
+}));
+
+/** Shared prose and style fields for authored and resolved variants. */
+const variantProseSchema = eligibleSchema.extend({
   id: z.string().min(1),
   ...variantStyleSchema.partial().shape,
   headline: z.string().min(1),
@@ -19,21 +26,20 @@ export const authoredVariantSchema = eligibleSchema.extend({
   byline: z.string().min(1).optional(),
   body: z.array(z.string().min(1)).min(1),
   settled: z.boolean().optional(),
-  links: z
-    .array(
-      z.object({
-        placeholder: z.string().min(1),
-        label: z.string().min(1),
-        target: linkTargetSchema,
-      })
-    )
-    .default([]),
-}).refine(
-  (variant) => variantStyleKinds.every((kind) => variant[kind] === undefined) ||
-    variantStyleKinds.every((kind) => variant[kind] !== undefined),
-  'Set voice, stance and genre together.',
-);
-export type AuthoredVariant = z.infer<typeof authoredVariantSchema>;
+});
+
+/** A variant either picks all three style tags or uses the default style. */
+function hasCompleteVariantStyle(variant: z.infer<typeof variantProseSchema>): boolean {
+  return variantStyleKinds.every(kind => variant[kind] === undefined) ||
+    variantStyleKinds.every(kind => variant[kind] !== undefined);
+}
+
+const completeVariantStyleMessage = 'Set voice, stance and genre together.';
+/** Prose with a concrete link list in the editorial catalogue and saved decisions. */
+const resolvedVariantSchema = variantProseSchema.extend({
+  links: templateLinksSchema.default([]),
+}).refine(hasCompleteVariantStyle, completeVariantStyleMessage);
+export type AuthoredVariant = z.infer<typeof resolvedVariantSchema>;
 /** Read a bare or quoted tier name; other expressions are resolved during rating. */
 export function literalTierName(source: string): string | undefined {
   // Parse as one expression so comments, whitespace and parentheses match the evaluator.
@@ -81,6 +87,15 @@ export const editorialTriggerRuleSchema = z.strictObject({
     ctx.addIssue({ code: 'custom', path: ['event'], message: 'Remove event or change the subject to event.' });
 });
 export type EditorialTriggerRule = z.infer<typeof editorialTriggerRuleSchema>;
+/** Merge expressions combine qualifying stories before choosing a variant. */
+const mergeTemplateSchema = z.strictObject({
+  match: expressionSchema,
+  min: z.number().int().positive(),
+  priority: z.number().int().optional(),
+  values: z.record(editorialValueNameSchema, expressionSchema).optional(),
+  variants: z.array(resolvedVariantSchema).min(1),
+});
+
 /** Templates explicitly name supported triggers and any placeholder format overrides. */
 export const templateSchema = eligibleSchema.extend({
   id: z.string().min(1),
@@ -90,16 +105,28 @@ export const templateSchema = eligibleSchema.extend({
   names: z.array(z.string().min(1)).optional(),
   mode: z.enum(['authored', 'llmOnly']).default('authored'),
   short: z.boolean().default(false),
-  variants: z.array(authoredVariantSchema),
-  merge: z.strictObject({
-    match: expressionSchema,
-    min: z.number().int().positive(),
-    priority: z.number().int().optional(),
-    values: z.record(editorialValueNameSchema, expressionSchema).optional(),
-    variants: z.array(authoredVariantSchema).min(1),
-  }).nullish(),
+  variants: z.array(resolvedVariantSchema),
+  merge: mergeTemplateSchema.nullish(),
 });
 export type EditorialTemplate = z.infer<typeof templateSchema>;
+
+const inheritingVariantSchema = variantProseSchema.extend({
+  links: templateLinksSchema.nullish(),
+}).refine(hasCompleteVariantStyle, completeVariantStyleMessage);
+/** Authored files can omit or reset links before resolving inheritance. */
+export const authoredTemplateSchema = templateSchema.extend({
+  extends: z.string().min(1).nullish(),
+  links: templateLinksSchema.nullish(),
+  variants: z.array(inheritingVariantSchema),
+  merge: mergeTemplateSchema.extend({ variants: z.array(inheritingVariantSchema).min(1) }).nullish(),
+});
+
+/** A named list shared by story templates. */
+export const rootTemplateSchema = z.strictObject({
+  id: z.string().min(1),
+  links: templateLinksSchema,
+});
+
 /** Version of the effective editorial catalogue saved with decisions. */
 export const editorialConfigVersion = 3;
 

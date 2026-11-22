@@ -441,15 +441,13 @@
     "tags": ["politics", "international"],
     "names": ["civilization"],
     "weight": { "base": 1 },
+    "extends": "civilization",
     "variants": [
       {
         "id": "major-single-city-report",
         "headline": "{{civilization}} is reduced to a single city",
         "body": [
           "{{civilization}}, until recently one of the great powers, is now a country of one city. Its chancery has boxed the seals of provinces it no longer governs, and the clerks who kept them have been paid off. The flag still flies over the last roof, but the street below it is thinner than it was."
-        ],
-        "links": [
-          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
         ],
         "weight": { "base": 1 }
       },
@@ -464,9 +462,6 @@
           "Cities let go: {{lost}}",
           "A map that once needed a table, folded to a single square."
         ],
-        "links": [
-          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
-        ],
         "weight": { "base": 1 }
       },
       {
@@ -478,9 +473,6 @@
         "body": [
           "It is told that the roads of {{civilization}} once ran cart to cart from border to capital. Now a man can walk a morning there and meet only a shepherd.",
           "An old drover heard the news and shrugged. A cloak with one clasp still keeps the rain off, he said, but you would not call it a warm cloak."
-        ],
-        "links": [
-          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
         ],
         "weight": { "base": 1 }
       }
@@ -671,15 +663,15 @@
     "tags": ["politics", "international"],
     "names": ["ideology", "name"],
     "weight": { "base": 1 },
+    "links": [
+      { "placeholder": "name", "label": "{{name}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+    ],
     "variants": [
       {
         "id": "rival-ideology-report",
         "headline": "{{name}} takes up {{ideology}}",
         "body": [
           "The {{player.civic.government}} of {{name}} has adopted {{ideology}} as its guiding doctrine. Its courtiers have spent the morning learning a new oath, and a mason is already at work on the lintel where the old words were cut. The proclamation was read at first light to a square that had been swept for the occasion."
-        ],
-        "links": [
-          { "placeholder": "name", "label": "{{name}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
         ],
         "weight": { "base": 1 }
       },
@@ -693,9 +685,6 @@
         "body": [
           "We are pleased to learn that {{name}} has adopted {{ideology}}, the doctrine that also guides our own affairs. Neighbors who read the world the same way tend to quarrel less and trade more, and the guards along the border have already grown friendlier. {{name}} is welcome to the company."
         ],
-        "links": [
-          { "placeholder": "name", "label": "{{name}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
-        ],
         "weight": { "base": 1 }
       },
       {
@@ -708,9 +697,6 @@
           "{{name}} now holds {{ideology}} as its doctrine. A nation that picks a direction has also picked the places that direction leads.",
           "Watch what {{name}} builds next, and where it puts its soldiers. The declaration will name the target later; the groundwork names it now."
         ],
-        "links": [
-          { "placeholder": "name", "label": "{{name}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
-        ],
         "weight": { "base": 1 }
       }
     ]
@@ -721,15 +707,13 @@
     "tags": ["politics", "international"],
     "names": ["civilization", "tiedName"],
     "weight": { "base": 1 },
+    "extends": "civilization",
     "variants": [
       {
         "id": "score-leader-report",
         "headline": "{{civilization}} takes first place among the powers",
         "body": [
           "{{civilization}} now heads the table of powers. The new standings went up on the exchange steps at noon, and the crowd that gathered read them with the particular attention people give to a name that has just risen. A clerk copied the sheet twice and checked the first line both times."
-        ],
-        "links": [
-          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
         ],
         "weight": { "base": 1 }
       },
@@ -745,9 +729,6 @@
           "Also first: {{tiedName}}, level on the count",
           "One line, no daylight between the names."
         ],
-        "links": [
-          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
-        ],
         "weight": { "base": 1 }
       },
       {
@@ -761,6 +742,7 @@
           "The latest reckoning puts us at the head of the powers, and the square outside the exchange heard the news before the council did. Being first is a position; staying first is a campaign.",
           "Every rival below us is already working out what we did and how to copy it. We should be three steps into the next idea before they finish the arithmetic."
         ],
+        "links": [],
         "weight": { "base": 1 }
       }
     ]

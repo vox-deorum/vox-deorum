@@ -3,17 +3,15 @@
     "id": "building-completed-account",
     "triggers": ["building-completed"],
     "tags": ["cities", "domestic"],
-    "names": ["building", "cityName"],
+    "names": ["building", "city"],
     "weight": { "base": 1 },
+    "extends": "city",
     "variants": [
       {
         "id": "building-completed-report",
-        "headline": "The {{building}} opens in {{cityName}}",
+        "headline": "The {{building}} opens in {{city}}",
         "body": [
-          "Work on {{cityName}}'s {{building}} is complete. Residents watched the builders remove their final scaffolds, then gathered at the entrance as the keeper unlocked the doors. The new building is now in service."
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "Work on {{city}}'s {{building}} is complete. Residents watched the builders remove their final scaffolds, then gathered at the entrance as the keeper unlocked the doors. The new building is now in service."
         ],
         "weight": {
           "base": 1
@@ -25,12 +23,9 @@
         "voice": "gazette",
         "stance": "neutral",
         "genre": "notice",
-        "headline": "Notice from {{cityName}}: the {{building}} opens",
+        "headline": "Notice from {{city}}: the {{building}} opens",
         "body": [
-          "We are informed that work on the {{building}} in {{cityName}} is finished, and its doors will open at first light. The keeper asks visitors to arrive before dusk. Those attending to business there may now make their arrangements."
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "We are informed that work on the {{building}} in {{city}} is finished, and its doors will open at first light. The keeper asks visitors to arrive before dusk. Those attending to business there may now make their arrangements."
         ],
         "weight": {
           "base": 1
@@ -44,10 +39,7 @@
         "genre": "anecdote",
         "headline": "The {{building}} opens, and the neighbors peek in",
         "body": [
-          "The {{building}} is complete in {{cityName}}, and the last ladder came down at sunrise. Mrs. Vale brought her grandson to watch the workers sweep the steps; he asked if they could come back tomorrow. They will have no work here, but the doors are ready."
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "The {{building}} is complete in {{city}}, and the last ladder came down at sunrise. Mrs. Vale brought her grandson to watch the workers sweep the steps; he asked if they could come back tomorrow. They will have no work here, but the doors are ready."
         ],
         "weight": {
           "base": 1
@@ -59,12 +51,9 @@
         "voice": "press",
         "stance": "ambitious",
         "genre": "analysis",
-        "headline": "Another job for the builders of {{cityName}}",
+        "headline": "Another job for the builders of {{city}}",
         "body": [
-          "{{cityName}} has its {{building}}, and the men who raised it are already asking what comes next. The foreman has kept his best hands on the payroll, a cost the city pays every quiet week. If the {{terms.civic.government}} has another site in mind, this is the season to break ground."
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "{{city}} has its {{building}}, and the men who raised it are already asking what comes next. The foreman has kept his best hands on the payroll, a cost the city pays every quiet week. If the {{terms.civic.government}} has another site in mind, this is the season to break ground."
         ],
         "weight": {
           "base": 1
@@ -77,17 +66,15 @@
     "id": "building-investment-account",
     "triggers": ["building-investment-made"],
     "tags": ["cities", "domestic"],
-    "names": ["building", "cityName"],
+    "names": ["building", "city"],
     "weight": { "base": 1 },
+    "extends": "city",
     "variants": [
       {
         "id": "building-investment-report",
-        "headline": "{{cityName}} puts money behind the {{building}}",
+        "headline": "{{city}} puts money behind the {{building}}",
         "body": [
-          "The city has put money into the {{building}} at {{cityName}}, and work has picked up. Extra carts have arrived at the site while crews keep two shifts on the scaffold. Nearby shopkeepers say the building work starts earlier and runs later."
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "The city has put money into the {{building}} at {{city}}, and work has picked up. Extra carts have arrived at the site while crews keep two shifts on the scaffold. Nearby shopkeepers say the building work starts earlier and runs later."
         ],
         "weight": {
           "base": 1
@@ -101,10 +88,7 @@
         "genre": "notice",
         "headline": "City funds for the {{building}}",
         "body": [
-          "Word from {{cityName}} says that a new payment has been assigned to the {{building}}, and the workmen are to be paid through winter. The stewards will display the accounts at the site each week. Material suppliers should inquire at the site."
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "Word from {{city}} says that a new payment has been assigned to the {{building}}, and the workmen are to be paid through winter. The stewards will display the accounts at the site each week. Material suppliers should inquire at the site."
         ],
         "weight": {
           "base": 1
@@ -116,12 +100,9 @@
         "voice": "press",
         "stance": "government-critical",
         "genre": "analysis",
-        "headline": "The price of haste in {{cityName}}",
+        "headline": "The price of haste in {{city}}",
         "body": [
-          "{{cityName}} has put money into its {{building}}, and the work has quickened. More hands now crowd the scaffold, while the keeper talks of an opening day. The faster schedule comes at a cost: the city chest is lighter, and another project must wait."
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "{{city}} has put money into its {{building}}, and the work has quickened. More hands now crowd the scaffold, while the keeper talks of an opening day. The faster schedule comes at a cost: the city chest is lighter, and another project must wait."
         ],
         "weight": {
           "base": 1
@@ -133,12 +114,9 @@
         "voice": "crier",
         "stance": "ambitious",
         "genre": "notice",
-        "headline": "Hear it, {{cityName}}! Coin speeds the {{building}}",
+        "headline": "Hear it, {{city}}! Coin speeds the {{building}}",
         "body": [
           "Hear it, {{terms.civic.people}}! The {{building}} has coin behind it now, and the masons work by lamplight! Stone by stone, the roof comes nearer! Come and see what your money is building!"
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
         ],
         "weight": { "base": 1 }
       }
@@ -148,17 +126,15 @@
     "id": "building-purchased-account",
     "triggers": ["building-purchased"],
     "tags": ["cities", "domestic"],
-    "names": ["building", "cityName"],
+    "names": ["building", "city"],
     "weight": { "base": 1 },
+    "extends": "city",
     "variants": [
       {
         "id": "building-purchased-report",
-        "headline": "{{cityName}} buys the {{building}}",
+        "headline": "{{city}} buys the {{building}}",
         "body": [
-          "There was no building season at {{cityName}}: the {{building}} was bought finished, and the city paid in {{currency}}. The first visitors found the mortar still damp and the keeper still looking for the keys. A line had formed at the door before the ink dried on the deed."
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "There was no building season at {{city}}: the {{building}} was bought finished, and the city paid in {{currency}}. The first visitors found the mortar still damp and the keeper still looking for the keys. A line had formed at the door before the ink dried on the deed."
         ],
         "weight": { "base": 1 }
       },
@@ -167,12 +143,9 @@
         "voice": "tabloid",
         "stance": "populist",
         "genre": "report",
-        "headline": "No wait in {{cityName}}: the {{building}} is bought",
+        "headline": "No wait in {{city}}: the {{building}} is bought",
         "body": [
-          "Other cities wait seasons for a {{building}} and watch every course go up. {{cityName}} did it in an afternoon: counted out {{currency}}, took the keys, opened the door. The masons who expected the work are still standing in the yard."
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "Other cities wait seasons for a {{building}} and watch every course go up. {{city}} did it in an afternoon: counted out {{currency}}, took the keys, opened the door. The masons who expected the work are still standing in the yard."
         ],
         "weight": { "base": 1 }
       },
@@ -181,12 +154,9 @@
         "voice": "gazette",
         "stance": "pro-government",
         "genre": "notice",
-        "headline": "A purchase for {{cityName}}: the {{building}} is ready",
+        "headline": "A purchase for {{city}}: the {{building}} is ready",
         "body": [
-          "It is confirmed that {{cityName}} has secured its {{building}} for {{currency}} and holds it ready for use. The bargain was settled in a single season, sparing the city a long spell of dust and scaffolding. The keys were handed over before the plaster was dry."
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "It is confirmed that {{city}} has secured its {{building}} for {{currency}} and holds it ready for use. The bargain was settled in a single season, sparing the city a long spell of dust and scaffolding. The keys were handed over before the plaster was dry."
         ],
         "weight": { "base": 1 }
       },
@@ -195,12 +165,9 @@
         "voice": "press",
         "stance": "neutral",
         "genre": "analysis",
-        "headline": "{{cityName}} pays for speed",
+        "headline": "{{city}} pays for speed",
         "body": [
-          "{{cityName}} bought its {{building}} outright for {{currency}}, and the work was finished before anyone could watch it rise. Speed was the purchase, and the price is entered in the city books. What the same sum might have done elsewhere is not written down, which is how most bargains escape judgment."
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "{{city}} bought its {{building}} outright for {{currency}}, and the work was finished before anyone could watch it rise. Speed was the purchase, and the price is entered in the city books. What the same sum might have done elsewhere is not written down, which is how most bargains escape judgment."
         ],
         "weight": { "base": 1 }
       }
@@ -210,17 +177,15 @@
     "id": "city-defense-completed-account",
     "triggers": ["city-defense-completed"],
     "tags": ["cities", "military", "domestic"],
-    "names": ["building", "cityName"],
+    "names": ["building", "city"],
     "weight": { "base": 1 },
+    "extends": "city",
     "variants": [
       {
         "id": "city-defense-completed-report",
-        "headline": "{{cityName}} finishes new defenses",
+        "headline": "{{city}} finishes new defenses",
         "body": [
-          "The last stone of the {{building}} went into place at {{cityName}} this week, and the gatekeeper has been trying the new bars ever since. Rubble still lies in the ditch, but the wall behind it would turn a raid today. The watch has moved its posts to the higher ground."
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "The last stone of the {{building}} went into place at {{city}} this week, and the gatekeeper has been trying the new bars ever since. Rubble still lies in the ditch, but the wall behind it would turn a raid today. The watch has moved its posts to the higher ground."
         ],
         "weight": { "base": 1 }
       },
@@ -229,12 +194,9 @@
         "voice": "press",
         "stance": "national",
         "genre": "report",
-        "headline": "{{cityName}} strengthens its walls",
+        "headline": "{{city}} strengthens its walls",
         "body": [
-          "Sentries at {{cityName}} climbed to their new posts this morning, now that the {{building}} is finished. The officer of the watch says any column coming up the road would need ladders it did not bring. The town sleeps easier, and the watch does not."
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "Sentries at {{city}} climbed to their new posts this morning, now that the {{building}} is finished. The officer of the watch says any column coming up the road would need ladders it did not bring. The town sleeps easier, and the watch does not."
         ],
         "weight": { "base": 1 }
       },
@@ -243,12 +205,9 @@
         "voice": "crier",
         "stance": "national",
         "genre": "notice",
-        "headline": "{{cityName}} is ready for a siege",
+        "headline": "{{city}} is ready for a siege",
         "body": [
-          "{{terms.civic.people}} of {{cityName}}, look up! The {{building}} is finished, stone on stone, and the watch has moved into it! Let the enemy count our walls from the road! Sleep easy tonight!"
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "{{terms.civic.people}} of {{city}}, look up! The {{building}} is finished, stone on stone, and the watch has moved into it! Let the enemy count our walls from the road! Sleep easy tonight!"
         ],
         "weight": { "base": 1 }
       },
@@ -257,12 +216,9 @@
         "voice": "gazette",
         "stance": "pro-government",
         "genre": "notice",
-        "headline": "A stronger {{cityName}}",
+        "headline": "A stronger {{city}}",
         "body": [
-          "It is confirmed that the {{building}} at {{cityName}} is complete and the watch installed. The {{terms.civic.government}} ordered the work done before the danger was plain, and the city has the benefit of it now. Visitors will find the gate open at the usual hours."
-        ],
-        "links": [
-          { "placeholder": "cityName", "label": "{{cityName}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
+          "It is confirmed that the {{building}} at {{city}} is complete and the watch installed. The {{terms.civic.government}} ordered the work done before the danger was plain, and the city has the benefit of it now. Visitors will find the gate open at the usual hours."
         ],
         "weight": { "base": 1 }
       }
@@ -274,15 +230,13 @@
     "tags": ["cities", "domestic"],
     "names": ["building", "city"],
     "weight": { "base": 1 },
+    "extends": "city",
     "variants": [
       {
         "id": "city-courthouse-completed-report",
         "headline": "The {{building}} opens in {{city}}",
         "body": [
           "The {{building}} has opened in {{city}}, lifting the penalty of occupation. The city is now integrated into our territory."
-        ],
-        "links": [
-          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
         ],
         "weight": { "base": 1 }
       },
@@ -294,9 +248,6 @@
         "headline": "{{city}} takes its place in the realm",
         "body": [
           "We have governed {{city}} as a conquered city. With the {{building}} in service, it can now be administered on the same footing as our other cities."
-        ],
-        "links": [
-          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
         ],
         "weight": { "base": 1 }
       }

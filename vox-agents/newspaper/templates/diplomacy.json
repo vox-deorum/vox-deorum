@@ -5,15 +5,15 @@
     "tags": ["politics", "international"],
     "names": ["master"],
     "weight": { "base": 1 },
+    "links": [
+      { "placeholder": "master", "label": "{{master}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+    ],
     "variants": [
       {
         "id": "becomes-vassal-report",
         "headline": "Our new vassalage under {{master}}",
         "body": [
           "The treaty that makes us a vassal of {{master}} is signed, and our flag now flies beside theirs. In the chancery, a clerk copied the terms twice and sealed both copies before the wax cooled. From today, their court speaks for us in matters we once settled alone."
-        ],
-        "links": [
-          { "placeholder": "master", "label": "{{master}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
         ],
         "weight": { "base": 1 }
       },
@@ -26,9 +26,6 @@
         "body": [
           "The years in which our {{terms.civic.government}} answered to no other court are ended. This season we became a vassal of {{master}}, and the treaty lies in the archive under a fresh seal. A scribe has closed the old roll with a black ribbon, and the new one begins with their name at the top."
         ],
-        "links": [
-          { "placeholder": "master", "label": "{{master}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
-        ],
         "weight": { "base": 1 }
       },
       {
@@ -40,9 +37,6 @@
         "body": [
           "Word came at dawn that we are now vassals of {{master}}, and the {{terms.civic.government}} has still not read the terms aloud. Ask the first clerk you meet what we promised and what we received. If our young men can be called to their wars, the square deserves to hear the bargain before the drums do."
         ],
-        "links": [
-          { "placeholder": "master", "label": "{{master}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
-        ],
         "weight": { "base": 1 }
       },
       {
@@ -53,9 +47,6 @@
         "headline": "Our neighbors have a new court to bargain with",
         "body": [
           "A dispute with us now runs through two courts instead of one. Our vassalage to {{master}} means their ministers can be asked to settle what our own envoys once decided. The open question is whether the {{player.civic.government}} of {{master}} treats that duty as a shield or as a leash."
-        ],
-        "links": [
-          { "placeholder": "master", "label": "{{master}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
         ],
         "weight": { "base": 1 }
       }
@@ -157,15 +148,13 @@
     "tags": ["politics", "international"],
     "names": ["civilization", "player.leader"],
     "weight": { "base": 1 },
+    "extends": "civilization",
     "variants": [
       {
         "id": "denounced-by-major-report",
         "headline": "{{civilization}} denounces our nation",
         "body": [
           "{{civilization}} has denounced us in public, and the declaration was read on the steps of the foreign ministry this morning. No treaty was torn up to mark the occasion, and no envoy was called home. What has been spent is the courtesy that made quiet dealings possible."
-        ],
-        "links": [
-          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
         ],
         "weight": { "base": 1 }
       },
@@ -178,9 +167,6 @@
         "body": [
           "The fishmonger heard it before the fish were sold: {{civilization}} has denounced us. From there the news ran stall to stall, gathering a regiment, a stolen cannon and a duchess along the way. By dusk the market had a better story than the ministry and was not inclined to give it up."
         ],
-        "links": [
-          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
-        ],
         "weight": { "base": 1 }
       },
       {
@@ -192,9 +178,6 @@
         "body": [
           "{{civilization}} has called us out by name, and every court in the world has heard it. Fine words will not unsay the insult; a stronger guard on the frontier might. Let the ministers answer with a muster that every neighboring court can count."
         ],
-        "links": [
-          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
-        ],
         "weight": { "base": 1 }
       },
       {
@@ -205,9 +188,6 @@
         "headline": "In this year, {{civilization}} spoke against us",
         "body": [
           "In this year {{player.leader}}, {{player.civic.leaderTitle}} of {{civilization}}, spoke a denunciation of our nation before assembled witnesses. The scribe has set down the words in full and marked the day beside them. No answer is entered in this record yet."
-        ],
-        "links": [
-          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
         ],
         "weight": { "base": 1 }
       }
@@ -449,15 +429,15 @@
     "tags": ["politics", "international"],
     "names": ["vassal"],
     "weight": { "base": 1 },
+    "links": [
+      { "placeholder": "vassal", "label": "{{vassal}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+    ],
     "variants": [
       {
         "id": "gains-vassal-report",
         "headline": "Our court takes {{vassal}} as a vassal",
         "body": [
           "{{vassal}} now answers to our {{terms.civic.government}} as a vassal. A clerk at the palace has entered their name on the roll of dependent courts, in fresh ink. The tribute will be counted when it arrives; the duty to protect them begins at once."
-        ],
-        "links": [
-          { "placeholder": "vassal", "label": "{{vassal}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
         ],
         "weight": { "base": 1 }
       },
@@ -470,9 +450,6 @@
         "body": [
           "In this season the envoys of {{vassal}} came before our court and placed their nation under our protection. Their {{player.civic.government}} keeps its hall, its officers and its seal. A new column has been ruled in the tribute book, and the first entry awaits the year's end."
         ],
-        "links": [
-          { "placeholder": "vassal", "label": "{{vassal}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
-        ],
         "weight": { "base": 1 }
       },
       {
@@ -484,9 +461,6 @@
         "body": [
           "Tribute from {{vassal}} will soon reach our treasury, and the sum will be welcome. The obligation that comes with it is harder to price: a vassal expects help, and help must travel by road. The value of this arrangement depends on how quickly our soldiers can reach their frontier."
         ],
-        "links": [
-          { "placeholder": "vassal", "label": "{{vassal}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
-        ],
         "weight": { "base": 1 }
       },
       {
@@ -497,9 +471,6 @@
         "headline": "Let the magistrates of {{vassal}} set out what they can pay",
         "body": [
           "Our {{terms.civic.government}} may now set a tribute on {{vassal}}, and the square is already spending it. A figure that pleases the crowd will empty the treasury twice: once when the tax cannot be paid, and again when the province must be held by force. Let the assessors count the harvest first, then take a share the land can carry."
-        ],
-        "links": [
-          { "placeholder": "vassal", "label": "{{vassal}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
         ],
         "weight": { "base": 1 }
       }
@@ -550,15 +521,13 @@
     "tags": ["politics", "international"],
     "names": ["civilization"],
     "weight": { "base": 1 },
+    "extends": "civilization",
     "variants": [
       {
         "id": "mutual-denunciation-report",
         "headline": "We and {{civilization}} denounce each other",
         "body": [
           "{{civilization}} and our {{terms.civic.government}} have denounced each other, both in the same season. The two declarations are public, and neither court has left itself an easy way back. At the exchange, a broker read both notices and added a surcharge to every crate bound that way."
-        ],
-        "links": [
-          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
         ],
         "weight": { "base": 1 }
       },
@@ -571,9 +540,6 @@
         "body": [
           "Each court has now put its quarrel with the other in writing, ours and {{civilization}}'s alike. Envoys may still meet behind closed doors, but both sides have said in public what is hard to unsay. Every small dispute from here will be measured against that record."
         ],
-        "links": [
-          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
-        ],
         "weight": { "base": 1 }
       },
       {
@@ -585,9 +551,6 @@
         "body": [
           "Two farmers curse each other over the hedge. The hedge grows thicker, and neither field grows wider."
         ],
-        "links": [
-          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
-        ],
         "weight": { "base": 1 }
       },
       {
@@ -598,9 +561,6 @@
         "headline": "Who pays for the shouting?",
         "body": [
           "Words have passed between our {{terms.civic.government}} and {{civilization}}, and the cost will land in some ordinary street. A printer near the market has already set the same quarrel twice, once for each side, and been paid for both. Let the government name the trade it is willing to lose before it names another grievance."
-        ],
-        "links": [
-          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
         ],
         "weight": { "base": 1 }
       }
@@ -825,15 +785,13 @@
     "tags": ["politics", "international"],
     "names": ["civilization"],
     "weight": { "base": 1 },
+    "extends": "civilization",
     "variants": [
       {
         "id": "we-denounce-major-report",
         "headline": "We denounce {{civilization}}",
         "body": [
           "Our {{terms.civic.government}} has denounced {{civilization}}, and the words are now part of the public record. Clerks have copied the declaration into the day book, where any foreign court may read it. The anger may pass; the page will not."
-        ],
-        "links": [
-          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
         ],
         "weight": { "base": 1 }
       },
@@ -845,9 +803,6 @@
         "headline": "Said plainly, and none too soon",
         "body": [
           "{{civilization}} has been denounced at last, and the declaration stands signed in our own hand. That is a firm word where too many careful ones were spent before it, and every court on the frontier has taken note. Now bring the garrisons up to the same pitch, so {{civilization}} weighs our spears as carefully as it has just read our resolve."
-        ],
-        "links": [
-          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
         ],
         "weight": { "base": 1 }
       },
@@ -861,9 +816,6 @@
         "body": [
           "Sir, I read this morning that our {{terms.civic.government}} has denounced {{civilization}}, and my first thought was of the wagons that cross that border in both directions. A quarrel is cheap to announce and expensive to feed. If there is a way to take back the edge without taking back the truth, the government should find it."
         ],
-        "links": [
-          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
-        ],
         "weight": { "base": 1 }
       },
       {
@@ -874,9 +826,6 @@
         "headline": "In this year, we spoke against {{civilization}}",
         "body": [
           "In this year the {{terms.civic.government}} spoke against {{civilization}} in the hearing of foreign courts. The scribe has copied the declaration word for word and dated it. No judgment is entered beside it, for the consequences are not yet known."
-        ],
-        "links": [
-          { "placeholder": "civilization", "label": "{{civilization}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
         ],
         "weight": { "base": 1 }
       }
