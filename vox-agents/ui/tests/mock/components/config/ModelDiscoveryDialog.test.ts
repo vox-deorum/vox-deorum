@@ -111,6 +111,26 @@ describe('ModelDiscoveryDialog', () => {
     });
   });
 
+  it('uses saved service connections from the desk and offers only chat models', async () => {
+    const chat = { id: 'openai/model-a', provider: 'openai', name: 'model-a' };
+    const embed = { id: 'openai/text-embedding-3-small', provider: 'openai', name: 'text-embedding-3-small' };
+    api.discoverModels.mockResolvedValue({
+      provider: 'openai', models: [chat, embed], recommendedTiers: { default: embed.id },
+    });
+    const wrapper = mount(ModelDiscoveryDialog, { props: { visible: true, savedConnection: true }, global });
+
+    await chooseProvider(wrapper, 'openai');
+    expect(wrapper.find('#model-discovery-OPENAI_API_KEY').exists()).toBe(false);
+    await clickButton(wrapper, 'List models');
+    await flushPromises();
+    expect(api.discoverModels).toHaveBeenLastCalledWith('openai', {});
+    expect(wrapper.findAll('.setup-wizard-model strong').map(node => node.text())).toEqual([chat.id]);
+    await wrapper.get(`input[value="${chat.id}"]`).setValue(true);
+    await clickButton(wrapper, 'Add model');
+    expect(wrapper.emitted('select')).toEqual([[chat]]);
+    expect(wrapper.emitted('update:apiKeys')).toBeUndefined();
+  });
+
   it('shows sorted models and selects the recommended default', async () => {
     api.discoverModels.mockResolvedValue({
       provider: 'openrouter',

@@ -193,3 +193,9 @@ export const providerCredentials: Record<string, { required: readonly string[]; 
 export function isEvaluationOnlyProvider(provider: string): boolean {
   return llmProviders.some((candidate) => candidate.value === provider && candidate.evaluationOnly === true);
 }
+
+/** Identify known non-chat models when a provider catalog lists several kinds together. */
+export function isKnownNonChatModel(provider: string, name: string): boolean {
+  return isEvaluationOnlyProvider(provider) || (provider === 'openai'
+    && /^(?:text-embedding-|whisper-|tts-|dall-e-|gpt-image-|omni-moderation-|text-moderation-)/i.test(name));
+}

@@ -87,7 +87,9 @@ The routes live under `/api/debug` in `src/web/routes/debug.ts`; log reads accep
 
 ### Writing Desk
 
-Open **Debug → Writing Desk** from a writable source checkout. The desk checks every unsettled stock variant by default. **Generate** uses only checked variants that match the current filters. Narrow the list or uncheck variants to reduce the batch, then choose your models and drafts per variant. Settle the current copy or a draft to write it back to the template file. Use **Unsettle** to reopen it.
+Open **Debug → Writing Desk** from a writable source checkout. The desk checks every unsettled stock variant by default. **Generate** uses the checked variants that match the current filters. Choose models and drafts per variant in the toolbar. Use **More models…** in the model field to browse a saved provider connection and add a model for this visit.
+
+Settle the current copy or a draft to write it back to the template file. Use **Unsettle** to reopen it. To start a new round after approving some drafts, stop any running batch and choose **Clear drafts**. This removes generated candidates across the desk, including filtered variants. Current copy and settled examples remain available for the next batch.
 
 The desk groups variants by voice, stance, and genre, and sends up to eight variants per request. Each request includes relevant settled examples, favoring the same voice and template. Merge variants and templates reserved for the newspaper editor are outside the desk.
 

@@ -8,14 +8,16 @@ import Password from 'primevue/password';
 import ModelPickerList from '@/components/config/ModelPickerList.vue';
 import { useModelDiscovery } from '@/composables/useModelDiscovery';
 import type { DiscoveredModel } from '@/utils/types';
-import { llmProviders } from '@/utils/types';
+import { isKnownNonChatModel, llmProviders } from '@/utils/types';
 
 type DiscoveryPhase = 'connect' | 'pick';
 
 interface Props {
   visible: boolean;
-  apiKeys: Record<string, string>;
+  apiKeys?: Record<string, string>;
   evaluation?: boolean;
+  /** Browse using the server's saved credentials without editing them. */
+  savedConnection?: boolean;
 }
 
 interface Emits {
@@ -49,9 +51,16 @@ const phase = ref<DiscoveryPhase>('connect');
 const providerOptions = computed(() => llmProviders.filter(provider =>
   provider.value !== 'aws' && (props.evaluation || !provider.evaluationOnly)));
 
+/** Only show writing-capable choices when browsing from the desk. */
+const modelOptions = computed(() => props.savedConnection
+  ? discoveredModels.value.filter(model =>
+    !isKnownNonChatModel(model.provider, model.name) && model.recommendedOptions?.embeddingSize === undefined)
+  : discoveredModels.value);
+const canAdd = computed(() => modelOptions.value.some(model => model.id === selectedModelId.value));
+
 /** Invalidate stale checks and clear feedback when the user chooses a different service. */
 function selectProvider(): void {
-  if (selectedProvider.value === 'openai-compatible' && !enteredCredentials.value.OPENAI_COMPATIBLE_URL) {
+  if (!props.savedConnection && selectedProvider.value === 'openai-compatible' && !enteredCredentials.value.OPENAI_COMPATIBLE_URL) {
     updateCredential('OPENAI_COMPATIBLE_URL', 'http://127.0.0.1:11434');
     return;
   }
@@ -61,7 +70,7 @@ function selectProvider(): void {
 
 /** Check the selected service and advance only after a successful discovery. */
 async function checkConnection(): Promise<void> {
-  if (await discover()) phase.value = 'pick';
+  if (await discover(props.savedConnection ? {} : undefined)) phase.value = 'pick';
 }
 
 /** Return to connection details while retaining the current credential draft. */
@@ -72,9 +81,11 @@ function returnToConnection(): void {
 /** Add the selected model and retain only credentials entered for this service. */
 function addModel(): void {
   const model = selectedModel.value;
-  if (!model) return;
-  const credentials = nonEmptySelectedCredentials();
-  if (Object.keys(credentials).length > 0) emit('update:apiKeys', { ...props.apiKeys, ...credentials });
+  if (!model || !canAdd.value) return;
+  if (!props.savedConnection) {
+    const credentials = nonEmptySelectedCredentials();
+    if (Object.keys(credentials).length > 0) emit('update:apiKeys', { ...props.apiKeys, ...credentials });
+  }
   emit('select', model);
   closeDialog();
 }
@@ -117,8 +128,9 @@ onUnmounted(invalidate);
   >
     <section v-if="phase === 'connect'" class="setup-wizard-step">
       <div class="setup-wizard-heading">
-        <h3>Connect a service</h3>
-        <p>Choose the account or local service that can provide this model.</p>
+        <h3>{{ savedConnection ? 'Choose a service' : 'Connect a service' }}</h3>
+        <p v-if="savedConnection">Browse models from a service you already use. Manage connections in Configuration.</p>
+        <p v-else>Choose the account or local service that can provide this model.</p>
       </div>
 
       <div class="setup-wizard-field">
@@ -141,7 +153,7 @@ onUnmounted(invalidate);
         Vox Deorum lists the models available to your local Claude Code sign-in. If the list is empty, check that Claude Code is installed and signed in.
       </p>
 
-      <div class="setup-wizard-credentials">
+      <div v-if="!savedConnection" class="setup-wizard-credentials">
         <div v-for="field in credentialFields" :key="field.key" class="setup-wizard-field">
           <div class="setup-wizard-label-row">
             <label :for="`model-discovery-${field.key}`">{{ field.label }}</label>
@@ -179,7 +191,10 @@ onUnmounted(invalidate);
 
       <div v-if="discoveryErrorKind" class="setup-wizard-error-panel" aria-live="polite">
         <strong>We could not check that connection.</strong>
-        <p>{{ discoveryStatusCopy }}</p>
+        <p v-if="savedConnection && (discoveryErrorKind === 'auth' || discoveryErrorKind === 'missing-credential')">
+          Check the saved connection in Configuration, then try again.
+        </p>
+        <p v-else>{{ discoveryStatusCopy }}</p>
         <p v-if="selectedProvider === 'codex'" class="text-muted">
           Run Setup wizard first to sign in with ChatGPT.
         </p>
@@ -194,7 +209,7 @@ onUnmounted(invalidate);
         <h3>Pick a model</h3>
         <p>Your account works. Choose the AI model to add.</p>
       </div>
-      <ModelPickerList v-model="selectedModelId" :models="discoveredModels" />
+      <ModelPickerList v-model="selectedModelId" :models="modelOptions" />
     </section>
 
     <template #footer>
@@ -203,14 +218,14 @@ onUnmounted(invalidate);
         <div class="setup-wizard-footer-next">
           <Button
             v-if="phase === 'connect'"
-            label="Check and continue"
+            :label="savedConnection ? 'List models' : 'Check and continue'"
             :loading="discoveryPending"
             :disabled="!selectedProvider || discoveryPending"
             @click="checkConnection"
           />
           <template v-else>
             <Button label="Back" severity="secondary" @click="returnToConnection" />
-            <Button label="Add model" :disabled="!selectedModel" @click="addModel" />
+            <Button label="Add model" :disabled="!canAdd" @click="addModel" />
           </template>
         </div>
       </div>

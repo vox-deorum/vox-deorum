@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import Button from 'primevue/button';
+import Dialog from 'primevue/dialog';
 import InputText from 'primevue/inputtext';
 import MultiSelect from 'primevue/multiselect';
 import SelectButton from 'primevue/selectbutton';
+import { useToast } from 'primevue/usetoast';
 import DeskVariantList from '@/components/newspaper/DeskVariantList.vue';
 import DeskWritingRows from '@/components/newspaper/DeskWritingRows.vue';
 import DeskBatchBar from '@/components/newspaper/DeskBatchBar.vue';
@@ -11,9 +13,30 @@ import { useWritingDesk, type DeskShow } from '@/stores/writing-desk';
 import type { DeskText } from '@/utils/types';
 
 const {
-  catalogue, tags, show, search, groups, eligible, checked, selected, detail, draft, job, models, choices, requestCount,
-  error, detailLoading, saving, starting, stopping, busy, load, select, check, toggleAll, edit, save, generate, stop,
+  catalogue, tags, show, search, groups, eligible, checked, selected, detail, draft, job, models, availableModels,
+  choices, requestCount, candidateCount, error, detailLoading, saving, starting, stopping, clearing, busy,
+  load, select, check, toggleAll, edit, save, generate, stop, clearDrafts, addModel,
 } = useWritingDesk();
+const confirmClear = ref(false);
+const toast = useToast();
+let clearConfirmed = false;
+
+/** Close the confirmation and clear unapproved drafts. */
+async function confirmClearDrafts() {
+  clearConfirmed = true;
+  confirmClear.value = false;
+  const cleared = await clearDrafts();
+  if (cleared !== undefined) {
+    toast.add({ severity: 'success', summary: `${cleared} generated ${cleared === 1 ? 'draft' : 'drafts'} cleared`, life: 4000 });
+  }
+}
+
+/** Move focus back to the desk when the clear button may have disappeared. */
+function finishClearDialog() {
+  if (!clearConfirmed) return;
+  clearConfirmed = false;
+  document.getElementById('desk-variant-search')?.focus();
+}
 
 const variants = computed(() => catalogue.value?.templates.flatMap(template => template.variants) ?? []);
 const settled = computed(() => variants.value.filter(variant => variant.settled).length);
@@ -58,7 +81,7 @@ onMounted(load);
     </div>
     <section v-else-if="catalogue" class="desk-workspace panel-container" aria-label="Writing workspace">
       <div class="panel-toolbar desk-toolbar" role="group" aria-label="Variant filters">
-        <InputText v-model="search" class="desk-search" size="small" placeholder="Find a template or variant"
+        <InputText id="desk-variant-search" v-model="search" class="desk-search" size="small" placeholder="Find a template or variant"
           aria-label="Search templates or variants" />
         <SelectButton v-model="show" :options="showOptions" option-label="label" option-value="value"
           :allow-empty="false" size="small" aria-label="Show variants" />
@@ -68,9 +91,10 @@ onMounted(load);
         <Button v-if="eligible.length" :label="selectionLabel"
           size="small" severity="secondary" outlined @click="toggleAll" />
       </div>
-      <DeskBatchBar v-if="checked.size || busy" v-model:choices="choices" v-model:models="models"
-        :checked="checked.size" :request-count="requestCount" :available-models="catalogue.models" :job="job" :busy="busy"
-        :starting="starting" :stopping="stopping" @generate="generate" @stop="stop" />
+      <DeskBatchBar v-if="checked.size || busy || candidateCount" v-model:choices="choices" v-model:models="models"
+        :checked="checked.size" :request-count="requestCount" :available-models="availableModels" :job="job" :busy="busy"
+        :starting="starting" :stopping="stopping" :clearing="clearing" :candidate-count="candidateCount" :saving="saving"
+        @generate="generate" @stop="stop" @clear="confirmClear = true" @add-model="addModel" />
       <div class="desk-panes">
         <DeskVariantList :groups="groups" :checked="checked" :selected="selected" @check="check" @select="select" />
         <section class="desk-sheet" aria-label="Writing">
@@ -93,7 +117,7 @@ onMounted(load);
           <div v-if="detailLoading" class="table-empty" role="status">Loading the variant…</div>
           <div v-else-if="detail" class="desk-rows">
             <DeskWritingRows v-model:draft="editText"
-              :detail="detail" :open-row="draft?.row" :saving="saving" @edit="edit" @save="save" />
+              :detail="detail" :open-row="draft?.row" :saving="saving || clearing" @edit="edit" @save="save" />
           </div>
           <div v-else class="table-empty">
             <i class="pi pi-file-edit" aria-hidden="true" />
@@ -103,5 +127,13 @@ onMounted(load);
         </section>
       </div>
     </section>
+    <Dialog v-model:visible="confirmClear" header="Clear generated drafts?" modal :style="{ maxWidth: '28rem' }"
+      @after-hide="finishClearDialog">
+      <p>This clears drafts across the Writing Desk, including variants hidden by filters. Current copy and settled examples will stay.</p>
+      <template #footer>
+        <Button label="Cancel" severity="secondary" text autofocus @click="confirmClear = false" />
+        <Button label="Clear all drafts" severity="danger" :disabled="busy || saving" @click="confirmClearDrafts" />
+      </template>
+    </Dialog>
   </div>
 </template>

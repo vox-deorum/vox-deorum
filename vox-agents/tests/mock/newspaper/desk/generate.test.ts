@@ -3,10 +3,12 @@ import { SpanStatusCode } from '@opentelemetry/api';
 import { config } from '../../../../src/agents/config/load.js';
 import { flushDeskTelemetry, sqliteExporter } from '../../../../src/instrumentation.js';
 import type { DeskCandidate, DeskGenerateRequest, DeskRef, DeskStyle, DeskText } from '../../../../src/types/api.js';
+import type { Model } from '../../../../src/types/config.js';
 import { deskWritingRulesPath, type DeskCatalogue, type DeskTemplate, type DeskVariant } from '../../../../src/newspaper/desk/catalogue.js';
 import type { DeskWriteReply, DeskWriter } from '../../../../src/newspaper/desk/generate.js';
 import {
   DeskJobRunningError,
+  clearAllCandidates,
   clearCandidates,
   deskModelNames,
   getCandidates,
@@ -19,11 +21,19 @@ import {
 const mocks = vi.hoisted(() => ({
   catalogue: undefined as unknown,
   stream: vi.fn(),
+  ensureModelsResolved: vi.fn(),
+  runtimeModels: new Map<string, Model>(),
 }));
 
 vi.mock('../../../../src/agents/models/concurrency.js', async (importOriginal) => ({
   ...await importOriginal<typeof import('../../../../src/agents/models/concurrency.js')>(),
   streamTextWithConcurrency: mocks.stream,
+}));
+
+vi.mock('../../../../src/agents/models/resolution.js', async importOriginal => ({
+  ...await importOriginal<typeof import('../../../../src/agents/models/resolution.js')>(),
+  ensureModelsResolved: mocks.ensureModelsResolved,
+  getRuntimeModel: (name: string) => mocks.runtimeModels.get(name),
 }));
 
 vi.mock('../../../../src/newspaper/desk/catalogue.js', async importOriginal => ({
@@ -139,6 +149,9 @@ describe('newspaper desk generation', () => {
   beforeEach(() => {
     mocks.catalogue = catalogue();
     mocks.stream.mockReset();
+    mocks.ensureModelsResolved.mockReset();
+    mocks.ensureModelsResolved.mockResolvedValue(undefined);
+    mocks.runtimeModels.clear();
     config.llms[modelA] = { provider: 'openai', name: modelA };
     config.llms[modelB] = { provider: 'openai', name: modelB };
   });
@@ -229,12 +242,7 @@ describe('newspaper desk generation', () => {
   afterEach(async () => {
     stopJob();
     await waitForJob();
-    for (const ref of [
-      { templateId: 'press-news', variantId: 'one' },
-      { templateId: 'press-news', variantId: 'two' },
-      { templateId: 'press-news', variantId: 'old' },
-      { templateId: 'report-news', variantId: 'one' },
-    ]) clearCandidates(ref);
+    clearAllCandidates();
     delete config.llms[modelA];
     delete config.llms[modelB];
     vi.restoreAllMocks();
@@ -282,6 +290,68 @@ describe('newspaper desk generation', () => {
     const ref = { templateId: 'press-news', variantId: 'one' };
     await expect(startJob(request([ref], 1, ['desk-test-missing']), async request => replyFor(request)))
       .rejects.toMatchObject({ status: 400 });
+  });
+
+  it('should accept a discovered provider-qualified chat model without a configured alias', async () => {
+    const name = 'openai/desk-discovered-chat';
+    const ref = { templateId: 'press-news', variantId: 'one' };
+    mocks.ensureModelsResolved.mockImplementation(async () => {
+      mocks.runtimeModels.set(name, { provider: 'openai', name: 'desk-discovered-chat' });
+    });
+    const writer = vi.fn<DeskWriter>(async input => replyFor(input));
+    const job = await startJob(request([ref], 1, [name]), writer);
+    await waitForJob();
+    expect(mocks.ensureModelsResolved).toHaveBeenCalledWith([name]);
+    expect(job).toMatchObject({ status: 'done', total: 1, done: 1, failed: 0 });
+    expect(writer).toHaveBeenCalledTimes(1);
+    expect(getCandidates(ref)).toEqual([expect.objectContaining({ model: name })]);
+  });
+
+  it('should reject known non-chat and unsupported provider-qualified references before discovery', async () => {
+    const ref = { templateId: 'press-news', variantId: 'one' };
+    for (const name of ['typesafe/jev', 'unknown-provider/chat', 'openai/whisper-1', 'openrouter/other/embedder']) {
+      await expect(startJob(request([ref], 1, [name]), async input => replyFor(input)))
+        .rejects.toMatchObject({ status: 400 });
+    }
+    expect(mocks.ensureModelsResolved).not.toHaveBeenCalled();
+  });
+
+  it('should reject known embedding and evaluation aliases before discovery', async () => {
+    config.llms['desk-test-embed'] = { provider: 'openai', name: 'embed', options: { embeddingSize: 8 } };
+    config.llms['desk-test.evaluator'] = modelA;
+    const ref = { templateId: 'press-news', variantId: 'one' };
+    try {
+      for (const name of ['desk-test-embed', 'desk-test.evaluator']) {
+        await expect(startJob(request([ref], 1, [name]), async input => replyFor(input)))
+          .rejects.toMatchObject({ status: 400 });
+      }
+      expect(mocks.ensureModelsResolved).not.toHaveBeenCalled();
+    } finally {
+      delete config.llms['desk-test-embed'];
+      delete config.llms['desk-test.evaluator'];
+    }
+  });
+
+  it('should reject a provider-qualified reference discovered to be an embedding model', async () => {
+    const name = 'openai/desk-embedding-model';
+    const ref = { templateId: 'press-news', variantId: 'one' };
+    mocks.ensureModelsResolved.mockImplementation(async () => {
+      mocks.runtimeModels.set(name, { provider: 'openai', name: 'desk-embedding-model', options: { embeddingSize: 8 } });
+    });
+    const writer = vi.fn<DeskWriter>(async input => replyFor(input));
+    await expect(startJob(request([ref], 1, [name]), writer)).rejects.toMatchObject({ status: 400 });
+    expect(writer).not.toHaveBeenCalled();
+    expect(getCandidates(ref)).toEqual([]);
+    expect(getCurrentJob()?.status).toBe('stopped');
+  });
+
+  it('should report a failed model discovery preflight as a desk error', async () => {
+    const name = 'openai/desk-not-in-catalog';
+    const ref = { templateId: 'press-news', variantId: 'one' };
+    mocks.ensureModelsResolved.mockRejectedValue(new Error('not in the provider catalog'));
+    await expect(startJob(request([ref], 1, [name]), async input => replyFor(input)))
+      .rejects.toMatchObject({ status: 400 });
+    expect(getCurrentJob()?.status).toBe('stopped');
   });
 
   it('should skip settled variants and send only unsettled refs to the writer', async () => {
@@ -345,6 +415,48 @@ describe('newspaper desk generation', () => {
     expect(root.attributes['desk.requests.discarded']).toBe(1);
     expect(requests[0].attributes['desk.outcome']).toBe('discarded');
     expect(getCandidates(ref)).toEqual([]);
+  });
+
+  it('should clear every candidate after a stopped run and keep the job history', async () => {
+    const one = { templateId: 'press-news', variantId: 'one' };
+    const two = { templateId: 'press-news', variantId: 'two' };
+    const first = await startJob(request([one, two], 1, [modelA, modelB]), async input => replyFor(input));
+    await waitForJob();
+    expect(first.status).toBe('done');
+    const before = getCandidates(one).length + getCandidates(two).length;
+    expect(before).toBeGreaterThan(0);
+
+    let release!: (reply: DeskWriteReply) => void;
+    const pending = new Promise<DeskWriteReply>(resolve => { release = resolve; });
+    const stopped = await startJob(request([one], 1, [modelB]), () => pending);
+    stopJob();
+    release(replyFor({ refs: [one], choices: 1 }));
+    await waitForJob();
+    expect(stopped.status).toBe('stopped');
+
+    expect(clearAllCandidates()).toBe(before);
+    expect(getCandidates(one)).toEqual([]);
+    expect(getCandidates(two)).toEqual([]);
+    expect(getCurrentJob()).toBe(stopped);
+  });
+
+  it('should refuse to clear candidates while a job is running', async () => {
+    let release!: (reply: DeskWriteReply) => void;
+    const pending = new Promise<DeskWriteReply>(resolve => { release = resolve; });
+    const ref = { templateId: 'press-news', variantId: 'one' };
+    const job = await startJob(request([ref]), () => pending);
+    let error: unknown;
+    try {
+      clearAllCandidates();
+    } catch (caught) {
+      error = caught;
+    }
+    expect(error).toMatchObject({ status: 409 });
+    expect(getCurrentJob()).toBe(job);
+    stopJob();
+    release(replyFor({ refs: [ref], choices: 1 }));
+    await waitForJob();
+    expect(clearAllCandidates()).toBe(0);
   });
 
   it('should reject a second job while the first is still preparing', async () => {

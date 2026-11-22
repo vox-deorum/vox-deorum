@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushPromises, mount } from '@vue/test-utils';
 import PrimeVue from 'primevue/config';
+import ToastService from 'primevue/toastservice';
 import WritingDeskView from '@/views/WritingDeskView.vue';
 import { deskPollIntervalMs } from '@/stores/writing-desk';
 import type { DeskCatalogueResponse, DeskJob, DeskVariantDetail } from '@/utils/types';
@@ -11,6 +12,7 @@ const api = vi.hoisted(() => ({
   getDeskJob: vi.fn(),
   startDeskJob: vi.fn(),
   stopDeskJob: vi.fn(),
+  clearDeskCandidates: vi.fn(),
   settleDeskVariant: vi.fn(),
   unsettleDeskVariant: vi.fn(),
 }));
@@ -53,7 +55,10 @@ vi.mock('virtua/vue', () => ({
 
 /** Mount the desk with real inputs and stable list rendering for jsdom. */
 function mountView() {
-  return mount(WritingDeskView, { attachTo: document.body, global: { plugins: [PrimeVue], stubs: { RouterLink: true } } });
+  return mount(WritingDeskView, {
+    attachTo: document.body,
+    global: { plugins: [PrimeVue, ToastService], stubs: { RouterLink: true }, directives: { tooltip: () => undefined } },
+  });
 }
 
 let wrapper: ReturnType<typeof mountView>;
@@ -73,6 +78,12 @@ function row(id: string) {
 /** Find a control by its label. */
 function action(label: string) {
   return wrapper.findAll('button').find(button => button.text() === label || button.attributes('aria-label') === label)!;
+}
+
+/** Find a confirmation action in the dialog teleported to the document. */
+function dialogAction(label: string) {
+  return Array.from(document.querySelectorAll<HTMLButtonElement>('[role="dialog"] button'))
+    .find(button => button.textContent?.trim() === label)!;
 }
 
 describe('WritingDeskView', () => {
@@ -160,6 +171,46 @@ describe('WritingDeskView', () => {
     expect(wrapper.get('input[aria-label="Check era / report"]').element).toHaveProperty('checked', true);
   });
 
+  it('should clear drafts only on confirmation even when the filters hide all unsettled variants', async () => {
+    await selectVariant('gazette');
+    await row('first').get('.desk-copy').trigger('click');
+    await action('Settled').trigger('click');
+    expect(wrapper.findAll('.desk-variant-id').map(variant => variant.text())).toEqual(['report']);
+    await action('Clear drafts').trigger('click');
+    dialogAction('Cancel').click();
+    await flushPromises();
+    expect(api.clearDeskCandidates).not.toHaveBeenCalled();
+    expect(row('first').find('textarea').exists()).toBe(true);
+
+    api.clearDeskCandidates.mockResolvedValue({ cleared: 2 });
+    const next = structuredClone(catalogue);
+    next.templates[0]!.variants[0]!.candidateCount = 0;
+    api.getDeskCatalogue.mockResolvedValue(next);
+    api.getDeskVariant.mockResolvedValueOnce({ ...initial, candidates: [] });
+    await action('Clear drafts').trigger('click');
+    dialogAction('Clear all drafts').click();
+    await flushPromises();
+
+    expect(api.clearDeskCandidates).toHaveBeenCalledTimes(1);
+    expect(wrapper.find('[data-row="first"]').exists()).toBe(false);
+    expect(row('current').text()).toContain(original.headline);
+    expect(wrapper.get('.desk-overall').text()).toBe('1/2 settled');
+    expect(wrapper.find('.desk-batch').exists()).toBe(false);
+  });
+
+  it('should show a batch that started elsewhere when it prevents clearing drafts', async () => {
+    await selectVariant('gazette');
+    await action('Clear drafts').trigger('click');
+    api.clearDeskCandidates.mockRejectedValue(new Error('Stop the running batch first'));
+    api.getDeskJob.mockResolvedValue(running);
+    dialogAction('Clear all drafts').click();
+    await flushPromises();
+
+    expect(action('Stop').isVisible()).toBe(true);
+    expect(action('Clear drafts').element.disabled).toBe(true);
+    expect(row('first').isVisible()).toBe(true);
+  });
+
   it('should generate for unsettled variants by default and exclude settled variants from template selection', async () => {
     const template = wrapper.get<HTMLInputElement>('input[aria-label="Check all variants of era"]');
     const report = wrapper.get<HTMLInputElement>('input[aria-label="Check era / report"]');
@@ -172,7 +223,7 @@ describe('WritingDeskView', () => {
     await action('Select all unsettled').trigger('click');
     expect(template.element.checked).toBe(true);
     await template.setValue(false);
-    expect(wrapper.find('.desk-batch').exists()).toBe(false);
+    expect(action('Generate').element.disabled).toBe(true);
     await template.setValue(true);
     expect(wrapper.get('.desk-checked').text()).toContain('1 checked');
     api.startDeskJob.mockResolvedValue(running);
@@ -206,7 +257,7 @@ describe('WritingDeskView', () => {
 
     await action('Settled').trigger('click');
     expect(wrapper.findAll('.desk-variant-id').map(variant => variant.text())).toEqual(['report']);
-    expect(wrapper.find('.desk-batch').exists()).toBe(false);
+    expect(action('Generate').element.disabled).toBe(true);
     await action('All').trigger('click');
     wrapper.getComponent({ name: 'MultiSelect' }).vm.$emit('update:modelValue', ['science']);
     await flushPromises();

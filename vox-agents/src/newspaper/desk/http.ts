@@ -6,7 +6,7 @@ import { sendError } from '../../web/http-utils.js';
 import { deskChoicesLimit } from './batch.js';
 import { DeskError, deskTriggers, readDeskCatalogue } from './catalogue.js';
 import { deskVariantStyle, findDeskVariant } from './brief.js';
-import { clearCandidates, deskModelNames, getCandidates, getCurrentJob, startJob, stopJob, type DeskWriter } from './generate.js';
+import { clearAllCandidates, clearCandidates, deskModelNames, getCandidates, getCurrentJob, startJob, stopJob, type DeskWriter } from './generate.js';
 import { settleVariant, unsettleVariant } from './settle.js';
 import { templateVariables } from './variables.js';
 
@@ -93,6 +93,7 @@ export function mountDeskRoutes(app: Express, writer?: DeskWriter): void {
   router.use(express.json({ limit: '256kb' }));
   router.get('/', reply(catalogueSummary));
   router.get(variantPath, reply(req => variantDetail(refFrom(req))));
+  router.delete('/candidates', reply(() => ({ cleared: clearAllCandidates() })));
   router.post('/jobs', reply(req => startJob(batchSchema.parse(req.body), writer)));
   router.get('/jobs/current', reply(getCurrentJob));
   router.post('/jobs/current/stop', reply(stopJob));

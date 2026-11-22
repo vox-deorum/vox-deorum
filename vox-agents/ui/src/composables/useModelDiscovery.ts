@@ -108,13 +108,13 @@ export function useModelDiscovery({ isActive }: UseModelDiscoveryOptions) {
   }
 
   /** Discover, sort, and select models when the active caller still owns this request. */
-  async function discover(): Promise<boolean> {
+  async function discover(credentials = selectedCredentials()): Promise<boolean> {
     if (!selectedProvider.value || discoveryPending.value) return false;
     const requestGeneration = generation;
     discoveryPending.value = true;
     clearDiscoveryError();
     try {
-      const response = await api.discoverModels(selectedProvider.value, selectedCredentials());
+      const response = await api.discoverModels(selectedProvider.value, credentials);
       if (!isActive() || requestGeneration !== generation) return false;
       discoveredModels.value = [...response.models].sort((left, right) => left.id.localeCompare(right.id));
       recommendedTiers.value = response.recommendedTiers ?? {};

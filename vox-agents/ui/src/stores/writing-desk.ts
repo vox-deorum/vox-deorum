@@ -66,6 +66,10 @@ export function useWritingDesk() {
   const draft = ref<EditDraft>();
   const job = ref<DeskJob | null>(null);
   const models = ref<string[]>([]);
+  const discoveredModels = ref<string[]>([]);
+  const availableModels = computed(() => [...new Set([...(catalogue.value?.models ?? []), ...discoveredModels.value])]);
+  const candidateCount = computed(() => (catalogue.value?.templates ?? []).reduce((total, template) =>
+    total + template.variants.reduce((count, variant) => count + variant.candidateCount, 0), 0));
   const requestCount = computed(() => chunkDeskVariants([...checked.value.values()]).length * models.value.length);
   const choices = ref<number | null>(3);
   const error = ref('');
@@ -73,7 +77,8 @@ export function useWritingDesk() {
   const saving = ref(false);
   const starting = ref(false);
   const stopping = ref(false);
-  const busy = computed(() => starting.value || stopping.value || job.value?.status === 'running');
+  const clearing = ref(false);
+  const busy = computed(() => starting.value || stopping.value || clearing.value || job.value?.status === 'running');
 
   let catalogueRequest = 0;
   let detailRequest = 0;
@@ -111,6 +116,18 @@ export function useWritingDesk() {
     }
   }
 
+  /** Read the selection and finish its loading state if it is still current. */
+  async function loadSelection(target: DeskRef, refresh = false) {
+    const request = detailRequest + 1;
+    try {
+      await loadDetail(target, refresh);
+    } catch (cause) {
+      if (request === detailRequest) error.value = errorMessage(cause);
+    } finally {
+      if (request === detailRequest) detailLoading.value = false;
+    }
+  }
+
   /** Select a variant and reset the previous variant's editor. */
   async function select(target: DeskRef) {
     if (detail.value && deskRefKey(detail.value) === deskRefKey(target)) return;
@@ -119,14 +136,13 @@ export function useWritingDesk() {
     detail.value = undefined;
     detailLoading.value = true;
     error.value = '';
-    const request = detailRequest + 1;
-    try {
-      await loadDetail(target);
-    } catch (cause) {
-      if (request === detailRequest) error.value = errorMessage(cause);
-    } finally {
-      if (request === detailRequest) detailLoading.value = false;
-    }
+    await loadSelection(target);
+  }
+
+  /** Keep models added from the provider catalog available for this visit. */
+  function addModel(id: string) {
+    if (!availableModels.value.includes(id)) discoveredModels.value.push(id);
+    if (!models.value.includes(id)) models.value.push(id);
   }
 
   /** Track exceptions to the default of generating for all unsettled variants. */
@@ -145,7 +161,7 @@ export function useWritingDesk() {
 
   /** Open a row with a fresh copy or close it if it is already open. */
   function edit(row: string, text: DeskText) {
-    if (!detail.value || detail.value.settled || saving.value) return;
+    if (!detail.value || detail.value.settled || saving.value || clearing.value) return;
     draft.value = draft.value?.row === row
       ? undefined
       : { row, revision: detail.value.revision, text: copyText(text) };
@@ -173,7 +189,7 @@ export function useWritingDesk() {
   /** Save either the edited copy or the full original text of a collapsed row. */
   async function save(row: string, source: DeskText | DeskCandidate) {
     const current = detail.value;
-    if (!current || saving.value) return;
+    if (!current || saving.value || clearing.value) return;
     const editing = draft.value?.row === row ? draft.value : undefined;
     const revision = editing?.revision ?? current.revision;
     saving.value = true;
@@ -197,6 +213,34 @@ export function useWritingDesk() {
       loadCatalogue(),
       target && !detailLoading.value && !saving.value ? loadDetail(target, true) : undefined,
     ]);
+  }
+
+  /** Discard generated drafts while keeping the current copy and any edit to it. */
+  async function clearDrafts() {
+    if (busy.value || saving.value) return;
+    clearing.value = true;
+    error.value = '';
+    try {
+      const { cleared } = await api.clearDeskCandidates();
+      if (disposed) return;
+      if (draft.value?.row !== deskCurrentRow) draft.value = undefined;
+      for (const template of catalogue.value?.templates ?? []) {
+        for (const variant of template.variants) variant.candidateCount = 0;
+      }
+      if (detail.value) detail.value.candidates = [];
+      await Promise.all([
+        loadCatalogue(),
+        selected.value ? loadSelection(selected.value, true) : undefined,
+      ]);
+      return cleared;
+    } catch (cause) {
+      error.value = errorMessage(cause);
+      // Another browser may have started a batch since the last refresh.
+      await jobRequest;
+      if (!disposed) await refreshJob();
+    } finally {
+      clearing.value = false;
+    }
   }
 
   /** Fetch one poll at a time and reject replies superseded by start or stop. */
@@ -276,7 +320,8 @@ export function useWritingDesk() {
   }
 
   return {
-    catalogue, tags, show, search, groups, eligible, checked, selected, detail, draft, job, models, choices, requestCount,
-    error, detailLoading, saving, starting, stopping, busy, load, select, check, toggleAll, edit, save, generate, stop,
+    catalogue, tags, show, search, groups, eligible, checked, selected, detail, draft, job, models, availableModels,
+    choices, requestCount, candidateCount, error, detailLoading, saving, starting, stopping, clearing, busy,
+    load, select, check, toggleAll, edit, save, generate, stop, clearDrafts, addModel,
   };
 }

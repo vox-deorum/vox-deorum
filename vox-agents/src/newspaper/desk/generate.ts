@@ -3,14 +3,15 @@
  *
  * Runs one in-memory writing batch for the Newspaper Writing Desk. Each request
  * covers chunks of variants that share a style and is sent to every selected
- * configured chat model. Results are held in memory, keeping the newest 30 per
- * variant, and are discarded when a job stops or when a variant is settled or
- * unsettled.
+ * chat model, either a configured alias or a provider-qualified model ID.
+ * The newest 30 candidates per variant stay in memory until cleared or the
+ * variant is settled or reopened. Stopping a job drops only later replies.
  */
 import { config } from '../../agents/config/load.js';
 import { buildProviderOptions, getModel, getModelConfig } from '../../agents/models/models.js';
 import { formatModelReference, parseModelReference } from '../../agents/models/model-reference.js';
 import { ensureModelsResolved, getRuntimeModel } from '../../agents/models/resolution.js';
+import { synthesizeModelConfig } from '../../agents/models/rules.js';
 import { stripJsonFence } from '../../agents/models/text-cleaning.js';
 import { streamTextWithConcurrency, withModelConfig } from '../../agents/models/concurrency.js';
 import type { ConcurrencyContext } from '../../agents/models/concurrency.js';
@@ -22,7 +23,7 @@ import type {
   DeskRef,
   DeskText,
 } from '../../types/api.js';
-import { isEvaluationOnlyProvider, isSynthesizableModelId } from '../../types/constants.js';
+import { isKnownNonChatModel } from '../../types/constants.js';
 import { createLogger } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errors.js';
 import { Output } from 'ai';
@@ -129,11 +130,15 @@ let jobCounter = 0;
 
 /** Read the configured aliases that can answer chat requests. */
 export function deskModelNames(): string[] {
-  return Object.keys(config.llms).filter(configuredChatModel);
+  return Object.keys(config.llms).filter(isChatModelReference);
 }
 
-/** Follow one configured alias chain and reject embedding, evaluation and cyclic targets. */
-function configuredChatModel(name: string): boolean {
+/**
+ * Follow one alias chain or provider-qualified reference and reject embedding,
+ * evaluation and cyclic targets. A discovered provider-qualified model passes
+ * the preflight check until resolution records whether it is a chat model.
+ */
+function isChatModelReference(name: string): boolean {
   const visited = new Set<string>();
   let current = name;
   for (;;) {
@@ -142,19 +147,19 @@ function configuredChatModel(name: string): boolean {
     if (current === 'embedder' || current === 'evaluator' || current.endsWith('.evaluator')) return false;
     const entry = Object.hasOwn(config.llms, current) ? config.llms[current] : undefined;
     if (entry === undefined) {
-      const { fullKey, provider } = parseModelReference(current);
+      const { fullKey, provider, name } = parseModelReference(current);
       if (fullKey !== current) {
         current = fullKey;
         continue;
       }
-      if (!isSynthesizableModelId(fullKey) || isEvaluationOnlyProvider(provider)) return false;
-      return getRuntimeModel(fullKey)?.options?.embeddingSize === undefined;
+      const definition = getRuntimeModel(fullKey) ?? synthesizeModelConfig(fullKey);
+      return definition !== undefined && !isKnownNonChatModel(provider, name) && definition.options?.embeddingSize === undefined;
     }
     if (typeof entry === 'string') {
       current = entry;
       continue;
     }
-    return !isEvaluationOnlyProvider(entry.provider) && entry.options?.embeddingSize === undefined;
+    return !isKnownNonChatModel(entry.provider, entry.name) && entry.options?.embeddingSize === undefined;
   }
 }
 
@@ -168,6 +173,21 @@ export function clearCandidates(ref: DeskRef): void {
   const key = deskRefKey(ref);
   generations.set(key, (generations.get(key) ?? 0) + 1);
   candidates.delete(key);
+}
+
+/**
+ * Drop every candidate in memory, regardless of the current filters or
+ * selection, and report how many rows were removed. Job history, telemetry and
+ * stock files are untouched. A stopped job is safe to clear because later
+ * replies are ignored once its signal is aborted.
+ */
+export function clearAllCandidates(): number {
+  if (currentJob?.status === 'running')
+    throw new DeskError(409, 'A writing desk job is running. Stop it before clearing candidates.');
+  let cleared = 0;
+  for (const rows of candidates.values()) cleared += rows.length;
+  candidates.clear();
+  return cleared;
 }
 
 /** Read the mutation epoch captured for a reference. */
@@ -405,6 +425,15 @@ function prepareTasks(
   });
 }
 
+/** Reject names that cannot write copy: unknown aliases and non-chat models. */
+function assertChatModels(models: string[]): void {
+  const rejected = models.filter(model => !isChatModelReference(model));
+  if (rejected.length > 0)
+    throw new DeskError(400,
+      `Cannot write newspaper copy with ${rejected.map(model => `'${model}'`).join(', ')}. `
+      + 'Choose a configured chat alias or a provider/model chat model.');
+}
+
 /**
  * Start one writing batch. The job is installed before the first await, so two
  * callers cannot both pass the running check, and work prepared before a clear
@@ -422,10 +451,7 @@ export async function startJob(
   if (!Number.isInteger(request.choices) || request.choices < 1 || request.choices > deskChoicesLimit)
     throw new DeskError(400, `Choices must be a whole number from 1 to ${deskChoicesLimit}.`);
   const models = [...new Set(request.models)];
-  const allowed = new Set(deskModelNames());
-  const unknown = models.filter(model => !allowed.has(model));
-  if (unknown.length > 0)
-    throw new DeskError(400, `Unknown or non-chat model ${unknown.map(model => `'${model}'`).join(', ')}.`);
+  assertChatModels(models);
   request = { ...request, models };
 
   const generationsAtStart = new Map(
@@ -451,7 +477,15 @@ export async function startJob(
     if (!catalogue.available)
       throw new DeskError(503, catalogue.reason ?? 'The stock newspaper catalogue is not available.');
     tasks = controller.signal.aborted ? [] : prepareTasks(request, catalogue);
-    if (tasks.length > 0) await ensureModelsResolved(models);
+    if (tasks.length > 0) {
+      try {
+        await ensureModelsResolved(models);
+      } catch (error) {
+        throw new DeskError(400, errorMessage(error));
+      }
+      // Discovery can reveal that a provider-qualified reference is an embedding model.
+      assertChatModels(models);
+    }
   } catch (error) {
     job.status = 'stopped';
     job.errors.push({ model: '', refs: [...request.refs], message: errorMessage(error) });

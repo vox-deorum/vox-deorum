@@ -785,6 +785,11 @@ class ApiClient {
     return this.fetchJson(this.baseUrl + writingDeskPath + '/jobs/current/stop', { method: 'POST' });
   }
 
+  /** Discard all generated candidates from the desk. */
+  clearDeskCandidates(): Promise<{ cleared: number }> {
+    return this.fetchJson(this.baseUrl + writingDeskPath + '/candidates', { method: 'DELETE' });
+  }
+
   /** Save the chosen copy to the stock template. */
   settleDeskVariant(ref: DeskRef, request: DeskSettleRequest): Promise<DeskVariantDetail> {
     return this.fetchJson(this.baseUrl + deskVariantPath(ref) + '/settle', {
