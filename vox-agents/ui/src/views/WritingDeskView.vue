@@ -76,8 +76,15 @@ onMounted(load);
         <section class="desk-sheet" aria-label="Writing">
           <header class="table-header desk-sheet-header">
             <div v-if="detail" class="desk-selection">
-              <span class="text-muted">{{ detail.templateId }} /</span>
-              <h2>{{ detail.variantId }}</h2>
+              <div class="desk-variant-title">
+                <span class="text-muted">{{ detail.templateId }} /</span>
+                <h2>{{ detail.variantId }}</h2>
+              </div>
+              <dl class="desk-variant-style" aria-label="Variant style">
+                <div><dt class="text-muted">Voice</dt><dd>{{ detail.style.voice }}</dd></div>
+                <div><dt class="text-muted">Stance</dt><dd>{{ detail.style.stance }}</dd></div>
+                <div><dt class="text-muted">Genre</dt><dd>{{ detail.style.genre }}</dd></div>
+              </dl>
             </div>
             <h2 v-else>Article copy</h2>
             <span v-if="detail?.settled" class="desk-review-state"><i class="pi pi-check-circle" aria-hidden="true" /> Settled</span>

@@ -3,6 +3,7 @@
     <Toolbar>
       <template #start>
         <Tag
+          v-if="rootSpan.turn != null"
           :value="`Turn ${rootSpan.turn}`"
           class="mr-2" />
         <Tag

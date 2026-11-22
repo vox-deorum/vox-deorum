@@ -9,7 +9,7 @@
 import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node";
 import { SQLiteSpanExporter } from "./agents/telemetry/sqlite-exporter.js";
 import { VoxSpanExporter } from "./agents/telemetry/vox-exporter.js";
-import { BatchSpanProcessor } from "@opentelemetry/sdk-trace-base";
+import { BatchSpanProcessor, SimpleSpanProcessor } from "@opentelemetry/sdk-trace-base";
 import dotenv from 'dotenv';
 import { config } from "./agents/config/load.js";
 
@@ -44,3 +44,21 @@ const tracerProvider = new NodeTracerProvider({
 });
 
 tracerProvider.register();
+
+// A canceled desk batch can end thousands of spans at once. Export them through the same
+// SQLite writer without putting that burst through the game's bounded span buffer.
+const deskSpanProcessor = new SimpleSpanProcessor({
+  /** Write desk spans through the same exporter as game spans. */
+  export: (spans, done) => sqliteExporter.export(spans, done),
+  /** The main exporter owns the shared SQLite connections. */
+  shutdown: async () => {},
+});
+const deskTracerProvider = new NodeTracerProvider({ spanProcessors: [deskSpanProcessor] });
+
+/** Tracer for Writing Desk batches and requests. */
+export const deskTracer = deskTracerProvider.getTracer('newspaper-desk');
+
+/** Wait for ended Writing Desk spans to reach SQLite. */
+export function flushDeskTelemetry(): Promise<void> {
+  return deskSpanProcessor.forceFlush();
+}

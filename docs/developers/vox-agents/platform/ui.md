@@ -85,6 +85,18 @@ The Debug page gathers logs into one card:
 
 The routes live under `/api/debug` in `src/web/routes/debug.ts`; log reads accept only filenames from the folder listing. Discovery and zip creation live in `src/utils/debug/log-sources.ts` and `log-bundle.ts`, and ini updates in `src/game/civ5-ini.ts`. `ui/src/views/DebugView.vue` uses the components in `ui/src/components/logging/`.
 
+### Writing Desk
+
+Open **Debug → Writing Desk** from a writable source checkout. The desk checks every unsettled stock variant by default. **Generate** uses only checked variants that match the current filters. Narrow the list or uncheck variants to reduce the batch, then choose your models and drafts per variant. Settle the current copy or a draft to write it back to the template file. Use **Unsettle** to reopen it.
+
+The desk groups variants by voice, stance, and genre, and sends up to eight variants per request. Each request includes relevant settled examples, favoring the same voice and template. Merge variants and templates reserved for the newspaper editor are outside the desk.
+
+In **Telemetry**, open the `newspaper-desk` database and select a **Writing Desk batch** trace. The full prompts and replies are stored locally in `newspaper/newspaper-desk-player-0.db` under the configured telemetry directory. Restarting Vox Agents clears the in-memory desk candidates, but recorded replies remain in that database.
+
+The desk shows the provider's token totals. Telemetry shows visible output and reasoning separately.
+
+The UI starts at `WritingDeskView.vue`. The catalogue, writer briefs, and save logic live in `vox-agents/src/newspaper/desk/`.
+
 ## Development
 
 Install the service dependencies from the repository root with `npm install`. The UI has its own package and lockfile outside the npm workspaces; install it from the same root with `npm install --prefix vox-agents/ui --include=dev`.

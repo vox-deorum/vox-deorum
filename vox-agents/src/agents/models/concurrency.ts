@@ -95,6 +95,25 @@ function getModelLimiter(model: Model): ReturnType<typeof pLimit> {
   return limiter;
 }
 
+/** Reject canceled waits immediately; an abandoned slot never starts a model call. */
+function runWithModelSlot<T>(
+  limiter: ReturnType<typeof pLimit>,
+  run: () => Promise<T>,
+  signal?: AbortSignal,
+): Promise<T> {
+  if (!signal) return limiter(run);
+  signal.throwIfAborted();
+  return new Promise((resolve, reject) => {
+    const cancel = () => reject(signal.reason);
+    signal.addEventListener('abort', cancel, { once: true });
+    void limiter(() => {
+      signal.removeEventListener('abort', cancel);
+      signal.throwIfAborted();
+      return run();
+    }).then(resolve, reject);
+  });
+}
+
 /**
  * Wrapper for streamText that adds per-model concurrency limiting and exponential retry.
  * This is a drop-in replacement for streamText that ensures only a limited number of
@@ -103,7 +122,7 @@ function getModelLimiter(model: Model): ReturnType<typeof pLimit> {
  *
  * @param params - Same parameters as streamText, but model must be a Model object from getModel()
  * @param context - The narrow execution-context surface (logger + timeout-refresh slot); in production a VoxContext
- * @param awaitSteps - Whether to await the steps Promise within the retry (default: true)
+ * @param options - Set useBatchManager to false for live work that runs alongside Oracle replay.
  * @returns Promise that resolves to either StreamTextResult or the resolved steps array
  *
  * @example
@@ -118,7 +137,8 @@ function getModelLimiter(model: Model): ReturnType<typeof pLimit> {
  */
 export async function streamTextWithConcurrency<T extends Parameters<typeof streamText>[0]>(
   params: T & { model: any }, // model is from getModel() which returns LanguageModel
-  context: ConcurrencyContext
+  context: ConcurrencyContext,
+  options: { useBatchManager?: boolean } = {},
 ) {
   context.timeoutRefresh = () => {};
   // Extract the model config from params
@@ -130,7 +150,7 @@ export async function streamTextWithConcurrency<T extends Parameters<typeof stre
   // Batch mode: route through the batch manager if it's active.
   // This bypasses streaming, per-model concurrency limiting, and retry logic entirely —
   // the batch API handles all of that server-side.
-  if (hasBatchManager() && modelConfig) {
+  if (options.useBatchManager !== false && hasBatchManager() && modelConfig) {
     // Local CLI providers (Codex through its ChatGPT proxy, Claude Code through its runtime)
     // have no batch API, and their forced middleware and host capabilities never run on the
     // batch path. Sending them through Oracle's live fallback would silently mix the
@@ -175,7 +195,7 @@ export async function streamTextWithConcurrency<T extends Parameters<typeof stre
   const firstTokenTimeout = readModelTimeout('LLM_FIRST_TOKEN_TIMEOUT_MS');
 
   // Wrap the streamText call with both concurrency limiting and exponential retry
-  return limiter(async () => {
+  return runWithModelSlot(limiter, async () => {
     let maxIteration = 0;
 
     // Convert system messages after the first non-system message to user messages
@@ -299,7 +319,7 @@ export async function streamTextWithConcurrency<T extends Parameters<typeof stre
       initialExecutionTimeout: firstTokenTimeout ?? executionTimeout,
       abortSignal: params.abortSignal,
     })
-  });
+  }, params.abortSignal);
 }
 
 /**

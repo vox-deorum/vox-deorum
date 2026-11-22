@@ -5,7 +5,7 @@ import { MockLanguageModelV4 } from 'ai/test';
 // Keep retries immediate so each test observes only the response deadlines.
 vi.mock('node:timers/promises', () => ({ setTimeout: async () => {} }));
 
-import { getExecutionTimeout, streamTextWithConcurrency } from '../../../../src/agents/models/concurrency.js';
+import { getExecutionTimeout, streamTextWithConcurrency, withModelConfig } from '../../../../src/agents/models/concurrency.js';
 import { httpTimeouts, readModelTimeout, validateModelTimeouts } from '../../../../src/agents/models/timeouts.js';
 import { createFakeLogger } from '../../../helpers/fake-logger.js';
 
@@ -42,6 +42,36 @@ afterEach(() => {
 });
 
 describe('model response deadlines', () => {
+  it('should cancel a queued request without waiting for the live call ahead of it', async () => {
+    let complete!: () => void;
+    const model = new MockLanguageModelV4({
+      doStream: async () => ({
+        stream: new ReadableStream({ start(controller) { complete = () => finish(controller); } }),
+      }),
+    });
+    const modelConfig = { provider: 'openai', name: 'queue-test', options: { concurrencyLimit: 1 } };
+    /** Submit both calls to the same real model limiter. */
+    const run = (abortSignal?: AbortSignal) => streamTextWithConcurrency(
+      withModelConfig({ model, prompt: 'hi', maxRetries: 0, abortSignal, stopWhen: () => true }, modelConfig),
+      { logger: createFakeLogger() as any, timeoutRefresh: undefined },
+    );
+    const live = run();
+    const controller = new AbortController();
+    const queued = run(controller.signal).catch(error => error);
+    try {
+      await vi.advanceTimersByTimeAsync(0);
+      expect(model.doStreamCalls).toHaveLength(1);
+      controller.abort();
+      const result = await Promise.race([queued, vi.advanceTimersByTimeAsync(0).then(() => 'still waiting')]);
+      expect(result).toBe(controller.signal.reason);
+    } finally {
+      complete();
+      await live;
+      await queued;
+    }
+    expect(model.doStreamCalls).toHaveLength(1);
+  });
+
   it('should retain the first-token budget after stream metadata arrives', async () => {
     const model = new MockLanguageModelV4({
       doStream: async () => ({

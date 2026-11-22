@@ -27,13 +27,16 @@ const initial: DeskVariantDetail = {
   triggers: [], siblings: [], candidates: choices,
   variables: [{ name: 'civilization', group: 'trigger', source: 'player.name', keep: false, mayBeEmpty: false }],
 };
-const settled: DeskVariantDetail = { ...initial, variantId: 'report', revision: 'r2', settled: true, candidates: [] };
+const settled: DeskVariantDetail = {
+  ...initial, variantId: 'report', revision: 'r2', settled: true, candidates: [],
+  style: { voice: 'press', stance: 'friendly', genre: 'analysis' },
+};
 const catalogue: DeskCatalogueResponse = {
   available: true, models: ['default', 'another'],
   templates: [{
     id: 'era', file: 'science.json', tags: ['science'], triggerSummary: 'A friend enters a new era',
     variants: [initial, settled].map(value => ({
-      id: value.variantId, style, headline: value.text.headline, settled: value.settled, candidateCount: value.candidates.length,
+      id: value.variantId, style: value.style, headline: value.text.headline, settled: value.settled, candidateCount: value.candidates.length,
     })),
   }],
 };
@@ -98,6 +101,26 @@ describe('WritingDeskView', () => {
     expect(wrapper.findAll('.desk-variant-link')).toHaveLength(2);
     await action('Unsettled').trigger('click');
     expect(wrapper.findAll('.desk-variant-link').map(button => button.get('.desk-variant-id').text())).toEqual(['gazette']);
+  });
+
+  it('should show the selected variant style and clear it while another variant loads', async () => {
+    /** Read the visible labels and values from the copy header. */
+    const visibleStyle = () => Object.fromEntries(wrapper.findAll('.desk-variant-style > div')
+      .map(field => [field.get('dt').text(), field.get('dd').text()]));
+
+    await selectVariant('gazette');
+    expect(visibleStyle()).toEqual({ Voice: style.voice, Stance: style.stance, Genre: style.genre });
+    expect(wrapper.get('.desk-sheet .desk-sheet-header').text()).toContain('2 candidates');
+
+    let resolve!: (detail: DeskVariantDetail) => void;
+    api.getDeskVariant.mockReturnValueOnce(new Promise<DeskVariantDetail>(done => { resolve = done; }));
+    await selectVariant('report');
+    expect(wrapper.find('.desk-variant-style').exists()).toBe(false);
+    expect(wrapper.find('.desk-sheet [role="status"]').exists()).toBe(true);
+    resolve(settled);
+    await flushPromises();
+    expect(visibleStyle()).toEqual({ Voice: 'press', Stance: 'friendly', Genre: 'analysis' });
+    expect(wrapper.get('.desk-review-state').text()).toBe('Settled');
   });
 
   it('should send unchanged text when settling a collapsed candidate and show the settled state', async () => {

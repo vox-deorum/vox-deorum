@@ -97,8 +97,8 @@ describe('telemetry routes', () => {
   });
 
   describe('GET /api/telemetry/sessions/active', () => {
-    it('maps active connection ids into session descriptors', async () => {
-      vi.spyOn(sqliteExporter, 'getActiveConnections').mockReturnValue(['game1-player-0']);
+    it('lists active game connections and omits the Writing Desk', async () => {
+      vi.spyOn(sqliteExporter, 'getActiveConnections').mockReturnValue(['game1-player-0', 'newspaper-desk-player-0']);
 
       const res = await request(app).get('/api/telemetry/sessions/active');
 

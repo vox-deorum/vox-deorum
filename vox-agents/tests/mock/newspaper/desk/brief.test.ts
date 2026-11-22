@@ -154,4 +154,14 @@ describe('newspaper desk brief', () => {
     expect(rendered).toContain('Body for draft');
     expect(rendered).toContain('Write with pace.');
   });
+
+  it('should show paragraph breaks in the current copy and settled examples', () => {
+    const sample = template('sample-news', ['science'], [
+      variant('draft', press, false, { text: { headline: 'Current', body: ['Draft opening.', 'Draft ending.'] } }),
+      variant('settled', press, true, { text: { headline: 'Sample', body: ['Sample opening.\n\nSample ending.'] } }),
+    ]);
+    const rendered = renderBrief(briefView([{ templateId: sample.id, variantId: 'draft' }], catalogue([sample]), 1));
+    expect(rendered).toContain('> Draft opening.\n\n> Draft ending.');
+    expect(rendered).toContain('> Sample opening.\n\n> Sample ending.');
+  });
 });

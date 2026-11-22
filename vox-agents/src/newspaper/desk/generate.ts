@@ -9,11 +9,12 @@
  */
 import { config } from '../../agents/config/load.js';
 import { buildProviderOptions, getModel, getModelConfig } from '../../agents/models/models.js';
-import { parseModelReference } from '../../agents/models/model-reference.js';
+import { formatModelReference, parseModelReference } from '../../agents/models/model-reference.js';
 import { ensureModelsResolved, getRuntimeModel } from '../../agents/models/resolution.js';
 import { stripJsonFence } from '../../agents/models/text-cleaning.js';
 import { streamTextWithConcurrency, withModelConfig } from '../../agents/models/concurrency.js';
 import type { ConcurrencyContext } from '../../agents/models/concurrency.js';
+import type { StepTokenUsage } from '../../agents/telemetry/model-usage.js';
 import type {
   DeskCandidate,
   DeskGenerateRequest,
@@ -25,6 +26,10 @@ import { isEvaluationOnlyProvider, isSynthesizableModelId } from '../../types/co
 import { createLogger } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errors.js';
 import { Output } from 'ai';
+import type { ModelMessage, StepResult, ToolSet } from 'ai';
+import { ROOT_CONTEXT, SpanStatusCode, trace } from '@opentelemetry/api';
+import type { Context } from '@opentelemetry/api';
+import { deskTracer } from '../../instrumentation.js';
 import { z } from 'zod';
 // @ts-expect-error - jaison doesn't have type definitions
 import jaison from 'jaison';
@@ -37,6 +42,9 @@ import {
 import { deskChoicesLimit, deskRefKey } from './batch.js';
 import { DeskError, readDeskCatalogue } from './catalogue.js';
 import type { DeskCatalogue } from './catalogue.js';
+import { normalizeParagraphs } from './paragraphs.js';
+import { deskMessages, deskTelemetryContextId, recordDeskReply, recordDeskUsage, sumDeskUsage } from './telemetry.js';
+import type { DeskRequestOutcome } from './telemetry.js';
 import { candidateWarnings, templateVariables } from './variables.js';
 
 /** Newest candidates kept for each variant. */
@@ -49,6 +57,9 @@ export interface DeskWriteRequest {
   choices: number;
   prompt: string;
   signal: AbortSignal;
+  messages: ModelMessage[];
+  /** Preserve the full step for telemetry, including steps that fail parsing. */
+  recordReply: (step: StepResult<ToolSet>) => void;
 }
 
 /** A prepared model request before it is assigned the job's cancellation signal. */
@@ -89,7 +100,7 @@ const structuredChoiceSchema = z.object({
   headline: z.string(),
   subheadline: z.string().nullable(),
   byline: z.string().nullable(),
-  body: z.array(z.string()),
+  body: z.array(z.string()).describe('Each string is one paragraph.'),
 });
 const writerChoiceSchema = structuredChoiceSchema.partial({ subheadline: true, byline: true });
 type WriterChoice = z.infer<typeof writerChoiceSchema>;
@@ -111,8 +122,8 @@ const generations = new Map<string, number>();
 let currentJob: DeskJob | null = null;
 /** The controller for the running job, if any. */
 let currentController: AbortController | null = null;
-/** Completion of the current job's work, for tests and shutdown. */
-let currentRun: Promise<void> = Promise.resolve();
+/** Batches still draining, including stopped batches superseded by a new job. */
+const pendingRuns = new Set<Promise<void>>();
 /** Monotonic job counter, so IDs stay unique without a UUID dependency. */
 let jobCounter = 0;
 
@@ -169,15 +180,15 @@ export function getCurrentJob(): DeskJob | null {
   return currentJob;
 }
 
-/** Wait for the current job's queued work to settle. */
-export function waitForJob(): Promise<void> {
-  return currentRun;
+/** Wait for dispatched desk work to finish, including canceled requests. */
+export async function waitForJob(): Promise<void> {
+  await Promise.all(pendingRuns);
 }
 
 /** Normalize one writer reply choice into editable desk text. */
 function cleanText(choice: WriterChoice): DeskText | undefined {
   const headline = choice.headline.trim();
-  const body = choice.body.map(line => line.trim()).filter(Boolean);
+  const body = normalizeParagraphs(choice.body);
   if (!headline || body.length === 0) return undefined;
   const subheadline = choice.subheadline?.trim();
   const byline = choice.byline?.trim();
@@ -210,7 +221,7 @@ function applyReply(
   catalogue: DeskCatalogue,
   generationsAtStart: ReadonlyMap<string, number>,
   reply: DeskWriteReply,
-): void {
+): DeskRequestOutcome {
   const wanted = new Set(task.chunk.map(deskRefKey));
   const grouped = new Map<string, WriterChoice[]>();
   for (const variant of reply.variants) {
@@ -220,15 +231,19 @@ function applyReply(
     entry.push(...variant.choices);
     grouped.set(key, entry);
   }
+  let discarded = 0;
+  let short = 0;
   for (const ref of task.chunk) {
     const key = deskRefKey(ref);
-    if (generationsAtStart.get(key) !== currentGeneration(ref)) continue;
-    if (job.status !== 'running') continue;
     const found = findDeskVariant(catalogue, ref);
-    if (!found || found.variant.settled) continue;
+    if (generationsAtStart.get(key) !== currentGeneration(ref) || !found || found.variant.settled) {
+      discarded++;
+      continue;
+    }
     const variables = templateVariables(found.template, catalogue, found.variant);
     const entry = grouped.get(key);
     if (!entry?.length) {
+      short++;
       job.errors.push({
         model: task.model,
         refs: [ref],
@@ -256,6 +271,7 @@ function applyReply(
       if (stored === task.choices) break;
     }
     if (stored < task.choices) {
+      short++;
       job.errors.push({
         model: task.model,
         refs: [ref],
@@ -263,6 +279,8 @@ function applyReply(
       });
     }
   }
+  if (discarded === task.chunk.length) return 'discarded';
+  return short || discarded ? 'partial' : 'complete';
 }
 
 /** Run one prepared request and record its progress on the job. */
@@ -273,32 +291,64 @@ async function runTask(
   generationsAtStart: ReadonlyMap<string, number>,
   signal: AbortSignal,
   writer: DeskWriter,
-): Promise<void> {
+  parent: Context,
+): Promise<{ outcome: DeskRequestOutcome; usage: Partial<StepTokenUsage> }> {
+  const messages = deskMessages(task.prompt);
+  const span = deskTracer.startSpan('Writing Desk request', {
+    attributes: {
+      'vox.context.id': deskTelemetryContextId,
+      'desk.job.id': job.id,
+      'desk.model.alias': task.model,
+      'desk.variant.ids': task.chunk.map(ref => `${ref.templateId}/${ref.variantId}`),
+      'desk.choices': task.choices,
+      'step.messages': JSON.stringify(messages),
+    },
+  }, parent);
+  let outcome: DeskRequestOutcome = 'canceled';
+  let usage: Partial<StepTokenUsage> | undefined;
   try {
+    signal.throwIfAborted();
+    span.setAttribute('model', formatModelReference(getModelConfig(task.model)));
     const reply = await writer({
       model: task.model,
       refs: task.chunk,
       choices: task.choices,
       prompt: task.prompt,
       signal,
+      messages,
+      /** Capture the provider reply at the application boundary, before parsing. */
+      recordReply: step => {
+        try {
+          usage = recordDeskReply(span, messages, step);
+        } catch (error) {
+          logger.warn('Could not record the Writing Desk reply', { job: job.id, error: errorMessage(error) });
+        }
+      },
     });
-    if (job.status !== 'running' || signal.aborted) return;
-    if (reply.tokens) {
-      job.tokens.input += reply.tokens.input ?? 0;
-      job.tokens.output += reply.tokens.output ?? 0;
+    usage ??= { inputTokens: reply.tokens?.input, outputTokens: reply.tokens?.output };
+    if (!signal.aborted) {
+      if (reply.tokens) {
+        job.tokens.input += reply.tokens.input ?? 0;
+        job.tokens.output += reply.tokens.output ?? 0;
+      }
+      outcome = applyReply(job, task, catalogue, generationsAtStart, reply);
+      span.setStatus({ code: SpanStatusCode.OK });
     }
-    applyReply(job, task, catalogue, generationsAtStart, reply);
   } catch (error) {
-    if (job.status !== 'running' || signal.aborted) return;
-    job.failed++;
-    job.errors.push({
-      model: task.model,
-      refs: [...task.chunk],
-      message: errorMessage(error),
-    });
+    if (!signal.aborted) {
+      outcome = 'failed';
+      const message = errorMessage(error);
+      span.setStatus({ code: SpanStatusCode.ERROR, message });
+      job.failed++;
+      job.errors.push({ model: task.model, refs: [...task.chunk], message });
+    }
   } finally {
     if (job.status === 'running') job.done++;
+    if (usage) recordDeskUsage(span, usage);
+    span.setAttribute('desk.outcome', outcome);
+    span.end();
   }
+  return { outcome, usage: usage ?? {} };
 }
 
 /** Run the prepared requests without letting one failure cancel the others. */
@@ -310,9 +360,35 @@ async function runTasks(
   signal: AbortSignal,
   writer: DeskWriter,
 ): Promise<void> {
-  await Promise.allSettled(tasks.map(task =>
-    runTask(job, task, catalogue, generationsAtStart, signal, writer)));
-  if (job.status === 'running') job.status = 'done';
+  const batch = deskTracer.startSpan('Writing Desk batch', { attributes: {
+    'vox.context.id': deskTelemetryContextId,
+    'desk.job.id': job.id,
+    'desk.model.aliases': [...new Set(tasks.map(task => task.model))],
+    'desk.requests': tasks.length,
+  } }, ROOT_CONTEXT);
+  const parent = trace.setSpan(ROOT_CONTEXT, batch);
+  try {
+    const results = await Promise.allSettled(tasks.map(task =>
+      runTask(job, task, catalogue, generationsAtStart, signal, writer, parent)));
+    const counts: Record<DeskRequestOutcome, number> = { complete: 0, partial: 0, failed: 0, canceled: 0, discarded: 0 };
+    const usage: Partial<StepTokenUsage> = {};
+    for (const result of results) {
+      if (result.status === 'rejected') {
+        counts.failed++;
+      } else {
+        counts[result.value.outcome]++;
+        sumDeskUsage(usage, result.value.usage);
+      }
+    }
+    recordDeskUsage(batch, usage);
+    for (const [outcome, count] of Object.entries(counts)) batch.setAttribute(`desk.requests.${outcome}`, count);
+    if (job.status === 'running') job.status = 'done';
+    batch.setAttribute('desk.job.status', job.status);
+    if (counts.failed) batch.setStatus({ code: SpanStatusCode.ERROR, message: `${counts.failed} failed requests` });
+    else if (job.status === 'done') batch.setStatus({ code: SpanStatusCode.OK });
+  } finally {
+    batch.end();
+  }
 }
 
 /** Build the model calls for one job without running them. */
@@ -367,7 +443,6 @@ export async function startJob(
   const controller = new AbortController();
   currentJob = job;
   currentController = controller;
-  currentRun = Promise.resolve();
 
   let catalogue: DeskCatalogue;
   let tasks: ReturnType<typeof prepareTasks>;
@@ -388,11 +463,13 @@ export async function startJob(
     if (job.status === 'running') job.status = 'done';
     return job;
   }
-  currentRun = runTasks(job, tasks, catalogue, generationsAtStart, controller.signal, writer)
+  const run = runTasks(job, tasks, catalogue, generationsAtStart, controller.signal, writer)
     .catch(error => {
       job.status = 'stopped';
       job.errors.push({ model: '', refs: [...request.refs], message: errorMessage(error) });
     });
+  pendingRuns.add(run);
+  void run.then(() => pendingRuns.delete(run));
   return job;
 }
 
@@ -408,23 +485,27 @@ export function stopJob(): DeskJob | null {
 /** Call one model with the prepared brief and parse its JSON reply. */
 async function writeWithModel(request: DeskWriteRequest): Promise<DeskWriteReply> {
   const modelConfig = getModelConfig(request.model);
-  const result = await streamTextWithConcurrency(
-    withModelConfig({
-      model: getModel(modelConfig),
-      providerOptions: buildProviderOptions(modelConfig),
-      maxRetries: 0,
-      abortSignal: request.signal,
-      messages: [
-        { role: 'system' as const, content: request.prompt },
-        { role: 'user' as const, content: 'Write the requested choices now.' },
-      ],
-      output: Output.object({ schema: writerReplySchema }),
-      stopWhen: () => true,
-    }, modelConfig),
-    { logger, timeoutRefresh: undefined } satisfies ConcurrencyContext,
-  );
-  const steps = result.steps;
-  const lastStep = steps[steps.length - 1];
+  let lastStep: StepResult<ToolSet> | undefined;
+  try {
+    const result = await streamTextWithConcurrency(
+      withModelConfig({
+        model: getModel(modelConfig),
+        providerOptions: buildProviderOptions(modelConfig),
+        maxRetries: 0,
+        abortSignal: request.signal,
+        messages: request.messages,
+        // Keep a finished step even if the stream wrapper detects an error afterward.
+        onStepEnd: step => { lastStep = step; },
+        output: Output.object({ schema: writerReplySchema }),
+        stopWhen: () => true,
+      }, modelConfig),
+      { logger, timeoutRefresh: undefined } satisfies ConcurrencyContext,
+      { useBatchManager: false },
+    );
+    lastStep = result.steps.at(-1) ?? lastStep;
+  } finally {
+    if (lastStep) request.recordReply(lastStep);
+  }
   const text = typeof lastStep?.text === 'string' ? stripJsonFence(lastStep.text).trim() : '';
   const variants = parseWriterVariants(text);
   if (!variants) throw new Error(`Model '${request.model}' returned no parsable choices.`);

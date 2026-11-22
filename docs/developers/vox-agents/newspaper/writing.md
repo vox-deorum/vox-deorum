@@ -2,11 +2,15 @@
 
 Use this guide to write or revise `vox-agents/newspaper/templates/`. Check the trigger and the [facts and names you can print](editorial.md#placeholders-and-facts) before you draft. Each story reads in one column. A [two-column page](designs.md#rendering-constraints) puts two briefs side by side.
 
-## Each story body should be about three sentences
+## Shape each body into paragraphs
+
+A short brief with one focus can use one paragraph. Start a new paragraph when the scene, time, speaker, or focus changes. The three jobs below describe what the body needs to cover; they do not set a paragraph count and do not each get one paragraph.
+
+Write the three sentences in the same paragraph, unless you *really* want to format them as different paragraphs.
 
 1. **Report the news.** Say what happened and name who or what it happened to. Put the main facts first. A crier can call the city by name. A pamphlet can open with “At last!”
-2. **Add an useful detail.** Explain what changed or show how people react. Use a scene or a quote if it tells readers something they need to know.
-3. **Say what it means.** Follow up with a consequence, a judgment, a request, or a joke. The last sentence should add something the first two set up.
+2. **Add a useful detail.** Explain what changed or show how people react. Use a scene or a quote if it tells readers something they need to know.
+3. **Say what it means.** Follow up with a consequence, a judgment, a request, or a joke. Think about how it can be useful or meaningful to your readers: reminding them to care more about happiness, to prepare for defense if enemies are gathering, or to be aware of a potential cultural victory. Don't be prescriptive, write in a natural way that fits the genre.
 
 ## Use everyday words and simple grammar structures
 
@@ -89,15 +93,8 @@ High unrest:
 
 - Does the first sentence tell readers what happened?
 - Did you use the names you know and pick civic terms where they fit?
-- Are the sentences easy to follow? Does the second add a fact or detail?
+- Are the sentences easy to follow? Does each paragraph keep one focus?
+- Does every new paragraph start because the scene, time, speaker, or focus changed?
 - Does the record back the claims? Do the numbers make sense in the story?
 - Does the ending follow from the news and fit the genre?
 - If this news comes up again, does the next version add something new?
-
-## Draft with the Writing Desk
-
-Open **Debug → Writing Desk** from a writable source checkout. The desk checks every unsettled stock variant by default. **Generate** uses only checked variants that match the current filters. Narrow the list or uncheck variants to reduce the batch, then choose your models and drafts per variant. Settle the current copy or a draft to write it back to the template file. Use **Unsettle** to reopen it.
-
-The desk groups variants by voice, stance, and genre, and sends up to eight variants per request. Each request includes relevant settled examples, favoring the same voice and template. Drafts disappear when Vox Agents restarts. Merge variants and templates reserved for the newspaper editor are outside the desk.
-
-The UI starts at `WritingDeskView.vue`. The catalogue, writer briefs, and save logic live in `vox-agents/src/newspaper/desk/`.

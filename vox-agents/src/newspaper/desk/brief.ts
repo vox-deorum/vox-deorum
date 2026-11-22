@@ -12,6 +12,7 @@ import { renderSystemPrompt } from '../../agents/prompts/prompt-files.js';
 import { defaultVariantStyle } from '../editorial/config/styles.js';
 import { chunkDeskVariants, deskChunkSize, deskRefKey } from './batch.js';
 import { deskTriggers, deskWritingRulesPath, type DeskCatalogue, type DeskTemplate, type DeskVariant } from './catalogue.js';
+import { normalizeParagraphs } from './paragraphs.js';
 import { deskTextPlaceholders, templateVariables } from './variables.js';
 
 /** Settled examples per variant before the request-wide deduplication. */
@@ -212,13 +213,13 @@ export function briefView(
     const found = findDeskVariant(catalogue, ref);
     if (!found) return [];
     const { template, variant } = found;
-    const current = variant.text;
+    const current = { ...variant.text, body: normalizeParagraphs(variant.text.body) };
     const used = deskTextPlaceholders(current);
     const links = (variant.links ?? []).map(({ placeholder }) => ({ placeholder, keep: used.has(placeholder) }));
     const formats = Object.entries(template.formats ?? {}).map(([name, format]) => ({ name, format }));
     const triggers = templateTriggers(template, catalogue);
     const siblings = template.variants.filter(sibling => sibling.id !== variant.id)
-      .map(({ id, text: { headline, body } }) => ({ id, headline, body }));
+      .map(({ id, text: { headline, body } }) => ({ id, headline, body: normalizeParagraphs(body) }));
     return [{
       templateId: template.id,
       variantId: variant.id,
@@ -255,6 +256,7 @@ export function briefView(
       stance: example.style.stance,
       genre: example.style.genre,
       ...example.text,
+      body: normalizeParagraphs(example.text.body),
     })),
     variants,
   };

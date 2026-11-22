@@ -6,7 +6,7 @@
   container-type: inline-size;
 }
 
-.desk-template-title, .desk-variant, .desk-variant-link, .desk-selection,
+.desk-template-title, .desk-variant, .desk-variant-link, .desk-variant-title,
 .desk-review-state, .desk-batch-models, .desk-batch-progress, .desk-error {
   display: flex;
   align-items: center;
@@ -128,7 +128,20 @@
   padding-inline: .75rem;
   font-size: .875rem;
 }
-.desk-selection { gap: .45rem; flex-wrap: wrap; min-width: 0; overflow-wrap: anywhere; }
+.desk-sheet .desk-sheet-header { align-items: baseline; }
+.desk-sheet .desk-sheet-header > span { white-space: nowrap; }
+.desk-selection { min-width: 0; overflow-wrap: anywhere; }
+.desk-variant-title { gap: 0 .45rem; flex-wrap: wrap; }
+.desk-variant-style {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .25rem 1.25rem;
+  margin: .3rem 0 0;
+  font-size: .8125rem;
+}
+.desk-variant-style > div { display: flex; flex-wrap: wrap; gap: 0 .375rem; }
+.desk-variant-style dt { font-weight: 400; }
+.desk-variant-style dd { margin: 0; font-weight: 600; }
 .desk-sheet-header h2 { margin: 0; font: inherit; }
 .desk-review-state { gap: .3rem; color: var(--p-green-600); }
 

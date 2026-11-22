@@ -28,7 +28,8 @@ import { createNewspaperDebugRoutes } from './routes/newspaper.js';
 import { ReplaySession } from '../newspaper/replay/session.js';
 import { mountReplayRoutes } from '../newspaper/replay/http.js';
 import { mountDeskRoutes } from '../newspaper/desk/http.js';
-import { stopJob as stopDeskJob } from '../newspaper/desk/generate.js';
+import { stopJob as stopDeskJob, waitForJob as waitForDeskJob } from '../newspaper/desk/generate.js';
+import { flushDeskTelemetry } from '../instrumentation.js';
 
 // Get __dirname in ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -115,6 +116,14 @@ async function closeWebServer(): Promise<void> {
     } finally {
       activeServer = null;
       activePort = null;
+      // A desk job may have started while newspaper exports were draining over HTTP.
+      stopDeskJob();
+      await waitForDeskJob();
+      try {
+        await flushDeskTelemetry();
+      } catch (error) {
+        webLogger.error('Could not flush Writing Desk telemetry', error);
+      }
     }
   }
 }

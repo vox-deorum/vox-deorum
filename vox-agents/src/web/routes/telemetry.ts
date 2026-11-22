@@ -17,6 +17,7 @@ import { errorMessage } from '../../utils/errors.js';
 import { WorkspaceStore } from '../../agents/workspace/workspace-store.js';
 import { materialize } from '../../agents/workspace/materialize.js';
 import { zipSink } from '../../agents/workspace/materialize-zip.js';
+import { deskTelemetryContextId } from '../../newspaper/desk/telemetry.js';
 import type {
   TelemetryDatabasesResponse,
   TelemetryMetadata,
@@ -190,8 +191,8 @@ router.post('/upload', upload.single('database'), async (req: Request, res: Resp
  * List active telemetry sessions from SQLiteSpanExporter
  */
 router.get('/sessions/active', async (_req: Request, res: Response<TelemetrySessionsResponse>) => {
-  // Get active connections (context IDs) from the exporter
-  const sessionIds = sqliteExporter.getActiveConnections();
+  // Writing Desk traces are stored for browsing but do not belong to a live game.
+  const sessionIds = sqliteExporter.getActiveConnections().filter(id => id !== deskTelemetryContextId);
 
   // Parse session IDs to extract game and player info
   const sessions: TelemetrySession[] = sessionIds.map(sessionId => {

@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { SpanStatusCode } from '@opentelemetry/api';
 import { config } from '../../../../src/agents/config/load.js';
+import { flushDeskTelemetry, sqliteExporter } from '../../../../src/instrumentation.js';
 import type { DeskCandidate, DeskGenerateRequest, DeskRef, DeskStyle, DeskText } from '../../../../src/types/api.js';
 import { deskWritingRulesPath, type DeskCatalogue, type DeskTemplate, type DeskVariant } from '../../../../src/newspaper/desk/catalogue.js';
 import type { DeskWriteReply, DeskWriter } from '../../../../src/newspaper/desk/generate.js';
@@ -109,6 +111,30 @@ const request = (refs: DeskRef[], choices = 1, models = [modelA]): DeskGenerateR
   choices,
 });
 
+/** Read the stored batch and all its requests from the isolated test database. */
+async function readTrace(jobId: string) {
+  await waitForJob();
+  await flushDeskTelemetry();
+  const db = sqliteExporter.openDatabaseFile('newspaper/newspaper-desk-player-0.db');
+  if (!db) throw new Error('No Writing Desk telemetry database was created.');
+  try {
+    const rows = await db.selectFrom('spans')
+      .selectAll()
+      .where(eb => eb(eb.ref('attributes', '->>').key('desk.job.id'), '=', jobId))
+      .execute();
+    const spans = rows.map(row => ({ ...row, attributes: JSON.parse(String(row.attributes)) }));
+    const root = spans.find(span => span.parentSpanId === null);
+    if (!root) throw new Error('No Writing Desk batch span was found.');
+    const requests = spans.filter(span => span.parentSpanId === root.spanId);
+    expect(requests).toHaveLength(spans.length - 1);
+    for (const span of requests) expect(span.traceId).toBe(root.traceId);
+    expect(spans.every(span => span.turn === null)).toBe(true);
+    return { root, requests };
+  } finally {
+    await db.destroy();
+  }
+}
+
 describe('newspaper desk generation', () => {
   beforeEach(() => {
     mocks.catalogue = catalogue();
@@ -120,15 +146,84 @@ describe('newspaper desk generation', () => {
   it('should preserve valid drafts across variants when part of a model reply is malformed', async () => {
     const one = { templateId: 'press-news', variantId: 'one' };
     const two = { templateId: 'press-news', variantId: 'two' };
+    const first = 'The news came at sunrise. The bells rang before noon.';
     mocks.stream.mockResolvedValue({ steps: [{ text: JSON.stringify({ variants: [
-      { ...one, choices: [{ headline: 'Missing body' }, { headline: 'A report', byline: null, body: ['', 'The news.'] }] },
-      { ...two, choices: [null, { headline: 'Another report', body: ['Other news.'] }] },
+      { ...one, choices: [{ headline: 'Missing body' }, { headline: 'A report', byline: null,
+        body: ['  ', `  ${first}\r\n \t\r\nLater, the road reopened.\r\nTravel resumed.  `, '', '  The next day, the first convoy arrived.'] }] },
+      { ...two, choices: [null] },
     ] }) }] });
-    await startJob(request([one, two]));
-    await waitForJob();
-    expect(getCandidates(one)).toEqual([expect.objectContaining({ headline: 'A report', body: ['The news.'] })]);
-    expect(getCandidates(two)).toEqual([expect.objectContaining({ headline: 'Another report', body: ['Other news.'] })]);
+    const job = await startJob(request([one, two]));
+    const { root, requests } = await readTrace(job.id);
+    expect(getCandidates(one)).toEqual([expect.objectContaining({
+      headline: 'A report',
+      body: [first, 'Later, the road reopened.\nTravel resumed.', 'The next day, the first convoy arrived.'],
+    })]);
+    expect(getCandidates(two)).toEqual([]);
     expect(getCurrentJob()).toMatchObject({ total: 1, done: 1, failed: 0 });
+    expect(root.attributes['desk.requests.partial']).toBe(1);
+    expect(requests[0].attributes['desk.outcome']).toBe('partial');
+  });
+
+  it('should persist the batch hierarchy, model, full exchanges and available token counts', async () => {
+    const ref = { templateId: 'press-news', variantId: 'one' };
+    const text = JSON.stringify(replyFor({ refs: [ref], choices: 1 }));
+    const replies = [{ role: 'assistant', content: [{ type: 'reasoning', text: 'Working notes' }, { type: 'text', text }] }];
+    mocks.stream.mockResolvedValue({ steps: [{
+      text,
+      response: {
+        messages: replies.map(reply => ({
+          ...reply,
+          providerOptions: { private: 'omit' },
+          content: reply.content.map(part => ({ ...part, providerMetadata: { private: 'omit' } })),
+        })),
+        headers: { private: 'omit' },
+      },
+      usage: { inputTokens: 25_000, outputTokens: 200, inputTokenDetails: { cacheReadTokens: 1024 },
+        outputTokenDetails: { reasoningTokens: 70 } },
+    }] });
+    const job = await startJob(request([ref], 1, [modelA, modelB]));
+    const { root, requests } = await readTrace(job.id);
+    expect(root.attributes).toMatchObject({
+      'desk.requests': 2, 'desk.requests.complete': 2,
+      'tokens.input': 50_000, 'tokens.input.cached': 2048, 'tokens.reasoning': 140,
+    });
+    expect(root.attributes['tokens.output']).toBe(requests.reduce((total, span) => total + span.attributes['tokens.output'], 0));
+    expect(requests.map(span => span.attributes['desk.model.alias']).sort()).toEqual([modelA, modelB]);
+    for (const span of requests) {
+      expect(span.attributes).toMatchObject({
+        model: `openai/${span.attributes['desk.model.alias']}`, 'desk.variant.ids': ['press-news/one'],
+        'desk.choices': 1, 'tokens.input': 25_000, 'tokens.input.cached': 1024,
+        'tokens.reasoning': 70, 'desk.outcome': 'complete',
+      });
+      expect(span.attributes['tokens.output']).toBeGreaterThan(0);
+      expect(JSON.parse(span.attributes['step.messages'])).toEqual(mocks.stream.mock.calls[0][0].messages);
+      expect(JSON.parse(span.attributes['step.responses'])).toEqual(replies);
+      expect(JSON.stringify(span.attributes)).not.toContain('"private"');
+    }
+  });
+
+  it('should keep an unparseable response in a failed request trace', async () => {
+    const raw = '  ```json\n"wrong reply shape"\n```  ';
+    mocks.stream.mockResolvedValue({ steps: [{ text: raw }] });
+    const job = await startJob(request([{ templateId: 'press-news', variantId: 'one' }]));
+    const { root, requests } = await readTrace(job.id);
+    expect(job.failed).toBe(1);
+    expect(root.attributes['desk.requests.failed']).toBe(1);
+    expect(requests[0]).toMatchObject({ statusCode: SpanStatusCode.ERROR, statusMessage: expect.any(String),
+      attributes: { 'desk.outcome': 'failed' } });
+    expect(JSON.parse(requests[0].attributes['step.responses'])[0].content[0].text).toBe(raw);
+  });
+
+  it('should keep good drafts when the response metadata cannot be serialized for telemetry', async () => {
+    const ref = { templateId: 'press-news', variantId: 'one' };
+    const text = JSON.stringify(replyFor({ refs: [ref], choices: 1 }));
+    const part = { type: 'text', text, unexpected: {} };
+    part.unexpected = part;
+    mocks.stream.mockResolvedValue({ steps: [{ text, response: { messages: [{ role: 'assistant', content: [part] }] } }] });
+    const job = await startJob(request([ref]));
+    await waitForJob();
+    expect(job.failed).toBe(0);
+    expect(getCandidates(ref)).toHaveLength(1);
   });
 
   afterEach(async () => {
@@ -159,20 +254,27 @@ describe('newspaper desk generation', () => {
     }
   });
 
-  it('should finish large batches without a total request cap', async () => {
+  it('should finish and trace large batches without dropping requests', async () => {
     const large = template('large-batch', ['science'], Array.from({ length: 101 }, (_, index) =>
       variant(`report-${index}`, { ...report, stance: `stance-${index}` })));
     mocks.catalogue = { ...catalogue(), templates: [large] };
     const refs = large.variants.map(({ id }) => ({ templateId: large.id, variantId: id }));
+    // A quick burst can exceed the standard telemetry buffer even with eight variants per request.
+    const models = Array.from({ length: 21 }, (_, index) => `desk-burst-${index}`);
+    for (const name of models) config.llms[name] = { provider: 'openai', name };
+    const total = refs.length * models.length;
     const writer = vi.fn<DeskWriter>(async input => replyFor(input));
     try {
-      const job = await startJob(request(refs, 1, [modelA, modelB]), writer);
-      await waitForJob();
-      expect(job).toMatchObject({ status: 'done', total: 202, done: 202, failed: 0 });
-      expect(writer).toHaveBeenCalledTimes(202);
-      expect(getCandidates(refs.at(-1)!)).toHaveLength(2);
+      const job = await startJob(request(refs, 1, models), writer);
+      const { root, requests } = await readTrace(job.id);
+      expect(job).toMatchObject({ status: 'done', total, done: total, failed: 0 });
+      expect(root.attributes['desk.requests.complete']).toBe(total);
+      expect(requests).toHaveLength(total);
+      expect(writer).toHaveBeenCalledTimes(total);
+      expect(getCandidates(refs.at(-1)!)).toHaveLength(models.length);
     } finally {
       for (const ref of refs) clearCandidates(ref);
+      for (const model of models) delete config.llms[model];
     }
   });
 
@@ -223,8 +325,11 @@ describe('newspaper desk generation', () => {
     expect(job.status).toBe('running');
     stopJob();
     release(replyFor({ refs: [ref], choices: 1 }));
-    await waitForJob();
+    const { root, requests } = await readTrace(job.id);
     expect(job.status).toBe('stopped');
+    expect(job.done).toBe(0);
+    expect(root.attributes['desk.requests.canceled']).toBe(1);
+    expect(requests[0].attributes['desk.outcome']).toBe('canceled');
     expect(getCandidates(ref)).toEqual([]);
   });
 
@@ -233,10 +338,12 @@ describe('newspaper desk generation', () => {
     const pending = new Promise<DeskWriteReply>(resolve => { release = resolve; });
     const writer: DeskWriter = () => pending;
     const ref = { templateId: 'press-news', variantId: 'one' };
-    await startJob(request([ref]), writer);
+    const job = await startJob(request([ref]), writer);
     clearCandidates(ref);
     release(replyFor({ refs: [ref], choices: 1 }));
-    await waitForJob();
+    const { root, requests } = await readTrace(job.id);
+    expect(root.attributes['desk.requests.discarded']).toBe(1);
+    expect(requests[0].attributes['desk.outcome']).toBe('discarded');
     expect(getCandidates(ref)).toEqual([]);
   });
 

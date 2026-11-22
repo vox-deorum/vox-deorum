@@ -23,6 +23,23 @@ These rules are the current guide for the stock newspaper catalogue.
 - Stance: {{style.stance}}{{#style.stanceGuidance}} - {{style.stanceGuidance}}{{/style.stanceGuidance}}
 - Genre: {{style.genre}}{{#style.genreGuidance}} - {{style.genreGuidance}}{{/style.genreGuidance}}
 
+## Paragraphs
+
+- Keep the sentences of a short brief together when they share a focus.
+- Start a new paragraph when it helps readers follow a change of scene, time, speaker, or focus.
+- Do not give every rhetorical beat its own paragraph or hold to a fixed paragraph count.
+- Each `body` entry is one paragraph. Do not put blank lines inside an entry.
+
+**One paragraph, one scene.** The news and the details belong together:
+
+> The council reopened the market this morning. By noon, bakers had sold out and the square smelled of bread again.
+
+**Two paragraphs when the focus shifts.** Start with what happened on the road, then turn to what it changed in town:
+
+> The last cart crossed the bridge before dawn. By sunrise the river had torn away both spans.
+>
+> At the town hall, the clerk moved tomorrow's hearing to the schoolhouse so families stranded on the east bank could attend.
+
 {{#hasExamples}}
 ## Settled examples
 
@@ -37,6 +54,7 @@ Headline: {{headline}}
 {{/subheadline}}{{#byline}}Byline: {{byline}}
 {{/byline}}{{#body}}
 > {{.}}
+
 {{/body}}
 
 {{/examples}}
@@ -99,11 +117,17 @@ Headline: {{headline}}
 #### Current text
 
 - Headline: {{current.headline}}
-- {{#current.subheadline}}Subheadline: {{current.subheadline}}
-- {{/current.subheadline}}{{#current.byline}}Byline: {{current.byline}}
-- {{/current.byline}}{{#current.body}}
+{{#current.subheadline}}
+- Subheadline: {{current.subheadline}}
+{{/current.subheadline}}
+{{#current.byline}}
+- Byline: {{current.byline}}
+{{/current.byline}}
+
+{{#current.body}}
 > {{.}}
-- {{/current.body}}
+
+{{/current.body}}
 
 {{/variants}}
 ## Output
@@ -113,7 +137,7 @@ Return one JSON object with a `variants` array. Include every variant from the r
 - `headline`: the headline, using only listed placeholders.
 - `subheadline`: a subheadline if needed, otherwise `null`.
 - `byline`: a byline if needed, otherwise `null`.
-- `body`: one or more paragraphs, using only listed placeholders.
+- `body`: one or more paragraphs, one entry per paragraph, using only listed placeholders. A short single-focus brief can use one paragraph.
 
 Example shape:
 
@@ -128,7 +152,7 @@ Example shape:
           "headline": "A headline",
           "subheadline": null,
           "byline": null,
-          "body": ["A first paragraph.", "A second paragraph."]
+          "body": ["A single cohesive paragraph."]
         }
       ]
     }

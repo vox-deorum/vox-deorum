@@ -9,6 +9,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { MockLanguageModelV4 } from 'ai/test';
 
 const mocks = vi.hoisted(() => ({
   hasBatchManager: vi.fn(() => true),
@@ -26,6 +27,7 @@ vi.mock('../../../../src/oracle/batch/format-converter.js', () => ({
 }));
 
 import { getExecutionTimeout, streamTextWithConcurrency, withModelConfig } from '../../../../src/agents/models/concurrency.js';
+import { createFakeLogger } from '../../../helpers/fake-logger.js';
 
 // The guard runs before any retry/streaming machinery, touching only context.timeoutRefresh.
 const fakeContext = { timeoutRefresh: () => {} } as any;
@@ -87,6 +89,32 @@ describe('streamTextWithConcurrency batch guard', () => {
     expect(mocks.enqueue).toHaveBeenCalledTimes(1);
     expect(mocks.convertToStepResult).toHaveBeenCalledWith({ id: 'chat-completion' }, undefined);
     expect(result).toEqual({ steps: ['converted', { id: 'chat-completion' }] });
+  });
+
+  it('streams a live request without submitting it to the active replay batch', async () => {
+    const model = new MockLanguageModelV4({
+      doStream: async () => ({
+        stream: new ReadableStream({
+          start(controller) {
+            controller.enqueue({ type: 'text-start', id: 'reply' });
+            controller.enqueue({ type: 'text-delta', id: 'reply', delta: 'live reply' });
+            controller.enqueue({ type: 'text-end', id: 'reply' });
+            controller.enqueue({
+              type: 'finish', finishReason: { unified: 'stop' },
+              usage: { inputTokens: { total: 1 }, outputTokens: { total: 2 } },
+            });
+            controller.close();
+          },
+        }),
+      }),
+    });
+    const params = withModelConfig({ model, prompt: 'Write a brief.' }, { provider: 'openai', name: 'live-test' });
+    const result = await streamTextWithConcurrency(params, {
+      logger: createFakeLogger() as any,
+      timeoutRefresh: undefined,
+    }, { useBatchManager: false });
+    expect(result.steps[0]?.text).toBe('live reply');
+    expect(mocks.enqueue).not.toHaveBeenCalled();
   });
 
   it('applies the step tool-input hooks while converting a batch response', async () => {
