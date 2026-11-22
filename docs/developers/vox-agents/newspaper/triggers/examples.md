@@ -64,7 +64,7 @@ In [`enemy-front-posture-offensive`](../../../../../vox-agents/newspaper/trigger
 
 ## Congress
 
-The [Congress rules](../../../../../vox-agents/newspaper/triggers/congress.json) and [templates](../../../../../vox-agents/newspaper/templates/congress.json) show two ways to cover the same institution. For an imminent session, check that `game.congress` is readable and available before comparing the expected session with next turn. For a result, match the permitted `ResolutionResult` event without needing a Congress snapshot. Its `resolutionType` can be a string or a number, so the templates offer a generic report as well as variants that require the name.
+The [Congress rules](../../../../../vox-agents/newspaper/triggers/congress.json) and [templates](../../../../../vox-agents/newspaper/templates/congress.json) cover upcoming sessions, new motions, and vote results. For an imminent session, check that `game.congress` is available before comparing the expected session with next turn. For a new motion, select from `game.congress.newProposals` entries with a recorded proposer. For a result, require both the resolution and proposer names on the public `ResolutionResult` event. The trigger checks the proposer so every variant can name them.
 
 ## Probe catalogue examples
 

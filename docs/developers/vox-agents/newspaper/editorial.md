@@ -101,7 +101,9 @@ Prose and typed link values use `{{name}}` placeholders. Headlines, subheadlines
 | `{{terms.leader}}` | The reader's leader name |
 | `{{terms.<name>}}` | A printable [term](triggers/constants.md#terms) defined by the catalogue, such as the receiver's capital |
 
-Use qualified names such as `{{city.owner.name}}` and `{{subject.id}}` for recorded identities. Require facts essential to the story in the trigger. Missing optional facts, such as a leader's name in a supporting detail, leave their placeholders unresolved; another variant can print without them. An empty link label or invalid link destination also makes a variant unprintable. The editor evaluates terms once per check and each variant cites the rows behind the terms it prints.
+Use qualified names such as `{{city.owner.name}}` and `{{subject.id}}` for recorded identities. Check facts essential to the story in the trigger's `when`. Every variant can then use those facts directly. For example, skip a Congress motion or vote result if its proposer cannot be named. Apply the same filter before choosing or counting items in a roundup.
+
+Variants can differ in supporting details. If an optional detail is missing, its placeholder remains unresolved and that variant cannot print. An empty link label or invalid link destination also makes a variant unprintable. The editor evaluates terms once per check and each variant cites the rows behind the terms it prints.
 
 List name placeholders in the template's `names` array without braces. For example, add `terms.leader` to the array when the body uses `{{terms.leader}}`. The reader underlines the resolved name with the `vd-name` CSS class, and any declared link stays clickable.
 

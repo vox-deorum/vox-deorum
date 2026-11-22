@@ -6,12 +6,15 @@
       "game.knows('congress')",
       "game.congress.available === true",
       "game.congress.knows('newProposals')",
-      "game.congress.newProposals.length > 0"
+      "game.congress.newProposals.some(p => p.knows('proposer') && p.proposer.trim())"
     ],
     "values": {
-      "count": "game.congress.newProposals.length",
-      "proposal": "game.congress.newProposals[0].name",
-      "ours": "self.knows('name') && game.congress.newProposals.some(p => p.knows('proposer') && p.proposer === self.name)"
+      "motions": "game.congress.newProposals.filter(p => p.knows('proposer') && p.proposer.trim()).map(p => ({ name: p.name, proposer: p.proposer }))",
+      "count": "motions.length",
+      "proposal": "motions[0].name",
+      "proposer": "motions[0].proposer",
+      "ourProposal": "self.knows('name') ? motions.find(p => p.proposer === self.name)?.name ?? null : null",
+      "ours": "ourProposal !== null"
     },
     "tier": "ours ? 'notable' : 'routine'",
     "tags": ["international", "congress"]
@@ -23,12 +26,13 @@
     "when": [
       "event.passed === false",
       "event.knows('resolutionType') && typeof event.resolutionType === 'string' && event.resolutionType.trim().length > 0",
-      "event.knows('isEnact') && typeof event.isEnact === 'boolean'"
+      "event.knows('isEnact') && typeof event.isEnact === 'boolean'",
+      "event.knows('proposerName') && typeof event.proposerName === 'string' && event.proposerName.trim().length > 0"
     ],
     "values": {
       "resolution": "event.resolutionType",
       "isEnact": "event.isEnact",
-      "proposer": "event.knows('proposerName') ? event.proposerName : null",
+      "proposer": "event.proposerName",
       "ours": "event.knows('player') && event.player.self === true"
     },
     "tier": "ours ? 'major' : 'routine'",
@@ -41,12 +45,13 @@
     "when": [
       "event.passed === true",
       "event.knows('resolutionType') && typeof event.resolutionType === 'string' && event.resolutionType.trim().length > 0",
-      "event.knows('isEnact') && typeof event.isEnact === 'boolean'"
+      "event.knows('isEnact') && typeof event.isEnact === 'boolean'",
+      "event.knows('proposerName') && typeof event.proposerName === 'string' && event.proposerName.trim().length > 0"
     ],
     "values": {
       "resolution": "event.resolutionType",
       "isEnact": "event.isEnact",
-      "proposer": "event.knows('proposerName') ? event.proposerName : null",
+      "proposer": "event.proposerName",
       "ours": "event.knows('player') && event.player.self === true"
     },
     "tier": "ours ? 'major' : 'notable'",
@@ -158,10 +163,13 @@
     "when": [
       "game.knows('congress')",
       "game.congress.available === true",
-      "(game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => worldProjects.includes(r.name))) || (game.congress.knows('proposals') && game.congress.proposals.some(p => worldProjects.includes(p.name)))"
+      "(game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => worldProjects.includes(r.name))) || (game.congress.knows('proposals') && game.congress.proposals.some(p => p.isEnact && worldProjects.includes(p.name) && p.knows('proposer') && p.proposer.trim()))"
     ],
     "values": {
-      "project": "(() => { const active = game.congress.knows('activeResolutions') ? game.congress.activeResolutions.find(r => worldProjects.includes(r.name)) : undefined; const proposal = game.congress.knows('proposals') ? game.congress.proposals.find(p => worldProjects.includes(p.name)) : undefined; return active ? active.name : proposal.name; })()"
+      "activeProject": "game.congress.knows('activeResolutions') ? game.congress.activeResolutions.find(r => worldProjects.includes(r.name))?.name ?? null : null",
+      "motion": "activeProject !== null ? null : (() => { const p = game.congress.proposals.find(p => p.isEnact && worldProjects.includes(p.name) && p.knows('proposer') && p.proposer.trim()); return { name: p.name, proposer: p.proposer }; })()",
+      "project": "activeProject ?? motion.name",
+      "proposer": "motion?.proposer ?? null"
     },
     "tier": "notable",
     "tags": ["international", "congress"]
@@ -185,10 +193,12 @@
     "when": [
       "game.knows('congress') && game.congress.available === true",
       "game.congress.knows('newProposals')",
-      "game.congress.newProposals.some(p => p.isEnact === true && p.name.startsWith('Sanction'))"
+      "game.congress.newProposals.some(p => p.isEnact === true && p.name.startsWith('Sanction') && p.knows('proposer') && p.proposer.trim())"
     ],
     "values": {
-      "resolution": "game.congress.newProposals.find(p => p.isEnact === true && p.name.startsWith('Sanction')).name"
+      "motion": "(() => { const p = game.congress.newProposals.find(p => p.isEnact === true && p.name.startsWith('Sanction') && p.knows('proposer') && p.proposer.trim()); return { name: p.name, proposer: p.proposer }; })()",
+      "resolution": "motion.name",
+      "proposer": "motion.proposer"
     },
     "tier": "major",
     "tags": ["international", "congress"]
@@ -199,10 +209,12 @@
     "when": [
       "game.knows('congress') && game.congress.available === true",
       "game.congress.knows('newProposals')",
-      "game.congress.newProposals.some(p => p.isEnact === false && p.name.startsWith('Sanction'))"
+      "game.congress.newProposals.some(p => p.isEnact === false && p.name.startsWith('Sanction') && p.knows('proposer') && p.proposer.trim())"
     ],
     "values": {
-      "resolution": "game.congress.newProposals.find(p => p.isEnact === false && p.name.startsWith('Sanction')).name"
+      "motion": "(() => { const p = game.congress.newProposals.find(p => p.isEnact === false && p.name.startsWith('Sanction') && p.knows('proposer') && p.proposer.trim()); return { name: p.name, proposer: p.proposer }; })()",
+      "resolution": "motion.name",
+      "proposer": "motion.proposer"
     },
     "tier": "notable",
     "tags": ["international", "congress"]
@@ -212,11 +224,12 @@
     "subject": "world",
     "when": [
       "game.knows('congress') && game.congress.available === true",
-      "game.congress.knows('newProposals') && game.congress.newProposals.some(p => p.isEnact && p.name.startsWith('Travel Ban'))"
+      "game.congress.knows('newProposals') && game.congress.newProposals.some(p => p.isEnact && p.name.startsWith('Travel Ban') && p.knows('proposer') && p.proposer.trim())"
     ],
     "values": {
-      "resolution": "game.congress.newProposals.find(p => p.isEnact && p.name.startsWith('Travel Ban')).name",
-      "proposer": "(() => { const p = game.congress.newProposals.find(p => p.isEnact && p.name.startsWith('Travel Ban')); return p.knows('proposer') ? p.proposer : null; })()"
+      "motion": "(() => { const p = game.congress.newProposals.find(p => p.isEnact && p.name.startsWith('Travel Ban') && p.knows('proposer') && p.proposer.trim()); return { name: p.name, proposer: p.proposer }; })()",
+      "resolution": "motion.name",
+      "proposer": "motion.proposer"
     },
     "tier": "notable",
     "tags": ["international", "congress", "culture"]
@@ -226,11 +239,12 @@
     "subject": "world",
     "when": [
       "game.knows('congress') && game.congress.available === true",
-      "game.congress.knows('newProposals') && game.congress.newProposals.some(p => p.isEnact === false && p.name.startsWith('Travel Ban'))"
+      "game.congress.knows('newProposals') && game.congress.newProposals.some(p => p.isEnact === false && p.name.startsWith('Travel Ban') && p.knows('proposer') && p.proposer.trim())"
     ],
     "values": {
-      "resolution": "game.congress.newProposals.find(p => p.isEnact === false && p.name.startsWith('Travel Ban')).name",
-      "proposer": "(() => { const p = game.congress.newProposals.find(p => p.isEnact === false && p.name.startsWith('Travel Ban')); return p.knows('proposer') ? p.proposer : null; })()"
+      "motion": "(() => { const p = game.congress.newProposals.find(p => p.isEnact === false && p.name.startsWith('Travel Ban') && p.knows('proposer') && p.proposer.trim()); return { name: p.name, proposer: p.proposer }; })()",
+      "resolution": "motion.name",
+      "proposer": "motion.proposer"
     },
     "tier": "notable",
     "tags": ["international", "congress", "culture"]
