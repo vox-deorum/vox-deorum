@@ -110,7 +110,7 @@ describe('stock foreign city desk', () => {
         type: 'link', target: { type: 'city', cityId: '20' },
       }));
       expect(story.record.sources).toContainEqual(expect.objectContaining({ table: 'GameEvents', id: 101 }));
-      expect(story.record.sources).toContainEqual(expect.objectContaining({ table: 'CityInformations', id: 2010 }));
+      expect(story.record.sources).toContainEqual(expect.objectContaining({ table: 'CityInformations', id: town.source.id }));
     });
 
     it('should prefer the player hook when both hooks report the same settlement', async () => {

@@ -1,0 +1,172 @@
+[
+  {
+    "id": "building-completed",
+    "subject": "event",
+    "event": "CityConstructed",
+    "when": [
+      "event.knows('player') && event.player.knows('id') && event.player.self === true",
+      "event.knows('city') && event.city.knows('name') && event.city.knows('owner') && event.city.owner.knows('id') && event.city.own === true",
+      "event.player.id === event.city.owner.id",
+      "event.knows('building') && !defenses.includes(event.building)",
+      "event.city.knows('importantBuildings') && Array.isArray(event.city.importantBuildings)",
+      "event.city.importantBuildings.includes(event.building)",
+      "event.knows('isGoldPurchase') && event.isGoldPurchase === false && event.knows('isFaithPurchase') && event.isFaithPurchase === false",
+      "!events.some(e => (e.type === 'PlayerCityFounded' || e.type === 'UnitCityFounded') && e.turn === event.turn && e.knows('plot') && event.knows('plot') && e.plot.x === event.plot.x && e.plot.y === event.plot.y)"
+    ],
+    "values": {
+      "building": "event.building",
+      "cityName": "event.city.name"
+    },
+    "tier": "filler",
+    "adjust": "event.stake.building",
+    "tags": ["cities", "domestic"]
+  },
+  {
+    "id": "building-investment-made",
+    "subject": "event",
+    "event": "CityInvestedBuilding",
+    "when": [
+      "event.knows('player') && event.player.knows('id') && event.player.self === true",
+      "event.knows('city') && event.city.knows('name') && event.city.knows('owner') && event.city.owner.knows('id') && event.city.own === true",
+      "event.player.id === event.city.owner.id",
+      "event.knows('building')",
+      "event.knows('invested') && (event.invested === true || event.invested === 1)",
+      "!events.some(e => e.type === 'CityConstructed' && e.knows('player') && e.player.knows('id') && e.player.id === event.player.id && e.knows('building') && e.building === event.building && e.knows('city') && e.city.knows('id') && event.city.knows('id') && e.city.id === event.city.id && e.knows('isGoldPurchase') && e.isGoldPurchase === false && e.knows('isFaithPurchase') && e.isFaithPurchase === false)"
+    ],
+    "values": {
+      "building": "event.building",
+      "cityName": "event.city.name"
+    },
+    "tier": "filler",
+    "adjust": "event.stake.building",
+    "tags": ["cities", "domestic"]
+  },
+  {
+    "id": "building-purchased",
+    "subject": "event",
+    "event": "CityConstructed",
+    "when": [
+      "event.knows('player') && event.player.knows('id') && event.player.self === true",
+      "event.knows('city') && event.city.knows('name') && event.city.knows('owner') && event.city.owner.knows('id') && event.city.own === true",
+      "event.player.id === event.city.owner.id",
+      "event.knows('building') && !defenses.includes(event.building)",
+      "event.city.knows('importantBuildings') && Array.isArray(event.city.importantBuildings)",
+      "event.city.importantBuildings.includes(event.building)",
+      "(event.knows('isGoldPurchase') && event.isGoldPurchase === true) || (event.knows('isFaithPurchase') && event.isFaithPurchase === true)"
+    ],
+    "values": {
+      "building": "event.building",
+      "cityName": "event.city.name",
+      "currency": "event.knows('isGoldPurchase') && event.isGoldPurchase === true ? 'gold' : 'faith'"
+    },
+    "tier": "filler",
+    "adjust": "event.stake.building",
+    "tags": ["cities", "domestic"]
+  },
+  {
+    "id": "city-defense-completed",
+    "subject": "event",
+    "event": "CityConstructed",
+    "when": [
+      "event.knows('building') && defenses.includes(event.building)",
+      "event.knows('player') && event.player.self === true",
+      "event.knows('city') && event.city.knows('name') && event.city.own === true"
+    ],
+    "values": {
+      "building": "event.building",
+      "cityName": "event.city.name"
+    },
+    "tier": "routine",
+    "adjust": "event.stake.building",
+    "tags": ["cities", "military", "domestic"]
+  },
+  {
+    "id": "foreign-building-completed",
+    "subject": "event",
+    "event": "CityConstructed",
+    "when": [
+      "event.knows('player') && event.player.knows('id') && event.player.self === false",
+      "event.knows('city') && event.city.knows('name') && event.city.knows('owner') && event.city.owner.knows('id') && event.city.owner.knows('name') && event.city.foreign === true",
+      "event.player.id === event.city.owner.id",
+      "event.city.is.nearby",
+      "event.knows('building') && !defenses.includes(event.building)",
+      "event.city.knows('importantBuildings') && Array.isArray(event.city.importantBuildings)",
+      "event.city.importantBuildings.includes(event.building)",
+      "event.knows('isGoldPurchase') && event.isGoldPurchase === false && event.knows('isFaithPurchase') && event.isFaithPurchase === false",
+      "!events.some(e => (e.type === 'PlayerCityFounded' || e.type === 'UnitCityFounded') && e.turn === event.turn && e.knows('plot') && event.knows('plot') && e.plot.x === event.plot.x && e.plot.y === event.plot.y)"
+    ],
+    "values": {
+      "building": "event.building",
+      "cityName": "event.city.name",
+      "civilization": "event.city.owner.name"
+    },
+    "tier": "filler",
+    "adjust": "event.stake.place",
+    "tags": ["cities", "international"]
+  },
+  {
+    "id": "foreign-building-purchased",
+    "subject": "event",
+    "event": "CityConstructed",
+    "when": [
+      "event.knows('player') && event.player.knows('id') && event.player.self === false",
+      "event.knows('city') && event.city.knows('name') && event.city.knows('owner') && event.city.owner.knows('id') && event.city.owner.knows('name') && event.city.foreign === true",
+      "event.player.id === event.city.owner.id",
+      "event.city.is.nearby",
+      "event.knows('building') && !defenses.includes(event.building)",
+      "event.city.knows('importantBuildings') && Array.isArray(event.city.importantBuildings)",
+      "event.city.importantBuildings.includes(event.building)",
+      "(event.knows('isGoldPurchase') && event.isGoldPurchase === true) || (event.knows('isFaithPurchase') && event.isFaithPurchase === true)"
+    ],
+    "values": {
+      "building": "event.building",
+      "cityName": "event.city.name",
+      "civilization": "event.city.owner.name",
+      "currency": "event.knows('isGoldPurchase') && event.isGoldPurchase === true ? 'gold' : 'faith'"
+    },
+    "tier": "filler",
+    "adjust": "event.stake.place",
+    "tags": ["cities", "international"]
+  },
+  {
+    "id": "foreign-building-investment-made",
+    "subject": "event",
+    "event": "CityInvestedBuilding",
+    "when": [
+      "event.knows('player') && event.player.knows('id') && event.player.knows('name') && event.player.self === false",
+      "event.knows('city') && event.city.knows('name') && event.city.knows('owner') && event.city.owner.knows('id') && event.city.owner.knows('name') && event.city.foreign === true",
+      "event.player.id === event.city.owner.id",
+      "event.city.is.nearby",
+      "event.knows('building') && typeof event.building === 'string' && event.building.length > 0",
+      "event.knows('invested') && (event.invested === true || event.invested === 1)",
+      "!events.some(e => e.type === 'CityConstructed' && (e.turn > event.turn || (e.turn === event.turn && e.id > event.id)) && e.knows('player') && e.player.knows('id') && e.player.id === event.player.id && e.knows('city') && e.city.knows('id') && event.city.knows('id') && e.city.id === event.city.id && e.knows('building') && e.building === event.building)"
+    ],
+    "values": {
+      "building": "event.building",
+      "owner": "event.city.owner.name"
+    },
+    "tier": "filler",
+    "adjust": "event.stake.place",
+    "tags": ["cities", "international"]
+  },
+  {
+    "id": "foreign-city-defense-completed",
+    "subject": "event",
+    "event": "CityConstructed",
+    "when": [
+      "event.knows('player') && event.player.knows('id') && event.player.knows('name') && event.player.self === false",
+      "event.knows('city') && event.city.knows('name') && event.city.knows('owner') && event.city.owner.knows('id') && event.city.owner.knows('name') && event.city.foreign === true",
+      "event.player.id === event.city.owner.id",
+      "event.city.is.nearby",
+      "event.knows('building') && defenses.includes(event.building)",
+      "!events.some(e => (e.type === 'PlayerCityFounded' || e.type === 'UnitCityFounded') && e.turn === event.turn && e.knows('plot') && event.knows('plot') && e.plot.x === event.plot.x && e.plot.y === event.plot.y)"
+    ],
+    "values": {
+      "building": "event.building",
+      "owner": "event.city.owner.name"
+    },
+    "tier": "routine",
+    "adjust": "event.stake.place",
+    "tags": ["cities", "military", "international"]
+  }
+]

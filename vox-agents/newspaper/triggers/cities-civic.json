@@ -1,0 +1,122 @@
+[
+  {
+    "id": "capital-outgrown",
+    "subject": "world",
+    "when": [
+      "self.knows('capital') && Number.isFinite(self.capital.population)",
+      "self.cities.some(c => c.knows('population') && c.population > self.capital.population)"
+    ],
+    "values": {
+      "largestPopulation": "Math.max(...self.cities.filter(c => c.knows('population') && Number.isFinite(c.population)).map(c => c.population))",
+      "largest": "(() => { const names = self.cities.filter(c => c.knows('population') && c.population === largestPopulation).map(c => c.name); return names.length <= 2 ? names.join(' and ') : names.slice(0, -1).join(', ') + ', and ' + names[names.length - 1]; })()",
+      "tied": "self.cities.filter(c => c.knows('population') && c.population === largestPopulation).length > 1",
+      "capital": "self.capital.name"
+    },
+    "tier": "routine"
+  },
+  {
+    "id": "cities-share-grievance",
+    "subject": "city",
+    "when": [
+      "city.own",
+      "city.knows('unhappiness')",
+      "city.unhappiness.top !== null"
+    ],
+    "group": {
+      "by": "city.unhappiness.top",
+      "min": 3
+    },
+    "tier": "notable",
+    "adjust": "10 * (count - 3)",
+    "tags": ["cities", "domestic"]
+  },
+  {
+    "id": "city-famine-unrest",
+    "subject": "city",
+    "when": [
+      "city.own",
+      "city.knows('unhappiness')",
+      "city.unhappiness.top === 'famine'"
+    ],
+    "values": {
+      "faminePopulation": "city.unhappiness.famine"
+    },
+    "tier": "notable",
+    "adjust": "city.stake.place",
+    "tags": ["cities", "domestic"]
+  },
+  {
+    "id": "city-growth-milestone",
+    "subject": "city",
+    "window": "recent",
+    "when": [
+      "city.knows('population') && city.population >= largeCity && city.knows('own') && city.own",
+      "city.knows('before') && city.before.knows('population') && Number.isFinite(city.before.population)",
+      "city.before.knows('owner') && city.before.owner.self",
+      "crossed(city.population, city.before.population, largeCity) || crossed(city.population, city.before.population, metropolis)"
+    ],
+    "values": {
+      "milestone": "crossed(city.population, city.before.population, metropolis) ? 'metropolis' : 'large city'",
+      "population": "city.population",
+      "cityName": "city.name"
+    },
+    "tier": "milestone === 'metropolis' ? 'notable' : 'routine'",
+    "tags": ["cities", "domestic"]
+  },
+  {
+    "id": "starvation-without-siege",
+    "subject": "city",
+    "when": [
+      "city.own",
+      "self.knows('atWar') && self.atWar === false",
+      "city.knows('unhappiness') && city.unhappiness.knows('top') && city.unhappiness.top !== 'famine'",
+      "city.knows('foodPerTurn') && Number.isFinite(city.foodPerTurn) && city.foodPerTurn < 0",
+      "city.knows('foodStored') && Number.isFinite(city.foodStored)",
+      "city.is.starving"
+    ],
+    "values": {
+      "foodPerTurn": "city.foodPerTurn",
+      "foodStored": "city.foodStored",
+      "shortfall": "-city.foodPerTurn"
+    },
+    "tier": "notable",
+    "adjust": ["city.stake.place", "Math.min(20, 5 * shortfall)"],
+    "tags": ["cities", "domestic"]
+  },
+  {
+    "id": "foreign-city-growth-milestone",
+    "subject": "city",
+    "window": "recent",
+    "when": [
+      "city.foreign === true && city.knows('name')",
+      "city.knows('owner') && city.owner.knows('id') && city.owner.knows('name')",
+      "city.is.nearby",
+      "city.knows('population') && Number.isFinite(city.population)",
+      "city.knows('before') && city.before.knows('population') && Number.isFinite(city.before.population)",
+      "city.before.knows('owner') && city.before.owner.knows('id') && city.before.owner.id === city.owner.id",
+      "crossed(city.population, city.before.population, largeCity) || crossed(city.population, city.before.population, metropolis)"
+    ],
+    "values": {
+      "population": "city.population",
+      "milestone": "crossed(city.population, city.before.population, metropolis) ? 'metropolis' : 'large city'"
+    },
+    "tier": "milestone === 'metropolis' ? 'notable' : 'routine'",
+    "adjust": "city.stake.place",
+    "tags": ["cities", "international"]
+  },
+  {
+    "id": "foreign-city-hardship",
+    "subject": "city",
+    "when": [
+      "city.foreign === true && city.knows('name')",
+      "city.knows('owner') && city.owner.knows('id') && city.owner.knows('name')",
+      "(city.knows('unhappiness') && city.unhappiness.knows('top') && (city.unhappiness.top === 'famine' || city.unhappiness.top === 'pillaged')) || (city.knows('foodPerTurn') && Number.isFinite(city.foodPerTurn) && city.foodPerTurn < 0 && city.knows('foodStored') && Number.isFinite(city.foodStored) && city.is.starving)"
+    ],
+    "values": {
+      "cause": "city.knows('unhappiness') && city.unhappiness.knows('top') && city.unhappiness.top === 'famine' ? 'famine' : city.knows('unhappiness') && city.unhappiness.knows('top') && city.unhappiness.top === 'pillaged' ? 'pillaged' : 'foodShortage'"
+    },
+    "tier": "notable",
+    "adjust": "city.stake.place",
+    "tags": ["cities", "international"]
+  }
+]

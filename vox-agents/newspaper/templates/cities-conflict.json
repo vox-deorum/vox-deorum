@@ -263,39 +263,5 @@
         "weight": { "base": 1 }
       }
     ]
-  },
-  {
-    "id": "foreign-city-takes-heavy-damage-account",
-    "triggers": ["foreign-city-takes-heavy-damage"],
-    "tags": ["cities", "military", "international"],
-    "names": ["city", "owner"],
-    "weight": { "base": 1 },
-    "variants": [
-      {
-        "id": "foreign-city-takes-heavy-damage-report",
-        "headline": "{{city}} is badly damaged",
-        "body": [
-          "{{city}} has taken heavy damage. Whole streets near the wall are empty, and families are carrying their bedding deeper into the city. {{owner}} has not said how long the repairs will take, and the market has moved into the narrow lanes behind the gate."
-        ],
-        "links": [
-          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
-        ],
-        "weight": { "base": 1 }
-      },
-      {
-        "id": "foreign-city-takes-heavy-damage-analysis",
-        "voice": "press",
-        "stance": "neutral",
-        "genre": "analysis",
-        "headline": "The cost of a battered {{city}}",
-        "body": [
-          "Heavy damage at {{city}} leaves {{owner}} with a city that must be rebuilt before it can be held. Walls, wells and storehouses all cost money, and a shaken population costs more. The bill will reach the capital before the repairs are finished."
-        ],
-        "links": [
-          { "placeholder": "city", "label": "{{city}}", "target": { "type": "city", "cityId": "{{cityId}}" } }
-        ],
-        "weight": { "base": 1 }
-      }
-    ]
   }
 ]
