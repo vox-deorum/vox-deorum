@@ -397,11 +397,14 @@
     "variants": [
       {
         "id": "foreign-wonder-completed-report",
-        "headline": "{{city}} completes the {{wonder}}",
+        "headline": "{{civilization}} completes the {{wonder}}",
         "body": [
-          "The {{wonder}} in {{city}} is finished, and the city answers to {{civilization}}. The scaffolding is barely down, and carters here already quote a fare to the gate. Innkeepers along the road are counting beds they do not yet have."
+          "The scaffolding is down from the {{wonder}} in {{city}}, {{civilization}}. The scaffolding is barely down, and carters are already asking for a fare to the gate. Merchants have set up stalls near the gate, selling food to people who came only to look."
         ],
-        "weight": { "base": 1 }
+        "weight": {
+          "base": 1
+        },
+        "settled": true
       },
       {
         "id": "foreign-wonder-completed-analysis",

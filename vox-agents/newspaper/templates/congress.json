@@ -745,21 +745,27 @@
         "genre": "report",
         "headline": "Travel limits proposed by {{proposer}}",
         "body": [
-          "{{proposer}} has put {{resolution}} before the Congress. Adopted, it would slow travel between every nation in the chamber. At the arrivals gate, a porter has already heard the rumor and is warning families not to book passage for the spring."
+          "{{proposer}} has put {{resolution}} before the Congress. The motion would apply border limits in every nation represented, including{{terms.civilization}}. In towns along the frontier roads, families are asking what a ban would mean for trade and for relatives living close to the line. Until the delegations decide, the crossings stay as they are."
         ],
-        "weight": { "base": 1 }
+        "weight": {
+          "base": 1
+        },
+        "settled": true
       },
       {
         "id": "travel-ban-proposed-letter",
         "voice": "gazette",
         "stance": "local",
         "genre": "letter",
-        "byline": "A Traveler",
-        "headline": "Will my cousins make it to the fair?",
+        "byline": "A Nervous Traveler",
+        "headline": "Will my cousins make it to my table?",
         "body": [
-          "Sir, my cousins across the border were to join us for the harvest supper. Now {{proposer}} has proposed {{resolution}}, and their last letter asks whether it will close the road between us. Can your paper find out what the delegates mean to do? I can give up the supper. I cannot give up my cousins."
+          "Sir, my cousins across the border were to join us for a family supper. Now {{proposer}} has proposed {{resolution}}. Can your paper find out what the Congress want to do? I can give up the supper. I cannot give up my cousins."
         ],
-        "weight": { "base": 1 }
+        "weight": {
+          "base": 1
+        },
+        "settled": true
       },
       {
         "id": "travel-ban-proposed-anecdote",
@@ -805,11 +811,15 @@
         "voice": "press",
         "stance": "artistic",
         "genre": "editorial",
-        "headline": "Give touring artists their audiences back",
+        "headline": "Give our artists a stage beyond our own borders",
         "body": [
-          "The chamber should back the motion from {{proposer}} to repeal {{resolution}} and open the roads to touring players. A troupe that draws half a house at home can pack a small hall across the water, and the takings carry it through the winter. Leave the roads shut, and our stages will keep recycling the same few names until the paint wears off."
+          "The Congress should vote for {{proposer}}'s motion to repeal {{resolution}}. {{terms.civic.leaderAddress}}, the lyricists and singers of {{terms.civilization}} have waited long enough at closed gates. Send them out, and they will bring back songs that make our people happy."
         ],
-        "weight": { "base": 1 }
+        "weight": {
+          "base": 1
+        },
+        "byline": "Editorial Board",
+        "settled": true
       },
       {
         "id": "travel-ban-repeal-proposed-crier",
@@ -818,9 +828,12 @@
         "genre": "notice",
         "headline": "Hear this, travelers: the ban may end",
         "body": [
-          "Travelers, hear this: {{proposer}} has asked the Congress to lift {{resolution}}. Until the vote is public, trust no one selling quick passage. Coin handed over at the dock rarely comes back at the border."
+          "Travelers, hear this: {{proposer}} has asked the Congress to lift {{resolution}}. Before the vote is public, trust no one selling quick passage. Coin handed over to them rarely comes back!"
         ],
-        "weight": { "base": 1 }
+        "weight": {
+          "base": 1
+        },
+        "settled": true
       }
     ]
   }
