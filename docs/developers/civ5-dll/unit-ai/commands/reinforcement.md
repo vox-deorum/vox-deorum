@@ -120,6 +120,8 @@ The fight's exposure and the Withdraw's `s⁺` read the fight's share `s`, which
 
 Native selection is described in full under [recruitment](recruitment.md#candidates-and-selection). After its reach check, it becomes the native admission proposal. An optional provider can retain it or admit a candidate subset before spotting or marching. Added candidates pass the same reach checks; failures stay excluded. The admitted group determines help, swing and any missing capture role without changing the chosen command's checked priority. See [participant admission](execution.md#participant-admission).
 
+Path and competing-target rejections can clear when a nearby unit moves or dies. A friendly unit can reopen the offer even when its move leaves it spent. The retry still runs the same [reach and safe embark checks](execution.md#reinforce-readiness).
+
 | Step | Rule |
 | --- | --- |
 | 1. Filter | Candidates beyond strike reach and within recruitment range. At an enemy city a candidate must also pass `CanStrikeCity`, so strength that cannot hurt the city is never counted. |

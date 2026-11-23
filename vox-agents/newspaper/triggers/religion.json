@@ -30,7 +30,7 @@
       "self.knows('foundedReligion') && typeof self.foundedReligion === 'string' && self.foundedReligion === city.majorityReligion",
       "city.conversions.some(c => c.knows('religion') && c.religion === city.majorityReligion)"
     ],
-    "values": { "cityState": "city.owner.name", "city": "city.name", "religion": "city.majorityReligion" },
+    "values": { "cityState": "city.owner.name", "religion": "city.majorityReligion" },
     "tier": "notable",
     "adjust": "city.owner.stake.relation",
     "tags": ["politics", "international"]

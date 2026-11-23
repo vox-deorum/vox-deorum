@@ -151,11 +151,11 @@ Counted enemies feed [Reinforce retirement](overview.md#overlapping-offers): an 
 
 | Rule | Detail |
 | --- | --- |
-| Source pool | The target's threat victims plus the [local strength set](#battlefield-estimate). At an enemy city, the garrison's victims also join. |
+| Source pool | The target's threat victims, the [local strength set](#battlefield-estimate), and eligible combat units sharing their plots. At an enemy city, the garrison's victims also join. |
 | Eligibility | A living land or sea combat unit on the turn's starting roster, outside an army, able to move, outside a friendly city, not a held garrison and not already in `withdrawnUnits`. |
 | Order | Ascending unit ID, without duplicates. |
 
-An endangered recruit starts the offer; healthy recruits can still add removable exposure and travel with it. The [Withdraw readiness check](withdrawal.md#readiness-and-execution) drops recruits whose domain has no destination. The [Withdraw page](withdrawal.md#recruits) covers how the group sets the priority and how execution moves it.
+An endangered recruit starts the offer. Other recruits can join if they have a legal first-turn stop. The [Withdraw readiness check](withdrawal.md#readiness-and-execution) scores those stops together before admission.
 
 ## Candidates and selection
 
@@ -172,7 +172,7 @@ An endangered recruit starts the offer; healthy recruits can still add removable
 | Enemy-dominated zone | Siege units are excluded. Our cities have no dominance gate. |
 | Healing | Units that should heal given the destination's territory are excluded. |
 | Donor zones | A unit from another zone stays if its zone is friendly or withdrawing, if it is embarked, or if it is a land unit in a safe city. Otherwise its zone keeps it. |
-| Rejection | A unit that fails this offer's reach check stays excluded from this offer for the rest of the turn. Other battlefields can still select it. |
+| Rejection | Excludes the unit from this offer until a relevant board change clears a temporary rejection. See [Reinforce readiness](execution.md#reinforce-readiness). |
 
 Travel time discounts incoming help. **Travel example** (2 base moves, distances 4 and 5, strength 100; all supplied).
 

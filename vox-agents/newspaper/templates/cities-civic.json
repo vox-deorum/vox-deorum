@@ -9,11 +9,14 @@
       {
         "id": "capital-outgrown-report",
         "when": "!tied",
-        "headline": "{{largest}} outgrows the capital",
+        "headline": "{{capital}} is no longer the largest city",
         "body": [
-          "The count in {{largest}} passed the capital this week, and the clerk who keeps the roll has ordered a longer table. The city now holds {{largestPopulation}} people against {{capital}}. For the first time, the realm's biggest crowd gathers outside the capital."
+          "{{largest}} has more residents than {{capital}}, according to the latest count, with {{largestPopulation}} people in its streets. While the capital remains the seat of {{terms.civic.government}}, its claim to the biggest population has ended."
         ],
-        "weight": { "base": 1 }
+        "weight": {
+          "base": 1
+        },
+        "settled": true
       },
       {
         "id": "capital-outgrown-tied",
@@ -21,11 +24,14 @@
         "stance": "neutral",
         "genre": "report",
         "when": "tied",
-        "headline": "{{largest}} pass the capital",
+        "headline": "No single largest city: {{largest}} level at {{largestPopulation}}",
         "body": [
-          "The roll has a tie at the top: {{largest}} each hold {{largestPopulation}} people, which puts every one of them past {{capital}}. A clerk in the capital has copied the figures twice to be sure. The table of city ranks has no first line, only a row of equals."
+          "The latest count puts {{largest}} level at {{largestPopulation}} people, each with more people than {{capital}}. The capital keeps the government offices and the official title, but the population record now places it behind the leaders."
         ],
-        "weight": { "base": 1 }
+        "weight": {
+          "base": 1
+        },
+        "settled": true
       },
       {
         "id": "capital-outgrown-analysis",
@@ -126,11 +132,14 @@
     "variants": [
       {
         "id": "city-famine-unrest-report",
-        "headline": "Famine grips {{city}}",
+        "headline": "Hunger tops the list in {{city}}",
         "body": [
-          "The bakeries of {{city}} are closing before noon, and the queues outside them form earlier each week. Famine now leads every other complaint in the city, leaving {{faminePopulation}} {{terms.civic.people}} unhappy. By the time the bread is gone, the square is empty."
+          "Famine is now the leading grievance in {{city}}, and {{faminePopulation}} {{terms.civic.people}} are unhappy. Bread lines form before sunrise, and the ovens go cold by noon. As the city has not announced new grain shipments, the square empties as soon as the last loaf is sold."
         ],
-        "weight": { "base": 1 }
+        "weight": {
+          "base": 1
+        },
+        "settled": true
       },
       {
         "id": "city-famine-unrest-analysis",
@@ -177,11 +186,14 @@
     "variants": [
       {
         "id": "city-growth-milestone-report",
-        "headline": "{{city}} reaches {{population}} people",
+        "headline": "A {{milestone}} at last: {{city}} passes {{population}}",
         "body": [
-          "A new lane has opened on the edge of {{city}}, and the washing lines are already up. The city now counts {{population}} people, which makes it a {{milestone}}. The council has begun to argue about where the next well should be dug."
+          "The count in {{city}} now stands at {{population}} people, making it a {{milestone}}. The newest lane is still muddy, but new families have already moved in. City officials say markets stays busy all day long, straining all kinds of public infrastructure."
         ],
-        "weight": { "base": 1 }
+        "weight": {
+          "base": 1
+        },
+        "settled": true
       },
       {
         "id": "city-growth-milestone-analysis",

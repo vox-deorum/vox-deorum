@@ -20,7 +20,7 @@ flowchart TD
 
 | Stage | What it supplies | Reference |
 | --- | --- | --- |
-| Recruit | The target's victims, the local strength set and each recruit's danger. | [Withdraw recruits](recruitment.md#withdraw-recruits) |
+| Recruit | The target's victims, the local strength set and combat units sharing their tiles. | [Withdraw recruits](recruitment.md#withdraw-recruits) |
 | Score | `X`, `s⁺` and priority. Rescored after every command and whenever Reinforce changes. | `EstimateWithdraw` in `civ5-dll/CvGameCoreDLL_Expansion2/CvTacticalOperationalLoop.cpp`. |
 | Search | The retreat weights in the plot score, the search purpose and the path step. | [Withdraw search](#withdraw-search) |
 | Check and execute | Destinations, the march rule, admission and path moves. | [Readiness and execution](#readiness-and-execution) |
@@ -67,7 +67,7 @@ The examples use the [value page's running inputs](value.md#running-example-inpu
 | Part | Reads as |
 | --- | --- |
 | `θ × w_R / Z_T` | The theater, risk weight and scale the fight uses, so both offers share one priority scale. |
-| `X / Z_T` | The exposure the whole recruit group takes with it, in typical units. |
+| `X / Z_T` | The net exposure the group saves, in typical units. |
 | `1 − s⁺` | The part our strength cannot protect. When the enemy has triple our strength and no help is coming, it is 0.9; when help brings parity, it is 0.5. A lower projection leaves the fight's share in place, so help never raises the priority. |
 | `0.7^n` | Discount for the offer's `n` failed readiness checks this turn: full priority before any failure, 70% after one, and 49% after two. |
 
@@ -80,21 +80,22 @@ The examples use the [value page's running inputs](value.md#running-example-inpu
 
 ## Removable exposure
 
-**Removable exposure** `X` is what each threat loses when the recruits leave. For every threat that reaches at least one recruit:
+**Removable exposure** `X` is the net reduction in danger attributed to known enemies. The opening estimate omits the recruits' current exposure without finding paths. Readiness compares holding the current plots with taking the legal first-turn stops. A unit without a stop stays where it is. Execution repeats the comparison if admission changes the group.
 
-`X = Σ (capped exposure over all victims − capped exposure over the victims that stay)`
+`X = max(0, Σ (capped exposure while holding − capped exposure after the moves))`
+
+Known direct hits on a shared tile go to the defender the game would choose. Area damage still reaches the other units on that tile. An embarked swordsman can take area damage while a warship escorts it, and can take the direct hit if the warship leaves. Units on other tiles keep their claims on the same attacker's limited attacks.
 
 Worth appears in the allocation cells and in the `X` (worth) column; the last column divides it by `Z_T`.
 
 | Part | Reads as |
 | --- | --- |
-| All victims | The threat's recorded `fExposure`, already capped at its attacks per turn. |
-| Victims that stay | The same cap applied after the recruits are removed. A threat with more attacks than staying victims keeps only what it can still hit. |
-| Threats with no recruit | Add nothing. |
+| Holding | The threat's recorded `fExposure`, already capped at its attacks per turn. |
+| After moving | The same cap applied to the projected occupants of affected tiles and the unchanged victims. |
 | Unattributed danger | Fog, terrain and improvement damage belongs to no threat and stays out of `X`. |
-| Overlapping battlefields | Two Withdraws can count the same `X` once each. Queue rank follows the estimate, so the higher Withdraw is checked first, but it can drop below the other when a check removes a domain without a destination. Its moved or lost units are then excluded from every later Withdraw that turn, so a lower one can take only what remains. |
+| Overlapping battlefields | Two Withdraws can count the same exposure initially. The higher estimate is checked first and can drop below the other after projection. A unit that moves or dies is excluded from later Withdraws that turn. |
 
-| Threat | Victims and allocations | `X` (worth) | `X / Z_T` |
+| Threat | Example opening allocations | `X` (worth) | `X / Z_T` |
 | --- | --- | --- | --- |
 | 1-attack knight | Archer at `0.72` (worth 288) that is not a recruit; spearman at `0.10` (worth 40) that is. The cap keeps the archer's 288; the stayer keeps 288. | 0 | 0 |
 | 1-attack knight | Archer at `0.72` (288) is a recruit; spearman at `0.10` (40) stays. Stays: 40. | `288 − 40 = 248` | `0.72 − 0.10 = 0.62` |
@@ -119,21 +120,21 @@ A recruit's value at risk is its contribution to `X` only when no staying victim
 
 ## Destination
 
-`WithdrawDestination` floods from the battlefield with the recruit range as its limit, in one domain, and takes the friendly city with the shortest path. When the battlefield plot does not suit the domain, the flood starts from the domain's first endangered recruit, or its first recruit when none is endangered. It is computed in `CheckWithdraw` and stored in `aiWithdrawDestination`: index 0 for land, 1 for sea, −1 when unset.
+`WithdrawDestination` searches for friendly cities within recruit range, separately for land and sea. It is computed in `CheckWithdraw` and stored in `aiWithdrawDestination`: index 0 for land, 1 for sea, −1 when unset.
 
 | Rule | Detail |
 | --- | --- |
 | Start | The battlefield plot when it suits the domain; otherwise the domain's first endangered recruit, or its first recruit when none is endangered. |
-| Friendly | Our city, a same-team city, or a city whose territory our units may enter under open borders. `IsFriendlyTerritory` checks team ownership and open borders only. |
+| Friendly | A same-team city, a city whose team grants us open borders, or a city-state whose territory we have permission to enter, for example through friendship. The first two also qualify for the search's friendly-city bonus. |
 | Domain | Land and sea get one destination each. A sea destination must be a coastal city that the naval flood reaches. |
-| Ties | Lower plot index. |
+| Ranking | Shortest path, with one step added for a city that grants territory access but does not qualify for the friendly-city bonus. Equal scores prefer a city with the bonus, then the lower plot index. |
 | Missing | A domain with no reached friendly city gets −1. |
 
-**Example.** A battlefield 5 plots inside enemy land has our border city 7 path steps away and a city-state with open borders 4 steps away, both within the recruit range. The land flood reaches the city-state, so the Withdraw heads there. That city is also the target of the domain's search.
+**Example.** Our border city is seven path steps away. A city-state that grants access through friendship wins if it is five steps away. At six steps, our border city wins because the search recognizes it as shelter.
 
 ## Withdraw search
 
-Each domain search runs with the purpose `Withdraw` and its own plot scoring. The retreat objective sits in the plot score, the value that orders candidate moves and replaces each unit's provisional score in a completed plan. The search therefore passes `bTargetDistanceRelevant = false`: the exploration-only pull toward the target and its "never move farther away" rule are off, and the pull home becomes a scored term. The constants are named `TACTICAL_WITHDRAW_*` in `CvTacticalAI.cpp`.
+Each destination gets one search with the purpose `Withdraw`. Land and sea recruits heading for the same port search together. The retreat objective sits in the plot score, the value that orders candidate moves and replaces each unit's provisional score in a completed plan. The search passes `bTargetDistanceRelevant = false` so the pull home becomes a scored term and units can step sideways. The constants are named `TACTICAL_WITHDRAW_*` in `CvTacticalAI.cpp`.
 
 The search covers plots within 5 steps of the destination, within 2 of enemies found there and within 1 of each unit. A candidate plot more than 6 path steps from the destination, or outside that set, is skipped, so a unit with no candidate left gets no search move and is left to the path step.
 
@@ -200,31 +201,31 @@ After a successful search, a recruit the search used stays where it is when its 
 
 ## Readiness and execution
 
-`CheckWithdraw` finds the destinations and accepts the offer when one endangered recruit can take a first step toward its destination without issuing orders. A host using a permitted objective menu can request a Withdraw directly, so the check returns no recruits for `withdraw.enabled` at 0 or an own-city battlefield before any gathering or destination work.
+`CheckWithdraw` finds a city for each recruit domain and compares holding with the first-turn stops it can reach. It issues no orders. A host using a permitted objective menu can request a Withdraw directly, so the check also guards against a disabled Withdraw or an own-city battlefield.
 
 | Result | Condition |
 | --- | --- |
 | Target gone | The target plot is missing. |
-| No recruits | No recruit, or no recruit's domain has a destination. |
-| Reduced | Recruits in a domain without a destination leave the estimate. A strict decrease returns the offer to the queue at the lower estimate, adds no failure, and turns it inactive if the estimate reaches 0. |
-| No reachable | After the reduction check, no endangered recruit with a destination can march toward it, or the path's first stop is the unit's own plot. |
-| Passed | At least one endangered recruit can march. |
+| No recruits | No units qualify, Withdrawal is disabled, or the battlefield is our city. |
+| No reachable | The checked group cannot save enough exposure to get a positive priority. This uses a readiness failure. |
+| Reduced | The comparison lowers the priority but leaves it positive. The offer returns to the queue without a failure. |
+| Passed | The projected moves save exposure and the priority has not fallen. |
 
 A failed check adds one failure and makes the offer inactive, or skipped at `readiness.maxFailures` (3). A later re-estimation can return an inactive offer to ready. It recalculates the priority from the current board and applies the accumulated failure discount, so a fight that opens a route can still enable a retreat. A reduced check counts no failure.
 
-**March rule.** A path passes when its first-turn stop stays within native's danger limit, or when the stop's danger is below both the current plot's danger and the unit's hit points. Staying is usually worse than that stop, and a lethal stop is still refused.
+**March rule.** From farther away, a retreat aims within two tiles of the city. From two tiles away it aims within one; from one tile away it aims for the city. Readiness and the path step use the same rule. The first stop must advance and stay within native's danger limit, or have danger below both the current plot's danger and the unit's hit points.
 
-`ExecuteWithdraw` follows the Reinforce path with these deviations:
+`ExecuteMarch` admits and scores the whole group before it issues a move. An unchanged group keeps the checked score. If the provider leaves units out, it scores them where they stand; an empty group records zero. Withdraw then follows the Reinforce path with these differences:
 
 | # | Deviation | Why |
 | --- | --- | --- |
-| 1 | Before admission, drop recruits whose domain has no destination, then clear the processed flag of every spent recruit. On every exit, restore the processed flag of each recruit that had one, when it still exists and is not dying. | A recruit without a destination stays out of admission and dispositions. A unit an earlier command spent is skipped by admission, the search and the path step, yet it may still have movement left. Processing gained during execution stays. |
+| 1 | Admit from the checked recruits. Temporarily clear any processed flag that would prevent a recruit from using its remaining movement. Restore the saved flags when the command ends. | A recruit without a legal first stop stays put. Processing gained during execution stays. |
 | 2 | No spotter move. | The destination is friendly territory. |
 | 3 | After the search, send every recruit that was not processed, or is still on its starting plot with movement left, but after a successful search leave a recruit the search used on a plot with no danger where it is. | The search now plans the retreat. The path step still moves recruits the search did not reach and rescues anyone it left exposed, and a chosen heal in safety stands. |
-| 4 | Order path moves by lowest health share first, civilians last. | Damaged units get the first chance to march within their domain. The search keeps its own order. |
+| 4 | Order path moves by lowest health share first, civilians last. | Damaged units get the first chance to march. The search keeps its own order. |
 | 5 | Use the [march rule](#readiness-and-execution). | A retreat may accept a stop that native refuses while staying is worse. |
 
-The admitted units split by domain, land first. Each nonempty domain with a destination runs one `PositionUnitsAroundTarget` call, so a command can run two searches, each with up to four attempts. Each search uses the `Withdraw` purpose with the destination as its target, turns target distance off because the retreat terms are in the plot score, and caps aggression at Low. The command merges both searches' attempts, timing and success, and keeps the first search's flavors, zones, provider request and validation result unless a later search's flavors were invalid; that search's details then replace them, and when both replies are invalid the first reply's details stay. A search that stops still merges what it recorded. `bSearchRan` is set before each search starts. The [records reference](reference.md#records) lists the command fields, including the units that moved or died.
+Admitted units headed to the same city share one search, even when they come from different domains. If land units head inland and ships head for a port, each city gets its own search. Every search uses the `Withdraw` purpose with target distance off and aggression capped at Low. The command merges their attempts and movement into one [record](reference.md#records).
 
 ## Closing the battlefield
 
