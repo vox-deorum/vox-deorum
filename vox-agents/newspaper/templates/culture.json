@@ -43,7 +43,7 @@
         "voice": "press",
         "stance": "rationalist",
         "genre": "analysis",
-        "headline": "The teacher stops correcting the words",
+        "headline": "The handle sells the jug now",
         "body": [
           "The clerks put the share of our habits held by {{rival}} at {{percentage}} percent, the point they now call Influential. A potter's wife on the east lane has sold her mother's jug shape for a foreign handle because buyers reached for it first. It is only a count of taste, and taste can be counted again next season."
         ],
@@ -399,7 +399,7 @@
         "id": "foreign-wonder-completed-report",
         "headline": "{{civilization}} completes the {{wonder}}",
         "body": [
-          "The scaffolding is down from the {{wonder}} in {{city}}, {{civilization}}. The scaffolding is barely down, and carters are already asking for a fare to the gate. Merchants have set up stalls near the gate, selling food to people who came only to look."
+          "The scaffolding is down from the {{wonder}} in {{city}}, {{civilization}}. The ropes that raised the last stone lie coiled on the paving. A boy has climbed the fence to touch the new wall, and no one has chased him off."
         ],
         "weight": {
           "base": 1
@@ -411,9 +411,9 @@
         "voice": "press",
         "stance": "ambitious",
         "genre": "analysis",
-        "headline": "The {{wonder}} makes {{civilization}} hard to forget",
+        "headline": "A stonecutter asks what our yards could raise",
         "body": [
-          "The {{wonder}} now stands finished in {{civilization}}, and its newspapers will be full of the story for a season. A stonecutter here read the account twice and then asked his foreman what our own yards might raise with the same will and better stone. The next great work should answer that question."
+          "The {{wonder}} now stands finished in {{civilization}}, and a stonecutter here read the account twice before he went back to his bench. He asked his foreman what our own yards might raise with the same will and better stone. The foreman had no answer, and the yard went quiet. The next commission will go to the yard that can answer him."
         ],
         "links": [],
         "weight": { "base": 1 }
@@ -425,7 +425,7 @@
         "genre": "anecdote",
         "headline": "They will walk you through every stone",
         "body": [
-          "The boards came down at {{city}} last week, and a carter who walked through the {{wonder}} says the crowd did it in silence. He has been describing the roof to anyone who will listen since he got back. Crowds do not usually go quiet."
+          "The boards came down at {{city}}, and a carter who walked through the {{wonder}} says the crowd did it in silence. He has been describing the roof to anyone who will listen since he got back. Crowds do not usually go quiet."
         ],
         "weight": { "base": 1 }
       },
@@ -436,7 +436,7 @@
         "genre": "report",
         "headline": "The {{wonder}} at {{city}} is complete",
         "body": [
-          "Innkeepers in {{city}} report a busy season since the {{wonder}} opened, with guests from many nations, ours among them. A quarrel between courts does not close a good hall to travelers. May the road stay open and the crowds keep coming."
+          "Letters from {{city}} relate that the {{wonder}} now stands finished there, and that the masons' guild rang its bell when the last stone went up. Whatever divides the courts, a work like this is a pleasure shared. May it long draw a crowd."
         ],
         "weight": { "base": 1 }
       }
@@ -603,7 +603,7 @@
         "stance": "populist",
         "genre": "anecdote",
         "when": "ours === false",
-        "headline": "The autograph he missed",
+        "headline": "The loaf in the window",
         "body": [
           "Word came that {{civilization}} had spent {{person}} in a single great act, and a baker there set a loaf aside for the hero and would sell it to no one. By the third day it was hard as a brick. He put it in the window anyway, and a sign beneath it says the shop remembers."
         ],
@@ -654,7 +654,7 @@
         "voice": "tabloid",
         "stance": "local",
         "genre": "anecdote",
-        "headline": "The crates came up from the docks before dawn",
+        "headline": "The widow came every afternoon",
         "body": [
           "The gallery in {{city}} took in {{added|new work|new works}} this week, and a widow came every afternoon to look at one of them. She stayed until the lamplighter rattled his ladder on the third day and told him she had once seen that hall in a dream. The guards let her stay."
         ],
@@ -705,7 +705,7 @@
         "voice": "spoken",
         "stance": "local",
         "genre": "anecdote",
-        "headline": "The nail is still in the wall",
+        "headline": "A frame waiting for a picture",
         "body": [
           "The frame maker in {{city}} still cuts moulding in the old pattern, though no one has ordered it since the collection shrank. The city has lost {{lost|great work|great works}}, and the rest of the nation will hardly notice. He keeps one finished frame leaning against the wall, waiting for a picture that will not come back."
         ],
@@ -745,7 +745,7 @@
         "voice": "press",
         "stance": "ambitious",
         "genre": "analysis",
-        "headline": "The innkeeper at {{city}}'s {{wonder}} orders a second cart",
+        "headline": "The carter at {{city}}'s {{wonder}} charges by the seat",
         "body": [
           "The {{wonder}} at {{city}} is open, and the road to it is busy: a carter now charges by the seat and still fills his bench before the gate. Travelers are arriving from towns that had no business with us a year ago, and the inns have raised their prices. The next step is to give those visitors a second reason to stay the night."
         ],

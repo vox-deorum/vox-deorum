@@ -169,10 +169,10 @@
       "player.questObservationTurn <= turn && turn - player.questObservationTurn <= 1",
       "player.knows('before')",
       "player.before.knows('questDeadlines') && Array.isArray(player.before.questDeadlines)",
-      "player.questDeadlines.some(deadline => deadline > turn + 3 && !player.before.questDeadlines.includes(deadline))"
+      "player.questDeadlines.some(deadline => Number.isSafeInteger(deadline) && deadline > turn + 3 && !player.before.questDeadlines.includes(deadline))"
     ],
     "values": {
-      "turnsLeft": "Math.min(...player.questDeadlines.filter(deadline => deadline > turn + 3 && !player.before.questDeadlines.includes(deadline))) - turn",
+      "turnsLeft": "Math.min(...player.questDeadlines.filter(deadline => Number.isSafeInteger(deadline) && deadline > turn + 3 && !player.before.questDeadlines.includes(deadline))) - turn",
       "cityState": "player.name"
     },
     "tier": "filler",

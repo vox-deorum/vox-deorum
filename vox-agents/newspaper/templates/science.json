@@ -98,7 +98,7 @@
         "genre": "analysis",
         "headline": "A neighbor's new learning",
         "body": [
-          "What does {{tech}} in the hands of {{team}} change for us? Their workshops keep lamps burning past midnight now, and a drover who passes the gate says the guards have stopped asking his business. A neighbor with new tools and late hours is preparing for something, and our own benches should not be the last to hear of it."
+          "What does {{tech}} in the hands of {{team}} change for us? Their workshops keep lamps burning past midnight, and a drover who passes the gate says the guards have begun asking traders their names and writing them down. A neighbor who keeps such a list is worth watching, and our own benches should not be the last to hear of it."
         ],
         "weight": { "base": 1 }
       },
@@ -232,7 +232,7 @@
         "genre": "report",
         "headline": "One more for the home team",
         "body": [
-          "{{tech}} is ours. The scholars get the credit, the printers get the work, and the rest of us get one more useful thing by next season."
+          "{{tech}} is ours. The scholars get the credit, the printers get the work, and the rest of us get to hear it explained at supper by someone who has read half the report."
         ],
         "weight": { "base": 1 }
       },
@@ -297,7 +297,7 @@
         "when": "distance !== null",
         "headline": "Up the road, a new era",
         "body": [
-          "{{civilization}} is in the {{era}} as of this week, and its nearest city is only {{distance}} from our own gate. The old soldiers at the border tavern keep asking for a column on the road or a banner on the wall to point at, and the road gives them nothing, which is what makes them grumble. A neighbor that adds to its learning adds to its strength, and that neighbor is two doors down."
+          "{{civilization}} is in the {{era}}, and its nearest city is only {{distance}} from our own gate. The old soldiers at the border tavern keep asking for a column on the road or a banner on the wall to point at, and the road gives them nothing, which is what makes them grumble. They have started counting the carts instead."
         ],
         "links": [],
         "weight": { "base": 1 }
@@ -321,7 +321,7 @@
         "genre": "editorial",
         "headline": "A rival enters the {{era}}. And us?",
         "body": [
-          "{{civilization}} has entered the {{era}}, {{terms.civic.people}}, and its {{player.civic.government}} will soon be telling anyone who listens how little it cost. Ask our own {{terms.civic.government}} the same question and watch the answer turn into a speech. What did we pay to keep pace, and whose purse was opened? A government that cannot show the bill should not ask for the credit."
+          "{{civilization}} has entered the {{era}}, {{terms.civic.people}}, and its {{player.civic.government}} will want credit for every schoolbook and scaffold it can point to. Ask our own {{terms.civic.government}} what it spent on our scholars and watch the answer turn into a speech. A government that cannot show the bill should not ask for the credit."
         ],
         "links": [],
         "weight": { "base": 1 }
