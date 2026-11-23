@@ -14,10 +14,10 @@ import DeskWritingRows from '@/components/newspaper/DeskWritingRows.vue';
 import DeskBatchBar from '@/components/newspaper/DeskBatchBar.vue';
 import { useWritingDesk, type DeskApprovalSnapshot, type DeskShow } from '@/stores/writing-desk';
 import { errorMessage } from '@/utils/errors';
-import type { DeskRef, DeskStyle, DeskStyleRequest, DeskText } from '@/utils/types';
+import type { DeskRef, DeskStyle, DeskStyleRequest } from '@/utils/types';
 
 const {
-  catalogue, tags, show, search, groups, eligible, checked, selected, detail, draft, job, models, availableModels,
+  catalogue, tags, show, search, groups, eligible, checked, selected, detail, openRow, draft, edits, job, models, availableModels,
   choices, requestCount, candidateCount, error, detailLoading, saving, starting, stopping, clearing, busy,
   load, select, check, toggleAll, edit, save, saveStyle, approvalSnapshot, saveMany, generate, stop, clearDrafts, addModel,
 } = useWritingDesk();
@@ -64,7 +64,7 @@ async function confirmStyle() {
   }
 }
 
-/** Freeze the copies shown in the approval dialog, including the open edit. */
+/** Freeze the copies shown in the approval dialog, including any edits. */
 function openApproval() {
   approval.value = approvalSnapshot();
   if (!approval.value) return;
@@ -124,11 +124,6 @@ const showOptions: { label: string; value: DeskShow }[] = [
   { label: 'Unsettled', value: 'unsettled' },
   { label: 'Settled', value: 'settled' },
 ];
-const editText = computed({
-  get: () => draft.value?.text,
-  set: (text: DeskText | undefined) => { if (draft.value && text) draft.value.text = text; },
-});
-
 onMounted(load);
 </script>
 
@@ -198,8 +193,8 @@ onMounted(load);
           </header>
           <div v-if="detailLoading" class="table-empty" role="status">Loading the variant…</div>
           <div v-else-if="detail" class="desk-rows">
-            <DeskWritingRows v-model:draft="editText"
-              :detail="detail" :open-row="draft?.row" :saving="saving || clearing" @edit="edit" @save="save" />
+            <DeskWritingRows v-model:draft="draft" :detail="detail" :open-row="openRow" :edits="edits?.copies"
+              :saving="saving || clearing" @edit="edit" @save="save" />
           </div>
           <div v-else class="table-empty">
             <i class="pi pi-file-edit" aria-hidden="true" />

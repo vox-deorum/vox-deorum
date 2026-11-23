@@ -29,6 +29,8 @@ A **reachable-plots query** runs pathfinding without a destination. It returns e
 
 When a simulated kill frees a plot, subsequent queries can ignore that dead unit's zone of control.
 
+Tactical scoring also needs the number of steps from each plot to the target. `UpdatePlotDistanceToTarget` builds separate land and sea maps with `GetPlotsInReachSimple`. It visits plots in breadth-first order because each step has the same cost and eligibility depends only on the plot. Individual unit movement still uses the general pathfinder.
+
 ### Danger in path cost
 
 For AI units, end-of-turn path cost penalizes risky water, foreign or unowned territory, poor terrain, and unknown plots. Its main cost is projected danger relative to current health. High-danger stops in the near future cost more; later stops matter less because they will be re-planned. Civilians and embarked units receive stronger penalties and can be rejected outright by the abort-in-danger policy.

@@ -190,21 +190,33 @@ describe('WritingDeskView', () => {
     expect(wrapper.find('.desk-batch').exists()).toBe(false);
   });
 
-  it('should switch the one open editor and save its edited copy', async () => {
+  it('should keep candidate edits while switching rows and variants and settle the collapsed copy', async () => {
     await selectVariant('gazette');
     await row('first').get('.desk-copy').trigger('click');
-    expect(row('first').findAll('textarea')).toHaveLength(3);
+    await row('first').get('textarea').setValue('My first headline');
     await row('second').get('.desk-copy').trigger('click');
     expect(row('first').find('textarea').exists()).toBe(false);
-    await row('second').get('textarea').setValue('My headline');
+    await row('second').get('textarea').setValue('My second headline');
+    await selectVariant('report');
+    await selectVariant('gazette');
+
+    await row('first').get('.desk-copy').trigger('click');
+    expect(row('first').get('textarea').element.value).toBe('My first headline');
+    await action('Close editor').trigger('click');
+    expect(row('first').get('.desk-copy').text()).toContain('My first headline');
+    expect(row('second').get('.desk-copy').text()).toContain('My second headline');
+    expect(api.settleDeskVariant).not.toHaveBeenCalled();
+
     api.settleDeskVariant.mockResolvedValue({ ...initial, settled: true, candidates: [] });
-    await action('Settle candidate: Second account').trigger('click');
+    await action('Settle candidate: My first headline').trigger('click');
     expect(api.settleDeskVariant).toHaveBeenCalledWith(expect.objectContaining({ variantId: 'gazette' }),
-      expect.objectContaining({ headline: 'My headline', body: ['Another paragraph'], revision: 'r1' }));
+      expect.objectContaining({ headline: 'My first headline', body: choices[0]!.body, revision: 'r1' }));
   });
 
   it('should keep multiple approval choices after rejection and refresh siblings after saving', async () => {
     await selectVariant('gazette');
+    await row('current').get('.desk-copy').trigger('click');
+    await row('current').get('textarea').setValue('Edited current account');
     await row('second').get('.desk-copy').trigger('click');
     await row('second').get('textarea').setValue('Edited second account');
     await action('Settle multiple…').trigger('click');
@@ -236,7 +248,7 @@ describe('WritingDeskView', () => {
     await flushPromises();
 
     expect(api.settleDeskVariants).toHaveBeenLastCalledWith({ templateId: 'era', variantId: 'gazette' },
-      { revision: 'r1', primary, siblings: [original] });
+      { revision: 'r1', primary, siblings: [{ ...original, headline: 'Edited current account' }] });
     expect(wrapper.get('.desk-overall').text()).toBe('3/3 settled');
     expect(wrapper.findAll('.desk-variant-id').map(variant => variant.text())).toContain('gazette-1');
     expect(row('current').text()).toContain(primary.headline);
@@ -254,7 +266,10 @@ describe('WritingDeskView', () => {
 
   it('should clear drafts only on confirmation even when the filters hide all unsettled variants', async () => {
     await selectVariant('gazette');
+    await row('current').get('.desk-copy').trigger('click');
+    await row('current').get('textarea').setValue('Current copy edit');
     await row('first').get('.desk-copy').trigger('click');
+    await row('first').get('textarea').setValue('Candidate edit');
     await action('Settled').trigger('click');
     expect(wrapper.findAll('.desk-variant-id').map(variant => variant.text())).toEqual(['report']);
     await action('Clear drafts').trigger('click');
@@ -274,7 +289,7 @@ describe('WritingDeskView', () => {
 
     expect(api.clearDeskCandidates).toHaveBeenCalledTimes(1);
     expect(wrapper.find('[data-row="first"]').exists()).toBe(false);
-    expect(row('current').text()).toContain(original.headline);
+    expect(row('current').get('.desk-copy').text()).toContain('Current copy edit');
     expect(wrapper.get('.desk-overall').text()).toBe('1/2 settled');
     expect(wrapper.find('.desk-batch').exists()).toBe(false);
   });
@@ -389,11 +404,12 @@ describe('WritingDeskView', () => {
     });
   });
 
-  it('should preserve the draft and its starting revision through a poll refresh', async () => {
+  it('should preserve a closed draft and its starting revision through a poll refresh', async () => {
     vi.useFakeTimers();
     await selectVariant('gazette');
     await row('first').get('.desk-copy').trigger('click');
     await row('first').get('textarea').setValue('My unsaved edit');
+    await action('Close editor').trigger('click');
     api.startDeskJob.mockResolvedValue(running);
     await action('Generate').trigger('click');
     await flushPromises();
@@ -401,9 +417,9 @@ describe('WritingDeskView', () => {
     api.getDeskVariant.mockResolvedValue({ ...initial, revision: 'new', candidates: [choices[1]] });
     await vi.advanceTimersByTimeAsync(deskPollIntervalMs);
     await flushPromises();
-    expect(row('first').get('textarea').element.value).toBe('My unsaved edit');
+    expect(row('first').get('.desk-copy').text()).toContain('My unsaved edit');
     api.settleDeskVariant.mockResolvedValue({ ...initial, settled: true, candidates: [] });
-    await action('Settle candidate: First account').trigger('click');
+    await action('Settle candidate: My unsaved edit').trigger('click');
     expect(api.settleDeskVariant).toHaveBeenCalledWith(expect.objectContaining({ variantId: 'gazette' }),
       expect.objectContaining({ revision: 'r1', headline: 'My unsaved edit' }));
   });

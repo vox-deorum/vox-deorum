@@ -1,4 +1,4 @@
-import { computed, onScopeDispose, ref, watch } from 'vue';
+import { computed, onScopeDispose, reactive, ref, watch } from 'vue';
 import { api } from '@/api/client';
 import { errorMessage } from '@/utils/errors';
 import type {
@@ -19,9 +19,13 @@ export interface DeskVariantGroup {
 }
 
 interface EditDraft {
-  row: string;
-  revision: string;
+  source: DeskText | DeskCandidate;
   text: DeskText;
+}
+
+interface VariantEdits {
+  revision: string;
+  copies: Map<string, EditDraft>;
 }
 
 export interface DeskApprovalSnapshot {
@@ -34,6 +38,11 @@ export interface DeskApprovalSnapshot {
 function copyText(text: DeskText): DeskText {
   const { headline, subheadline, byline, body } = text;
   return { headline, subheadline, byline, body: [...body] };
+}
+
+/** Find the original copy for an editor row. */
+function rowSource(detail: DeskVariantDetail, row: string): DeskText | DeskCandidate | undefined {
+  return row === deskCurrentRow ? detail.text : detail.candidates.find(candidate => candidate.id === row);
 }
 
 /** Keep the desk state for one visit while the server owns jobs and candidates. */
@@ -69,7 +78,31 @@ export function useWritingDesk() {
   });
   const selected = ref<DeskRef>();
   const detail = ref<DeskVariantDetail>();
-  const draft = ref<EditDraft>();
+  const openRow = ref<string>();
+  const editsByVariant = reactive(new Map<string, VariantEdits>());
+  const edits = computed(() => detail.value && editsByVariant.get(deskRefKey(detail.value)));
+  const draft = computed<DeskText | undefined>({
+    /** Load the retained edit or start with the row's original text. */
+    get() {
+      const row = openRow.value;
+      if (!detail.value || !row) return;
+      const edited = edits.value?.copies.get(row);
+      if (edited) return edited.text;
+      const source = rowSource(detail.value, row);
+      return source && copyText(source);
+    },
+    /** Keep each changed row independently of which editor is open. */
+    set(text) {
+      const current = detail.value;
+      const row = openRow.value;
+      if (!current || !row || !text) return;
+      const source = rowSource(current, row);
+      if (!source) return;
+      const saved = edits.value ?? { revision: current.revision, copies: new Map<string, EditDraft>() };
+      saved.copies.set(row, { source, text });
+      editsByVariant.set(deskRefKey(current), saved);
+    },
+  });
   const job = ref<DeskJob | null>(null);
   const models = ref<string[]>([]);
   const discoveredModels = ref<string[]>([]);
@@ -104,22 +137,26 @@ export function useWritingDesk() {
     catalogue.value = result;
   }
 
-  /** Load one detail while protecting the active row and revision during a draft. */
+  /** Load detail without letting batch results displace copies being edited. */
   async function loadDetail(target: DeskRef, refresh = false) {
     const request = ++detailRequest;
     const result = await api.getDeskVariant(target);
     if (disposed || request !== detailRequest) return;
-    const editing = draft.value;
-    const current = detail.value;
-    if (refresh && editing && current) {
-      const candidate = current.candidates.find(row => row.id === editing.row);
-      const candidates = candidate && !result.candidates.some(row => row.id === candidate.id)
-        ? [...result.candidates, candidate]
-        : result.candidates;
-      detail.value = { ...current, candidates };
-    } else {
-      detail.value = result;
+    const key = deskRefKey(target);
+    const saved = editsByVariant.get(key);
+    const current = refresh && (openRow.value || saved) ? detail.value : undefined;
+    const base = current ?? result;
+    const candidates = new Map(result.candidates.map(candidate => [candidate.id, candidate]));
+    const openCandidate = current?.candidates.find(candidate => candidate.id === openRow.value);
+    if (openCandidate && !candidates.has(openCandidate.id)) candidates.set(openCandidate.id, openCandidate);
+    if (saved?.revision === base.revision) {
+      for (const { source } of saved.copies.values()) {
+        if ('id' in source && !candidates.has(source.id)) candidates.set(source.id, source);
+      }
+    } else if (saved) {
+      editsByVariant.delete(key);
     }
+    detail.value = { ...base, candidates: [...candidates.values()] };
   }
 
   /** Read the selection and finish its loading state if it is still current. */
@@ -134,11 +171,11 @@ export function useWritingDesk() {
     }
   }
 
-  /** Select a variant and reset the previous variant's editor. */
+  /** Select a variant and close the editor while retaining its edits. */
   async function select(target: DeskRef) {
     if (detail.value && deskRefKey(detail.value) === deskRefKey(target)) return;
     selected.value = target;
-    draft.value = undefined;
+    openRow.value = undefined;
     detail.value = undefined;
     detailLoading.value = true;
     error.value = '';
@@ -165,12 +202,17 @@ export function useWritingDesk() {
     else check(eligible.value, true);
   }
 
-  /** Open a row with a fresh copy or close it if it is already open. */
-  function edit(row: string, text: DeskText) {
+  /** Open or collapse a row's editor. */
+  function edit(row: string) {
     if (!detail.value || detail.value.settled || saving.value || clearing.value) return;
-    draft.value = draft.value?.row === row
-      ? undefined
-      : { row, revision: detail.value.revision, text: copyText(text) };
+    openRow.value = openRow.value === row ? undefined : row;
+  }
+
+  /** Drop candidate edits while keeping changes to the current copy. */
+  function keepCurrentEdit(key: string, saved: VariantEdits, revision = saved.revision) {
+    const currentEdit = saved.copies.get(deskCurrentRow);
+    if (currentEdit) editsByVariant.set(key, { revision, copies: new Map([[deskCurrentRow, currentEdit]]) });
+    else editsByVariant.delete(key);
   }
 
   /** Reconcile a successful save, ignoring reads started before it. */
@@ -185,16 +227,18 @@ export function useWritingDesk() {
       summary.style = result.style;
       summary.candidateCount = result.candidates.length;
     }
+    const saved = editsByVariant.get(key);
+    const currentEdit = saved?.copies.get(deskCurrentRow);
+    if (saved && currentEdit && saved.revision === styleRevision &&
+      JSON.stringify(copyText(currentEdit.source)) === JSON.stringify(copyText(result.text))) {
+      keepCurrentEdit(key, saved, result.revision);
+    } else {
+      editsByVariant.delete(key);
+    }
     if (selected.value && deskRefKey(selected.value) === key) {
       ++detailRequest;
       detailLoading.value = false;
-      // A style save leaves the current copy intact, so its editor can stay open.
-      if (draft.value?.row === deskCurrentRow && draft.value.revision === styleRevision) {
-        if (JSON.stringify(detail.value?.text) === JSON.stringify(result.text))
-          draft.value.revision = result.revision;
-      } else {
-        draft.value = undefined;
-      }
+      if (styleRevision === undefined || openRow.value !== deskCurrentRow) openRow.value = undefined;
       detail.value = result;
     }
   }
@@ -211,18 +255,19 @@ export function useWritingDesk() {
     }
   }
 
-  /** Save either the edited copy or the full original text of a collapsed row. */
-  async function save(row: string, source: DeskText | DeskCandidate) {
+  /** Save the edited text when present, or use the row's original copy. */
+  async function save(row: string) {
     const current = detail.value;
     if (!current || saving.value || clearing.value) return;
-    const editing = draft.value?.row === row ? draft.value : undefined;
-    const revision = editing?.revision ?? current.revision;
+    const text = edits.value?.copies.get(row)?.text ?? rowSource(current, row);
+    if (!text) return;
+    const revision = current.revision;
     saving.value = true;
     error.value = '';
     try {
       const result = current.settled
         ? await api.unsettleDeskVariant(current, revision)
-        : await api.settleDeskVariant(current, { ...copyText(editing?.text ?? source), revision });
+        : await api.settleDeskVariant(current, { ...copyText(text), revision });
       if (!disposed) applySave(result);
     } catch (cause) {
       error.value = errorMessage(cause);
@@ -235,7 +280,6 @@ export function useWritingDesk() {
   function approvalSnapshot(): DeskApprovalSnapshot | undefined {
     const current = detail.value;
     if (!current || current.settled || !current.candidates.length || saving.value || clearing.value) return;
-    const editing = draft.value;
     const rows = [
       { id: deskCurrentRow, label: 'Current copy', text: current.text },
       ...current.candidates.map((candidate, index) => ({
@@ -244,12 +288,11 @@ export function useWritingDesk() {
     ];
     return {
       target: { templateId: current.templateId, variantId: current.variantId },
-      revision: editing?.revision ?? current.revision,
-      copies: rows.map(row => ({
-        id: row.id,
-        label: editing?.row === row.id ? `${row.label} (edited)` : row.label,
-        text: copyText(editing?.row === row.id ? editing.text : row.text),
-      })),
+      revision: current.revision,
+      copies: rows.map(row => {
+        const edited = edits.value?.copies.get(row.id);
+        return { id: row.id, label: edited ? `${row.label} (edited)` : row.label, text: copyText(edited?.text ?? row.text) };
+      }),
     };
   }
 
@@ -288,7 +331,8 @@ export function useWritingDesk() {
     try {
       const { cleared } = await api.clearDeskCandidates();
       if (disposed) return;
-      if (draft.value?.row !== deskCurrentRow) draft.value = undefined;
+      if (openRow.value !== deskCurrentRow) openRow.value = undefined;
+      for (const [key, saved] of editsByVariant) keepCurrentEdit(key, saved);
       for (const template of catalogue.value?.templates ?? []) {
         for (const variant of template.variants) variant.candidateCount = 0;
       }
@@ -385,7 +429,7 @@ export function useWritingDesk() {
   }
 
   return {
-    catalogue, tags, show, search, groups, eligible, checked, selected, detail, draft, job, models, availableModels,
+    catalogue, tags, show, search, groups, eligible, checked, selected, detail, openRow, draft, edits, job, models, availableModels,
     choices, requestCount, candidateCount, error, detailLoading, saving, starting, stopping, clearing, busy,
     load, select, check, toggleAll, edit, save, saveStyle, approvalSnapshot, saveMany, generate, stop, clearDrafts, addModel,
   };

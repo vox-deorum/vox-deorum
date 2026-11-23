@@ -89,7 +89,9 @@ The routes live under `/api/debug` in `src/web/routes/debug.ts`; log reads accep
 
 Open **Debug → Writing Desk** from a writable source checkout. The desk checks every unsettled stock variant by default. **Generate** uses the checked variants that match the current filters. Choose models and drafts per variant in the toolbar. Use **More models…** in the model field to browse a saved provider connection and add a model for this visit.
 
-Settle the current copy or a draft to save it. To keep several copies, choose **Settle multiple…** and pick which one keeps the original variant ID and file. The others get the next available suffixes (`-1`, `-2`, and so on) in a companion file such as `war-variants.json`. Each is a settled example and a separate publication choice with the original's style, eligibility, and weight. Use **Unsettle** to reopen any of them. To start a new round, stop any running batch and choose **Clear drafts** to remove generated candidates across the desk while keeping the saved copies.
+Click a copy to edit it. The desk keeps your edits as you close editors or switch between variants during a visit. Settle a copy to save it to the catalogue. To save several, choose **Settle multiple…** and pick which one keeps the original variant ID and file. The others get the next available suffixes (`-1`, `-2`, and so on) in a companion file such as `war-variants.json`. Each is a settled example and a separate publication choice with the original's style, eligibility, and weight. Use **Unsettle** to reopen any of them.
+
+To start a new round, stop any running batch and choose **Clear drafts** to remove generated candidates and their edits across the desk while keeping the current copies.
 
 Use **Edit style** beside the variant's voice, stance, and genre to correct its tags. Saving keeps the article and its settled status and clears drafts written for that variant's previous style. The desk groups variants by these tags and sends up to eight variants per request. Each request includes relevant settled examples, favoring the same voice and template. Merge variants and templates reserved for the newspaper editor are outside the desk.
 

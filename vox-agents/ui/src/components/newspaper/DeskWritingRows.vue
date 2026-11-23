@@ -6,14 +6,18 @@ import { deskCurrentRow } from '@/stores/writing-desk';
 import DeskText from './DeskText.vue';
 import DeskRowEditor from './DeskRowEditor.vue';
 
-const props = defineProps<{ detail: DeskVariantDetail; openRow?: string; saving: boolean }>();
+const props = defineProps<{
+  detail: DeskVariantDetail;
+  openRow?: string;
+  edits?: ReadonlyMap<string, { text: Writing }>;
+  saving: boolean;
+}>();
 const draft = defineModel<Writing>('draft');
-const emit = defineEmits<{ edit: [row: string, text: Writing]; save: [row: string, text: Writing] }>();
+const emit = defineEmits<{ edit: [row: string]; save: [row: string] }>();
 
 interface Row {
   id: string;
   label?: string;
-  model?: string;
   text: Writing;
   warnings?: string[];
   first?: boolean;
@@ -25,11 +29,14 @@ const rows = computed<Row[]>(() => {
     const group = groups.get(candidate.model) ?? [];
     group.push({
       id: candidate.id, label: group.length ? undefined : candidate.model,
-      model: candidate.model, text: candidate, warnings: candidate.warnings, first: !group.length,
+      text: props.edits?.get(candidate.id)?.text ?? candidate,
+      warnings: candidate.warnings, first: !group.length,
     });
     groups.set(candidate.model, group);
   }
-  return [{ id: deskCurrentRow, label: 'Current', text: props.detail.text }, ...[...groups.values()].flat()];
+  const current = props.edits?.get(deskCurrentRow)?.text ?? props.detail.text;
+  return [{ id: deskCurrentRow, label: 'Current', text: current },
+    ...[...groups.values()].flat()];
 });
 
 /** Name the action using the text it will settle. */
@@ -56,7 +63,7 @@ function actionLabel(row: Row): string {
     <component :is="detail.settled ? 'div' : 'button'" v-else class="desk-copy"
       :type="detail.settled ? undefined : 'button'" :disabled="saving || undefined"
       :aria-expanded="detail.settled ? undefined : false"
-      @click="emit('edit', row.id, row.text)"
+      @click="emit('edit', row.id)"
     >
       <span class="desk-copy-headline"><DeskText :text="row.text.headline" :variables="detail.variables" /></span>
       <span v-if="row.text.subheadline" class="desk-copy-subtitle"><DeskText :text="row.text.subheadline" :variables="detail.variables" /></span>
@@ -67,10 +74,10 @@ function actionLabel(row: Row): string {
     </component>
     <div class="desk-row-actions">
       <Button v-if="openRow === row.id" icon="pi pi-chevron-up" text rounded size="small" severity="secondary"
-        :disabled="saving" aria-label="Close editor" title="Close editor" @click="emit('edit', row.id, row.text)" />
+        :disabled="saving" aria-label="Close editor" title="Close editor" @click="emit('edit', row.id)" />
       <Button :icon="detail.settled ? 'pi pi-times' : 'pi pi-check'" text rounded size="small"
         :severity="detail.settled ? 'secondary' : 'success'" :disabled="saving"
-        :title="actionLabel(row)" :aria-label="actionLabel(row)" @click="emit('save', row.id, row.text)" />
+        :title="actionLabel(row)" :aria-label="actionLabel(row)" @click="emit('save', row.id)" />
     </div>
   </article>
 </template>

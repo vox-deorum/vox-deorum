@@ -108,8 +108,8 @@ What a replay leaves behind:
 | --- | --- |
 | A plan gives each unit an attack, a move, a finish (end the turn in place), or nothing. | A unit with nothing stays free for later passes. |
 | Replay runs rows in order and stops at the first that fails, for example when a move reveals a hidden enemy. | Rows already run stay done. Rows after the failure never run. |
-| Finishing units are marked processed only after the whole replay succeeds, and not when they should heal and still have moves. | A unit that only moved, or finished in a replay that stopped, stays available. |
-| Each retry builds its positions from scratch on the current state. | A retry sees enemies the last attempt revealed. |
+| Surviving finishing units are marked processed only after the whole replay succeeds, unless they should heal and still have moves. | A unit that only moved, or finished in a replay that stopped, stays available. |
+| Each retry looks up its units by ID and builds positions from the current state. | It sees newly revealed enemies and drops units lost during replay, such as a civilian killed by a retreating enemy. |
 
 ### Support placement
 
