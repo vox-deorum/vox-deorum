@@ -45,7 +45,8 @@ Following the same spirit, use relevant numbers that make sense in the game worl
 - “We lead by 3 technologies” makes sense. Readers can understand what the count measures.
 - Write “The city is badly damaged” in place of “The city has 100/300 HP.” Hit points do not make sense in the game world context.
 - Name the placeholder after its unit. Use `{{dropPoints}}`, `{{unrestPoints}}`, and `{{nearestDistance}}`. 
-- Names containing `happiness` or `weariness` print `percent`, `population` print `million`, `points` print `point` or `points`, `turns` print `turn` or `turns`, and `distance` print `tile` or `tiles`.
+- Names ending in `percentage` or containing `happiness` or `weariness` print `percent` automatically. For example, `{{percentage}}` prints `80 percent` when its value is 80.
+- Names containing `population` print `million`, `points` print `point` or `points`, `turns` print `turn` or `turns`, and `distance` print `tile` or `tiles`.
 - Add `{{terms.civic.people}}` after population count, such as `Famine leaves {{faminePopulation}} {{terms.civic.people}} unhappy`.
 - Print a count and its noun together with `{{count|power|powers}}`. It writes the singular after 1 and the plural otherwise.
 - Use `regiment` for military units and `team` for civilian units.

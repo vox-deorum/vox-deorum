@@ -157,7 +157,7 @@
     "subject": "event",
     "event": "UnitCreated",
     "when": [
-      "event.knows('person')",
+      "event.knows('person') && typeof event.person === 'string' && event.person.length > 0",
       "event.knows('kind') && event.kind === 'born'",
       "event.knows('player') && event.player.knows('name')"
     ],

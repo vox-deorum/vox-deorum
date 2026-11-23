@@ -17,6 +17,7 @@ type BatchFacts = Pick<ExpressionBatch, 'constants' | 'facts'>;
 const defaultFormatPatterns: Readonly<Record<string, string>> = {
   '*happiness*': 'percent',
   '*weariness*': 'percent',
+  '*percentage': 'percent',
   '*population*': 'million',
   '*points*': 'point|points',
   '*turns*': 'turn|turns',
