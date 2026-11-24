@@ -1,20 +1,22 @@
 # Newspaper replay and evidence
 
-Replay turns a saved MCP knowledge database into newspaper editions without Civilization V, the bridge, or a live MCP connection. Use the browser to read editions and inspect evidence, or the command line to save a report and compare catalogue changes.
+Replay reads an MCP knowledge database to generate issues or inspect the evidence available to one player at a given turn. You can use the browser or CLI without Civilization V, the bridge, or a live MCP connection.
 
 ## Open a recording in the browser reader
 
-From the repository root, run:
+Install the [workspace dependencies](../../setup.md) and run from the repository root:
 
 ```sh
 npm run newspaper:preview -w vox-agents
 ```
 
-The command builds MCP's queries, serves the reader and replay API at [127.0.0.1:5600](http://127.0.0.1:5600/), and opens a browser. Ctrl+C stops it. The reader starts in **Mockups**. Pick a design, front page layout, and tint, or enter a civilization such as Nubia to try a customized masthead. The source preview accepts `?fixture=` links to developer fixtures, including through the old `/preview.html` address. Installed builds serve the Victorian ordinary sample as a separate fixture.
+The command builds MCP's queries and opens the source reader at [127.0.0.1:5600](http://127.0.0.1:5600/). Use **Mockups** to try designs, layouts, and tints. Press Ctrl+C in the terminal to stop the preview.
 
-Switch to **Recorded**, open **Recording**, and enter the full MCP knowledge database, receiving player ID, and inclusive first and last turns. The form suggests the latest archived knowledge database when one is available. Click **Generate**, then choose an **Edition** to read its saved articles. The batch opens the newest edition unless you chose or focused another one. The design, front page layout, and tint controls apply to this browser tab; choose **As published** and **Design default** to restore the saved appearance.
+1. Switch to **Recorded** and open **Recording**. Choose a full MCP knowledge database, such as a game archive under `mcp-server/archive/`. The form can suggest the latest archive. A per-player telemetry database (`-player-<id>.db`) lacks the game evidence.
+2. Enter the receiving **Player ID** (0 to 21) and the inclusive first and last turns. Click **Generate**.
+3. Use **Edition** to read a saved issue. The batch opens the latest edition if you haven't changed or focused the selection. Appearance controls affect the current browser view; choose **As published** and **Design default** to restore the saved appearance.
 
-On the normal Vox Deorum server the reader is at `/newspaper/`. For a source checkout of that server, build the dependencies and reader before starting it:
+On the normal Vox Deorum server, open `/newspaper/`. To run that server from source, build MCP and the reader before starting Vox Agents:
 
 ```sh
 npm run build -w mcp-server
@@ -22,100 +24,78 @@ npm run build:newspaper -w vox-agents
 npm run dev -w vox-agents
 ```
 
-Relative paths resolve from the directory where you launched the source preview, or from the normal server's working directory. Use absolute paths to share a run across hosts. Vite alone serves the reader shell without the replay API.
+Relative paths resolve from the host's working directory; the source preview uses the directory where you invoked npm.
 
 ### Set the reporting window
 
-Replay checks the first turn, advances at the chosen interval, and checks the last turn even when it falls between intervals. For example, if turn 100 publishes and turn 105 skips, the turn 110 check covers events from 101 through 110. Until a first edition publishes, the window starts at the first configured turn.
+Replay checks the first turn, advances by the interval, and checks the final turn even if it falls between intervals. The **reporting period** starts at the first configured turn. After an issue prints, it starts on the following turn. For example, if turn 100 publishes and turn 105 skips, the check at turn 110 covers turns 101 through 110.
 
-Under **Recording > Advanced**, set the publication frequency in Standard pace turns. The stock default is five, which becomes eight recorded turns on Epic. Comparison history can use recorded or Standard pace turns, can reach before the first check as far as turn zero, and is omitted when set to zero. Replay uses a recognized recorded pace (Quick, Standard, Epic, or Marathon), then an explicit positive multiplier if the pace is unknown, then a labelled Standard assumption.
-
-Choose **Inspect evidence only** to check a source without an output database or run ID. Its event window starts after the preceding check, and its own evidence check interval follows the selected duration units.
+| Setting under **Recording > Advanced** | Effect |
+| --- | --- |
+| **Publication frequency** | Standard pace turns (stock default: five, which becomes eight recorded turns on Epic). |
+| **Comparison duration** | Lookback for comparison snapshots. Choose recorded or Standard pace turns. History can reach before the first check, down to turn zero. Use zero to omit comparison snapshots. |
+| **Speed multiplier override** | Used when the recording has no recognized pace. Without an override, replay assumes Standard and labels the assumption. |
+| **Inspect evidence only** | Under **Replay purpose**, check evidence without creating a run or output database. Its separate check interval follows **Duration units**. The event window starts after the preceding check. |
 
 ### Stop, resume, or start fresh
 
-- **Stop after current check** finishes the current step and saves the latest checkpoint with any edition. **Continue** starts from the saved cursor. **Save preferences** applies frequency and LLM preferences to future checks, scheduling from the last completed check even if it skipped. The current editor uses authored rules and records a fallback if LLM use was requested.
-- Reloading the page can restore the server's active session. After a server restart, use **Recording > Saved run > Resume** with the recording, player ID, run ID, and output path. Resume checks the recording's bytes and restores the saved schedule, preferences, and catalogue before any further checks.
-- Start a **New run** after changing rules or templates so the new checks use the changes. A **Branch run** records its parent and starts from the configured first turn with fresh history. A run ID is assigned if omitted; reusing an existing ID for the same receiver returns a conflict. The default store is `.tmp/newspaper/replays-v9.sqlite` relative to the host working directory. Keep it separate from the read-only recording, including symlinks and hardlinks.
-- Replay only opens the current output version at the chosen path. An older or newer newspaper output is rejected with an unsupported version message and left unchanged. Outputs from earlier versions are not migrated, so choose a new output file and start a **New run** to generate editions there from the MCP recording.
+| Action | What it does |
+| --- | --- |
+| **Stop after current check** / **Continue** | Finish the current check and pause, or continue from the saved cursor. |
+| **Save preferences** | Apply frequency and LLM preferences to future checks. The next cutoff is scheduled from the last completed check, even after a skip. The current editor still uses authored rules and records when it falls back to them. |
+| **Resume** | Reopen a saved run after a server restart. Under **Recording > Saved run**, use its run ID and output path with the original recording and player. Replay checks the recording's bytes and restores the saved catalogue, preferences, and schedule. Choose **Continue** to advance. |
+| **New run** / **Branch run** | Start with fresh publication history. A branch records its parent. Use a new run after changing rules or templates; an existing run keeps its saved catalogue. |
+
+Reloading the page can restore the active server session. New runs receive a run ID if one is omitted; an existing ID for that receiver conflicts. The default store is a versioned SQLite file under `.tmp/newspaper/` in the host working directory. Keep it separate from the recording. Replay leaves unsupported store versions untouched; use a different output path to regenerate those editions.
 
 ### Read Replay diagnostics
 
-Expand **Replay diagnostics** below the paper. **Skipped checks in this batch** lists each skipped cutoff and its reason. **Selected edition** shows the evidence, sources, and trigger and template IDs for each article. The archive keeps article provenance with the prose so older editions can reopen directly. For the full editorial decision and trigger trace, use the CLI audit. Votes are saved separately and can influence future checks.
-
-Click **Inspect cutoff** to query the current window without advancing. The result stays tied to the inspected cutoff and can differ from the cutoff of the edition on screen. It shows the original dates, row IDs, and permitted values for national and city summaries, events, tactical zones, receiver technologies, comparison rows, diplomacy, and congress observations.
+Open **Replay diagnostics** below the paper. **Skipped checks in this batch** lists cutoffs and skip reasons. **Selected edition** shows each article's evidence and rule and template IDs. **Inspect cutoff** queries the current window without advancing; its cutoff can differ from that of the edition on screen. It shows the permitted values, dates, and row IDs behind the observation.
 
 ## Generate examples from the command line
 
-Run this from the repository root to check a Standard pace Netherlands recording from turns 24 through 99. It saves an audit for each check and requests a PNG if turn 29 publishes:
+From the repository root, replace `recordings/game.db`, the player ID, and the turns with values from your recording. Use a new or empty output directory:
 
 ```sh
-npm run newspaper -w vox-agents -- --database mcp-server/archive/self-play/0d749c4f-69a7-4682-81b3-8fa70f38c012_1794782175768.db --player 7 --from 24 --to 99 --every 5 --output .tmp/newspaper-examples/netherlands --render-turns 29
+npm run newspaper -w vox-agents -- --database recordings/game.db --player 7 --from 24 --to 99 --output .tmp/newspaper-examples
 ```
 
-The local recording may be unavailable in your checkout. Substitute the full knowledge database from another game and set its player ID and turn range. Relative paths resolve from the directory where you invoked npm. Omit `--render-turns 29` when adapting the command to check a different cutoff.
+Use `--help` for all options. Paths resolve from the directory where you invoked npm.
 
-| Option | Effect |
+| Option | When to use it |
 | --- | --- |
-| `--database`, `--player` | Read-only source recording and receiving player ID (0 to 21). |
-| `--output` | New or empty directory for the replay database and report. |
-| `--from`, `--to` | Inclusive first and last turns. The first defaults to zero. Starting later omits earlier publication history. |
-| `--every` | Check frequency in Standard pace turns. Defaults to five. |
-| `--comparison` | Comparison duration in recorded turns. Defaults to ten; use zero to omit. |
-| `--config` | Editorial catalogue overlay directory. |
-| `--render-turns` | Comma-separated cutoffs inside the requested range. Requires installed Edge or Chrome. |
-| `--help` | List the options without building dependencies. |
+| `--from`, `--to` | Check an inclusive range. The first turn defaults to zero. Use the same turn for both to inspect one cutoff without earlier publication history. |
+| `--every` | Change the frequency in Standard pace turns (default: five). |
+| `--comparison` | Change the comparison history in recorded turns (default: ten; zero omits it). |
+| `--config` | Add an editorial catalogue overlay. |
+| `--render-turns` | Request PNGs for comma-separated cutoffs in the range, for example `--render-turns 29` when the example recording uses Standard pace. Only published editions render. Stop the Vox Deorum server first: PNG mode rebuilds the shared reader and launches installed Edge or Chrome. If the build is interrupted, rebuild the reader before restarting the server. |
 
-The command builds MCP's queries before replay creates output. For PNGs it also rebuilds the shared reader assets, so stop Vox Deorum before running it. If that build is interrupted, rebuild the reader before restarting the server. Omit `--render-turns` for a faster text and JSON pass without a browser.
-
-Open `index.html` directly in a browser. Rendered issues appear first; expand the other issues to read their prose and evidence. The run disclosure links to each check's `audit-<turn>.json` and identifies any requested preview that did not publish. `issue-<turn>.json` holds each publication and `run.json` indexes the run. If replay fails after it starts, the report and manifest retain work completed so far when they can be written. `replay.sqlite` stores the published editions, their article evidence, and the latest checkpoint. To continue a partial run in the browser, resume with its source and player, `replay.sqlite` as the output path, and run ID `examples`. A CLI rerun needs a fresh output directory.
+Open the output's `index.html` to read the issues and find the audit for each check. `audit-<turn>.json` records the editorial decision even when the check skips; `issue-<turn>.json` holds a published issue. `run.json` indexes the results, and `replay.sqlite` holds the editions, article sources, and checkpoint. If the CLI stops partway through, resume in the browser with run ID `examples` and `replay.sqlite` as the output path. A CLI rerun needs a fresh directory.
 
 ### Iterate on a rule or overlay
 
-Mirror the catalogue paths in an overlay directory. For example, place a copy of `vox-agents/newspaper/triggers/cities-settlement.json` under `triggers/` in the overlay, edit a rule there, and add `--config .tmp/newspaper-overlay` to the command. Run it with a new `--output` and keep the same source, player, range, and frequency. See [catalogue merging](editorial.md#catalogue-and-eligibility) for which fields carry over.
+An **overlay** is a folder that mirrors the stock catalogue. To change settler coverage, for example, put a rule with the existing ID under `triggers/cities-settlement.json` in that folder. Follow the [catalogue merge rules](editorial.md#catalogue-and-eligibility) and pass the folder with `--config` or **Recording > Advanced > Editorial config directory**.
 
-If a story is missing, read the [trigger audit](triggers/overview.md) for matched subjects and their evidence. The decision shows how the candidates competed for space. A `mergedInto` entry points to the combined story that covered a candidate. `choiceErrors` records expression failures and whether the check hit its execution limit. For [design weights](designs.md#which-design-runs), compare runs with the same recording, receiver, and first cutoff. Use matching shorter windows if a long replay reaches its memory limit; a fresh window starts with no publication history.
-
-The audit also explains the design and title. `designSelection` shows the previous design, its run length, why the editor kept it or drew again, and each candidate's raw weight and weight in that draw. A zero draw weight means the editor kept the old design without drawing or left that candidate out. `mastheadRuleId` names a rule that supplied the printed title; without one the design supplied it.
-
-### Stock catalogue reading examples
-
-These outcomes describe the stock catalogue at Git revision `94671707a653ca0710806c50bc994e4e66b4ab95`. Use that revision, the recording above, and no overlay to reproduce them. The current catalogue can select different stories. For an isolated cutoff, give `--from` and `--to` the same turn and use `--every 1`.
-
-| Receiver and cutoffs | What to read |
-| --- | --- |
-| Netherlands (7), 24 to 99, every five turns | Amsterdam's settler story uses positive local happiness at 29; nations draw level in research at 59; Rotterdam outgrows Amsterdam at 69. |
-| Netherlands (7) at 112; Austria (4) at 125 | Utrecht's zero local happiness yields a straight account; Salzburg's negative local happiness yields a critical one. |
-| Netherlands (7), 308 and 417 in separate runs | Wartime Golden Age coverage uses a straight voice at 47% national happiness and a supportive voice at 100%. |
+Compare fresh runs with the same recording, player, turn range, and frequency. For a missing story, trace its [trigger match](triggers/overview.md#how-a-check-evaluates-triggers), then check the candidate decision, `mergedInto`, and `choiceErrors`. For appearance changes, inspect `designSelection` for the previous design, reason, and candidate weights. The audit's `mastheadRuleId` identifies the rule that supplied the title when one won.
 
 ## Historical evidence-query verification
 
-Use the full knowledge database from the CLI example above. The accompanying `-player-7.db` contains agent telemetry. To reproduce the evidence checks in the browser, choose **Inspect evidence only** for the Netherlands (7) with turns 0 through 440, an interval of five, comparison duration ten in recorded turns, and no speed override.
-
-To inspect Amsterdam at turn 200, set both turns to 200 in evidence-only mode, click **Generate**, then **Inspect cutoff**. City row `9162` records population 17, science per turn 92, and one turn left on its University. For a capture, generate evidence checks from 245 to 250 and inspect cutoff 250: event `247000938` records the capture of Stuttgart from barbarians at `(6, 14)` on turn 247. Source dates show when an observation was made; a recording can retain a civilization's final summary after elimination.
+Use **Inspect evidence only** to verify dated visibility. Compare a city's row date with the cutoff, and check that each visible event has the expected participants. A recording can keep a final national summary after a civilization is eliminated. A city can disappear after a visible capture or raze, even when the event is outside the requested window. The diagnostics distinguish unresolved lifecycle coordinates from ambiguous same-turn ordering. See [evidence and visibility](triggers/facts.md#evidence-the-facts-rely-on).
 
 ### Replaying private espionage reports
 
-Use the same recording with `--from 215 --to 216 --every 1 --config vox-agents/newspaper/probes`. Run it once for India (player 1) and once for the Ottomans (player 5), each with its own output. Open `audit-216.json`. India's operation at Istanbul (row `216000196`) is followed by its team's Civil Service gain (`216000197`). The Ottoman report identifies India and cites the operation and the defender's next recorded turn (`216000654`). The technology inference is private to India. See [event facts](triggers/facts.md#event) for the conditions behind these reports.
+Run the same turn range twice with separate outputs, once as the spy's owner and once as the defender. Use the [probe catalogue](triggers/examples.md#probe-catalogue-examples) or inspect the evidence directly. Compare the same operation in both audits. The owner can infer a technology from a matching gain; the defender's account uses its own evidence. See [event facts](triggers/facts.md#event) for the matching rules.
 
 ### Replaying front reports and ship launches
 
-Use the same probe overlay for the Netherlands (player 7). Give `--from` and `--to` the same cutoff, set `--every 1`, and use a new output directory each time. Inspect the audit or cutoff evidence:
-
-| Cutoff | Observation |
-| --- | --- |
-| 179 | Amsterdam's Trireme purchase produces no launch report. Training row `179000692` and creation row `179000691` record the purchase. |
-| 235 | The Stuttgart sea zone (row `2426`) records a Withdraw assessment and sightings, including a German Galleass. |
-| 282 | Rotterdam's report identifies a newly trained Frigate. Its sources include training row `282001079`, creation row `282001078`, and city row `14913`. |
-
-See [tactical observations](triggers/facts.md#tactical-observations) and [inferred city facts](triggers/facts.md#inferred-city-facts) for what these records support.
+With the [probe catalogue](triggers/examples.md#probe-catalogue-examples), inspect a cutoff with a known tactical zone and one with a naval unit completion. Check that the front report cites a dated zone observation. A launch cites the training, earlier creation, and city observations; a purchase cannot qualify. See [tactical observations](triggers/facts.md#tactical-observations) and [inferred city facts](triggers/facts.md#inferred-city-facts).
 
 ## Source, storage, and API
 
-Replay calls MCP's shared `newspaper/queries.ts` directly with a read-only connection and explicit recorded-turn bounds. `projection.ts` owns historical visibility and field filtering: a later meeting cannot reveal an earlier event, and a missing observation can leave a city or national snapshot stale. A visible later capture or raze can retire a city even if the event falls before the requested window. Look for `cityLifecycleUnresolved` (missing lifecycle coordinates) and `cityLifecycleOrderUnknown` (equal same-turn timestamps) in diagnostics. See [evidence and visibility](triggers/facts.md#evidence-the-facts-rely-on) for the reporting rules. The live MCP `get-newspaper-evidence` tool shares the query, with a cutoff before the current turn so the round can finish recording.
+| Source | Responsibility |
+| --- | --- |
+| `mcp-server/src/newspaper/queries.ts`, `projection.ts` | Read dated evidence with visibility and field filtering. Replay opens the recording read-only. The MCP tool uses the same query and requires a cutoff before the current game turn. |
+| `replay/session.ts`, `replay/store.ts` | Serialize requests and save each edition, its sources, and the latest checkpoint together. The archive keeps editions and votes; use CLI audits for per-cutoff decisions. Failed reads or writes leave the cursor unchanged. Resume after a conflict from a concurrent write. |
+| `replay/http.ts`, `contracts/replay.ts`, `contracts/archive.ts` | Loopback API under `/api/newspaper/replay`. Use `POST /advance` to step the session and add `?view=summary` to omit the full evidence and decision. `POST /evidence` inspects the cutoff, and `GET /issues` and `GET /issues/:issueId` read the archive. Publication advances, vote writes, and preference writes carry a run ID and receiver; a stale scope returns 409. |
 
-`replay/session.ts` serializes requests. In one transaction, `replay/store.ts` saves any published edition with its article evidence and updates the latest checkpoint. The output holds editions, article evidence, and the latest checkpoint with its saved catalogue for resume. It does not keep a per-cutoff history or editorial decisions. Failed reads and writes leave the cursor unchanged. A stale revision after another process writes to the same run returns a conflict; resume before retrying.
-
-The loopback-only routes in `replay/http.ts` live under `/api/newspaper/replay`. Use `contracts/replay.ts` for settings and evidence responses and `contracts/archive.ts` for edition, vote, and article provenance payloads. The browser batches through `POST /advance?view=summary`, which returns status, any skip reason, and the issue ID when one publishes. `POST /evidence` reads the current cutoff; `GET /issues` and `GET /issues/:issueId` read the archive. Publication advances, vote writes, and preference writes require the run ID and receiver; stale scopes return 409.
-
-For changes to replay, run `npm test -w vox-agents -- tests/mock/newspaper` from the repository root. For MCP projection changes, also run `npm run test:mock -w mcp-server -- tests/newspaper`. See [reader and export tests](renderer.md#run-the-tests) for browser setup.
+Relative source paths start in `vox-agents/src/newspaper/`. For tests, see [catalogue and projection checks](triggers/overview.md#verify-changes) and [reader and export tests](renderer.md#run-the-tests).

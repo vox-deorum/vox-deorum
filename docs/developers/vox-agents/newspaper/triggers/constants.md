@@ -51,7 +51,7 @@ Numeric `window` and `repeat` fields also use Standard turns. Inside an expressi
 
 ## Type lists
 
-Use list membership to check a category. For example, `settlers.includes(t.unit)` matches Settler, Pioneer and Colonist. The stock file also defines `workers`, `missionaries`, `greatPeople`, `defenses`, `ideologies` and `worldProjects`. The `ideologies` list determines which branches can count toward `player.ideology`. The building stake uses `eras` (ordered from Ancient to Future) and `earlyBuildings` (such as Monument and Granary).
+Use list membership to check a category. For example, `settlers.includes(t.unit)` matches Settler, Pioneer and Colonist. Use `ideologies` to control which branches count toward `player.ideology`. The building stake uses the ordered `eras` list and `earlyBuildings`.
 
 Names must match the text in the recording. If the recorded text uses a different language, adapt the affected lists.
 
@@ -110,7 +110,7 @@ Terms are expressions for printed text or finite numbers. The editor evaluates t
 
 The editor capitalizes a term, including civic vocabulary, when it opens a sentence or a text field. Elsewhere it keeps the term's original casing.
 
-The stock `civilization` and `civilizationAdjective` terms provide a name such as Sweden and an adjective such as Swedish. The [probe overlay](../../../../../vox-agents/newspaper/probes/constants.json) adds terms for the capital's name, a phrase based on ideology, and the name of an overlord. A failed, hidden or nonprintable result leaves the term unavailable. Copy that needs it is ineligible; see [masthead rules](../editorial.md#masthead-rules) for title and label fallbacks.
+Stock identity terms are `civilization`, `civilizationAdjective`, and `leader`. For Sweden, the first two print Sweden and Swedish. The [probe overlay](../../../../../vox-agents/newspaper/probes/constants.json) adds terms for the capital's name, a phrase based on ideology, and the name of an overlord. A failed, hidden or nonprintable result leaves the term unavailable. Copy that needs it is ineligible; see [masthead rules](../editorial.md#masthead-rules) for title and label fallbacks.
 
 Government, people, and leader titles use the separate [civic vocabulary](../editorial.md#civic-vocabulary). Change those phrases in `civic-terms.json` without writing a new expression or variant.
 

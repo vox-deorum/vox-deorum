@@ -1,7 +1,7 @@
 # Newspaper offline evaluation
 
-Review authored stories with [replay](replay.md). Keep the recording, receiver, and turn range fixed between catalogue variants. Read the issues for usefulness, variety, and voice, and use the audits to see which evidence and decisions produced each story.
+Use [fresh replays](replay.md#iterate-on-a-rule-or-overlay) to evaluate a catalogue change. Hold the recording, receiver, turn range, and check frequency fixed. Read the issues for usefulness, variety, and voice, then use the audits to trace the facts and decisions behind a story that appeared, changed, or disappeared.
 
-The [Archivist](../agents/archivist.md) can mine story pitches from recordings. Use the [writing rules](writing.md) when turning a pitch into an authored variant.
+The [Archivist](../agents/archivist.md) can mine story pitches from recordings. Follow the [writing rules](writing.md) when turning a pitch into an authored variant, or draft it with a model in the [Writing Desk](../platform/ui.md#writing-desk).
 
-[Plan 7](../../../plans/newspaper/implementation/07-llm-editors.md) proposes comparing authored and model editors with the same evidence, configuration, and publication history. It also covers fallback, mode changes, and model cost.
+Replay currently uses authored rules. The [model editing plan](../../../plans/newspaper/implementation/07-llm-editors.md) describes a future comparison with a model editor under the same evidence and publication history.

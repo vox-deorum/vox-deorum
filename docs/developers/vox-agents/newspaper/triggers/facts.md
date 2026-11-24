@@ -33,13 +33,13 @@ Every expression can read these, whatever its subject.
 | `players` | Every known player, including `self` |
 | `cities` | Every city the receiver can see |
 | `events` | Every permitted event in the trigger's window, oldest first |
-| `turn` | The cutoff turn of this check |
+| `turn` | The check's last eligible game turn, called its cutoff |
 | `game` | `speed` (the recorded game speed name), `speedMultiplier`, `mapSize`, `startEra`, `maxTurns`, and `congress` when league observations exist |
 | `press` | Publication memory: `issues` (published issue count) and `lastIssueTurn` (turn of the latest issue, or `null`) |
 | `printed(ruleId, subject?)` | `{turn, count}` for published articles a rule supported, or `null` when none. The optional `subject` limits the count to one city, player or pair. See [publication memory](overview.md#publication-memory). |
 | `distance(a, b)` | Hex distance between players, cities, plots or events. See [distance](constants.md#distance). |
 
-The **reporting period** runs from the turn after the last published edition through the cutoff. Before the first edition, it starts at the first replay turn. A trigger's **window** defaults to that period. A custom `window` changes historical comparisons and lists such as the global `events`; the subjects of event and incident rules still come from the reporting period.
+A trigger's **window** defaults to the [reporting period](../replay.md#set-the-reporting-window). A custom `window` changes comparisons and lists such as the global `events`. Event and incident subjects still come from the reporting period.
 
 ## City
 
@@ -94,7 +94,7 @@ The causes omit occupation and empire-wide unhappiness. Population caps and spec
 
 The `neighbor-puppet-annexed` rule infers annexation from `city.before.isPuppet && !city.isPuppet && city.isOccupied` and an unchanged owner.
 
-For the receiver's own training events, `port` gives the city name when both purchase flags are explicitly false and the creation predates training on the same turn. The launch probe also limits eligible unit types. See [the ship launch replay](../replay.md#replaying-front-reports-and-ship-launches) for an example.
+For the receiver's own training events, `port` gives a readable city name when both purchase flags are explicitly false and exactly one earlier creation that turn matches the unit and supplies its type. The launch probe also limits eligible unit types. See [the ship launch replay](../replay.md#replaying-front-reports-and-ship-launches) for an example.
 
 ## Player
 
@@ -113,7 +113,7 @@ For the receiver's own training events, `port` gives the city name when both pur
 | Religion | `foundedReligion`, `majorityReligion` |
 | Diplomacy | `diplomaticDeals` and the projected `majorAlly` and `relationships` |
 
-The stored `Cities` column becomes `cityCount`; `player.cities` lists visible cities. The receiver's own votes, resources, unit count, supply and deals require full access. Foreign summaries expose fewer fields; `militaryStrength` needs full access or the receiver's own summary. City-states can have identity, ally, city count, population, gold, income, technologies, resources and relationships. A readable summary can make an identity visible even with no readable national values.
+The stored `Cities` column becomes `cityCount`; `player.cities` lists visible cities. Some fields require full access. See `ownPlayerFields`, `foreignPlayerFields`, and `projectPlayerReportFields` for access by player type. A readable summary can identify a player without exposing national values.
 
 `self.happinessPercentage` measures national happiness on a 0 to 100 scale. At 50, happy and unhappy citizens are in balance.
 
@@ -236,6 +236,7 @@ Current facts use the cutoff roster; events use the latest roster from an earlie
 | `city` | The cutoff city that matches the event's city ID or plot and ownership evidence |
 | `plot` | `x` and `y`, when the event has a location |
 | `distance.own` | Hex distance from `plot` to the receiver's nearest city at the cutoff |
+| `coveredByDeal` | Row ID of the unique later deal on the same turn that accounts for this technology gain or peaceful city transfer. It lets the rule leave the event to the deal story. |
 
 A player ID of -1 means "nobody" and provides no player link. [Event policy](#evidence-the-facts-rely-on) controls which IDs and names can reach rules.
 
@@ -249,10 +250,13 @@ A player ID of -1 means "nobody" and provides no player link. [Event policy](#ev
 | `EspionageResult` | `perspective` (`source` or `target`), `spyResult`, `cityName` when recorded, and links to the parties when their identity is available. The source may also get an inferred `tech` name. |
 | `ElectionResultSuccess`, `ElectionResultFailure` | `player`, signed `influenceChange`, and `cityState` when the capital's label resolves. Failure applies only to a player with a recorded spy in the election. |
 | `PlayerAdoptPolicyBranch` | `player`, `branch` |
+| `DealMade` | `fromPlayer` and `toPlayer` when readable. Valid structured terms supply `deal.from`, `deal.to`, and `deal.clauses`. |
 | `UnitCreated` | `player`, `unit`, `plot`. A named great person adds `person` and `kind: 'born'`. Unwitnessed births supply only the owner and name. |
 | `GreatPersonExpended` | `player`, `unit`, `plot`. A named great person adds `person` and `kind: 'expended'`. |
 | `UnitPrekill` | `player` (the owner), `unit`, `plot`, `person`, `kind: 'died'` and `attackingPlayer` when the final removal records a known attacker |
 | `ResolutionResult` | Public vote outcome: `isEnact` (true for enactment, false for repeal), `passed`, `resolutionType` (recorded name or numeric type), and the raw `decision`. The `proposerName` and `proposerPlayerId` are available when recorded. `player` links to a proposer with the usual dated contact. |
+
+A readable deal with a peace treaty has `deal.kind: 'peace-treaty'`. Other classifications require the receiver to be a party and each side to have a recorded label for every clause. Then `deal.kind`, `deal.weGive`, and `deal.weGet` support the story. Map, technology, and embassy deals can also supply `deal.direction`. See [deal patterns](examples.md#agreements-and-great-people).
 
 The defender can report a detected operation from its next recorded turn if it still appears to hold the city. `Identified` and `Killed` can reveal the source. `Detected` and `KilledNotIdentified` keep it anonymous; `Undetected` gives no defender report. The recording leaves notification delivery unknown.
 
@@ -350,12 +354,6 @@ MCP's `newspaper/queries.ts` returns cutoff snapshots, optional comparison snaps
 | Policy adoption | Requires full access to the player or 200 diplomat points from a roster before the event turn. |
 | Deal terms | Text and structured terms share one access gate: contact with parties and named players or teams, plus participation in the deal or 800 diplomat points with each foreign party. |
 | Embedded labels | Recorded player and city labels require dated contact with the corresponding player or city owner. Liberation keeps the city ID; its owner and city label are unavailable. |
-
-Completed deals involving us are classified using the recorded terms from both sides. Goods and gold, including gold per turn, qualify for a trade story when both sides provide them and for a gift story when only one side does. An embassy grant or exchange can include lump-sum gold. Buying, selling, exchanging, or gifting maps and technologies has dedicated coverage. A research agreement has its own story.
-
-A comprehensive agreement combines distinct commitments, such as a map and a technology, or an embassy and Open Borders. Reciprocal terms of one kind usually count as one commitment. Payment for a map or technology stays part of that purchase. A comprehensive story takes precedence over a standalone story for the same clause when the evidence links the two. A separate deal with the same partner can still qualify. Peace treaties and the events that actually start or end wars keep their existing coverage.
-
-For example, unwitnessed world news can report that Hypatia appeared in Persia with no city or unit type. Great person uses and deaths require recorded visibility. A death uses the final removal and is suppressed by a use that turn. Same-turn conversions, including gifts, supply no birth or death story. Named stories need a recorded personal name, which the strategist's `get-events` omits.
 
 | Join | Required evidence |
 | --- | --- |

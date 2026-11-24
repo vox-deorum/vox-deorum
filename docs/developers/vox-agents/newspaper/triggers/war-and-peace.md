@@ -10,7 +10,7 @@ For example, if Shaka declares on Brazil and India follows its defensive pact wi
 
 ## Incident facts in rules
 
-A rule with `subject: incident` can report a pact drawing in the receiver with `incident.kind === 'war' && incident.knows('role') && incident.role === 'joined' && incident.reason === 'pact'`. A story can name visible participants with `incident.participants.filter(p => p.player.knows('name')).map(p => p.player.name).join(', ')`. All rules for an incident share a conflict key, so selection can publish at most one account per issue. A declaration targeting the receiver can use `urgent` to qualify for the breaking front page.
+To report a pact drawing in the receiver, require an incident of kind `war`, readable role `joined`, and readable reason `pact`. Name participants with readable player names. Rules for the same incident share a conflict key, so selection keeps one account per issue. Mark a declaration urgent when it warrants a breaking front.
 
 ## Combining declaration reports
 
@@ -64,4 +64,4 @@ Use the parser and relationship checks in `mcp-server/src/diplomacy/relationship
 
 The relative paths start in `vox-agents/src/newspaper/`. For another story angle, add a [trigger and template](overview.md). For a new fact, extend the inference and update the [fact reference](facts.md). Test independent wars, recursive calls, gaps and skipped checks with the [CLI replay audit](../replay.md#generate-examples-from-the-command-line).
 
-Publication saves the pair memory and advances the reporting boundary. A skipped check keeps both at the previous publication, so the next check can rebuild history across the open reporting period and consider the earlier incident again.
+Publication saves pair memory and advances the reporting boundary. After a skip, both stay at the previous publication, so the next check can consider the incident again.

@@ -1,12 +1,12 @@
 # Newspaper trigger examples
 
-Start with the settler overlay to tune a score and revise a report. The stock rules below show patterns to borrow.
+Use the settler overlay to change a story's score and wording. The stock rules below show other patterns to borrow.
 
 ## A city shrinks after sending settlers
 
 [`settler-departure`](overview.md#a-first-example) rates the story by how much population the city lost. To give the capital and large cities more weight, set `adjust` to `["city.stake.place", "10 * lost"]` for `settler-departure` in your overlay's `triggers/` folder. A capital shrinking from eight to six scores 73: 45 for the `routine` tier, 8 for the capital, and 20 for the population loss.
 
-To edit the neutral report, save this as `<overlay>/templates/settler.json`:
+To edit the neutral report, save this as `<overlay>/templates/cities-settlement.json`:
 
 ```json
 [
@@ -15,36 +15,34 @@ To edit the neutral report, save this as `<overlay>/templates/settler.json`:
     "variants": [
       {
         "id": "settler-departure-report",
-        "headline": "Settlers ready in a smaller {{town}}",
-        "body": ["{{town}} has trained a party of settlers. Its population has fallen, and it still has food to spare."]
+        "headline": "Settler party prepares to leave {{city}}",
+        "body": ["{{city}} has trained a party of settlers. Its population has fallen, and it still has food to spare."]
       }
     ]
   }
 ]
 ```
 
-Run a [fresh replay](../replay.md#iterate-on-a-rule-or-overlay) with the overlay. The report keeps its condition and city link. Check the audit to see the score and which variant printed.
+Run a [fresh replay](../replay.md#iterate-on-a-rule-or-overlay) with the overlay. The overlay keeps the report's condition and city link. In the audit, check the adjusted score and the selected variant.
 
 ## Cities and borders
 
-Domestic and foreign city rules share files by topic: [construction](../../../../../vox-agents/newspaper/triggers/cities-construction.json), [settlement](../../../../../vox-agents/newspaper/triggers/cities-settlement.json), [civic life](../../../../../vox-agents/newspaper/triggers/cities-civic.json), [ownership](../../../../../vox-agents/newspaper/triggers/cities-ownership.json) and [conflict](../../../../../vox-agents/newspaper/triggers/cities-conflict.json). In the [templates directory](../../../../../vox-agents/newspaper/templates), the `foreign-*` accounts share [foreign-cities.json](../../../../../vox-agents/newspaper/templates/foreign-cities.json). The other city accounts stay in the five topic files. Related patterns appear in the [religion](../../../../../vox-agents/newspaper/triggers/religion.json), [war](../../../../../vox-agents/newspaper/triggers/war.json) and [war fronts](../../../../../vox-agents/newspaper/triggers/war-fronts.json) rules.
-
-Foreign reports use events and the basic city snapshots already visible to the reader. Detailed readings such as `unhappiness` causes, `foodPerTurn`, or a linked `CityTrained` event appear only when the reader has that observation, so a missing figure stays out of the story. Population rankings stay domestic, so a foreign report does not rank cities the reader cannot see.
+Domestic and foreign rules share the topical `cities-*.json` files in [triggers/](../../../../../vox-agents/newspaper/triggers/). Many foreign stories share [foreign-cities.json](../../../../../vox-agents/newspaper/templates/foreign-cities.json). Use [city facts](facts.md#city) to distinguish basic snapshots, detailed readings, and linked events. Population rankings such as `capital-outgrown` use own cities.
 
 | Rule | What to borrow |
 | --- | --- |
 | `city-puppet-annexed`, `neighbor-puppet-annexed` | Compare two snapshots of an own city or a foreign city within `neighboring`. The city goes from puppet to occupied under the same owner. |
 | `city-courthouse-completed`, `foreign-city-courthouse-completed` | Use a witnessed Courthouse or Satrap's Court completion or purchase in an occupied, non-puppet city. This ends the occupation unhappiness penalty; the game's occupation flag can remain set. |
-| `city-celebration-begins`, `foreign-city-celebration-begins` | Use the witnessed `CityBeginsWLTKD` event and a readable city linked to its owner. A nearby foreign celebration needs the same evidence as a domestic one. |
+| `city-celebration-begins`, `foreign-city-celebration-begins` | Use the witnessed `CityBeginsWLTKD` event and a readable city linked to its owner. A nearby foreign celebration also needs a matching player and city owner. |
 | `forward-settle` | Use `PlayerCityFounded` or `UnitCityFounded`, and prefer `PlayerCityFounded` when both report the same settlement. The rule covers rival settlements within `adjacent` of our nearest city, so `foreign-city-founded` leaves them alone. Urgency stays at two tiles or less. |
 | `foreign-city-founded` | Report any other eligible local founding within `nearby` (15 tiles). Require a readable city name and owner, and skip a `UnitCityFounded` duplicate of a `PlayerCityFounded` event. |
 | `foreign-building-investment-made` | Require the witnessed `CityInvestedBuilding` event for a nearby foreign city with a readable name. Name the building and owner, and suppress the report for a later completion or purchase with the same recorded building name in the reporting window. |
-| `foreign-city-growth-milestone`, `foreign-city-defense-completed` | Read growth from same-owner population snapshots and defense from completed construction. Both use basic observations; rankings such as `capital-outgrown` stay domestic. |
+| `foreign-city-growth-milestone`, `foreign-city-defense-completed` | Read growth from same-owner population snapshots and defenses from a witnessed `CityConstructed` completion, including a purchase. |
 | `besieged-and-starving` | Combine the `besieged` and `starving` shortcuts for an own city. Half damage makes it urgent; default `rearm` waits for a check where the conditions are false. |
 | `neighbors-convert` | Group neighboring foreign cities by their new majority religion. Require three matches in the `recent` window and raise the score as the group grows. |
-| `foreign-city-hardship`, `foreign-city-raises-settlers` | Hardship runs at any distance when the observation carries the detail: print the readable cause (`famine` or `pillaged`), or a food shortage built from readable `foodPerTurn` and `foodStored` figures. Settler training needs a linked `CityTrained` settler, a population drop and readable positive `foodPerTurn`. Leave out any cause or figure the snapshot does not carry. |
+| `foreign-city-hardship`, `foreign-city-raises-settlers` | Hardship runs at any distance with a readable leading cause (`famine` or `pillaged`) or the `starving` shortcut. Settler training needs the linked event, a population drop, and positive `foodPerTurn`. |
 | `foreign-city-flips`, `foreign-city-liberated`, `foreign-occupied-city-resists` | Report ownership changes from `CityFlipped` and `PlayerLiberated`. When a same-turn capture covers the same transfer, let `nearby-city-captured` print one account instead. Resistance needs occupied status and positive `resistanceTurns`. |
-| `foreign-city-takes-heavy-damage` | Compare nearby non-enemy cities' hit points before and after they cross half damage. Use the war variant only when a war involving the owner is known. The readings do not identify the attacker or prove a blockade. |
+| `foreign-city-takes-heavy-damage` | Compare nearby non-enemy cities' hit points before and after they cross half damage. The war variant needs a known war involving the owner; damage alone supports the neutral report. |
 
 ## National affairs
 
@@ -72,6 +70,16 @@ In [`enemy-front-posture-offensive`](../../../../../vox-agents/newspaper/trigger
 
 `vassals-join-war` names the participants whose reason for joining is inferred as `vassal`. It rates a war involving the receiver above a foreign war and marks it urgent when the receiver is the target. See [war and peace inference](war-and-peace.md).
 
+## Agreements and great people
+
+| Pattern | What to borrow |
+| --- | --- |
+| [Completed agreements](../../../../../vox-agents/newspaper/triggers/agreements.json) | Use the receiver's recorded contributions and receipts. Commerce in both directions is a trade; in one direction it is a gift. Maps, technologies, embassies, and research agreements have their own angles. |
+| `comprehensive-agreement` | Combine distinct commitments such as a map and a technology. A payment for a map can stay part of the purchase. Use a single report when linked observations describe the same clause. A separate deal with the same partner can still qualify. |
+| [Named great people](../../../../../vox-agents/newspaper/triggers/culture.json) | Unwitnessed news can name Hypatia and Persia. A story about her use or death needs a witnessed event. The death is based on a final removal without a same-turn use. A same-turn conversion, including a gift, supplies neither birth nor death. |
+
+See [event facts](facts.md#event) for the fields that supply this copy.
+
 ## Congress
 
 The [Congress rules](../../../../../vox-agents/newspaper/triggers/congress.json) and [templates](../../../../../vox-agents/newspaper/templates/congress.json) cover upcoming sessions, new motions, and vote results. For an imminent session, check that `game.congress` is available before comparing the expected session with next turn. For a new motion, select from `game.congress.newProposals` entries with a recorded proposer. For a result, require both the resolution and proposer names on the public `ResolutionResult` event. The trigger checks the proposer so every variant can name them.
@@ -94,7 +102,7 @@ From the repository root, add `--config vox-agents/newspaper/probes` to a fresh 
 
 ### A foreign policy briefing
 
-`probe-foreign-policies` requires our diplomat abroad and readable policy names. It picks one branch from the latest tier with names, favoring ideologies. Turn and player ID break ties consistently. A specific adoption still needs a readable `PlayerAdoptPolicy` event.
+`probe-foreign-policies` requires our diplomat abroad and readable policy names. It picks one branch from the latest tier with names, favoring ideologies. Turn and player ID pick one deterministically when several qualify. A specific adoption still needs a readable `PlayerAdoptPolicy` event.
 
 ### A retraction after a printed peace
 

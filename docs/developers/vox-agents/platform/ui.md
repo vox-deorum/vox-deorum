@@ -77,31 +77,30 @@ Opening a `strategist.turn.N` span in Telemetry shows a summary of that turn ins
 
 ### Debug page
 
-The Debug page gathers logs into one card:
+The Debug page gathers logs into one card and can send the sample issue to the game:
 
 - **Tabs.** Live Winston logs from the process, filterable by level and source, plus file tabs for Vox Agents, the bridge, the MCP server, and Civ 5. Service tabs open the newest log first (the Civ 5 tab opens `Lua.log`). Each tab has a file picker, search, a level filter for structured logs, and Refresh. Large files show only their last 512 KB.
 - **Download all.** Zips the latest logs for bug reports: the newest rotated `combined*.log` and `error*.log` per service, every Civ 5 log (the game rewrites them each launch), and a `setup.txt` manifest with the Vox Deorum version, platform, Civ 5 logging state, installed mod folder names, and which files were included or skipped. A file over 10 MB contributes only its newest 10 MB. Never API keys, `.env`, config JSON, or telemetry databases.
 - **Civ 5 logging switch.** Sets `LoggingEnabled` in the game's `config.ini`. Civ 5 reads it only at startup, so the page asks for a restart after a change.
+- **Show newspaper.** Exports the packaged Victorian sample for the current seat and reports success once the game acknowledges opening it. See [show an issue in the game](../newspaper/renderer.md#show-an-issue-in-the-game) for setup and fallback behavior.
 
-The routes live under `/api/debug` in `src/web/routes/debug.ts`; log reads accept only filenames from the folder listing. Discovery and zip creation live in `src/utils/debug/log-sources.ts` and `log-bundle.ts`, and ini updates in `src/game/civ5-ini.ts`. `ui/src/views/DebugView.vue` uses the components in `ui/src/components/logging/`.
+Log routes live under `/api/debug` in `src/web/routes/debug.ts` and accept only filenames from the folder listing. Discovery and zip creation live in `src/utils/debug/log-sources.ts` and `log-bundle.ts`, and ini updates in `src/game/civ5-ini.ts`. `ui/src/views/DebugView.vue` uses the components in `ui/src/components/logging/`.
 
 ### Writing Desk
 
-Open **Debug → Writing Desk** from a writable source checkout. The desk checks every unsettled stock variant by default. **Generate** uses the checked variants that match the current filters. Choose models and drafts per variant in the toolbar. Use **More models…** in the model field to browse a saved provider connection and add a model for this visit.
+Open **Debug → Writing Desk** from a writable source checkout. Use a configured chat model to draft stock variants, then save approved copy to the catalogue. See the [catalogue and authoring reference](../newspaper/editorial.md) for template fields.
 
-Click a copy to edit it. The desk keeps your edits as you close editors or switch between variants during a visit. Settle a copy to save it to the catalogue. To save several, choose **Settle multiple…** and pick which one keeps the original variant ID and file. The others get the next available suffixes (`-1`, `-2`, and so on) in a companion file such as `war-variants.json`. Each is a settled example and a separate publication choice with the original's style, eligibility, and weight. Use **Unsettle** to reopen any of them.
+1. **Choose variants.** Search, the All/Unsettled/Settled filter, and topic tags narrow the list. Unsettled variants are checked by default; **Generate** uses checked variants that match the filters.
+2. **Generate.** Pick choices per model and one or more models. Requests group checked variants by voice, stance, and genre, up to eight per request, and include the [writing guide](../newspaper/writing.md) in the model prompt.
+3. **Review.** A variant lists its current copy and candidates by model. Click an unsettled row to edit; those working drafts survive editor and variant switches.
+4. **Settle.** Settling saves the copy to the catalogue and marks it settled; **Unsettle** reopens it. **Settle multiple…** keeps one copy at the original ID and file and appends the rest as `-1`, `-2`, … in a companion such as `war-variants.json`. Each inherits the original's settings, including style, eligibility, weight, and links.
+5. **Reset.** Stop a running batch, then **Clear drafts** to remove generated candidates and edits while keeping current copies.
 
-To start a new round, stop any running batch and choose **Clear drafts** to remove generated candidates and their edits across the desk while keeping the current copies.
+The model field lists configured chat models; **More models…** adds a model from a saved provider connection for this visit. Choices default to 3 and cap at 30. **Edit style** corrects voice, stance, and genre and clears that variant's drafts for the old style; the article and its settled state stay. The writer sees each drafted template's settled variants and up to six from others with shared tags or style. Merge variants and `mode: llmOnly` templates are outside the desk.
 
-Use **Edit style** beside the variant's voice, stance, and genre to correct its tags. Saving keeps the article and its settled status and clears drafts written for that variant's previous style.
+In **Telemetry**, select an `agent.newspaper-writer` trace in the `newspaper-desk` database to read each call's prompt and reply. Search by variant or model; **Refresh** and **Load older traces** reach more. Replies in `newspaper/newspaper-desk-player-0.db` survive a restart; drafts do not. The desk shows provider token totals, and Telemetry splits visible output and reasoning.
 
-The desk groups variants by style and sends up to eight per request. The writer sees all settled variants from the templates it is drafting, so it can find fresh angles on the same news. It also sees a few examples from other templates for guidance on style and structure. Merge variants and templates reserved for the newspaper editor are outside the desk.
-
-In **Telemetry**, open the `newspaper-desk` database and select an `agent.newspaper-writer` trace. Its model step shows the prompt and available reply. Use **Refresh** for newly completed requests and **Load older traces** to see more. Search the loaded traces by variant ID or model. Older batches remain available in the same local database (`newspaper/newspaper-desk-player-0.db`). Recorded replies survive a restart; unapproved drafts in the desk do not.
-
-The desk shows the provider's token totals. Telemetry shows visible output and reasoning separately.
-
-The UI starts at `WritingDeskView.vue`. The catalogue, writer briefs, and save logic live in `vox-agents/src/newspaper/desk/`.
+The UI starts at `WritingDeskView.vue`. The catalogue and writer brief live in `vox-agents/src/newspaper/desk/`, and the prompt is `vox-agents/prompts/newspaper-writer.md`.
 
 ## Development
 

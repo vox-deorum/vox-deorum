@@ -1,5 +1,5 @@
 # Newspaper live integration
 
-Automatic publication during a live game is planned. To try delivery today, load the game and use [Show newspaper](renderer.md#show-an-issue-in-the-game) on the Debug page to open the packaged sample.
+**Debug → Show newspaper** opens the packaged Victorian sample in Civilization V. Follow the [delivery setup](renderer.md#show-an-issue-in-the-game) to test it with the active seat. [Replay](replay.md) issues are available in the browser and CLI output.
 
-[Plan 5](../../../plans/newspaper/implementation/05-live-integration.md) proposes checking MCP's recorded evidence every few completed turns for the human player. A notification and a Newspaper menu entry will open the latest issue for the current game and seat.
+[Automatic publication](../../../plans/newspaper/implementation/05-live-integration.md) is planned. The proposal covers checks after completed turns, notifications, and a menu entry for the latest issue.

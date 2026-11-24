@@ -1,6 +1,6 @@
 # Newspaper trigger overview
 
-A trigger spots a development in a game recording, such as one of our cities shrinking after training settlers. The rule tests facts visible to the receiving player. A [story template](../editorial.md#authoring-choices) turns a match into copy that can compete for space in an issue.
+A trigger tests recorded facts visible to one player. A match produces a **development**, such as a city shrinking after training settlers. A [story template](../editorial.md#authoring-choices) turns the match into copy that can compete for space.
 
 ## Add a trigger
 
@@ -29,7 +29,7 @@ The stock `settler-departure` rule checks our cities for a population drop after
 | `adjust` | No | One expression or a list of expressions that add or subtract points from the tier base. |
 | `urgent` | No | Expression that can qualify the development for breaking front page coverage. |
 | `group` | No | [Combines](#grouping) matches by key. |
-| `repeat` | No | [Controls](#repeats) when a subject can fire again. |
+| `repeat` | No | [Controls](#repeats) when a city, player, pair, or world rule can fire again. Events and incidents ignore it. |
 | `chance` | No | [Probability](#chance) from 0 to 1 that a qualifying subject or group produces a development. |
 | `tags` | No | Labels used in editorial selection, pages and feedback. |
 | `enabled` | No | Set to `false` to disable the rule. |
@@ -40,7 +40,7 @@ The stock `settler-departure` rule checks our cities for a population drop after
 | --- | --- |
 | `city` | Each visible city at the cutoff |
 | `player` | Each known player, including the receiver and city-states |
-| `pair` | Each pair of known players with a recorded relationship |
+| `pair` | Each visible pair with a known war or peace observation |
 | `event` | Each permitted event of the listed types in the reporting period |
 | `incident` | Each inferred [war or peace incident](war-and-peace.md) in the reporting period |
 | `world` | The whole check; use globals such as `cities` and `players` |
@@ -51,7 +51,7 @@ An event or incident remains a subject if it is inside the reporting period even
 
 Each enabled rule tests its subjects against the same fact model. A `when` list runs in order and stops at the first false result, [hidden or missing fact](facts.md#hidden-and-missing-facts), or error. Conditions use JavaScript truthiness: for example, a readable nonempty `city.majorityReligion` passes.
 
-After `when` passes, the editor checks repeat eligibility. Ungrouped rules apply `chance` before evaluating `values` and scoring the match. Grouped rules evaluate `values`, form groups, then apply `chance` and score each surviving group. The audit includes results, errors, and evidence even if the check publishes nothing.
+After `when` and repeat eligibility pass, the rule takes one of two paths. An ungrouped match tests `chance` before evaluating `values` and scoring. A grouped match evaluates `values` and forms groups before testing `chance` and scoring. A skipped publication still has an audit of results, errors, and evidence.
 
 ## Expressions and authored choices
 
@@ -104,7 +104,7 @@ City location and the owner's relationship can count separately. Check whether y
 | `once` | Never, once a story for that rule and subject has printed. |
 | A span such as `medium` | After this many [Standard turns](constants.md#spans) have elapsed since publication, even if the condition stayed true. |
 
-A stateful match spends its repeat only when it contributes to a printed story. A match left out can compete again if it still qualifies. A false condition can rearm an existing match even on a skipped check. Publication closes the reporting window; a skip keeps it open. Event and incident rules use the reporting period and fingerprints to avoid repeating printed developments.
+City, player, pair, and world rules spend their repeat only when the match contributes to a printed story. A match can compete again while it still qualifies. A false condition can rearm an existing match even on a skipped check. Event and incident rules always use `once`; the reporting period and printed fingerprints keep their developments from repeating.
 
 ## Publication memory
 
@@ -137,9 +137,9 @@ From the repository root or `vox-agents/`, use `npm run --silent newspaper:trigg
 
 ## Tune with an overlay
 
-Mirror the catalogue structure and keep the IDs of rules you want to change. Lists such as `when`, `adjust`, and `tags` replace the inherited lists. Use `enabled: false` to turn off a stock rule. Version 3 uses `tier` and `adjust` in place of the old `importance` field. See [constant overrides](constants.md#change-or-add-a-name) and [catalogue merges](../editorial.md#catalogue-and-eligibility).
+Mirror the catalogue structure and keep the IDs of rules you want to change. Lists such as `when`, `adjust`, and `tags` replace the inherited lists. Use `enabled: false` to turn off a stock rule. See [constant overrides](constants.md#change-or-add-a-name) and [catalogue merges](../editorial.md#catalogue-and-eligibility).
 
-Follow the [replay workflow](../replay.md#iterate-on-a-rule-or-overlay) to load an overlay in a fresh run. In browser replay use **Recording > Advanced > Editorial config directory**.
+Follow the [replay workflow](../replay.md#iterate-on-a-rule-or-overlay) to load an overlay in a fresh run.
 
 ## Probe catalogue behavior
 

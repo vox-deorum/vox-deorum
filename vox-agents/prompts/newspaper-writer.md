@@ -84,20 +84,6 @@ Follow these example writings as a model, learn from the way they handle differe
 | {{group}} | `{{name}}` | {{source}} | {{#mayBeEmpty}}may be empty{{/mayBeEmpty}}{{^mayBeEmpty}}always present{{/mayBeEmpty}}{{#keep}}; keep{{/keep}} |
 {{/variables}}
 
-### Current text
-- Headline: {{current.headline}}
-{{#current.subheadline}}
-- Subheadline: {{current.subheadline}}
-{{/current.subheadline}}
-{{#current.byline}}
-- Byline: {{current.byline}}
-{{/current.byline}}
-
-{{#current.body}}
-> {{.}}
-
-{{/current.body}}
-
 {{/variants}}
 ## Output
 Return a JSON object with a `variants` array. Include every variant from the request once. Each entry has the variant's `templateId`, its `variantId`, and a `choices` array of exactly {{choices}} objects. Each choice has these fields:
