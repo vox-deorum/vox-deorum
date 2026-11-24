@@ -107,11 +107,14 @@
         "voice": "gazette",
         "stance": "neutral",
         "genre": "notice",
-        "headline": "Notice to the learned: {{tech}} abroad",
+        "headline": "Notice: {{tech}} in {{team}}",
         "body": [
-          "The printers give notice that {{tech}} is now in use in {{team}}, whose lands lie near ours. Scholars who can show the report to be mistaken should call at the office before the next edition. Until then the notice stands."
+          "Scientists of a nearby country, {{team}}, have lately acquired knowledge of {{tech}}. Scholars who can show the report to be mistaken should call at the office before the next edition. Until then the notice stands."
         ],
-        "weight": { "base": 1 }
+        "weight": {
+          "base": 1
+        },
+        "settled": true
       },
       {
         "id": "nearby-team-gains-technology-anecdote",

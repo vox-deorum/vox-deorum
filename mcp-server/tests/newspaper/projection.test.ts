@@ -220,6 +220,31 @@ describe('newspaper field projection', () => {
     expect(projectNewspaperEvent(row as any, context())).toBeUndefined();
   });
 
+  it('should project only observed endpoints of a plundered trade route', () => {
+    const row = { ID: 4, Turn: 10, CreatedAt: 1010, Player0: 1, Type: 'PlayerPlunderedTradeRoute', Payload: {
+      PlunderingPlayerID: 63, OriginOwnerID: 0, OriginCityID: 1, DestinationOwnerID: 2, DestinationCityID: 2,
+    } };
+    const ctx = context();
+    const [, destination] = ctx.cityHistory!;
+    ctx.cityHistory = [
+      ...ctx.cityHistory!,
+      { ...destination, ID: 7, Key: 1, Name: 'Harbor', Owner: 'Civ0', X: 7, Player0: 2 },
+    ];
+    const projected = projectNewspaperEvent(row as any, ctx);
+    expect(projected?.values).toMatchObject({
+      OriginCityID: 1, OriginCityX: 7, OriginCityY: 0, DestinationCityID: 2, DestinationCityX: 2, DestinationCityY: 0,
+    });
+    expect(projected?.relatedSources).toEqual(expect.arrayContaining([
+      expect.objectContaining({ table: 'CityInformations', id: 7 }),
+      expect.objectContaining({ table: 'CityInformations', id: 2 }),
+    ]));
+
+    ctx.cityHistory = ctx.cityHistory.map(city => city.ID === 2 ? { ...city, Player0: 0 } : city);
+    const partiallyObserved = projectNewspaperEvent(row as any, ctx);
+    expect(partiallyObserved?.values).toHaveProperty('OriginCityX', 7);
+    expect(partiallyObserved?.values).not.toHaveProperty('DestinationCityX');
+  });
+
   it.each([63, 1])('should retain a witnessed capture with barbarian owner %s', oldOwner => {
     const newOwner = oldOwner === 63 ? 1 : 63;
     const row = { ID: 5, Turn: 10, CreatedAt: 1010, Player0: 1, Type: 'CityCaptureComplete', Payload: {

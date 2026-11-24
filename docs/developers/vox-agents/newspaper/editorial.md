@@ -98,6 +98,7 @@ Prose and typed link values use `{{name}}` placeholders. Headlines, subheadlines
 | `{{city.owner.name}}` | A namespaced reference, here the owner of a city subject |
 | `{{player.leader}}`, `{{city.owner.leader}}` | The visible leader of a player subject or a referenced player |
 | `{{lost}}` | A scalar rule value from the ungrouped development |
+| `{{originCity}}`, `{{originCiv}}`, `{{destinationCity}}`, `{{destinationCiv}}` | The departure and arrival cities and their owners in trade route completion and plunder stories. The order follows the route, regardless of who reads the issue. |
 | `{{key}}`, `{{count}}` | A grouped development's non-null scalar key and member count |
 | `{{terms.civilization}}`, `{{terms.civilizationAdjective}}` | The reader's civilization name and its English adjective, such as Rome and Roman |
 | `{{terms.leader}}` | The reader's leader name |

@@ -383,9 +383,10 @@ export const newspaperEventConfigs: Record<string, NewspaperEventConfig> = {
     cityIDs: { OriginCityID: 'OriginPlayerID', DestinationCityID: 'DestinationPlayerID' }
   },
   PlayerPlunderedTradeRoute: {
-    fields: ['PlunderingPlayerID', 'OriginOwnerID', 'DestinationOwnerID', 'PlunderGoldValue'],
+    fields: ['PlunderingPlayerID', 'OriginOwnerID', 'DestinationOwnerID', 'PlunderGoldValue', 'OriginCityID', 'DestinationCityID'],
     subjects: diplomaticEventSubjects.PlayerPlunderedTradeRoute,
-    cities: { OriginCity: 'OriginOwnerID', DestinationCity: 'DestinationOwnerID' }
+    cities: { OriginCity: 'OriginOwnerID', DestinationCity: 'DestinationOwnerID' },
+    cityIDs: { OriginCityID: 'OriginOwnerID', DestinationCityID: 'DestinationOwnerID' }
   },
   TeamSetEra: { fields: ['TeamID', 'NewEra'], subjects: teamSubject },
   TeamTechResearched: {

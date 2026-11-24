@@ -56,14 +56,14 @@
     "id": "incoming-trade-route-plundered-account",
     "triggers": ["incoming-trade-route-plundered"],
     "tags": ["economy", "trade"],
-    "names": ["origin", "plunderer"],
+    "names": ["originCity", "originCiv", "destinationCity", "destinationCiv", "plunderer"],
     "weight": { "base": 1 },
     "variants": [
       {
         "id": "incoming-trade-route-plundered-account-report",
-        "headline": "A caravan from {{origin}} is plundered",
+        "headline": "{{plunderer}} strikes a trade route from {{originCity}} to {{destinationCity}}",
         "body": [
-          "Raiders under {{plunderer}} fell on a caravan from {{origin}} carrying goods for our market before it reached the gate, and its load is gone. In the cloth rows, a draper has moved three bolts to the back shelf and told her regulars the price holds only until the shelf is bare. What the road loses, the counter pays for."
+          "Raiders under {{plunderer}} struck a shipment from {{originCity}} bound for {{destinationCity}}, and the goods are lost. Merchants in {{originCity}} are reviewing orders that depended on the load, and buyers in {{destinationCity}} will have to wait for another shipment, if one is sent."
         ],
         "weight": { "base": 1 }
       },
@@ -72,9 +72,9 @@
         "voice": "press",
         "stance": "hawkish",
         "genre": "report",
-        "headline": "{{plunderer}} robs the road to our gates",
+        "headline": "{{plunderer}} robs a route bound for {{destinationCity}}",
         "body": [
-          "{{plunderer}}'s raiders fell on a caravan from {{origin}} bound for our gates and carried off the load. They struck where the road dips out of sight of the gate, a spot any patient band would choose. A captain who rides that stretch says the next caravan should not travel it without spears."
+          "Raiders under {{plunderer}} struck a shipment from {{originCiv}} before it reached {{destinationCity}} and carried off the load. The goods were meant for merchants in {{destinationCity}}, and the loss will be felt at the counter before the next delivery arrives."
         ],
         "weight": { "base": 1 }
       },
@@ -84,9 +84,9 @@
         "stance": "local",
         "genre": "anecdote",
         "when": "gold !== null",
-        "headline": "Payday for the raiders",
+        "headline": "{{plunderer}} takes {{gold}} gold from a route to {{destinationCity}}",
         "body": [
-          "Raiders under {{plunderer}} hit a caravan from {{origin}} bound for us and rode off with {{gold}} gold. At the unloading yard, a porter turned his slate face down and told the foreman he would not stand the gate road after dark for the same copper. His neighbor has begun sending her children to the well in pairs."
+          "Raiders under {{plunderer}} struck a shipment from {{originCity}} bound for {{destinationCity}} and took {{gold}} gold. Merchants in {{destinationCity}} will count the loss in the next accounts, and buyers may find fewer goods on offer until the route is used again."
         ],
         "weight": { "base": 1 }
       },
@@ -95,9 +95,9 @@
         "voice": "gazette",
         "stance": "government-critical",
         "genre": "editorial",
-        "headline": "Trade needs a guarded road",
+        "headline": "Trade needs a guarded route",
         "body": [
-          "Raiders under {{plunderer}} emptied a caravan from {{origin}} meant for our merchants on the road, and the shippers are asking what the {{terms.civic.government}} intends for the next one. The answer so far is that guarding a road is expensive, as though the cost of losing the goods were nothing. Either put armed men beside the bales or tell the merchant plainly that the road is his own risk."
+          "Raiders under {{plunderer}} took a shipment from {{originCiv}} meant for our buyers. The {{terms.civic.government}} should say how it plans to protect the next one. Guarding a trade route costs money, and so does losing the goods."
         ],
         "weight": { "base": 1 }
       },
@@ -106,9 +106,9 @@
         "voice": "spoken",
         "stance": "neutral",
         "genre": "report",
-        "headline": "The road from {{origin}} is robbed",
+        "headline": "The route from {{originCity}} is plundered",
         "body": [
-          "Word came up the road that the caravan from {{origin}} never arrived. Thieves under {{plunderer}} met it at dusk, they say, and the drivers walked home with empty carts and a story they will tell all winter. Our market grows thin at the edges, the merchants in {{origin}} grow quiet, and somewhere a band is drinking to a fine week."
+          "Word came that a shipment from {{originCity}} never arrived in {{destinationCiv}}. Raiders under {{plunderer}} struck it on the way, and the goods are gone. Our market will feel the gap, and merchants in {{originCity}} will wait on word of the next shipment."
         ],
         "weight": { "base": 1 }
       }
@@ -169,14 +169,14 @@
     "id": "long-trade-route-completed-account",
     "triggers": ["long-trade-route-completed"],
     "tags": ["economy", "trade", "international"],
-    "names": ["ourCity", "partner", "theirCity"],
+    "names": ["originCity", "originCiv", "destinationCity", "destinationCiv"],
     "weight": { "base": 1 },
     "variants": [
       {
         "id": "long-trade-route-completed-account-report",
-        "headline": "Trade run complete between cities {{routeDistance}} apart",
+        "headline": "Trade run complete from {{originCity}} to {{destinationCity}}",
         "body": [
-          "A caravan has finished the run between {{ourCity}} and {{theirCity}}, a road of {{routeDistance}}. The bales came off the carts gray with dust, and the customs clerk logged every one before he would let the drivers eat. He says the merchants are already asking about a second run before the weather changes."
+          "A trade run from {{originCity}} to {{destinationCity}} has finished. The cities are {{routeDistance}} tiles apart. Another run would give merchants at both ends time to line up new orders."
         ],
         "weight": { "base": 1 }
       },
@@ -186,9 +186,9 @@
         "stance": "ambitious",
         "genre": "analysis",
         "when": "outgoing === true",
-        "headline": "The next order from {{theirCity}}",
+        "headline": "The next order from {{destinationCity}}",
         "body": [
-          "Our traders have taken a full load from {{ourCity}} to {{theirCity}} and come home with empty carts. The profit worth chasing is the habit this road starts: a buyer in {{theirCity}} who learns our measures will order from them again. A workshop in {{ourCity}} that can fill such an order twice over has its next season spoken for."
+          "Our traders have finished the run from {{originCity}} to {{destinationCity}}. A repeat order from {{destinationCity}} would give workshops in {{originCity}} a reason to set aside stock for the next run."
         ],
         "weight": { "base": 1 }
       },
@@ -198,9 +198,9 @@
         "stance": "conciliatory",
         "genre": "report",
         "when": "outgoing === false",
-        "headline": "A long road ends at {{ourCity}}",
+        "headline": "A long route ends at {{destinationCity}}",
         "body": [
-          "Word reaches the printing house that a caravan from {{theirCity}} has finished the road to {{ourCity}}, all {{routeDistance}} of it. The driver spent his first evening at the gate yard brushing dust from his team while a boy from the inn carried out water. A town that treats such a visitor well will see his wheels again next season."
+          "Traders from {{originCity}} in {{originCiv}} have completed their run to {{destinationCity}}. Merchants in both cities will be watching to see if the route is used again."
         ],
         "weight": { "base": 1 }
       },
@@ -209,10 +209,9 @@
         "voice": "chronicle",
         "stance": "neutral",
         "genre": "report",
-        "when": "partner !== null",
-        "headline": "A trade run with {{partner}} enters the record",
+        "headline": "A trade run between {{originCiv}} and {{destinationCiv}} enters the record",
         "body": [
-          "The entry for this season records a completed run between {{theirCity}} and {{ourCity}}, a road of {{routeDistance}}, with {{partner}} written in the margin. The scribe set down the goods by kind and count, then the names of the merchants who pledged for them. He left the page open at the bottom, as is done when a road is expected to be used again."
+          "The trade record has a completed run from {{originCity}} in {{originCiv}} to {{destinationCity}} in {{destinationCiv}}. The two cities are {{routeDistance}} tiles apart."
         ],
         "weight": { "base": 1 }
       },
@@ -221,9 +220,9 @@
         "voice": "feed",
         "stance": "neutral",
         "genre": "report",
-        "headline": "A run of {{routeDistance}}, completed",
+        "headline": "Trade run complete: {{originCity}} to {{destinationCity}}",
         "body": [
-          "Full run done: {{ourCity}} and {{theirCity}}, {{routeDistance}}. Nothing lost on the road. Buyers are already asking about the next one."
+          "One completed run between cities {{routeDistance}} tiles apart. Buyers can start planning for the next shipment."
         ],
         "weight": { "base": 1 }
       }
@@ -233,25 +232,28 @@
     "id": "our-trade-route-plundered-account",
     "triggers": ["our-trade-route-plundered"],
     "tags": ["economy", "trade"],
-    "names": ["destination", "plunderer"],
+    "names": ["originCity", "originCiv", "destinationCity", "destinationCiv", "plunderer"],
     "weight": { "base": 1 },
     "variants": [
       {
         "id": "our-trade-route-plundered-account-report",
-        "headline": "Raiders cut short the road to {{destination}}",
+        "headline": "{{plunderer}} strikes our trade route to {{destinationCity}}",
         "body": [
-          "Raiders under {{plunderer}} stripped one of our outbound caravans on the road to {{destination}}, and its cargo will never reach a buyer. The dispatch yard spent the morning returning fees to merchants who had paid for space, and the clerk marked each name with a small cross. Nothing on that road has grown safer for the next load."
+          "Raiders under {{plunderer}} struck one of our shipments bound for {{destinationCity}}, and its load is lost. Merchants from {{originCity}} are reviewing orders that depended on the missing cargo. Buyers in {{destinationCity}} will have to wait for another shipment, if one is sent."
         ],
-        "weight": { "base": 1 }
+        "weight": {
+          "base": 1
+        },
+        "settled": true
       },
       {
         "id": "our-trade-route-plundered-account-robber",
         "voice": "tabloid",
         "stance": "populist",
         "genre": "report",
-        "headline": "{{plunderer}} takes our trade on the road",
+        "headline": "{{plunderer}} takes our goods on the route to {{destinationCity}}",
         "body": [
-          "{{plunderer}} took one of our caravans apart on the road to {{destination}} and kept the goods. The drivers walked back with empty hands and a full story. The carters and the stallkeepers will feel this week's loss; the men who signed the papers will feel none of it."
+          "{{plunderer}} stripped one of our outbound shipments on the route to {{destinationCity}} and kept the goods. Our traders returned with empty hands and a full story. The merchants of {{originCiv}} and the buyers in {{destinationCity}} will feel this week's loss; the men who signed the papers will feel none of it."
         ],
         "weight": { "base": 1 }
       },
@@ -263,11 +265,11 @@
         "when": "gold !== null",
         "headline": "The account of a plundered route",
         "body": [
-          "Caravans lost: one, and it left from our own soil.",
+          "Shipments lost: one, and it began at {{originCity}}.",
           "Raiders: {{plunderer}}.",
-          "Route: ours, bound for {{destination}}.",
+          "Route: ours, bound for {{destinationCity}}.",
           "Gold taken: {{gold}}.",
-          "Cargo: gone. The loss is entered beside the road that closed."
+          "Cargo: gone. The loss is entered beside the route that was struck."
         ],
         "weight": { "base": 1 }
       },
@@ -276,9 +278,9 @@
         "voice": "broadcast",
         "stance": "conciliatory",
         "genre": "report",
-        "headline": "Trade route to {{destination}} plundered",
+        "headline": "Trade route to {{destinationCity}} plundered",
         "body": [
-          "Raiders under {{plunderer}} robbed a caravan of ours on the road to {{destination}}. In the dispatch yard this evening, a merchant is folding a letter to the buyers who were promised the load. \"Tell them plainly,\" she says. \"A late cart is better than a rumor.\""
+          "Raiders under {{plunderer}} robbed a shipment of ours on the route to {{destinationCity}}. The merchants in {{originCity}} who sent it are notifying buyers in {{destinationCity}} that the load will not arrive. A late shipment is better than a rumor, and the buyers should hear the facts directly."
         ],
         "weight": { "base": 1 }
       },
@@ -287,9 +289,9 @@
         "voice": "pamphlet",
         "stance": "hawkish",
         "genre": "editorial",
-        "headline": "Send the spears with the trade",
+        "headline": "Send guards with the trade",
         "body": [
-          "Another of our caravans on the road to {{destination}} is gone, {{terms.civic.people}}, and {{plunderer}} is already counting the profit. A thief weighs the purse against the guard, and on our roads the guard is a rumor. Put spears beside the bales and robbery will cost more than it pays."
+          "{{plunderer}} took one of our shipments to {{destinationCiv}}, {{terms.civic.people}}. Put guards with the next shipment and make raiders think twice about the cost of taking it."
         ],
         "weight": { "base": 1 }
       }
@@ -303,22 +305,28 @@
     "variants": [
       {
         "id": "trade-network-opens-account-report",
-        "headline": "Our trade goes abroad",
+        "headline": "First foreign trade route opened",
         "body": [
-          "Carts loaded for foreign markets rolled out of the gate this week, and the last count had found no road at all. Our roads abroad now number {{routes}}. At the north gate warehouse, the keeper has lifted the bar from a door that had stayed shut and swept the threshold twice for good measure."
+          "For the first time, our trade network has {{routes}} outgoing routes. Carts are carrying goods toward foreign markets. {{terms.civilization}}'s merchants are eager to learn from these early journeys, while the {{terms.civic.government}} is counting for their profits."
         ],
-        "weight": { "base": 1 }
+        "weight": {
+          "base": 1
+        },
+        "settled": true
       },
       {
         "id": "trade-network-opens-account-notice",
         "voice": "crier",
         "stance": "national",
         "genre": "notice",
-        "headline": "Hear it! Our trade goes abroad",
+        "headline": "Hear it! Our trade roads are open",
         "body": [
-          "Hear it, {{terms.civic.people}}! Our goods go out to foreign markets! The roads abroad now number {{routes}}, and at the last count we had none! Every cart that leaves carries our mark, and every cart that comes home carries our pay!"
+          "Hear it, people of {{terms.civilization}}! Our goods now travel to foreign markets by {{routes}} trade routes. Our merchants carry our goods beyond {{terms.civilizationAdjective}} borders, and money is pouring in!"
         ],
-        "weight": { "base": 1 }
+        "weight": {
+          "base": 1
+        },
+        "settled": true
       },
       {
         "id": "trade-network-opens-account-analysis",
@@ -348,14 +356,14 @@
     "id": "we-plunder-foreign-trade-route-account",
     "triggers": ["we-plunder-foreign-trade-route"],
     "tags": ["economy", "trade"],
-    "names": ["destination", "origin"],
+    "names": ["originCity", "originCiv", "destinationCity", "destinationCiv"],
     "weight": { "base": 1 },
     "variants": [
       {
         "id": "we-plunder-foreign-trade-route-account-report",
-        "headline": "We plunder a caravan from {{origin}}",
+        "headline": "Our soldiers plunder a route from {{originCiv}}",
         "body": [
-          "A caravan from {{origin}} met our soldiers on the road and did not continue its journey. The wagons came back to our depot, where a quartermaster is now weighing sacks that still carry another ruler's seal. The load will feed the stores or fill the market, and the merchants who sent it will hear only that the road swallowed their goods."
+          "Our soldiers struck a foreign trade route out of {{originCiv}} and brought the goods home. The load will feed the stores or fill the market, and the merchants who sent it will hear only that the goods did not arrive."
         ],
         "weight": { "base": 1 }
       },
@@ -367,7 +375,7 @@
         "when": "gold !== null",
         "headline": "{{gold}} gold taken from a foreign route",
         "body": [
-          "Our soldiers took {{gold}} gold from a caravan out of {{origin}} along with its cargo. At the pay table, a clerk is weighing coin stamped with another sovereign's face and setting it in a separate pile. The sum will help balance this month's books; the merchants who lost it will remember the road and the men who held it."
+          "Our soldiers took {{gold}} gold from a shipment out of {{originCity}} along with its goods. The sum will help balance this month's books, and the merchants who lost it will remember the route and the men who held it."
         ],
         "weight": { "base": 1 }
       },
@@ -376,10 +384,9 @@
         "voice": "gazette",
         "stance": "elitist",
         "genre": "report",
-        "when": "destination !== null",
-        "headline": "A route from {{origin}} to {{destination}} is plundered",
+        "headline": "A route from {{originCity}} to {{destinationCity}} is plundered",
         "body": [
-          "Letters from the frontier relate that our soldiers stopped a caravan bound from {{origin}} to {{destination}} and brought it in with its goods. The cargo will sell well at our markets, and the officers may expect their share of praise. A great power takes what it intends to keep, and this cargo we intend to keep."
+          "Reports from abroad relate that our soldiers stopped a shipment bound from {{originCity}} to {{destinationCity}} and brought it in with its goods. The cargo will sell well at our markets, and the officers may expect their share of praise. A great power takes what it intends to keep, and this cargo we intend to keep."
         ],
         "weight": { "base": 1 }
       },
@@ -390,7 +397,7 @@
         "genre": "joke",
         "headline": "Foreign trade turns a profit",
         "body": [
-          "Merchants wait years for trade with {{origin}} to pay. A soldier with a good road can collect the same profit before supper."
+          "Merchants wait years for trade with {{originCiv}} to pay. A soldier with a good route can collect the same profit before supper."
         ],
         "weight": { "base": 1 }
       },
@@ -402,7 +409,7 @@
         "byline": "A merchant",
         "headline": "Have we no merchants left?",
         "body": [
-          "Sir, I have spent my working life on roads like the one from {{origin}} that our soldiers just closed, and I know the families at both ends. The loss is not only the goods in the wagon but the handshake that sent it out. When we want that road again, the men at the far end will remember whose flag stopped their carts."
+          "Sir, we have spent years building trade on routes like the one from {{originCiv}} to {{destinationCiv}}, and our soldiers have just struck one of them. The loss is not only the goods but the trust that sent them. When we want that route again, the merchants at the far end will remember whose flag stopped their goods."
         ],
         "weight": { "base": 1 }
       }

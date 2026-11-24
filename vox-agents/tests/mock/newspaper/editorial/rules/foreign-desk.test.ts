@@ -196,6 +196,38 @@ describe('stock foreign desk', () => {
     expect(fired(result, 'our-trade-route-plundered')).toEqual(['event/1']);
     expect(fired(result, 'incoming-trade-route-plundered')).toEqual(['event/2']);
     expect(fired(result, 'we-plunder-foreign-trade-route')).toEqual(['event/3']);
+    expectStory(result, 'our-trade-route-plundered', ['Brazil']);
+    expectStory(result, 'incoming-trade-route-plundered', ['India', 'Brazil']);
+    expectStory(result, 'we-plunder-foreign-trade-route', ['India']);
+  });
+
+  it.each([
+    ['our-trade-route-plundered', 0, 2, 1],
+    ['incoming-trade-route-plundered', 2, 0, 1],
+    ['we-plunder-foreign-trade-route', 2, 1, 0],
+    ['long-trade-route-completed', 0, 2, null],
+    ['long-trade-route-completed', 2, 0, null],
+  ] as const)('should expose ordered endpoints for %s (%i to %i)', async (rule, origin, destination, plunderer) => {
+    const cities = { 0: home, 1: city(11, 8, 1, 'Salvador', 12), 2: city(12, 8, 2, 'Delhi', 35) };
+    const from = cities[origin];
+    const to = cities[destination];
+    const endpoints = {
+      OriginCityID: from.subjectID, OriginCityX: from.values.X, OriginCityY: from.values.Y,
+      DestinationCityID: to.subjectID, DestinationCityX: to.values.X, DestinationCityY: to.values.Y,
+    };
+    const report = plunderer === null
+      ? event('PlayerTradeRouteCompleted', 1, 9, origin, destination, { ...endpoints, OriginPlayerID: origin, DestinationPlayerID: destination })
+      : event('PlayerPlunderedTradeRoute', 1, 9, plunderer, origin, { ...endpoints, PlunderingPlayerID: plunderer,
+        OriginOwnerID: origin, DestinationOwnerID: destination });
+    const result = await publish(evidence([report], [snapshot(0, 8, [relationship(1), relationship(2)])]), Object.values(cities));
+    const match = result.decision.triggerAudit.find(entry => entry.rule === rule)?.subjects.find(subject => subject.subject === 'event/1');
+    expect(match?.outcome).toBe('fired');
+    expect(match?.expressions).toEqual(expect.arrayContaining([
+      expect.objectContaining({ field: 'values.originCity', value: from.values.Name }),
+      expect.objectContaining({ field: 'values.originCiv', value: context.playerNames![origin] }),
+      expect.objectContaining({ field: 'values.destinationCity', value: to.values.Name }),
+      expect.objectContaining({ field: 'values.destinationCiv', value: context.playerNames![destination] }),
+    ]));
   });
 
   it('should report incoming open borders separately except when both grants are new', async () => {
