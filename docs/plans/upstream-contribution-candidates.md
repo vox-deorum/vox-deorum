@@ -114,6 +114,8 @@ VD adjusts risk, occupation, attrition, city defense, and ground defense in tact
 
 `VOX_TACTICAL_OPERATIONAL_LOOP` replaces non-barbarian zone-by-zone combat and reinforcement scheduling with battlefield offers, readiness checks, execution, and reprioritization. This adds `CvTacticalOperationalLoop`, `CvTacticalOperationalValue`, and `CvTacticalOperationalWeights`. See [operational loop](../developers/civ5-dll/unit-ai/commands/overview.md).
 
+The [tactical cover PR draft](tactical-cover-upstream-pr.md) proposes shared search and legal stacking changes separately and records the native and operational comparisons.
+
 **Source:** patches `0080`–`0085`, tactical integration, danger access, and defines/options. **Gate:** reconcile copied native routines with current upstream, separate simulator grading and capture adapters, and agree on configuration and maintenance ownership. Compare full-turn outcomes, city and unit losses, reinforcement behavior, command limits, and runtime against current upstream. Default-off and a working simulator are insufficient evidence for adoption.
 
 ### Production scoring and weight accumulation
