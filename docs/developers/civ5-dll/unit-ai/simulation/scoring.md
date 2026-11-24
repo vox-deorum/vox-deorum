@@ -88,7 +88,7 @@ Naval units use a separate table. Without enemies, desirability follows distance
 
 A Withdraw search replaces the enemy-distance table with its own two rows, uses plain enemy distance for every unit and scores the pull home in the plot score, so its target distance is off. See [Withdraw search](../commands/withdrawal.md#withdraw-search).
 
-Intermediate moves receive provisional danger penalties. `ScoreCombatUnitTurnEnd` checks final positions against remaining HP, adjusts for experience, and penalizes isolation more heavily. Nearby friendlies, terrain, air cover, and citadels can improve the result. Unsafe plots can be rejected outright.
+Intermediate moves receive provisional danger penalties. `ScoreCombatUnitTurnEnd` checks final positions against remaining HP, adjusts for experience, and penalizes isolation more heavily. Nearby friendlies, terrain, air cover, and citadels can improve the result. Formation and isolation count committed defenders by domain. A land unit and a ship sharing one tile, including a city, each count when the scorer uses both domains. Embarked units give no adjacent cover. Unsafe plots can be rejected outright.
 
 ## Search order and final ranking
 
@@ -103,7 +103,7 @@ Search order and final ranking use different scores and checks:
 
 ### Completed-plan score
 
-`CvBasePosition::UpdateScore` accumulates damage and bonuses and keeps one provisional plot score per unit. At completion, both committed and released units replace that provisional value with the change in positioning. `getScoreTotal` also includes the [trade gain](#how-plans-keep-the-score):
+`CvBasePosition::UpdateScore` accumulates damage and bonuses and keeps one provisional plot score per unit. At completion, each unit's positioning change replaces its provisional value. The search also scores friendly units outside the search on or next to a changed tile. `getScoreTotal` includes the [trade gain](#how-plans-keep-the-score):
 
 `total score = 10 × (cumulative damage delta + cumulative bonuses) + sum of unit positioning changes + trade gain`
 
@@ -111,17 +111,19 @@ Search order and final ranking use different scores and checks:
 
 | Term | What it measures |
 | --- | --- |
-| `F`, `S` | Final plot values at the ending and starting tiles. Both use the completed board and the unit's state after its actions. The unit cannot provide cover for its own starting tile. |
+| `F`, `S` | Plot values with friendly units in their ending and starting positions, respectively. Both use the enemies that survived the plan and the unit's health after its actions. |
 | `A` | Added danger: the ending tile's danger penalty minus the starting tile's penalty, floored at zero. Danger is already part of both plot values. |
 | `m` | Usable moves left when released, including fractional moves. For a committed turn end, `m` is zero. The movement credit is rounded down to whole score points. |
 
 | What the unit does | Ends its turn | Releases with one move | Releases with two moves |
 | --- | ---: | ---: | ---: |
-| Stays on its starting tile | 0 | 0 | 0 |
+| Stays on its starting tile as a neighbor leaves, adding 30 danger | −30 | −15 | −10 |
 | Moves to a tile worth 30 points less, all from added danger | −30 | −15 | −10 |
 | Moves to a tile worth 30 points more, with no added danger | +30 | +30 | +30 |
 
-A shot from the starting tile still earns its damage and bonuses. The unit's positioning change is zero whether it ends its turn after the shot or stays available. The safety check can still reject a committed finish, regardless of its score. Aircraft have no tile value. The separate support search still uses its existing placement and cover score for units that finish and keeps the provisional value for units it releases.
+In each layout, nearby defenders that commit to staying provide formation and cover. Units released with moves do not provide that cover in either layout. A unit sharing a tile with the game's chosen defender pays only the share of danger that defender cannot absorb. A civilian pays a capture penalty only if a surviving enemy can enter its tile. Great Generals, Great Admirals and other support units keep the value of getting closer when the army gathers. Cities use their own danger rules.
+
+A shot from the starting tile still earns damage and bonuses. If the friendly layout is unchanged, the shot adds no positioning gain. The safety check can still reject a committed finish. Aircraft and special power actions have no positioning gain, and the separate support search keeps its own placement rules.
 
 ### Last-round heuristic quirk
 

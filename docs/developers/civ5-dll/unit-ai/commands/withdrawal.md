@@ -154,7 +154,7 @@ Score points, with the tenfold weight on damage and bonuses applied.
 | Damage taken | −10 per HP. | −10 per HP. | A melee trade now needs better than three to one. |
 | Healing in place | 10 per HP. | 10 per HP on a plot with zero danger; on a plot with danger, half that, rounded down. | A unit that reached safety may stop and heal. A threatened unit gets too little to beat a real retreat. |
 | Aggression level | From RISK. | Capped at Low. | No risky melee. |
-| Progress test | Units reached their line distance. | A kill, a ranged or melee attack, a heal, or a positive sum of the units' placement gains (end plot score minus start plot score). | The gains hold danger, enemy distance and the pull home, so any real retreat counts. |
+| Progress test | Units reached their line distance. | A kill, a ranged or melee attack, a heal, or a positive sum of [positioning changes](../simulation/scoring.md#completed-plan-score). | Gains include danger, enemy distance and the pull home. A retreat can lose as much as it gains if it exposes a nearby friendly. |
 | Turn-end danger, isolation doubling, cover, adjacent friend, terrain, frontline city, home ground, moves left, trade, captures, camps, citadels, pillage | As today. | Unchanged. | Kept out to limit the change. |
 
 In a Withdraw, a unit with a legal shot still gets the staying and healing candidates, so it may fire or stay and heal.
