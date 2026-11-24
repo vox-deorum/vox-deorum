@@ -77,7 +77,7 @@
         "id": "nearby-team-gains-technology-report",
         "headline": "Word of {{tech}} from {{team}}",
         "body": [
-          "Word comes from {{team}} that {{tech}} is now known there. Our own archive holds no account of the work, and the lecture halls have nothing to set beside the report. They have begun asking what can be had in writing, since a name repeated at market is not yet a lesson."
+          "Word comes from {{team}} that {{tech}} is now known there. Our scholars have yet to report the same. An account of how it is used nearby would give them a place to start."
         ],
         "weight": { "base": 1 }
       },
@@ -86,7 +86,7 @@
         "when": "team.includes(' and ')",
         "headline": "{{tech}} now known to {{team}}",
         "body": [
-          "{{team}} now hold {{tech}} between them, according to notices from each court. The reports differ in detail, as reports from separate capitals will. Our own archive holds no account of the work, and the lecture halls have nothing to set beside those reports."
+          "Knowledge of {{tech}} now extends to {{team}}. When our scholars seek an account of the new learning, they will have more than one place to ask."
         ],
         "weight": { "base": 1 }
       },
@@ -95,9 +95,9 @@
         "voice": "press",
         "stance": "rationalist",
         "genre": "analysis",
-        "headline": "What we lack, and what we might learn",
+        "headline": "What can we learn about {{tech}}?",
         "body": [
-          "That {{tech}} is now known to {{team}} is a fact of the wider world. What concerns us is the gap it describes. Our archive has no entry for the work, and it is possible the record never kept one, as records of early learning sometimes do not. Either way, the useful question is what our scholars can study from another account, and whether we can obtain one without guessing at the rest."
+          "With {{tech}} now known in {{team}}, our scholars have a nearby example to study. If we can learn how the knowledge is put to use there, we can judge what catching up would be worth."
         ],
         "weight": { "base": 1 }
       },
@@ -120,9 +120,9 @@
         "voice": "tabloid",
         "stance": "local",
         "genre": "anecdote",
-        "headline": "The name the schoolroom could not explain",
+        "headline": "A question from the schoolroom",
         "body": [
-          "The schoolmaster read the notice aloud at the end of lessons: {{tech}} is now known in {{team}}. A pupil asked what it was, and the master said he could not say, which he later admitted was the honest answer. He set the class to copying the name so that at least that much would be remembered."
+          "A schoolmaster read out the news that {{tech}} is now known in {{team}}. One pupil had a question for the next lesson: who here could teach it?"
         ],
         "weight": { "base": 1 }
       },
@@ -131,9 +131,9 @@
         "voice": "spoken",
         "stance": "traditional",
         "genre": "proverb",
-        "headline": "Keep your own lamp trimmed",
+        "headline": "A lesson from nearby",
         "body": [
-          "{{tech}} is known in {{team}}. Keep your own lamp trimmed."
+          "{{tech}} is known in {{team}}. A good pupil knows where to ask."
         ],
         "weight": { "base": 1 }
       }
@@ -148,9 +148,9 @@
     "variants": [
       {
         "id": "nearby-team-gains-known-technology-report",
-        "headline": "A second copy of {{tech}}",
+        "headline": "{{tech}} is now known here and in {{team}}",
         "body": [
-          "{{tech}} is now known to {{team}} as well as to us. Our scholars already have their own account of the work, and the two will not agree in every particular. The lecture halls have begun asking for the neighbor's copy, on the sensible ground that a second version is easier to check than a first."
+          "{{tech}} is now known to {{team}} as well as to us. Our scholars may soon have another account of the work to compare with their own."
         ],
         "weight": { "base": 1 }
       },
@@ -159,9 +159,9 @@
         "voice": "feed",
         "stance": "neutral",
         "genre": "report",
-        "headline": "Same lesson, second classroom",
+        "headline": "More hands at work on {{tech}}",
         "body": [
-          "{{tech}} is known in {{team}} now, and it is known here. A subject taught in two schools is not a crisis. It is how a subject gets corrected."
+          "Add {{team}} to the list of those who know {{tech}}. We know it too. Now we can see what each of us makes of it."
         ],
         "weight": { "base": 1 }
       },
@@ -170,9 +170,9 @@
         "voice": "press",
         "stance": "rationalist",
         "genre": "analysis",
-        "headline": "What a shared {{tech}} changes",
+        "headline": "What shared knowledge of {{tech}} changes",
         "body": [
-          "A technology held by one party is an advantage. Held by two, it is a common standard. {{tech}} is now known to {{team}}, as it is to us, and whatever advantage the knowledge gave us is now shared. The sensible response is not to mourn the advantage but to ask which of the two schools will keep the better notes, and whether either will publish them. Shared knowledge can still be used well or badly, and that choice remains ours."
+          "Now that {{tech}} is known in {{team}}, both sides have the same knowledge to draw on. Its value will depend on where each side can put it to use and how widely it is taught."
         ],
         "weight": { "base": 1 }
       },
@@ -181,9 +181,9 @@
         "voice": "chronicle",
         "stance": "neutral",
         "genre": "anecdote",
-        "headline": "Two accounts of {{tech}} compared",
+        "headline": "Room for another account of {{tech}}",
         "body": [
-          "At the reading room a copyist was asked to set our account of {{tech}} beside the version that has come from {{team}}. She found the two agreed on the main points and differed on the order, and said so plainly. The reader who had asked for the comparison paid for both copies and left without saying which he preferred."
+          "On hearing that {{tech}} was now known in {{team}}, a copyist at the reading room suggested leaving room beside our account for theirs. Readers could then see what each had to add."
         ],
         "weight": { "base": 1 }
       },
@@ -195,7 +195,7 @@
         "headline": "The same lesson in two rooms",
         "byline": "A schoolmaster",
         "body": [
-          "Madam Editor, I have taught {{tech}} for years, and I confess a small pleasure in hearing that the schools of {{team}} now teach it too. A subject taught in more than one room is a subject that will be corrected in more than one. My own notes are not finished, and I would rather compare them with another's than defend them alone."
+          "Madam Editor, I would welcome an account of {{tech}} from {{team}} now that our scholars have the subject in common. I would gladly set aside a lesson for questions we might put to one another."
         ],
         "weight": { "base": 1 }
       },
@@ -204,9 +204,9 @@
         "voice": "spoken",
         "stance": "traditional",
         "genre": "proverb",
-        "headline": "Two wicks",
+        "headline": "A lesson shared",
         "body": [
-          "{{tech}} is known in {{team}} and here. Two wicks make the room no darker."
+          "{{tech}} is known in {{team}} and here. Two teachers can give the same lesson and learn from each other."
         ],
         "weight": { "base": 1 }
       }
