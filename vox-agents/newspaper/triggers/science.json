@@ -30,7 +30,26 @@
       "event.knows('tech') && typeof event.tech === 'string' && event.tech.length > 0",
       "!event.knows('changeAmount') || event.changeAmount > 0",
       "event.knows('teamId') && self.knows('teamId') && event.teamId !== self.teamId",
-      "event.knows('players') && event.players.some(p => p.knows('major') && p.major === true && p.knows('distance') && p.distance <= nearby && p.knows('name'))"
+      "event.knows('players') && event.players.some(p => p.knows('major') && p.major === true && p.knows('distance') && p.distance <= nearby && p.knows('name'))",
+      "self.hasTechnology(event.tech) !== true"
+    ],
+    "values": {
+      "tech": "event.tech",
+      "team": "event.players.filter(p => p.knows('major') && p.major === true && p.knows('name')).map(p => p.name).join(' and ')"
+    },
+    "tier": "routine",
+    "tags": ["science", "international"]
+  },
+  {
+    "id": "nearby-team-gains-known-technology",
+    "subject": "event",
+    "event": "TeamTechResearched",
+    "when": [
+      "event.knows('tech') && typeof event.tech === 'string' && event.tech.length > 0",
+      "!event.knows('changeAmount') || event.changeAmount > 0",
+      "event.knows('teamId') && self.knows('teamId') && event.teamId !== self.teamId",
+      "event.knows('players') && event.players.some(p => p.knows('major') && p.major === true && p.knows('distance') && p.distance <= nearby && p.knows('name'))",
+      "self.hasTechnology(event.tech) === true"
     ],
     "values": {
       "tech": "event.tech",

@@ -185,6 +185,8 @@ Both helpers return `true` on an exact match and cite the national row, or retur
 
 `self.hasTechnology('Printing Press')` looks up the receiving team's latest change for that recorded display name through the cutoff, even before the trigger window. It returns `true` for a gain from research, grants or theft, or `false` for a loss, and cites the event. Rivals, earlier snapshots and unlogged technologies, including some starting technologies, give `undefined`. Use an era fallback if needed.
 
+When a nearby team acquires a technology, the stock science rules use the receiving team's possession at the issue cutoff to choose the angle. A recorded gain gives the shared technology account. A recorded loss or missing history gives the account about a technology we are presumed to lack.
+
 ### Covert presence and roster points
 
 Spy rosters match roles and locations. A nonnegative network balance also identifies intelligence gathering or schmoozing across game languages. A clear miss or empty roster establishes absence. Missing rosters, ambiguous matches or unrecognized states without a balance leave presence unknown.

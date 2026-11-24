@@ -361,11 +361,14 @@
     "variants": [
       {
         "id": "we-plunder-foreign-trade-route-account-report",
-        "headline": "Our soldiers plunder a route from {{originCiv}}",
+        "headline": "Our forces seize goods from {{originCiv}}",
         "body": [
-          "Our soldiers struck a foreign trade route out of {{originCiv}} and brought the goods home. The load will feed the stores or fill the market, and the merchants who sent it will hear only that the goods did not arrive."
+          "Our soldiers stopped a foreign shipment from {{originCiv}} to {{triggerValues.we-plunder-foreign-trade-route.destinationCiv}} and seized its goods. The cargo is now in our hands, earing a considerable income for {{terms.civic.government}}. The government of {{destinationCiv}} has protested this incident."
         ],
-        "weight": { "base": 1 }
+        "weight": {
+          "base": 1
+        },
+        "settled": true
       },
       {
         "id": "we-plunder-foreign-trade-route-account-gold",

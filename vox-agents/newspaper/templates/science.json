@@ -75,30 +75,29 @@
     "variants": [
       {
         "id": "nearby-team-gains-technology-report",
-        "when": "!team.includes(' and ')",
-        "headline": "New learning on the frontier: {{tech}}",
+        "headline": "Word of {{tech}} from {{team}}",
         "body": [
-          "{{team}} has learned {{tech}}, and its cities stand close enough that our own smiths hear of every change within a week. At the frontier market a cooper asked a passing carter what the news would mean for barrels, and got a shrug for an answer. Our guilds should expect the question from their own customers soon."
+          "Word comes from {{team}} that {{tech}} is now known there. Our own archive holds no account of the work, and the lecture halls have nothing to set beside the report. They have begun asking what can be had in writing, since a name repeated at market is not yet a lesson."
         ],
         "weight": { "base": 1 }
       },
       {
         "id": "nearby-team-gains-technology-partners",
         "when": "team.includes(' and ')",
-        "headline": "New knowledge in {{team}}: {{tech}}",
+        "headline": "{{tech}} now known to {{team}}",
         "body": [
-          "{{team}} now hold {{tech}} between them, and each court has sent word that the rest had nothing to do with it. The clerks name the same scholars in different orders, which is how a shared discovery is made to look like several. What reaches us is the knowledge itself, and it now sits on both sides of a border we share."
+          "{{team}} now hold {{tech}} between them, according to notices from each court. The reports differ in detail, as reports from separate capitals will. Our own archive holds no account of the work, and the lecture halls have nothing to set beside those reports."
         ],
         "weight": { "base": 1 }
       },
       {
         "id": "nearby-team-gains-technology-analysis",
         "voice": "press",
-        "stance": "hawkish",
+        "stance": "rationalist",
         "genre": "analysis",
-        "headline": "A neighbor's new learning",
+        "headline": "What we lack, and what we might learn",
         "body": [
-          "What does {{tech}} in the hands of {{team}} change for us? Their workshops keep lamps burning past midnight, and a drover who passes the gate says the guards have begun asking traders their names and writing them down. A neighbor who keeps such a list is worth watching, and our own benches should not be the last to hear of it."
+          "That {{tech}} is now known to {{team}} is a fact of the wider world. What concerns us is the gap it describes. Our archive has no entry for the work, and it is possible the record never kept one, as records of early learning sometimes do not. Either way, the useful question is what our scholars can study from another account, and whether we can obtain one without guessing at the rest."
         ],
         "weight": { "base": 1 }
       },
@@ -121,9 +120,9 @@
         "voice": "tabloid",
         "stance": "local",
         "genre": "anecdote",
-        "headline": "New learning across the fence",
+        "headline": "The name the schoolroom could not explain",
         "body": [
-          "The quarrel began over a loaf and ended with half the street choosing sides: {{tech}} has reached {{team}}, and no one could agree whether it would make bread cheaper or just make bakers quicker. The old miller ended it by thumping the counter. \"Cheaper or dearer,\" he said, \"they will still want it buttered.\""
+          "The schoolmaster read the notice aloud at the end of lessons: {{tech}} is now known in {{team}}. A pupil asked what it was, and the master said he could not say, which he later admitted was the honest answer. He set the class to copying the name so that at least that much would be remembered."
         ],
         "weight": { "base": 1 }
       },
@@ -132,9 +131,82 @@
         "voice": "spoken",
         "stance": "traditional",
         "genre": "proverb",
-        "headline": "The lamp next door",
+        "headline": "Keep your own lamp trimmed",
         "body": [
-          "{{tech}} lights the neighbor's table. Trim your own wick before dark."
+          "{{tech}} is known in {{team}}. Keep your own lamp trimmed."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "nearby-team-gains-known-technology-account",
+    "triggers": ["nearby-team-gains-known-technology"],
+    "tags": ["science", "international"],
+    "names": ["team", "tech"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "nearby-team-gains-known-technology-report",
+        "headline": "A second copy of {{tech}}",
+        "body": [
+          "{{tech}} is now known to {{team}} as well as to us. Our scholars already have their own account of the work, and the two will not agree in every particular. The lecture halls have begun asking for the neighbor's copy, on the sensible ground that a second version is easier to check than a first."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "nearby-team-gains-known-technology-feed",
+        "voice": "feed",
+        "stance": "neutral",
+        "genre": "report",
+        "headline": "Same lesson, second classroom",
+        "body": [
+          "{{tech}} is known in {{team}} now, and it is known here. A subject taught in two schools is not a crisis. It is how a subject gets corrected."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "nearby-team-gains-known-technology-analysis",
+        "voice": "press",
+        "stance": "rationalist",
+        "genre": "analysis",
+        "headline": "What a shared {{tech}} changes",
+        "body": [
+          "A technology held by one party is an advantage. Held by two, it is a common standard. {{tech}} is now known to {{team}}, as it is to us, and whatever advantage the knowledge gave us is now shared. The sensible response is not to mourn the advantage but to ask which of the two schools will keep the better notes, and whether either will publish them. Shared knowledge can still be used well or badly, and that choice remains ours."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "nearby-team-gains-known-technology-anecdote",
+        "voice": "chronicle",
+        "stance": "neutral",
+        "genre": "anecdote",
+        "headline": "Two accounts of {{tech}} compared",
+        "body": [
+          "At the reading room a copyist was asked to set our account of {{tech}} beside the version that has come from {{team}}. She found the two agreed on the main points and differed on the order, and said so plainly. The reader who had asked for the comparison paid for both copies and left without saying which he preferred."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "nearby-team-gains-known-technology-letter",
+        "voice": "gazette",
+        "stance": "conciliatory",
+        "genre": "letter",
+        "headline": "The same lesson in two rooms",
+        "byline": "A schoolmaster",
+        "body": [
+          "Madam Editor, I have taught {{tech}} for years, and I confess a small pleasure in hearing that the schools of {{team}} now teach it too. A subject taught in more than one room is a subject that will be corrected in more than one. My own notes are not finished, and I would rather compare them with another's than defend them alone."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "nearby-team-gains-known-technology-proverb",
+        "voice": "spoken",
+        "stance": "traditional",
+        "genre": "proverb",
+        "headline": "Two wicks",
+        "body": [
+          "{{tech}} is known in {{team}} and here. Two wicks make the room no darker."
         ],
         "weight": { "base": 1 }
       }

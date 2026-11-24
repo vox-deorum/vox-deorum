@@ -112,6 +112,29 @@ describe('stock foreign desk', () => {
     expect(record?.sources).toContainEqual(expect.objectContaining({ table: 'CityInformations', id: 2010 }));
   });
 
+  it.each([
+    ['a recorded gain', true, 'nearby-team-gains-known-technology'],
+    ['a recorded loss', false, 'nearby-team-gains-technology'],
+    ['no recorded change', undefined, 'nearby-team-gains-technology'],
+  ] as const)('should choose one nearby technology account for %s on our team', async (_history, gained, rule) => {
+    const tech = 'Printing Press';
+    const ownChange = { table: 'GameEvents', id: 100, turn: 2, createdAt: 2000 } as const;
+    const input = evidence([
+      event('TeamTechResearched', 1, 9, 1, 1, { TeamID: 101, Tech: tech, ChangeAmount: 1 }),
+      event('TeamTechResearched', 2, 9, 2, 2, { TeamID: 102, Tech: tech, ChangeAmount: 1 }),
+      event('TeamTechResearched', 3, 9, 1, 1, { TeamID: 101, Tech: tech, ChangeAmount: -1 }),
+    ], [snapshot(0, 8, [relationship(1), relationship(2)])]);
+    if (gained !== undefined) input.receiverTechnologies = [{ name: tech, gained, source: ownChange }];
+    const result = await publish(input, [home, city(11, 8, 1, 'Salvador', 4), city(12, 8, 2, 'Delhi', 35)]);
+
+    expect(fired(result, 'nearby-team-gains-technology')).toEqual(gained ? [] : ['event/1']);
+    expect(fired(result, 'nearby-team-gains-known-technology')).toEqual(gained ? ['event/1'] : []);
+    const article = expectStory(result, rule, ['Brazil', tech]);
+    const record = result.state.issues[0]?.items.find(item => item.id === article.id);
+    expect(record?.templateIds).toContain(`${rule}-account`);
+    if (gained !== undefined) expect(record?.sources).toContainEqual(ownChange);
+  });
+
   it('should report Geneva changing sides and exclude a city-state that merely lost its ally', async () => {
     const result = await publish(evidence([
       event('SetAlly', 1, 9, 10, 1, { MinorPlayerID: 10, OldAllyPlayerID: 0, NewAllyPlayerID: 1 }),
