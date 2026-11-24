@@ -1,0 +1,231 @@
+[
+  {
+    "id": "embassy-agreement-account",
+    "triggers": ["embassy-agreement"],
+    "tags": ["politics", "international"],
+    "names": ["partner"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "embassy-agreement-exchange-report",
+        "when": "direction === 'exchange'",
+        "headline": "We and {{partner}} agree to exchange embassies",
+        "body": [
+          "Our {{terms.civic.government}} and {{partner}} have agreed to exchange embassies. Each can now open a mission in the other's capital. {{dealTerms}}"
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "embassy-agreement-exchange-gazette",
+        "voice": "gazette",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "direction === 'exchange'",
+        "headline": "An exchange of embassies with {{partner}}",
+        "body": [
+          "Letters from the foreign office confirm that an exchange of embassies has been arranged with {{partner}}. The terms read: {{dealTerms}} A resident envoy in each capital will give both courts a direct channel for official business."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "embassy-agreement-grant-report",
+        "when": "direction === 'grant'",
+        "headline": "We agree to an embassy from {{partner}}",
+        "body": [
+          "Our {{terms.civic.government}} has given {{partner}} permission to open an embassy in our capital. {{dealTerms}}"
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "embassy-agreement-receive-report",
+        "when": "direction === 'receive'",
+        "headline": "{{partner}} agrees to our embassy",
+        "body": [
+          "{{partner}} has given our {{terms.civic.government}} permission to open an embassy in its capital. {{dealTerms}}"
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "research-agreement-account",
+    "triggers": ["research-agreement"],
+    "tags": ["science", "politics", "international"],
+    "names": ["partner"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "research-agreement-report",
+        "headline": "A research agreement with {{partner}}",
+        "body": [
+          "Our {{terms.civic.government}} and {{partner}} have signed a research agreement. Both sides stand to benefit from the research they carry out while it lasts. {{dealTerms}}"
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "technology-deal-account",
+    "triggers": ["technology-deal"],
+    "tags": ["science", "economy", "trade", "international"],
+    "names": ["partner"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "technology-deal-buy-report",
+        "when": "direction === 'buy'",
+        "headline": "We buy technology from {{partner}}",
+        "body": [
+          "Our {{terms.civic.government}} has bought technology from {{partner}}. {{dealTerms}}"
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "technology-deal-sell-report",
+        "when": "direction === 'sell'",
+        "headline": "We sell technology to {{partner}}",
+        "body": [
+          "Our {{terms.civic.government}} has agreed to sell knowledge to {{partner}}. The terms read: {{dealTerms}} The agreement sets a price for learning our scholars already hold."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "technology-deal-exchange-report",
+        "when": "direction === 'exchange'",
+        "headline": "We and {{partner}} exchange technology",
+        "body": [
+          "Our {{terms.civic.government}} and {{partner}} have exchanged technology. Both sides leave the table with something new to study. {{dealTerms}}"
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "technology-deal-gift-in-report",
+        "when": "direction === 'gift-in'",
+        "headline": "A technology gift from {{partner}}",
+        "body": [
+          "{{partner}} has made our {{terms.civic.government}} a gift of knowledge. The terms read: {{dealTerms}} The gift adds to what our scholars can study."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "technology-deal-gift-out-report",
+        "when": "direction === 'gift-out'",
+        "headline": "A technology gift for {{partner}}",
+        "body": [
+          "Our {{terms.civic.government}} has made {{partner}} a gift of knowledge. The terms read: {{dealTerms}} The gift carries our learning abroad without payment."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "map-deal-account",
+    "triggers": ["map-deal"],
+    "tags": ["economy", "trade", "international"],
+    "names": ["partner"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "map-deal-buy-report",
+        "when": "direction === 'buy'",
+        "headline": "We buy maps from {{partner}}",
+        "body": [
+          "Our {{terms.civic.government}} has bought maps from {{partner}}. {{dealTerms}}"
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "map-deal-sell-report",
+        "when": "direction === 'sell'",
+        "headline": "We sell maps to {{partner}}",
+        "body": [
+          "Our {{terms.civic.government}} has agreed to sell maps to {{partner}}. The terms read: {{dealTerms}} The agreement puts copies of our survey work into their hands."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "map-deal-exchange-report",
+        "when": "direction === 'exchange'",
+        "headline": "We and {{partner}} exchange maps",
+        "body": [
+          "Our {{terms.civic.government}} and {{partner}} have exchanged maps. Each side has received a copy of the other's charts. {{dealTerms}}"
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "map-deal-gift-in-report",
+        "when": "direction === 'gift-in'",
+        "headline": "A gift of maps from {{partner}}",
+        "body": [
+          "{{partner}} has made our {{terms.civic.government}} a gift of maps. The terms read: {{dealTerms}} Our surveyors will add the charts to the national collection."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "map-deal-gift-out-report",
+        "when": "direction === 'gift-out'",
+        "headline": "A gift of maps for {{partner}}",
+        "body": [
+          "Our {{terms.civic.government}} has made {{partner}} a gift of maps. The terms read: {{dealTerms}} The charts leave our keeping without payment."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "comprehensive-agreement-account",
+    "triggers": ["comprehensive-agreement"],
+    "tags": ["politics", "economy", "international"],
+    "names": ["partner"],
+    "weight": { "base": 1 },
+    "triggerSummary": "We signed a deal with several distinct commitments. The package can contain terms from one or both sides.",
+    "variants": [
+      {
+        "id": "comprehensive-agreement-bilateral-report",
+        "when": "weGive !== null && weGet !== null",
+        "headline": "A broad agreement with {{partner}}",
+        "body": [
+          "Our {{terms.civic.government}} and {{partner}} have settled several matters in a single agreement. {{dealTerms}}"
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "comprehensive-agreement-one-sided-report",
+        "when": "weGive === null || weGet === null",
+        "headline": "One document, several clauses with {{partner}}",
+        "body": [
+          "The agreement between our {{terms.civic.government}} and {{partner}} gathers several commitments into a single document. {{dealTerms}}"
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "comprehensive-agreement-press",
+        "voice": "press",
+        "stance": "neutral",
+        "genre": "report",
+        "headline": "The clauses agreed with {{partner}}",
+        "body": [
+          "The foreign office has issued the terms of its agreement with {{partner}}. Several matters were settled under the same seal. {{dealTerms}}"
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "other-diplomatic-deal-account",
+    "triggers": ["other-diplomatic-deal"],
+    "tags": ["politics", "international"],
+    "names": ["partner"],
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "other-diplomatic-deal-report",
+        "headline": "A diplomatic deal with {{partner}}",
+        "body": [
+          "Our {{terms.civic.government}} has concluded a diplomatic deal with {{partner}}. {{dealTerms}}"
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  }
+]

@@ -351,7 +351,9 @@ MCP's `newspaper/queries.ts` returns cutoff snapshots, optional comparison snaps
 | Deal terms | Text and structured terms share one access gate: contact with parties and named players or teams, plus participation in the deal or 800 diplomat points with each foreign party. |
 | Embedded labels | Recorded player and city labels require dated contact with the corresponding player or city owner. Liberation keeps the city ID; its owner and city label are unavailable. |
 
-The `trade-deal` rule reports our completed deals when both lists of terms are visible. An exchange such as Silk for Open Borders lists what each side provides. When only one side gives something, a gift template names the giver and lists the terms. Peace treaties use separate coverage.
+Completed deals involving us are classified using the recorded terms from both sides. Goods and gold, including gold per turn, qualify for a trade story when both sides provide them and for a gift story when only one side does. An embassy grant or exchange can include lump-sum gold. Buying, selling, exchanging, or gifting maps and technologies has dedicated coverage. A research agreement has its own story.
+
+A comprehensive agreement combines distinct commitments, such as a map and a technology, or an embassy and Open Borders. Reciprocal terms of one kind usually count as one commitment. Payment for a map or technology stays part of that purchase. A comprehensive story takes precedence over a standalone story for the same clause when the evidence links the two. A separate deal with the same partner can still qualify. Peace treaties and the events that actually start or end wars keep their existing coverage.
 
 For example, unwitnessed world news can report that Hypatia appeared in Persia with no city or unit type. Great person uses and deaths require recorded visibility. A death uses the final removal and is suppressed by a use that turn. Same-turn conversions, including gifts, supply no birth or death story. Named stories need a recorded personal name, which the strategist's `get-events` omits.
 

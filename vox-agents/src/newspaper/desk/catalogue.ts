@@ -17,7 +17,7 @@ import { readRootTemplates, resolveTemplateLinks } from '../editorial/config/tem
 import { readTemplateSources } from '../editorial/config/template-sources.js';
 
 export type DeskLink = AuthoredVariant['links'][number];
-export type DeskTriggerDefinition = Pick<EditorialTriggerRule, 'id' | 'subject' | 'when' | 'values' | 'group'>;
+export type DeskTriggerDefinition = Pick<EditorialTriggerRule, 'id' | 'summary' | 'subject' | 'when' | 'values' | 'group'>;
 
 /** One authored variant with the revision of the original file entry. */
 export interface DeskVariant {
@@ -116,12 +116,14 @@ export function deskTriggers(template: DeskTemplate, catalogue: DeskCatalogue): 
 }
 
 /** Keep editable text and the raw revision without keeping the entire source in memory. */
-function readTemplate(raw: unknown, template: EditorialTemplate, file: string, baseCount: number, companion?: string): DeskTemplate {
+function readTemplate(raw: unknown, template: EditorialTemplate, file: string, baseCount: number,
+  triggerDefinitions: ReadonlyMap<string, DeskTriggerDefinition>, companion?: string): DeskTemplate {
   const { id, tags, triggers, formats, names, when } = template;
   const rawVariants = asRecord(raw)?.variants as unknown[];
   return {
     id, tags, triggers, formats, names, when, file,
-    triggerSummary: triggers.map(id => id.replaceAll('-', ' ')).join(', '),
+    triggerSummary: template.triggerSummary ?? triggers.map(id =>
+      triggerDefinitions.get(id)?.summary ?? id.replaceAll('-', ' ')).join(' '),
     variants: template.variants.map((variant, index) => ({
       id: variant.id,
       ...(index >= baseCount && companion ? { file: companion } : {}),
@@ -145,6 +147,14 @@ export async function readDeskCatalogue(options: DeskCatalogueOptions = {}): Pro
   try {
     await requireWritable(templatesDirectory, 'The stock templates folder', true);
     await requireWritable(writingPath, 'The writing guide');
+    const byId = new Map<string, DeskTriggerDefinition>();
+    for (const file of await readSection(triggersDirectory)) {
+      const triggers = z.array(editorialTriggerRuleSchema).parse(await readJson(path.join(triggersDirectory, file)));
+      for (const trigger of triggers) {
+        if (byId.has(trigger.id)) throw new Error('Duplicate trigger ID: ' + trigger.id);
+        byId.set(trigger.id, trigger);
+      }
+    }
     const templates: DeskTemplate[] = [];
     const seenTemplates = new Set<string>();
     const sources = await readTemplateSources(templatesDirectory, {
@@ -162,15 +172,7 @@ export async function readDeskCatalogue(options: DeskCatalogueOptions = {}): Pro
         if (variantIds.size !== template.variants.length) throw new Error('Duplicate variant IDs in ' + template.id);
         const baseVariants = asRecord(base[index])?.variants;
         const baseCount = Array.isArray(baseVariants) ? baseVariants.length : 0;
-        templates.push(readTemplate(raw[index], template, file, baseCount, companion));
-      }
-    }
-    const byId = new Map<string, DeskTriggerDefinition>();
-    for (const file of await readSection(triggersDirectory)) {
-      const triggers = z.array(editorialTriggerRuleSchema).parse(await readJson(path.join(triggersDirectory, file)));
-      for (const trigger of triggers) {
-        if (byId.has(trigger.id)) throw new Error('Duplicate trigger ID: ' + trigger.id);
-        byId.set(trigger.id, trigger);
+        templates.push(readTemplate(raw[index], template, file, baseCount, byId, companion));
       }
     }
     /** Resolve a stock asset inside this checkout. */

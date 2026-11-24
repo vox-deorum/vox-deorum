@@ -2,6 +2,7 @@ import { eventReportTurn, type NewspaperEvent, type NewspaperSnapshot,
   type NewspaperSourceReference } from '../../../../../mcp-server/dist/newspaper/evidence.js';
 import { isRecord } from '../../../utils/guards.js';
 import { uniqueSources } from '../shared/sources.js';
+import { classifyDeal, coveringDeal } from './deal.js';
 import { eventCityTargets, eventConfig, eventPlot, recordedId, resolveEventCity } from './event-city.js';
 import { fact, recordedFact, reference, rowSources, type FactBuildContext, type FactField, type FactObject } from './model.js';
 
@@ -144,6 +145,13 @@ export function buildEventFacts(event: NewspaperEvent, context: FactBuildContext
   }
   const namedKind = namedPersonKinds[type];
   if (fields.person && namedKind) fields.kind = fact(namedKind, sources);
+  const deal = classifyDeal(event, context.receiverId);
+  if (deal) {
+    const projected = recordedFact(deal, sources);
+    if (projected) fields.deal = projected;
+  }
+  const coveredBy = coveringDeal(event, context);
+  if (coveredBy) fields.coveredByDeal = fact(coveredBy.source.id, [...sources, ...rowSources(coveredBy)]);
   const actingField = actingPlayerFields[type] ?? (playerFields.length === 1 ? playerFields[0] : undefined);
   for (const field of playerFields) {
     const player = eventPlayerFact(values[field], event, context, sources);

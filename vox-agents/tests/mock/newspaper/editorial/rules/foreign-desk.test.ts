@@ -65,7 +65,129 @@ function fired(result: Awaited<ReturnType<typeof publish>>, rule: string) {
     .filter(subject => subject.outcome === 'fired').map(subject => subject.subject);
 }
 
+type Term = readonly [type: string, label: string, data1?: number, data2?: number];
+
+/** Record the same directional terms and printable labels supplied by DealMade. */
+function deal(id: number, from: number, to: number, fromTerms: Term[], toTerms: Term[], turn = 9) {
+  return event('DealMade', id, turn, from, to, {
+    FromPlayerID: from, ToPlayerID: to,
+    FromGives: fromTerms.length ? fromTerms.map(([, label]) => label) : {},
+    ToGives: toTerms.length ? toTerms.map(([, label]) => label) : {},
+    TradedItems: [[from, fromTerms] as const, [to, toTerms] as const].flatMap(([giver, terms]) =>
+      terms.map(([ItemType, , Data1, Data2]) => ({ FromPlayerID: giver, ItemType, Data1, Data2 }))),
+  });
+}
+
+const gold: Term = ['Gold', '10 Gold'];
+const silk: Term = ['Resources', '1 Silk'];
+const embassy: Term = ['AllowEmbassy', 'Embassy'];
+const borders: Term = ['OpenBorders', 'Open Borders'];
+const map: Term = ['Maps', 'World Map'];
+const technology: Term = ['Techs', 'Technology: Printing Press'];
+
 describe('stock foreign desk', () => {
+  describe('completed deals', () => {
+    it.each([
+      ['technology-deal', 'buy', [gold], [technology]],
+      ['technology-deal', 'sell', [technology], [gold]],
+      ['technology-deal', 'exchange', [technology], [['Techs', 'Technology: Banking']]],
+      ['map-deal', 'buy', [gold], [map]],
+      ['map-deal', 'sell', [map], [gold]],
+      ['map-deal', 'exchange', [map], [map]],
+    ] satisfies [string, string, Term[], Term[]][])('should publish the %s %s variant from our perspective', async (rule, direction, ours, theirs) => {
+      const result = await publish(evidence([deal(1, 1, 0, theirs, ours)], [snapshot(0, 8, [relationship(1)])]));
+      expect(fired(result, 'trade-deal')).toEqual([]);
+      expect(fired(result, 'comprehensive-agreement')).toEqual([]);
+      const story = expectStory(result, rule, ['Brazil', ...ours.map(([, label]) => label), ...theirs.map(([, label]) => label)]);
+      expect(result.decision.selectedVariants[story.id]).toBe(`${rule}-${direction}-report`);
+    });
+
+    it('should separate real trade, gifts, embassies with gold, and research agreements', async () => {
+      const pact: Term = ['ResearchAgreement', 'Research Agreement'];
+      const incomplete = deal(7, 0, 1, [silk], [gold]);
+      delete incomplete.values.TradedItems;
+      const malformed = deal(8, 0, 1, [silk], [gold]);
+      malformed.values.TradedItems = [{ ItemType: 'Gold', FromPlayerID: 2 }];
+      const result = await publish(evidence([
+        deal(1, 0, 1, [silk], [gold]), deal(2, 0, 1, [], [gold]),
+        deal(3, 0, 1, [embassy], [embassy, gold]), deal(4, 0, 1, [embassy], []),
+        deal(5, 0, 1, [pact], [pact]), deal(6, 0, 1, [['PeaceTreaty', 'Peace Treaty']], [gold]),
+        incomplete, malformed,
+      ], [snapshot(0, 8, [relationship(1), relationship(2)])]));
+      expect(fired(result, 'trade-deal')).toEqual(['event/1']);
+      expect(fired(result, 'trade-gift')).toEqual(['event/2']);
+      expect(fired(result, 'embassy-agreement')).toEqual(['event/3', 'event/4']);
+      expect(fired(result, 'research-agreement')).toEqual(['event/5']);
+      expect(fired(result, 'comprehensive-agreement')).toEqual([]);
+      expectStory(result, 'embassy-agreement', ['Brazil', 'Embassy']);
+    });
+
+    it('should cover the package and its matching border grant while retaining an independent deal and reverse grant', async () => {
+      const combined = deal(1, 0, 1, [embassy, borders], [silk], 10);
+      const reverseGrant = deal(3, 1, 0, [borders], []);
+      const observedRelation = [0, 1].flatMap(player => [
+        snapshot(player, 5, [relationship(1 - player, 'peace', { openBordersTo: false })]),
+        snapshot(player, 10, [relationship(1 - player, 'peace', { openBordersTo: true })]),
+      ]);
+      const result = await publish(evidence([combined, deal(2, 0, 1, [silk], [gold]), reverseGrant], observedRelation));
+      expect(fired(result, 'comprehensive-agreement')).toEqual(['event/1']);
+      expect(fired(result, 'trade-deal')).toEqual(['event/2']);
+      expect(fired(result, 'embassy-agreement')).toEqual([]);
+      expect(fired(result, 'open-borders-granted')).toEqual([]);
+      expect(fired(result, 'open-borders-received')).toEqual(['player/1']);
+      expectStory(result, 'comprehensive-agreement', ['Brazil', 'Embassy', 'Open Borders', 'Silk']);
+    });
+
+    it('should replace the gain of a traded technology but keep independent research on the same turn', async () => {
+      const result = await publish(evidence([
+        event('TeamTechResearched', 1, 9, 0, 0, { TeamID: 100, Tech: 'Printing Press', ChangeAmount: 1 }),
+        event('TeamTechResearched', 2, 9, 0, 0, { TeamID: 100, Tech: 'Banking', ChangeAmount: 1 }),
+        deal(3, 0, 1, [map], [technology]),
+      ], [snapshot(0, 8, [relationship(1)])]));
+      expect(fired(result, 'comprehensive-agreement')).toEqual(['event/3']);
+      expect(fired(result, 'map-deal')).toEqual([]);
+      expect(fired(result, 'technology-deal')).toEqual([]);
+      expect(fired(result, 'our-team-gains-technology')).toEqual(['event/2']);
+      expectStory(result, 'comprehensive-agreement', ['Brazil', 'World Map', 'Printing Press']);
+    });
+
+    it('should distinguish a city transferred in a package from a separate conquest', async () => {
+      const transferred = city(20, 10, 0, 'Salvador', 6);
+      const captured = city(21, 10, 0, 'Delhi', 8);
+      const result = await publish(evidence([
+        event('CityCaptureComplete', 1, 9, 1, 0, { OldOwnerID: 1, NewOwnerID: 0, IsConquest: false, CityX: 6, CityY: 0 }),
+        event('CityCaptureComplete', 2, 9, 2, 0, { OldOwnerID: 2, NewOwnerID: 0, IsConquest: true, CityX: 8, CityY: 0 }),
+        deal(3, 0, 1, [embassy], [['Cities', 'City of Salvador', 6, 0]]),
+      ], [snapshot(0, 8, [relationship(1), relationship(2)])]), [transferred, captured]);
+      expect(fired(result, 'comprehensive-agreement')).toEqual(['event/3']);
+      expect(fired(result, 'city-capture-involving-us')).toEqual(['event/2']);
+      expectStory(result, 'comprehensive-agreement', ['Brazil', 'Salvador']);
+    });
+
+    it('should let a package cover its pact while reporting a standalone friendship', async () => {
+      const pact: Term = ['DefensivePact', 'Defensive Pact'];
+      const friendship: Term = ['DeclarationOfFriendship', 'Declaration of Friendship'];
+      const result = await publish(evidence([
+        deal(1, 0, 1, [embassy, pact], [pact]), deal(2, 0, 1, [friendship], [friendship]),
+      ], [
+        snapshot(0, 5, [relationship(1, 'peace', { friendship: false, defensivePact: false })]),
+        snapshot(0, 10, [relationship(1, 'peace', { friendship: true, defensivePact: true })]),
+      ]));
+      expect(fired(result, 'comprehensive-agreement')).toEqual(['event/1']);
+      expect(fired(result, 'defensive-pact-signed')).toEqual([]);
+      expect(fired(result, 'friendship-begins')).toEqual(['pair/0/1']);
+    });
+
+    it('should leave standalone third-party coverage intact when another deal includes a war clause', async () => {
+      const war: Term = ['ThirdPartyWar', 'Declare War on India', 102];
+      const result = await publish(evidence([
+        deal(1, 0, 1, [gold], [war]), deal(2, 0, 1, [borders], [war]),
+      ], [snapshot(0, 8, [relationship(1), relationship(2)])]));
+      expect(fired(result, 'third-party-war-deal')).toEqual(['event/1']);
+      expect(fired(result, 'comprehensive-agreement')).toEqual(['event/2']);
+    });
+  });
+
   it('should report a nearby third-party capital taken by conquest and exclude other transfers', async () => {
     const capture = { IsCapital: true, IsConquest: true, OldOwnerID: 1, NewOwnerID: 2, CityX: 4, CityY: 0 };
     const result = await publish(evidence([

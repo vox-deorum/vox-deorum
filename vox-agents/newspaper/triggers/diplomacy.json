@@ -6,7 +6,8 @@
       "!player.self && player.knows('major') && player.major === true",
       "player.knows('name')",
       "self.relation(player).knows('vassalOf')",
-      "self.relation(player).vassalOf === true"
+      "self.relation(player).vassalOf === true",
+      "!self.knows('before') || !player.knows('before') || (self.before.relation(player).vassalOf === false && !self.relation(player).coveredByAgreement('vassalOf', self.before.relation(player)))"
     ],
     "values": {
       "master": "player.name"
@@ -32,13 +33,15 @@
   },
   {
     "id": "defensive-pact-signed",
+    "summary": "We entered a defensive pact with another civilization.",
     "subject": "pair",
     "when": [
       "pair.involvesSelf",
       "pair.other.knows('name')",
       "pair.knows('majors') && pair.majors === true",
       "pair.knows('pact') && pair.pact === true",
-      "pair.knows('before') && pair.before.knows('pact') && pair.before.pact === false"
+      "pair.knows('before') && pair.before.knows('pact') && pair.before.pact === false",
+      "!pair.coveredByAgreement('pact', pair.before)"
     ],
     "values": {
       "ally": "pair.other.name"
@@ -120,6 +123,7 @@
   },
   {
     "id": "friendship-begins",
+    "summary": "We declared friendship with another civilization.",
     "subject": "pair",
     "window": "recent",
     "when": [
@@ -128,7 +132,8 @@
       "pair.majors",
       "pair.knows('friends') && pair.friends === true",
       "pair.knows('before') && pair.before.knows('friends') && pair.before.friends === false",
-      "!(pair.knows('pact') && pair.pact === true && pair.before.knows('pact') && pair.before.pact === false)"
+      "!pair.coveredByAgreement('friends', pair.before)",
+      "!(pair.knows('pact') && pair.pact === true && pair.before.knows('pact') && pair.before.pact === false && !pair.coveredByAgreement('pact', pair.before))"
     ],
     "values": {
       "friend": "pair.other.name"
@@ -160,7 +165,8 @@
       "!player.self && player.knows('major') && player.major === true",
       "player.knows('name')",
       "self.relation(player).knows('masterOf')",
-      "self.relation(player).masterOf === true"
+      "self.relation(player).masterOf === true",
+      "!self.knows('before') || !player.knows('before') || (self.before.relation(player).masterOf === false && !self.relation(player).coveredByAgreement('masterOf', self.before.relation(player)))"
     ],
     "values": {
       "vassal": "player.name"
@@ -176,7 +182,7 @@
       "!player.self && player.knows('major') && player.major === true",
       "player.knows('name')",
       "player.knows('friend') && self.knows('before')",
-      "(() => { const now = self.relation(player); const before = self.before.relation(player); return now.vassalOf === false && now.masterOf === false && before.masterOf === true; })()"
+      "(() => { const now = self.relation(player); const before = self.before.relation(player); return now.vassalOf === false && now.masterOf === false && before.masterOf === true && !now.coveredByAgreement('masterOf', before); })()"
     ],
     "values": {
       "vassal": "player.name"
@@ -207,6 +213,7 @@
   },
   {
     "id": "open-borders-granted",
+    "summary": "We newly granted another civilization permission to cross our borders.",
     "subject": "player",
     "window": "recent",
     "when": [
@@ -214,7 +221,8 @@
       "player.knows('name')",
       "self.knows('before')",
       "self.relation(player).knows('openBordersTo') && self.relation(player).openBordersTo === true",
-      "self.before.relation(player).knows('openBordersTo') && self.before.relation(player).openBordersTo === false"
+      "self.before.relation(player).knows('openBordersTo') && self.before.relation(player).openBordersTo === false",
+      "!self.relation(player).coveredByAgreement('openBordersTo', self.before.relation(player))"
     ],
     "values": {
       "civilization": "player.name",
@@ -226,6 +234,7 @@
   },
   {
     "id": "open-borders-received",
+    "summary": "Another civilization newly granted us permission to cross its borders.",
     "subject": "player",
     "window": "recent",
     "when": [
@@ -234,7 +243,8 @@
       "self.knows('before')",
       "self.relation(player).knows('openBordersFrom') && self.relation(player).openBordersFrom === true",
       "self.before.relation(player).knows('openBordersFrom') && self.before.relation(player).openBordersFrom === false",
-      "!(self.relation(player).knows('openBordersTo') && self.relation(player).openBordersTo === true && self.before.relation(player).knows('openBordersTo') && self.before.relation(player).openBordersTo === false)"
+      "!self.relation(player).coveredByAgreement('openBordersFrom', self.before.relation(player))",
+      "!(self.relation(player).knows('openBordersTo') && self.relation(player).openBordersTo === true && self.before.relation(player).knows('openBordersTo') && self.before.relation(player).openBordersTo === false && !self.relation(player).coveredByAgreement('openBordersTo', self.before.relation(player)))"
     ],
     "values": {
       "civilization": "player.name",
@@ -246,6 +256,7 @@
   },
   {
     "id": "third-party-peace-deal",
+    "summary": "A visible deal includes terms to make peace with a third party.",
     "subject": "event",
     "event": "DealMade",
     "when": [
@@ -253,6 +264,7 @@
       "event.fromPlayer.knows('name') && event.toPlayer.knows('name')",
       "event.knows('tradedItems') && Array.isArray(event.tradedItems)",
       "event.tradedItems.some(item => item.knows('itemType') && item.itemType === 'ThirdPartyPeace')",
+      "!(event.knows('deal') && event.deal.knows('kind') && event.deal.kind === 'comprehensive-agreement')",
       "!event.tradedItems.some(item => item.knows('itemType') && item.itemType === 'ThirdPartyWar')"
     ],
     "values": {
@@ -267,13 +279,15 @@
   },
   {
     "id": "third-party-war-deal",
+    "summary": "A visible deal includes terms to declare war on a third party.",
     "subject": "event",
     "event": "DealMade",
     "when": [
       "event.knows('fromPlayer') && event.knows('toPlayer')",
       "event.fromPlayer.knows('name') && event.toPlayer.knows('name')",
       "event.knows('tradedItems') && Array.isArray(event.tradedItems)",
-      "event.tradedItems.some(item => item.knows('itemType') && item.itemType === 'ThirdPartyWar')"
+      "event.tradedItems.some(item => item.knows('itemType') && item.itemType === 'ThirdPartyWar')",
+      "!(event.knows('deal') && event.deal.knows('kind') && event.deal.kind === 'comprehensive-agreement')"
     ],
     "values": {
       "from": "event.fromPlayer.name",
@@ -292,7 +306,7 @@
       "!player.self && player.knows('major') && player.major === true",
       "player.knows('name')",
       "player.knows('friend') && self.knows('before')",
-      "(() => { const now = self.relation(player); const before = self.before.relation(player); return now.vassalOf === false && now.masterOf === false && before.vassalOf === true; })()"
+      "(() => { const now = self.relation(player); const before = self.before.relation(player); return now.vassalOf === false && now.masterOf === false && before.vassalOf === true && !now.coveredByAgreement('vassalOf', before); })()"
     ],
     "values": {
       "master": "player.name"

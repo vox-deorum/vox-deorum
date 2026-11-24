@@ -1,0 +1,125 @@
+[
+  {
+    "id": "comprehensive-agreement",
+    "summary": "We signed a deal with several distinct commitments, such as open borders and a resource transfer.",
+    "subject": "event",
+    "event": "DealMade",
+    "when": [
+      "event.knows('deal') && event.deal.knows('kind') && event.deal.kind === 'comprehensive-agreement'",
+      "event.knows('fromPlayer') && event.knows('toPlayer')",
+      "event.fromPlayer.self ? event.toPlayer.knows('name') : event.fromPlayer.knows('name')"
+    ],
+    "values": {
+      "partner": "event.fromPlayer.self ? event.toPlayer.name : event.fromPlayer.name",
+      "weGive": "event.deal.weGive",
+      "weGet": "event.deal.weGet",
+      "dealTerms": "(weGive === null ? '' : 'We provide ' + weGive + '.') + (weGet === null ? '' : (weGive === null ? '' : ' ') + partner + ' provides ' + weGet + '.')"
+    },
+    "tier": "major",
+    "adjust": "event.fromPlayer.self ? event.toPlayer.stake.relation : event.fromPlayer.stake.relation",
+    "tags": ["politics", "economy", "international"]
+  },
+  {
+    "id": "embassy-agreement",
+    "summary": "We granted, received, or exchanged embassy permissions. A one-time gold payment can be part of the deal.",
+    "subject": "event",
+    "event": "DealMade",
+    "when": [
+      "event.knows('deal') && event.deal.knows('kind') && event.deal.kind === 'embassy-agreement'",
+      "event.knows('fromPlayer') && event.knows('toPlayer')",
+      "event.fromPlayer.self ? event.toPlayer.knows('name') : event.fromPlayer.knows('name')"
+    ],
+    "values": {
+      "partner": "event.fromPlayer.self ? event.toPlayer.name : event.fromPlayer.name",
+      "weGive": "event.deal.weGive",
+      "weGet": "event.deal.weGet",
+      "direction": "event.deal.direction",
+      "dealTerms": "(weGive === null ? '' : 'We provide ' + weGive + '.') + (weGet === null ? '' : (weGive === null ? '' : ' ') + partner + ' provides ' + weGet + '.')"
+    },
+    "tier": "routine",
+    "adjust": "event.fromPlayer.self ? event.toPlayer.stake.relation : event.fromPlayer.stake.relation",
+    "tags": ["politics", "international"]
+  },
+  {
+    "id": "map-deal",
+    "summary": "We bought, sold, exchanged, gave, or received a world map in a completed deal.",
+    "subject": "event",
+    "event": "DealMade",
+    "when": [
+      "event.knows('deal') && event.deal.knows('kind') && event.deal.kind === 'map-deal'",
+      "event.knows('fromPlayer') && event.knows('toPlayer')",
+      "event.fromPlayer.self ? event.toPlayer.knows('name') : event.fromPlayer.knows('name')"
+    ],
+    "values": {
+      "partner": "event.fromPlayer.self ? event.toPlayer.name : event.fromPlayer.name",
+      "weGive": "event.deal.weGive",
+      "weGet": "event.deal.weGet",
+      "direction": "event.deal.direction",
+      "dealTerms": "(weGive === null ? '' : 'We provide ' + weGive + '.') + (weGet === null ? '' : (weGive === null ? '' : ' ') + partner + ' provides ' + weGet + '.')"
+    },
+    "tier": "notable",
+    "adjust": "event.fromPlayer.self ? event.toPlayer.stake.relation : event.fromPlayer.stake.relation",
+    "tags": ["economy", "trade", "international"]
+  },
+  {
+    "id": "other-diplomatic-deal",
+    "summary": "We signed a standalone deal for another term, such as votes or a city.",
+    "subject": "event",
+    "event": "DealMade",
+    "when": [
+      "event.knows('deal') && event.deal.knows('kind') && event.deal.kind === 'other-diplomatic-deal'",
+      "event.knows('fromPlayer') && event.knows('toPlayer')",
+      "event.fromPlayer.self ? event.toPlayer.knows('name') : event.fromPlayer.knows('name')"
+    ],
+    "values": {
+      "partner": "event.fromPlayer.self ? event.toPlayer.name : event.fromPlayer.name",
+      "weGive": "event.deal.weGive",
+      "weGet": "event.deal.weGet",
+      "dealTerms": "(weGive === null ? '' : 'We provide ' + weGive + '.') + (weGet === null ? '' : (weGive === null ? '' : ' ') + partner + ' provides ' + weGet + '.')"
+    },
+    "tier": "notable",
+    "adjust": "event.fromPlayer.self ? event.toPlayer.stake.relation : event.fromPlayer.stake.relation",
+    "tags": ["politics", "international"]
+  },
+  {
+    "id": "research-agreement",
+    "summary": "We signed a research agreement with another civilization.",
+    "subject": "event",
+    "event": "DealMade",
+    "when": [
+      "event.knows('deal') && event.deal.knows('kind') && event.deal.kind === 'research-agreement'",
+      "event.knows('fromPlayer') && event.knows('toPlayer')",
+      "event.fromPlayer.self ? event.toPlayer.knows('name') : event.fromPlayer.knows('name')"
+    ],
+    "values": {
+      "partner": "event.fromPlayer.self ? event.toPlayer.name : event.fromPlayer.name",
+      "weGive": "event.deal.weGive",
+      "weGet": "event.deal.weGet",
+      "dealTerms": "(weGive === null ? '' : 'We provide ' + weGive + '.') + (weGet === null ? '' : (weGive === null ? '' : ' ') + partner + ' provides ' + weGet + '.')"
+    },
+    "tier": "notable",
+    "adjust": "event.fromPlayer.self ? event.toPlayer.stake.relation : event.fromPlayer.stake.relation",
+    "tags": ["science", "politics", "international"]
+  },
+  {
+    "id": "technology-deal",
+    "summary": "We bought, sold, exchanged, gave, or received technology in a completed deal.",
+    "subject": "event",
+    "event": "DealMade",
+    "when": [
+      "event.knows('deal') && event.deal.knows('kind') && event.deal.kind === 'technology-deal'",
+      "event.knows('fromPlayer') && event.knows('toPlayer')",
+      "event.fromPlayer.self ? event.toPlayer.knows('name') : event.fromPlayer.knows('name')"
+    ],
+    "values": {
+      "partner": "event.fromPlayer.self ? event.toPlayer.name : event.fromPlayer.name",
+      "weGive": "event.deal.weGive",
+      "weGet": "event.deal.weGet",
+      "direction": "event.deal.direction",
+      "dealTerms": "(weGive === null ? '' : 'We provide ' + weGive + '.') + (weGet === null ? '' : (weGive === null ? '' : ' ') + partner + ' provides ' + weGet + '.')"
+    },
+    "tier": "notable",
+    "adjust": "event.fromPlayer.self ? event.toPlayer.stake.relation : event.fromPlayer.stake.relation",
+    "tags": ["science", "economy", "trade", "international"]
+  }
+]

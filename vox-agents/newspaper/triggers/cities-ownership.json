@@ -4,6 +4,7 @@
     "subject": "event",
     "event": "CityCaptureComplete",
     "when": [
+      "!event.knows('coveredByDeal')",
       "event.knows('city') && event.city.knows('name')",
       "event.knows('oldOwner') && event.knows('newOwner')",
       "(event.newOwner.self === true && event.oldOwner.knows('name')) || (event.oldOwner.self === true && event.newOwner.knows('name'))"

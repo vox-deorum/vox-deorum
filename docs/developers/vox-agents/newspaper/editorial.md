@@ -37,6 +37,7 @@ A template names one or more rules in `triggers`. All must fire for the same sub
 | --- | --- |
 | `id` | Stable identity used by overlays and decisions |
 | `triggers` | Trigger IDs that must all match the same subject |
+| `triggerSummary` | Optional plain-language eligibility summary for the Writing Desk tooltip and the writer's brief. By default, both use the named triggers' summaries. |
 | `tags` | Topic and scope labels for pages, variety and feedback |
 | `mode` | `authored` (default) or `llmOnly`; the heuristic editor skips `llmOnly` templates |
 | `short` | Lets the editor reserve the last slot for a brief |

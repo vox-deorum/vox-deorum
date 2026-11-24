@@ -28,6 +28,7 @@
     "event": "TeamTechResearched",
     "when": [
       "event.knows('tech') && typeof event.tech === 'string' && event.tech.length > 0",
+      "!event.knows('coveredByDeal')",
       "!event.knows('changeAmount') || event.changeAmount > 0",
       "event.knows('teamId') && self.knows('teamId') && event.teamId !== self.teamId",
       "event.knows('players') && event.players.some(p => p.knows('major') && p.major === true && p.knows('distance') && p.distance <= nearby && p.knows('name'))",
@@ -46,6 +47,7 @@
     "event": "TeamTechResearched",
     "when": [
       "event.knows('tech') && typeof event.tech === 'string' && event.tech.length > 0",
+      "!event.knows('coveredByDeal')",
       "!event.knows('changeAmount') || event.changeAmount > 0",
       "event.knows('teamId') && self.knows('teamId') && event.teamId !== self.teamId",
       "event.knows('players') && event.players.some(p => p.knows('major') && p.major === true && p.knows('distance') && p.distance <= nearby && p.knows('name'))",
@@ -79,6 +81,7 @@
     "event": "TeamTechResearched",
     "when": [
       "event.knows('tech') && typeof event.tech === 'string' && event.tech.length > 0",
+      "!event.knows('coveredByDeal')",
       "!event.knows('changeAmount') || event.changeAmount > 0",
       "event.knows('players') && event.players.some(p => p.self === true)"
     ],

@@ -67,6 +67,7 @@ const eventTypesSchema = z.union([z.string().min(1), z.array(z.string().min(1)).
 /** A rule runs on one kind of fact subject and reports the developments it finds. */
 export const editorialTriggerRuleSchema = z.strictObject({
   id: z.string().min(1),
+  summary: z.string().trim().min(1).optional(),
   subject: z.enum(['city', 'player', 'pair', 'event', 'incident', 'world']),
   event: eventTypesSchema.optional(),
   window: spanSchema.optional(),
@@ -99,6 +100,7 @@ const mergeTemplateSchema = z.strictObject({
 /** Templates explicitly name supported triggers and any placeholder format overrides. */
 export const templateSchema = eligibleSchema.extend({
   id: z.string().min(1),
+  triggerSummary: z.string().trim().min(1).optional(),
   triggers: z.array(z.string().min(1)).min(1),
   tags: z.array(z.string().min(1)),
   formats: z.record(z.string().min(1), z.string().min(1)).default({}),

@@ -20,6 +20,7 @@ function factRuntime(model, wrap, constants, factDefinitions) {
     city: new Set(model.subjects.city), player: new Set(model.subjects.player), pair: new Set(model.subjects.pair),
   };
   const subjectInfo = new WeakMap();
+  const agreementFields = new WeakMap();
   const printedSubjectKeys = new WeakMap();
   const expressionSubjects = new Map();
   const definitionsByKind = { shortcuts: new Map(), stakes: new Map() };
@@ -113,6 +114,51 @@ function factRuntime(model, wrap, constants, factDefinitions) {
   function series(kind, id) {
     const subjects = timelines[kind];
     return subjects && Object.hasOwn(subjects, id) ? subjects[id] : undefined;
+  }
+
+  // Compare the original rows, including their ordering within a turn.
+  function compareSource(left, right) {
+    return left.turn - right.turn || left.createdAt - right.createdAt;
+  }
+
+  // Index completed deals by both parties. A competing deal with the same clause makes attribution ambiguous.
+  let dealsByPair;
+  function pairDeals(first, second) {
+    const keyFor = (a, b) => a < b ? a + '/' + b : b + '/' + a;
+    if (!dealsByPair) {
+      dealsByPair = new Map();
+      for (const event of model.events) {
+        const deal = event.fields.deal?.value;
+        if (!deal) continue;
+        const key = keyFor(deal.from.value, deal.to.value);
+        if (!dealsByPair.has(key)) dealsByPair.set(key, []);
+        dealsByPair.get(key).push(event);
+      }
+    }
+    return dealsByPair.get(keyFor(first, second)) ?? [];
+  }
+
+  // Attribute a change only when one recorded clause fits between both observed states.
+  function coveredByAgreement(first, second, field, current, before, type, giver, starts = true) {
+    if (first !== model.receiverId && second !== model.receiverId) return false;
+    const older = agreementFields.get(before)?.[field];
+    if (current?.value !== starts || older?.value !== !starts) return false;
+    const currentRows = current.sources?.filter(row => row.table === 'PlayerSummaries');
+    const olderRows = older.sources?.filter(row => row.table === 'PlayerSummaries');
+    if (!currentRows?.length || !olderRows?.length) return false;
+    const firstAfter = currentRows.reduce((a, b) => compareSource(a, b) < 0 ? a : b);
+    const lastBefore = olderRows.reduce((a, b) => compareSource(a, b) > 0 ? a : b);
+    const matches = pairDeals(first, second).filter(event => {
+      const row = event.sources[0];
+      return compareSource(lastBefore, row) <= 0 && compareSource(row, firstAfter) <= 0 &&
+        event.fields.deal.value.clauses.value.some(clause => clause.type.value === type &&
+          (giver === undefined || clause.giver.value === giver));
+    });
+    if (matches.length !== 1 || matches[0].fields.deal.value.kind?.value !== 'comprehensive-agreement') return false;
+    const row = matches[0].sources[0];
+    if (compareSource(lastBefore, row) >= 0) return false;
+    cite([...olderRows, ...matches[0].sources, ...currentRows]);
+    return true;
   }
 
   // Group windows share the same evidence, but have different event and comparison views.
@@ -284,6 +330,13 @@ function factRuntime(model, wrap, constants, factDefinitions) {
           return readable ? matching / readable : 0;
         }));
       }
+      if (kind === 'pair') {
+        method('coveredByAgreement', Object.freeze((field, before) => {
+          const type = field === 'pact' ? 'DefensivePact' : field === 'friends' ? 'DeclarationOfFriendship' : undefined;
+          return type !== undefined && coveredByAgreement(fields.a.value.id, fields.b.value.id,
+            field, fields[field], before, type);
+        }));
+      }
       // Current cities expose the receiver's matching tactical zones from the same cutoff observation.
       if (kind === 'city' && current)
         method('tacticalZones', Object.freeze(() => tacticalZonesForCity(result)));
@@ -311,6 +364,7 @@ function factRuntime(model, wrap, constants, factDefinitions) {
         });
       }
       const result = record(fields, kind, date, methods);
+      if (kind === 'pair') agreementFields.set(result, fields);
       cache.set(key, result);
       subjectInfo.set(result, { kind, id, date, segment, anchored });
       registerPrintedSubject(result, kind, anchored && kind === 'pair' ? fields.id?.value : id);
@@ -480,7 +534,23 @@ function factRuntime(model, wrap, constants, factDefinitions) {
       if (influence) available.influence = influence;
       const protection = forward?.protected ?? backward?.protected;
       if (protection) available.protected = protection;
-      return record(available, 'player.relation', date);
+      const methods = { coveredByAgreement: {
+        known: () => true,
+        get: () => Object.freeze((field, before) => {
+          switch (field) {
+            case 'openBordersTo': return coveredByAgreement(id, otherId, field, available[field], before, 'OpenBorders', id);
+            case 'openBordersFrom': return coveredByAgreement(id, otherId, field, available[field], before, 'OpenBorders', otherId);
+            case 'vassalOf': return coveredByAgreement(id, otherId, field, available[field], before, 'Vassalage', id) ||
+              coveredByAgreement(id, otherId, field, available[field], before, 'VassalageRevoke', otherId, false);
+            case 'masterOf': return coveredByAgreement(id, otherId, field, available[field], before, 'Vassalage', otherId) ||
+              coveredByAgreement(id, otherId, field, available[field], before, 'VassalageRevoke', id, false);
+            default: return false;
+          }
+        }),
+      } };
+      const result = record(available, 'player.relation', date, methods);
+      agreementFields.set(result, available);
+      return result;
     }
 
     // Unloaded turns are hidden. Within covered history, a gap makes held false regardless of the test.

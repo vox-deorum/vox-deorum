@@ -19,6 +19,7 @@ The stock `settler-departure` rule checks our cities for a population drop after
 | Field | Required | Meaning |
 | --- | --- | --- |
 | `id` | Yes | Stable name the template references. Keep it when moving or tuning the rule. |
+| `summary` | No | A brief description of when the rule fires. The Writing Desk shows it in the template tooltip and the writer's brief. |
 | `subject` | Yes | What the rule runs on. |
 | `event` | For event rules | One event type or a list of types. |
 | `window` | No | Lookback for `before`, `history`, `events`, and facts such as `city.trained`. A named span or number of Standard turns. Defaults to the open reporting period, which advances when an issue publishes. |

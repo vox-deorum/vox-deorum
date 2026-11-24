@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import { config } from '../../../../src/agents/config/load.js';
 import type { DeskCatalogueResponse, DeskRef, DeskVariantDetail } from '../../../../src/types/api.js';
+import { briefView } from '../../../../src/newspaper/desk/brief.js';
+import { readDeskCatalogue } from '../../../../src/newspaper/desk/catalogue.js';
 import { clearCandidates, stopJob, waitForJob, type DeskWriter } from '../../../../src/newspaper/desk/generate.js';
 import { mountDeskRoutes } from '../../../../src/newspaper/desk/http.js';
 import { startNewspaperHost } from '../../../../src/newspaper/export/http.js';
@@ -53,6 +55,18 @@ describe('Writing Desk HTTP routes', () => {
     expect(result.body).toBeNull();
     await request(host.app).post('/api/newspaper/desk/jobs').set('Content-Type', 'application/json').send('{').expect(400);
     await request(host.app).post('/api/newspaper/desk/jobs').send({ models: [], refs: [], choices: 0 }).expect(400);
+  });
+
+  it('should send the same authored trigger summary to the tooltip and writer', async () => {
+    const response = await request(host.app).get('/api/newspaper/desk').expect(200);
+    const catalogue = await readDeskCatalogue();
+    const summary = catalogue.triggers.find(trigger => trigger.id === 'trade-deal')?.summary;
+    expect(summary).toBeTruthy();
+    const api: DeskCatalogueResponse = response.body;
+    const template = api.templates.find(template => template.id === 'trade-deal-account')!;
+    const ref = { templateId: template.id, variantId: template.variants[0].id };
+    expect(template.triggerSummary).toBe(summary);
+    expect(briefView([ref], catalogue, 1).variants[0].triggerSummary).toBe(summary);
   });
 
   it('should report an empty body after trimming all paragraphs', async () => {
