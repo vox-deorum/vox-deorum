@@ -11,22 +11,28 @@
         "id": "trade-deal-account-report",
         "headline": "A bargain with {{partner}}",
         "body": [
-          "Our envoys have struck a deal with {{partner}}. We agreed to provide {{weGive}} in exchange for {{weGet}}."
+          "Our envoys have struck a trade deal with {{partner}}. We agreed to send {{weGive}} and receive {{weGet}} in return. Merchants in {{terms.civilization}} say the terms match what was promised at the talks, and the first cargoes are already moving."
         ],
-        "weight": { "base": 1 }
+        "weight": {
+          "base": 1
+        },
+        "settled": true
       },
       {
         "id": "trade-deal-account-ledger",
         "voice": "gazette",
         "stance": "neutral",
         "genre": "ledger",
-        "headline": "The terms of the bargain",
+        "headline": "A bargain with {{partner}}",
         "body": [
-          "Party: {{partner}}.",
+          "We are informed that a treaty of commerce was lately concluded between {{terms.civilization}} and {{partner}}.",
           "Our side provides: {{weGive}}.",
           "{{partner}} provides: {{weGet}}."
         ],
-        "weight": { "base": 1 }
+        "weight": {
+          "base": 1
+        },
+        "settled": true
       },
       {
         "id": "trade-deal-account-notice",
@@ -37,18 +43,24 @@
         "body": [
           "Hear it, {{terms.civic.people}}! Under the deal with {{partner}}, our side provides {{weGive}}, and theirs provides {{weGet}}."
         ],
-        "weight": { "base": 1 }
+        "weight": {
+          "base": 1
+        },
+        "settled": true
       },
       {
         "id": "trade-deal-account-editorial",
         "voice": "pamphlet",
         "stance": "pro-government",
         "genre": "editorial",
-        "headline": "The envoys earn their keep",
+        "headline": "A successful deal with {{partner}}",
         "body": [
-          "Read the terms for yourself, {{terms.civic.people}}. Our envoys agreed to provide {{weGive}} and secured {{weGet}} from {{partner}} in return. Give them their due for bringing home an agreement."
+          "Read the terms for yourself, {{terms.civic.people}}. Our envoys agreed to provide {{weGive}} and secured {{weGet}} from {{partner}} in return. Give them their due for bringing home a favorable agreement."
         ],
-        "weight": { "base": 1 }
+        "weight": {
+          "base": 1
+        },
+        "settled": true
       }
     ]
   },
