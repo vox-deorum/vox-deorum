@@ -4,15 +4,13 @@
     "triggers": ["ally-city-state-attacked"],
     "tags": ["politics", "military"],
     "names": ["aggressor", "ally"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "ally-city-state-attacked-report",
         "headline": "{{aggressor}} marches on {{ally}}",
         "body": [
           "War has come to {{ally}}, a small power that stands with us, and {{aggressor}} is the power that opened it. By the time the news reached the market square, the shutters were already going up and the carts were turning for home. Our own soldiers remain out of the fighting, and the promise we made to {{ally}} now rests on nothing but our word."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "ally-city-state-attacked-analysis",
@@ -22,8 +20,7 @@
         "headline": "Why the attack on {{ally}} matters",
         "body": [
           "The attack on {{ally}} is a message addressed to larger neighbors, and {{aggressor}} expects us to read it. A power that spends soldiers on a small state is testing how much the rest of us will pay to keep our promises. Our soldiers are not in this fight, but the next town that asks for our protection will want to know what our word is worth."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "ally-city-state-attacked-notice",
@@ -33,8 +30,7 @@
         "headline": "{{aggressor}} opens war on {{ally}}",
         "body": [
           "Notice to carriers and merchants: {{aggressor}} has opened war on {{ally}}, a small power allied to {{terms.civilization}}. Carts bound for that market should turn aside until the roads are clear. Our {{terms.civic.government}} keeps its soldiers out of the fighting."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "ally-city-state-attacked-editorial",
@@ -44,8 +40,7 @@
         "headline": "An ally is at war. What is our answer?",
         "body": [
           "Mark it, {{terms.civic.people}}: {{aggressor}} is at war with {{ally}}, and its people are watching the road for the help we promised them. Our {{terms.civic.government}} should name the wagons, the men and the day they leave, because a promise that arrives after the gates close is only an apology. An ally left to fight alone learns to choose a different friend."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -54,15 +49,13 @@
     "triggers": ["ally-city-state-captured"],
     "tags": ["politics", "military", "international"],
     "names": ["captor", "cityState"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "ally-city-state-captured-report",
         "headline": "{{cityState}} falls to {{captor}}",
         "body": [
           "{{captor}} has taken {{cityState}} by force, and the small power that stood with us now answers to a foreign flag. A merchant who kept a stall in its square came home with his cart half empty and said the last he saw of the town was a line of strangers on the wall. The city's name stays on our roll of friends, though the hand that answered our letters is gone."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "ally-city-state-captured-analysis",
@@ -72,8 +65,7 @@
         "headline": "What we lost with {{cityState}}",
         "body": [
           "The flag over {{cityState}} belongs to {{captor}} now, and with it goes the road that made the town worth visiting. Drivers who once rested their horses in its yard now stop a day's ride short and pay for fodder on this side of the border. The loss will be counted in ledgers long after the soldiers have marched home."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "ally-city-state-captured-obituary",
@@ -83,8 +75,7 @@
         "headline": "{{cityState}}, faithful to the last",
         "body": [
           "Be it set down in the record that {{cityState}} kept faith with {{terms.civilization}} to the last, and asked no reward for it. The city held its own council, its own gate, and its own name among the small powers until {{captor}}'s army came and took all three. What remains is the example, which no conqueror can garrison."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "ally-city-state-captured-editorial",
@@ -94,8 +85,7 @@
         "headline": "Tell our allies when help can reach them",
         "body": [
           "The ally we swore to protect is gone: {{captor}} has taken {{cityState}}. Our {{terms.civic.government}} should put a number on its promises before the next small power asks for one: how many soldiers, how many days, and who will lead them. Without that number, every ally we gain is only buying hope with our coin."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "ally-city-state-captured-near",
@@ -106,8 +96,7 @@
         "headline": "Our ally falls {{distance}} from home",
         "body": [
           "The walls that fell at {{cityState}} stand only {{distance}} from our nearest town, and {{captor}} holds them now. A carter here has cousins behind those walls, and he has been meeting every traveler on the home road with the same question. The road between us has never felt so short."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -116,15 +105,13 @@
     "triggers": ["city-state-ally-defects"],
     "tags": ["politics"],
     "names": ["cityState", "rival"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "city-state-ally-defects-report",
         "headline": "{{cityState}} defects to {{rival}}",
         "body": [
           "{{cityState}} has ended its alliance with us and taken up with {{rival}} instead. Our envoy at that court is folding his letters and asking the price of a seat on the next cart home. Our traders will learn soon enough what the new friendship costs them at the gate."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "city-state-ally-defects-analysis",
@@ -134,8 +121,7 @@
         "headline": "Would more gold have kept {{cityState}}?",
         "body": [
           "Losing {{cityState}} to {{rival}} will be called an auction in the capital, and perhaps it was. A small power also counts who answers its letters and who remembers its quarrels, and gold settles neither. A heavier purse would not mend what our envoys stopped noticing."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "city-state-ally-defects-anecdote",
@@ -145,8 +131,7 @@
         "headline": "The flags came down at {{cityState}}",
         "body": [
           "For as long as the caravans could remember, our banner had flown beside {{cityState}}'s own above the market gate. On the morning the watch changed, a boy on the wall lowered it without ceremony and ran {{rival}}'s colors up in its place. By noon the same guards were waving through the same carts, and only the colors overhead told another story."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "city-state-ally-defects-letter",
@@ -157,8 +142,7 @@
         "byline": "A trader on the {{cityState}} road",
         "body": [
           "Madam Editor: my stall sits at the corner where the road enters {{cityState}}'s market, and I count the envoys as they pass. All season the visitors in {{rival}}'s cloaks outnumbered ours, so when the alliance changed this week, the only soul surprised on my road was the man who sold the flag."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -167,15 +151,13 @@
     "triggers": ["city-state-ally-gained"],
     "tags": ["politics", "international"],
     "names": ["cityState", "replaced"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "city-state-ally-gained-report",
         "headline": "{{cityState}} names us its ally",
         "body": [
           "{{cityState}} has chosen {{terms.civilization}} as its ally, and its envoy came to the foreign office before the ink was dry. His first question was what we mean to send, and when it will arrive. Friendship is a fine word, and the envoy is waiting to see what follows it."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "city-state-ally-gained-analysis",
@@ -186,8 +168,7 @@
         "headline": "What {{cityState}} opens to us",
         "body": [
           "{{cityState}} is our ally, and the city lies {{distance}} from the nearest of our towns. Our merchants are already sorting their wares for a first venture into that market, and our envoys should be close behind them. The ceremony is still fresh, and a rival with a heavier purse will not wait for the ink to cool."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "city-state-ally-gained-notice",
@@ -198,8 +179,7 @@
         "headline": "Notice: our envoys succeed in {{cityState}}",
         "body": [
           "Notice is given that {{cityState}} has left the alliance of {{replaced}} and chosen {{terms.civilization}} instead. The {{terms.civic.government}}'s envoys won it with patience and coin, and the credit belongs to them. Traders bound for that market may collect a letter of introduction at the foreign office."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "city-state-ally-gained-crier",
@@ -209,8 +189,7 @@
         "headline": "Hear it! {{cityState}} stands with us",
         "body": [
           "Hear it, {{terms.civic.people}}, and pass it down the street! {{cityState}} has bound itself to {{terms.civilization}}! Its council has chosen our friendship, and chosen it freely! {{cityState}} stands with us!"
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -219,15 +198,13 @@
     "triggers": ["city-state-ally-lost"],
     "tags": ["politics", "international"],
     "names": ["cityState"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "city-state-ally-lost-report",
         "headline": "{{cityState}} walks away from our alliance",
         "body": [
           "{{cityState}} has left our alliance, and the clerk who keeps the roll of friends has drawn a line through its name. No other power has been named in the space beside it. The book of friendships has a way of showing its gaps at the worst time."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "city-state-ally-lost-analysis",
@@ -237,8 +214,7 @@
         "headline": "Who lost {{cityState}}?",
         "body": [
           "{{cityState}} has walked away from our alliance, and it walked away to no one. The capital should sit with that fact, since no rival's purse explains it. A friendship that thins in quiet seasons seldom names the day it breaks."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "city-state-ally-lost-chronicle",
@@ -248,8 +224,7 @@
         "headline": "The alliance with {{cityState}} ends",
         "body": [
           "In this season the council of {{cityState}} ended its alliance with {{terms.civilization}}, and no other power was named in our place. The city remains among the small powers, owing its friendship to none. It keeps its own counsel on the reason, and this record keeps only the fact."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "city-state-ally-lost-ledger",
@@ -261,8 +236,7 @@
           "Alliance of {{terms.civilization}} with {{cityState}}: dissolved.",
           "Power named to take our place: none.",
           "Balance: a free small power, owing us nothing."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -271,15 +245,13 @@
     "triggers": ["city-state-ally-switches-to-friend"],
     "tags": ["politics", "international"],
     "names": ["cityState", "friend"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "city-state-ally-switches-to-friend-report",
         "headline": "{{cityState}} switches its alliance to {{friend}}",
         "body": [
           "{{cityState}} has given its alliance to {{friend}}, and our own bond with the city is closed. Our envoy in the square handed his letters to {{friend}}'s man, who took them with a bow and a word of welcome. The friendship leaves our keeping, though it stays inside a circle we trust."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "city-state-ally-switches-to-friend-analysis",
@@ -289,8 +261,7 @@
         "headline": "A go-between for {{cityState}}",
         "body": [
           "{{cityState}} now looks to {{friend}} rather than to us, and the change may yet serve both towns. If a quarrel over a road or a field arises, {{friend}} can carry messages before either side hardens its position. A common friend at the table is worth more than a claim on a gate we no longer keep."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "city-state-ally-switches-to-friend-notice",
@@ -300,8 +271,7 @@
         "headline": "Notice of a new ally in {{cityState}}",
         "body": [
           "For the record: {{cityState}}, {{distance}} from our nearest city, now counts {{friend}} its ally. Our own alliance there lapses with the season, and it lapses without a quarrel."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "city-state-ally-switches-to-friend-broadcast",
@@ -311,8 +281,7 @@
         "headline": "{{cityState}} changes allies tonight",
         "body": [
           "Word from the frontier tonight: {{cityState}} has switched its alliance to {{friend}}. The city lies {{distance}} from our nearest border. Until today it was our ally. Its new friend is a friend of ours."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -321,7 +290,6 @@
     "triggers": ["city-state-friendship-changes"],
     "tags": ["politics", "international"],
     "names": ["cityState"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "city-state-friendship-changes-report",
@@ -329,8 +297,7 @@
         "headline": "{{cityState}} counts us a friend",
         "body": [
           "{{cityState}} now counts {{terms.civilization}} a friend, though the bond has not grown into an alliance. Its market admits our traders on friend's terms, and our letters sit near the top of its council's pile. Friendship is a smaller thing than alliance, and it is also easier to lose."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "city-state-friendship-changes-ends",
@@ -338,8 +305,7 @@
         "headline": "{{cityState}} is friendly no longer",
         "body": [
           "Friendship with {{cityState}} has lapsed, and the city no longer counts us among its friends. The welcome at its gate has cooled, and our envoy waits longer each season for an answer. A cool welcome is cheaper than a closed gate, and harder to argue with."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "city-state-friendship-changes-notice",
@@ -350,8 +316,7 @@
         "headline": "Friendship recorded with {{cityState}}",
         "body": [
           "Be it entered in the record that {{terms.civilization}} and {{cityState}} are friends from this season forward. The city's scribes have written the bond into their book, and our archive holds the matching page."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "city-state-friendship-changes-critical",
@@ -362,8 +327,7 @@
         "headline": "We let a friendship lapse",
         "body": [
           "Our friendship with {{cityState}} has ended. A friendship is kept by small courtesies repeated season after season, and ours were allowed to lapse. The capital should explain to the city why the visits stopped, and to the rest of us why we are hearing of it only now."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "city-state-friendship-changes-proverb",
@@ -374,8 +338,7 @@
         "headline": "A word at the fire",
         "body": [
           "They say by the fire: a cold hearth teaches the guest the road. So it is with {{cityState}}."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -384,7 +347,6 @@
     "triggers": ["city-state-quest-countdown-disappeared"],
     "tags": ["politics", "international"],
     "names": ["cityState"],
-    "weight": { "base": 1 },
     "extends": "city-state",
     "variants": [
       {
@@ -393,8 +355,7 @@
         "body": [
           "A dated errand is gone from {{cityState}}'s board before the day it named. A traveler who had saved coin for the road says she will hold it a week and see what the board says next. The board keeps its reasons to itself."
         ],
-        "links": [],
-        "weight": { "base": 1 }
+        "links": []
       },
       {
         "id": "city-state-quest-countdown-disappeared-notice",
@@ -404,8 +365,7 @@
         "headline": "Notice: an errand ends in {{cityState}}",
         "body": [
           "Merchants and travelers should know that a dated errand is gone from {{cityState}}'s board before its deadline. Workmen who priced the job should call at the gatehouse before spending more coin on travel."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "city-state-quest-countdown-disappeared-record",
@@ -415,8 +375,7 @@
         "headline": "The missing date on {{cityState}}'s board",
         "body": [
           "{{cityState}} has struck an errand from its board before day {{previousDeadline}}, and that day is still to come. A workman who had saved his good boots for the trip now says he will wear the old pair until someone tells him the job is real. The board offers no explanation, only a blank space where a date used to be."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -425,7 +384,6 @@
     "triggers": ["city-state-quest-deadline-approaching"],
     "tags": ["politics", "international"],
     "names": ["cityState"],
-    "weight": { "base": 1 },
     "extends": "city-state",
     "variants": [
       {
@@ -435,8 +393,7 @@
         "body": [
           "An errand on {{cityState}}'s board comes due in {{turnsLeft}}. A hauler has loaded the last of his goods and means to be inside the gate before the board is cleared. The road is short, but the clock is shorter."
         ],
-        "links": [],
-        "weight": { "base": 1 }
+        "links": []
       },
       {
         "id": "city-state-quest-deadline-approaching-today",
@@ -445,8 +402,7 @@
         "body": [
           "Today is the last day for the errand {{cityState}} posted. When the sun goes down, the work will be finished or the chance will be gone. The board has no patience for second thoughts."
         ],
-        "links": [],
-        "weight": { "base": 1 }
+        "links": []
       },
       {
         "id": "city-state-quest-deadline-approaching-feed",
@@ -457,8 +413,7 @@
         "headline": "The {{cityState}} clock hits zero",
         "body": [
           "Last day for the {{cityState}} errand. Finish it or leave it. The board clears at sundown."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "city-state-quest-deadline-approaching-crier",
@@ -469,8 +424,7 @@
         "headline": "Hear it! {{turnsLeft}} on the {{cityState}} errand",
         "body": [
           "Hear it, all who carry goods or tools for {{cityState}}! The errand closes in {{turnsLeft}}, and the sand is already low! {{turnsLeft}}, I say! Be at the gate before the last sand falls!"
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -479,7 +433,6 @@
     "triggers": ["city-state-timed-quest-observed"],
     "tags": ["politics", "international"],
     "names": ["cityState"],
-    "weight": { "base": 1 },
     "extends": "city-state",
     "variants": [
       {
@@ -488,8 +441,7 @@
         "body": [
           "{{cityState}} has posted a new errand and given it {{turnsLeft}}. A tanner read the notice twice, then went looking for his partner, since the work would take two pairs of hands. If he finds his partner, they will have to start while the offer still stands."
         ],
-        "links": [],
-        "weight": { "base": 1 }
+        "links": []
       },
       {
         "id": "city-state-timed-quest-observed-notice",
@@ -499,8 +451,7 @@
         "headline": "New errand posted in {{cityState}}",
         "body": [
           "News from {{cityState}} this evening: another errand is up. The board gives it {{turnsLeft}} to be finished. The count began the moment the notice went up."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "city-state-timed-quest-observed-analysis",
@@ -510,8 +461,7 @@
         "headline": "A clock worth beating",
         "body": [
           "The new errand in {{cityState}} has {{turnsLeft}} to be finished, which is time enough to do the work properly. A prize with a clock beside it is still a prize, and the first to start usually takes it. {{terms.civilization}} should be first to start."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -520,15 +470,13 @@
     "triggers": ["foreign-major-wins-city-state"],
     "tags": ["politics", "international"],
     "names": ["cityState", "civilization", "replaced"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "foreign-major-wins-city-state-report",
         "headline": "{{civilization}} wins the alliance of {{cityState}}",
         "body": [
           "{{cityState}} now follows {{civilization}} as its ally, and {{civilization}}'s colors fly beside the city's own. The city lies {{distance}} from the nearest of our towns. The city has gained a powerful friend, and we have gained a powerful neighbor."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "foreign-major-wins-city-state-analysis",
@@ -538,8 +486,7 @@
         "headline": "A foothold {{distance}} from our walls",
         "body": [
           "{{civilization}} has won a friend in {{cityState}}, a city {{distance}} from our nearest gate. Such friendships are bought with patience and a full purse, and this one will take both to keep. A power does not pay for a stable this close to our road unless it means to ride."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "foreign-major-wins-city-state-pamphlet",
@@ -549,8 +496,7 @@
         "headline": "Hear it, {{terms.civic.people}}: {{civilization}} wins a neighbor",
         "body": [
           "Look to {{cityState}}, {{terms.civic.people}}: it has gone over to {{civilization}}. Carters at this end of the road are asking whose men will meet them at the next bridge. Our {{terms.civic.government}} should answer that before the drivers answer for themselves."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "foreign-major-wins-city-state-joke",
@@ -561,8 +507,7 @@
         "headline": "The seat is still warm",
         "body": [
           "{{cityState}} has a new ally in {{civilization}}. The wine {{replaced}} used to send is now poured for a different guest, and the city swears it tastes the same."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -571,15 +516,13 @@
     "triggers": ["friendly-city-state-attacked"],
     "tags": ["politics", "military", "international"],
     "names": ["aggressor", "cityState"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "friendly-city-state-attacked-report",
         "headline": "{{aggressor}} makes war on our friend {{cityState}}",
         "body": [
           "{{aggressor}} is at war with {{cityState}}, a small power that counts {{terms.civilization}} its friend. Its traders have pulled their goods off the road, and not one of our soldiers has been called to its gate. In the market people keep their voices low and wonder how long a friend's word stays a promise."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "friendly-city-state-attacked-analysis",
@@ -589,8 +532,7 @@
         "headline": "What the war on {{cityState}} reveals",
         "body": [
           "The war on {{cityState}} is a lesson in what {{aggressor}} values. A small state with a market and a gate was still worth an army to {{aggressor}}, which tells every neighbor what to expect. Our own soldiers are spectators for now, and they should be taking note."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "friendly-city-state-attacked-spoken",
@@ -600,8 +542,7 @@
         "headline": "It is told that war came to {{cityState}}",
         "body": [
           "They tell it by the hearth, and the telling is always the same: {{aggressor}} has taken up arms against {{cityState}}, the little market town that calls us friend. No son of ours marches in that column, and every family sets a full table tonight. The fire is warm, and the road is not."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "friendly-city-state-attacked-notice",
@@ -611,8 +552,7 @@
         "headline": "War reaches {{cityState}}",
         "body": [
           "Notice to traders: {{aggressor}} has opened a war on {{cityState}}, a small power that counts {{terms.civilization}} a friend. Drivers bound for that market should take the longer road until the fighting ends. Our {{terms.civic.government}} keeps its soldiers at home."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -621,15 +561,13 @@
     "triggers": ["friendly-city-state-captured"],
     "tags": ["politics", "military", "international"],
     "names": ["captor", "cityState"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "friendly-city-state-captured-report",
         "headline": "Our friend {{cityState}} falls to {{captor}}",
         "body": [
           "{{cityState}} has fallen to {{captor}}, and its gate now opens to a foreign watch. The city counted {{terms.civilization}} a friend, and the traders who once crowded its square will need a new road this season. The new watch will learn the road soon enough, and the road will not welcome it."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "friendly-city-state-captured-obituary",
@@ -639,8 +577,7 @@
         "headline": "The passing of {{cityState}}",
         "body": [
           "{{cityState}} kept faith with {{terms.civilization}} until the swords of {{captor}} reached its streets. Its altars stood open to every traveler, and its people gave what they had to the poor. Its holy fires are in other hands now, and the faithful can only hope they are still burning."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "friendly-city-state-captured-broadcast",
@@ -651,8 +588,7 @@
         "headline": "{{cityState}} falls to {{captor}}",
         "body": [
           "News at this hour: {{cityState}} has fallen to {{captor}}. A new banner hangs over its gate tonight. The city stands {{distance}} from our nearest town. That is near enough for worry, and this border needs watching."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "friendly-city-state-captured-gazette",
@@ -662,8 +598,7 @@
         "headline": "Letters from the frontier: {{cityState}} is taken",
         "body": [
           "Letters from the frontier relate that {{captor}} has taken {{cityState}} by conquest. A small power that counted {{terms.civilization}} a friend is gone from the roll of independents, and this paper can print nothing but regret. We are informed that the city's gates are watched by strangers, and its old courtesies are now a matter of memory."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   }

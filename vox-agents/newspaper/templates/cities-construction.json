@@ -4,7 +4,6 @@
     "triggers": ["building-completed"],
     "tags": ["cities", "domestic"],
     "names": ["building", "city"],
-    "weight": { "base": 1 },
     "extends": "city",
     "variants": [
       {
@@ -67,7 +66,6 @@
     "triggers": ["building-investment-made"],
     "tags": ["cities", "domestic"],
     "names": ["building", "city"],
-    "weight": { "base": 1 },
     "extends": "city",
     "variants": [
       {
@@ -117,8 +115,7 @@
         "headline": "Hear it, {{city}}! Coin speeds the {{building}}",
         "body": [
           "Hear it, {{terms.civic.people}}! The {{building}} has coin behind it now, and the masons work by lamplight! Stone by stone, the roof comes nearer! Come and see what your money is building!"
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -127,7 +124,6 @@
     "triggers": ["building-purchased"],
     "tags": ["cities", "domestic"],
     "names": ["building", "city"],
-    "weight": { "base": 1 },
     "extends": "city",
     "variants": [
       {
@@ -135,8 +131,7 @@
         "headline": "{{city}} buys the {{building}}",
         "body": [
           "There was no building season at {{city}}: the {{building}} was bought finished, and the city paid in {{currency}}. The first visitors found the mortar still damp and the keeper still looking for the keys. A line had formed at the door before the ink dried on the deed."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "building-purchased-tabloid",
@@ -146,8 +141,7 @@
         "headline": "No wait in {{city}}: the {{building}} is bought",
         "body": [
           "Other cities wait seasons for a {{building}} and watch every course go up. {{city}} did it in an afternoon: counted out {{currency}}, took the keys, opened the door. The masons who expected the work are still standing in the yard."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "building-purchased-notice",
@@ -157,8 +151,7 @@
         "headline": "A purchase for {{city}}: the {{building}} is ready",
         "body": [
           "It is confirmed that {{city}} has secured its {{building}} for {{currency}} and holds it ready for use. The bargain was settled in a single season, sparing the city a long spell of dust and scaffolding. The keys were handed over before the plaster was dry."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "building-purchased-analysis",
@@ -168,8 +161,7 @@
         "headline": "{{city}} pays for speed",
         "body": [
           "{{city}} bought its {{building}} outright for {{currency}}, and the work was finished before anyone could watch it rise. Speed was the purchase, and the price is entered in the city books. What the same sum might have done elsewhere is not written down, which is how most bargains escape judgment."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -178,7 +170,6 @@
     "triggers": ["city-defense-completed"],
     "tags": ["cities", "military", "domestic"],
     "names": ["building", "city"],
-    "weight": { "base": 1 },
     "extends": "city",
     "variants": [
       {
@@ -186,8 +177,7 @@
         "headline": "{{city}} finishes new defenses",
         "body": [
           "The last stone of the {{building}} went into place at {{city}} this week, and the gatekeeper has been trying the new bars ever since. Rubble still lies in the ditch, but the wall behind it would turn a raid today. The watch has moved its posts to the higher ground."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "city-defense-completed-press",
@@ -197,8 +187,7 @@
         "headline": "{{city}} strengthens its walls",
         "body": [
           "Sentries at {{city}} climbed to their new posts this morning, now that the {{building}} is finished. The officer of the watch says any column coming up the road would need ladders it did not bring. The town sleeps easier, and the watch does not."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "city-defense-completed-crier",
@@ -208,8 +197,7 @@
         "headline": "{{city}} is ready for a siege",
         "body": [
           "{{terms.civic.people}} of {{city}}, look up! The {{building}} is finished, stone on stone, and the watch has moved into it! Let the enemy count our walls from the road! Sleep easy tonight!"
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "city-defense-completed-notice",
@@ -219,8 +207,7 @@
         "headline": "A stronger {{city}}",
         "body": [
           "It is confirmed that the {{building}} at {{city}} is complete and the watch installed. The {{terms.civic.government}} ordered the work done before the danger was plain, and the city has the benefit of it now. Visitors will find the gate open at the usual hours."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -229,7 +216,6 @@
     "triggers": ["city-courthouse-completed"],
     "tags": ["cities", "domestic"],
     "names": ["building", "city"],
-    "weight": { "base": 1 },
     "extends": "city",
     "variants": [
       {
@@ -237,8 +223,7 @@
         "headline": "The {{building}} opens in {{city}}",
         "body": [
           "The {{building}} has opened in {{city}}, lifting the penalty of occupation. The city is now integrated into our territory."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "city-courthouse-completed-analysis",
@@ -248,8 +233,7 @@
         "headline": "{{city}} takes its place in the realm",
         "body": [
           "We have governed {{city}} as a conquered city. With the {{building}} in service, it can now be administered on the same footing as our other cities."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   }

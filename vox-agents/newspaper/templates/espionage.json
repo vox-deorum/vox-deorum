@@ -4,7 +4,6 @@
     "triggers": ["election-operation"],
     "tags": ["politics", "international"],
     "names": ["cityState"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "election-operation-report",
@@ -12,8 +11,7 @@
         "headline": "The vote in {{cityState}} went our way",
         "body": [
           "{{cityState}} has voted the way we hoped. The count was read from the town hall steps, and the candidate we backed stood in the square below, shaking every hand offered. The friends we helped now hold the seats that decide which envoy is heard first."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "election-operation-failure",
@@ -21,8 +19,7 @@
         "headline": "The vote in {{cityState}} went against us",
         "body": [
           "Our money went into an election in {{cityState}} and came back as receipts. The count turned against us before midnight, and the man we opposed thanked his voters from a balcony. Whoever answers for this should explain why the town preferred the other candidate."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "election-operation-gazette",
@@ -33,8 +30,7 @@
         "headline": "The election in {{cityState}} goes our way",
         "body": [
           "Letters from {{cityState}} confirm that the contest there closed in favor of the candidate our {{terms.civic.government}} thought worth backing. The council house steps are swept and empty this morning, and the clerks within are tying the campaign's papers into bundles. Traders from that quarter may expect a friendlier reception at our gates for years to come."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "election-operation-editorial",
@@ -45,8 +41,7 @@
         "headline": "Make the case for meddling in {{cityState}}",
         "body": [
           "Good coin went to {{cityState}} to buy an election, and the election stayed unbought! Let the minister who signed for the purse name one advantage an honest envoy could not have won. If there is none, the next purse should stay shut and the voters there should be left in peace."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "election-operation-influence",
@@ -57,8 +52,7 @@
         "headline": "One number from {{cityState}}'s murky business",
         "body": [
           "One number out of {{cityState}} is worth more than all the speeches: our standing there shifted by {{influence|point|points}}. Agents will go on arguing which favors were bought and which promises were merely made. The figure stands in the ledger, and every request we make in that town will be measured against it."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -67,7 +61,6 @@
     "triggers": ["our-diplomat-abroad"],
     "tags": ["politics", "international"],
     "names": ["capital", "civilization"],
-    "weight": { "base": 1 },
     "extends": "civilization",
     "variants": [
       {
@@ -75,8 +68,7 @@
         "headline": "Our diplomat takes up post in {{civilization}}",
         "body": [
           "An envoy of ours now keeps a post in {{civilization}}. His trunks went into the coach before first light, and the dispatch case rode on the seat beside him. Letters to that court will no longer wait on a willing traveler."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "our-diplomat-abroad-chronicle",
@@ -87,8 +79,7 @@
         "headline": "An envoy established at {{capital}}",
         "body": [
           "In this year the court of {{civilization}} admitted our envoy at {{capital}}. The porters were paid their customary fees, and a first letter went home within the week. The practice of stationing a voice abroad, kept by our fathers, is thus maintained."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "our-diplomat-abroad-broadcast",
@@ -98,8 +89,7 @@
         "headline": "A diplomat goes to {{civilization}}",
         "body": [
           "In {{civilization}} tonight, our envoy has taken his post. He will dine at their table and listen to every toast. One ear in that hall is worth a regiment, and the treasury pays a fraction for it."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -108,7 +98,6 @@
     "triggers": ["spy-caught-at-home"],
     "tags": ["politics", "international"],
     "names": ["cityName"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "spy-caught-at-home-identified",
@@ -116,8 +105,7 @@
         "headline": "A foreign spy, caught and named",
         "body": [
           "Our officers took a foreign agent inside our borders, and the documents on him carried the mark of the service that sent him. The magistrate studied the seal a second time before he reached for wax. A formal protest is on its way to that court, where it will be denied in equally formal language."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "spy-caught-at-home-killed",
@@ -125,8 +113,7 @@
         "headline": "A foreign spy is killed in our streets",
         "body": [
           "Our watch killed a foreign spy inside our borders this week, and he was buried before the sun rose. Our {{terms.civic.government}} has traced him to the service that employed him, though his people at home will hear only of a death abroad. The watch keeps the rest of the matter sealed."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "spy-caught-at-home-crier",
@@ -137,8 +124,7 @@
         "headline": "Hear it! A spy is taken in {{cityName}}",
         "body": [
           "{{cityName}}, attend, {{terms.civic.people}}! A stranger came among you to pry into your affairs, and the watch laid hands on him before he finished. Held fast! Go back to your suppers; the watch does not sleep."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "spy-caught-at-home-pamphlet",
@@ -148,8 +134,7 @@
         "headline": "A foreign spy uncovered!",
         "body": [
           "Neighbors, a foreign spy was pulled off our streets by the watch last night! The ministry has the service's name in a drawer and means to keep it there. Ask your alderman why the people who live here are told of such things only after the danger has gone."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -158,15 +143,13 @@
     "triggers": ["spy-detected-abroad"],
     "tags": ["politics", "international"],
     "names": ["cityName", "possibleTechnology", "target"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "spy-detected-abroad-report",
         "headline": "Seen at the work, but not named",
         "body": [
           "One of our people abroad was seen where he should not have been. Nobody there has yet tied him to us, and no protest has arrived at our embassy. The local watch is questioning porters at the ministry gate while our staff keeps to its ordinary routine."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "spy-detected-abroad-analysis",
@@ -177,8 +160,7 @@
         "headline": "What {{target}} may hold back",
         "body": [
           "In {{target}} the authorities are certain a spy was at work and cannot say for whom. That uncertainty spares our envoy a formal protest this month. The bill will be paid in small coin: documents opened twice, familiar faces asked for papers, and our visitors in {{target}} kept standing in hallways. Someone in the ministry should explain how a trained agent came to be spotted."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "spy-detected-abroad-take",
@@ -189,8 +171,7 @@
         "headline": "Our spy drew notice and may bring home {{possibleTechnology}}",
         "body": [
           "Word from our embassy says the agent was spotted in the course of his work, and the reports do not settle whether {{possibleTechnology}} came home with him. Officials there have spent the week asking after strangers who called at odd hours. Should the papers he carried prove sound, the alarm will look like a bargain."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "spy-detected-abroad-chronicle",
@@ -201,8 +182,7 @@
         "headline": "One of ours is marked in {{cityName}}",
         "body": [
           "In this season a man of ours was observed at his task in {{cityName}}. The watch questioned the gatekeepers for an afternoon and then let the affair drop. Whether he left with anything of value, this record does not say."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -211,7 +191,6 @@
     "triggers": ["spy-detected-at-home"],
     "tags": ["politics", "international"],
     "names": ["cityName"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "spy-detected-at-home-report",
@@ -219,8 +198,7 @@
         "headline": "A foreign spy, seen and unnamed",
         "body": [
           "Our watchers have spotted a foreign agent plying his trade within our borders. Nobody has yet named his employer, and the streets around the embassies have turned strangely quiet. Extra patrols will walk the watch house rounds until the question is settled."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "spy-detected-at-home-killed",
@@ -228,8 +206,7 @@
         "headline": "The spy who died unnamed",
         "body": [
           "A foreign spy died at the hands of our watchers, and he carried no name for the man who paid him. His body was removed before the stalls opened. Somewhere a handler now waits for a message that cannot be sent, and to ask after it would expose him."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "spy-detected-at-home-notice",
@@ -239,8 +216,7 @@
         "headline": "Notice: the watch is awake",
         "body": [
           "Be it known that a foreign agent has been observed at his work within our borders, and that his master remains unidentified. The {{terms.civic.government}} requests that householders note unfamiliar callers and speak of this matter to no one outside the household until the inquiry closes."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "spy-detected-at-home-tabloid",
@@ -251,8 +227,7 @@
         "headline": "Someone was watching {{cityName}}",
         "body": [
           "A stranger with quick eyes was working {{cityName}} this week, and he did not come from any house on our street. He was a foreign spy, and no one can name the man who hired him. The market still sold its bread, but every unfamiliar face at a stall got a long look."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -261,7 +236,6 @@
     "triggers": ["spy-exposed-abroad"],
     "tags": ["politics", "international"],
     "names": ["target"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "spy-exposed-abroad-identified",
@@ -269,8 +243,7 @@
         "headline": "Named abroad, and the doors close",
         "body": [
           "A foreign government has put a name to one of our agents, and the name is the right one. Our embassy heard the news before the official note reached its door, which says something about the leaks on that side. The cipher he used is ash in the grate this morning."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "spy-exposed-abroad-killed",
@@ -278,8 +251,7 @@
         "headline": "Killed abroad, and known to them",
         "body": [
           "One of our agents died in service abroad this week, and the government that killed him knows who he worked for. At the ministry a clerk closed the file with a single stroke of the pen and said nothing. What he was doing there will remain inside those walls."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "spy-exposed-abroad-unnamed",
@@ -287,8 +259,7 @@
         "headline": "Our spy is killed abroad, unnamed",
         "body": [
           "A man of ours was killed abroad, and the men who killed him never learned whose errand he ran. No protest will be lodged, and no name will appear in print. The service will keep the loss to itself and leave the file shut."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "spy-exposed-abroad-editorial",
@@ -299,8 +270,7 @@
         "headline": "The ministry owes us its account",
         "body": [
           "{{target}} has named one of our agents in public, and our ministry has not offered a word in reply. That silence asks the country to trust a foreign account, and a country that pays for a secret service deserves better. Let the minister say what good the operation did. The agent's name can stay out of the answer."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "spy-exposed-abroad-analysis",
@@ -311,8 +281,7 @@
         "headline": "The cost of the quiet work in {{target}}",
         "body": [
           "Our agent died in {{target}}, and the men who buried him knew which flag he served. The price of such work comes in two parts: the life lost, and the goodwill with {{target}} that goes with it. What the service gained in exchange, nobody outside its doors can say. The country should demand an answer before another name is spent."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "spy-exposed-abroad-obituary",
@@ -323,8 +292,7 @@
         "headline": "A winter coat passed on",
         "body": [
           "He died abroad in the service of his country, doing the work he had been given. At the rooms where he lodged, the landlady handed his heavy coat to a traveler, remembering how he had once done the same for a man caught in the rain. The service keeps its own account of his name."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -333,15 +301,13 @@
     "triggers": ["spy-may-gain-technology"],
     "tags": ["politics", "international"],
     "names": ["possibleTechnology", "target"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "spy-may-gain-technology-report",
         "headline": "Our spy may have gained {{possibleTechnology}}",
         "body": [
           "Our spy finished his work abroad and slipped out without raising an alarm. Early word from the service says {{possibleTechnology}} may have come home with him. Should the reports prove true, our workshops will show the difference before the season changes."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "spy-may-gain-technology-ledger",
@@ -353,8 +319,7 @@
           "Entered in the ledger of the service:",
           "Watchmen roused: none. Goods carried home, report unverified: {{possibleTechnology}}.",
           "On the other side of the page: the long years of study we may have saved."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "spy-may-gain-technology-analysis",
@@ -365,8 +330,7 @@
         "headline": "Unnoticed in {{target}}",
         "body": [
           "In {{target}} tonight, our people finished their work and no bell rang. The service believes the night's take may include {{possibleTechnology}}. If so, the gap in learning between our two nations has narrowed by a stride. Neither country's workshops will be told the reason."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "spy-may-gain-technology-feed",
@@ -376,8 +340,7 @@
         "headline": "Quiet win: possibly {{possibleTechnology}}",
         "body": [
           "No alarm. No witness. Probable prize: {{possibleTechnology}}. Short report, good reading."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -386,7 +349,6 @@
     "triggers": ["spy-posted-abroad"],
     "tags": ["politics", "international"],
     "names": ["city", "civilization"],
-    "weight": { "base": 1 },
     "extends": "city",
     "variants": [
       {
@@ -394,8 +356,7 @@
         "headline": "One of ours has taken rooms in {{city}}",
         "body": [
           "One of our quiet people has settled into {{city}}, a city of {{civilization}}. The room he rents above a shop looks down on the gate and opens onto a back stair. The {{city.owner.civic.government}} keeps its own hours, and he intends to learn every one."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "spy-posted-abroad-notice",
@@ -405,8 +366,7 @@
         "headline": "A quiet posting to {{city}}",
         "body": [
           "Notice is given that a trusted servant of ours has taken a place in {{city}}, a city of {{civilization}}. Correspondence sent along the usual road will find him. His first letter home will describe those parts of the city that visitors are never invited to see."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "spy-posted-abroad-anecdote",
@@ -416,8 +376,7 @@
         "headline": "One of ours goes to {{city}}",
         "body": [
           "They say a quiet man of ours has gone down the road to {{city}}, in the land of {{civilization}}. He will keep a stall in that market, and the gate will learn his face. When the wind shifts, word will come back along the same road."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "spy-posted-abroad-analysis",
@@ -427,8 +386,7 @@
         "headline": "A room inside {{city}}",
         "body": [
           "From a window in {{city}}, our agent sees what no dispatch from {{civilization}} will ever admit. He counts the wagons at the gate each morning, and the tally tells him what {{civilization}} is moving before any announcement. The question is whether that traffic is ordinary trade or the supplies for a road being built in secret. Either answer is worth the rent."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -437,7 +395,6 @@
     "triggers": ["their-diplomat-arrives"],
     "tags": ["politics", "international"],
     "names": ["civilization"],
-    "weight": { "base": 1 },
     "extends": "civilization",
     "variants": [
       {
@@ -445,8 +402,7 @@
         "headline": "A diplomat of {{civilization}} arrives at our capital",
         "body": [
           "A diplomat from {{civilization}} has moved into a house near our capital's ministry. The gatekeeper has one more face to learn and one more name for the visitors' book. Matters that once waited on a courier can now be raised at a door."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "their-diplomat-arrives-gazette",
@@ -456,8 +412,7 @@
         "headline": "An envoy from {{civilization}} at our court",
         "body": [
           "It is with satisfaction that we note the arrival of an envoy from {{civilization}} at our capital. The reception ledger has a new page, and his name is written there in ink not yet dry. A message carried by a diplomat arrives with fewer bruises than one carried by rumor, and honest words are welcome at this court."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "their-diplomat-arrives-editorial",
@@ -467,8 +422,7 @@
         "headline": "A listener at our table",
         "body": [
           "{{civilization}} has planted an envoy in our capital, and we should count the cost of courtesy. Wine is cheap; an unlocked study is not. Let the steward pour freely and let the clerks lock every drawer before the guest arrives. A visitor who knows he is watched writes a careful report, and a careful report serves his masters poorly."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   }

@@ -4,7 +4,6 @@
     "triggers": ["congress-new-proposals"],
     "tags": ["international", "congress"],
     "names": ["proposal", "proposer", "ourProposal", "ourProposer"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "congress-new-proposals-report",
@@ -39,8 +38,7 @@
         "headline": "Hear it! Our name is on the agenda",
         "body": [
           "Hear it, {{terms.civic.people}} of {{ourProposer}}! Our motion on {{ourProposal}} stands before the Congress, and the clerks have read it aloud! Find a delegate in the square and ask what we have proposed to the world. Every capital will hear of it before the week is out!"
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "congress-new-proposals-notice",
@@ -78,7 +76,6 @@
     "triggers": ["congress-resolution-defeated"],
     "tags": ["international", "congress"],
     "names": ["resolution", "proposer"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "congress-resolution-defeated-report",
@@ -142,7 +139,6 @@
     "triggers": ["congress-resolution-passed"],
     "tags": ["international", "congress"],
     "names": ["resolution", "proposer"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "congress-resolution-passed-report",
@@ -207,15 +203,13 @@
     "triggers": ["congress-sanctions-on-us"],
     "tags": ["international", "congress"],
     "names": ["resolution"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "congress-sanctions-on-us-report",
         "headline": "The World Congress has sanctioned us",
         "body": [
           "The Congress has written {{resolution}} into its law, and our name is on it. At the custom house, a broker read the notice twice and then crossed three ships off his list for the season. The counting houses will have the cost reckoned before the {{terms.civic.government}} has finished the first page."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "congress-sanctions-on-us-crier",
@@ -225,8 +219,7 @@
         "headline": "Hear it! The Congress has set its hand against us",
         "body": [
           "Hear it, {{terms.civic.people}}! The Congress has passed {{resolution}}, and the measure names us! They have put our name in their book, but they have not put a lock on our gates! Let every neighbor hear how the world has treated us today!"
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "congress-sanctions-on-us-editorial",
@@ -236,8 +229,7 @@
         "headline": "Tell merchants what the sanction stops",
         "body": [
           "The Congress has voted {{resolution}} against us, and the wharves will know the price before the counting houses do. A skipper with a hold full of goods needs a straight answer about which ports will still take him, and he needs it before he weighs anchor. Our {{terms.civic.government}} should nail the terms to the customs house door where every hand can read them."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "congress-sanctions-on-us-analysis",
@@ -247,8 +239,7 @@
         "headline": "The sanction, and the silence around it",
         "body": [
           "{{resolution}} is law now, and it follows our envoys into every foreign room. They sit down already marked, and both sides know what that costs. Our {{terms.civic.government}} has offered no route out and named no price it would pay to have the mark lifted. If there were a plan, we would have heard of it by now."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -257,7 +248,6 @@
     "triggers": ["congress-session-approaching"],
     "tags": ["international", "congress"],
     "names": ["league"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "congress-session-approaching-report",
@@ -265,8 +255,7 @@
         "headline": "The World Congress sits in {{turnsUntil}}",
         "body": [
           "Delegates expect the Congress to sit again in {{turnsUntil}}. In the lodging houses, envoys are sorting their papers and counting the promises they can still collect. Down at the chamber, porters are hauling benches into the gallery, and the corridors smell of fresh ink."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "congress-session-approaching-at-hand",
@@ -274,8 +263,7 @@
         "headline": "The World Congress sits at any moment",
         "body": [
           "Any moment now, the Congress opens and the gavel will fall. The agenda is already on the table, the galleries are full, and half the world is holding its breath. The first name called will settle more than the room expects."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "congress-session-approaching-notice",
@@ -286,8 +274,7 @@
         "headline": "Notice: {{league}} to convene",
         "body": [
           "Delegations to {{league}} are reminded that the chamber sits in {{turnsUntil}}. Bring your instructions in writing, and settle among yourselves before you arrive. A delegation that cannot agree at the door has already lost the room."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "congress-session-approaching-ledger",
@@ -299,8 +286,7 @@
         "body": [
           "Sitting opens in {{turnsUntil}}.",
           "Papers waiting for the clerk: {{count}}."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "congress-session-approaching-analysis",
@@ -311,8 +297,7 @@
         "headline": "The days when the bargains are priced",
         "body": [
           "There are {{turnsUntil}} left before the chamber opens, and the real voting has already begun in the corridors. Delegates trade favors over supper the way merchants trade cargo, and a promise made in summer is called in at the gavel. Our delegation should be out knocking on doors, not sitting by its own fire. A fine speech cannot recover a vote that was lost at dinner."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -321,15 +306,13 @@
     "triggers": ["congress-session-imminent"],
     "tags": ["international", "congress"],
     "names": ["league"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "congress-session-imminent-report",
         "headline": "The World Congress convenes on the next turn",
         "body": [
           "The Congress opens tomorrow, and the first delegations have already taken their seats. The galleries have gone still, and the clerk is practicing the long list of names he must read. Every nation in that hall will leave bound by the same decision."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "congress-session-imminent-notice",
@@ -340,8 +323,7 @@
         "headline": "Notice to the delegations: {{league}} sits",
         "body": [
           "{{league}} sits tomorrow, and the whole town is talking about it! Settle your instructions tonight and make a list of the favors you are owed. In that chamber, a friend you failed to greet last winter will remember it at the ballot."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "congress-session-imminent-agenda",
@@ -352,8 +334,7 @@
         "headline": "World Congress to hear {{count|proposal|proposals}} at its next session",
         "body": [
           "The Congress opens tomorrow with {{count|proposal|proposals}} on the table. At a printers' hall in the capital, the apprentices have spent the week arguing the same list and taking a show of hands at supper. Their master makes each one give a reason aloud. He says the Congress could learn from the exercise."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "congress-session-imminent-single",
@@ -364,8 +345,7 @@
         "headline": "Hear it! One matter before the world's chamber",
         "body": [
           "Hear it, {{terms.civic.people}}! One proposal goes before the Congress tomorrow, and only one! A single page will decide it, and a single tally will settle us all! Be in the square when the answer falls!"
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -373,15 +353,13 @@
     "id": "congress-votes-changed-account",
     "triggers": ["congress-votes-changed"],
     "tags": ["international", "congress"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "congress-votes-changed-report",
         "headline": "Our votes in the Congress change",
         "body": [
           "Our delegation now holds {{votes|vote|votes}} in the Congress, against {{previous|vote|votes}} at the last tally. The change has been entered in the delegation's book, in a hand that pressed harder than usual. The old figure is crossed out but still legible, which is how the clerk prefers it."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "congress-votes-changed-gain",
@@ -392,8 +370,7 @@
         "headline": "Our voice in the Congress grows",
         "body": [
           "Our tally in the Congress has risen to {{votes|vote|votes}} from {{previous|vote|votes}}. Delegations that walked past us last season will find a reason to call this week. In that hall, a delegate counts heads before he counts principles."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "congress-votes-changed-loss",
@@ -404,8 +381,7 @@
         "headline": "Our voice in the Congress shrinks",
         "body": [
           "Our strength in the Congress has fallen from {{previous|vote|votes}} to {{votes|vote|votes}}. A short list of delegations explains the gap, and our delegates in that hall can put a name to every vote we lost. {{terms.civic.leaderAddress}}, read that list to the nation and say what we mean to offer before the next ballot."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -414,15 +390,13 @@
     "triggers": ["congress-voting-opens"],
     "tags": ["international", "congress"],
     "names": ["league"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "congress-voting-opens-report",
         "headline": "Voting opens in the World Congress",
         "body": [
           "The Congress has begun to vote. One clerk calls the delegations by name while another keeps the tally in a book that will not close before evening. The galleries have gone quiet, and every seat is watching the same page."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "congress-voting-opens-notice",
@@ -433,8 +407,7 @@
         "headline": "Notice from {{league}}: the vote is open",
         "body": [
           "The ballot is open at {{league}}, and the delegates are filing past the clerk. When the last name has been called, the count will be posted at the door. Until then, hold your temper; the delegations in that hall will still have to work with one another next season."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "congress-voting-opens-ballot",
@@ -445,8 +418,7 @@
         "headline": "Voting day in the world's chamber",
         "body": [
           "Delegates vote tonight on {{count|proposal|proposals}}, and the cloakrooms have emptied early. Every bargain worth striking was struck before supper. In that hall, second place buys nothing."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "congress-voting-opens-feed",
@@ -458,8 +430,7 @@
         "body": [
           "Voting is live at the Congress.",
           "{{count|proposal|proposals}} on the ballot. All of them bind you, whichever way the count falls."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -468,15 +439,13 @@
     "triggers": ["congress-world-ideology"],
     "tags": ["international", "congress"],
     "names": ["resolution"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "congress-world-ideology-report",
         "headline": "The Congress sets a world ideology",
         "body": [
           "The Congress has made {{resolution}} the common law of the world. In one foreign capital, the town crier learned the new words by heart and complained that they were too long for a single breath. By morning, every household will have heard them whether it wanted to or not."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "congress-world-ideology-ours",
@@ -487,8 +456,7 @@
         "headline": "Our ideology carries the world",
         "body": [
           "The Congress has written our own creed into law as {{resolution}}. Delegations that snubbed us last year will now quote our own words back to us. Our delegates should spend that credit before the room finds a new favorite."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "congress-world-ideology-editorial",
@@ -499,8 +467,7 @@
         "headline": "A creed not ours is crowned",
         "body": [
           "The world's chamber has raised {{resolution}} above every other creed, and the name it honors is not ours. A decree cannot light a candle, and no clerk can hear a confession. The faithful should go on keeping their own hours, and the {{terms.civic.government}} should say clearly which shrines it will defend."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "congress-world-ideology-anecdote",
@@ -510,8 +477,7 @@
         "headline": "Which delegations clapped, and which didn't",
         "body": [
           "When the clerk read {{resolution}}, half the gallery rose at once and the other half studied its boots. The doorkeeper, who has watched a hundred such votes, says the boots tell you more than the cheering. Down at the docks, the crane men judge a creed by who gets paid first."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -520,7 +486,6 @@
     "triggers": ["congress-world-project"],
     "tags": ["international", "congress"],
     "names": ["project", "proposer"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "congress-world-project-report",
@@ -528,8 +493,7 @@
         "headline": "A world project before the Congress",
         "body": [
           "{{proposer}} has put {{project}} before the Congress. In the quarry district, a gang boss is already counting how many crews he could send if the motion passes. The largest share earns the largest reward, and he means to have his name on it."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "congress-world-project-analysis",
@@ -540,8 +504,7 @@
         "headline": "What a share in {{project}} will cost",
         "body": [
           "What will a leading share of {{project}} cost, and what will it return? Every delegation in the corridor is asking that, and none has an answer that fits on one page. The Congress pays best for the greatest contribution, and the bill comes due in workshops and fields where every hand is already spoken for. A nation with a full order book may find the prize costs more than the ledger shows."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "congress-world-project-work",
@@ -552,8 +515,7 @@
         "headline": "Trade halls eye work on {{project}}",
         "body": [
           "From the Congress tonight: {{project}} is open, and the work goes to whichever nations commit to it. At a machine shop back home, the foreman has already chalked a new job on the board and left the crew size blank. \"Fill that in by Monday,\" he tells the owner, \"or the men will look elsewhere.\""
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "congress-world-project-anecdote",
@@ -564,8 +526,7 @@
         "headline": "A blank line under {{project}}",
         "body": [
           "A printer on the high street has set {{project}} in type and left a gap beneath it for the name of the nation that does the work. His apprentice asks why the gap. \"Because I do not intend to print the wrong name,\" he says."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -574,15 +535,13 @@
     "triggers": ["congress-world-religion"],
     "tags": ["international", "congress"],
     "names": ["resolution"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "congress-world-religion-report",
         "headline": "The Congress names a world religion",
         "body": [
           "The Congress has named {{resolution}} the faith of the world. In a market town, the priest read the decree from the steps, then went back inside without finishing the blessing. By the well that evening, neighbors argued over whether the old prayers still counted."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "congress-world-religion-ours",
@@ -593,8 +552,7 @@
         "headline": "Our faith carries the world's blessing",
         "body": [
           "{{resolution}} now stands as the faith of the world, and the name it carries is ours. Shrines that strangers passed without a glance will soon have visitors at the door. Our priests warn that a favor granted by a chamber is never settled in full."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "congress-world-religion-editorial",
@@ -605,8 +563,7 @@
         "headline": "The old faiths need no blessing",
         "body": [
           "The Congress has handed its blessing to {{resolution}}, and our faith got nothing but the shadow of it. The rites we keep were old before that chamber had a roof, and no clerk was ever needed to make them proper. A decree from abroad cannot teach a grandmother how to pray."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "congress-world-religion-letter",
@@ -617,8 +574,7 @@
         "headline": "One altar blessed, many houses standing",
         "body": [
           "To the editor: the news has reached our street that the Congress chose {{resolution}}. My household keeps a different faith, and so do the two houses beside mine. We lend each other tools and share one well, and no delegate granted us leave. Let the chamber bless what it likes."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -627,15 +583,13 @@
     "triggers": ["sanction-proposed"],
     "tags": ["international", "congress"],
     "names": ["resolution", "proposer"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "sanction-proposed-report",
         "headline": "A sanctions proposal reaches the Congress",
         "body": [
           "{{proposer}} has put {{resolution}} before the Congress, a motion to shut one nation out of ordinary trade. Every delegation in the chamber has asked the clerks for a copy of the text. Down at the port, merchants are asking a harder question: whose ships will be turned away first?"
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "sanction-proposed-analysis",
@@ -645,8 +599,7 @@
         "headline": "Sanctions: the chamber's weapon",
         "body": [
           "With {{resolution}}, {{proposer}} would turn a quarrel into a shipping schedule. No soldier would march under it, yet the named nation would find its credit thinner and its friends slower to answer. Every yes on that vote is also a choice of whom to hurt. The ledger a rival keeps will be settled when the season turns."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "sanction-proposed-editorial",
@@ -656,8 +609,7 @@
         "headline": "Against the sanctions proposal",
         "body": [
           "{{proposer}} wants the Congress to pass {{resolution}}, but the case for it has yet to survive a hard question. What could the named nation still settle across a table, and what does everyone lose once that table is carried out of the room? A boycott stiffens the country it punishes. A rival who still answers letters is worth more to the Congress than one who has torn up the address."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "sanction-proposed-street",
@@ -667,8 +619,7 @@
         "headline": "Palaces aim it, markets feel it",
         "body": [
           "{{proposer}} has asked the Congress to back {{resolution}}, and the docks will feel the bill before the history books do. A sanction begins at a polished desk and ends at a fish stall. Every delegate should vote as though the fish market were watching, because it is."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -677,15 +628,13 @@
     "triggers": ["sanction-repeal-proposed"],
     "tags": ["international", "congress"],
     "names": ["resolution", "proposer"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "sanction-repeal-proposed-report",
         "headline": "A proposal to end a sanction",
         "body": [
           "{{proposer}} has asked the Congress to repeal {{resolution}}. Should the motion carry, the censure falls away from the nation named in the text. Traders who lost business under it will still want the harbor master's word before they move a single crate."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "sanction-repeal-proposed-hand",
@@ -695,8 +644,7 @@
         "headline": "A motion to lift {{resolution}}",
         "body": [
           "The Congress will vote on a motion from {{proposer}} to repeal {{resolution}}. A shipping agent has kept a bundle of orders tied with string since the sanction began, waiting for a reason to open it. If the vote goes her way, the string comes off that night."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "sanction-repeal-proposed-editorial",
@@ -706,8 +654,7 @@
         "headline": "The pressure may come off",
         "body": [
           "{{proposer}} wants the chamber to lift {{resolution}}. Take away that sanction and the Congress gives up a bargaining chip. Let the delegates wait until the other side has earned the relief."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "sanction-repeal-proposed-feed",
@@ -718,8 +665,7 @@
         "body": [
           "{{proposer}} has proposed repealing {{resolution}}.",
           "Status: proposed. No vote yet. The galleries are getting restless."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -728,15 +674,13 @@
     "triggers": ["travel-ban-proposed"],
     "tags": ["international", "congress", "culture"],
     "names": ["proposer", "resolution"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "travel-ban-proposed-report",
         "headline": "Congress weighs limits on travel abroad",
         "body": [
           "{{proposer}} has put {{resolution}} on the table at the Congress. If passed, it would make trips across the border harder. Innkeepers and coachmen who rely on foreign visitors are already counting the business they could lose."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "travel-ban-proposed-proposer",
@@ -775,8 +719,7 @@
         "headline": "The singer has two posters ready",
         "body": [
           "Ever since {{proposer}} brought {{resolution}} before the Congress, a touring singer has kept two sets of posters. One advertises her foreign halls; the other lists rooms she can fill at home. The printer asked which set to hang, and she pointed at the foreign one without a word."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -785,15 +728,13 @@
     "triggers": ["travel-ban-repeal-proposed"],
     "tags": ["international", "congress", "culture"],
     "names": ["proposer", "resolution"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "travel-ban-repeal-proposed-report",
         "headline": "A proposal to lift a travel ban",
         "body": [
           "The Congress will vote on a motion from {{proposer}} to end {{resolution}}. At a coaching yard on the north road, the ostler has swept out stalls that stood empty all season and counted the horses he can feed. He will not hang the sign back up until the vote is public."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "travel-ban-repeal-proposed-notice",
@@ -803,8 +744,7 @@
         "headline": "Notice: A proposal to end the travel ban",
         "body": [
           "We are told that {{proposer}} has moved to repeal {{resolution}}. Until the chamber votes to end them, the restrictions remain in force, whatever the newspapers say. A proposal on a shelf changes nothing at the border."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "travel-ban-repeal-proposed-editorial",

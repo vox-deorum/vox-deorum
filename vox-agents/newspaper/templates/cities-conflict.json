@@ -4,7 +4,6 @@
     "triggers": ["city-being-razed"],
     "tags": ["cities", "military", "international"],
     "names": ["city", "civilization"],
-    "weight": { "base": 1 },
     "extends": "city",
     "variants": [
       {
@@ -42,8 +41,7 @@
         "headline": "A city burns {{distance}} from our nearest city",
         "body": [
           "Word from the frontier says {{civilization}} is burning {{city}}, {{distance}} from the nearest of our towns. Travelers from that country speak of smoke lying flat across the fields at noon. This office will print the next dispatch as soon as a rider reaches us."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "city-being-razed-obituary",
@@ -53,8 +51,7 @@
         "headline": "The end of {{city}}",
         "body": [
           "{{city}} has {{turns}} before the last of it is gone, and the fire is the work of {{civilization}}. The city had its shrines and its market days, and both will end together. The prayers once said there will be said elsewhere, by people who remember the stones."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -63,7 +60,6 @@
     "triggers": ["city-under-siege"],
     "tags": ["cities", "military"],
     "names": ["city"],
-    "weight": { "base": 1 },
     "extends": "city",
     "variants": [
       {
@@ -71,8 +67,7 @@
         "headline": "{{city}} holds with damaged defenses",
         "body": [
           "{{city}} still stands, though its walls are badly broken. Families near the rampart have carried their bedding to relatives deeper in the city, and the market has moved into the narrow streets behind the wall. The gate is barred, and the watch does not sleep."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "city-under-siege-crier",
@@ -96,8 +91,7 @@
         "headline": "Can {{city}} repair its walls under siege?",
         "body": [
           "{{city}} can hold for a while, but its wall cannot be repaired while the road is closed. Stone, lime and timber all come from outside, and an army at the gate takes the road first. The garrison's quiet days are its only chance to haul and mix, and it should spend them that way."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "city-under-siege-anecdote",
@@ -107,8 +101,7 @@
         "headline": "Life inside besieged {{city}}",
         "body": [
           "In {{city}} the bakers have moved their ovens to the back rooms and the money is kept in aprons. Prices are chalked fresh at dawn and paid without argument. At night the city listens to one sound, the gate creaking on its hinges as the watch walks above it."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "city-under-siege-notice",
@@ -118,8 +111,7 @@
         "headline": "The defense of {{city}} continues",
         "body": [
           "We are advised that {{city}} remains under siege, its walls sorely battered but still holding. The watch relieves itself without a gap, and runners are moving at all hours. Citizens are asked to keep the streets clear for them."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -128,7 +120,6 @@
     "triggers": ["city-pillaged-unrest"],
     "tags": ["cities", "domestic", "military"],
     "names": ["city"],
-    "weight": { "base": 1 },
     "extends": "city",
     "variants": [
       {
@@ -150,8 +141,7 @@
         "headline": "The fields around {{city}} lie in ruin",
         "body": [
           "The count of {{city}} puts pillage first among its troubles, with {{pillagedPopulation}} {{terms.civic.people}} unhappy. A raid takes a night; rebuilding takes seed, hands and a season. The officers who decide where the garrison stands should be asked why these fields were left open."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "city-pillaged-unrest-anecdote",
@@ -161,8 +151,7 @@
         "headline": "The road to {{city}} is empty now",
         "body": [
           "The cart track south of {{city}} used to be busy before daybreak. Now the ruts are dry and the farms along it stand open to the wind, their doors gone for firewood. The families who worked them sleep inside the walls and walk out each morning to look at what is left."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "city-pillaged-unrest-notice",
@@ -172,8 +161,7 @@
         "headline": "{{city}} counts the cost of pillage",
         "body": [
           "Word from {{city}}: pillaged land is now the heaviest burden on the city, and {{pillagedPopulation}} {{terms.civic.people}} are unhappy because of it. Towns with wagons, seed or labor to spare should send word to the council."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -182,7 +170,6 @@
     "triggers": ["we-raze-a-city"],
     "tags": ["cities", "domestic"],
     "names": ["city"],
-    "weight": { "base": 1 },
     "extends": "city",
     "variants": [
       {
@@ -190,8 +177,7 @@
         "headline": "{{city}} is being razed",
         "body": [
           "Our soldiers began pulling down the walls of {{city}} this week, and the smoke has not lifted since. {{turns}} will see the last of it. The road to the site is already quieter than it was."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "we-raze-a-city-analysis",
@@ -201,8 +187,7 @@
         "headline": "The decision to raze {{city}}",
         "body": [
           "The destruction of {{city}} will take {{turns}}, and when it is done the realm will have one fewer gate to hold and one more open field to watch. A razed city costs less to keep and more to explain. The order was ours; so is the empty ground."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "we-raze-a-city-obituary",
@@ -212,8 +197,7 @@
         "headline": "The end of {{city}}",
         "body": [
           "{{city}} has {{turns}} before the last wall comes down and the ground is cleared. Its market days and its prayers will end in the same hour. The gods it served will have to remember it, because the fields will not."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "we-raze-a-city-population",
@@ -224,8 +208,7 @@
         "headline": "{{population}} people and {{turns}} left in {{city}}",
         "body": [
           "There are still {{population}} people inside {{city}}, and our soldiers are burning it around them. {{turns}} will empty the place one way or another. The busiest street in the city is the road out."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   }

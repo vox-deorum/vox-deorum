@@ -3,15 +3,13 @@
     "id": "falls-to-last-place-account",
     "triggers": ["falls-to-last-place"],
     "tags": ["politics", "international"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "falls-to-last-place-report",
         "headline": "We fall to last place among the powers",
         "body": [
           "We sit at the bottom of the table of {{count|power|powers}}, a place we did not hold at the last reckoning. A runner from the exchange brought the sheet to the council house before noon, and the doorkeeper read it twice before he would pass it on. The powers above us are already counting the next season's gains."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "falls-to-last-place-analysis",
@@ -21,8 +19,7 @@
         "headline": "Why our own tallies can flatter us",
         "body": [
           "We are last of {{count|power|powers}}, and the ministers say the table was kinder before. It was: our own returns counted granaries and miles of road and never asked whether the bread was sold or the road patrolled. A tally that flatters a government is a debt the street collects later."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "falls-to-last-place-pamphlet",
@@ -33,8 +30,7 @@
         "body": [
           "Dead last of {{count|power|powers}}, and the {{terms.civic.government}} has the nerve to call the tally a delicate matter. Ask the fishwife at her empty stall, or the mason out of work, how delicate it feels.",
           "These same men bowed for the cheers when the ledgers balanced. Let them come down to the market steps and bow for this."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "falls-to-last-place-joke",
@@ -44,8 +40,7 @@
         "headline": "Last of {{count}}, and holding",
         "body": [
           "Standings are in: last of {{count}}. The good news is that the floor is solid. Nothing left to lose but the view."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -54,15 +49,13 @@
     "triggers": ["foreign-golden-age-begins"],
     "tags": ["politics", "international"],
     "names": ["civilization"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "foreign-golden-age-report",
         "headline": "{{civilization}} enters a golden age",
         "body": [
           "A golden age has begun in {{civilization}}. Traders down from its capital describe forges working past dark and carts waiting at the quarry gate before sunrise. Its neighbors should expect a busier market and a prouder envoy."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "foreign-golden-age-notice",
@@ -72,8 +65,7 @@
         "headline": "Notice from abroad: golden days in {{civilization}}",
         "body": [
           "We are informed from {{civilization}} that a golden age has begun there. Letters from its capital tell of shops open past their usual hour and a court in good spirits. We pass the news along as it reached us."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "foreign-golden-age-analysis",
@@ -84,8 +76,7 @@
         "body": [
           "{{civilization}} has entered a golden age, and full coffers make a neighbor bolder. The same gold that pays for festivals pays for foundries.",
           "Expect its envoys to speak with more weight at the next table. We should settle what we will answer, and what we will spend on the answer, before the gold runs thin."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "foreign-golden-age-proverb",
@@ -95,8 +86,7 @@
         "headline": "The neighbor's granary is full",
         "body": [
           "Let {{civilization}}'s barn swell; keep your own roof sound."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -105,15 +95,13 @@
     "triggers": ["foreign-golden-age-ends"],
     "tags": ["politics", "international"],
     "names": ["civilization"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "foreign-golden-age-end-report",
         "headline": "The golden age of {{civilization}} ends",
         "body": [
           "The golden age of {{civilization}} has ended. A haulier on its roads says the night shifts have stopped and the hired hands have gone home to their villages. Its markets will feel the difference before its court admits it."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "foreign-golden-age-end-obituary",
@@ -124,8 +112,7 @@
         "body": [
           "For a season, {{civilization}} walked as if the road had been smoothed ahead of it. Its markets filled, its councils spoke with confidence, and its people took the plenty as a sign of favor.",
           "That season is over. What comes now is a test, and a people who took the plenty as a blessing should meet the lean years the same way."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "foreign-golden-age-end-chronicle",
@@ -135,8 +122,7 @@
         "headline": "The record of {{civilization}}: the age is done",
         "body": [
           "In this year the golden age of {{civilization}} was concluded. Its storehouses are shut and its court keeps plain hours again. The scribes have entered the fact and turned to the next page."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -144,15 +130,13 @@
     "id": "golden-age-begins-account",
     "triggers": ["golden-age-begins"],
     "tags": ["politics", "domestic"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "golden-age-begins-report",
         "headline": "A golden age begins at home",
         "body": [
           "Our nation has entered a golden age with no war at its back. Down in the lower town a cooper has taken on the two men he sent home last winter, and someone has whitewashed the market cross for no reason anyone can name. Plenty arrives quietly, one small repair at a time."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "golden-age-begins-crier",
@@ -162,8 +146,7 @@
         "headline": "Hear it! A golden age is upon us",
         "body": [
           "Hear it, {{terms.civic.people}}! The golden age is upon us and no enemy is at the gate! Hang the good cloth from every window! Peace at home, work for every hand, no war at the door!"
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "golden-age-begins-editorial",
@@ -174,8 +157,7 @@
         "body": [
           "Our golden age has begun, and it did not arrive by accident: it rests on a peace kept, ledgers balanced, and clerks who did the unglamorous work while others took the credit.",
           "Our advice is to spend the surplus where it will still stand in ten years: walls, roads and full granaries. A good season should leave a mark that outlasts it."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "golden-age-begins-letter",
@@ -187,8 +169,7 @@
         "body": [
           "Sir, word has come from the capital that we are in a golden age, and the {{terms.civic.government}} is said to be delighted. On my street the flour has not come down a farthing, and my customers still weigh their coins before they choose a loaf.",
           "So I ask you plainly: when does any of this reach the oven?"
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "golden-age-begins-anecdote",
@@ -199,8 +180,7 @@
         "body": [
           "The news reached the market before the stalls were half set: peace, and the good years at last. A potter's wife bought a ribbon she did not need, then stood in the lane letting the sun catch it.",
           "Our scholars can argue about golden ages. The ribbon is already in her hair."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -208,15 +188,13 @@
     "id": "golden-age-ends-account",
     "triggers": ["golden-age-ends"],
     "tags": ["politics", "domestic"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "golden-age-ends-report",
         "headline": "Our golden age ends",
         "body": [
           "Our golden age is over. The cloth hall opens late now, and the night watch has gone back to one man and one lantern. Hard seasons do not announce themselves; they just take the helper away first."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "golden-age-ends-obituary",
@@ -226,8 +204,7 @@
         "headline": "A kettle from the golden age",
         "body": [
           "In one workshop this age will be remembered by a lad who came in to sweep the floor and left able to beat a kettle seam that holds water. His master says the kettle will outlast them both. The bright years have gone, but the skill they paid for stays."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "golden-age-ends-analysis",
@@ -238,8 +215,7 @@
         "body": [
           "The golden age has ended, and the temptation is to sit with it. Give the country a day to feel the loss, then put the mourning cloth away.",
           "The hands that built the last prosperity have not gone anywhere, and the drawings are still in the drawer. We raised this once; we can raise it higher with the lesson behind us."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -247,15 +223,13 @@
     "id": "golden-age-in-wartime-account",
     "triggers": ["golden-age-in-wartime"],
     "tags": ["politics"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "golden-age-wartime-report",
         "headline": "A golden age begins, even against {{enemies}}",
         "body": [
           "A golden age has begun with the war against {{enemies}} still running. At the depot, a quartermaster broke open a crate of boots nobody had ordered this season, and the line of men went quiet. New boots mean someone expects them to march a long way."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "golden-age-wartime-editorial",
@@ -265,8 +239,7 @@
         "headline": "Open peace talks while we can afford to walk away",
         "body": [
           "We have entered a golden age while the war with {{enemies}} grinds on. {{terms.civic.leaderAddress}}, open talks now, while full coffers let us walk away from a bad offer. A treasury is a poor thing to spend on pride, and a worse thing to run dry."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "golden-age-wartime-crier",
@@ -276,8 +249,7 @@
         "headline": "Hear it! A golden age, even in war!",
         "body": [
           "Hear it, {{terms.civic.people}}! The golden age is here in the capital, and the war against {{enemies}} runs on! Coin in the chest and spears in the field, both at once! Carry that to the front and let the other side hear it!"
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "golden-age-wartime-dance-lesson",
@@ -287,8 +259,7 @@
         "headline": "A partner for the next dance",
         "body": [
           "The dancing master opened his hall for the golden age, and the war against {{enemies}} had emptied the men's side of it. A seamstress who had not danced since her wedding took a young clerk by the arm and told him to mind her toes. They were still at it when the last lamp went down."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -296,15 +267,13 @@
     "id": "happiness-recovers-account",
     "triggers": ["happiness-recovers"],
     "tags": ["politics", "domestic"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "happiness-recovers-report",
         "headline": "The national mood recovers",
         "body": [
           "The country's mood has climbed back to {{happinessPercentage}}, over the halfway line again. A stair-builder in the north ward has rehired the apprentice he let go in the hard months. One shop does not prove a recovery, but it is where recoveries start."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "happiness-recovers-broadcast",
@@ -314,8 +283,7 @@
         "headline": "The national mood has picked up",
         "body": [
           "Good evening. The nation's mood stands at {{happinessPercentage}} tonight, back above the halfway mark. In a packed hall in the capital, the figure was read out and the room applauded before the reader finished. The government credits steady work and steady hands."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "happiness-recovers-anecdote",
@@ -326,8 +294,7 @@
         "body": [
           "The number says the mood is {{happinessPercentage}}, but the tram stop says it plainer. A man stood to give a stranger his seat without being asked, and the chestnut seller was whistling.",
           "You can argue with a figure. You cannot argue with a whole platform humming along."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "happiness-recovers-pamphlet",
@@ -337,8 +304,7 @@
         "headline": "Mark it, {{terms.civic.people}}: the hard days have eased",
         "body": [
           "Take note, {{terms.civic.people}}: the mood has climbed to {{happinessPercentage}} and the squeeze is easing. The relief was paid for in the sheds and shops, not in the {{terms.civic.government}}'s fine rooms. Enjoy it, and remember who was missing when the load was heavy."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -347,15 +313,13 @@
     "triggers": ["ideology-adopted"],
     "tags": ["politics", "domestic"],
     "names": ["ideology"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "ideology-adopted-report",
         "headline": "Our nation takes up {{ideology}}",
         "body": [
           "Our {{terms.civic.government}} has adopted {{ideology}} as the nation's guiding doctrine. A herald read the proclamation at the courthouse steps, and the crowd heard it in a silence that had a few coughs in it. The flags went up on schedule; the cheering did not."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "ideology-adopted-analysis",
@@ -366,8 +330,7 @@
         "body": [
           "With {{ideology}}, the {{terms.civic.government}} has declared what the state stands for. A doctrine is a promise about whose interests come first, and promises of that kind are read closely abroad.",
           "Our friends will hold us to it and our rivals will hunt for the space between the speech and the ledger. Both will know within a few seasons which one we meant."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "ideology-adopted-pamphlet",
@@ -378,8 +341,7 @@
         "body": [
           "The {{terms.civic.government}} has chosen {{ideology}} for all of us, and nobody thought to ask the people who must live under it. A doctrine is cheap to write and expensive to obey.",
           "So answer one plain question before the bunting goes up: what does {{ideology}} put in the dinner pot of a weaver's family? We will print the answer, and we will check it."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "ideology-adopted-gazette",
@@ -389,8 +351,7 @@
         "headline": "The state takes a doctrine",
         "body": [
           "We are informed that the {{terms.civic.government}} has settled on {{ideology}} as our guiding doctrine. At the old school, the master has put away the reader he has used since his own student days and sent a boy to fetch the new one. What our fathers kept, the next generation will be asked to weigh again."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -399,15 +360,13 @@
     "triggers": ["ideology-switched"],
     "tags": ["politics", "international"],
     "names": ["civilization", "formerIdeology", "ideology"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "ideology-switched-report",
         "headline": "{{civilization}} abandons {{formerIdeology}} for {{ideology}}",
         "body": [
           "The {{event.player.civic.government}} of {{civilization}} has set aside {{formerIdeology}} and taken up {{ideology}}. Its embassy has sent for a new seal, since the old one carries a creed the country no longer holds. No drums, no speeches; the change came in a single line of official print."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "ideology-switched-ours",
@@ -418,8 +377,7 @@
         "headline": "Our {{terms.civic.government}} changes doctrine",
         "body": [
           "Our {{terms.civic.government}} has abandoned {{formerIdeology}} and adopted {{ideology}}. Down in the council corridor, porters are hauling the old pamphlets to the pulping tub while the ink on the new ones is still wet. The nation will be asked to change its mind faster than the paper changes hands."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "ideology-switched-chronicle",
@@ -430,8 +388,7 @@
         "headline": "A change of doctrine recorded",
         "body": [
           "In this season {{civilization}} set aside {{formerIdeology}} and adopted {{ideology}}. The {{event.player.civic.leaderTitle}} swore the oath at the gate in new words, and the old form was struck from the register. The dispatch offers no reason, and none is entered here."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -440,7 +397,6 @@
     "triggers": ["major-reduced-to-single-city"],
     "tags": ["politics", "international"],
     "names": ["civilization"],
-    "weight": { "base": 1 },
     "extends": "civilization",
     "variants": [
       {
@@ -448,8 +404,7 @@
         "headline": "{{civilization}} is reduced to a single city",
         "body": [
           "{{civilization}}, until recently one of the great powers, is now a country of one city. Its chancery has boxed the seals of provinces it no longer governs, and the clerks who kept them have been paid off. The flag still flies over the last roof, but the street below it is thinner than it was."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "major-single-city-ledger",
@@ -461,8 +416,7 @@
           "Cities held today: 1",
           "Cities let go: {{lost}}",
           "A map that once needed a table, folded to a single square."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "major-single-city-anecdote",
@@ -473,8 +427,7 @@
         "body": [
           "It is told that the roads of {{civilization}} once ran cart to cart from border to capital. Now a man can walk a morning there and meet only a shepherd.",
           "An old drover heard the news and shrugged. A cloak with one clasp still keeps the rain off, he said, but you would not call it a warm cloak."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -483,15 +436,13 @@
     "triggers": ["policy-adopted"],
     "tags": ["politics", "domestic"],
     "names": ["policy"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "policy-adopted-report",
         "headline": "The {{terms.civic.government}} adopts {{policy}}",
         "body": [
           "Our {{terms.civic.government}} has adopted {{policy}}. The order went up at the market cross before the stalls opened, and a carter read it aloud to a ring of neighbors who each heard something different in it. By supper the street had three versions of what it means and no agreement on any of them."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "policy-adopted-notice",
@@ -501,8 +452,7 @@
         "headline": "Notice of a new policy",
         "body": [
           "Be it known that the {{terms.civic.government}} has adopted {{policy}}. The measure now stands among the provisions of the state and will be carried out in the usual manner. The ministers commend it to every household."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "policy-adopted-analysis",
@@ -512,8 +462,7 @@
         "headline": "The lease that stayed unsigned",
         "body": [
           "The {{terms.civic.government}} has adopted {{policy}}, and a lease in the harbor office is still unsigned. A boatowner had agreed to take a second berth for the season and now wants the clause on fees read to him twice. He will sign when the arithmetic stops moving, and not before."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "policy-adopted-editorial",
@@ -524,8 +473,7 @@
         "body": [
           "The {{terms.civic.government}} has adopted {{policy}}, and the notice is set in very handsome type. Handsome type has never yet fed a child.",
           "Set one number beside it before the brass band starts: what this does to a week's wages. Show us that, and we will cheer as loud as the next paper."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -534,15 +482,13 @@
     "triggers": ["policy-branch-opened"],
     "tags": ["politics", "domestic"],
     "names": ["branch"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "policy-branch-opened-report",
         "headline": "The {{terms.civic.government}} takes up {{branch}}",
         "body": [
           "The {{terms.civic.government}} has opened the {{branch}} branch, and the state now works along {{count|line|lines}} of policy. A clerk ruled a fresh page in the great register and left the space under it bare. What fills it will be read for years."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "policy-branch-opened-crier",
@@ -552,8 +498,7 @@
         "headline": "Hear it! The {{branch}} branch is open",
         "body": [
           "Listen, {{terms.civic.people}}! Your {{terms.civic.government}} has opened the {{branch}} branch! That makes {{count|branch|branches}} of policy working for you! Now give the council the cheer it has earned!"
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "policy-branch-opened-chronicle",
@@ -563,8 +508,7 @@
         "headline": "The {{branch}} branch, recorded",
         "body": [
           "In this season the court opened the {{branch}} branch, bringing its branches of policy to {{count}}. The scribes have entered the heading and left the page beneath it bare. The measures that fill it will be set down as they come."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -572,15 +516,13 @@
     "id": "revolt-threshold-cleared-account",
     "triggers": ["revolt-threshold-cleared"],
     "tags": ["politics", "domestic"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "revolt-cleared-report",
         "headline": "The mood lifts, and a trunk stays packed",
         "body": [
           "The mood in the street has risen to {{happinessPercentage}}, back above the line where crowds turn dangerous. A boarding-house keeper by the quay has unpacked her summer linen but left the travel trunk strapped under the bed. She says a trunk costs nothing to keep packed and everything to pack in a hurry."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "revolt-cleared-analysis",
@@ -591,8 +533,7 @@
         "body": [
           "The mood has risen to {{happinessPercentage}}, clear of the danger line though still short of half. The magistrate's docket tells the same story: a few brawls, no mob, and courthouse steps that stayed empty overnight.",
           "Credit where it is due. The {{terms.civic.government}} stocked the granaries and paid the watch on time, and the street noticed. It has bought itself patience, not a holiday."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "revolt-cleared-feed",
@@ -602,8 +543,7 @@
         "headline": "Mood update: a quieter square",
         "body": [
           "Mood check: {{happinessPercentage}}. Square is quiet, gates are open, no crowds. Still under half, but pointing the right way."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -611,15 +551,13 @@
     "id": "revolt-threshold-crossed-account",
     "triggers": ["revolt-threshold-crossed"],
     "tags": ["politics", "domestic"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "revolt-crossed-report",
         "headline": "The mood falls, and the carter takes the back lane",
         "body": [
           "The mood has fallen to {{happiness}}, under the line where anger turns to action. A carter on the south side now brings his load in by the alley behind the shops and leaves the yard gate shut. He says the long way round costs an hour and saves an argument."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "revolt-crossed-crier",
@@ -629,8 +567,7 @@
         "headline": "Hear it! The people are angry!",
         "body": [
           "Hear it twice! The nation's mood has sunk to {{happiness}}, and the street has no patience left! The {{terms.civic.people}} want bread, work and a night without fear! You who govern, hear it twice!"
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "revolt-crossed-editorial",
@@ -641,8 +578,7 @@
         "body": [
           "The mood has dropped to {{happiness}}, below the line where a crowd stops asking and starts moving. In the tanners' lane, a woman has hung a slate by her gate and writes each new grievance on it in chalk.",
           "Someone from the {{terms.civic.government}} should go and read that slate. Then come back and read it to the council, out loud, name by name."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "revolt-crossed-broadcast",
@@ -652,8 +588,7 @@
         "headline": "The mood falls, and shops close early",
         "body": [
           "This is the national bulletin. The nation's mood stands at {{happiness}} tonight, below the danger line. Shutters are up early along the east road. The {{terms.civic.government}} meets at dawn. Again: the {{terms.civic.government}} meets at dawn."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -662,7 +597,6 @@
     "triggers": ["rival-adopts-ideology"],
     "tags": ["politics", "international"],
     "names": ["ideology", "name"],
-    "weight": { "base": 1 },
     "links": [
       { "placeholder": "name", "label": "{{name}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
     ],
@@ -672,8 +606,7 @@
         "headline": "{{name}} takes up {{ideology}}",
         "body": [
           "The {{player.civic.government}} of {{name}} has adopted {{ideology}} as its guiding doctrine. Its courtiers have spent the morning learning a new oath, and a mason is already at work on the lintel where the old words were cut. The proclamation was read at first light to a square that had been swept for the occasion."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "rival-ideology-shared",
@@ -684,8 +617,7 @@
         "headline": "{{name}} now shares our doctrine",
         "body": [
           "We are pleased to learn that {{name}} has adopted {{ideology}}, the doctrine that also guides our own affairs. Neighbors who read the world the same way tend to quarrel less and trade more, and the guards along the border have already grown friendlier. {{name}} is welcome to the company."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "rival-ideology-analysis",
@@ -696,8 +628,7 @@
         "body": [
           "{{name}} now holds {{ideology}} as its doctrine. A nation that picks a direction has also picked the places that direction leads.",
           "Watch what {{name}} builds next, and where it puts its soldiers. The declaration will name the target later; the groundwork names it now."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -706,7 +637,6 @@
     "triggers": ["score-leader-changes"],
     "tags": ["politics", "international"],
     "names": ["civilization", "tiedName"],
-    "weight": { "base": 1 },
     "extends": "civilization",
     "variants": [
       {
@@ -714,8 +644,7 @@
         "headline": "{{civilization}} takes first place among the powers",
         "body": [
           "{{civilization}} now heads the table of powers. The new standings went up on the exchange steps at noon, and the crowd that gathered read them with the particular attention people give to a name that has just risen. A clerk copied the sheet twice and checked the first line both times."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "score-leader-tied",
@@ -728,8 +657,7 @@
           "First place: {{civilization}}",
           "Also first: {{tiedName}}, level on the count",
           "One line, no daylight between the names."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "score-leader-ours",
@@ -742,8 +670,7 @@
           "The latest reckoning puts us at the head of the powers, and the square outside the exchange heard the news before the council did. Being first is a position; staying first is a campaign.",
           "Every rival below us is already working out what we did and how to copy it. We should be three steps into the next idea before they finish the arithmetic."
         ],
-        "links": [],
-        "weight": { "base": 1 }
+        "links": []
       }
     ]
   },
@@ -751,15 +678,13 @@
     "id": "unhappiness-sets-in-account",
     "triggers": ["unhappiness-sets-in"],
     "tags": ["politics", "domestic"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "unhappiness-sets-in-report",
         "headline": "The nation's mood falls below half",
         "body": [
           "The national mood has fallen to {{happiness}}, down {{dropPoints}} from the last count. A candle-maker on the west lane says customers now buy one candle where they used to buy three, and he has stopped ordering extra wicks. Small economies like that are how a hard season starts."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "unhappiness-sets-in-critical",
@@ -770,8 +695,7 @@
         "body": [
           "The mood has slid to {{happiness}}, below half and down {{dropPoints}} from the last count. The ministers have found the word serious.",
           "Serious is what they say when the problem is already in the room. On the east side, a mother now sends her boy to the bakery at opening time to buy yesterday's bread cheap, and she has a different word for the men who caused it."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "unhappiness-sets-in-gazette",
@@ -781,8 +705,7 @@
         "headline": "The national mood, diminished",
         "body": [
           "We are credibly informed that national contentment has fallen to {{happiness}}, below the halfway mark and down {{dropPoints}} on the last count. A draper in the market tells us that customers now ask to have a worn collar turned rather than a new shirt made. He does not expect the habit to pass with the season."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "unhappiness-sets-in-proverb",
@@ -792,8 +715,7 @@
         "headline": "When the pot runs low",
         "body": [
           "A thin pot makes a loud kitchen, and a light purse a sharp tongue."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   }

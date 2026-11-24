@@ -4,7 +4,6 @@
     "triggers": ["foreign-city-growth-milestone"],
     "tags": ["cities", "international"],
     "names": ["city", "owner"],
-    "weight": { "base": 1 },
     "extends": "city",
     "variants": [
       {
@@ -12,8 +11,7 @@
         "headline": "{{city}} grows to {{population}} people",
         "body": [
           "{{city}} now counts {{population}} people, and new lanes are going up outside its old edge. {{owner}} has ordered a second well dug, and the market runs past the afternoon bell. The city is beginning to look like the center of something."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "foreign-city-growth-milestone-dispatch",
@@ -23,8 +21,7 @@
         "headline": "From beyond the border: {{city}} reaches {{population}}",
         "body": [
           "We are informed that {{city}} has reached {{population}} people under {{owner}}. Letters from the city speak of crowded inns and a longer walk to the wells. Growth of that kind gives a neighbor more hands, more taxes and a louder voice."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -33,7 +30,6 @@
     "triggers": ["foreign-city-hardship"],
     "tags": ["cities", "international"],
     "names": ["city", "owner"],
-    "weight": { "base": 1 },
     "extends": "city",
     "variants": [
       {
@@ -42,8 +38,7 @@
         "headline": "Famine takes hold in {{city}}",
         "body": [
           "Famine has taken hold in {{city}}, and {{owner}} faces calls to open the public stores. Bread lines form before the doors open, and the carts come back from the fields lighter each week. A hungry city is a city that remembers who failed to feed it."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "foreign-city-hardship-famine-analysis",
@@ -54,8 +49,7 @@
         "headline": "Hunger in {{city}}",
         "body": [
           "Famine in {{city}} puts pressure on {{owner}} as well as on the city. A government that cannot feed a town may hear about it in its tax rolls and its market prices. The trouble may stay inside the walls, but the cost may not."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "foreign-city-hardship-pillaged-report",
@@ -63,8 +57,7 @@
         "headline": "Pillaged land around {{city}}",
         "body": [
           "The land around {{city}} has been pillaged, and the farmsteads outside the wall stand empty. The road that once carried vegetables to market carries dust. {{owner}} may feel the loss in its granaries before the season turns."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "foreign-city-hardship-pillaged-analysis",
@@ -75,8 +68,7 @@
         "headline": "The fields outside {{city}} are bare",
         "body": [
           "Pillaging around {{city}} has left {{owner}} with fields to bring back into use and a season already begun. Land left unguarded invites a second visit, and the next one costs more than the last. A neighbor that cannot guard its fields is a neighbor with a weakness worth noting."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "foreign-city-hardship-food-shortage-report",
@@ -84,8 +76,7 @@
         "headline": "{{city}} runs short of food",
         "body": [
           "{{city}} is short of food, and its stores are dwindling. The market stalls close earlier each week, and {{owner}} has the city's accounts to answer for. How the city meets the shortfall will shape the season ahead."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "foreign-city-hardship-food-shortage-analysis",
@@ -96,8 +87,7 @@
         "headline": "A thin larder in {{city}}",
         "body": [
           "A food shortage in {{city}} is a warning to {{owner}} before it is a disaster. Full markets hide bad planning, and thin ones expose it. The next season may answer the problem or make it a permanent entry in the city's books."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -106,7 +96,6 @@
     "triggers": ["foreign-city-takes-heavy-damage"],
     "tags": ["cities", "military", "international"],
     "names": ["city", "owner"],
-    "weight": { "base": 1 },
     "extends": "city",
     "variants": [
       {
@@ -115,8 +104,7 @@
         "headline": "{{city}} is badly damaged",
         "body": [
           "The defenses of {{city}} have fallen to half strength or less. Repairs are now another demand on {{owner}} while it is at war."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "foreign-city-takes-heavy-damage-analysis",
@@ -127,8 +115,7 @@
         "headline": "The cost of a battered {{city}}",
         "body": [
           "At {{city}}, {{owner}} has to weigh repairs against the demands of its war. Delaying either comes at a cost."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "foreign-city-takes-heavy-damage-repair-report",
@@ -136,8 +123,7 @@
         "headline": "Heavy damage at {{city}}",
         "body": [
           "The defenses of {{city}} have fallen to half strength or less. {{owner}} has substantial repairs ahead."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "foreign-city-takes-heavy-damage-repair-analysis",
@@ -148,8 +134,7 @@
         "headline": "What repairing {{city}} will cost {{owner}}",
         "body": [
           "Restoring {{city}} will take resources that {{owner}} might otherwise have spent elsewhere. The damage is clear; the scale of the repair bill is still unknown."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -158,7 +143,6 @@
     "triggers": ["foreign-building-completed"],
     "tags": ["cities", "international"],
     "names": ["building", "city", "civilization"],
-    "weight": { "base": 1 },
     "extends": "city",
     "variants": [
       {
@@ -166,8 +150,7 @@
         "headline": "{{civilization}} completes the {{building}} in {{city}}",
         "body": [
           "The scaffold at {{city}} came down this week, and the {{building}} stands finished under {{civilization}}'s flag. Carts have been going in and out of the gate since dawn. Our watchers across the border counted them until dark."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "foreign-building-completed-analysis",
@@ -177,8 +160,7 @@
         "headline": "New works at {{city}}",
         "body": [
           "The {{building}} at {{city}} is finished, and {{civilization}} can now do something on this frontier that it could not do last season. That is the whole meaning of the news, and it is enough. Our own plans should be made on the assumption that the next work has already begun."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "foreign-building-completed-notice",
@@ -188,8 +170,7 @@
         "headline": "From beyond our border: {{city}} completes the {{building}}",
         "body": [
           "We are informed from beyond the border that {{city}} has completed its {{building}} for {{civilization}}. The road to the city was busy all season and has been quiet since the roof went on. Traders bound that way will find the work finished and the crowds gone home."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "foreign-building-completed-anecdote",
@@ -199,8 +180,7 @@
         "headline": "A neighbor's new work",
         "body": [
           "A carter who came through {{city}} last week swears that {{civilization}}'s new {{building}} was not there in spring. He has told the story in three markets, and each time the building gets taller. The people of the city only shrug and say it was finished before the rains."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -209,7 +189,6 @@
     "triggers": ["foreign-building-purchased"],
     "tags": ["cities", "international"],
     "names": ["building", "city", "civilization"],
-    "weight": { "base": 1 },
     "extends": "city",
     "variants": [
       {
@@ -217,8 +196,7 @@
         "headline": "{{civilization}} buys the {{building}} in {{city}}",
         "body": [
           "No scaffold ever stood at {{city}}. The {{building}} was bought finished, and {{civilization}} paid for it in {{currency}}. The first visitors found the mortar still damp and the keeper still hunting for the keys."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "foreign-building-purchased-press",
@@ -228,8 +206,7 @@
         "headline": "{{civilization}} pays for the {{building}} near our border",
         "body": [
           "At {{city}} the {{building}} was bought, not built: {{civilization}} paid and took it finished. A neighbor that buys its works outright has money to spare and a reason to want them sooner. Both deserve a line in our own accounts."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "foreign-building-purchased-anecdote",
@@ -239,8 +216,7 @@
         "headline": "A neighbor's deep purse",
         "body": [
           "A trader from {{city}} says he walked past a fenced pit in the morning and a finished {{building}} by evening. {{civilization}} paid in {{currency}} and skipped the years of dust, he says, and the market laughs. Nobody in the city finds it as funny."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "foreign-building-purchased-notice",
@@ -250,8 +226,7 @@
         "headline": "Notice from {{city}}: the {{building}} is bought",
         "body": [
           "Notice is given that the {{building}} at {{city}} has been bought complete by {{civilization}}, the price paid in {{currency}}. No building season was spent on it, and no scaffolding was raised. The city has the use of the work at once, and the sellers have the money."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -260,7 +235,6 @@
     "triggers": ["foreign-building-investment-made"],
     "tags": ["cities", "international"],
     "names": ["building", "city", "owner"],
-    "weight": { "base": 1 },
     "extends": "city",
     "variants": [
       {
@@ -268,8 +242,7 @@
         "headline": "{{owner}} puts money into the {{building}} at {{city}}",
         "body": [
           "{{owner}} has put money toward the {{building}} at {{city}}. That puts the project on the treasury's books and gives the builders a head start when work begins. Traders across the border will be watching to see what the city makes of it."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "foreign-building-investment-made-analysis",
@@ -279,8 +252,7 @@
         "headline": "What {{owner}}'s payment at {{city}} tells us",
         "body": [
           "{{city}}'s {{building}} has enough backing from {{owner}} to draw a payment in advance. A treasury can call many projects urgent, but the money it puts down tells us which ones matter. That is the figure worth following across the border."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -289,7 +261,6 @@
     "triggers": ["foreign-city-defense-completed"],
     "tags": ["cities", "military", "international"],
     "names": ["building", "city", "owner"],
-    "weight": { "base": 1 },
     "extends": "city",
     "variants": [
       {
@@ -297,8 +268,7 @@
         "headline": "{{owner}} has the {{building}} ready at {{city}}",
         "body": [
           "The {{building}} at {{city}} is ready, and {{owner}} has moved its watch into the new posts. The gatekeeper spent the morning trying the bars, and the guard now stands where the old wall gave the clearest view. Travelers coming through the gate report a longer line of sentries than before."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "foreign-city-defense-completed-analysis",
@@ -308,8 +278,7 @@
         "headline": "{{city}} is harder to take than it was",
         "body": [
           "{{owner}} has added the {{building}} at {{city}}, and the city's approaches are now covered by a stronger wall. That changes the arithmetic for anyone who might march that way. Our own officers should note the new posts before they draw up another plan."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -318,7 +287,6 @@
     "triggers": ["foreign-city-flips"],
     "tags": ["cities", "politics", "international"],
     "names": ["city", "owner", "oldOwner"],
-    "weight": { "base": 1 },
     "extends": "city",
     "variants": [
       {
@@ -326,8 +294,7 @@
         "headline": "{{city}} turns from {{oldOwner}} to {{owner}}",
         "body": [
           "The flag over {{city}} has changed hands. The city now answers to {{owner}} instead of {{oldOwner}}, and the clerks at its town hall are cutting new seals. The old ones are already being scraped off the forms."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "foreign-city-flips-analysis",
@@ -337,8 +304,7 @@
         "headline": "A change of rule in {{city}}",
         "body": [
           "{{city}} has passed from {{oldOwner}} to {{owner}}. A town that changes flags is a test of both governments. {{owner}} will need to win the city's trust before it can count on its taxes."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -347,15 +313,13 @@
     "triggers": ["foreign-city-liberated"],
     "tags": ["cities", "politics", "international"],
     "names": ["owner", "liberatedOwner"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "foreign-city-liberated-report",
         "headline": "A city is returned to {{liberatedOwner}} by {{owner}}",
         "body": [
           "{{owner}} has returned a city to {{liberatedOwner}}. The occupiers have gone, and the city's own officials have taken up its business again. A crowd gathered at the council hall to hear the change read aloud, and the guard outside the door wears {{liberatedOwner}}'s colors this morning."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "foreign-city-liberated-analysis",
@@ -365,8 +329,7 @@
         "headline": "What a returned city may mean for {{owner}}",
         "body": [
           "{{owner}} has returned a city to {{liberatedOwner}}. A government that gives a city back may earn goodwill that proves useful later, or it may find the gift soon forgotten. The next time a map is redrawn, {{owner}} may have one more claim on {{liberatedOwner}}'s attention."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -375,7 +338,6 @@
     "triggers": ["foreign-occupied-city-resists"],
     "tags": ["cities", "politics", "international"],
     "names": ["city", "owner"],
-    "weight": { "base": 1 },
     "extends": "city",
     "variants": [
       {
@@ -383,8 +345,7 @@
         "headline": "{{city}} resists {{owner}}'s rule",
         "body": [
           "{{city}} is held by {{owner}}, and the city has not accepted the flag above its gate. Orders go out from the prefect's office and then go nowhere. The market keeps its old hours, and the clerks keep their old habits."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "foreign-occupied-city-resists-dispatch",
@@ -394,8 +355,7 @@
         "headline": "From beyond the border: trouble in {{city}}",
         "body": [
           "Word from {{city}} says the occupation under {{owner}} has not settled the city. Its people answer questions briefly and gather in small groups, and the prefect has asked for more patrols. An occupation that needs more soldiers is an occupation that has not ended."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -404,7 +364,6 @@
     "triggers": ["foreign-city-founded"],
     "tags": ["cities", "international"],
     "names": ["city", "owner"],
-    "weight": { "base": 1 },
     "extends": "city",
     "variants": [
       {
@@ -412,8 +371,7 @@
         "headline": "{{owner}} founds {{city}}",
         "body": [
           "A new town called {{city}} now stands under {{owner}}'s flag. The first shelters are up, and a market square has been marked out with rope. Our maps will need a new line on that side of the border."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "foreign-city-founded-dispatch",
@@ -423,8 +381,7 @@
         "headline": "From beyond the border: {{city}} is founded",
         "body": [
           "Word reaches this office that {{owner}} has founded {{city}}, {{distance}} from our nearest city. The town has a name, a flag and little else as yet. A new neighbor that close is worth watching, if only to see what it draws away from our trade."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -433,7 +390,6 @@
     "triggers": ["foreign-city-raises-settlers"],
     "tags": ["cities", "international"],
     "names": ["city", "owner"],
-    "weight": { "base": 1 },
     "extends": "city",
     "variants": [
       {
@@ -441,8 +397,7 @@
         "headline": "{{city}} raises a settler party",
         "body": [
           "{{owner}} has raised a settler party at {{city}}. The wagons are loaded, and the town's count is already smaller by the people in the party. A neighbor that can spare that many is a neighbor worth watching."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "foreign-city-raises-settlers-analysis",
@@ -452,8 +407,7 @@
         "headline": "A settler party is raised at {{city}}",
         "body": [
           "A settler party has been raised at {{city}}, and {{owner}} did not gather it for nothing. A town that can spare that many people is a town with plans for more ground. The treasury's next move is the one to watch."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -462,7 +416,6 @@
     "triggers": ["foreign-city-courthouse-completed"],
     "tags": ["cities", "international"],
     "names": ["building", "city", "owner"],
-    "weight": { "base": 1 },
     "extends": "city",
     "variants": [
       {
@@ -470,8 +423,7 @@
         "headline": "{{owner}} opens a {{building}} in {{city}}",
         "body": [
           "The {{building}} has opened in {{city}}. The city is now integrated into {{owner}}'s territory and no longer bears the penalty of occupation."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "foreign-city-courthouse-completed-analysis",
@@ -481,8 +433,7 @@
         "headline": "{{owner}} integrates {{city}}",
         "body": [
           "The new {{building}} gives {{owner}} a settled basis for governing {{city}}. For its neighbors, that is a sign that {{owner}} now treats the former conquest as part of its territory."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -491,7 +442,6 @@
     "triggers": ["foreign-city-celebration-begins"],
     "tags": ["cities", "international"],
     "names": ["city", "owner"],
-    "weight": { "base": 1 },
     "extends": "city",
     "variants": [
       {
@@ -499,8 +449,7 @@
         "headline": "{{city}} begins a citywide celebration",
         "body": [
           "In {{owner}}, the city of {{city}} has begun a local celebration."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "foreign-city-celebration-begins-notice",
@@ -510,8 +459,7 @@
         "headline": "From beyond the border: a celebration in {{city}}",
         "body": [
           "News from {{owner}}: a celebration is under way in {{city}}."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   }

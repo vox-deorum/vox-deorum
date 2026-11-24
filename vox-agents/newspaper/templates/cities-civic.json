@@ -4,7 +4,6 @@
     "triggers": ["capital-outgrown"],
     "tags": ["cities", "domestic"],
     "names": ["capital", "largest"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "capital-outgrown-report",
@@ -42,8 +41,7 @@
         "headline": "{{largest}} now outweighs {{capital}}",
         "body": [
           "{{largest}} now holds more people than {{capital}}, and the {{terms.civic.government}} has not moved a chair. Petitions still go to the capital, and the clerks there still decide which to answer. In {{largest}}, the man who binds those petitions has asked for a bigger sack, a request that says more about the future than any census."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "capital-outgrown-anecdote",
@@ -54,8 +52,7 @@
         "headline": "{{capital}} loses its crown to {{largest}}",
         "body": [
           "In the market at {{capital}}, an old speaker still opens with the biggest city in the realm. A boy in the crowd has taken to shouting the new figure, {{largestPopulation}}, and naming {{largest}} at the top of his voice. The speaker has not changed his line, but he no longer waits for applause."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "capital-outgrown-feed",
@@ -66,8 +63,7 @@
         "headline": "The capital just got outgrown",
         "body": [
           "{{largest}} just passed {{capital}} on the population roll, {{largestPopulation}} people to the capital's smaller count. The {{terms.civic.government}} still sits in the capital. The crowds have other ideas."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -75,15 +71,13 @@
     "id": "cities-share-grievance-account",
     "triggers": ["cities-share-grievance"],
     "tags": ["cities", "domestic"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "cities-share-grievance-report",
         "headline": "The same grievance in {{count|city|cities}}",
         "body": [
           "The same entry now heads the complaint books in {{count}} of our cities: {{key}}. Clerks in each town wrote it without knowing the others had. A grievance with that many addresses is a question for the capital."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "cities-share-grievance-analysis",
@@ -93,8 +87,7 @@
         "headline": "One problem, {{count|city|cities}}",
         "body": [
           "The entry {{key}} leads the complaint book in {{count}} of our cities, and a pattern that wide is policy by another name. Weather explains one bad season in one town; it does not explain the same line in every ledger. The {{terms.civic.government}} should be able to say when the choice was made and who expected to gain by it."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "cities-share-grievance-famine",
@@ -105,8 +98,7 @@
         "headline": "Hunger in {{count}} of our cities",
         "body": [
           "Hunger now leads the complaint book in {{count}} cities. Ask anyone in a bread line and they will say it led there last month. The capital has the count now, and the capital can read."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "cities-share-grievance-culture",
@@ -117,8 +109,7 @@
         "headline": "Boredom in {{count|city|cities}}",
         "body": [
           "The complaint is the same in {{count}} of our cities: nothing to do once the day's work is done. Benches in the square fill before dark and empty by the first bell. A fiddler in one of those towns has played the same three songs all summer, and nobody has asked for a fourth."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -127,7 +118,6 @@
     "triggers": ["city-famine-unrest"],
     "tags": ["cities", "domestic"],
     "names": ["city"],
-    "weight": { "base": 1 },
     "extends": "city",
     "variants": [
       {
@@ -149,8 +139,7 @@
         "headline": "Why {{city}} is hungry",
         "body": [
           "{{city}} cannot feed itself, and the city's own count puts famine ahead of every other grievance. {{faminePopulation}} {{terms.civic.people}} are unhappy because of it. Granaries do not empty on their own; someone set the harvest, the stores and the roads, and someone should explain the result."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "city-famine-unrest-anecdote",
@@ -160,8 +149,7 @@
         "headline": "Empty stalls in {{city}}",
         "body": [
           "A woman in {{city}} keeps a chipped bowl by her door for the bread cart. Last winter the cart came twice a day; now it comes once and is empty before she reaches the corner. She has stopped hurrying, she says, because hurrying does not bake bread."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "city-famine-unrest-notice",
@@ -171,8 +159,7 @@
         "headline": "A call for bread in {{city}}",
         "body": [
           "The faithful of {{city}} are asked to bring what they can spare to the shrine steps before dark. Famine is the city's heaviest burden, and the stores must stretch to the next harvest. A loaf left at the shrine tonight will be on a table before morning."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -181,7 +168,6 @@
     "triggers": ["city-growth-milestone"],
     "tags": ["cities", "domestic"],
     "names": ["city"],
-    "weight": { "base": 1 },
     "extends": "city",
     "variants": [
       {
@@ -203,8 +189,7 @@
         "headline": "{{city}} crosses {{population}}",
         "body": [
           "{{city}} is now a {{milestone}} at {{population}} people, and the size changes what the city can ask of the realm. Its market runs past the afternoon bell, and the potters have fired a second kiln. More hands mean more trade, more noise and louder demands for roads and wells, and a city that answers those demands will not stay this size for long."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "city-growth-milestone-crier",
@@ -214,8 +199,7 @@
         "headline": "{{city}} has grown to {{population}}!",
         "body": [
           "{{terms.civic.people}} of {{city}}, all hear it! The city counts {{population}} souls and stands now as a {{milestone}}! Count the chimneys and count the carts! Say the name aloud: {{city}}!"
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "city-growth-milestone-gazette",
@@ -225,8 +209,7 @@
         "headline": "A milestone for {{city}}",
         "body": [
           "We are informed that {{city}} has reached {{population}} people and is now reckoned a {{milestone}}. The older families will tell you the walk to the well has grown longer and the crowd at the market larger still. Such growth comes slowly, and the city is the sounder for it."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -235,7 +218,6 @@
     "triggers": ["starvation-without-siege"],
     "tags": ["cities", "domestic"],
     "names": ["city"],
-    "weight": { "base": 1 },
     "extends": "city",
     "variants": [
       {
@@ -243,8 +225,7 @@
         "headline": "{{city}} is eating into its stores",
         "body": [
           "The granary in {{city}} holds {{foodStored}} of grain and gives up {{shortfall}} of it each day, with no army outside to blame. The chalk line on the door drops a little every morning. The keeper has stopped chalking the good weeks, because there are none."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "starvation-without-siege-analysis",
@@ -254,8 +235,7 @@
         "headline": "Why {{city}} is starving in peacetime",
         "body": [
           "There is no siege at {{city}}, no raiders in the fields and no enemy at the gate. Yet the city loses {{shortfall}} of food a day from a store of {{foodStored}}, and the granary books say so plainly. Peacetime hunger is somebody's decision, and somebody should be asked to explain it."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "starvation-without-siege-anecdote",
@@ -265,8 +245,7 @@
         "headline": "The granary at {{city}} is emptying",
         "body": [
           "A baker on the high street in {{city}} now cuts every loaf in two before she opens the shop. The granary that feeds her ovens holds {{foodStored}} of grain and loses {{shortfall}} of that a day. She has stopped taking orders for next week, and her customers have stopped asking."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "starvation-without-siege-ledger",
@@ -278,8 +257,7 @@
           "Grain in store: {{foodStored}}.",
           "Lost each day: {{shortfall}}.",
           "Siege: none. Battle: none. The store still falls."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -288,7 +266,6 @@
     "triggers": ["city-celebration-begins"],
     "tags": ["cities", "domestic"],
     "names": ["city"],
-    "weight": { "base": 1 },
     "extends": "city",
     "variants": [
       {
@@ -296,8 +273,7 @@
         "headline": "A celebration begins in {{city}}",
         "body": [
           "A citywide celebration is under way in {{city}}."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "city-celebration-begins-notice",
@@ -307,8 +283,7 @@
         "headline": "From the city pages: {{city}} celebrates",
         "body": [
           "Readers in {{city}} may mark the start of a citywide celebration on their calendars."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   }

@@ -4,15 +4,13 @@
     "triggers": ["ally-joins-our-war"],
     "tags": ["politics", "military", "international"],
     "names": ["allies", "opponent"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "ally-joins-our-war-report",
         "headline": "Allies join the war against {{opponent}}",
         "body": [
           "A column of {{allies}} arrived at our camp before dawn, and their banners now fly beside ours against {{opponent}}. The cooks had to borrow pots from the infantry to feed them all. {{opponent}} will find its next battle more crowded than the last.{{hostileAllies}}"
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "ally-joins-our-war-analysis",
@@ -22,8 +20,7 @@
         "headline": "A warning for our other rivals",
         "body": [
           "{{allies}} have brought their army into the field against {{opponent}}, and the promise behind that march was made long before this war. A treaty that is never tested is only a pleasant memory; this one has now been tested in public. Every chancellery in the world is revising its estimate of what our signature is worth.{{hostileAllies}}"
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "ally-joins-our-war-gazette",
@@ -33,8 +30,7 @@
         "headline": "The pact answered in arms",
         "body": [
           "Dispatches from the capital confirm that {{allies}} have entered the war at our side against {{opponent}}. The keeper of the frontier post has added their colors to the board, though he had to move ours to make room. We hope the arrangement proves as durable as the paper it was written on.{{hostileAllies}}"
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "ally-joins-our-war-crier",
@@ -44,8 +40,7 @@
         "headline": "Hear it! We do not fight alone",
         "body": [
           "Make way! {{allies}} have come to our side and march against {{opponent}}! Their drums were heard on the north road this morning! Our friends have not left us to fight alone! Pass the word to every street!{{hostileAllies}}"
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -54,15 +49,13 @@
     "triggers": ["foreign-peace-nearby"],
     "tags": ["politics", "military", "international"],
     "names": ["initiator", "target"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "foreign-peace-nearby-report",
         "headline": "Peace near our borders",
         "body": [
           "{{initiator}} and {{target}} have ended their war. The closer of the two lies {{nearestDistance}} from our frontier, close enough that our carters know its roads. The toll keepers there have stopped asking travelers where they are headed."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "foreign-peace-nearby-gazette",
@@ -72,8 +65,7 @@
         "headline": "Neighbors at peace again",
         "body": [
           "Word has reached this office that {{initiator}} and {{target}} have concluded a peace, and that neither side has announced a price. At the border bridge, the keeper has taken down the barrier and swept the planks. May the quiet last longer than the quarrel did."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "foreign-peace-nearby-analysis",
@@ -83,8 +75,7 @@
         "headline": "The quiet between {{initiator}} and {{target}}",
         "body": [
           "The settlement between {{initiator}} and {{target}} contains no term worth printing, which tells us most of what we need. Wars usually end when one treasury empties or both grow tired of paying. Either explanation points the same way: the fighting stopped because it had become too expensive."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "foreign-peace-nearby-proverb",
@@ -94,8 +85,7 @@
         "headline": "When the neighbors' fire burns low",
         "body": [
           "Two loud houses have gone dark, and the lane sleeps at last. {{initiator}} and {{target}} have put out their lamps."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -104,15 +94,13 @@
     "triggers": ["foreign-war-nearby"],
     "tags": ["politics", "military", "international"],
     "names": ["initiator", "target"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "foreign-war-nearby-report",
         "headline": "War breaks out near our borders",
         "body": [
           "War has broken out between {{initiator}} and {{target}}, and the nearer of them stands {{nearestDistance}} from our border. Farmers along that road have begun moving stock away from the frontier. Our own patrols have been doubled, though no one has ordered them to cross."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "foreign-war-nearby-analysis",
@@ -122,8 +110,7 @@
         "headline": "A war next door",
         "body": [
           "The quarrel between {{initiator}} and {{target}} began {{nearestDistance}} from our border, close enough that smoke will show above our watchposts. A war that near moves the price of grain, the safety of the roads and the temper of every court in the region. Two armies are drilling within sight of our border, and our officers should be taking notes."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "foreign-war-nearby-broadcast",
@@ -133,8 +120,7 @@
         "headline": "{{initiator}} at war with {{target}}",
         "body": [
           "War between {{initiator}} and {{target}} tonight. The fighting is close to our frontier. Travelers on the border road are choosing the long way around, and the watchposts are keeping their lamps lit."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "foreign-war-nearby-editorial",
@@ -144,8 +130,7 @@
         "headline": "Their war, our doorstep",
         "body": [
           "The war between {{initiator}} and {{target}} is being fought {{nearestDistance}} from our farms, and our {{terms.civic.government}} has said almost nothing about it. The {{terms.civic.people}} deserve to know whether our roads, our markets and our sons are exposed. {{terms.civic.leaderAddress}}, speak plainly to your {{terms.civic.people}} before the silence spends the last of their patience."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "foreign-war-nearby-chronicle",
@@ -155,8 +140,7 @@
         "headline": "A war nearby, set down",
         "body": [
           "In this year {{initiator}} and {{target}} took up arms against each other, at a distance of {{nearestDistance}} from our borders. The frontier scribe noted the smoke before he noted the cause. Our own watch was doubled the same week, and the record gives no order for it."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -165,15 +149,13 @@
     "triggers": ["peace-capitulation"],
     "tags": ["politics", "military", "international"],
     "names": ["initiator", "target"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "peace-capitulation-report",
         "headline": "A war ends in capitulation",
         "body": [
           "{{initiator}} and {{target}} have ended their war, and the settlement is entered as a capitulation. A rider brought the news to the foreign office before the market opened, and the clerks read it in silence. The terms have not been published, so no one can yet say which side bowed."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "peace-capitulation-obituary",
@@ -183,8 +165,7 @@
         "headline": "The war between {{initiator}} and {{target}} is ended",
         "body": [
           "The war between {{initiator}} and {{target}} is over. It began with promises and ended with a signed page, and the record calls the ending a capitulation. What is left is a border to redraw and a generation of letters to answer."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "peace-capitulation-analysis",
@@ -195,8 +176,7 @@
         "headline": "Our war with {{initiator}} ends in capitulation",
         "body": [
           "Our war with {{initiator}} has ended, and the record describes the settlement as a capitulation. Whether the terms favor us will be known when they are printed, and the government has not printed them. Until then, the only fact worth holding is that the shooting has stopped."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "peace-capitulation-gazette",
@@ -207,8 +187,7 @@
         "headline": "Our war with {{target}} is settled",
         "body": [
           "Peace with {{target}} is signed, and the instrument records a capitulation. At the frontier station, the barrier was raised before noon and the first cart in months crossed without a challenge. We do not yet know the price, but we know the sound of the guns has stopped."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -217,15 +196,13 @@
     "triggers": ["peace-concessions"],
     "tags": ["politics", "military", "international"],
     "names": ["initiator", "target"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "peace-concessions-report",
         "headline": "A peace with visible terms",
         "body": [
           "The peace between {{initiator}} and {{target}} includes {{count}} concessions: {{concessions}}. A broker at the exchange copied the list into his book before he would name a price for anything. The market has taken the paper at its word, which is more than the parties have done."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "peace-concessions-ledger",
@@ -237,8 +214,7 @@
           "Signed by: {{initiator}} and {{target}}.",
           "Concessions recorded: {{count}}.",
           "The list: {{concessions}}."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "peace-concessions-editorial",
@@ -249,8 +225,7 @@
         "headline": "Who owes what in the peace with {{target}}?",
         "body": [
           "The peace with {{target}} lists {{concessions}} among its concessions. Each concession is either a payment or a promise, and every household that helps pay can tell the two apart. Let the {{terms.civic.government}} print the full terms, what we gave and what we got, before it asks for another levy."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "peace-concessions-broadcast",
@@ -260,8 +235,7 @@
         "headline": "A peace with terms tonight",
         "body": [
           "Peace has been concluded between {{initiator}} and {{target}}. The settlement lists {{count}} concessions. A clerk read the pages aloud at the exchange, and the crowd heard every one."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -270,15 +244,13 @@
     "triggers": ["peace-on-one-front"],
     "tags": ["politics", "military", "international"],
     "names": ["remaining", "settled"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "peace-on-one-front-report",
         "headline": "Peace on one front only",
         "body": [
           "The guns facing {{settled}} are silent, and peace has been signed. The war with {{remaining}} goes on, and the regiments from the quiet side are already marching. They have traded one road for another."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "peace-on-one-front-analysis",
@@ -288,8 +260,7 @@
         "headline": "One account closes, others stay open",
         "body": [
           "{{settled}} has made peace with us, while the war with {{remaining}} goes on. A treaty on one border always frees soldiers for another. Where those soldiers march will tell the country more than any speech from the {{terms.civic.government}}."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "peace-on-one-front-gazette",
@@ -299,8 +270,7 @@
         "headline": "Peace with {{settled}}",
         "body": [
           "The peace with {{settled}} is concluded, and the bells rang at noon. They stopped sooner than expected, perhaps because the war with {{remaining}} is still burning. We join in the relief and reserve our hopes for the front that has no treaty yet."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "peace-on-one-front-editorial",
@@ -310,8 +280,7 @@
         "headline": "Bells for one front, drums for the others",
         "body": [
           "The bells have rung for {{settled}}, and the war with {{remaining}} goes on. The families waiting on that front heard the same bells and understood what they meant. Let the {{terms.civic.government}} tell them why one quarrel could be closed and theirs left open."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -319,15 +288,13 @@
     "id": "peace-returns-account",
     "triggers": ["peace-returns"],
     "tags": ["politics", "military"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "peace-returns-report",
         "headline": "We are at peace",
         "body": [
           "Peace has come to the nation. In the capital, the recruiting table was carried away before noon, and the square filled with people who had no orders to follow. The first carts of returning soldiers are expected within the week."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "peace-returns-chronicle",
@@ -337,8 +304,7 @@
         "headline": "The record of rest",
         "body": [
           "The record notes that the war has ended. The muster rolls were closed, the frontier companies were released to their homes, and the bells were rung in every town that had one. The scribe adds no praise and no blame, only the date."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "peace-returns-anecdote",
@@ -348,8 +314,7 @@
         "headline": "The long walk home",
         "body": [
           "A woman on the east road walked past the recruiting table this morning and stopped, because there was no table. Her husband's regiment is said to be coming home, and she has been carrying a letter in her pocket for a month. She read it again, then went to buy flour for a larger loaf."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "peace-returns-editorial",
@@ -359,8 +324,7 @@
         "headline": "Peace, and what to do with it",
         "body": [
           "The war is over, and the country has not yet decided what to do with the peace. The men will come home to workshops that closed and fields that went unploughed, and the bills will arrive before the welcome does. A government that can raise an army should be able to plan a harvest."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "peace-returns-names-by-village",
@@ -371,8 +335,7 @@
         "headline": "Please print the names by village",
         "body": [
           "Madam, they say the war is over. When the names of those coming home are ready, please set them down by village, so each street can look for its own. My aunt cannot read a whole page, but she knows the shape of one name, and she has been looking for it for two years."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -381,15 +344,13 @@
     "triggers": ["vassals-join-war"],
     "tags": ["military"],
     "names": ["initiator", "target", "vassals"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "vassals-join-war-report",
         "headline": "Vassals drawn into the war",
         "body": [
           "The war between {{initiator}} and {{target}} has drawn in {{vassals}}, who march under their oaths. Their columns took the road this week, and the inns along it filled by nightfall. A quarrel between two powers has become the work of several.{{hostileAllies}}"
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "vassals-join-war-analysis",
@@ -399,8 +360,7 @@
         "headline": "What the vassals add",
         "body": [
           "{{vassals}} have joined the war between {{initiator}} and {{target}} because their oaths require it. A vassal brings soldiers to a quarrel he did not choose, so the new names swell the old armies while the causes on both sides stay exactly as they were. The columns on the road are longer this week, and every extra mile of them must still be fed.{{hostileAllies}}"
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "vassals-join-war-chronicle",
@@ -410,8 +370,7 @@
         "headline": "The record of vassalage honored",
         "body": [
           "The book of oaths sets down that {{vassals}} joined the war between {{initiator}} and {{target}} under the bond of vassalage. Their banners went where their master's went, as they have in earlier reigns. The scribe records that the oath was kept and enters no price beside it.{{hostileAllies}}"
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "vassals-join-war-editorial",
@@ -421,8 +380,7 @@
         "headline": "Small kings, big wars",
         "body": [
           "{{vassals}} are being marched into a war that {{initiator}} and {{target}} began, and no one asked their opinion. An oath is a grand thing for a great power to hold and a heavy thing for a small one to carry. {{terms.civic.people}}, note who writes these agreements and who is merely written into them.{{hostileAllies}}"
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -431,15 +389,13 @@
     "triggers": ["war-advantage-stalls"],
     "tags": ["military"],
     "names": ["opponent"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "war-advantage-stalls-report",
         "headline": "Our advantage over {{opponent}} stops growing",
         "body": [
           "The war against {{opponent}} has stopped gaining ground. The supply clerk still loads the same flour each morning, but now he asks the same provisioners for it twice. The officers at the front cannot say when the line last moved."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "war-advantage-stalls-analysis",
@@ -449,8 +405,7 @@
         "headline": "The stalled advance against {{opponent}}",
         "body": [
           "Reports have been good, yet the count against {{opponent}} has hardly moved. A number that refuses to change may mean a pause, a siege, or an army that has outrun its wagons. The record does not yet choose between them."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "war-advantage-stalls-letter",
@@ -461,8 +416,7 @@
         "headline": "The war that stands still",
         "body": [
           "Madam, the war with {{opponent}} has settled around a single camp, and my son's regiment is in that camp. The harvest is brought in by other hands, and the tax collector still finds the doorstep, while the fighting finds nothing to do. Will a counselor tell us what the army waits for, and how long our patience is expected to last?"
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "war-advantage-stalls-feed",
@@ -472,8 +426,7 @@
         "headline": "Stuck: the war with {{opponent}}",
         "body": [
           "The line against {{opponent}} has not moved again this week. The same camps keep sending the same bills."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -482,15 +435,13 @@
     "triggers": ["war-between-friends"],
     "tags": ["politics", "military", "international"],
     "names": ["first", "second"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "war-between-friends-report",
         "headline": "Two friends go to war",
         "body": [
           "{{first}} and {{second}} have gone to war, though both count themselves friends of ours. Their envoys still nod to each other in our capital, but they no longer ride in the same carriage. Each will now ask us for help, and whatever we give one, the other will count against us."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "war-between-friends-analysis",
@@ -500,8 +451,7 @@
         "headline": "When friends fight",
         "body": [
           "{{first}} and {{second}} were both our friends, and now they are each other's enemies. Each court will ask what our friendship is worth, and each will judge the answer by what we send the other. An even hand will look like betrayal in both capitals."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "war-between-friends-editorial",
@@ -511,8 +461,7 @@
         "headline": "A plea in the war of {{first}} and {{second}}",
         "body": [
           "It grieves us to report that {{first}} and {{second}}, both friends of {{terms.civilization}}, are now at war with each other. The beginnings of the quarrel are hidden from us, and we will not pretend to judge them. We ask only that our friendship be put to use as a peacemaker, before the table between them is broken past mending."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "war-between-friends-anecdote",
@@ -522,8 +471,7 @@
         "headline": "They say the table is broken",
         "body": [
           "The innkeeper keeps the corner table for two envoys who used to share it. Now {{first}} and {{second}} are at war, and each sends his man to a different room. The second cup is still on the shelf, and the girl who dusts it has stopped asking why."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -532,15 +480,13 @@
     "triggers": ["war-duration-milestone"],
     "tags": ["politics", "military"],
     "names": ["opponent"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "war-duration-milestone-report",
         "headline": "The war runs long",
         "body": [
           "The war with {{opponent}} has now lasted {{turns}}. At the joinery, the master has stopped promising delivery dates, because the men who used to finish the work are still away. He planes the boards himself now, and the shavings pile up by the door."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "war-duration-milestone-analysis",
@@ -550,8 +496,7 @@
         "headline": "The long stretch of the war with {{opponent}}",
         "body": [
           "The war with {{opponent}} has lasted {{turns}}, and a war of that age is no longer the one its makers declared. The men change, the money changes, and the purpose shifts quietly with them. Whatever is signed at the end will answer a question nobody asked at the start."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "war-duration-milestone-chronicle",
@@ -561,8 +506,7 @@
         "headline": "The record of a long war",
         "body": [
           "The town book sets down the length of the war with {{opponent}} at {{turns}}. In the muster yard, the sergeant now writes down recruits who were not born when the fighting began. The record offers no judgment, only the count."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "war-duration-milestone-tabloid",
@@ -572,8 +516,7 @@
         "headline": "The war with {{opponent}} is {{turns}} old",
         "body": [
           "The bakery has taken down the board where it marked the count. The war with {{opponent}} is {{turns}} old, and nobody at the counter remembers how it started. Everyone knows someone still out there."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -582,7 +525,6 @@
     "triggers": ["war-involving-us"],
     "tags": ["politics", "military"],
     "names": ["initiator", "target"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "war-involving-us-report",
@@ -590,8 +532,7 @@
         "headline": "War between {{initiator}} and {{target}}",
         "body": [
           "War now stands between {{initiator}} and {{target}}. Before the clerks had opened their ledgers, a line had formed at the recruiting office, and the first names were written in a borrowed hand. On the frontier, the watch fires burned until dawn.{{hostileAllies}}"
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "war-involving-us-broadcast",
@@ -602,8 +543,7 @@
         "headline": "{{initiator}} has attacked",
         "body": [
           "War, tonight. {{initiator}} has opened war on us. The reserves have been called in, and the frontier garrisons are standing to. We will bring you more as the dispatches arrive.{{hostileAllies}}"
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "war-involving-us-crier",
@@ -614,8 +554,7 @@
         "headline": "Hear it! {{initiator}} makes war on us",
         "body": [
           "Hear it! {{initiator}} has brought war to our gates! Every man to his post, every gate barred, every storehouse counted! They chose this quarrel, and we will finish it!{{hostileAllies}}"
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "war-involving-us-gazette",
@@ -626,8 +565,7 @@
         "headline": "A state of war with {{target}}",
         "body": [
           "{{terms.civilization}} and {{target}} are now in a state of war. The {{terms.civic.government}} is said to have weighed the question at length before deciding. The first levy left the yard before this edition was set, and the couriers were still dusty when they passed the window. We hope the weighing was as careful as we are told.{{hostileAllies}}"
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "war-involving-us-editorial",
@@ -638,8 +576,7 @@
         "headline": "Their quarrel, our treaty",
         "body": [
           "A treaty has turned the quarrel between {{initiator}} and {{target}} into our own. A pact is a debt taken on in fair weather, and the collector is at the door. {{terms.civic.people}}, ask the {{terms.civic.government}} what this war is meant to buy, and ask before the ledgers are closed.{{hostileAllies}}"
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -648,7 +585,6 @@
     "triggers": ["war-on-three-fronts"],
     "tags": ["politics", "military"],
     "names": ["enemies"],
-    "weight": { "base": 1 },
     "merge": {
       "match": "member.incident?.is.incomingMajorDeclaration && member.incident.initiator.knows('name') && self.wars.some(p => p.knows('id') && p.id === member.incident.initiator.id)",
       "min": 1,
@@ -678,8 +614,7 @@
         "headline": "War on {{count|front|fronts}}",
         "body": [
           "We are now at war with {{enemies}}. In the map room, the clerk has begun pinning new fronts to the wall because the table is full. Each declaration adds a line to his book and a name to the list of families waiting."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "war-on-three-fronts-analysis",
@@ -689,8 +624,7 @@
         "headline": "Count the fronts",
         "body": [
           "We now fight {{count|war|wars}}, against {{enemies}}, and all of them ask for the same soldiers. Every company sent to one front is a company the others must do without, and the {{terms.civic.government}} has not said which front comes first. Until it does, the army is being divided evenly among quarrels that are not equal."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "war-on-three-fronts-crier",
@@ -700,8 +634,7 @@
         "headline": "Hear it! The nation fights on {{count|front|fronts}}",
         "body": [
           "Hear the names of those who fight us: {{enemies}}! One country cannot feed so many fronts, so every pair of hands must do the work of two! Bring in the harvest, man the gates, and let them hear that we are still standing!"
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "war-on-three-fronts-feed",
@@ -711,8 +644,7 @@
         "headline": "We are at war with {{count|power|powers}} now",
         "body": [
           "War count: {{count|power|powers}}. Names: {{enemies}}. Every front sends its bill to the same purse. You can guess whose."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -721,15 +653,13 @@
     "triggers": ["war-turns-against-us"],
     "tags": ["politics", "military"],
     "names": ["opponent"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "war-turns-against-us-report",
         "headline": "The war tally favors {{opponent}}",
         "body": [
           "The tally in the war with {{opponent}} has fallen to {{score}}. The printer still posts each new figure in his window, but the crowd that used to gather around it has thinned. The ones who stop now ask only whether anyone has opened talks."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "war-turns-against-us-analysis",
@@ -739,8 +669,7 @@
         "headline": "The number nobody in the {{terms.civic.government}} quotes",
         "body": [
           "The count in the war with {{opponent}} stands at {{score}}, a figure no minister has repeated aloud. A war tally is the price of orders given and chances refused, and the {{terms.civic.people}} who paid for it should hear the arithmetic. The recruiting lists hang on every wall; the same should be done for this number."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "war-turns-against-us-broadcast",
@@ -750,8 +679,7 @@
         "headline": "The war with {{opponent}} tonight",
         "body": [
           "The war with {{opponent}}, tonight: the count is {{score}}. Officers talk of holding. Nobody talks of advancing."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "war-turns-against-us-chronicle",
@@ -761,8 +689,7 @@
         "headline": "The record of a hard season",
         "body": [
           "The campaign book enters the count against {{opponent}} at {{score}}. The hospital has more wounded than beds, and the cloister has been given over to cots. The book records such seasons without complaint, as it recorded them for our fathers."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -771,15 +698,13 @@
     "triggers": ["war-turns-our-way"],
     "tags": ["politics", "military"],
     "names": ["opponent"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "war-turns-our-way-report",
         "headline": "Our side leads in the war with {{opponent}}",
         "body": [
           "The count in the war with {{opponent}} has risen to {{score}} in our favor. At the post office, the same families still come each week for letters and ask the same question at the window. A good tally has never yet brought a soldier home."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "war-turns-our-way-analysis",
@@ -789,8 +714,7 @@
         "headline": "What the lead is worth",
         "body": [
           "Our side now leads by {{score}} in the ledger of the war with {{opponent}}. Ground and lives bought that margin, and it is worth only what the other side will pay to stop losing. The price should be tested while the lead is still new."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "war-turns-our-way-notice",
@@ -800,8 +724,7 @@
         "headline": "The war proceeds favorably",
         "body": [
           "Merchants are informed that the war with {{opponent}} goes well and that our side holds {{score}} at the exchange. Shipping agents have cut their rates on the eastern run. Traders may plan on that basis."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "war-turns-our-way-tabloid",
@@ -811,8 +734,7 @@
         "headline": "Good news, and the bill beside it",
         "body": [
           "The barkeep has chalked our {{score}} lead over {{opponent}} beside the ale price, and the regulars have begun arguing about the parade route. One man ordered nothing and said he was saving for the celebration. The keeper poured him a glass anyway and put it on the slate."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -821,15 +743,13 @@
     "triggers": ["war-weariness-eases"],
     "tags": ["politics", "military"],
     "names": ["opponent"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "war-weariness-eases-report",
         "headline": "The war sits lighter on the country",
         "body": [
           "The country's weariness with the war against {{opponent}} has fallen to {{wearinessPercent}}. On the high street, people talk about roof tiles and the state of the road instead of the front. The shops have more customers than they did a month ago."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "war-weariness-eases-gazette",
@@ -839,8 +759,7 @@
         "headline": "Weariness eases in the war with {{opponent}}",
         "body": [
           "The country's mood has improved: weariness with the war against {{opponent}} stands at {{wearinessPercent}}. At the coach office, travelers have begun asking after the southern road again, and the morning coach has gone out full all week. A people that can look past a war may yet be able to end it."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "war-weariness-eases-analysis",
@@ -850,8 +769,7 @@
         "headline": "The number behind the mood",
         "body": [
           "The nation's weariness with the war against {{opponent}} has fallen to {{wearinessPercent}}, after a season above the halfway mark. Patience is a store like grain or coin, and this one has just been replenished. What empties or fills that store, more than any battle, sets the length of a war."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "war-weariness-eases-feed",
@@ -861,8 +779,7 @@
         "headline": "Down to {{wearinessPercent}}: the country exhales",
         "body": [
           "We are still at war with {{opponent}}, but the country's weariness has fallen to {{wearinessPercent}}. The barber says the morning passed without one word about the front. His first complaint was a haircut."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -871,15 +788,13 @@
     "triggers": ["war-weariness-sets-in"],
     "tags": ["politics", "military"],
     "names": ["opponent"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "war-weariness-sets-in-report",
         "headline": "The war begins to wear us down",
         "body": [
           "The war against {{opponent}} now weighs on the country at {{wearinessPercent}}. The cobbler on the east street no longer asks after customers' families; he reads their news in the state of their boots. These days the war is paid for one small repair at a time."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "war-weariness-sets-in-gazette",
@@ -889,8 +804,7 @@
         "headline": "A weary nation, and no statement",
         "body": [
           "At {{wearinessPercent}}, the country's weariness with the war against {{opponent}} has passed the halfway mark. The {{terms.civic.government}} has offered no answer to that mood. In such a season silence is taken as a reply, and not a comforting one."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "war-weariness-sets-in-editorial",
@@ -900,8 +814,7 @@
         "headline": "Tired of the war? Say it plainly",
         "body": [
           "The war against {{opponent}} now weighs on the country at {{wearinessPercent}}. That figure is a vote cast in kitchens and workshops long before any clerk writes it down. Let the {{terms.civic.government}} answer it in plain words, before the streets choose louder ones."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "war-weariness-sets-in-chronicle",
@@ -911,8 +824,7 @@
         "headline": "The record of a weary nation",
         "body": [
           "The almshouse book enters the nation's weariness with the war against {{opponent}} at {{wearinessPercent}}. The line forms before daylight now, and the butcher's hand is heavier on the scale. Patience is not the same as endurance."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },

@@ -4,7 +4,6 @@
     "triggers": ["friend-enters-new-era"],
     "tags": ["politics", "international"],
     "names": ["civilization", "era", "former"],
-    "weight": { "base": 1 },
     "extends": "civilization",
     "variants": [
       {
@@ -13,8 +12,7 @@
         "body": [
           "Word from {{civilization}} says the {{former}} is behind it and the {{era}} has begun. Its envoy in our capital spent the morning answering the same question from every merchant: what will the new workshops sell, and when? Our guilds should send a buyer before the first crates are spoken for."
         ],
-        "links": [],
-        "weight": { "base": 1 }
+        "links": []
       },
       {
         "id": "friend-enters-new-era-gazette",
@@ -24,8 +22,7 @@
         "headline": "A friend crosses into the {{era}}",
         "body": [
           "Letters from a friendly court inform us that {{civilization}} has passed out of the {{former}} and into the {{era}}, and that its scholars are already borrowing books they once thought beyond them. We are told the first public lecture drew a crowd that filled the hall and part of the street. A neighbor who learns in the open like that is a neighbor worth keeping."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "friend-enters-new-era-spoken",
@@ -36,8 +33,7 @@
         "body": [
           "They say {{civilization}} has entered the {{era}}, and the traders say its clerks now reckon faster than ours. One boy brought home a counting board marked in a way his father could not read. The father kept the board on the shelf and told the boy to learn the markings before the traders changed their minds."
         ],
-        "links": [],
-        "weight": { "base": 1 }
+        "links": []
       },
       {
         "id": "friend-enters-new-era-chronicle",
@@ -49,8 +45,7 @@
         "body": [
           "In this season {{civilization}} set aside the {{former}} and took up the {{era}}, and its nearest city stands {{distance}} from our own according to the rolls. The warden of the boundary road was asked to count the wagons passing in a week and found more than he expected. He entered the number without comment, as the custom is."
         ],
-        "links": [],
-        "weight": { "base": 1 }
+        "links": []
       },
       {
         "id": "friend-enters-new-era-analysis",
@@ -61,8 +56,7 @@
         "body": [
           "The {{era}} has reached {{civilization}}'s workshops, and the {{former}} is now a thing its apprentices study from old drawings. The ceremony matters less than what follows it: our professors have begun asking for places at its schools, and its scholars have begun asking for ours. A friendship that trades students as well as goods will outlast any treaty signed in a hall."
         ],
-        "links": [],
-        "weight": { "base": 1 }
+        "links": []
       }
     ]
   },
@@ -71,15 +65,13 @@
     "triggers": ["nearby-team-gains-technology"],
     "tags": ["science", "international"],
     "names": ["team", "tech"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "nearby-team-gains-technology-report",
         "headline": "Word of {{tech}} from {{team}}",
         "body": [
           "Word comes from {{team}} that {{tech}} is now known there. Our scholars have yet to report the same. An account of how it is used nearby would give them a place to start."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "nearby-team-gains-technology-partners",
@@ -87,8 +79,7 @@
         "headline": "{{tech}} now known to {{team}}",
         "body": [
           "Knowledge of {{tech}} now extends to {{team}}. When our scholars seek an account of the new learning, they will have more than one place to ask."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "nearby-team-gains-technology-analysis",
@@ -98,8 +89,7 @@
         "headline": "What can we learn about {{tech}}?",
         "body": [
           "With {{tech}} now known in {{team}}, our scholars have a nearby example to study. If we can learn how the knowledge is put to use there, we can judge what catching up would be worth."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "nearby-team-gains-technology-notice",
@@ -123,8 +113,7 @@
         "headline": "A question from the schoolroom",
         "body": [
           "A schoolmaster read out the news that {{tech}} is now known in {{team}}. One pupil had a question for the next lesson: who here could teach it?"
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "nearby-team-gains-technology-proverb",
@@ -134,8 +123,7 @@
         "headline": "A lesson from nearby",
         "body": [
           "{{tech}} is known in {{team}}. A good pupil knows where to ask."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -144,15 +132,13 @@
     "triggers": ["nearby-team-gains-known-technology"],
     "tags": ["science", "international"],
     "names": ["team", "tech"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "nearby-team-gains-known-technology-report",
         "headline": "{{tech}} is now known here and in {{team}}",
         "body": [
           "{{tech}} is now known to {{team}} as well as to us. Our scholars may soon have another account of the work to compare with their own."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "nearby-team-gains-known-technology-feed",
@@ -162,8 +148,7 @@
         "headline": "More hands at work on {{tech}}",
         "body": [
           "Add {{team}} to the list of those who know {{tech}}. We know it too. Now we can see what each of us makes of it."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "nearby-team-gains-known-technology-analysis",
@@ -173,8 +158,7 @@
         "headline": "What shared knowledge of {{tech}} changes",
         "body": [
           "Now that {{tech}} is known in {{team}}, both sides have the same knowledge to draw on. Its value will depend on where each side can put it to use and how widely it is taught."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "nearby-team-gains-known-technology-anecdote",
@@ -184,8 +168,7 @@
         "headline": "Room for another account of {{tech}}",
         "body": [
           "On hearing that {{tech}} was now known in {{team}}, a copyist at the reading room suggested leaving room beside our account for theirs. Readers could then see what each had to add."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "nearby-team-gains-known-technology-letter",
@@ -196,8 +179,7 @@
         "byline": "A schoolmaster",
         "body": [
           "Madam Editor, I would welcome an account of {{tech}} from {{team}} now that our scholars have the subject in common. I would gladly set aside a lesson for questions we might put to one another."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "nearby-team-gains-known-technology-proverb",
@@ -207,8 +189,7 @@
         "headline": "A lesson shared",
         "body": [
           "{{tech}} is known in {{team}} and here. Two teachers can give the same lesson and learn from each other."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -217,15 +198,13 @@
     "triggers": ["new-era"],
     "tags": ["politics", "domestic"],
     "names": ["era"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "new-era-report",
         "headline": "Our nation enters the {{era}}",
         "body": [
           "{{terms.civilization}} is in the {{era}} now, and the change shows first in small rooms rather than great halls. At the land office, a clerk has been copying the same map for years, and this week he was told the old sheet will no longer do. He has not thrown it away."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "new-era-crier",
@@ -235,8 +214,7 @@
         "headline": "Hear it! The {{era}} is ours",
         "body": [
           "Hear it, {{terms.civic.people}}! The {{era}} has come, and no town meets it alone. Light a lamp in the window tonight, and let the next street see it and light another."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "new-era-broadcast",
@@ -246,8 +224,7 @@
         "headline": "The {{era}} begins tonight",
         "body": [
           "Tonight {{terms.civilization}} is in the {{era}}. In workshops and kitchens, people are trying out words that were strange last month. A girl in the capital asks her father what he will make first. He says he does not know yet, and the whole age is waiting for his answer."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "new-era-chronicle",
@@ -257,8 +234,7 @@
         "headline": "The record of our passage into the {{era}}",
         "body": [
           "In this year {{terms.civilization}} entered the {{era}}, and the bells were rung at every shrine before the proclamation was read. The keeper of the chief shrine gave thanks for our scholars who labored unseen and asked the congregation to remember them in prayer. The scribes set down the date twice, so that no later hand might shorten it."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "new-era-letter",
@@ -269,8 +245,7 @@
         "byline": "A clerk of the capital",
         "body": [
           "Madam Editor, the clerks have worked toward the {{era}} for years, and this week the city finally noticed. My office has not had a quiet hour since the proclamation, because every neighbor now wants a form filled out for something new. The government promised this age and delivered it; a word of thanks would not be wasted on the men who keep the ledgers."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -279,15 +254,13 @@
     "triggers": ["our-team-gains-technology"],
     "tags": ["science", "domestic"],
     "names": ["era", "tech"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "our-team-gains-technology-report",
         "headline": "The scholars finish {{tech}}",
         "body": [
           "Our scholars have finished {{tech}}, and the {{terms.civic.government}} had the first written account on its table before noon. A second copy went to the printer, and a third has gone missing between the lecture hall and the archive. The archivist has pinned a note to the door, though she has not named the borrower."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "our-team-gains-technology-analysis",
@@ -297,8 +270,7 @@
         "headline": "Who can teach {{tech}} next?",
         "body": [
           "The real test of {{tech}} begins after the cheering stops: can anyone teach it? One of the demonstrators has spent the week writing out the steps for a colleague in a town that missed the trials, in words a first-year pupil could follow. A method that lives in one head dies with it; a method written down belongs to the nation."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "our-team-gains-technology-feed",
@@ -308,8 +280,7 @@
         "headline": "One more for the home team",
         "body": [
           "{{tech}} is ours. The scholars get the credit, the printers get the work, and the rest of us get to hear it explained at supper by someone who has read half the report."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "our-team-gains-technology-gazette",
@@ -320,8 +291,7 @@
         "headline": "Notice: {{tech}} is finished",
         "body": [
           "Notice is given that our scholars have brought {{tech}} to its end. One copy goes to the archive before any is sold. Let the {{era}} count it among its works, and let the hands that made it be named."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "our-team-gains-technology-anecdote",
@@ -331,8 +301,7 @@
         "headline": "At the market, the word is {{tech}}",
         "body": [
           "The news beat the mayor's clerk to the market: {{tech}} is ours, someone shouted, and for an hour nobody knew whether that meant cheaper salt. A porter asked what good it would do a man with no workshop, and the crowd laughed. The clerk arrived to find his announcement already old."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -341,7 +310,6 @@
     "triggers": ["rival-enters-new-era"],
     "tags": ["politics", "international"],
     "names": ["civilization", "era", "former"],
-    "weight": { "base": 1 },
     "extends": "civilization",
     "variants": [
       {
@@ -350,8 +318,7 @@
         "body": [
           "{{civilization}} has put the {{former}} behind it and entered the {{era}}, and the first sign here was a price list. A cloth merchant found that her agent there had raised his rates before the proclamation was even dry. She has kept the old list pinned above the new one, she says, to remind herself what caution costs."
         ],
-        "links": [],
-        "weight": { "base": 1 }
+        "links": []
       },
       {
         "id": "rival-enters-new-era-gazette",
@@ -361,8 +328,7 @@
         "headline": "A rival leaves the {{former}}",
         "body": [
           "We are advised from abroad that {{civilization}}, whose friendship we do not claim, has quitted the {{former}} for the {{era}}. A professor here has already ordered its new treatises for the university shelf, saying a rival's book is cheaper than a rival's mistake. Whether the crossing deserves our envy or our attention, the reader may judge."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "rival-enters-new-era-tabloid",
@@ -374,8 +340,7 @@
         "body": [
           "{{civilization}} is in the {{era}}, and its nearest city is only {{distance}} from our own gate. The old soldiers at the border tavern keep asking for a column on the road or a banner on the wall to point at, and the road gives them nothing, which is what makes them grumble. They have started counting the carts instead."
         ],
-        "links": [],
-        "weight": { "base": 1 }
+        "links": []
       },
       {
         "id": "rival-enters-new-era-spoken",
@@ -386,8 +351,7 @@
         "body": [
           "It is told that when the {{era}} reached {{civilization}}, the grandmothers hid the old seed jars in the rafters and would not say where. The young ones laughed and bought new ones. The jars are still up there, and the tellers say nobody has needed them yet."
         ],
-        "links": [],
-        "weight": { "base": 1 }
+        "links": []
       },
       {
         "id": "rival-enters-new-era-editorial",
@@ -398,8 +362,7 @@
         "body": [
           "{{civilization}} has entered the {{era}}, {{terms.civic.people}}, and its {{player.civic.government}} will want credit for every schoolbook and scaffold it can point to. Ask our own {{terms.civic.government}} what it spent on our scholars and watch the answer turn into a speech. A government that cannot show the bill should not ask for the credit."
         ],
-        "links": [],
-        "weight": { "base": 1 }
+        "links": []
       }
     ]
   },
@@ -408,7 +371,6 @@
     "triggers": ["technology-leader-changes"],
     "tags": ["science"],
     "names": ["civilization"],
-    "weight": { "base": 1 },
     "extends": "civilization",
     "variants": [
       {
@@ -417,8 +379,7 @@
         "body": [
           "{{civilization}} now stands first in learning, with {{count|known technology|known technologies}} to its name. A bookseller here has cleared a shelf for the leading country's newest journals and put a card in the window before a single volume arrived. First place is a loan, and the shelf remembers who earned it."
         ],
-        "links": [],
-        "weight": { "base": 1 }
+        "links": []
       },
       {
         "id": "technology-leader-changes-ledger",
@@ -430,8 +391,7 @@
           "At the top of the learning tally: {{civilization}}",
           "Works counted: {{count}}",
           "Rivals ahead: none"
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "technology-leader-changes-joke",
@@ -443,8 +403,7 @@
         "body": [
           "{{civilization}} leads the world with {{count|art or science|arts and sciences}}. Someone else has the same number. The top step was not built for a crowd."
         ],
-        "links": [],
-        "weight": { "base": 1 }
+        "links": []
       },
       {
         "id": "technology-leader-changes-analysis",
@@ -455,8 +414,7 @@
         "body": [
           "{{civilization}} stands at the top of the tally with {{count|art or science|arts and sciences}}, though a count of works says little about a school. In the record of one old academy, the lecture hall runs crowded for a subject the tally barely notices, while the room for a celebrated art stands empty. A rival further down may be filling more benches in the arts we share, and the ledger will never show it."
         ],
-        "links": [],
-        "weight": { "base": 1 }
+        "links": []
       }
     ]
   }

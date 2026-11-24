@@ -28,7 +28,7 @@ When applying an override, entries and authored variants merge by ID; arrays of 
 Templates, variants, pages, designs, layouts, and masthead rules can use `when` to read the permitted facts. See [expression bindings](triggers/overview.md#expressions-and-authored-choices) for what each can read.
 
 - Without `when`, the choice passes its condition. A false result, error, or [hidden fact](triggers/facts.md#hidden-and-missing-facts) rules it out.
-- For choices with a `weight`, start with its `base` and add the amount from each true adjustment. False conditions and unavailable facts contribute nothing. If an adjustment is interrupted or skipped because of the execution budget, the choice is left out.
+- Every weighted choice defaults to a base weight of 1 with no adjustments when `weight`, or `base` inside a weight object, is omitted. An authored weight starts with its `base` and adds the amount from each true adjustment. False conditions and unavailable facts contribute nothing. If an adjustment is interrupted or skipped because of the execution budget, the choice is left out.
 - A final weight must be positive. Template weight adds to the story's score; variant, design, layout, and masthead weights affect their draws. Sections use their conditions and topic tags.
 
 A template names one or more rules in `triggers`. All must fire for the same subject with overlapping evidence periods. For grouped rules, the subject kind and group key must match. The candidate uses the overlapping period, combined tags, and the score and tier of the highest scoring development. It's urgent if any development is urgent.
@@ -41,13 +41,13 @@ A template names one or more rules in `triggers`. All must fire for the same sub
 | `tags` | Topic and scope labels for pages, variety and feedback |
 | `mode` | `authored` (default) or `llmOnly`; the heuristic editor skips `llmOnly` templates |
 | `short` | Lets the editor reserve the last slot for a brief |
-| `weight` | Base weight and conditional adjustments |
+| `weight` | Base weight and conditional adjustments; defaults to 1 with no adjustments |
 | `variants` | Authored prose choices with an ID, text, links, eligibility, weight, and style tags |
 | `names` | Optional list of placeholders that display names, such as `["city", "player.leader"]` |
 | `extends`, `links` | Optional root template ID and link list to share with variants |
 | `merge` | Optional rules and prose for combining selected stories |
 
-`id`, `triggers`, `tags`, `weight` and `variants` are required. Each variant requires `id`, `headline`, `body` and `weight`; `subheadline`, `byline`, `when` and `links` are optional. The subheadline and byline appear before the article body. The optional `settled` mark records review in the Writing Desk and has no effect on story selection.
+`id`, `triggers`, `tags` and `variants` are required. Each variant requires `id`, `headline` and `body`; `weight`, `subheadline`, `byline`, `when` and `links` are optional. The subheadline and byline appear before the article body. The optional `settled` mark records review in the Writing Desk and has no effect on story selection.
 
 The [news writing rules](writing.md) show how to turn visible game facts into entertaining stories, imagine what the news means to people in the world, and write in the chosen voice, stance, and genre.
 
@@ -153,7 +153,7 @@ The editor picks a visual design, then looks for a title, motto, and section lab
 
 The stock rules in `mastheads/` are grouped by civilization, era, policy, ideology, and combinations of these facts. Civilization titles draw on local records and publications. *The Khipu of Tawantinsuyu* pairs the Inca masthead with the cord register design, while *Correio Braziliense* takes its name from an early Brazilian paper. Stock rules without an ideology theme are eligible only when the record shows no ideology. Era rules apply to selected designs so other formats can keep their own titles.
 
-Give each rule an `id`, `title`, and `weight`. Use `when` to check visible facts such as `self.name`, `self.era`, or `self.hasPolicy('Five-Year Plan')`. Limit a title to the design it suits with `designs` so rotation can bring a different masthead. For example, Order can use *The Workers' Herald* on a broadsheet and *The Workers' Wire* on the feed. Omit `designs` if a custom rule should apply everywhere, or supply a new list to replace a stock rule's scope. Add a `motto` and a `pageLabels` map keyed by page IDs as needed.
+Give each rule an `id` and a `title`. A rule without a `weight` uses base 1. Use `when` to check visible facts such as `self.name`, `self.era`, or `self.hasPolicy('Five-Year Plan')`. Limit a title to the design it suits with `designs` so rotation can bring a different masthead. For example, Order can use *The Workers' Herald* on a broadsheet and *The Workers' Wire* on the feed. Omit `designs` if a custom rule should apply everywhere, or supply a new list to replace a stock rule's scope. Add a `motto` and a `pageLabels` map keyed by page IDs as needed.
 
 Rule IDs must be unique within each `mastheads/` folder. Local rules override stock rules by ID, and local folder entries apply after any older flat `masthead-rules.json` overlay. Set `when` to the string `"false"` to disable a stock rule.
 

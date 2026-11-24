@@ -4,15 +4,13 @@
     "triggers": ["faith-drifts"],
     "tags": ["politics", "domestic"],
     "names": ["founded", "majorityFaith"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "faith-drifts-report",
         "headline": "Most of our cities now keep {{majorityFaith}}",
         "body": [
           "{{majorityFaith}} now holds the majority in most of our cities, and {{founded}}, the faith {{terms.civilization}} founded, now trails it. At the old shrine in the capital, the keeper still unlocks the door at first light and finds the benches half empty. Both faiths keep their doors open, and the record shows no quarrel between them."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "faith-drifts-editorial",
@@ -22,8 +20,7 @@
         "headline": "Keep the faith we founded",
         "body": [
           "Neighbors, {{majorityFaith}} now leads in most of our cities, and the creed we founded, {{founded}}, has slipped behind it. In the schoolyard the children sing the newer hymns easily, while the old prayers come out haltingly, like a language half forgotten. Say the old prayers at home this week; a faith kept at the hearth does not need a majority to survive."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "faith-drifts-letter",
@@ -34,8 +31,7 @@
         "byline": "A Reader of This Paper",
         "body": [
           "Sir, your report on {{majorityFaith}} leading in most of our cities reads like a notice that one door has shut for good. My daughter keeps {{majorityFaith}} and I keep {{founded}}, and last washing day she hung her sheets on my line as she always does. The kettle went on twice, once for each of us, and the nation did not come apart."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "faith-drifts-analysis",
@@ -45,8 +41,7 @@
         "headline": "Who keeps the old shrine open?",
         "body": [
           "The shift to {{majorityFaith}} in most of our cities raises a practical question: who will pay for the roof over the old prayers? At the shrine of {{founded}}, the donation book shows fewer names each season, while the building needs the same repairs it has always needed. A creed can lose the count and still deserve a dry floor, and the men who keep the accounts know it."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -55,7 +50,6 @@
     "triggers": ["faith-reaches-city-state"],
     "tags": ["politics", "international"],
     "names": ["city", "cityState", "religion"],
-    "weight": { "base": 1 },
     "extends": "city",
     "variants": [
       {
@@ -63,8 +57,7 @@
         "headline": "Our faith takes root in {{cityState}}",
         "body": [
           "Most people in {{city}}, a town of {{cityState}}, now keep {{religion}}, the faith {{terms.civilization}} founded. The keeper there writes that the shrine has added our prayers to its morning reading and has room for both customs. {{city}} lies beyond our nearest neighbors, so the news reached us the slow way the prayers did."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "faith-reaches-city-state-gazette",
@@ -74,8 +67,7 @@
         "headline": "Dispatch from {{cityState}}: our faith finds new followers",
         "body": [
           "Letters from {{city}} relate that {{religion}} now holds the majority there, and it is the faith {{terms.civilization}} founded. The candle seller in the market keeps two sizes on his shelf, one for each feast, and says both sell out. The two congregations still draw water at the same well, and that is the news we like best."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "faith-reaches-city-state-anecdote",
@@ -85,8 +77,7 @@
         "headline": "A traveler brings news of our faith from {{cityState}}",
         "body": [
           "A salt hauler says the inn at {{city}} now sets a lamp in the window and keeps a blessing for travelers who ask. Most people in the city follow {{religion}}. By his third trip, the hauler could say the blessing too."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "faith-reaches-city-state-feed",
@@ -96,8 +87,7 @@
         "headline": "Our faith has a new foothold in {{cityState}}",
         "body": [
           "{{city}} now has a {{religion}} majority. That's well past our nearest neighbors. Our prayers have made the trip. Can our merchants?"
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -106,7 +96,6 @@
     "triggers": ["faith-reaches-distant-city"],
     "tags": ["religion", "international"],
     "names": ["city", "civilization", "religion"],
-    "weight": { "base": 1 },
     "extends": "city",
     "variants": [
       {
@@ -115,8 +104,7 @@
         "body": [
           "{{city}}, a city of {{civilization}} about {{distance}} from our nearest town, now keeps {{religion}} as its majority faith. The change came from the city's own people, and the shrine there has added our prayers to its morning reading. A creed that travels that far without an army has found something worth keeping."
         ],
-        "links": [],
-        "weight": { "base": 1 }
+        "links": []
       },
       {
         "id": "faith-reaches-distant-city-analysis",
@@ -126,8 +114,7 @@
         "headline": "Our creed gains a distant majority",
         "body": [
           "{{city}} has given {{religion}} a majority inside {{civilization}}, which puts our faith on firm ground {{distance}} from our nearest city. That is farther than any town we call a neighbor, and preachers won the ground with a hymn book. Our {{terms.civic.government}} should count those worshippers as a road into {{civilization}} and keep that road watched, because their ruler will not forget that our prayers got there first."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "faith-reaches-distant-city-tale",
@@ -138,8 +125,7 @@
         "body": [
           "They tell it at the well: {{city}}, a city {{distance}} from the last market we know, has taken up {{religion}}, the faith of our own hearths. The road is long, so travelers cut the tale down to a verse and passed it on. The singers have given it a tune the children already know."
         ],
-        "links": [],
-        "weight": { "base": 1 }
+        "links": []
       }
     ]
   },
@@ -148,15 +134,13 @@
     "triggers": ["foreign-faith-deepens"],
     "tags": ["religion", "international"],
     "names": ["civilization", "religion"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "foreign-faith-deepens-report",
         "headline": "{{civilization}} deepens its faith",
         "body": [
           "The faith of {{religion}} has grown deeper in {{civilization}}, where its teachers have set down new words for the old prayers. A merchant who heard them read in a market hall says the crowd stood still through the whole recital. Whatever the change means for that country, it will reach every town that keeps the creed."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "foreign-faith-deepens-chronicle",
@@ -167,8 +151,7 @@
         "headline": "A creed reformed in a foreign land",
         "body": [
           "The elders of {{civilization}} reformed the faith of {{religion}} this year. They sat through a season of reading, struck one observance from the calendar and set another in its place. The towns that keep the creed will spend a generation learning which of the old customs still stand."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "foreign-faith-deepens-notice",
@@ -179,8 +162,7 @@
         "headline": "Notice to readers of divinity",
         "body": [
           "Notice is given that {{civilization}} has added new articles to the faith of {{religion}}, to be read at the temples from the coming feast. Travelers who dispute the wording may ask the keepers for a copy, and should read it before they object."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -189,7 +171,6 @@
     "triggers": ["foreign-major-adopts-our-faith"],
     "tags": ["politics", "international", "religion"],
     "names": ["civilization", "religion"],
-    "weight": { "base": 1 },
     "extends": "civilization",
     "variants": [
       {
@@ -197,8 +178,7 @@
         "headline": "Our faith takes most cities of {{civilization}}",
         "body": [
           "{{religion}}, the faith we founded, now leads in most cities of {{civilization}}. A bookbinder in one of its market towns reports orders for our prayer book outrunning his supply of thread. The change was made by the people of that country, quietly, one household at a time."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "foreign-major-adopts-our-faith-analysis",
@@ -208,8 +188,7 @@
         "headline": "Will pilgrims from {{civilization}} visit our shrines?",
         "body": [
           "{{religion}} now leads in most of the cities of {{civilization}}, and that makes our own shrines the oldest houses of a faith we founded. Pilgrims will come looking for the room where the first prayers were said, and they will judge our roads and our welcome before they judge our doctrine. Our {{terms.civic.government}} would do well to decide now, while the news is still good, whether it means to be a generous host."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "foreign-major-adopts-our-faith-letter",
@@ -220,8 +199,7 @@
         "byline": "A Trader of the Long Roads",
         "body": [
           "Sir, I trade in salt and cloth along the roads into {{civilization}}, and this season the orders have changed. Drivers there ask for prayer books before they ask for either, now that {{religion}} leads in most of their cities. A potter on my street now packs a bowl with every book sold, and if your readers have copies to spare, send them to me at the inn by the north gate."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -230,15 +208,13 @@
     "triggers": ["foreign-religion-founded"],
     "tags": ["politics", "international"],
     "names": ["civilization", "holyCity", "religion"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "foreign-religion-founded-report",
         "headline": "{{civilization}} founds a religion in {{holyCity}}",
         "body": [
           "{{civilization}} has founded a new faith called {{religion}} in {{holyCity}}. The first gathering met in a borrowed courtyard, and the speaker had to repeat the opening words three times as latecomers crowded in. The name is already on travelers' lips, and the towns along the road will hear it soon enough."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "foreign-religion-founded-ledger",
@@ -251,8 +227,7 @@
           "Name it was given: {{religion}}",
           "First shrine raised at: {{holyCity}}",
           "So stands the account: a nation, a name, a city, and a faith with no history yet."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "foreign-religion-founded-bulletin",
@@ -262,8 +237,7 @@
         "headline": "A new creed is on the map in {{holyCity}}",
         "body": [
           "A new faith has a name tonight: {{religion}}. It is founded in {{civilization}}, and its first shrine in {{holyCity}} is already standing room only. A creed is a border that moves without soldiers. Watch the map."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -272,7 +246,6 @@
     "triggers": ["national-majority-faith-changed"],
     "tags": ["politics", "domestic", "religion"],
     "names": ["former", "religion"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "national-majority-faith-changed-report",
@@ -280,8 +253,7 @@
         "headline": "{{religion}} overtakes {{former}} in most of our cities",
         "body": [
           "The count now gives {{religion}} the majority in most of our cities, passing {{former}}. At a market town on the inland road, the two congregations share a bell tower and take turns ringing it, though each claims the better hour. The tally will be forgotten before the arrangement is."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "national-majority-faith-changed-first",
@@ -289,8 +261,7 @@
         "headline": "{{religion}} now leads in most of our cities",
         "body": [
           "Our cities had no common majority at the last count. They have one now, and it is {{religion}}. In the square, a shopkeeper hung a ribbon from her awning and closed early, saying she had waited long enough to celebrate something."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "national-majority-faith-changed-crier",
@@ -301,8 +272,7 @@
         "headline": "Hear it! Our own faith leads the nation",
         "body": [
           "Hear it, {{terms.civic.people}}! {{religion}} is now the faith of most of our cities, and it is the faith we founded! Throw open the shutters and put a light in every window, so the whole street can see who leads the count!"
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "national-majority-faith-changed-analysis",
@@ -313,8 +283,7 @@
         "headline": "A new majority, an old day of rest",
         "body": [
           "{{religion}} has become the majority faith across our cities, and people will feel it first on the weekly day of rest. Shops that have shut on the same day for generations now hear arguments about which day is holy, and those arguments get settled at the counter by people who know their customers. Our {{terms.civic.government}} can write one rule for the calendar, and {{terms.civic.people}} will keep the old day at home anyway."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -323,7 +292,6 @@
     "triggers": ["neighbor-majority-faith-changed"],
     "tags": ["politics", "international", "religion"],
     "names": ["civilization", "former", "religion"],
-    "weight": { "base": 1 },
     "extends": "civilization",
     "variants": [
       {
@@ -331,8 +299,7 @@
         "headline": "{{religion}} takes most cities in {{civilization}}",
         "body": [
           "Across the border in {{civilization}}, {{religion}} has taken the majority from {{former}}. The border market now opens a day later than it did last season, and our carters have been caught with loaded wagons and nowhere to sell. Traders who learn the new calendar first will take the best pitches."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "neighbor-majority-faith-changed-gazette",
@@ -342,8 +309,7 @@
         "headline": "Two prayer books for a binder in {{civilization}}",
         "body": [
           "Letters from {{civilization}} relate that {{religion}} has gained a majority in most of its cities, where {{former}} was lately first. A binder there marks each prayer book with a different colored thread, so a customer can find his own without reading the title. He says the two colors sell in equal numbers, and he has stopped guessing which will win."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "neighbor-majority-faith-changed-notice",
@@ -354,8 +320,7 @@
         "body": [
           "Border towns, take note: {{religion}} now leads in most cities across the line, where {{former}} held the count. The feast has moved, and the fair has moved with it. Load your cart for the new day, or sell to empty benches."
         ],
-        "links": [],
-        "weight": { "base": 1 }
+        "links": []
       }
     ]
   },
@@ -364,15 +329,13 @@
     "triggers": ["neighbors-convert"],
     "tags": ["religion"],
     "names": ["key"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "neighbors-convert-report",
         "headline": "{{key}} gains a majority in {{count}} nearby cities",
         "body": [
           "{{count|town|towns}} along our border now keep {{key}} as their majority faith. In the market nearest the crossing, a copyist has hired a boy to carry bundles of prayer sheets to the villages, and the boy has learned the route better than the words. The creed is no longer a visitor in these parts; it has bought a chair."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "neighbors-convert-ledger",
@@ -384,8 +347,7 @@
           "Faith now leading in the border towns: {{key}}",
           "Towns counted in the change: {{count}}",
           "Read down the column and the border looks different from the way it did last season."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "neighbors-convert-anecdote",
@@ -395,8 +357,7 @@
         "headline": "The ferryman counts the towns",
         "body": [
           "The ferryman at the crossing says he can tell the new pilgrims by the way they hold their bundles. {{count|town|towns}} along the border road have taken up {{key}}, and the landing stage is crowded before sunrise. \"Same water,\" he says, \"different songs.\""
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "neighbors-convert-proverb",
@@ -406,8 +367,7 @@
         "headline": "One town, then the field",
         "body": [
           "One hearth keeps {{key}}: a neighbor smiles. {{count|hearth|hearths}} keep it: the lane raises a shrine. One reed bends; the marsh turns."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -416,15 +376,13 @@
     "triggers": ["our-faith-deepens"],
     "tags": ["religion", "domestic"],
     "names": ["religion"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "our-faith-deepens-report",
         "headline": "{{religion}} gains a new article of belief",
         "body": [
           "The keepers of {{religion}} have added to the faith at home, and the first copies went out to the shrines before the week was over. A woman in the market paused her stall to listen while a reader recited the new passage, then asked him to start again for a neighbor who had missed it. Small additions settle slowly into a creed, and this one has already found a listener."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "our-faith-deepens-gazette",
@@ -435,8 +393,7 @@
         "headline": "The state's stewardship adds to the creed",
         "body": [
           "We are pleased to report that {{religion}} has been enriched with further observances, and that the work was done in good order. The new copies reached the shrines before the feast, so the keepers could learn them at a walking pace rather than a run. Such quiet competence is easy to overlook, and the officers who arranged it deserve the thanks of every congregation."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "our-faith-deepens-chronicle",
@@ -447,8 +404,7 @@
         "headline": "The rites set in order anew",
         "body": [
           "Our elders reformed the faith of {{religion}} in this season. They sat in the shrine hall through a long week of reading, kept the rites that had stood the test of years, and set the rest aside. When the doors opened, the people came in without being called, and the first feast under the new order was full."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "our-faith-deepens-crier",
@@ -458,8 +414,7 @@
         "headline": "Hear it! The national faith is deepened",
         "body": [
           "Hear it, {{terms.civic.people}}! The faith of {{religion}} has grown, and its new words are read this week in every shrine in the land! Come and hear them once, then say them at your own table until they need no book!"
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -468,15 +423,13 @@
     "triggers": ["own-cities-divided-by-faith"],
     "tags": ["politics", "domestic", "religion"],
     "names": ["founded", "others"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "own-cities-divided-by-faith-report",
         "headline": "Our cities keep more than one faith",
         "body": [
           "{{founded}}, the faith {{terms.civilization}} founded, leads in {{faithful|city|cities}}, and {{divided|city|cities}} more follow other creeds: {{others}}. In one river town, the two congregations share a well and a ladder, and the keeper of the older shrine has learned enough of the newer prayers to lend a hand. The arrangement holds because nobody has asked the law to settle it."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "own-cities-divided-by-faith-editorial",
@@ -487,8 +440,7 @@
         "body": [
           "{{terms.civilization}} founded {{founded}}, with only {{faithful|city|cities}} of ours still keeping it. The other {{divided|city|cities}} follow {{others}}.",
           "A faith born on this soil and carried around the world deserves better than to thin out where it was born. Before the next count, our {{terms.civic.government}} should say what it intends for {{founded}} and for the towns that still keep it."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "own-cities-divided-by-faith-letter",
@@ -500,8 +452,7 @@
         "body": [
           "Madam, your paper counts {{divided}} cities that keep {{others}} as though each number were a debt owed by the rest of us. My lane has half its doors open to a different prayer now, and we still share one well.",
           "Print this too: {{founded}} stands in my lane because the neighbors chose it, and they knock at my door when the hour is late."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "own-cities-divided-by-faith-ledger",
@@ -514,8 +465,7 @@
           "Cities keeping another creed: {{divided}}",
           "Names of those creeds: {{others}}",
           "One government over them all, and a different prayer behind more than one door."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -524,7 +474,6 @@
     "triggers": ["own-city-converts"],
     "tags": ["cities", "domestic"],
     "names": ["city", "religion"],
-    "weight": { "base": 1 },
     "extends": "city",
     "variants": [
       {
@@ -532,8 +481,7 @@
         "headline": "{{city}} turns to {{religion}}",
         "body": [
           "{{religion}} now holds a majority in {{city}}. The baker on the corner has started closing an hour early on the new feast day, and his old customers have learned to buy their bread in the morning. Nobody has taken down the shrine by the gate; the town simply walks past it on a different day."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "own-city-converts-pamphlet",
@@ -544,8 +492,7 @@
         "headline": "Good news, people of {{city}}",
         "body": [
           "Neighbors of {{city}}, {{religion}} now leads in your streets, and {{terms.civilization}} founded it. The shrine door that stood half shut now stands open, and the keeper has stopped counting who comes. Bring a neighbor this feast day and let the road see the crowd!"
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "own-city-converts-press",
@@ -557,8 +504,7 @@
         "body": [
           "{{religion}}, a faith our own people did not found, now holds the majority in {{city}}. The conversions of recent months went its way, and its congregation rings a bell at hours this town has never used.",
           "The shrine by the east gate still opens on the old feast day. Its keeper lent the front benches to a carter's family for a wedding last week, and the old hall was full for an afternoon."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "own-city-converts-anecdote",
@@ -568,8 +514,7 @@
         "headline": "New hymns over the wall",
         "body": [
           "In {{city}}, the rooming-house keeper says the singing now comes over the back wall before the wash water is warm. The city's majority faith is {{religion}}, and the new hymns have spread from the shrine to the tenements. \"I liked the old ones better,\" she says, and hums the new one anyway."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -578,15 +523,13 @@
     "triggers": ["pantheon-founded"],
     "tags": ["religion", "international"],
     "names": ["belief", "city", "civilization"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "pantheon-founded-report",
         "headline": "{{civilization}} founds a pantheon in {{city}}",
         "body": [
           "{{civilization}} has raised its first pantheon in {{city}}, and the ceremony lasted from noon until the lamps were lit. Families came forward one at a time to name the power they would honor, and the list grew longer with each household. The name they set above the rest was {{belief}}. A people who can name what they worship has taken the first step toward a common faith."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "pantheon-founded-spoken",
@@ -597,8 +540,7 @@
         "headline": "They say the first altars at {{city}} are ours",
         "body": [
           "They say {{civilization}} has raised a pantheon in {{city}}, and the smoke from our first altar could be seen from the next valley. Our elders spoke the names of the old powers out loud in a voice that reached the back of the crowd, and {{belief}} was the first they named. The children will learn those names now, and that is worth more to us than a good harvest."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "pantheon-founded-chronicle",
@@ -609,8 +551,7 @@
         "headline": "A pantheon entered in the foreign record",
         "body": [
           "The people of {{civilization}} raised a pantheon in {{city}} this year, and their elders chose {{belief}} as the first teaching in a ceremony that lasted a full day. Our record notes the date, the place, and the number of households that came forward. The meaning of the rites is theirs to keep; the count is ours to preserve."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "pantheon-founded-notice",
@@ -620,8 +561,7 @@
         "headline": "Notice to travelers: a new pantheon at {{city}}",
         "body": [
           "Travelers bound for {{city}} should know that {{civilization}} has founded a pantheon there, and that its first teaching is called {{belief}}. Visitors are welcome at the rites if they come in good order. The road past the altar remains open to those who would rather not stop."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -630,15 +570,13 @@
     "triggers": ["religion-founded"],
     "tags": ["politics", "domestic"],
     "names": ["religion"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "religion-founded-report",
         "headline": "This nation has founded {{religion}}",
         "body": [
           "{{terms.civilization}} has founded {{religion}}, and the first prayers were said in a borrowed room with the door left open for anyone who came. By the third evening the keeper had run out of seats, and neighbors brought their own stools from home. A faith that began in one town has started to ask where it will stand next."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "religion-founded-crier",
@@ -648,8 +586,7 @@
         "headline": "Hear it! A religion of our own",
         "body": [
           "Hear it in the square! {{religion}} is ours, founded by our own people! Carry the name to every market you reach, and let no town say it heard of the faith from a stranger!"
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "religion-founded-analysis",
@@ -660,8 +597,7 @@
         "body": [
           "{{terms.civilization}} founded {{religion}} at no cost beyond belief, and the faith now travels on its own.",
           "A trader who shares our prayers will open his door before he asks for papers, and a town that sings our hymns will remember our name when our envoy arrives. Every household abroad that keeps {{religion}} is a voice speaking for us in a foreign town."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "religion-founded-chronicle",
@@ -671,8 +607,7 @@
         "headline": "A founding entered in the record",
         "body": [
           "The faith of {{religion}} was founded among our people in this season. The first names were entered in the shrine book as each household came forward, and the keeper read the list back to the crowd before the doors closed. What follows will be written by other hands in other years."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   }

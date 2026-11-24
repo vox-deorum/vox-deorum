@@ -3,15 +3,13 @@
     "id": "probe-treasury-account",
     "triggers": ["probe-treasury"],
     "tags": ["economy"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "probe-treasury-report",
         "headline": "Treasury reaches {{treasury}} gold",
         "body": [
           "The treasury now holds {{treasury}} gold, a sum worth noting on this page."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -19,13 +17,11 @@
     "id": "probe-huns-riding-account",
     "triggers": ["probe-huns-riding"],
     "tags": ["foreign"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "probe-huns-riding-report",
         "headline": "{{civilization}} gains {{technology}}",
-        "body": ["News of cavalry drills has reached the borders of the Huns."],
-        "weight": { "base": 1 }
+        "body": ["News of cavalry drills has reached the borders of the Huns."]
       }
     ]
   },
@@ -33,13 +29,11 @@
     "id": "probe-ideology-adopted-account",
     "triggers": ["probe-ideology-adopted"],
     "tags": ["politics"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "probe-ideology-adopted-report",
         "headline": "{{civilization}} adopts {{ideology}}",
-        "body": ["The government has declared its allegiance to {{ideology}}."],
-        "weight": { "base": 1 }
+        "body": ["The government has declared its allegiance to {{ideology}}."]
       }
     ]
   },
@@ -47,13 +41,11 @@
     "id": "probe-foreign-birth-account",
     "triggers": ["probe-foreign-birth"],
     "tags": ["foreign"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "probe-foreign-birth-report",
         "headline": "{{civilization}} welcomes {{person}}",
-        "body": ["Word has reached us of a new great person, {{person}}."],
-        "weight": { "base": 1 }
+        "body": ["Word has reached us of a new great person, {{person}}."]
       }
     ]
   },
@@ -61,7 +53,6 @@
     "id": "probe-obituary-account",
     "triggers": ["probe-obituary"],
     "tags": ["culture"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "probe-obituary-expended",
@@ -69,8 +60,7 @@
         "headline": "The last act of {{person}}",
         "subheadline": "{{civilization}} marks the close of {{person}}'s service",
         "byline": "By our {{civilization}} correspondent",
-        "body": ["The act marks the end of {{person}}'s service to {{civilization}}."],
-        "weight": { "base": 1 }
+        "body": ["The act marks the end of {{person}}'s service to {{civilization}}."]
       },
       {
         "id": "probe-obituary-died",
@@ -78,8 +68,7 @@
         "headline": "{{person}} has died",
         "subheadline": "{{civilization}} mourns {{person}}",
         "byline": "From our {{civilization}} desk",
-        "body": ["We remember {{person}} for their service to {{civilization}}."],
-        "weight": { "base": 1 }
+        "body": ["We remember {{person}} for their service to {{civilization}}."]
       }
     ]
   },
@@ -87,15 +76,13 @@
     "id": "probe-culture-opinion-account",
     "triggers": ["probe-culture-opinion"],
     "tags": ["opinion"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "probe-culture-opinion-report",
         "headline": "Boredom stirs unrest in {{city}}",
         "subheadline": "{{culture}} points of cultural neglect weigh on {{city}}",
         "byline": "By our correspondent in {{city}}",
-        "body": ["The city's people have little to occupy their minds, and the neglect shows in the local mood."],
-        "weight": { "base": 1 }
+        "body": ["The city's people have little to occupy their minds, and the neglect shows in the local mood."]
       }
     ]
   },
@@ -103,13 +90,11 @@
     "id": "probe-peace-account",
     "triggers": ["probe-peace"],
     "tags": ["international"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "probe-peace-report",
         "headline": "Peace with {{other}}",
-        "body": ["The latest reports place us at peace with {{other}}."],
-        "weight": { "base": 1 }
+        "body": ["The latest reports place us at peace with {{other}}."]
       }
     ]
   },
@@ -117,13 +102,11 @@
     "id": "probe-retraction-account",
     "triggers": ["probe-retraction"],
     "tags": ["international"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "probe-retraction-report",
         "headline": "War returns with {{other}}",
-        "body": ["Only {{sincePeace}} turns after we reported peace, war has broken out with {{other}}."],
-        "weight": { "base": 1 }
+        "body": ["Only {{sincePeace}} turns after we reported peace, war has broken out with {{other}}."]
       }
     ]
   },
@@ -131,13 +114,11 @@
     "id": "probe-hundredth-issue-account",
     "triggers": ["probe-hundredth-issue"],
     "tags": ["domestic"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "probe-hundredth-issue-report",
         "headline": "The hundredth issue",
-        "body": ["This is issue number {{issue}} of our paper."],
-        "weight": { "base": 1 }
+        "body": ["This is issue number {{issue}} of our paper."]
       }
     ]
   },
@@ -145,13 +126,11 @@
     "id": "probe-quiet-spell-account",
     "triggers": ["probe-quiet-spell"],
     "tags": ["domestic"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "probe-quiet-spell-report",
         "headline": "The presses fall silent",
-        "body": ["No issue has appeared for {{gap}} turns."],
-        "weight": { "base": 1 }
+        "body": ["No issue has appeared for {{gap}} turns."]
       }
     ]
   },
@@ -159,13 +138,11 @@
     "id": "probe-spy-city-profile-account",
     "triggers": ["probe-spy-city-profile"],
     "tags": ["international"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "probe-spy-city-profile-report",
         "headline": "Boredom stirs in {{city}}",
-        "body": ["Our agent in {{city}} reports {{boredom}} points of cultural neglect."],
-        "weight": { "base": 1 }
+        "body": ["Our agent in {{city}} reports {{boredom}} points of cultural neglect."]
       }
     ]
   },
@@ -173,13 +150,11 @@
     "id": "probe-inbound-diplomat-account",
     "triggers": ["probe-inbound-diplomat"],
     "tags": ["international"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "probe-inbound-diplomat-report",
         "headline": "{{civilization}} posts a diplomat at our court",
-        "body": ["Their envoy is here, while ours is not stationed there."],
-        "weight": { "base": 1 }
+        "body": ["Their envoy is here, while ours is not stationed there."]
       }
     ]
   },
@@ -187,13 +162,11 @@
     "id": "probe-foreign-policies-account",
     "triggers": ["probe-foreign-policies"],
     "tags": ["politics"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "probe-foreign-policies-report",
         "headline": "{{civilization}}: policies in {{policyBranch}}",
-        "body": ["Our envoy reports these policies: {{policies}}."],
-        "weight": { "base": 1 }
+        "body": ["Our envoy reports these policies: {{policies}}."]
       }
     ]
   },
@@ -201,13 +174,11 @@
     "id": "probe-espionage-tech-account",
     "triggers": ["probe-espionage-tech"],
     "tags": ["science"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "probe-espionage-tech-report",
         "headline": "A likely theft of {{technology}}",
-        "body": ["Our operation in {{operationSite}} may have obtained {{technology}} from {{civilization}}."],
-        "weight": { "base": 1 }
+        "body": ["Our operation in {{operationSite}} may have obtained {{technology}} from {{civilization}}."]
       }
     ]
   },
@@ -215,13 +186,11 @@
     "id": "probe-spy-loss-account",
     "triggers": ["probe-spy-loss"],
     "tags": ["military"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "probe-spy-loss-report",
         "headline": "An agent lost in {{operationSite}}",
-        "body": ["Our spy was killed during an operation in {{operationSite}}."],
-        "weight": { "base": 1 }
+        "body": ["Our spy was killed during an operation in {{operationSite}}."]
       }
     ]
   },
@@ -229,13 +198,11 @@
     "id": "probe-defender-report-account",
     "triggers": ["probe-defender-report"],
     "tags": ["international"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "probe-defender-report-story",
         "headline": "A foreign operation in {{operationSite}}",
-        "body": ["A spy from {{civilization}} was detected in {{operationSite}}."],
-        "weight": { "base": 1 }
+        "body": ["A spy from {{civilization}} was detected in {{operationSite}}."]
       }
     ]
   },
@@ -243,13 +210,11 @@
     "id": "probe-election-influence-account",
     "triggers": ["probe-election-influence"],
     "tags": ["international"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "probe-election-influence-report",
         "headline": "Election news from {{cityState}}",
-        "body": ["Our influence with {{cityState}} changed by {{change}}."],
-        "weight": { "base": 1 }
+        "body": ["Our influence with {{cityState}} changed by {{change}}."]
       }
     ]
   },
@@ -257,13 +222,11 @@
     "id": "probe-front-zone-account",
     "triggers": ["probe-front-zone"],
     "tags": ["international"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "probe-front-zone-report",
         "headline": "{{posture}} assessment near {{frontCity}}",
-        "body": ["On turn {{observedTurn}}, observers sighted these units in the {{domain}} zone: {{counts}}."],
-        "weight": { "base": 1 }
+        "body": ["On turn {{observedTurn}}, observers sighted these units in the {{domain}} zone: {{counts}}."]
       }
     ]
   },
@@ -271,13 +234,11 @@
     "id": "probe-ship-launch-account",
     "triggers": ["probe-ship-launch"],
     "tags": ["military"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "probe-ship-launch-report",
         "headline": "A new {{ship}} at {{port}}",
-        "body": ["A {{ship}} has joined the fleet at {{port}}."],
-        "weight": { "base": 1 }
+        "body": ["A {{ship}} has joined the fleet at {{port}}."]
       }
     ]
   }

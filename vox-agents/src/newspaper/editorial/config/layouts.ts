@@ -4,11 +4,11 @@ import { z } from 'zod';
 /** Validate a nonempty expression in an authored catalogue. */
 export const expressionSchema = z.string().refine((source) => source.trim().length > 0, 'Expected an expression.');
 const weightSchema = z.strictObject({
-  base: z.number().finite(),
+  base: z.number().finite().default(1),
   adjustments: z.array(z.strictObject({ when: expressionSchema, add: z.number().finite() })).default([]),
 });
-/** An authored setting with an optional condition and a weight. */
-export const eligibleSchema = z.strictObject({ when: expressionSchema.optional(), weight: weightSchema });
+/** An authored setting with an optional condition and a default weight of 1. */
+export const eligibleSchema = z.strictObject({ when: expressionSchema.optional(), weight: weightSchema.prefault({}) });
 
 /** A page layout; breaking layouts are reserved for the front page. */
 export const editorialLayoutSchema = eligibleSchema.extend({

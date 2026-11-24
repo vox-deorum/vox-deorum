@@ -3,15 +3,13 @@
     "id": "treasury-falls-into-deficit-account",
     "triggers": ["treasury-falls-into-deficit"],
     "tags": ["politics", "domestic"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "treasury-falls-into-deficit-report",
         "headline": "The treasury slips into deficit",
         "body": [
           "The treasury now spends {{deficit}} gold more each season than it collects. On the quarry road, a carter hauling stone for the {{terms.civic.government}} was sent back with half his load still on the wagon. He says he will bring the rest when someone can name the day he is paid."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "treasury-falls-into-deficit-ledger",
@@ -23,8 +21,7 @@
           "Last reckoning: the receipts met the bills.",
           "This reckoning: outgoings exceed receipts by {{deficit}} gold.",
           "Not yet entered in the book: which account will be trimmed."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "treasury-falls-into-deficit-analysis",
@@ -34,8 +31,7 @@
         "headline": "A bill that comes back every season",
         "body": [
           "{{deficit}} gold leaves the treasury every season, and every season it must be found again. Sell a warehouse or postpone a road and one reckoning is covered; the same gap waits on the other side. A {{terms.civic.government}} that will not name the account it means to trim is borrowing against next year's patience, and the next reckoning will show whether this was a bad harvest or a new habit."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "treasury-falls-into-deficit-letter",
@@ -46,8 +42,7 @@
         "byline": "A stallholder",
         "body": [
           "Sir, I keep a stall in the cloth market, and I know what it is to end a week short. The treasury is {{deficit}} gold behind every season, yet the {{terms.civic.government}} has not told us whose purse will cover it. When my own books run red, I sell a bolt cheap or go without supper. Which of those has the treasury chosen?"
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -55,15 +50,13 @@
     "id": "treasury-milestone-account",
     "triggers": ["treasury-milestone"],
     "tags": ["politics", "domestic"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "treasury-milestone-report",
         "headline": "The treasury passes a thousand gold",
         "body": [
           "The public chest has passed a thousand gold, and the count stands at {{gold}}, {{gain}} above the last tally. Word reached the flour market by noon, where a baker heard it and bought a new set of scales on the strength of the news. Her old ones still worked; she said she wanted the good ones anyway."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "treasury-milestone-gazette",
@@ -73,8 +66,7 @@
         "headline": "The reserve reaches the thousand mark",
         "body": [
           "Letters from the counting house report that {{gold}} gold now rests in the public chest, {{gain}} more than at the last accounting, and that the reserve has carried past a thousand. The older families, we hear, speak less of the sum than of the vault that holds it, and of what so much coined metal says about the credit of the city."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "treasury-milestone-crier",
@@ -84,8 +76,7 @@
         "headline": "Hear it! A thousand gold in the vault!",
         "body": [
           "Hear it, {{terms.civic.people}}, hear it! The public chest has gone past a thousand, and the tally is {{gold}} gold! Bring down the plans you have kept rolled in a drawer, for this city has the means to raise them!"
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "treasury-milestone-feed",
@@ -95,8 +86,7 @@
         "headline": "The treasury just crossed 1,000 gold",
         "body": [
           "Chest just went past 1,000 gold. Count: {{gold}}. Gain since the last check: {{gain}}. No estimates, no rounding. The money is there."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -104,15 +94,13 @@
     "id": "treasury-reserve-recovers-account",
     "triggers": ["treasury-reserve-recovers"],
     "tags": ["economy", "domestic"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "treasury-reserve-recovers-report",
         "headline": "The treasury gains time against the deficit",
         "body": [
           "The treasury can meet its bills for {{turnsLeft}} now, with {{gold}} gold in hand and {{deficit}} gold still leaving each season. That is more cover than the last count showed, and the clerk at the pay window has started paying the smaller claims again. The queue at his window is shorter; the book of names is not."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "treasury-reserve-recovers-analysis",
@@ -122,8 +110,7 @@
         "headline": "What the treasury can do with more time",
         "body": [
           "The shortfall has not gone away: {{deficit}} gold still leaves the treasury every season. What has changed is the time in hand, now {{turnsLeft}}, and the {{terms.civic.government}} is putting it to work: the pay office settles the oldest warrants first, and a clerk is gone upriver after what is owed there. If that money comes in, the season closes without a new levy, though the reprieve lasts only while spending holds near today's figure."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "treasury-reserve-recovers-anecdote",
@@ -133,8 +120,7 @@
         "headline": "The count runs long at the pawnbroker's table",
         "body": [
           "The chest has {{turnsLeft}} of cover now, and on Candle Street the pawnbroker hung his best coat back on the rail. His reasons are {{gold}} gold in hand and {{deficit}} gold still going out each season. \"Come back next month,\" he told a customer, and this time he meant it kindly."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -142,15 +128,13 @@
     "id": "treasury-reserve-runs-short-account",
     "triggers": ["treasury-reserve-runs-short"],
     "tags": ["economy", "domestic"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "treasury-reserve-runs-short-report",
         "headline": "The treasury reserve runs short",
         "body": [
           "The reserve will cover {{turnsLeft}} more, with {{gold}} gold on hand and {{deficit}} gold spent beyond receipts each season. At the glassworks by the river, the owner is paying his men in two parts and keeping the second until the bottles sell. His foreman says the furnace has never been banked so early in the year."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "treasury-reserve-runs-short-ledger",
@@ -162,8 +146,7 @@
           "Gold in the chest at this count: {{gold}} gold.",
           "Spent beyond receipts, each season: {{deficit}} gold.",
           "The chest can answer bills for {{turnsLeft}}."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "treasury-reserve-runs-short-bulletin",
@@ -173,8 +156,7 @@
         "headline": "Treasury cover: {{turnsLeft}} left",
         "body": [
           "In the capital tonight, the treasury holds {{gold}} gold. It spends {{deficit}} gold more than it takes in each season, which leaves {{turnsLeft}} of cover. A miller waiting on a payment for flour has one question for the {{terms.civic.government}}: who gets paid last when the chest runs dry?"
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "treasury-reserve-runs-short-editorial",
@@ -184,8 +166,7 @@
         "headline": "The old rule was a full store",
         "body": [
           "Our grandparents kept a full granary and slept through the winter. This treasury holds {{gold}} gold, sends {{deficit}} gold out the door every season, and can answer for {{turnsLeft}} more. {{terms.civic.leaderAddress}}, lay the pay rolls and the grain bills on the table before you approve a single further expense, so the trades that fill this city know what work they may take."
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   },
@@ -193,15 +174,13 @@
     "id": "treasury-returns-to-surplus-account",
     "triggers": ["treasury-returns-to-surplus"],
     "tags": ["politics", "domestic"],
-    "weight": { "base": 1 },
     "variants": [
       {
         "id": "treasury-returns-to-surplus-report",
         "headline": "The deficit ends",
         "body": [
           "The treasury is paying its way again, clearing {{goldPerTurn}} gold each season above what it spends. At the weaving shed on Lower Street, the owner has put a second loom back to work and taken on the woman who used to mind it. She starts on Monday."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "treasury-returns-to-surplus-press",
@@ -211,8 +190,7 @@
         "headline": "The state pays its way",
         "body": [
           "After a run of seasons in arrears, {{terms.civilization}} now clears {{goldPerTurn}} gold a season. The pay office has cleared its backlog of small warrants, and a ship's agent on the exchange held his prices and still found buyers after seasons of cutting to move cargo. When the country pays its way, credit follows the coin."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "treasury-returns-to-surplus-notice",
@@ -222,8 +200,7 @@
         "headline": "Notice: the accounts no longer run behind",
         "body": [
           "Be it known that the treasury takes in {{goldPerTurn}} gold more each season than it spends. Traders holding warrants from the lean seasons may present them at the pay office from the first bell. Bring them before the quarter closes."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "treasury-returns-to-surplus-proverb",
@@ -233,8 +210,7 @@
         "headline": "The purse that stopped leaking",
         "body": [
           "They say a purse mended before the fair is still full at the fair's end. Ours is mended."
-        ],
-        "weight": { "base": 1 }
+        ]
       },
       {
         "id": "treasury-returns-to-surplus-crier",
@@ -245,8 +221,7 @@
         "headline": "Hear it! The lean stretch is over!",
         "body": [
           "Hear it, {{terms.civic.people}}, hear it! The treasury brings in {{goldPerTurn}} gold more than it sends out! The hard season is done, the pay window is open, and no one need count coppers by the door!"
-        ],
-        "weight": { "base": 1 }
+        ]
       }
     ]
   }
