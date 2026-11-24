@@ -9,11 +9,14 @@
     "variants": [
       {
         "id": "city-being-razed-report",
-        "headline": "{{city}} is being razed",
+        "headline": "Fire consumes {{city}} as {{civilization}} razes it",
         "body": [
-          "{{civilization}} has set fire to {{city}}, and the burning is deliberate. At the present pace, {{turns}} will pass before the walls are down and the site is bare. The roads that led there will be the only thing left."
+          "{{city}} is burning at the order of {{civilization}}. In {{turns}}, the last of its walls will come down. Travelers on the approach road report smoke lying across the fields, and the work of destruction continues."
         ],
-        "weight": { "base": 1 }
+        "weight": {
+          "base": 1
+        },
+        "settled": true
       },
       {
         "id": "city-being-razed-population",
@@ -21,11 +24,14 @@
         "stance": "neutral",
         "genre": "report",
         "when": "population !== null",
-        "headline": "{{population}} people remain as {{city}} is razed",
+        "headline": "{{population}} remain in {{city}} as the flames spread",
         "body": [
-          "{{population}} people are still inside {{city}} while {{civilization}} burns it street by street. No order has come to spare the place, and the fire has {{turns}} more to run. Families at the gate have stacked their bundles by the road and wait for a gap in the flames."
+          "Smoke from {{city}} shows from the ridge road. {{civilization}} is razing the city around {{population}} people who are still in it. Officers at the gate say the burning will take {{turns}} more and that the roads out stay passable for now. With hopes that this tragic situation may soon come to an end, many families still refuse to leave, "
         ],
-        "weight": { "base": 1 }
+        "weight": {
+          "base": 1
+        },
+        "settled": true
       },
       {
         "id": "city-being-razed-distance",
@@ -124,11 +130,14 @@
     "variants": [
       {
         "id": "city-pillaged-unrest-report",
-        "headline": "Pillaged land weighs on {{city}}",
+        "headline": "{{city}} blames pillage for unhappy citizens",
         "body": [
-          "Raiders stripped the land around {{city}} and left the farmsteads empty. Pillage is now the city's leading grievance, and it leaves {{pillagedPopulation}} {{terms.civic.people}} unhappy. The road that once carried vegetables to market carries dust."
+          "Raiders stripped the land around {{city}} and left the farmsteads empty. In the city, pillage is the leading cause of unhappiness and accounts for {{pillagedPopulation}} {{terms.civic.people}}. Even after driving raiders away, {{owner.civic.government}} would need to send in worker teams to restore the order."
         ],
-        "weight": { "base": 1 }
+        "weight": {
+          "base": 1
+        },
+        "settled": true
       },
       {
         "id": "city-pillaged-unrest-analysis",
