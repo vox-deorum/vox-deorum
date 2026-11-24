@@ -94,7 +94,7 @@ Prose and typed link values use `{{name}}` placeholders. Headlines, subheadlines
 | --- | --- |
 | `{{city}}`, `{{cityId}}`, `{{owner}}` | The city name and ID for a city subject or an event's city, and the owner name for a city subject |
 | `{{subject.name}}`, `{{subject.id}}` | The visible subject's name and ID |
-| `{{period.from}}`, `{{period.to}}` | The matched rules' shared window: exclusive lower bound and inclusive cutoff turn |
+| `{{period.from}}`, `{{period.to}}` | The matched rules' shared window: exclusive lower bound and inclusive cutoff, each printed as `Turn X` |
 | `{{city.owner.name}}` | A namespaced reference, here the owner of a city subject |
 | `{{player.leader}}`, `{{city.owner.leader}}` | The visible leader of a player subject or a referenced player |
 | `{{lost}}` | A scalar rule value from the ungrouped development |

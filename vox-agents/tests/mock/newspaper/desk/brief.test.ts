@@ -34,7 +34,7 @@ function variant(
 ): DeskVariant {
   const text: DeskText = {
     headline: `Headline for ${id}`,
-    body: [`Body for ${id} on turn {{period.to}}.`],
+    body: [`Body for ${id} on {{period.to}}.`],
   };
   return {
     id,

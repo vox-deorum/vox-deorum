@@ -87,8 +87,9 @@ export function placeholderName(key: string): string {
   return separator === -1 ? key : key.slice(0, separator);
 }
 
-/** Append a raw unit, choosing its singular or plural form when the format supplies both. */
-function formatted(value: RuleScalar, format: string | undefined): string {
+/** Print period bounds as turn labels and append units to other values as needed. */
+function formatted(name: string, value: RuleScalar, format: string | undefined): string {
+  if (name === 'period.from' || name === 'period.to') return `Turn ${value}`;
   if (!format) return String(value);
   const [singular, plural] = format.split('|').map((part) => part.trim());
   const unit = plural !== undefined && Math.abs(Number(value)) !== 1 ? plural : singular;
@@ -110,7 +111,7 @@ export function substitute(text: string, values: TemplateValues, precedingText?:
   return text.replace(placeholderPattern, (whole, key: string, position: number) => {
     const [name, singular, plural, ...rest] = key.split('|');
     const value = Object.hasOwn(values, name) ? values[name] : undefined;
-    let printed = value == null ? whole : formatted(value, declared?.[name] ?? defaultFormat(name));
+    let printed = value == null ? whole : formatted(name, value, declared?.[name] ?? defaultFormat(name));
     if (value != null && singular !== undefined && plural !== undefined && !rest.length)
       printed += ` ${Number(value) === 1 ? singular : plural}`;
     if (precedingText !== undefined) {

@@ -108,7 +108,7 @@
         "genre": "notice",
         "headline": "Notice: {{tech}} in {{team}}",
         "body": [
-          "Scientists of a nearby country, {{team}}, have lately acquired knowledge of {{tech}}. Scholars who can show the report to be mistaken should call at the office before the next edition. Until then the notice stands."
+          "Scientists of a nearby country, {{team}}, have acquired novel knowledge of {{tech}}. Scholars who can disprove should call the newspaper office as soon as possible. Until then this notice stands."
         ],
         "weight": {
           "base": 1

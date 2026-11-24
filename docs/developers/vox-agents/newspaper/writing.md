@@ -47,6 +47,7 @@ Following the same spirit, use relevant numbers that make sense in the game worl
 - Name the placeholder after its unit. Use `{{dropPoints}}`, `{{unrestPoints}}`, and `{{nearestDistance}}`. 
 - Names ending in `percentage` or containing `happiness` or `weariness` print `percent` automatically. For example, `{{percentage}}` prints `80 percent` when its value is 80.
 - Names containing `population` print `million`, `points` print `point` or `points`, `turns` print `turn` or `turns`, and `distance` print `tile` or `tiles`.
+- `{{period.from}}` and `{{period.to}}` print as `Turn X`. Write “by {{period.to}}” to get “by Turn 50”.
 - Add `{{terms.civic.people}}` after population count, such as `Famine leaves {{faminePopulation}} {{terms.civic.people}} unhappy`.
 - Print a count and its noun together with `{{count|power|powers}}`. It writes the singular after 1 and the plural otherwise.
 - Use `regiment` for military units and `team` for civilian units.

@@ -11,7 +11,7 @@ import { matchTemplates, substitute } from '../../../../../src/newspaper/editori
 
 const standard = {
   id: 'report', tags: [], weight: { base: 1 },
-  variants: [{ id: 'account', headline: 'News from {{city}}', body: ['Published on turn {{period.to}}.'], weight: { base: 1 } }],
+  variants: [{ id: 'account', headline: 'News from {{city}}', body: ['Published on {{period.to}}.'], weight: { base: 1 } }],
 };
 
 /** Exercise authored eligibility against the same visible facts and compiled catalogue as a check. */
@@ -95,7 +95,7 @@ describe('newspaper template matching', () => {
       variants: [
         {
           ...standard.variants[0], id: 'named',
-          body: ['{{city.owner.leader}} visits {{city}} on turn {{period.to}}.'],
+          body: ['{{city.owner.leader}} visits {{city}} on {{period.to}}.'],
           links: [{ placeholder: 'city', label: '{{city}}', target: { type: 'city', cityId: '{{cityId}}' } }],
         },
         standard.variants[0],
@@ -123,7 +123,7 @@ describe('newspaper template matching', () => {
       ...standard, triggers: ['conversions'],
       when: 'group.count === 3 && group.matches[1].city.name === "City 1" && typeof city === "undefined"',
       variants: [
-        { id: 'valid', headline: '{{group.key}} spreads to {{count}} cities', body: ['Turn {{period.to}}.'],
+        { id: 'valid', headline: '{{group.key}} spreads to {{count}} cities', body: ['{{period.to}}.'],
           when: 'group.matches[2].values.population === 3 && !Object.hasOwn(values, "population")',
           weight: { base: 0, adjustments: [{ when: 'group.matches.every(m => m.city.id >= 0)', add: 1 }] } },
         { id: 'false', headline: '{{key}} spreads', body: ['Observed this turn.'],
@@ -143,7 +143,7 @@ describe('newspaper template matching', () => {
     ], {
       ...standard, triggers: ['generic'],
       variants: [
-        { id: 'valid', headline: 'News', body: ['Turn {{period.to}}.'],
+        { id: 'valid', headline: 'News', body: ['{{period.to}}.'],
           when: '!subject.knows("name") && subject.kind === "world"', weight: { base: 1 } },
         { id: 'missing-name', headline: 'News', body: ['No city named.'],
           when: '!subject.name', weight: { base: 100 } },
@@ -255,7 +255,7 @@ describe('newspaper placeholder printing', () => {
       variants: [{
         ...standard.variants[0],
         headline: 'After {{turns}}',
-        body: ['Turn {{period.to}}.'],
+        body: ['{{period.to}}.'],
       }],
     };
     const selected = await candidates(0, [{
@@ -274,7 +274,7 @@ describe('newspaper placeholder printing', () => {
       variants: [{
         ...standard.variants[0],
         headline: '{{population}} people at {{happinessPercentage}}, famine at {{faminePopulation}}, war in {{turns}}, city {{distance}}',
-        body: ['Turn {{period.to}}.'],
+        body: ['After {{period.from}} and by {{period.to}}.'],
       }],
     };
     const selected = await candidates(0, [{
@@ -287,5 +287,7 @@ describe('newspaper placeholder printing', () => {
     );
     expect(nodes.map((node) => node.text).join(''))
       .toBe('12 million people at 62 percent, famine at 1 million, war in 3 turns, city 2 tiles');
+    const body = renderAuthoredText(variant.body[0], selected[0].values, variant);
+    expect(body.map((node) => node.text).join('')).toBe('After Turn 8 and by Turn 10.');
   });
 });

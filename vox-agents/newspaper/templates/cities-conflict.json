@@ -83,7 +83,10 @@
         "body": [
           "Hear me, {{terms.civic.people}} of {{city}}! The enemy is at the gate and the wall is battered, but it still stands! Bring water to the rampart and keep your fires low! Stand fast. The wall holds!"
         ],
-        "weight": { "base": 1 }
+        "weight": {
+          "base": 1
+        },
+        "settled": true
       },
       {
         "id": "city-under-siege-analysis",
