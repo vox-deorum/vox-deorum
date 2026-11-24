@@ -6,7 +6,7 @@ These rules are the current guide for the stock newspaper catalogue.
 {{{writingRules}}}
 
 ## Placeholder rules
-- For each writing task, only use its listed variables listed.
+- For each writing task, only use its listed variables.
 - An unknown placeholder makes the story unprintable.
 
 ## Using paragraphs
@@ -20,7 +20,9 @@ These rules are the current guide for the stock newspaper catalogue.
 Follow these example writings as a model, learn from the way they handle different voices, stances, and genres.
 
 {{#examples}}
-### {{voice}} / {{stance}} / {{genre}} ({{templateId}} / {{variantId}})
+### {{templateId}} / {{variantId}} ({{voice}} / {{stance}} / {{genre}})
+{{#when}}- Variant condition: {{when}}
+{{/when}}
 - Headline: {{headline}}
 {{#subheadline}}- Subheadline: {{subheadline}}
 {{/subheadline}}{{#byline}}- Byline: {{byline}}
@@ -32,7 +34,6 @@ Follow these example writings as a model, learn from the way they handle differe
 {{/hasExamples}}
 # Your tasks
 ## Your writing style
-Each 
 - Voice: {{style.voice}}{{#style.voiceGuidance}} - {{style.voiceGuidance}}{{/style.voiceGuidance}}
 - Stance: {{style.stance}}{{#style.stanceGuidance}} - {{style.stanceGuidance}}{{/style.stanceGuidance}}
 - Genre: {{style.genre}}{{#style.genreGuidance}} - {{style.genreGuidance}}{{/style.genreGuidance}}
@@ -82,11 +83,6 @@ Each
 {{#variables}}
 | {{group}} | `{{name}}` | {{source}} | {{#mayBeEmpty}}may be empty{{/mayBeEmpty}}{{^mayBeEmpty}}always present{{/mayBeEmpty}}{{#keep}}; keep{{/keep}} |
 {{/variables}}
-
-- Other variants of this template (do not repeat their wording):
-{{#siblings}}
-- `{{id}}`: {{headline}} {{#body}}| {{.}} {{/body}}
-{{/siblings}}
 
 ### Current text
 - Headline: {{current.headline}}

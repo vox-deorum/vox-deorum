@@ -1,21 +1,21 @@
 [
   {
-    "id": "gold-trade-deal",
+    "id": "trade-deal",
     "subject": "event",
     "event": "DealMade",
     "when": [
       "event.knows('fromPlayer') && event.knows('toPlayer') && (event.fromPlayer.self || event.toPlayer.self)",
       "event.fromPlayer.self ? event.toPlayer.knows('name') : event.fromPlayer.knows('name')",
-      "event.knows('fromGives') && Array.isArray(event.fromGives) && event.fromGives.length > 0",
-      "event.knows('toGives') && Array.isArray(event.toGives) && event.toGives.length > 0",
+      "event.knows('fromGives') && Array.isArray(event.fromGives)",
+      "event.knows('toGives') && Array.isArray(event.toGives)",
+      "event.fromGives.length > 0 || event.toGives.length > 0",
       "event.knows('tradedItems') && Array.isArray(event.tradedItems)",
-      "event.tradedItems.some(item => item.knows('itemType') && (item.itemType === 'Gold' || item.itemType === 'GoldPerTurn'))",
       "!event.tradedItems.some(item => item.knows('itemType') && item.itemType === 'PeaceTreaty')"
     ],
     "values": {
       "partner": "(() => { const p = event.fromPlayer.self ? event.toPlayer : event.fromPlayer; return p.name; })()",
-      "weGive": "(event.fromPlayer.self ? event.fromGives : event.toGives).join(', ')",
-      "weGet": "(event.fromPlayer.self ? event.toGives : event.fromGives).join(', ')"
+      "weGive": "(event.fromPlayer.self ? event.fromGives : event.toGives).join(', ') || null",
+      "weGet": "(event.fromPlayer.self ? event.toGives : event.fromGives).join(', ') || null"
     },
     "tier": "notable",
     "adjust": "event.fromPlayer.self ? event.toPlayer.stake.relation : event.fromPlayer.stake.relation",

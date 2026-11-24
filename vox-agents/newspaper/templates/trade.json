@@ -1,52 +1,80 @@
 [
   {
-    "id": "gold-trade-deal-account",
-    "triggers": ["gold-trade-deal"],
+    "id": "trade-deal-account",
+    "triggers": ["trade-deal"],
     "tags": ["economy", "trade", "international"],
     "names": ["partner"],
+    "when": "weGive !== null && weGet !== null",
     "weight": { "base": 1 },
     "variants": [
       {
-        "id": "gold-trade-deal-account-report",
-        "headline": "A bargain with {{partner}}, and gold in the terms",
+        "id": "trade-deal-account-report",
+        "headline": "A bargain with {{partner}}",
         "body": [
-          "Our envoys and {{partner}} have sealed a bargain, and gold sits among its clauses. The exchange is plain: we hand over {{weGive}}, and {{weGet}} comes back to us. In the market square, a money-changer who has heard too many promises says he will weigh the coin himself when it arrives."
+          "Our envoys have struck a deal with {{partner}}. We agreed to provide {{weGive}} in exchange for {{weGet}}."
         ],
         "weight": { "base": 1 }
       },
       {
-        "id": "gold-trade-deal-account-ledger",
+        "id": "trade-deal-account-ledger",
         "voice": "gazette",
         "stance": "neutral",
         "genre": "ledger",
         "headline": "The terms of the bargain",
         "body": [
           "Party: {{partner}}.",
-          "Outgoing: {{weGive}}.",
-          "Incoming: {{weGet}}.",
-          "The gold entry is inked and witnessed, with a blank line left beneath it for the next reckoning."
+          "Our side provides: {{weGive}}.",
+          "{{partner}} provides: {{weGet}}."
         ],
         "weight": { "base": 1 }
       },
       {
-        "id": "gold-trade-deal-account-notice",
+        "id": "trade-deal-account-notice",
         "voice": "crier",
         "stance": "populist",
         "genre": "notice",
         "headline": "Hear it! Terms are struck with {{partner}}",
         "body": [
-          "Hear it, {{terms.civic.people}}, hear it! {{partner}} has agreed, and gold is in the bargain! We hand over {{weGive}}; {{weGet}} returns to us! Watch the bread stalls, for prices move before the coin does!"
+          "Hear it, {{terms.civic.people}}! Under the deal with {{partner}}, our side provides {{weGive}}, and theirs provides {{weGet}}."
         ],
         "weight": { "base": 1 }
       },
       {
-        "id": "gold-trade-deal-account-editorial",
+        "id": "trade-deal-account-editorial",
         "voice": "pamphlet",
         "stance": "pro-government",
         "genre": "editorial",
         "headline": "The envoys earn their keep",
         "body": [
-          "Read the terms for yourself, {{terms.civic.people}}: {{partner}} has set a seal to the page, we give {{weGive}}, we gain {{weGet}}, and gold settles the balance. Such a bargain does not fall from the sky. Your {{terms.civic.government}} kept its envoys at the table until the last clause was agreed, and every workshop with an order to fill will feel the result before the quarter closes."
+          "Read the terms for yourself, {{terms.civic.people}}. Our envoys agreed to provide {{weGive}} and secured {{weGet}} from {{partner}} in return. Give them their due for bringing home an agreement."
+        ],
+        "weight": { "base": 1 }
+      }
+    ]
+  },
+  {
+    "id": "trade-gift-account",
+    "triggers": ["trade-deal"],
+    "tags": ["economy", "trade", "international"],
+    "names": ["partner"],
+    "when": "weGive === null || weGet === null",
+    "weight": { "base": 1 },
+    "variants": [
+      {
+        "id": "trade-gift-account-incoming",
+        "when": "weGive === null",
+        "headline": "A gift from {{partner}}",
+        "body": [
+          "{{partner}} has offered us a gift: {{weGet}}. We accepted without owing anything in return under the agreement."
+        ],
+        "weight": { "base": 1 }
+      },
+      {
+        "id": "trade-gift-account-outgoing",
+        "when": "weGet === null",
+        "headline": "A gift for {{partner}}",
+        "body": [
+          "Our envoys arranged a gift for {{partner}}: {{weGive}}. The agreement calls for no payment in return."
         ],
         "weight": { "base": 1 }
       }

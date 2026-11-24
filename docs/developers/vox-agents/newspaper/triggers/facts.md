@@ -351,6 +351,8 @@ MCP's `newspaper/queries.ts` returns cutoff snapshots, optional comparison snaps
 | Deal terms | Text and structured terms share one access gate: contact with parties and named players or teams, plus participation in the deal or 800 diplomat points with each foreign party. |
 | Embedded labels | Recorded player and city labels require dated contact with the corresponding player or city owner. Liberation keeps the city ID; its owner and city label are unavailable. |
 
+The `trade-deal` rule reports our completed deals when both lists of terms are visible. An exchange such as Silk for Open Borders lists what each side provides. When only one side gives something, a gift template names the giver and lists the terms. Peace treaties use separate coverage.
+
 For example, unwitnessed world news can report that Hypatia appeared in Persia with no city or unit type. Great person uses and deaths require recorded visibility. A death uses the final removal and is suppressed by a use that turn. Same-turn conversions, including gifts, supply no birth or death story. Named stories need a recorded personal name, which the strategist's `get-events` omits.
 
 | Join | Required evidence |

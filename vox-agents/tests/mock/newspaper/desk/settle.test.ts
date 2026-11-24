@@ -9,7 +9,7 @@ import { builtInCatalogueDirectory, getEditorialExpressions, loadEditorialConfig
 import { buildNewspaperFacts } from '../../../../src/newspaper/editorial/facts/index.js';
 import { evaluateTriggerRules } from '../../../../src/newspaper/editorial/rules/evaluate.js';
 import { matchTemplates, printable } from '../../../../src/newspaper/editorial/selection/templates.js';
-import { pickExamples } from '../../../../src/newspaper/desk/brief.js';
+import { briefView } from '../../../../src/newspaper/desk/brief.js';
 import type { DeskCatalogue, DeskVariant } from '../../../../src/newspaper/desk/catalogue.js';
 import { DeskError, readDeskCatalogue } from '../../../../src/newspaper/desk/catalogue.js';
 import type { DeskSettleOptions } from '../../../../src/newspaper/desk/settle.js';
@@ -580,7 +580,8 @@ describe('newspaper desk settle many', () => {
       body: ['First sibling body for {{civilization}}.'],
     });
     expect(firstSibling.links).toEqual(sourceRow.links);
-    expect(pickExamples(fixture.secondRef, catalogue, 3).map(example => example.variantId)).toEqual(['draft', 'draft-4', 'draft-5']);
+    const brief = briefView([fixture.secondRef], catalogue, 1);
+    expect(brief.examples.map(example => example.variantId)).toEqual(['draft', 'draft-4', 'draft-5']);
 
     const config = await loadEditorialConfig(fixture.directory);
     const compiled = await getEditorialExpressions(config);

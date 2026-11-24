@@ -93,7 +93,9 @@ Click a copy to edit it. The desk keeps your edits as you close editors or switc
 
 To start a new round, stop any running batch and choose **Clear drafts** to remove generated candidates and their edits across the desk while keeping the current copies.
 
-Use **Edit style** beside the variant's voice, stance, and genre to correct its tags. Saving keeps the article and its settled status and clears drafts written for that variant's previous style. The desk groups variants by these tags and sends up to eight variants per request. Each request includes relevant settled examples, favoring the same voice and template. Merge variants and templates reserved for the newspaper editor are outside the desk.
+Use **Edit style** beside the variant's voice, stance, and genre to correct its tags. Saving keeps the article and its settled status and clears drafts written for that variant's previous style.
+
+The desk groups variants by style and sends up to eight per request. The writer sees all settled variants from the templates it is drafting, so it can find fresh angles on the same news. It also sees a few examples from other templates for guidance on style and structure. Merge variants and templates reserved for the newspaper editor are outside the desk.
 
 In **Telemetry**, open the `newspaper-desk` database and select an `agent.newspaper-writer` trace. Its model step shows the prompt and available reply. Use **Refresh** for newly completed requests and **Load older traces** to see more. Search the loaded traces by variant ID or model. Older batches remain available in the same local database (`newspaper/newspaper-desk-player-0.db`). Recorded replies survive a restart; unapproved drafts in the desk do not.
 

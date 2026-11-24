@@ -7,7 +7,6 @@ import { deskWritingRulesPath, type DeskCatalogue, type DeskTemplate, type DeskV
 import {
   briefView,
   chunkByStyle,
-  pickExamples,
   renderBrief,
 } from '../../../../src/newspaper/desk/brief.js';
 
@@ -127,20 +126,31 @@ describe('newspaper desk brief', () => {
     ]);
   });
 
-  it('should prefer settled examples with the same voice and template and ignore unsettled variants', () => {
-    const results = pickExamples({ templateId: target.id, variantId: 'draft' }, catalogue([target, settled]));
-    expect(results.map(example => example.variantId)).toEqual(['target-settled', 'same-style']);
-    expect(results.every(example => example.score > 0)).toBe(true);
-    expect(results.some(example => example.variantId === 'untouched')).toBe(false);
-  });
-
-  it('should deduplicate examples shared by variants in one chunk', () => {
+  it('should show every settled variant of the task template once and still include related examples', () => {
+    const localNotice = { voice: 'crier', stance: 'local', genre: 'notice' };
+    const science = { ...target, variants: [
+      ...target.variants,
+      variant('unselected', press),
+      variant('crier-first', localNotice, true, { when: 'scienceLead > 2' }),
+      variant('crier-second', localNotice, true),
+    ] };
     const view = briefView([
-      { templateId: target.id, variantId: 'draft' },
-      { templateId: target.id, variantId: 'sibling' },
-    ], catalogue([target, settled]), 2);
-    const keys = view.examples.map(example => JSON.stringify([example.templateId, example.variantId]));
-    expect(new Set(keys).size).toBe(keys.length);
+      { templateId: science.id, variantId: 'draft' },
+      { templateId: science.id, variantId: 'sibling' },
+    ], catalogue([science, settled]), 2);
+    expect(view.examples.map(({ templateId, variantId }) => [templateId, variantId])).toEqual([
+      [science.id, 'target-settled'],
+      [science.id, 'crier-first'],
+      [science.id, 'crier-second'],
+      [settled.id, 'same-style'],
+    ]);
+    const rendered = renderBrief(view);
+    expect(rendered).toContain('crier / local / notice');
+    expect(rendered).toContain('scienceLead > 2');
+    expect(rendered).not.toContain('Headline for unselected');
+    for (const { headline } of [...view.examples, ...view.variants.map(task => task.current)]) {
+      expect(rendered.split(headline)).toHaveLength(2);
+    }
   });
 
   it('should render the live writing rules and the current starting text', async () => {
