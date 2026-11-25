@@ -242,10 +242,11 @@
         "voice": "feed",
         "stance": "neutral",
         "genre": "report",
-        "headline": "Trade run complete: {{originCity}} to {{destinationCity}}",
+        "headline": "Long trade route links {{originCity}} and {{destinationCity}}",
         "body": [
-          "One completed run between cities {{routeDistance}} tiles apart. Buyers can start planning for the next shipment."
-        ]
+          "A {{routeDistance}} trade route is now open between {{originCity}} ({{terms.civilization}}) and {{destinationCity}} ({{destinationCiv}}). In both cities, merchants and travelers are busily preparing for their next trip."
+        ],
+        "settled": true
       }
     ]
   },

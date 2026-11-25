@@ -66,10 +66,11 @@
       {
         "id": "technology-deal-buy-report",
         "when": "direction === 'buy'",
-        "headline": "We buy technology from {{partner}}",
+        "headline": "A purchase of {{weGet}} closes with {{partner}}",
         "body": [
-          "Our {{terms.civic.government}} has bought technology from {{partner}}. {{dealTerms}}"
-        ]
+          "The {{player.civic.government}} has acquired a technology from {{partner}}. We provide {{weGive}}, and {{partner}} provides {{weGet}}."
+        ],
+        "settled": true
       },
       {
         "id": "technology-deal-sell-report",
