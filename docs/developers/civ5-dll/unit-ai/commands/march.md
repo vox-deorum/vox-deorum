@@ -88,6 +88,8 @@ Let `q(t) = 1 / (1 + t)` for travel time `t` in turns. The **readiness gain** `g
 | Carrier group | 2. |
 | Any other operation | 0, so no March offer. |
 
+The carrier group chooses its deployment zone from the carrier's position, using nearby water when it is in port and a suitable water plot is available. Its destination does not affect where it measures from. March still uses the whole formation for movement and scoring.
+
 The March reprices the target zone's theater with the whole formation. `OperationTargetZoneCity` finds the city in the operation target's zone. The local set and enemy strength are read at that city, with members not already in the local set added to local strength. A city of ours uses its own strength and the enemy strength against it. The operation enemy also counts as hostile at its own city during peacetime staging.
 
 The result is stored twice:
