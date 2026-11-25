@@ -138,18 +138,20 @@
       {
         "id": "map-deal-gift-in-report",
         "when": "direction === 'gift-in'",
-        "headline": "A gift of maps from {{partner}}",
+        "headline": "A gift of charts from {{partner}}",
         "body": [
-          "{{partner}} has made our {{terms.civic.government}} a gift of maps. The terms read: {{dealTerms}} Our surveyors will add the charts to the national collection."
-        ]
+          "We have received a world map from {{partner}}, given freely and without terms. {{terms.civilizationAdjective}} cartographers and harbor masters are comparing it with their charts.  Scholars are still debating about the existence of these places."
+        ],
+        "settled": true
       },
       {
         "id": "map-deal-gift-out-report",
         "when": "direction === 'gift-out'",
-        "headline": "A gift of maps for {{partner}}",
+        "headline": "We gifted a world map to {{partner}}",
         "body": [
-          "Our {{terms.civic.government}} has made {{partner}} a gift of maps. The terms read: {{dealTerms}} The charts leave our keeping without payment."
-        ]
+          "Our {{terms.civic.government}} has made {{partner}} a gift of maps. Merchants and scholars in {{terms.civilization}} will now gain our knowledge of distant coasts and roads."
+        ],
+        "settled": true
       }
     ]
   },
