@@ -46,6 +46,8 @@ Follow these example writings as a model, learn from the way they handle differe
 {{#hasTriggers}}
 
 ### Triggers
+A good story fits in the trigger. Start from here.
+
 {{#triggers}}
 - `{{id}}` ({{subject}}): when {{when}}{{#values}}; values {{values}}{{/values}}{{#group}}; group {{group}}{{/group}}
 {{/triggers}}
@@ -63,18 +65,12 @@ Follow these example writings as a model, learn from the way they handle differe
 - `{{name}}`: {{format}}
 {{/formats}}
 {{/hasFormats}}
-{{^hasFormats}}
-- No extra formats.
-{{/hasFormats}}
 {{#hasLinks}}
 
 ### Link placeholders
 {{#links}}
 - `{{placeholder}}`{{#keep}} (keep: the current text uses it){{/keep}}
 {{/links}}
-{{/hasLinks}}
-{{^hasLinks}}
-- None.
 {{/hasLinks}}
 
 ### Available variables
