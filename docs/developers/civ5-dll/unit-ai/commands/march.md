@@ -16,8 +16,8 @@ flowchart TD
 | Stage | What it supplies | Function |
 | --- | --- | --- |
 | Prepare | Reserve recruitment, checkpoint cleanup, this turn's waypoint and corridor. | `PrepareArmy` in `civ5-dll/CvGameCoreDLL_Expansion2/CvTacticalOperationalLoop.cpp`. |
-| Estimate | Goal weight, readiness gain, theater with the full army and the opening priority. | `EstimateArmyMarch`. |
-| Check | Confirm the prepared order and find the members that can still act. | `CheckArmyMarch`. |
+| Estimate | Goal weight, readiness gain, theater with the full army, opening priority and available members. | `EstimateArmyMarch`. |
+| Check | Confirm the prepared order still matches. | `CheckArmyMarch`. |
 | Execute | Run Gather and move distant members toward the waypoint, yielding on new contact. | `ExecuteMarch`, `PositionUnitsAroundTarget`. |
 | Finish | Safety moves, then the native move and stage transition. | `FinishPreparedArmies`, `CvAIOperation::FinishMove` and `FinishTurn`. |
 
@@ -49,7 +49,9 @@ A host stop keeps the effects already committed and skips the remaining finishes
 
 At **muster**, which means the Recruiting or Gathering stage, the March scores arrival at the army's muster plot. In later stages it scores arrival at the army goal. The **waypoint** is `ComputeTargetPlotForThisTurn`, and the **corridor** is the step path from the army center to the goal that contains the waypoint. The corridor is rebuilt only when the waypoint or goal changes.
 
-The **readiness gain** estimates progress from the shared corridor and the movement members have left. It ranks the offer without finding individual routes or predicting their stops. Any usable member can join Gather. A ship can take a route around land even if it increases the distance to the fleet.
+Readiness gain adds two distances: the hexes a member needs to reach the waypoint's arrival radius, and the steps from the waypoint to the end of the shared path. An intermediate waypoint has a radius of two hexes. At the end of the path, March uses the operation's gather tolerance at muster or its deployment range at the goal. Operations without a final deployment, such as carrier groups, keep the two-hex radius at their goal.
+
+A member inside the radius or whose nearest corridor tile is beyond the waypoint has zero distance for the first leg. The remaining corridor steps still count. The score converts the distance to turns at the member's base movement rate, credits the fraction of a turn it can still move, and averages gains across the whole roster. Gather finds the actual routes, which can include a detour around land even if it puts a ship farther from the fleet.
 
 ## Goal weight and theater
 
@@ -105,13 +107,13 @@ A combat army supplies one battlefield with center `OPERATIONAL_CENTER_ARMY`. It
 
 `EstimateArmyMarch` requires the prepared order, a live operation and army, a matching stage, target, muster and goal, the row's waypoint, at least one member that can act, a positive goal weight, and a positive readiness gain. Army rows are estimated after the city and unit battlefields, so the March reads their live theaters.
 
-`CheckArmyMarch` re-resolves the order on the live board and collects the members who can act.
+`EstimateArmyMarch` collects the members who can act while computing readiness gain. `CheckArmyMarch` validates the order against the live board. Execution uses the estimated roster and filters out members who can no longer act.
 
 | Result | Condition |
 | --- | --- |
 | Target gone | The prepared order is missing. The offer drops. |
-| No reachable | The operation, army or waypoint no longer matches, or no member can act. |
-| Passed | The order still matches and at least one member can act. |
+| No reachable | The operation, army or waypoint no longer matches. |
+| Passed | The order still matches. |
 
 A March has no failure counter. A failed check makes the offer inactive, and a later estimate can return it to ready when the board changes.
 

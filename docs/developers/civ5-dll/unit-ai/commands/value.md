@@ -523,7 +523,7 @@ A recruit standing in a friendly city is attributed with `GetCityDangerByThreat`
 
 ## Army March priority
 
-Army March combines the target theater, mission value and estimated progress with the army's remaining movement. See [Army March](march.md#priority) for the formula and inputs. Gather scores danger when choosing moves; the queue does not price exposure from predicted stops.
+Army March combines the target theater, mission value and estimated progress with the army's remaining movement. The progress estimate uses this turn's waypoint and the shared path to the destination. See [Army March](march.md#formation-progress) for the distance rule and [priority](march.md#priority) for the formula. Gather scores danger when choosing moves.
 
 **All four command priorities.**
 

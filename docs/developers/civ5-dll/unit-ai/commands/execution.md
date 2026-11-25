@@ -24,7 +24,7 @@ The diagram shows the common path. City fire can end a fight before admission; e
 
 ## Readiness checks
 
-`CheckFight` checks the target, recruits and damage without issuing orders; Reinforce checks [reach](#reinforce-readiness), Withdraw checks [destinations](#withdraw-readiness), and Army March checks [the live order and roster](#army-march-readiness) instead.
+`CheckFight` checks the target, recruits and damage without issuing orders; Reinforce checks [reach](#reinforce-readiness), Withdraw checks [destinations](#withdraw-readiness), and Army March checks [the live order](#army-march-readiness).
 
 | Offer | Passing rule | Reason or exception |
 | --- | --- | --- |
@@ -46,7 +46,7 @@ Each check records `passed`, or a failed condition. Fight checks stop at the fir
 | No defenders | Our city has no defender and no endangered recruit. |
 | No nearby enemy | Our city has defenders but no endangered recruit, and no visible enemy combat unit within 5 plots. |
 | Reduced | Reinforce: a reach check replaced rejected units with the remaining selection, and its estimate is strictly lower. The replacement can be weaker or farther, since the result compares estimates, not head count. |
-| No reachable | Reinforce: no selected unit is left after the reach checks, so the offer turns inactive. Army March: the order is stale or no member can act. |
+| No reachable | Reinforce: no selected unit is left after the reach checks, so the offer turns inactive. Army March: the order is stale. |
 | Passed | The applicable checks pass, including the immediate city-strike pass for a unit fight. |
 
 Native recruitment reads the current tactical roster and its eligibility rules. **Available** means the unit passes `canUseNow`: moves left, unprocessed and not dying. Recruitment can include ranged units that can reach a firing position but only shoot next turn, and nearby units within 2 plots even when blocked. A pass can therefore lead to positioning. Support recruits such as generals contribute no damage. Endangered units added only during execution cannot make readiness pass; an endangered unit already in offensive recruitment contributes normally.
@@ -60,7 +60,7 @@ City fights use this damage check regardless of zone posture, native zone domina
 | Spearman in our city's bombard range; no unit recruits | City fire supplies local damage and passes readiness. | Fire, then end on a kill, no recruits or no expected damage. Consumes one command slot and retires no overlap. |
 | Ungarrisoned enemy city at 1 HP; ranged damage, no capturer | City-progress term is 0. If exposure keeps priority positive, fail `no capturer` and wait. | An available melee capturer moving into recruitment distance can wake it; recruitment, damage and capture checks run again. |
 | Same city with a garrison the recruits can damage | Pass without a capturer. | Garrison damage justifies attacking. |
-| Combat army with a proposed stop but 300 worth of added exposure | The checked priority reprices to 0. | The offer turns inactive without a failure count. A later estimate can return it ready. |
+| Combat army with a matching order and usable members | Pass at the estimated priority. | Gather and fallback moves check danger when selecting positions. |
 
 ## Participant admission
 
@@ -132,7 +132,7 @@ An initial reach failure stays excluded for the turn. A path or first-stop failu
 
 ## Army March readiness
 
-The check re-resolves the order and gathers the members who can act. A missing prepared row drops the offer. A stale order or empty roster makes it inactive without a failure count. See [Army March](march.md#offer-readiness-and-execution).
+The check re-resolves the order. A missing prepared row drops the offer, and a stale order makes it inactive without a failure count. The estimate already found members who can act when it made the offer ready. See [Army March](march.md#offer-readiness-and-execution).
 
 ## Marching execution
 
