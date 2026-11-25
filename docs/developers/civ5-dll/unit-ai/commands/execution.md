@@ -2,7 +2,7 @@
 
 The [command loop](overview.md) checks the highest-priority offer before it can issue orders. A **readiness check** confirms recruitment, damage or reach without moving units; a passing offer executes one **command**. This page follows fights, Reinforce, Withdraw and Army March through those steps, then explains search preferences and how recruits are recorded.
 
-The implementation is in `civ5-dll/CvGameCoreDLL_Expansion2/CvTacticalOperationalLoop.cpp`. Fights use `CheckFight` and `ExecuteFight`. Reinforce and Withdraw check readiness separately and share `ExecuteMarch`. Army March uses `CheckArmyMarch` and `ExecuteMarch` with a formation gate. See [recruitment](recruitment.md), [value](value.md) and [Army March](march.md) for selection, scoring and formation rules. HP means hit points.
+The implementation is in `civ5-dll/CvGameCoreDLL_Expansion2/CvTacticalOperationalLoop.cpp`. Fights use `CheckFight` and `ExecuteFight`. Reinforce and Withdraw check readiness separately and share `ExecuteMarch`. Army March uses `CheckArmyMarch` and `ExecuteMarch` with the Gather search. See [recruitment](recruitment.md), [value](value.md) and [Army March](march.md) for selection, scoring and formation rules. HP means hit points.
 
 ```mermaid
 flowchart TD
@@ -15,7 +15,7 @@ flowchart TD
     P --> S["Final geometry and flavors"]
     S --> E["Search and execute<br/>up to four attempts"]
     E --> M["Follow-up<br/>city landing, Reinforce or Withdraw paths"]
-    C -->|March passes| G["March: formation gate<br/>spotter, search, fallback stops"]
+    C -->|March passes| G["March: spotter, Gather and safe approaches"]
     G -->|New contact| Y["Yield<br/>offer stays ready"]
     G -->|No contact| N["Finish army<br/>safety move, FinishMove, FinishTurn"]
 ```
@@ -24,14 +24,14 @@ The diagram shows the common path. City fire can end a fight before admission; e
 
 ## Readiness checks
 
-`CheckFight` checks the target, recruits and damage without issuing orders; Reinforce checks [reach](#reinforce-readiness), Withdraw checks [destinations](#withdraw-readiness), and Army March checks [joint stops](#army-march-readiness) instead.
+`CheckFight` checks the target, recruits and damage without issuing orders; Reinforce checks [reach](#reinforce-readiness), Withdraw checks [destinations](#withdraw-readiness), and Army March checks [the live order and roster](#army-march-readiness) instead.
 
 | Offer | Passing rule | Reason or exception |
 | --- | --- | --- |
 | Enemy unit | Living best defender on the target plot, then either an eligible city strike or native recruits with positive expected damage. | City fire passes immediately, even with no unit recruits. |
 | Enemy city | Native recruits with positive expected city or garrison damage; at 1 HP or less, also a capturer or positive garrison damage. | No extra siege-progress check: the [attack fall share](value.md#city-allowance-and-fall-share) already discounts healing, and garrison damage has its own term. |
 | Our city | An [endangered recruit](#city-defense), or a defender plus a visible enemy combat unit within 5 plots (search geometry reach). | No offensive damage check. Fast or long-range enemies can cause city danger while outside search geometry; waiting leaves recruits available elsewhere. |
-| Army March | At least one member has a legal joint stop, and the priority repriced from those stops is positive. | The check re-resolves the prepared order and measures added exposure. A stale order makes the offer inactive. |
+| Army March | The prepared order still matches and at least one member can act. | The check rebuilds the live admission roster. A stale order makes the offer inactive. |
 
 **Native recruits** come from `FindUnitsWithinStrikingDistance`. The **damage test**, used again during [execution](#fight-execution), requires positive damage from `ComputeTotalExpectedDamage`; a city fight also accepts its separately reported garrison damage from counted attacks.
 
@@ -45,8 +45,8 @@ Each check records `passed`, or a failed condition. Fight checks stop at the fir
 | No capturer | A city at 1 HP or less has neither positive expected garrison damage nor a recruited combat unit that is melee, has moves and an attack left, and has no capture prohibition. |
 | No defenders | Our city has no defender and no endangered recruit. |
 | No nearby enemy | Our city has defenders but no endangered recruit, and no visible enemy combat unit within 5 plots. |
-| Reduced | Reinforce: a reach check replaced rejected units with the remaining selection, and its estimate is strictly lower. The replacement can be weaker or farther, since the result compares estimates, not head count. Army March: the updated forecast and added exposure lower the priority. The offer returns at that estimate, or inactive at 0. |
-| No reachable | Reinforce: no selected unit is left after the reach checks, so the offer turns inactive. Army March: no member has a stop to propose, or the repriced priority is 0. |
+| Reduced | Reinforce: a reach check replaced rejected units with the remaining selection, and its estimate is strictly lower. The replacement can be weaker or farther, since the result compares estimates, not head count. |
+| No reachable | Reinforce: no selected unit is left after the reach checks, so the offer turns inactive. Army March: the order is stale or no member can act. |
 | Passed | The applicable checks pass, including the immediate city-strike pass for a unit fight. |
 
 Native recruitment reads the current tactical roster and its eligibility rules. **Available** means the unit passes `canUseNow`: moves left, unprocessed and not dying. Recruitment can include ranged units that can reach a firing position but only shoot next turn, and nearby units within 2 plots even when blocked. A pass can therefore lead to positioning. Support recruits such as generals contribute no damage. Endangered units added only during execution cannot make readiness pass; an endangered unit already in offensive recruitment contributes normally.
@@ -80,7 +80,7 @@ Reinforce admission precedes its single spotter pass and path moves. Additional 
 
 Withdraw proposes the recruits with a legal first-turn stop. The command records and scores the admitted group before moving it. Recruits omitted by admission hold their original tiles for this comparison.
 
-Army March proposes members with a forecast stop. Admission can keep the selection or choose a subset; an empty subset refuses the command. The March never adds candidates, and a member omitted by a subset is not moved by the command.
+Army March proposes the members who can still act. Admission can keep the selection or choose a subset; an empty subset refuses the command. The March never adds candidates, and a member omitted by a subset is not moved by the command.
 
 ## Fight execution
 
@@ -132,7 +132,7 @@ An initial reach failure stays excluded for the turn. A path or first-stop failu
 
 ## Army March readiness
 
-`CheckArmyMarch` re-resolves the prepared order and updates the formation's stop forecast. It reprices the offer using the added exposure. A missing prepared row drops the offer. If no member has a stop to propose or the new priority is zero, the offer becomes inactive. A lower positive priority returns it ready at that estimate. The check counts no failure. See [Army March](march.md#offer-readiness-and-execution).
+The check re-resolves the order and gathers the members who can act. A missing prepared row drops the offer. A stale order or empty roster makes it inactive without a failure count. See [Army March](march.md#offer-readiness-and-execution).
 
 ## Marching execution
 
@@ -152,13 +152,7 @@ A Withdraw uses the label `AI_TACTICAL_WITHDRAW` and the destination in place of
 
 ### Army March
 
-An Army March uses the label `AI_TACTICAL_OPERATION` and the prepared waypoint in place of the target. `PositionUnitsAroundTarget` receives the proposed stops and the formation gate:
-
-1. Move a spotter (a unit used to improve visibility), excluding held garrisons, under the formation gate.
-2. Run `ExecuteEngagement` with the `Gather` purpose, target distance relevant, the operation's enemy as counterpart, and aggression capped at Low. The gate yields on a new contact during or after the search.
-3. Try the proposed stops as fallbacks for unprocessed members. After a successful search, restrict these attempts to members still more than four path steps from the waypoint. Use `ExactMarchFlags` plus `ArmyMarchRouteFlags` and enforce live stacking.
-
-The gate watches for a new enemy that can attack a formation member, an enemy on the approach route that can defend, or an enemy city that can range strike a member. A March yields at that contact plot, spends its command slot and leaves the offer ready, so a later estimate can route around the contact or fight it. `ObserveMarchContacts` remembers contacts already seen, so the same enemy does not yield the March twice. The March issues no safety move of its own; `FinishPreparedArmies` runs the army safety pass after the loop.
+An Army March uses `AI_TACTICAL_OPERATION`. It spots, runs Gather around the prepared waypoint and tries an approach for unprocessed units that are still far away. Gather scores danger as part of positioning, and the fallback checks danger at the first-turn stop. New enemy contact can send the army back to the queue. See [Army March](march.md#offer-readiness-and-execution) for the contact and end-of-turn behavior.
 
 The command record keeps the selection, whether the search ran, the units that moved or died for Reinforce, Withdraw and Army March alike, and whether any of them did.
 

@@ -175,13 +175,13 @@ The Reinforce priority reserves nothing for that peer offer: it is the fight's p
 
 A prepared combat army takes the same Reinforce slot and `eReinforce` state, but its [Army March](march.md#priority) is a separate offer with its own estimate:
 
-`priority = θ × max(0, R × w_goal × g − w_R × A / Z_T)`
+`priority = θ × R × w_goal × g`
 
 | Aspect | Reinforce | Army March |
 | --- | --- | --- |
 | Base | The battlefield's fight priority. | One turn of the army's formation progress at its operation's goal weight. |
-| Risk | Already inside the fight's stake through exposure. | The net exposure the checked stops add. |
-| Selection | Incoming candidates beyond strike reach. | The prepared army's own members and their checked stops. |
+| Risk | Already inside the fight's stake through exposure. | Gather scores danger, and fallback movement checks danger at the stop. |
+| Selection | Incoming candidates beyond strike reach. | The prepared army's own members who can still act. |
 | Retirement | An executed Reinforce retires enemy battlefields counted in its strength estimate. | A March retires no offer, and no offer retires a March. |
 
 The two offers never share a row. An army row supports only the Reinforce slot, and a battlefield row never carries an Army March.
