@@ -73,18 +73,20 @@
       {
         "id": "trade-gift-account-incoming",
         "when": "weGive === null",
-        "headline": "A gift from {{partner}}",
+        "headline": "A gift arrives from {{partner}}",
         "body": [
-          "{{partner}} has offered us a gift: {{weGet}}. We accepted without owing anything in return under the agreement."
-        ]
+          "We have received {{weGet}} from {{partner}}. The {{terms.civic.government}} asked for nothing but goodwill in return. "
+        ],
+        "settled": true
       },
       {
         "id": "trade-gift-account-outgoing",
         "when": "weGet === null",
-        "headline": "A gift for {{partner}}",
+        "headline": "We give {{weGive}} to {{partner}} as a gift",
         "body": [
-          "Our envoys arranged a gift for {{partner}}: {{weGive}}. The agreement calls for no payment in return."
-        ]
+          "Our {{terms.civic.government}} has sent {{weGive}} to {{partner}} with no terms attached. {{partner}} has issued an appreciation letter."
+        ],
+        "settled": true
       }
     ]
   },

@@ -17,7 +17,7 @@ flowchart TD
     H --> T
     M --> F["Fight stake<br/>local damage"]
     SEL --> R["Reinforce<br/>help, swing and priority"]
-    L --> W["Withdraw recruits<br/>victims and local units that can leave"]
+    L --> W["Withdraw recruits<br/>victims, local units and threatened armies that can leave"]
     W --> WD["Withdraw<br/>removable exposure and priority"]
 ```
 
@@ -27,7 +27,7 @@ flowchart TD
 | Tally | `LocalStrength`, `LocalCityStrength`, `EnemyCenterStrength`, `EnemyCityStrength` | Local friendly strength `L` and enemy strength `T`. | [Theater](value.md#theater-multiplier), Reinforce and Withdraw. |
 | Candidates | `GatherReinforceCandidates` | Incoming units with travel and join turns. | Selection. |
 | Selection | `SelectReinforcement` | `need`, the selection, help and the capture role. | [Reinforce priority](reinforcement.md#reinforce-priority). |
-| Withdraw recruits | `GatherWithdrawRecruits` | Our combat units at the battlefield that can leave. | [Withdraw priority](withdrawal.md#withdraw-priority). |
+| Withdraw recruits | `GatherWithdrawRecruits` | Our combat units at the battlefield that can leave, plus a threatened prepared army's members. | [Withdraw priority](withdrawal.md#withdraw-priority). |
 
 ## Battlefield estimate
 
@@ -52,7 +52,7 @@ The **local set** holds our units near enough to count at the center. Define `R_
 | Filter | Keeps | Feeds |
 | --- | --- | --- |
 | **Strength filter** | Land and sea units in the center's domains within `R_s`. Spent units and army members count. Aircraft and ranged units of the other domain do not. A unit that passes `IsCapturer`, spent or not, sets the local capturer flag. | `L` in the [strength tallies](#strength-tallies). |
-| **Damage filter** | Units on the tactical roster that can still attack: usable by the tactical AI and not out of attacks (`canUseForTacticalAI`, `!isOutOfAttacks`), not covering a friendly civilian and not an embarked ranged unit. Aircraft and ranged units of either domain qualify. Fighters (`UNITAI_DEFENSE_AIR`) must be on the sweep list and have air search enabled. At a city, `CanStrikeCity` drops units flagged `isNoCapture` and ranged units below native's minimum expected damage (`min(best defender HP / 20, 3)`, using 0 HP with no defender). | [Local damage](value.md#destroyed-value) at an enemy city or unit, and the city's local `CanCapture` test for the [attack fall share](value.md#city-allowance-and-fall-share). |
+| **Damage filter** | Units that can still attack: on the tactical roster, or a member of a prepared army the fight borrows when March is on. Each must be usable by the tactical AI and not out of attacks (`canUseForTacticalAI`, `!isOutOfAttacks`), not covering a friendly civilian and not an embarked ranged unit. Aircraft and ranged units of either domain qualify. Fighters (`UNITAI_DEFENSE_AIR`) must be on the sweep list and have air search enabled. At a city, `CanStrikeCity` drops units flagged `isNoCapture` and ranged units below native's minimum expected damage (`min(best defender HP / 20, 3)`, using 0 HP with no defender). | [Local damage](value.md#destroyed-value) at an enemy city or unit, and the city's local `CanCapture` test for the [attack fall share](value.md#city-allowance-and-fall-share). |
 
 The damage filter shares availability and city strike checks with [readiness recruitment](execution.md#readiness-checks). The separate sweep list includes available fighters that can sweep from their current plot, regardless of air search or city strike eligibility.
 
@@ -151,11 +151,12 @@ Counted enemies feed [Reinforce retirement](overview.md#overlapping-offers): an 
 
 | Rule | Detail |
 | --- | --- |
-| Source pool | The target's threat victims, the [local strength set](#battlefield-estimate), and eligible combat units sharing their plots. At an enemy city, the garrison's victims also join. |
-| Eligibility | A living land or sea combat unit on the turn's starting roster, outside an army, able to move, outside a friendly city, not a held garrison and not already in `withdrawnUnits`. |
+| Source pool | The target's threat victims in the Withdraw exposure layout, the [local strength set](#battlefield-estimate), eligible combat units sharing their plots, and a threatened prepared army's living members. At an enemy city, the garrison's victims also join. |
+| Threatened army | An army is threatened when one of its members is a victim in the Fight threat layout. Every living member of that army then joins the candidates. |
+| Eligibility | A living land or sea combat unit able to move, outside a friendly city, not a held garrison and not already in `withdrawnUnits`. A unit outside an army must also be on the turn's starting roster; an army unit is admitted only when its own army is threatened here. |
 | Order | Ascending unit ID, without duplicates. |
 
-An endangered recruit starts the offer. Other recruits can join if they have a legal first-turn stop. The [Withdraw readiness check](withdrawal.md#readiness-and-execution) scores those stops together before admission.
+An endangered recruit starts the offer. Other recruits can join if they have a legal first-turn stop. The [Withdraw readiness check](withdrawal.md#readiness-and-execution) scores those stops together before admission. Any admitted recruit with an army ID makes the offer a [formation Withdraw](withdrawal.md#formation-retreat), which plans the group's stops with the formation rules.
 
 ## Candidates and selection
 

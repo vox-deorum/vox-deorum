@@ -1,10 +1,10 @@
 # Unit AI: Commands
 
-The **operational loop** coordinates combat, reinforcement and withdrawal across the map during a player's turn. It replaces the zone-by-zone combat pass of [military tactics](../tactics/overview.md), giving higher-priority work access to shared units first. This developer guide describes the DLL (dynamic-link library) implementation, enabled for non-barbarian players by `VOX_TACTICAL_OPERATIONAL_LOOP` (0, off by default).
+The **operational loop** coordinates combat, reinforcement, withdrawal and combat army movement across the map during a player's turn. It replaces the zone-by-zone combat pass of [military tactics](../tactics/overview.md), giving higher-priority work access to shared units first. With Army March enabled, it also takes over the native movement pass for land, naval and combined combat armies. This developer guide describes the DLL (dynamic-link library) implementation, enabled for non-barbarian players by `VOX_TACTICAL_OPERATIONAL_LOOP` (0, off by default).
 
 ```mermaid
 flowchart TD
-    B["Build battlefields<br/>enemy targets and our cities"] --> E["Estimate<br/>fight, Reinforce and Withdraw offers"]
+    B["Build battlefields<br/>enemy targets, our cities and armies"] --> E["Estimate<br/>fight, Reinforce, Withdraw and Army March offers"]
     E --> S["Select highest ready priority"]
     S --> C{"Readiness passes?"}
     C -->|No| S
@@ -16,11 +16,11 @@ flowchart TD
 
 | Term | Meaning |
 | --- | --- |
-| **Battlefield** | One enemy unit, enemy city or city of ours, with separate fight, Reinforce and Withdraw offers. |
-| **Offer** | A proposed action with a queue state and an **estimate**, its queue priority. A fight attacks an enemy or defends our city; **Reinforce** brings distant units toward the center; **Withdraw** pulls local units back toward a friendly city. |
+| **Battlefield** | One enemy unit, enemy city or city of ours, with separate fight, Reinforce and Withdraw offers, or one prepared combat army, with a single Army March offer. |
+| **Offer** | A proposed action with a queue state and an **estimate**, its queue priority. A fight attacks an enemy or defends our city; **Reinforce** brings distant units toward the center; **Withdraw** pulls local units back toward a friendly city; **Army March** advances a prepared combat army through its formation. |
 | **Readiness check** | Confirms suitable recruits, damage or reach before issuing orders. |
 | **Command** | One passing offer's execution. Each offer runs at most once per turn, even when it finds no action. |
-| **Engagement** | Tactical search and execution, including retries. A fight can end after city fire; a Reinforce or Withdraw command can also march units along paths. |
+| **Engagement** | Tactical search and execution, including retries. A fight can end after city fire; a Reinforce, Withdraw or Army March command can also march units along paths. |
 | Our, native, HP | The acting player; existing Vox Populi behavior; hit points. |
 
 Start with the command loop below, then follow the part you need to audit:
@@ -31,6 +31,7 @@ Start with the command loop below, then follow the part you need to audit:
 | [Recruitment](recruitment.md) | Which units count as local or incoming, how is strength measured, and who gets selected? |
 | [Reinforcement priorities](reinforcement.md) | How much does bringing the selected units add, and how does travel reduce that benefit? |
 | [Withdrawal priorities](withdrawal.md) | When is pulling local units back worth more than fighting, and where do they go? |
+| [Army March](march.md) | How does a combat army move, when does it advance or hold, and when does it yield? |
 | [Readiness and execution](execution.md) | Can the offer run, what orders does it issue, and how are search preferences chosen? |
 | [Settings and reference](reference.md) | Where are the defaults, records, source files and copies of native functions? |
 
@@ -43,21 +44,23 @@ The simulator can supply an **operational provider** through host callbacks; `Cv
 | Decision | When | DLL's native choice |
 | --- | --- | --- |
 | Command choice | Before each readiness check, including after a failed check | Highest ready priority, with the [queue tie breaks](#command-loop). |
-| Participant admission | After readiness, before recruits act | Gathered fight recruits, the checked Reinforce selection, or the Withdraw recruits. A provider can retain this selection or request a candidate subset. See [admission and refusal](execution.md#participant-admission). |
+| Participant admission | After readiness, before recruits act | Gathered fight recruits, the checked Reinforce selection, the Withdraw recruits, or the checked Army March stops. A provider can retain this selection or request a candidate subset. See [admission and refusal](execution.md#participant-admission). |
 | Search flavors | After spotting and greedy air, using the final geometry | Geographic flavor blend plus command-kind row. See [search preferences](execution.md#geographic-blend). |
 
-The simulator's supplied adapter builds a separate menu from the acting player's permitted knowledge. It maps selected objectives to live battlefields and walks ranked replies through these readiness checks, stopping at the first pass. Missing mappings and failed checks are execution feedback. Native decoding keeps the queue above, including when the supplied reply delegates to native. The [simulator provider guide](../../../../../../vox-deorum-rl/docs/operations/providers.md) owns the observation boundary and recovery limits.
+The simulator's supplied adapter builds a separate menu from the acting player's permitted knowledge. It maps selected objectives to live battlefields and walks ranked replies through these readiness checks, stopping at the first pass. Missing mappings and failed checks are execution feedback. Native decoding keeps the queue above, including when the supplied reply delegates to native.
 
 ## Turn integration
 
 The loop's copy of `ProcessDominanceZones` keeps the surrounding native passes in order:
 
-1. Global high priority: healing, operation armies and garrisons.
+1. Global high priority: healing, operation armies and garrisons. In this pass `PlotOperationalArmyMoves` prepares land, naval and combined combat armies for the loop when `march.enabled` is nonzero. Other operations move natively.
 2. Emergency purchases in every zone.
-3. The [command loop](#command-loop), through `RunCommandLoop`, for fights, Reinforce and Withdraw.
+3. The [command loop](#command-loop), through `RunCommandLoop`, for fights, Reinforce, Withdraw and Army March. When the loop ends, `FinishPreparedArmies` runs the safety move and native finish of every army it prepared.
 4. Deferred garrison holds, global middle and low priority passes, then the review of unassigned units.
 
 Battlefield reinforcement replaces the regular zone reinforcement pass. The loop also omits zone posture routines and zone target extraction. Global passes still handle camps, civilians, improvements and other target types. Units left unprocessed can pass to Homeland AI (the system for remaining unit tasks) as usual. Barbarians keep native scheduling.
+
+With `march.enabled` at 0, no army is prepared and every operation keeps its native movement. No army battlefields exist, and recruitment and discovery behave as they did before Army March. See [Army March](march.md#enablement-and-turn-integration).
 
 ## Command loop
 
@@ -67,12 +70,12 @@ Battlefield reinforcement replaces the regular zone reinforcement pass. The loop
 | --- | --- |
 | Build | Resolve settings, **mapped flavors** (player preferences on military scales), **weights** (relative importance of benefits) and **reference scales** (normalization values). Build battlefields and threat maps, which attribute damage to enemy units and cities. |
 | Estimate | A [battlefield estimate](recruitment.md#battlefield-estimate) shares the local scan, theater and **stake** (combined fight benefits) needed by open offers. Closed cities still refresh theater. Positive estimates become ready, nonpositive estimates inactive; waiting fights also need a helpful change. Invalid targets drop every open offer. |
-| Select | Highest ready estimate first. Ties favor own-city fights, enemy-city fights, enemy-unit fights, then Reinforce, then Withdraw; further ties favor lower plot index, then build order. Stop with no ready offer or at the command cap. |
-| Check | Check only the selected offer. A failed fight check makes it waiting or skipped at the failure limit. Reinforce goes inactive when its target is gone or no recruit passes reach. Withdraw goes inactive or skipped at the failure limit if it cannot find a group with positive priority. A reduced offer competes again at its lower priority without using a failure attempt and is inactive at zero. A passing offer executes at its checked estimate. |
+| Select | Highest ready estimate first. Ties favor own-city fights, enemy-city fights, enemy-unit fights, then Reinforce, then Withdraw, then Army March; further ties favor lower plot index, then build order. Stop with no ready offer or at the command cap. |
+| Check | Check only the selected offer. A failed fight check makes it waiting or skipped at the failure limit. Reinforce goes inactive when its target is gone or no recruit passes reach. Withdraw goes inactive or skipped at the failure limit if it cannot find a group with positive priority. Army March drops when its prepared order is gone, turns inactive when the prepared row no longer matches, no member has a legal stop or its repriced priority is 0, and returns ready at a reduced estimate otherwise. A reduced offer competes again at its lower priority without using a failure attempt and is inactive at zero. A passing offer executes at its checked estimate. |
 | Record and retire | Close the offer even if it ended before search or found no action. Explicit refusal consumes the slot without retiring other offers. Rebuild threats, then apply the [overlap rules](#overlapping-offers). |
 | Refresh | Compare the board before and after the command, add newly captured own-city battlefields, re-estimate open offers and apply the [wake rule](#wake-rule). Resume selection. |
 
-The command cap, `iMaxCommands` (64), includes refused commands. Failed readiness checks consume no slots, and search retries belong to the same command. Every open offer is re-estimated after every command, including distant offers, without native recruitment, path or readiness checks. A closed fight still refreshes its stake while its Reinforce or Withdraw remains open.
+The command cap, `iMaxCommands` (64), includes refused commands. Failed readiness checks consume no slots, and search retries belong to the same command. An Army March counts no readiness failures: its check passes, returns at a reduced estimate, turns inactive or drops. A yield spends a command slot and leaves the offer ready for the next estimate. Every open offer is re-estimated after every command, including distant offers, without native recruitment, path or readiness checks. A closed fight still refreshes its stake while its Reinforce or Withdraw remains open.
 
 The loop separates facts fixed for the turn from values refreshed after commands:
 
@@ -81,6 +84,7 @@ The loop separates facts fixed for the turn from values refreshed after commands
 | Weights and reference scales | Fight stakes and open-offer priorities |
 | City battlefields' theater importance and every battlefield's ground term | Theater contest, threat maps and reinforcement selections |
 | Original enemy battlefields and their zone and near-city flags | Surviving unit targets' plots and newly captured own-city battlefields |
+| Prepared armies, their operation and army IDs, and their stable row order | Army waypoints and zones, March priorities, and targets discovered after the command |
 | Readiness failure limit | Reinforcement check flags are cleared so reach can be checked again |
 
 ### Offer states
@@ -121,9 +125,20 @@ A Withdraw offer uses these states:
 | Refused | A provider chooses an empty subset from nonempty eligibility | The turn ends; the command slot is consumed and no other offer is retired. |
 | Dropped | Re-estimation finds the target unit gone, or its city lost by its recorded owner or no longer ours | The turn ends. |
 
-The offer exists only at enemy battlefields with `withdraw.enabled` nonzero. Our cities and a disabled switch keep an inactive Withdraw slot with estimate 0 all turn, so every battlefield records three offers.
+The Withdraw offer exists only at enemy battlefields with `withdraw.enabled` nonzero. Our cities and a disabled switch keep an inactive Withdraw slot with estimate 0 all turn, so every non-army battlefield records three offers.
 
-A waiting fight keeps its refreshed estimate and cumulative failure count. Waking it preserves the count and applies no priority discount. Readiness determines whether the fight can execute; the current estimate determines its priority. A reinforcement or Withdraw offer never waits, so it is never woken; a Reinforce offer also never counts failures. When `EstimateFight` finds a target gone, every open offer at that battlefield drops together.
+An Army March uses the Reinforce slot and counts no failures:
+
+| State | Enters when | Leaves when |
+| --- | --- | --- |
+| Ready | An opening or later estimate is positive | It reaches the top and is checked, executes or yields. |
+| Inactive | Its estimate is nonpositive, or a check finds no legal stop or no positive priority, including when the row no longer matches its prepared order | A later estimate is positive. |
+| Executed | It runs as a command without provider refusal or yield | The turn ends. |
+| Refused | The provider chooses an empty subset, the prepared order cannot be resolved, or a changed order cannot be rebuilt | The turn ends. |
+| Dropped | `ResolveArmyMarch` finds no prepared row for the battlefield | The turn ends. |
+| Yielded | A new contact stops the move | It returns to ready, and the command slot is spent. |
+
+A waiting fight keeps its refreshed estimate and cumulative failure count. Waking it preserves the count and applies no priority discount. Readiness determines whether the fight can execute; the current estimate determines its priority. A reinforcement, Withdraw or Army March offer never waits, so it is never woken; a Reinforce or Army March offer also never counts failures. When `EstimateFight` finds a target gone, every open offer at that battlefield drops together.
 
 ## Battlefields
 
@@ -133,17 +148,22 @@ A waiting fight keeps its refreshed estimate and cumulative failure count. Wakin
 
 `AddOwnCityBattlefield` adds one battlefield per city of ours, including safe cities whose offers can become inactive at the first estimate. It uses the city plot's land zone. If that zone is unknown, it uses the city's water zone, identified by the negative city ID. Zone data is read without refreshing because the zone map cannot be rebuilt mid-turn.
 
-Fight, Reinforce and Withdraw offers keep separate states. Executing any offer refreshes the other open offers' estimates along with the rest of the queue.
+With March on, `SnapshotEnemies` and `DiscoverEnemyBattlefields` add visible hostile combat units and visible enemy cities of players at war that the tactical snapshot did not supply. Each target is classified once in map order, and duplicate owner and ID pairs are skipped. `SyncArmyBattlefields` then adds one row per prepared army, with center `OPERATIONAL_CENTER_ARMY`. The row's plot and zone come from the prepared waypoint, and its operation and army IDs identify the order it scores.
 
-The battlefield stores its build-order ID, center type, target owner and unit or city ID, plot index and zone ID. It also records these facts for the turn:
+Fight, Reinforce and Withdraw offers keep separate states. An army row supports only the Reinforce slot, which carries its Army March and uses the row's army ID as its target. Executing any offer refreshes the other open offers' estimates along with the rest of the queue.
+
+The battlefield stores its build-order ID, center type, target owner and unit, city or army ID, plot index and zone ID. It also records these facts for the turn:
 
 | Fact | Rule |
 | --- | --- |
 | Theater importance | A city battlefield fixes its own importance: city value divided by `Z_C` (city scale), capped at 1. A fight at an enemy target uses its target zone's city, which can be ours or an enemy's; an own-city fight uses its own city. A unit battlefield stores no importance: it remembers its zone city's plot for the turn and reads that city's current theater, so the link survives a capture during the turn, and a cityless zone uses the theater floor. The [theater multiplier](value.md#theater-multiplier) `θ` combines importance with contest, which is refreshed after every command. |
 | `ΔG(t)` (ground recovered by removing target unit t) | Local ground score with the target present minus the score with it removed, in plot weight. |
 | Near our city | Native `GetCityDistanceInPlots` is below 4 at build time. For major civilizations this means within 3 plots of our nearest city. Minors use half the plot distance to their capital, rounded down, so their exemption reaches 7 plots. |
+| Army waypoint | `ComputeTargetPlotForThisTurn` in the prepared order, which is the muster plot while the army is Recruiting or Gathering and the army goal afterward. The row reads its zone from that plot, and the March checks stops from it. |
 
-The turn's enemy battlefields stay fixed. A newly revealed enemy can enter danger calculations, city strength and search geometry immediately; it receives an independent battlefield in the next turn's snapshot. Re-estimation follows a surviving target unit's current plot, while its original zone, ground term and near-city flag stay fixed; its theater comes from the remembered zone city. A dead unit or a city lost by its recorded owner drops every open offer of that battlefield. Each estimate pass handles city battlefields first, then unit battlefields. A city battlefield with every offer closed still refreshes its theater each pass, with no stake, because unit fights in its zone read it.
+With March off, every enemy battlefield is fixed for the turn. A newly revealed enemy can enter danger calculations, city strength and search geometry immediately; it receives an independent battlefield in the next turn's snapshot. With March on, `DiscoverEnemyBattlefields` can add a visible enemy after a command when enemy observations changed. The new row keeps its own identity and fixed facts, and existing rows keep theirs. Army rows are fixed before the loop; `SyncArmyBattlefields` only updates the waypoint of an open March.
+
+Re-estimation follows a surviving target unit's current plot, while its original zone, ground term and near-city flag stay fixed; its theater comes from the remembered zone city. A dead unit or a city lost by its recorded owner drops every open offer of that battlefield. Each estimate pass handles city battlefields first, then unit battlefields, then army battlefields after both passes. A city battlefield with every offer closed still refreshes its theater each pass, with no stake, because unit fights in its zone read it.
 
 A city we capture during the turn becomes an own-city battlefield when the command that took it ends. It uses the city's current value and zone; the turn's weights, scales and other battlefields stay as they were. The captured city's enemy-city offer drops under the rule above.
 
@@ -153,17 +173,18 @@ A search centered on one enemy can attack surrounding enemies. After an enemy-un
 
 These offers are exempt:
 
-- A fight whose target has positive threat damage against our units outside friendly cities and armies. Its own search can recruit those endangered units. Spent units still sustain this exemption.
+- A fight whose target has positive threat damage against our units. The Fight threat layout includes enrolled army members, while the Withdraw layout leaves them out, and the fight's own search can recruit those endangered units. Spent units still sustain this exemption.
+- A fight that borrows members of a prepared army, meaning its `fightArmies` set is not empty.
 - A fight marked near our city at build time, using the [native city-distance rule](#battlefields).
 - Every enemy-city and own-city fight. These commands also retire no unit fights.
 
 The loop rebuilds threats after execution, before the overlap pass, so a unit moved into danger by the command can protect its attacker's offer. A Withdraw's local peer closure runs earlier, immediately after the command, and reads only whether a selected unit moved or died. Ready, inactive and waiting offers can be retired; executed, refused, retired, skipped and dropped offers are closed. A fight retires other fights only after a search with a nonempty group, whether or not the search found or completed a plan; a Reinforce retires on movement, and a Withdraw closes its own peers on movement. Commands ending after city fire, visibility failure or greedy air retire no fights.
 
-**Reinforce retirement** uses the enemies counted in the executed offer's last estimate. If at least one selected unit changed plot or died, retire the open reinforcement offer of every other enemy battlefield whose target contributed to `T` (enemy strength). Ready and inactive offers can be retired. Our cities' reinforcement offers are exempt; a command with no such unit change retires nothing.
+**Reinforce retirement** uses the enemies counted in the executed offer's last estimate. If at least one selected unit changed plot or died, retire the open reinforcement offer of every other enemy battlefield whose target contributed to `T` (enemy strength). Ready and inactive offers can be retired. Our cities' reinforcement offers and army rows are exempt; a command with no such unit change retires nothing.
 
-**Withdraw closure** is local: a Withdraw and a Reinforce close each other at their battlefield only when one moves a unit, with the own-city and disabled-switch exemptions in the [Withdraw closing rules](withdrawal.md#closing-the-battlefield). Other battlefields are not retired directly, but their offers can change when the loop re-estimates them.
+**Withdraw closure** is local: a Withdraw and a Reinforce close each other at their battlefield only when one moves a unit, with the own-city and disabled-switch exemptions in the [Withdraw closing rules](withdrawal.md#closing-the-battlefield). A formation Withdraw follows the same rule at its own battlefield. Other battlefields are not retired directly, but their offers can change when the loop re-estimates them.
 
-Apart from that peer rule, retiring an offer leaves its battlefield's other offers intact. Reinforcement commands retire only reinforcement offers, and fights retire only fights.
+Apart from that peer rule, retiring an offer leaves its battlefield's other offers intact. Reinforcement commands retire only reinforcement offers, and fights retire only fights. An Army March retires no offer, and no offer retires an Army March. Its own estimate closes it.
 
 The examples below use the [value guide's running inputs](value.md#running-example-inputs): town value 15, city scale `Z_C = 40`, typical unit worth `Z_T = 400`, 100 maximum unit HP and neutral weights. Killing a unit earns its [destroyed value](value.md#destroyed-value): its whole living value, 60% of full-health worth plus 40% scaled by remaining HP.
 
@@ -192,7 +213,7 @@ The examples below use the [value guide's running inputs](value.md#running-examp
 | A unit of ours arrives at a new plot and remains available | It is within its own native striking distance (`base moves × 4`) of the target, or within its [strike reach](recruitment.md#battlefield-estimate), base moves plus ranged attack range, of our city. Aircraft and port-changing ships pass this distance test automatically. |
 | Our city's re-estimate finds an endangered recruit | Always wakes that own-city fight. |
 
-Native striking distance uses `baseMoves(false) × 4`. The turn's scan takes the largest value among our living land and sea units at turn build. A moved unit uses its own native striking distance at an enemy target and its strike reach at our city. These are distance tests; waking returns a positive-estimate fight to ready so its full readiness check can run again.
+Native striking distance uses `baseMoves(false) × 4`. The turn's scan takes the largest value among our living land and sea units at turn build. A moved unit uses its own native striking distance at an enemy target and its strike reach at our city. A prepared army member released by operation cleanup counts as a friendly arrival. These are distance tests; waking returns a positive-estimate fight to ready so its full readiness check can run again.
 
 Damage to an enemy or city still standing, and our units merely spent, damaged or lost, do not wake fights. Enemy disappearance from visibility also counts as a snapshot change. A helpful change leaves the offer waiting if its refreshed estimate is nonpositive. Other commands add no failures while a fight waits.
 

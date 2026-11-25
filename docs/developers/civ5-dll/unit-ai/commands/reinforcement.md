@@ -1,6 +1,6 @@
 # Unit AI: Reinforcement Priorities
 
-Each [battlefield](overview.md#battlefields) has a **Reinforce offer** to bring distant units toward its center. Its **priority** is the battlefield's [fight priority](value.md#fight-priority) times the share of the outcome the arriving units swing, so marches and fights compete in one queue on one base. At an enemy battlefield the offer shares the field with a [Withdraw](withdrawal.md); a Withdraw that moves a unit closes this offer for the rest of the turn.
+Each [battlefield](overview.md#battlefields) has a **Reinforce offer** to bring distant units toward its center. Its **priority** is the battlefield's [fight priority](value.md#fight-priority) times the share of the outcome the arriving units swing, so Reinforce and fights compete in one queue on one base. At an enemy battlefield the offer shares the field with a [Withdraw](withdrawal.md); a Withdraw that moves a unit closes this offer for the rest of the turn. A prepared combat army uses the same slot and offer state, but its [Army March](march.md#priority) prices progress and added risk instead of a stake and swing.
 
 ```mermaid
 flowchart TD
@@ -16,7 +16,7 @@ flowchart TD
 | --- | --- | --- |
 | Recruit | Local and enemy strength, the selected incoming units and their join turns. | [Recruitment](recruitment.md#candidates-and-selection) |
 | Score | Swing and priority. Rescored after every command, together with the fight's stake and theater. | `EstimateBattlefield` in `civ5-dll/CvGameCoreDLL_Expansion2/CvTacticalOperationalLoop.cpp`. |
-| Check and execute | Actual paths, available recruits and march orders. | [Reinforce readiness](execution.md#reinforce-readiness) |
+| Check and execute | Actual paths, available recruits and path orders. | [Reinforce readiness](execution.md#reinforce-readiness) |
 
 | Part | Fight | Reinforce |
 | --- | --- | --- |
@@ -68,7 +68,7 @@ Examples use these inputs unless they state their own. Results are rounded only 
 
 ## Reinforce priority
 
-**Rule: the fight's priority, times the share of the outcome the march swings.**
+**Rule: the fight's priority, times the share of the outcome the help swings.**
 
 `priority = θ × stake × swing`
 
@@ -79,7 +79,7 @@ Examples use these inputs unless they state their own. Results are rounded only 
 
 | Property | Why it holds |
 | --- | --- |
-| A march never outranks the fight it joins. | Priority is fight priority × swing, and swing is at most 1. |
+| A Reinforce never outranks the fight it joins. | Priority is fight priority × swing, and swing is at most 1. |
 | A fight local units already win needs no rule. | Its fight has the higher priority, runs first and removes the target, which drops both offers. |
 | More danger to a city never lowers the pull. | Danger raises both `θ` and the stake. |
 
@@ -170,18 +170,33 @@ A [Withdraw](withdrawal.md) at the same battlefield competes with this offer for
 
 The Reinforce priority reserves nothing for that peer offer: it is the fight's priority times its swing, while the Withdraw counts its own removable exposure. A ready Reinforce never raises the Withdraw priority; the [Withdraw priority](withdrawal.md#withdraw-priority) explains how `s⁺` combines them.
 
-## Marches against fights
+### Army March in the same slot
+
+A prepared combat army takes the same Reinforce slot and `eReinforce` state, but its [Army March](march.md#priority) is a separate offer with its own estimate:
+
+`priority = θ × max(0, R × w_goal × g − w_R × A / Z_T)`
+
+| Aspect | Reinforce | Army March |
+| --- | --- | --- |
+| Base | The battlefield's fight priority. | One turn of the army's formation progress at its operation's goal weight. |
+| Risk | Already inside the fight's stake through exposure. | The net exposure the checked stops add. |
+| Selection | Incoming candidates beyond strike reach. | The prepared army's own members and their checked stops. |
+| Retirement | An executed Reinforce retires enemy battlefields counted in its strength estimate. | A March retires no offer, and no offer retires a March. |
+
+The two offers never share a row. An army row supports only the Reinforce slot, and a battlefield row never carries an Army March.
+
+## Reinforce against fights
 
 The offers above, ranked together as the queue sees them.
 
 | Offer | Priority | Reads as |
 | --- | --- | --- |
 | Fight: our capital at 25 HP | `0.975385 (θ) × 3 (stake) = 2.926` | The defense itself comes first. |
-| March to that capital | 0.972 | The strongest march: a third of its fight. |
+| Reinforce to that capital | 0.972 | The strongest help: a third of its fight. |
 | Fight: our capital at 200 HP | `0.803077 (θ) × 1.2 (stake) = 0.964` | |
 | Fight: large enemy city at half HP | `0.723077 (θ) × 0.72 (stake) = 0.521` | |
-| Fight: kill a full-health knight worth 700 | `0.2 (θ) × 1.75 (stake) = 0.350` | A sure kill outranks every march except a capital about to fall. |
-| March to our capital at 200 HP | 0.320 | |
-| March to the large enemy city at half HP | 0.173 | A top-up of a siege under way. |
+| Fight: kill a full-health knight worth 700 | `0.2 (θ) × 1.75 (stake) = 0.350` | A sure kill outranks every Reinforce except a capital about to fall. |
+| Reinforce to our capital at 200 HP | 0.320 | |
+| Reinforce to the large enemy city at half HP | 0.173 | A top-up of a siege under way. |
 | Fight: the knight with 30 local damage | `0.2 (θ) × 0.21 (stake) = 0.042` | |
-| March toward that knight | 0.014 | |
+| Reinforce toward that knight | 0.014 | |

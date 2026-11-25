@@ -12,7 +12,7 @@ flowchart TD
     S --> O[Persistent operations, armies, targets, directives]
     O --> T[Tactical AI]
     W --> T
-    T --> A[Healing, army movement, urgent combat, global passes]
+    T --> A[Healing, prepared armies, urgent combat, global passes]
     A -->|unprocessed units with movement| H[Homeland AI]
     O --> H
     W --> H
@@ -23,9 +23,9 @@ flowchart TD
     A --> O
 ```
 
-For a normal AI player, `CvPlayerAI::AI_unitUpdate` runs Tactical AI before Homeland AI. Tactical AI refreshes targets, recruits combat and support units, heals urgent frontline units, advances persistent-operation armies through `CvAIOperation::DoTurn`, and completes its combat priorities. Homeland AI then rebuilds its candidate list from eligible units, refreshes role targets, and runs its ordered passes. The resulting missions change the state seen by later passes and by the next turn.
+For a normal AI player, `CvPlayerAI::AI_unitUpdate` runs Tactical AI before Homeland AI. Tactical AI refreshes targets, recruits combat and support units, heals urgent frontline units, advances persistent-operation armies through `CvAIOperation::DoTurn`, and completes its combat priorities. With `march.enabled` on, land, naval and combined combat armies are handed to the [command loop](../commands/overview.md) instead. Homeland AI then rebuilds its candidate list from eligible units, refreshes role targets, and runs its ordered passes. The resulting missions change the state seen by later passes and by the next turn.
 
-`CvAIOperation::DoTurn` maintains reserve membership, target validity, movement progress, army and operation state, and abort reason. Cleanup releases Army IDs and removes obsolete armies or operations. See [operation stages](stages.md) for stage sequences, [military organization](organization.md) for formation membership and release, and [civilian operation](civilian.md) for civilian-specific ownership.
+`CvAIOperation::DoTurn` maintains reserve membership, target validity, movement progress, army and operation state, and abort reason. Cleanup releases Army IDs and removes obsolete armies or operations. A prepared army skips `DoTurn`: the command loop moves it, and `FinishPreparedArmies` runs its safety move and native finish at loop exit. See [operation stages](stages.md) for stage sequences, [military organization](organization.md) for formation membership and release, and [civilian operation](civilian.md) for civilian-specific ownership.
 
 ## Completion, abort, and cleanup
 
@@ -37,6 +37,8 @@ Ordinary military deployment follows this sequence:
 2. The next **pre-unit sweep**, the cleanup pass before unit control, calls `ShouldAbort` and marks surviving members as recently deployed.
 3. The sweep calls `Kill`, releasing the members and deleting the army and operation.
 
+A prepared combat army reaches the same deployment rule through `FinishPreparedArmies` at the command loop's exit. It calls `MoveArmyUnitsToSafety` on members that can act, then `FinishMove`, then `FinishTurn` when the move progressed, so the stage transition lands before the loop returns. An operation already marked aborted releases its units and is killed in the same pass. A live operation whose army is gone is set to `AI_ABORT_NO_UNITS` and killed.
+
 | Detection point | State | Member release | Object deletion |
 | --- | --- | --- | --- |
 | Request or initialization rejected | Preconditions fail, or initialization leaves Invalid or Aborted | Destruction releases any recruited members | Immediate direct deletion, bypassing `Kill` |
@@ -44,6 +46,7 @@ Ordinary military deployment follows this sequence:
 | Deployment detected after successful `Move` | Successful Finish | At `Kill` in the next pre-unit sweep | During that sweep |
 | Pre-unit sweep finds a terminal state | Successful Finish or Aborted | At `Kill` in this sweep | During this sweep |
 | `DoTurn` returns false without a terminal state | Current state retained until cleanup | At `Kill` in the same Tactical pass | During that pass |
+| Prepared army finish does not progress | Aborted, army missing, or `FinishMove` returns false | `ReleaseAllUnits` immediately when aborted, otherwise when `Kill` resets the army | `Kill` in `FinishPreparedArmies` |
 
 Whenever `ShouldAbort` observes Successful Finish, it marks surviving members as recently deployed before release. A request rejected before initialization has no abort reason. Initialization itself can set a specific reason, such as `AI_ABORT_NO_UNITS`, before direct deletion.
 
@@ -103,7 +106,7 @@ Tactical AI retains a unit only while a later pass can use it. Routine Homeland 
 
 | Unit kind | Owner this turn | Later handling |
 | --- | --- | --- |
-| Persistent-operation army member | Persistent operation through Tactical AI | Moves with its army until cleanup releases its Army ID. |
+| Persistent-operation army member | Persistent operation through Tactical AI, or the command loop for a prepared army | Moves with its army until cleanup releases its Army ID. |
 | Independent combat, ranged, or combat-support unit | Tactical AI | Homeland AI receives it when Tactical leaves it unprocessed with movement. |
 | Explorer | Homeland AI | Tactical eligibility excludes land and sea explorer roles. |
 | Ordinary civilian | Homeland AI | A role action, safety response, or escorted civilian operation supplies its work. |

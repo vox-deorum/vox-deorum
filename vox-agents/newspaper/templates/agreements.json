@@ -92,16 +92,18 @@
         "when": "direction === 'gift-in'",
         "headline": "A technology gift from {{partner}}",
         "body": [
-          "{{partner}} has made our {{terms.civic.government}} a gift of knowledge. The terms read: {{dealTerms}} The gift adds to what our scholars can study."
-        ]
+          "{{partner}} has made our {{terms.civic.government}} a gift of knowledge. The terms read: {{dealTerms}}. Our educational scholars are busy preparing a new school curriculum."
+        ],
+        "settled": true
       },
       {
         "id": "technology-deal-gift-out-report",
         "when": "direction === 'gift-out'",
         "headline": "A technology gift for {{partner}}",
         "body": [
-          "Our {{terms.civic.government}} has made {{partner}} a gift of knowledge. The terms read: {{dealTerms}} The gift carries our learning abroad without payment."
-        ]
+          "Our {{terms.civic.government}} has made {{partner}} a gift of knowledge. The terms read: {{dealTerms}}. Our scholars and translators are busy preparing materials to finalize this arrangement."
+        ],
+        "settled": true
       }
     ]
   },
@@ -114,10 +116,11 @@
       {
         "id": "map-deal-buy-report",
         "when": "direction === 'buy'",
-        "headline": "We buy maps from {{partner}}",
+        "headline": "A new map purchased from {{partner}}",
         "body": [
-          "Our {{terms.civic.government}} has bought maps from {{partner}}. {{dealTerms}}"
-        ]
+          "Our {{player.civic.government}} have bought a map from {{partner}} for {{weGive}}. Cartographers and harbor masters in {{terms.civilization}} are examining it with their own charts. In a few days, {{terms.civilizationAdjective}} bookstores will start selling the new map."
+        ],
+        "settled": true
       },
       {
         "id": "map-deal-sell-report",

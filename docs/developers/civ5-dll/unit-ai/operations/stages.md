@@ -33,6 +33,8 @@ flowchart LR
 
 Recruiting ends when the formation has enough strength, even if required slots remain open. Gathering ends when every member is within the operation's muster tolerance. Standard military operations finish at deployment range. They do not use the operation's At Target stage.
 
+With `march.enabled` on, a prepared land, naval or combined combat army advances through the [command loop](../commands/overview.md) instead of `DoTurn`. Its stage sequence and deployment condition are unchanged. At loop exit, `FinishPreparedArmies` runs `FinishMove` and `FinishTurn`, so a prepared army still leaves Moving only when the deployment condition is met.
+
 ### Escorted civilian operations
 
 Civilian operations assign their civilian before setup. They use an At Target stage because arriving and performing the civilian mission can be separate events.

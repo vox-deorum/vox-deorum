@@ -71,6 +71,14 @@ A nuclear attack pairs owned nuclear units with enemy cities in range. It avoids
 
 Initialization stores target and muster, then sets the army goal. Recruiting and gathering use muster; movement follows the goal. See [operation stages](stages.md#lifecycle-overview) for the stage sequence and [completion and abort](lifecycle.md#completion-abort-and-cleanup) for terminal handling.
 
+With `march.enabled` on, a prepared land, naval or combined combat army has its order rechecked before the March runs and after every command:
+
+| Point | Prepared order check |
+| --- | --- |
+| After each command | `RefreshPreparedArmies` erases a missing operation, sets a missing army to `AI_ABORT_NO_UNITS`, updates the waypoint when the stage, target, muster or goal changed, and removes a terminal or unrepairable order. |
+| March execution | `ExecuteMarch` re-resolves the order. An aborted operation or changed order is updated or removed; a valid new order refuses the command and leaves the offer for the next estimate. |
+| Loop exit | `FinishPreparedArmies` runs the safety move, then `FinishMove`, then `FinishTurn` when the move progressed. A finish that does not progress kills the operation. |
+
 ### Retargeting
 
 Target checks run before and after army movement. Each family's validator can keep its destination, replace it, or abort:
@@ -106,6 +114,7 @@ An operation can abort for an invalid target, strategic or diplomatic cancellati
 | Member leaves during recruiting | Reopens its formation slot for recruitment or production. |
 | Member leaves after recruiting | Aborts when filled formation slots fall below half the formation's original required formation slots. |
 | No step path | Combat army movement records `AI_ABORT_LOST_PATH`. |
+| Dangerous waypoint | A prepared army's next waypoint fails `IsWaypointTooDangerous` while the army is moving, and the operation records `AI_ABORT_TOO_DANGEROUS`. |
 | Strategic review | Cancels for forced peace, an unattacked opponent, a vanished threatened-city list for a domain, or a defensive war-state pullback. |
 
 An improving tactical zone alone does not cancel a city-defense operation. It still uses the shared deployment completion rule. Released members and their temporary reserve exclusion are covered by [membership and release](organization.md#membership-and-release).

@@ -1,12 +1,15 @@
 # Unit AI: Command Value and Priorities
 
-The [command loop](overview.md) gives every fight offer a **priority** (the code's **estimate**, stored in `fEstimate`). The highest ready priority gets the next readiness check, so priority decides which fights get shared units first.
+The [command loop](overview.md) gives every offer a **priority** (the code's **estimate**, stored in `fEstimate`). The highest ready priority gets the next readiness check, so priority decides which offers get shared units first. Fights, Reinforce and Withdraw price a battlefield stake; an [Army March](march.md) prices one turn of a prepared army's progress against the exposure it adds.
 
 ```mermaid
 flowchart TD
-    P["Priority = θ × stake"]
+    P["Priority = θ × benefit"]
     P --> T["Theater θ<br/>how much the zone's city matters now"]
-    P --> S["Stake<br/>what local units can change this turn"]
+    P --> S["Stake or removable exposure<br/>what local units can change this turn"]
+    P --> M["Army March benefit<br/>progress minus added risk"]
+    M --> GA["Readiness gain g<br/>one turn of formation progress"]
+    M --> RA["Added exposure A<br/>risk the move creates"]
     T --> I["Importance i<br/>city value / our best city<br/>fixed for the turn"]
     T --> C["Contest c<br/>how likely the city changes hands<br/>refreshed after each command"]
     C --> PR["Pressure p<br/>attacker share of strength²"]
@@ -30,7 +33,7 @@ flowchart TD
 
 | Fixed for the turn | Fixed when the battlefield is built | Refreshed after each command |
 | --- | --- | --- |
-| Reference scales, weights, city theater importance | Ground `ΔG(t)` | Health, local damage, garrisons, threats, theater contest, open-offer priorities |
+| Reference scales, weights, city theater importance, each operation's goal weight | Ground `ΔG(t)` | Health, local damage, garrisons, threats, theater contest, open-offer priorities, and each March's readiness gain, added exposure and priority |
 
 ## Shared values and scales
 
@@ -328,7 +331,7 @@ With forecast readiness enabled, a checked fight scores **realizable damage + �
 | `d`, `d_t` | The loop's copy of native per-threat danger to the unit (`GetDangerByThreat`), in HP, at the [enemy roll](#damage-rolls). `d` sums the threats, and `d_t` is one threat's part. |
 | `E_t` | A threat's kept allocations, summed. |
 | `E_c` | Same for a city: bombardment counts as one attack, plus the garrison's kept allocations. |
-| Scanned units | `BuildThreats`: our living, non-air combat units outside friendly cities and armies, spent and processed units included. |
+| Scanned units | `BuildThreats`: our living, non-air combat units outside friendly cities and armies, spent and processed units included. With March on, members of prepared armies are also scanned, including inside a friendly city, and only in the Fight layout. |
 | **Endangered units** | Scanned units with a positive threat entry. They exempt the attacker's fight from overlap retirement, stay endangered when the attack cap drops their allocation, and are filtered for availability at execution. |
 
 **Exposure examples.** Archers worth 400, `M = 100`.
@@ -508,6 +511,43 @@ A recruit standing in a friendly city is attributed with `GetCityDangerByThreat`
 | None | 0 | 0.2 | 0.36 | 0 | 0 | 0 | 0, inactive |
 | Equal | 0.5 | 0.6 | 0.68 | 80 | 0.4 | 1.2 | 0.816 |
 | Triple | 0.9 | 0.92 | 0.936 | 200 or more | 1 (capped) | 3.0 | 2.808 |
+
+## Army March priority
+
+**Rule: one turn of formation progress at the operation's goal weight, less the risk of the exposure it adds.** Unlike the other offers, the benefit is not a battlefield stake. The army's arrival has a mission value set by its operation, and only the extra danger is priced in worth.
+
+`priority = θ × max(0, R × w_goal × g − w_R × A / Z_T)`
+
+| Part | Reads as | Scale or range |
+| --- | --- | --- |
+| `θ` | Target zone's [theater](#theater-multiplier) with the whole formation in the strength tally, so a stronger army raises its own multiplier. | 0.2 to 1. |
+| `R` (**ready-unit allowance**) | Setting `march.readyUnits` (2): typical units of mission value that one full turn of progress is worth. | Typical units. |
+| `w_goal` (**goal weight**) | Mission value: the occupation, hold-city or attrition weight; the gold flavor for pillage; 2 for a carrier group; 0 for any other operation, which gets no offer. | 0 to 2. |
+| `g` (**readiness gain**) | 0 to 1, from the [formation progress](march.md#formation-progress) comparison of holding with one quiet step. | Travel turns mapped through `q(t) = 1 / (1 + t)`. |
+| `w_R` | Risk weight, setting `weight.risk` (1 at neutral). | 0.5 to 2. |
+| `A` (**added exposure**) | Net increase in [capped exposure](#exposure) from the checked stops, in worth. A move that saves exposure has `A = 0`. | Worth, at least 0. |
+| `Z_T` | Typical unit worth. | Worth, fixed for the turn. |
+
+The opening estimate omits `A`, so it prices the plan without its risk. `CheckArmyMarch` projects the exact stops, measures `A` over the changed board, and reprices the offer.
+
+**Example.** `θ = 0.5`, `R = 2`, `w_goal = 1`, `g = 1/6` and `A = 40` worth.
+
+| Case | Priority |
+| --- | --- |
+| Running inputs, `Z_T = 400` | `0.5 × max(0, 2 × 1 × 1/6 − 1 × 40/400) = 0.5 × (0.3333 − 0.1) = 0.1167` |
+| Added exposure 300 worth | `0.5 × (0.3333 − 0.75) = 0`, inactive |
+| Carrier group, `w_goal = 2` | `0.5 × (0.6667 − 0.1) = 0.2833` |
+| The opening estimate, before the check adds `A` | `0.5 × 0.3333 = 0.1667` |
+| Theater with the army 0.5, without it 0.3 | 0.1167; the army's contribution is already inside `θ` |
+
+**All four command priorities.**
+
+| Offer | Benefit | Priority |
+| --- | --- | --- |
+| Fight | Battlefield stake. | `θ × stake` |
+| Reinforce | The fight's priority times the share help swings. | `θ × stake × swing` |
+| Withdraw | Removable exposure times the share our strength and ready help leave uncovered, with a failure discount. | `θ × w_R × X / Z_T × (1 − s⁺) × 0.7^n` |
+| Army March | One turn of progress at the mission's goal weight, less added risk. | `θ × max(0, R × w_goal × g − w_R × A / Z_T)` |
 
 ## Worked priorities
 

@@ -1,6 +1,6 @@
 # Unit AI: Withdrawal Priorities
 
-The **Withdraw offer** pulls our combat units at an enemy battlefield back toward the closest friendly city. It competes with fights and Reinforce on the same priority scale, loses ties to both, and exists at enemy battlefields with at least one endangered recruit. Own-city battlefields have no Withdraw.
+The **Withdraw offer** pulls our combat units at an enemy battlefield back toward the closest friendly city. It competes with fights and Reinforce on the same priority scale, loses ties to both, and exists at enemy battlefields with at least one endangered recruit. Own-city battlefields have no Withdraw. When a threatened prepared army is among the recruits, the same offer becomes a **formation Withdraw** and retreats the group with the army's formation rules.
 
 A fight and a Withdraw count different exposure pools. The fight counts its target's exposure at `s`, the share its own strength can protect. The Withdraw counts `X`, the exposure a retreat removes across all recruits, and scales it by `1 − s⁺`. Either offer can rank first.
 
@@ -15,12 +15,14 @@ flowchart TD
     X --> C["Capped exposure<br/>each threat's largest victims"]
     X --> G["Recruits<br/>every combat unit that can leave"]
     G --> D["Destination<br/>closest friendly city per domain"]
+    G --> FM["Threatened army<br/>whole formation joins"]
+    FM --> FS["Formation stops<br/>keep the group's shape"]
     S --> H["Ready Reinforce<br/>larger of its share and s"]
 ```
 
 | Stage | What it supplies | Reference |
 | --- | --- | --- |
-| Recruit | The target's victims, the local strength set and combat units sharing their tiles. | [Withdraw recruits](recruitment.md#withdraw-recruits) |
+| Recruit | The target's victims, the local strength set, combat units sharing their tiles, and a threatened prepared army's members. | [Withdraw recruits](recruitment.md#withdraw-recruits) |
 | Score | `X`, `s⁺` and priority. Rescored after every command and whenever Reinforce changes. | `EstimateWithdraw` in `civ5-dll/CvGameCoreDLL_Expansion2/CvTacticalOperationalLoop.cpp`. |
 | Search | The retreat weights in the plot score, the search purpose and the path step. | [Withdraw search](#withdraw-search) |
 | Check and execute | Destinations, the march rule, admission and path moves. | [Readiness and execution](#readiness-and-execution) |
@@ -29,7 +31,7 @@ flowchart TD
 | --- | --- | --- | --- |
 | Priority | `θ × stake` | `θ × stake × swing` | `θ × w_R × X / Z_T × (1 − s⁺) × 0.7^n` |
 | Strength share | `s` inside the exposure term | Swing from the share | `1 − s⁺` over its own removable exposure `X` |
-| Units | Local set | Incoming selection | Every combat unit at the battlefield that can leave |
+| Units | Local set | Incoming selection | Every combat unit at the battlefield that can leave, plus a threatened prepared army's members |
 | Direction | At the center | Toward the center | Toward a friendly city |
 
 ## Shared values and scales
@@ -92,6 +94,7 @@ Worth appears in the allocation cells and in the `X` (worth) column; the last co
 | --- | --- |
 | Holding | The threat's recorded `fExposure`, already capped at its attacks per turn. |
 | After moving | The same cap applied to the projected occupants of affected tiles and the unchanged victims. |
+| Formation Withdraw | The comparison covers the whole occupied board, so an attack that moves to a stayer or to a neighbor is priced, and `X` can fall even when the recruits themselves leave danger. |
 | Unattributed danger | Fog, terrain and improvement damage belongs to no threat and stays out of `X`. |
 | Overlapping battlefields | Two Withdraws can count the same exposure initially. The higher estimate is checked first and can drop below the other after projection. A unit that moves or dies is excluded from later Withdraws that turn. |
 
@@ -117,6 +120,11 @@ A recruit's value at risk is its contribution to `X` only when no staying victim
 | Archer that fired and has no movement left | No | 0 |
 | Swordsman inside our city | No: the city holds it | 0 |
 | Unit that already withdrew this turn | No | 0 |
+| Member of a prepared army the knight threatens | Yes: its whole living formation joins and the offer becomes a [formation Withdraw](#formation-retreat) | Its own exposure |
+| Member of a prepared army that is not threatened here | No | 0 |
+| Army member inside a friendly city | No: the city holds it | 0 |
+
+An army is threatened at a battlefield when one of its members is a victim in the Fight threat layout there. The Withdraw layout leaves enrolled members out, so `GatherWithdrawRecruits` reads the threat from the Fight layout and the independent recruiting pool from the Withdraw layout.
 
 ## Destination
 
@@ -199,6 +207,23 @@ Units are not alone, RISK is 20 after the Withdraw row, so the danger penalty is
 
 After a successful search, a recruit the search used stays where it is when its plot has no danger, which keeps a chosen safe heal. The path step marches the rest: recruits the search did not use, and used recruits still on a plot with danger. After a failed search it marches every eligible recruit, as before.
 
+## Formation retreat
+
+A Withdraw becomes a **formation Withdraw** as soon as one recruit belongs to a prepared army. `GatherWithdrawRecruits` then adds every living member of each threatened army to the candidates, and `GetWithdrawStops` plans the group with the formation's route and stacking rules.
+
+| Step | Formation Withdraw |
+| --- | --- |
+| Recruits | A threatened prepared army's members join. The usual filters still apply: the member must be able to move, outside a friendly city, not a held garrison and not already withdrawn. |
+| Order | Stops are planned lowest health share first, civilians last. |
+| Stop | `CanMarch` supplies the first-turn candidate, then `FormationPathStop` walks it back along the last path until the group keeps its shape. The stop must also fit the native stacking limit, and an embarked member must stop on water. |
+| Danger | `WithdrawStopDanger` reads the plot's projected occupants, including the group's own arrivals. A stop above the first-stop danger limit is rejected while it is at least as dangerous as holding or at least as dangerous as the member's current hit points. |
+| Exposure | `ExposureSaved` compares the whole occupied board when the formation projects stops. A retreat that exposes a neighbor is priced. |
+| Search | The group searches under the `Withdraw` purpose with target distance off and aggression capped at Low. |
+| After moving | A moved member is marked processed and keeps its stop for the rest of the turn. It also joins `turn.withdrawnUnits`. |
+| Admission | The native default keeps the checked group. If the provider omits members, `GetWithdrawStops` re-plans the remaining detachment and the omitted members hold. |
+
+The first-stop danger limit is half the member's current hit points for an attacking non-siege unit, and 0 otherwise. That is the same limit a fight's march uses.
+
 ## Readiness and execution
 
 `CheckWithdraw` finds a city for each recruit domain and compares holding with the first-turn stops it can reach. It issues no orders. A host using a permitted objective menu can request a Withdraw directly, so the check also guards against a disabled Withdraw or an own-city battlefield.
@@ -213,7 +238,7 @@ After a successful search, a recruit the search used stays where it is when its 
 
 A failed check adds one failure and makes the offer inactive, or skipped at `readiness.maxFailures` (3). A later re-estimation can return an inactive offer to ready. It recalculates the priority from the current board and applies the accumulated failure discount, so a fight that opens a route can still enable a retreat. A reduced check counts no failure.
 
-**March rule.** From farther away, a retreat aims within two tiles of the city. From two tiles away it aims within one; from one tile away it aims for the city. Readiness and the path step use the same rule. The first stop must advance and stay within native's danger limit, or have danger below both the current plot's danger and the unit's hit points.
+**March rule.** From farther away, a retreat aims within two tiles of the city. From two tiles away it aims within one; from one tile away it aims for the city. Readiness and the path step use the same rule. The first stop must advance and stay within native's danger limit, or have danger below both the current plot's danger and the unit's hit points. A formation Withdraw replaces the per-unit ring target with the group's [checked formation stops](#formation-retreat) and the danger comparison above.
 
 `ExecuteMarch` admits and scores the whole group before it issues a move. An unchanged group keeps the checked score. If the provider leaves units out, it scores them where they stand; an empty group records zero. Withdraw then follows the Reinforce path with these differences:
 
@@ -224,12 +249,13 @@ A failed check adds one failure and makes the offer inactive, or skipped at `rea
 | 3 | After the search, send every recruit that was not processed, or is still on its starting plot with movement left, but after a successful search leave a recruit the search used on a plot with no danger where it is. | The search now plans the retreat. The path step still moves recruits the search did not reach and rescues anyone it left exposed, and a chosen heal in safety stands. |
 | 4 | Order path moves by lowest health share first, civilians last. | Damaged units get the first chance to march. The search keeps its own order. |
 | 5 | Use the [march rule](#readiness-and-execution). | A retreat may accept a stop that native refuses while staying is worse. |
+| 6 | A formation replays each checked stop exactly with the March flags, and re-plans the remaining detachment after an admission subset. | Members keep the group's shape, and an omitted member holds instead of taking a new single-unit route. |
 
 Admitted units headed to the same city share one search, even when they come from different domains. If land units head inland and ships head for a port, each city gets its own search. Every search uses the `Withdraw` purpose with target distance off and aggression capped at Low. The command merges their attempts and movement into one [record](reference.md#records).
 
 ## Closing the battlefield
 
-A non-refused Withdraw adds the selected units that left their plot or died to `turn.withdrawnUnits`. A recruit that stayed put can join a later Withdraw at another battlefield.
+A non-refused Withdraw adds the selected units that left their plot or died to `turn.withdrawnUnits`; a formation member that moved is also marked processed. A recruit that stayed put can join a later Withdraw at another battlefield.
 
 | Event | Effect on this battlefield | Other battlefields |
 | --- | --- | --- |
