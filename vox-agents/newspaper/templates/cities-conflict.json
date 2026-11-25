@@ -48,10 +48,11 @@
         "voice": "press",
         "stance": "devout",
         "genre": "obituary",
-        "headline": "The end of {{city}}",
+        "headline": "The Passing of {{cityName}}",
         "body": [
-          "{{city}} has {{turns}} before the last of it is gone, and the fire is the work of {{civilization}}. The city had its shrines and its market days, and both will end together. The prayers once said there will be said elsewhere, by people who remember the stones."
-        ]
+          "{{city}} was once the crowning jewel of {{civilization}}, a sanctuary of high spires and deep faith. Now, it faces its final trial. In {{turns}}, the flames will consume the last altar. We pray that the souls of the {{population}} residents find a mercy their city could not secure."
+        ],
+        "settled": true
       }
     ]
   },

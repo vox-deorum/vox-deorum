@@ -38,10 +38,11 @@
         "stance": "national",
         "genre": "analysis",
         "when": "!tied",
-        "headline": "{{largest}} now outweighs {{capital}}",
+        "headline": "Population vs. Power",
         "body": [
-          "{{largest}} now holds more people than {{capital}}, and the {{terms.civic.government}} has not moved a chair. Petitions still go to the capital, and the clerks there still decide which to answer. In {{largest}}, the man who binds those petitions has asked for a bigger sack, a request that says more about the future than any census."
-        ]
+          "{{largest}} now holds {{largestPopulation}} residents, officially surpassing {{capital}} as the largest city in {{terms.civilization}}. While the {{terms.civic.government}} remains anchored in the capital, the economic heartbeat of the nation has migrated. As the center of gravity shifts, the nation must decide if power will follow the people or if {{capital}} can maintain its grip on the realm."
+        ],
+        "settled": true
       },
       {
         "id": "capital-outgrown-anecdote",
@@ -60,10 +61,11 @@
         "stance": "neutral",
         "genre": "report",
         "when": "!tied",
-        "headline": "The capital just got outgrown",
+        "headline": "New population leader: {{largest}}",
         "body": [
-          "{{largest}} just passed {{capital}} on the population roll, {{largestPopulation}} people to the capital's smaller count. The {{terms.civic.government}} still sits in the capital. The crowds have other ideas."
-        ]
+          "{{largest}} just became the biggest city in {{terms.civilization}}, surpassing {{capital}} with {{largestPopulation}} people. Check the full census report for the growth trends."
+        ],
+        "settled": true
       }
     ]
   },
@@ -74,10 +76,11 @@
     "variants": [
       {
         "id": "cities-share-grievance-report",
-        "headline": "The same grievance in {{count|city|cities}}",
+        "headline": "Widespread discontent over {{key}}",
         "body": [
-          "The same entry now heads the complaint books in {{count}} of our cities: {{key}}. Clerks in each town wrote it without knowing the others had. A grievance with that many addresses is a question for the capital."
-        ]
+          "A common grievance has emerged across {{count}} cities in {{terms.civilization}}. Reports indicate that {{key}} is the primary source of unrest among the {{terms.civic.people}}."
+        ],
+        "settled": true
       },
       {
         "id": "cities-share-grievance-analysis",
@@ -95,10 +98,11 @@
         "stance": "populist",
         "genre": "notice",
         "when": "key == 'famine'",
-        "headline": "Hunger in {{count}} of our cities",
+        "headline": "{{key}} in {{count}} cities",
         "body": [
-          "Hunger now leads the complaint book in {{count}} cities. Ask anyone in a bread line and they will say it led there last month. The capital has the count now, and the capital can read."
-        ]
+          "Bread lines are growing in {{count}} cities. The {{terms.civic.government}} seems to have forgotten we need to eat. Hang in there, {{terms.civic.people}}."
+        ],
+        "settled": true
       },
       {
         "id": "cities-share-grievance-culture",
@@ -156,10 +160,11 @@
         "voice": "gazette",
         "stance": "devout",
         "genre": "notice",
-        "headline": "A call for bread in {{city}}",
+        "headline": "Notice to the {{terms.civic.people}} of {{city}}",
         "body": [
-          "The faithful of {{city}} are asked to bring what they can spare to the shrine steps before dark. Famine is the city's heaviest burden, and the stores must stretch to the next harvest. A loaf left at the shrine tonight will be on a table before morning."
-        ]
+          "We are informed that {{faminePopulation}} souls in {{city}} now suffer the trial of hunger. Let the faithful gather at the shrines to pray for providence, that the heavens may grant us relief from this scarcity."
+        ],
+        "settled": true
       }
     ]
   },
@@ -186,30 +191,33 @@
         "voice": "press",
         "stance": "ambitious",
         "genre": "analysis",
-        "headline": "{{city}} crosses {{population}}",
+        "headline": "The Weight of Growth in {{cityName}}",
         "body": [
-          "{{city}} is now a {{milestone}} at {{population}} people, and the size changes what the city can ask of the realm. Its market runs past the afternoon bell, and the potters have fired a second kiln. More hands mean more trade, more noise and louder demands for roads and wells, and a city that answers those demands will not stay this size for long."
-        ]
+          "The census is in: {{city}} is now a {{milestone}} with {{population}} residents. While the numbers signal a triumph of expansion, the city's appetite for better amenities is ever growing faster. It is up to {{city.owner.civic.government}} to provide for its people and lead the world."
+        ],
+        "settled": true
       },
       {
         "id": "city-growth-milestone-crier",
         "voice": "crier",
         "stance": "national",
         "genre": "notice",
-        "headline": "{{city}} has grown to {{population}}!",
+        "headline": "Notice of population growth in {{cityName}}",
         "body": [
-          "{{terms.civic.people}} of {{city}}, all hear it! The city counts {{population}} souls and stands now as a {{milestone}}! Count the chimneys and count the carts! Say the name aloud: {{city}}!"
-        ]
+          "Hear me, {{terms.civic.people}}! {{city}} has passed {{population}} people and is officially a {{milestone}}! Our borders expand and our power grows. {{cityName}} is a {{milestone}}!"
+        ],
+        "settled": true
       },
       {
         "id": "city-growth-milestone-gazette",
         "voice": "gazette",
         "stance": "traditional",
         "genre": "report",
-        "headline": "A milestone for {{city}}",
+        "headline": "{{cityName}} Declared a {{milestone}}",
         "body": [
-          "We are informed that {{city}} has reached {{population}} people and is now reckoned a {{milestone}}. The older families will tell you the walk to the well has grown longer and the crowd at the market larger still. Such growth comes slowly, and the city is the sounder for it."
-        ]
+          "{{city}} now numbers {{population}} souls, officially qualifying it as a {{milestone}}. In this era of sudden expansion, we must hope that the virtues of our fathers are not lost amidst the ever-shifting fashions of a modern city."
+        ],
+        "settled": true
       }
     ]
   },
@@ -222,10 +230,11 @@
     "variants": [
       {
         "id": "starvation-without-siege-report",
-        "headline": "{{city}} is eating into its stores",
+        "headline": "Starvation reported in {{city}}",
         "body": [
-          "The granary in {{city}} holds {{foodStored}} of grain and gives up {{shortfall}} of it each day, with no army outside to blame. The chalk line on the door drops a little every morning. The keeper has stopped chalking the good weeks, because there are none."
-        ]
+          "The food supply in {{city}} has fallen to critical levels. With only {{foodStored}} remaining and a deficit of {{shortfall}} per turn, the population is suffering from hunger."
+        ],
+        "settled": true
       },
       {
         "id": "starvation-without-siege-analysis",
@@ -252,12 +261,13 @@
         "voice": "gazette",
         "stance": "government-critical",
         "genre": "ledger",
-        "headline": "The food account of {{city}}",
+        "headline": "A Dire Account from {{city}}",
         "body": [
-          "Grain in store: {{foodStored}}.",
-          "Lost each day: {{shortfall}}.",
-          "Siege: none. Battle: none. The store still falls."
-        ]
+          "We are credibly informed that a severe dearth has befallen the people of {{city}}, though no enemy army invests the walls to block our trade.",
+          "Current Stores: {{foodStored}}; Daily Shortfall: {{shortfall}}",
+          "The {{terms.civic.government}} continues to speak of national prosperity, yet this tally reveals a tragedy of administrative neglect."
+        ],
+        "settled": true
       }
     ]
   },
@@ -270,20 +280,22 @@
     "variants": [
       {
         "id": "city-celebration-begins-report",
-        "headline": "A celebration begins in {{city}}",
+        "headline": "Celebrations begin in {{city}}",
         "body": [
-          "A citywide celebration is under way in {{city}}."
-        ]
+          "A public celebration has begun in {{city}}. Residents have gathered in the streets to mark the occasion with festivities."
+        ],
+        "settled": true
       },
       {
         "id": "city-celebration-begins-notice",
         "voice": "gazette",
         "stance": "neutral",
         "genre": "notice",
-        "headline": "From the city pages: {{city}} celebrates",
+        "headline": "Public festivities in {{city}}",
         "body": [
-          "Readers in {{city}} may mark the start of a citywide celebration on their calendars."
-        ]
+          "A celebration has commenced within the walls of {{city}}. All {{terms.civic.people}} are encouraged to join in the merrymaking."
+        ],
+        "settled": true
       }
     ]
   }

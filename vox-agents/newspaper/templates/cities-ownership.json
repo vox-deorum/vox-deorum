@@ -99,11 +99,12 @@
         "voice": "gazette",
         "stance": "conciliatory",
         "genre": "letter",
-        "headline": "Madam, we are {{newOwner}} now",
-        "byline": "A resident of {{city}}",
+        "headline": "A New Chapter for {{cityName}}",
+        "byline": "A Loyal Subject",
         "body": [
-          "Madam, the flag above our square is {{newOwner}}'s now, and the clerks have already changed the headings on every form. The people of {{city}} did not move: the same bakers, the same boatmen, the same children in the lane. We ask {{newOwner}} to encourage our trade and to be gentle with our taxes. The quarrel with {{formerOwner}} was never ours."
-        ]
+          "Madam, letters from the frontier relate that {{city}} now serves {{newOwner}} instead of {{formerOwner}}. I pray that our {{terms.civic.leaderAddress}} extends a gracious hand to the inhabitants: by treating our new neighbors with kindness, we ensure that the drums of war remain silent."
+        ],
+        "settled": true
       },
       {
         "id": "city-flips-anecdote",
@@ -137,10 +138,11 @@
         "stance": "neutral",
         "genre": "report",
         "when": "returned === true",
-        "headline": "Our independence is restored",
+        "headline": "{{liberator}} secures {{city}}",
         "body": [
-          "Our long occupation is over. {{liberator}} restored the nation to its own government, and the council chamber that answered to a foreign governor answers to us again. The guard at the door has changed colors, and the first session is already called."
-        ]
+          "Military units under {{liberator}} have successfully liberated {{city}}. The city was formally handed back to the {{terms.civilizationAdjective}} administration this morning. While the streets are celebratory, the army remains on high alert to ensure the perimeter is fully secure."
+        ],
+        "settled": true
       },
       {
         "id": "city-liberated-other",
@@ -148,10 +150,11 @@
         "stance": "neutral",
         "genre": "report",
         "when": "returned === false",
-        "headline": "{{liberated}} is free again",
+        "headline": "{{city}} returned to {{liberated}}",
         "body": [
-          "{{liberated}} governs itself again. {{liberator}} cleared away the foreign garrison, and the nation raised its own flag this week after living under an occupier's banner. Its council has taken up the ordinary work of law and taxes, and messengers carried word through the streets that had waited for the old flag to return."
-        ]
+          "{{liberator}} has liberated {{city}} and formally returned it to the control of {{liberated}}. The handover took place at the city hall, where commanders from both nations signed the transfer documents. This move is seen as a significant shift in the regional balance of power."
+        ],
+        "settled": true
       },
       {
         "id": "city-liberated-gazette",
@@ -159,10 +162,11 @@
         "stance": "conciliatory",
         "genre": "report",
         "when": "returned === false",
-        "headline": "A nation restored: {{liberated}} is free",
+        "headline": "The restoration of {{city}}",
         "body": [
-          "We are informed from {{liberated}} that the nation has taken up its own government once more, {{liberator}} having cleared away the foreign garrison. At the council hall a new seal was cut and the old one broken in the same hour. The returned government has sent its thanks, and our merchants may look for the roads to open."
-        ]
+          "We are credibly informed that the forces of {{liberator}} have lately secured {{city}}, restoring its governance to the rightful administration of {{liberated}}. Such a gesture of goodwill surely strengthens the ties of friendship between these two powers and promises a more tranquil era for the local populace."
+        ],
+        "settled": true
       },
       {
         "id": "city-liberated-editorial",
@@ -170,10 +174,11 @@
         "stance": "national",
         "genre": "editorial",
         "when": "returned === false",
-        "headline": "Freedom for {{liberated}}",
+        "headline": "Justice Triumphs at {{city}}!",
         "body": [
-          "{{liberated}} flies its own flag again, and {{liberator}} made that possible. A nation restored is a friend for a generation; a nation swallowed whole is a grievance that outlives the men who ordered it. Remember which of the two {{liberator}} chose, and remember it the next time a map is redrawn."
-        ]
+          "At last, {{city}} returns to the people of {{liberated}}! Our {{terms.civic.government}} has proven that {{terms.civilizationAdjective}} steel serves the cause of justice. Who can deny our greatness now? Let us hold our heads high, {{terms.civic.people}}, for we have liberated the oppressed!"
+        ],
+        "settled": true
       }
     ]
   },
