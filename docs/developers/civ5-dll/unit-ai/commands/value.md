@@ -528,7 +528,7 @@ A recruit standing in a friendly city is attributed with `GetCityDangerByThreat`
 | `A` (**added exposure**) | Net increase in [capped exposure](#exposure) from the checked stops, in worth. A move that saves exposure has `A = 0`. | Worth, at least 0. |
 | `Z_T` | Typical unit worth. | Worth, fixed for the turn. |
 
-The opening estimate omits `A`, so it prices the plan without its risk. `CheckArmyMarch` projects the exact stops, measures `A` over the changed board, and reprices the offer.
+The opening estimate omits `A`, so it prices progress alone. `CheckArmyMarch` forecasts `A` from the proposed stops and reprices the offer. Gather can choose other plots when it runs.
 
 **Example.** `θ = 0.5`, `R = 2`, `w_goal = 1`, `g = 1/6` and `A = 40` worth.
 

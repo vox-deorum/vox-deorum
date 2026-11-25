@@ -6,7 +6,7 @@ An **Army March** is the operational command that moves a land, naval or combine
 flowchart TD
     P["Prepare each combat army<br/>before the command loop"] --> R["Army battlefield<br/>one March offer"]
     R --> E["Estimate<br/>goal weight, progress, theater"]
-    E --> C["Readiness<br/>exact stops and added exposure"]
+    E --> C["Readiness<br/>proposed stops and added exposure"]
     C -->|Passed| X["Search and move<br/>formation-gated stops"]
     X -->|New contact| Y["Yield<br/>offer stays ready"]
     X --> F["Finish army<br/>safety move, FinishMove, FinishTurn"]
@@ -17,7 +17,7 @@ flowchart TD
 | --- | --- | --- |
 | Prepare | Reserve recruitment, checkpoint cleanup, this turn's waypoint and corridor. | `PrepareArmy` in `civ5-dll/CvGameCoreDLL_Expansion2/CvTacticalOperationalLoop.cpp`. |
 | Estimate | Goal weight, readiness gain, theater with the full army and the opening priority. | `EstimateArmyMarch`. |
-| Check | Exact first-turn stops and the exposure they add. | `CheckArmyMarch`. |
+| Check | Proposed first-turn stops and the exposure they add. | `CheckArmyMarch`. |
 | Execute | Formation-gated search and moves, with a yield on a new contact. | `ExecuteMarch`, `PositionUnitsAroundTarget`. |
 | Finish | Safety moves, then the native move and stage transition. | `FinishPreparedArmies`, `CvAIOperation::FinishMove` and `FinishTurn`. |
 
@@ -49,7 +49,7 @@ A host stop keeps the effects already committed and skips the remaining finishes
 
 At **muster**, which means the Recruiting or Gathering stage, the March scores arrival at the army's muster plot. In later stages it scores arrival at the army goal. The **waypoint** is `ComputeTargetPlotForThisTurn`, and the **corridor** is the step path from the army center to the goal that contains the waypoint. The corridor is rebuilt only when the waypoint or goal changes.
 
-Each member uses a cached route keyed by army row and unit. The cache is rebuilt when the unit's start plot or waypoint changes, and invalidated when a new enemy plot appears. A **first-turn stop** is the farthest cached node the unit's live movement can reach. `FormationPathStop` then walks the route forward while the stop keeps the formation sound.
+Each member uses a cached route keyed by army row and unit. Route forecasts ignore friendly stacking. The cache is rebuilt when the unit's start plot or waypoint changes, and invalidated when a new enemy plot appears. A **first-turn stop** is the farthest cached node the unit's live movement can reach. `FormationPathStop` then walks the route forward while the stop keeps the formation sound.
 
 | Formation rule | Detail |
 | --- | --- |
@@ -57,7 +57,7 @@ Each member uses a cached route keyed by army row and unit. The cache is rebuilt
 | Tolerance | The operation's gather tolerance at the current center. |
 | Stop test | Moving one member to the stop must not push any member farther from the new center than the larger of its current distance and the tolerance. |
 | Combined armies | An embarked member must stop on water. |
-| Check mode | The stop must also pass `canMoveInto` with destination and March flags, and multiple arrivals must fit the native stacking limit. |
+| Forecast stop | The stop must pass the movement and formation rules. Its friendly stacking slots are not checked or reserved; Gather chooses the actual positions. |
 
 Let `q(t) = 1 / (1 + t)` for travel time `t` in turns. The **readiness gain** `g` compares holding with one step along the route:
 
@@ -66,12 +66,12 @@ Let `q(t) = 1 / (1 + t)` for travel time `t` in turns. The **readiness gain** `g
 | Part | Reads as |
 | --- | --- |
 | `t_before` | Cached travel turns from the member's plot to the goal, or 0 when already within the goal radius. |
-| `t_after` | Travel turns from its first-turn stop. A member with no legal stop holds, so `t_after = t_before`. Infinite travel gives no progress. |
+| `t_after` | Travel turns from its proposed stop. A member with no proposal holds, so `t_after = t_before`. Infinite travel gives no progress. |
 | `T_hold`, `T_move` | The slowest member before and after the step, also including the projected formation center's corridor travel and the corridor tail beyond the waypoint, less the member arrival radius. |
 | Muster wait | Only in Recruiting, when the formation still lacks enough units, `ArmyMarchRecruitmentWait` adds the later of a committed production arrival's turns to both `T_hold` and `T_move`. |
 | `/ 2` | Averages individual progress and formation progress, so neither a single fast unit nor a fast center can carry the estimate alone. |
 
-`g` is 0 when no member can move or no legal stop exists. A nonpositive `g` leaves the offer inactive.
+`g` is 0 when no member can move or none has a stop to propose. A nonpositive `g` leaves the offer inactive.
 
 **Progress example.** Three members each move from 2 turns of travel to 1, and the formation center does the same. `q(2) = 1/3` and `q(1) = 1/2`, so `g = ((1/2 − 1/3) + (1/2 − 1/3)) / 2 = 1/6 ≈ 0.1667`. If one member stays at 2 turns, its individual term is 0 and `T_move` stays at 2 turns, so `g = (1/9 + 0) / 2 = 1/18 ≈ 0.0556`, one third of the full gain.
 
@@ -101,7 +101,7 @@ A March therefore gains from reinforcements twice: the same formation produces p
 
 ## Added exposure
 
-The opening estimate prices no added exposure. The readiness check projects the exact first-turn stops and measures the change in capped exposure with `ExposureSaved`. A positive **added exposure** `A` is the net increase in exposure; a move that saves exposure has `A = 0`.
+The opening estimate prices no added exposure. The readiness check uses the proposed stops to forecast the change in capped exposure with `ExposureSaved`, even if several members propose the same plot. A positive **added exposure** `A` is the net increase in exposure; a move that saves exposure has `A = 0`.
 
 Each enemy threat at a battlefield nearby is weighted by the part that battlefield's own forces do not already cover. `ArmyMarchAttackerWeights` sets the weight to `1 − s⁺`, where `s⁺` is the fight's strength share when no positive Reinforce is ready, or the larger of that share and the Reinforce's projected share when one is. A city garrison inherits its city's weight.
 
@@ -161,25 +161,25 @@ A combat army supplies one battlefield with center `OPERATIONAL_CENTER_ARMY`. It
 
 `EstimateArmyMarch` requires the prepared order, a live operation and army, a matching stage, target, muster and goal, the row's waypoint, at least one member that can act, a positive goal weight, and a positive readiness gain. Army rows are estimated after the city and unit battlefields, so the March reads their live theaters.
 
-`CheckArmyMarch` re-resolves the order and rebuilds the stops with formation and stacking checks. It then prices added exposure and the priority again.
+`CheckArmyMarch` re-resolves the order on the live board, updates the formation's proposed stops, and prices the added exposure. An occupied proposal can still admit a unit to Gather, which can place it elsewhere.
 
 | Result | Condition |
 | --- | --- |
 | Target gone | The prepared order is missing. The offer drops. |
-| No reachable | The prepared row's operation, army or waypoint no longer matches, no member has a legal stop, or the repriced priority is 0 and has not fallen. |
-| Reduced | The exact stops and added exposure lower the priority. The offer returns ready at that estimate, or inactive at 0, without a failure count. |
+| No reachable | The prepared row's operation, army or waypoint no longer matches, no member has a stop to propose, or the repriced priority is 0 and has not fallen. |
+| Reduced | The updated forecast and added exposure lower the priority. The offer returns ready at that estimate, or inactive at 0, without a failure count. |
 | Passed | The priority is positive and has not fallen. |
 
 A March has no failure counter. A failed check makes the offer inactive, and a later estimate can return it to ready when the board changes.
 
 `ExecuteMarch` first validates the order again. If the operation has aborted or `ShouldAbort` is true, or if its stage, target, muster or goal changed, it tries `UpdatePreparedWaypoint`. A new valid order declines this command and leaves the offer inactive for the next estimate. If no new order exists, `RemovePreparedOperation` releases the army, reports the result and kills the operation.
 
-The checked stop for each selected unit is the only move the March tries:
+March admits the members with a proposed stop, then uses Gather to find a plan:
 
 1. Admit the checked selection. The native default keeps it; an empty provider subset refuses the command.
 2. Move a spotter, excluding held garrisons, under the formation gate.
-3. Run the engagement with the March kind row, the `Gather` search purpose, target distance relevant, the operation's enemy as counterpart, and aggression capped at Low.
-4. After a successful search, move every unprocessed member that is still more than four path steps from the waypoint to its checked stop. A failed search moves every unprocessed member. A member with no checked stop holds.
+3. Run the `Gather` search with the operation's enemy as counterpart and aggression capped at Low. The search can place units on other plots that fit the formation.
+4. Try the proposed stops as fallbacks for unprocessed members. After a successful search, only members more than four path steps from the waypoint need a fallback. Each fallback still has to pass live movement and stacking rules.
 5. Record the moved units and the yield plot.
 
 The move uses `ExactMarchFlags` plus `ArmyMarchRouteFlags`. Flags disable path stop nodes, keep a unit in its native domain when possible, apply the civilian stacking and danger rules, and require safe embark for land units. Naval and combined armies whose members are not all ocean-going also avoid ocean. `ExecuteMoveToPlot` can still refuse a stop.
