@@ -73,6 +73,7 @@ The own-city kind row adds no offset. Posture rows follow native values except t
 | `reinforce.strengthRatio` | 1 | `r` (desired strength ratio): with `T` (enemy strength) and `L` (local friendly strength), need is `max(0, rT − L)`, and selection stops once full strength covers it. Selection and the enemy-center parity gate use `r`; the score reads the resulting selection. |
 | `withdraw.enabled` | 1 | Nonzero lets enemy-unit and enemy-city battlefields offer Withdraw. A disabled switch keeps the slot inactive all turn. |
 | `exposure.split` | 1 | Nonzero scales fight exposure by the strength share; 0 counts fight exposure in full. Withdraw uses its own removable exposure and the stored strength share either way. |
+| `camp.nearPlots` | 5 | A camp within this many plots of our nearest city counts at full value. Beyond that, the distance discounts its bounty. |
 
 `march.enabled` and `march.readyUnits` are constants beside these weights in the same table. The first gates live discovery, army preparation and the March behavior described in [Army March](march.md); the second is `R` in the [Army March priority](value.md#army-march-priority).
 
@@ -126,18 +127,18 @@ These parameters affect both the shared value functions and the simulator's grad
 
 | Record | Contents |
 | --- | --- |
-| `offers` | Battlefield, kind, target, owner and zone, once per offer slot in the pass, including gated slots. |
+| `offers` | Battlefield, kind, target, owner and zone, once per slot, including gated slots. A camp row uses its plot index as the target and has no owner. |
 | `steps` | Opening estimate at step 0, then one step per post-command estimate. A command ends its step; the final end reason is `noReadyOffer`, `commandCap` or `stopped`. A host failure, game over or exception closes the last step as `stopped`, including post-command threat or estimate failures. |
 | Snapshot | Ready rank, offer slot, state, estimate, theater multiplier, importance, pressure, contest, damage level, swing (1 for fights and Withdraw), exposure share, removable exposure `X` (raw worth), Withdraw share, chosen withdrawal destinations and nonzero stake terms (the battlefield's fight stake). An Army March adds its goal weight, readiness gain, theater without the army and added exposure. Each term retains value and weighted contribution. Resolved weights appear once per pass. Missing terms mean zero value and contribution. |
 | Event | Ordered check, update, provider refusal or terminating command, with before/after state and estimate. A check that changes another slot's estimate or state adds an update event for that slot. A refusal retains its terminating command with a READY-to-REFUSED transition and adds a separate refusal event. Count commands once, including refusals, and count skips from checks ending at the failure limit. Reduced Reinforce and Withdraw checks return to the current queue, or turn inactive at estimate 0. A missing target makes a Reinforce inactive without a reach failure. An Army March yield records its contact plot and leaves the offer ready for the next estimate. |
 | Closed state | Target gone, city lost, retired, failure limit, provider refusal or execution. A closed row carries forward its snapshot with the new state, reason and rank. Executed and refused offers include the matching command's checked values. A Withdraw that reaches its failure limit records the estimate and exposure from its final check. |
-| `commands` | Step and command identity, execution priority `fEstimate`, prior failures, admission and final flavor decisions, geometry, attempts, selected units, moved-unit IDs for Reinforce, Withdraw and Army March (`vMoved`), whether an admitted unit moved (`bMoved`), endangered-unit dispositions, and retired offers. A Withdraw records attempts across its destinations and keeps the first search's flavors, zones and provider request, or the first invalid reply if any. An Army March records its operation, army, forecast score, and any plot where it yielded. City-fire-only commands remain present. |
+| `commands` | Step and command identity, checked priority, prior failures, admission and search decisions, selected and moved unit IDs where tracked, endangered-unit dispositions, and retirements. A camp claim uses the existing target plot and moved-unit fields. A Withdraw combines attempts across destinations and retains the first search's decision or the first invalid reply. An Army March retains its operation, army, forecast and any yield plot. City-fire-only commands remain present. |
 | `checks`, `vSkipped`, `bCommandCap` | Readiness and count inputs, preserving the loop's failure accounting. |
 | Settings and turn inputs | Complete settings compared with the same build's defaults, mapped flavors, resolved weights and fixed scales. The simulator writes settings once per start, and inputs once per evaluated-player pass. |
 
 The trace writes every offer slot in the opening step, then complete replacement rows only when recorded scalars change. Rows are keyed by battlefield and offer slot. Reconstruct a step by replacing rows in the preceding estimate snapshot. An empty snapshot keeps that table. Events describe queue transitions within a step and do not alter this baseline. New offers add rows and closed offers remain present.
 
-Snapshots carry no unit lists; command and check structures hold detailed diagnostics. The shared record does not define the capture schema or search-order export. Rollout writing and host integration belong to the simulator documentation.
+Snapshots carry no unit lists. Camp value contributes to the aggregate stake; the six recorded fight terms stay the same. To confirm a camp clear, match the command plot and moving unit to the native `CAMP` gold transaction. Rollout writing and host integration belong to the simulator documentation.
 
 ### Performance counters
 
@@ -180,7 +181,7 @@ The source is in `civ5-dll/CvGameCoreDLL_Expansion2`.
 | --- | --- |
 | `CvTacticalOperationalLoop.h` and `.cpp` | Turn integration and scales; settings, mapped flavors and posture and kind offsets; battlefields, threats, offer scoring and selection; readiness, execution, geographic preference blending, aggression and records. |
 | `CvTacticalOperationalWeights.h` and `.cpp` | Named weight and constant tables and `ResolveOperationalWeights`. |
-| `CvTacticalOperationalValue.h` and `.cpp` | Shared unit, city, exposure and ground values, reference scales, upgrade premium and flavor weight curve. |
+| `CvTacticalOperationalValue.h` and `.cpp` | Shared unit, city, exposure and ground values, reference scales and strength, ordinary camp bounty, upgrade premium and flavor weight curve. |
 | `CvTacticalSearchShared.h` | Declarations exposing the native search globals used by the copies. |
 
 ### Estimation and selection
@@ -194,7 +195,8 @@ The source is in `civ5-dll/CvGameCoreDLL_Expansion2`.
 | Incoming selection | `GatherReinforceCandidates`, `TravelTurns`, `IsCapturer` and `SelectReinforcement` fill `SOperationalCandidate` and `SOperationalReinforce`. |
 | Reinforce lifecycle | `CheckReinforce` checks reach, `RetryReinforce` clears temporary rejections after relevant board changes, and `RetiresReinforce` applies overlap retirement. |
 | Withdraw lifecycle | `EstimateWithdraw` gathers recruits and estimates exposure saved. `CheckWithdraw` finds destinations by domain and projects the first-turn stops. See [Withdraw readiness and execution](withdrawal.md#readiness-and-execution). |
-| March execution | `ExecuteMarch` admits a checked Reinforce, Withdraw or Army March group once and runs positioning once per destination. |
+| March execution | `ExecuteMarch` admits a checked group once and runs positioning by destination. A fogged camp uses its safe path stops without a search. |
+| Camp claims | `FindCampClaimant` uses the native harassment finder. `EstimateCampClaim` prices the trip; `ExecuteCampClaim` admits one unit and issues one move. |
 | Army March prepare | `CvTacticalAI::PlotOperationalArmyMoves` calls `PrepareArmy`, which runs `PrepareMove`, records the waypoint and corridor through `ComputeTargetPlotForThisTurn`, and removes members from the independent roster. `RefreshPreparedArmies` settles aborted orders after each command. |
 | Army March estimate | `EstimateArmyMarch` calls `ArmyMarchGoalWeight`, `ArmyMarchReadinessGain`, `EstimateArmyMarchTheater` and `ArmyMarchPriority`. Army rows estimate after city and unit battlefields. |
 | Army March check | `CheckArmyMarch` updates the stop forecast and prices added exposure with `ArmyMarchAttackerWeights` and `ExposureSaved`. Gather and actual moves enforce stacking. |

@@ -1,6 +1,6 @@
 # Unit AI: Reinforcement Priorities
 
-Each [battlefield](overview.md#battlefields) has a **Reinforce offer** to bring distant units toward its center. Its **priority** is the battlefield's [fight priority](value.md#fight-priority) times the share of the outcome the arriving units swing, so Reinforce and fights compete in one queue on one base. At an enemy battlefield the offer shares the field with a [Withdraw](withdrawal.md); a Withdraw that moves a unit closes this offer for the rest of the turn. A prepared combat army uses the same slot and offer state, but its [Army March](march.md#priority) prices progress and added risk instead of a stake and swing.
+A **Reinforce offer** brings distant units toward a [battlefield](overview.md#battlefields). Its priority usually uses the battlefield's [fight stake](value.md#fight-priority) and the share of the outcome the arriving units swing. Camps can supply their own stake. At an enemy unit or city, a [Withdraw](withdrawal.md) that moves a unit closes Reinforce for the rest of the turn. An [empty camp claim](value.md#camp-value) and [Army March](march.md#priority) also use this slot with their own priorities.
 
 ```mermaid
 flowchart TD
@@ -21,7 +21,7 @@ flowchart TD
 | Part | Fight | Reinforce |
 | --- | --- | --- |
 | `θ` | The zone's current theater. | The same value. |
-| Stake | What local units can change this turn. | The same value. |
+| Stake | What local units can change this turn. | The fight stake, with a minimum at guarded camps and a separate stake at fogged camps. |
 | Share | Already inside the stake, from damage. | **Swing**, from strength: 0 to 1. |
 | Peer offer | The battlefield's Withdraw counts its own removable exposure over all recruits. | Excluded by that Withdraw once it moves a unit. |
 
@@ -68,29 +68,30 @@ Examples use these inputs unless they state their own. Results are rounded only 
 
 ## Reinforce priority
 
-**Rule: the fight's priority, times the share of the outcome the help swings.**
+**Rule: the theater multiplier times the stake and the rise in our strength share.**
 
 `priority = θ × stake × swing`
 
 | Part | Reads as |
 | --- | --- |
-| `θ × stake` | The battlefield's fight priority, unchanged. Help goes where a fight is already worth something, in proportion to it. |
+| `θ × stake` | The ordinary fight priority, or the value of the camp if it is greater. |
 | [`swing`](#swing) | How far the selected units move our strength share, 0 to 1. |
 
 | Property | Why it holds |
 | --- | --- |
-| A Reinforce never outranks the fight it joins. | Priority is fight priority × swing, and swing is at most 1. |
-| A fight local units already win needs no rule. | Its fight has the higher priority, runs first and removes the target, which drops both offers. |
+| An ordinary Reinforce cannot outrank the fight it joins. | It uses the same stake and swing is at most 1. A camp can still draw help when no local unit can damage the guard. |
 | More danger to a city never lowers the pull. | Danger raises both `θ` and the stake. |
 
 | Gate | Our city | Enemy unit or city |
 | --- | --- | --- |
-| Border | None. | Destination zone must be ours or adjacent to ours, by the turn's initial zone data. |
+| Border | None. | Destination zone must be ours or adjacent to ours, by the turn's initial zone data. A guarded or fogged camp can draw help outside this border. |
 | Posture | None. | Withdraw posture gives priority 0. |
 | **Short selection** | None: defending is never optional, so partial help still counts. | Candidates run out before full strength covers need, so `(L_R + S) / T < r`: priority 0. The stack must hold once it arrives. |
 | No selection | Priority 0. | Priority 0. |
 
-These gates apply only to Reinforce; the battlefield's fight and Withdraw keep their own priorities.
+A visible guard keeps its ordinary strength tally and its Fight stake includes the camp bonus. Reinforce uses the greater of that stake and the [camp value](value.md#camp-value). A fogged camp uses the camp value and floors enemy strength at one typical unit, the average combat strength of the player's reference military types. Both keep the Withdraw posture and short-selection gates. A fogged camp uses the ordinary reach check and safe march stops; the group stops short without a combat search.
+
+A camp seen empty uses its single claimant's [travel priority](value.md#camp-value) when entry requires a later turn. The claimant heads to the first turn's stop on the exact route to the camp. The move can abort in danger.
 
 ## Swing
 

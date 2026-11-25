@@ -55,7 +55,7 @@ Each member uses a cached route keyed by army row and unit. Route forecasts igno
 | --- | --- |
 | Center | The member nearest the mean of all member plots, with ties favoring the member nearer the army goal. |
 | Tolerance | The operation's gather tolerance at the current center. |
-| Stop test | Moving one member to the stop must not push any member farther from the new center than the larger of its current distance and the tolerance. |
+| Stop test | Keep the same member as the center for both distance checks. Its plot changes if it moves. No member may end farther from it than the larger of its starting distance and the tolerance. |
 | Combined armies | An embarked member must stop on water. |
 | Forecast stop | The stop must pass the movement and formation rules. Its friendly stacking slots are not checked or reserved; Gather chooses the actual positions. |
 

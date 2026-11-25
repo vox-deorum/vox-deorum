@@ -172,13 +172,14 @@ flowchart LR
 
 **Enemy unit fight**, target `t`:
 
-`stake = w_A × K_t / Z_T + w_R × E_t × s / Z_T + k_t × (w_G × ΔG(t) + w_C × C × f_def × a_t)`
+`stake = w_A × K_t / Z_T + w_R × E_t × s / Z_T + k_t × (w_G × ΔG(t) + w_C × C × f_def × a_t + n × B)`
 
 | Term | Formula | Reads as |
 | --- | --- | --- |
 | **Destruction** | `w_A × K_t / Z_T` | Enemy value local units and city fire can remove from the target ([destroyed value](#destroyed-value) `K_t`) × attrition weight. |
 | **Exposure** | `w_R × E_t × s / Z_T` | Value of our units the target can hurt before our next turn ([exposure](#exposure) `E_t`) × risk weight × the [strength share](#strength-share) fighting here can protect. A Withdraw counts a separate pool over all recruits. |
 | **Ground** | `k_t × w_G × ΔG(t)` | Territory recovered if the target is removed ([ground](#ground-value) `ΔG(t)`) × hold-ground weight × damage share, since it pays off only on removal. |
+| **Camp** | `k_t × n × B` | A share of the [camp value](#camp-value). This term is zero except while the opening guard remains on its camp. |
 | **City relief** | `k_t × w_C × C × f_def × a_t` | Target's part `a_t` ([relief share](#city-relief)) of our city's danger `C × f_def` × hold-city weight × damage share. 0 away from our cities. |
 
 **Enemy city fight**, current garrison `g`:
@@ -214,6 +215,14 @@ flowchart LR
 | `f_att`, `f_def` | Attack or defense fall share. | 0 to 1. |
 | `w_A`, `w_G`, `w_R`, `w_O`, `w_C` | Attrition, hold-ground, risk, occupation and hold-city weights, from `ResolveOperationalWeights` via the [flavor curve](reference.md#weights-file) `base × 2^(slope × (flavor − 50) / 50)` (`50 − flavor` for risk). Search preferences resolve separately per engagement. | 1 at neutral, 0.5 to 2 across preferences; `w_G` 0.05 at neutral, 0.025 to 0.1. |
 | `Z_T` | Typical unit worth. | Worth, fixed for the turn. |
+
+## Camp value
+
+The ordinary camp bounty is worth `B = 0.5 × G_c / (Z_T × g)` typical units. `G_c` is the native gold payment: player handicap gold plus the AI handicap bonus when applicable, then the plunder modifier and Vox Populi era scaling in native integer order. A player without a city earns no bounty. The typical unit worth `Z_T` and gold per unit of worth `g` come from the reference military types. Without a gold scale, the bounty adds no priority.
+
+Distance multiplies the bounty by `n = min(1, camp.nearPlots / d)`, where `d` is plot distance to the nearest city we own. A camp 10 plots away has half value at the default setting of 5. The camp inherits its zone's [theater multiplier](#theater-multiplier).
+
+For a camp seen empty, the claim's priority is `θ × n × B / (1 + h × t)`, where `t` is legal travel time in turns and `h` is 1 at war with a major civilization or 0.5 otherwise. A 35 gold bounty with a typical unit price of 350 gold is worth 0.05 units. If the camp's zone has no city, the theater floor applies. With our nearest city three plots away, an immediate claim then scores 0.01; a one-turn trip at peace scores about 0.0067. Guarded and fogged camps apply this camp value to [Reinforce](reinforcement.md#reinforce-priority).
 
 ## Strength share
 
