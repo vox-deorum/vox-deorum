@@ -46,7 +46,7 @@ Follow these example writings as a model, learn from the way they handle differe
 {{#hasTriggers}}
 
 ### Triggers
-A good story fits in the trigger. Start from here.
+A good story fits the trigger that starts it. Start from here.
 
 {{#triggers}}
 - `{{id}}` ({{subject}}): when {{when}}{{#values}}; values {{values}}{{/values}}{{#group}}; group {{group}}{{/group}}
