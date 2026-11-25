@@ -128,10 +128,11 @@
     "variants": [
       {
         "id": "building-purchased-report",
-        "headline": "{{city}} buys the {{building}}",
+        "headline": "{{building}} completed in {{city}} via {{currency}}",
         "body": [
-          "There was no building season at {{city}}: the {{building}} was bought finished, and the city paid in {{currency}}. The first visitors found the mortar still damp and the keeper still looking for the keys. A line had formed at the door before the ink dried on the deed."
-        ]
+          "The {{terms.civic.government}} has used {{currency}} to quickly secure the construction of a {{building}} in {{city}}. The building is now fully operational."
+        ],
+        "settled": true
       },
       {
         "id": "building-purchased-tabloid",
@@ -174,10 +175,11 @@
     "variants": [
       {
         "id": "city-defense-completed-report",
-        "headline": "{{city}} finishes new defenses",
+        "headline": "New defenses completed in {{city}}",
         "body": [
-          "The last stone of the {{building}} went into place at {{city}} this week, and the gatekeeper has been trying the new bars ever since. Rubble still lies in the ditch, but the wall behind it would turn a raid today. The watch has moved its posts to the higher ground."
-        ]
+          "The {{building}} in {{city}} is complete. Local commanders state that the new structure significantly improves the city's ability to withstand an attack."
+        ],
+        "settled": true
       },
       {
         "id": "city-defense-completed-press",
@@ -220,10 +222,11 @@
     "variants": [
       {
         "id": "city-courthouse-completed-report",
-        "headline": "The {{building}} opens in {{city}}",
+        "headline": "Courthouse opens in {{city}}",
         "body": [
-          "The {{building}} has opened in {{city}}, lifting the penalty of occupation. The city is now integrated into our territory."
-        ]
+          "The {{building}} in {{city}} is now complete. The new facility will serve as the center for local administration and legal proceedings, ending a period of military occupation."
+        ],
+        "settled": true
       },
       {
         "id": "city-courthouse-completed-analysis",

@@ -24,10 +24,11 @@
       {
         "id": "city-capture-gained",
         "when": "gained === true",
-        "headline": "{{city}} is ours",
+        "headline": "{{terms.civilization}} takes control of {{city}}",
         "body": [
-          "Our soldiers took {{city}} from {{formerOwner}}, and our flag went up over the gate before the smoke cleared. The granaries, the walls and the people inside all passed to us with the city. The garrison that held it is gone, and the market has reopened."
-        ]
+          "{{city}} has fallen to {{terms.civilization}}. Our forces moved in from the outskirts and secured the city center after the defense by {{formerOwner}} collapsed. Local leaders are awaiting further instructions from {{terms.civic.leaderAddress}}."
+        ],
+        "settled": true
       },
       {
         "id": "city-capture-lost",
@@ -37,8 +38,9 @@
         "when": "gained === false",
         "headline": "{{city}} falls to {{captor}}",
         "body": [
-          "{{captor}} has taken {{city}} from us. The garrison is broken, the gates stand open to their soldiers, and the oaths sworn there last season count for nothing. Runners carried the news out ahead of the closing roads."
-        ]
+          "Forces from {{captor}} have taken {{city}}, previously a stronghold of {{terms.civilization}}, after a sustained assault. Observers report that the transition occurred quickly. Local {{terms.civic.people}} are now adjusting to the administration of {{captor}}."
+        ],
+        "settled": true
       },
       {
         "id": "city-capture-gained-analysis",
@@ -46,10 +48,12 @@
         "stance": "hawkish",
         "genre": "analysis",
         "when": "gained === true",
-        "headline": "What {{city}} adds",
+        "headline": "The Fall of {{cityName}}",
         "body": [
-          "{{city}}, taken from {{formerOwner}}, brings walls, wells and a stretch of high ground, and it brings a people who did not choose us. Holding it means manning the gate, feeding the streets and watching the old loyalties for a season or two. An army can take a city in a morning; keeping it is the campaign that follows."
-        ]
+          "The capture of {{city}} provides {{terms.civilization}} with a vital strategic pivot. While {{formerOwner}} may claim the loss is merely a border adjustment, this victory transforms a defense hub into a launchpad for further expansion."
+        ],
+        "subheadline": "A decisive blow to {{formerOwner}}",
+        "settled": true
       },
       {
         "id": "city-capture-lost-editorial",
@@ -57,10 +61,11 @@
         "stance": "government-critical",
         "genre": "editorial",
         "when": "gained === false",
-        "headline": "Who is taking names for {{city}}?",
+        "headline": "Disaster at {{cityName}}",
         "body": [
-          "{{city}} has fallen to {{captor}}, and no one in authority has said who is to blame. On our street, a woman whose mother still lives there has asked the watch three times when the city will be ours again, and no one can give her a day. {{terms.civic.leaderAddress}}, say how you mean to take it back, or say that you will not."
-        ]
+          "{{captor}} has seized {{city}}! Was the {{terms.civic.government}} asleep while the enemy marched? Our {{terms.civic.people}} pay the price for this negligence. We demand to know why our defenses were so weak!"
+        ],
+        "settled": true
       }
     ]
   },
@@ -73,10 +78,11 @@
     "variants": [
       {
         "id": "city-flips-report",
-        "headline": "{{city}} changes allegiance",
+        "headline": "{{cityName}} switches allegiance to {{newOwner}}",
         "body": [
-          "The flag over {{city}} came down in the night and another went up by morning. The city has turned from {{formerOwner}} to {{newOwner}} without a treaty or a siege. Clerks at the town hall are already cutting new seals and scraping the old ones off the forms."
-        ]
+          "{{city}}, formerly under the control of {{formerOwner}}, has flipped its loyalty to {{newOwner}}. The change in governance happened without a major battle. Local officials cite a shift in political will as the reason for the change. {{newOwner}} has already begun installing their own administrators."
+        ],
+        "settled": true
       },
       {
         "id": "city-flips-analysis",
@@ -121,8 +127,9 @@
         "id": "city-liberated-report",
         "headline": "{{liberator}} liberates {{liberated}}",
         "body": [
-          "{{liberator}} drove the occupiers out of {{liberated}}, and the nation raised its own flag again before the day was over. A crowd gathered at the council hall and sang the old anthem twice, badly. The guard outside the door wears the nation's colors this morning."
-        ]
+          "{{city}} has been liberated from its occupiers by the forces of {{liberator}}. The city is now returning to the control of {{liberated}}. Crowds gathered in the streets to welcome the return of their own administration."
+        ],
+        "settled": true
       },
       {
         "id": "city-liberated-returned",
@@ -253,8 +260,9 @@
         "id": "occupied-city-resists-report",
         "headline": "Resistance continues in {{city}}",
         "body": [
-          "{{city}} is ours on the map, and nowhere else. Its clerks send out orders and then file them away when nothing happens, and the prefect expects {{turns}} more of the same. He has stopped promising an early end."
-        ]
+          "Despite being under occupation, {{city}} continues to resist. Reports indicate the unrest is widespread, with local populations refusing to cooperate with {{terms.civilizationAdjective}} occupying forces. This resistance is expected to last for {{turns}} more."
+        ],
+        "settled": true
       },
       {
         "id": "occupied-city-resists-population",

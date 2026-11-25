@@ -65,10 +65,12 @@
         "stance": "hawkish",
         "genre": "analysis",
         "when": "cause == 'pillaged'",
-        "headline": "The fields outside {{city}} are bare",
+        "headline": "Fire and Theft near {{city}}",
         "body": [
-          "Pillaging around {{city}} has left {{owner}} with fields to bring back into use and a season already begun. Land left unguarded invites a second visit, and the next one costs more than the last. A neighbor that cannot guard its fields is a neighbor with a weakness worth noting."
-        ]
+          "{{city}} is reeling after a devastating pillage has stripped the city of its wealth. While {{owner}} may attempt to downplay the disaster, the loss of critical infrastructure cannot be hidden. For {{terms.civilization}}, this is a clear invitation to strike."
+        ],
+        "subheadline": "{{owner}}'s defenses proven useless",
+        "settled": true
       },
       {
         "id": "foreign-city-hardship-food-shortage-report",

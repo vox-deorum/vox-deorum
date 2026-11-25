@@ -110,10 +110,11 @@
         "voice": "crier",
         "stance": "national",
         "genre": "notice",
-        "headline": "Hear it! {{city}} is founded",
+        "headline": "A new home for {{terms.civilization}}",
         "body": [
-          "Word for every street and every stall: {{city}} is founded! Our settlers raised the flag at dawn, and there is a new city under it! {{terms.civic.people}}, say the name and say it again: {{city}}!"
-        ]
+          "Hear it, {{terms.civic.people}}! We have founded {{city}}! A new light for the {{terms.civilizationAdjective}} people! {{cityName}} is born!"
+        ],
+        "settled": true
       },
       {
         "id": "our-city-founded-analysis",

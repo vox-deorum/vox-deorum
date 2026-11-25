@@ -75,18 +75,20 @@
       {
         "id": "technology-deal-sell-report",
         "when": "direction === 'sell'",
-        "headline": "We sell technology to {{partner}}",
+        "headline": "Technology sold to {{partner}}",
         "body": [
-          "Our {{terms.civic.government}} has agreed to sell knowledge to {{partner}}. The terms read: {{dealTerms}} The agreement sets a price for learning our scholars already hold."
-        ]
+          "{{terms.civilization}} has sold {{weGive}} to {{partner}} for {{weGet}}. The deal is complete and envoys have confirmed the terms."
+        ],
+        "settled": true
       },
       {
         "id": "technology-deal-exchange-report",
         "when": "direction === 'exchange'",
-        "headline": "We and {{partner}} exchange technology",
+        "headline": "Technology exchange completed with {{partner}}",
         "body": [
-          "Our {{terms.civic.government}} and {{partner}} have exchanged technology. Both sides leave the table with something new to study. {{dealTerms}}"
-        ]
+          "{{terms.civilization}} has exchanged technology with {{partner}}. The terms read: {{dealTerms}}. The {{terms.civic.government}} confirms the transfer is underway."
+        ],
+        "settled": true
       },
       {
         "id": "technology-deal-gift-in-report",
@@ -126,18 +128,20 @@
       {
         "id": "map-deal-sell-report",
         "when": "direction === 'sell'",
-        "headline": "We sell maps to {{partner}}",
+        "headline": "Cartographic sale agreed with {{partner}}",
         "body": [
-          "Our {{terms.civic.government}} has agreed to sell maps to {{partner}}. The terms read: {{dealTerms}} The agreement puts copies of our survey work into their hands."
-        ]
+          "A map deal with {{partner}} is complete. The terms read: {{dealTerms}}. In {{terms.civilization}}, merchants are checking the new charts before the next voyage."
+        ],
+        "settled": true
       },
       {
         "id": "map-deal-exchange-report",
         "when": "direction === 'exchange'",
-        "headline": "We and {{partner}} exchange maps",
+        "headline": "Map exchange with {{partner}}",
         "body": [
-          "Our {{terms.civic.government}} and {{partner}} have exchanged maps. Each side has received a copy of the other's charts. {{dealTerms}}"
-        ]
+          "{{terms.civilization}} and {{partner}} have exchanged maps. We provide {{weGive}}. {{partner}} provides {{weGet}}. Cartographers are comparing both sets of charts."
+        ],
+        "settled": true
       },
       {
         "id": "map-deal-gift-in-report",

@@ -68,10 +68,11 @@
         "voice": "tabloid",
         "stance": "local",
         "genre": "anecdote",
-        "headline": "The herdsmen reach {{city}} without the herds",
+        "headline": "Barbarians at {{city}} gates",
         "body": [
-          "The farmer's cart came through the gate at a gallop with an empty harness trailing behind it. Raiders are camped near {{city}}, {{barbarians}} by the watch's count, and the ridge glows with their fires each night. 'The oxen bolted before I did,' the farmer said. 'I did not wait to argue.'"
-        ]
+          "Women in {{city}} packed bread and water into sacks. They left them at the gate for the defenders. An old man said he had seen barbarians before. He told the young to keep their voices low."
+        ],
+        "settled": true
       },
       {
         "id": "barbarians-at-the-gates-analysis",
@@ -682,10 +683,11 @@
         "voice": "tabloid",
         "stance": "local",
         "genre": "anecdote",
-        "headline": "The crack in {{city}}'s wall",
+        "headline": "Half of {{city}} is patching cracks tonight",
         "body": [
-          "A mason walked the length of the wall at {{city}} this morning, tapping the stone with a mallet and saying nothing. Where he struck, the stone rang hollow, and he has asked for lime and a second cart. His apprentice says the old man has not slept since the first strike."
-        ]
+          "{{city}} took heavy damage and the street lamps flicker low. An old man nailed boards over his shop window and told his boy to sleep downstairs. The square is quiet, and nobody sings."
+        ],
+        "settled": true
       },
       {
         "id": "our-city-takes-heavy-damage-crier",
