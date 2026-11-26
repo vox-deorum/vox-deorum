@@ -144,14 +144,14 @@
     "id": "foreign-building-completed-account",
     "triggers": ["foreign-building-completed"],
     "tags": ["cities", "international"],
-    "names": ["building", "city", "civilization"],
+    "names": ["building", "city", "owner"],
     "extends": "city",
     "variants": [
       {
         "id": "foreign-building-completed-report",
-        "headline": "{{civilization}} completes the {{building}} in {{city}}",
+        "headline": "{{owner}} completes the {{building}} in {{city}}",
         "body": [
-          "The scaffold at {{city}} came down this week, and the {{building}} stands finished under {{civilization}}'s flag. Carts have been going in and out of the gate since dawn. Our watchers across the border counted them until dark."
+          "The scaffold at {{city}} came down this week, and the {{building}} stands finished under {{owner}}'s flag. Carts have been going in and out of the gate since dawn. Our watchers across the border counted them until dark."
         ]
       },
       {
@@ -161,7 +161,7 @@
         "genre": "analysis",
         "headline": "New works at {{city}}",
         "body": [
-          "The {{building}} at {{city}} is finished, and {{civilization}} can now do something on this frontier that it could not do last season. That is the whole meaning of the news, and it is enough. Our own plans should be made on the assumption that the next work has already begun."
+          "The {{building}} at {{city}} is finished, and {{owner}} can now do something on this frontier that it could not do last season. That is the whole meaning of the news, and it is enough. Our own plans should be made on the assumption that the next work has already begun."
         ]
       },
       {
@@ -171,7 +171,7 @@
         "genre": "notice",
         "headline": "From beyond our border: {{city}} completes the {{building}}",
         "body": [
-          "We are informed from beyond the border that {{city}} has completed its {{building}} for {{civilization}}. The road to the city was busy all season and has been quiet since the roof went on. Traders bound that way will find the work finished and the crowds gone home."
+          "We are informed from beyond the border that {{city}} has completed its {{building}} for {{owner}}. The road to the city was busy all season and has been quiet since the roof went on. Traders bound that way will find the work finished and the crowds gone home."
         ]
       },
       {
@@ -181,7 +181,7 @@
         "genre": "anecdote",
         "headline": "A neighbor's new work",
         "body": [
-          "A carter who came through {{city}} last week swears that {{civilization}}'s new {{building}} was not there in spring. He has told the story in three markets, and each time the building gets taller. The people of the city only shrug and say it was finished before the rains."
+          "A carter who came through {{city}} last week swears that {{owner}}'s new {{building}} was not there in spring. He has told the story in three markets, and each time the building gets taller. The people of the city only shrug and say it was finished before the rains."
         ]
       }
     ]
@@ -190,14 +190,14 @@
     "id": "foreign-building-purchased-account",
     "triggers": ["foreign-building-purchased"],
     "tags": ["cities", "international"],
-    "names": ["building", "city", "civilization"],
+    "names": ["building", "city", "owner"],
     "extends": "city",
     "variants": [
       {
         "id": "foreign-building-purchased-report",
-        "headline": "{{civilization}} buys the {{building}} in {{city}}",
+        "headline": "{{owner}} buys the {{building}} in {{city}}",
         "body": [
-          "No scaffold ever stood at {{city}}. The {{building}} was bought finished, and {{civilization}} paid for it in {{currency}}. The first visitors found the mortar still damp and the keeper still hunting for the keys."
+          "No scaffold ever stood at {{city}}. The {{building}} was bought finished, and {{owner}} paid for it in {{currency}}. The first visitors found the mortar still damp and the keeper still hunting for the keys."
         ]
       },
       {
@@ -205,9 +205,9 @@
         "voice": "press",
         "stance": "hawkish",
         "genre": "report",
-        "headline": "{{civilization}} pays for the {{building}} near our border",
+        "headline": "{{owner}} pays for the {{building}} near our border",
         "body": [
-          "At {{city}} the {{building}} was bought, not built: {{civilization}} paid and took it finished. A neighbor that buys its works outright has money to spare and a reason to want them sooner. Both deserve a line in our own accounts."
+          "At {{city}} the {{building}} was bought, not built: {{owner}} paid and took it finished. A neighbor that buys its works outright has money to spare and a reason to want them sooner. Both deserve a line in our own accounts."
         ]
       },
       {
@@ -217,7 +217,7 @@
         "genre": "anecdote",
         "headline": "A neighbor's deep purse",
         "body": [
-          "A trader from {{city}} says he walked past a fenced pit in the morning and a finished {{building}} by evening. {{civilization}} paid in {{currency}} and skipped the years of dust, he says, and the market laughs. Nobody in the city finds it as funny."
+          "A trader from {{city}} says he walked past a fenced pit in the morning and a finished {{building}} by evening. {{owner}} paid in {{currency}} and skipped the years of dust, he says, and the market laughs. Nobody in the city finds it as funny."
         ]
       },
       {
@@ -227,7 +227,7 @@
         "genre": "notice",
         "headline": "Notice from {{city}}: the {{building}} is bought",
         "body": [
-          "Notice is given that the {{building}} at {{city}} has been bought complete by {{civilization}}, the price paid in {{currency}}. No building season was spent on it, and no scaffolding was raised. The city has the use of the work at once, and the sellers have the money."
+          "Notice is given that the {{building}} at {{city}} has been bought complete by {{owner}}, the price paid in {{currency}}. No building season was spent on it, and no scaffolding was raised. The city has the use of the work at once, and the sellers have the money."
         ]
       }
     ]
@@ -288,14 +288,14 @@
     "id": "foreign-city-flips-account",
     "triggers": ["foreign-city-flips"],
     "tags": ["cities", "politics", "international"],
-    "names": ["city", "owner", "oldOwner"],
+    "names": ["city", "newOwner", "oldOwner"],
     "extends": "city",
     "variants": [
       {
         "id": "foreign-city-flips-report",
-        "headline": "{{city}} turns from {{oldOwner}} to {{owner}}",
+        "headline": "{{city}} turns from {{oldOwner}} to {{newOwner}}",
         "body": [
-          "The flag over {{city}} has changed hands. The city now answers to {{owner}} instead of {{oldOwner}}, and the clerks at its town hall are cutting new seals. The old ones are already being scraped off the forms."
+          "The flag over {{city}} has changed hands. The city now answers to {{newOwner}} instead of {{oldOwner}}, and the clerks at its town hall are cutting new seals. The old ones are already being scraped off the forms."
         ]
       },
       {
@@ -305,7 +305,7 @@
         "genre": "analysis",
         "headline": "A change of rule in {{city}}",
         "body": [
-          "{{city}} has passed from {{oldOwner}} to {{owner}}. A town that changes flags is a test of both governments. {{owner}} will need to win the city's trust before it can count on its taxes."
+          "{{city}} has passed from {{oldOwner}} to {{newOwner}}. A town that changes flags is a test of both governments. {{newOwner}} will need to win the city's trust before it can count on its taxes."
         ]
       }
     ]
@@ -314,13 +314,13 @@
     "id": "foreign-city-liberated-account",
     "triggers": ["foreign-city-liberated"],
     "tags": ["cities", "politics", "international"],
-    "names": ["owner", "liberatedOwner"],
+    "names": ["owner", "liberated"],
     "variants": [
       {
         "id": "foreign-city-liberated-report",
-        "headline": "A city is returned to {{liberatedOwner}} by {{owner}}",
+        "headline": "A city is returned to {{liberated}} by {{owner}}",
         "body": [
-          "{{owner}} has returned a city to {{liberatedOwner}}. The occupiers have gone, and the city's own officials have taken up its business again. A crowd gathered at the council hall to hear the change read aloud, and the guard outside the door wears {{liberatedOwner}}'s colors this morning."
+          "{{owner}} has returned a city to {{liberated}}. The occupiers have gone, and the city's own officials have taken up its business again. A crowd gathered at the council hall to hear the change read aloud, and the guard outside the door wears {{liberated}}'s colors this morning."
         ]
       },
       {
@@ -330,7 +330,7 @@
         "genre": "analysis",
         "headline": "What a returned city may mean for {{owner}}",
         "body": [
-          "{{owner}} has returned a city to {{liberatedOwner}}. A government that gives a city back may earn goodwill that proves useful later, or it may find the gift soon forgotten. The next time a map is redrawn, {{owner}} may have one more claim on {{liberatedOwner}}'s attention."
+          "{{owner}} has returned a city to {{liberated}}. A government that gives a city back may earn goodwill that proves useful later, or it may find the gift soon forgotten. The next time a map is redrawn, {{owner}} may have one more claim on {{liberated}}'s attention."
         ]
       }
     ]

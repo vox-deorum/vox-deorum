@@ -67,6 +67,22 @@ function civicIdentity(
   return result;
 }
 
+/** List the runtime placeholder names for one subject or reference identity field. */
+export function identityNames(kind: StorySubject['kind'], key: string, reference?: string): string[] {
+  if (reference !== undefined) {
+    const names = [`${kind}.${reference}.${key}`];
+    if (key === 'name') names.push(reference);
+    else if (key === 'id') names.push(`${reference}Id`);
+    else if (key.startsWith('civic.')) names.push(`${reference}.${key}`);
+    return names;
+  }
+  const names = [`${kind}.${key}`, `subject.${key}`];
+  if (key === 'name') names.push(kind);
+  else if (key === 'id') names.push(`${kind}Id`);
+  else if (key.startsWith('civic.')) names.push(key);
+  return names;
+}
+
 /** Add qualified identity fields and short name and ID aliases for the visible subjects. */
 export function storyIdentity(
   subject: StorySubject,
@@ -77,13 +93,11 @@ export function storyIdentity(
   for (const key of subject.kind === 'player' ? playerIdentityKeys : identityKeys) {
     const field = readIdentity(subject.fields, key);
     if (!field) continue;
-    fields['subject.' + key] = fields[subject.kind + '.' + key] = field;
-    if (key !== 'leader') fields[key === 'name' ? subject.kind : subject.kind + 'Id'] = field;
+    for (const name of identityNames(subject.kind, key)) fields[name] = field;
   }
   if (subject.kind === 'player')
-    for (const [key, field] of Object.entries(civicIdentity(subject.fields, civic))) {
-      fields[key] = fields['subject.' + key] = fields['player.' + key] = field;
-    }
+    for (const [key, field] of Object.entries(civicIdentity(subject.fields, civic)))
+      for (const name of identityNames(subject.kind, key)) fields[name] = field;
   if (!facts) return fields;
   for (const [name, link] of Object.entries(subject.fields ?? {})) {
     const value = link.value;
@@ -94,14 +108,11 @@ export function storyIdentity(
     for (const key of ref.kind === 'player' ? playerIdentityKeys : identityKeys) {
       const field = readIdentity(target, key, link);
       if (!field) continue;
-      fields[subject.kind + '.' + name + '.' + key] = field;
-      if (key !== 'leader') fields[key === 'name' ? name : name + 'Id'] = field;
+      for (const alias of identityNames(subject.kind, key, name)) fields[alias] = field;
     }
     if (ref.kind === 'player')
-      for (const [key, field] of Object.entries(civicIdentity(target, civic, link))) {
-        fields[subject.kind + '.' + name + '.' + key] = field;
-        fields[name + '.' + key] = field;
-      }
+      for (const [key, field] of Object.entries(civicIdentity(target, civic, link)))
+        for (const alias of identityNames(subject.kind, key, name)) fields[alias] = field;
   }
   return fields;
 }

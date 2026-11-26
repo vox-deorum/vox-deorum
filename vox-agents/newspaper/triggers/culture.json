@@ -145,8 +145,7 @@
     ],
     "values": {
       "wonder": "city.built.find(b => b.knows('building') && city.wonders.includes(b.building)).building",
-      "civilization": "city.owner.name",
-      "cityName": "city.name"
+      "civilization": "city.owner.name"
     },
     "tier": "notable",
     "adjust": "city.owner.stake.relation",

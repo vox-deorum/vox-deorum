@@ -232,7 +232,7 @@
       "!player.before.knows('ideology') || player.before.ideology === null"
     ],
     "values": {
-      "name": "player.name",
+      "rival": "player.name",
       "ideology": "player.ideology",
       "shared": "self.knows('ideology') && typeof self.ideology === 'string' && self.ideology === player.ideology"
     },

@@ -84,9 +84,9 @@ describe('newspaper desk variables', () => {
     expect(listed).not.toContain('triggerValues.era.observedTurn');
     expect(variable(variables, 'distance')).toMatchObject({ group: 'trigger', mayBeEmpty: true, prints: 'N tiles' });
     expect(variable(variables, 'observedTurn')).toMatchObject({ prints: 'turn N' });
-    expect(variable(variables, 'turn')).toMatchObject({ group: 'reader', mayBeEmpty: false, prints: 'turn N' });
+    expect(variable(variables, 'turn')).toMatchObject({ group: 'reader', aliases: [], mayBeEmpty: false, prints: 'turn N' });
     expect(variable(variables, 'civilization')).toMatchObject({
-      source: 'player.name', mayBeEmpty: false, prints: 'as is',
+      source: 'player.name', aliases: ['triggerValues.era.civilization'], mayBeEmpty: false, prints: 'as is',
     });
     expect(listed).not.toContain('key');
     expect(listed).not.toContain('count');
@@ -94,45 +94,62 @@ describe('newspaper desk variables', () => {
     expect(listed).not.toContain('period.to');
   });
 
-  it('should drop a bare trigger key shared by two triggers but keep both qualified names', () => {
+  it('should list qualified names for repeated trigger values and give both the bare alias', () => {
     const first = trigger('first', 'player', { civilization: 'player.name' });
     const second = trigger('second', 'player', { civilization: 'player.name' });
-    const listed = names(templateVariables(
+    const variables = templateVariables(
       template('news', ['first', 'second'], [variant('draft', { headline: 'Hello', body: [paragraph] })]),
       catalogue([first, second]),
-    ));
-    expect(listed).not.toContain('civilization');
-    expect(listed).toEqual(expect.arrayContaining([
-      'triggerValues.first.civilization',
-      'triggerValues.second.civilization',
-    ]));
+    );
+    expect(names(variables)).not.toContain('civilization');
+    for (const id of ['first', 'second'])
+      expect(variable(variables, `triggerValues.${id}.civilization`)?.aliases).toEqual(['civilization']);
   });
 
-  it('should offer bare key and count for one grouped trigger without exposing its members', () => {
+  it('should reserve a bare name for the listed row when grouped and ungrouped values repeat it', () => {
+    const first = trigger('first', 'world', { detail: 'world.detail' });
+    const second = trigger('second', 'world', { detail: 'world.extra' }, { by: 'kind' });
+    const sibling = variant('sibling', { headline: 'Earlier {{detail}}', body: [paragraph] });
+    const draft = variant('draft', { headline: 'Hello', body: [paragraph] });
+    const variables = templateVariables(
+      template('news', ['first', 'second'], [draft, sibling]), catalogue([first, second]), draft,
+    );
+    expect(variable(variables, 'detail')).toMatchObject({ group: 'sibling' });
+    expect(variable(variables, 'triggerValues.first.detail')).toMatchObject({ aliases: [], mayBeEmpty: false });
+    expect(variable(variables, 'triggerValues.second.detail')).toMatchObject({ aliases: [], mayBeEmpty: true });
+  });
+
+  it('should offer group key and count and list member values as potentially empty', () => {
     const grouped = trigger('grouped', 'player', { unit: 'unit.type', amount: 'amount' }, { by: 'kind' });
-    const listed = names(templateVariables(
+    const variables = templateVariables(
       template('news', ['grouped'], [variant('draft', { headline: 'Hello', body: [paragraph] })]),
       catalogue([grouped]),
-    ));
-    expect(listed).toEqual(expect.arrayContaining(['key', 'count']));
+    );
+    const listed = names(variables);
+    for (const name of ['key', 'count'])
+      expect(variable(variables, name)).toMatchObject({
+        aliases: [`group.${name}`, `triggerValues.grouped.${name}`], mayBeEmpty: false,
+      });
+    for (const name of ['unit', 'amount'])
+      expect(variable(variables, name)).toMatchObject({
+        aliases: [`triggerValues.grouped.${name}`], mayBeEmpty: true,
+      });
     for (const absent of ['group.key', 'group.count', 'triggerValues.grouped.key', 'triggerValues.grouped.count'])
       expect(listed).not.toContain(absent);
-    expect(listed).not.toContain('unit');
-    expect(listed).not.toContain('amount');
     expect(listed).not.toContain('triggerValues.grouped.unit');
   });
 
   it('should leave bare key and count out when two triggers are grouped', () => {
     const first = trigger('first', 'player', { unit: 'unit.type' }, { by: 'kind' });
     const second = trigger('second', 'player', { unit: 'unit.type' }, { by: 'kind' });
-    const listed = names(templateVariables(
+    const variables = templateVariables(
       template('news', ['first', 'second'], [variant('draft', { headline: 'Hello', body: [paragraph] })]),
       catalogue([first, second]),
-    ));
-    expect(listed).toEqual(expect.arrayContaining([
-      'triggerValues.first.key', 'triggerValues.first.count',
-      'triggerValues.second.key', 'triggerValues.second.count',
-    ]));
+    );
+    for (const id of ['first', 'second'])
+      for (const name of ['key', 'count'])
+        expect(variable(variables, `triggerValues.${id}.${name}`)?.aliases).toEqual([`group.${name}`]);
+    const listed = names(variables);
     expect(listed).not.toContain('key');
     expect(listed).not.toContain('count');
     expect(listed).not.toContain('group.key');
@@ -207,8 +224,11 @@ describe('newspaper desk variables', () => {
     ]));
     for (const absent of ['subject.leader', 'subject.civic.government', 'civic.government'])
       expect(listed).not.toContain(absent);
-    expect(variable(variables, 'player')).toMatchObject({ group: 'subject', mayBeEmpty: true });
-    expect(variable(variables, 'player.leader')).toMatchObject({ mayBeEmpty: true });
+    expect(variable(variables, 'player')).toMatchObject({
+      group: 'subject', aliases: ['player.name', 'subject.name'], mayBeEmpty: true,
+    });
+    expect(variable(variables, 'player.leader')).toMatchObject({ aliases: ['subject.leader'], mayBeEmpty: true });
+    expect(variable(variables, 'player.civic.government')?.aliases).toEqual(['subject.civic.government', 'civic.government']);
   });
 
   it('should list short reference names and only the qualified fields without a short form', () => {
@@ -225,8 +245,11 @@ describe('newspaper desk variables', () => {
       'city.owner.civic.government', 'subject.name', 'subject.id'])
       expect(listed).not.toContain(absent);
     expect(variable(variables, 'owner')).toMatchObject({
-      group: 'reference', mayBeEmpty: true, prints: 'as is',
+      group: 'reference', aliases: ['city.owner.name'], mayBeEmpty: true, prints: 'as is',
     });
+    expect(variable(variables, 'city')?.aliases).toEqual(['city.name', 'subject.name']);
+    expect(variable(variables, 'owner.civic.government')?.aliases).toEqual(['city.owner.civic.government']);
+    expect(variable(variables, 'city.owner.leader')?.aliases).toEqual([]);
   });
 
   it('should mark only the link placeholders the current text uses as keep', () => {

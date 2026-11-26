@@ -6,6 +6,7 @@
  * `editorial/selection/templates.ts` and `editorial/facts/story.ts`.
  */
 import type { DeskText, DeskVariable } from '../../types/api.js';
+import { identityNames } from '../editorial/facts/story.js';
 import { placeholderName, placeholderPattern, placeholderUnit } from '../editorial/selection/templates.js';
 import { deskTriggers, type DeskCatalogue, type DeskTemplate, type DeskTriggerDefinition, type DeskVariant } from './catalogue.js';
 
@@ -16,7 +17,7 @@ export interface DeskWarning {
 }
 
 /** A desk variable before its printed form is derived from the runtime unit rule. */
-type DeskVariableSpec = Omit<DeskVariable, 'prints'>;
+type DeskVariableSpec = Omit<DeskVariable, 'aliases' | 'prints'> & { aliases?: string[] };
 
 /** Describe how a placeholder prints, using the renderer's unit rule. */
 function variablePrints(name: string): string {
@@ -48,11 +49,10 @@ function groupSource(trigger: DeskTriggerDefinition): string {
   return typeof by === 'string' ? by : `triggerValues.${trigger.id}.key`;
 }
 
-/** Count repeated scalar trigger value names across ungrouped triggers. */
+/** Count repeated scalar value names across triggers. */
 function repeatedTriggerNames(triggers: readonly DeskTriggerDefinition[]): Set<string> {
   const counts = new Map<string, number>();
   for (const trigger of triggers) {
-    if (trigger.group) continue;
     for (const [name, value] of Object.entries(trigger.values ?? {})) {
       if (Array.isArray(value)) continue;
       counts.set(name, (counts.get(name) ?? 0) + 1);
@@ -62,19 +62,19 @@ function repeatedTriggerNames(triggers: readonly DeskTriggerDefinition[]): Set<s
 }
 
 /** Build trigger and group variables with one canonical name per value. */
-function triggerVariables(triggers: readonly DeskTriggerDefinition[]): DeskVariableSpec[] {
+function triggerVariables(triggers: readonly DeskTriggerDefinition[], repeated: ReadonlySet<string>): DeskVariableSpec[] {
   const variables: DeskVariableSpec[] = [];
-  const repeated = repeatedTriggerNames(triggers);
   for (const trigger of triggers) {
-    if (trigger.group) continue;
     for (const [name, value] of Object.entries(trigger.values ?? {})) {
       if (Array.isArray(value)) continue;
+      const qualified = `triggerValues.${trigger.id}.${name}`;
       variables.push({
         group: 'trigger',
         // A repeated value is ambiguous alone, so list its rule-qualified name instead.
-        name: repeated.has(name) ? `triggerValues.${trigger.id}.${name}` : name,
+        name: repeated.has(name) ? qualified : name,
+        aliases: [repeated.has(name) ? name : qualified],
         source: typeof value === 'string' ? value : `${trigger.id}.values.${name}`,
-        mayBeEmpty: expressionMayBeEmpty(value),
+        mayBeEmpty: trigger.group !== undefined || expressionMayBeEmpty(value),
         keep: false,
       });
     }
@@ -85,6 +85,7 @@ function triggerVariables(triggers: readonly DeskTriggerDefinition[]): DeskVaria
     variables.push({
       group: 'group',
       name: single ? 'key' : `triggerValues.${trigger.id}.key`,
+      aliases: ['group.key', `triggerValues.${trigger.id}.key`],
       source: groupSource(trigger),
       mayBeEmpty: false,
       keep: false,
@@ -92,6 +93,7 @@ function triggerVariables(triggers: readonly DeskTriggerDefinition[]): DeskVaria
     variables.push({
       group: 'group',
       name: single ? 'count' : `triggerValues.${trigger.id}.count`,
+      aliases: ['group.count', `triggerValues.${trigger.id}.count`],
       source: `triggerValues.${trigger.id}.count`,
       mayBeEmpty: false,
       keep: false,
@@ -116,6 +118,7 @@ function subjectVariables(
     variables.push({
       group: 'subject',
       name: first.subject,
+      aliases: identityNames(first.subject, 'name'),
       source: first.subject,
       mayBeEmpty: true,
       keep: false,
@@ -125,6 +128,7 @@ function subjectVariables(
   variables.push({
     group: 'subject',
     name: 'player.leader',
+    aliases: identityNames(first.subject, 'leader'),
     source: 'player.leader',
     mayBeEmpty: true,
     keep: false,
@@ -133,6 +137,7 @@ function subjectVariables(
     variables.push({
       group: 'subject',
       name: `player.civic.${slot}`,
+      aliases: identityNames(first.subject, `civic.${slot}`),
       source: `player.civic.${slot}`,
       mayBeEmpty: false,
       keep: false,
@@ -161,6 +166,7 @@ function referenceVariables(
     variables.push({
       group: 'reference',
       name: field,
+      aliases: identityNames(subject, 'name', field),
       source: `${subject}.${field}.name`,
       mayBeEmpty: true,
       keep: false,
@@ -170,6 +176,7 @@ function referenceVariables(
       variables.push({
         group: 'reference',
         name: `${field}.civic.${slot}`,
+        aliases: identityNames(subject, `civic.${slot}`, field),
         source: `${subject}.${field}.civic.${slot}`,
         mayBeEmpty: true,
         keep: false,
@@ -179,6 +186,7 @@ function referenceVariables(
     variables.push({
       group: 'reference',
       name: `${subject}.${field}.leader`,
+      aliases: identityNames(subject, 'leader', field),
       source: `${subject}.${field}.leader`,
       mayBeEmpty: true,
       keep: false,
@@ -273,16 +281,22 @@ export function templateVariables(
       existing.mayBeEmpty = existing.mayBeEmpty || variable.mayBeEmpty;
       return;
     }
-    byName.set(variable.name, { ...variable, prints: variablePrints(variable.name) });
+    const aliases = (variable.aliases ?? []).filter(alias => alias !== variable.name);
+    byName.set(variable.name, { ...variable, aliases, prints: variablePrints(variable.name) });
   };
-  triggerVariables(triggers).forEach(add);
+  triggerVariables(triggers, repeated).forEach(add);
   subjectVariables(triggers, catalogue, repeated).forEach(add);
   const first = triggers[0];
   if (first && !first.group) referenceVariables(first, catalogue).forEach(add);
   readerVariables(catalogue).forEach(add);
   linkVariables(template, variant).forEach(add);
   siblingVariables(template, variant).forEach(add);
-  return [...byName.values()];
+  const variables = [...byName.values()];
+  // A listed row reserves its bare name even if several triggers use it.
+  for (const variable of variables)
+    if (variable.group === 'trigger')
+      variable.aliases = variable.aliases.filter(alias => !repeated.has(alias) || !byName.has(alias));
+  return variables;
 }
 
 /** Check proposed copy for unknown names, dropped links, and potentially absent facts. */

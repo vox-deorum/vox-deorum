@@ -51,7 +51,6 @@
       "city.conversions.some(c => c.knows('religion') && c.religion === city.majorityReligion)"
     ],
     "values": {
-      "cityName": "city.name",
       "civilization": "city.owner.name",
       "religion": "city.majorityReligion",
       "distance": "city.distance.own"
@@ -233,7 +232,6 @@
     "values": {
       "civilization": "event.player.name",
       "ours": "event.player.self === true",
-      "cityName": "event.city.name",
       "belief": "event.beliefType"
     },
     "tier": "ours ? 'notable' : 'routine'",

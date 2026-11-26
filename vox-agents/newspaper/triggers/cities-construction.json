@@ -15,8 +15,7 @@
       "!events.some(e => (e.type === 'PlayerCityFounded' || e.type === 'UnitCityFounded') && e.turn === event.turn && e.knows('plot') && event.knows('plot') && e.plot.x === event.plot.x && e.plot.y === event.plot.y)"
     ],
     "values": {
-      "building": "event.building",
-      "cityName": "event.city.name"
+      "building": "event.building"
     },
     "tier": "filler",
     "adjust": "event.stake.building",
@@ -35,8 +34,7 @@
       "!events.some(e => e.type === 'CityConstructed' && e.knows('player') && e.player.knows('id') && e.player.id === event.player.id && e.knows('building') && e.building === event.building && e.knows('city') && e.city.knows('id') && event.city.knows('id') && e.city.id === event.city.id && e.knows('isGoldPurchase') && e.isGoldPurchase === false && e.knows('isFaithPurchase') && e.isFaithPurchase === false)"
     ],
     "values": {
-      "building": "event.building",
-      "cityName": "event.city.name"
+      "building": "event.building"
     },
     "tier": "filler",
     "adjust": "event.stake.building",
@@ -58,7 +56,6 @@
     ],
     "values": {
       "building": "event.building",
-      "cityName": "event.city.name",
       "currency": "event.knows('isGoldPurchase') && event.isGoldPurchase === true ? 'gold' : 'faith'"
     },
     "tier": "filler",
@@ -75,8 +72,7 @@
       "event.knows('city') && event.city.knows('name') && event.city.own === true"
     ],
     "values": {
-      "building": "event.building",
-      "cityName": "event.city.name"
+      "building": "event.building"
     },
     "tier": "routine",
     "adjust": "event.stake.building",
@@ -117,8 +113,7 @@
     ],
     "values": {
       "building": "event.building",
-      "cityName": "event.city.name",
-      "civilization": "event.city.owner.name"
+      "owner": "event.city.owner.name"
     },
     "tier": "filler",
     "adjust": "event.stake.place",
@@ -141,8 +136,7 @@
     ],
     "values": {
       "building": "event.building",
-      "cityName": "event.city.name",
-      "civilization": "event.city.owner.name",
+      "owner": "event.city.owner.name",
       "currency": "event.knows('isGoldPurchase') && event.isGoldPurchase === true ? 'gold' : 'faith'"
     },
     "tier": "filler",

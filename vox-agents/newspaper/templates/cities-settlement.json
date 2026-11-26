@@ -114,7 +114,7 @@
         "genre": "notice",
         "headline": "A new home for {{terms.civilization}}",
         "body": [
-          "Hear it, {{terms.civic.people}}! We have founded {{city}}! A new light for the {{terms.civilizationAdjective}} people! {{cityName}} is born!"
+          "Hear it, {{terms.civic.people}}! We have founded {{city}}! A new light for the {{terms.civilizationAdjective}} people! {{city}} is born!"
         ],
         "settled": true
       },

@@ -44,6 +44,7 @@ import { deskChoicesLimit, deskRefKey } from './batch.js';
 import { DeskError, readDeskCatalogue } from './catalogue.js';
 import type { DeskCatalogue } from './catalogue.js';
 import { normalizeParagraphs } from './paragraphs.js';
+import { repairCopy } from './repair.js';
 import { deskMessages, deskTelemetryContextId, recordDeskReply, recordDeskUsage } from './telemetry.js';
 import type { DeskRequestOutcome } from './telemetry.js';
 import { candidateWarnings, templateVariables } from './variables.js';
@@ -276,8 +277,9 @@ function applyReply(
     const seen = new Set(getCandidates(ref).map(choiceKey));
     let stored = 0;
     for (const [index, raw] of entry.entries()) {
-      const text = cleanText(raw);
-      if (!text) continue;
+      const cleaned = cleanText(raw);
+      if (!cleaned) continue;
+      const text = repairCopy(cleaned, variables);
       const duplicate = seen.has(choiceKey(text));
       seen.add(choiceKey(text));
       const warnings = candidateWarnings(text, found.variant, variables);

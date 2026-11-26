@@ -284,17 +284,19 @@ describe('newspaper desk settle', () => {
     expect(await readFile(fixture.templatePath, 'utf8')).toBe(original);
   });
 
-  it('should reject a runtime alias that the writer table does not list', async () => {
+  it('should save canonical spellings for runtime aliases, including kept links', async () => {
     const fixture = await createFixture();
     const draft = findVariant(await readCatalogue(fixture), fixture.ref);
-    const error = await rejection(settleVariant(
+    await settleVariant(
       fixture.ref,
-      { headline: 'A friend enters the {{subject.name}} era', body: ['News from {{civilization}}.'] },
+      { headline: 'A dispatch from {{subject.name}}', body: ['News from {{triggerValues.fixture-era.civilization}}.'] },
       draft.revision,
       options(fixture),
-    ));
-    expect(error.status).toBe(400);
-    expect(error.message).toContain('subject.name');
+    );
+    const [saved] = await readParsed(fixture.templatePath);
+    expect(saved.variants[0]).toMatchObject({
+      headline: 'A dispatch from {{player}}', body: ['News from {{civilization}}.'], settled: true,
+    });
   });
 
   it('should reject an unknown placeholder and leave the original bytes in place', async () => {
@@ -535,7 +537,7 @@ describe('newspaper desk settle many', () => {
         body: ['Primary body for {{civilization}}.'],
       },
       siblings: [
-        { headline: 'First sibling {{era}}', body: ['First sibling body for {{civilization}}.'] },
+        { headline: 'First sibling {{triggerValues.fixture-era.era}}', body: ['First sibling body for {{ civilization }}.'] },
         { headline: 'Second sibling {{era}}', byline: 'Staff', body: ['Second sibling body for {{civilization}}.'] },
       ],
     }, { ...options(fixture), onChange });

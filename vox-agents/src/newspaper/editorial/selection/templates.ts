@@ -207,16 +207,14 @@ function templateFacts(
   const groups = [];
   for (const part of parts) {
     const { matches } = part.values;
-    if (!Array.isArray(matches)) {
-      const entries = Object.entries(part.values).filter((entry): entry is [string, RuleScalar] => !Array.isArray(entry[1]));
-      triggerValues[part.definitionId] = Object.fromEntries(entries);
-      for (const [name, value] of entries) {
-        qualified[`triggerValues.${part.definitionId}.${name}`] = value;
-        if (Object.hasOwn(values, name)) repeated.add(name);
-        values[name] = value;
-      }
-      continue;
+    const entries = Object.entries(part.values).filter((entry): entry is [string, RuleScalar] => !Array.isArray(entry[1]));
+    triggerValues[part.definitionId] = Object.fromEntries(entries);
+    for (const [name, value] of entries) {
+      qualified[`triggerValues.${part.definitionId}.${name}`] = value;
+      if (Object.hasOwn(values, name)) repeated.add(name);
+      values[name] = value;
     }
+    if (!Array.isArray(matches)) continue;
     const group = {
       key: part.values.key as RuleScalar, count: matches.length,
       matches: matches.map((match) => {
@@ -228,9 +226,7 @@ function templateFacts(
       }),
     };
     groups.push(group);
-    triggerValues[part.definitionId] = group;
-    qualified[`triggerValues.${part.definitionId}.key`] = group.key;
-    qualified[`triggerValues.${part.definitionId}.count`] = group.count;
+    Object.assign(triggerValues[part.definitionId], group);
   }
   for (const name of repeated) delete values[name];
   const group = groups.length === 1 ? groups[0] : undefined;

@@ -48,7 +48,7 @@
         "stance": "hawkish",
         "genre": "analysis",
         "when": "gained === true",
-        "headline": "The Fall of {{cityName}}",
+        "headline": "The Fall of {{city}}",
         "body": [
           "The capture of {{city}} provides {{terms.civilization}} with a vital strategic pivot. While {{formerOwner}} may claim the loss is merely a border adjustment, this victory transforms a defense hub into a launchpad for further expansion."
         ],
@@ -61,7 +61,7 @@
         "stance": "government-critical",
         "genre": "editorial",
         "when": "gained === false",
-        "headline": "Disaster at {{cityName}}",
+        "headline": "Disaster at {{city}}",
         "body": [
           "{{captor}} has seized {{city}}! Was the {{terms.civic.government}} asleep while the enemy marched? Our {{terms.civic.people}} pay the price for this negligence. We demand to know why our defenses were so weak!"
         ],
@@ -78,7 +78,7 @@
     "variants": [
       {
         "id": "city-flips-report",
-        "headline": "{{cityName}} switches allegiance to {{newOwner}}",
+        "headline": "{{city}} switches allegiance to {{newOwner}}",
         "body": [
           "{{city}}, formerly under the control of {{formerOwner}}, has flipped its loyalty to {{newOwner}}. The change in governance happened without a major battle. Local officials cite a shift in political will as the reason for the change. {{newOwner}} has already begun installing their own administrators."
         ],
@@ -99,7 +99,7 @@
         "voice": "gazette",
         "stance": "conciliatory",
         "genre": "letter",
-        "headline": "A New Chapter for {{cityName}}",
+        "headline": "A New Chapter for {{city}}",
         "byline": "A Loyal Subject",
         "body": [
           "Madam, letters from the frontier relate that {{city}} now serves {{newOwner}} instead of {{formerOwner}}. I pray that our {{terms.civic.leaderAddress}} extends a gracious hand to the inhabitants: by treating our new neighbors with kindness, we ensure that the drums of war remain silent."

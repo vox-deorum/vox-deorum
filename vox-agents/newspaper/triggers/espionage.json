@@ -123,7 +123,6 @@
       "city.knows('owner') && city.owner.major && city.owner.knows('name') && city.before.knows('owner') && city.before.owner.id === city.owner.id"
     ],
     "values": {
-      "cityName": "city.name",
       "civilization": "city.owner.name"
     },
     "tier": "routine",

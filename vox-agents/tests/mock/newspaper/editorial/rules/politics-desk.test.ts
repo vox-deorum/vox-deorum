@@ -609,7 +609,7 @@ describe('stock politics desk', () => {
       const rival = firedSubjects(rule(differing, 'rival-adopts-ideology'));
       expect(rival).toHaveLength(1);
       expect(rival[0].subject).toBe('player/1');
-      expect(subjectValue(rival[0], 'name')).toBe('Brazil');
+      expect(subjectValue(rival[0], 'rival')).toBe('Brazil');
       expect(subjectValue(rival[0], 'ideology')).toBe('Freedom');
       expect(subjectValue(rival[0], 'shared')).toBe(false);
 

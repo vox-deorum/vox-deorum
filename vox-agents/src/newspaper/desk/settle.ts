@@ -11,6 +11,7 @@ import { authoredTemplateSchema } from '../editorial/config/schema.js';
 import { mergeTemplateVariants, templateVariantIds, variantCompanionFilename } from '../editorial/config/template-sources.js';
 import { deskVariantStyle, findDeskVariant } from './brief.js';
 import { DeskError, deskTemplateFilePath, deskVariantRevision, readDeskCatalogue, type DeskCatalogueOptions, type DeskVariant } from './catalogue.js';
+import { repairCopy } from './repair.js';
 import { templateVariables, variantWarnings } from './variables.js';
 
 export interface DeskSettleOptions extends DeskCatalogueOptions {
@@ -217,7 +218,7 @@ async function updateVariant(ref: DeskRef, revision: string, options: DeskSettle
     if (siblings.length > 0 && variant.settled)
       throw new DeskError(409, 'This variant is already settled. Reopen it before adding copies.');
     const variables = templateVariables(template, catalogue, variant);
-    const copy = normalizeText(primary);
+    const copy = repairCopy(normalizeText(primary), variables);
     requireValidCopy(copy, variant, variables);
     fields = { ...copy, settled: true };
     if (siblings.length) {
@@ -227,7 +228,7 @@ async function updateVariant(ref: DeskRef, revision: string, options: DeskSettle
       const used = new Set(templateVariantIds(combined));
       let next = 1;
       for (const source of siblings) {
-        const siblingCopy = normalizeText(source);
+        const siblingCopy = repairCopy(normalizeText(source), variables);
         requireValidCopy(siblingCopy, variant, variables);
         while (used.has(`${variant.id}-${next}`)) next++;
         siblingRows.push(siblingRow(entry, `${variant.id}-${next++}`, siblingCopy));

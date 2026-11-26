@@ -80,11 +80,11 @@ Prose and links use `{{name}}` placeholders. A placeholder prints its own unit, 
 | `{{terms.civilization}}`, `{{terms.civilizationAdjective}}`, `{{terms.leader}}` | Receiver's civilization name, English adjective, and leader. For a modded or localized name, use its recorded name or supply the adjective in the catalogue. |
 | `{{terms.<name>}}` | A printable [term](triggers/constants.md#terms) defined by the catalogue |
 
-The Writing Desk lists one canonical name per value: bare trigger values, short reference names such as `owner`, and no IDs, `subject.*` names, or `period.*` names. It accepts only those names. The runtime still accepts the longer aliases and IDs for links and overlays.
+The Writing Desk lists one canonical name per value: bare trigger values, short reference names such as `owner`, and no IDs, `subject.*` names, or `period.*` names. Before checking copy, the desk rewrites a misspelled name to its listed name when only one row matches. A row matches when the spelling is one of the row's runtime aliases, or when it equals the row's name after ignoring case, punctuation and a trailing `name`. For example, `{{city.name}}` and `{{cityName}}` both become `{{city}}`. The desk accepts only listed names after that step. The runtime still accepts the longer aliases and IDs for links and overlays.
 
 Identity placeholders follow one reference from a subject. For example, an event can use `{{event.city.name}}`. To print its city's owner, define a trigger value for that fact. World and group subjects have no automatic name or ID. If a reference such as `city.formerOwner` is missing from the Writing Desk's variable list, expose the name as a trigger value to use it there.
 
-For a single group, print a non-null scalar `{{key}}` or `{{count}}`. Expressions can read `group.matches`. If several rules supply the same value, qualify it: `{{triggerValues.conversions.count}}` names the group from the `conversions` rule. Its members are available in `triggerValues.conversions.matches`. Ambiguous bare values leave the variant out.
+For a single group, print a non-null scalar `{{key}}` or `{{count}}`. A grouped rule's other values print only when every member has the same value; for example, `{{victim}}` prints when all lost units fell to one civilization. Expressions can read `group.matches`. If several rules supply the same value, qualify it: `{{triggerValues.conversions.count}}` names the group from the `conversions` rule. Its members are available in `triggerValues.conversions.matches`. Ambiguous bare values leave the variant out.
 
 List name placeholders without braces in `names`, such as `terms.leader`. The reader underlines them using `vd-name` and keeps declared links clickable.
 

@@ -90,9 +90,7 @@ function catalogue(templates: DeskTemplate[]): DeskCatalogue {
 }
 
 const target = template('science-news', ['science', 'international'], [
-  variant('draft', press, false, {
-    links: [{ placeholder: 'civilization', label: '{{civilization}}', target: { type: 'civilization', civilizationId: '{{playerId}}' } }],
-  }),
+  variant('draft', press),
   variant('sibling', press, false),
   variant('target-settled', press, true),
 ]);

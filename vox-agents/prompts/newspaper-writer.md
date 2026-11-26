@@ -48,19 +48,12 @@ A good story fits the trigger that starts it. Start from here.
 
 - Template condition: {{templateWhen}}
 - Task condition: {{variantWhen}}
-{{#hasLinks}}
-
-### Link placeholders
-{{#links}}
-- `{{placeholder}}`{{#keep}} (keep: the current text uses it){{/keep}}
-{{/links}}
-{{/hasLinks}}
 
 ### Available variables
-| Name | Prints as | Source | Availability |
-| --- | --- | --- | --- |
+| Name | Prints as | Source |
+| --- | --- | --- |
 {{#variables}}
-| `{{name}}` | {{prints}} | {{source}} | {{#mayBeEmpty}}may be empty{{/mayBeEmpty}}{{^mayBeEmpty}}always present{{/mayBeEmpty}}{{#keep}}; keep{{/keep}} |
+| `{{name}}` | {{prints}} | {{source}} |
 {{/variables}}
 
 {{/variants}}

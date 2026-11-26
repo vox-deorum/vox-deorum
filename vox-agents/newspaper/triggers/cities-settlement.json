@@ -10,7 +10,6 @@
       "event.city.distance.capital >= nearby"
     ],
     "values": {
-      "cityName": "event.city.name",
       "distance": "event.city.distance.capital"
     },
     "tier": "notable",
@@ -41,9 +40,6 @@
       "event.knows('player') && event.player.self === true && event.knows('city') && event.city.knows('name')",
       "event.type === 'PlayerCityFounded' || !event.knows('plot') || !events.some(e => e.type === 'PlayerCityFounded' && e.turn === event.turn && e.knows('player') && e.player.self && e.knows('plot') && e.plot.x === event.plot.x && e.plot.y === event.plot.y)"
     ],
-    "values": {
-      "cityName": "event.city.name"
-    },
     "tier": "routine",
     "tags": ["cities", "domestic"]
   },

@@ -201,7 +201,6 @@ describe('stock building news', () => {
     const completed = subject(audit('building-completed'));
     expect(completed).toMatchObject({ outcome: 'fired', importance: 30 });
     expect(placeholder(completed, 'values.building')).toBe('Granary');
-    expect(placeholder(completed, 'values.cityName')).toBe('Tours');
     expect(completed.sources).toEqual(expect.arrayContaining([
       expect.objectContaining({ table: 'GameEvents', id: 100 }),
       expect.objectContaining({ table: 'CityInformations', turn: 10 }),
@@ -227,7 +226,6 @@ describe('stock building news', () => {
     const investment = subject(audit('building-investment-made'));
     expect(investment).toMatchObject({ outcome: 'fired', tier: 'filler' });
     expect(placeholder(investment, 'values.building')).toBe('Monument');
-    expect(placeholder(investment, 'values.cityName')).toBe('Tours');
     expect(investment.sources).toEqual(expect.arrayContaining([
       expect.objectContaining({ table: 'GameEvents', id: 100 }),
       expect.objectContaining({ table: 'CityInformations', turn: 10 }),
@@ -291,8 +289,7 @@ describe('stock building news', () => {
     const completed = subject(audit('foreign-building-completed'));
     expect(completed).toMatchObject({ outcome: 'fired', tier: 'filler' });
     expect(placeholder(completed, 'values.building')).toBe('Library');
-    expect(placeholder(completed, 'values.cityName')).toBe('Recife');
-    expect(placeholder(completed, 'values.civilization')).toBe('Brazil');
+    expect(placeholder(completed, 'values.owner')).toBe('Brazil');
   });
 
   it.each([
@@ -302,8 +299,7 @@ describe('stock building news', () => {
     const { audit } = await check(foreign('Library', ['Library'], 12, purchase));
     const bought = subject(audit('foreign-building-purchased'));
     expect(bought.outcome).toBe('fired');
-    expect(placeholder(bought, 'values.cityName')).toBe('Recife');
-    expect(placeholder(bought, 'values.civilization')).toBe('Brazil');
+    expect(placeholder(bought, 'values.owner')).toBe('Brazil');
     expect(placeholder(bought, 'values.currency')).toBe(currency);
     expect(subject(audit('foreign-building-completed')).outcome).toBe('false');
     expect(subject(audit('building-purchased')).outcome).toBe('false');

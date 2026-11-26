@@ -241,7 +241,10 @@ describe('newspaper trigger rules', () => {
 
     it('should bind scalar values in order, clamp importance, and apply group ratings only above the minimum', async () => {
       const rule: EditorialTriggerRule = { id: 'religion', subject: 'city', tier: 'filler', when: 'city.majorityReligion',
-        values: { population: 'city.population', doubled: 'population * 2' },
+        values: {
+          population: 'city.population', doubled: 'population * 2',
+          partial: 'population === 7 ? undefined : "visible"', count: '99', key: '"member key"',
+        },
         group: { by: 'doubled === 2 ? "singleton" : city.majorityReligion' },
         adjust: ['matches[0].values.doubled * 100', 'count'],
         urgent: 'key === "Buddhism" && count === 2 && typeof city === "undefined"', tags: [] };
@@ -256,10 +259,11 @@ describe('newspaper trigger rules', () => {
         subject: 'group/city/"Buddhism"',
         seriesKeys: ['city/1', 'city/2'].map(subject => JSON.stringify(['religion', subject])), importance: 100, urgent: true,
         values: { count: 2, key: 'Buddhism', matches: [
-          { subject: 'city/1', values: { population: 4, doubled: 8 } },
-          { subject: 'city/2', values: { population: 7, doubled: 14 } },
+          { subject: 'city/1', values: { population: 4, doubled: 8, partial: 'visible', count: 99, key: 'member key' } },
+          { subject: 'city/2', values: { population: 7, doubled: 14, count: 99, key: 'member key' } },
         ] },
       }]);
+      expect(result.developments[0].values).not.toHaveProperty('partial');
       expect(result.developments[0].sources.map(source => source.id)).toEqual([1, 2]);
       expect(result.audit[0].groups).toMatchObject([
         { subject: 'group/city/"Buddhism"', outcome: 'fired', importance: 100, urgent: true },

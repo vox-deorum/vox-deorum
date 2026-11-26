@@ -270,7 +270,10 @@ export async function evaluateTriggerRules({
         record.outcome = 'chance';
         continue;
       }
-      const placeholders = { count: matches.length, key, matches: entries };
+      const shared = Object.fromEntries(Object.entries(entries[0].values).filter(([name, value]) =>
+        entries.every(({ values }) => Object.hasOwn(values, name) && values[name] === value)
+      ));
+      const placeholders = { ...shared, matches: entries, count: matches.length, key };
       /** Combine both evaluation phases' evidence before emitting the group. */
       const complete = (results: ExpressionResult[]) => {
         record.expressions = auditSteps(rate, results);

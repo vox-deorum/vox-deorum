@@ -192,7 +192,7 @@
         "voice": "press",
         "stance": "ambitious",
         "genre": "analysis",
-        "headline": "The Weight of Growth in {{cityName}}",
+        "headline": "The Weight of Growth in {{city}}",
         "body": [
           "The census is in: {{city}} is now a {{milestone}} with {{population}} residents. While the numbers signal a triumph of expansion, the city's appetite for better amenities is ever growing faster. It is up to {{owner.civic.government}} to provide for its people and lead the world."
         ],
@@ -203,9 +203,9 @@
         "voice": "crier",
         "stance": "national",
         "genre": "notice",
-        "headline": "Notice of population growth in {{cityName}}",
+        "headline": "Notice of population growth in {{city}}",
         "body": [
-          "Hear me, {{terms.civic.people}}! {{city}} has passed {{population}} people and is officially a {{milestone}}! Our borders expand and our power grows. {{cityName}} is a {{milestone}}!"
+          "Hear me, {{terms.civic.people}}! {{city}} has passed {{population}} people and is officially a {{milestone}}! Our borders expand and our power grows. {{city}} is a {{milestone}}!"
         ],
         "settled": true
       },
@@ -214,7 +214,7 @@
         "voice": "gazette",
         "stance": "traditional",
         "genre": "report",
-        "headline": "{{cityName}} Declared a {{milestone}}",
+        "headline": "{{city}} Declared a {{milestone}}",
         "body": [
           "{{city}} now numbers {{population}} souls, officially qualifying it as a {{milestone}}. In this era of sudden expansion, we must hope that the virtues of our fathers are not lost amidst the ever-shifting fashions of a modern city."
         ],

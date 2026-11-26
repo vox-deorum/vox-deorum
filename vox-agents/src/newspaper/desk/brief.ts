@@ -13,7 +13,7 @@ import { defaultVariantStyle } from '../editorial/config/styles.js';
 import { chunkDeskVariants, deskChunkSize, deskRefKey } from './batch.js';
 import { deskTriggers, deskWritingRulesPath, type DeskCatalogue, type DeskTemplate, type DeskVariant } from './catalogue.js';
 import { normalizeParagraphs } from './paragraphs.js';
-import { deskTextPlaceholders, templateVariables } from './variables.js';
+import { templateVariables } from './variables.js';
 
 /** Examples from other templates per task template, before deduplication. */
 const relatedExamplesPerTemplate = 2;
@@ -42,10 +42,7 @@ interface BriefVariant {
   templateWhen: string;
   variantWhen: string;
   names: string;
-  hasLinks: boolean;
-  links: { placeholder: string; keep: boolean }[];
   variables: DeskVariable[];
-  current: DeskText;
 }
 
 /** One example flattened for the prompt's section loop. */
@@ -175,9 +172,6 @@ export function briefView(
     if (!found) return [];
     const { template, variant } = found;
     taskTemplates.set(template.id, template);
-    const current = { ...variant.text, body: normalizeParagraphs(variant.text.body) };
-    const used = deskTextPlaceholders(current);
-    const links = (variant.links ?? []).map(({ placeholder }) => ({ placeholder, keep: used.has(placeholder) }));
     const triggers = templateTriggers(template, catalogue);
     return [{
       templateId: template.id,
@@ -189,11 +183,8 @@ export function briefView(
       templateWhen: conditions(template.when),
       variantWhen: conditions(variant.when),
       names: template.names?.join(', ') || 'none',
-      hasLinks: links.length > 0,
-      links,
       variables: templateVariables(template, catalogue, variant)
         .map(variable => ({ ...variable, source: briefSource(variable.source) })),
-      current,
     }];
   });
   const examples: BriefExample[] = [];

@@ -92,7 +92,7 @@ Open **Debug → Writing Desk** from a writable source checkout. Use a configure
 
 1. **Choose variants.** Search, the All/Unsettled/Settled filter, and topic tags narrow the list. Unsettled variants are checked by default; **Generate** uses checked variants that match the filters.
 2. **Generate.** Pick choices per model and one or more models. Requests group checked variants by voice, stance, and genre, up to eight per request, and include the [writing guide](../newspaper/writing.md) in the model prompt.
-3. **Review.** A variant lists its current copy and candidates by model. Click an unsettled row to edit; those working drafts survive editor and variant switches.
+3. **Review.** A variant lists its current copy and candidates by model. Generated and settled copy has misspelled placeholders repaired to the listed names first (see [Placeholders and facts](../newspaper/editorial.md#placeholders-and-facts)). Click an unsettled row to edit; those working drafts survive editor and variant switches.
 4. **Settle.** Settling saves the copy to the catalogue and marks it settled; **Unsettle** reopens it. **Settle multiple…** keeps one copy at the original ID and file and appends the rest as `-1`, `-2`, … in a companion such as `war-variants.json`. Each inherits the original's settings, including style, eligibility, weight, and links.
 5. **Reset.** Stop a running batch, then **Clear drafts** to remove generated candidates and edits while keeping current copies.
 

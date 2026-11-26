@@ -48,7 +48,7 @@
         "voice": "press",
         "stance": "devout",
         "genre": "obituary",
-        "headline": "The Passing of {{cityName}}",
+        "headline": "The Passing of {{city}}",
         "body": [
           "{{city}} was once the crowning jewel of {{civilization}}, a sanctuary of high spires and deep faith. Now, it faces its final trial. In {{turns}}, the flames will consume the last altar. We pray that the souls of the {{population}} residents find a mercy their city could not secure."
         ],

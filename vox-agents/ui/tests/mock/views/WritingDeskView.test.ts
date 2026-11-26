@@ -29,7 +29,7 @@ const choices = [
 const initial: DeskVariantDetail = {
   templateId: 'era', variantId: 'gazette', style, revision: 'r1', settled: false, text: original,
   triggers: [], siblings: [], candidates: choices,
-  variables: [{ name: 'civilization', group: 'trigger', prints: 'as is', source: 'player.name', keep: false, mayBeEmpty: false }],
+  variables: [{ name: 'civilization', aliases: [], group: 'trigger', prints: 'as is', source: 'player.name', keep: false, mayBeEmpty: false }],
 };
 const settled: DeskVariantDetail = {
   ...initial, variantId: 'report', revision: 'r2', settled: true, candidates: [],

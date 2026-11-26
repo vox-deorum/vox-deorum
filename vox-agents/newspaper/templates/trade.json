@@ -376,7 +376,7 @@
         "id": "we-plunder-foreign-trade-route-account-report",
         "headline": "Our forces seize goods from {{originCiv}}",
         "body": [
-          "Our soldiers stopped a foreign shipment from {{originCiv}} to {{triggerValues.we-plunder-foreign-trade-route.destinationCiv}} and seized its goods. The cargo is now in our hands, earing a considerable income for {{terms.civic.government}}. The government of {{destinationCiv}} has protested this incident."
+          "Our soldiers stopped a foreign shipment from {{originCiv}} to {{destinationCiv}} and seized its goods. The cargo is now in our hands, earing a considerable income for {{terms.civic.government}}. The government of {{destinationCiv}} has protested this incident."
         ],
         "weight": {
           "base": 1

@@ -57,8 +57,7 @@
     ],
     "values": {
       "milestone": "crossed(city.population, city.before.population, metropolis) ? 'metropolis' : 'large city'",
-      "population": "city.population",
-      "cityName": "city.name"
+      "population": "city.population"
     },
     "tier": "milestone === 'metropolis' ? 'notable' : 'routine'",
     "tags": ["cities", "domestic"]

@@ -45,15 +45,6 @@ vi.mock('../../../../src/newspaper/desk/catalogue.js', async importOriginal => (
   readDeskCatalogue: async () => mocks.catalogue,
 }));
 
-vi.mock('../../../../src/newspaper/desk/variables.js', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../../../src/newspaper/desk/variables.js')>();
-  return {
-    ...actual,
-    templateVariables: () => [],
-    candidateWarnings: () => [],
-  };
-});
-
 const modelA = 'desk-test-model-a';
 const modelB = 'desk-test-model-b';
 const press: DeskStyle = { voice: 'press', stance: 'neutral', genre: 'report' };
@@ -175,6 +166,29 @@ describe('newspaper desk generation', () => {
     expect(getCurrentJob()).toMatchObject({ total: 1, done: 1, failed: 0 });
     expect(roots[0].attributes['desk.outcome']).toBe('partial');
     expect(requests[0].attributes['desk.outcome']).toBe('partial');
+  });
+
+  it('should store repaired placeholders and compare the repaired choices for duplicates', async () => {
+    const ref = { templateId: 'press-news', variantId: 'one' };
+    const stock = catalogue();
+    stock.triggers[0].values = { victim: 'player.name' };
+    mocks.catalogue = stock;
+    const body = ['A report from the border.'];
+    mocks.stream.mockResolvedValue({ steps: [{ text: JSON.stringify({ variants: [{
+      ...ref,
+      choices: [
+        { headline: 'News from {{triggerValues.trigger-a.victim}}', body },
+        { headline: 'News from {{victim}}', body },
+      ],
+    }] }) }] });
+
+    await startJob(request([ref], 2));
+    await waitForJob();
+
+    const stored = getCandidates(ref);
+    expect(stored.map(candidate => candidate.headline)).toEqual(['News from {{victim}}', 'News from {{victim}}']);
+    expect(stored[0].warnings).toEqual([]);
+    expect(stored[1].warnings).toHaveLength(1);
   });
 
   it('should persist one agent and step per request with model, exchanges and token counts', async () => {

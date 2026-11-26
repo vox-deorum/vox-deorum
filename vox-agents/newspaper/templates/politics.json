@@ -596,16 +596,16 @@
     "id": "rival-adopts-ideology-account",
     "triggers": ["rival-adopts-ideology"],
     "tags": ["politics", "international"],
-    "names": ["ideology", "name"],
+    "names": ["ideology", "rival"],
     "links": [
-      { "placeholder": "name", "label": "{{name}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
+      { "placeholder": "rival", "label": "{{rival}}", "target": { "type": "civilization", "civilizationId": "{{playerId}}" } }
     ],
     "variants": [
       {
         "id": "rival-ideology-report",
-        "headline": "{{name}} takes up {{ideology}}",
+        "headline": "{{rival}} takes up {{ideology}}",
         "body": [
-          "The {{player.civic.government}} of {{name}} has adopted {{ideology}} as its guiding doctrine. Its courtiers have spent the morning learning a new oath, and a mason is already at work on the lintel where the old words were cut. The proclamation was read at first light to a square that had been swept for the occasion."
+          "The {{player.civic.government}} of {{rival}} has adopted {{ideology}} as its guiding doctrine. Its courtiers have spent the morning learning a new oath, and a mason is already at work on the lintel where the old words were cut. The proclamation was read at first light to a square that had been swept for the occasion."
         ]
       },
       {
@@ -614,9 +614,9 @@
         "stance": "conciliatory",
         "genre": "report",
         "when": "shared === true",
-        "headline": "{{name}} now shares our doctrine",
+        "headline": "{{rival}} now shares our doctrine",
         "body": [
-          "We are pleased to learn that {{name}} has adopted {{ideology}}, the doctrine that also guides our own affairs. Neighbors who read the world the same way tend to quarrel less and trade more, and the guards along the border have already grown friendlier. {{name}} is welcome to the company."
+          "We are pleased to learn that {{rival}} has adopted {{ideology}}, the doctrine that also guides our own affairs. Neighbors who read the world the same way tend to quarrel less and trade more, and the guards along the border have already grown friendlier. {{rival}} is welcome to the company."
         ]
       },
       {
@@ -624,10 +624,10 @@
         "voice": "broadcast",
         "stance": "hawkish",
         "genre": "analysis",
-        "headline": "{{name}} has a doctrine now",
+        "headline": "{{rival}} has a doctrine now",
         "body": [
-          "{{name}} now holds {{ideology}} as its doctrine. A nation that picks a direction has also picked the places that direction leads.",
-          "Watch what {{name}} builds next, and where it puts its soldiers. The declaration will name the target later; the groundwork names it now."
+          "{{rival}} now holds {{ideology}} as its doctrine. A nation that picks a direction has also picked the places that direction leads.",
+          "Watch what {{rival}} builds next, and where it puts its soldiers. The declaration will name the target later; the groundwork names it now."
         ]
       }
     ]

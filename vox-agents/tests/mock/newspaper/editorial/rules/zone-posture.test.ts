@@ -147,7 +147,6 @@ describe('zone posture triggers', () => {
       const entry = audit(result, 'own-front-posture-defensive', 'city/10');
 
       expect(entry?.outcome).toBe('fired');
-      expect(value(result, 'own-front-posture-defensive', 'city/10', 'values.cityName')).toBe('Paris');
       expect(value(result, 'own-front-posture-defensive', 'city/10', 'values.domain')).toBe('Land');
       expect(value(result, 'own-front-posture-defensive', 'city/10', 'values.previousPosture')).toBe('Counterattack');
       expect(value(result, 'own-front-posture-defensive', 'city/10', 'values.posture')).toBe('Hedgehog');
@@ -268,7 +267,6 @@ describe('zone posture triggers', () => {
       const result = await check(fixture({ cities: [home, enemy], zones: [land], state: 'war' }));
 
       expect(audit(result, 'enemy-front-posture-offensive', 'city/20')?.outcome).toBe('fired');
-      expect(value(result, 'enemy-front-posture-offensive', 'city/20', 'values.cityName')).toBe('Persepolis');
       expect(value(result, 'enemy-front-posture-offensive', 'city/20', 'values.civilization')).toBe('Brazil');
       expect(value(result, 'enemy-front-posture-offensive', 'city/20', 'values.domain')).toBe('Land');
       expect(value(result, 'enemy-front-posture-offensive', 'city/20', 'values.posture')).toBe('Steamroll');

@@ -16,10 +16,12 @@ const standard = {
 
 /** Exercise authored eligibility against the same visible facts and compiled catalogue as a check. */
 async function candidates(totalCities: number, triggers: unknown[], template: unknown,
-  { adjust, receiverName = 'France', receiverLeader }: {
+  { adjust, receiverName = 'France', receiverLeader, rivals = [], events = [] }: {
     adjust?: (developments: RuleDevelopment[]) => RuleDevelopment[];
     receiverName?: string;
     receiverLeader?: string;
+    rivals?: string[];
+    events?: NewspaperEvidence['events'];
   } = {}) {
   const base = await loadEditorialConfig();
   const config = await parseEditorialConfig({ ...base, triggers, templates: [template] });
@@ -28,15 +30,18 @@ async function candidates(totalCities: number, triggers: unknown[], template: un
     source: { table: 'CityInformations', id, turn: 10, createdAt: 10 },
     values: { Name: `City ${id}`, OwnerID: 0, Population: id + 1, MajorityReligion: 'Buddhism' },
   }));
-  const owner = {
-    subjectID: 0, source: { table: 'PlayerSummaries' as const, id: 2, turn: 10, createdAt: 10 }, values: {},
-  };
+  const names = [receiverName, ...rivals];
+  const players = names.map((_, subjectID) => ({
+    subjectID, source: { table: 'PlayerSummaries' as const, id: subjectID + 2, turn: 10, createdAt: 10 }, values: {},
+  }));
   const facts = buildNewspaperFacts({
     request: { receiverPlayerID: 0, cutoffTurn: 10, previousCheckTurn: 8, historyFromTurn: 5 },
-    players: [owner], cities, events: [], comparisons: { players: [], cities: [] },
+    players, cities, events, comparisons: { players: [], cities: [] },
     history: { fromTurn: 5, baseline: { players: [], cities: [] },
-      snapshots: { players: [owner], cities }, events: [], gaps: [] },
-  }, { playerIdentities: { 0: { name: receiverName, major: true, leader: receiverLeader } } });
+      snapshots: { players, cities }, events: [], gaps: [] },
+  }, { playerIdentities: Object.fromEntries(names.map((name, id) =>
+    [id, { name, major: true, leader: id === 0 ? receiverLeader : undefined }]
+  )) });
   const compiled = await getEditorialExpressions(config);
   const rules = await evaluateTriggerRules({
     rules: config.triggers, compiled, facts, constants: config.constants, speedMultiplier: 1,
@@ -137,6 +142,38 @@ describe('newspaper template matching', () => {
     expect(selected[0].values).not.toHaveProperty('population');
   });
 
+  it.each([
+    { secondVictim: 1, expected: 'Brazil' },
+    { secondVictim: 2, expected: undefined },
+  ])('should expose a combat group victim only when both losses name the same player ($secondVictim)',
+    async ({ secondVictim, expected }) => {
+      const events: NewspaperEvidence['events'] = [1, secondVictim].map((victim, id) => ({
+        type: 'UnitKilledInCombat', source: { table: 'GameEvents', id, turn: 10, createdAt: 10 },
+        values: { KillerPlayerID: 0, KilledPlayerID: victim },
+      }));
+      const [candidate] = await candidates(0, [{
+        id: 'losses', subject: 'event', event: 'UnitKilledInCombat', tier: 'filler', when: 'true',
+        group: { by: 'event.killerPlayer.id' }, values: { victim: 'event.killedPlayer.name' },
+      }], {
+        ...standard, triggers: ['losses'], variants: [
+          { ...standard.variants[0], id: 'summary', headline: '{{count}}' },
+          { ...standard.variants[0], id: 'named', headline: '{{victim}}', body: ['{{triggerValues.losses.victim}}'],
+            when: 'victim === values.victim && victim === triggerValues.losses.victim && !Object.hasOwn(values, "matches")' },
+        ],
+      }, { events, rivals: ['Brazil', 'India'] });
+      expect(candidate.values.count).toBe(2);
+      const named = candidate.variants.find(variant => variant.id === 'named');
+      if (expected === undefined) {
+        expect(named).toBeUndefined();
+        expect(candidate.values).not.toHaveProperty('victim');
+        expect(candidate.values).not.toHaveProperty(['triggerValues.losses.victim']);
+      } else {
+        expect(named).toBeDefined();
+        expect(substitute(named!.headline, candidate.values)).toBe(expected);
+        expect(substitute(named!.body[0], candidate.values)).toBe(expected);
+      }
+    });
+
   it('should skip variants with invalid link destinations or direct reads of an unavailable subject name', async () => {
     const selected = await candidates(0, [
       { id: 'generic', subject: 'world', tier: 'filler', when: 'true', values: { empty: '""' } },
@@ -159,23 +196,27 @@ describe('newspaper template matching', () => {
 
   it('should give each grouped rule its own membership and suppress ambiguous group placeholders', async () => {
     const selected = await candidates(3, [
-      { id: 'conversions', subject: 'city', tier: 'filler', when: 'true', group: { by: 'city.majorityReligion', min: 2 } },
-      { id: 'growth', subject: 'city', tier: 'filler', when: 'city.population > 1', group: { by: 'city.majorityReligion', min: 2 } },
+      { id: 'conversions', subject: 'city', tier: 'filler', when: 'true',
+        group: { by: 'city.majorityReligion', min: 2 }, values: { label: '"conversions"' } },
+      { id: 'growth', subject: 'city', tier: 'filler', when: 'city.population > 1',
+        group: { by: 'city.majorityReligion', min: 2 }, values: { label: '"growth"' } },
     ], {
       ...standard, triggers: ['conversions', 'growth'],
-      when: 'typeof group === "undefined" && typeof count === "undefined" && triggerValues.growth.matches[0].city.id === 1',
+      when: 'typeof group === "undefined" && typeof count === "undefined" && typeof label === "undefined" && triggerValues.growth.matches[0].city.id === 1',
       variants: [
         { ...standard.variants[0], id: 'ambiguous', headline: '{{count}} cities' },
         { ...standard.variants[0], id: 'ambiguous-key', headline: '{{group.key}} spreads' },
+        { ...standard.variants[0], id: 'ambiguous-label', headline: '{{label}}' },
         { ...standard.variants[0], id: 'qualified',
           headline: '{{triggerValues.conversions.key}} reaches {{triggerValues.conversions.count}} cities',
-          body: ['Of these, {{triggerValues.growth.count}} are growing.'],
+          body: ['{{triggerValues.conversions.label}} and {{triggerValues.growth.label}}'],
           when: 'triggerValues.conversions.matches.length === 3 && triggerValues.growth.count === 2' },
       ],
     });
     expect(selected).toHaveLength(1);
     expect(selected[0]).toMatchObject({ subject: 'group/city/"Buddhism"',
-      values: { 'triggerValues.conversions.count': 3, 'triggerValues.growth.count': 2 } });
+      values: { 'triggerValues.conversions.count': 3, 'triggerValues.growth.count': 2,
+        'triggerValues.conversions.label': 'conversions', 'triggerValues.growth.label': 'growth' } });
     expect(selected[0].variants.map((variant) => variant.id)).toEqual(['qualified']);
   });
 
