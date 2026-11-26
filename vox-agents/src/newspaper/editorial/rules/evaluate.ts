@@ -31,16 +31,7 @@ type Group = ExpressionBatch['groups'][number];
 type Sources = RuleDevelopment['sources'];
 type AuditSubject = TriggerRuleAudit['subjects'][number];
 type AuditGroup = TriggerRuleAudit['groups'][number];
-type NamedStep = {
-  slot: number | undefined;
-  field: string;
-  source: string;
-  /** Placeholder name a value step reports, when the step produces one. */
-  name?: string;
-  /** Expression binding name for later steps; a print-only value leaves it unset. */
-  bind?: string;
-  adjustment?: true;
-};
+type NamedStep = { slot: number | undefined; field: string; source: string; bind?: string; adjustment?: true };
 
 interface SubjectMatch extends RuleGroupMatch {
   sources: Sources;
@@ -96,9 +87,9 @@ function scalar(result: ExpressionResult | undefined) {
 
 /** Reshape only successful evaluations for templates, discarding unavailable placeholders. */
 function matchValues(results: readonly ExpressionResult[], steps: readonly NamedStep[]): RuleGroupMatch['values'] {
-  return Object.fromEntries(steps.flatMap(({ name }, index) => {
+  return Object.fromEntries(steps.flatMap(({ bind }, index) => {
     const value = scalar(results[index]);
-    return name === undefined || value === undefined ? [] : [[name, value]];
+    return bind === undefined || value === undefined ? [] : [[bind, value]];
   }));
 }
 
@@ -135,9 +126,7 @@ export async function evaluateTriggerRules({
       slot: slots.when[index], field: typeof rule.when === 'string' ? 'when' : `when[${index}]`, source,
     }));
     const values = Object.entries(rule.values ?? {}).map(([name, source]) => ({
-      slot: slots.values.get(name), field: `values.${name}`, name,
-      // A print-only `turn` keeps the reserved binding so later steps read the current turn.
-      bind: name === 'turn' ? undefined : name, source,
+      slot: slots.values.get(name), field: `values.${name}`, bind: name, source,
     }));
     const rate = ratingSteps(rule, slots);
     const tail = rule.group ? [{ slot: slots.groupBy, field: 'group.by', source: rule.group.by }] : rate;

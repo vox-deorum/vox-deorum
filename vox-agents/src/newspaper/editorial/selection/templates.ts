@@ -41,8 +41,10 @@ const unitMatchers = Object.entries(unitPatterns)
 
 /** Resolve the printed unit for a placeholder name. */
 export function placeholderUnit(name: string): PlaceholderUnit | undefined {
-  // Only an exact final segment is a turn, so goldPerTurn and turnsLeft keep their own forms.
-  if (name === 'period.from' || name === 'period.to' || name.split('.').at(-1) === 'turn')
+  // A turn point is `turn` or a name ending in `Turn`; rates such as goldPerTurn and spans such as turnsLeft are not.
+  const last = name.split('.').at(-1) ?? name;
+  if (name === 'period.from' || name === 'period.to' || last === 'turn' ||
+    (last.endsWith('Turn') && !last.endsWith('PerTurn')))
     return { kind: 'turn' };
   const unit = unitMatchers.find((entry) => entry.pattern.test(name))?.unit;
   if (unit === undefined) return undefined;
@@ -200,7 +202,6 @@ function templateFacts(
   const identity = storyIdentity(subject, facts, civicTerms);
   const triggerValues: Record<string, ExpressionBindings> = Object.create(null);
   const values: TemplateValues = Object.create(null);
-  const printOnly: TemplateValues = Object.create(null);
   const qualified: TemplateValues = Object.create(null);
   const repeated = new Set<string>();
   const groups = [];
@@ -208,13 +209,11 @@ function templateFacts(
     const { matches } = part.values;
     if (!Array.isArray(matches)) {
       const entries = Object.entries(part.values).filter((entry): entry is [string, RuleScalar] => !Array.isArray(entry[1]));
-      // A print-only `turn` is not bound so expressions keep reading the current turn.
-      triggerValues[part.definitionId] = Object.fromEntries(entries.filter(([name]) => name !== 'turn'));
+      triggerValues[part.definitionId] = Object.fromEntries(entries);
       for (const [name, value] of entries) {
         qualified[`triggerValues.${part.definitionId}.${name}`] = value;
-        const target = name === 'turn' ? printOnly : values;
-        if (Object.hasOwn(target, name)) repeated.add(name);
-        target[name] = value;
+        if (Object.hasOwn(values, name)) repeated.add(name);
+        values[name] = value;
       }
       continue;
     }
@@ -233,10 +232,7 @@ function templateFacts(
     qualified[`triggerValues.${part.definitionId}.key`] = group.key;
     qualified[`triggerValues.${part.definitionId}.count`] = group.count;
   }
-  for (const name of repeated) {
-    delete values[name];
-    delete printOnly[name];
-  }
+  for (const name of repeated) delete values[name];
   const group = groups.length === 1 ? groups[0] : undefined;
   const bindings: ExpressionBindings = {
     ...values,
@@ -254,11 +250,11 @@ function templateFacts(
     ...termPlaceholders(terms),
     ...identityValues,
     ...values,
-    ...printOnly,
     ...qualified,
     ...Object.fromEntries(Object.entries(identityValues).filter(([key]) => key.includes('.') || key.endsWith('Id'))),
     'subject.key': subject.key, 'subject.kind': subject.kind,
-    'period.from': period.from, 'period.to': period.to,
+    // The current turn is the inclusive end of every reporting period.
+    turn: period.to, 'period.from': period.from, 'period.to': period.to,
     ...(group ? {
       key: group.key, count: group.count,
       'group.key': group.key, 'group.count': group.count,

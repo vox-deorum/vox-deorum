@@ -72,18 +72,19 @@ describe('newspaper desk variables', () => {
       civilization: 'player.name',
       era: 'player.era',
       distance: "player.knows('distance') ? player.distance : null",
-      turn: '42',
+      observedTurn: '42',
     });
     const variables = templateVariables(
       template('news', ['era'], [variant('draft', { headline: 'Hello', body: [paragraph] })]),
       catalogue([era]),
     );
     const listed = names(variables);
-    expect(listed).toEqual(expect.arrayContaining(['civilization', 'era', 'distance', 'turn']));
+    expect(listed).toEqual(expect.arrayContaining(['civilization', 'era', 'distance', 'observedTurn']));
     expect(listed).not.toContain('triggerValues.era.civilization');
-    expect(listed).not.toContain('triggerValues.era.turn');
+    expect(listed).not.toContain('triggerValues.era.observedTurn');
     expect(variable(variables, 'distance')).toMatchObject({ group: 'trigger', mayBeEmpty: true, prints: 'N tiles' });
-    expect(variable(variables, 'turn')).toMatchObject({ prints: 'turn N' });
+    expect(variable(variables, 'observedTurn')).toMatchObject({ prints: 'turn N' });
+    expect(variable(variables, 'turn')).toMatchObject({ group: 'reader', mayBeEmpty: false, prints: 'turn N' });
     expect(variable(variables, 'civilization')).toMatchObject({
       source: 'player.name', mayBeEmpty: false, prints: 'as is',
     });

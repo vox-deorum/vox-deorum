@@ -187,17 +187,18 @@ function referenceVariables(
   return variables;
 }
 
-/** Build reader terms from constants and civic vocabulary. */
+/** Build the current turn and reader terms from constants and civic vocabulary. */
 function readerVariables(catalogue: DeskCatalogue): DeskVariableSpec[] {
-  const variables: DeskVariableSpec[] = Object.keys(catalogue.constants?.terms ?? {}).map(
-    (name): DeskVariableSpec => ({
+  const variables: DeskVariableSpec[] = [
+    { group: 'reader', name: 'turn', source: 'current turn', mayBeEmpty: false, keep: false },
+    ...Object.keys(catalogue.constants?.terms ?? {}).map((name): DeskVariableSpec => ({
       group: 'reader',
       name: `terms.${name}`,
       source: `terms.${name}`,
       mayBeEmpty: false,
       keep: false,
-    }),
-  );
+    })),
+  ];
   for (const slot of Object.keys(catalogue.civicTerms?.defaults ?? {})) {
     variables.push({
       group: 'reader',

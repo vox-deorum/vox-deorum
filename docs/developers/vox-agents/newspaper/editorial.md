@@ -66,12 +66,13 @@ The editor draws variants for placed articles in ranked order. Each earlier vari
 
 ### Placeholders and facts
 
-Prose and links use `{{name}}` placeholders. A placeholder prints its own unit, so copy writes it alone: `on {{turn}}`, not `on turn {{turn}}`. Require the facts that define the story in the trigger's `when`, including before counting items in a roundup. If a supporting detail is missing, a variant that prints it is ineligible. Articles cite the evidence behind facts and terms they print.
+Prose and links use `{{name}}` placeholders. A placeholder prints its own unit, so copy writes it alone: `on {{observedTurn}}`, not `on turn {{observedTurn}}`. Require the facts that define the story in the trigger's `when`, including before counting items in a roundup. If a supporting detail is missing, a variant that prints it is ineligible. Articles cite the evidence behind facts and terms they print.
 
 | Placeholder | Value |
 | --- | --- |
 | `{{city}}`, `{{cityId}}` | City name and ID for a city subject or the city linked to an event |
 | `{{subject.name}}`, `{{subject.id}}` | Name and ID of the visible subject |
+| `{{turn}}` | The current turn, which is the issue's cutoff |
 | `{{period.from}}`, `{{period.to}}` | Matched rules' shared window, with an exclusive lower bound and inclusive cutoff. Each prints as `turn X`. |
 | `{{city.owner.name}}`, `{{city.owner.leader}}` | Identity of a directly referenced subject. A city owner's name and ID also have the aliases `{{owner}}` and `{{ownerId}}`. |
 | `{{lost}}`, `{{originCity}}` | Rule-defined values, for example a population drop or one endpoint in the stock trade routes |
@@ -91,12 +92,10 @@ The editor matches unit patterns against the placeholder name, ignoring case.
 
 | Name pattern | Unit |
 | --- | --- |
-| Last segment `turn`, or `period.from` or `period.to` | `turn 42`, capitalized as `Turn 42` at the start of a sentence |
+| `turn`, `period.from`, `period.to`, or a name ending in `Turn` other than `PerTurn` (such as `observedTurn`) | `turn 42`, capitalized as `Turn 42` at the start of a sentence |
 | Ends in `percentage` or contains `happiness` or `weariness` | percent |
 | Contains `population` | million |
 | Contains `points`, `turns`, or `distance` | point, turn, or tile, with a plural as needed |
-
-A trigger or merge value may be named `turn`. It prints like any other value but is print-only: expressions keep reading the current turn.
 
 Use `{{count|power|powers}}` to append a noun to a plain count.
 

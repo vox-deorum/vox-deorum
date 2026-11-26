@@ -249,39 +249,33 @@ describe('newspaper placeholder printing', () => {
       { wallStrength: 100, maxWallStrength: 300 })).toBe('100 of 300');
   });
 
-  it('should print a turn value, period bounds, and merge values as turn labels', () => {
-    expect(substitute('{{turn}} at {{period.to}} and {{merge.values.turn}}',
-      { turn: 42, 'period.to': 43, 'merge.values.turn': 41 })).toBe('turn 42 at turn 43 and turn 41');
+  it('should print turn points, period bounds, and merge values as turn labels', () => {
+    expect(substitute('{{observedTurn}} at {{period.to}} and {{merge.values.foundedTurn}}',
+      { observedTurn: 42, 'period.to': 43, 'merge.values.foundedTurn': 41 })).toBe('turn 42 at turn 43 and turn 41');
   });
 
   it('should capitalize a turn label at the start of a sentence', () => {
-    expect(substitute('{{turn}}: the entry for {{city}}', { turn: 42, city: 'Paris' }, ''))
+    expect(substitute('{{observedTurn}}: the entry for {{city}}', { observedTurn: 42, city: 'Paris' }, ''))
       .toBe('Turn 42: the entry for Paris');
-    expect(substitute('the entry arrives on {{turn}}', { turn: 42 }, ''))
+    expect(substitute('the entry arrives on {{observedTurn}}', { observedTurn: 42 }, ''))
       .toBe('the entry arrives on turn 42');
   });
 
-  it('should keep other names that contain turn on their own units', () => {
+  it('should keep rates and spans that mention turns on their own units', () => {
     expect(substitute('{{goldPerTurn}} gold, {{turnsLeft}} left', { goldPerTurn: 7, turnsLeft: 3 }))
       .toBe('7 gold, 3 turns left');
   });
 
-  it('should print a trigger value named turn without binding over the current turn', async () => {
+  it('should print the current turn as turn', async () => {
     const template = {
       ...standard, triggers: ['report'],
-      when: 'turn === 10 && typeof values.turn === "undefined"',
-      variants: [{
-        ...standard.variants[0], id: 'dated',
-        headline: '{{turn}}: the entry', body: ['Reported by {{period.to}} as {{turn}}.'],
-      }],
+      variants: [{ ...standard.variants[0], id: 'dated', headline: '{{turn}}: the entry', body: ['Reported on {{turn}}.'] }],
     };
-    const selected = await candidates(0, [{
-      id: 'report', subject: 'world', tier: 'filler', when: 'true', values: { turn: '2' },
-    }], template);
+    const selected = await candidates(0, [{ id: 'report', subject: 'world', tier: 'filler', when: 'true' }], template);
     expect(selected).toHaveLength(1);
-    expect(selected[0].values.turn).toBe(2);
     const [variant] = selected[0].variants;
-    expect(substitute(variant.headline, selected[0].values, '')).toBe('Turn 2: the entry');
+    expect(substitute(variant.headline, selected[0].values, '')).toBe(`Turn ${selected[0].period.to}: the entry`);
+    expect(substitute(variant.body[0], selected[0].values, '')).toBe(`Reported on turn ${selected[0].period.to}.`);
   });
 
   it('should apply built-in units in authored prose', async () => {

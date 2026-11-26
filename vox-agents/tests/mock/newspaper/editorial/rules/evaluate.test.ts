@@ -288,17 +288,6 @@ describe('newspaper trigger rules', () => {
       });
     });
 
-    it('should keep the current turn when a print-only value is named turn', async () => {
-      const run = await prepare([{
-        id: 'dated', subject: 'world', tier: 'filler', when: 'true',
-        values: { turn: '2', after: 'turn + 1' },
-        adjust: ['turn - 10'], tags: [],
-      }]);
-      const result = await run(facts({ turn: 20 }));
-      expect(result.developments[0].values).toMatchObject({ turn: 2, after: 21 });
-      expect(result.developments[0].importance).toBe(constants.tiers.filler + 10);
-    });
-
     it('should keep derived bindings for adjustments after one adjustment times out', async () => {
       const run = await prepare([{
         id: 'interrupted', subject: 'world', tier: 'filler', when: 'true',

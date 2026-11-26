@@ -202,7 +202,7 @@
         "id": "enemy-front-posture-offensive-report",
         "headline": "The reading at {{city}} changes to {{posture}}",
         "body": [
-          "On {{turn}}, our assessment of the {{domain}} zone at {{city}} changed from {{previousPosture}} to {{posture}}. {{civilization}} holds the city, and the new word tells our observers to expect an assault to open there. The roads around {{city}} will be worth watching in the days ahead."
+          "On {{observedTurn}}, our assessment of the {{domain}} zone at {{city}} changed from {{previousPosture}} to {{posture}}. {{civilization}} holds the city, and the new word tells our observers to expect an assault to open there. The roads around {{city}} will be worth watching in the days ahead."
         ]
       },
       {
@@ -213,7 +213,7 @@
         "when": "previousPosture !== 'NONE'",
         "headline": "From {{previousPosture}} to {{posture}} at {{city}}",
         "body": [
-          "The front assessment for {{city}}, held by {{civilization}}, moved from {{previousPosture}} to {{posture}} on {{turn}}. The reading covers the {{domain}} zone, and it turned offensive before any formation was seen to move. If the balance our observers measured holds, the next days should show the assault itself."
+          "The front assessment for {{city}}, held by {{civilization}}, moved from {{previousPosture}} to {{posture}} on {{observedTurn}}. The reading covers the {{domain}} zone, and it turned offensive before any formation was seen to move. If the balance our observers measured holds, the next days should show the assault itself."
         ]
       },
       {
@@ -221,9 +221,9 @@
         "voice": "chronicle",
         "stance": "neutral",
         "genre": "report",
-        "headline": "{{turn}}: the entry for {{city}}",
+        "headline": "{{observedTurn}}: the entry for {{city}}",
         "body": [
-          "In the campaign record, {{turn}} marks a change from {{previousPosture}} to {{posture}} in our assessment of the {{domain}} zone at {{city}}, held by {{civilization}}. The cause is unrecorded."
+          "In the campaign record, {{observedTurn}} marks a change from {{previousPosture}} to {{posture}} in our assessment of the {{domain}} zone at {{city}}, held by {{civilization}}. The cause is unrecorded."
         ]
       },
       {
@@ -233,7 +233,7 @@
         "genre": "report",
         "headline": "A new word on the board at {{city}}",
         "body": [
-          "The watch board's entry for {{city}} on {{turn}} went from {{previousPosture}} to {{posture}}. That is our command's assessment of the {{domain}} zone. What happened on the ground is still an open question."
+          "The watch board's entry for {{city}} on {{observedTurn}} went from {{previousPosture}} to {{posture}}. That is our command's assessment of the {{domain}} zone. What happened on the ground is still an open question."
         ]
       }
     ]
@@ -249,7 +249,7 @@
         "id": "enemy-front-posture-regroup-report",
         "headline": "The entry at {{city}} moves from {{previousPosture}} to {{posture}}",
         "body": [
-          "Our front assessment for {{city}} moved from {{previousPosture}} to {{posture}} on {{turn}}. The earlier word described a withdrawal, and the new one describes a force back on its footing in the {{domain}} zone. The city is held by {{civilization}}, and the next sighting will show whether the pause ends in a settle or a fresh advance."
+          "Our front assessment for {{city}} moved from {{previousPosture}} to {{posture}} on {{observedTurn}}. The earlier word described a withdrawal, and the new one describes a force back on its footing in the {{domain}} zone. The city is held by {{civilization}}, and the next sighting will show whether the pause ends in a settle or a fresh advance."
         ]
       },
       {
@@ -259,7 +259,7 @@
         "genre": "analysis",
         "headline": "After the withdrawal: the reading at {{city}}",
         "body": [
-          "The entry for {{city}}, held by {{civilization}}, changed from {{previousPosture}} to {{posture}} on {{turn}}. The shift ends a stretch in which the {{domain}} zone was read as a withdrawal, and it looks like a threat putting itself back in order. Our posts along that front should stop counting on the quiet."
+          "The entry for {{city}}, held by {{civilization}}, changed from {{previousPosture}} to {{posture}} on {{observedTurn}}. The shift ends a stretch in which the {{domain}} zone was read as a withdrawal, and it looks like a threat putting itself back in order. Our posts along that front should stop counting on the quiet."
         ]
       },
       {
@@ -269,7 +269,7 @@
         "genre": "report",
         "headline": "The board at {{city}} is updated",
         "body": [
-          "The front board for {{city}} was updated on {{turn}}. The reading moved from {{previousPosture}} to {{posture}} in the {{domain}} zone, and the city is held by {{civilization}}. In plain words: the force our watchers saw pulling back has stopped and is being put in order again."
+          "The front board for {{city}} was updated on {{observedTurn}}. The reading moved from {{previousPosture}} to {{posture}} in the {{domain}} zone, and the city is held by {{civilization}}. In plain words: the force our watchers saw pulling back has stopped and is being put in order again."
         ]
       },
       {
@@ -279,7 +279,7 @@
         "genre": "editorial",
         "headline": "A different word for the same ground at {{city}}",
         "body": [
-          "The map room has changed its entry for {{city}} from {{previousPosture}} to {{posture}}, dated {{turn}}. A change of that kind is a judgment about the {{domain}} zone, and readers who follow the front will want it explained in plain language. The {{terms.civic.government}} should say what the new word means and how long it expects the reading to stand."
+          "The map room has changed its entry for {{city}} from {{previousPosture}} to {{posture}}, dated {{observedTurn}}. A change of that kind is a judgment about the {{domain}} zone, and readers who follow the front will want it explained in plain language. The {{terms.civic.government}} should say what the new word means and how long it expects the reading to stand."
         ]
       }
     ]
@@ -295,7 +295,7 @@
         "id": "enemy-front-posture-withdraw-report",
         "headline": "The reading at {{city}} turns to {{posture}}",
         "body": [
-          "Our staff entered a new front reading for {{city}} on {{turn}}. The {{domain}} entry moved from {{previousPosture}} to {{posture}}, and the city is held by {{civilization}}. The new word means the pressure on that front has eased, though the next sighting will show how long it stays that way."
+          "Our staff entered a new front reading for {{city}} on {{observedTurn}}. The {{domain}} entry moved from {{previousPosture}} to {{posture}}, and the city is held by {{civilization}}. The new word means the pressure on that front has eased, though the next sighting will show how long it stays that way."
         ]
       },
       {
@@ -305,7 +305,7 @@
         "genre": "analysis",
         "headline": "The new word at {{city}}, and the questions it raises",
         "body": [
-          "The front entry for {{city}}, held by {{civilization}}, moved from {{previousPosture}} to {{posture}} on {{turn}}. A withdrawal reading is a statement about the balance our observers can see in the {{domain}} zone, and it invites questions about what happens next. The public has been given the label and nothing more."
+          "The front entry for {{city}}, held by {{civilization}}, moved from {{previousPosture}} to {{posture}} on {{observedTurn}}. A withdrawal reading is a statement about the balance our observers can see in the {{domain}} zone, and it invites questions about what happens next. The public has been given the label and nothing more."
         ]
       },
       {
@@ -315,7 +315,7 @@
         "genre": "report",
         "headline": "Movement on the Front",
         "body": [
-          "The forces of {{civilization}} have withdrawn from their position in the {{domain}} near {{city}}. This change from a {{previousPosture}} posture was observed on {{turn}}."
+          "The forces of {{civilization}} have withdrawn from their position in the {{domain}} near {{city}}. This change from a {{previousPosture}} posture was observed on {{observedTurn}}."
         ],
         "settled": true
       },
@@ -326,7 +326,7 @@
         "genre": "anecdote",
         "headline": "The word at the carters' stand: {{city}}",
         "body": [
-          "At the carters' stand, a man read the day's board aloud for those who cannot: {{city}}, {{turn}}, {{posture}} where the last entry said {{previousPosture}}. Someone asked whether the new word meant the fighting had stopped. Nobody at the stand could answer, and the reader moved on to the next line."
+          "At the carters' stand, a man read the day's board aloud for those who cannot: {{city}}, {{observedTurn}}, {{posture}} where the last entry said {{previousPosture}}. Someone asked whether the new word meant the fighting had stopped. Nobody at the stand could answer, and the reader moved on to the next line."
         ]
       }
     ]
@@ -713,7 +713,7 @@
         "id": "own-front-posture-counterattack-report",
         "headline": "Our front at {{city}} is read as {{posture}}",
         "body": [
-          "Our own observers entered a new reading for the front at {{city}} on {{turn}}. The {{domain}} entry moved from {{previousPosture}} to {{posture}}, and the city is ours. The new word means our staff sees an opening around the walls and intends to strike into it."
+          "Our own observers entered a new reading for the front at {{city}} on {{observedTurn}}. The {{domain}} entry moved from {{previousPosture}} to {{posture}}, and the city is ours. The new word means our staff sees an opening around the walls and intends to strike into it."
         ]
       },
       {
@@ -723,7 +723,7 @@
         "genre": "analysis",
         "headline": "From {{previousPosture}} to {{posture}} at {{city}}",
         "body": [
-          "The front assessment for {{city}} changed from {{previousPosture}} to {{posture}} on {{turn}}. A counterattack reading says our observers see an opening in the {{domain}} zone. Openings of that kind do not wait, and the staff that called for the counter has a short season to use it."
+          "The front assessment for {{city}} changed from {{previousPosture}} to {{posture}} on {{observedTurn}}. A counterattack reading says our observers see an opening in the {{domain}} zone. Openings of that kind do not wait, and the staff that called for the counter has a short season to use it."
         ]
       },
       {
@@ -733,7 +733,7 @@
         "genre": "report",
         "headline": "A change on the board at {{city}}",
         "body": [
-          "The front board for {{city}} shows a new entry tonight, dated {{turn}}. The reading moved from {{previousPosture}} to {{posture}} in the {{domain}} zone. The force that dug in around the city now means to come out and strike."
+          "The front board for {{city}} shows a new entry tonight, dated {{observedTurn}}. The reading moved from {{previousPosture}} to {{posture}} in the {{domain}} zone. The force that dug in around the city now means to come out and strike."
         ]
       },
       {
@@ -743,7 +743,7 @@
         "genre": "report",
         "headline": "Our line at {{city}} is read anew",
         "body": [
-          "Dispatches from the map room state that the front at {{city}} has been reassessed from {{previousPosture}} to {{posture}}, with the change entered on {{turn}}. The dispatch describes the {{domain}} zone and offers no forecast. We print the entry as it stands."
+          "Dispatches from the map room state that the front at {{city}} has been reassessed from {{previousPosture}} to {{posture}}, with the change entered on {{observedTurn}}. The dispatch describes the {{domain}} zone and offers no forecast. We print the entry as it stands."
         ]
       }
     ]
@@ -759,7 +759,7 @@
         "id": "own-front-posture-defensive-report",
         "headline": "The front at {{city}} is read as {{posture}}",
         "body": [
-          "Our observers entered a new front reading for {{city}} on {{turn}}. The {{domain}} entry moved from {{previousPosture}} to {{posture}}, and the city is ours. The new word means the staff wants the force around it dug in and holding its ground."
+          "Our observers entered a new front reading for {{city}} on {{observedTurn}}. The {{domain}} entry moved from {{previousPosture}} to {{posture}}, and the city is ours. The new word means the staff wants the force around it dug in and holding its ground."
         ]
       },
       {
@@ -769,7 +769,7 @@
         "genre": "report",
         "headline": "At {{city}}, a quieter word on the board",
         "body": [
-          "The front entry for {{city}} moved from {{previousPosture}} to {{posture}} on {{turn}}. The dispatch gives the new reading for the {{domain}} zone and no explanation of what prompted it. Our readers may judge for themselves whether the change follows the ground or the mood at headquarters."
+          "The front entry for {{city}} moved from {{previousPosture}} to {{posture}} on {{observedTurn}}. The dispatch gives the new reading for the {{domain}} zone and no explanation of what prompted it. Our readers may judge for themselves whether the change follows the ground or the mood at headquarters."
         ]
       },
       {
@@ -779,7 +779,7 @@
         "genre": "notice",
         "headline": "Hear it, {{city}}! The board has a new word",
         "body": [
-          "The watch board at {{city}} has a fresh entry, dated {{turn}}. The word for the {{domain}} zone is now {{posture}}, where the last entry said {{previousPosture}}. Ask at the gate for the full notice, and keep the streets clear for the runners."
+          "The watch board at {{city}} has a fresh entry, dated {{observedTurn}}. The word for the {{domain}} zone is now {{posture}}, where the last entry said {{previousPosture}}. Ask at the gate for the full notice, and keep the streets clear for the runners."
         ]
       },
       {
@@ -789,7 +789,7 @@
         "genre": "report",
         "headline": "The record of {{city}}'s front",
         "body": [
-          "In this season the front book for {{city}} passed from {{previousPosture}} to {{posture}}. The change is dated {{turn}} and concerns the {{domain}} zone. The scribe records the new reading and adds no interpretation."
+          "In this season the front book for {{city}} passed from {{previousPosture}} to {{posture}}. The change is dated {{observedTurn}} and concerns the {{domain}} zone. The scribe records the new reading and adds no interpretation."
         ]
       }
     ]

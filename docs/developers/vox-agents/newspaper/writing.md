@@ -6,7 +6,7 @@ Use this guide to write or revise a [stock variant](editorial.md#catalogue-and-e
 
 Use only the [placeholders listed for your task](editorial.md#placeholders-and-facts). An unknown placeholder makes the story unprintable.
 
-A placeholder prints its own unit, so write it alone: `on {{turn}}`, not `on turn {{turn}}`. `{{turnsLeft}}` prints `3 turns`, and `{{distance}}` prints `4 tiles`. Add a noun to a plain count with `{{count|regiment|regiments}}`.
+A placeholder prints its own unit, so write it alone: `on {{observedTurn}}`, not `on turn {{observedTurn}}`. `{{turn}}` is the current turn, `{{turnsLeft}}` prints `3 turns`, and `{{distance}}` prints `4 tiles`. Add a noun to a plain count with `{{count|regiment|regiments}}`.
 
 ## Shape each body into paragraphs
 
