@@ -69,6 +69,8 @@ Posture rows follow native values except that Hedgehog uses −15 for RISK (will
 | `city.units` | 3 | Size of a city fight in typical units; this is `C` (city allowance). |
 | `readiness.maxFailures` | 3 | Truncated to an integer and floored at 1 for the failure limit. |
 | `reinforce.strengthRatio` | 1 | `r` (desired strength ratio): with `T` (enemy strength) and `L` (local friendly strength), need is `max(0, rT − L)`, and selection stops once full strength covers it. Selection and the enemy-center parity gate use `r`; the score reads the resulting selection. |
+| `potential.weight` | 0.1 | Share of potential stake Reinforce counts at one turn to contact. Set to 0 to score without potential stake. |
+| `potential.turnDiscount` | 0.5 | Multiplier on the potential weight for each turn to contact beyond the first. See [Reinforce priority](reinforcement.md#reinforce-priority). |
 | `withdraw.enabled` | 1 | Nonzero lets enemy-unit and enemy-city battlefields offer Withdraw. A disabled switch keeps the slot inactive all turn. |
 | `exposure.split` | 1 | Nonzero scales fight exposure by the strength share; 0 counts fight exposure in full. Withdraw uses its own removable exposure and the stored strength share either way. |
 | `camp.nearPlots` | 5 | A camp within this many plots of our nearest city counts at full value. Beyond that, the distance discounts its bounty. |
@@ -130,7 +132,7 @@ These parameters affect both the shared value functions and the simulator's grad
 | --- | --- |
 | `offers` | Battlefield, kind, target, owner and zone, once per slot, including gated slots. A camp row uses its plot index as the target and has no owner. |
 | `steps` | Opening estimate at step 0, then one step per post-command estimate. A command ends its step; the final end reason is `noReadyOffer`, `commandCap` or `stopped`. A host failure, game over or exception closes the last step as `stopped`, including post-command threat or estimate failures. |
-| Snapshot | Ready rank, offer slot, state, estimate, theater multiplier, importance, pressure, contest, damage level, swing (1 for fights and Withdraw), exposure share, removable exposure `X` (raw worth), Withdraw share, chosen withdrawal destinations and nonzero stake terms (the battlefield's fight stake). An Army March adds its goal weight, readiness gain and theater without the army. Each term retains value and weighted contribution. Resolved weights appear once per pass. Missing terms mean zero value and contribution. |
+| Snapshot | Ready rank, offer slot, state, estimate, theater multiplier, importance, pressure, contest, damage level, swing (1 for fights and Withdraw), exposure share, removable exposure `X` (raw worth), Withdraw share, chosen withdrawal destinations and the stake inputs below. An Army March adds its goal weight, readiness gain and theater without the army. Resolved weights appear once per pass. Missing terms mean zero value and contribution. |
 | Event | Ordered check, update, provider refusal or terminating command, with before/after state and estimate. A check that changes another slot's estimate or state adds an update event for that slot. A refusal retains its terminating command with a READY-to-REFUSED transition and adds a separate refusal event. Count commands once, including refusals, and count skips from checks ending at the failure limit. Reduced Reinforce and Withdraw checks return to the current queue, or turn inactive at estimate 0. A missing target makes a Reinforce inactive without a reach failure. An Army March yield records its contact plot and leaves the offer ready for the next estimate. |
 | Closed state | Target gone, city lost, retired, failure limit, provider refusal or execution. A closed row carries forward its snapshot with the new state, reason and rank. Executed and refused offers include the matching command's checked values. A Withdraw that reaches its failure limit records the estimate and exposure from its final check. |
 | `commands` | Step and command identity, checked priority, prior failures, admission and search decisions, the search's [situation values and offsets](execution.md#command-offset), selected and moved unit IDs where tracked, endangered-unit dispositions, and retirements. A camp claim uses the existing target plot and moved-unit fields. A Withdraw combines attempts across destinations and retains the first search's decision or the first invalid reply. An Army March retains its operation, army, forecast and any yield plot. City-fire-only commands remain present. |
@@ -139,7 +141,9 @@ These parameters affect both the shared value functions and the simulator's grad
 
 The trace writes every offer slot in the opening step, then complete replacement rows only when recorded scalars change. Rows are keyed by battlefield and offer slot. Reconstruct a step by replacing rows in the preceding estimate snapshot. An empty snapshot keeps that table. Events describe queue transitions within a step and do not alter this baseline. New offers add rows and closed offers remain present.
 
-Snapshots carry no unit lists. Camp value contributes to the aggregate stake; the six recorded fight terms stay the same. To confirm a camp clear, match the command plot and moving unit to the native `CAMP` gold transaction. Rollout writing and host integration belong to the simulator documentation.
+`SOperationalSnapshot` and `SOperationalCommandRecord` store **total stake** (`fStake`), **realized stake** (`fRealized`) and **potential stake** (`fPotential`) with the six fight terms. The terms retain their unweighted values at current and full share and their weighted contributions to realized stake. Camp value contributes to the totals separately. Reinforce also stores **turns to contact** (`fTurnsToContact`) and the discounted **potential weight** (`fPotentialWeight`). `RecordStep` copies these values from the offer, or from the checked command for executed and refused offers. Only Reinforce slot snapshots can be replaced solely because the new inputs changed.
+
+Snapshots carry no unit lists. To confirm a camp clear, match the command plot and moving unit to the native `CAMP` gold transaction. Rollout writing and host integration belong to the simulator documentation.
 
 ### Performance counters
 
@@ -153,7 +157,7 @@ The loop's `ClockNs` host seam reads the performance counter used by `cvStopWatc
 | Readiness | Reinforce reach checks and Army March order and roster checks. The latter is timed by `armyMarchCheckNs`. |
 | Execution | Commands, provider admission/flavor time, city fire, spotting, greedy air, marching and search time. Army March positioning is timed by `armyMarchMoveNs`. Nested subtotals belong to their parent stage. |
 | Engagement | Counted once even with retries. Host-specific attempts and search time are described below. |
-| Tactical log | With game and AI logging enabled and no supplied record: step-indexed messages and a final pass summary of time, commands, checks, estimates and searches. |
+| Tactical log | With game and AI logging enabled and no supplied record, `RunCommandLoop` logs step messages and a final pass summary. A Reinforce check line prints realized stake, total stake, potential stake, turns to contact and potential weight alongside the strength and selection details. |
 
 DLL `attempts` counts each native search iteration, including empty results, and `searchNs` times `FindBestUnitAssignments`. Simulator `attempts` counts provider decisions, and `searchNs` sums provider decision time, matching rollout `counts.searchNs`. Compare search costs within the same host.
 
@@ -194,7 +198,7 @@ The source is in `civ5-dll/CvGameCoreDLL_Expansion2`.
 | Enemy-city damage | `StartCityDamage` records the starting garrison. `ProjectCityAttackDamage` estimates each hit before interception, and `SimulateCityAttack` adds accepted hits to `SOperationalCityDamage`. `ExpectedCityHeal` supplies healing and `AttackFallShare` resolves progress. |
 | Strength | `LocalStrength` and `LocalCityStrength` read the strength filter; `EnemyCenterStrength` counts opposition. |
 | Incoming selection | `GatherReinforceCandidates`, `TravelTurns`, `IsCapturer` and `SelectReinforcement` fill `SOperationalCandidate` and `SOperationalReinforce`. |
-| Reinforce lifecycle | `CheckReinforce` checks reach, `RetryReinforce` clears temporary rejections after relevant board changes, and `RetiresReinforce` applies overlap retirement. |
+| Reinforce lifecycle | `ScoreReinforce` prices the selected help, `CheckReinforce` checks reach, `RetryReinforce` clears temporary rejections after relevant board changes, and `RetiresReinforce` applies overlap retirement. |
 | Withdraw lifecycle | `EstimateWithdraw` gathers recruits and estimates exposure saved. `CheckWithdraw` finds destinations by domain and projects the first-turn stops. See [Withdraw readiness and execution](withdrawal.md#readiness-and-execution). |
 | March execution | `ExecuteMarch` admits a checked group once and runs positioning by destination. A fogged camp uses its safe path stops without a search. |
 | Camp claims | `FindCampClaimant` asks the native harassment finder for one unit, limited to independent roster units outside armies and held garrisons. `EstimateCampClaim` prices the trip; `ExecuteCampClaim` admits one unit and issues one move. |

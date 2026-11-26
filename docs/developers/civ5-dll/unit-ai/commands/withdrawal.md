@@ -17,19 +17,19 @@ flowchart TD
     G --> D["Destination<br/>closest friendly city per domain"]
     G --> FM["Threatened army<br/>whole formation joins"]
     FM --> FS["Formation stops<br/>keep the group's shape"]
-    S --> H["Ready Reinforce<br/>larger of its share and s"]
+    S --> H["Reinforce with positive score at φ = 0<br/>larger of its share and s"]
 ```
 
 | Stage | What it supplies | Reference |
 | --- | --- | --- |
 | Recruit | The target's victims, the local strength set, combat units sharing their tiles, and a threatened prepared army's members. | [Withdraw recruits](recruitment.md#withdraw-recruits) |
-| Score | `X`, `s⁺` and priority. Rescored after every command and whenever Reinforce changes. | `EstimateWithdraw` in `civ5-dll/CvGameCoreDLL_Expansion2/CvTacticalOperationalLoop.cpp`. |
+| Score | `X`, `s⁺` and priority. Rescored after every command and when a readiness check changes the Reinforce state or its score without potential stake. | `EstimateWithdraw` in `civ5-dll/CvGameCoreDLL_Expansion2/CvTacticalOperationalLoop.cpp`. |
 | Search | The retreat weights in the plot score, the search purpose and the path step. | [Withdraw search](#withdraw-search) |
 | Check and execute | Destinations, the march rule, admission and path moves. | [Readiness and execution](#readiness-and-execution) |
 
 | Part | Fight | Reinforce | Withdraw |
 | --- | --- | --- | --- |
-| Priority | `θ × stake` | `θ × stake × swing` | `θ × w_R × X / Z_T × (1 − s⁺) × 0.7^n` |
+| Priority | `θ × realized stake` | `θ × (realized stake + φ × potential stake) × swing`, with a [camp floor](reinforcement.md#reinforce-priority) where applicable | `θ × w_R × X / Z_T × (1 − s⁺) × 0.7^n` |
 | Strength share | `s` inside the exposure term | Swing from the share | `1 − s⁺` over its own removable exposure `X` |
 | Units | Local set | Incoming selection | Every combat unit at the battlefield that can leave, plus a threatened prepared army's members |
 | Direction | At the center | Toward the center | Toward a friendly city |
@@ -40,11 +40,13 @@ flowchart TD
 | --- | --- | --- |
 | `X` (**removable exposure**) | The exposure the retreat removes, from [removable exposure](#removable-exposure). | Worth, at least 0; divided by `Z_T` in the priority. |
 | `s` (**strength share**) | The fight's share of fighting power at the battlefield, from [strength share](value.md#strength-share). | 0 to 1; 0.5 at parity. |
-| `s⁺` | The larger of the fight's share `s` and the Reinforce's projected share `s_h` ([swing](reinforcement.md#swing)) while a positive Reinforce selection is ready; the fight's `s` otherwise. A released pool's lower Reinforce start does not enter. Stored as `fWithdrawShare`, so a ready Reinforce never raises the Withdraw priority. | 0 to 1. |
+| `s⁺` | The fight's share `s`, raised to the Reinforce's projected share `s_h` if the offer qualifies for help credit and `s_h` is higher. | 0 to 1. |
 | `w_R` | Risk weight, setting `weight.risk` (1) at neutral. | 0.5 to 2. |
 | `Z_T` | Typical unit worth. | Worth, fixed for the turn. |
 | `θ` | The zone's current [theater multiplier](value.md#theater-multiplier). Unit battlefields read their zone city. | Theater floor (0.2) to 1. |
 | **Capped exposure** | A threat's largest allocations to a set of victims, up to its attacks per turn. | Worth. |
+
+`ExposureShareWithHelp` in `CvTacticalOperationalLoop.cpp` credits help when Reinforce is ready or inactive, has counted enemy strength, and would score above zero using realized stake alone. This check keeps the usual camp floor. The credited share can only lower Withdraw's priority.
 
 ## Running example inputs
 
@@ -302,7 +304,7 @@ Each 1-attack swordsman worth 600 threatens one archer, and all three archers ar
 | Same, equal strength | 0.5 | `0.2 × (0.30 + 0.06) = 0.072` | `0.2 × 0.36 × 0.5 = 0.036` | Fight |
 | Archers at 30 HP, lethal, enemy triple | 0.1 | `0.2 × (0.30 + 0.72 × 0.1) = 0.074` | `0.2 × 3 × 0.72 × 0.9 = 0.389` | Withdraw, well ahead |
 | Lethal, equal strength | 0.5 | `0.2 × (0.30 + 0.36) = 0.132` | `0.2 × 2.16 × 0.5 = 0.216` | Withdraw |
-| Lethal, enemy triple, a ready Reinforce brings parity (`s⁺ = 0.5`) | 0.1 | 0.074 | `0.2 × 2.16 × 0.5 = 0.216` | Withdraw, lower than without help |
+| Lethal, enemy triple, Reinforce scores on realized stake and brings parity (`s⁺ = 0.5`) | 0.1 | 0.074 | `0.2 × 2.16 × 0.5 = 0.216` | Withdraw, lower than without help |
 | Lethal, enemy triple, two archers already fired and have no movement left | 0.1 | 0.074 | `0.2 × 1 × 0.72 × 0.9 = 0.130` | Withdraw, too late for those two |
 | Lethal, enemy triple, two archers were processed earlier but still have movement left | 0.1 | 0.074 | 0.389 | Withdraw; all three qualify, and the search and paths decide which move |
 | No archer is threatened | | `0.2 × 0.30 = 0.060` | 0, inactive | Fight |
@@ -318,13 +320,13 @@ At an enemy city `s` is the pressure `p` of the city's theater. Our hits do not 
 
 ### D. Our city
 
-An own-city battlefield has no Withdraw. Its fight uses the same split, so the exposure part halves at equal strength while city danger keeps its full value. At our capital at 200 of 250 HP with danger 80, `C × f_def = 1.2`; three threatened archers give `E_def / Z_T = 117.12 / 400 = 0.2928` ([decay example](value.md#city-defense-exposure)). The stake is `1.2 + 0.2928 × 0.5 = 1.3464` at parity, and `1.2 + 0.2928 × 0.1 = 1.22928` when the enemy has triple our strength.
+An own-city battlefield has no Withdraw. Its fight uses the same split, so the exposure part halves at equal strength while city danger keeps its full value. At our capital at 200 of 250 HP with danger 80, `C × f_def = 1.2`; three threatened archers give `E_def / Z_T = 117.12 / 400 = 0.2928` ([decay example](value.md#city-defense-exposure)). The realized stake is `1.2 + 0.2928 × 0.5 = 1.3464` at parity, and `1.2 + 0.2928 × 0.1 = 1.22928` when the enemy has triple our strength.
 
-The city's own priority is `0.68 (θ) × 1.3464 (stake) = 0.915552 ≈ 0.916` at parity. A nearby fight that kills a full-health knight worth 700 adds a destruction term of `700/400 = 1.75` typical units, scoring `0.68 × 1.75 = 1.19` at the same `θ` when the fight's other terms are zero, so the kill can outrank the city.
+The city's own priority is `0.68 (θ) × 1.3464 (realized stake) = 0.915552 ≈ 0.916` at parity. A nearby fight that kills a full-health knight worth 700 adds a destruction term of `700/400 = 1.75` typical units, scoring `0.68 × 1.75 = 1.19` at the same `θ` when the fight's other terms are zero, so the kill can outrank the city.
 
 ## Ordering against fights
 
 - A Withdraw loses ties to every fight and to Reinforce.
 - A fight that can kill or capture keeps most of its rank; the split lowers only its exposure part. Example A's last row and example C's second row show this.
 - The fight counts its target's exposure at `s`, while the Withdraw counts `X` over all recruits and weights it by `1 − s⁺`. The pools can differ in either direction: a larger recruit group or a smaller covered share raises the Withdraw, while a kill, capture or a target the fight can protect raises the fight. Examples A and B show each offer winning.
-- A ready Reinforce can lower the Withdraw through `s⁺`, which is the larger of the fight's share and the Reinforce's projected share. Help that is already coming makes an immediate retreat less urgent, but a projected share below the fight's share changes nothing.
+- Help that qualifies for credit makes retreat less urgent when it raises the projected strength share.

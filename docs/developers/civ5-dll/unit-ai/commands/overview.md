@@ -69,19 +69,19 @@ With `march.enabled` at 0, no army is prepared and every operation keeps its nat
 | Stage | Rule |
 | --- | --- |
 | Build | Resolve settings, **mapped flavors** (player preferences on military scales), **weights** (relative importance of benefits) and **reference scales** (normalization values). Build battlefields and threat maps, which attribute damage to enemy units and cities. |
-| Estimate | A [battlefield estimate](recruitment.md#battlefield-estimate) shares the local scan, theater and **stake** (combined fight benefits) needed by open offers. Closed cities still refresh theater. Positive estimates become ready, nonpositive estimates inactive; waiting fights also need a helpful change. Invalid targets drop every open offer. |
+| Estimate | A [battlefield estimate](recruitment.md#battlefield-estimate) shares the local scan and theater across open offers. Fight uses [realized stake](value.md#fight-priority) for this turn; Reinforce also counts a share of potential stake. Closed cities still refresh theater. Positive estimates become ready, nonpositive estimates inactive; waiting fights also need a helpful change. Invalid targets drop every open offer. |
 | Select | Highest ready estimate first. Ties favor own-city Fight, enemy-city Fight, unit and camp Fight, Reinforce, Withdraw, then Army March. Further ties favor lower plot index, then build order. Stop with no ready offer or at the command cap. |
 | Check | Check only the selected offer. A failed fight check makes it waiting or skipped at the failure limit. Reinforce goes inactive if its target is gone, no recruit passes the reach check, or the selected group falls short of the required strength at a target other than one of our cities. Withdraw goes inactive or skipped at the failure limit if it cannot find a group with positive priority. Army March drops when its prepared order is gone and goes inactive if the order no longer matches, no member can act. A reduced offer competes again at its lower positive priority without using a failure attempt. A passing offer executes at its checked estimate. |
 | Record and retire | Close the offer even if it ended before search or found no action. Explicit refusal consumes the slot without retiring other offers. Rebuild threats, then apply the [overlap rules](#overlapping-offers). |
 | Refresh | Compare the board before and after the command, add newly captured own-city battlefields, re-estimate open offers and apply the [wake rule](#wake-rule). Resume selection. |
 
-The command cap, `iMaxCommands` (64), includes refused commands. Failed readiness checks consume no slots, and search retries belong to the same command. An Army March counts no readiness failures: its check passes, turns inactive or drops. A yield spends a command slot and leaves the offer ready for the next estimate. Every open offer is re-estimated after every command, including distant offers, without native recruitment, path or readiness checks. A closed fight still refreshes its stake while its Reinforce or Withdraw remains open.
+The command cap, `iMaxCommands` (64), includes refused commands. Failed readiness checks consume no slots, and search retries belong to the same command. An Army March counts no readiness failures: its check passes, turns inactive or drops. A yield spends a command slot and leaves the offer ready for the next estimate. Every open offer is re-estimated after every command, including distant offers, without native recruitment, path or readiness checks. The loop still refreshes the battlefield's stake and its realized and potential parts while a Reinforce or Withdraw remains open after a fight closes.
 
 The loop separates facts fixed for the turn from values refreshed after commands:
 
 | Fixed for the turn | Refreshed after each command |
 | --- | --- |
-| Weights and reference scales | Fight stakes and open-offer priorities |
+| Weights and reference scales | Realized stake, potential stake and open-offer priorities |
 | City battlefields' theater importance and every battlefield's ground term | Theater contest, threat maps and reinforcement selections |
 | Original enemy battlefields and their zone and near-city flags | Surviving unit targets' plots and newly captured own-city battlefields |
 | Prepared armies, their operation and army IDs, and their stable row order | Army waypoints and zones, March priorities, and targets discovered after the command |
@@ -206,7 +206,7 @@ The examples below use the [value guide's running inputs](value.md#running-examp
 | Scout, worth 100 | `100 (worth) × (0.6 (retained share) + 0.4 (health share) × 20/100 (HP)) = 68` | `0.35 (θ) × 68 / 400 (Z_T) = 0.0595` | If it survives 2 plots from our town, its fight stays open even within 2 plots of the catapult. |
 | Catapult, worth 500 | `500 × (0.6 + 0.4 × 20/100) = 340` | `0.35 × 340 / 400 = 0.2975` | Checked first. |
 
-**Waiting-offer example.** Supplied: a cityless zone, full-health killable targets 1 plot apart, far from our cities, with no threat damage or other stake terms.
+**Waiting-offer example.** Supplied: a cityless zone, full-health killable targets 1 plot apart, far from our cities, with no threat damage or other realized terms.
 
 | Offer | Priority | Sequence and result |
 | --- | --- | --- |

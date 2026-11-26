@@ -1,12 +1,13 @@
 # Unit AI: Command Value and Priorities
 
-The [command loop](overview.md) gives every offer a **priority** (the code's **estimate**, stored in `fEstimate`). The highest ready priority gets the next readiness check, so priority decides which offers get shared units first. Fights, Reinforce and Withdraw price a battlefield stake; an [Army March](march.md) prices the estimated progress of a prepared army.
+The [command loop](overview.md) gives every offer a **priority** (the code's **estimate**, stored in `fEstimate`). The highest ready priority gets the next readiness check, so priority decides which offers get shared units first. A Fight uses realized stake. [Reinforce](reinforcement.md) also counts a discounted part of potential stake. [Withdraw](withdrawal.md) prices removable exposure, and [Army March](march.md) prices the estimated progress of a prepared army.
 
 ```mermaid
 flowchart TD
     P["Priority = θ × benefit"]
     P --> T["Theater θ<br/>how much the zone's city matters now"]
-    P --> S["Stake or removable exposure<br/>what local units can change this turn"]
+    P --> S["Battlefield stake<br/>realized this turn or still potential"]
+    P --> X["Withdraw<br/>removable exposure"]
     P --> M["Army March benefit<br/>estimated progress"]
     M --> GA["Readiness gain g<br/>one turn of formation progress"]
     M --> RA["Added exposure A<br/>risk the move creates"]
@@ -14,8 +15,8 @@ flowchart TD
     T --> C["Contest c<br/>how likely the city changes hands<br/>refreshed after each command"]
     C --> PR["Pressure p<br/>attacker share of strength²"]
     C --> DM["Damage level δ<br/>share of city HP lost"]
-    S --> DE["Destroy<br/>enemy value local units can remove"]
-    S --> PT["Protect<br/>our value local units can save"]
+    S --> DE["Destroy<br/>enemy value at stake"]
+    S --> PT["Protect<br/>our value at stake"]
     DE --> K["Destroyed value<br/>of a unit or garrison"]
     DE --> CP["City progress<br/>toward capture"]
     PT --> EX["Exposure<br/>of our units"]
@@ -28,8 +29,8 @@ flowchart TD
 | --- | --- | --- |
 | Raw value | Unit worth adjusted for remaining health. | `700 (worth) × (0.6 (retained share) + 0.4 (health share) × 30/100 (remaining HP)) = 504` |
 | Normalized quantity | Unit value / typical unit worth `Z_T`, so every unit and city quantity is in **typical units**. | `504 / 400 (typical worth) = 1.26` typical units |
-| Weighted term | Quantity × preference weight; the terms sum to the stake. | `1.26 × 1 (neutral attrition weight) = 1.26` |
-| Queue priority | Stake × theater `θ`. A ranking score: uncapped and not a probability. | `0.2 (cityless theater) × 1.26 = 0.252` |
+| Realized term | Full term × its current share. The full term already includes the preference weight. | `1.26 × 1 (neutral attrition weight) × 1 (destroyed share) = 1.26` |
+| Fight priority | Realized stake × theater `θ`. This score ranks offers. | `0.2 (cityless theater) × 1.26 = 0.252` |
 
 | Fixed for the turn | Fixed when the battlefield is built | Refreshed after each command |
 | --- | --- | --- |
@@ -155,51 +156,28 @@ A **theater** is the zone around one city. Every fight in the zone shares its mu
 
 ## Fight priority
 
-**Rule: enemy value local units can destroy this turn, plus our value they can protect this turn.** A **term** is a normalized quantity × a preference weight; a **stake** sums a fight's terms. All terms are in typical units, so destroying 500 of enemy worth and protecting 500 of ours count the same at neutral weights. A stake of 0 makes the fight inactive.
+**Fight priority = theater `θ` × realized stake.** A fight with zero realized stake has zero priority.
 
-```mermaid
-flowchart LR
-    U["Enemy unit fight"] --> U1["Destruction K_t"]
-    U --> U2["Exposure E_t"]
-    U --> U3["k_t × ground ΔG(t)"]
-    U --> U4["k_t × city relief"]
-    EC["Enemy city fight"] --> E1["City progress C × f_att"]
-    EC --> E2["Garrison destruction K_g"]
-    EC --> E3["Exposure E_c"]
-    OC["Our city fight"] --> O1["City danger C × f_def"]
-    OC --> O2["Exposure E_def"]
-```
+`EstimateFight` in `CvTacticalOperationalLoop.cpp` computes all three totals in typical units:
 
-**Enemy unit fight**, target `t`:
-
-`stake = w_A × K_t / Z_T + w_R × E_t × s / Z_T + k_t × (w_G × ΔG(t) + w_C × C × f_def × a_t + n × B)`
-
-| Term | Formula | Reads as |
+| Name | Calculation | Meaning |
 | --- | --- | --- |
-| **Destruction** | `w_A × K_t / Z_T` | Enemy value local units and city fire can remove from the target ([destroyed value](#destroyed-value) `K_t`) × attrition weight. |
-| **Exposure** | `w_R × E_t × s / Z_T` | Value of our units the target can hurt before our next turn ([exposure](#exposure) `E_t`) × risk weight × the [strength share](#strength-share) fighting here can protect. A Withdraw counts a separate pool over all recruits. |
-| **Ground** | `k_t × w_G × ΔG(t)` | Territory recovered if the target is removed ([ground](#ground-value) `ΔG(t)`) × hold-ground weight × damage share, since it pays off only on removal. |
-| **Camp** | `k_t × n × B` | A share of the [camp value](#camp-value). This term is zero except while the opening guard remains on its camp. |
-| **City relief** | `k_t × w_C × C × f_def × a_t` | Target's part `a_t` ([relief share](#city-relief)) of our city's danger `C × f_def` × hold-city weight × damage share. 0 away from our cities. |
+| **Stake** (total stake) | Sum of full terms | All the value at stake at the battlefield, with each term at full share. |
+| **Realized stake** | Sum of each full term × its current share | What local units can destroy or protect this turn. |
+| **Potential stake** | Stake − realized stake | The remainder. Reinforce can count part of it as units come into range. |
 
-**Enemy city fight**, current garrison `g`:
+| Battlefield | Term | Full term | Share |
+| --- | --- | --- | --- |
+| Enemy unit | [Destruction](#destroyed-value) | `w_A × living value / Z_T` | Destroyed value `K_t` / living value |
+| Enemy unit | [Ground](#ground-value) | `w_G × ΔG(t)` | Damage share `k_t` |
+| Enemy unit | [City relief](#city-relief) | `w_C × C × f_def × a_t` | Damage share `k_t` |
+| Enemy unit | [Camp](#camp-value) | `n × B` while the opening guard stays on the camp | Damage share `k_t` |
+| Enemy city | [City progress](#city-allowance-and-fall-share) | `w_O × C` | Attack fall share `f_att` |
+| Enemy city | [Garrison destruction](#garrison-destroyed-value) | `w_A × garrison living value / Z_T` | Destroyed value `K_g` / garrison living value |
+| Our city | [City danger](#own-city-stake) | `w_C × C` | Defense fall share `f_def` |
+| All three | [Exposure](#exposure) | `w_R × E / Z_T` | [Strength share](#strength-share) `s`, or 1 when `exposure.split` is 0 |
 
-`stake = w_O × C × f_att + w_A × K_g / Z_T + w_R × E_c × s / Z_T`
-
-| Term | Formula | Reads as |
-| --- | --- | --- |
-| **City progress** | `w_O × C × f_att` | City allowance × progress toward capture this turn ([attack fall share](#city-allowance-and-fall-share) `f_att`) × occupation weight. Healing reduces only this term; capture earns it in full. |
-| **Garrison destruction** | `w_A × K_g / Z_T` | [Garrison value](#garrison-destroyed-value) our hits destroy × attrition weight. Kept separate because native combat splits hits between city and garrison. |
-| **Exposure** | `w_R × E_c × s / Z_T` | Value of our units the city and garrison can hurt × risk weight × [strength share](#strength-share). Keeps the fight active when both damage terms are 0. |
-
-**Our city fight:**
-
-`stake = w_C × C × f_def + w_R × E_def × s / Z_T`
-
-| Term | Formula | Reads as |
-| --- | --- | --- |
-| **City danger** | `w_C × C × f_def` | City allowance × closeness to falling before our next turn ([defense fall share](#city-allowance-and-fall-share) `f_def`) × hold-city weight. |
-| **Exposure** | `w_R × E_def × s / Z_T` | Value at risk of the city's endangered recruits × risk weight × [strength share](#strength-share). See [own-city stake](#own-city-stake). |
+An absent garrison contributes zero. Exposure uses threats known for this turn even at full share.
 
 **Symbols.**
 
@@ -207,7 +185,7 @@ flowchart LR
 | --- | --- | --- |
 | `K_t`, `K_g` | Destroyed value of the target unit or current garrison. | Worth, 0 to the unit's living value. |
 | `k_t` (**damage share**) | `min(1, local damage on the target / its remaining HP)`. | 0 to 1; 1 means a kill is possible. |
-| `E_t`, `E_c`, `E_def` | Exposure attributed to the target, to the city plus garrison, or to our city's endangered recruits. | Worth, nonnegative. |
+| `E` (`E_t`, `E_c`, or `E_def`) | Exposure attributed to the target, to the city plus garrison, or to our city's endangered recruits. | Worth, nonnegative. |
 | `s`, `s⁺` | [Strength share](#strength-share) now and with Reinforce help. | 0 to 1; 0.5 at parity. |
 | `ΔG(t)` | Ground recovered by removing `t`. | Plot weight, about 1 per ordinary plot. |
 | `a_t` | Relief share. | 0 to 1. |
@@ -235,7 +213,7 @@ For a camp seen empty, the claim's priority is `θ × n × B / (1 + h × t)`, wh
 | `L`, `T` | Local and enemy strength from the [strength tallies](recruitment.md#strength-tallies). At a unit target they are centered on the target; at a city they are the theater inputs. |
 | `k` (**steepness**) | Exponent from setting `theater.steepness` (2), squared per Lanchester's square law. At an enemy city, `s` matches the theater's [pressure](#theater-multiplier); at ours, it is `1 − pressure`. |
 | No enemy strength | At our city `s = 1`, since nothing threatens the exposure. At an enemy center `s = 0`: the local force cannot answer the danger, for example ships shelling land units. |
-| `s⁺` | The larger of `s` and the Reinforce's projected share `reinforce.fShareWithHelp` while a positive Reinforce selection is ready; `s` otherwise. Used by Withdraw, so ready help never raises its priority. |
+| `s⁺` | Withdraw starts with `s` and uses the Reinforce's projected share if it is higher and the [offer scores without potential stake](withdrawal.md#withdraw-priority). |
 
 | `L` / `T` | `s` at exponent 2 |
 | --- | --- |
@@ -245,7 +223,7 @@ For a camp seen empty, the claim's priority is `θ × n × B / (1 + h × t)`, wh
 | Double | 0.80 |
 | Triple | 0.90 |
 
-`EstimateTheater` saves the share before Reinforce bookkeeping can rewrite `L`, and `EstimateFight` multiplies each exposure term by it. Only exposure is split this way; destruction, city progress, city danger and relief keep their full value. Setting `exposure.split` (1) to 0 gives fights full exposure; Withdraw keeps its own removable exposure and the stored strength share.
+`EstimateTheater` saves the share before Reinforce bookkeeping can rewrite `L`, and `EstimateFight` multiplies each exposure term by it. Each other term uses its own share from the table above. Setting `exposure.split` (1) to 0 gives fights full exposure; Withdraw keeps its own removable exposure and the stored strength share.
 
 ## City allowance and fall share
 
@@ -357,11 +335,11 @@ With forecast readiness enabled, a checked fight scores **realizable damage + �
 
 **Destruction and exposure together.** That knight is worth 700 at full health and local units can deal it 45. At equal strength, `s = 0.5`.
 
-| Stake term | Calculation | Value |
+| Realized term | Calculation | Value |
 | --- | --- | --- |
 | Destruction | `700 (F) × 0.4 (health share) × 45/100 (D_t / M) / 400 (Z_T)` | 0.315 |
 | Exposure | `304 (archer kept by the attack cap) × 0.5 (s) / 400 (Z_T)` | 0.380 |
-| Stake | `0.315 + 0.380` | 0.695 |
+| Realized stake | `0.315 + 0.380` | 0.695 |
 | Priority | `0.2 (cityless θ) × 0.695`; the fight protects the archer only while it holds the field | 0.139 |
 
 A Withdraw of that archer removes less than the knight's full 0.76: the spearman has no movement left, so it is not a recruit and stays under the knight's attack cap. Removable exposure is `0.76 − 0.12 = 0.64`, or 256 worth, weighted by `1 − s⁺`. The full 0.76 applies only when the spearman can also leave. That is a separate pool from the fight's 0.380 exposure term.
@@ -390,7 +368,7 @@ A Withdraw of that archer removes less than the knight's full 0.76: the spearman
 | `c` | `1 − 0.5 (1 − p) × 0.8 (1 − δ)` | 0.6 |
 | `θ` | `0.2 + 0.8 × 1 (i) × 0.6 (c)` | 0.68 |
 
-| Fight | Destruction `K_t / 400 (Z_T)` | Relief `k_t × 1.2 × a_t` | Stake | Priority `0.68 (θ) × stake` |
+| Fight | Destruction `K_t / 400 (Z_T)` | Relief `k_t × 1.2 × a_t` | Realized stake | Priority `0.68 (θ) × realized stake` |
 | --- | --- | --- | --- | --- |
 | Catapult worth 300, full health, causes 50 of the 80, local units can kill it | `300 (living value) / 400 = 0.75` | `1 (k_t) × 1.2 × 50/80 (a_t) = 0.75` | 1.50 | 1.020 |
 | Our capital's own fight | | 1.2 (whole city danger) | 1.20 | 0.816 |
@@ -420,7 +398,7 @@ The garrison term is `w_A × K_g / Z_T`:
 | `K_g`, garrison at 15 HP | Lethal (`D_g` 20 ≥ 15): `400 × (0.6 (retained share) + 0.4 × 15/100 (remaining / M))` | 264 |
 | Garrison term | `264 / 400` | 0.66 |
 | City progress, full health, heal 20 | `3 (C) × (25 (D_c) − 20 (H)) / 250 (R)` | 0.06 |
-| Stake with the dying garrison | `0.06 + 0.66` | 0.72 |
+| Realized stake with the dying garrison | `0.06 + 0.66` | 0.72 |
 | City progress with heal 25 | `3 × max(0, 25 − 25) / 250`; the garrison term is unchanged | 0 |
 
 ## Ground value
@@ -467,20 +445,20 @@ The garrison term is `w_A × K_g / Z_T`:
 | End three blockades | `0.5 (blockade share) × (1 + 1 + 1.25 (hill))` | 1.625 |
 | `ΔG(t)` | `2.35 + 1.625` | 3.975 |
 | Ground term | `1 (k_t) × 0.05 (w_G) × 3.975` | 0.19875 |
-| Stake | `400 (living value) / 400 (Z_T) + 0.19875`; on plain hostile land it would be 1.00 | 1.19875 |
+| Realized stake | `400 (living value) / 400 (Z_T) + 0.19875`; on plain hostile land it would be 1.00 | 1.19875 |
 | Same spearman, local damage 30 only | Ground `0.3 (k_t = 30/100) × 0.05 × 3.975 = 0.0596` + destruction `400 × 0.4 (health share) × 30/100 / 400 = 0.12` | 0.1796 |
 | A killable spearman that only blockades one open plot | Ground term `1 (k_t) × 0.05 × 0.5 (blockade share) × 1 (open plot)` | 0.025 |
 
 ## Own-city stake
 
-An own-city fight values the city and nearby endangered recruits it can protect.
+An own-city battlefield has two terms: city danger and exposure of endangered recruits. Its Fight uses their realized shares:
 
-`stake = w_C × C × f_def + w_R × E_def × s / Z_T`
+`realized stake = w_C × C × f_def + w_R × E_def × s / Z_T`
 
 | Part | Reads as | Scale or range |
 | --- | --- | --- |
 | `f_def = min(1, city danger / R)` | [Defense fall share](#city-allowance-and-fall-share): damage due before our next turn divided by the city's remaining HP `R`. | 0 to 1. |
-| `E_def` | Value at risk of the city's [endangered recruits](recruitment.md#city-defense-recruits) under [city defense exposure](#city-defense-exposure). A recruit in a friendly city uses a projected garrison calculation; if the city can fall, its whole danger counts as hostile, which can make the starting exposure lethal. Source caps and victim decay can still reduce its contribution. Counts even with no city danger. | Unit value; the stake divides it by `Z_T`. |
+| `E_def` | Value at risk of the city's [endangered recruits](recruitment.md#city-defense-recruits) under [city defense exposure](#city-defense-exposure). A recruit in a friendly city uses a projected garrison calculation; if the city can fall, its whole danger counts as hostile, which can make the starting exposure lethal. Source caps and victim decay can still reduce its contribution. Counts even with no city danger. | Unit value; dividing by `Z_T` converts it to typical units. |
 | `w_C`, `w_R` | Hold-city and risk weights. | Preference multipliers. |
 | `C` | City allowance, setting `city.units` (3). | Typical units. |
 
@@ -515,7 +493,7 @@ A recruit standing in a friendly city is attributed with `GetCityDangerByThreat`
 
 **Own-city example.** Our capital: `i = 40/40 = 1`; 200 of 250 HP, so `δ = 0.2`; no exposed recruits.
 
-| Enemy vs our strength | `p` | `c = 1 − (1 − p) × 0.8 (1 − δ)` | `θ = 0.2 + 0.8 × c` | Danger | `f_def = danger / 200 (R)` | Stake `3 (C) × f_def` | Priority |
+| Enemy vs our strength | `p` | `c = 1 − (1 − p) × 0.8 (1 − δ)` | `θ = 0.2 + 0.8 × c` | Danger | `f_def = danger / 200 (R)` | Realized stake `3 (C) × f_def` | Priority |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | None | 0 | 0.2 | 0.36 | 0 | 0 | 0 | 0, inactive |
 | Equal | 0.5 | 0.6 | 0.68 | 80 | 0.4 | 1.2 | 0.816 |
@@ -529,16 +507,16 @@ Army March combines the target theater, mission value and estimated progress wit
 
 | Offer | Benefit | Priority |
 | --- | --- | --- |
-| Fight | Battlefield stake. | `θ × stake` |
-| Reinforce | The fight's priority times the share help swings. | `θ × stake × swing` |
-| Withdraw | Removable exposure times the share our strength and ready help leave uncovered, with a failure discount. | `θ × w_R × X / Z_T × (1 − s⁺) × 0.7^n` |
+| Fight | This turn's damage and protection. | `θ × realized stake` |
+| Reinforce | Realized and discounted potential stake, times the share help swings. [Camp rules](reinforcement.md#reinforce-priority) can set a floor. | `θ × (realized stake + φ × potential stake) × swing` |
+| Withdraw | Removable exposure times the share our strength and credited help leave uncovered, with a failure discount. | `θ × w_R × X / Z_T × (1 − s⁺) × 0.7^n` |
 | Army March | Estimated progress at the mission's goal weight. | `θ × R × w_goal × g` |
 
 ## Worked priorities
 
 Running example inputs throughout; `θ = 0.2 + 0.8 × i × c` with `c = 1 − (1 − p)(1 − δ)`.
 
-| Offer | Theater | `θ` | Stake | Priority |
+| Offer | Theater | `θ` | Realized stake | Priority |
 | --- | --- | --- | --- | --- |
 | Border city (20) at 5 of 250 HP, no garrison, capturer present, we have double its strength | `i = 0.5`; `p = 0.8`; `δ = 245/250 = 0.98`; `c = 1 − 0.2 × 0.02 = 0.996` | 0.598 | `3 (C) × 1 (capture) = 3.00` | 1.795 |
 | Large city (45), full health, no garrison, 50 local damage, equal strength | `i = 1` (capped); `p = 0.5`; `δ = 0`; `c = 0.5` | 0.600 | `3 × (50 (D_c) − 20 (H)) / 250 (R) = 0.36` | 0.216 |
@@ -557,7 +535,7 @@ Running example inputs throughout; `θ = 0.2 + 0.8 × i × c` with `c = 1 − (1
 
 **City or units first** at the large city, full health, `θ = 0.6`. The search of whichever runs can still attack either target.
 
-| Fight | Stake | Priority |
+| Fight | Realized stake | Priority |
 | --- | --- | --- |
 | Swordsman worth 600 at 50 HP, local units can kill it | `600 × (0.6 + 0.4 × 50/100) / 400 = 1.20` | 0.720 |
 | The city with 50 local damage | `3 × (50 − 20 (H)) / 250 = 0.36` | 0.216 |

@@ -76,7 +76,7 @@ City fights use this damage check regardless of zone posture, native zone domina
 
 Only hosts with admission capability expand candidates and build preliminary search geometry for the callback. Native IDs, checked Reinforce values and effective admission remain available for records without repeating those queries.
 
-Reinforce admission precedes its single spotter pass and path moves. Additional candidates must pass the same flood, alternative-target, safe embark and first-stop danger checks as the checked proposal. Failed additions are excluded. Admitted strength, discounted help, swing and missing capture role are recomputed without reranking the chosen offer. Native, requested and effective selections remain available for later records.
+Reinforce admission precedes its single spotter pass and path moves. Additional candidates must pass the same flood, alternative-target, safe embark and first-stop danger checks as the checked proposal. Failed additions are excluded. The admitted group supplies its strength, discounted help, swing, turns to contact and any missing capture role. The command keeps the checked priority. Native, requested and effective selections remain available for later records.
 
 Withdraw proposes the recruits with a legal first-turn stop. The command records and scores the admitted group before moving it. Recruits omitted by admission hold their original tiles for this comparison.
 
@@ -207,7 +207,7 @@ The **command offset** moves the search flavors toward what the command's local 
 | Reinforce | The same, read from its battlefield's fight, since the help should do what that fight needs. |
 | Withdraw, Army March | The [kind row](reference.md#posture-rows-and-kind-rows) alone. Both searches are capped at Low aggression, and Army March has no exposure estimate. |
 
-The situation values are in typical units (`Z_T`), read unweighted from the stake the offer had when the command was chosen (see [fight priority](value.md#fight-priority)). `GatherSituation` reads them and `SituationFlavorOffsets` turns them into offsets.
+`GatherSituation` reads the checked command's unweighted terms for this turn, with exposure taken before the strength split. The terms are in typical units (see [fight priority](value.md#fight-priority)). `SituationFlavorOffsets` uses them to set search offsets.
 
 | Symbol | Meaning | Source | Scale |
 | --- | --- | --- | --- |
@@ -220,7 +220,7 @@ The situation values are in typical units (`Z_T`), read unweighted from the stak
 
 #### Covered fights
 
-A search's plots include room around nearby enemies, so it can attack them instead of its target. The command's own stake leaves those enemies out because each has its own unit fight offer, so `V_A` adds them back.
+A search's plots include room around nearby enemies, so it can attack them instead of its target. Each nearby enemy has its own unit fight offer, so `V_A` can also count destruction from those offers.
 
 - A **covered fight** is another open enemy-unit fight within 2 plots of the command's target in a compatible zone (land with land, water with water), from any fight kind. `CoversFight` is the reach part of the [overlap rule](overview.md#overlapping-offers), without its exemptions: those decide which fights stay open for their own command, not which enemies a search can reach.
 - Only the **largest** destruction among covered fights counts, since one group rarely kills several targets in a turn.
