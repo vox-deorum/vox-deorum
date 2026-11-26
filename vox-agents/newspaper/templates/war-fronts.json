@@ -313,10 +313,11 @@
         "voice": "gazette",
         "stance": "neutral",
         "genre": "report",
-        "headline": "A change in the {{domain}} entry at {{city}}",
+        "headline": "Movement on the Front",
         "body": [
-          "We are informed that the front entry for {{city}}, held by {{civilization}}, passed from {{previousPosture}} to {{posture}} on turn {{observedTurn}}. The dispatch supplies the new word and no commentary. We print the change as it reached us and leave the explanation to those who keep the board."
-        ]
+          "Tthe forces of {{civilization}} have withdrawn from their position in the {{domain}} near {{city}}. This change from a {{previousPosture}} posture was observed on turn {{observedTurn}}."
+        ],
+        "settled": true
       },
       {
         "id": "enemy-front-posture-withdraw-anecdote",

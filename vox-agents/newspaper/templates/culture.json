@@ -594,10 +594,11 @@
         "voice": "tabloid",
         "stance": "local",
         "genre": "anecdote",
-        "headline": "The widow came every afternoon",
+        "headline": "MORE MASTERPIECES",
         "body": [
-          "The gallery in {{city}} took in {{added|new work|new works}} this week, and a widow came every afternoon to look at one of them. She stayed until the lamplighter rattled his ladder on the third day and told him she had once seen that hall in a dream. The guards let her stay."
-        ]
+          "A student in {{city}} filled his sketchbook with the {{added}} new additions in the city gallery. With {{total}} works, there's no room left to walk. It's a miracle we can breathe."
+        ],
+        "settled": true
       }
     ]
   },
@@ -686,10 +687,11 @@
         "voice": "tabloid",
         "stance": "local",
         "genre": "anecdote",
-        "headline": "The children got there first",
+        "headline": "{{city}}'S NEW JEWEL",
         "body": [
-          "The children of {{city}} reached the {{wonder}} before the guards had set their posts, and by evening every stone had a name they had invented. A grandmother watching from the fence said she had done the same at their age, at a wall that no longer stands. The masons leaned on the fence and let them keep their invented names."
-        ]
+          "A child in {{city}} tried to touch the base of the {{wonder}}, as the guard shouted at him to move along. The whole town is staring at the architectural marvel: it's finally finished!"
+        ],
+        "settled": true
       }
     ]
   },

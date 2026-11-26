@@ -511,10 +511,11 @@
         "voice": "tabloid",
         "stance": "local",
         "genre": "anecdote",
-        "headline": "New hymns over the wall",
+        "headline": "FAITH FLIP IN {{city}}!",
         "body": [
-          "In {{city}}, the rooming-house keeper says the singing now comes over the back wall before the wash water is warm. The city's majority faith is {{religion}}, and the new hymns have spread from the shrine to the tenements. \"I liked the old ones better,\" she says, and hums the new one anyway."
-        ]
+          "An old woman in {{city}} replaced the icon on her mantel. She’s a follower of {{religion}} now. She says the new prayers feel right: the old gods are gone."
+        ],
+        "settled": true
       }
     ]
   },

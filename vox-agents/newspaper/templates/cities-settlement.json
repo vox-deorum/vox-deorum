@@ -8,10 +8,11 @@
     "variants": [
       {
         "id": "distant-colony-founded-report",
-        "headline": "A new colony {{distance}} from the capital",
+        "headline": "Distant colony established at {{city}}",
         "body": [
-          "The flag went up at {{city}} this week, {{distance}} from the capital and a long road from any help. The settlers spent their first night around a single fire, dividing the ground by rope and argument. The town will remember that first fire longer than it remembers us."
-        ]
+          "A new colony has been founded at {{city}}. The site is located at a distance of {{distance}} from the capital, marking a significant expansion of {{terms.civilization}}'s territorial reach."
+        ],
+        "settled": true
       },
       {
         "id": "distant-colony-founded-analysis",
@@ -54,10 +55,11 @@
     "variants": [
       {
         "id": "forward-settle-named",
-        "headline": "A new town on the doorstep of {{ours}}",
+        "headline": "A new settlement near {{ours}}",
         "body": [
-          "A new town called {{city}} now stands {{distance}} from {{ours}}, and {{player}} put it there. From the far field, our farmers can see its roofs and its smoke. The ground between the two towns is the first thing they will argue about."
-        ]
+          "A new settlement, {{city}}, has been founded. Located {{distance}} away from {{ours}}, it pushes the {{terms.civilizationAdjective}} border forward. It is unclear when the two governments may start border disputes. "
+        ],
+        "settled": true
       },
       {
         "id": "forward-settle-analysis",
@@ -159,10 +161,11 @@
       {
         "id": "settler-departure-report",
         "when": "!city.knows('happinessDelta') || !(city.happinessDelta < 0 || city.happinessDelta > 0)",
-        "headline": "Settlers ready as {{city}} grows smaller",
+        "headline": "Settlers depart from {{city}}",
         "body": [
-          "The carts are loaded at the edge of {{city}} and the count is down. A settler party is ready to go, and the neighbors are already dividing the work the leavers will not do. Nobody has said aloud which families will be missed most."
-        ]
+          "A group of settlers has departed from {{city}} to find new land, resulting in a population loss of {{lost}}."
+        ],
+        "settled": true
       },
       {
         "id": "settler-departure-strained",

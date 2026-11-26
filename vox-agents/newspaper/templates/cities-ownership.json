@@ -111,10 +111,11 @@
         "voice": "tabloid",
         "stance": "local",
         "genre": "anecdote",
-        "headline": "The flag changed overnight in {{city}}",
+        "headline": "GOODBYE {{formerOwner}}!",
         "body": [
-          "The watchman on the east gate of {{city}} hauled down one flag and ran up another before breakfast, then went home to sleep. By noon the square held two crowds, one cheering {{newOwner}} and one muttering about {{formerOwner}}. The same baker sold bread to both and said nothing."
-        ]
+          "The tavern keeper in {{city}} changed the sign on his door. He’s serving {{newOwner}}'s beer now. A few coins at hand, he says it tastes better than the stuff from {{formerOwner}}. "
+        ],
+        "settled": true
       }
     ]
   },
@@ -191,10 +192,11 @@
     "variants": [
       {
         "id": "neighbor-puppet-annexed-report",
-        "headline": "{{city}} comes under direct rule",
+        "headline": "{{owner}} integrates {{city}}",
         "body": [
-          "{{city}} has stopped being a puppet and become a province, ruled directly from {{owner}}. The flag above the gate is the same, but every order now comes from the capital. The first sign will be the tax collectors, who no longer need to ask."
-        ]
+          "{{owner}} has completed the annexation of {{city}}, located at {{distance}} from our borders. The city has lots its semi-autonomous status under {{owner}}."
+        ],
+        "settled": true
       },
       {
         "id": "neighbor-puppet-annexed-analysis",
@@ -239,8 +241,9 @@
         "id": "city-puppet-annexed-report",
         "headline": "{{city}} comes under direct rule",
         "body": [
-          "The capital has taken over the administration of {{city}}, until now a puppet. The city remains under occupation."
-        ]
+          "The annexation of {{city}} is complete. The city, previously semi-autonomous, is now under the direct control of {{owner}}. Local officials are now reporting to the {{city.owner.civic.government}}."
+        ],
+        "settled": true
       },
       {
         "id": "city-puppet-annexed-analysis",

@@ -65,10 +65,11 @@
     "variants": [
       {
         "id": "city-under-siege-report",
-        "headline": "{{city}} holds with damaged defenses",
+        "headline": "Defenses weakened at {{city}}",
         "body": [
-          "{{city}} still stands, though its walls are badly broken. Families near the rampart have carried their bedding to relatives deeper in the city, and the market has moved into the narrow streets behind the wall. The gate is barred, and the watch does not sleep."
-        ]
+          "The walls of {{city}} are badly damaged following recent assaults. Military observers note a visible decline in structural integrity along the main ramparts. Local teams are working to reinforce the breaches while the siege continues."
+        ],
+        "settled": true
       },
       {
         "id": "city-under-siege-crier",
@@ -99,10 +100,11 @@
         "voice": "tabloid",
         "stance": "local",
         "genre": "anecdote",
-        "headline": "Life inside besieged {{city}}",
+        "headline": "BLOOD ON THE BRICKS",
         "body": [
-          "In {{city}} the bakers have moved their ovens to the back rooms and the money is kept in aprons. Prices are chalked fresh at dawn and paid without argument. At night the city listens to one sound, the gate creaking on its hinges as the watch walks above it."
-        ]
+          "A guard in {{city}} leaned against a jagged wall and wept. He remembers when the ramparts were smooth and strong; now, there are more holes than stone. The enemy is too close."
+        ],
+        "settled": true
       },
       {
         "id": "city-under-siege-notice",

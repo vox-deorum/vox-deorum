@@ -50,10 +50,11 @@
         "stance": "local",
         "genre": "anecdote",
         "when": "!tied",
-        "headline": "{{capital}} loses its crown to {{largest}}",
+        "headline": "CAPITAL LOSES ITS CROWN",
         "body": [
-          "In the market at {{capital}}, an old speaker still opens with the biggest city in the realm. A boy in the crowd has taken to shouting the new figure, {{largestPopulation}}, and naming {{largest}} at the top of his voice. The speaker has not changed his line, but he no longer waits for applause."
-        ]
+          "A tailor in {{largest}} just took an order for a hundred new banners. He doesn't care about the politics or the officials back in {{capital}}. {{largest}} is the new heart of the nation."
+        ],
+        "settled": true
       },
       {
         "id": "capital-outgrown-feed",
