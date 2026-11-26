@@ -196,7 +196,7 @@ The source is in `civ5-dll/CvGameCoreDLL_Expansion2`.
 | Reinforce lifecycle | `CheckReinforce` checks reach, `RetryReinforce` clears temporary rejections after relevant board changes, and `RetiresReinforce` applies overlap retirement. |
 | Withdraw lifecycle | `EstimateWithdraw` gathers recruits and estimates exposure saved. `CheckWithdraw` finds destinations by domain and projects the first-turn stops. See [Withdraw readiness and execution](withdrawal.md#readiness-and-execution). |
 | March execution | `ExecuteMarch` admits a checked group once and runs positioning by destination. A fogged camp uses its safe path stops without a search. |
-| Camp claims | `FindCampClaimant` uses the native harassment finder. `EstimateCampClaim` prices the trip; `ExecuteCampClaim` admits one unit and issues one move. |
+| Camp claims | `FindCampClaimant` asks the native harassment finder for one unit, limited to independent roster units outside armies and held garrisons. `EstimateCampClaim` prices the trip; `ExecuteCampClaim` admits one unit and issues one move. |
 | Army March prepare | `CvTacticalAI::PlotOperationalArmyMoves` calls `PrepareArmy`, which runs `PrepareMove`, records the waypoint and corridor through `ComputeTargetPlotForThisTurn`, and removes members from the independent roster. `RefreshPreparedArmies` settles aborted orders after each command. |
 | Army March estimate | `EstimateArmyMarch` calls `ArmyMarchGoalWeight`, `ArmyMarchReadinessGain`, `EstimateArmyMarchTheater` and `ArmyMarchPriority`. Army rows estimate after city and unit battlefields. |
 | Army March check | `CheckArmyMarch` validates the order. Gather uses the participants collected at estimate time, and actual moves enforce stacking. |
