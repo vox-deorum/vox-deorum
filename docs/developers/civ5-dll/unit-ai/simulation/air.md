@@ -19,7 +19,7 @@ Aircraft use the `MS_AIR` strategy. They act from a base and have no end-of-turn
 
 Recruitment considers both the current base and eligible plots the carrying ship can reach this turn. If an aircraft needs that ship to move, the search recruits the ship too. Launch plots must fit the search area and its approach-to-target restrictions (`GetCargoLaunchPlots`). Once the ship moves in a simulated plan, its aircraft launch from the new plot, including for source-dependent combat modifiers.
 
-`GetAirTargetPlots` uses the game's strike-validity check from the assumed launch plot through `CanAirUnitStrikeFrom`. Fighters are recruited even when no bomber or missile joins the attack. If an unseen target first needs a fighter sweep for reconnaissance, `ExecuteSpotterMove` performs it before search; the fighter has then spent its attack and stays out of the plan.
+`GetAirTargetPlots` uses the game's strike-validity check from the assumed launch plot through `CanAirUnitStrikeFrom`. With tactical air search on, fighters are strike recruits as well as sweepers, so a fighter alone in reach can make a target attack ready in a native attack or an operational fight. With air search off, fighters stay out of the recruit list and remain available for interceptions. If an unseen target first needs a fighter sweep for reconnaissance, `ExecuteSpotterMove` performs it before search; the fighter has then spent its attack and stays out of the plan.
 
 ## Interception and uncertain damage
 

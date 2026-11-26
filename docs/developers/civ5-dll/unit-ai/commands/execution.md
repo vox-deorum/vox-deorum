@@ -33,7 +33,7 @@ The diagram shows the common path. City fire can end a fight before admission; e
 | Our city | An [endangered recruit](#city-defense), or a defender plus a visible enemy combat unit within 5 plots (search geometry reach). | No offensive damage check. Fast or long-range enemies can cause city danger while outside search geometry; waiting leaves recruits available elsewhere. |
 | Army March | The prepared order still matches and at least one member can act. | The check rebuilds the live admission roster. A stale order makes the offer inactive. |
 
-**Native recruits** come from `FindUnitsWithinStrikingDistance`. The **damage test**, used again during [execution](#fight-execution), requires positive damage from `ComputeTotalExpectedDamage`; a city fight also accepts its separately reported garrison damage from counted attacks.
+**Native recruits** come from `FindUnitsWithinStrikingDistance`. With tactical air search on, fighters are strike recruits as well as sweepers, so a fighter alone in reach can make a target attack ready in a native attack or an operational fight. With air search off, fighters stay out of the recruit list and remain available for interceptions. The **damage test**, used again during [execution](#fight-execution), requires positive damage from `ComputeTotalExpectedDamage`; a city fight also accepts its separately reported garrison damage from counted attacks.
 
 Each check records `passed`, or a failed condition. Fight checks stop at the first condition below that applies. Reinforce readiness [adds its own results](#reinforce-readiness); the Withdraw results are in [Withdrawal readiness and execution](withdrawal.md#readiness-and-execution), and the Army March rules are under [Army March readiness](#army-march-readiness).
 

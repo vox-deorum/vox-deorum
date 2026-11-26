@@ -20,7 +20,7 @@ The callers and recruitment rules live in `civ5-dll/CvGameCoreDLL_Expansion2/CvT
 `FindUnitsWithinStrikingDistance` builds the participant list for zone unit attacks and city capture from the [current-turn pool](overview.md#independent-units-and-priorities). A unit qualifies when all of these hold:
 
 - It is still usable by Tactical AI, so not processed by an earlier pass this turn.
-- It is not a barbarian guarding a camp, a unit that cannot capture when the target is a city, a defense fighter, or a unit covering a friendly civilian.
+- It is not a barbarian guarding a camp, a unit that cannot capture when the target is a city, a defense fighter when the air search is off, or a unit covering a friendly civilian.
 - It is no farther than four times its base moves from the target. Units that can change port, and aircraft under the air search, are checked by their own range instead.
 - It can act on the target this turn:
   - A ranged unit can strike from where it stands, or reach a plot in range this turn without embarking. It must also be expected to deal meaningful damage, or it is left out.
@@ -74,7 +74,7 @@ These units are in the pool but are skipped by [striking-distance recruitment](#
 | Unit processed by an earlier pass | Healing, an earlier engagement, or another move already used its turn. | Only the ones that ran before. |
 | Unit with nothing in reach | No target-driven pass selects it. | Reinforcement positioning, ranged opportunity searches, and Homeland AI's opportunity attacks. |
 | Ranged unit not expected to deal meaningful damage | The damage check leaves it out. | Positioning and ranged opportunity searches. |
-| Defense fighter: an aircraft whose unit type's default UnitAI role is air defense, such as a fighter | It is reserved for interception and sweeps, so it is never recruited as a striker. | Sweep recruitment picks sweep-capable fighters for the same attack. In stock play they sweep greedily before the search. Under the air search they join it. |
+| Defense fighter: an aircraft whose unit type's default UnitAI role is air defense, such as a fighter | With air search off, it is reserved for interception and sweeps, so it is not recruited as a striker. | Sweep recruitment picks sweep-capable fighters for the same attack. In stock play they sweep greedily before the search. Under the air search they join it as strike recruits as well as sweepers. |
 | Unit covering a friendly civilian | It stays with the civilian. | None while it covers. |
 
 Land garrisons left unprocessed by the early pass can join zone attacks and city capture. [Garrison timing](#garrisons) controls that choice.
