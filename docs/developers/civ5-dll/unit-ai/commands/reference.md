@@ -23,7 +23,7 @@ flowchart TD
 | Medium, High, Braveheart aggression RISK (score choosing search aggression) thresholds | 40, 60, 90 | `VOX_OPERATIONAL_AGGRESSION_MEDIUM_RISK`, `VOX_OPERATIONAL_AGGRESSION_HIGH_RISK`, `VOX_OPERATIONAL_AGGRESSION_BRAVEHEART_RISK` |
 | Posture and kind offsets | Tables below | `CvTacticalOperationalLoop.cpp` |
 | Priority weights, slopes and constants | [Weights file](#weights-file) | `CvTacticalOperationalWeights.cpp` |
-| `march.enabled` | 0 | `CvTacticalOperationalWeights.cpp` |
+| `march.enabled` | 1 when the operational loop is on | `CvTacticalOperationalWeights.cpp` |
 | `march.readyUnits` | 2 | `CvTacticalOperationalWeights.cpp` |
 
 The game defines are in `(1) Community Patch/Database Changes/Defines/CoreDefineChanges.sql`. The mod option is in `(1) Community Patch/Database Changes/NewCustomModOptions.xml`, both under `civ5-dll/`.
