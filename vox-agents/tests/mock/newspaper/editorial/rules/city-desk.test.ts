@@ -175,11 +175,15 @@ describe('stock city desk', () => {
     const result = await check(fixture([first, second], [], [gained, lost, regained, elsewhere]));
     const stories = result.archived.filter(item => item.ruleIds?.includes(rule));
     expect(stories).toHaveLength(2);
-    const cityIds = stories.map(item => [...new Set([...item.headline, ...item.body.flat()].flatMap(node =>
+    /** Read every node an archived story printed, from its headline and its printed body. */
+    const copy = (story: typeof stories[number]) => [
+      ...story.headline, ...(result.items.find(item => item.id === story.id)?.body.flat() ?? []),
+    ];
+    const cityIds = stories.map(story => [...new Set(copy(story).flatMap(node =>
       'target' in node && node.target.type === 'city' ? [node.target.cityId] : []))]);
     expect(cityIds.flat().sort()).toEqual(['30', '31']);
     const repeated = stories.find(item => item.sources.some(source => source.table === 'GameEvents' && source.id === 201))!;
-    expect([...repeated.headline, ...repeated.body.flat()]).toContainEqual(expect.objectContaining({
+    expect(copy(repeated)).toContainEqual(expect.objectContaining({
       type: 'link', target: expect.objectContaining({ type: 'city', cityId: '30' }),
     }));
     const eventIds = repeated.sources.filter(source => source.table === 'GameEvents').map(source => source.id);
