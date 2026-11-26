@@ -252,7 +252,7 @@ describe('zone posture triggers', () => {
       expect(audit(result, rule, 'city/20')).toMatchObject({
         outcome: 'fired', sources: expect.arrayContaining([offensive.source, offensive.previousPosture.source]),
       });
-      expect(value(result, rule, 'city/20', 'values.observedTurn')).toBe(8);
+      expect(value(result, rule, 'city/20', 'values.turn')).toBe(8);
       const reversed = await check(fixture({ cities: [home, enemy], zones: [latest], state: 'war', previousState: 'peace', changes }));
       expect(audit(reversed, rule, 'city/20')?.outcome).toBe('false');
       const older = { ...offensive, source: { ...offensive.source, turn: 5 },

@@ -237,7 +237,7 @@
     ],
     "values": {
       "frontIndex": "player.tacticalZones.findIndex(z => z.knows('city') && Object.values(z.units).some(types => Object.values(types).some(count => count > 0)))",
-      "observedTurn": "turn",
+      "turn": "turn",
       "frontCity": "player.tacticalZones[frontIndex].city",
       "domain": "player.tacticalZones[frontIndex].domain.toLowerCase()",
       "posture": "player.tacticalZones[frontIndex].posture",

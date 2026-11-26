@@ -57,7 +57,7 @@
         "id": "forward-settle-named",
         "headline": "A new settlement near {{ours}}",
         "body": [
-          "A new settlement, {{city}}, has been founded. Located {{distance}} away from {{ours}}, it pushes the {{terms.civilizationAdjective}} border forward. It is unclear when the two governments may start border disputes. "
+          "{{player}} has founded a new settlement, {{city}}. Located {{distance}} away from {{ours}}, it pushes their border toward ours. It is unclear when the two governments may start border disputes."
         ],
         "settled": true
       },

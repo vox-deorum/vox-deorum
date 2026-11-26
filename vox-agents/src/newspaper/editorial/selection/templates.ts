@@ -13,8 +13,11 @@ import { uniqueSources } from '../shared/sources.js';
 type TemplateValues = Record<string, RuleScalar>;
 type Period = RuleDevelopment['period'];
 type BatchFacts = Pick<ExpressionBatch, 'constants' | 'facts'>;
-/** Built-in formats keyed by placeholder name patterns; `*` matches any text. */
-const defaultFormatPatterns: Readonly<Record<string, string>> = {
+/** A placeholder's printed unit: a turn label or a unit that follows the number. */
+export type PlaceholderUnit = { kind: 'turn' } | { kind: 'unit'; singular: string; plural?: string };
+
+/** Built-in unit patterns keyed by placeholder name; `*` matches any text. */
+const unitPatterns: Readonly<Record<string, string>> = {
   '*happiness*': 'percent',
   '*weariness*': 'percent',
   '*percentage': 'percent',
@@ -32,17 +35,21 @@ function formatPattern(pattern: string): RegExp {
   return new RegExp(`^${source}$`, 'i');
 }
 
-/** Precompiled built-in format matchers in declaration order. */
-const defaultPlaceholderFormats = Object.entries(defaultFormatPatterns)
-  .map(([pattern, format]) => ({ pattern: formatPattern(pattern), format }));
+/** Precompiled built-in unit matchers in declaration order. */
+const unitMatchers = Object.entries(unitPatterns)
+  .map(([pattern, unit]) => ({ pattern: formatPattern(pattern), unit }));
 
-/** Find the built-in format for a placeholder name. */
-function defaultFormat(name: string): string | undefined {
-  return defaultPlaceholderFormats.find((entry) => entry.pattern.test(name))?.format;
+/** Resolve the printed unit for a placeholder name. */
+export function placeholderUnit(name: string): PlaceholderUnit | undefined {
+  // Only an exact final segment is a turn, so goldPerTurn and turnsLeft keep their own forms.
+  if (name === 'period.from' || name === 'period.to' || name.split('.').at(-1) === 'turn')
+    return { kind: 'turn' };
+  const unit = unitMatchers.find((entry) => entry.pattern.test(name))?.unit;
+  if (unit === undefined) return undefined;
+  const [singular, plural] = unit.split('|');
+  return { kind: 'unit', singular, ...(plural === undefined ? {} : { plural }) };
 }
 export const placeholderPattern = /\{\{([^{}]+)\}\}/g;
-/** Template-declared format overrides carried with the placeholder values. */
-export const placeholderFormats = Symbol('placeholderFormats');
 
 /** A complete, evidence-supported authored choice available to an editor. */
 export interface EditorialCandidate {
@@ -87,18 +94,17 @@ export function placeholderName(key: string): string {
   return separator === -1 ? key : key.slice(0, separator);
 }
 
-/** Print period bounds as turn labels and append units to other values as needed. */
-function formatted(name: string, value: RuleScalar, format: string | undefined): string {
-  if (name === 'period.from' || name === 'period.to') return `Turn ${value}`;
-  if (!format) return String(value);
-  const [singular, plural] = format.split('|').map((part) => part.trim());
-  const unit = plural !== undefined && Math.abs(Number(value)) !== 1 ? plural : singular;
-  return `${String(value)} ${unit}`;
+/** Print a value with its placeholder unit. */
+function formatted(value: RuleScalar, unit: PlaceholderUnit | undefined): string {
+  if (unit === undefined) return String(value);
+  if (unit.kind === 'turn') return `turn ${value}`;
+  const label = unit.plural !== undefined && Math.abs(Number(value)) !== 1 ? unit.plural : unit.singular;
+  return `${String(value)} ${label}`;
 }
 
-/** Capitalize a printed term at the start of a sentence, allowing for surrounding quotes. */
+/** Capitalize a printed term, civic word or turn label at the start of a sentence, allowing for surrounding quotes. */
 function termSentenceCase(name: string, printed: string, precedingText: string): string {
-  if (!(name.startsWith('terms.') || civicPlaceholder(name))) return printed;
+  if (!(name.startsWith('terms.') || civicPlaceholder(name) || placeholderUnit(name)?.kind === 'turn')) return printed;
   if (!/(?:^|[.!?][\p{Pe}\p{Pf}"']*\s+)[\s\p{Ps}\p{Pi}"']*$/u.test(precedingText)) return printed;
   return printed.replace(/^([\s\p{Ps}\p{Pi}"']*)(\p{L})/u,
     (_match, opening, letter) => opening + letter.toUpperCase());
@@ -106,17 +112,18 @@ function termSentenceCase(name: string, printed: string, precedingText: string):
 
 /** Substitute placeholders and units. Pass the preceding prose when rendering display text. */
 export function substitute(text: string, values: TemplateValues, precedingText?: string): string {
-  const declared = (values as TemplateValues & { [placeholderFormats]?: Record<string, string> })[placeholderFormats];
   let cursor = 0;
   return text.replace(placeholderPattern, (whole, key: string, position: number) => {
     const [name, singular, plural, ...rest] = key.split('|');
     const value = Object.hasOwn(values, name) ? values[name] : undefined;
-    let printed = value == null ? whole : formatted(name, value, declared?.[name] ?? defaultFormat(name));
+    const unit = value == null ? undefined : placeholderUnit(name);
+    let printed = value == null ? whole : formatted(value, unit);
     if (value != null && singular !== undefined && plural !== undefined && !rest.length)
       printed += ` ${Number(value) === 1 ? singular : plural}`;
     if (precedingText !== undefined) {
       precedingText += text.slice(cursor, position);
-      if (typeof value === 'string') printed = termSentenceCase(name, printed, precedingText);
+      if (typeof value === 'string' || unit?.kind === 'turn')
+        printed = termSentenceCase(name, printed, precedingText);
       precedingText += printed;
       cursor = position + whole.length;
     }
@@ -187,12 +194,13 @@ function supportingMatch(ids: readonly string[], rules: ReadonlyMap<string, Rule
 /** Build candidate bindings and printable values without flattening members of a group. */
 function templateFacts(
   parts: readonly RuleDevelopment[], period: Period, facts?: BatchFacts['facts'], terms?: EditorialTerms,
-  civicTerms?: EditorialCivicTerms, formats: Record<string, string> = {}
+  civicTerms?: EditorialCivicTerms
 ) {
   const subject = storySubject(parts[0].subject, facts);
   const identity = storyIdentity(subject, facts, civicTerms);
   const triggerValues: Record<string, ExpressionBindings> = Object.create(null);
   const values: TemplateValues = Object.create(null);
+  const printOnly: TemplateValues = Object.create(null);
   const qualified: TemplateValues = Object.create(null);
   const repeated = new Set<string>();
   const groups = [];
@@ -200,11 +208,13 @@ function templateFacts(
     const { matches } = part.values;
     if (!Array.isArray(matches)) {
       const entries = Object.entries(part.values).filter((entry): entry is [string, RuleScalar] => !Array.isArray(entry[1]));
-      triggerValues[part.definitionId] = Object.fromEntries(entries);
+      // A print-only `turn` is not bound so expressions keep reading the current turn.
+      triggerValues[part.definitionId] = Object.fromEntries(entries.filter(([name]) => name !== 'turn'));
       for (const [name, value] of entries) {
         qualified[`triggerValues.${part.definitionId}.${name}`] = value;
-        if (Object.hasOwn(values, name)) repeated.add(name);
-        values[name] = value;
+        const target = name === 'turn' ? printOnly : values;
+        if (Object.hasOwn(target, name)) repeated.add(name);
+        target[name] = value;
       }
       continue;
     }
@@ -223,7 +233,10 @@ function templateFacts(
     qualified[`triggerValues.${part.definitionId}.key`] = group.key;
     qualified[`triggerValues.${part.definitionId}.count`] = group.count;
   }
-  for (const name of repeated) delete values[name];
+  for (const name of repeated) {
+    delete values[name];
+    delete printOnly[name];
+  }
   const group = groups.length === 1 ? groups[0] : undefined;
   const bindings: ExpressionBindings = {
     ...values,
@@ -241,6 +254,7 @@ function templateFacts(
     ...termPlaceholders(terms),
     ...identityValues,
     ...values,
+    ...printOnly,
     ...qualified,
     ...Object.fromEntries(Object.entries(identityValues).filter(([key]) => key.includes('.') || key.endsWith('Id'))),
     'subject.key': subject.key, 'subject.kind': subject.kind,
@@ -250,8 +264,6 @@ function templateFacts(
       'group.key': group.key, 'group.count': group.count,
     } : {}),
   };
-  if (Object.keys(formats).length)
-    Object.defineProperty(placeholders, placeholderFormats, { value: formats, enumerable: true });
   return { bindings, placeholders, identity };
 }
 
@@ -310,7 +322,7 @@ export async function matchTemplates(
     for (const rules of bySubject.values()) {
       const match = supportingMatch(template.triggers, rules);
       if (!match) continue;
-      const choice = templateFacts(match.parts, match.period, batch.facts, terms, config.civicTerms, template.formats);
+      const choice = templateFacts(match.parts, match.period, batch.facts, terms, config.civicTerms);
       const variants = template.variants.filter((variant) => printable(variant, choice.placeholders));
       if (variants.length || template.merge) plans.push({ template, prepared, ...match, choice, variants });
     }

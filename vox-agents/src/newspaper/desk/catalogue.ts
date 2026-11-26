@@ -33,7 +33,7 @@ export interface DeskVariant {
 }
 
 /** One editable template and the file containing it. */
-export interface DeskTemplate extends Pick<EditorialTemplate, 'id' | 'tags' | 'triggers' | 'formats' | 'names' | 'when'> {
+export interface DeskTemplate extends Pick<EditorialTemplate, 'id' | 'tags' | 'triggers' | 'names' | 'when'> {
   file: string;
   triggerSummary: string;
   variants: DeskVariant[];
@@ -118,10 +118,10 @@ export function deskTriggers(template: DeskTemplate, catalogue: DeskCatalogue): 
 /** Keep editable text and the raw revision without keeping the entire source in memory. */
 function readTemplate(raw: unknown, template: EditorialTemplate, file: string, baseCount: number,
   triggerDefinitions: ReadonlyMap<string, DeskTriggerDefinition>, companion?: string): DeskTemplate {
-  const { id, tags, triggers, formats, names, when } = template;
+  const { id, tags, triggers, names, when } = template;
   const rawVariants = asRecord(raw)?.variants as unknown[];
   return {
-    id, tags, triggers, formats, names, when, file,
+    id, tags, triggers, names, when, file,
     triggerSummary: template.triggerSummary ?? triggers.map(id =>
       triggerDefinitions.get(id)?.summary ?? id.replaceAll('-', ' ')).join(' '),
     variants: template.variants.map((variant, index) => ({

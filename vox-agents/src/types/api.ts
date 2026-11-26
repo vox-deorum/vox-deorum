@@ -741,8 +741,10 @@ export type DeskStyleCatalogue = Record<keyof DeskStyle, { id: string; guidance?
 
 /** A placeholder available to the writer. */
 export interface DeskVariable {
-  group: 'trigger' | 'group' | 'subject' | 'reference' | 'period' | 'reader' | 'link' | 'sibling';
+  group: 'trigger' | 'group' | 'subject' | 'reference' | 'reader' | 'link' | 'sibling';
   name: string;
+  /** How the placeholder prints, such as `turn N`, `N turns`, or `as is`. */
+  prints: string;
   source: string;
   mayBeEmpty: boolean;
   keep: boolean;

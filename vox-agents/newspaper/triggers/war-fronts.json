@@ -95,7 +95,7 @@
       "changeIndex": "city.tacticalPostureChanges.map(c => c.knows('posture') && c.knows('previousPosture') && typeof c.previousPosture === 'string' && (c.posture === 'Steamroll' || c.posture === 'Surgical City Strike') && c.previousPosture !== 'Steamroll' && c.previousPosture !== 'Surgical City Strike' && c.knows('owner') && c.knows('receiver') && (r => r.knows('war') && r.war === true)(c.owner.relation(c.receiver))).lastIndexOf(true)",
       "cityName": "city.name",
       "civilization": "city.owner.name",
-      "observedTurn": "city.tacticalPostureChanges[changeIndex].turn",
+      "turn": "city.tacticalPostureChanges[changeIndex].turn",
       "domain": "city.tacticalPostureChanges[changeIndex].domain",
       "previousPosture": "city.tacticalPostureChanges[changeIndex].previousPosture",
       "posture": "city.tacticalPostureChanges[changeIndex].posture"
@@ -120,7 +120,7 @@
       "changeIndex": "city.tacticalPostureChanges.map(c => c.knows('posture') && c.knows('previousPosture') && (c.posture === 'Attrition' || c.posture === 'Exploit Flanks') && c.previousPosture === 'Withdraw' && c.knows('owner') && c.knows('receiver') && (r => r.knows('war') && r.war === true)(c.owner.relation(c.receiver))).lastIndexOf(true)",
       "cityName": "city.name",
       "civilization": "city.owner.name",
-      "observedTurn": "city.tacticalPostureChanges[changeIndex].turn",
+      "turn": "city.tacticalPostureChanges[changeIndex].turn",
       "domain": "city.tacticalPostureChanges[changeIndex].domain",
       "previousPosture": "city.tacticalPostureChanges[changeIndex].previousPosture",
       "posture": "city.tacticalPostureChanges[changeIndex].posture"
@@ -145,7 +145,7 @@
       "changeIndex": "city.tacticalPostureChanges.map(c => c.knows('posture') && c.knows('previousPosture') && c.posture === 'Withdraw' && c.previousPosture !== 'NONE' && c.previousPosture !== 'Withdraw' && c.knows('owner') && c.knows('receiver') && (r => r.knows('war') && r.war === true)(c.owner.relation(c.receiver))).lastIndexOf(true)",
       "cityName": "city.name",
       "civilization": "city.owner.name",
-      "observedTurn": "city.tacticalPostureChanges[changeIndex].turn",
+      "turn": "city.tacticalPostureChanges[changeIndex].turn",
       "domain": "city.tacticalPostureChanges[changeIndex].domain",
       "previousPosture": "city.tacticalPostureChanges[changeIndex].previousPosture",
       "posture": "city.tacticalPostureChanges[changeIndex].posture"
@@ -328,7 +328,7 @@
     "values": {
       "changeIndex": "city.tacticalPostureChanges.map(c => c.knows('posture') && c.knows('previousPosture') && c.posture === 'Counterattack' && c.previousPosture === 'Hedgehog').lastIndexOf(true)",
       "cityName": "city.name",
-      "observedTurn": "city.tacticalPostureChanges[changeIndex].turn",
+      "turn": "city.tacticalPostureChanges[changeIndex].turn",
       "domain": "city.tacticalPostureChanges[changeIndex].domain",
       "previousPosture": "city.tacticalPostureChanges[changeIndex].previousPosture",
       "posture": "city.tacticalPostureChanges[changeIndex].posture"
@@ -350,7 +350,7 @@
     "values": {
       "changeIndex": "city.tacticalPostureChanges.map(c => c.knows('posture') && c.knows('previousPosture') && c.posture === 'Hedgehog' && c.previousPosture !== 'NONE' && c.previousPosture !== 'Hedgehog').lastIndexOf(true)",
       "cityName": "city.name",
-      "observedTurn": "city.tacticalPostureChanges[changeIndex].turn",
+      "turn": "city.tacticalPostureChanges[changeIndex].turn",
       "domain": "city.tacticalPostureChanges[changeIndex].domain",
       "previousPosture": "city.tacticalPostureChanges[changeIndex].previousPosture",
       "posture": "city.tacticalPostureChanges[changeIndex].posture"

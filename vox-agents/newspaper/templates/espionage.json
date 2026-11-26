@@ -355,7 +355,7 @@
         "id": "spy-posted-abroad-report",
         "headline": "One of ours has taken rooms in {{city}}",
         "body": [
-          "One of our quiet people has settled into {{city}}, a city of {{civilization}}. The room he rents above a shop looks down on the gate and opens onto a back stair. The {{city.owner.civic.government}} keeps its own hours, and he intends to learn every one."
+          "One of our quiet people has settled into {{city}}, a city of {{civilization}}. The room he rents above a shop looks down on the gate and opens onto a back stair. The {{owner.civic.government}} keeps its own hours, and he intends to learn every one."
         ]
       },
       {

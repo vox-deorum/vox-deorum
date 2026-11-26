@@ -284,6 +284,19 @@ describe('newspaper desk settle', () => {
     expect(await readFile(fixture.templatePath, 'utf8')).toBe(original);
   });
 
+  it('should reject a runtime alias that the writer table does not list', async () => {
+    const fixture = await createFixture();
+    const draft = findVariant(await readCatalogue(fixture), fixture.ref);
+    const error = await rejection(settleVariant(
+      fixture.ref,
+      { headline: 'A friend enters the {{subject.name}} era', body: ['News from {{civilization}}.'] },
+      draft.revision,
+      options(fixture),
+    ));
+    expect(error.status).toBe(400);
+    expect(error.message).toContain('subject.name');
+  });
+
   it('should reject an unknown placeholder and leave the original bytes in place', async () => {
     const fixture = await createFixture();
     const original = await readFile(fixture.templatePath, 'utf8');
@@ -365,7 +378,8 @@ describe('newspaper desk settle', () => {
     const raw = parsed[0].variants[0] as unknown as AuthoredVariant;
     const catalogue = await readCatalogue(fixture);
     const variables = templateVariables(catalogue.templates[0], catalogue, settled);
-    const values = Object.fromEntries(variables.map(variable => [variable.name, 'x']));
+    // Links target IDs, which the writer table omits, so supply the alias the link needs.
+    const values = { playerId: 1, ...Object.fromEntries(variables.map(variable => [variable.name, 'x'])) };
     expect(variables).not.toHaveLength(0);
     expect(printable(raw, values)).toBe(true);
   });

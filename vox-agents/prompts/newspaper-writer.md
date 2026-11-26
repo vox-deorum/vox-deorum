@@ -5,16 +5,6 @@ These rules are the current guide for the stock newspaper catalogue.
 
 {{{writingRules}}}
 
-## Placeholder rules
-- For each writing task, only use its listed variables.
-- An unknown placeholder makes the story unprintable.
-
-## Using paragraphs
-- Keep the sentences of a short brief together when they share a focus.
-- Start a new paragraph when it helps readers follow a change of scene, time, speaker, or focus.
-- Do not give every rhetorical beat its own paragraph or hold to a fixed paragraph count.
-- Each `body` entry is one paragraph. Do not put blank lines inside an entry.
-
 {{#hasExamples}}
 ## Example writings
 Follow these example writings as a model, learn from the way they handle different voices, stances, and genres.
@@ -58,13 +48,6 @@ A good story fits the trigger that starts it. Start from here.
 
 - Template condition: {{templateWhen}}
 - Task condition: {{variantWhen}}
-{{#hasFormats}}
-
-### Formats
-{{#formats}}
-- `{{name}}`: {{format}}
-{{/formats}}
-{{/hasFormats}}
 {{#hasLinks}}
 
 ### Link placeholders
@@ -74,10 +57,10 @@ A good story fits the trigger that starts it. Start from here.
 {{/hasLinks}}
 
 ### Available variables
-| Group | Name | Source | Availability |
+| Name | Prints as | Source | Availability |
 | --- | --- | --- | --- |
 {{#variables}}
-| {{group}} | `{{name}}` | {{source}} | {{#mayBeEmpty}}may be empty{{/mayBeEmpty}}{{^mayBeEmpty}}always present{{/mayBeEmpty}}{{#keep}}; keep{{/keep}} |
+| `{{name}}` | {{prints}} | {{source}} | {{#mayBeEmpty}}may be empty{{/mayBeEmpty}}{{^mayBeEmpty}}always present{{/mayBeEmpty}}{{#keep}}; keep{{/keep}} |
 {{/variables}}
 
 {{/variants}}
@@ -87,7 +70,7 @@ Return a JSON object with a `variants` array. Include every variant from the req
 - `headline`: the headline, using only listed placeholders.
 - `subheadline`: a subheadline if needed, otherwise `null`.
 - `byline`: a byline if needed, otherwise `null`.
-- `body`: one or more paragraphs, one entry per paragraph, using only listed placeholders. A short single-focus brief can use one paragraph.
+- `body`: one or more paragraphs, one entry per paragraph with no blank lines inside an entry, using only listed placeholders. A short single-focus brief can use one paragraph.
 
 Example shape:
 

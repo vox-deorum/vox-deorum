@@ -249,23 +249,39 @@ describe('newspaper placeholder printing', () => {
       { wallStrength: 100, maxWallStrength: 300 })).toBe('100 of 300');
   });
 
-  it('should let a template declare a raw unit', async () => {
+  it('should print a turn value, period bounds, and merge values as turn labels', () => {
+    expect(substitute('{{turn}} at {{period.to}} and {{merge.values.turn}}',
+      { turn: 42, 'period.to': 43, 'merge.values.turn': 41 })).toBe('turn 42 at turn 43 and turn 41');
+  });
+
+  it('should capitalize a turn label at the start of a sentence', () => {
+    expect(substitute('{{turn}}: the entry for {{city}}', { turn: 42, city: 'Paris' }, ''))
+      .toBe('Turn 42: the entry for Paris');
+    expect(substitute('the entry arrives on {{turn}}', { turn: 42 }, ''))
+      .toBe('the entry arrives on turn 42');
+  });
+
+  it('should keep other names that contain turn on their own units', () => {
+    expect(substitute('{{goldPerTurn}} gold, {{turnsLeft}} left', { goldPerTurn: 7, turnsLeft: 3 }))
+      .toBe('7 gold, 3 turns left');
+  });
+
+  it('should print a trigger value named turn without binding over the current turn', async () => {
     const template = {
-      ...standard, triggers: ['report'], formats: { turns: 'cycle|cycles' },
+      ...standard, triggers: ['report'],
+      when: 'turn === 10 && typeof values.turn === "undefined"',
       variants: [{
-        ...standard.variants[0],
-        headline: 'After {{turns}}',
-        body: ['{{period.to}}.'],
+        ...standard.variants[0], id: 'dated',
+        headline: '{{turn}}: the entry', body: ['Reported by {{period.to}} as {{turn}}.'],
       }],
     };
     const selected = await candidates(0, [{
-      id: 'report', subject: 'world', tier: 'filler', when: 'true', values: { turns: '2' },
+      id: 'report', subject: 'world', tier: 'filler', when: 'true', values: { turn: '2' },
     }], template);
+    expect(selected).toHaveLength(1);
+    expect(selected[0].values.turn).toBe(2);
     const [variant] = selected[0].variants;
-    const nodes = inlineTextSchema.parse(
-      renderAuthoredText(variant.headline, selected[0].values, variant, selected[0].names)
-    );
-    expect(nodes.map((node) => node.text).join('')).toBe('After 2 cycles');
+    expect(substitute(variant.headline, selected[0].values, '')).toBe('Turn 2: the entry');
   });
 
   it('should apply built-in units in authored prose', async () => {
@@ -288,6 +304,6 @@ describe('newspaper placeholder printing', () => {
     expect(nodes.map((node) => node.text).join(''))
       .toBe('12 million people at 62 percent, famine at 1 million, war in 3 turns, city 2 tiles');
     const body = renderAuthoredText(variant.body[0], selected[0].values, variant);
-    expect(body.map((node) => node.text).join('')).toBe('After Turn 8 and by Turn 10.');
+    expect(body.map((node) => node.text).join('')).toBe('After turn 8 and by turn 10.');
   });
 });

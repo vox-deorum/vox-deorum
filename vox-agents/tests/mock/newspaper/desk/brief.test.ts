@@ -34,7 +34,7 @@ function variant(
 ): DeskVariant {
   const text: DeskText = {
     headline: `Headline for ${id}`,
-    body: [`Body for ${id} on {{period.to}}.`],
+    body: [`Body for ${id} on {{era}}.`],
   };
   return {
     id,
@@ -61,7 +61,6 @@ function template(
     triggerSummary: `Summary for ${id}`,
     triggers: ['trigger-a'],
     when: 'period.from > 0',
-    formats: { population: 'million|millions' },
     names: ['era'],
     variants,
     ...extra,
@@ -148,30 +147,40 @@ describe('newspaper desk brief', () => {
     expect(rendered).toContain('crier / local / notice');
     expect(rendered).toContain('scienceLead > 2');
     expect(rendered).not.toContain('Headline for unselected');
-    for (const { headline } of [...view.examples, ...view.variants.map(task => task.current)]) {
+    for (const { headline } of view.examples) {
       expect(rendered.split(headline)).toHaveLength(2);
     }
   });
 
-  it('should render the live writing rules and the current starting text', async () => {
+  it('should render the live writing rules', async () => {
     directory = await mkdtemp(path.join(tmpdir(), 'vd-desk-brief-'));
     const writingPath = path.join(directory, 'writing.md');
     await writeFile(writingPath, 'Write plainly.\n\nBRIEF-MARKER-42\n');
     const view = briefView([{ templateId: target.id, variantId: 'draft' }], catalogue([target, settled]), 2, writingPath);
     const rendered = renderBrief(view);
     expect(rendered).toContain('BRIEF-MARKER-42');
-    expect(rendered).toContain('Headline for draft');
-    expect(rendered).toContain('Body for draft');
     expect(rendered).toContain('Write with pace.');
   });
 
-  it('should show paragraph breaks in the current copy and settled examples', () => {
+  it('should cut a long variable source in the writer prompt', () => {
+    mocks.variables = [{
+      group: 'trigger', name: 'distance', prints: 'N tiles', source: 'x'.repeat(200), mayBeEmpty: false, keep: false,
+    }];
+    try {
+      const view = briefView([{ templateId: target.id, variantId: 'draft' }], catalogue([target, settled]), 1);
+      expect(view.variants[0].variables[0].source).toBe('x'.repeat(80) + '...');
+      expect(renderBrief(view)).toContain('x'.repeat(80) + '...');
+    } finally {
+      mocks.variables = [];
+    }
+  });
+
+  it('should show paragraph breaks in settled examples', () => {
     const sample = template('sample-news', ['science'], [
       variant('draft', press, false, { text: { headline: 'Current', body: ['Draft opening.', 'Draft ending.'] } }),
       variant('settled', press, true, { text: { headline: 'Sample', body: ['Sample opening.\n\nSample ending.'] } }),
     ]);
     const rendered = renderBrief(briefView([{ templateId: sample.id, variantId: 'draft' }], catalogue([sample]), 1));
-    expect(rendered).toContain('> Draft opening.\n\n> Draft ending.');
     expect(rendered).toContain('> Sample opening.\n\n> Sample ending.');
   });
 });

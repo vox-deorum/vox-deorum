@@ -98,7 +98,7 @@ describe('stock foreign desk', () => {
       const result = await publish(evidence([deal(1, 1, 0, theirs, ours)], [snapshot(0, 8, [relationship(1)])]));
       expect(fired(result, 'trade-deal')).toEqual([]);
       expect(fired(result, 'comprehensive-agreement')).toEqual([]);
-      const story = expectStory(result, rule, ['Brazil', ...ours.map(([, label]) => label), ...theirs.map(([, label]) => label)]);
+      const story = expectStory(result, rule, ['Brazil']);
       expect(result.decision.selectedVariants[story.id]).toBe(`${rule}-${direction}-report`);
     });
 

@@ -19,6 +19,8 @@ import { deskTextPlaceholders, templateVariables } from './variables.js';
 const relatedExamplesPerTemplate = 2;
 /** Examples from other templates in one request. */
 const relatedExampleLimit = 6;
+/** Longest variable source shown in the writer prompt before it is cut. */
+const variableSourceLimit = 80;
 
 /** A trigger rendered for the brief. */
 interface BriefTrigger {
@@ -39,8 +41,6 @@ interface BriefVariant {
   triggers: BriefTrigger[];
   templateWhen: string;
   variantWhen: string;
-  hasFormats: boolean;
-  formats: { name: string; format: string }[];
   names: string;
   hasLinks: boolean;
   links: { placeholder: string; keep: boolean }[];
@@ -90,6 +90,11 @@ export function findDeskVariant(
 /** Join authored conditions for a brief. */
 function conditions(source?: string | string[]): string {
   return Array.isArray(source) ? source.join(' and ') : source ?? 'none';
+}
+
+/** Cut a long variable source so one expression cannot dominate the prompt. */
+function briefSource(source: string): string {
+  return source.length > variableSourceLimit ? source.slice(0, variableSourceLimit) + '...' : source;
 }
 
 /** Group unsettled refs by voice, stance and genre, then split each group into chunks. */
@@ -173,7 +178,6 @@ export function briefView(
     const current = { ...variant.text, body: normalizeParagraphs(variant.text.body) };
     const used = deskTextPlaceholders(current);
     const links = (variant.links ?? []).map(({ placeholder }) => ({ placeholder, keep: used.has(placeholder) }));
-    const formats = Object.entries(template.formats ?? {}).map(([name, format]) => ({ name, format }));
     const triggers = templateTriggers(template, catalogue);
     return [{
       templateId: template.id,
@@ -184,12 +188,11 @@ export function briefView(
       triggers,
       templateWhen: conditions(template.when),
       variantWhen: conditions(variant.when),
-      hasFormats: formats.length > 0,
-      formats,
       names: template.names?.join(', ') || 'none',
       hasLinks: links.length > 0,
       links,
-      variables: templateVariables(template, catalogue, variant),
+      variables: templateVariables(template, catalogue, variant)
+        .map(variable => ({ ...variable, source: briefSource(variable.source) })),
       current,
     }];
   });

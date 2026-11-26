@@ -34,7 +34,7 @@ When a template names several rules, they must match the same subject with overl
 | `mode` | `authored` (default) or `llmOnly`, which the current editor skips |
 | `short` | Lets the editor reserve its last ranking slot for a brief |
 | `when`, `weight` | Template eligibility, base weight, and conditional adjustments |
-| `names`, `formats` | Placeholders to style as names and units to print with named values |
+| `names` | Placeholders to style as names |
 | `extends`, `links` | Root template ID and typed link list |
 | `merge` | Rules and variants for combining selected stories |
 
@@ -66,18 +66,20 @@ The editor draws variants for placed articles in ranked order. Each earlier vari
 
 ### Placeholders and facts
 
-Prose and links use `{{name}}` placeholders. Require the facts that define the story in the trigger's `when`, including before counting items in a roundup. If a supporting detail is missing, a variant that prints it is ineligible. Articles cite the evidence behind facts and terms they print.
+Prose and links use `{{name}}` placeholders. A placeholder prints its own unit, so copy writes it alone: `on {{turn}}`, not `on turn {{turn}}`. Require the facts that define the story in the trigger's `when`, including before counting items in a roundup. If a supporting detail is missing, a variant that prints it is ineligible. Articles cite the evidence behind facts and terms they print.
 
 | Placeholder | Value |
 | --- | --- |
 | `{{city}}`, `{{cityId}}` | City name and ID for a city subject or the city linked to an event |
 | `{{subject.name}}`, `{{subject.id}}` | Name and ID of the visible subject |
-| `{{period.from}}`, `{{period.to}}` | Matched rules' shared window, with an exclusive lower bound and inclusive cutoff. Each prints as `Turn X`. |
+| `{{period.from}}`, `{{period.to}}` | Matched rules' shared window, with an exclusive lower bound and inclusive cutoff. Each prints as `turn X`. |
 | `{{city.owner.name}}`, `{{city.owner.leader}}` | Identity of a directly referenced subject. A city owner's name and ID also have the aliases `{{owner}}` and `{{ownerId}}`. |
 | `{{lost}}`, `{{originCity}}` | Rule-defined values, for example a population drop or one endpoint in the stock trade routes |
 | `{{key}}`, `{{count}}` | A single group's key and member count |
 | `{{terms.civilization}}`, `{{terms.civilizationAdjective}}`, `{{terms.leader}}` | Receiver's civilization name, English adjective, and leader. For a modded or localized name, use its recorded name or supply the adjective in the catalogue. |
 | `{{terms.<name>}}` | A printable [term](triggers/constants.md#terms) defined by the catalogue |
+
+The Writing Desk lists one canonical name per value: bare trigger values, short reference names such as `owner`, and no IDs, `subject.*` names, or `period.*` names. It accepts only those names. The runtime still accepts the longer aliases and IDs for links and overlays.
 
 Identity placeholders follow one reference from a subject. For example, an event can use `{{event.city.name}}`. To print its city's owner, define a trigger value for that fact. World and group subjects have no automatic name or ID. If a reference such as `city.formerOwner` is missing from the Writing Desk's variable list, expose the name as a trigger value to use it there.
 
@@ -85,15 +87,18 @@ For a single group, print a non-null scalar `{{key}}` or `{{count}}`. Expression
 
 List name placeholders without braces in `names`, such as `terms.leader`. The reader underlines them using `vd-name` and keeps declared links clickable.
 
-The editor supplies units by placeholder name, ignoring case. Set `formats` to override the unit for an exact name.
+The editor matches unit patterns against the placeholder name, ignoring case.
 
 | Name pattern | Unit |
 | --- | --- |
+| Last segment `turn`, or `period.from` or `period.to` | `turn 42`, capitalized as `Turn 42` at the start of a sentence |
 | Ends in `percentage` or contains `happiness` or `weariness` | percent |
 | Contains `population` | million |
 | Contains `points`, `turns`, or `distance` | point, turn, or tile, with a plural as needed |
 
-Use `{{count|power|powers}}` to append a noun to a plain count. In `formats`, use a value such as `"point|points"` for a unit with singular and plural forms.
+A trigger or merge value may be named `turn`. It prints like any other value but is print-only: expressions keep reading the current turn.
+
+Use `{{count|power|powers}}` to append a noun to a plain count.
 
 ### Sharing links
 

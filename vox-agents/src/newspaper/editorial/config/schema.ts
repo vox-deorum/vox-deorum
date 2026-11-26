@@ -97,13 +97,12 @@ const mergeTemplateSchema = z.strictObject({
   variants: z.array(resolvedVariantSchema).min(1),
 });
 
-/** Templates explicitly name supported triggers and any placeholder format overrides. */
+/** Templates explicitly name supported triggers and any display names. */
 export const templateSchema = eligibleSchema.extend({
   id: z.string().min(1),
   triggerSummary: z.string().trim().min(1).optional(),
   triggers: z.array(z.string().min(1)).min(1),
   tags: z.array(z.string().min(1)),
-  formats: z.record(z.string().min(1), z.string().min(1)).default({}),
   names: z.array(z.string().min(1)).optional(),
   mode: z.enum(['authored', 'llmOnly']).default('authored'),
   short: z.boolean().default(false),
@@ -130,7 +129,7 @@ export const rootTemplateSchema = z.strictObject({
 });
 
 /** Version of the effective editorial catalogue saved with decisions. */
-export const editorialConfigVersion = 3;
+export const editorialConfigVersion = 4;
 
 const designSchema = eligibleSchema.extend({
   id: z.string().min(1),

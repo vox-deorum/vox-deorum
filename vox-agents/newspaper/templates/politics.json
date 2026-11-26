@@ -365,7 +365,7 @@
         "id": "ideology-switched-report",
         "headline": "{{civilization}} abandons {{formerIdeology}} for {{ideology}}",
         "body": [
-          "The {{event.player.civic.government}} of {{civilization}} has set aside {{formerIdeology}} and taken up {{ideology}}. Its embassy has sent for a new seal, since the old one carries a creed the country no longer holds. No drums, no speeches; the change came in a single line of official print."
+          "The {{player.civic.government}} of {{civilization}} has set aside {{formerIdeology}} and taken up {{ideology}}. Its embassy has sent for a new seal, since the old one carries a creed the country no longer holds. No drums, no speeches; the change came in a single line of official print."
         ]
       },
       {
@@ -387,7 +387,7 @@
         "when": "ours === false",
         "headline": "A change of doctrine recorded",
         "body": [
-          "In this season {{civilization}} set aside {{formerIdeology}} and adopted {{ideology}}. The {{event.player.civic.leaderTitle}} swore the oath at the gate in new words, and the old form was struck from the register. The dispatch offers no reason, and none is entered here."
+          "In this season {{civilization}} set aside {{formerIdeology}} and adopted {{ideology}}. The {{player.civic.leaderTitle}} swore the oath at the gate in new words, and the old form was struck from the register. The dispatch offers no reason, and none is entered here."
         ]
       }
     ]

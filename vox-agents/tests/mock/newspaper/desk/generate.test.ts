@@ -79,7 +79,6 @@ function template(id: string, tags: string[], variants: DeskVariant[]): DeskTemp
     tags,
     triggerSummary: `Summary ${id}`,
     triggers: ['trigger-a'],
-    formats: {},
     variants,
   };
 }

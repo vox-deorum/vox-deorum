@@ -855,7 +855,7 @@
           "when": "merge.values.distinctAttackers >= 3",
           "headline": "Breaking: {{merge.values.distinctAttackers|power|powers}} declare war",
           "body": [
-            "War came in a wave on turn {{key}}: {{merge.values.attackers}} have all declared it on us.{{merge.values.allies}} Every frontier must be watched at once now, and no offer of help can be refused this week."
+            "War came in a single wave: {{merge.values.attackers}} have all declared it on us.{{merge.values.allies}} Every frontier must be watched at once now, and no offer of help can be refused this week."
           ],
           "weight": {
             "base": 1

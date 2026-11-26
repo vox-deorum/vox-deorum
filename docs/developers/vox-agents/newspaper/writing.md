@@ -2,7 +2,11 @@
 
 Use this guide to write or revise a [stock variant](editorial.md#catalogue-and-eligibility). The Writing Desk also includes it in the writer model's prompt for each request.
 
-Check the trigger and the [facts and names you can print](editorial.md#placeholders-and-facts) before you draft. Use only the placeholders available for the story.
+## Use placeholders
+
+Use only the [placeholders listed for your task](editorial.md#placeholders-and-facts). An unknown placeholder makes the story unprintable.
+
+A placeholder prints its own unit, so write it alone: `on {{turn}}`, not `on turn {{turn}}`. `{{turnsLeft}}` prints `3 turns`, and `{{distance}}` prints `4 tiles`. Add a noun to a plain count with `{{count|regiment|regiments}}`.
 
 ## Shape each body into paragraphs
 
@@ -34,7 +38,7 @@ Write in the variant's [voice, stance, and genre](editorial.md#variant-styles). 
 
 ## Use relevant numbers in the game world
 
-Use numbers that make sense in the game world, and turn a figure into words when a raw unit would break the scene. The [placeholders and facts reference](editorial.md#placeholders-and-facts) explains how placeholders print; choose wording readers can picture.
+Choose wording readers can picture, and turn a figure into words when a raw unit would break the scene.
 
 - “We lead by 3 technologies” works because readers understand what the count measures.
 - Write “The city is badly damaged” in place of “The city has 100/300 HP.” Hit points have no place in the world.

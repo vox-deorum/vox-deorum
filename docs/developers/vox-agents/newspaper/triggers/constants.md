@@ -118,4 +118,4 @@ Government, people, and leader titles use the separate [civic vocabulary](../edi
 
 Edit the built-in file to change the default, or use an [overlay](overview.md#tune-with-an-overlay) to try a change for one replay. Constant groups, including tiers and terms, merge by name. A type list with the same name replaces the whole list. Shortcuts and stakes merge by subject and name.
 
-New names must be valid JavaScript identifiers. Constants and terms cannot use reserved names such as `self` and `turn`. Shortcut and stake names must avoid fact-view methods such as `knows`. A threshold used in only one rule can stay in that rule.
+New names must be valid JavaScript identifiers. Constants and terms cannot use reserved names such as `self` and `turn`. Trigger values may use `turn` as a print-only value. Shortcut and stake names must avoid fact-view methods such as `knows`. A threshold used in only one rule can stay in that rule.

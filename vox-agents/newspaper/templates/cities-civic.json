@@ -194,7 +194,7 @@
         "genre": "analysis",
         "headline": "The Weight of Growth in {{cityName}}",
         "body": [
-          "The census is in: {{city}} is now a {{milestone}} with {{population}} residents. While the numbers signal a triumph of expansion, the city's appetite for better amenities is ever growing faster. It is up to {{city.owner.civic.government}} to provide for its people and lead the world."
+          "The census is in: {{city}} is now a {{milestone}} with {{population}} residents. While the numbers signal a triumph of expansion, the city's appetite for better amenities is ever growing faster. It is up to {{owner.civic.government}} to provide for its people and lead the world."
         ],
         "settled": true
       },

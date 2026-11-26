@@ -226,7 +226,7 @@
       {
         "id": "probe-front-zone-report",
         "headline": "{{posture}} assessment near {{frontCity}}",
-        "body": ["On turn {{observedTurn}}, observers sighted these units in the {{domain}} zone: {{counts}}."]
+        "body": ["On {{turn}}, observers sighted these units in the {{domain}} zone: {{counts}}."]
       }
     ]
   },

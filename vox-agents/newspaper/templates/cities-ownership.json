@@ -241,7 +241,7 @@
         "id": "city-puppet-annexed-report",
         "headline": "{{city}} comes under direct rule",
         "body": [
-          "The annexation of {{city}} is complete. The city, previously semi-autonomous, is now under the direct control of {{owner}}. Local officials are now reporting to the {{city.owner.civic.government}}."
+          "The annexation of {{city}} is complete. The city, previously semi-autonomous, is now under the direct control of {{owner}}. Local officials are now reporting to the {{owner.civic.government}}."
         ],
         "settled": true
       },

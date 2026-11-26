@@ -33,9 +33,9 @@ const constantNameSchema = identifierSchema.refine(
   name => !reservedValueNames.has(name) && name !== 'distance' && name !== 'count',
   'Name collides with an expression binding.',
 );
-/** The documented distance and count values are local to a rule and may reuse those names. */
+/** Values may reuse the documented distance and count names; a trigger or merge value may print the current turn under its reserved name. */
 export const editorialValueNameSchema = identifierSchema.refine(
-  name => !reservedValueNames.has(name), 'Name collides with an expression binding.',
+  name => name === 'turn' || !reservedValueNames.has(name), 'Name collides with an expression binding.',
 );
 const shortcutNameSchema = identifierSchema.refine(name => !['knows', 'relations', 'toJSON'].includes(name), 'Name is reserved by the fact view.');
 const spanSchema = z.number().positive();
