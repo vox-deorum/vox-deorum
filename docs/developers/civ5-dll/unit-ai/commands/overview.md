@@ -45,7 +45,7 @@ The simulator can supply an **operational provider** through host callbacks; `Cv
 | --- | --- | --- |
 | Command choice | Before each readiness check, including after a failed check | Highest ready priority, with the [queue tie breaks](#command-loop). |
 | Participant admission | After readiness, before recruits act | The checked participants for the command, including the single recruit for a camp claim. A provider can retain the selection or request a candidate subset. See [admission and refusal](execution.md#participant-admission). |
-| Search flavors | After spotting and greedy air, using the final geometry | Geographic flavor blend plus command-kind row. See [search preferences](execution.md#geographic-blend). |
+| Search flavors | After spotting and greedy air, using the final geometry | Geographic flavor blend plus the [command offset](execution.md#command-offset). See [search preferences](execution.md#geographic-blend). |
 
 The simulator's supplied adapter builds a separate menu from the acting player's permitted knowledge. It maps selected objectives to live battlefields and walks ranked replies through these readiness checks, stopping at the first pass. Missing mappings and failed checks are execution feedback. Native decoding keeps the queue above, including when the supplied reply delegates to native.
 

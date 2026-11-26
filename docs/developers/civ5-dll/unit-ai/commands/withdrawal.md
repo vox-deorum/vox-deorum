@@ -190,18 +190,18 @@ The penalty is subtracted, so a plot closer to the city ranks higher.
 
 ### Worked examples
 
-Units are not alone, RISK is 20 after the Withdraw row, so the danger penalty is about 1.52 times the scaled danger. Smaller terms are ignored.
+Units are not alone, mapped flavors are neutral, and enemies stand off our land. The Withdraw kind row sets RISK to 30 (50 − 20), so the danger penalty is about 1.32 times the scaled danger, and ATTRITION to 40 (50 − 10), so unit damage scores 0.871 times its HP. Smaller terms are ignored.
 
 | Case | Stay | Retreat | Chosen |
 | --- | --- | --- | --- |
-| Archer at 60 HP, danger 30 (penalty 76), enemy adjacent, healthy target | Shoot 25: `25 × 3/10 = 7` HP, 70 points | 2 steps to zero danger, enemy distance 1 to 3: `76 danger removed + 80 destination + 80 distance = 236` | Retreat |
-| Same, target at 30 HP | `25 × 3/10 = 7` damage and `25 × 3/10 = 7` focus, 140 points | 236 | Retreat |
-| Same, target at 25 HP, the shot kills | `250 damage + 250 focus + 150 kill = 650` | 236 | Kill |
-| Swordsman at 100 HP, danger 20 (penalty 30), adjacent | Deal 30, take 20: `90 − 200 = −110` | 2 steps, enemy distance 1 to 3: `30 danger removed + 60 destination + 120 distance = 210` | Retreat |
+| Archer at 60 HP, danger 30 (penalty 66), enemy adjacent, healthy target | Shoot 25: `22 (25 × 0.871) × 3/10 = 6` HP, 60 points | 2 steps to zero danger, enemy distance 1 to 3: `66 danger removed + 80 destination + 80 distance = 226` | Retreat |
+| Same, target at 30 HP | `22 × 3/10 = 6` damage and `25 × 3/10 = 7` focus, 130 points | 226 | Retreat |
+| Same, target at 25 HP, the shot kills | `220 damage + 250 focus + 130 kill (15 × 0.871) = 600` | 226 | Kill |
+| Swordsman at 100 HP, danger 20 (penalty 26), adjacent | Deal 30, take 20: `70 (26 (30 × 0.871) × 3/10) − 200 = −130` | 2 steps, enemy distance 1 to 3: `26 danger removed + 60 destination + 120 distance = 206` | Retreat |
 | Same swordsman already 3 plots from the enemy, no danger | 0 | 2 more steps: `60`; the archer beside it gains `80 destination + 40 distance = 120` | Both move; the archer goes first when plots or movement are short |
 | Spearman at 70 HP on a zero-danger plot, 6 steps from the city, no enemy within 4 plots | Heal 10: `100` | Walk 2 steps: `60` | Heal |
 | Wounded archer at 40 HP, danger 30, every other plot unreachable or more dangerous | Heal 10 with danger: `50` | None available | Heal in place |
-| Same archer with a route to zero danger | Heal 10 with danger: `50` | `114 danger removed + 80 destination + 80 distance = 274` | Retreat |
+| Same archer with a route to zero danger | Heal 10 with danger: `50` | `99 danger removed + 80 destination + 80 distance = 259` | Retreat |
 
 ### Path step after the search
 

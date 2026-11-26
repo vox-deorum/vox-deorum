@@ -109,7 +109,7 @@ Offensive recruitment can include a [held garrison](recruitment.md#candidates-an
 | Defender | A land combat unit, or a sea one at a coastal city, within its [strike reach](recruitment.md#battlefield-estimate) by plain distance, including the held garrison on the city plot. This is the boundary where Reinforce candidates begin. Units covering a friendly civilian are left out, as native recruitment leaves them out. |
 | Aircraft | Under air search, an aircraft whose range reaches the city from its base or from a plot its carrier can reach this turn, plus that carrier when it is available. Defenders need no ability to attack the city. |
 
-Apply [admission](#participant-admission) to the combined recruits, then search with those admitted; endangered recruits receive [dispositions](#search-dispositions). The engagement uses the own-city kind row, no counterpart (native gives no civ modifier in our own zone) and `bTargetDistanceRelevant` false in both search and geometry gathering. This removes the penalty for ending farther from the city: a healthy spearman can hold while a wounded archer retreats. Enemy fights keep it on. There is no city fire, spotter move, separate air attack or capture follow-up; native high-priority fire, enemy-unit commands and the end-of-turn review keep those strikes.
+Apply [admission](#participant-admission) to the combined recruits, then search with those admitted; endangered recruits receive [dispositions](#search-dispositions). The engagement uses its [command offset](#command-offset), no counterpart (native gives no civ modifier in our own zone) and `bTargetDistanceRelevant` false in both search and geometry gathering. This removes the penalty for ending farther from the city: a healthy spearman can hold while a wounded archer retreats. Enemy fights keep it on. There is no city fire, spotter move, separate air attack or capture follow-up; native high-priority fire, enemy-unit commands and the end-of-turn review keep those strikes.
 
 ## Reinforce readiness
 
@@ -181,25 +181,101 @@ Vox Deorum custom flavors enter these readings, allowing strategists to steer th
 
 1. In each contributing zone, apply native civ, operation and zone modifiers to the mapped flavors, without search-intent defaults, then add that zone's posture row.
 2. Average these vectors by their plot counts. With no contributing zone, start with the mapped flavors.
-3. Add the command's kind row, clamp to 0 to 100 and round once.
+3. Add the [command offset](#command-offset), clamp to 0 to 100 and round once.
 4. Choose the **representative zone**, the zone with the most plots; ties go to the lower zone ID.
 
-The function also calculates **aggression RISK** (the separate score used to choose search aggression). Each contributing zone starts at neutral 50, receives the same tactical modifiers using the game's flavor-scale conversion, then its posture's risk offset. Average these scores by plot count, including None and Withdraw zones, and add the command kind's risk offset before clamping and rounding once. With no valid zones, use 50 plus the kind offset. Player preferences still steer search scoring and priority; this separate calculation chooses aggression.
+The function also calculates **aggression RISK** (the separate score used to choose search aggression). Each contributing zone starts at neutral 50, receives the same tactical modifiers using the game's flavor-scale conversion, then its posture's risk offset. Average these scores by plot count, including None and Withdraw zones, and add the command offset's RISK before clamping and rounding once. With no valid zones, use 50 plus that offset. Player preferences still steer search scoring and priority; this separate calculation chooses aggression.
 
-RISK always counts as set for danger scoring. **Aggression examples** use supplied geometry, neutral RISK 50 and no tactical modifiers; offsets come from the [posture and kind tables](reference.md#posture-rows-and-kind-rows).
+RISK always counts as set for danger scoring. **Aggression examples** use supplied geometry, neutral RISK 50 and no tactical modifiers; posture offsets come from the [posture table](reference.md#posture-rows-and-kind-rows) and risk offsets from the [command offset examples](#command-offset-examples).
 
 | Command and geometry | Aggression RISK calculation | Level at default thresholds |
 | --- | --- | --- |
-| Unit fight: 60% Hedgehog, 40% Steamroll | `50 (neutral) + 0.6 (plot share) × (−15) (Hedgehog) + 0.4 (plot share) × 10 (Steamroll) + 0 (kind) = 45` | Medium |
-| Enemy-city fight: same geometry | `45 (zone blend) + 10 (city kind) = 55` | Medium |
-| Unit fight: all Withdraw posture | `50 − 30 (Withdraw posture) + 0 (kind) = 20` | Low; readiness still determines whether it can run. |
-| Our city: all Hedgehog | `50 − 15 (Hedgehog) + 0 (own-city kind) = 35` | Low |
+| Unit fight with nothing at stake: 60% Hedgehog, 40% Steamroll | `50 (neutral) + 0.6 (plot share) × (−15) (Hedgehog) + 0.4 (plot share) × 10 (Steamroll) + 0 (risk offset) = 45` | Medium |
+| Enemy-city fight that can be captured now: same geometry | `45 (zone blend) + 22 (risk offset) = 67` | High |
+| Unit fight with nothing at stake: all Withdraw posture | `50 − 30 (Withdraw posture) + 0 (risk offset) = 20` | Low; readiness still determines whether it can run. |
+| Our city about to fall, killable catapult covered: all Hedgehog | `50 − 15 (Hedgehog) + 22 (risk offset) = 57` | Medium |
+
+### Command offset
+
+The **command offset** moves the search flavors toward what the command's local situation calls for. A siege goes all-in when the city falls this turn and kills nearby field units first when it cannot. A defense picks out siege units when our city is in danger and holds a line when the enemy on our land cannot be beaten.
+
+`command offset = kind row + focus offset + risk offset + hold-ground offset`
+
+| Command kind | Offsets it adds |
+| --- | --- |
+| Unit fight, city fight, own-city fight | The kind row and the three situation offsets below. |
+| Reinforce | The same, read from its battlefield's fight, since the help should do what that fight needs. |
+| Withdraw, Army March | The [kind row](reference.md#posture-rows-and-kind-rows) alone. Both searches are capped at Low aggression, and Army March has no exposure estimate. |
+
+The situation values are in typical units (`Z_T`), read unweighted from the stake the offer had when the command was chosen (see [fight priority](value.md#fight-priority)). `GatherSituation` reads them and `SituationFlavorOffsets` turns them into offsets.
+
+| Symbol | Meaning | Source | Scale |
+| --- | --- | --- | --- |
+| `V_O` (**capture value**) | Enemy city value we can take this turn | City progress `C × f_att`, counted only when the fall share `f_att` is 1: a capturer is present and projected damage covers the city's remaining HP. Partial wall damage counts 0. | 0, or `C` (3, `city.units`) |
+| `V_A` (**kill value**) | Enemy unit value we can destroy this turn | Destruction and garrison destruction, plus the largest destruction among [covered fights](#covered-fights) | 0 to a few units |
+| `V_C` (**siege value**) | Our city value the enemies here can take | Own-city fight: city danger `C × f_def`. Enemy-unit fight: its city relief `k_t × C × f_def × a_t`. 0 elsewhere. | 0 to `C` |
+| `G` (**gain**) | Everything we can win or save | `V_O + V_A + V_C` | 0 to a few units |
+| `X_u` (**uncovered exposure**) | Exposure our strength cannot answer | `X × (1 − s)`: the fight's exposure `X` times the share `1 − s` that our [strength share](value.md#strength-share) `s` leaves open. `s` is the battlefield's own share, whatever `exposure.split` says. | 0 to `X` |
+| **On our land** | The target plot is held by our side | The plot owner is us, a teammate, a master or vassal, or a minor allied with our side. An own-city fight always counts. | Yes or no |
+
+#### Covered fights
+
+A search's plots include room around nearby enemies, so it can attack them instead of its target. The command's own stake leaves those enemies out because each has its own unit fight offer, so `V_A` adds them back.
+
+- A **covered fight** is another open enemy-unit fight within 2 plots of the command's target in a compatible zone (land with land, water with water), from any fight kind. `CoversFight` is the reach part of the [overlap rule](overview.md#overlapping-offers), without its exemptions: those decide which fights stay open for their own command, not which enemies a search can reach.
+- Only the **largest** destruction among covered fights counts, since one group rarely kills several targets in a turn.
+- Exposure and strength share stay with the command's own battlefield, so no danger is counted twice.
+
+#### Focus offset
+
+The focus offset raises OCCUPATION, ATTRITION and HOLD_CITY by their share of the gain. It never lowers a flavor, so a flavor the fight has no use for stays where the posture row puts it.
+
+`focus_f = flavor.focusSpan (40) × V_f / (G + flavor.softener (1))`
+
+| Part | Reads as |
+| --- | --- |
+| `V_f` | The objective's value: `V_O` for OCCUPATION, `V_A` for ATTRITION, `V_C` for HOLD_CITY. `V_C` is 0 away from our cities, so an offensive fight gets no HOLD_CITY offset. |
+| `G + flavor.softener` | The softener shrinks the offsets when little is at stake, so a fight with `G` near 0 moves nothing. |
+| `flavor.focusSpan` | How far the flavors can rise. One objective holding all of `G` = 3 gets `40 × 3/4 = 30`; the three offsets together stay below 40. |
+
+#### Risk offset
+
+The risk offset raises RISK when there is much to win or save and lowers it when our units are exposed without cover. RISK sets the search's [aggression level](#aggression-levels).
+
+`risk = flavor.riskSpan (30) × (G − X_u) / (G + X_u + flavor.softener (1))`
+
+| Part | Reads as |
+| --- | --- |
+| `G − X_u` | Gain against uncovered danger. Positive pushes toward aggression, negative toward caution. |
+| `G + X_u + flavor.softener` | Keeps the result between −30 and +30, and near 0 when both are small. |
+
+#### Hold-ground offset
+
+When the enemy on our land cannot be beaten, HOLD_GROUND rises by as much as RISK falls, so units stand on good home terrain instead of chasing.
+
+`hold_ground = max(0, −risk)` on our land, 0 elsewhere. On enemy land the answer to that danger is caution or Withdraw.
+
+#### Command offset examples
+
+Each row is one fight at the default spans. `C` is 3; the other values are supplied.
+
+| Case | On our land | `V_O` | `V_A` | `V_C` | `G` | `X` | `s` | `X_u` | RISK | OCC | ATT | HOLD_CITY | HOLD_GROUND |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Nothing at stake | No | 0 | 0 | 0 | 0 | 0 | 0.5 | 0 | 0 | 0 | 0 | 0 | 0 |
+| Enemy city can be captured now | No | 3 | 0 | 0 | 3 | 0.2 | 0.8 | 0.04 | +22.0 | +30.0 | 0 | 0 | 0 |
+| Same city cannot fall, killable swordsman (1.2) covered | No | 0 | 1.2 | 0 | 1.2 | 0.5 | 0.5 | 0.25 | +11.6 | 0 | +21.8 | 0 | 0 |
+| Same city cannot fall, garrison scratched (0.12), no covered fight | No | 0 | 0.12 | 0 | 0.12 | 1.0 | 0.2 | 0.8 | −10.6 | 0 | +4.3 | 0 | 0 |
+| Our city about to fall (`f_def` 1), killable catapult (0.75) covered | Yes | 0 | 0.75 | 3 | 3.75 | 0.3 | 0.5 | 0.15 | +22.0 | 0 | +6.3 | +25.3 | 0 |
+| Stronger enemy on our land, only scratched (0.2) | Yes | 0 | 0.2 | 0 | 0.2 | 1.0 | 0.3 | 0.7 | −7.9 | 0 | +6.7 | 0 | +7.9 |
+| Weaker enemy on our land, killable (1.2) | Yes | 0 | 1.2 | 0 | 1.2 | 0.5 | 0.8 | 0.1 | +14.3 | 0 | +21.8 | 0 | 0 |
+
+The situation offsets add to the kind row unrounded; the blend rounds the final flavor once. The engagement record keeps the situation values and offsets (see [records](reference.md#records)).
 
 ### Aggression levels
 
 `AggressionFromRisk` maps aggression RISK (the posture-based score for search aggression) to a search level using the thresholds below. Retries keep that level and the original search flavors (preferences used to score tactical plans).
 
-With default rows and no modifiers, single-zone unit fights resolve to Low for Attrition and Hedgehog, Medium for Exploit Flanks and Counterattack, and High for Steamroll. City fights and Reinforce still receive their kind offsets. A Withdraw applies its kind row and then caps the level at Low. Native city assaults choose aggression by melee count, and native positioning searches always use Low. The loop uses the same posture and kind calculation for these searches.
+With default rows, no modifiers and nothing at stake, single-zone unit fights resolve to Low for Attrition and Hedgehog, Medium for Exploit Flanks and Counterattack, and High for Steamroll. Fights and Reinforce add their [risk offset](#risk-offset), so a city that falls this turn can raise the level and an exposed group can lower it. A Withdraw or Army March applies its kind row and then caps the level at Low. Native city assaults choose aggression by melee count, and native positioning searches always use Low. The loop uses the same posture and command offset calculation for these searches.
 
 | Aggression RISK (score used to select search aggression) | Level with default thresholds |
 | --- | --- |
@@ -208,7 +284,7 @@ With default rows and no modifiers, single-zone unit fights resolve to Low for A
 | 60 to 89 | High |
 | 90 and above | Braveheart |
 
-Final search geometry is rebuilt after spotting and greedy air from the units still able to act. A Withdraw skips those steps and builds one geometry per destination from the admitted recruits heading there, even if they come from different domains. The search-flavor callback receives that geometry and the native geographic blend with the command-kind row already included. Its reply replaces the five search preferences only when every value is between 0 and 100; otherwise the blend stays. Aggression keeps the separate neutral-RISK calculation, including tactical modifiers, posture and kind offsets once each. No posture offset is reapplied to the reply.
+Final search geometry is rebuilt after spotting and greedy air from the units still able to act. A Withdraw skips those steps and builds one geometry per destination from the admitted recruits heading there, even if they come from different domains. The search-flavor callback receives that geometry and the native geographic blend with the command offset already included. Its reply replaces the five search preferences only when every value is between 0 and 100; otherwise the blend stays. Aggression keeps the separate neutral-RISK calculation, including tactical modifiers, posture rows and the command offset once each. No posture offset is reapplied to the reply.
 
 ## Search dispositions
 

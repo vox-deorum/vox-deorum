@@ -30,7 +30,7 @@ The game defines are in `(1) Community Patch/Database Changes/Defines/CoreDefine
 
 ## Posture rows and kind rows
 
-**Posture rows** (offsets for a zone's tactical stance) are applied before the geographic average. **Kind rows** (offsets for the active command type) are added afterward. All entries are flavor points. RISK accepts danger, OCCUPATION favors capturing cities, ATTRITION favors damaging enemies, HOLD_CITY favors city defense, and HOLD_GROUND favors territorial control.
+**Posture rows** (offsets for a zone's tactical stance) are applied before the geographic average. **Kind rows** (the base of the [command offset](execution.md#command-offset) for the active command type) are added afterward, with the situation offsets for fights and Reinforce. All entries are flavor points. RISK accepts danger, OCCUPATION favors capturing cities, ATTRITION favors damaging enemies, HOLD_CITY favors city defense, and HOLD_GROUND favors territorial control.
 
 | Posture | RISK | OCCUPATION | ATTRITION | HOLD_CITY | HOLD_GROUND |
 | --- | --- | --- | --- | --- | --- |
@@ -45,14 +45,12 @@ The game defines are in `(1) Community Patch/Database Changes/Defines/CoreDefine
 
 | Active command kind | RISK | OCCUPATION | ATTRITION | HOLD_CITY | HOLD_GROUND |
 | --- | --- | --- | --- | --- | --- |
-| Unit fight | 0 | 0 | 0 | 0 | 0 |
-| City fight | +10 | +15 | −25 | −5 | −5 |
-| Reinforce | −15 | −10 | −10 | +10 | +20 |
-| Withdraw | −30 | 0 | 0 | +10 | 0 |
-| Own-city fight | 0 | 0 | 0 | 0 | 0 |
-| Army March | −30 | 0 | 0 | 0 | 0 |
+| Unit fight, city fight, own-city fight | 0 | 0 | 0 | 0 | 0 |
+| Reinforce | 0 | 0 | 0 | 0 | 0 |
+| Withdraw | −20 | −30 | −10 | −20 | −10 |
+| Army March | −30 | −20 | 0 | 0 | 0 |
 
-The own-city kind row adds no offset. Posture rows follow native values except that Hedgehog uses −15 for RISK (willingness to accept danger), compared with native's −10. Enemy-city and reinforcement kind rows are derived from native's CityAssault and Reinforce rows by subtracting the mean of their posture rows and rounding to multiples of 5. The Withdraw and Army March rows are set directly and apply to those commands. These are search flavor offsets; the priority weights in the next section resolve separately. A Withdraw posture zone contributes its posture row to a search in proportion to its share of the search plots. An enemy-center Reinforce offer is gated out when its zone is in the Withdraw posture; fights and Withdraw offers still run there if they pass their own gates.
+Posture rows follow native values except that Hedgehog uses −15 for RISK (willingness to accept danger), compared with native's −10. Fights and Reinforce leave everything to their situation offsets. The Withdraw row lowers the objectives so moving away beats fighting and leans cautious; the Army March row stays cautious and is not drawn into cities on the way. Both run on their kind row alone. These are search flavor offsets; the priority weights in the next section resolve separately. A Withdraw posture zone contributes its posture row to a search in proportion to its share of the search plots. An enemy-center Reinforce offer is gated out when its zone is in the Withdraw posture; fights and Withdraw offers still run there if they pass their own gates.
 
 ## Weights file
 
@@ -74,6 +72,9 @@ The own-city kind row adds no offset. Posture rows follow native values except t
 | `withdraw.enabled` | 1 | Nonzero lets enemy-unit and enemy-city battlefields offer Withdraw. A disabled switch keeps the slot inactive all turn. |
 | `exposure.split` | 1 | Nonzero scales fight exposure by the strength share; 0 counts fight exposure in full. Withdraw uses its own removable exposure and the stored strength share either way. |
 | `camp.nearPlots` | 5 | A camp within this many plots of our nearest city counts at full value. Beyond that, the distance discounts its bounty. |
+| `flavor.focusSpan` | 40 | How far the [focus offset](execution.md#focus-offset) can raise OCCUPATION, ATTRITION and HOLD_CITY together. |
+| `flavor.riskSpan` | 30 | The largest move of the [risk offset](execution.md#risk-offset), up or down. |
+| `flavor.softener` | 1 | Typical units added to each offset's denominator, so a fight with little at stake moves the flavors little. |
 
 `march.enabled` and `march.readyUnits` are constants beside these weights in the same table. The first gates live discovery, army preparation and the March behavior described in [Army March](march.md); the second is `R` in the [Army March priority](value.md#army-march-priority).
 
@@ -132,7 +133,7 @@ These parameters affect both the shared value functions and the simulator's grad
 | Snapshot | Ready rank, offer slot, state, estimate, theater multiplier, importance, pressure, contest, damage level, swing (1 for fights and Withdraw), exposure share, removable exposure `X` (raw worth), Withdraw share, chosen withdrawal destinations and nonzero stake terms (the battlefield's fight stake). An Army March adds its goal weight, readiness gain and theater without the army. Each term retains value and weighted contribution. Resolved weights appear once per pass. Missing terms mean zero value and contribution. |
 | Event | Ordered check, update, provider refusal or terminating command, with before/after state and estimate. A check that changes another slot's estimate or state adds an update event for that slot. A refusal retains its terminating command with a READY-to-REFUSED transition and adds a separate refusal event. Count commands once, including refusals, and count skips from checks ending at the failure limit. Reduced Reinforce and Withdraw checks return to the current queue, or turn inactive at estimate 0. A missing target makes a Reinforce inactive without a reach failure. An Army March yield records its contact plot and leaves the offer ready for the next estimate. |
 | Closed state | Target gone, city lost, retired, failure limit, provider refusal or execution. A closed row carries forward its snapshot with the new state, reason and rank. Executed and refused offers include the matching command's checked values. A Withdraw that reaches its failure limit records the estimate and exposure from its final check. |
-| `commands` | Step and command identity, checked priority, prior failures, admission and search decisions, selected and moved unit IDs where tracked, endangered-unit dispositions, and retirements. A camp claim uses the existing target plot and moved-unit fields. A Withdraw combines attempts across destinations and retains the first search's decision or the first invalid reply. An Army March retains its operation, army, forecast and any yield plot. City-fire-only commands remain present. |
+| `commands` | Step and command identity, checked priority, prior failures, admission and search decisions, the search's [situation values and offsets](execution.md#command-offset), selected and moved unit IDs where tracked, endangered-unit dispositions, and retirements. A camp claim uses the existing target plot and moved-unit fields. A Withdraw combines attempts across destinations and retains the first search's decision or the first invalid reply. An Army March retains its operation, army, forecast and any yield plot. City-fire-only commands remain present. |
 | `checks`, `vSkipped`, `bCommandCap` | Readiness and count inputs, preserving the loop's failure accounting. |
 | Settings and turn inputs | Complete settings compared with the same build's defaults, mapped flavors, resolved weights and fixed scales. The simulator writes settings once per start, and inputs once per evaluated-player pass. |
 
@@ -160,7 +161,7 @@ With no record and logging off, the DLL skips all timers, including danger-read 
 
 ## Search purposes
 
-A search request's **purpose** labels its command and territory; retries keep the same label. Search preferences come from the [geographic blend](execution.md#geographic-blend) and command-kind offset.
+A search request's **purpose** labels its command and territory; retries keep the same label. Search preferences come from the [geographic blend](execution.md#geographic-blend) and the [command offset](execution.md#command-offset).
 
 | Purpose | Command or territory |
 | --- | --- |
