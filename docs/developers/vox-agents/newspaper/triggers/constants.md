@@ -59,6 +59,8 @@ Names must match the text in the recording. If the recorded text uses a differen
 
 A shortcut is an expression attached to the fact it reads. A historical fact uses the historical snapshot, so `city.before.is.conquered` tests the earlier occupation and puppet flags. Globals such as `cities` and `turn` still describe the current check. A shortcut is hidden if it needs an unavailable fact; use `city.is.knows('starving')` to test whether that shortcut can be evaluated.
 
+Several rules can share an event shortcut. The stock building rules read `event.is.ourBuilding` for a completion in one of our cities and `event.is.regularBuilding` for a building that is neither a defense, a wonder nor a courthouse integration.
+
 | Shortcut | Test |
 | --- | --- |
 | `city.is.neighbor`, `city.is.nearby` | A foreign city within the corresponding distance |

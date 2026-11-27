@@ -10,13 +10,18 @@ import type {
   NewspaperDiplomacyGap, NewspaperDiplomacySnapshot, NewspaperEvent, NewspaperSnapshot,
   NewspaperSourceReference, NewspaperTacticalZone
 } from './evidence.js';
-import { cityAtEvent, cityOwner, knowsPlayer, relatedSources, source, visibility, type NewspaperCityObservation } from './recorded-city.js';
+import {
+  cityAtEvent, cityOwner, compareDates, knowsPlayer, relatedSources, source, visibility, type NewspaperCityObservation
+} from './recorded-city.js';
 import { diplomatAtCapital, ownSpyAtCity, type RecordedRoster } from './espionage.js';
 import { projectReceiverQuestDeadlines } from './quest-deadlines.js';
 export type { NewspaperCityObservation } from './recorded-city.js';
 
 type PlayerContact = Pick<Selectable<PlayerSummary>, 'Key'> &
   Partial<Pick<Selectable<PlayerSummary>, keyof PlayerSummary & `Player${number}`>>;
+
+/** A dated city row with the recorded building list, read without receiver visibility. */
+export type NewspaperConstructedCity = Pick<Selectable<CityInformation>, 'ID' | 'Key' | 'Turn' | 'CreatedAt' | 'X' | 'Y' | 'ImportantBuildings'>;
 
 /** City projection needs dated contact and may use a narrow private roster observation. */
 export interface NewspaperCityProjectionContext {
@@ -25,6 +30,11 @@ export interface NewspaperCityProjectionContext {
   players: Selectable<PlayerInformation>[];
   /** Snapshots for dated city joins, including nonvisible rows that prevent reuse of stale evidence. */
   cityHistory?: readonly NewspaperCityObservation[];
+  /**
+   * Dated building lists for cities with witnessed constructions, read without receiver visibility.
+   * They judge significance only and are never projected as city detail.
+   */
+  constructedCities?: readonly NewspaperConstructedCity[];
   /** Recorded founding, capture, flip and razing events that the receiver may read. */
   cityLifecycle?: readonly Selectable<GameEvent>[];
   /** Dated contact for ownership anchors from earlier turns. */
@@ -623,6 +633,35 @@ function copyCityPositions(config: NewspaperEventConfig, row: Selectable<GameEve
   return city;
 }
 
+/** Read a recorded building list from a parsed value or JSON text. Lua records an empty list as {}. */
+function recordedBuildings(value: unknown): string[] | undefined {
+  let list = value;
+  if (typeof list === 'string') {
+    try { list = JSON.parse(list); } catch { return undefined; }
+  }
+  if (Array.isArray(list)) return list.every(entry => typeof entry === 'string') ? list : undefined;
+  return list && typeof list === 'object' && Object.keys(list).length === 0 ? [] : undefined;
+}
+
+/**
+ * Judge a completed building from the first recorded city row at or after the event.
+ * A city drops a building once its successor is built, so the row before the event is not enough.
+ */
+function markImportantBuilding(
+  row: Selectable<GameEvent>, mainCity: NewspaperCityObservation, values: Record<string, unknown>,
+  context: NewspaperProjectionContext
+): void {
+  const building = values.Building;
+  if (typeof building !== 'string') return;
+  const candidate = (context.constructedCities ?? [])
+    .filter(city => city.Key === mainCity.Key && city.X === mainCity.X && city.Y === mainCity.Y &&
+      compareDates(city, row) >= 0)
+    .sort((a, b) => compareDates(a, b) || a.ID - b.ID)
+    .find(city => recordedBuildings(city.ImportantBuildings) !== undefined);
+  if (!candidate) return;
+  values.IsImportant = recordedBuildings(candidate.ImportantBuildings)!.includes(building);
+}
+
 /** Publish only the owner and recorded names of an unwitnessed world-news event. */
 function projectWorldNewsEvent(row: Selectable<GameEvent>, config: NewspaperEventConfig,
   context: NewspaperProjectionContext): NewspaperEvent | undefined {
@@ -703,6 +742,8 @@ export function projectNewspaperEvent(row: Selectable<GameEvent>, context: Newsp
     values.IsNowAlly = values.IsNowAlly !== false && values.IsNowAlly !== 0;
   }
   const mainCity = config.cityIDs ? copyCityPositions(config, row, values, context, related) : undefined;
+  // Significance uses recorded building lists that stay hidden when the receiver lacks city detail access.
+  if (row.Type === 'CityConstructed' && mainCity) markImportantBuilding(row, mainCity, values, context);
   if (row.Type === 'CityTrained') {
     // Generic visibility may reflect another owner's unit or city with the same local ID.
     const port = payload.PlayerID === context.receiverPlayerID &&

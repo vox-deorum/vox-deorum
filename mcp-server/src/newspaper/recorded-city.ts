@@ -34,7 +34,7 @@ export function knowsPlayer(id: unknown, context: NewspaperCityProjectionContext
 }
 
 /** Compare cross-table dates. Insertion IDs cannot order a snapshot against an event. */
-function compareDates(a: DatedRow, b: DatedRow): number {
+export function compareDates(a: DatedRow, b: DatedRow): number {
   return a.Turn - b.Turn || a.CreatedAt - b.CreatedAt;
 }
 

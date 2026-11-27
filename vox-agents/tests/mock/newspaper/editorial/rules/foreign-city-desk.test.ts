@@ -144,18 +144,26 @@ describe('stock foreign city desk', () => {
       { owner: 1, name: 'Recife', building: "Satrap's Court", rule: 'foreign-city-courthouse-completed', generic: 'foreign-building-purchased' },
     ])('should give an integrating $building one account and keep ordinary construction separate', async ({ owner, name, building, rule, generic }) => {
       const prior = city(20, 5, 10, owner, name, { IsPuppet: false, IsOccupied: true });
-      const occupied = city(20, 10, 10, owner, name, { IsPuppet: false, IsOccupied: true, ImportantBuildings: [building] });
+      const occupied = city(20, 10, 10, owner, name, {
+        IsPuppet: false, IsOccupied: true, Wonders: [],
+      });
       const completion = gameEvent(113, 'CityConstructed', 9, {
-        OwnerID: owner, CityID: 20, CityX: 10, CityY: 2, Building: building, IsGoldPurchase: true,
+        OwnerID: owner, CityID: 20, CityX: 10, CityY: 2, Building: building, IsGoldPurchase: true, IsImportant: true,
       });
       const base = owner === 0 ? [] : [home];
-      const integrated = await check(fixture([...base, occupied], [prior], [completion]));
+      /** Build the fixture with a readable era for the stock importance check. */
+      const evidence = (cutoff: NewspaperSnapshot) => {
+        const input = fixture([...base, cutoff], [prior], [completion]);
+        input.players[0].values.Era = 'Medieval Era';
+        return input;
+      };
+      const integrated = await check(evidence(occupied));
       expect(integrated.fired(rule)).toEqual(['event/113']);
       expect(integrated.fired(generic)).toEqual([]);
       expectStory(integrated, rule, [name, building, ...(owner === 1 ? ['Brazil'] : [])]);
 
       const ordinary = { ...occupied, values: { ...occupied.values, IsOccupied: false } };
-      const genericResult = await check(fixture([...base, ordinary], [prior], [completion]));
+      const genericResult = await check(evidence(ordinary));
       expect(genericResult.fired(rule)).toEqual([]);
       expect(genericResult.fired(generic)).toEqual(['event/113']);
       const { item } = expectStory(genericResult, generic, [name, building]);

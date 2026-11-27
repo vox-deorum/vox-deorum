@@ -9,29 +9,32 @@ import { buildNewspaperFacts } from '../../../../../src/newspaper/editorial/fact
 import { relationship, snapshot as diplomacySnapshot } from '../../../../helpers/newspaper-diplomacy.js';
 
 type AuditSubject = TriggerRuleAudit['subjects'][number];
+type Purchase = { gold?: boolean; faith?: boolean };
 
 let config: EditorialConfig;
 
-/** Record one readable city observation at a fixed date. */
+/** Record one readable city observation at a fixed date, with the basic flags a stock city reports. */
 function cityRow(id: number, turn: number, x: number, owner: number, name: string,
   values: NewspaperSnapshot['values'] = {}): NewspaperSnapshot {
   return {
     subjectID: id,
-    values: { X: x, Y: 2, Name: name, OwnerID: owner, ...values },
+    values: { X: x, Y: 2, Name: name, OwnerID: owner, IsPuppet: false, IsOccupied: false, Wonders: [], ...values },
     source: { table: 'CityInformations', id: turn * 100 + id, turn, createdAt: turn * 1000 + 5 },
   };
 }
 
-/** Record one witnessed building completion at the cutoff with explicit purchase flags. */
+/** Record one witnessed building completion at the cutoff with explicit purchase flags and importance. */
 function constructed(id: number, cityID: number, owner: number, x: number, building: string,
-  purchase: { gold?: boolean; faith?: boolean } = {}, createdAt = 10_001): NewspaperEvent {
+  options: { purchase?: Purchase; createdAt?: number; important?: boolean } = {}): NewspaperEvent {
+  const purchase = options.purchase ?? {};
   return {
     type: 'CityConstructed',
     values: {
       OwnerID: owner, CityID: cityID, CityX: x, CityY: 2, Building: building,
       IsGoldPurchase: purchase.gold ?? false, IsFaithPurchase: purchase.faith ?? false,
+      ...(options.important === undefined ? {} : { IsImportant: options.important }),
     },
-    source: { table: 'GameEvents', id, turn: 10, createdAt },
+    source: { table: 'GameEvents', id, turn: 10, createdAt: options.createdAt ?? 10_001 },
   };
 }
 
@@ -58,10 +61,11 @@ function founded(id: number, player: number, x: number): NewspaperEvent {
 function fixture(cities: NewspaperSnapshot[], before: NewspaperSnapshot[], events: NewspaperEvent[]): NewspaperEvidence {
   const players = [0, 1].map(subjectID => {
     const row = diplomacySnapshot(subjectID, 10, []);
-    return { subjectID, values: {}, source: row.source };
+    return { subjectID, values: { Era: 'Medieval Era' }, source: row.source };
   });
   const earlier = players.map(row => ({
     ...row,
+    values: {},
     source: { ...row.source, turn: 0, id: row.subjectID, createdAt: 0 },
   }));
   return {
@@ -84,17 +88,16 @@ function fixture(cities: NewspaperSnapshot[], before: NewspaperSnapshot[], event
   };
 }
 
-/** Build one completion in Tours, optionally naming the readable regular buildings. */
-function own(building: string, buildings?: string[],
-  options: { wonders?: string[]; purchase?: { gold?: boolean; faith?: boolean }; createdAt?: number;
-    events?: NewspaperEvent[] } = {}): NewspaperEvidence {
+/** Build one completion in Tours, optionally as a wonder, a purchase or a notable building. */
+function own(building: string,
+  options: { wonders?: string[]; purchase?: Purchase; createdAt?: number; events?: NewspaperEvent[];
+    important?: boolean } = {}): NewspaperEvidence {
   return fixture(
-    [cityRow(10, 10, 10, 0, 'Tours', {
-      ...(buildings === undefined ? {} : { ImportantBuildings: buildings }),
-      ...(options.wonders === undefined ? {} : { Wonders: options.wonders }),
-    })],
+    [cityRow(10, 10, 10, 0, 'Tours', options.wonders === undefined ? {} : { Wonders: options.wonders })],
     [cityRow(10, 5, 10, 0, 'Tours')],
-    [constructed(100, 10, 0, 10, building, options.purchase, options.createdAt), ...(options.events ?? [])],
+    [constructed(100, 10, 0, 10, building, {
+      purchase: options.purchase, createdAt: options.createdAt, important: options.important,
+    }), ...(options.events ?? [])],
   );
 }
 
@@ -102,11 +105,11 @@ function own(building: string, buildings?: string[],
 function investing(building: string, activation: boolean | number = true,
   completed?: string): NewspaperEvidence {
   return fixture(
-    [cityRow(10, 10, 10, 0, 'Tours', { ImportantBuildings: completed === undefined ? [] : [completed] })],
+    [cityRow(10, 10, 10, 0, 'Tours')],
     [cityRow(10, 5, 10, 0, 'Tours')],
     [
       invested(100, 10, 0, 10, building, activation),
-      ...(completed === undefined ? [] : [constructed(101, 10, 0, 10, completed)]),
+      ...(completed === undefined ? [] : [constructed(101, 10, 0, 10, completed, { important: true })]),
     ],
   );
 }
@@ -115,8 +118,8 @@ function investing(building: string, activation: boolean | number = true,
 function investingAbroad(building: string): NewspaperEvidence {
   return fixture(
     [
-      cityRow(10, 10, 10, 0, 'Tours', { ImportantBuildings: [] }),
-      cityRow(20, 10, 12, 1, 'Recife', { ImportantBuildings: [] }),
+      cityRow(10, 10, 10, 0, 'Tours'),
+      cityRow(20, 10, 12, 1, 'Recife'),
     ],
     [cityRow(10, 5, 10, 0, 'Tours'), cityRow(20, 5, 12, 1, 'Recife')],
     [invested(100, 20, 1, 12, building)],
@@ -127,8 +130,8 @@ function investingAbroad(building: string): NewspaperEvidence {
 function investingAcrossCities(building: string): NewspaperEvidence {
   return fixture(
     [
-      cityRow(10, 10, 10, 0, 'Tours', { ImportantBuildings: [] }),
-      cityRow(20, 10, 12, 1, 'Recife', { ImportantBuildings: [building] }),
+      cityRow(10, 10, 10, 0, 'Tours'),
+      cityRow(20, 10, 12, 1, 'Recife'),
     ],
     [cityRow(10, 5, 10, 0, 'Tours'), cityRow(20, 5, 12, 1, 'Recife')],
     [invested(100, 10, 0, 10, building), constructed(101, 20, 1, 12, building)],
@@ -136,15 +139,15 @@ function investingAcrossCities(building: string): NewspaperEvidence {
 }
 
 /** Build one completion in a foreign city at the given distance from Tours. */
-function foreign(building: string, buildings: string[], x = 12,
-  purchase: { gold?: boolean; faith?: boolean } = {}): NewspaperEvidence {
+function foreign(building: string, x = 12, purchase: Purchase = {}, important?: boolean,
+  values: NewspaperSnapshot['values'] = {}): NewspaperEvidence {
   return fixture(
     [
-      cityRow(10, 10, 10, 0, 'Tours', { ImportantBuildings: [] }),
-      cityRow(20, 10, x, 1, 'Recife', { ImportantBuildings: buildings }),
+      cityRow(10, 10, 10, 0, 'Tours'),
+      cityRow(20, 10, x, 1, 'Recife', values),
     ],
     [cityRow(10, 5, 10, 0, 'Tours'), cityRow(20, 5, x, 1, 'Recife')],
-    [constructed(100, 20, 1, x, building, purchase)],
+    [constructed(100, 20, 1, x, building, { purchase, important })],
   );
 }
 
@@ -177,13 +180,13 @@ describe('stock building news', () => {
   beforeAll(async () => { config = await loadEditorialConfig(); });
 
   it('should rate Walls higher during war and a Monument lower in the Industrial Era', async () => {
-    const wallsAtPeace = subject((await check(own('Walls', ['Walls']))).audit('city-defense-completed'));
-    const wartime = own('Walls', ['Walls']);
+    const wallsAtPeace = subject((await check(own('Walls'))).audit('city-defense-completed'));
+    const wartime = own('Walls');
     wartime.diplomacy!.history = [diplomacySnapshot(0, 10, [relationship(1, 'war')])];
     const wallsAtWar = subject((await check(wartime)).audit('city-defense-completed'));
 
-    const early = own('Monument', ['Monument']);
-    const late = own('Monument', ['Monument']);
+    const early = own('Monument');
+    const late = own('Monument', { important: true });
     early.players[0].values.Era = 'Ancient Era';
     late.players[0].values.Era = 'Industrial Era';
     const earlyMonument = subject((await check(early)).audit('building-completed'));
@@ -197,7 +200,7 @@ describe('stock building news', () => {
   });
 
   it('should report a completed regular building at home with its city', async () => {
-    const { audit } = await check(own('Granary', ['Granary']));
+    const { audit } = await check(own('Granary', { important: true }));
     const completed = subject(audit('building-completed'));
     expect(completed).toMatchObject({ outcome: 'fired', importance: 30 });
     expect(placeholder(completed, 'values.building')).toBe('Granary');
@@ -213,7 +216,7 @@ describe('stock building news', () => {
     ['gold', { gold: true }],
     ['faith', { faith: true }],
   ] as const)('should report a regular building bought with %s separately', async (currency, purchase) => {
-    const { audit } = await check(own('Market', ['Market'], { purchase }));
+    const { audit } = await check(own('Market', { purchase, important: true }));
     expect(subject(audit('building-completed'))).toMatchObject({ outcome: 'false' });
     const purchased = subject(audit('building-purchased'));
     expect(purchased).toMatchObject({ outcome: 'fired', tier: 'filler' });
@@ -264,51 +267,59 @@ describe('stock building news', () => {
   });
 
   it('should leave fortifications to the existing defense report', async () => {
-    const { audit } = await check(own('Walls', ['Walls']));
+    const { audit } = await check(own('Walls'));
     expect(subject(audit('building-completed'))).toMatchObject({ outcome: 'false' });
     expect(subject(audit('building-purchased'))).toMatchObject({ outcome: 'false' });
     expect(subject(audit('city-defense-completed'))).toMatchObject({ outcome: 'fired' });
   });
 
-  it('should require a positive regular-building list so wonders and missing details do not qualify', async () => {
-    const wonder = await check(own('Petra', ['Granary'], { wonders: ['Petra'] }));
-    expect(subject(wonder.audit('building-completed'))).toMatchObject({ outcome: 'false' });
-    expect(subject(wonder.audit('our-wonder-completed'))).toMatchObject({ outcome: 'fired' });
+  it('should leave a completion without an importance decision to the audit', async () => {
+    const unknown = await check(own('Library'));
+    expect(subject(unknown.audit('building-completed'))).toMatchObject({ outcome: 'hidden' });
 
-    const unlisted = await check(own('Library', ['Granary']));
-    expect(subject(unlisted.audit('building-completed'))).toMatchObject({ outcome: 'false' });
-
-    const missing = await check(own('Granary'));
-    expect(subject(missing.audit('building-completed'))).toMatchObject({ outcome: 'false' });
+    const declined = await check(own('Library', { important: false }));
+    expect(subject(declined.audit('building-completed'))).toMatchObject({ outcome: 'false' });
   });
 
-  it('should report an unlisted early building in the Ancient Era, but not later or for a wonder', async () => {
-    /** Complete one building in Tours, which lists no important buildings, during the given era. */
-    const during = (era: string, building: string, options: Parameters<typeof own>[2] = {}) => {
-      const evidence = own(building, [], { wonders: [], ...options });
+  it('should treat any non-wonder building as notable in the Ancient Era and require a yes later', async () => {
+    /** Complete one building in Tours during the given era. */
+    const during = (era: string, building: string, options: Parameters<typeof own>[1] = {}) => {
+      const evidence = own(building, options);
       evidence.players[0].values.Era = era;
       return check(evidence);
     };
-    expect(subject((await during('Ancient Era', 'Monument')).audit('building-completed'))).toMatchObject({ outcome: 'fired' });
-    expect(subject((await during('Ancient Era', 'Well', { purchase: { gold: true } })).audit('building-purchased'))).toMatchObject({ outcome: 'fired' });
-    expect(subject((await during('Classical Era', 'Monument')).audit('building-completed'))).toMatchObject({ outcome: 'false' });
-    const wonder = await during('Ancient Era', 'Stonehenge', { wonders: ['Stonehenge'] });
+    expect(subject((await during('Ancient', 'Monument')).audit('building-completed')))
+      .toMatchObject({ outcome: 'fired' });
+    expect(subject((await during('Ancient Era', 'Well', { purchase: { gold: true } })).audit('building-purchased')))
+      .toMatchObject({ outcome: 'fired' });
+    expect(subject((await during('Classical', 'Monument', { important: false })).audit('building-completed')))
+      .toMatchObject({ outcome: 'false' });
+
+    const wonder = await during('Ancient Era', 'Stonehenge', { wonders: ['Stonehenge'], important: true });
     expect(subject(wonder.audit('building-completed'))).toMatchObject({ outcome: 'false' });
     expect(subject(wonder.audit('our-wonder-completed'))).toMatchObject({ outcome: 'fired' });
   });
 
-  it('should judge a completion by the list recorded when it was built, even after a successor replaced it', async () => {
-    const arena = { ...constructed(100, 10, 0, 10, 'Arena'), source: { table: 'GameEvents' as const, id: 100, turn: 7, createdAt: 7_001 } };
-    const evidence = fixture(
-      [cityRow(10, 10, 10, 0, 'Tours', { ImportantBuildings: ['Circus'] })],
-      [cityRow(10, 5, 10, 0, 'Tours'), cityRow(10, 7, 10, 0, 'Tours', { ImportantBuildings: ['Arena'] })],
-      [arena],
-    );
-    expect(subject((await check(evidence)).audit('building-completed'))).toMatchObject({ outcome: 'fired' });
+  it('should report a distant foreign important completion and let presence and war raise its score', async () => {
+    const distant = subject((await check(foreign('University', 40, {}, true))).audit('foreign-building-completed'));
+    expect(distant).toMatchObject({ outcome: 'fired', tier: 'filler' });
+    expect(placeholder(distant, 'values.building')).toBe('University');
+    expect(placeholder(distant, 'values.owner')).toBe('Brazil');
+
+    const watched = await check(foreign('University', 40, {}, true, { OurSpyPresent: true }));
+    const watchedCompletion = subject(watched.audit('foreign-building-completed'));
+    expect(watchedCompletion.outcome).toBe('fired');
+    expect(watchedCompletion.importance).toBeGreaterThan(distant.importance!);
+
+    const wartime = foreign('University', 40, {}, true);
+    wartime.diplomacy!.history = [diplomacySnapshot(0, 10, [relationship(1, 'war')])];
+    const warCompletion = subject((await check(wartime)).audit('foreign-building-completed'));
+    expect(warCompletion.outcome).toBe('fired');
+    expect(warCompletion.importance).toBeGreaterThan(distant.importance!);
   });
 
   it('should report a nearby foreign regular completion with its civilization', async () => {
-    const { audit } = await check(foreign('Library', ['Library']));
+    const { audit } = await check(foreign('Library', 12, {}, true));
     expect(subject(audit('building-completed'))).toMatchObject({ outcome: 'false' });
     expect(subject(audit('building-purchased'))).toMatchObject({ outcome: 'false' });
     const completed = subject(audit('foreign-building-completed'));
@@ -321,7 +332,7 @@ describe('stock building news', () => {
     ['gold', { gold: true }],
     ['faith', { faith: true }],
   ] as const)('should distinguish a witnessed nearby foreign purchase with %s from construction', async (currency, purchase) => {
-    const { audit } = await check(foreign('Library', ['Library'], 12, purchase));
+    const { audit } = await check(foreign('Library', 12, purchase, true));
     const bought = subject(audit('foreign-building-purchased'));
     expect(bought.outcome).toBe('fired');
     expect(placeholder(bought, 'values.owner')).toBe('Brazil');
@@ -330,22 +341,18 @@ describe('stock building news', () => {
     expect(subject(audit('building-purchased')).outcome).toBe('false');
   });
 
-  it('should require proximity and a corroborated ordinary building for a foreign purchase', async () => {
-    const distantPurchase = await check(foreign('Library', ['Library'], 40, { gold: true }));
-    expect(subject(distantPurchase.audit('foreign-building-purchased')).outcome).toBe('false');
+  it('should report a distant foreign purchase and leave an unknown importance to the audit', async () => {
+    const distantPurchase = await check(foreign('Library', 40, { gold: true }, true));
+    expect(subject(distantPurchase.audit('foreign-building-purchased')).outcome).toBe('fired');
 
-    const unlistedPurchase = await check(foreign('Library', [], 12, { faith: true }));
-    expect(subject(unlistedPurchase.audit('foreign-building-purchased')).outcome).toBe('false');
-  });
-
-  it('should keep a distant foreign completion out of the foreign report', async () => {
-    const distant = await check(foreign('Library', ['Library'], 40));
-    expect(subject(distant.audit('foreign-building-completed')).outcome).toBe('false');
+    const unknownPurchase = await check(foreign('Library', 12, { faith: true }));
+    expect(subject(unknownPurchase.audit('foreign-building-purchased'))).toMatchObject({ outcome: 'hidden' });
   });
 
   it('should not report a same-turn founding freebie as an ordinary completion', async () => {
-    const { audit } = await check(own('Monument', ['Monument'], {
+    const { audit } = await check(own('Monument', {
       createdAt: 10_007,
+      important: true,
       events: [founded(90, 0, 10)],
     }));
     expect(subject(audit('building-completed'))).toMatchObject({ outcome: 'false' });
@@ -354,11 +361,11 @@ describe('stock building news', () => {
   it('should not report a same-turn founding freebie as a nearby foreign completion', async () => {
     const { audit } = await check(fixture(
       [
-        cityRow(10, 10, 10, 0, 'Tours', { ImportantBuildings: [] }),
-        cityRow(20, 10, 12, 1, 'Recife', { ImportantBuildings: ['Library'] }),
+        cityRow(10, 10, 10, 0, 'Tours'),
+        cityRow(20, 10, 12, 1, 'Recife'),
       ],
       [cityRow(10, 5, 10, 0, 'Tours'), cityRow(20, 5, 12, 1, 'Recife')],
-      [founded(90, 1, 12), constructed(100, 20, 1, 12, 'Library', {}, 10_007)],
+      [founded(90, 1, 12), constructed(100, 20, 1, 12, 'Library', { createdAt: 10_007, important: true })],
     ));
     expect(subject(audit('foreign-building-completed'))).toMatchObject({ outcome: 'false' });
   });

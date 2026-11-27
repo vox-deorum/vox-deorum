@@ -36,6 +36,19 @@ export async function event(db: Kysely<KnowledgeDatabase>, id: number, turn: num
   await db.insertInto('GameEvents').values({ ID: id, Turn: turn, Type: type, Payload: payload, Player0: level, CreatedAt: 2000 + turn } as any).execute();
 }
 
+/** Insert a dated observation of the seeded city 42, with explicit insertion order, turn and access. */
+export async function city(db: Kysely<KnowledgeDatabase>, id: number, turn: number, values: Record<string, unknown> = {}) {
+  await db.insertInto('CityInformations').values({
+    ID: id, Key: 42, Turn: turn, Version: id, IsLatest: 0, CreatedAt: 3000 + turn, Payload: {}, Changes: [],
+    Player0: 1, Owner: 'Civ1', Name: 'Port', X: 0, Y: 4, Population: 1, MajorityReligion: null,
+    DefenseStrength: 10, HitPoints: 100, MaxHitPoints: 100, IsPuppet: 0, IsCapital: 0, IsOccupied: 0, IsCoastal: 0,
+    FoodStored: 0, FoodPerTurn: 0, ProductionStored: 0, ProductionPerTurn: 0, GoldPerTurn: 0,
+    SciencePerTurn: 0, CulturePerTurn: 0, FaithPerTurn: 0, TourismPerTurn: 0, HappinessDelta: 0,
+    RazingTurns: 0, ResistanceTurns: 0, BuildingCount: 0, Wonders: [], ImportantBuildings: [],
+    GreatWorkCount: 0, ProductionTurnsLeft: 0, ...values
+  } as any).execute();
+}
+
 /** Seed own domestic and trade facts, public culture, basic cities, and dated public conditions. */
 export async function seedEvidence(db: Kysely<KnowledgeDatabase>) {
   for (const key of [0, 1, 2, 3]) {

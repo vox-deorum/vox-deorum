@@ -12,7 +12,7 @@ import {
 import {
   newspaperEventConfigs, newspaperWorldNewsTypes, projectNewspaperCity, projectNewspaperDiplomacy,
   projectNewspaperEvent, projectNewspaperPlayer, projectTacticalZones,
-  type NewspaperCityProjectionContext, type NewspaperProjectionContext
+  type NewspaperCityProjectionContext, type NewspaperConstructedCity, type NewspaperProjectionContext
 } from './projection.js';
 import { projectEspionageEvidence } from './espionage-operations.js';
 import { readReceiverTechnologies } from './technologies.js';
@@ -141,10 +141,11 @@ export async function queryNewspaperEvidence(
       else if (!turns.has(row.Turn)) staleCityTurns.add(row.Turn);
     }
   }
-  const [permittedLifecycle, cityHistory, cityContacts] = await Promise.all([
+  const [permittedLifecycle, cityHistory, cityContacts, constructedCities] = await Promise.all([
     readPermittedLifecycle(db, cityLifecycle, visibilityField),
     readCityJoinHistory(db, firstCityJoin, cutoffTurn, visibilityField, [...oldCityDates].filter(turn => turn < firstCityJoin)),
-    readCityContacts(db, staleCityTurns, visibilityField, receiverPlayerID)
+    readCityContacts(db, staleCityTurns, visibilityField, receiverPlayerID),
+    readConstructedCities(db, events, cutoffTurn)
   ]);
   const permittedLifecycleIDs = new Set(permittedLifecycle.map(event => event.ID));
   const contexts = new Map<number, NewspaperProjectionContext>();
@@ -155,7 +156,7 @@ export async function queryNewspaperEvidence(
     return permittedLifecycleIDs.has(event.ID) &&
       (event.Type === 'CityCaptureComplete' ? event.Payload.NewOwnerID : event.Payload.PlayerID) === playerID;
   }
-  const cityContext = { receiverPlayerID, players, cityHistory, cityLifecycle, knowsLifecyclePlayer };
+  const cityContext = { receiverPlayerID, players, cityHistory, cityLifecycle, knowsLifecyclePlayer, constructedCities };
   /** Accept a private receiver roster only at full recorded receiver access. */
   function ownRoster(row: (RecordedRoster & Partial<Pick<CityRow, ReceiverField>>) | undefined): RecordedRoster | undefined {
     return row?.[visibilityField] === 2 ? row : undefined;
@@ -446,6 +447,20 @@ function readCityJoinHistory(
       eb('ID', 'in', before), eb('ID', 'in', barriers), ...(oldDates.length ? [eb('ID', 'in', anchors)] : []),
       eb.and([eb('Turn', '>=', fromTurn), eb('Turn', '<=', cutoffTurn)])
     ]))
+    .orderBy('Turn').orderBy('ID').execute();
+}
+
+/** Read important-building lists for witnessed constructions without applying receiver visibility. */
+async function readConstructedCities(
+  db: Kysely<KnowledgeDatabase>, events: readonly Selectable<GameEvent>[], cutoffTurn: number
+): Promise<NewspaperConstructedCity[]> {
+  const constructed = events.filter(event => event.Type === 'CityConstructed');
+  const ids = [...new Set(constructed.map(event => event.Payload.CityID))]
+    .filter((id): id is number => typeof id === 'number' && Number.isInteger(id) && id >= 0);
+  if (!ids.length) return [];
+  const fromTurn = Math.min(...constructed.map(event => event.Turn));
+  return db.selectFrom('CityInformations').select(['ID', 'Key', 'Turn', 'CreatedAt', 'X', 'Y', 'ImportantBuildings'])
+    .where('Key', 'in', ids).where('Turn', '>=', fromTurn).where('Turn', '<=', cutoffTurn)
     .orderBy('Turn').orderBy('ID').execute();
 }
 

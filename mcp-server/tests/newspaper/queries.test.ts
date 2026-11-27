@@ -4,7 +4,7 @@ import type { KnowledgeDatabase } from '../../src/knowledge/schema/base.js';
 import { queryNewspaperEvidence } from '../../src/newspaper/queries.js';
 import { newspaperEvidenceRequestSchema, newspaperEvidenceSchema } from '../../src/newspaper/evidence.js';
 import { readEvents, readSnapshotRange, readSnapshotsAtCutoff } from '../../src/knowledge/history.js';
-import { createEvidenceDatabase, seedEvidence, summary, event } from './fixtures.js';
+import { createEvidenceDatabase, seedEvidence, summary, event, city } from './fixtures.js';
 
 const request = { receiverPlayerID: 0, previousCheckTurn: 5, cutoffTurn: 10, comparisonRange: { fromTurn: 5, toTurn: 10 } };
 let db: Kysely<KnowledgeDatabase>;
@@ -326,5 +326,57 @@ describe('historical evidence queries', () => {
     expect(result.history?.events.find(row => row.source.id === 123)?.values).toEqual({ TeamID: 1, Tech: 'Writing' });
     const ids = result.events.map(row => row.source.id);
     expect([...ids].sort((a, b) => a - b)).toEqual(ids);
+  });
+});
+
+describe('newspaper construction significance', () => {
+  it('should mark a witnessed foreign construction without exposing the recorded building list', async () => {
+    await db.updateTable('CityInformations').set({ ImportantBuildings: JSON.stringify(['Granary']) }).where('ID', '=', 21).execute();
+    await city(db, 22, 11, { ImportantBuildings: ['Granary'] });
+    await event(db, 201, 11, 'CityConstructed', { OwnerID: 1, CityID: 42, BuildingType: 'Granary' });
+
+    const evidence = await queryNewspaperEvidence(db, { ...request, cutoffTurn: 11 });
+    const constructed = evidence.events.find(row => row.source.id === 201)!;
+    expect(constructed.values).toMatchObject({ Building: 'Granary', CityX: 0, CityY: 4, IsImportant: true });
+    expect(evidence.cities.find(row => row.subjectID === 42)?.values).not.toHaveProperty('ImportantBuildings');
+  });
+
+  it('should judge a building from the first row after the event rather than the cutoff row', async () => {
+    await city(db, 20, 6);
+    await city(db, 22, 7, { ImportantBuildings: ['Arena'] });
+    await db.updateTable('CityInformations').set({ ImportantBuildings: JSON.stringify(['Circus']) }).where('ID', '=', 21).execute();
+    await event(db, 201, 7, 'CityConstructed', { OwnerID: 1, CityID: 42, BuildingType: 'Arena' });
+
+    const constructed = (await queryNewspaperEvidence(db, request)).events.find(row => row.source.id === 201)!;
+    expect(constructed.values).toMatchObject({ Building: 'Arena', IsImportant: true });
+  });
+
+  it('should mark a building absent from the recorded list as not important', async () => {
+    await city(db, 20, 6);
+    await city(db, 22, 7, { ImportantBuildings: ['Arena'] });
+    await event(db, 201, 7, 'CityConstructed', { OwnerID: 1, CityID: 42, BuildingType: 'Temple' });
+
+    const constructed = (await queryNewspaperEvidence(db, request)).events.find(row => row.source.id === 201)!;
+    expect(constructed.values).toMatchObject({ Building: 'Temple', IsImportant: false });
+  });
+
+  it('should read an empty Lua list as a recorded list that omits the building', async () => {
+    await city(db, 20, 6);
+    await city(db, 22, 7);
+    await db.updateTable('CityInformations').set({ ImportantBuildings: '{}' as never }).where('ID', '=', 22).execute();
+    await db.updateTable('CityInformations').set({ ImportantBuildings: JSON.stringify(['Temple']) }).where('ID', '=', 21).execute();
+    await event(db, 201, 7, 'CityConstructed', { OwnerID: 1, CityID: 42, BuildingType: 'Temple' });
+
+    const constructed = (await queryNewspaperEvidence(db, request)).events.find(row => row.source.id === 201)!;
+    expect(constructed.values).toMatchObject({ Building: 'Temple', IsImportant: false });
+  });
+
+  it('should leave significance unset without a city row at or after the event', async () => {
+    await event(db, 201, 10, 'CityConstructed', { OwnerID: 1, CityID: 42, BuildingType: 'Granary' });
+    await db.updateTable('GameEvents').set({ CreatedAt: 4010 }).where('ID', '=', 201).execute();
+
+    const constructed = (await queryNewspaperEvidence(db, request)).events.find(row => row.source.id === 201)!;
+    expect(constructed.values).toMatchObject({ Building: 'Granary', CityX: 0, CityY: 4 });
+    expect(constructed.values).not.toHaveProperty('IsImportant');
   });
 });

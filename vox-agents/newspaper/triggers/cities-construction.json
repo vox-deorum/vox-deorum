@@ -4,14 +4,10 @@
     "subject": "event",
     "event": "CityConstructed",
     "when": [
-      "event.knows('player') && event.player.knows('id') && event.player.self === true",
-      "event.knows('city') && event.city.knows('name') && event.city.knows('owner') && event.city.owner.knows('id') && event.city.own === true",
-      "event.player.id === event.city.owner.id",
-      "event.knows('building') && !defenses.includes(event.building)",
-      "(event.knows('importantBuilding') && event.importantBuilding === true) || (self.knows('era') && self.era === 'Ancient Era' && event.city.knows('wonders') && Array.isArray(event.city.wonders) && !event.city.wonders.includes(event.building))",
-      "event.knows('isGoldPurchase') && event.isGoldPurchase === false && event.knows('isFaithPurchase') && event.isFaithPurchase === false",
-      "!event.is.courthouseIntegration",
-      "!events.some(e => (e.type === 'PlayerCityFounded' || e.type === 'UnitCityFounded') && e.turn === event.turn && e.knows('plot') && event.knows('plot') && e.plot.x === event.plot.x && e.plot.y === event.plot.y)"
+      "event.is.ourBuilding",
+      "event.is.regularBuilding && event.is.notableBuilding",
+      "!event.is.purchased",
+      "!event.is.foundingFreebie"
     ],
     "values": {
       "building": "event.building"
@@ -25,11 +21,9 @@
     "subject": "event",
     "event": "CityInvestedBuilding",
     "when": [
-      "event.knows('player') && event.player.knows('id') && event.player.self === true",
-      "event.knows('city') && event.city.knows('name') && event.city.knows('owner') && event.city.owner.knows('id') && event.city.own === true",
-      "event.player.id === event.city.owner.id",
-      "event.knows('building')",
-      "event.knows('invested') && (event.invested === true || event.invested === 1)",
+      "event.is.ourBuilding",
+      "typeof event.building === 'string' && event.building.length > 0",
+      "event.invested === true || event.invested === 1",
       "!events.some(e => e.type === 'CityConstructed' && e.knows('player') && e.player.knows('id') && e.player.id === event.player.id && e.knows('building') && e.building === event.building && e.knows('city') && e.city.knows('id') && event.city.knows('id') && e.city.id === event.city.id && e.knows('isGoldPurchase') && e.isGoldPurchase === false && e.knows('isFaithPurchase') && e.isFaithPurchase === false)"
     ],
     "values": {
@@ -44,17 +38,13 @@
     "subject": "event",
     "event": "CityConstructed",
     "when": [
-      "event.knows('player') && event.player.knows('id') && event.player.self === true",
-      "event.knows('city') && event.city.knows('name') && event.city.knows('owner') && event.city.owner.knows('id') && event.city.own === true",
-      "event.player.id === event.city.owner.id",
-      "event.knows('building') && !defenses.includes(event.building)",
-      "(event.knows('importantBuilding') && event.importantBuilding === true) || (self.knows('era') && self.era === 'Ancient Era' && event.city.knows('wonders') && Array.isArray(event.city.wonders) && !event.city.wonders.includes(event.building))",
-      "(event.knows('isGoldPurchase') && event.isGoldPurchase === true) || (event.knows('isFaithPurchase') && event.isFaithPurchase === true)",
-      "!event.is.courthouseIntegration"
+      "event.is.ourBuilding",
+      "event.is.regularBuilding && event.is.notableBuilding",
+      "event.is.purchased"
     ],
     "values": {
       "building": "event.building",
-      "currency": "event.knows('isGoldPurchase') && event.isGoldPurchase === true ? 'gold' : 'faith'"
+      "currency": "event.isGoldPurchase === true ? 'gold' : 'faith'"
     },
     "tier": "filler",
     "adjust": "event.stake.building",
@@ -65,9 +55,8 @@
     "subject": "event",
     "event": "CityConstructed",
     "when": [
-      "event.knows('building') && defenses.includes(event.building)",
-      "event.knows('player') && event.player.self === true",
-      "event.knows('city') && event.city.knows('name') && event.city.own === true"
+      "event.is.ourBuilding",
+      "defenses.includes(event.building)"
     ],
     "values": {
       "building": "event.building"
@@ -81,9 +70,7 @@
     "subject": "event",
     "event": "CityConstructed",
     "when": [
-      "event.knows('player') && event.player.knows('id') && event.player.self === true",
-      "event.knows('city') && event.city.knows('id') && event.city.knows('name') && event.city.knows('owner') && event.city.owner.knows('id') && event.city.own === true",
-      "event.player.id === event.city.owner.id",
+      "event.is.ourBuilding",
       "event.is.courthouseIntegration"
     ],
     "values": {
@@ -98,22 +85,17 @@
     "subject": "event",
     "event": "CityConstructed",
     "when": [
-      "event.knows('player') && event.player.knows('id') && event.player.self === false",
-      "event.knows('city') && event.city.knows('name') && event.city.knows('owner') && event.city.owner.knows('id') && event.city.owner.knows('name') && event.city.foreign === true",
-      "event.player.id === event.city.owner.id",
-      "event.city.is.nearby",
-      "event.knows('building') && !defenses.includes(event.building)",
-      "event.knows('importantBuilding') && event.importantBuilding === true",
-      "event.knows('isGoldPurchase') && event.isGoldPurchase === false && event.knows('isFaithPurchase') && event.isFaithPurchase === false",
-      "!event.is.courthouseIntegration",
-      "!events.some(e => (e.type === 'PlayerCityFounded' || e.type === 'UnitCityFounded') && e.turn === event.turn && e.knows('plot') && event.knows('plot') && e.plot.x === event.plot.x && e.plot.y === event.plot.y)"
+      "event.is.theirBuilding",
+      "event.is.regularBuilding && event.is.notableBuilding",
+      "!event.is.purchased",
+      "!event.is.foundingFreebie"
     ],
     "values": {
       "building": "event.building",
       "owner": "event.city.owner.name"
     },
     "tier": "filler",
-    "adjust": "event.stake.place",
+    "adjust": ["event.city.owner.stake.relation", "event.city.ourSpyPresent ? 5 : 0"],
     "tags": ["cities", "international"]
   },
   {
@@ -121,22 +103,17 @@
     "subject": "event",
     "event": "CityConstructed",
     "when": [
-      "event.knows('player') && event.player.knows('id') && event.player.self === false",
-      "event.knows('city') && event.city.knows('name') && event.city.knows('owner') && event.city.owner.knows('id') && event.city.owner.knows('name') && event.city.foreign === true",
-      "event.player.id === event.city.owner.id",
-      "event.city.is.nearby",
-      "event.knows('building') && !defenses.includes(event.building)",
-      "event.knows('importantBuilding') && event.importantBuilding === true",
-      "(event.knows('isGoldPurchase') && event.isGoldPurchase === true) || (event.knows('isFaithPurchase') && event.isFaithPurchase === true)",
-      "!event.is.courthouseIntegration"
+      "event.is.theirBuilding",
+      "event.is.regularBuilding && event.is.notableBuilding",
+      "event.is.purchased"
     ],
     "values": {
       "building": "event.building",
       "owner": "event.city.owner.name",
-      "currency": "event.knows('isGoldPurchase') && event.isGoldPurchase === true ? 'gold' : 'faith'"
+      "currency": "event.isGoldPurchase === true ? 'gold' : 'faith'"
     },
     "tier": "filler",
-    "adjust": "event.stake.place",
+    "adjust": ["event.city.owner.stake.relation", "event.city.ourSpyPresent ? 5 : 0"],
     "tags": ["cities", "international"]
   },
   {
@@ -144,12 +121,10 @@
     "subject": "event",
     "event": "CityInvestedBuilding",
     "when": [
-      "event.knows('player') && event.player.knows('id') && event.player.knows('name') && event.player.self === false",
-      "event.knows('city') && event.city.knows('name') && event.city.knows('owner') && event.city.owner.knows('id') && event.city.owner.knows('name') && event.city.foreign === true",
-      "event.player.id === event.city.owner.id",
+      "event.is.theirBuilding",
       "event.city.is.nearby",
-      "event.knows('building') && typeof event.building === 'string' && event.building.length > 0",
-      "event.knows('invested') && (event.invested === true || event.invested === 1)",
+      "typeof event.building === 'string' && event.building.length > 0",
+      "event.invested === true || event.invested === 1",
       "!events.some(e => e.type === 'CityConstructed' && (e.turn > event.turn || (e.turn === event.turn && e.id > event.id)) && e.knows('player') && e.player.knows('id') && e.player.id === event.player.id && e.knows('city') && e.city.knows('id') && event.city.knows('id') && e.city.id === event.city.id && e.knows('building') && e.building === event.building)"
     ],
     "values": {
@@ -165,12 +140,10 @@
     "subject": "event",
     "event": "CityConstructed",
     "when": [
-      "event.knows('player') && event.player.knows('id') && event.player.knows('name') && event.player.self === false",
-      "event.knows('city') && event.city.knows('name') && event.city.knows('owner') && event.city.owner.knows('id') && event.city.owner.knows('name') && event.city.foreign === true",
-      "event.player.id === event.city.owner.id",
+      "event.is.theirBuilding",
       "event.city.is.nearby",
-      "event.knows('building') && defenses.includes(event.building)",
-      "!events.some(e => (e.type === 'PlayerCityFounded' || e.type === 'UnitCityFounded') && e.turn === event.turn && e.knows('plot') && event.knows('plot') && e.plot.x === event.plot.x && e.plot.y === event.plot.y)"
+      "defenses.includes(event.building)",
+      "!event.is.foundingFreebie"
     ],
     "values": {
       "building": "event.building",
@@ -185,9 +158,7 @@
     "subject": "event",
     "event": "CityConstructed",
     "when": [
-      "event.knows('player') && event.player.knows('id') && event.player.knows('name') && event.player.self === false",
-      "event.knows('city') && event.city.knows('id') && event.city.knows('name') && event.city.knows('owner') && event.city.owner.knows('id') && event.city.owner.knows('name') && event.city.foreign === true",
-      "event.player.id === event.city.owner.id",
+      "event.is.theirBuilding",
       "event.city.is.nearby",
       "event.is.courthouseIntegration"
     ],

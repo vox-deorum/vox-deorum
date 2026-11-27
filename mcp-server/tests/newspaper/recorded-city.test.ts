@@ -62,7 +62,7 @@ describe('dated newspaper joins', () => {
     await city({ ID: 23, Turn: 11, CreatedAt: 2012, Player0: 0 });
     const seen = await queryNewspaperEvidence(db, request);
     expect(seen.events.find(row => row.type === 'CityConstructed')).toMatchObject({
-      values: { Building: 'Shrine', CityX: 0, CityY: 4 }, relatedSources: [{ id: 22, turn: 11 }]
+      values: { Building: 'Shrine', CityX: 0, CityY: 4, IsImportant: false }, relatedSources: [{ id: 22, turn: 11 }]
     });
 
     for (const CreatedAt of [2011, 2010]) {

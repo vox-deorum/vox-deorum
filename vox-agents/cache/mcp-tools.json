@@ -842,6 +842,12 @@
           "maximum": 9007199254740991,
           "description": "Inclusive cutoff in recorded game turns"
         },
+        "historyFromTurn": {
+          "description": "Start turn for trigger history, or -1 to include turn zero; history also covers the previous check",
+          "type": "integer",
+          "minimum": -1,
+          "maximum": 9007199254740991
+        },
         "comparisonRange": {
           "description": "Optional bounded snapshot history in recorded game turns",
           "type": "object",

@@ -3,7 +3,7 @@ import { eventReportTurn, type NewspaperEvent, type NewspaperSnapshot,
 import { isRecord } from '../../../utils/guards.js';
 import { uniqueSources } from '../shared/sources.js';
 import { classifyDeal, coveringDeal } from './deal.js';
-import { compareFactDates, eventCityTargets, eventConfig, eventPlot, recordedId, recordedNames, resolveEventCity } from './event-city.js';
+import { eventCityTargets, eventConfig, eventPlot, recordedId, resolveEventCity } from './event-city.js';
 import { fact, recordedFact, reference, rowSources, type FactBuildContext, type FactField, type FactObject } from './model.js';
 
 const actingPlayerFields: Readonly<Record<string, string>> = {
@@ -24,22 +24,6 @@ type SubjectSources = Map<string, readonly NewspaperSourceReference[]>;
 type TeamEvidence = { players: Set<number>; bySummaryId: Map<number, number> };
 const involvedSubjectsByContext = new WeakMap<FactBuildContext, WeakMap<NewspaperEvent, SubjectSources>>();
 const teamEvidenceByContext = new WeakMap<FactBuildContext, TeamEvidence>();
-
-/**
- * Decide whether a completed building was among the city's important buildings when it was built.
- * The city's list drops a building once its successor is built (a Circus replaces an Arena), so the
- * first readable list recorded at or after the completion decides, not the list at the cutoff.
- */
-function importantAtCompletion(event: NewspaperEvent, city: NewspaperSnapshot, context: FactBuildContext): FactField | undefined {
-  const building = event.values.Building;
-  if (typeof building !== 'string' || !building) return undefined;
-  const observed = [...context.cityHistory(city), city]
-    .filter(row => compareFactDates(row, event) >= 0)
-    .sort(compareFactDates)
-    .find(row => recordedNames(row.values.ImportantBuildings) !== undefined);
-  if (!observed) return undefined;
-  return fact(recordedNames(observed.values.ImportantBuildings)!.includes(building), [...rowSources(event), ...rowSources(observed)]);
-}
 
 /** Convert a projected payload field to camel case, including acronyms such as ID. */
 function camelCase(field: string): string {
@@ -195,25 +179,22 @@ export function buildEventFacts(event: NewspaperEvent, context: FactBuildContext
   }
 
   const { main, named } = eventCityTargets(event);
-  let mainCity: NewspaperSnapshot | undefined;
   for (const target of named) {
     const city = resolveEventCity(event, target, context);
     if (city && target.field) {
       const linked = fact(reference('city', city.subjectID), [...sources, ...rowSources(city)]);
       fields[camelCase(target.field)] = linked;
-      if (target === main) {
-        fields.city = linked;
-        mainCity = city;
-      }
+      if (target === main) fields.city = linked;
     }
   }
   if (main && !main.field) {
-    mainCity = resolveEventCity(event, main, context);
-    if (mainCity) fields.city = fact(reference('city', mainCity.subjectID), [...sources, ...rowSources(mainCity)]);
+    const city = resolveEventCity(event, main, context);
+    if (city) fields.city = fact(reference('city', city.subjectID), [...sources, ...rowSources(city)]);
   }
-  if (type === 'CityConstructed' && mainCity) {
-    const important = importantAtCompletion(event, mainCity, context);
-    if (important) fields.importantBuilding = important;
+  // MCP decides importance from the first recorded building list at or after the completion.
+  if (type === 'CityConstructed') {
+    const important = recordedBoolean(values.IsImportant);
+    if (important !== undefined) fields.importantBuilding = fact(important, sources);
   }
   const plot = eventPlot(event);
   if (plot) {

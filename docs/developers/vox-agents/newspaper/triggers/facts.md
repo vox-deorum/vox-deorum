@@ -250,7 +250,7 @@ A player ID of -1 means "nobody" and provides no player link. [Event policy](#ev
 | `EspionageResult` | `perspective` (`source` or `target`), `spyResult`, `cityName` when recorded, and links to the parties when their identity is available. The source may also get an inferred `tech` name. |
 | `ElectionResultSuccess`, `ElectionResultFailure` | `player`, signed `influenceChange`, and `cityState` when the capital's label resolves. Failure applies only to a player with a recorded spy in the election. |
 | `PlayerAdoptPolicyBranch` | `player`, `branch` |
-| `CityConstructed` | `player`, `city`, `building`, `isGoldPurchase`, `isFaithPurchase`, and `importantBuilding`: whether the city's `importantBuildings` listed the building in the first readable observation at or after the completion. The cutoff list can drop a building once its successor is built, as a Circus replaces an Arena. With no readable list since the completion, `importantBuilding` is hidden. The list never includes buildings that need no technology (Monument) or ancient-era buildings that lead nowhere (Well, Stone Works), so the stock home building rules also accept any building that is not a wonder while the receiver is in the Ancient Era. |
+| `CityConstructed` | `player`, `city`, `building`, `isGoldPurchase`, `isFaithPurchase`, and `importantBuilding`: whether the completed building was on the first recorded building list at or after the completion. MCP reads that list even when the receiver cannot see the city's details, so the fact can be known for a city the reader only watches from outside. It is hidden when no later row has a readable list. The stock building rules treat any non-wonder building as notable in the Ancient Era. |
 | `DealMade` | `fromPlayer` and `toPlayer` when readable. Valid structured terms supply `deal.from`, `deal.to`, and `deal.clauses`. |
 | `UnitCreated` | `player`, `unit`, `plot`. A named great person adds `person` and `kind: 'born'`. Unwitnessed births supply only the owner and name. |
 | `GreatPersonExpended` | `player`, `unit`, `plot`. A named great person adds `person` and `kind: 'expended'`. |
@@ -335,9 +335,9 @@ Pass an already scaled [named span](constants.md#spans) or a count of recorded t
 
 ## Hidden and missing facts
 
-Use `subject.knows(field)` before reading a fact that may be hidden. For example, `city.knows('foodPerTurn') && city.foodPerTurn > 0` tests food only for cities with the required access. A player unknown on the requested turn has no readable relationship fact for that turn.
+In a `when` list, a bare read of a hidden fact already stops the rule for that subject and names the fact in the audit. Call `subject.knows(field)` to branch on availability, inside callbacks such as `events.some`, or where a hidden read must not hold back a repeat rule from rearming. For example, `city.knows('foodPerTurn') && city.foodPerTurn > 0` chooses the food story only for cities with the required access. A player unknown on the requested turn has no readable relationship fact for that turn.
 
-A hidden read in a condition, value, tier, or urgency expression stops the rule for that subject or group and names the fact in the audit. In an `adjust` expression, a hidden read contributes 0 points and the other adjustments still run. See [stakes](constants.md#stakes) for checking a shared calculation's inputs.
+A hidden read in a `values`, `tier`, or `urgent` expression also stops the rule for that subject or group. In an `adjust` expression, a hidden read contributes 0 points and the other adjustments still run. See [stakes](constants.md#stakes) for checking a shared calculation's inputs.
 
 The first sighting gives a baseline for later comparisons. If the receiver first saw a rival city on turn 8, `city.before` is unavailable for any earlier date. `city.founded` may estimate turn 8 if the loaded history reaches the recording's start and the observation begins after that start. For a story about a witnessed founding, require a founding event.
 

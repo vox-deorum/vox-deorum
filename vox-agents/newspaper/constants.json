@@ -93,7 +93,13 @@
     "event": {
       "forwardSettle": "event.knows('player') && event.player.is.rival && event.player.knows('name') && event.knows('city') && event.city.knows('name') && event.city.knows('nearestOwn') && event.city.nearestOwn.knows('name') && event.knows('distance') && event.distance.knows('own') && event.distance.own <= adjacent",
       "preferredFounding": "event.type === 'PlayerCityFounded' || !event.knows('plot') || !events.some(e => e.type === 'PlayerCityFounded' && e.turn === event.turn && e.knows('player') && e.player.knows('id') && e.player.id === event.player.id && e.knows('plot') && e.plot.x === event.plot.x && e.plot.y === event.plot.y && e.knows('city') && e.city.knows('name'))",
-      "courthouseIntegration": "event.knows('building') && (event.building === 'Courthouse' || event.building === `Satrap's Court`) && event.knows('city') && event.city.knows('isPuppet') && event.city.isPuppet === false && event.city.knows('isOccupied') && event.city.isOccupied === true"
+      "courthouseIntegration": "event.knows('building') && (event.building === 'Courthouse' || event.building === `Satrap's Court`) && event.knows('city') && event.city.knows('isPuppet') && event.city.isPuppet === false && event.city.knows('isOccupied') && event.city.isOccupied === true",
+      "ourBuilding": "event.player.self === true && event.city.own === true && event.player.id === event.city.owner.id && !!event.city.name",
+      "theirBuilding": "event.player.self === false && event.city.foreign === true && event.player.id === event.city.owner.id && !!event.city.name && !!event.city.owner.name",
+      "regularBuilding": "!defenses.includes(event.building) && !event.city.wonders.includes(event.building) && !event.is.courthouseIntegration",
+      "notableBuilding": "self.era.startsWith('Ancient') || event.importantBuilding === true",
+      "purchased": "event.isGoldPurchase === true || event.isFaithPurchase === true",
+      "foundingFreebie": "events.some(e => (e.type === 'PlayerCityFounded' || e.type === 'UnitCityFounded') && e.turn === event.turn && e.knows('plot') && event.knows('plot') && e.plot.x === event.plot.x && e.plot.y === event.plot.y)"
     },
     "player": {
       "neighbor": "!player.self && player.distance <= neighboring",
