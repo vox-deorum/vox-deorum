@@ -183,7 +183,7 @@ Travel time discounts incoming help. **Travel example** (2 base moves, distances
 | Join turns `j` | `max(1, τ − 1)` | Travel 2: join 1. Travel 3: join 2. |
 | Discounted help | `str(u) / j` | Strength 100: 100 at join 1, 50 at join 2. |
 
-Selection uses `need = max(0, r × T − L)`. `r` is the desired friendly/enemy ratio (setting `reinforce.strengthRatio`, 1). `S` is the full strength of the selected units, and `help = Σ str(u) / j` is their discounted strength.
+Selection uses `need = max(0, r × T − L)`. `r` is the desired friendly/enemy ratio (setting `reinforce.strengthRatio`, 1). At our cities `r` rises with the city's danger; see [own-city fall urgency](reinforcement.md#own-city-fall-urgency). `S` is the full strength of the selected units, and `help = Σ str(u) / j` is their discounted strength.
 
 Selection sorts by `j`, then `τ`, then unit ID, and takes candidates until `S` meets `need`. Discounted help sets the [swing](reinforcement.md#swing). There is no two-unit minimum; native requires two friendly units in total.
 

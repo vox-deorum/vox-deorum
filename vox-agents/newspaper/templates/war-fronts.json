@@ -303,10 +303,12 @@
         "voice": "press",
         "stance": "government-critical",
         "genre": "analysis",
-        "headline": "The new word at {{city}}, and the questions it raises",
+        "headline": "A Strategic Retreat, or a Trap?",
         "body": [
-          "The front entry for {{city}}, held by {{civilization}}, moved from {{previousPosture}} to {{posture}} on {{observedTurn}}. A withdrawal reading is a statement about the balance our observers can see in the {{domain}} zone, and it invites questions about what happens next. The public has been given the label and nothing more."
-        ]
+          "The forces of {{civilization}} abandoned their {{previousPosture}} posture in the {{domain}} on {{observedTurn}}, withdrawing from the vicinity of {{city}}. While the {{terms.civic.government}} hails this as a victory, we must ask if it is a trap or a sign of a deeper collapse in the enemy's line. Moving too quickly into the vacuum could leave our own forces exposed to a counter-strike."
+        ],
+        "subheadline": "{{civilization}} withdraws from the {{domain}}",
+        "settled": true
       },
       {
         "id": "enemy-front-posture-withdraw-gazette",
@@ -324,10 +326,11 @@
         "voice": "tabloid",
         "stance": "local",
         "genre": "anecdote",
-        "headline": "The word at the carters' stand: {{city}}",
+        "headline": "QUIET AT LAST?",
         "body": [
-          "At the carters' stand, a man read the day's board aloud for those who cannot: {{city}}, {{observedTurn}}, {{posture}} where the last entry said {{previousPosture}}. Someone asked whether the new word meant the fighting had stopped. Nobody at the stand could answer, and the reader moved on to the next line."
-        ]
+          "A lookout in {{city}} saw {{civilization}} army started to leave the {{domain}} on {{observedTurn}}. They spent weeks in a {{previousPosture}} posture, eyeing our walls. Now the dust settles, and the tavern is full of people asking where the war went."
+        ],
+        "settled": true
       }
     ]
   },

@@ -18,8 +18,11 @@ Strength uses the [strength tallies](recruitment.md#strength-tallies). The [valu
 | --- | --- | --- |
 | `L` (**local strength**) | Our units near the center, from the [local set](recruitment.md#battlefield-estimate). At our city it includes the city's own strength. | Native strength × remaining health share. Only ratios matter, so examples use strengths such as 100. |
 | `T` (**enemy strength**) | Hostile units and cities near the center. At an enemy city it includes the city. | Same scale as `L`. |
-| `r` (**desired ratio**) | Setting `reinforce.strengthRatio` (1): the friendly/enemy strength ratio selection aims for. | Positive; 1 means parity. |
-| `need` | `max(0, r × T − L)`: full strength selection tries to add. | Strength, at least 0. |
+| `r` (**desired ratio**) | Setting `reinforce.strengthRatio` (1): the friendly/enemy strength ratio selection aims for at enemy targets and other battlefields. | Positive; 1 means parity. |
+| `u` (**fall urgency**) | Setting `reinforce.fallUrgency` (1): how far a city's defense fall share raises the ratio at our cities. | At least 0; 0 keeps `r` everywhere. |
+| `r_city` (**city ratio**) | `r × (1 + u × f_def)` at our cities: parity plus more help for a city in danger. | `r` to `r × (1 + u)`. |
+| `f_def` (**defense fall share**) | City danger over remaining HP, capped at 1, [computed by the own-city Fight](value.md#city-allowance-and-fall-share). | 0 to 1. |
+| `need` | `max(0, r × T − L)` at enemy targets and other battlefields; `max(0, r_city × T − L)` at our cities: full strength selection tries to add. | Strength, at least 0. |
 | `S` | Selected units' full strength, including any role unit. | Strength. |
 | `j` (**join turns**) | `max(1, travel turns − 1)`, from the [distance estimate](recruitment.md#candidates-and-selection). | Whole turns, at least 1. |
 | `help` | Sum over selected units of strength / `j`: strength discounted by how long it takes to join. | 0 to `S`. |
@@ -59,7 +62,7 @@ Examples use these inputs unless they state their own. Results are rounded only 
 
 `φ = potential.weight × potential.turnDiscount^(a − 1)`
 
-**Swing** is the rise in our strength share as the selected help joins. Selection stops once full strength covers need, so help seldom takes the share past parity and the swing tops out near one half. The **swing scale** `k` (setting `reinforce.swingScale`, 2) doubles it, and the cap at 1 keeps the term within the fight's range: a rise from no strength to parity counts as 1. The recorded swing and the strength share that Withdraw reads keep their unscaled values.
+**Swing** is the rise in our strength share as the selected help joins. At enemy targets selection stops once full strength covers need at parity, so help seldom takes the share past parity and the swing tops out near one half. At our cities the raised [city ratio](#own-city-fall-urgency) can select past parity, so a city in danger gets more help and a larger swing. The **swing scale** `k` (setting `reinforce.swingScale`, 2) doubles the swing, and the cap at 1 keeps the term within the fight's range: a rise from no strength to parity counts as 1. The recorded swing and the strength share that Withdraw reads keep their unscaled values.
 
 The **potential weight** `φ` starts at `potential.weight` (0.1) and is multiplied by `potential.turnDiscount` (0.5) for each turn to contact past the first, including fractional turns. Set `potential.weight` to 0 to score without potential stake.
 
@@ -131,9 +134,29 @@ Path and competing-target rejections can clear when a nearby unit moves or dies.
 | Horseman | 50 | 2 | 1 | 50 | No; tie broken by unit ID, then selection stops. |
 | Knight | 100 | 3 | `max(1, 3 (travel) − 1) = 2` | `100 / 2 (j) = 50` | No; need already covered. |
 
+## Own-city fall urgency
+
+At our cities, the desired ratio rises with the city's danger: `r_city = r × (1 + u × f_def)`. `r` is `reinforce.strengthRatio`, `u` is setting `reinforce.fallUrgency` (1), and `f_def` is the defense fall share the own-city Fight computes before Reinforce estimates: city danger over remaining HP, capped at 1. Need becomes `max(0, r_city × T − L)`. Enemy cities and other battlefields keep `r` and the parity gate, and setting `u` to 0 restores `r` at our cities.
+
+| `f_def` | `r_city = 1 (r) × (1 + 1 (u) × f_def)` | Need at `T = 100`, `L = 40` |
+| --- | --- | --- |
+| 0 | 1 | `1 × 100 − 40 = 60` |
+| 0.3 | 1.3 | `1.3 × 100 − 40 = 90` |
+| 0.5 | 1.5 | `1.5 × 100 − 40 = 110` |
+| 1 | 2 | `2 × 100 − 40 = 160` |
+
+**Danger example.** `T = 100`, `L = 40`, `f_def = 0.5`, theater 0.5, no exposure, neutral hold-city weight, and four candidates of strength 30 each with `j = 2`. With `C = 3`, stake is `3 × 0.5 (f_def) = 1.5` realized and 3 total, so `φ` (0.1) adds `0.1 × 1.5 = 0.15` and the stake base is 1.65. The fight share is `s = 40² / (40² + 100²) = 0.138`.
+
+| Selection | Need | Units | Help | Share `s_h` | Swing `s_h − s` | Scaled swing | Priority |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `r = 1` (old) | 60 | 2 | `2 × 30 / 2 = 30` | `(40 + 30)² / ((40 + 30)² + 100²) = 0.329` | 0.191 | 0.382 | `0.5 (θ) × 1.65 × 0.382 = 0.315` |
+| `r_city = 1.5` | 110 | 4 | `4 × 30 / 2 = 60` | `(40 + 60)² / ((40 + 60)² + 100²) = 0.5` | 0.362 | 0.724 | `0.5 × 1.65 × 0.724 = 0.597` |
+
+With only two candidates, both ratios select the same two units and score the same, because our city counts partial help.
+
 ## Worked priorities
 
-The table uses the running strengths and one spearman with `j = 1` unless stated otherwise, giving swing 0.332308, scaled swing 0.664615 and `φ = 0.1`. The knight is at full health, worth 700 and in a cityless zone. The cities have no garrison or exposure in these examples.
+The table uses the running strengths and one spearman with `j = 1` unless stated otherwise, giving swing 0.332308, scaled swing 0.664615 and `φ = 0.1`. Our-city rows raise the ratio with danger, but one recruit leaves the selection, swing and priority unchanged. The knight is at full health, worth 700 and in a cityless zone. The cities have no garrison or exposure in these examples.
 
 | Destination | `θ` | Realized stake | Potential stake | Realized + `φ` × potential | Reinforce priority |
 | --- | --- | --- | --- | --- | --- |

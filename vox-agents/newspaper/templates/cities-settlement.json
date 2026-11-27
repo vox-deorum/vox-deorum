@@ -102,10 +102,11 @@
     "variants": [
       {
         "id": "our-city-founded-report",
-        "headline": "A new city: {{city}}",
+        "headline": "New settlement founded at {{city}}",
         "body": [
-          "The stakes went in at dawn, and by dusk {{city}} had a fire, a roped-off square and a name on the gate. Our settlers raised it under our flag. What comes next is the old list: houses, fields and walls."
-        ]
+          "{{terms.civilization}} has founded {{city}}. {{terms.civic.people}} have begun clearing land and erecting the first permanent structures in the new settlement."
+        ],
+        "settled": true
       },
       {
         "id": "our-city-founded-crier",
