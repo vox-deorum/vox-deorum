@@ -19,7 +19,7 @@ flowchart TD
 | Setting | Default | Source |
 | --- | --- | --- |
 | `VOX_TACTICAL_OPERATIONAL_LOOP` | 0 | `NewCustomModOptions.xml` |
-| Command cap, `iMaxCommands` | 64 | `VOX_OPERATIONAL_MAX_COMMANDS` |
+| Command cap, `iMaxCommands` | 256 | `VOX_OPERATIONAL_MAX_COMMANDS` |
 | Medium, High, Braveheart aggression RISK (score choosing search aggression) thresholds | 40, 60, 90 | `VOX_OPERATIONAL_AGGRESSION_MEDIUM_RISK`, `VOX_OPERATIONAL_AGGRESSION_HIGH_RISK`, `VOX_OPERATIONAL_AGGRESSION_BRAVEHEART_RISK` |
 | Posture and kind offsets | Tables below | `CvTacticalOperationalLoop.cpp` |
 | Priority weights, slopes and constants | [Weights file](#weights-file) | `CvTacticalOperationalWeights.cpp` |
