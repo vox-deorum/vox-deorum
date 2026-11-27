@@ -19,30 +19,33 @@
         "voice": "press",
         "stance": "ambitious",
         "genre": "analysis",
-        "headline": "{{city}} is a long way from home",
+        "headline": "The {{terms.civilizationAdjective}} Horizon",
         "body": [
-          "{{city}} is {{distance}} from the capital, and that distance is now the town's chief fact. Grain, orders and soldiers will all come the same long way, and all will arrive late. A road will follow the settlers in time, and the road will bring the next town with it."
-        ]
+          "By founding {{city}} at a distance of {{distance}}, {{terms.civic.leaderAddress}} has pushed our borders further than ever before. The logistics of supplying a colony so far from the heartland will strain our current networks, yet the potential for new trade is immense. If {{terms.civic.people}} can tame this wild frontier, {{terms.civilization}} will soon dominate the continent's wealth. "
+        ],
+        "settled": true
       },
       {
         "id": "distant-colony-founded-report-pamphlet",
         "voice": "pamphlet",
         "stance": "local",
         "genre": "report",
-        "headline": "A new town, {{distance}} out",
+        "headline": "Another city founded at {{city}}!",
         "body": [
-          "They have founded a town called {{city}}, {{distance}} out from home, and nobody asked the rest of us whether we wished to pay for it. The settlers are brave, or desperate, or both. This paper wishes them well and will be watching the accounts."
-        ]
+          "A new colony is established at {{city}}, {{distance}} from the capital. {{terms.civic.leaderAddress}}, why send our {{terms.civic.people}} to the ends of the earth? While you plant flags in the dirt far away, our own streets remain unrepaired! Who among us will pay for this distant venture?"
+        ],
+        "settled": true
       },
       {
         "id": "distant-colony-founded-notice",
         "voice": "gazette",
         "stance": "neutral",
         "genre": "notice",
-        "headline": "A colony at {{city}}",
+        "headline": "News of a new settlement",
         "body": [
-          "Advice reaches this office of {{city}}, founded {{distance}} from the capital and now open to trade. The settlement has a cleared site, a few shelters and little else as yet. Traders bound that way should ask the market office for the route and the return load."
-        ]
+          "We are credibly informed that a party of settlers has established the colony of {{city}}, situated at a distance of {{distance}} from the capital, extending the reach of {{terms.civilization}}."
+        ],
+        "settled": true
       }
     ]
   },
@@ -66,19 +69,21 @@
         "voice": "press",
         "stance": "hawkish",
         "genre": "analysis",
-        "headline": "{{player}} plants a town near {{ours}}",
+        "headline": "The Encroachment of {{player}}",
         "body": [
-          "{{player}} has placed {{city}} {{distance}} from {{ours}}, and the site was chosen with care. A settlement that close can watch our road, shelter their patrols and crowd our fields without a single soldier in sight. The answer to a post is another post, and ours has not been built."
-        ]
+          "The founding of {{city}} marks a bold shift in {{player}}'s territorial strategy. Located only {{distance}} from {{ours}}, the new settlement creates an immediate geopolitical friction point. If {{player}} continues this pattern of aggressive proximity, the question is no longer whether our borders will clash, but when. "
+        ],
+        "subheadline": "Territorial gains push closer to {{ours}}",
+        "settled": true
       },
       {
         "id": "forward-settle-editorial",
         "voice": "pamphlet",
         "stance": "local",
         "genre": "editorial",
-        "headline": "{{city}} rises beside {{ours}}",
+        "headline": "Another Burden on {{ours}}!",
         "body": [
-          "There is a new town called {{city}} {{distance}} from {{ours}}, and no one has told the farmers where their fields end. {{player}} drew the line on a map in some far room. Send surveyors before the harvest, or the first argument over a furrow will be settled with a scythe."
+          "Look at the map, {{terms.civic.people}}! {{city}} has been founded {{distance}} from our gates. Who pays for this expansion? We do! The {{terms.civic.government}} spends our gold on a far-off outpost while our own streets crumble. Why must {{ours}} fund a dream we will never see? Stop this waste now!"
         ]
       },
       {
@@ -86,10 +91,11 @@
         "voice": "gazette",
         "stance": "conciliatory",
         "genre": "report",
-        "headline": "New neighbors at {{city}}",
+        "headline": "News of a New Settlement",
         "body": [
-          "We are informed that {{player}} has founded {{city}}, a town {{distance}} from {{ours}} and close enough for a morning's ride. Such neighbors try the patience, but they also bring a market where our merchants may sell. It is cheaper to trade across a border than to guard it."
-        ]
+          "We are credibly informed that {{player}} has established a new city, {{city}}, merely {{distance}} from {{ours}}. While such proximity might give pause to some, we believe this new neighbor provides a wonderful opportunity for increased commerce and the sharing of ideas between our respective peoples."
+        ],
+        "settled": true
       }
     ]
   },
@@ -124,20 +130,22 @@
         "voice": "press",
         "stance": "ambitious",
         "genre": "analysis",
-        "headline": "{{city}} begins its story",
+        "headline": "Expanding the {{terms.civilizationAdjective}} Reach",
         "body": [
-          "Every city begins as a promise that someone has to keep. {{city}} has the site, the settlers and the flag, and nothing else that a hard winter respects. Seed and tools sent this season will decide whether the town is a city in ten years."
-        ]
+          "With the establishment of {{city}}, {{terms.civilization}} secures a vital foothold in the region. Some argue that rapid expansion invites instability, but the sheer scale of the available land makes hesitation a crime. To ensure its success, we must now prioritize the infrastructure that will link {{city}} to the heart of our power."
+        ],
+        "settled": true
       },
       {
         "id": "our-city-founded-notice",
         "voice": "gazette",
         "stance": "pro-government",
         "genre": "notice",
-        "headline": "A new settlement at {{city}}",
+        "headline": "Notice to the {{terms.civic.people}}",
         "body": [
-          "It is with pleasure that we record the founding of {{city}} under the nation's flag. The {{terms.civic.government}} has pledged the town protection and a share of the next stores. Settlers bound for the site may register at the capital."
-        ]
+          "We are pleased to report that, through the prudent planning of the {{terms.civic.government}}, a new settlement named {{city}} has been established. This expansion ensures the continued prosperity and security of {{terms.civilizationAdjective}} lands."
+        ],
+        "settled": true
       },
       {
         "id": "our-city-founded-sign-painter",
@@ -174,10 +182,11 @@
         "stance": "government-critical",
         "genre": "report",
         "when": "city.knows('happinessDelta') && city.happinessDelta < 0",
-        "headline": "Settlers ready, spirits low in {{city}}",
+        "headline": "Population Drain in {{city}}",
         "body": [
-          "{{city}} is smaller this week, and its temper is worse. The settler party took families out through the gate, and those who stayed find the streets no easier for the empty rooms. The council has offered no explanation."
-        ]
+          "{{city}} is {{lost}} souls lighter today as another group of settlers departs for the frontier. While the {{terms.civic.government}} praises this expansion, the residents left behind are facing dwindling spirits and growing hardship. {{terms.civic.leaderAddress}}, why are we exporting our youth when the home city is in such visible decline?"
+        ],
+        "settled": true
       },
       {
         "id": "settler-departure-hopeful",
@@ -185,10 +194,11 @@
         "stance": "pro-government",
         "genre": "report",
         "when": "city.knows('happinessDelta') && city.happinessDelta > 0",
-        "headline": "Good cheer in {{city}} as settlers prepare to go",
+        "headline": "Settlers Depart {{city}} for the Frontier",
         "body": [
-          "The settler carts left {{city}} this week, and the town is in good cheer. Tables are less crowded, the lanes are quieter, and the council points to the mood as proof the plan worked. It may even be true."
-        ]
+          "{{city}} is {{lost}} souls lighter today as a new party of settlers marched out the main gates to claim fresh land. The {{terms.civic.government}}'s vision for expansion is taking shape, and the mood in the city remains jubilant. Local merchants are already preparing shipments to support the new settlement, confident in the {{terms.civic.leaderTitle}}'s foresight. "
+        ],
+        "settled": true
       },
       {
         "id": "settler-departure-anecdote",

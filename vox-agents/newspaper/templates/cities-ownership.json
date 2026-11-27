@@ -250,10 +250,12 @@
         "voice": "press",
         "stance": "neutral",
         "genre": "analysis",
-        "headline": "Direct rule for {{city}}",
+        "headline": "The End of Autonomy for {{city}}",
         "body": [
-          "{{city}} has moved from puppet to province. The capital now gives the city its orders directly, while the city remains occupied and its people live under the same flag. Direct rule may bring clearer decisions, but the occupation continues."
-        ]
+          "{{city}} has been fully annexed by {{owner}}, ending its period as a semi-autonomous state. The {{owner.civic.government}} now exercises direct control over all local administration and taxation. The {{owner.civic.people}} in {{city}} may now find themselves subject to the full weight of the state's bureaucracy, potentially sparking the very unrest the previous system sought to avoid."
+        ],
+        "subheadline": "Direct rule replaces semi-autonomous status",
+        "settled": true
       }
     ]
   },
@@ -278,10 +280,11 @@
         "stance": "government-critical",
         "genre": "analysis",
         "when": "population !== null",
-        "headline": "{{population}} people in an occupied {{city}}",
+        "headline": "The Unbroken Spirit of {{city}}",
         "body": [
-          "There are {{population}} people inside {{city}}, and the city has not accepted the flag above the gate. The city is expected to resist for {{turns}} more, which makes the occupation a campaign with no enemy to fight. The men who ordered it owe the treasury an account of how it ends."
-        ]
+          "With {{population}} in the crosshairs, the people of {{city}} refuse to bow to the {{owner.civic.government}}. Resistance is expected to hold for another {{turns}}, a testament to the loyalty they still hold for {{formerOwner}}. The {{owner.civic.leaderAddress}} may hold the walls, but they have failed to capture the hearts of the occupied."
+        ],
+        "settled": true
       },
       {
         "id": "occupied-city-resists-anecdote",
@@ -300,10 +303,11 @@
         "stance": "neutral",
         "genre": "report",
         "when": "unrestPoints !== null",
-        "headline": "Mood darkens in occupied {{city}}",
+        "headline": "{{city}} Defies {{owner}}'s Control",
         "body": [
-          "The occupation of {{city}} is entering another season, and the city's books record a change of {{unrestPoints}} in local happiness. Patrols in the old quarter have been doubled. The prefect says {{turns}} more must pass before the city settles, a phrase he has used before."
-        ]
+          "Loyalty to {{formerOwner}} remains strong in {{city}}, where the occupation is meeting public defiance. Local stability has dropped by {{unrestPoints}}, leading to frequent disruptions of {{owner.civic.government}} administration. Current projections suggest the city will remain in resistance for {{turns}}."
+        ],
+        "settled": true
       }
     ]
   }

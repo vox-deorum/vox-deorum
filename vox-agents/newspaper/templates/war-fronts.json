@@ -200,10 +200,11 @@
     "variants": [
       {
         "id": "enemy-front-posture-offensive-report",
-        "headline": "The reading at {{city}} changes to {{posture}}",
+        "headline": "{{civilization}} prepares offensive actions",
         "body": [
-          "On {{observedTurn}}, our assessment of the {{domain}} zone at {{city}} changed from {{previousPosture}} to {{posture}}. {{civilization}} holds the city, and the new word tells our observers to expect an assault to open there. The roads around {{city}} will be worth watching in the days ahead."
-        ]
+          "Observers report that {{civilization}} has transitioned from {{previousPosture}} to a {{posture}} posture on {{observedTurn}}, most notable in {{city}}'s {{domain}} area. The move indicates a shift in the priorities of {{civilization}}'s high command."
+        ],
+        "settled": true
       },
       {
         "id": "enemy-front-posture-offensive-analysis",
@@ -231,10 +232,12 @@
         "voice": "tabloid",
         "stance": "populist",
         "genre": "report",
-        "headline": "A new word on the board at {{city}}",
+        "headline": "{{civilization}} IS COMING!",
         "body": [
-          "The watch board's entry for {{city}} on {{observedTurn}} went from {{previousPosture}} to {{posture}}. That is our command's assessment of the {{domain}} zone. What happened on the ground is still an open question."
-        ]
+          "{{civilization}} has stopped playing games. Reports from {{observedTurn}} show they have adopted a {{posture}} in the {{domain}}. The people of {{city}} remember when the enemy was just {{previousPosture}}. Now, the only thing coming our way is steel."
+        ],
+        "subheadline": "{{civilization}} drops the mask",
+        "settled": true
       }
     ]
   },
@@ -247,10 +250,11 @@
     "variants": [
       {
         "id": "enemy-front-posture-regroup-report",
-        "headline": "The entry at {{city}} moves from {{previousPosture}} to {{posture}}",
+        "headline": "{{civilization}} regrouping near {{city}}",
         "body": [
-          "Our front assessment for {{city}} moved from {{previousPosture}} to {{posture}} on {{observedTurn}}. The earlier word described a withdrawal, and the new one describes a force back on its footing in the {{domain}} zone. The city is held by {{civilization}}, and the next sighting will show whether the pause ends in a settle or a fresh advance."
-        ]
+          "After a period of {{previousPosture}}, {{civilization}} has adopted a {{posture}} posture near {{city}}'s {{domain}} area {{observedTurn}}. Military analysts believe the enemy is now attempting to stabilize its front."
+        ],
+        "settled": true
       },
       {
         "id": "enemy-front-posture-regroup-analysis",
@@ -293,10 +297,11 @@
     "variants": [
       {
         "id": "enemy-front-posture-withdraw-report",
-        "headline": "The reading at {{city}} turns to {{posture}}",
+        "headline": "{{civilization}} Withdraws from {{domain}}",
         "body": [
-          "Our staff entered a new front reading for {{city}} on {{observedTurn}}. The {{domain}} entry moved from {{previousPosture}} to {{posture}}, and the city is held by {{civilization}}. The new word means the pressure on that front has eased, though the next sighting will show how long it stays that way."
-        ]
+          "As of {{observedTurn}}, military reports indicate that {{civilization}} has shifted its posture to {{posture}} near {{city}}'s {{domain}} area. Their forces had previously maintained a {{previousPosture}} posture. While this movement leaves the region around {{city}} quieter, it remains unclear if the shift is permanent or tactical."
+        ],
+        "settled": true
       },
       {
         "id": "enemy-front-posture-withdraw-analysis",
@@ -343,30 +348,34 @@
     "variants": [
       {
         "id": "enemy-troops-sighted-near-city-report",
-        "headline": "Enemy colors near {{city}}",
+        "headline": "Enemy Troops Sighted Near {{city}}",
         "body": [
-          "Columns under the banners of {{enemies}} have been seen a short march from {{city}}. Watchmen counted their fires after nightfall, and the miller has hauled his flour behind the wall. The roads remain open, though the carts that use them have grown scarce."
-        ]
+          "Regiments from {{enemies}} have been spotted in the vicinity of {{city}}. Local scouts confirmed the presence of these forces today, and garrison forces are reportedly on alert. The {{terms.civic.government}} has been notified of the sighting. "
+        ],
+        "settled": true
       },
       {
         "id": "enemy-troops-sighted-near-city-crier",
         "voice": "crier",
         "stance": "national",
         "genre": "notice",
-        "headline": "Hear it, {{city}}! The enemy is near",
+        "headline": "ENEMIES APPROACHING",
         "body": [
-          "Look to the north road! Soldiers of {{enemies}} are coming, and their fires already light the ridge! Bring in the flocks and shut the shutters! No one walks the fields after dark! Pass the word! Pass the word!"
-        ]
+          "Hear it, {{terms.civic.people}}! The {{enemies}} are at our doorstep in {{city}}! Gather your courage and your weapons. Fight for {{terms.civilization}}, fight for your homes!"
+        ],
+        "settled": true
       },
       {
         "id": "enemy-troops-sighted-near-city-analysis",
         "voice": "press",
         "stance": "hawkish",
         "genre": "analysis",
-        "headline": "Three things an army near {{city}} can do",
+        "headline": "Emergency at {{city}}",
         "body": [
-          "A force flying the colors of {{enemies}} has come within a day of {{city}}. This is more men than a raiding party needs, which leaves three uses: a siege, a march through the fields, or a screen while the real blow falls elsewhere. Our officers should be asking which, not merely counting."
-        ]
+          "{{city}} is now under direct threat as {{enemies}} move their forces into the immediate vicinity. By placing pressure on {{city}}, the enemy is testing our reaction time and our resolve. Firmness now is the only way to deter a full-scale assault on our {{owner.civic.people}}."
+        ],
+        "subheadline": "{{enemies}} assemble near our walls",
+        "settled": true
       },
       {
         "id": "enemy-troops-sighted-near-city-feed",
@@ -525,10 +534,11 @@
     "variants": [
       {
         "id": "nearby-city-captured-report",
-        "headline": "{{city}} changes hands near our border",
+        "headline": "{{winner}} Secures Control of {{city}}",
         "body": [
-          "{{city}}, a town near our border, has changed hands. {{winner}} took it from {{loser}}, and the fighting took place {{distance}} from our own fields. A different banner hung over its gate by evening. Our patrols have been told to hold their line and watch."
-        ]
+          "{{winner}} has seized {{city}} from {{loser}}, a city {{distance}} away from our territory. News of the conquest reached {{terms.civilizationAdjective}} capital this morning. The city has now transitioned to the administration of {{winner}}."
+        ],
+        "settled": true
       },
       {
         "id": "nearby-city-captured-analysis",
@@ -667,20 +677,22 @@
     "variants": [
       {
         "id": "our-city-takes-heavy-damage-report",
-        "headline": "{{city}} takes heavy damage",
+        "headline": "{{city}} Suffers Heavy Damage",
         "body": [
-          "The walls of {{city}} have been badly hit, and one stretch of stone has come down altogether. Dust from the breach has settled on the roofs as far as the market square. The garrison has moved its stores underground and posted extra men at the gap."
-        ]
+          "{{city}} has sustained significant damage during recent hostilities. Labor teams have begun assessing the wreckage to determine the extent of the losses, while priority is being given to the city's fortifications."
+        ],
+        "settled": true
       },
       {
         "id": "our-city-takes-heavy-damage-analysis",
         "voice": "press",
         "stance": "government-critical",
         "genre": "analysis",
-        "headline": "The cost to {{city}}",
+        "headline": "The Crumbled Promise of {{city}}",
         "body": [
-          "The walls of {{city}} have lost a quarter or more of what they were built to bear, and that is not enough for comfort. A breach changes the arithmetic of a siege: the defender must now watch two lines, the wall and the hole in it. Every hour spent repairing is an hour the attacker also gets to use."
-        ]
+          "The walls of {{city}} have fallen to a shocking degree of ruin. The {{owner.civic.government}} spoke of an impenetrable shield, yet the current strength of the fortifications is a fraction of what was promised. This failure of intelligence and defense leaves the {{owner.civic.people}} exposed. {{owner.civic.leaderAddress}}, where was the protection we were guaranteed?"
+        ],
+        "settled": true
       },
       {
         "id": "our-city-takes-heavy-damage-anecdote",
@@ -698,10 +710,11 @@
         "voice": "crier",
         "stance": "national",
         "genre": "notice",
-        "headline": "Hear it, {{city}}! The walls are hurt",
+        "headline": "HOLD THE LINE",
         "body": [
-          "Stand clear of the wall! The stone is cracked and loose overhead! Keep the children off the rubble and let the masons work! We will mend it, but not if you stand in the way!"
-        ]
+          "Attention, {{terms.civic.people}}! The streets of {{city}} lie in ruins! Do not falter, for the survival of {{terms.civilization}} depends on our resolve. Hold the line!"
+        ],
+        "settled": true
       }
     ]
   },

@@ -219,10 +219,12 @@
         "stance": "populist",
         "genre": "report",
         "when": "population !== null",
-        "headline": "{{population}} people and {{turns}} left in {{city}}",
+        "headline": "CITY WIPED OFF MAP!",
         "body": [
-          "There are still {{population}} people inside {{city}}, and our soldiers are burning it around them. {{turns}} will empty the place one way or another. The busiest street in the city is the road out."
-        ]
+          "The {{terms.civic.government}} is erasing {{city}}, and the demolition will be done in {{turns}}. Around {{population}} people have been told their homes no longer exist. The streets are full of crates and crying children. The map is getting cleaner, but the people are getting nowhere."
+        ],
+        "subheadline": "Families cast out as walls come down",
+        "settled": true
       }
     ]
   }

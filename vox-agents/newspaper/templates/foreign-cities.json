@@ -49,18 +49,20 @@
         "stance": "neutral",
         "genre": "analysis",
         "when": "cause == 'famine'",
-        "headline": "Hunger in {{city}}",
+        "headline": "The Hunger of {{city}}",
         "body": [
-          "Famine in {{city}} puts pressure on {{owner}} as well as on the city. A government that cannot feed a town may hear about it in its tax rolls and its market prices. The trouble may stay inside the walls, but the cost may not."
-        ]
+          "Famine has taken hold in {{city}}, turning the urban center into a scene of desperation. The {{owner.civic.government}}'s response has been slow, and the reserves are reportedly empty. This crisis reveals a dangerous fragility in {{owner}}'s supply chains: a state that cannot feed its own people is a state in decline. "
+        ],
+        "settled": true
       },
       {
         "id": "foreign-city-hardship-pillaged-report",
         "when": "cause == 'pillaged'",
-        "headline": "Pillaged land around {{city}}",
+        "headline": "{{city}} pillaged",
         "body": [
-          "The land around {{city}} has been pillaged, and the farmsteads outside the wall stand empty. The road that once carried vegetables to market carries dust. {{owner}} may feel the loss in its granaries before the season turns."
-        ]
+          "Reports indicate that {{city}} has been pillaged. {{owner}} is now dealing with the loss of infrastructure and assets resulting from the attack."
+        ],
+        "settled": true
       },
       {
         "id": "foreign-city-hardship-pillaged-analysis",
@@ -78,10 +80,11 @@
       {
         "id": "foreign-city-hardship-food-shortage-report",
         "when": "cause == 'foodShortage'",
-        "headline": "{{city}} runs short of food",
+        "headline": "Food shortage reported in {{city}}",
         "body": [
-          "{{city}} is short of food, and its stores are dwindling. The market stalls close earlier each week, and {{owner}} has the city's accounts to answer for. How the city meets the shortfall will shape the season ahead."
-        ]
+          "A severe food shortage has struck {{city}}. Residents are facing hardship as {{owner}} struggles to secure enough provisions for the population."
+        ],
+        "settled": true
       },
       {
         "id": "foreign-city-hardship-food-shortage-analysis",
@@ -89,10 +92,11 @@
         "stance": "neutral",
         "genre": "analysis",
         "when": "cause == 'foodShortage'",
-        "headline": "A thin larder in {{city}}",
+        "headline": "The Breadline in {{city}}",
         "body": [
-          "A food shortage in {{city}} is a warning to {{owner}} before it is a disaster. Full markets hide bad planning, and thin ones expose it. The next season may answer the problem or make it a permanent entry in the city's books."
-        ]
+          "{{city}} is facing a critical food shortage, leaving the {{owner.civic.government}} struggling to maintain order in the markets. The shortage is creating a palpable tension among the residents, exposing the vulnerability of {{owner}}'s urban centers. {{terms.civilization}} should decide how to best handle this strategic opening."
+        ],
+        "settled": true
       }
     ]
   },
