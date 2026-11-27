@@ -18,6 +18,8 @@ export interface ChoiceEvaluation {
 interface EvaluatedChoice {
   weight: number;
   sources: NewspaperSourceReference[];
+  /** The choice's `when` did not evaluate to true. */
+  ineligible?: true;
 }
 
 type ChoiceBatch = Pick<ExpressionBatch, 'constants' | 'facts' | 'globals'>;
@@ -70,10 +72,12 @@ export async function evaluateChoices(
 
   const results: EvaluatedChoice[] = choices.map(({ choice }) => ({ weight: choice.base, sources: [] }));
   const eligible = choices.map(({ choice }) => choice.when === undefined);
+  const whenFailed = choices.map(() => false);
   await evaluate(
     choices.flatMap(({ choice }, index) => choice.when === undefined ? [] : [{ index, slots: [choice.when] }]),
     ([result], index) => {
       eligible[index] = matches(result);
+      whenFailed[index] = !eligible[index];
       if (eligible[index] && result.sources) results[index].sources.push(...result.sources);
     },
   );
@@ -94,7 +98,9 @@ export async function evaluateChoices(
       }
     },
   );
-  return results.map(({ weight, sources }, index) => eligible[index] && Number.isFinite(weight) && weight > 0
-    ? { weight, sources: uniqueSources(sources) }
-    : { weight: 0, sources: [] });
+  return results.map(({ weight, sources }, index) => {
+    if (whenFailed[index]) return { weight: 0, sources: [], ineligible: true };
+    if (!eligible[index]) return { weight: 0, sources: [] };
+    return Number.isFinite(weight) && weight > 0 ? { weight, sources: uniqueSources(sources) } : { weight: 0, sources: [] };
+  });
 }

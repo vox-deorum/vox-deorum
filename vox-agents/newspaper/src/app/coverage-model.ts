@@ -16,7 +16,7 @@ export const stageLabels: Record<CoverageStage, string> = {
   'not-fired': 'Rule never fired',
   'not-together': 'Rules not together',
   unprintable: 'Unprintable',
-  'weighted-out': 'Weighted out',
+  'weighted-out': 'Blocked by when or weight',
   'passed-over': 'Passed over',
   printed: 'Printed',
 };
@@ -26,7 +26,7 @@ export const stageCountLabels: Record<CoverageStage, string> = {
   'not-fired': 'never fired',
   'not-together': 'not together',
   unprintable: 'unprintable',
-  'weighted-out': 'weighted out',
+  'weighted-out': 'blocked by when or weight',
   'passed-over': 'passed over',
   printed: 'printed',
 };
@@ -40,7 +40,8 @@ export const outcomeLabels: Record<CandidateOutcome, string> = {
   'printed-before': 'already printed before',
   'not-positive': 'score not positive',
   'no-variants': 'no usable variant',
-  unpublished: 'check did not publish',
+  unplaced: 'selected but found no slot',
+  unpublished: 'check skipped',
 };
 
 export type Grouping = 'desk' | 'stage' | 'tag';
@@ -122,20 +123,37 @@ export function groupLabel(key: string, grouping: Grouping): string {
   return grouping === 'stage' ? stageLabels[key as CoverageStage] ?? key : key;
 }
 
-/** Describe one stop reason in a few words, naming the guard when there is one. */
-export function describeStop(stop: RuleStop): string {
-  const guard = stop.guard === undefined ? undefined : `guard ${stop.guard + 1}`;
+/** Say in a few words what happened to the subjects a step stopped. */
+export function stopReason(stop: RuleStop): string {
   switch (stop.kind) {
-    case 'false': return guard ? `${guard} was false` : 'a guard was false';
-    case 'hidden': return guard ? `${guard} could not see the evidence` : 'the evidence was not visible';
-    case 'error': return guard ? `${guard} failed with an error` : 'the rule failed with an error';
+    case 'false': return 'false';
+    case 'hidden': case 'group-hidden': return 'evidence not visible';
+    case 'error': case 'group-error': return 'failed with an error';
     case 'repeat': return 'already reported recently';
-    case 'chance': return 'lost the chance roll';
-    case 'too-small': return 'the change was too small';
-    case 'group-chance': return 'the group lost the chance roll';
-    case 'group-hidden': return 'the group evidence was not visible';
-    case 'group-error': return 'the group failed with an error';
+    case 'chance': case 'group-chance': return 'lost the roll';
+    case 'too-small': return 'change too small';
   }
+}
+
+/** Name the step where a stop happened, such as "guard 4" or "the chance roll". */
+export function stopStep(stop: RuleStop): string {
+  if (stop.guard !== undefined) return `guard ${stop.guard + 1}`;
+  switch (stop.kind) {
+    case 'false': return 'a guard';
+    case 'hidden': return 'the visibility check';
+    case 'error': return 'evaluation';
+    case 'repeat': return 'the repeat check';
+    case 'chance': return 'the chance roll';
+    case 'too-small': return 'the size threshold';
+    case 'group-chance': return 'the group chance roll';
+    case 'group-hidden': return 'the group visibility check';
+    case 'group-error': return 'group evaluation';
+  }
+}
+
+/** Pluralize a count of times. */
+function times(count: number): string {
+  return `${count} ${count === 1 ? 'time' : 'times'}`;
 }
 
 /** Name the subject kind a rule iterates, for sentences like "820 city subjects". */
@@ -143,15 +161,24 @@ function subjectNoun(rule: RunRuleCoverage): string {
   return rule.subject ? `${rule.subject} subjects` : 'subjects';
 }
 
-/** Summarize why a rule that never fired stopped, or why it never ran. */
+/**
+ * Summarize why a rule that never fired stopped, or why it never ran. Names the deepest step any subject
+ * reached, since early filters (such as "is this my city") stop most subjects by design.
+ */
 export function ruleNeverFired(id: string, rule: RunRuleCoverage | undefined): string {
   if (!rule) return `Rule ${id} never fired.`;
   if (rule.disabled) return `Rule ${id} is turned off in the catalogue, so it never runs.`;
   if (!rule.subjects) return `Rule ${id} never had visible ${subjectNoun(rule)}.`;
-  const top = rule.stops[0];
-  if (!top) return `Rule ${id} checked ${rule.subjects} ${subjectNoun(rule)} and never fired.`;
-  const source = top.source ? ` (${top.source})` : '';
-  return `Rule ${id} never fired: ${top.count} of ${rule.subjects} ${subjectNoun(rule)} stopped because ${describeStop(top)}${source}.`;
+  const last = rule.stops.at(-1);
+  if (!last) return `Rule ${id} checked ${rule.subjects} ${subjectNoun(rule)} and never fired.`;
+  // A guard can stop subjects for more than one reason (false, hidden, error); count them together.
+  const step = rule.stops.filter(stop => last.guard === undefined ? stop === last : stop.guard === last.guard);
+  const stopped = step.reduce((sum, stop) => sum + stop.count, 0);
+  const reached = Math.max(...step.map(stop => stop.reached));
+  const source = last.source ? ` (${last.source})` : '';
+  const head = `Rule ${id} never fired: ${reached} of ${rule.subjects} ${subjectNoun(rule)} reached ${stopStep(last)}${source}`;
+  return stopped >= reached ? `${head} and all stopped there.`
+    : `${head}; ${stopped} stopped there and ${reached - stopped} went on without firing.`;
 }
 
 /** Summarize a rule's run-wide funnel in one sentence. */
@@ -168,12 +195,12 @@ export function unprintedOutcomes(template: TemplateCoverage): [CandidateOutcome
     .sort((a, b) => b[1] - a[1]);
 }
 
-/** Compare a template's best unprinted score with the weakest story that did print. */
+/** Compare a template's best unprinted score with the weakest printed story in the check where it came closest. */
 export function scoreVersusFloor(template: TemplateCoverage): string | undefined {
-  if (template.bestScore === null) return undefined;
-  const best = `Best score ${formatScore(template.bestScore)}`;
-  return template.floor === null ? `${best}; nothing printed in those checks.`
-    : `${best}; printed stories in those checks needed at least ${formatScore(template.floor)}.`;
+  if (template.bestScore === null || template.scoreTurn === null) return undefined;
+  const best = `Closest at turn ${template.scoreTurn}: scored ${formatScore(template.bestScore)}`;
+  return template.floor === null ? `${best}; that check skipped, so nothing printed.`
+    : `${best}; the lowest printed score that check was ${formatScore(template.floor)}.`;
 }
 
 /** Show an editor score with at most one decimal place. */
@@ -195,12 +222,17 @@ export function templateReason(template: TemplateCoverage, rules: ReadonlyMap<st
       const score = scoreVersusFloor(template);
       return `${reached}${top ? `, mostly ${outcomeLabels[top[0]]}` : ''}.${score ? ` ${score}` : ''}`;
     }
-    case 'weighted-out':
-      return `Matched ${funnel.matched} ${funnel.matched === 1 ? 'time' : 'times'}, but the template weight was zero each time.`;
+    case 'weighted-out': {
+      const parts = [
+        funnel.ineligible && `the template's when was false ${times(funnel.ineligible)}`,
+        funnel.zeroWeight && `its weight was zero ${times(funnel.zeroWeight)}`,
+      ].filter(Boolean);
+      return `Matched ${times(funnel.matched)}; ${parts.length ? parts.join(' and ') : 'its when or weight blocked every match'}.`;
+    }
     case 'unprintable':
       return funnel.unprintable >= funnel.noVariants
-        ? `Matched ${funnel.matched} ${funnel.matched === 1 ? 'time' : 'times'}, but no variant could fill its placeholders.`
-        : `Matched ${funnel.matched} ${funnel.matched === 1 ? 'time' : 'times'}, but every variant weighed zero.`;
+        ? `Matched ${times(funnel.matched)}, but no variant could fill its placeholders.`
+        : `Matched ${times(funnel.matched)}, but every printable variant was ineligible or weighed zero.`;
     case 'not-together':
       return `Each rule fired, but never on the same subject in overlapping periods (${funnel.partial} partial ${funnel.partial === 1 ? 'match' : 'matches'}).`;
     case 'not-fired': {

@@ -56,14 +56,14 @@ Open **Replay diagnostics** below the paper to find out why a template never pri
 
 | Stage | Meaning | Where to look |
 | --- | --- | --- |
-| Printed | Printed at least once, alone or merged into a roundup story. | |
-| Passed over | Reached the editor but never printed. | The outcome counts (outranked, conflict, printed before, not positive, unpublished) and its best score against the weakest printed story in those checks. |
-| Weighted out | Its rules matched, but the template weight was zero. | The template's `weight`. |
-| Unprintable | No variant could fill all its placeholders, or every variant weighed zero. | Variant placeholders and weights. |
+| Printed | Printed at least once, on its own, as a roundup's merge template, or absorbed into a roundup. | |
+| Passed over | Reached the editor but never printed. | The outcome counts (outranked, conflict, printed before, not positive, no slot on the page, check skipped) and the check where it came closest: its score there against that check's lowest printed score. Urgent stories and conflicts can override score order. |
+| Weighted out | Its rules matched, but the template's `when` was false or its weight was zero. | The template's `when` and `weight`; the funnel counts each separately. |
+| Unprintable | No variant could fill all its placeholders, or every variant was ineligible or weighed zero. | Variant placeholders, `when`, and weights. |
 | Not together | Each of its rules fired, but never on the same subject in overlapping periods. | The partial match count and each rule's subjects. |
 | Not fired | At least one of its rules never fired. | The rule funnel below. |
 
-Expand a template to see its rules' funnels: how many subjects each rule checked over the run, how many fired, and which guard stopped the rest, with the guard's expression. For example, `city-under-siege` might check 820 city subjects, fire none, and stop 790 at `when[1]`. A rule with no subjects never saw a visible entity of its subject kind; a disabled rule never runs. Other stops are repeat memory, a failed chance draw, a group below its minimum size, or evidence hidden from the receiver.
+Expand a template to see its rules' funnels. Each rule lists, in the order it applies them, every step that stopped subjects over the run: how many subjects reached the step and how many it stopped, with the guard's expression. Guards are numbered from 1 in the order of the rule's `when` list. Early guards often just narrow the subject, so the template's one-line reason names the last step that stopped subjects. For example, `city-under-siege` might check 820 city subjects and fire none: guard 1 (`city.own`) stops 600 foreign cities, and all 220 remaining cities stop at guard 3 (`city.is.besieged`). A rule with no subjects never saw a visible entity of its subject kind; a disabled rule never runs. Other stops are repeat memory, a failed chance draw, a group below its minimum size, or evidence hidden from the receiver.
 
 **Skipped checks in this batch** lists cutoffs and skip reasons. **Selected edition** lists each printed article with its template, rules, subject, importance, and editor score, followed by the strongest candidates that check did not print and the score they needed. **Inspect cutoff** appears only for **Inspect evidence only** replays. It queries the current window without advancing and shows the permitted values, dates, and row IDs behind each observation.
 

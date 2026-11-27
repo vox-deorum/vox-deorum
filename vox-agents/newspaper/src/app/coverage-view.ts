@@ -4,7 +4,6 @@ import {
   countStages,
   coverageTags,
   defaultControls,
-  describeStop,
   filterTemplates,
   groupLabel,
   groupTemplates,
@@ -13,6 +12,8 @@ import {
   scoreVersusFloor,
   stageCountLabels,
   stageLabels,
+  stopReason,
+  stopStep,
   stagesWorstFirst,
   templateReason,
   unprintedOutcomes,
@@ -23,8 +24,6 @@ import {
 import { element } from './dom.js';
 
 const storageKey = 'vox-deorum.newspaper.coverage';
-/** Stops listed per rule before the rest are summed into one row. */
-const shownStops = 5;
 
 /** Create an element with an optional class and text. */
 function make<K extends keyof HTMLElementTagNameMap>(tag: K, className?: string, text?: string): HTMLElementTagNameMap[K] {
@@ -117,27 +116,19 @@ function ruleFunnel(id: string, rule: RunRuleCoverage | undefined): HTMLElement 
   block.append(make('p', undefined, ruleFunnelLine(rule)));
   if (!rule.stops.length || rule.disabled) return block;
   const table = make('table', 'host-coverage-stops');
-  const head = make('tr');
-  head.append(make('th', undefined, 'Stopped because'), make('th', undefined, 'Subjects'), make('th', undefined, 'Share'));
   table.append(make('thead'), make('tbody'));
+  const head = make('tr');
+  head.append(make('th', undefined, 'Step'), make('th', undefined, 'Result'), make('th', undefined, 'Reached'), make('th', undefined, 'Stopped'));
   table.tHead!.append(head);
-  /** Add one row to the stop table. */
-  function row(reason: Node | string, count: number): void {
+  // Rows follow the order the rule applies its steps, so the last row is the deepest hurdle.
+  for (const stop of rule.stops) {
     const tr = make('tr');
-    const cell = make('td');
-    cell.append(reason);
-    const share = rule!.subjects ? `${Math.min(100, Math.round(count / rule!.subjects * 100))}%` : '';
-    tr.append(cell, make('td', undefined, String(count)), make('td', undefined, share));
+    tr.dataset.coverageStop = stop.key;
+    const step = make('td', undefined, stopStep(stop));
+    if (stop.source) step.append(make('br'), make('code', undefined, stop.source));
+    tr.append(step, make('td', undefined, stopReason(stop)), make('td', undefined, String(stop.reached)), make('td', undefined, String(stop.count)));
     table.tBodies[0].append(tr);
   }
-  for (const stop of rule.stops.slice(0, shownStops)) {
-    const reason = document.createDocumentFragment();
-    reason.append(describeStop(stop));
-    if (stop.source) reason.append(': ', make('code', undefined, stop.source));
-    row(reason, stop.count);
-  }
-  const rest = rule.stops.slice(shownStops);
-  if (rest.length) row(`${rest.length} other ${rest.length === 1 ? 'reason' : 'reasons'}`, rest.reduce((sum, stop) => sum + stop.count, 0));
   block.append(table);
   return block;
 }
@@ -150,7 +141,8 @@ function templateDetail(template: TemplateCoverage, rules: ReadonlyMap<string, R
   const { funnel } = template;
   const steps: [number, string][] = [
     [funnel.partial, 'partial matches'], [funnel.matched, 'full matches'], [funnel.unprintable, 'unprintable'],
-    [funnel.zeroWeight, 'zero template weight'], [funnel.noVariants, 'no weighted variant'],
+    [funnel.ineligible, 'template when false'], [funnel.zeroWeight, 'zero template weight'],
+    [funnel.noVariants, 'no eligible variant'],
     [funnel.candidates, 'sent to the editor'], [template.printed, 'checks printed'],
   ];
   const list = make('ul', 'host-coverage-funnel');
@@ -216,7 +208,11 @@ export function mountCoverage() {
   function renderTagOptions(data: RunCoverage): void {
     const tags = coverageTags(data);
     tagFilter.replaceChildren(new Option('All tags', ''), ...tags.map(tag => new Option(tag, tag)));
-    tagFilter.value = tags.includes(controls.tag) ? controls.tag : '';
+    // A saved tag this run lacks would hide every template behind an "All tags" label, so drop it.
+    if (!tags.includes(controls.tag)) controls.tag = '';
+    if (controls.stage && !stagesWorstFirst.includes(controls.stage)) controls.stage = '';
+    tagFilter.value = controls.tag;
+    stageFilter.value = controls.stage;
   }
 
   /** Build one template row whose rule funnels appear when it is expanded. */

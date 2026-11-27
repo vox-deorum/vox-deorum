@@ -244,6 +244,7 @@ export async function loadEditorialConfig(directory?: string): Promise<Editorial
 /**
  * Map each template ID to the catalogue file (desk) that defines it, such as `cities-conflict`.
  * Files in an overlay's `templates` folder take precedence; templates found nowhere are left out.
+ * The names come from the current files, so a template moved since a run was saved shows its new desk.
  */
 export async function templateDesks(directory?: string): Promise<Map<string, string>> {
   const desks = new Map<string, string>();
@@ -252,9 +253,9 @@ export async function templateDesks(directory?: string): Promise<Map<string, str
     let sources;
     try {
       sources = await readTemplateSources(folder);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue;
-      throw error;
+    } catch {
+      // Desks only label diagnostics; a missing or half-edited folder leaves its templates under `other`.
+      continue;
     }
     for (const { file, base } of sources)
       for (const template of base)

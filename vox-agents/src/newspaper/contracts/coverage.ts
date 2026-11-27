@@ -21,18 +21,24 @@ export const templateFunnelSchema = z.object({
   matched: count,
   /** Matches where no variant could fill all of its placeholders. */
   unprintable: count,
-  /** Printable matches whose template weight was zero or less. */
+  /** Printable matches whose template `when` was false. Absent from coverage saved before this count existed. */
+  ineligible: count.default(0),
+  /** Printable, eligible matches whose template weight was zero or less. */
   zeroWeight: count,
-  /** Weighted matches whose every printable variant weighed zero or less. */
+  /** Weighted matches whose every printable variant was ineligible or weighed zero or less. */
   noVariants: count,
   /** Candidates handed to the editor. */
   candidates: count,
 });
 export type TemplateFunnel = z.infer<typeof templateFunnelSchema>;
 
-/** What the editor did with a candidate. */
+/**
+ * What the editor did with a candidate. `printed` also marks a roundup story built by a merge template;
+ * `merged` marks a story absorbed into one. `unplaced` was selected but found no slot in a published edition;
+ * `unpublished` was selected in a check that skipped.
+ */
 export const candidateOutcomeSchema = z.enum([
-  'printed', 'merged', 'outranked', 'conflict', 'printed-before', 'not-positive', 'no-variants', 'unpublished',
+  'printed', 'merged', 'outranked', 'conflict', 'printed-before', 'not-positive', 'no-variants', 'unplaced', 'unpublished',
 ]);
 export type CandidateOutcome = z.infer<typeof candidateOutcomeSchema>;
 
@@ -49,7 +55,7 @@ export const checkCoverageSchema = z.object({
   turn: z.number().int(),
   status: z.enum(['published', 'skipped']),
   reason: z.string().optional(),
-  /** Lowest editor score among printed stories, or null when nothing printed. */
+  /** Lowest editor score among printed stories (a roundup scores as its strongest member), or null when nothing printed. */
   printedFloor: z.number().finite().nullable(),
   rules: z.record(z.string(), checkRuleCoverageSchema),
   templates: z.record(z.string(), templateFunnelSchema),
@@ -75,6 +81,9 @@ export const ruleStopSchema = z.object({
   guard: z.number().int().nonnegative().optional(),
   /** The guard's authored expression. */
   source: z.string().optional(),
+  /** Subjects that reached this step, after every earlier step stopped its share. */
+  reached: count,
+  /** Subjects this step stopped. */
   count,
 });
 export type RuleStop = z.infer<typeof ruleStopSchema>;
@@ -92,7 +101,7 @@ export const runRuleCoverageSchema = z.object({
   fired: count,
   /** Checks in which the rule fired at least once. */
   firedChecks: count,
-  /** Stops, most frequent first. */
+  /** Stops in the order the rule applies them: guards from first to last, then repeat memory, chance, and grouping. */
   stops: z.array(ruleStopSchema),
 });
 export type RunRuleCoverage = z.infer<typeof runRuleCoverageSchema>;
@@ -111,9 +120,15 @@ export const templateCoverageSchema = z.object({
   funnel: templateFunnelSchema,
   /** Editor outcomes summed across the run. */
   outcomes: z.partialRecord(candidateOutcomeSchema, count),
-  /** Best editor score among its unprinted candidates, or null. */
+  /**
+   * The check where an unprinted candidate came closest to printing: the published check with the smallest gap
+   * between its best score and that check's lowest printed score, or else the check with its best score.
+   * All three fields are null when it never reached the editor unprinted. Urgency and conflicts can override score order.
+   */
+  scoreTurn: z.number().int().nullable(),
+  /** Its best editor score in that check. */
   bestScore: z.number().finite().nullable(),
-  /** Lowest printed floor among published checks where it was an unprinted candidate, or null. */
+  /** The lowest printed score in that check, or null when that check skipped. */
   floor: z.number().finite().nullable(),
   /** Turns of the last checks where it printed, newest first, at most five. */
   printedTurns: z.array(z.number().int()),

@@ -44,10 +44,13 @@ function jsonView(value: unknown): HTMLPreElement {
   return pre;
 }
 
-/** Find the editor score of the printed candidate behind a published article. */
+/**
+ * Find the editor score of the printed candidate behind a published article. A roundup lists its anchor
+ * template first and appears as its own printed candidate, so matching the first template finds it too.
+ */
 function printedScore(record: PublishedItemRecord, check: CheckCoverage | undefined): number | undefined {
   return check?.candidates.find(candidate => candidate.outcome === 'printed'
-    && record.templateIds.includes(candidate.template)
+    && candidate.template === record.templateIds[0]
     && (!record.subject || candidate.subject === record.subject))?.score;
 }
 
@@ -55,6 +58,7 @@ function printedScore(record: PublishedItemRecord, check: CheckCoverage | undefi
 function articleLine(record: PublishedItemRecord, headline: string, score: number | undefined): HTMLLIElement {
   const item = document.createElement('li');
   item.dataset.editionArticle = record.id;
+  if (score !== undefined) item.dataset.score = String(score);
   const title = document.createElement('strong');
   title.textContent = headline;
   const facts = [

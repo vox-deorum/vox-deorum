@@ -28,6 +28,8 @@ export interface CheckCoverageInput {
   printed: ReadonlySet<string>;
   /** Original candidate IDs absorbed by a printed merged story, mapped to that story. */
   mergedInto: ReadonlyMap<string, string>;
+  /** Printed roundup stories built by merge templates, each scored as its strongest member. */
+  roundups?: readonly { story: EditorialCandidate; score: number }[];
 }
 
 /** Count why one rule's subjects and groups did not fire in a check. */
@@ -57,8 +59,25 @@ function candidateOutcome(id: string, input: CheckCoverageInput): CandidateOutco
   if (input.mergedInto.has(id)) return 'merged';
   if (input.printed.has(id)) return 'printed';
   const outcome = input.outcomes.get(id) ?? 'outranked';
-  // A selected story that did not reach the page was dropped by a skip or by the layout.
-  return outcome === 'selected' ? 'unpublished' : outcome;
+  if (outcome !== 'selected') return outcome;
+  // A selected story missing from the page found no slot, or its check skipped.
+  return input.status === 'published' ? 'unplaced' : 'unpublished';
+}
+
+/** Describe one candidate for the check's coverage. */
+function candidateEntry(
+  candidate: EditorialCandidate, score: number, outcome: CandidateOutcome, mergedInto?: string,
+): CandidateCoverage {
+  return {
+    id: candidate.id,
+    template: candidate.templateIds[0],
+    subject: candidate.subject,
+    rules: candidate.ruleIds,
+    importance: candidate.importance,
+    score,
+    outcome,
+    ...(mergedInto === undefined ? {} : { mergedInto }),
+  };
 }
 
 /** Summarize one completed check's trigger, template, and editor funnels. */
@@ -66,20 +85,13 @@ export function summarizeCheckCoverage(input: CheckCoverageInput): CheckCoverage
   const rules: CheckCoverage['rules'] = {};
   for (const audit of input.audit)
     if (audit.subjectCount > 0 || audit.groups.length) rules[audit.rule] = ruleCoverage(audit);
-  const candidates = input.candidates.map((candidate): CandidateCoverage => {
-    const merged = input.mergedInto.get(candidate.id);
-    return {
-      id: candidate.id,
-      template: candidate.templateIds[0],
-      subject: candidate.subject,
-      rules: candidate.ruleIds,
-      importance: candidate.importance,
-      score: input.scores.get(candidate.id) ?? 0,
-      outcome: candidateOutcome(candidate.id, input),
-      ...(merged === undefined ? {} : { mergedInto: merged }),
-    };
-  });
-  const printedScores = candidates.filter(isPrinted).map(candidate => candidate.score);
+  const candidates = [
+    ...input.candidates.map(candidate => candidateEntry(candidate, input.scores.get(candidate.id) ?? 0,
+      candidateOutcome(candidate.id, input), input.mergedInto.get(candidate.id))),
+    // A roundup's first template is its merge anchor, which wrote the printed story.
+    ...(input.roundups ?? []).map(({ story, score }) => candidateEntry(story, score, 'printed')),
+  ];
+  const printedScores = candidates.filter(candidate => candidate.outcome === 'printed').map(candidate => candidate.score);
   return {
     turn: input.turn,
     status: input.status,
@@ -94,6 +106,15 @@ export function summarizeCheckCoverage(input: CheckCoverageInput): CheckCoverage
 /** Whether a candidate reached the page, alone or inside a merged story. */
 function isPrinted(candidate: Pick<CandidateCoverage, 'outcome'>): boolean {
   return candidate.outcome === 'printed' || candidate.outcome === 'merged';
+}
+
+/** Order of the non-guard stops, matching the order trigger evaluation applies them after the guards. */
+const laterStops: readonly string[] = ['repeat', 'chance', 'hidden', 'error', 'too-small', 'group-chance', 'group-hidden', 'group-error'];
+
+/** Rank a stop by where the rule applies it: guards in order, then the later steps. */
+function stopRank({ kind, guard }: Pick<RuleStop, 'kind' | 'guard'>): number {
+  if (guard !== undefined) return guard * 3 + ['false', 'hidden', 'error'].indexOf(kind);
+  return 1e6 + laterStops.indexOf(kind);
 }
 
 /** Parse a stop key into its kind and guard index. */
@@ -117,17 +138,25 @@ function summarizeRules(checks: readonly CheckCoverage[], config: EditorialConfi
       if (entry.fired) firedChecks++;
       for (const [key, value] of Object.entries(entry.stops)) stops.set(key, (stops.get(key) ?? 0) + value);
     }
+    const ordered = [...stops].map(([key, value]) => ({ key, ...parseStop(key), count: value }))
+      .sort((left, right) => stopRank(left) - stopRank(right));
+    // Every outcome of one guard shares the subjects that reached that guard.
+    const step = (stop: { kind: string; guard?: number }) => stop.guard === undefined ? stop.kind : `guard:${stop.guard}`;
+    const reachedBy = new Map<string, number>();
+    let remaining = subjects;
+    for (const stop of ordered) {
+      if (!reachedBy.has(step(stop))) reachedBy.set(step(stop), remaining);
+      remaining -= stop.count;
+    }
     return {
       id: rule.id,
       subject: rule.subject,
       ...(rule.enabled === false ? { disabled: true } : {}),
       checks: checkCount, subjects, fired, firedChecks,
-      stops: [...stops].sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
-        .map(([key, value]) => {
-          const parsed = parseStop(key);
-          const source = parsed.guard === undefined ? undefined : guards[parsed.guard];
-          return { key, ...parsed, ...(source === undefined ? {} : { source: String(source) }), count: value };
-        }),
+      stops: ordered.map((stop) => {
+        const source = stop.guard === undefined ? undefined : guards[stop.guard];
+        return { ...stop, ...(source === undefined ? {} : { source: String(source) }), reached: reachedBy.get(step(stop))! };
+      }),
     };
   });
 }
@@ -139,9 +168,18 @@ function templateStage(
   if (printed) return 'printed';
   if (funnel.candidates) return 'passed-over';
   if (funnel.noVariants) return 'unprintable';
-  if (funnel.zeroWeight) return 'weighted-out';
+  if (funnel.zeroWeight || funnel.ineligible) return 'weighted-out';
   if (funnel.unprintable) return 'unprintable';
   return rules.every(id => (fired.get(id) ?? 0) > 0) ? 'not-together' : 'not-fired';
+}
+
+/** Prefer a published check with the smallest gap to its printed floor, then the higher score. */
+function closerToPrint(
+  next: { best: number; floor: number | null }, current: { best: number; floor: number | null },
+): boolean {
+  if ((next.floor === null) !== (current.floor === null)) return next.floor !== null;
+  if (next.floor !== null && current.floor !== null) return next.floor - next.best < current.floor - current.best;
+  return next.best > current.best;
 }
 
 /** Aggregate saved check coverage into one explanation per authored template. */
@@ -154,26 +192,30 @@ export function summarizeRunCoverage(
   const ordered = [...checks].sort((left, right) => left.turn - right.turn);
   const rules = summarizeRules(ordered, config);
   const fired = new Map(rules.map(rule => [rule.id, rule.fired]));
+  // Index each check's candidates by template once instead of rescanning them per template.
+  const byTemplate = ordered.map((check) => {
+    const groups = new Map<string, CandidateCoverage[]>();
+    for (const candidate of check.candidates) groups.set(candidate.template, [...(groups.get(candidate.template) ?? []), candidate]);
+    return groups;
+  });
   const templates = config.templates.filter(template => template.mode !== 'llmOnly').map((template): TemplateCoverage => {
-    const funnel: TemplateFunnel = { partial: 0, matched: 0, unprintable: 0, zeroWeight: 0, noVariants: 0, candidates: 0 };
+    const funnel: TemplateFunnel = { partial: 0, matched: 0, unprintable: 0, ineligible: 0, zeroWeight: 0, noVariants: 0, candidates: 0 };
     const outcomes: TemplateCoverage['outcomes'] = {};
     const printedTurns: number[] = [];
-    let bestScore: number | null = null;
-    let floor: number | null = null;
-    for (const check of ordered) {
+    let closest: { turn: number; best: number; floor: number | null } | undefined;
+    ordered.forEach((check, index) => {
       const counts = check.templates[template.id];
-      if (counts) for (const key of Object.keys(funnel) as (keyof TemplateFunnel)[]) funnel[key] += counts[key];
-      const own = check.candidates.filter(candidate => candidate.template === template.id);
+      if (counts) for (const key of Object.keys(funnel) as (keyof TemplateFunnel)[]) funnel[key] += counts[key] ?? 0;
+      const own = byTemplate[index].get(template.id) ?? [];
       for (const candidate of own) outcomes[candidate.outcome] = (outcomes[candidate.outcome] ?? 0) + 1;
       if (own.some(isPrinted)) {
         printedTurns.push(check.turn);
-        continue;
+        return;
       }
-      if (!own.length) continue;
-      const best = Math.max(...own.map(candidate => candidate.score));
-      bestScore = bestScore === null ? best : Math.max(bestScore, best);
-      if (check.printedFloor !== null) floor = floor === null ? check.printedFloor : Math.min(floor, check.printedFloor);
-    }
+      if (!own.length) return;
+      const entry = { turn: check.turn, best: Math.max(...own.map(candidate => candidate.score)), floor: check.printedFloor };
+      if (!closest || closerToPrint(entry, closest)) closest = entry;
+    });
     return {
       id: template.id,
       desk: desks.get(template.id) ?? 'other',
@@ -181,7 +223,8 @@ export function summarizeRunCoverage(
       rules: template.triggers,
       stage: templateStage(printedTurns.length, funnel, template.triggers, fired),
       printed: printedTurns.length,
-      funnel, outcomes, bestScore, floor,
+      funnel, outcomes,
+      scoreTurn: closest?.turn ?? null, bestScore: closest?.best ?? null, floor: closest?.floor ?? null,
       printedTurns: printedTurns.reverse().slice(0, 5),
     };
   });

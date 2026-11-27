@@ -296,7 +296,7 @@ export function placeholderSources(
 function funnelFor(funnel: Map<string, TemplateFunnel>, id: string): TemplateFunnel {
   let entry = funnel.get(id);
   if (!entry) {
-    entry = { partial: 0, matched: 0, unprintable: 0, zeroWeight: 0, noVariants: 0, candidates: 0 };
+    entry = { partial: 0, matched: 0, unprintable: 0, ineligible: 0, zeroWeight: 0, noVariants: 0, candidates: 0 };
     funnel.set(id, entry);
   }
   return entry;
@@ -344,7 +344,7 @@ export async function matchTemplates(
   })), budget);
   const active = plans.flatMap((plan, index) => {
     if (templateWeights[index].weight > 0) return [{ ...plan, rating: templateWeights[index] }];
-    if (funnel) funnelFor(funnel, plan.template.id).zeroWeight++;
+    if (funnel) funnelFor(funnel, plan.template.id)[templateWeights[index].ineligible ? 'ineligible' : 'zeroWeight']++;
     return [];
   });
   const variantWeights = await evaluateChoices(compiled.runner, batch, active.flatMap((plan) =>

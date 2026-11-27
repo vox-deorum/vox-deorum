@@ -219,4 +219,11 @@ describe('offline replay output store', () => {
     expect(store.checkCoverage('run-a', 0, 15)).toBeUndefined();
     expect(store.coverage('run-a', 1)).toEqual([]);
   });
+
+  it('should read a story saved as unpublished in a published check as one that found no slot', () => {
+    store.create('source', checkpointAt());
+    const candidate = { id: 'story', template: 'report', subject: 'city/1', rules: ['rule'], importance: 5, score: 5, outcome: 'unpublished' as const };
+    store.commit(checkpointAt(10), undefined, { turn: 10, status: 'published', printedFloor: 9, rules: {}, templates: {}, candidates: [candidate] });
+    expect(store.checkCoverage('run-a', 0, 10)!.candidates[0].outcome).toBe('unplaced');
+  });
 });

@@ -221,16 +221,16 @@ describe('replay browser API', () => {
     expect(fetchMock.mock.calls[0]).toEqual(['/api/newspaper/replay/advance?view=summary', { method: 'POST' }]);
   });
   it('should scope run coverage reads and parse template stages and rule funnels', async () => {
-    const funnel = { partial: 0, matched: 0, unprintable: 0, zeroWeight: 0, noVariants: 0, candidates: 0 };
+    const funnel = { partial: 0, matched: 0, unprintable: 0, ineligible: 0, zeroWeight: 0, noVariants: 0, candidates: 0 };
     const fetchMock = stubJson({
       checks: 2, published: 1, turns: { from: 10, to: 15 }, uncoveredIssues: 0,
       templates: [{
         id: 'siege-report', desk: 'cities-conflict', tags: ['cities'], rules: ['city-under-siege'], stage: 'not-fired',
-        printed: 0, funnel, outcomes: {}, bestScore: null, floor: null, printedTurns: [],
+        printed: 0, funnel, outcomes: {}, scoreTurn: null, bestScore: null, floor: null, printedTurns: [],
       }],
       rules: [{
         id: 'city-under-siege', subject: 'city', checks: 2, subjects: 40, fired: 0, firedChecks: 0,
-        stops: [{ key: 'false:0', kind: 'false', guard: 0, source: 'city.is.besieged', count: 40 }],
+        stops: [{ key: 'false:0', kind: 'false', guard: 0, source: 'city.is.besieged', reached: 40, count: 40 }],
       }],
     });
     const result = await getReplayCoverage('run-1', 4);

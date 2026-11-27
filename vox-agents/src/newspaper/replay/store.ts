@@ -34,6 +34,14 @@ export function resolveReplayOutput(sourcePath: string, outputPath?: string): st
   return output;
 }
 
+/** Parse saved coverage. Early rows marked stories that found no slot in a published edition as `unpublished`. */
+function readCoverage(saved: string): CheckCoverage {
+  const coverage = checkCoverageSchema.parse(JSON.parse(saved));
+  if (coverage.status === 'published')
+    for (const candidate of coverage.candidates) if (candidate.outcome === 'unpublished') candidate.outcome = 'unplaced';
+  return coverage;
+}
+
 /** Store the latest checkpoint and published editions for each offline run. */
 export class ReplayStore {
   private readonly db: Database.Database;
@@ -170,14 +178,14 @@ export class ReplayStore {
   coverage(runId: string, receiver: number): CheckCoverage[] {
     const rows = this.db.prepare('SELECT Coverage FROM OfflineReplayCoverage WHERE RunID = ? AND Receiver = ? ORDER BY Cutoff')
       .all(runId, receiver) as { Coverage: string }[];
-    return rows.map(row => checkCoverageSchema.parse(JSON.parse(row.Coverage)));
+    return rows.map(row => readCoverage(row.Coverage));
   }
 
   /** Read one check's coverage, or undefined when that check saved none. */
   checkCoverage(runId: string, receiver: number, turn: number): CheckCoverage | undefined {
     const row = this.db.prepare('SELECT Coverage FROM OfflineReplayCoverage WHERE RunID = ? AND Receiver = ? AND Cutoff = ?')
       .get(runId, receiver, turn) as { Coverage: string } | undefined;
-    return row && checkCoverageSchema.parse(JSON.parse(row.Coverage));
+    return row && readCoverage(row.Coverage);
   }
 
   /** Close the output connection after the session has drained its queue. */

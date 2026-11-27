@@ -423,8 +423,8 @@ main {
   vertical-align: top;
 }
 
-.host-coverage-stops th:not(:first-child),
-.host-coverage-stops td:not(:first-child) {
+.host-coverage-stops th:nth-child(n + 3),
+.host-coverage-stops td:nth-child(n + 3) {
   text-align: right;
   white-space: nowrap;
 }

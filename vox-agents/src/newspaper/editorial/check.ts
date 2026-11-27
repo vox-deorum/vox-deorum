@@ -25,7 +25,7 @@ import { computeFeedback } from './selection/feedback.js';
 import { publishedFingerprints, selectHeuristic } from './selection/heuristic.js';
 import { mergeSelectedStories } from './selection/merge.js';
 import { advanceSeries, decaySeries } from './selection/series.js';
-import { matchTemplates } from './selection/templates.js';
+import { matchTemplates, type EditorialCandidate } from './selection/templates.js';
 import { applyStylePreferences } from './selection/styles.js';
 import type { EditorialContext } from './shared/context.js';
 import type { ExpressionBatch, ExpressionCheckBudget } from './shared/expressions.js';
@@ -218,10 +218,13 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
       if (current.armed || printed.has(key)) state.triggerRepeats[key] = current;
   };
   /** Record where every template stopped in this check, given the candidates that reached the page. */
-  const recordCoverage = (printed: ReadonlySet<string>, mergedInto: ReadonlyMap<string, string>) => {
+  const recordCoverage = (
+    printed: ReadonlySet<string>, mergedInto: ReadonlyMap<string, string>,
+    roundups: { story: EditorialCandidate; score: number }[] = [],
+  ) => {
     decision.coverage = summarizeCheckCoverage({
       turn, status: decision.status, reason: decision.reason, audit: rules.audit, funnel, candidates,
-      scores: originalScores, outcomes: selection.outcomes, printed, mergedInto,
+      scores: originalScores, outcomes: selection.outcomes, printed, mergedInto, roundups,
     });
   };
   /** Leave matches and diplomacy available for the next check. */
@@ -311,6 +314,7 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
   decision.status = 'published';
   const displayedCandidates = new Set<string>();
   const mergedInto = new Map<string, string>();
+  const roundups: { story: EditorialCandidate; score: number }[] = [];
   for (const candidate of presentation.itemCandidates.values()) {
     displayedCandidates.add(candidate.id);
     if (!candidate.mergedCandidateIds) continue;
@@ -318,6 +322,7 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
     // The merge is a presentation choice, so its audit score reports the strongest original.
     const score = Math.max(...candidate.mergedCandidateIds.map(id => originalScores.get(id)!));
     decision.candidateScores.push({ id: candidate.id, score, selected: true });
+    roundups.push({ story: candidate, score });
   }
   decision.candidateScores = decision.candidateScores.map((entry) => {
     const replacement = mergedInto.get(entry.id);
@@ -334,6 +339,6 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
   if (presentation.mastheadRuleId !== undefined) decision.mastheadRuleId = presentation.mastheadRuleId;
   decision.layouts = presentation.layouts;
   recordChoiceErrors();
-  recordCoverage(displayedCandidates, mergedInto);
+  recordCoverage(displayedCandidates, mergedInto, roundups);
   return { status: 'published', issue, state, decision };
 }
