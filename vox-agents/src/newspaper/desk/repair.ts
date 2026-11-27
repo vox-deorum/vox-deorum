@@ -1,5 +1,8 @@
 import type { DeskText, DeskVariable } from '../../types/api.js';
-import { placeholderName, placeholderPattern } from '../editorial/selection/templates.js';
+import { placeholderName, placeholderUnit } from '../editorial/selection/templates.js';
+
+/** A placeholder together with any stray braces a writer put around it. */
+const bracedPlaceholder = /\{*\{\{([^{}]+)\}\}\}*/g;
 
 /** Ignore case, punctuation and a trailing name suffix when comparing spellings. */
 function looseName(name: string): string {
@@ -26,12 +29,14 @@ export function repairCopy(text: DeskText, variables: readonly Pick<DeskVariable
     }
   }
 
-  /** Repair a field while preserving plural suffixes and unresolved placeholders. */
-  const repair = (field: string): string => field.replace(placeholderPattern, (whole, key: string) => {
+  /** Repair a field, dropping stray braces and a plural suffix the name already prints, and leave unresolved placeholders as written. */
+  const repair = (field: string): string => field.replace(bracedPlaceholder, (whole, key: string) => {
     const base = placeholderName(key);
     const trimmed = base.trim();
     const name = listed.has(trimmed) ? trimmed : aliases.get(trimmed) ?? loose.get(looseName(trimmed));
-    return name === undefined || name === null ? whole : '{{' + name + key.slice(base.length) + '}}';
+    if (name === undefined || name === null) return whole;
+    const suffix = placeholderUnit(name) === undefined ? key.slice(base.length) : '';
+    return '{{' + name + suffix + '}}';
   });
 
   return {

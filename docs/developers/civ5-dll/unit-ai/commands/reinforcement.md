@@ -133,28 +133,28 @@ Path and competing-target rejections can clear when a nearby unit moves or dies.
 
 ## Worked priorities
 
-The table uses the running strengths and one spearman with `j = 1` unless stated otherwise, giving swing 0.332308 and `φ = 0.1`. The knight is at full health, worth 700 and in a cityless zone. The cities have no garrison or exposure in these examples.
+The table uses the running strengths and one spearman with `j = 1` unless stated otherwise, giving swing 0.332308, scaled swing 0.664615 and `φ = 0.1`. The knight is at full health, worth 700 and in a cityless zone. The cities have no garrison or exposure in these examples.
 
 | Destination | `θ` | Realized stake | Potential stake | Realized + `φ` × potential | Reinforce priority |
 | --- | --- | --- | --- | --- | --- |
-| Our capital at 25 of 250 HP, danger exceeds 25 | 0.975385 | 3 | 0 | 3 | 0.972 |
-| Our capital at 200 of 250 HP, danger 80 | 0.803077 | 1.2 | 1.8 | 1.38 | 0.368 |
-| Our capital at full health, enemy two turns out, no danger this turn | 0.753846 | 0 | 3 | 0.3 | 0.075 |
-| Enemy city worth 45 at 125 of 250 HP, 50 local damage | 0.723077 | 0.72 | 2.28 | 0.948 | 0.228 |
-| Same city at full health | 0.446154 | 0.36 | 2.64 | 0.624 | 0.093 |
-| Enemy city worth 20 at half HP, no local units, enemy strength 100 | 0.4 | 0 | 3 | 0.3 | 0.060, swing 0.5 |
-| Knight with 45 local damage, threatening the [archer](value.md#exposure) | 0.2 | 0.548846 | 1.961154 | 0.744962 | 0.050 |
-| Knight with 30 local damage and no exposure | 0.2 | 0.21 | 1.54 | 0.364 | 0.024 |
-| Same knight, no local damage | 0.2 | 0 | 1.75 | 0.175 | 0.012 |
-| Same knight, still no local damage but help joins at `j = 2` | 0.2 | 0 | 1.75 | 0.0875 | 0.003, swing 0.192308 and `φ = 0.05` |
+| Our capital at 25 of 250 HP, danger exceeds 25 | 0.975385 | 3 | 0 | 3 | 1.945 |
+| Our capital at 200 of 250 HP, danger 80 | 0.803077 | 1.2 | 1.8 | 1.38 | 0.737 |
+| Our capital at full health, enemy two turns out, no danger this turn | 0.753846 | 0 | 3 | 0.3 | 0.150 |
+| Enemy city worth 45 at 125 of 250 HP, 50 local damage | 0.723077 | 0.72 | 2.28 | 0.948 | 0.456 |
+| Same city at full health | 0.446154 | 0.36 | 2.64 | 0.624 | 0.185 |
+| Enemy city worth 20 at half HP, no local units, enemy strength 100 | 0.4 | 0 | 3 | 0.3 | 0.120, swing 0.5 and scaled swing 1 |
+| Knight with 45 local damage, threatening the [archer](value.md#exposure) | 0.2 | 0.548846 | 1.961154 | 0.744962 | 0.099 |
+| Knight with 30 local damage and no exposure | 0.2 | 0.21 | 1.54 | 0.364 | 0.048 |
+| Same knight, no local damage | 0.2 | 0 | 1.75 | 0.175 | 0.023 |
+| Same knight, still no local damage but help joins at `j = 2` | 0.2 | 0 | 1.75 | 0.0875 | 0.007, swing 0.192308 and `φ = 0.05` |
 
-At the capital with 200 HP, danger realizes `3 × 80 / 200 = 1.2`. Reinforce also takes `0.1 × (3 − 1.2) = 0.18` of potential stake, giving `0.803077 × 1.38 × 0.332308 ≈ 0.368`.
+At the capital with 200 HP, danger realizes `3 × 80 / 200 = 1.2`. Reinforce also takes `0.1 × (3 − 1.2) = 0.18` of potential stake, giving `0.803077 × 1.38 × 0.664615 ≈ 0.737`.
 
 The enemy city with 50 local damage loses 20 of that damage to healing, leaving 30. At half health that gives `3 × 30 / 125 = 0.72` realized stake.
 
 If the only recruit for the knight has strength 25, `(100 + 25) / 150 ≈ 0.833` falls below parity. The priority is 0 even if there is potential stake.
 
-For a cityless camp worth 0.05 with a full-health guard worth 100 and no local damage, the weighted stake before the camp floor is `0.1 × (100 / 400 + 0.05) = 0.03`. The floor raises it to 0.05, so at the running swing the offer scores `0.2 × 0.05 × 0.332308 ≈ 0.0033`. A fogged camp of the same value with the same swing scores 0.0033 directly on the camp value.
+For a cityless camp worth 0.05 with a full-health guard worth 100 and no local damage, the weighted stake before the camp floor is `0.1 × (100 / 400 + 0.05) = 0.03`. The floor raises it to 0.05, so at the running scaled swing the offer scores `0.2 × 0.05 × 0.664615 ≈ 0.0066`. A fogged camp of the same value scores 0.0066 directly on the camp value.
 
 ## Withdraw at the same battlefield
 
@@ -179,6 +179,6 @@ The two offers never share a row. An army row supports only the Reinforce slot, 
 
 ## Reinforce against fights
 
-Fight uses `θ × realized stake`. At the capital with 25 HP, Fight scores 2.926 and Reinforce scores 0.972. At 200 HP, Fight scores 0.964 and Reinforce scores 0.368. That Reinforce outranks a sure kill of the cityless knight at 0.350. At the large enemy city at half HP, Fight scores 0.521 and Reinforce scores 0.228.
+Fight uses `θ × realized stake`. At the capital with 25 HP, Fight scores 2.926 and Reinforce scores 1.945. At 200 HP, Fight scores 0.964 and Reinforce scores 0.737. That Reinforce outranks a sure kill of the cityless knight at 0.350. At the large enemy city at half HP, Fight scores 0.521 and Reinforce scores 0.456.
 
-If no local unit can hit the knight and there is no exposure, the Fight scores 0 while Reinforce can still score 0.012. As each command runs, the loop re-estimates open offers and their available recruits.
+If no local unit can hit the knight and there is no exposure, the Fight scores 0 while Reinforce can still score 0.023. As each command runs, the loop re-estimates open offers and their available recruits.

@@ -23,13 +23,13 @@ flowchart TD
 | Stage | What it supplies | Reference |
 | --- | --- | --- |
 | Recruit | The target's victims, the local strength set, combat units sharing their tiles, and a threatened prepared army's members. | [Withdraw recruits](recruitment.md#withdraw-recruits) |
-| Score | `X`, `s⁺` and priority. Rescored after every command and when a readiness check changes the Reinforce state or its score without potential stake. | `EstimateWithdraw` in `civ5-dll/CvGameCoreDLL_Expansion2/CvTacticalOperationalLoop.cpp`. |
+| Score | `X`, `s⁺` and priority. Rescored after every command and when a readiness check changes the Reinforce state or its realized score. | `EstimateWithdraw` in `civ5-dll/CvGameCoreDLL_Expansion2/CvTacticalOperationalLoop.cpp`. |
 | Search | The retreat weights in the plot score, the search purpose and the path step. | [Withdraw search](#withdraw-search) |
 | Check and execute | Destinations, the march rule, admission and path moves. | [Readiness and execution](#readiness-and-execution) |
 
 | Part | Fight | Reinforce | Withdraw |
 | --- | --- | --- | --- |
-| Priority | `θ × realized stake` | `θ × (realized stake + φ × potential stake) × swing`, with a [camp floor](reinforcement.md#reinforce-priority) where applicable | `θ × w_R × X / Z_T × (1 − s⁺) × 0.7^n` |
+| Priority | `θ × realized stake` | `θ × (realized stake + φ × potential stake) × min(1, k × swing)`, with a [camp floor](reinforcement.md#reinforce-priority) where applicable | `θ × w_R × X / Z_T × (1 − s⁺) × 0.7^n` |
 | Strength share | `s` inside the exposure term | Swing from the share | `1 − s⁺` over its own removable exposure `X` |
 | Units | Local set | Incoming selection | Every combat unit at the battlefield that can leave, plus a threatened prepared army's members |
 | Direction | At the center | Toward the center | Toward a friendly city |
@@ -46,7 +46,7 @@ flowchart TD
 | `θ` | The zone's current [theater multiplier](value.md#theater-multiplier). Unit battlefields read their zone city. | Theater floor (0.2) to 1. |
 | **Capped exposure** | A threat's largest allocations to a set of victims, up to its attacks per turn. | Worth. |
 
-`ExposureShareWithHelp` in `CvTacticalOperationalLoop.cpp` credits help when Reinforce is ready or inactive, has counted enemy strength, and would score above zero using realized stake alone. This check keeps the usual camp floor. The credited share can only lower Withdraw's priority.
+`ExposureShareWithHelp` in `CvTacticalOperationalLoop.cpp` credits help when Reinforce is ready or inactive, has counted enemy strength, and its realized score is positive. This check keeps the usual camp floor. The credited share is the projected share `s_h`, unscaled by `reinforce.swingScale`, and it can only lower Withdraw's priority.
 
 ## Running example inputs
 

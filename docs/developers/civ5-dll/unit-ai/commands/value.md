@@ -223,7 +223,7 @@ For a camp seen empty, the claim's priority is `θ × n × B / (1 + h × t)`, wh
 | Double | 0.80 |
 | Triple | 0.90 |
 
-`EstimateTheater` saves the share before Reinforce bookkeeping can rewrite `L`, and `EstimateFight` multiplies each exposure term by it. Each other term uses its own share from the table above. Setting `exposure.split` (1) to 0 gives fights full exposure; Withdraw keeps its own removable exposure and the stored strength share.
+`EstimateTheater` tallies `L`, `T` and the share, and saves that share for the fight and Withdraw. `EstimateFight` multiplies each exposure term by it. Each other term uses its own share from the table above. Setting `exposure.split` (1) to 0 gives fights full exposure; Withdraw keeps its own removable exposure and the stored strength share.
 
 ## City allowance and fall share
 
@@ -508,7 +508,7 @@ Army March combines the target theater, mission value and estimated progress wit
 | Offer | Benefit | Priority |
 | --- | --- | --- |
 | Fight | This turn's damage and protection. | `θ × realized stake` |
-| Reinforce | Realized and discounted potential stake, times the share help swings. [Camp rules](reinforcement.md#reinforce-priority) can set a floor. | `θ × (realized stake + φ × potential stake) × swing` |
+| Reinforce | Realized and discounted potential stake, times the [scaled share](reinforcement.md#swing) help swings. [Camp rules](reinforcement.md#reinforce-priority) can set a floor. | `θ × (realized stake + φ × potential stake) × min(1, k × swing)` |
 | Withdraw | Removable exposure times the share our strength and credited help leave uncovered, with a failure discount. | `θ × w_R × X / Z_T × (1 − s⁺) × 0.7^n` |
 | Army March | Estimated progress at the mission's goal weight. | `θ × R × w_goal × g` |
 

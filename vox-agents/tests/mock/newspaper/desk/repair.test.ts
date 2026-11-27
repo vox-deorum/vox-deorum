@@ -35,6 +35,26 @@ describe('newspaper desk placeholder repair', () => {
     ])).toEqual({ headline: '{{cityName}} in {{city}}', body: ['Report.'] });
   });
 
+  it('should drop a plural suffix from a name that already prints its unit', () => {
+    expect(repairCopy({
+      headline: '{{ Turns Left |turn|turns}} remain',
+      body: ['Since {{observedTurn|turn|turns}}, {{count|regiment|regiments}} marched.'],
+    }, [
+      { name: 'turnsLeft', aliases: [] },
+      { name: 'observedTurn', aliases: [] },
+      { name: 'count', aliases: [] },
+    ])).toEqual({
+      headline: '{{turnsLeft}} remain',
+      body: ['Since {{observedTurn}}, {{count|regiment|regiments}} marched.'],
+    });
+  });
+
+  it('should strip stray braces around a resolved placeholder only', () => {
+    expect(repairCopy({ headline: '{{{cityName}}} and {{{mystery}}}', body: ['{{{{city}}}}.'] }, [
+      { name: 'city', aliases: ['city.name'] },
+    ])).toEqual({ headline: '{{city}} and {{{mystery}}}', body: ['{{city}}.'] });
+  });
+
   it('should leave ambiguous and unknown placeholders as written', () => {
     const text = {
       headline: '{{ victim }} in {{ CITY_NAME }}',
