@@ -37,10 +37,11 @@
       {
         "id": "foreign-city-hardship-famine-report",
         "when": "cause == 'famine'",
-        "headline": "Famine takes hold in {{city}}",
+        "headline": "Famine reported in {{city}}",
         "body": [
-          "Famine has taken hold in {{city}}, and {{owner}} faces calls to open the public stores. Bread lines form before the doors open, and the carts come back from the fields lighter each week. A hungry city is a city that remembers who failed to feed it."
-        ]
+          "A severe famine has struck {{city}}. Reports from the region indicate that {{owner}} is struggling to provide enough food for the city's residents."
+        ],
+        "settled": true
       },
       {
         "id": "foreign-city-hardship-famine-analysis",
@@ -135,10 +136,11 @@
         "stance": "neutral",
         "genre": "analysis",
         "when": "knownWar === false",
-        "headline": "What repairing {{city}} will cost {{owner}}",
+        "headline": "A City in Ruins: {{city}}",
         "body": [
-          "Restoring {{city}} will take resources that {{owner}} might otherwise have spent elsewhere. The damage is clear; the scale of the repair bill is still unknown."
-        ]
+          "{{city}} is reeling from heavy damage that has left its infrastructure in shambles. Whether the cause was a natural disaster or internal sabotage, the scale of the ruins is staggering. {{owner.civic.government}} needs rapid reconstruction before the city's economic output collapses."
+        ],
+        "settled": true
       }
     ]
   },
@@ -161,30 +163,33 @@
         "voice": "press",
         "stance": "hawkish",
         "genre": "analysis",
-        "headline": "New works at {{city}}",
+        "headline": "New {{building}} bolsters {{owner}}",
         "body": [
-          "The {{building}} at {{city}} is finished, and {{owner}} can now do something on this frontier that it could not do last season. That is the whole meaning of the news, and it is enough. Our own plans should be made on the assumption that the next work has already begun."
-        ]
+          "The completion of the {{building}} in {{city}} proves that {{owner}} possesses the resources and the will to expand their infrastructure. A city that can afford such luxury is a city that can afford a larger garrison. The {{terms.civic.government}} of {{owner}} is building a foundation for long-term dominance that we should not ignore."
+        ],
+        "settled": true
       },
       {
         "id": "foreign-building-completed-notice",
         "voice": "gazette",
         "stance": "neutral",
         "genre": "notice",
-        "headline": "From beyond our border: {{city}} completes the {{building}}",
+        "headline": "Notice of the new {{building}} in {{city}}",
         "body": [
-          "We are informed from beyond the border that {{city}} has completed its {{building}} for {{owner}}. The road to the city was busy all season and has been quiet since the roof went on. Traders bound that way will find the work finished and the crowds gone home."
-        ]
+          "We are informed that the people of {{owner}} have completed the construction of a {{building}} in {{city}}. The building is now fully operational."
+        ],
+        "settled": true
       },
       {
         "id": "foreign-building-completed-anecdote",
         "voice": "tabloid",
         "stance": "neutral",
         "genre": "anecdote",
-        "headline": "A neighbor's new work",
+        "headline": "A neighbor's new building",
         "body": [
-          "A carter who came through {{city}} last week swears that {{owner}}'s new {{building}} was not there in spring. He has told the story in three markets, and each time the building gets taller. The people of the city only shrug and say it was finished before the rains."
-        ]
+          "A carter who came through {{city}} last week swears that {{owner}}'s new {{building}} was not there in spring. He barely recognized the skyline with the new {{building}} towering over the street. {{owner}} is growing fast."
+        ],
+        "settled": true
       }
     ]
   },
