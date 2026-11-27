@@ -76,8 +76,7 @@
         ],
         "weight": {
           "base": 1
-        },
-        "settled": true
+        }
       },
       {
         "id": "building-investment-notice",
@@ -90,8 +89,7 @@
         ],
         "weight": {
           "base": 1
-        },
-        "settled": true
+        }
       },
       {
         "id": "building-investment-critique",
@@ -104,18 +102,18 @@
         ],
         "weight": {
           "base": 1
-        },
-        "settled": true
+        }
       },
       {
         "id": "building-investment-notice-crier",
         "voice": "crier",
         "stance": "ambitious",
         "genre": "notice",
-        "headline": "Hear it, {{city}}! Coin speeds the {{building}}",
+        "headline": "News of the {{building}}",
         "body": [
-          "Hear it, {{terms.civic.people}}! The {{building}} has coin behind it now, and the masons work by lamplight! Stone by stone, the roof comes nearer! Come and see what your money is building!"
-        ]
+          "Hear me, {{terms.civic.people}}! New funds have arrived for the {{building}} in {{city}}! We will not wait for tomorrow when we can lead today. Speed the work! Speed the work!"
+        ],
+        "settled": true
       }
     ]
   },
@@ -149,10 +147,11 @@
         "voice": "gazette",
         "stance": "pro-government",
         "genre": "notice",
-        "headline": "A purchase for {{city}}: the {{building}} is ready",
+        "headline": "To the merchants and citizens of {{city}}",
         "body": [
-          "It is confirmed that {{city}} has secured its {{building}} for {{currency}} and holds it ready for use. The bargain was settled in a single season, sparing the city a long spell of dust and scaffolding. The keys were handed over before the plaster was dry."
-        ]
+          "It is our pleasure to announce that a {{building}} has been secured for {{city}} via a generous investment of {{currency}}. Such foresight by the {{terms.civic.government}} ensures our continued prosperity and growth."
+        ],
+        "settled": true
       },
       {
         "id": "building-purchased-analysis",
@@ -186,30 +185,33 @@
         "voice": "press",
         "stance": "national",
         "genre": "report",
-        "headline": "{{city}} strengthens its walls",
+        "headline": "{{city}} Bolsters National Defense",
         "body": [
-          "Sentries at {{city}} climbed to their new posts this morning, now that the {{building}} is finished. The officer of the watch says any column coming up the road would need ladders it did not bring. The town sleeps easier, and the watch does not."
-        ]
+          "The completion of the {{building}} in {{city}} marks a critical advancement in our national defense strategy. By strengthening this hub, the {{terms.civic.government}} has ensured that {{city}} remains an impregnable fortress. The {{building}} serves to safeguard the unity and longevity of our great people."
+        ],
+        "settled": true
       },
       {
         "id": "city-defense-completed-crier",
         "voice": "crier",
         "stance": "national",
         "genre": "notice",
-        "headline": "{{city}} is ready for a siege",
+        "headline": "Fortification in {{city}}",
         "body": [
-          "{{terms.civic.people}} of {{city}}, look up! The {{building}} is finished, stone on stone, and the watch has moved into it! Let the enemy count our walls from the road! Sleep easy tonight!"
-        ]
+          "Hear me, {{terms.civic.people}} of {{city}}! The {{building}} is finished! Our walls are stronger and the nation is safer. A stronger {{city}}, a safer {{terms.civilization}}!"
+        ],
+        "settled": true
       },
       {
         "id": "city-defense-completed-notice",
         "voice": "gazette",
         "stance": "pro-government",
         "genre": "notice",
-        "headline": "A stronger {{city}}",
+        "headline": "Fortification at {{city}}",
         "body": [
-          "It is confirmed that the {{building}} at {{city}} is complete and the watch installed. The {{terms.civic.government}} ordered the work done before the danger was plain, and the city has the benefit of it now. Visitors will find the gate open at the usual hours."
-        ]
+          "We are pleased to relate that the {{building}} in {{city}} is now operational. Through the foresight of the {{terms.civic.government}}, our city stands as a formidable bastion against any who would threaten us."
+        ],
+        "settled": true
       }
     ]
   },

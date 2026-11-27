@@ -8,20 +8,22 @@
     "variants": [
       {
         "id": "foreign-city-growth-milestone-report",
-        "headline": "{{city}} grows to {{population}} people",
+        "headline": "{{city}} reaches {{milestone}} status",
         "body": [
-          "{{city}} now counts {{population}} people, and new lanes are going up outside its old edge. {{owner}} has ordered a second well dug, and the market runs past the afternoon bell. The city is beginning to look like the center of something."
-        ]
+          "The city of {{city}}, owned by {{owner}}, has grown into a {{milestone}}. Its population has now reached {{population}}."
+        ],
+        "settled": true
       },
       {
         "id": "foreign-city-growth-milestone-dispatch",
         "voice": "gazette",
         "stance": "neutral",
         "genre": "report",
-        "headline": "From beyond the border: {{city}} reaches {{population}}",
+        "headline": "Baby Boom in {{owner}}",
         "body": [
-          "We are informed that {{city}} has reached {{population}} people under {{owner}}. Letters from the city speak of crowded inns and a longer walk to the wells. Growth of that kind gives a neighbor more hands, more taxes and a louder voice."
-        ]
+          "Travelers returning from the east report that {{city}} has achieved the status of a {{milestone}}. The census of {{population}} indicates a period of significant growth for the city and the governance of {{owner}}."
+        ],
+        "settled": true
       }
     ]
   },

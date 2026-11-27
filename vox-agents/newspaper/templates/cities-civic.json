@@ -246,10 +246,12 @@
         "voice": "press",
         "stance": "government-critical",
         "genre": "analysis",
-        "headline": "Why {{city}} is starving in peacetime",
+        "headline": "The Shame of Peacetime Hunger",
         "body": [
-          "There is no siege at {{city}}, no raiders in the fields and no enemy at the gate. Yet the city loses {{shortfall}} of food a day from a store of {{foodStored}}, and the granary books say so plainly. Peacetime hunger is somebody's decision, and somebody should be asked to explain it."
-        ]
+          "With a daily shortfall of {{shortfall}} and only {{foodStored}} left in the granaries, the math of survival at {{city}} is grim.  The {{owner.civic.government}} continues to project an image of prosperity, but the empty stomachs of the {{owner.civic.people}} tell the truth. Why was there no reserve?"
+        ],
+        "subheadline": "{{city}} starves while the country is at peace",
+        "settled": true
       },
       {
         "id": "starvation-without-siege-anecdote",

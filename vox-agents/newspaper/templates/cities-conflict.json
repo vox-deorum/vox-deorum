@@ -38,10 +38,11 @@
         "stance": "neutral",
         "genre": "report",
         "when": "distance !== null",
-        "headline": "A city burns {{distance}} from our nearest city",
+        "headline": "A City Consumed",
         "body": [
-          "Word from the frontier says {{civilization}} is burning {{city}}, {{distance}} from the nearest of our towns. Travelers from that country speak of smoke lying flat across the fields at noon. This office will print the next dispatch as soon as a rider reaches us."
-        ]
+          "We are credibly informed that {{civilization}} has commenced the razing of {{city}}. Our correspondents report that the city, located {{distance}} away, will be entirely erased in {{turns}}. It remains to be seen how this vacancy shall alter the balance of the region."
+        ],
+        "settled": true
       },
       {
         "id": "city-being-razed-obituary",
@@ -90,10 +91,12 @@
         "voice": "press",
         "stance": "government-critical",
         "genre": "analysis",
-        "headline": "Can {{city}} repair its walls under siege?",
+        "headline": "The Crumbling Walls of {{city}}",
         "body": [
-          "{{city}} can hold for a while, but its wall cannot be repaired while the road is closed. Stone, lime and timber all come from outside, and an army at the gate takes the road first. The garrison's quiet days are its only chance to haul and mix, and it should spend them that way."
-        ]
+          "With the wall strength at {{wallStrength}}, much of {{city}}'s ramparts has been reduced to rubble. The {{owner.civic.government}} promised an impregnable defense, yet the city is now a sieve. If the {{owner.civic.leaderTitle}} does not break this siege immediately, there will be no city left to save."
+        ],
+        "subheadline": "Defense integrity falling fast",
+        "settled": true
       },
       {
         "id": "city-under-siege-anecdote",
@@ -111,10 +114,11 @@
         "voice": "gazette",
         "stance": "pro-government",
         "genre": "notice",
-        "headline": "The defense of {{city}} continues",
+        "headline": "Notice to the residents of {{city}}",
         "body": [
-          "We are advised that {{city}} remains under siege, its walls sorely battered but still holding. The watch relieves itself without a gap, and runners are moving at all hours. Citizens are asked to keep the streets clear for them."
-        ]
+          "The ramparts of {{city}} have sustained damage during the current siege. Be assured that {{terms.civic.government}} is directing all necessary repairs to ensure our safety and the continued strength of our defenses."
+        ],
+        "settled": true
       }
     ]
   },
@@ -141,10 +145,12 @@
         "voice": "press",
         "stance": "government-critical",
         "genre": "analysis",
-        "headline": "The fields around {{city}} lie in ruin",
+        "headline": "Pillage and Neglect in {{city}}",
         "body": [
-          "The count of {{city}} puts pillage first among its troubles, with {{pillagedPopulation}} {{terms.civic.people}} unhappy. A raid takes a night; rebuilding takes seed, hands and a season. The officers who decide where the garrison stands should be asked why these fields were left open."
-        ]
+          "The unrest gripping {{city}} is a direct result of the {{owner.civic.government}}'s failure to protect its own land. {{pillagedPopulation}} people are now suffering because the military was nowhere to be found. Where were the patrols? Who should be responsible for the failure?"
+        ],
+        "subheadline": "{{pillagedPopulation}} million displaced by raids",
+        "settled": true
       },
       {
         "id": "city-pillaged-unrest-anecdote",
@@ -161,10 +167,11 @@
         "voice": "gazette",
         "stance": "conciliatory",
         "genre": "notice",
-        "headline": "{{city}} counts the cost of pillage",
+        "headline": "Notice to the {{terms.civic.people}} of {{city}}",
         "body": [
-          "Word from {{city}}: pillaged land is now the heaviest burden on the city, and {{pillagedPopulation}} {{terms.civic.people}} are unhappy because of it. Towns with wagons, seed or labor to spare should send word to the council."
-        ]
+          "We are credibly informed that recent disturbances in the countryside have caused distress for {{pillagedPopulation}} {{terms.civic.people}}. Let us trust that a swift return to peace will soon restore the prosperity of {{city}} and its neighbors."
+        ],
+        "settled": true
       }
     ]
   },
@@ -177,30 +184,34 @@
     "variants": [
       {
         "id": "we-raze-a-city-report",
-        "headline": "{{city}} is being razed",
+        "headline": "Destruction of {{city}} underway",
         "body": [
-          "Our soldiers began pulling down the walls of {{city}} this week, and the smoke has not lifted since. {{turns}} will see the last of it. The road to the site is already quieter than it was."
-        ]
+          "The razing of {{city}} is currently in progress. Approximately {{population}} people remain in the area as the structures are brought down. The process will be finished in {{turns}}."
+        ],
+        "settled": true
       },
       {
         "id": "we-raze-a-city-analysis",
         "voice": "press",
         "stance": "national",
         "genre": "analysis",
-        "headline": "The decision to raze {{city}}",
+        "headline": "The Erasure of {{city}}",
         "body": [
-          "The destruction of {{city}} will take {{turns}}, and when it is done the realm will have one fewer gate to hold and one more open field to watch. A razed city costs less to keep and more to explain. The order was ours; so is the empty ground."
-        ]
+          "{{terms.civilization}} is systematically dismantling {{city}}, and the process will be complete in {{turns}}. While the loss of a population of {{population}} is a stark figure, the {{terms.civic.government}} views the site as a strategic burden. By clearing the land, we remove a drain on national resources and open the way for more efficient expansion."
+        ],
+        "subheadline": "A hard choice for the national good",
+        "settled": true
       },
       {
         "id": "we-raze-a-city-obituary",
         "voice": "press",
         "stance": "devout",
         "genre": "obituary",
-        "headline": "The end of {{city}}",
+        "headline": "A Final Prayer for {{city}}",
         "body": [
-          "{{city}} has {{turns}} before the last wall comes down and the ground is cleared. Its market days and its prayers will end in the same hour. The gods it served will have to remember it, because the fields will not."
-        ]
+          "At its height, {{city}} served as a bastion of the spirit, fostering a community of {{population}} believers. We recall the great festivals that once filled its squares with hymns of praise. This trial has come to pass, and as the walls fall over the next {{turns}}, we entrust its memory to the heavens."
+        ],
+        "settled": true
       },
       {
         "id": "we-raze-a-city-population",
