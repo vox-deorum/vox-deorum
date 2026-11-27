@@ -90,25 +90,26 @@ A camp seen empty uses its single claimant's [travel priority](value.md#camp-val
 
 The **swing** is the rise in our strength share when help joins.
 
-`swing = s_h − s_R`, with `s_R = L_R² / (L_R² + T²)` and `s_h = (L_R + help)² / ((L_R + help)² + T²)`
+`swing = s_h − s`, with `s = L² / (L² + T²)` and `s_h = (L + help)² / ((L + help)² + T²)`
 
 | Part | Reads as |
 | --- | --- |
-| `s_R` (**Reinforce start**) | Our share of fighting power from `L_R`, squared per Lanchester's square law with the theater's exponent (`theater.steepness`, 2). When a fight has released local units into the candidate pool, `L_R` is below the fight's `L`, so the swing starts from a lower share than the fight's exposure uses. 1 with no enemy strength. |
-| `L_R`, `T` | The battlefield's tallies after released local units enter the candidate pool. At a city they are the theater inputs; at a unit they are centered on the target. `L_R = L` when no local units are released. |
-| `s_h − s_R` | Each added unit is worth less once our side dominates, so no separate cap is needed. As help grows without limit the swing approaches `1 − s_R`. |
+| `s` (**fight share**) | Our share of fighting power from `L`, squared per Lanchester's square law with the theater's exponent (`theater.steepness`, 2). 1 with no enemy strength. |
+| `L`, `T` | The battlefield's tallies. At a city they are the theater inputs; at a unit they are centered on the target. |
+| `s_h − s` | Each added unit is worth less once our side dominates, so no separate cap is needed. As help grows without limit the swing approaches `1 − s`. |
+| `min(1, k × swing)` | The swing the score uses. Doubling reaches 1 for a rise from no strength to parity, and the cap keeps larger rises at 1. |
 
-The fight's exposure and the Withdraw's `s⁺` read the fight's share `s`, which the released candidate pool does not change.
+The fight's exposure and the Withdraw's `s⁺` read the fight's share `s`. They keep the unscaled share, so the swing scale changes only the Reinforce priority.
 
-**Swing curve** at the running strengths, `s_R = s = 0.307692` because no local units are released.
+**Swing curve** at the running strengths, `s = 0.307692`.
 
-| Selection | Help | `s_h = (100 (L_R) + help)² / ((100 + help)² + 150² (T))` | Swing `s_h − 0.307692 (s_R)` |
-| --- | --- | --- | --- |
-| None | 0 | 0.307692, unchanged | 0 |
-| A knight of strength 100, `j = 2` | `100 (strength) / 2 (j) = 50` | `150² / (150² + 150²) = 0.5` | 0.192308 |
-| The spearman, `j = 1` | 100 | `200² / (200² + 150²) = 0.64` | 0.332308 |
-| Supplied large group | 400 | `500² / (500² + 150²) = 0.917431` | 0.609739 |
-| Unlimited | | 1 | `1 − 0.307692 (s_R) = 0.692308`, the bound |
+| Selection | Help | `s_h = (100 (L) + help)² / ((100 + help)² + 150² (T))` | Swing `s_h − 0.307692 (s)` | Scaled swing `min(1, 2 (k) × swing)` |
+| --- | --- | --- | --- | --- |
+| None | 0 | 0.307692, unchanged | 0 | 0 |
+| A knight of strength 100, `j = 2` | `100 (strength) / 2 (j) = 50` | `150² / (150² + 150²) = 0.5` | 0.192308 | 0.384615 |
+| The spearman, `j = 1` | 100 | `200² / (200² + 150²) = 0.64` | 0.332308 | 0.664615 |
+| Supplied large group | 400 | `500² / (500² + 150²) = 0.917431` | 0.609739 | 1; `2 × 0.609739 = 1.219478` capped |
+| Unlimited | | 1 | `1 − 0.307692 (s) = 0.692308`, the bound | 1; `2 × 0.692308 = 1.384615` capped |
 
 ## Selection
 
@@ -118,7 +119,7 @@ Path and competing-target rejections can clear when a nearby unit moves or dies.
 
 | Step | Rule |
 | --- | --- |
-| 1. Filter | Candidates beyond strike reach and within recruitment range. At an enemy city a candidate must also pass `CanStrikeCity`, so strength that cannot hurt the city is never counted. |
+| 1. Filter | Candidates beyond strike reach and within recruitment range. A unit within its strike reach of the target counts as local strength, spent or not, and never becomes a candidate. At an enemy city a candidate must also pass `CanStrikeCity`, so strength that cannot hurt the city is never counted. |
 | 2. Cover need | Sort by join turns, travel turns, then unit ID, and select until full strength `S` meets `need`. |
 | 3. Role unit | Enemy city only: if no local or selected unit can capture, the nearest remaining capturer joins, even when need is 0. Its strength counts in help. |
 
