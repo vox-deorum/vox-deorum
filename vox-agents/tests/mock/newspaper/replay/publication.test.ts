@@ -23,6 +23,8 @@ describe('durable replay publication', () => {
     recording = await createReplayRecording('Epic', [6]);
     outputPath = path.join(path.dirname(recording.filename), 'newspaper.sqlite');
     catalogue = await writeReplayPublicationCatalogue(recording.filename);
+    // The low-priority fixture briefs share one rule, so repetition penalties would push them off the page.
+    await writeFile(path.join(catalogue, 'defaults.json'), JSON.stringify({ rulePenalty: 0, ruleFatigue: 0 }));
     session = new ReplaySession();
   });
   afterEach(async () => { await session.close(); await recording.cleanup(); });
@@ -47,7 +49,7 @@ describe('durable replay publication', () => {
     } finally { sqlite.close(); }
     const stock = await loadEditorialConfig();
     await Promise.all([
-      writeFile(path.join(catalogue, 'defaults.json'), '{}'),
+      writeFile(path.join(catalogue, 'defaults.json'), JSON.stringify({ rulePenalty: 0, ruleFatigue: 0 })),
       writeFile(path.join(catalogue, 'triggers.json'), JSON.stringify([
         ...stock.triggers.map(rule => ({ id: rule.id, enabled: false })),
         { id: 'fixture-branch', subject: 'event', tier: 'filler', event: 'PlayerAdoptPolicyBranch', when: 'true', repeat: 'once' },
@@ -78,14 +80,14 @@ describe('durable replay publication', () => {
     const full = await session.advance();
     expect(full.evidence.request).toMatchObject({ previousCheckTurn: 110, cutoffTurn: 115 });
     expect(full.check?.decision.candidateScores).toHaveLength(11);
-    expect(full.check?.decision.candidateScores.filter(score => score.selected)).toHaveLength(6);
+    expect(full.check?.decision.candidateScores.filter(score => score.selected)).toHaveLength(8);
     const pages = full.check!.issue!.pages;
     expect(pages.map(page => [page.id, page.hasLead, page.itemIds.length])).toEqual([
-      ['front', false, 4], ['economy', false, 2],
+      ['front', false, 4], ['economy', false, 4],
     ]);
-    expect(new Set(pages.flatMap(page => page.itemIds)).size).toBe(6);
+    expect(new Set(pages.flatMap(page => page.itemIds)).size).toBe(8);
     const archived = await session.getIssue(full.check!.issue!.issueId);
-    expect(archived.articles).toHaveLength(6);
+    expect(archived.articles).toHaveLength(8);
   });
 
   it('should publish unwitnessed research by a met civilization using the configured ideology names', async () => {
@@ -103,7 +105,7 @@ describe('durable replay publication', () => {
         values: { technology: 'event.tech', civilization: 'event.player.name' },
       }, editionBriefRule])),
       writeFile(path.join(catalogue, 'templates.json'), JSON.stringify([{
-        id: 'fixture-research-article', triggers: ['fixture-research'], tags: ['foreign'], weight: { base: 1 },
+        id: 'fixture-research-article', triggers: ['fixture-research'], tags: ['science'], weight: { base: 1 },
         variants: [{ id: 'notice', headline: '{{civilization}} gains a technology', body: ['{{technology}}'], weight: { base: 1 } }],
       }, editionBriefTemplate])),
     ]);
@@ -167,6 +169,7 @@ describe('durable replay publication', () => {
     await Promise.all([
       writeFile(path.join(catalogue, 'triggers.json'), JSON.stringify([...probeConfig.triggers, editionBriefRule])),
       writeFile(path.join(catalogue, 'templates.json'), JSON.stringify([...probeConfig.templates, editionBriefTemplate])),
+      writeFile(path.join(catalogue, 'pages.json'), JSON.stringify(probeConfig.pages)),
     ]);
     await session.configure(settings());
     const result = await session.advance();

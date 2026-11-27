@@ -60,12 +60,6 @@
     "multiplier": 1.5
   },
   {
-    "id": "voice-feed-short-fillers",
-    "match": { "voice": "feed" },
-    "when": "story.short",
-    "multiplier": 1.5
-  },
-  {
     "id": "voice-tabloid-cities-domestic",
     "match": { "voice": "tabloid" },
     "when": "story.tags.includes('cities') && story.tags.includes('domestic')",

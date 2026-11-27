@@ -16,7 +16,7 @@
   {
     "id": "probe-huns-riding-account",
     "triggers": ["probe-huns-riding"],
-    "tags": ["foreign"],
+    "tags": ["foreign", "international"],
     "variants": [
       {
         "id": "probe-huns-riding-report",
@@ -28,7 +28,7 @@
   {
     "id": "probe-ideology-adopted-account",
     "triggers": ["probe-ideology-adopted"],
-    "tags": ["politics"],
+    "tags": ["politics", "domestic"],
     "variants": [
       {
         "id": "probe-ideology-adopted-report",
@@ -40,7 +40,7 @@
   {
     "id": "probe-foreign-birth-account",
     "triggers": ["probe-foreign-birth"],
-    "tags": ["foreign"],
+    "tags": ["foreign", "international"],
     "variants": [
       {
         "id": "probe-foreign-birth-report",
@@ -161,7 +161,7 @@
   {
     "id": "probe-foreign-policies-account",
     "triggers": ["probe-foreign-policies"],
-    "tags": ["politics"],
+    "tags": ["politics", "international"],
     "variants": [
       {
         "id": "probe-foreign-policies-report",

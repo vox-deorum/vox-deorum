@@ -12,7 +12,7 @@ import type {
 } from '../contracts/coverage.js';
 import type { TriggerRuleAudit } from '../contracts/triggers.js';
 import type { EditorialConfig } from './config/schema.js';
-import type { SelectionOutcome } from './selection/heuristic.js';
+import type { SelectionOutcome } from './selection/fill.js';
 import type { EditorialCandidate } from './selection/templates.js';
 
 export interface CheckCoverageInput {

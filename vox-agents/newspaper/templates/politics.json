@@ -222,7 +222,7 @@
   {
     "id": "golden-age-in-wartime-account",
     "triggers": ["golden-age-in-wartime"],
-    "tags": ["politics"],
+    "tags": ["politics", "domestic"],
     "variants": [
       {
         "id": "golden-age-wartime-report",

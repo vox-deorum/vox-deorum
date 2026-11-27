@@ -61,11 +61,10 @@ describe('editorial catalogue files', () => {
     await expect(loadEditorialConfig(directory)).rejects.toThrow(field);
   });
 
-  it('should require room for a five story front', async () => {
-    await writeDocument('defaults.json', { maxItems: 4 });
-    await expect(loadEditorialConfig(directory)).rejects.toThrow('maxItems');
-    await writeDocument('defaults.json', { maxItems: 5 });
-    expect((await loadEditorialConfig(directory)).defaults.maxItems).toBe(5);
+  it('should reject a template whose tags no section takes', async () => {
+    const base = await loadEditorialConfig();
+    await writeDocument('templates.json', [{ id: base.templates[0].id, tags: [] }]);
+    await expect(loadEditorialConfig(directory)).rejects.toThrow(base.templates[0].id);
   });
 
   it('should reject snapshots that predate the current catalogue version', async () => {
@@ -324,7 +323,7 @@ describe('editorial catalogue files', () => {
     const owner = { placeholder: 'owner', label: '{{owner}}', target: { type: 'civilization', civilizationId: '{{playerId}}' } };
     const localCity = { ...city, target: { ...city.target, cityId: '{{seatCityId}}' } };
     const story = { headline: '{{city}} and {{owner}}', body: ['News from {{city}}.'], weight: { base: 1 } };
-    const report = { id: 'link-test', triggers: ['link-test-trigger'], tags: [], weight: { base: 1 } };
+    const report = { id: 'link-test', triggers: ['link-test-trigger'], tags: ['economy'], weight: { base: 1 } };
 
     beforeEach(async () => {
       await writeDocument('triggers.json', [{ id: 'link-test-trigger', subject: 'world', tier: 'routine', when: 'true' }]);

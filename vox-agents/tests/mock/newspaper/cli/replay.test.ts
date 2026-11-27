@@ -21,6 +21,8 @@ describe('newspaper replay command artifacts', () => {
   beforeEach(async () => {
     recording = await createReplayRecording('Epic', [6]);
     options = await createReplayCliOptions(recording.filename);
+    // The fixture briefs share one rule, so the stock repetition penalties would keep them off the front.
+    await writeFile(path.join(options.config!, 'defaults.json'), JSON.stringify({ rulePenalty: 0, ruleFatigue: 0 }));
     vi.spyOn(renderer, 'renderNewspaperExamples').mockRejectedValue(new Error('Unexpected preview rendering in a mock replay test.'));
   });
   afterEach(async () => { vi.restoreAllMocks(); await recording.cleanup(); });

@@ -69,7 +69,6 @@ export interface EditorialCandidate {
   tier: string;
   importance: number;
   urgent: boolean;
-  short: boolean;
   weight: number;
   variants: AuthoredVariant[];
   variantWeights: Record<string, number>;
@@ -399,7 +398,6 @@ function candidate(
     tier: strongest.tier,
     importance: strongest.importance,
     urgent: parts.some((part) => part.urgent),
-    short: template.short,
     weight: rating.weight,
     variants, variantWeights, variantSources, values,
     ...(template.names === undefined ? {} : { names: template.names }),

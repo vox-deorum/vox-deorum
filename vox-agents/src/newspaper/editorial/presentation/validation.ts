@@ -4,9 +4,9 @@ import { parseIssueDocument } from '../../renderer/validation.js';
 import type { EditorialConfig } from '../config/schema.js';
 import type { PresentationWeights } from './eligibility.js';
 import type { PresentationResult } from './issue.js';
-import { frontBriefCount, sectionBriefCount } from './page-plan.js';
+import { briefsFit } from './page-plan.js';
 
-/** Enforce canonical series, threat prominence, evidence dates and required lead counts. */
+/** Enforce canonical series, threat prominence, evidence dates and page sizes. */
 export function validateEditorialIssue(
   { issue, itemCandidates: candidates, layouts, variants }: PresentationResult,
   config: EditorialConfig,
@@ -52,9 +52,9 @@ export function validateEditorialIssue(
     const lead = candidates.get(page.itemIds[0]);
     if (page.layout === 'breaking' && (!definition.front || !page.hasLead || !lead?.urgent))
       throw new Error('A breaking page requires an urgent lead.');
-    const required = (definition.front ? frontBriefCount : sectionBriefCount) + (page.hasLead ? 1 : 0);
-    if (page.itemIds.length !== required)
-      throw new Error(`Page ${page.id} does not fill its required ${required} articles.`);
+    const briefs = page.itemIds.length - (page.hasLead ? 1 : 0);
+    if (!briefsFit(briefs, definition.front))
+      throw new Error(`Page ${page.id} holds ${briefs} briefs, outside its allowed range.`);
     if (
       !definition.front &&
       page.itemIds.some(

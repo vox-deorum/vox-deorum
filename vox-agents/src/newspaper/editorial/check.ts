@@ -22,8 +22,8 @@ import { addDiplomacyFacts, addPressFacts, type NewspaperFactModel } from './fac
 import { evaluateTriggerRules, ruleHistoryTurns } from './rules/evaluate.js';
 import { buildPress } from './rules/press.js';
 import { computeFeedback } from './selection/feedback.js';
-import { publishedFingerprints, selectHeuristic } from './selection/heuristic.js';
-import { mergeSelectedStories } from './selection/merge.js';
+import { fillPages, publishedFingerprints } from './selection/fill.js';
+import { createStoryMerger } from './selection/merge.js';
 import { advanceSeries, decaySeries } from './selection/series.js';
 import { matchTemplates, type EditorialCandidate } from './selection/templates.js';
 import { applyStylePreferences } from './selection/styles.js';
@@ -179,7 +179,13 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
     ...candidate,
     seriesKeys: candidate.seriesKeys.map((key) => `${scope}/${key}`),
   }));
-  const selection = selectHeuristic(candidates, state, config, feedback);
+  const weights = await evaluatePresentation(config, compiled, batch, budget);
+  const selection = await fillPages({
+    candidates, state, config, feedback, turn,
+    sections: config.pages.filter(page => !page.front && (weights.get(page) ?? 0) > 0),
+    merge: createStoryMerger(candidates, config, compiled, batch, budget, publishedFingerprints(state), terms),
+  });
+  const front = selection.pages[0].stories;
   const originalScores = new Map(selection.scores.map(({ id, score }) => [id, score]));
   const decision: EditorialDecisionRecord = {
     checkId,
@@ -196,7 +202,7 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
     selectedVariants: {},
     designId: null,
     layouts: {},
-    evidence: uniqueSources(selection.selected.flatMap((candidate) => candidate.sources)),
+    evidence: uniqueSources(selection.pages.flatMap(({ stories }) => stories.flatMap((candidate) => candidate.sources))),
     feedback,
     diplomacyInference: diplomacy.audit,
     triggerAudit: rules.audit,
@@ -235,21 +241,10 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
     recordCoverage(new Set(), new Map());
     return { status: 'skipped', reason: decision.reason, state, decision };
   };
-  if (selection.selected.length < frontBriefCount)
-    return skip(`Only ${selection.selected.length} of ${frontBriefCount} required front articles are ready.`);
-  const weights = await evaluatePresentation(config, compiled, batch, budget);
-  const fronts = prepareFrontLayouts(config, weights, terms);
-  const merged = await mergeSelectedStories(
-    selection.selected, candidates, config, compiled, batch, budget, publishedFingerprints(state),
-    (prospective) => {
-      const plan = planPage(prospective, true);
-      return prospective.length >= plan.count && fittingFrontLayouts(fronts, plan.breaking).size > 0;
-    }, terms,
-  );
-  const plan = planPage(merged, true);
-  if (merged.length < plan.count)
-    return skip(`Only ${merged.length} of ${plan.count} required front articles are ready.`);
-  const fittingFronts = fittingFrontLayouts(fronts, plan.breaking);
+  const plan = planPage(front, true);
+  if (!selection.frontComplete)
+    return skip(`Only ${front.length} ready articles fit the front page, which needs ${frontBriefCount} briefs${plan.leadId ? ' and a lead' : ''}.`);
+  const fittingFronts = fittingFrontLayouts(prepareFrontLayouts(config, weights, terms), plan.breaking);
   let styleSources = new Map<string, NewspaperSourceReference[]>();
   const presentation = await presentIssue({
     checkId,
@@ -258,7 +253,7 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
     timelineId: input.timelineId,
     receiver: input.receiver,
     turn,
-    selected: merged,
+    pages: selection.pages,
     state,
     config,
     weights,
@@ -283,7 +278,7 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
     }),
   });
   if (!presentation)
-    return skip(`No eligible ${plan.breaking ? 'breaking' : 'regular'} front layout for ${merged.length} ready articles.`);
+    return skip(`No eligible ${plan.breaking ? 'breaking' : 'regular'} front layout for ${front.length} ready articles.`);
   const issue = validateEditorialIssue(presentation, config, weights);
   const records: PublishedItemRecord[] = issue.items.map((item) => {
     const candidate = presentation.itemCandidates.get(item.id)!;

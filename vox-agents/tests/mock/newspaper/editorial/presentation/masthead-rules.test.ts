@@ -8,12 +8,14 @@ import {
 } from '../../../../../src/newspaper/editorial/config/expressions.js';
 import { editorialConfigSchema, editorialConfigVersion, type EditorialConfig } from '../../../../../src/newspaper/editorial/config/schema.js';
 import { buildNewspaperFacts } from '../../../../../src/newspaper/editorial/facts/index.js';
-import { evaluatePresentation } from '../../../../../src/newspaper/editorial/presentation/eligibility.js';
+import { evaluatePresentation, type PresentationWeights } from '../../../../../src/newspaper/editorial/presentation/eligibility.js';
 import { presentIssue } from '../../../../../src/newspaper/editorial/presentation/issue.js';
+import { pageAccepts, pageComplete } from '../../../../../src/newspaper/editorial/presentation/page-plan.js';
 import {
   selectMastheadRule,
   type MastheadRuleSelection,
 } from '../../../../../src/newspaper/editorial/presentation/masthead-rules.js';
+import type { FilledPage } from '../../../../../src/newspaper/editorial/selection/fill.js';
 import type { EditorialCandidate } from '../../../../../src/newspaper/editorial/selection/templates.js';
 import type { ExpressionCheckBudget } from '../../../../../src/newspaper/editorial/shared/expressions.js';
 
@@ -23,7 +25,7 @@ function createConfig(): EditorialConfig {
     version: editorialConfigVersion,
     defaults: {
       frequencyStandardTurns: 5, llmEnabled: false, publicationTitle: 'Publication',
-      maxItems: 8, importanceMax: 100, decayPerTurn: 0.9,
+      importanceMax: 100, decayPerTurn: 0.9,
       seriesWeight: 1, noveltyBonus: 1, varietyBonus: 1,
       feedback: { window: 50, series: 3, tag: 1, bound: 10 },
     },
@@ -70,9 +72,31 @@ function createCandidate(config: EditorialConfig, id: string): EditorialCandidat
   return {
     id, subject: id, period: { from: 1, to: 5 }, triggerIds: [`trigger/${id}`], ruleIds: ['coverage'],
     templateIds: ['coverage'], seriesKeys: [`series/${id}`], tags: ['economy'], tier: 'filler', importance: 20,
-    urgent: false, short: false, weight: 1, variants: config.templates[0].variants,
+    urgent: false, weight: 1, variants: config.templates[0].variants,
     variantWeights: { standard: 1 }, variantSources: {}, values: {}, sources: [], fingerprint: id,
   };
+}
+
+/** Build the front and every eligible section from the selected stories, keeping sections that fit. */
+function pagesFor(
+  config: EditorialConfig, candidates: readonly EditorialCandidate[], weights: PresentationWeights,
+): FilledPage[] {
+  const frontPage = config.pages.find(page => page.front)!;
+  const front: EditorialCandidate[] = [];
+  for (const candidate of candidates) if (pageAccepts(front, candidate, true)) front.push(candidate);
+  const sections = config.pages
+    .filter(page => !page.front && (weights.get(page) ?? 0) > 0)
+    .sort((left, right) => left.order - right.order)
+    .map(page => ({ page, stories: [] as EditorialCandidate[] }));
+  for (const candidate of candidates.filter(candidate => !front.includes(candidate))) {
+    const section = sections.find(({ page, stories }) =>
+      candidate.tags.some(tag => page.tags.includes(tag)) && pageAccepts(stories, candidate, false));
+    section?.stories.push(candidate);
+  }
+  return [
+    { page: frontPage, stories: front },
+    ...sections.filter(({ stories }) => pageComplete(stories, false)),
+  ];
 }
 
 /** Build permission-filtered facts with one receiver policy branch and identity. */
@@ -214,12 +238,14 @@ describe('masthead presentation', () => {
       motto: 'Rule Motto',
       sources: [conditionSource, titleSource],
     };
+    const candidates = Array.from({ length: 10 }, (_, index) => createCandidate(config, String(index)));
+    const weights = await weightsFor(config);
     const result = (await presentIssue({
       checkId: 'check/10',
       issueId: 'issue/10', campaignId: 'campaign', timelineId: 'branch',
       receiver: { playerId: 0, label: 'France' }, turn: 10,
-      selected: Array.from({ length: 8 }, (_, index) => createCandidate(config, String(index))),
-      state: createInitialPublicationState(), config, weights: await weightsFor(config),
+      pages: pagesFor(config, candidates, weights),
+      state: createInitialPublicationState(), config, weights,
       proseRandom: () => 0,
       terms: new Map([
         ['civilization', { value: 'France', sources: [titleSource] }],
@@ -245,12 +271,14 @@ describe('masthead presentation', () => {
 
   it('should keep the design title, motto and page labels when no rule wins', async () => {
     const config = createConfig();
+    const candidates = Array.from({ length: 6 }, (_, index) => createCandidate(config, String(index)));
+    const weights = await weightsFor(config);
     const result = (await presentIssue({
       checkId: 'check/10',
       issueId: 'issue/10', campaignId: 'campaign', timelineId: 'branch',
       receiver: { playerId: 0, label: 'France' }, turn: 10,
-      selected: Array.from({ length: 6 }, (_, index) => createCandidate(config, String(index))),
-      state: createInitialPublicationState(), config, weights: await weightsFor(config),
+      pages: pagesFor(config, candidates, weights),
+      state: createInitialPublicationState(), config, weights,
       proseRandom: () => 0,
       selectMasthead: async () => undefined,
     }))!;

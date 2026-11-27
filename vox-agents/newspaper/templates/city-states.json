@@ -103,7 +103,7 @@
   {
     "id": "city-state-ally-defects-account",
     "triggers": ["city-state-ally-defects"],
-    "tags": ["politics"],
+    "tags": ["politics", "international"],
     "names": ["cityState", "rival"],
     "variants": [
       {

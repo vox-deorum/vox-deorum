@@ -1,4 +1,4 @@
-/** Combine selected original stories while keeping a front page fillable. */
+/** Combine placed original stories into merged reports. */
 import type { NewspaperSourceReference } from '../../../../../mcp-server/dist/newspaper/evidence.js';
 import type { RuleScalar } from '../../contracts/triggers.js';
 import type { CompiledEditorialExpressions, EditorialTerms } from '../config/expressions.js';
@@ -16,40 +16,21 @@ function memberBindings(candidate: EditorialCandidate): ExpressionBindings {
   return { ...candidate.variantBindings, templateIds: candidate.templateIds };
 }
 
-/** Evaluate one anchor against the remaining original selections and render its merged choices. */
+/** Render one anchor's merged choices for members whose match already passed. */
 async function mergeCandidate(
   anchor: EditorialCandidate,
-  remaining: readonly EditorialCandidate[],
+  members: readonly EditorialCandidate[],
+  matchSources: readonly NewspaperSourceReference[],
+  anchorPlaced: boolean,
   definition: MergeDefinition,
   compiled: CompiledEditorialExpressions,
   batch: MergeBatch,
   budget: ExpressionCheckBudget,
   terms?: EditorialTerms,
 ): Promise<EditorialCandidate | undefined> {
-  const eligible = remaining.filter(member => member !== anchor);
-  if (eligible.length < definition.min) return undefined;
   const prepared = compiled.templates.get(anchor.templateIds[0])!.merge!;
-  const lead = memberBindings(anchor);
   const windowFromTurn = anchor.period.from;
-  const [matching] = await compiled.runner.evaluate({
-    ...batch,
-    groups: [{
-      expressions: [prepared.match], windowFromTurn,
-      subjects: eligible.map(member => ({ lead, member: memberBindings(member) })),
-    }],
-  }, budget);
-  const sources: NewspaperSourceReference[] = [];
-  const members: EditorialCandidate[] = [];
-  for (const [index, [result]] of matching.entries()) {
-    recordChoiceError(result, prepared.match, budget);
-    if ('value' in result && result.value) {
-      members.push(eligible[index]);
-      sources.push(...(result.sources ?? []));
-    }
-  }
-  if (matching.some(([result]) => 'error' in result && result.error.hidden === undefined)) return undefined;
-  if (members.length < definition.min) return undefined;
-
+  const sources = [...matchSources];
   const values: Record<string, RuleScalar> = Object.create(null);
   const merge = { members: members.map(memberBindings), count: members.length, values };
   const bindings = { ...anchor.variantBindings, merge };
@@ -94,7 +75,7 @@ async function mergeCandidate(
   /** Retain each provenance key once, starting with the anchor's keys. */
   const union = (read: (candidate: EditorialCandidate) => readonly string[]) =>
     [...new Set(support.flatMap(read))];
-  const consumed = remaining.includes(anchor) ? support : members;
+  const consumed = anchorPlaced ? support : members;
   const mergedCandidateIds = consumed.map(member => member.id);
   const coveredFingerprints = [...new Set(support.map(member => member.fingerprint))].sort();
   const ruleSubjects = [...new Map(consumed.flatMap(member => member.ruleIds.map(ruleId => {
@@ -122,37 +103,93 @@ async function mergeCandidate(
   };
 }
 
-/** Apply merge anchors by priority, leaving originals intact unless the replacement keeps the front fillable. */
-export async function mergeSelectedStories(
-  selected: EditorialCandidate[],
+/** One cached match between a merge anchor and a placed story. */
+interface MatchResult {
+  value: boolean;
+  failed: boolean;
+  sources: NewspaperSourceReference[];
+}
+
+/** Merge pass over the placed original stories; `allow` can veto a merged story. */
+export type StoryMerger = (
+  placed: readonly EditorialCandidate[],
+  allow: (merged: EditorialCandidate) => boolean,
+) => Promise<EditorialCandidate[]>;
+
+/**
+ * Prepare merge passes for one check. Each pass applies anchors by priority to the placed
+ * stories. Match results and merged stories are cached, so repeated passes evaluate each
+ * anchor and story pair once.
+ */
+export function createStoryMerger(
   candidates: readonly EditorialCandidate[],
   config: EditorialConfig,
   compiled: CompiledEditorialExpressions,
   batch: MergeBatch,
   budget: ExpressionCheckBudget,
   published: ReadonlySet<string>,
-  frontFits: (prospective: EditorialCandidate[]) => boolean,
   terms?: EditorialTerms,
-): Promise<EditorialCandidate[]> {
+): StoryMerger | undefined {
   const definitions = new Map(config.templates.flatMap(template => template.merge ? [[template.id, template.merge]] : []));
-  if (!definitions.size) return selected;
+  if (!definitions.size) return undefined;
   const anchors = candidates.flatMap(anchor => {
     const definition = definitions.get(anchor.templateIds[0]);
     return definition && !published.has(anchor.fingerprint) ? [{ anchor, definition }] : [];
   }).sort((a, b) => (b.definition.priority ?? 0) - (a.definition.priority ?? 0) || a.anchor.id.localeCompare(b.anchor.id));
-  let consumed = new Map<string, EditorialCandidate>();
-  /** Project the ranked slate with each consumed original replaced by its merge. */
-  const project = (replacements: ReadonlyMap<string, EditorialCandidate>) =>
-    [...new Set(selected.map(candidate => replacements.get(candidate.id) ?? candidate))];
-  for (const { anchor, definition } of anchors) {
-    if (consumed.has(anchor.id)) continue;
-    const merged = await mergeCandidate(
-      anchor, selected.filter(candidate => !consumed.has(candidate.id)), definition, compiled, batch, budget, terms,
-    );
-    if (!merged) continue;
-    const update = new Map(consumed);
-    for (const id of merged.mergedCandidateIds!) update.set(id, merged);
-    if (frontFits(project(update))) consumed = update;
-  }
-  return project(consumed);
+  if (!anchors.length) return undefined;
+  const matches = new Map<string, MatchResult>();
+  const built = new Map<string, Promise<EditorialCandidate | undefined>>();
+  /** Key one anchor and member pair. */
+  const pairKey = (anchor: EditorialCandidate, member: EditorialCandidate) => JSON.stringify([anchor.id, member.id]);
+
+  /** Evaluate the anchor's match against stories it has not seen yet, then return every result. */
+  const match = async (anchor: EditorialCandidate, eligible: readonly EditorialCandidate[]): Promise<MatchResult[]> => {
+    const fresh = eligible.filter(member => !matches.has(pairKey(anchor, member)));
+    if (fresh.length) {
+      const prepared = compiled.templates.get(anchor.templateIds[0])!.merge!;
+      const lead = memberBindings(anchor);
+      const [results] = await compiled.runner.evaluate({
+        ...batch,
+        groups: [{
+          expressions: [prepared.match], windowFromTurn: anchor.period.from,
+          subjects: fresh.map(member => ({ lead, member: memberBindings(member) })),
+        }],
+      }, budget);
+      for (const [index, [result]] of results.entries()) {
+        recordChoiceError(result, prepared.match, budget);
+        const value = 'value' in result && Boolean(result.value);
+        matches.set(pairKey(anchor, fresh[index]), {
+          value,
+          failed: 'error' in result && result.error.hidden === undefined,
+          sources: value ? result.sources ?? [] : [],
+        });
+      }
+    }
+    return eligible.map(member => matches.get(pairKey(anchor, member))!);
+  };
+
+  return async (placed, allow) => {
+    const consumed = new Set<string>();
+    const merged: EditorialCandidate[] = [];
+    for (const { anchor, definition } of anchors) {
+      if (consumed.has(anchor.id)) continue;
+      const eligible = placed.filter(candidate => candidate !== anchor && !consumed.has(candidate.id));
+      if (eligible.length < definition.min) continue;
+      const results = await match(anchor, eligible);
+      if (results.some(result => result.failed)) continue;
+      const members = eligible.filter((_, index) => results[index].value);
+      if (members.length < definition.min) continue;
+      const anchorPlaced = placed.includes(anchor);
+      const key = JSON.stringify([anchor.id, members.map(member => member.id), anchorPlaced]);
+      if (!built.has(key)) {
+        const sources = results.flatMap(result => result.sources);
+        built.set(key, mergeCandidate(anchor, members, sources, anchorPlaced, definition, compiled, batch, budget, terms));
+      }
+      const story = await built.get(key)!;
+      if (!story || !allow(story)) continue;
+      merged.push(story);
+      for (const id of story.mergedCandidateIds!) consumed.add(id);
+    }
+    return merged;
+  };
 }

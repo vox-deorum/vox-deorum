@@ -7,7 +7,7 @@ export const editionBriefRule = {
 };
 
 export const editionBriefTemplate = {
-  id: editionBriefRule.id, triggers: [editionBriefRule.id], tags: [], weight: { base: 1 },
+  id: editionBriefRule.id, triggers: [editionBriefRule.id], tags: ['domestic'], weight: { base: 1 },
   variants: [{ id: 'fixture-brief', headline: 'Council brief', body: ['The council reviewed its agenda.'], weight: { base: 1 } }],
 };
 
@@ -23,6 +23,8 @@ export function withEditionBriefs(evidence: NewspaperEvidence, config: Editorial
     evidence: { ...evidence, events: [...evidence.events, ...briefs] },
     config: editorialConfigSchema.parse({
       ...config, triggers: [...config.triggers, editionBriefRule], templates: [...config.templates, editionBriefTemplate],
+      // The briefs share one rule, so the repetition penalties would push them off the page.
+      defaults: { ...config.defaults, rulePenalty: 0, ruleFatigue: 0 },
     }),
   };
 }

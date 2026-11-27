@@ -8,7 +8,7 @@ Start in `vox-agents/newspaper/` to author coverage or `vox-agents/src/newspaper
 
 | Catalogue file | Controls |
 | --- | --- |
-| `defaults.json` | Frequency, story limits and scoring, style repetition, and feedback |
+| `defaults.json` | Frequency, sections kept, scoring and rule penalties, style repetition, and feedback |
 | `constants.json` | [Shared thresholds, lists, tiers, stakes, shortcuts, and terms](triggers/constants.md) |
 | `triggers/*.json` | [Which developments qualify and how they score](triggers/overview.md#trigger-entries) |
 | `templates/*.json`, `root-templates.json` | Story variants and shared link lists |
@@ -19,7 +19,7 @@ Start in `vox-agents/newspaper/` to author coverage or `vox-agents/src/newspaper
 
 The loader reads stock groups in filename order. A companion such as `war-variants.json` adds ordinary variants to templates in `war.json`. Name the template by `id` and give each added variant an ID distinct from its regular and merge variants.
 
-To override stock entries, mirror the catalogue structure in an overlay and keep their IDs. Lists of entries with IDs, including variants, merge by ID. Lists such as tags, conditions, and paragraphs replace the inherited list. Defaults and constants merge by field. Grouped overlays take precedence over corresponding flat files. [Style rules](#variant-styles) add new IDs instead. Replay validates and saves the effective catalogue for resume.
+To override stock entries, mirror the catalogue structure in an overlay and keep their IDs. Lists of entries with IDs, including variants, merge by ID. Lists such as tags, conditions, and paragraphs replace the inherited list. Defaults and constants merge by field. Grouped overlays take precedence over corresponding flat files. [Style rules](#variant-styles) add new IDs instead. Replay validates and saves the effective catalogue for resume. The loader rejects a template with no tag that some section takes, because the front cannot hold every story.
 
 ## Authoring choices
 
@@ -32,7 +32,6 @@ When a template names several rules, they must match the same subject with overl
 | `id`, `triggers`, `tags`, `variants` | Required: stable template ID, matching rule IDs, topic and scope tags, and ordinary prose choices |
 | `triggerSummary` | Eligibility summary for the Writing Desk, which falls back to rule summaries or readable IDs |
 | `mode` | `authored` (default) or `llmOnly`, which the current editor skips |
-| `short` | Lets the editor reserve its last ranking slot for a brief |
 | `when`, `weight` | Template eligibility, base weight, and conditional adjustments |
 | `names` | Placeholders to style as names |
 | `extends`, `links` | Root template ID and typed link list |
@@ -46,7 +45,7 @@ A template with `merge` can combine selected stories even when its own ordinary 
 
 `merge.variants` and `merge.values` can use `merge.members` and `merge.count`. A scalar value named `attackers` prints as `{{merge.values.attackers}}`. Use an empty ordinary `variants` list for a new merge-only template. To suppress a stock variant in an overlay, set its `when` to the string `"false"`. Set `merge` to `null` in an overlay to disable the combination.
 
-A combination uses one slot, keeps the original evidence and urgency, and replaces the combining template's own article if it was selected. The editor needs eligible combined prose and enough remaining articles to fill the front. See [war coverage](triggers/war-and-peace.md#combining-declaration-reports) for an example.
+A combination uses one slot, keeps the original evidence and urgency, and replaces the combining template's own article if it was selected. It needs eligible combined prose; when a combination leaves the front short, the editor fills the pages again without combining. See [war coverage](triggers/war-and-peace.md#combining-declaration-reports) for an example.
 
 ### Variant styles
 
@@ -60,7 +59,7 @@ Set all three tags together or use the defaults. The tag definitions in `styles/
 
 Each style rule has an `id`, `match`, `when`, and positive `multiplier`. A variant needs an allowed tag for every kind in `match`. Put single-kind rules in `voice-rules.json`, `stance-rules.json`, or `genre-rules.json`, and rules that test multiple kinds in `mixed-rules.json`. Rules are read in that order, with overlays after stock. Overlays can redefine tags; added rules need new IDs.
 
-Rules can read `story.tier`, `story.importance` (adjusted tier score before ranking bonuses), `story.urgent`, `story.short`, and `story.tags`. Guard subject-specific reads. For example, test `subject.kind === 'city'` before `city.happinessDelta`. A false condition, error, or hidden fact leaves the weight unchanged. Applied style evidence goes into the audit. Use the variant's own `when` for facts its copy needs.
+Rules can read `story.tier`, `story.importance` (adjusted tier score before ranking bonuses), `story.urgent`, and `story.tags`. Guard subject-specific reads. For example, test `subject.kind === 'city'` before `city.happinessDelta`. A false condition, error, or hidden fact leaves the weight unchanged. Applied style evidence goes into the audit. Use the variant's own `when` for facts its copy needs.
 
 The editor draws variants for placed articles in ranked order. Each earlier variant with the same tag applies that kind's factor in `defaults.styleRepeat`: voice 1.25, stance 1, and genre 0.8. This favors a consistent voice and varied genres.
 
@@ -117,12 +116,26 @@ Terms layer from `defaults` to the winning branch or ideology, then civilization
 
 ### Pages and designs
 
-| Page | Briefs required | When it gets a lead |
-| --- | --- | --- |
-| Front | Four | The first urgent story leads a breaking front. Otherwise, the highest importance must beat the runner-up by at least 15 points before rank bonuses and votes. |
-| Section | Two | The same 15-point rule. The section uses unplaced stories with matching topic tags. |
+`pages.json` sets one front page and six sections. A section takes stories whose tags include one of its tags, and the editor tries the sections in this order. A story with several tags goes to the earliest match, so the broad `domestic` and `international` catch-alls come last.
 
-A lead adds one story. The editor checks capacity after combining reports and keeps the reporting period open when the front cannot be filled. Sections run in `pages.json` order. An incomplete section leaves its stories available to later sections. A published article appears on just one page. [Designs](designs.md#which-design-runs) determine how it looks.
+| Order | ID | Label | Tags |
+| --- | --- | --- | --- |
+| 0 | `front` | The Record | None; takes any story with room for it |
+| 1 | `war` | The Front Lines | `military` |
+| 2 | `assembly` | The Assembly | `congress` |
+| 3 | `economy` | Trade and Livelihood | `economy`, `trade` |
+| 4 | `learning` | Faith, Arts and Learning | `religion`, `culture`, `science` |
+| 5 | `home` | At Home | `domestic` |
+| 6 | `abroad` | Beyond Our Borders | `international` |
+
+| Page | Briefs | Most stories | When it takes a lead |
+| --- | --- | --- | --- |
+| Front | Exactly 4 | 5 | The first urgent story leads a breaking page. Otherwise the top story leads a full page of five when its importance beats the runner-up by at least 15 points. |
+| Section | 2 to 4 | 5 | The same 15-point gap on a page of 3 or more stories. |
+
+A fifth story only prints when the page also has a lead. Importance here is the story's adjusted tier score, before rank bonuses and votes. A section with fewer than 2 stories is dropped. The rest are ranked by the total score of their stories, and the edition keeps the best `defaults.sections` (2) in page order. Stories from a dropped section then move, best first, to a kept section that takes one of their tags and has room. For example, a lone trade deal tagged `trade` and `international` moves from Trade and Livelihood to Beyond Our Borders.
+
+A check that cannot fill the front with four briefs skips and keeps the reporting period open. A printed article appears on just one page. [Designs](designs.md#which-design-runs) determine how it looks.
 
 ### Masthead rules
 
@@ -144,17 +157,41 @@ The issue saves these choices. Use **Recorded** replay to see rule results and t
 
 ## Developments, selection, and continuity
 
-The editor ranks up to ten candidates by default. It gives urgent stories priority; within the same urgency the last slot favors a brief if none was selected. Nonurgent stories need a positive rank. A development, continuing series (rule and subject), or war or peace incident can support only one ranked story per issue.
+Selection is one loop. It takes the best remaining story, urgent first, then rank, then ID, and prints it on the front if there is room, otherwise in the first section that takes its tags. It skips a story that shares a series, trigger, or conflict key with a placed story, and a nonurgent story without a positive rank. The loop ends when the candidates run out or every page holds five stories. A development, continuing series (rule and subject), or war or peace incident can support only one story per issue.
 
 | Rank component | Stock calculation |
 | --- | --- |
 | Importance and template weight | Adjusted tier score plus resolved template weight |
 | Series history | 15% of the highest series score. Published importance adds to the series, which decays by a factor of 0.94 per recorded turn. |
 | Novelty | +6 when none of the story's series has printed |
-| Variety | +8 when the story adds any tag not yet selected for the issue |
+| Variety | +8 when the story adds any tag not yet placed in the issue |
 | Votes | [Feedback](#votes-and-preferences), capped at ±25 |
+| Rule repetition | -15 for each story from a rule already placed in this issue |
+| Rule fatigue | -10 for each printed item of the same rule, times 0.94 per turn since its issue |
 
-Publication closes the reporting period and spends [repeat memory](triggers/overview.md#repeats) for printed series, including reports covered by a combination. A skip advances the schedule and keeps the reporting period open. Series scores decay on both outcomes.
+### Rule penalties
+
+A rule that fills the paper loses value twice. Repetition counts the stories placed earlier in this issue. Fatigue counts every printed item whose rules overlap, faded by `defaults.decayPerTurn` (0.94).
+
+| Case | Calculation | Loss |
+| --- | --- | --- |
+| A third foreign wonder report in the same issue | 2 × 15 | 30 |
+| Two reports printed 5 turns ago | 2 × 10 × 0.94^5 | ≈ 14.7 |
+| Two reports printed 10 turns ago | 2 × 10 × 0.94^10 | ≈ 10.8 |
+
+### Combining during the loop
+
+After each placement the editor rebuilds combined reports from the placed stories. A combination occupies one slot, at its earliest member's place, scores as its strongest member, and frees the other slots for later passes of the loop. An urgent combination must sit on the front, where it can lead.
+
+If combining leaves the front without its four briefs, the loop runs again without combining, and the combined result is kept only when the plain run also cannot fill the front.
+
+### Front subjects and the reserve
+
+The front keeps a mix of subjects. Its last slots prefer a story from another subject once every front story shares one. A story that no page takes, but that the front has room for by count, waits in a reserve. After the loop, the editor repairs the front: it moves the best story of another subject from a section, gives the replaced brief back to that section when its tags fit, then tops the front up to four briefs from the sections and the reserve. The reserve is what lets the front print from one subject when the whole issue has only one.
+
+Coverage records why a candidate did not print. `outranked` means no page had room or took its tags. `unplaced` means the story was placed in a section that the edition dropped. `conflict`, `printed-before`, `not-positive`, and `no-variants` name the other skips.
+
+Publication closes the reporting period and spends [repeat memory](triggers/overview.md#repeats) for printed series, including stories covered by a combination. A skip advances the schedule and keeps the reporting period open. Series scores decay on both outcomes.
 
 The [CLI audit](replay.md#generate-examples-from-the-command-line) shows trigger results, candidate ranks, combined reports, placement, and the final `selectedVariants` and `selectedStyles`. Design, layout, and prose draws use separate seeds.
 
@@ -174,4 +211,4 @@ The decision records the votes and adjustments used at the cutoff. [Replay prefe
 
 ## Ownership and inputs
 
-Under `vox-agents/src/newspaper/editorial/`, `config/load.ts` loads the catalogue, `check.ts` runs a check, and `selection/` and `presentation/` handle stories and layout. The publication state lives in `contracts/publication.ts` one level up. See [replay storage](replay.md#source-storage-and-api) and [verification commands](triggers/overview.md#verify-changes).
+Under `vox-agents/src/newspaper/editorial/`, `config/load.ts` loads the catalogue, `check.ts` runs a check, `selection/fill.ts` fills the pages, and `presentation/` renders them. The publication state lives in `contracts/publication.ts` one level up. See [replay storage](replay.md#source-storage-and-api) and [verification commands](triggers/overview.md#verify-changes).

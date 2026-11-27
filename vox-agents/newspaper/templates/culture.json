@@ -511,7 +511,7 @@
   {
     "id": "great-person-expended-account",
     "triggers": ["great-person-expended"],
-    "tags": ["politics"],
+    "tags": ["politics", "culture"],
     "names": ["civilization", "person"],
     "variants": [
       {

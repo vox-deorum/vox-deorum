@@ -105,7 +105,6 @@ export const templateSchema = eligibleSchema.extend({
   tags: z.array(z.string().min(1)),
   names: z.array(z.string().min(1)).optional(),
   mode: z.enum(['authored', 'llmOnly']).default('authored'),
-  short: z.boolean().default(false),
   variants: z.array(resolvedVariantSchema),
   merge: mergeTemplateSchema.nullish(),
 });
@@ -160,13 +159,17 @@ export const editorialConfigSchema = z
       frequencyStandardTurns: z.number().int().positive(),
       llmEnabled: z.boolean(),
       publicationTitle: z.string().min(1),
-      /** Ranked stories available to the paper; the front needs four briefs and possibly a lead. */
-      maxItems: z.number().int().min(5),
       importanceMax: z.number().positive(),
       decayPerTurn: z.number().min(0).max(1),
       seriesWeight: z.number().nonnegative(),
       noveltyBonus: z.number().nonnegative(),
       varietyBonus: z.number().nonnegative(),
+      /** How many sections an issue keeps beside the front, chosen by the total score of their stories. */
+      sections: z.number().int().nonnegative().default(2),
+      /** Points subtracted for each story from the same rule already placed in this issue. */
+      rulePenalty: z.number().nonnegative().default(15),
+      /** Points per story of the same rule printed in earlier issues, decayed by decayPerTurn for each turn since. */
+      ruleFatigue: z.number().nonnegative().default(10),
       styleRepeat: z.strictObject({
         voice: z.number().finite().positive(),
         stance: z.number().finite().positive(),

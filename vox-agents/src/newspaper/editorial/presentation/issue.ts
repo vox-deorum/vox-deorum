@@ -19,8 +19,8 @@ import {
   placeholderPattern, placeholderName, substitute, resolveLinkTarget, type EditorialCandidate
 } from '../selection/templates.js';
 import { fittingFrontLayouts, prepareFrontLayouts, type FrontLayouts, type PresentationWeights } from './eligibility.js';
-import { placeArticles } from './placement.js';
-import { planPage } from './page-plan.js';
+import type { FilledPage } from '../selection/fill.js';
+import { pageComplete, planPage } from './page-plan.js';
 import { resolveMasthead, resolvePrintableTermText, termTextSources } from './masthead.js';
 import type { MastheadRuleSelection } from './masthead-rules.js';
 
@@ -111,6 +111,20 @@ export function choosePressRunDesign(
   };
 }
 
+/** Put the planned lead first and keep a different subject second on the front page. */
+function orderStories(
+  stories: readonly EditorialCandidate[],
+  leadId: string | undefined,
+  diversifySubjects: boolean,
+): EditorialCandidate[] {
+  const first = stories.find(story => story.id === leadId) ?? stories[0];
+  if (!first) return [];
+  const second = diversifySubjects
+    ? stories.find(story => story !== first && story.subject !== first.subject)
+    : undefined;
+  return [first, ...(second ? [second] : []), ...stories.filter(story => story !== first && story !== second)];
+}
+
 export interface PresentationResult {
   issue: IssueDocument;
   variants: Record<string, string>;
@@ -121,7 +135,13 @@ export interface PresentationResult {
   mastheadRuleId?: string;
 }
 
-/** Write canonical articles, prioritize immediate threats, and adapt section pages to available content. */
+/** Order one page's stories behind its planned lead. */
+function ordered(stories: readonly EditorialCandidate[], front: boolean) {
+  const leadId = planPage(stories, front).leadId;
+  return { stories: orderStories(stories, leadId, front), hasLead: leadId !== undefined };
+}
+
+/** Write canonical articles for filled pages, choosing the design, layouts, and prose. */
 export async function presentIssue(input: {
   checkId: string;
   issueId: string;
@@ -129,7 +149,8 @@ export async function presentIssue(input: {
   timelineId: string;
   receiver: IssueReceiver;
   turn: number;
-  selected: EditorialCandidate[];
+  /** The front first, then the sections, as the editor filled them. */
+  pages: readonly FilledPage[];
   state: PublicationState;
   config: EditorialConfig;
   weights: PresentationWeights;
@@ -142,31 +163,30 @@ export async function presentIssue(input: {
 }): Promise<PresentationResult | undefined> {
   const { config, weights, state } = input;
   const terms = input.terms ?? new Map();
-  const plan = planPage(input.selected, true);
-  if (input.selected.length < plan.count) return undefined;
+  const [front, ...sections] = input.pages;
+  if (!front?.page.front || !pageComplete(front.stories, true)) return undefined;
+  const plan = planPage(front.stories, true);
   const fitting = input.fittingFronts ?? fittingFrontLayouts(
     prepareFrontLayouts(config, weights, terms), plan.breaking,
   );
   const { design, audit } = choosePressRunDesign([...fitting.keys()], weights, state, () => pressRunDesignDraw(input.checkId));
   input.recordDesignSelection?.(audit);
   if (!design) return undefined;
-  const frontPage = config.pages.find(page => page.front)!;
   /** Draw each page independently so an omitted tab cannot affect later layouts. */
-  const pageDraw = (page: typeof frontPage) => pressRunLayoutDraw(input.checkId, design.id, page.id);
+  const pageDraw = (page: FilledPage['page']) => pressRunLayoutDraw(input.checkId, design.id, page.id);
   /** Use the precomputed positive weights for this design's layout choices. */
   const layoutWeight = (layout: EditorialDesign['layouts'][number]) => weights.get(layout) ?? 0;
-  const frontLayout = chooseWeighted(fitting.get(design)!, layoutWeight, () => pageDraw(frontPage))!;
-  const placement = placeArticles({
-    entries: input.selected,
-    frontPage,
-    frontLayout,
-    sectionPages: config.pages.filter(page => (weights.get(page) ?? 0) > 0),
-    sectionLayouts: design.layouts,
-    layoutWeight,
-    sectionDraw: pageDraw,
-  });
-  const placed = new Set(placement.flatMap(page => page.itemIds));
-  const candidates = input.selected.filter(candidate => placed.has(candidate.id));
+  const frontLayout = chooseWeighted(fitting.get(design)!, layoutWeight, () => pageDraw(front.page))!;
+  const sectionLayouts = design.layouts.filter(layout => layout.variant !== 'breaking');
+  const placement = [
+    { page: front.page, layout: frontLayout, ...ordered(front.stories, true) },
+    // A section without a layout in this design is left out.
+    ...sections.flatMap(({ page, stories }) => {
+      const layout = chooseWeighted(sectionLayouts, layoutWeight, () => pageDraw(page));
+      return layout ? [{ page, layout, ...ordered(stories, false) }] : [];
+    }),
+  ];
+  const candidates = placement.flatMap(page => page.stories);
   const prose = input.prepareProse ? await input.prepareProse(candidates) : candidates;
   const selectedMasthead = input.selectMasthead ? await input.selectMasthead(design) : undefined;
   const masthead = selectedMasthead ?? resolveMasthead(design, terms, config.defaults.publicationTitle);
@@ -179,6 +199,7 @@ export async function presentIssue(input: {
   const items: IssueItem[] = [];
   const publishedIds = new Map<string, string>();
   for (const [index, candidate] of prose.entries()) {
+    const placed = candidates[index];
     const variant = chooseWeighted(
       candidate.variants,
       (choice) => {
@@ -196,7 +217,7 @@ export async function presentIssue(input: {
     );
     if (!variant) throw new Error('A placed article has no eligible prose.');
     const id = `${input.issueId}/item/${index + 1}`;
-    publishedIds.set(candidate.id, id);
+    publishedIds.set(placed.id, id);
     variants[id] = variant.id;
     const style = resolveVariantStyle(variant);
     styles[id] = style;
@@ -245,7 +266,7 @@ export async function presentIssue(input: {
   }
   const pages: IssueDocument['pages'] = [];
   const layouts: Record<string, string> = {};
-  for (const { page, layout, itemIds, hasLead } of placement) {
+  for (const { page, layout, stories, hasLead } of placement) {
     layouts[page.id] = layout.id;
     let label = Object.hasOwn(design.pageLabels, page.id) ? design.pageLabels[page.id] : page.label;
     const ruleLabels = selectedMasthead?.rule.pageLabels;
@@ -262,7 +283,7 @@ export async function presentIssue(input: {
       label,
       layout: layout.variant,
       hasLead,
-      itemIds: itemIds.map(id => publishedIds.get(id)!),
+      itemIds: stories.map(story => publishedIds.get(story.id)!),
     });
   }
   return {

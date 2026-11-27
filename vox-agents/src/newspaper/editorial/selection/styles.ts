@@ -45,7 +45,6 @@ export async function applyStylePreferences(
         tier: candidate.tier,
         importance: candidate.importance,
         urgent: candidate.urgent,
-        short: candidate.short ?? false,
         tags: [...candidate.tags],
       },
     }],

@@ -67,7 +67,7 @@ All expressions can read the check's [globals](facts.md#globals). Other names de
 | Template and variant conditions and weight adjustments | The subject's visible facts, unambiguous value names, `values`, `triggerValues`, `subject`, `period`, and `group`, `key` and `count` for a single group |
 | Template `merge.match` | `lead` and `member`: the combining template's facts and a selected story's facts, with `member.templateIds` identifying its templates |
 | Merge values and variants | The combining template's bindings, plus `merge.members` and `merge.count`; variants also get the computed `merge.values` |
-| Style preferences | The variant bindings and `story`, with `tier`, `importance`, `urgent`, `short`, and `tags` |
+| Style preferences | The variant bindings and `story`, with `tier`, `importance`, `urgent`, and `tags` |
 | Page, design, layout, and masthead conditions and weight adjustments | No candidate bindings |
 
 See [authoring choices](../editorial.md#authoring-choices) for how these expressions control eligibility and weight.

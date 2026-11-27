@@ -10,8 +10,7 @@ import { matchTemplates, type EditorialCandidate } from '../../../../src/newspap
 import { applyStylePreferences } from '../../../../src/newspaper/editorial/selection/styles.js';
 import { computeFeedback, candidateFeedback } from '../../../../src/newspaper/editorial/selection/feedback.js';
 import { decaySeries } from '../../../../src/newspaper/editorial/selection/series.js';
-import { publishedFingerprints, selectHeuristic } from '../../../../src/newspaper/editorial/selection/heuristic.js';
-import { mergeSelectedStories } from '../../../../src/newspaper/editorial/selection/merge.js';
+import { fillPages } from '../../../../src/newspaper/editorial/selection/fill.js';
 import { runEditorialCheck } from '../../../../src/newspaper/editorial/check.js';
 import { buildPress } from '../../../../src/newspaper/editorial/rules/press.js';
 import { ruleSubjectKey } from '../../../../src/newspaper/editorial/rules/subjects.js';
@@ -84,12 +83,12 @@ function development(definitionId: string, subject: string, importance = 50): Ru
 /** Build a selected candidate with explicit style variants for preference tests. */
 function styleCandidate(
   id: string, variants: EditorialCandidate['variants'],
-  facts: Partial<Pick<EditorialCandidate, 'importance' | 'tier' | 'urgent' | 'short' | 'tags'>> = {},
+  facts: Partial<Pick<EditorialCandidate, 'importance' | 'tier' | 'urgent' | 'tags'>> = {},
 ): EditorialCandidate {
   return {
     id, subject: `player/${id}`, period: { from: 5, to: 10 }, triggerIds: [], ruleIds: [], templateIds: [],
     seriesKeys: [], tier: facts.tier ?? 'routine', tags: facts.tags ?? [], importance: facts.importance ?? 50, urgent: facts.urgent ?? false,
-    short: facts.short ?? false, weight: 1, variants,
+    weight: 1, variants,
     variantWeights: Object.fromEntries(variants.map(variant => [variant.id, 1])),
     variantSources: {}, variantBindings: {}, values: {}, sources: [], fingerprint: id,
   };
@@ -131,6 +130,8 @@ describe('editorial engine', () => {
     const base = await loadEditorialConfig();
     config = editorialConfigSchema.parse({
       ...base,
+      // Most fixture stories share a rule; the repetition penalties have their own tests in fill.test.ts.
+      defaults: { ...base.defaults, rulePenalty: 0, ruleFatigue: 0 },
       triggers: [
         { id: 'ledger', subject: 'player', tier: 'notable', when: ['player.self', 'player.gold > 0'], values: { $balance: 'player.gold' }, adjust: '10', urgent: '$balance >= 100' },
         { id: 'culture', subject: 'player', tier: 'routine', adjust: '5', when: ['!player.self', 'player.culturePerTurn > 0'], values: { amount: 'player.culturePerTurn' } },
@@ -138,13 +139,13 @@ describe('editorial engine', () => {
       ],
       templates: [
         { id: 'ledger', triggers: ['ledger'], tags: ['economy'], weight: { base: 1 }, variants: [{ id: 'ledger', headline: 'Treasury: {{$balance}}', body: ['The account stood at {{$balance}} gold.'], weight: { base: 1 } }] },
-        { id: 'culture', triggers: ['culture'], tags: ['culture'], short: true, weight: { base: 1 }, variants: [{ id: 'culture', headline: 'New work', body: ['Cultural output reached {{amount}}.'], weight: { base: 1 } }] },
+        { id: 'culture', triggers: ['culture'], tags: ['culture'], weight: { base: 1 }, variants: [{ id: 'culture', headline: 'New work', body: ['Cultural output reached {{amount}}.'], weight: { base: 1 } }] },
       ],
     });
   });
 
   describe('authored selection and history', () => {
-    it('should publish four briefs when an eligible merge closes the importance gap', async () => {
+    it('should publish four briefs without a lead whether or not a merge closes the importance gap', async () => {
       const catalogue = editorialConfigSchema.parse({
         ...config,
         templates: [...config.templates, {
@@ -157,7 +158,9 @@ describe('editorial engine', () => {
       });
       const evidence = fixture();
       const unmerged = await check(evidence, undefined, config, 'branch', 'campaign', 2);
-      expect(unmerged.status).toBe('skipped');
+      if (unmerged.status !== 'published') throw new Error(unmerged.reason);
+      expect(unmerged.issue.pages[0].hasLead).toBe(false);
+      expect(unmerged.issue.pages[0].itemIds).toHaveLength(4);
       const merged = await check(evidence, undefined, catalogue, 'branch', 'campaign', 2);
       if (merged.status !== 'published') throw new Error(merged.reason);
       expect(merged.issue.pages[0].hasLead).toBe(false);
@@ -227,16 +230,20 @@ describe('editorial engine', () => {
         development('ledger', 'player/0'), development('culture', 'player/1'),
       ].map(priorDevelopment), catalogue, compiled, batch);
       const feedback = computeFeedback(result.state, catalogue);
-      expect(selectHeuristic(originals, result.state, catalogue, feedback).selected).toEqual([]);
+      const sections = catalogue.pages.filter(page => !page.front);
+      const originalsFill = await fillPages({
+        candidates: originals, state: result.state, config: catalogue, feedback, turn: 10, sections,
+      });
+      expect(originalsFill.pages.flatMap(page => page.stories)).toEqual([]);
 
       const newCandidates = await matchTemplates([
         development('ledger', 'player/0'), development('culture', 'player/1'),
         priorDevelopment(development('balance', 'player/0')),
       ], catalogue, compiled, batch);
-      const { selected } = selectHeuristic(newCandidates, result.state, catalogue, feedback);
-      expect(selected).toHaveLength(2);
-      expect(await mergeSelectedStories(selected, newCandidates, catalogue, compiled, batch,
-        { interruptedSlots: new Set() }, publishedFingerprints(result.state), () => true)).toEqual(selected);
+      const newFill = await fillPages({
+        candidates: newCandidates, state: result.state, config: catalogue, feedback, turn: 10, sections,
+      });
+      expect(newFill.scores.filter(entry => entry.selected)).toHaveLength(2);
     });
 
     it('should leave a competing original the only story credited to its series', async () => {
@@ -265,7 +272,7 @@ describe('editorial engine', () => {
       expect(merged.seriesKeys).not.toContain(balanceSeries);
     });
 
-    it('should retain ordinary stories if merged prose cannot print and keep the reporting window open on a shortfall', async () => {
+    it('should retain ordinary stories if merged prose cannot print', async () => {
       const catalogue = editorialConfigSchema.parse({
         ...config,
         templates: [...config.templates, {
@@ -288,10 +295,6 @@ describe('editorial engine', () => {
       expect(ready.issue.items).toHaveLength(5);
       expect(ready.decision.candidateScores.filter(score => score.selected)).toHaveLength(5);
       expect(ready.decision.candidateScores.every(score => !score.mergedInto)).toBe(true);
-      const lacking = await check(fixture(10, 5, 0), undefined, leadCatalogue);
-      expect(lacking.status).toBe('skipped');
-      expect(lacking.decision.reason).toMatch(/\b4\b.*\b5\b/);
-      expect(lacking.state.reportingThroughTurn).toBeNull();
     });
 
     it('should let a higher priority selected lead absorb only the original reports it matches', async () => {
@@ -630,19 +633,15 @@ describe('editorial engine', () => {
       expect(result.decision.evidence).toEqual(expect.arrayContaining([past.source, city.source, training.source]));
     });
 
-    it('should exclude unauthored and LLM-only templates and reserve space for an independent short item', async () => {
+    it('should exclude unauthored and LLM-only templates', async () => {
       const parsed = editorialConfigSchema.parse({ ...config, templates: [
         ...config.templates, { ...config.templates[0], id: 'model', mode: 'llmOnly' }, { ...config.templates[0], id: 'missing', variants: [] },
         { ...config.templates[0], id: 'balance', triggers: ['balance'] },
       ] });
-      const revised = { ...parsed, defaults: { ...parsed.defaults, maxItems: 2 } };
       const candidates = await matchTemplates([
         development('ledger', 'player/0', 90), development('balance', 'player/0', 80), development('culture', 'player/1', 10),
-      ], revised, await getEditorialExpressions(revised), { facts: buildNewspaperFacts(fixture()) });
+      ], parsed, await getEditorialExpressions(parsed), { facts: buildNewspaperFacts(fixture()) });
       expect(candidates.map(candidate => candidate.templateIds[0])).toEqual(['ledger', 'culture', 'balance']);
-      const state = createInitialPublicationState();
-      expect(selectHeuristic(candidates, state, revised, computeFeedback(state, revised)).selected.map(candidate => candidate.templateIds[0]))
-        .toEqual(['ledger', 'culture']);
     });
 
     it('should publish reproducibly and preserve choices across branches with distinct identities', async () => {
@@ -712,7 +711,7 @@ describe('editorial engine', () => {
       const snapshot = structuredClone(result.decision.configurationSnapshot);
       const active = revised.designs.find(design => design.id === result.issue.publication.designId)!;
       active.presentation.tokens!.paperColor = '#123456';
-      revised.defaults.maxItems = 1;
+      revised.defaults.sections = 1;
       expect(result.issue.publication).toEqual(presentation);
       expect(result.decision.configurationSnapshot).toEqual(snapshot);
     });
@@ -984,19 +983,17 @@ describe('editorial engine', () => {
       expect(selected[0].variantWeights).toEqual({ neutral: 2, supportive: 2, critical: 1 });
     });
 
-    it('should read the short, importance and tier facts of each selected story', async () => {
+    it('should read the importance and tier facts of each selected story', async () => {
       const catalogue = styleCatalogue([
-        { id: 'short', match: { genre: 'letter' }, when: 'story.short', multiplier: 2 },
         { id: 'important', match: { genre: 'letter' }, when: 'story.importance > 60', multiplier: 3 },
         { id: 'crisis', match: { genre: 'letter' }, when: "story.tier === 'crisis'", multiplier: 5 },
       ]);
       const variants = catalogue.templates[0].variants;
       const { selected } = await applyRules(catalogue, [
-        styleCandidate('short', variants, { short: true, importance: 10 }),
         styleCandidate('important', variants, { importance: 70, tier: 'crisis' }),
         styleCandidate('ordinary', variants, { importance: 10 }),
       ]);
-      expect(selected.map(candidate => candidate.variantWeights.letter)).toEqual([2, 15, 1]);
+      expect(selected.map(candidate => candidate.variantWeights.letter)).toEqual([15, 1]);
     });
 
     it('should read story tags in a preference condition', async () => {
@@ -1015,20 +1012,21 @@ describe('editorial engine', () => {
   describe('current-vote feedback', () => {
     it('should change the next selected story when a current vote changes and restore it when cleared', async () => {
       const revised = structuredClone(config);
-      revised.defaults.maxItems = 1;
       const candidates = (await matchTemplates([development('ledger', 'player/0'), development('culture', 'player/1')],
         revised, await getEditorialExpressions(revised), { facts: buildNewspaperFacts(fixture()) })).map((candidate, index) => ({ ...candidate, id: `candidate-${index}`, importance: 40, weight: 1 }));
       const state = createInitialPublicationState();
       state.issues = [{ issueId: 'old', turn: 1, designId: 'wire',
         items: [historyItem('reader-choice', candidates[1].tags, candidates[1].seriesKeys)] }];
-      const neutral = selectHeuristic(candidates, state, revised, computeFeedback(state, revised));
-      expect(neutral.selected.map(candidate => candidate.id)).toEqual(['candidate-0']);
+      const sections = revised.pages.filter(page => !page.front);
+      /** List the front stories in the order fillPages places them. */
+      const front = async () => (await fillPages({
+        candidates, state, config: revised, feedback: computeFeedback(state, revised), turn: 10, sections,
+      })).pages[0].stories.map(candidate => candidate.id);
+      expect(await front()).toEqual(['candidate-0', 'candidate-1']);
       state.votes['reader-choice'] = 1;
-      const voted = selectHeuristic(candidates, state, revised, computeFeedback(state, revised));
-      expect(voted.selected.map(candidate => candidate.id)).toEqual(['candidate-1']);
+      expect(await front()).toEqual(['candidate-1', 'candidate-0']);
       state.votes['reader-choice'] = 0;
-      const cleared = selectHeuristic(candidates, state, revised, computeFeedback(state, revised));
-      expect(cleared.selected.map(candidate => candidate.id)).toEqual(['candidate-0']);
+      expect(await front()).toEqual(['candidate-0', 'candidate-1']);
     });
 
     it('should replace and clear votes exactly, ignoring importance and page duplication', () => {

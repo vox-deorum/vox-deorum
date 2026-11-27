@@ -33,6 +33,7 @@ describe('diplomacy rules in offline replay', () => {
       const catalogue = path.join(path.dirname(recording.filename), 'war-catalogue');
       await mkdir(catalogue);
       await Promise.all([
+        writeFile(path.join(catalogue, 'defaults.json'), JSON.stringify({ rulePenalty: 0, ruleFatigue: 0 })),
         writeFile(path.join(catalogue, 'triggers.json'), JSON.stringify([editionBriefRule])),
         writeFile(path.join(catalogue, 'templates.json'), JSON.stringify([editionBriefTemplate])),
       ]);
@@ -88,6 +89,7 @@ describe('diplomacy rules in offline replay', () => {
       const base = await loadEditorialConfig();
       const stalledRule = 'war-advantage-stalls';
       await Promise.all([
+        writeFile(path.join(catalogue, 'defaults.json'), JSON.stringify({ rulePenalty: 0, ruleFatigue: 0 })),
         writeFile(path.join(catalogue, 'triggers.json'), JSON.stringify([
           ...base.triggers.filter(rule => rule.id !== stalledRule).map(rule => ({ id: rule.id, enabled: false })),
           { id: 'wide-war-window', subject: 'pair', tier: 'filler', window: 45, when: 'false' },

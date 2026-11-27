@@ -31,7 +31,7 @@ Once there are enough stories to publish, the editor draws among designs with po
 
 Use `when` to rule out a format that would be out of place. Knotted Inca Cords, for example, fits The Inca from Classical through Renaissance. Set weights relative to the other designs that can appear at the same time: an option needs 40 to compete with a weight of 80. Keep a general option for each era and a fallback if the era is missing. Check `designSelection` in the [CLI replay audit](replay.md#iterate-on-a-rule-or-overlay) before tuning weights.
 
-The [editor](editorial.md#pages-and-designs) sets the story count and chooses whether a story leads. Layouts choose how those stories look. Breaking layouts are for the front only. Each design needs an unconditional ordinary and breaking layout with positive constant weights. Resizing rearranges the same articles.
+The [editor](editorial.md#pages-and-designs) fills the front with four briefs and an optional lead, and each section with 2 to 5 stories. Layouts choose how those stories look. Breaking layouts are for the front only. Each design needs an unconditional ordinary and breaking layout with positive constant weights. Resizing rearranges the same articles.
 
 ### Design assets
 

@@ -14,7 +14,7 @@ import type { FactObject, FactWindow } from '../../../../src/newspaper/editorial
 import { renderAuthoredText } from '../../../../src/newspaper/editorial/presentation/issue.js';
 import { evaluateTriggerRules } from '../../../../src/newspaper/editorial/rules/evaluate.js';
 import { computeFeedback } from '../../../../src/newspaper/editorial/selection/feedback.js';
-import { selectHeuristic } from '../../../../src/newspaper/editorial/selection/heuristic.js';
+import { fillPages } from '../../../../src/newspaper/editorial/selection/fill.js';
 import { matchTemplates } from '../../../../src/newspaper/editorial/selection/templates.js';
 import { uniqueSources } from '../../../../src/newspaper/editorial/shared/sources.js';
 import { withEditionBriefs } from '../../../helpers/newspaper-briefs.js';
@@ -780,8 +780,12 @@ describe('probe overlay', () => {
         });
         const result = await inspect(probeEvidence({ events: [loss] }), espionageConfig);
         const state = createInitialPublicationState();
-        const { selected } = selectHeuristic(result.candidates, state, espionageConfig, computeFeedback(state, espionageConfig));
-        const taking = selected.flatMap(candidate => candidate.templateIds);
+        const fill = await fillPages({
+          candidates: result.candidates, state, config: espionageConfig,
+          feedback: computeFeedback(state, espionageConfig), turn: 10,
+          sections: espionageConfig.pages.filter(page => !page.front),
+        });
+        const taking = fill.pages.flatMap(page => page.stories).flatMap(candidate => candidate.templateIds);
 
         expect(taking.slice(0, 2)).toEqual(['probe-spy-loss-account', 'probe-espionage-tech-account']);
         expect(auditSubject(result, 'probe-espionage-tech', 'event/101')?.outcome).toBe('fired');

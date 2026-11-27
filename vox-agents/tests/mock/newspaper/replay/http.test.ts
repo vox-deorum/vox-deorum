@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
+import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { queryNewspaperEvidence } from '../../../../../mcp-server/dist/newspaper/queries.js';
 import { deferred } from '../../../helpers/deferred.js';
@@ -12,6 +13,13 @@ import { createReplayRecording, replaySettings as sourceSettings, writeReplayPub
 
 /** Keep evidence-only lifecycle checks independent of the publication output store. */
 function replaySettings(databasePath: string) { return { ...sourceSettings(databasePath), publicationEnabled: false }; }
+
+/** Write the publication catalogue and let its shared fixture briefs fill the front despite one rule. */
+async function publicationCatalogue(databasePath: string) {
+  const directory = await writeReplayPublicationCatalogue(databasePath);
+  await writeFile(path.join(directory, 'defaults.json'), JSON.stringify({ rulePenalty: 0, ruleFatigue: 0 }));
+  return directory;
+}
 
 describe('replay HTTP routes', () => {
   let recording: Awaited<ReturnType<typeof createReplayRecording>>;
@@ -68,7 +76,7 @@ describe('replay HTTP routes', () => {
     const scope = { runId: 'summary-run', receiverPlayerID: 0 };
     await request(host.app).put('/api/newspaper/replay').send({
       ...sourceSettings(recording.filename), fromTurn: 6, toTurn: 30, ...scope,
-      editorialConfigDirectory: await writeReplayPublicationCatalogue(recording.filename),
+      editorialConfigDirectory: await publicationCatalogue(recording.filename),
       outputPath: path.join(path.dirname(recording.filename), 'summary-output.sqlite'),
     }).expect(200);
     const published = await request(host.app).post('/api/newspaper/replay/advance?view=summary').send(scope).expect(200);
@@ -116,7 +124,7 @@ describe('replay HTTP routes', () => {
     const scope = { runId: 'http-run', receiverPlayerID: 0 };
     await request(host.app).put('/api/newspaper/replay').send({
       ...sourceSettings(recording.filename), fromTurn: 6, toTurn: 30, ...scope,
-      editorialConfigDirectory: await writeReplayPublicationCatalogue(recording.filename),
+      editorialConfigDirectory: await publicationCatalogue(recording.filename),
       outputPath: path.join(path.dirname(recording.filename), 'http-output.sqlite'),
     }).expect(200);
     await request(host.app).post('/api/newspaper/replay/advance').send({}).expect(400);
@@ -139,7 +147,7 @@ describe('replay HTTP routes', () => {
     const scope = { runId: 'coverage-run', receiverPlayerID: 0 };
     await request(host.app).put('/api/newspaper/replay').send({
       ...sourceSettings(recording.filename), fromTurn: 6, toTurn: 30, ...scope,
-      editorialConfigDirectory: await writeReplayPublicationCatalogue(recording.filename),
+      editorialConfigDirectory: await publicationCatalogue(recording.filename),
       outputPath: path.join(path.dirname(recording.filename), 'coverage-output.sqlite'),
     }).expect(200);
     const advanced = await request(host.app).post('/api/newspaper/replay/advance').send(scope).expect(200);

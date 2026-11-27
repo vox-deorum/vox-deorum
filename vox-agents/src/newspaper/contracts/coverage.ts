@@ -34,8 +34,8 @@ export type TemplateFunnel = z.infer<typeof templateFunnelSchema>;
 
 /**
  * What the editor did with a candidate. `printed` also marks a roundup story built by a merge template;
- * `merged` marks a story absorbed into one. `unplaced` was selected but found no slot in a published edition;
- * `unpublished` was selected in a check that skipped.
+ * `merged` marks a story absorbed into one. `outranked` found no page with room for it; `unplaced` was
+ * placed in a section that the edition dropped; `unpublished` was selected in a check that skipped.
  */
 export const candidateOutcomeSchema = z.enum([
   'printed', 'merged', 'outranked', 'conflict', 'printed-before', 'not-positive', 'no-variants', 'unplaced', 'unpublished',

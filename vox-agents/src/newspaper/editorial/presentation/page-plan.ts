@@ -1,4 +1,4 @@
-/** Pure page policy shared by placement, merge fitting, and validation. */
+/** Pure page policy shared by page filling, presentation, and validation. */
 
 /** A story considered for one newspaper page. */
 export interface PageEntry {
@@ -7,17 +7,20 @@ export interface PageEntry {
   importance: number;
 }
 
-/** The lead, style, and required story count for one page. */
+/** The lead and style for one page. */
 export interface PagePlan {
   leadId: string | undefined;
   breaking: boolean;
-  count: number;
 }
 
-/** Briefs required before an optional lead is added to a front page. */
+/** Briefs the front page holds besides an optional lead. */
 export const frontBriefCount = 4;
-/** Briefs required before an optional lead is added to an inside page. */
-export const sectionBriefCount = 2;
+/** Fewest briefs a section may print. */
+export const sectionMinBriefs = 2;
+/** Most briefs a section may print besides an optional lead. */
+export const sectionMaxBriefs = 4;
+/** Most stories any page holds: its full briefs plus a lead. */
+export const pageMaxStories = 5;
 /** Raw-importance gap that makes a nonurgent story a discretionary lead. */
 export const leadImportanceMargin = 15;
 
@@ -38,13 +41,31 @@ function discretionaryLead(entries: readonly PageEntry[]): PageEntry | undefined
   return leader;
 }
 
-/** Decide whether a page has a lead and how many stories it needs before layout selection. */
+/**
+ * Decide a page's lead. The first urgent story leads a breaking front. Otherwise a story
+ * that clearly outranks the rest leads a full front of five, or a section of three or more.
+ */
 export function planPage(entries: readonly PageEntry[], front: boolean): PagePlan {
   const urgentLead = front ? entries.find(entry => entry.urgent) : undefined;
-  const lead = urgentLead ?? discretionaryLead(entries);
-  return {
-    leadId: lead?.id,
-    breaking: urgentLead !== undefined,
-    count: (front ? frontBriefCount : sectionBriefCount) + (lead ? 1 : 0),
-  };
+  const allowed = front ? entries.length === frontBriefCount + 1 : entries.length > sectionMinBriefs;
+  const lead = urgentLead ?? (allowed ? discretionaryLead(entries) : undefined);
+  return { leadId: lead?.id, breaking: urgentLead !== undefined };
+}
+
+/** Check whether a page's brief count, outside its lead, fits its range. */
+export function briefsFit(briefs: number, front: boolean): boolean {
+  return front ? briefs === frontBriefCount : briefs >= sectionMinBriefs && briefs <= sectionMaxBriefs;
+}
+
+/** Check whether a page's stories form a complete, printable page. */
+export function pageComplete(entries: readonly PageEntry[], front: boolean): boolean {
+  const lead = planPage(entries, front).leadId;
+  return briefsFit(entries.length - (lead === undefined ? 0 : 1), front);
+}
+
+/** Check whether a page has room for one more story; a fifth story needs the five to have a lead. */
+export function pageAccepts(entries: readonly PageEntry[], entry: PageEntry, front: boolean): boolean {
+  const next = [...entries, entry];
+  if (next.length < pageMaxStories) return true;
+  return next.length === pageMaxStories && planPage(next, front).leadId !== undefined;
 }

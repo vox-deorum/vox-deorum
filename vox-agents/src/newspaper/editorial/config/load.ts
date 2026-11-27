@@ -125,7 +125,7 @@ async function readStyleCatalogue(directory: string, optional = false) {
   };
 }
 
-/** Validate rule placement and report catalogue issues at the authored rule index. */
+/** Validate rule placement and section coverage, reporting catalogue issues at the authored index. */
 function parseLoadedCatalogue(input: unknown, sources: StyleRuleSource[]): EditorialConfig {
   const parsed = editorialConfigSchema.safeParse(input);
   if (!parsed.success) {
@@ -150,6 +150,16 @@ function parseLoadedCatalogue(input: unknown, sources: StyleRuleSource[]): Edito
         ? 'Match at least two kinds of style tag.'
         : `Match only the ${kind} kind of style tag.`,
     });
+  });
+  // Every story needs a section it can fall back to when the front is full.
+  const sectionTags = new Set(parsed.data.pages.filter(page => !page.front).flatMap(page => page.tags));
+  parsed.data.templates.forEach((template, index) => {
+    if (!template.tags.some(tag => sectionTags.has(tag)))
+      issues.push({
+        code: 'custom',
+        path: ['templates', index, 'tags'],
+        message: `Template ${template.id} has no tag that any section takes.`,
+      });
   });
   if (issues.length > 0) throw new z.ZodError(issues);
   return parsed.data;

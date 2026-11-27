@@ -8,7 +8,7 @@ import { summarizeCheckCoverage, summarizeRunCoverage } from '../../../../src/ne
 import { buildNewspaperFacts } from '../../../../src/newspaper/editorial/facts/index.js';
 import { evaluateTriggerRules } from '../../../../src/newspaper/editorial/rules/evaluate.js';
 import { computeFeedback } from '../../../../src/newspaper/editorial/selection/feedback.js';
-import { selectHeuristic } from '../../../../src/newspaper/editorial/selection/heuristic.js';
+import { fillPages } from '../../../../src/newspaper/editorial/selection/fill.js';
 import { matchTemplates } from '../../../../src/newspaper/editorial/selection/templates.js';
 
 const variant = { id: 'account', headline: 'News from {{city}}', body: ['Reported on {{period.to}}.'], weight: { base: 1 } };
@@ -41,7 +41,7 @@ const templates = [
 /** Run triggers, matching, and selection for four visible cities with populations 1 to 4. */
 async function check() {
   const base = await loadEditorialConfig();
-  const config = await parseEditorialConfig({ ...base, defaults: { ...base.defaults, maxItems: 5 }, triggers, templates });
+  const config = await parseEditorialConfig({ ...base, triggers, templates });
   const cities: NewspaperEvidence['cities'] = Array.from({ length: 4 }, (_, id) => ({
     subjectID: id,
     source: { table: 'CityInformations', id, turn: 10, createdAt: 10 },
@@ -59,16 +59,20 @@ async function check() {
   const candidates = await matchTemplates(rules.developments, config, compiled,
     { facts, constants: scaleEditorialConstants(config.constants, 1) }, undefined, undefined, funnel);
   const state = createInitialPublicationState();
-  const selection = selectHeuristic(candidates, state, config, computeFeedback(state, config));
-  /** Summarize the check as if the given candidates reached the page, by default every selected one. */
+  const fill = await fillPages({
+    candidates, state, config, feedback: computeFeedback(state, config), turn: 10,
+    sections: config.pages.filter(page => !page.front),
+  });
+  const selected = fill.pages.flatMap(page => page.stories);
+  /** Summarize the check as if the given candidates reached the page, by default every filled one. */
   const summarize = (status: 'published' | 'skipped', page: Partial<Pick<Parameters<typeof summarizeCheckCoverage>[0], 'printed' | 'mergedInto' | 'roundups'>> = {}) =>
     summarizeCheckCoverage({
       turn: 10, status, audit: rules.audit, funnel, candidates,
-      scores: new Map(selection.scores.map(({ id, score }) => [id, score])), outcomes: selection.outcomes,
-      printed: new Set(status === 'published' ? selection.selected.map(candidate => candidate.id) : []), mergedInto: new Map(),
+      scores: new Map(fill.scores.map(({ id, score }) => [id, score])), outcomes: fill.outcomes,
+      printed: new Set(status === 'published' ? selected.map(candidate => candidate.id) : []), mergedInto: new Map(),
       ...page,
     });
-  return { config, summarize, candidates, selected: selection.selected };
+  return { config, summarize, candidates, selected };
 }
 
 describe('newspaper template coverage', () => {
@@ -94,7 +98,7 @@ describe('newspaper template coverage', () => {
     const coverage = summarize('published');
     const weak = summarizeRunCoverage([coverage], config).templates.find(entry => entry.id === 'weak')!;
     expect(weak.outcomes).toEqual({ outranked: 1 });
-    expect(coverage.candidates.filter(candidate => candidate.outcome === 'printed')).toHaveLength(5);
+    expect(coverage.candidates.filter(candidate => candidate.outcome === 'printed')).toHaveLength(4);
     expect(weak).toMatchObject({ scoreTurn: 10, floor: coverage.printedFloor });
     expect(weak.bestScore!).toBeLessThan(weak.floor!);
   });
@@ -161,7 +165,7 @@ describe('newspaper template coverage', () => {
     const { config, summarize } = await check();
     const coverage = summarize('skipped');
     expect(coverage.printedFloor).toBeNull();
-    expect(coverage.candidates.filter(candidate => candidate.outcome === 'unpublished')).toHaveLength(5);
+    expect(coverage.candidates.filter(candidate => candidate.outcome === 'unpublished')).toHaveLength(4);
     const run = summarizeRunCoverage([coverage], config);
     expect(run.published).toBe(0);
     expect(run.templates.find(entry => entry.id === 'lead')!.stage).toBe('passed-over');

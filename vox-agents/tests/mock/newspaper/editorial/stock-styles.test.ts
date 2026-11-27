@@ -108,12 +108,12 @@ function variant(id: string, style: { voice?: string; stance?: string; genre?: s
 /** Build a selected candidate with explicit style variants and story facts. */
 function styleCandidate(
   id: string, variants: EditorialCandidate['variants'],
-  facts: Partial<Pick<EditorialCandidate, 'importance' | 'tier' | 'urgent' | 'short' | 'tags'>> = {},
+  facts: Partial<Pick<EditorialCandidate, 'importance' | 'tier' | 'urgent' | 'tags'>> = {},
 ): EditorialCandidate {
   return {
     id, subject: `player/${id}`, period: { from: 5, to: 10 }, triggerIds: [], ruleIds: [], templateIds: [],
     seriesKeys: [], tier: facts.tier ?? 'routine', tags: facts.tags ?? [], importance: facts.importance ?? 50, urgent: facts.urgent ?? false,
-    short: facts.short ?? false, weight: 1, variants,
+    weight: 1, variants,
     variantWeights: Object.fromEntries(variants.map(item => [item.id, 1])),
     variantSources: {}, variantBindings: {}, values: {}, sources: [], fingerprint: id,
   };
@@ -167,14 +167,6 @@ describe('stock newspaper styles', () => {
       const { selected } = await applyStock([candidate], 'Modern Era');
       const weights = selected[0].variantWeights;
       expect(weights.joke).toBeLessThan(weights.report);
-    });
-
-    it('should raise a proverb above an analysis on a short filler', async () => {
-      const candidate = styleCandidate('short',
-        [variant('proverb', { genre: 'proverb' }), variant('analysis', { genre: 'analysis' })], { short: true });
-      const { selected } = await applyStock([candidate], 'Modern Era');
-      const weights = selected[0].variantWeights;
-      expect(weights.proverb).toBeGreaterThan(weights.analysis);
     });
 
     it('should raise an editorial above a report on an important story', async () => {
@@ -231,16 +223,6 @@ describe('stock newspaper styles', () => {
       });
       expect(war.selected[0].variantWeights.obituary)
         .toBeGreaterThan(peace.selected[0].variantWeights.obituary);
-    });
-
-    it('should raise a notice on an urgent short story compared with one that is neither', async () => {
-      const styles = [variant('notice', { genre: 'notice' }), variant('report')];
-      const pressing = styleCandidate('urgent-short-notice', styles, { urgent: true, short: true });
-      const quiet = styleCandidate('quiet-notice', styles, { urgent: false, short: false });
-      const urgent = await applyStock([pressing], 'Modern Era');
-      const ordinary = await applyStock([quiet], 'Modern Era');
-      expect(urgent.selected[0].variantWeights.notice)
-        .toBeGreaterThan(ordinary.selected[0].variantWeights.notice);
     });
   });
 
@@ -874,7 +856,7 @@ describe('stock newspaper styles', () => {
       const styles = config.styles;
       if (!styles) throw new Error('The stock catalogue has no style definitions.');
       const story = {
-        importance: 90, urgent: true, short: true,
+        importance: 90, urgent: true,
         tags: [
           'cities', 'domestic', 'military', 'international', 'religion', 'wonders', 'science',
           'diplomacy', 'city-states', 'congress',

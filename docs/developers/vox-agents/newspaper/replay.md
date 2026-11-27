@@ -57,7 +57,7 @@ Open **Replay diagnostics** below the paper to find out why a template never pri
 | Stage | Meaning | Where to look |
 | --- | --- | --- |
 | Printed | Printed at least once, on its own, as a roundup's merge template, or absorbed into a roundup. | |
-| Passed over | Reached the editor but never printed. | The outcome counts (outranked, conflict, printed before, not positive, no slot on the page, check skipped) and the check where it came closest: its score there against that check's lowest printed score. Urgent stories and conflicts can override score order. |
+| Passed over | Reached the editor but never printed. | The outcome counts (outranked, conflict, printed before, not positive, section dropped, check skipped) and the check where it came closest: its score there against that check's lowest printed score. Urgent stories and conflicts can override score order. |
 | Weighted out | Its rules matched, but the template's `when` was false or its weight was zero. | The template's `when` and `weight`; the funnel counts each separately. |
 | Unprintable | No variant could fill all its placeholders, or every variant was ineligible or weighed zero. | Variant placeholders, `when`, and weights. |
 | Not together | Each of its rules fired, but never on the same subject in overlapping periods. | The partial match count and each rule's subjects. |
