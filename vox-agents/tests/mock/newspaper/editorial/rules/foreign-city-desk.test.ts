@@ -308,7 +308,7 @@ describe('stock foreign city desk', () => {
 
       const noKnownWar = await check(fixture([home, damaged], [before]));
       expect(noKnownWar.fired('foreign-city-takes-heavy-damage')).toEqual(['city/20']);
-      const neutral = expectStory(noKnownWar, 'foreign-city-takes-heavy-damage', ['Recife', 'Brazil']);
+      const neutral = expectStory(noKnownWar, 'foreign-city-takes-heavy-damage', ['Recife']);
       expect(noKnownWar.result.decision.selectedVariants[neutral.item.id])
         .not.toBe(result.result.decision.selectedVariants[wartime.item.id]);
 

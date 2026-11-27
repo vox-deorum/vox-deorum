@@ -282,6 +282,16 @@ describe('stock building news', () => {
     expect(subject(missing.audit('building-completed'))).toMatchObject({ outcome: 'false' });
   });
 
+  it('should judge a completion by the list recorded when it was built, even after a successor replaced it', async () => {
+    const arena = { ...constructed(100, 10, 0, 10, 'Arena'), source: { table: 'GameEvents' as const, id: 100, turn: 7, createdAt: 7_001 } };
+    const evidence = fixture(
+      [cityRow(10, 10, 10, 0, 'Tours', { ImportantBuildings: ['Circus'] })],
+      [cityRow(10, 5, 10, 0, 'Tours'), cityRow(10, 7, 10, 0, 'Tours', { ImportantBuildings: ['Arena'] })],
+      [arena],
+    );
+    expect(subject((await check(evidence)).audit('building-completed'))).toMatchObject({ outcome: 'fired' });
+  });
+
   it('should report a nearby foreign regular completion with its civilization', async () => {
     const { audit } = await check(foreign('Library', ['Library']));
     expect(subject(audit('building-completed'))).toMatchObject({ outcome: 'false' });

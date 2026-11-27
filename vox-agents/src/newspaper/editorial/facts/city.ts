@@ -2,7 +2,7 @@ import { eventReportTurn, type NewspaperEvent, type NewspaperSnapshot,
   type NewspaperSourceReference } from '../../../../../mcp-server/dist/newspaper/evidence.js';
 import { isRecord } from '../../../utils/guards.js';
 import { uniqueSources } from '../shared/sources.js';
-import { compareFactDates, eventsForCity, isCapture, isFounding, recordedId } from './event-city.js';
+import { compareFactDates, eventsForCity, isCapture, isFounding, recordedId, recordedNames } from './event-city.js';
 import { eventPlayerFact, recordedBoolean } from './event.js';
 import { fact, recordedFact, reference, rowSources, windowFacts, type FactBuildContext, type FactField, type FactObject } from './model.js';
 
@@ -50,7 +50,7 @@ export function buildCitySnapshotFacts(row: NewspaperSnapshot, context: FactBuil
 /** Normalize the two known list columns and recorded city flags, preserving explicit nulls. */
 function cityValue(key: typeof cityFields[number], raw: unknown): unknown {
   if (raw === null) return null;
-  if (key === 'Wonders' || key === 'ImportantBuildings') return names(raw);
+  if (key === 'Wonders' || key === 'ImportantBuildings') return recordedNames(raw);
   return key.startsWith('Is') ? recordedBoolean(raw) : raw;
 }
 
@@ -105,13 +105,6 @@ function trained(event: NewspaperEvent, receiverId: number): DatedFact {
   if (event.values.PlayerID === receiverId && typeof port === 'string' && port.trim())
     fields.port = fact(port, sources);
   return dated(event.source.turn, fields, sources);
-}
-
-/** Read recorded text names without treating a hidden or malformed list as empty. */
-function names(value: unknown): string[] | undefined {
-  // The Lua serializer represents a known empty list as an empty object.
-  if (isRecord(value) && !Object.keys(value).length) return [];
-  return Array.isArray(value) && value.every(item => typeof item === 'string') ? value : undefined;
 }
 
 /** Read a recorded religion name, ID, or known lack of a majority. */
@@ -188,8 +181,8 @@ function cityChanges(events: NewspaperEvent[], rows: NewspaperSnapshot[]) {
   for (let i = 1; i < rows.length; i++) {
     const [before, now] = [rows[i - 1], rows[i]];
     const sources = [...rowSources(before), ...rowSources(now)];
-    const oldWonders = names(before.values.Wonders);
-    const newWonders = names(now.values.Wonders);
+    const oldWonders = recordedNames(before.values.Wonders);
+    const newWonders = recordedNames(now.values.Wonders);
     if (oldWonders && newWonders) for (const name of new Set(newWonders)) {
       if (!oldWonders.includes(name)) wonders.push({ row: now, before, value: name, sources });
     }

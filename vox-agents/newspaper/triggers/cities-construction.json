@@ -8,8 +8,7 @@
       "event.knows('city') && event.city.knows('name') && event.city.knows('owner') && event.city.owner.knows('id') && event.city.own === true",
       "event.player.id === event.city.owner.id",
       "event.knows('building') && !defenses.includes(event.building)",
-      "event.city.knows('importantBuildings') && Array.isArray(event.city.importantBuildings)",
-      "event.city.importantBuildings.includes(event.building)",
+      "event.knows('importantBuilding') && event.importantBuilding === true",
       "event.knows('isGoldPurchase') && event.isGoldPurchase === false && event.knows('isFaithPurchase') && event.isFaithPurchase === false",
       "!event.is.courthouseIntegration",
       "!events.some(e => (e.type === 'PlayerCityFounded' || e.type === 'UnitCityFounded') && e.turn === event.turn && e.knows('plot') && event.knows('plot') && e.plot.x === event.plot.x && e.plot.y === event.plot.y)"
@@ -49,8 +48,7 @@
       "event.knows('city') && event.city.knows('name') && event.city.knows('owner') && event.city.owner.knows('id') && event.city.own === true",
       "event.player.id === event.city.owner.id",
       "event.knows('building') && !defenses.includes(event.building)",
-      "event.city.knows('importantBuildings') && Array.isArray(event.city.importantBuildings)",
-      "event.city.importantBuildings.includes(event.building)",
+      "event.knows('importantBuilding') && event.importantBuilding === true",
       "(event.knows('isGoldPurchase') && event.isGoldPurchase === true) || (event.knows('isFaithPurchase') && event.isFaithPurchase === true)",
       "!event.is.courthouseIntegration"
     ],
@@ -105,8 +103,7 @@
       "event.player.id === event.city.owner.id",
       "event.city.is.nearby",
       "event.knows('building') && !defenses.includes(event.building)",
-      "event.city.knows('importantBuildings') && Array.isArray(event.city.importantBuildings)",
-      "event.city.importantBuildings.includes(event.building)",
+      "event.knows('importantBuilding') && event.importantBuilding === true",
       "event.knows('isGoldPurchase') && event.isGoldPurchase === false && event.knows('isFaithPurchase') && event.isFaithPurchase === false",
       "!event.is.courthouseIntegration",
       "!events.some(e => (e.type === 'PlayerCityFounded' || e.type === 'UnitCityFounded') && e.turn === event.turn && e.knows('plot') && event.knows('plot') && e.plot.x === event.plot.x && e.plot.y === event.plot.y)"
@@ -129,8 +126,7 @@
       "event.player.id === event.city.owner.id",
       "event.city.is.nearby",
       "event.knows('building') && !defenses.includes(event.building)",
-      "event.city.knows('importantBuildings') && Array.isArray(event.city.importantBuildings)",
-      "event.city.importantBuildings.includes(event.building)",
+      "event.knows('importantBuilding') && event.importantBuilding === true",
       "(event.knows('isGoldPurchase') && event.isGoldPurchase === true) || (event.knows('isFaithPurchase') && event.isFaithPurchase === true)",
       "!event.is.courthouseIntegration"
     ],

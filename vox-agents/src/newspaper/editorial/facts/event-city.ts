@@ -1,5 +1,6 @@
 import type { NewspaperEvent, NewspaperSnapshot } from '../../../../../mcp-server/dist/newspaper/evidence.js';
 import { newspaperEventConfigs } from '../../../../../mcp-server/dist/newspaper/projection.js';
+import { isRecord } from '../../../utils/guards.js';
 import { plot as factPlot } from './distance.js';
 import type { FactBuildContext, Plot } from './model.js';
 
@@ -15,6 +16,13 @@ export function eventConfig(type: string) {
 /** Read a nonnegative recorded player or city ID. */
 export function recordedId(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : undefined;
+}
+
+/** Read recorded text names without treating a hidden or malformed list as empty. */
+export function recordedNames(value: unknown): string[] | undefined {
+  // The Lua serializer represents a known empty list as an empty object.
+  if (isRecord(value) && !Object.keys(value).length) return [];
+  return Array.isArray(value) && value.every(item => typeof item === 'string') ? value : undefined;
 }
 
 /** Compare rows by turn and timestamp. Insertion IDs cannot order rows from different tables. */
