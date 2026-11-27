@@ -6,6 +6,7 @@ import { archiveIssueSchema, type ArchiveIssue, type ArchiveList } from '../cont
 import { replayStateSchema } from '../contracts/replay.js';
 import { publicationStateSchema, type PublicationState } from '../contracts/publication.js';
 import type { IssueDocument } from '../contracts/issue.js';
+import { checkCoverageSchema, type CheckCoverage } from '../contracts/coverage.js';
 
 /** Offline output schema version written to SQLite `user_version`. */
 const offlineSchemaVersion = 9;
@@ -64,6 +65,12 @@ export class ReplayStore {
             PRIMARY KEY (RunID, Receiver, IssueID), UNIQUE (RunID, Receiver, Cutoff),
             FOREIGN KEY (RunID, Receiver) REFERENCES OfflineReplayRuns(RunID, Receiver)
           );
+          -- Added without a version change, so runs saved earlier keep resuming; their older checks have no rows.
+          CREATE TABLE IF NOT EXISTS OfflineReplayCoverage (
+            RunID TEXT NOT NULL, Receiver INTEGER NOT NULL, Cutoff INTEGER NOT NULL, Coverage TEXT NOT NULL,
+            PRIMARY KEY (RunID, Receiver, Cutoff),
+            FOREIGN KEY (RunID, Receiver) REFERENCES OfflineReplayRuns(RunID, Receiver)
+          );
         `);
         this.db.pragma(`user_version = ${offlineSchemaVersion}`);
       }).immediate();
@@ -90,8 +97,8 @@ export class ReplayStore {
     return checkpoint;
   }
 
-  /** Advance the run and save any edition and its evidence in the same transaction. */
-  commit(checkpoint: ReplayCheckpoint, issue?: IssueDocument): void {
+  /** Advance the run and save any edition, its evidence, and the check's coverage in the same transaction. */
+  commit(checkpoint: ReplayCheckpoint, issue?: IssueDocument, coverage?: CheckCoverage): void {
     const next = checkpointSchema.parse(checkpoint);
     const runId = next.session.runId!;
     const receiver = next.session.settings.receiverPlayerID;
@@ -115,6 +122,11 @@ export class ReplayStore {
         if (!evidence) throw new Error('Published issue evidence is missing from the checkpoint.');
         this.db.prepare('INSERT INTO OfflineReplayIssues VALUES (?, ?, ?, ?, ?, ?)')
           .run(runId, receiver, issue.issueId, cutoff, JSON.stringify(issue), JSON.stringify(evidence));
+      }
+      if (coverage) {
+        if (coverage.turn !== cutoff) throw new Error('Coverage and checkpoint cutoffs must agree.');
+        this.db.prepare('INSERT INTO OfflineReplayCoverage VALUES (?, ?, ?, ?)')
+          .run(runId, receiver, cutoff, JSON.stringify(checkCoverageSchema.parse(coverage)));
       }
       this.save(next);
     }).immediate();
@@ -152,6 +164,20 @@ export class ReplayStore {
       index: { issueId, runId, receiverPlayerID: receiver, cutoffTurn: issue.cutoff.turn, title: issue.publication.title, itemCount: issue.items.length },
       issue, articles: JSON.parse(row.Evidence).items, votes: Object.fromEntries(issue.items.map(item => [item.id, publication.votes[item.id] ?? 0])),
     });
+  }
+
+  /** Read every saved check's coverage for this branch's receiver, in cutoff order. */
+  coverage(runId: string, receiver: number): CheckCoverage[] {
+    const rows = this.db.prepare('SELECT Coverage FROM OfflineReplayCoverage WHERE RunID = ? AND Receiver = ? ORDER BY Cutoff')
+      .all(runId, receiver) as { Coverage: string }[];
+    return rows.map(row => checkCoverageSchema.parse(JSON.parse(row.Coverage)));
+  }
+
+  /** Read one check's coverage, or undefined when that check saved none. */
+  checkCoverage(runId: string, receiver: number, turn: number): CheckCoverage | undefined {
+    const row = this.db.prepare('SELECT Coverage FROM OfflineReplayCoverage WHERE RunID = ? AND Receiver = ? AND Cutoff = ?')
+      .get(runId, receiver, turn) as { Coverage: string } | undefined;
+    return row && checkCoverageSchema.parse(JSON.parse(row.Coverage));
   }
 
   /** Close the output connection after the session has drained its queue. */

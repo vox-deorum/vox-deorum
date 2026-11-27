@@ -19,6 +19,8 @@ interface ReplayControlCallbacks {
   onEvidence(evidence: NewspaperEvidence | null): void;
   /** Clear or add skip reasons from the batch. */
   onSkip(skip: ReplaySkip | null): void;
+  /** Refresh anything that summarizes the run after a batch ends, finished or stopped. */
+  onBatchEnd(): void;
   /** Hold votes from the old run while its replacement opens. */
   onConfiguring(configuring: boolean): void;
   /** Wait for earlier votes before a scoped write. */
@@ -260,6 +262,7 @@ export function mountReplayControls(callbacks: ReplayControlCallbacks): () => vo
       const restoreFocus = restoreStopFocus || document.activeElement === stop;
       batching = false;
       updateControls();
+      if (checked) callbacks.onBatchEnd();
       if (restoreFocus) requestAnimationFrame(() => {
         if (stop === document.activeElement || document.body === document.activeElement) {
           (proceed.hidden ? generate : proceed).focus({ preventScroll: true });

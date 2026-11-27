@@ -5,6 +5,7 @@ import { diplomacyMemorySchema, diplomacyInferenceSchema } from './diplomacy.js'
 import { inlineTextSchema } from './issue.js';
 import { variantStyleSchema } from './style.js';
 import { triggerRepeatStateSchema, triggerRuleAuditSchema } from './triggers.js';
+import { checkCoverageSchema } from './coverage.js';
 
 /** Receiver choices, resolved over catalogue defaults when the run is created. */
 export const publicationPreferencesSchema = z.object({
@@ -66,6 +67,8 @@ export const editorialDecisionRecordSchema = z.object({
   triggerAudit: z.array(triggerRuleAuditSchema),
   choiceErrors: z.array(choiceExpressionErrorSchema).min(1).optional(),
   evidenceRequest: newspaperEvidenceRequestSchema,
+  /** Where each template stopped in this check; absent from audits saved before coverage existed. */
+  coverage: checkCoverageSchema.optional(),
 });
 export type EditorialDecisionRecord = z.infer<typeof editorialDecisionRecordSchema>;
 

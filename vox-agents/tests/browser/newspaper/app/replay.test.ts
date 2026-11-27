@@ -3,9 +3,10 @@ import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Browser, Page, Route } from 'playwright-core';
+import type { Browser, Locator, Page, Route } from 'playwright-core';
 import { createNewspaperPreview } from '../../../../src/newspaper/cli/preview.js';
 import type { ArchiveIssue } from '../../../../src/newspaper/contracts/archive.js';
+import type { CandidateCoverage, CheckCoverage, RunCoverage, TemplateCoverage } from '../../../../src/newspaper/contracts/coverage.js';
 import type { ReplaySettings, ReplayState } from '../../../../src/newspaper/contracts/replay.js';
 import { launchInstalledBrowser } from '../../../../src/newspaper/export/browser.js';
 import { readerDirectory, startNewspaperHost } from '../../../../src/newspaper/export/http.js';
@@ -36,6 +37,62 @@ function savedIssue(): ArchiveIssue {
       importance: 5, headline: item.headline, evidenceSummary: 'Controlled evidence summary', sources: [{ table: 'PlayerSummaries', id: 3, turn: 12, createdAt: 123 }], fingerprint: `controlled/12/${item.id}`,
     })),
   };
+}
+
+/** Build a funnel with the given counts and zeros elsewhere. */
+function funnel(counts: Partial<TemplateCoverage['funnel']> = {}): TemplateCoverage['funnel'] {
+  return { partial: 0, matched: 0, unprintable: 0, zeroWeight: 0, noVariants: 0, candidates: 0, ...counts };
+}
+
+/** Build one template's run coverage with empty defaults. */
+function template(id: string, desk: string, tags: string[], rules: string[], stage: TemplateCoverage['stage'], extra: Partial<TemplateCoverage> = {}): TemplateCoverage {
+  return { id, desk, tags, rules, stage, printed: 0, funnel: funnel(), outcomes: {}, bestScore: null, floor: null, printedTurns: [], ...extra };
+}
+
+/** Build run coverage with templates spread over three desks and several stages. */
+function runCoverage(): RunCoverage {
+  return {
+    checks: 3, published: 2, turns: { from: 10, to: 20 }, uncoveredIssues: 1,
+    templates: [
+      template('trade-report', 'economy', ['economy'], ['trade-change'], 'printed', { printed: 2, printedTurns: [20, 12] }),
+      template('war-front', 'war', ['military'], ['front-shift'], 'passed-over', {
+        funnel: funnel({ matched: 6, candidates: 6 }), outcomes: { outranked: 5, conflict: 1 }, bestScore: 41, floor: 58,
+      }),
+      template('city-riot', 'cities-conflict', ['cities'], ['city-unrest', 'city-starving'], 'not-together', { funnel: funnel({ partial: 4 }) }),
+      template('siege-report', 'cities-conflict', ['cities', 'military'], ['city-under-siege'], 'not-fired'),
+    ],
+    rules: [
+      { id: 'trade-change', subject: 'player', checks: 3, subjects: 24, fired: 3, firedChecks: 2, stops: [] },
+      { id: 'front-shift', subject: 'player', checks: 3, subjects: 24, fired: 6, firedChecks: 3, stops: [] },
+      { id: 'city-unrest', subject: 'city', checks: 3, subjects: 60, fired: 2, firedChecks: 2, stops: [] },
+      { id: 'city-starving', subject: 'city', checks: 3, subjects: 60, fired: 2, firedChecks: 2, stops: [] },
+      { id: 'city-under-siege', subject: 'city', checks: 3, subjects: 60, fired: 0, firedChecks: 0, stops: [
+        { key: 'false:0', kind: 'false', guard: 0, source: 'city.is.besieged', count: 55 },
+        { key: 'hidden:1', kind: 'hidden', guard: 1, source: 'city.owner.visible', count: 5 },
+      ] },
+    ],
+  };
+}
+
+/** Build one check's coverage where twelve candidates lost, one printed and one merged. */
+function checkCoverage(turn: number): CheckCoverage {
+  const losing = Array.from({ length: 12 }, (_, index): CandidateCoverage => ({
+    id: `losing-${index}`, template: 'war-front', subject: `player:${index}`, rules: ['front-shift'],
+    importance: 3, score: 50 - index, outcome: index % 2 ? 'conflict' : 'outranked',
+  }));
+  return {
+    turn, status: 'published', printedFloor: 58, rules: {}, templates: {},
+    candidates: [
+      ...losing.reverse(),
+      { id: 'printed', template: 'controlled-template', subject: 'player:0', rules: ['controlled-trigger'], importance: 5, score: 61, outcome: 'printed' },
+      { id: 'absorbed', template: 'trade-report', subject: 'player:1', rules: ['trade-change'], importance: 2, score: 70, outcome: 'merged', mergedInto: 'printed' },
+    ],
+  };
+}
+
+/** Read one data attribute from every matching element, in page order. */
+async function dataValues(locator: Locator, key: string): Promise<(string | undefined)[]> {
+  return locator.evaluateAll((nodes, name) => nodes.map(node => (node as HTMLElement).dataset[name]), key);
 }
 
 /** Fulfill a request with the real host's transport. */
@@ -190,10 +247,15 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('replay b
       expect(await page.locator('#replay-diagnostics').getAttribute('open')).toBeNull();
 
       await page.locator('#replay-diagnostics > summary').click();
-      await page.locator('[data-replay=inspect]').click();
-      await page.locator('#evidence-view').getByText('Inspected cutoff: turn 23.').waitFor();
-      await page.locator('#page-items summary').filter({ hasText: 'War declared' }).click();
-      await page.locator('[data-article-sources]').waitFor();
+      expect(await page.locator('#evidence-section').isVisible()).toBe(false);
+      await page.locator('[data-coverage-desk]').first().waitFor();
+      await page.locator('[data-coverage-control=search]').fill('fixture-war-article');
+      const warTemplate = page.locator('[data-coverage-template="fixture-war-article"]');
+      expect(await warTemplate.getAttribute('data-coverage-stage')).toBe('printed');
+      await warTemplate.locator(':scope > summary').click();
+      await warTemplate.locator('[data-coverage-rule="fixture-war-report"]').waitFor();
+      await page.locator('#page-items [data-not-printed]').waitFor();
+      expect(await page.locator('#page-items [data-edition-article]').count()).toBeGreaterThan(0);
       await recordingOptions(page, 'Saved run');
       const runId = await page.locator('[name=runId]').inputValue();
       expect(runId).toBeTruthy();
@@ -222,6 +284,79 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('replay b
     }
   }, 60_000);
   }
+
+  it('should diagnose template coverage by desk, tag and stage, and list what missed the edition', async context => {
+    if (!browser) { context.skip(unavailable); return; }
+    const page = await browser.newPage({ viewport: { width: 390, height: 850 } });
+    const detail = savedIssue();
+    let coverageReads = 0;
+    await page.route('**/api/newspaper/replay**', async route => {
+      const { pathname } = new URL(route.request().url());
+      if (pathname.endsWith('/coverage')) { coverageReads += 1; return json(route, runCoverage()); }
+      const check = /\/coverage\/(\d+)$/.exec(pathname);
+      if (check) return json(route, checkCoverage(Number(check[1])));
+      if (pathname.endsWith('/issues')) return json(route, { issues: [detail.index] });
+      if (pathname.includes('/issues/')) return json(route, detail);
+      return json(route, session());
+    });
+    try {
+      await page.goto(`${host.url}/newspaper/`);
+      await openRecorded(page);
+      await page.locator('#reader-root[data-issue-id="issue-1"]').waitFor();
+      await page.locator('#replay-diagnostics > summary').click();
+      await page.locator('[data-coverage-desk]').first().waitFor();
+      expect(await page.locator('#evidence-section').isVisible()).toBe(false);
+      expect(await dataValues(page.locator('[data-coverage-desk]'), 'coverageDesk')).toEqual(['cities-conflict', 'war', 'economy']);
+
+      const cities = page.locator('[data-coverage-desk="cities-conflict"]');
+      await cities.locator(':scope > summary').click();
+      const rows = cities.locator('[data-coverage-template]');
+      await rows.first().waitFor();
+      expect(await dataValues(rows, 'coverageTemplate')).toEqual(['siege-report', 'city-riot']);
+      expect(await dataValues(rows, 'coverageStage')).toEqual(['not-fired', 'not-together']);
+      const siege = page.locator('[data-coverage-template="siege-report"]');
+      await siege.locator(':scope > summary').click();
+      const rule = siege.locator('[data-coverage-rule="city-under-siege"]');
+      await rule.locator('table').getByText('city.is.besieged').waitFor();
+      expect(await rule.locator('tbody tr').count()).toBe(2);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+
+      await page.locator('[data-coverage-control=grouping]').selectOption('tag');
+      const military = page.locator('[data-coverage-group="military"]');
+      await military.locator(':scope > summary').click();
+      await military.locator('[data-coverage-template]').first().waitFor();
+      expect((await dataValues(military.locator('[data-coverage-template]'), 'coverageTemplate')).sort()).toEqual(['siege-report', 'war-front']);
+      await page.locator('[data-coverage-control=hide-printed]').check();
+      expect(await page.locator('[data-coverage-group="economy"]').count()).toBe(0);
+      await page.locator('[data-coverage-control=stage]').selectOption('passed-over');
+      expect(await page.locator('[data-coverage-shown]').getAttribute('data-coverage-shown')).toBe('1');
+      await page.locator('[data-coverage-control=tag]').selectOption('cities');
+      expect(await page.locator('[data-coverage-shown]').getAttribute('data-coverage-shown')).toBe('0');
+
+      const notPrinted = page.locator('#page-items [data-not-printed]');
+      await notPrinted.waitFor();
+      expect(await page.locator('#page-items [data-edition-article]').count()).toBe(detail.articles.length);
+      const firstList = notPrinted.locator(':scope > ol [data-not-printed-candidate]');
+      expect(await firstList.count()).toBe(10);
+      expect(await firstList.first().getAttribute('data-not-printed-candidate')).toBe('losing-0');
+      expect(await notPrinted.locator('[data-outcome=merged], [data-outcome=printed]').count()).toBe(0);
+      await notPrinted.locator('details > summary').click();
+      await expect.poll(() => notPrinted.locator('[data-not-printed-candidate]').count()).toBe(12);
+
+      const reads = coverageReads;
+      await page.locator('#replay-diagnostics > summary').click();
+      await page.locator('#replay-diagnostics > summary').click();
+      await expect.poll(() => coverageReads).toBe(reads + 1);
+
+      await page.reload();
+      await openRecorded(page);
+      await page.locator('#replay-diagnostics > summary').click();
+      await page.locator('[data-coverage-shown]').waitFor();
+      expect(await page.locator('[data-coverage-control=grouping]').inputValue()).toBe('tag');
+      expect(await page.locator('[data-coverage-control=stage]').inputValue()).toBe('passed-over');
+      expect(await page.locator('[data-coverage-control=hide-printed]').isChecked()).toBe(true);
+    } finally { await page.close(); }
+  }, 60_000);
 
   it('should restyle a saved edition while preserving its content, section and vote', async context => {
     if (!browser) { context.skip(unavailable); return; }

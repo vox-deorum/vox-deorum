@@ -6,7 +6,7 @@ import type { ReplayAdvanceSummaryResponse } from '../contracts/replay.js';
 import { latestRecording } from './recordings.js';
 import { ReplaySessionError, type ReplaySession } from './session.js';
 
-type ReplayHandlers = Pick<ReplaySession, 'configure' | 'getState' | 'evidence' | 'advance' | 'listIssues' | 'getIssue' | 'setVote' | 'setPreferences'>;
+type ReplayHandlers = Pick<ReplaySession, 'configure' | 'getState' | 'evidence' | 'advance' | 'listIssues' | 'getIssue' | 'coverage' | 'checkCoverage' | 'setVote' | 'setPreferences'>;
 
 /** Adapt a session operation to the common JSON error boundary. */
 function reply(operation: (body: unknown, req: express.Request) => Promise<unknown>): RequestHandler {
@@ -40,6 +40,12 @@ export function mountReplayRoutes(app: Express, session: () => ReplayHandlers): 
   }));
   router.get('/issues', reply((_body, req) => session().listIssues(queryScope(req))));
   router.get('/issues/:issueId', reply((_body, req) => session().getIssue(String(req.params.issueId), queryScope(req))));
+  router.get('/coverage', reply((_body, req) => session().coverage(queryScope(req))));
+  router.get('/coverage/:turn', reply(async (_body, req) => {
+    const turn = String(req.params.turn);
+    if (!/^\d+$/.test(turn)) throw new ReplaySessionError('Expected a whole-number cutoff turn.', 400);
+    return session().checkCoverage(Number(turn), queryScope(req));
+  }));
   router.put('/votes', reply(body => session().setVote(body)));
   router.put('/preferences', reply(body => session().setPreferences(body)));
   /** Return parser failures through the same JSON envelope as session failures. */

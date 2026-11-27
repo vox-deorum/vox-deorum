@@ -2,6 +2,7 @@
 import type { NewspaperSourceReference } from '../../../../../mcp-server/dist/newspaper/evidence.js';
 import { linkTargetSchema } from '../../contracts/issue.js';
 import type { RuleDevelopment, RuleScalar } from '../../contracts/triggers.js';
+import type { TemplateFunnel } from '../../contracts/coverage.js';
 import type { CompiledEditorialExpressions, EditorialTerms } from '../config/expressions.js';
 import type { EditorialCivicTerms } from '../config/civic-terms.js';
 import type { EditorialConfig, EditorialTemplate, AuthoredVariant } from '../config/schema.js';
@@ -291,14 +292,28 @@ export function placeholderSources(
   });
 }
 
-/** Match every named trigger on the same subject and evaluate each choice with its evidence bindings. */
+/** Return a template's funnel counters, creating them on first use. */
+function funnelFor(funnel: Map<string, TemplateFunnel>, id: string): TemplateFunnel {
+  let entry = funnel.get(id);
+  if (!entry) {
+    entry = { partial: 0, matched: 0, unprintable: 0, zeroWeight: 0, noVariants: 0, candidates: 0 };
+    funnel.set(id, entry);
+  }
+  return entry;
+}
+
+/**
+ * Match every named trigger on the same subject and evaluate each choice with its evidence bindings.
+ * When `funnel` is given, count how far each template's matches got for coverage diagnostics.
+ */
 export async function matchTemplates(
   triggers: readonly RuleDevelopment[],
   config: EditorialConfig,
   compiled: CompiledEditorialExpressions,
   batch: BatchFacts,
   budget?: ExpressionCheckBudget,
-  terms?: EditorialTerms
+  terms?: EditorialTerms,
+  funnel?: Map<string, TemplateFunnel>
 ): Promise<EditorialCandidate[]> {
   const retainBindings = compiled.styleRules.length || config.templates.some(template => template.merge);
   const bySubject = new Map<string, Map<string, RuleDevelopment>>();
@@ -313,17 +328,25 @@ export async function matchTemplates(
     const prepared = compiled.templates.get(template.id)!;
     for (const rules of bySubject.values()) {
       const match = supportingMatch(template.triggers, rules);
-      if (!match) continue;
+      if (!match) {
+        if (funnel && template.triggers.some((id) => rules.has(id))) funnelFor(funnel, template.id).partial++;
+        continue;
+      }
+      if (funnel) funnelFor(funnel, template.id).matched++;
       const choice = templateFacts(match.parts, match.period, batch.facts, terms, config.civicTerms);
       const variants = template.variants.filter((variant) => printable(variant, choice.placeholders));
       if (variants.length || template.merge) plans.push({ template, prepared, ...match, choice, variants });
+      else if (funnel) funnelFor(funnel, template.id).unprintable++;
     }
   }
   const templateWeights = await evaluateChoices(compiled.runner, batch, plans.map((plan) => ({
     choice: plan.prepared, bindings: plan.choice.bindings, windowFromTurn: plan.period.from,
   })), budget);
-  const active = plans.flatMap((plan, index) => templateWeights[index].weight > 0 ?
-    [{ ...plan, rating: templateWeights[index] }] : []);
+  const active = plans.flatMap((plan, index) => {
+    if (templateWeights[index].weight > 0) return [{ ...plan, rating: templateWeights[index] }];
+    if (funnel) funnelFor(funnel, plan.template.id).zeroWeight++;
+    return [];
+  });
   const variantWeights = await evaluateChoices(compiled.runner, batch, active.flatMap((plan) =>
     plan.variants.map((variant) => ({
       choice: plan.prepared.variants.get(variant.id)!,
@@ -341,11 +364,16 @@ export async function matchTemplates(
       sources[variant.id] = uniqueSources([...result.sources, ...placeholderSources(variant, choice, terms)]);
       return true;
     });
-    return eligible.length || template.merge ? [candidate(
+    if (!eligible.length && !template.merge) {
+      if (funnel) funnelFor(funnel, template.id).noVariants++;
+      return [];
+    }
+    if (funnel) funnelFor(funnel, template.id).candidates++;
+    return [candidate(
       template, parts, period, choice.placeholders, rating, eligible, weights, sources,
       retainBindings ? choice.bindings : undefined,
       template.merge ? choice.identity : undefined,
-    )] : [];
+    )];
   });
 }
 

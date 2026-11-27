@@ -6,6 +6,7 @@ import { deferred } from '../../../helpers/deferred.js';
 import { startNewspaperHost } from '../../../../src/newspaper/export/http.js';
 import { mountReplayRoutes } from '../../../../src/newspaper/replay/http.js';
 import { ReplaySession } from '../../../../src/newspaper/replay/session.js';
+import { checkCoverageSchema, runCoverageSchema } from '../../../../src/newspaper/contracts/coverage.js';
 import { replayAdvanceSummaryResponseSchema, replayEvidenceResponseSchema, replayStateSchema } from '../../../../src/newspaper/contracts/replay.js';
 import { createReplayRecording, replaySettings as sourceSettings, writeReplayPublicationCatalogue } from '../../../helpers/newspaper-replay.js';
 
@@ -132,6 +133,25 @@ describe('replay HTTP routes', () => {
     await request(host.app).post('/api/newspaper/replay/advance').send({ ...scope, runId: 'stale' }).expect(409);
     await request(host.app).put('/api/newspaper/replay/preferences').send({ ...scope, frequencyStandardTurns: 2, llmEnabled: true }).expect(200);
     await request(host.app).put('/api/newspaper/replay/votes').send({ itemId, value: 1 }).expect(400);
+  });
+
+  it('should explain template coverage for the run and for one check within its scope', async () => {
+    const scope = { runId: 'coverage-run', receiverPlayerID: 0 };
+    await request(host.app).put('/api/newspaper/replay').send({
+      ...sourceSettings(recording.filename), fromTurn: 6, toTurn: 30, ...scope,
+      editorialConfigDirectory: await writeReplayPublicationCatalogue(recording.filename),
+      outputPath: path.join(path.dirname(recording.filename), 'coverage-output.sqlite'),
+    }).expect(200);
+    const advanced = await request(host.app).post('/api/newspaper/replay/advance').send(scope).expect(200);
+    const turn = advanced.body.check.decision.cutoffTurn;
+    const run = runCoverageSchema.parse((await request(host.app).get('/api/newspaper/replay/coverage').query(scope).expect(200)).body);
+    expect(run).toMatchObject({ checks: 1, published: 1, uncoveredIssues: 0, turns: { from: turn, to: turn } });
+    expect(run.templates.some(template => template.stage === 'printed')).toBe(true);
+    const check = checkCoverageSchema.parse((await request(host.app).get(`/api/newspaper/replay/coverage/${turn}`).query(scope).expect(200)).body);
+    expect(check.candidates.filter(candidate => candidate.outcome === 'printed').length).toBe(advanced.body.check.issue.items.length);
+    await request(host.app).get(`/api/newspaper/replay/coverage/${turn + 1}`).query(scope).expect(404);
+    await request(host.app).get('/api/newspaper/replay/coverage/latest').query(scope).expect(400);
+    await request(host.app).get('/api/newspaper/replay/coverage').query({ ...scope, runId: 'stale' }).expect(409);
   });
 
   it('should validate required advance scope inside the queue after a publication configuration', async () => {

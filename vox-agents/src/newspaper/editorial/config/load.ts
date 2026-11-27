@@ -241,6 +241,28 @@ export async function loadEditorialConfig(directory?: string): Promise<Editorial
   return config;
 }
 
+/**
+ * Map each template ID to the catalogue file (desk) that defines it, such as `cities-conflict`.
+ * Files in an overlay's `templates` folder take precedence; templates found nowhere are left out.
+ */
+export async function templateDesks(directory?: string): Promise<Map<string, string>> {
+  const desks = new Map<string, string>();
+  const folders = [path.join(builtInCatalogueDirectory(), 'templates'), ...(directory ? [path.join(directory, 'templates')] : [])];
+  for (const folder of folders) {
+    let sources;
+    try {
+      sources = await readTemplateSources(folder);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue;
+      throw error;
+    }
+    for (const { file, base } of sources)
+      for (const template of base)
+        if (isRecord(template) && typeof template.id === 'string') desks.set(template.id, file.slice(0, -'.json'.length));
+  }
+  return desks;
+}
+
 /** Apply the same validation to merged files and serialized replay configurations. */
 export async function parseEditorialConfig(input: unknown): Promise<EditorialConfig> {
   const config = editorialConfigSchema.parse(input);

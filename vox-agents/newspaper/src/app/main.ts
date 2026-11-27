@@ -244,6 +244,7 @@ const restoreRecording = mountReplayControls({
   async onRun(state, openLatest) {
     const version = readingVersion;
     replay = state;
+    diagnostics.setRun(state);
     selectedEdition = '';
     recordedPosition = undefined;
     showEditions([]);
@@ -271,6 +272,7 @@ const restoreRecording = mountReplayControls({
   },
   onEvidence: diagnostics.setEvidence,
   onSkip: diagnostics.addSkip,
+  onBatchEnd: diagnostics.refreshCoverage,
   onConfiguring: setConfiguring,
   flushVotes,
 });

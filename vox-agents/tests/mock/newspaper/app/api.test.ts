@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   advanceReplay,
   configureReplay,
+  getCheckCoverage,
+  getReplayCoverage,
   getReplayIssue,
   getReplayState,
   inspectReplay,
@@ -217,5 +219,45 @@ describe('replay browser API', () => {
     expect(result.session.runId).toBeUndefined();
     expect(result.session.preferences).toBeUndefined();
     expect(fetchMock.mock.calls[0]).toEqual(['/api/newspaper/replay/advance?view=summary', { method: 'POST' }]);
+  });
+  it('should scope run coverage reads and parse template stages and rule funnels', async () => {
+    const funnel = { partial: 0, matched: 0, unprintable: 0, zeroWeight: 0, noVariants: 0, candidates: 0 };
+    const fetchMock = stubJson({
+      checks: 2, published: 1, turns: { from: 10, to: 15 }, uncoveredIssues: 0,
+      templates: [{
+        id: 'siege-report', desk: 'cities-conflict', tags: ['cities'], rules: ['city-under-siege'], stage: 'not-fired',
+        printed: 0, funnel, outcomes: {}, bestScore: null, floor: null, printedTurns: [],
+      }],
+      rules: [{
+        id: 'city-under-siege', subject: 'city', checks: 2, subjects: 40, fired: 0, firedChecks: 0,
+        stops: [{ key: 'false:0', kind: 'false', guard: 0, source: 'city.is.besieged', count: 40 }],
+      }],
+    });
+    const result = await getReplayCoverage('run-1', 4);
+
+    expect(fetchMock.mock.calls[0]).toEqual([
+      '/api/newspaper/replay/coverage?runId=run-1&receiverPlayerID=4',
+      { method: 'GET' },
+    ]);
+    expect(result.templates[0]).toMatchObject({ id: 'siege-report', stage: 'not-fired' });
+    expect(result.rules[0].stops[0]).toMatchObject({ guard: 0, count: 40 });
+  });
+
+  it('should read one check cutoff and preserve a missing-coverage status', async () => {
+    const fetchMock = stubJson({
+      turn: 15, status: 'published', printedFloor: 58, rules: {}, templates: {},
+      candidates: [{ id: 'c1', template: 'siege-report', subject: 'city:3', rules: ['city-under-siege'], importance: 3, score: 41, outcome: 'outranked' }],
+    });
+    const result = await getCheckCoverage(15, 'run-1', 4);
+    expect(fetchMock.mock.calls[0]).toEqual([
+      '/api/newspaper/replay/coverage/15?runId=run-1&receiverPlayerID=4',
+      { method: 'GET' },
+    ]);
+    expect(result.candidates[0]).toMatchObject({ outcome: 'outranked', score: 41 });
+
+    stubJson({ error: 'No coverage for this check' }, 404);
+    const error = await getCheckCoverage(10, 'run-1', 4).catch(error => error);
+    expect(error).toBeInstanceOf(ReplayApiError);
+    expect(error.status).toBe(404);
   });
 });

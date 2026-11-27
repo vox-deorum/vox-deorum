@@ -2,7 +2,7 @@
  * Browser client for newspaper replay, saved issues, votes, and preferences.
  *
  * Requests and responses use the shared browser-safe replay and archive
- * contracts. Archive calls always carry the run and receiver scope.
+ * contracts. Archive and coverage calls always carry the run and receiver scope.
  */
 import type { z } from 'zod';
 import { newspaperArchiveScopeSchema, type NewspaperArchiveScope } from '../../../../mcp-server/dist/newspaper/protocol.js';
@@ -25,6 +25,12 @@ import {
   type ArchiveIssue,
   type ArchiveList,
 } from '../../../src/newspaper/contracts/archive.js';
+import {
+  checkCoverageSchema,
+  runCoverageSchema,
+  type CheckCoverage,
+  type RunCoverage,
+} from '../../../src/newspaper/contracts/coverage.js';
 
 /** Preserve HTTP status so controls can distinguish an empty session from an unavailable host. */
 export class ReplayApiError extends Error {
@@ -97,4 +103,14 @@ export async function saveReplayVote(input: z.infer<typeof archiveVoteRequestSch
 /** Save receiver preferences and return the scoped session that owns them. */
 export async function saveReplayPreferences(input: z.infer<typeof replayPreferencesRequestSchema>): Promise<ReplayState> {
   return replayStateSchema.parse(await request('PUT', '/preferences', replayPreferencesRequestSchema.parse(input)));
+}
+
+/** Read where each authored template stopped on its way to print across the run. */
+export async function getReplayCoverage(runId: string, receiverPlayerID: number): Promise<RunCoverage> {
+  return runCoverageSchema.parse(await request('GET', `/coverage?${scopeQuery(runId, receiverPlayerID)}`));
+}
+
+/** Read every candidate the editor saw at one check cutoff, with its outcome and score. */
+export async function getCheckCoverage(turn: number, runId: string, receiverPlayerID: number): Promise<CheckCoverage> {
+  return checkCoverageSchema.parse(await request('GET', `/coverage/${turn}?${scopeQuery(runId, receiverPlayerID)}`));
 }

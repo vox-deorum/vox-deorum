@@ -241,3 +241,207 @@ main {
   border: 1px solid #d6dacf;
   border-radius: 4px;
 }
+
+.host-diagnostic-sections .host-coverage {
+  grid-column: 1 / -1;
+}
+
+.host-coverage-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 8px 12px;
+  min-inline-size: 0;
+  padding: 0;
+  border: 0;
+  margin: 8px 0;
+}
+
+.host-coverage-controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  max-width: 100%;
+  font-size: 13px;
+}
+
+.host-coverage-controls label.host-coverage-check {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+}
+
+.host-coverage-controls select,
+.host-coverage-controls input:not([type="checkbox"]) {
+  box-sizing: border-box;
+  max-width: 100%;
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 1px solid #aeb7ae;
+  border-radius: 4px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+}
+
+.host-coverage-controls input[type="search"] {
+  width: min(16rem, 80vw);
+}
+
+.host-coverage p,
+.host-diagnostic-sections #page-items p {
+  margin: 4px 0;
+}
+
+.host-coverage-muted,
+.host-coverage-reason,
+.host-coverage-counts {
+  color: #576358;
+  font-size: 13px;
+}
+
+.host-coverage-note {
+  color: #7a5a12;
+}
+
+[data-coverage-error] {
+  color: #842626;
+}
+
+.host-diagnostic-sections .host-coverage summary {
+  width: auto;
+  overflow-wrap: anywhere;
+}
+
+.host-diagnostic-sections .host-coverage-group > summary {
+  font-weight: 400;
+}
+
+.host-coverage-name {
+  font-weight: 600;
+}
+
+.host-coverage-reason,
+.host-coverage-counts {
+  display: block;
+  margin-left: 1.1em;
+}
+
+.host-coverage-bar {
+  display: inline-flex;
+  width: 8rem;
+  max-width: 40%;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: #eeeee9;
+  vertical-align: middle;
+}
+
+.host-coverage-templates,
+.host-edition-articles,
+.host-coverage-funnel {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.host-diagnostic-sections .host-coverage-template {
+  margin-top: 4px;
+  padding: 4px 8px;
+  border-color: #e3e6dd;
+}
+
+.host-diagnostic-sections .host-coverage-template > summary {
+  font-weight: 400;
+}
+
+.host-coverage-template code,
+.host-coverage-rule code,
+.host-not-printed code {
+  font: 12px/1.5 Consolas, monospace;
+  overflow-wrap: anywhere;
+}
+
+.host-stage {
+  display: inline-block;
+  padding: 0 6px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.host-stage[data-stage="printed"] { background: #e3f0e6; color: #2f6b45; }
+.host-stage[data-stage="passed-over"] { background: #f6edd4; color: #6b4f0e; }
+.host-stage[data-stage="weighted-out"] { background: #eee6f5; color: #5d4479; }
+.host-stage[data-stage="unprintable"] { background: #f7e6da; color: #7f431c; }
+.host-stage[data-stage="not-together"] { background: #e1ecf5; color: #2f5d86; }
+.host-stage[data-stage="not-fired"] { background: #f5e0e0; color: #842626; }
+
+.host-coverage-bar [data-stage="printed"] { background: #4b8a60; }
+.host-coverage-bar [data-stage="passed-over"] { background: #c99a2e; }
+.host-coverage-bar [data-stage="weighted-out"] { background: #8a6aad; }
+.host-coverage-bar [data-stage="unprintable"] { background: #c0703a; }
+.host-coverage-bar [data-stage="not-together"] { background: #4f86b8; }
+.host-coverage-bar [data-stage="not-fired"] { background: #b44a4a; }
+
+.host-coverage-detail {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #e3e6dd;
+}
+
+.host-coverage-funnel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  font-size: 13px;
+}
+
+.host-coverage-rule {
+  margin-top: 8px;
+}
+
+.host-coverage-rule-title {
+  font-weight: 600;
+}
+
+.host-coverage-stops {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.host-coverage-stops th,
+.host-coverage-stops td {
+  padding: 2px 6px;
+  border-bottom: 1px solid #e3e6dd;
+  text-align: left;
+  vertical-align: top;
+}
+
+.host-coverage-stops th:not(:first-child),
+.host-coverage-stops td:not(:first-child) {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.host-coverage-stops td:first-child {
+  overflow-wrap: anywhere;
+}
+
+.host-edition-articles li {
+  margin-top: 6px;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.host-not-printed {
+  margin: 4px 0 0;
+  padding-left: 1.6em;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}

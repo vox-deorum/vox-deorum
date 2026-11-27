@@ -7,7 +7,9 @@ import type {
   EditorialDecisionRecord,
   PublishedItemRecord,
 } from '../contracts/publication.js';
+import type { TemplateFunnel } from '../contracts/coverage.js';
 import type { EditorialConfig } from './config/schema.js';
+import { summarizeCheckCoverage } from './coverage.js';
 import type {
   CompiledTriggerExpressions,
   EditorialTerm,
@@ -172,11 +174,13 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
     ))
       terms.set(`civic.${slot}`, term);
   const triggers = rules.developments;
-  const candidates = (await matchTemplates(triggers, config, compiled, batch, budget, terms)).map((candidate) => ({
+  const funnel = new Map<string, TemplateFunnel>();
+  const candidates = (await matchTemplates(triggers, config, compiled, batch, budget, terms, funnel)).map((candidate) => ({
     ...candidate,
     seriesKeys: candidate.seriesKeys.map((key) => `${scope}/${key}`),
   }));
   const selection = selectHeuristic(candidates, state, config, feedback);
+  const originalScores = new Map(selection.scores.map(({ id, score }) => [id, score]));
   const decision: EditorialDecisionRecord = {
     checkId,
     cutoffTurn: turn,
@@ -213,11 +217,19 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
     for (const [key, current] of Object.entries(rules.repeatState))
       if (current.armed || printed.has(key)) state.triggerRepeats[key] = current;
   };
+  /** Record where every template stopped in this check, given the candidates that reached the page. */
+  const recordCoverage = (printed: ReadonlySet<string>, mergedInto: ReadonlyMap<string, string>) => {
+    decision.coverage = summarizeCheckCoverage({
+      turn, status: decision.status, reason: decision.reason, audit: rules.audit, funnel, candidates,
+      scores: originalScores, outcomes: selection.outcomes, printed, mergedInto,
+    });
+  };
   /** Leave matches and diplomacy available for the next check. */
   const skip = (reason: string): EditorialCheckResult => {
     commitRepeats([]);
     decision.reason = budget.choiceEvaluationIncomplete ? `${reason} ${choiceLimitMessage}` : reason;
     recordChoiceErrors();
+    recordCoverage(new Set(), new Map());
     return { status: 'skipped', reason: decision.reason, state, decision };
   };
   if (selection.selected.length < frontBriefCount)
@@ -299,7 +311,6 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
   decision.status = 'published';
   const displayedCandidates = new Set<string>();
   const mergedInto = new Map<string, string>();
-  const originalScores = new Map(selection.scores.map(({ id, score }) => [id, score]));
   for (const candidate of presentation.itemCandidates.values()) {
     displayedCandidates.add(candidate.id);
     if (!candidate.mergedCandidateIds) continue;
@@ -323,5 +334,6 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
   if (presentation.mastheadRuleId !== undefined) decision.mastheadRuleId = presentation.mastheadRuleId;
   decision.layouts = presentation.layouts;
   recordChoiceErrors();
+  recordCoverage(displayedCandidates, mergedInto);
   return { status: 'published', issue, state, decision };
 }

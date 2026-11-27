@@ -85,6 +85,18 @@
       <details id="replay-diagnostics" class="host-diagnostics" hidden>
         <summary>Replay diagnostics</summary>
         <div class="host-diagnostic-sections">
+          <section id="coverage-section" class="host-coverage">
+            <h2>Template coverage</h2>
+            <p id="coverage-summary" data-coverage-summary></p>
+            <fieldset id="coverage-controls" class="host-coverage-controls" aria-label="Coverage grouping and filters" hidden>
+              <label>Group by <select data-coverage-control="grouping"><option value="desk">Desk</option><option value="stage">Stage</option><option value="tag">Tag</option></select></label>
+              <label>Tag <select data-coverage-control="tag"><option value="">All tags</option></select></label>
+              <label>Stage <select data-coverage-control="stage"><option value="">All stages</option></select></label>
+              <label>Search <input data-coverage-control="search" type="search" placeholder="Template or rule ID" /></label>
+              <label class="host-coverage-check"><input data-coverage-control="hide-printed" type="checkbox" /> Hide printed</label>
+            </fieldset>
+            <div id="coverage-tree"></div>
+          </section>
           <section>
             <h2>Skipped checks in this batch</h2>
             <div id="check-view"></div>
@@ -93,7 +105,7 @@
             <h2>Selected edition</h2>
             <div id="page-items"></div>
           </section>
-          <section>
+          <section id="evidence-section" hidden>
             <h2>Evidence at the current cutoff</h2>
             <button type="button" data-replay="inspect" disabled>Inspect cutoff</button>
             <div id="evidence-view"></div>

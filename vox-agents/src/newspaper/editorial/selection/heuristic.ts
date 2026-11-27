@@ -4,9 +4,14 @@ import type { EditorialConfig } from '../config/schema.js';
 import { candidateFeedback } from './feedback.js';
 import type { EditorialCandidate } from './templates.js';
 
+/** Why the editor kept or passed over a candidate. */
+export type SelectionOutcome = 'selected' | 'outranked' | 'conflict' | 'printed-before' | 'not-positive' | 'no-variants';
+
 export interface HeuristicSelection {
   selected: EditorialCandidate[];
   scores: { id: string; score: number; selected: boolean }[];
+  /** Each candidate's selection outcome, keyed by candidate ID. */
+  outcomes: Map<string, SelectionOutcome>;
 }
 
 /** Track editions' printed fingerprints and developments already covered by a merge. */
@@ -30,9 +35,13 @@ export function selectHeuristic(
   const selected: EditorialCandidate[] = [];
   const scores = new Map<string, number>();
   const published = publishedFingerprints(state);
-  const remaining = candidates.filter(
-    (candidate) => candidate.variants.length && !published.has(candidate.fingerprint)
-  );
+  const outcomes = new Map<string, SelectionOutcome>();
+  const remaining = candidates.filter((candidate) => {
+    if (published.has(candidate.fingerprint)) outcomes.set(candidate.id, 'printed-before');
+    else if (!candidate.variants.length) outcomes.set(candidate.id, 'no-variants');
+    else return true;
+    return false;
+  });
   /** Check whether a selected story already covers any of this candidate's subjects. */
   const conflicts = (candidate: EditorialCandidate) =>
     candidate.seriesKeys.some((key) => usedSeries.has(key)) ||
@@ -76,21 +85,28 @@ export function selectHeuristic(
     const candidate = remaining.shift()!;
     const weight = score(candidate);
     scores.set(candidate.id, weight);
-    if (
-      (!candidate.urgent && weight <= 0) ||
-      conflicts(candidate)
-    )
+    if (conflicts(candidate)) {
+      outcomes.set(candidate.id, 'conflict');
       continue;
+    }
+    if (!candidate.urgent && weight <= 0) {
+      outcomes.set(candidate.id, 'not-positive');
+      continue;
+    }
+    outcomes.set(candidate.id, 'selected');
     selected.push(candidate);
     candidate.seriesKeys.forEach((key) => usedSeries.add(key));
     candidate.triggerIds.forEach((id) => usedTriggers.add(id));
     candidate.conflictKeys?.forEach((key) => usedConflicts.add(key));
     candidate.tags.forEach((tag) => usedTags.add(tag));
   }
-  for (const candidate of candidates)
+  for (const candidate of candidates) {
     if (!scores.has(candidate.id)) scores.set(candidate.id, score(candidate));
+    if (!outcomes.has(candidate.id)) outcomes.set(candidate.id, 'outranked');
+  }
   return {
     selected,
+    outcomes,
     scores: candidates.map((candidate) => ({
       id: candidate.id,
       score: scores.get(candidate.id)!,

@@ -8,7 +8,9 @@ import { errorMessage } from '../../utils/errors.js';
 import { replayCheckSchema, replaySettingsSchema, replayStateSchema, replayPreferencesRequestSchema, type ReplayEvidenceResponse, type ReplaySpeed, type ReplayState } from '../contracts/replay.js';
 import { archiveVoteRequestSchema, type ArchiveIssue, type ArchiveList } from '../contracts/archive.js';
 import { createInitialPublicationState, publicationStateSchema, type PublicationState } from '../contracts/publication.js';
-import { loadEditorialConfig, parseEditorialConfig } from '../editorial/config/load.js';
+import { loadEditorialConfig, parseEditorialConfig, templateDesks } from '../editorial/config/load.js';
+import type { CheckCoverage, RunCoverage } from '../contracts/coverage.js';
+import { summarizeRunCoverage } from '../editorial/coverage.js';
 import type { EditorialConfig } from '../editorial/config/schema.js';
 import { resolveEditorialSpan } from '../editorial/config/constants.js';
 import { runEditorialCheck } from '../editorial/check.js';
@@ -180,6 +182,30 @@ export class ReplaySession {
     });
   }
 
+  /** Explain, for every authored template, the furthest stage it reached across this run's checks. */
+  coverage(scope?: unknown): Promise<RunCoverage> {
+    return this.run(async () => {
+      this.checkScope(scope);
+      const state = this.requirePublication();
+      const checks = this.store!.coverage(state.runId!, state.settings.receiverPlayerID);
+      const covered = new Set(checks.map(check => check.turn));
+      const uncovered = this.publication!.issues.filter(issue => !covered.has(issue.turn)).length;
+      const desks = await templateDesks(state.settings.editorialConfigDirectory);
+      return summarizeRunCoverage(checks, this.config!, desks, uncovered);
+    });
+  }
+
+  /** Read one check's saved coverage, including the candidates the editor passed over. */
+  checkCoverage(turn: number, scope?: unknown): Promise<CheckCoverage> {
+    return this.run(async () => {
+      this.checkScope(scope);
+      const state = this.requirePublication();
+      const coverage = this.store!.checkCoverage(state.runId!, state.settings.receiverPlayerID, turn);
+      if (!coverage) throw new ReplaySessionError('This check has no saved coverage.', 404);
+      return coverage;
+    });
+  }
+
   /** Replace a unique article's current vote; clearing removes its contribution exactly. */
   setVote(input: unknown): Promise<ReplayState> {
     return this.run(async () => {
@@ -272,7 +298,7 @@ export class ReplaySession {
         const check = replayCheckSchema.parse(result);
         if (check.decision.cutoffTurn !== cutoffTurn) throw new Error('Check and checkpoint cutoffs must agree.');
         if ((check.status === 'published') !== !!check.issue) throw new Error('Published checks require an issue; skipped checks cannot carry one.');
-        this.store.commit({ session: state, publication: result.state, configuration: this.config }, check.issue);
+        this.store.commit({ session: state, publication: result.state, configuration: this.config }, check.issue, check.decision.coverage);
         this.publication = result.state;
         this.state = state;
         return { session: this.snapshot(), evidence: inspectorEvidence(evidence), check };

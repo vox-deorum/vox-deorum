@@ -201,4 +201,22 @@ describe('offline replay output store', () => {
       expect(store.load('run-a', 0, 'source')).toEqual(checkpoint);
     } finally { competitor.close(); }
   });
+  it('should save coverage with each check and add its table to output saved before coverage existed', () => {
+    store.create('source', checkpointAt());
+    store.close();
+    const older = new Database(filename);
+    older.exec('DROP TABLE OfflineReplayCoverage');
+    older.close();
+    store = new ReplayStore(filename);
+    store.load('run-a', 0, 'source');
+    expect(store.coverage('run-a', 0)).toEqual([]);
+    const coverage = (turn: number) => ({ turn, status: 'skipped' as const, printedFloor: null, rules: {}, templates: {}, candidates: [] });
+    expect(() => store.commit(checkpointAt(10), undefined, coverage(9))).toThrow();
+    store.commit(checkpointAt(10), undefined, coverage(10));
+    store.commit(checkpointAt(15));
+    expect(store.coverage('run-a', 0)).toEqual([coverage(10)]);
+    expect(store.checkCoverage('run-a', 0, 10)).toEqual(coverage(10));
+    expect(store.checkCoverage('run-a', 0, 15)).toBeUndefined();
+    expect(store.coverage('run-a', 1)).toEqual([]);
+  });
 });

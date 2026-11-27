@@ -50,7 +50,24 @@ Reloading the page can restore the active server session. New runs receive a run
 
 ### Read Replay diagnostics
 
-Open **Replay diagnostics** below the paper. **Skipped checks in this batch** lists cutoffs and skip reasons. **Selected edition** shows each article's evidence and rule and template IDs. **Inspect cutoff** queries the current window without advancing; its cutoff can differ from that of the edition on screen. It shows the permitted values, dates, and row IDs behind the observation.
+Open **Replay diagnostics** below the paper to find out why a template never prints.
+
+**Template coverage** groups every authored template by desk (the catalogue file that defines it, such as `cities-conflict` or `war-fronts`). You can regroup by stage or tag, filter by tag or stage, and search by template or rule ID. Each template shows the furthest stage it failed to pass across the run's checks:
+
+| Stage | Meaning | Where to look |
+| --- | --- | --- |
+| Printed | Printed at least once, alone or merged into a roundup story. | |
+| Passed over | Reached the editor but never printed. | The outcome counts (outranked, conflict, printed before, not positive, unpublished) and its best score against the weakest printed story in those checks. |
+| Weighted out | Its rules matched, but the template weight was zero. | The template's `weight`. |
+| Unprintable | No variant could fill all its placeholders, or every variant weighed zero. | Variant placeholders and weights. |
+| Not together | Each of its rules fired, but never on the same subject in overlapping periods. | The partial match count and each rule's subjects. |
+| Not fired | At least one of its rules never fired. | The rule funnel below. |
+
+Expand a template to see its rules' funnels: how many subjects each rule checked over the run, how many fired, and which guard stopped the rest, with the guard's expression. For example, `city-under-siege` might check 820 city subjects, fire none, and stop 790 at `when[1]`. A rule with no subjects never saw a visible entity of its subject kind; a disabled rule never runs. Other stops are repeat memory, a failed chance draw, a group below its minimum size, or evidence hidden from the receiver.
+
+**Skipped checks in this batch** lists cutoffs and skip reasons. **Selected edition** lists each printed article with its template, rules, subject, importance, and editor score, followed by the strongest candidates that check did not print and the score they needed. **Inspect cutoff** appears only for **Inspect evidence only** replays. It queries the current window without advancing and shows the permitted values, dates, and row IDs behind each observation.
+
+Coverage is saved with each check. Checks run before coverage existed have none, so the summary counts the editions they printed separately; start a new run to cover them.
 
 ## Generate examples from the command line
 
@@ -70,13 +87,13 @@ Use `--help` for all options. Paths resolve from the directory where you invoked
 | `--config` | Add an editorial catalogue overlay. |
 | `--render-turns` | Request PNGs for comma-separated cutoffs in the range, for example `--render-turns 29` when the example recording uses Standard pace. Only published editions render. Stop the Vox Deorum server first: PNG mode rebuilds the shared reader and launches installed Edge or Chrome. If the build is interrupted, rebuild the reader before restarting the server. |
 
-Open the output's `index.html` to read the issues and find the audit for each check. `audit-<turn>.json` records the editorial decision even when the check skips; `issue-<turn>.json` holds a published issue. `run.json` indexes the results, and `replay.sqlite` holds the editions, article sources, and checkpoint. If the CLI stops partway through, resume in the browser with run ID `examples` and `replay.sqlite` as the output path. A CLI rerun needs a fresh directory.
+Open the output's `index.html` to read the issues and find the audit for each check. `audit-<turn>.json` records the editorial decision even when the check skips, including its template `coverage`; `issue-<turn>.json` holds a published issue. `run.json` indexes the results, and `replay.sqlite` holds the editions, article sources, and checkpoint. If the CLI stops partway through, resume in the browser with run ID `examples` and `replay.sqlite` as the output path. A CLI rerun needs a fresh directory.
 
 ### Iterate on a rule or overlay
 
 An **overlay** is a folder that mirrors the stock catalogue. To change settler coverage, for example, put a rule with the existing ID under `triggers/cities-settlement.json` in that folder. Follow the [catalogue merge rules](editorial.md#catalogue-and-eligibility) and pass the folder with `--config` or **Recording > Advanced > Editorial config directory**.
 
-Compare fresh runs with the same recording, player, turn range, and frequency. For a missing story, trace its [trigger match](triggers/overview.md#how-a-check-evaluates-triggers), then check the candidate decision, `mergedInto`, and `choiceErrors`. For appearance changes, inspect `designSelection` for the previous design, reason, and candidate weights. The audit's `mastheadRuleId` identifies the rule that supplied the title when one won.
+Compare fresh runs with the same recording, player, turn range, and frequency. For a missing story, start with its stage in **Template coverage** or in the audit's `coverage` field. Then trace its [trigger match](triggers/overview.md#how-a-check-evaluates-triggers) and check the candidate decision, `mergedInto`, and `choiceErrors`. For appearance changes, inspect `designSelection` for the previous design, reason, and candidate weights. The audit's `mastheadRuleId` identifies the rule that supplied the title when one won.
 
 ## Historical evidence-query verification
 
@@ -95,7 +112,8 @@ With the [probe catalogue](triggers/examples.md#probe-catalogue-examples), inspe
 | Source | Responsibility |
 | --- | --- |
 | `mcp-server/src/newspaper/queries.ts`, `projection.ts` | Read dated evidence with visibility and field filtering. Replay opens the recording read-only. The MCP tool uses the same query and requires a cutoff before the current game turn. |
-| `replay/session.ts`, `replay/store.ts` | Serialize requests and save each edition, its sources, and the latest checkpoint together. The archive keeps editions and votes; use CLI audits for per-cutoff decisions. Failed reads or writes leave the cursor unchanged. Resume after a conflict from a concurrent write. |
-| `replay/http.ts`, `contracts/replay.ts`, `contracts/archive.ts` | Loopback API under `/api/newspaper/replay`. Use `POST /advance` to step the session and add `?view=summary` to omit the full evidence and decision. `POST /evidence` inspects the cutoff, and `GET /issues` and `GET /issues/:issueId` read the archive. Publication advances, vote writes, and preference writes carry a run ID and receiver; a stale scope returns 409. |
+| `replay/session.ts`, `replay/store.ts` | Serialize requests and save each edition, its sources, the check's template coverage, and the latest checkpoint together. The archive keeps editions, coverage, and votes; use CLI audits for full per-cutoff decisions. Failed reads or writes leave the cursor unchanged. Resume after a conflict from a concurrent write. |
+| `editorial/coverage.ts`, `contracts/coverage.ts` | Summarize where each template stopped in one check (rule stops, template matching, editor outcomes) and combine the saved checks into one stage per template. Desks come from the catalogue file names. |
+| `replay/http.ts`, `contracts/replay.ts`, `contracts/archive.ts` | Loopback API under `/api/newspaper/replay`. Use `POST /advance` to step the session and add `?view=summary` to omit the full evidence and decision. `POST /evidence` inspects the cutoff. `GET /issues` and `GET /issues/:issueId` read the archive. `GET /coverage` returns the run's template coverage, and `GET /coverage/:turn` returns one check's coverage with every candidate's outcome and score. Publication advances, vote writes, and preference writes carry a run ID and receiver, and archive and coverage reads accept the same scope; a stale scope returns 409. |
 
 Relative source paths start in `vox-agents/src/newspaper/`. For tests, see [catalogue and projection checks](triggers/overview.md#verify-changes) and [reader and export tests](renderer.md#run-the-tests).
