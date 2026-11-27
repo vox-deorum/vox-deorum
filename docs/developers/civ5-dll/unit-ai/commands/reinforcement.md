@@ -17,16 +17,16 @@ Strength uses the [strength tallies](recruitment.md#strength-tallies). The [valu
 | Symbol | Meaning | Scale or range |
 | --- | --- | --- |
 | `L` (**local strength**) | Our units near the center, from the [local set](recruitment.md#battlefield-estimate). At our city it includes the city's own strength. | Native strength × remaining health share. Only ratios matter, so examples use strengths such as 100. |
-| `L_R` (**adjusted local strength**) | Reinforce's local tally after released local units enter its candidate pool. It equals `L` when no local units are released. | Same scale as `L`. |
 | `T` (**enemy strength**) | Hostile units and cities near the center. At an enemy city it includes the city. | Same scale as `L`. |
 | `r` (**desired ratio**) | Setting `reinforce.strengthRatio` (1): the friendly/enemy strength ratio selection aims for. | Positive; 1 means parity. |
-| `need` | `max(0, r × T − L_R)`: full strength selection tries to add. | Strength, at least 0. |
+| `need` | `max(0, r × T − L)`: full strength selection tries to add. | Strength, at least 0. |
 | `S` | Selected units' full strength, including any role unit. | Strength. |
 | `j` (**join turns**) | `max(1, travel turns − 1)`, from the [distance estimate](recruitment.md#candidates-and-selection). | Whole turns, at least 1. |
 | `help` | Sum over selected units of strength / `j`: strength discounted by how long it takes to join. | 0 to `S`. |
 | `s` (**fight share**) | Our share of fighting power at the center now, `L² / (L² + T²)`. The fight counts its target's exposure at `s`, and a [Withdraw](withdrawal.md#withdraw-priority) keeps `s⁺` at or above this share. At a city battlefield it matches the theater's [pressure](value.md#theater-multiplier) at an enemy city and `1 − pressure` at ours. | 0 to 1; 0.5 at parity. |
-| `s_R` (**Reinforce start**) | Reinforce's own starting share, `L_R² / (L_R² + T²)`, after local units enter its candidate pool. It equals `s` when no local units are released. | 0 to 1. |
-| `s_h` (**projected share**) | `(L_R + help)² / ((L_R + help)² + T²)`: Reinforce's share once the selected help joins from `s_R`. | 0 to 1. |
+| `s_h` (**projected share**) | `(L + help)² / ((L + help)² + T²)`: our share once the selected help joins from `s`. | 0 to 1. |
+| `swing` | `s_h − s`: the rise in our share as help joins. | 0 to `1 − s`. |
+| `k` (**swing scale**) | Setting `reinforce.swingScale` (2): multiplies the swing in the score, which caps `k × swing` at 1. | At least 0. |
 | `θ` | Current [theater multiplier](value.md#theater-multiplier) of the destination's zone. | Theater floor (0.2) to 1. |
 
 ## Running example inputs
@@ -41,7 +41,9 @@ Examples use these inputs unless they state their own. Results are rounded only 
 | Selection | One spearman of strength 100, `j = 1` | Supplied; its full strength covers need 50. |
 | Help | `100 (strength) / 1 (j) = 100` | Derived. |
 | Strength share `s` | `100² (L) / (100² + 150² (T)) = 0.307692` | Derived. |
-| Swing | `0.64 (s_h) − 0.307692 (s_R) = 0.332308` | Derived in [swing](#swing); with no local units released, `s_R = s`. |
+| Swing | `0.64 (s_h) − 0.307692 (s) = 0.332308` | Derived in [swing](#swing). |
+| Swing scale `k` | 2 | Setting `reinforce.swingScale`. |
+| Scaled swing | `min(1, 2 (k) × 0.332308 (swing)) = 0.664615` | Derived. |
 | City allowance `C`; city scale `Z_C` | 3; 40 | [Value page's running inputs](value.md#running-example-inputs). |
 | City maximum HP; expected heal `H` | 250 HP; 20 HP | Value page's running inputs; healing reduces non-capturing city progress. |
 | Unlisted exposure, ground, relief, garrison and camp terms | 0 | Supplied. |
@@ -53,11 +55,13 @@ Examples use these inputs unless they state their own. Results are rounded only 
 
 ## Reinforce priority
 
-`priority = θ × (realized stake + φ × potential stake) × swing`
+`priority = θ × (realized stake + φ × potential stake) × min(1, k × swing)`
 
 `φ = potential.weight × potential.turnDiscount^(a − 1)`
 
-**Swing** is the rise in our strength share as the selected help joins. The **potential weight** `φ` starts at `potential.weight` (0.1) and is multiplied by `potential.turnDiscount` (0.5) for each turn to contact past the first, including fractional turns. Set `potential.weight` to 0 to score without potential stake.
+**Swing** is the rise in our strength share as the selected help joins. Selection stops once full strength covers need, so help seldom takes the share past parity and the swing tops out near one half. The **swing scale** `k` (setting `reinforce.swingScale`, 2) doubles it, and the cap at 1 keeps the term within the fight's range: a rise from no strength to parity counts as 1. The recorded swing and the strength share that Withdraw reads keep their unscaled values.
+
+The **potential weight** `φ` starts at `potential.weight` (0.1) and is multiplied by `potential.turnDiscount` (0.5) for each turn to contact past the first, including fractional turns. Set `potential.weight` to 0 to score without potential stake.
 
 **Turns to contact** `a` estimates when the side that can realize the potential stake will be in place:
 
@@ -73,12 +77,12 @@ At enemy targets, `S / help` is a harmonic mean of join turns weighted by unit s
 | --- | --- | --- |
 | Border | None. | Destination zone must be ours or adjacent to ours, by the turn's initial zone data. Guarded and fogged camps are exempt. |
 | Posture | None. | Withdraw posture gives priority 0. |
-| **Short selection** | Partial help counts. | Priority 0 when full selected strength falls short of need: `L_R + S < r × T`. |
+| **Short selection** | Partial help counts. | Priority 0 when full selected strength falls short of need: `L + S < r × T`. |
 | No selection | Priority 0. | Priority 0. |
 
 Reinforce can score at an enemy unit or city with no local units if its selection passes these gates. Enemy-city recruitment still checks `CanStrikeCity` and looks for a capturer if one is missing.
 
-**Camps.** At a visible guard, the camp contributes to total and realized stake as shown in the [term table](value.md#fight-priority). Before multiplying by swing, `ScoreReinforce` uses the higher of `θ × (realized stake + φ × potential stake)` and `θ × camp value`. At a fogged camp the camp value is fully realized, with zero potential stake, turns to contact and potential weight. Enemy strength is at least that of a typical unit, the average combat strength of the player's reference military types. The usual posture, selection and reach checks still apply. Recruits march to safe stops short of a fogged camp without a combat search.
+**Camps.** At a visible guard, the camp contributes to total and realized stake as shown in the [term table](value.md#fight-priority). Before multiplying by scaled swing, `ScoreReinforce` uses the higher of `θ × (realized stake + φ × potential stake)` and `θ × camp value`. At a fogged camp the camp value is fully realized, with zero potential stake, turns to contact and potential weight. Enemy strength is at least that of a typical unit, the average combat strength of the player's reference military types. The usual posture, selection and reach checks still apply. Recruits march to safe stops short of a fogged camp without a combat search.
 
 A camp seen empty uses its single claimant's [travel priority](value.md#camp-value). For a later arrival, the claimant heads toward this turn's stopping point on the route to the camp. Danger can abort the move.
 
