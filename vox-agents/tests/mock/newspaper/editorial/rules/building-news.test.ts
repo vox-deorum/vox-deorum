@@ -282,6 +282,21 @@ describe('stock building news', () => {
     expect(subject(missing.audit('building-completed'))).toMatchObject({ outcome: 'false' });
   });
 
+  it('should report an unlisted early building in the Ancient Era, but not later or for a wonder', async () => {
+    /** Complete one building in Tours, which lists no important buildings, during the given era. */
+    const during = (era: string, building: string, options: Parameters<typeof own>[2] = {}) => {
+      const evidence = own(building, [], { wonders: [], ...options });
+      evidence.players[0].values.Era = era;
+      return check(evidence);
+    };
+    expect(subject((await during('Ancient Era', 'Monument')).audit('building-completed'))).toMatchObject({ outcome: 'fired' });
+    expect(subject((await during('Ancient Era', 'Well', { purchase: { gold: true } })).audit('building-purchased'))).toMatchObject({ outcome: 'fired' });
+    expect(subject((await during('Classical Era', 'Monument')).audit('building-completed'))).toMatchObject({ outcome: 'false' });
+    const wonder = await during('Ancient Era', 'Stonehenge', { wonders: ['Stonehenge'] });
+    expect(subject(wonder.audit('building-completed'))).toMatchObject({ outcome: 'false' });
+    expect(subject(wonder.audit('our-wonder-completed'))).toMatchObject({ outcome: 'fired' });
+  });
+
   it('should judge a completion by the list recorded when it was built, even after a successor replaced it', async () => {
     const arena = { ...constructed(100, 10, 0, 10, 'Arena'), source: { table: 'GameEvents' as const, id: 100, turn: 7, createdAt: 7_001 } };
     const evidence = fixture(
