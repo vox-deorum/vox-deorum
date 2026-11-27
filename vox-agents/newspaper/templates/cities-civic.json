@@ -88,10 +88,12 @@
         "voice": "press",
         "stance": "government-critical",
         "genre": "analysis",
-        "headline": "One problem, {{count|city|cities}}",
+        "headline": "A Pattern of Neglect",
         "body": [
-          "The entry {{key}} leads the complaint book in {{count}} of our cities, and a pattern that wide is policy by another name. Weather explains one bad season in one town; it does not explain the same line in every ledger. The {{terms.civic.government}} should be able to say when the choice was made and who expected to gain by it."
-        ]
+          "Why is {{key}} suddenly the primary grievance in {{count}} of our cities? The {{terms.civic.government}} claims these are isolated incidents of unrest, but the numbers suggest a systemic failure. When so many {{terms.civic.people}} share the same hardship, it is no longer a local issue; it is a national crisis. {{terms.civic.leaderAddress}}, who is paying the price for this administrative blindness?"
+        ],
+        "subheadline": "{{key}} spreads across {{count}} cities",
+        "settled": true
       },
       {
         "id": "cities-share-grievance-famine",
@@ -141,10 +143,12 @@
         "voice": "press",
         "stance": "government-critical",
         "genre": "analysis",
-        "headline": "Why {{city}} is hungry",
+        "headline": "The Hunger of {{city}}",
         "body": [
-          "{{city}} cannot feed itself, and the city's own count puts famine ahead of every other grievance. {{faminePopulation}} {{terms.civic.people}} are unhappy because of it. Granaries do not empty on their own; someone set the harvest, the stores and the roads, and someone should explain the result."
-        ]
+          "In {{city}}, {{faminePopulation}} {{owner.civic.people}} are now suffering from famine. It is a staggering figure for a city under the stewardship of the {{owner.civic.government}}, especially while the capital continues to feast. This is not a failure of the harvest, but a failure of distribution. {{owner.civic.leaderAddress}}, how can you justify this starvation while our warehouses remain locked?"
+        ],
+        "subheadline": "{{faminePopulation}} left to starve",
+        "settled": true
       },
       {
         "id": "city-famine-unrest-anecdote",

@@ -49,6 +49,27 @@ describe('newspaper desk placeholder repair', () => {
     });
   });
 
+  it('should drop a unit word the writer repeats next to a placeholder that prints it', () => {
+    expect(repairCopy({
+      headline: '{{turnsLeft}} turns left, {{distance}} Tile away',
+      body: [
+        'Turn {{observedTurn}} saw {{count}} regiments march {{distance}} tiles, unlike turn {{mystery}}.',
+        '{{turnsLeft}} turnstiles stood since turn {{ Observed Turn }}.',
+      ],
+    }, [
+      { name: 'turnsLeft', aliases: [] },
+      { name: 'distance', aliases: [] },
+      { name: 'observedTurn', aliases: [] },
+      { name: 'count', aliases: [] },
+    ])).toEqual({
+      headline: '{{turnsLeft}} left, {{distance}} away',
+      body: [
+        '{{observedTurn}} saw {{count}} regiments march {{distance}}, unlike turn {{mystery}}.',
+        '{{turnsLeft}} turnstiles stood since {{observedTurn}}.',
+      ],
+    });
+  });
+
   it('should strip stray braces around a resolved placeholder only', () => {
     expect(repairCopy({ headline: '{{{cityName}}} and {{{mystery}}}', body: ['{{{{city}}}}.'] }, [
       { name: 'city', aliases: ['city.name'] },
