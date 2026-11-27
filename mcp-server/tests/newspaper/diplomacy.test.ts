@@ -108,7 +108,7 @@ describe('dated public diplomacy evidence', () => {
     });
   });
 
-  it('releases war weariness only under full recorded access between two majors at war', async () => {
+  it('releases war weariness for any visible major at war with another major', async () => {
     await summary(db, 30, 0, 8, 1, { Relationships: {
       Civ1: ['Distance: Close', 'War (Our Score: -25%; Our War Weariness: 42%)']
     } });
@@ -117,12 +117,11 @@ describe('dated public diplomacy evidence', () => {
     } });
     const result = await queryNewspaperEvidence(db, request);
     expect(result.diplomacy!.history.find(row => row.source.id === 30)!.relationships).toEqual([
-      { targetPlayerID: 1, targetTeamID: 1, state: 'war', warScore: -25, proximity: 'Close', denouncedThem: false, openBordersTo: false }
+      { targetPlayerID: 1, targetTeamID: 1, state: 'war', warScore: -25, warWeariness: 42, proximity: 'Close', denouncedThem: false, openBordersTo: false }
     ]);
     expect(result.diplomacy!.history.find(row => row.source.id === 31)!.relationships).toEqual([
       { targetPlayerID: 1, targetTeamID: 1, state: 'war', warScore: -20, warWeariness: 37, proximity: 'Close', denouncedThem: false, openBordersTo: false }
     ]);
-    expect(result.diplomacy!.history.find(row => row.source.id === 30)!.relationships[0]).not.toHaveProperty('warWeariness');
     expect(newspaperEvidenceSchema.parse(result)).toEqual(result);
   });
 

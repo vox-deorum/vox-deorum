@@ -80,14 +80,14 @@ describe('newspaper field projection', () => {
     expect(projectNewspaperPlayer({ ...summary, Key: 1 } as any, ctx)?.values).toEqual({});
   });
 
-  it('should require recorded city access and return raw basic or full values without mutation', () => {
+  it('should expose full city values to a visible receiver and return raw values without mutation', () => {
     const row = { ID: 12, Key: 8, Turn: 10, CreatedAt: 3010, Player0: 1, Name: 'Harbor',
       HitPoints: 50, MaxHitPoints: 100, Population: 0, IsOccupied: false, IsCapital: 1, RazingTurns: 0,
       Wonders: ['Beacon'], ImportantBuildings: ['Library'], FoodPerTurn: -1 };
     const original = structuredClone(row);
-    const basic = projectNewspaperCity(row as any, context())!;
-    expect(basic.values).toMatchObject({ HitPoints: 50, Population: 0, IsOccupied: false, IsCapital: 1, RazingTurns: 0, Wonders: ['Beacon'] });
-    expect(basic.values).not.toHaveProperty('FoodPerTurn');
+    const shown = projectNewspaperCity(row as any, context())!;
+    expect(shown.values).toMatchObject({ HitPoints: 50, Population: 0, IsOccupied: false, IsCapital: 1, RazingTurns: 0,
+      Wonders: ['Beacon'], ImportantBuildings: ['Library'], FoodPerTurn: -1 });
     const full = projectCityReportFields(row, 2);
     expect(full.FoodPerTurn).toBe(-1);
     expect(full).not.toHaveProperty('IsCapital');
@@ -290,9 +290,9 @@ describe('newspaper field projection', () => {
     expect(permitted.values).not.toHaveProperty('PolicyID');
   });
 
-  it('exposes recorded military strength only for self and full national access', () => {
+  it('exposes recorded military strength to any visible player', () => {
     const row = { ID: 7, Key: 1, Turn: 9, CreatedAt: 1009, Player0: 1, Era: 'Classical Era', MilitaryStrength: 42 } as any;
-    expect(projectNewspaperPlayer(row, context(800))?.values).not.toHaveProperty('MilitaryStrength');
+    expect(projectNewspaperPlayer(row, context(800))?.values).toHaveProperty('MilitaryStrength', 42);
     expect(projectNewspaperPlayer({ ...row, Player0: 2 }, context())?.values).toHaveProperty('MilitaryStrength', 42);
     expect(projectNewspaperPlayer({ ...row, Key: 0, MilitaryStrength: 0, Player0: 2 }, context())?.values).toHaveProperty('MilitaryStrength', 0);
     expect(projectNewspaperPlayer({ ...row, Player0: 0 }, context())).toBeUndefined();

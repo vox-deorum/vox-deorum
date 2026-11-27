@@ -65,7 +65,7 @@ export const newspaperDiplomacySnapshotSchema = z.object({
     state: z.enum(['war', 'peace', 'unknown']).describe('Explicit relationship observation; missing entries never imply peace'),
     warScore: z.number().optional().describe('Directional score reported by the observing major'),
     warWeariness: z.number().int().min(0).max(100).optional()
-      .describe('Weariness reported by the observing major only under recorded full access during an active war'),
+      .describe('Weariness reported by a visible observing major at war with another major'),
     proximity: z.enum(['Neighbors', 'Close', 'Far', 'Distant']).optional()
       .describe('Raw distance label from the observation, excluding the Unknown placeholder'),
     influence: z.number().int().optional().describe('Signed city-state influence held by the resolved major'),

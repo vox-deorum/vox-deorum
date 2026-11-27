@@ -159,7 +159,7 @@
         "id": "foreign-building-completed-report",
         "headline": "{{owner}} completes the {{building}} in {{city}}",
         "body": [
-          "The scaffold at {{city}} came down this week, and the {{building}} stands finished under {{owner}}'s flag. Carts have been going in and out of the gate since dawn. Our watchers across the border counted them until dark."
+          "The scaffold at {{city}} came down this week, and the {{building}} stands finished under {{owner}}'s flag. Carts have been going in and out of the gate since dawn. Travelers who passed the gate counted them until dark."
         ]
       },
       {
@@ -189,7 +189,7 @@
         "voice": "tabloid",
         "stance": "neutral",
         "genre": "anecdote",
-        "headline": "A neighbor's new building",
+        "headline": "A new building abroad",
         "body": [
           "A carter who came through {{city}} last week swears that {{owner}}'s new {{building}} was not there in spring. He barely recognized the skyline with the new {{building}} towering over the street. {{owner}} is growing fast."
         ],
@@ -216,9 +216,9 @@
         "voice": "press",
         "stance": "hawkish",
         "genre": "report",
-        "headline": "{{owner}} pays for the {{building}} near our border",
+        "headline": "{{owner}} pays for the {{building}} outright",
         "body": [
-          "At {{city}} the {{building}} was bought, not built: {{owner}} paid and took it finished. A neighbor that buys its works outright has money to spare and a reason to want them sooner. Both deserve a line in our own accounts."
+          "At {{city}} the {{building}} was bought, not built: {{owner}} paid and took it finished. A power that buys its works outright has money to spare and a reason to want them sooner. Both deserve a line in our own accounts."
         ]
       },
       {
@@ -226,7 +226,7 @@
         "voice": "tabloid",
         "stance": "neutral",
         "genre": "anecdote",
-        "headline": "A neighbor's deep purse",
+        "headline": "A deep purse abroad",
         "body": [
           "A trader from {{city}} says he walked past a fenced pit in the morning and a finished {{building}} by evening. {{owner}} paid in {{currency}} and skipped the years of dust, he says, and the market laughs. Nobody in the city finds it as funny."
         ]
@@ -254,7 +254,7 @@
         "id": "foreign-building-investment-made-report",
         "headline": "{{owner}} puts money into the {{building}} at {{city}}",
         "body": [
-          "{{owner}} has put money toward the {{building}} at {{city}}. That puts the project on the treasury's books and gives the builders a head start when work begins. Traders across the border will be watching to see what the city makes of it."
+          "{{owner}} has put money toward the {{building}} at {{city}}. That puts the project on the treasury's books and gives the builders a head start when work begins. Traders in {{owner}} will be watching to see what the city makes of it."
         ]
       },
       {
@@ -264,7 +264,7 @@
         "genre": "analysis",
         "headline": "What {{owner}}'s payment at {{city}} tells us",
         "body": [
-          "{{city}}'s {{building}} has enough backing from {{owner}} to draw a payment in advance. A treasury can call many projects urgent, but the money it puts down tells us which ones matter. That is the figure worth following across the border."
+          "{{city}}'s {{building}} has enough backing from {{owner}} to draw a payment in advance. A treasury can call many projects urgent, but the money it puts down tells us which ones matter. That is the figure worth following in {{owner}}."
         ]
       }
     ]
@@ -365,7 +365,7 @@
         "voice": "gazette",
         "stance": "neutral",
         "genre": "report",
-        "headline": "From beyond the border: trouble in {{city}}",
+        "headline": "From abroad: trouble in {{city}}",
         "body": [
           "Word from {{city}} says the occupation under {{owner}} has not settled the city. Its people answer questions briefly and gather in small groups, and the prefect has asked for more patrols. An occupation that needs more soldiers is an occupation that has not ended."
         ]
@@ -383,7 +383,7 @@
         "id": "foreign-city-founded-report",
         "headline": "{{owner}} founds {{city}}",
         "body": [
-          "A new town called {{city}} now stands under {{owner}}'s flag. The first shelters are up, and a market square has been marked out with rope. Our maps will need a new line on that side of the border."
+          "A new town called {{city}} now stands under {{owner}}'s flag. The first shelters are up, and a market square has been marked out with rope. Our maps will need a new line in that quarter."
         ]
       },
       {
@@ -391,9 +391,9 @@
         "voice": "gazette",
         "stance": "neutral",
         "genre": "report",
-        "headline": "From beyond the border: {{city}} is founded",
+        "headline": "From abroad: {{city}} is founded",
         "body": [
-          "Word reaches this office that {{owner}} has founded {{city}}, {{distance}} from our nearest city. The town has a name, a flag and little else as yet. A new neighbor that close is worth watching, if only to see what it draws away from our trade."
+          "Word reaches this office that {{owner}} has founded {{city}}. The town has a name, a flag and little else as yet. A new town under {{owner}}'s flag is worth watching, if only to see what it draws away from our trade."
         ]
       }
     ]
@@ -409,7 +409,7 @@
         "id": "foreign-city-raises-settlers-report",
         "headline": "{{city}} raises a settler party",
         "body": [
-          "{{owner}} has raised a settler party at {{city}}. The wagons are loaded, and the town's count is already smaller by the people in the party. A neighbor that can spare that many is a neighbor worth watching."
+          "{{owner}} has raised a settler party at {{city}}. The wagons are loaded, and the town's count is already smaller by the people in the party. A power that can spare that many is a power worth watching."
         ]
       },
       {
@@ -445,7 +445,7 @@
         "genre": "analysis",
         "headline": "{{owner}} integrates {{city}}",
         "body": [
-          "The new {{building}} gives {{owner}} a settled basis for governing {{city}}. For its neighbors, that is a sign that {{owner}} now treats the former conquest as part of its territory."
+          "The new {{building}} gives {{owner}} a settled basis for governing {{city}}. For the wider region, that is a sign that {{owner}} now treats the former conquest as part of its territory."
         ]
       }
     ]
@@ -469,7 +469,7 @@
         "voice": "gazette",
         "stance": "neutral",
         "genre": "notice",
-        "headline": "From beyond the border: a celebration in {{city}}",
+        "headline": "From abroad: a celebration in {{city}}",
         "body": [
           "News from {{owner}}: a celebration is under way in {{city}}."
         ]

@@ -45,7 +45,7 @@ describe('facts from a replay recording', () => {
     } finally { await recording.cleanup(); }
   });
 
-  it('should use a new diplomat grant at cutoff even when the foreign summary has not changed', async () => {
+  it('should report a new diplomat at cutoff and read policy names without one', async () => {
     const recording = await createReplayRecording();
     try {
       const sqlite = new Database(recording.filename);
@@ -63,8 +63,10 @@ describe('facts from a replay recording', () => {
         const foreign = facts.players[1];
         expect(foreign.current?.ourDiplomatThere?.value).toBe(true);
         expect(foreign.current?.policyBranches?.value).toMatchObject({ Tradition: { value: ['Aristocracy'] } });
-        expect(foreign.history.find(row => row.turn === 5)?.fields?.policyBranches?.value)
-          .toMatchObject({ Tradition: { value: 1 } });
+        // Before the diplomat arrived, the visible player's policies are still readable by name.
+        const earlier = foreign.history.find(row => row.turn === 5)?.fields?.policyBranches?.value as
+          Record<string, { value: unknown }> | undefined;
+        expect(Array.isArray(earlier?.Tradition?.value)).toBe(true);
         const runner = await compileEditorialExpressions([
           { rule: 'recording', field: 'when', source: 'player.history.length' },
         ]);

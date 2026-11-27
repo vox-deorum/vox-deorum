@@ -1,6 +1,6 @@
 # Newspaper trigger facts
 
-The **receiver** is the player the newspaper is written for. [Trigger rules](overview.md) read facts allowed by that player's recorded access. Stored facts come from recorded rows. Inferred facts combine those rows, such as a city's distance from the receiver or its former owner. [Stock examples](examples.md) show both in use.
+The **receiver** is the player the newspaper is written for. [Trigger rules](overview.md) read facts visible to that player. Stored facts come from recorded rows. Inferred facts combine those rows, such as a city's distance from the receiver or its former owner. [Stock examples](examples.md) show both in use.
 
 | Subject | One per |
 | --- | --- |
@@ -11,6 +11,14 @@ The **receiver** is the player the newspaper is written for. [Trigger rules](ove
 | [`incident`](#incident) | Inferred declaration, settlement or observed war opening |
 
 Stock [stakes](constants.md#stakes) are available on city, player, pair and event facts. A rule can also read a stake through a linked subject, such as `pair.other.stake.front` when the receiver is in the pair.
+
+## Visibility and subject access
+
+Visibility decides the subject, not the story. Once a city is visible, a rule reads its full record, including production, food, unhappiness causes and important buildings, even for a foreign city. Once a player is visible, a rule reads its policy names, ideology and military strength, including for a foreign major, without a diplomat.
+
+A story can therefore reflect something the reader could not strictly know in the game. This is an accepted approximation: the newspaper aims for reasonable gameplay, not perfect information.
+
+Event visibility, contact and the [event-level insight gates](#evidence-the-facts-rely-on) still decide whether a reader can receive a story at all. A policy adoption needs full recorded access to the player or 200 diplomat points, and private deal terms need 800 diplomat points with each foreign party. The presence facts add score; they do not decide which subjects or events are available. See [covert presence and roster points](#covert-presence-and-roster-points) and [stakes](constants.md#stakes).
 
 ## Naming
 
@@ -47,10 +55,12 @@ A trigger's **window** defaults to the [reporting period](../replay.md#set-the-r
 
 ### Stored city facts
 
-| Access | Facts |
+| Group | Facts |
 | --- | --- |
-| Basic (any city the receiver can see) | `id`, `name`, `x`, `y`, `population`, `majorityReligion`, `defenseStrength`, `hitPoints`, `maxHitPoints`, `isCapital`, `isPuppet`, `isOccupied`, `isCoastal`, `wonders`, `razingTurns`, `resistanceTurns` |
-| Detailed (recorded full access to a team city or [spy insight](#covert-presence-and-roster-points)) | `foodStored`, `foodPerTurn`, `productionStored`, `productionPerTurn`, `currentProduction`, `productionTurnsLeft`, `goldPerTurn`, `sciencePerTurn`, `culturePerTurn`, `faithPerTurn`, `tourismPerTurn`, `happinessDelta`, `unhappiness`, `buildingCount`, `importantBuildings`, `greatWorkCount` |
+| Identity and status | `id`, `name`, `x`, `y`, `population`, `majorityReligion`, `defenseStrength`, `hitPoints`, `maxHitPoints`, `isCapital`, `isPuppet`, `isOccupied`, `isCoastal`, `wonders`, `razingTurns`, `resistanceTurns` |
+| Detail | `foodStored`, `foodPerTurn`, `productionStored`, `productionPerTurn`, `currentProduction`, `productionTurnsLeft`, `goldPerTurn`, `sciencePerTurn`, `culturePerTurn`, `faithPerTurn`, `tourismPerTurn`, `happinessDelta`, `unhappiness`, `buildingCount`, `importantBuildings`, `greatWorkCount` |
+
+Every visible city exposes both groups, including a foreign city. There is no separate spy or team access level for city detail.
 
 `city.happinessDelta` is net local happiness: negative is unhappy, positive is a surplus. `city.unhappiness` breaks local unhappiness into causes. An empty `UnhappinessSources` object sets all causes to 0; missing or malformed data leaves the breakdown hidden. The strategist's city report gives only net happiness.
 
@@ -113,7 +123,7 @@ For the receiver's own training events, `port` gives a readable city name when b
 | Religion | `foundedReligion`, `majorityReligion` |
 | Diplomacy | `diplomaticDeals` and the projected `majorAlly` and `relationships` |
 
-The stored `Cities` column becomes `cityCount`; `player.cities` lists visible cities. Some fields require full access. See `ownPlayerFields`, `foreignPlayerFields`, and `projectPlayerReportFields` for access by player type. A readable summary can identify a player without exposing national values.
+The stored `Cities` column becomes `cityCount`; `player.cities` lists visible cities. A visible foreign major exposes its policy names, ideology and military strength. A readable summary can still identify a player whose national values were not recorded.
 
 `self.happinessPercentage` measures national happiness on a 0 to 100 scale. At 50, happy and unhappy citizens are in balance.
 
@@ -156,7 +166,7 @@ On a known foreign major, `player.culturalInfluenceChanges` reads dated `Victory
 | `theirDiplomatHere` | This foreign major has a diplomat at the receiver's capital | That player's spy roster, read separately from our own. A readable roster that shows none gives `false`; missing or ambiguous evidence is hidden. |
 | `is.<name>` | A [shortcut](constants.md#shortcuts), such as `player.is.rival` | The catalogue |
 
-The two diplomat facts apply to known foreign majors. Policy and deal insight comes from the receiver's outgoing diplomat.
+The two diplomat facts apply to known foreign majors. They add score, while the event gates for policy adoption and private deal terms still use diplomat points.
 
 ### Relationship direction and access
 
@@ -164,17 +174,17 @@ Each `relationships` entry shows what its own summary recorded. `relation(other)
 
 | Fields | Direction and access |
 | --- | --- |
-| `denouncedThem`, `denouncedByThem` | The subject denounced the other player, or the reverse. A positive reading wins a same-turn disagreement. A negative reading needs the denouncing player's full major entry. |
-| `openBordersTo`, `openBordersFrom` | The subject granted borders to the other player, or the reverse. Each needs the grantor's own entry; a negative reading requires full major access. |
+| `denouncedThem`, `denouncedByThem` | The subject denounced the other player, or the reverse. A positive reading wins a same-turn disagreement. A negative reading needs a detailed recorded summary for the denouncing player. |
+| `openBordersTo`, `openBordersFrom` | The subject granted borders to the other player, or the reverse. Each needs the grantor's own entry; a negative reading needs a detailed recorded summary. |
 | `proximity` | The recorded label, such as `Close`, preferring the subject's entry if both are current. |
-| `warWeariness` | The subject's own reading on a 0 to 100 scale. Requires full access to a major at war with another major. |
+| `warWeariness` | The subject's own reading on a 0 to 100 scale, recorded for a visible major at war with another major. |
 | `influence`, `protected` | A major's signed influence over a city-state and whether it protects it. Either side can supply the reading. |
 
 For example, `relation(other).knows('openBordersFrom')` checks whether the reverse grant is readable.
 
 ### Policy names
 
-Both helpers return `true` on an exact match and cite the national row, or return `undefined` when the name cannot be established. Basic access supplies branch counts; full access or [diplomat insight](#covert-presence-and-roster-points) can reveal policy names.
+Both helpers return `true` on an exact match and cite the national row, or return `undefined` when the name cannot be established. A visible player exposes its policy names. A branch count alone cannot establish a policy name.
 
 | Helper | What matches |
 | --- | --- |
@@ -191,13 +201,17 @@ When a nearby team acquires a technology, the stock science rules use the receiv
 
 Spy rosters match roles and locations. A nonnegative network balance also identifies intelligence gathering or schmoozing across game languages. A clear miss or empty roster establishes absence. Missing rosters, ambiguous matches or unrecognized states without a balance leave presence unknown.
 
-| Insight | Points and station |
-| --- | --- |
-| Another major's city detail through a spy | 500 current points at the city at both observation and cutoff. |
-| Foreign policy names through a diplomat | 200 points at the foreign capital. |
-| Foreign deal terms through diplomats | 800 points at each foreign party's capital. |
+`ourSpyPresent`, `ourDiplomatThere` and `theirDiplomatHere` describe presence only. They do not unlock city or player facts. Presence adds points through the [stakes](constants.md#stakes):
 
-Current facts use the cutoff roster; events use the latest roster from an earlier turn. Spending points can reduce the recorded balance while the game still grants its bonus, so a story can be withheld.
+| Presence | Effect |
+| --- | --- |
+| Our spy in a foreign city | 5 points of city intel, added into the city's place score |
+| Our diplomat at a foreign major's capital | 3 points of city intel with that city's owner, plus 5 points of relation with the major |
+| Our spy in any of a player's cities | 5 points into that player's front score |
+
+A spy therefore brings more city and military stories about that civilization, and a diplomat brings more city and diplomatic stories.
+
+Current facts use the cutoff roster; events use the latest roster from an earlier turn. Spending points can reduce the recorded balance while the game still grants its bonus.
 
 ## Congress
 
@@ -250,7 +264,7 @@ A player ID of -1 means "nobody" and provides no player link. [Event policy](#ev
 | `EspionageResult` | `perspective` (`source` or `target`), `spyResult`, `cityName` when recorded, and links to the parties when their identity is available. The source may also get an inferred `tech` name. |
 | `ElectionResultSuccess`, `ElectionResultFailure` | `player`, signed `influenceChange`, and `cityState` when the capital's label resolves. Failure applies only to a player with a recorded spy in the election. |
 | `PlayerAdoptPolicyBranch` | `player`, `branch` |
-| `CityConstructed` | `player`, `city`, `building`, `isGoldPurchase`, `isFaithPurchase`, and `importantBuilding`: whether the completed building was on the first recorded building list at or after the completion. MCP reads that list even when the receiver cannot see the city's details, so the fact can be known for a city the reader only watches from outside. It is hidden when no later row has a readable list. The stock building rules treat any non-wonder building as notable in the Ancient Era. |
+| `CityConstructed` | `player`, `city`, `building`, `isGoldPurchase`, `isFaithPurchase`. Use `event.is.notableBuilding` to test the city's `importantBuildings` list, which also accepts any building in the Ancient Era. A building that the list no longer shows because a successor replaced it may be missed. |
 | `DealMade` | `fromPlayer` and `toPlayer` when readable. Valid structured terms supply `deal.from`, `deal.to`, and `deal.clauses`. |
 | `UnitCreated` | `player`, `unit`, `plot`. A named great person adds `person` and `kind: 'born'`. Unwitnessed births supply only the owner and name. |
 | `GreatPersonExpended` | `player`, `unit`, `plot`. A named great person adds `person` and `kind: 'expended'`. |
@@ -335,11 +349,13 @@ Pass an already scaled [named span](constants.md#spans) or a count of recorded t
 
 ## Hidden and missing facts
 
-In a `when` list, a bare read of a hidden fact already stops the rule for that subject and names the fact in the audit. Call `subject.knows(field)` to branch on availability, inside callbacks such as `events.some`, or where a hidden read must not hold back a repeat rule from rearming. For example, `city.knows('foodPerTurn') && city.foodPerTurn > 0` chooses the food story only for cities with the required access. A player unknown on the requested turn has no readable relationship fact for that turn.
+Hidden usually means the recording lacks the fact. A visible city exposes its full record, and a visible major its policy names, ideology and military strength, so a field that is absent was not recorded. It does not mean a spy or diplomat was missing.
 
-A hidden read in a `values`, `tier`, or `urgent` expression also stops the rule for that subject or group. In an `adjust` expression, a hidden read contributes 0 points and the other adjustments still run. See [stakes](constants.md#stakes) for checking a shared calculation's inputs.
+In a `when` list, a bare read of an unrecorded fact stops the rule for that subject and names the fact in the audit. Call `subject.knows(field)` to branch on availability, inside callbacks such as `events.some`, or where a missing read must not hold a repeat rule back from rearming. For example, `city.knows('foodPerTurn') && city.foodPerTurn > 0` chooses the food story only when that detail was recorded. A player unknown on the requested turn has no readable relationship fact for that turn.
 
-The first sighting gives a baseline for later comparisons. If the receiver first saw a rival city on turn 8, `city.before` is unavailable for any earlier date. `city.founded` may estimate turn 8 if the loaded history reaches the recording's start and the observation begins after that start. For a story about a witnessed founding, require a founding event.
+A missing read in a `values`, `tier`, or `urgent` expression also stops the rule for that subject or group. In an `adjust` expression, it contributes 0 points and the other adjustments still run. See [stakes](constants.md#stakes) for checking a shared calculation's inputs.
+
+The first sighting still gives a baseline for later comparisons. If the receiver first saw a rival city on turn 8, `city.before` is unavailable for any earlier date. `city.founded` may estimate turn 8 if the loaded history reaches the recording's start and the observation begins after that start. For a story about a witnessed founding, require a founding event.
 
 ## Evidence the facts rely on
 
@@ -352,7 +368,7 @@ MCP's `newspaper/queries.ts` returns cutoff snapshots, optional comparison snaps
 | Receiver involved | War and peace calls and some other events can reach the receiver despite an unknown party if it or its team took part. Dated contact controls which IDs and names a rule sees; one known member can establish a team ID. |
 | World news | Technology gains and named great person births can appear without a witness if the receiving player knows the owner or the whole team. Only the owner or team ID and recorded name are supplied. |
 | Private and public reports | Espionage reports go to the spy's owner and can reach the defender; elections report only to the affected player. Congress vote outcomes are public. |
-| Policy adoption | Requires full access to the player or 200 diplomat points from a roster before the event turn. |
+| Policy adoption | Requires full recorded access to the player or 200 diplomat points from a roster before the event turn. |
 | Deal terms | Text and structured terms share one access gate: contact with parties and named players or teams, plus participation in the deal or 800 diplomat points with each foreign party. |
 | Embedded labels | Recorded player and city labels require dated contact with the corresponding player or city owner. Liberation keeps the city ID; its owner and city label are unavailable. |
 
@@ -368,6 +384,6 @@ Facts cite the recorded source and any `relatedSources` used in joins. A player'
 
 1. Check that the evidence exists in MCP's projection. When it does not, extend `newspaperEventConfigs` or the city and player field lists, and add a visibility test under `mcp-server/tests/newspaper/`.
 2. Add the fact to the builder for its subject under `vox-agents/src/newspaper/editorial/facts/`. Keep the original source rows attached, so the audit and the reader's source inspection still work.
-3. Decide what "hidden" means for it and return hidden when the inputs are missing.
+3. Decide when the fact is missing, and return hidden then.
 4. Add a row to the table on this page with its meaning and what it is inferred from.
 5. Add a focused test under `vox-agents/tests/mock/newspaper/editorial/facts/` with a present value, a hidden value and a first observation.

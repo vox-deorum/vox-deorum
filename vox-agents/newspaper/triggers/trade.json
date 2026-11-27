@@ -5,9 +5,8 @@
     "subject": "event",
     "event": "DealMade",
     "when": [
-      "event.knows('deal') && event.deal.knows('kind') && event.deal.kind === 'trade-deal'",
-      "event.knows('fromPlayer') && event.knows('toPlayer')",
-      "event.fromPlayer.self ? event.toPlayer.knows('name') : event.fromPlayer.knows('name')"
+      "event.deal.kind === 'trade-deal'",
+      "event.is.dealPartnerNamed"
     ],
     "values": {
       "partner": "event.fromPlayer.self ? event.toPlayer.name : event.fromPlayer.name",
@@ -24,9 +23,8 @@
     "subject": "event",
     "event": "DealMade",
     "when": [
-      "event.knows('deal') && event.deal.knows('kind') && event.deal.kind === 'trade-gift'",
-      "event.knows('fromPlayer') && event.knows('toPlayer')",
-      "event.fromPlayer.self ? event.toPlayer.knows('name') : event.fromPlayer.knows('name')"
+      "event.deal.kind === 'trade-gift'",
+      "event.is.dealPartnerNamed"
     ],
     "values": {
       "partner": "event.fromPlayer.self ? event.toPlayer.name : event.fromPlayer.name",
@@ -42,10 +40,10 @@
     "subject": "event",
     "event": "PlayerPlunderedTradeRoute",
     "when": [
-      "event.knows('destinationOwner') && event.destinationOwner.self === true",
-      "event.knows('originOwner') && event.originOwner.self === false && event.originOwner.knows('name')",
-      "event.knows('plunderingPlayerId') && event.plunderingPlayerId !== self.id",
-      "event.knows('plunderingPlayer') && event.plunderingPlayer.knows('name')"
+      "event.destinationOwner.self === true",
+      "event.originOwner.self === false && event.originOwner.knows('name')",
+      "event.plunderingPlayerId !== self.id",
+      "event.plunderingPlayer.knows('name')"
     ],
     "values": {
       "originCity": "event.knows('originCity') && event.originCity.knows('name') ? event.originCity.name : null",
@@ -81,9 +79,7 @@
     "subject": "event",
     "event": "PlayerTradeRouteCompleted",
     "when": [
-      "event.knows('originPlayer') && event.knows('destinationPlayer')",
       "(event.originPlayer.self === true) !== (event.destinationPlayer.self === true)",
-      "event.knows('originCity') && event.knows('destinationCity')",
       "event.originCity.knows('name') && event.destinationCity.knows('name')",
       "distance(event.originCity, event.destinationCity) >= regional"
     ],
@@ -103,10 +99,10 @@
     "subject": "event",
     "event": "PlayerPlunderedTradeRoute",
     "when": [
-      "event.knows('originOwner') && event.originOwner.self === true",
-      "event.knows('plunderingPlayerId') && event.plunderingPlayerId !== self.id",
-      "event.knows('plunderingPlayer') && event.plunderingPlayer.knows('name')",
-      "event.knows('destinationOwner') && event.destinationOwner.knows('name')"
+      "event.originOwner.self === true",
+      "event.plunderingPlayerId !== self.id",
+      "event.plunderingPlayer.knows('name')",
+      "event.destinationOwner.knows('name')"
     ],
     "values": {
       "originCity": "event.knows('originCity') && event.originCity.knows('name') ? event.originCity.name : null",
@@ -140,8 +136,8 @@
     "subject": "event",
     "event": "PlayerPlunderedTradeRoute",
     "when": [
-      "event.knows('plunderingPlayerId') && event.plunderingPlayerId === self.id",
-      "event.knows('originOwner') && event.originOwner.self === false && event.originOwner.knows('name')"
+      "event.plunderingPlayerId === self.id",
+      "event.originOwner.self === false && event.originOwner.knows('name')"
     ],
     "values": {
       "originCity": "event.knows('originCity') && event.originCity.knows('name') ? event.originCity.name : null",

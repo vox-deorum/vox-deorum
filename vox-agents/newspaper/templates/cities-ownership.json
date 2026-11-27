@@ -194,7 +194,7 @@
         "id": "neighbor-puppet-annexed-report",
         "headline": "{{owner}} integrates {{city}}",
         "body": [
-          "{{owner}} has completed the annexation of {{city}}, located at {{distance}} from our borders. The city has lots its semi-autonomous status under {{owner}}."
+          "{{owner}} has completed the annexation of {{city}}. The city has lost its semi-autonomous status under {{owner}}."
         ],
         "settled": true
       },
@@ -205,7 +205,7 @@
         "genre": "analysis",
         "headline": "{{owner}} tightens its hold on {{city}}",
         "body": [
-          "A puppet bargains; a province obeys. {{city}} has just changed from one to the other, and {{owner}} now rules it from the capital. It lies {{distance}} from our nearest city, so a decision that once took a season of bargaining will now take a week."
+          "A puppet bargains; a province obeys. {{city}} has just changed from one to the other, and {{owner}} now rules it from the capital. It answers to the capital directly now, so a decision that once took a season of bargaining will now take a week."
         ]
       },
       {

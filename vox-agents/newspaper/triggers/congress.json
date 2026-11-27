@@ -26,9 +26,9 @@
     "event": "ResolutionResult",
     "when": [
       "event.passed === false",
-      "event.knows('resolutionType') && typeof event.resolutionType === 'string' && event.resolutionType.trim().length > 0",
-      "event.knows('isEnact') && typeof event.isEnact === 'boolean'",
-      "event.knows('proposerName') && typeof event.proposerName === 'string' && event.proposerName.trim().length > 0"
+      "typeof event.resolutionType === 'string' && event.resolutionType.trim().length > 0",
+      "typeof event.isEnact === 'boolean'",
+      "typeof event.proposerName === 'string' && event.proposerName.trim().length > 0"
     ],
     "values": {
       "resolution": "event.resolutionType",
@@ -45,9 +45,9 @@
     "event": "ResolutionResult",
     "when": [
       "event.passed === true",
-      "event.knows('resolutionType') && typeof event.resolutionType === 'string' && event.resolutionType.trim().length > 0",
-      "event.knows('isEnact') && typeof event.isEnact === 'boolean'",
-      "event.knows('proposerName') && typeof event.proposerName === 'string' && event.proposerName.trim().length > 0"
+      "typeof event.resolutionType === 'string' && event.resolutionType.trim().length > 0",
+      "typeof event.isEnact === 'boolean'",
+      "typeof event.proposerName === 'string' && event.proposerName.trim().length > 0"
     ],
     "values": {
       "resolution": "event.resolutionType",

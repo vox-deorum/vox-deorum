@@ -97,7 +97,7 @@ Compare fresh runs with the same recording, player, turn range, and frequency. F
 
 ## Historical evidence-query verification
 
-Use **Inspect evidence only** to verify dated visibility. Compare a city's row date with the cutoff, and check that each visible event has the expected participants. A recording can keep a final national summary after a civilization is eliminated. A city can disappear after a visible capture or raze, even when the event is outside the requested window. The diagnostics distinguish unresolved lifecycle coordinates from ambiguous same-turn ordering. See [evidence and visibility](triggers/facts.md#evidence-the-facts-rely-on).
+Use **Inspect evidence only** to verify dated visibility. Compare a city's row date with the cutoff, and check that each visible event has the expected participants. A visible city exposes its full record, and a visible major its policy names and military strength, so a field that is absent was not recorded. A recording can keep a final national summary after a civilization is eliminated. A city can disappear after a visible capture or raze, even when the event is outside the requested window. The diagnostics distinguish unresolved lifecycle coordinates from ambiguous same-turn ordering. See [evidence and visibility](triggers/facts.md#evidence-the-facts-rely-on).
 
 ### Replaying private espionage reports
 

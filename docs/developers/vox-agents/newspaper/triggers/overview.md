@@ -47,6 +47,8 @@ The stock `settler-departure` rule checks our cities for a population drop after
 
 An event or incident remains a subject if it is inside the reporting period even when the rule has a shorter `window`. See the [facts reference](facts.md) for the available globals and helpers.
 
+Visibility decides the subject, not the story. Once a city is visible, the rule reads its full record, including a foreign city's production, food and unhappiness causes. Once a player is visible, the rule reads its policy names, ideology and military strength without a diplomat. Event visibility, contact and the event-level insight gates still decide which stories a reader can receive. See [visibility and subject access](facts.md#visibility-and-subject-access).
+
 ## How a check evaluates triggers
 
 Each enabled rule tests its subjects against the same fact model. A `when` list runs in order and stops at the first false result, [hidden or missing fact](facts.md#hidden-and-missing-facts), or error. Conditions use JavaScript truthiness: for example, a readable nonempty `city.majorityReligion` passes.
@@ -90,11 +92,11 @@ A tier expression can distinguish stories of different kinds, for example `ours 
 
 | To weigh | What to use |
 | --- | --- |
-| A civilization's relationship to the reader | For a foreign wonder, use `city.owner.stake.relation`: a friend within seven tiles can add 14 points, while a distant neutral civilization can subtract 8. For news about two civilizations, use `pair.stake.relation`. |
-| The city itself | Use `city.stake.place`. A foreign city six tiles from our nearest city gets +5; one 100 tiles away gets −8. Use visible `city.isCapital` or `city.population` to add a separate bonus for a foreign capital or a large foreign city. |
+| A civilization's relationship to the reader | For a foreign wonder, use `city.owner.stake.relation`: a friend within seven tiles can add 14 points, while a distant neutral civilization can subtract 8. A diplomat at their capital adds 5. For news about two civilizations, use `pair.stake.relation`. |
+| The city itself | Use `city.stake.place`. A foreign city six tiles from our nearest city gets +5; one 100 tiles away gets −8. `city.stake.intel` adds 5 for our spy in the city and 3 for our diplomat at the owner's capital. Use visible `city.isCapital` or `city.population` to add a separate bonus for a foreign capital or a large foreign city. |
 | An offensive near a city | Use [tactical observations](facts.md#tactical-observations) to detect a shift in posture. [Rank the offensive by the city's location](examples.md#a-nearby-offensive-outranks-a-distant-one). |
 
-City location and the owner's relationship can count separately. Check whether you want proximity in both, since the relationship stake also considers distance. Adjustments help eligible stories compete alongside [novelty, variety, and votes](../editorial.md#developments-selection-and-continuity). Visibility and matching still follow the rule's facts and conditions.
+City location and the owner's relationship can count separately. Check whether you want proximity in both, since the relationship stake also considers distance. Do not add a `nearby` or `neighbor` condition to a foreign rule just to keep the story local; distance already ranks it through the place and relation stakes. Keep a distance condition where the story depends on it, such as a near and far pair covering both distance bands, or domestic news about a distant colony. Adjustments help eligible stories compete alongside [novelty, variety, and votes](../editorial.md#developments-selection-and-continuity).
 
 ## Repeats
 
@@ -125,7 +127,7 @@ A qualifying subject or group passes when its seeded draw is below `chance`. The
 
 ## Grouping
 
-To write a pattern rule, match each subject first, then group by what the matches have in common. The stock `neighbors-convert` rule groups neighboring foreign cities by their new majority religion and requires at least three matches. Set `group.by` to the common key and `group.min` to the minimum size (default 2). Rate the group with `count`, `key`, or `matches`, for example by adding more points as the group grows. Each match supplies its subject key and evaluated values.
+To write a pattern rule, match each subject first, then group by what the matches have in common. The stock `neighbors-convert` rule groups foreign cities by their new majority religion and requires at least three matches. Set `group.by` to the common key and `group.min` to the minimum size (default 2). Rate the group with `count`, `key`, or `matches`, for example by adding more points as the group grows. Each match supplies its subject key and evaluated values.
 
 A template can print `{{count}}` and a non-null `{{key}}` for a single group. When combining groups from multiple rules, use the rule ID, as in `{{triggerValues.conversions.count}}`. See [placeholders](../editorial.md#placeholders-and-facts).
 

@@ -76,7 +76,6 @@
       "city.foreign === true && city.knows('name')",
       "city.knows('owner') && city.owner.knows('id') && city.owner.knows('name')",
       "city.owner.knows('enemy') && city.owner.enemy === false",
-      "city.is.nearby",
       "city.knows('hitPoints') && Number.isFinite(city.hitPoints) && city.knows('maxHitPoints') && Number.isFinite(city.maxHitPoints) && city.maxHitPoints > 0",
       "city.knows('before') && city.before.knows('owner') && city.before.owner.knows('id') && city.before.owner.id === city.owner.id",
       "city.before.knows('hitPoints') && Number.isFinite(city.before.hitPoints) && city.before.hitPoints > city.hitPoints",

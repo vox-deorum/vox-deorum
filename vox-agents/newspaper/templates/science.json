@@ -70,7 +70,7 @@
         "id": "nearby-team-gains-technology-report",
         "headline": "Word of {{tech}} from {{team}}",
         "body": [
-          "Word comes from {{team}} that {{tech}} is now known there. Our scholars have yet to report the same. An account of how it is used nearby would give them a place to start."
+          "Word comes from {{team}} that {{tech}} is now known there. Our scholars have yet to report the same. An account of how it is used there would give them a place to start."
         ]
       },
       {
@@ -88,7 +88,7 @@
         "genre": "analysis",
         "headline": "What can we learn about {{tech}}?",
         "body": [
-          "With {{tech}} now known in {{team}}, our scholars have a nearby example to study. If we can learn how the knowledge is put to use there, we can judge what catching up would be worth."
+          "With {{tech}} now known in {{team}}, our scholars have an example to study. If we can learn how the knowledge is put to use there, we can judge what catching up would be worth."
         ]
       },
       {
@@ -98,7 +98,7 @@
         "genre": "notice",
         "headline": "Notice: {{tech}} in {{team}}",
         "body": [
-          "Scientists of a nearby country, {{team}}, have acquired novel knowledge of {{tech}}. Scholars who can disprove should call the newspaper office as soon as possible. Until then this notice stands."
+          "Scientists of {{team}} have acquired novel knowledge of {{tech}}. Scholars who can disprove should call the newspaper office as soon as possible. Until then this notice stands."
         ],
         "weight": {
           "base": 1
@@ -120,7 +120,7 @@
         "voice": "spoken",
         "stance": "traditional",
         "genre": "proverb",
-        "headline": "A lesson from nearby",
+        "headline": "A lesson from abroad",
         "body": [
           "{{tech}} is known in {{team}}. A good pupil knows where to ask."
         ]

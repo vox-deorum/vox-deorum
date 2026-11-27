@@ -156,9 +156,9 @@
     "subject": "event",
     "event": "UnitCreated",
     "when": [
-      "event.knows('person') && typeof event.person === 'string' && event.person.length > 0",
-      "event.knows('kind') && event.kind === 'born'",
-      "event.knows('player') && event.player.knows('name')"
+      "typeof event.person === 'string' && event.person.length > 0",
+      "event.kind === 'born'",
+      "event.player.knows('name')"
     ],
     "values": {
       "person": "event.person",
@@ -175,9 +175,9 @@
     "subject": "event",
     "event": "UnitPrekill",
     "when": [
-      "event.knows('person') && typeof event.person === 'string' && event.person.length > 0",
-      "event.knows('kind') && event.kind === 'died'",
-      "event.knows('player') && event.player.knows('name')"
+      "typeof event.person === 'string' && event.person.length > 0",
+      "event.kind === 'died'",
+      "event.player.knows('name')"
     ],
     "values": {
       "person": "event.person",
@@ -195,9 +195,9 @@
     "subject": "event",
     "event": "GreatPersonExpended",
     "when": [
-      "event.knows('person') && typeof event.person === 'string' && event.person.length > 0",
-      "event.knows('kind') && event.kind === 'expended'",
-      "event.knows('player') && event.player.knows('name')"
+      "typeof event.person === 'string' && event.person.length > 0",
+      "event.kind === 'expended'",
+      "event.player.knows('name')"
     ],
     "values": {
       "person": "event.person",
@@ -252,9 +252,9 @@
     "subject": "event",
     "event": "CityConstructed",
     "when": [
-      "event.knows('player') && event.player.self === true",
-      "event.knows('building') && typeof event.building === 'string'",
-      "event.knows('city') && event.city.knows('name') && event.city.knows('wonders') && Array.isArray(event.city.wonders)",
+      "event.player.self === true",
+      "typeof event.building === 'string'",
+      "event.city.knows('name') && Array.isArray(event.city.wonders)",
       "event.city.wonders.includes(event.building)"
     ],
     "values": {

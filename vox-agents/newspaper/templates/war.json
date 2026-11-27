@@ -52,6 +52,7 @@
     "variants": [
       {
         "id": "foreign-peace-nearby-report",
+        "when": "near",
         "headline": "Peace near our borders",
         "body": [
           "{{initiator}} and {{target}} have ended their war. The closer of the two lies {{nearestDistance}} from our frontier, close enough that our carters know its roads. The toll keepers there have stopped asking travelers where they are headed."
@@ -62,9 +63,9 @@
         "voice": "gazette",
         "stance": "conciliatory",
         "genre": "report",
-        "headline": "Neighbors at peace again",
+        "headline": "Peace between two powers",
         "body": [
-          "Word has reached this office that {{initiator}} and {{target}} have concluded a peace, and that neither side has announced a price. At the border bridge, the keeper has taken down the barrier and swept the planks. May the quiet last longer than the quarrel did."
+          "Word has reached this office that {{initiator}} and {{target}} have concluded a peace, and that neither side has announced a price. At a bridge on their frontier, the keeper has taken down the barrier and swept the planks. May the quiet last longer than the quarrel did."
         ]
       },
       {
@@ -82,7 +83,7 @@
         "voice": "spoken",
         "stance": "traditional",
         "genre": "proverb",
-        "headline": "When the neighbors' fire burns low",
+        "headline": "When two loud houses go dark",
         "body": [
           "Two loud houses have gone dark, and the lane sleeps at last. {{initiator}} and {{target}} have put out their lamps."
         ]
@@ -97,6 +98,7 @@
     "variants": [
       {
         "id": "foreign-war-nearby-report",
+        "when": "near",
         "headline": "War breaks out near our borders",
         "body": [
           "War has broken out between {{initiator}} and {{target}}, and the nearer of them stands {{nearestDistance}} from our border. Farmers along that road have begun moving stock away from the frontier. Our own patrols have been doubled, though no one has ordered them to cross."
@@ -107,6 +109,7 @@
         "voice": "press",
         "stance": "hawkish",
         "genre": "analysis",
+        "when": "near",
         "headline": "A war next door",
         "body": [
           "The quarrel between {{initiator}} and {{target}} began {{nearestDistance}} from our border, close enough that smoke will show above our watchposts. A war that near moves the price of grain, the safety of the roads and the temper of every court in the region. Two armies are drilling within sight of our border, and our officers should be taking notes."
@@ -119,7 +122,7 @@
         "genre": "report",
         "headline": "{{initiator}} at war with {{target}}",
         "body": [
-          "War between {{initiator}} and {{target}} tonight. The fighting is close to our frontier. Travelers on the border road are choosing the long way around, and the watchposts are keeping their lamps lit."
+          "War between {{initiator}} and {{target}} tonight. The news reached our markets by the evening bell, and the squares are full of it."
         ]
       },
       {
@@ -127,6 +130,7 @@
         "voice": "pamphlet",
         "stance": "populist",
         "genre": "editorial",
+        "when": "near",
         "headline": "Their war, our doorstep",
         "body": [
           "The war between {{initiator}} and {{target}} is being fought {{nearestDistance}} from our farms, and our {{terms.civic.government}} has said almost nothing about it. The {{terms.civic.people}} deserve to know whether our roads, our markets and our sons are exposed. {{terms.civic.leaderAddress}}, speak plainly to your {{terms.civic.people}} before the silence spends the last of their patience."
@@ -137,6 +141,7 @@
         "voice": "chronicle",
         "stance": "neutral",
         "genre": "report",
+        "when": "near",
         "headline": "A war nearby, set down",
         "body": [
           "In this year {{initiator}} and {{target}} took up arms against each other, at a distance of {{nearestDistance}} from our borders. The frontier scribe noted the smoke before he noted the cause. Our own watch was doubled the same week, and the record gives no order for it."

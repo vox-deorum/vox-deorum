@@ -4,8 +4,8 @@
     "subject": "event",
     "event": ["ElectionResultSuccess", "ElectionResultFailure"],
     "when": [
-      "event.knows('player') && event.player.self === true",
-      "event.knows('cityState') && typeof event.cityState === 'string' && event.cityState.trim().length > 0"
+      "event.player.self === true",
+      "typeof event.cityState === 'string' && event.cityState.trim().length > 0"
     ],
     "values": {
       "success": "event.type === 'ElectionResultSuccess'",
@@ -37,8 +37,8 @@
     "subject": "event",
     "event": "EspionageResult",
     "when": [
-      "event.knows('perspective') && event.perspective === 'target'",
-      "event.knows('spyResult') && (event.spyResult === 'Identified' || event.spyResult === 'Killed')"
+      "event.perspective === 'target'",
+      "event.spyResult === 'Identified' || event.spyResult === 'Killed'"
     ],
     "values": {
       "result": "event.spyResult",
@@ -52,8 +52,8 @@
     "subject": "event",
     "event": "EspionageResult",
     "when": [
-      "event.knows('perspective') && event.perspective === 'source'",
-      "event.knows('spyResult') && event.spyResult === 'Detected'"
+      "event.perspective === 'source'",
+      "event.spyResult === 'Detected'"
     ],
     "values": {
       "result": "event.spyResult",
@@ -69,8 +69,8 @@
     "subject": "event",
     "event": "EspionageResult",
     "when": [
-      "event.knows('perspective') && event.perspective === 'target'",
-      "event.knows('spyResult') && ['Detected', 'KilledNotIdentified'].includes(event.spyResult)"
+      "event.perspective === 'target'",
+      "['Detected', 'KilledNotIdentified'].includes(event.spyResult)"
     ],
     "values": {
       "result": "event.spyResult",
@@ -84,8 +84,8 @@
     "subject": "event",
     "event": "EspionageResult",
     "when": [
-      "event.knows('perspective') && event.perspective === 'source'",
-      "event.knows('spyResult') && ['Identified', 'Killed', 'KilledNotIdentified'].includes(event.spyResult)"
+      "event.perspective === 'source'",
+      "['Identified', 'Killed', 'KilledNotIdentified'].includes(event.spyResult)"
     ],
     "values": {
       "result": "event.spyResult",
@@ -101,9 +101,9 @@
     "subject": "event",
     "event": "EspionageResult",
     "when": [
-      "event.knows('perspective') && event.perspective === 'source'",
-      "event.knows('spyResult') && event.spyResult === 'Undetected'",
-      "event.knows('tech') && typeof event.tech === 'string' && event.tech.length > 0"
+      "event.perspective === 'source'",
+      "event.spyResult === 'Undetected'",
+      "typeof event.tech === 'string' && event.tech.length > 0"
     ],
     "values": {
       "possibleTechnology": "event.tech",

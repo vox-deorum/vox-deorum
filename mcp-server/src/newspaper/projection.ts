@@ -11,7 +11,7 @@ import type {
   NewspaperSourceReference, NewspaperTacticalZone
 } from './evidence.js';
 import {
-  cityAtEvent, cityOwner, compareDates, knowsPlayer, relatedSources, source, visibility, type NewspaperCityObservation
+  cityAtEvent, cityOwner, knowsPlayer, relatedSources, source, visibility, type NewspaperCityObservation
 } from './recorded-city.js';
 import { diplomatAtCapital, ownSpyAtCity, type RecordedRoster } from './espionage.js';
 import { projectReceiverQuestDeadlines } from './quest-deadlines.js';
@@ -20,9 +20,6 @@ export type { NewspaperCityObservation } from './recorded-city.js';
 type PlayerContact = Pick<Selectable<PlayerSummary>, 'Key'> &
   Partial<Pick<Selectable<PlayerSummary>, keyof PlayerSummary & `Player${number}`>>;
 
-/** A dated city row with the recorded building list, read without receiver visibility. */
-export type NewspaperConstructedCity = Pick<Selectable<CityInformation>, 'ID' | 'Key' | 'Turn' | 'CreatedAt' | 'X' | 'Y' | 'ImportantBuildings'>;
-
 /** City projection needs dated contact and may use a narrow private roster observation. */
 export interface NewspaperCityProjectionContext {
   receiverPlayerID: number;
@@ -30,11 +27,6 @@ export interface NewspaperCityProjectionContext {
   players: Selectable<PlayerInformation>[];
   /** Snapshots for dated city joins, including nonvisible rows that prevent reuse of stale evidence. */
   cityHistory?: readonly NewspaperCityObservation[];
-  /**
-   * Dated building lists for cities with witnessed constructions, read without receiver visibility.
-   * They judge significance only and are never projected as city detail.
-   */
-  constructedCities?: readonly NewspaperConstructedCity[];
   /** Recorded founding, capture, flip and razing events that the receiver may read. */
   cityLifecycle?: readonly Selectable<GameEvent>[];
   /** Dated contact for ownership anchors from earlier turns. */
@@ -68,7 +60,10 @@ const foreignPlayerFields = ['Era', 'Cities', 'Population', 'CulturePerTurn', 'T
 /** City fields reported only by the newspaper, outside the strategist's city list and its schema. */
 const newspaperCityOnlyFields = ['UnhappinessSources'] as const;
 
-/** Select national facts under recorded access, keeping a known visible identity with empty values. */
+/**
+ * Select national facts for a visible player, keeping a known visible identity with empty values.
+ * Once a player is visible the newspaper reads its full record; diplomats only add presence facts.
+ */
 export function projectNewspaperPlayer(row: Selectable<PlayerSummary>, context: NewspaperProjectionContext): NewspaperSnapshot | undefined {
   const reference = source('PlayerSummaries', row);
   const level = visibility(row, context.receiverPlayerID);
@@ -78,7 +73,7 @@ export function projectNewspaperPlayer(row: Selectable<PlayerSummary>, context: 
   const outgoing = diplomatAtCapital(context.receiverPlayerID, row.Key, context);
   const incoming = diplomatAtCapital(row.Key, context.receiverPlayerID, context);
   const selected = pickFields(row, own ? ownPlayerFields : foreignPlayerFields);
-  const values: Record<string, unknown> = projectPlayerReportFields(selected, level, outgoing?.points, info?.IsMajor === 1);
+  const values: Record<string, unknown> = projectPlayerReportFields(selected, level, Number.POSITIVE_INFINITY, info?.IsMajor === 1);
   if (info?.IsMajor === 0) {
     const deadlines = projectReceiverQuestDeadlines(row.Quests, context.receiverPlayerID, row.Turn);
     if (deadlines !== undefined) values.QuestDeadlines = deadlines;
@@ -86,7 +81,7 @@ export function projectNewspaperPlayer(row: Selectable<PlayerSummary>, context: 
   if (outgoing) values.OurDiplomatThere = outgoing.present;
   if (incoming) values.TheirDiplomatHere = incoming.present;
   if (own && level === 2) Object.assign(values, pickFields(row, ['Votes', 'Resources', 'MilitaryUnits', 'MilitarySupply', 'DiplomaticDeals']));
-  if ((own || level === 2) && 'MilitaryStrength' in row) values.MilitaryStrength = row.MilitaryStrength;
+  if ('MilitaryStrength' in row) values.MilitaryStrength = row.MilitaryStrength;
   if (!info && !Object.keys(values).length) return undefined;
   const related = relatedSources(reference, [...outgoing?.sources ?? [], ...incoming?.sources ?? []]);
   return { source: reference, subjectID: row.Key, values, ...(related.length ? { relatedSources: related } : {}) };
@@ -137,9 +132,9 @@ export function projectNewspaperDiplomacy(
     if (!target || target.Key === row.Key) continue;
     const facts = parseRelationship(value);
     if (facts.state === 'unknown') gap('unknownRelationship');
-    // Weariness is the observing major's own and only leaves the summary under full recorded access at war.
+    // Weariness is the observing major's own and is released for a visible major at war with another major.
     const { warWeariness, ...published } = facts;
-    const releaseWeariness = warWeariness !== undefined && level === 2 && result.isMajor && target.IsMajor === 1 &&
+    const releaseWeariness = warWeariness !== undefined && result.isMajor && target.IsMajor === 1 &&
       facts.state === 'war';
     result.relationships.push({
       targetPlayerID: target.Key, targetTeamID: target.TeamID, ...published,
@@ -156,14 +151,10 @@ export function projectNewspaperDiplomacy(
   return result;
 }
 
-/** Retain access granted by the city owner or their team. */
-function hasTeamCityAccess(row: NewspaperCityObservation, context: NewspaperCityProjectionContext): boolean {
-  const receiver = context.players.find(player => player.Key === context.receiverPlayerID);
-  return context.players.some(player => player.IsMajor === 1 && player.Civilization === row.Owner &&
-    (player.Key === context.receiverPlayerID || (typeof receiver?.TeamID === 'number' && receiver.TeamID === player.TeamID)));
-}
-
-/** Select city facts, checking the proxy at observation and cutoff before showing foreign detail. */
+/**
+ * Select every recorded fact of a visible city. Visibility decides the subject; spies do not gate detail.
+ * Our spy's presence is still reported, dated at observation or, for the current view, at the cutoff.
+ */
 export function projectNewspaperCity(
   row: Selectable<CityInformation>, context: NewspaperCityProjectionContext, cutoff = context, current = false
 ): NewspaperSnapshot | undefined {
@@ -171,25 +162,17 @@ export function projectNewspaperCity(
   const level = visibility(row, context.receiverPlayerID);
   if (level !== 1 && level !== 2) return undefined;
   const owner = cityOwner(row, context);
-  const observed = ownSpyAtCity(row, context);
-  const atCutoff = cutoff === context ? observed : ownSpyAtCity(row, cutoff);
-  const presence = current ? atCutoff : observed;
-  const spyAccess = context.players.some(player => player.Key === owner?.id && player.IsMajor === 1) &&
-    (observed?.points ?? 0) >= 500 && (atCutoff?.points ?? 0) >= 500;
-  const full = spyAccess || (level === 2 && hasTeamCityAccess(row, context));
-  const { Key: _key, ...fields } = projectCityReportFields(row, full ? 2 : 1);
+  const presence = ownSpyAtCity(row, current ? cutoff : context);
+  const { Key: _key, ...fields } = projectCityReportFields(row, 2);
   const values: Record<string, unknown> = { ...fields, ...pickFields(row, ['IsCapital']) };
   if (presence) values.OurSpyPresent = presence.present;
   // Unhappiness causes are newspaper-only. Omit an unrecorded reading and keep an observed empty object.
-  if (full) {
-    const unhappiness = pickFields(row, newspaperCityOnlyFields).UnhappinessSources;
-    if (unhappiness !== undefined && unhappiness !== null) values.UnhappinessSources = structuredClone(unhappiness);
-  }
+  const unhappiness = pickFields(row, newspaperCityOnlyFields).UnhappinessSources;
+  if (unhappiness !== undefined && unhappiness !== null) values.UnhappinessSources = structuredClone(unhappiness);
   if (owner) values.OwnerID = owner.id;
   const related = relatedSources(reference, [
     ...owner?.event ? [source('GameEvents', owner.event)] : [],
-    ...presence?.sources ?? [],
-    ...spyAccess ? [...observed?.sources ?? [], ...atCutoff?.sources ?? []] : []
+    ...presence?.sources ?? []
   ]);
   return { source: reference, subjectID: row.Key, values,
     ...(related.length ? { relatedSources: related } : {}) };
@@ -633,35 +616,6 @@ function copyCityPositions(config: NewspaperEventConfig, row: Selectable<GameEve
   return city;
 }
 
-/** Read a recorded building list from a parsed value or JSON text. Lua records an empty list as {}. */
-function recordedBuildings(value: unknown): string[] | undefined {
-  let list = value;
-  if (typeof list === 'string') {
-    try { list = JSON.parse(list); } catch { return undefined; }
-  }
-  if (Array.isArray(list)) return list.every(entry => typeof entry === 'string') ? list : undefined;
-  return list && typeof list === 'object' && Object.keys(list).length === 0 ? [] : undefined;
-}
-
-/**
- * Judge a completed building from the first recorded city row at or after the event.
- * A city drops a building once its successor is built, so the row before the event is not enough.
- */
-function markImportantBuilding(
-  row: Selectable<GameEvent>, mainCity: NewspaperCityObservation, values: Record<string, unknown>,
-  context: NewspaperProjectionContext
-): void {
-  const building = values.Building;
-  if (typeof building !== 'string') return;
-  const candidate = (context.constructedCities ?? [])
-    .filter(city => city.Key === mainCity.Key && city.X === mainCity.X && city.Y === mainCity.Y &&
-      compareDates(city, row) >= 0)
-    .sort((a, b) => compareDates(a, b) || a.ID - b.ID)
-    .find(city => recordedBuildings(city.ImportantBuildings) !== undefined);
-  if (!candidate) return;
-  values.IsImportant = recordedBuildings(candidate.ImportantBuildings)!.includes(building);
-}
-
 /** Publish only the owner and recorded names of an unwitnessed world-news event. */
 function projectWorldNewsEvent(row: Selectable<GameEvent>, config: NewspaperEventConfig,
   context: NewspaperProjectionContext): NewspaperEvent | undefined {
@@ -742,8 +696,6 @@ export function projectNewspaperEvent(row: Selectable<GameEvent>, context: Newsp
     values.IsNowAlly = values.IsNowAlly !== false && values.IsNowAlly !== 0;
   }
   const mainCity = config.cityIDs ? copyCityPositions(config, row, values, context, related) : undefined;
-  // Significance uses recorded building lists that stay hidden when the receiver lacks city detail access.
-  if (row.Type === 'CityConstructed' && mainCity) markImportantBuilding(row, mainCity, values, context);
   if (row.Type === 'CityTrained') {
     // Generic visibility may reflect another owner's unit or city with the same local ID.
     const port = payload.PlayerID === context.receiverPlayerID &&

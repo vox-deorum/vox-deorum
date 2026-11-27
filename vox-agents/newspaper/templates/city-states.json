@@ -138,7 +138,7 @@
         "voice": "gazette",
         "stance": "populist",
         "genre": "letter",
-        "headline": "A letter from the frontier",
+        "headline": "A letter from abroad",
         "byline": "A trader on the {{cityState}} road",
         "body": [
           "Madam Editor: my stall sits at the corner where the road enters {{cityState}}'s market, and I count the envoys as they pass. All season the visitors in {{rival}}'s cloaks outnumbered ours, so when the alliance changed this week, the only soul surprised on my road was the man who sold the flag."
@@ -270,7 +270,7 @@
         "genre": "notice",
         "headline": "Notice of a new ally in {{cityState}}",
         "body": [
-          "For the record: {{cityState}}, {{distance}} from our nearest city, now counts {{friend}} its ally. Our own alliance there lapses with the season, and it lapses without a quarrel."
+          "For the record: {{cityState}} now counts {{friend}} its ally. Our own alliance there lapses with the season, and it lapses without a quarrel."
         ]
       },
       {
@@ -280,7 +280,7 @@
         "genre": "report",
         "headline": "{{cityState}} changes allies tonight",
         "body": [
-          "Word from the frontier tonight: {{cityState}} has switched its alliance to {{friend}}. The city lies {{distance}} from our nearest border. Until today it was our ally. Its new friend is a friend of ours."
+          "Word reaches us tonight: {{cityState}} has switched its alliance to {{friend}}. Until today it was our ally. Its new friend is a friend of ours."
         ]
       }
     ]
@@ -475,7 +475,7 @@
         "id": "foreign-major-wins-city-state-report",
         "headline": "{{civilization}} wins the alliance of {{cityState}}",
         "body": [
-          "{{cityState}} now follows {{civilization}} as its ally, and {{civilization}}'s colors fly beside the city's own. The city lies {{distance}} from the nearest of our towns. The city has gained a powerful friend, and we have gained a powerful neighbor."
+          "{{cityState}} now follows {{civilization}} as its ally, and {{civilization}}'s colors fly beside the city's own. The city has gained a powerful friend, and every court that watches the balance of alliances will take note."
         ]
       },
       {
@@ -483,9 +483,9 @@
         "voice": "press",
         "stance": "hawkish",
         "genre": "analysis",
-        "headline": "A foothold {{distance}} from our walls",
+        "headline": "A new foothold for {{civilization}}",
         "body": [
-          "{{civilization}} has won a friend in {{cityState}}, a city {{distance}} from our nearest gate. Such friendships are bought with patience and a full purse, and this one will take both to keep. A power does not pay for a stable this close to our road unless it means to ride."
+          "{{civilization}} has won a friend in {{cityState}}. Such friendships are bought with patience and a full purse, and this one will take both to keep. A power does not pay for a stable unless it means to ride."
         ]
       },
       {
@@ -493,7 +493,7 @@
         "voice": "pamphlet",
         "stance": "hawkish",
         "genre": "report",
-        "headline": "Hear it, {{terms.civic.people}}: {{civilization}} wins a neighbor",
+        "headline": "Hear it, {{terms.civic.people}}: {{civilization}} wins an ally",
         "body": [
           "Look to {{cityState}}, {{terms.civic.people}}: it has gone over to {{civilization}}. Carters at this end of the road are asking whose men will meet them at the next bridge. Our {{terms.civic.government}} should answer that before the drivers answer for themselves."
         ]

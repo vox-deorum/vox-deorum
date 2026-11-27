@@ -4,7 +4,7 @@
     "subject": "event",
     "event": "CityConstructed",
     "when": [
-      "event.is.ourBuilding",
+      "event.is.ourCity",
       "event.is.regularBuilding && event.is.notableBuilding",
       "!event.is.purchased",
       "!event.is.foundingFreebie"
@@ -21,7 +21,7 @@
     "subject": "event",
     "event": "CityInvestedBuilding",
     "when": [
-      "event.is.ourBuilding",
+      "event.is.ourCity",
       "typeof event.building === 'string' && event.building.length > 0",
       "event.invested === true || event.invested === 1",
       "!events.some(e => e.type === 'CityConstructed' && e.knows('player') && e.player.knows('id') && e.player.id === event.player.id && e.knows('building') && e.building === event.building && e.knows('city') && e.city.knows('id') && event.city.knows('id') && e.city.id === event.city.id && e.knows('isGoldPurchase') && e.isGoldPurchase === false && e.knows('isFaithPurchase') && e.isFaithPurchase === false)"
@@ -38,7 +38,7 @@
     "subject": "event",
     "event": "CityConstructed",
     "when": [
-      "event.is.ourBuilding",
+      "event.is.ourCity",
       "event.is.regularBuilding && event.is.notableBuilding",
       "event.is.purchased"
     ],
@@ -55,7 +55,7 @@
     "subject": "event",
     "event": "CityConstructed",
     "when": [
-      "event.is.ourBuilding",
+      "event.is.ourCity",
       "defenses.includes(event.building)"
     ],
     "values": {
@@ -70,7 +70,7 @@
     "subject": "event",
     "event": "CityConstructed",
     "when": [
-      "event.is.ourBuilding",
+      "event.is.ourCity",
       "event.is.courthouseIntegration"
     ],
     "values": {
@@ -85,7 +85,7 @@
     "subject": "event",
     "event": "CityConstructed",
     "when": [
-      "event.is.theirBuilding",
+      "event.is.theirCity",
       "event.is.regularBuilding && event.is.notableBuilding",
       "!event.is.purchased",
       "!event.is.foundingFreebie"
@@ -95,7 +95,7 @@
       "owner": "event.city.owner.name"
     },
     "tier": "filler",
-    "adjust": ["event.city.owner.stake.relation", "event.city.ourSpyPresent ? 5 : 0"],
+    "adjust": ["event.city.owner.stake.relation", "event.stake.intel"],
     "tags": ["cities", "international"]
   },
   {
@@ -103,7 +103,7 @@
     "subject": "event",
     "event": "CityConstructed",
     "when": [
-      "event.is.theirBuilding",
+      "event.is.theirCity",
       "event.is.regularBuilding && event.is.notableBuilding",
       "event.is.purchased"
     ],
@@ -113,7 +113,7 @@
       "currency": "event.isGoldPurchase === true ? 'gold' : 'faith'"
     },
     "tier": "filler",
-    "adjust": ["event.city.owner.stake.relation", "event.city.ourSpyPresent ? 5 : 0"],
+    "adjust": ["event.city.owner.stake.relation", "event.stake.intel"],
     "tags": ["cities", "international"]
   },
   {
@@ -121,8 +121,7 @@
     "subject": "event",
     "event": "CityInvestedBuilding",
     "when": [
-      "event.is.theirBuilding",
-      "event.city.is.nearby",
+      "event.is.theirCity",
       "typeof event.building === 'string' && event.building.length > 0",
       "event.invested === true || event.invested === 1",
       "!events.some(e => e.type === 'CityConstructed' && (e.turn > event.turn || (e.turn === event.turn && e.id > event.id)) && e.knows('player') && e.player.knows('id') && e.player.id === event.player.id && e.knows('city') && e.city.knows('id') && event.city.knows('id') && e.city.id === event.city.id && e.knows('building') && e.building === event.building)"
@@ -140,8 +139,7 @@
     "subject": "event",
     "event": "CityConstructed",
     "when": [
-      "event.is.theirBuilding",
-      "event.city.is.nearby",
+      "event.is.theirCity",
       "defenses.includes(event.building)",
       "!event.is.foundingFreebie"
     ],
@@ -158,8 +156,7 @@
     "subject": "event",
     "event": "CityConstructed",
     "when": [
-      "event.is.theirBuilding",
-      "event.city.is.nearby",
+      "event.is.theirCity",
       "event.is.courthouseIntegration"
     ],
     "values": {

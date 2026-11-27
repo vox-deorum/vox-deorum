@@ -145,10 +145,10 @@ describe('stock foreign city desk', () => {
     ])('should give an integrating $building one account and keep ordinary construction separate', async ({ owner, name, building, rule, generic }) => {
       const prior = city(20, 5, 10, owner, name, { IsPuppet: false, IsOccupied: true });
       const occupied = city(20, 10, 10, owner, name, {
-        IsPuppet: false, IsOccupied: true, Wonders: [],
+        IsPuppet: false, IsOccupied: true, Wonders: [], ImportantBuildings: [building],
       });
       const completion = gameEvent(113, 'CityConstructed', 9, {
-        OwnerID: owner, CityID: 20, CityX: 10, CityY: 2, Building: building, IsGoldPurchase: true, IsImportant: true,
+        OwnerID: owner, CityID: 20, CityX: 10, CityY: 2, Building: building, IsGoldPurchase: true,
       });
       const base = owner === 0 ? [] : [home];
       /** Build the fixture with a readable era for the stock importance check. */

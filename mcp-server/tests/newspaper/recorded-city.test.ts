@@ -62,7 +62,7 @@ describe('dated newspaper joins', () => {
     await city({ ID: 23, Turn: 11, CreatedAt: 2012, Player0: 0 });
     const seen = await queryNewspaperEvidence(db, request);
     expect(seen.events.find(row => row.type === 'CityConstructed')).toMatchObject({
-      values: { Building: 'Shrine', CityX: 0, CityY: 4, IsImportant: false }, relatedSources: [{ id: 22, turn: 11 }]
+      values: { Building: 'Shrine', CityX: 0, CityY: 4 }, relatedSources: [{ id: 22, turn: 11 }]
     });
 
     for (const CreatedAt of [2011, 2010]) {
@@ -133,7 +133,7 @@ describe('dated newspaper joins', () => {
 });
 
 describe('newspaper city unhappiness', () => {
-  it('reports recorded causes only at full access and keeps an observed empty reading', async () => {
+  it('reports recorded causes for any visible city and keeps an observed empty reading', async () => {
     await city({ ID: 22, Key: 43, Turn: 12, Owner: 'Civ0', Player0: 2, UnhappinessSources: { Culture: 3, Distress: 1 } });
     await city({ ID: 23, Key: 44, Turn: 12, Player0: 1, UnhappinessSources: { Culture: 2 } });
     await city({ ID: 24, Key: 45, Turn: 12, Owner: 'Civ0', Player0: 2, UnhappinessSources: {} });
@@ -144,7 +144,7 @@ describe('newspaper city unhappiness', () => {
     const full = evidence.cities.find(row => row.subjectID === 43);
     expect(full?.values.UnhappinessSources).toEqual({ Culture: 3, Distress: 1 });
     expect(full?.source).toMatchObject({ table: 'CityInformations', id: 22, turn: 12 });
-    expect(evidence.cities.find(row => row.subjectID === 44)?.values).not.toHaveProperty('UnhappinessSources');
+    expect(evidence.cities.find(row => row.subjectID === 44)?.values).toMatchObject({ UnhappinessSources: { Culture: 2 } });
     expect(evidence.cities.find(row => row.subjectID === 45)).toMatchObject({
       values: { UnhappinessSources: {} }, source: { table: 'CityInformations', id: 24, turn: 12 }
     });

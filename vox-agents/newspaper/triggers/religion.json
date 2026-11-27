@@ -28,7 +28,7 @@
       "city.knows('before') && city.before.knows('majorityReligion')",
       "changed(city, 'majorityReligion')",
       "self.knows('foundedReligion') && typeof self.foundedReligion === 'string' && self.foundedReligion === city.majorityReligion",
-      "city.conversions.some(c => c.knows('religion') && c.religion === city.majorityReligion)"
+      "city.is.convertedToMajority"
     ],
     "values": { "cityState": "city.owner.name", "religion": "city.majorityReligion" },
     "tier": "notable",
@@ -48,7 +48,7 @@
       "city.knows('before') && city.before.knows('majorityReligion')",
       "changed(city, 'majorityReligion')",
       "city.knows('distance') && city.distance.knows('own') && city.distance.own > neighboring",
-      "city.conversions.some(c => c.knows('religion') && c.religion === city.majorityReligion)"
+      "city.is.convertedToMajority"
     ],
     "values": {
       "civilization": "city.owner.name",
@@ -64,8 +64,8 @@
     "subject": "event",
     "event": ["ReligionEnhanced", "ReligionReformed"],
     "when": [
-      "event.knows('player') && event.player.self === false && event.player.knows('major') && event.player.major === true && event.player.knows('name')",
-      "event.knows('religion') && typeof event.religion === 'string' && event.religion.length > 0"
+      "event.player.is.foreignMajor && event.player.knows('name')",
+      "typeof event.religion === 'string' && event.religion.length > 0"
     ],
     "values": {
       "civilization": "event.player.name",
@@ -100,9 +100,9 @@
     "subject": "event",
     "event": "ReligionFounded",
     "when": [
-      "event.knows('player') && !event.player.self && event.player.major && event.player.knows('name')",
-      "event.knows('religion') && typeof event.religion === 'string' && event.religion.length > 0",
-      "event.knows('holyCity') && event.holyCity.knows('name')"
+      "event.player.is.foreignMajor && event.player.knows('name')",
+      "typeof event.religion === 'string' && event.religion.length > 0",
+      "event.holyCity.knows('name')"
     ],
     "values": {
       "civilization": "event.player.name",
@@ -135,7 +135,7 @@
     "id": "neighbor-majority-faith-changed",
     "subject": "player",
     "when": [
-      "!player.self && player.major && player.is.nearby && player.knows('name')",
+      "!player.self && player.major && player.knows('name')",
       "player.is.hasMajorityReligion",
       "player.knows('before') && player.before.knows('majorityReligion') && typeof player.before.majorityReligion === 'string' && player.before.majorityReligion.length > 0",
       "player.majorityReligion !== player.before.majorityReligion",
@@ -156,15 +156,16 @@
     "subject": "city",
     "window": "recent",
     "when": [
-      "city.is.neighbor",
+      "city.foreign",
       "city.majorityReligion && changed(city, 'majorityReligion')"
     ],
     "group": {
       "by": "city.majorityReligion",
       "min": 3
     },
+    "values": { "place": "city.distance.knows('own') ? city.stake.place : 0" },
     "tier": "notable",
-    "adjust": "Math.min(15, 5 * (count - 3))"
+    "adjust": ["Math.max(...matches.map(m => m.values.place))", "Math.min(15, 5 * (count - 3))"]
   },
   {
     "id": "our-faith-deepens",
@@ -174,8 +175,8 @@
       "ReligionReformed"
     ],
     "when": [
-      "event.knows('player') && event.player.self === true",
-      "event.knows('religion') && typeof event.religion === 'string' && event.religion.length > 0"
+      "event.player.self === true",
+      "typeof event.religion === 'string' && event.religion.length > 0"
     ],
     "values": {
       "religion": "event.religion",
@@ -209,7 +210,7 @@
     "when": [
       "city.own",
       "city.knows('majorityReligion') && typeof city.majorityReligion === 'string'",
-      "city.conversions.some(c => c.knows('religion') && c.religion === city.majorityReligion)"
+      "city.is.convertedToMajority"
     ],
     "values": {
       "religion": "city.majorityReligion",
@@ -224,10 +225,10 @@
     "subject": "event",
     "event": "PantheonFounded",
     "when": [
-      "event.knows('player') && event.player.knows('name')",
-      "event.player.knows('major') && event.player.major === true",
-      "event.knows('city') && event.city.knows('name')",
-      "event.knows('beliefType') && typeof event.beliefType === 'string' && event.beliefType.trim().length > 0"
+      "event.player.knows('name')",
+      "event.player.major === true",
+      "event.city.knows('name')",
+      "typeof event.beliefType === 'string' && event.beliefType.trim().length > 0"
     ],
     "values": {
       "civilization": "event.player.name",

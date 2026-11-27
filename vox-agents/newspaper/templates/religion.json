@@ -298,7 +298,7 @@
         "id": "neighbor-majority-faith-changed-report",
         "headline": "{{religion}} takes most cities in {{civilization}}",
         "body": [
-          "Across the border in {{civilization}}, {{religion}} has taken the majority from {{former}}. The border market now opens a day later than it did last season, and our carters have been caught with loaded wagons and nowhere to sell. Traders who learn the new calendar first will take the best pitches."
+          "In {{civilization}}, {{religion}} has taken the majority from {{former}}. Its market towns now open a day later than they did last season, and our carters have been caught with loaded wagons and nowhere to sell. Traders who learn the new calendar first will take the best pitches."
         ]
       },
       {
@@ -316,9 +316,9 @@
         "voice": "pamphlet",
         "stance": "populist",
         "genre": "notice",
-        "headline": "Border towns: ask after the feast days",
+        "headline": "Trading towns: ask after the feast days",
         "body": [
-          "Border towns, take note: {{religion}} now leads in most cities across the line, where {{former}} held the count. The feast has moved, and the fair has moved with it. Load your cart for the new day, or sell to empty benches."
+          "Trading towns, take note: {{religion}} now leads in most cities of {{civilization}}, where {{former}} held the count. The feast has moved, and the fair has moved with it. Load your cart for the new day, or sell to empty benches."
         ],
         "links": []
       }
@@ -332,9 +332,9 @@
     "variants": [
       {
         "id": "neighbors-convert-report",
-        "headline": "{{key}} gains a majority in {{count}} nearby cities",
+        "headline": "{{key}} gains a majority in {{count}} cities",
         "body": [
-          "{{count|town|towns}} along our border now keep {{key}} as their majority faith. In the market nearest the crossing, a copyist has hired a boy to carry bundles of prayer sheets to the villages, and the boy has learned the route better than the words. The creed is no longer a visitor in these parts; it has bought a chair."
+          "{{count|town|towns}} in other lands now keep {{key}} as their majority faith. In a market where the faith has taken hold, a copyist has hired a boy to carry bundles of prayer sheets to the villages, and the boy has learned the route better than the words. The creed is no longer a visitor in those towns; it has bought a chair."
         ]
       },
       {
@@ -342,11 +342,11 @@
         "voice": "press",
         "stance": "neutral",
         "genre": "ledger",
-        "headline": "The border tally of faiths",
+        "headline": "The tally of faiths",
         "body": [
-          "Faith now leading in the border towns: {{key}}",
+          "Faith now leading in the towns counted: {{key}}",
           "Towns counted in the change: {{count}}",
-          "Read down the column and the border looks different from the way it did last season."
+          "Read down the column and the map looks different from the way it did last season."
         ]
       },
       {
@@ -356,7 +356,7 @@
         "genre": "anecdote",
         "headline": "The ferryman counts the towns",
         "body": [
-          "The ferryman at the crossing says he can tell the new pilgrims by the way they hold their bundles. {{count|town|towns}} along the border road have taken up {{key}}, and the landing stage is crowded before sunrise. \"Same water,\" he says, \"different songs.\""
+          "The ferryman at a river crossing says he can tell the new pilgrims by the way they hold their bundles. {{count|town|towns}} along the road have taken up {{key}}, and the landing stage is crowded before sunrise. \"Same water,\" he says, \"different songs.\""
         ]
       },
       {

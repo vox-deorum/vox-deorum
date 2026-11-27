@@ -68,51 +68,30 @@ describe('passive espionage presence', () => {
     expect(result.cities.find(row => row.subjectID === 42)?.values).not.toHaveProperty('OurSpyPresent');
     expect(result.players.find(row => row.subjectID === 1)?.values).not.toHaveProperty('OurDiplomatThere');
     expect(result.players.find(row => row.subjectID === 1)?.values).not.toHaveProperty('TheirDiplomatHere');
-    expect(result.players.find(row => row.subjectID === 1)?.values).toMatchObject({ PolicyBranches: { Tradition: 2 } });
+    expect(result.players.find(row => row.subjectID === 1)?.values).toMatchObject({ PolicyBranches: { Tradition: ['A', 'B'] } });
   });
 });
 
 describe('espionage city detail', () => {
-  it('keeps foreign city detail only while a settled spy holds 500 points at the observation and cutoff', async () => {
+  it('exposes foreign city detail without a spy and reports OurSpyPresent from the roster', async () => {
     await city(22, 42, 11, 'Civ1', 'Port', 1, { IsCapital: 1, ProductionPerTurn: 6, FoodPerTurn: 4 });
-    await summary(db, 20, 0, 11, 2, {
-      DiplomatPoints: {},
-      Spies: { Agent: spy('Spy', 'Port (Civ1)', 'Collecte de renseignements', 500) }
-    });
-    const request = { receiverPlayerID: 0, previousCheckTurn: 10, cutoffTurn: 11, historyFromTurn: 11 };
+    await summary(db, 20, 0, 11, 2, { DiplomatPoints: {}, Spies: {} });
+    const request = { receiverPlayerID: 0, previousCheckTurn: 10, cutoffTurn: 11 };
 
-    const atThreshold = await queryNewspaperEvidence(db, request);
-    expect(atThreshold.cities.find(row => row.subjectID === 42)?.values)
-      .toMatchObject({ OurSpyPresent: true, ProductionPerTurn: 6 });
-    expect(atThreshold.history?.snapshots.cities.find(row => row.subjectID === 42)?.values)
-      .toMatchObject({ ProductionPerTurn: 6 });
+    const withoutAgent = await queryNewspaperEvidence(db, request);
+    expect(withoutAgent.cities.find(row => row.subjectID === 42)?.values)
+      .toMatchObject({ OurSpyPresent: false, ProductionPerTurn: 6, FoodPerTurn: 4 });
 
     await summary(db, 21, 0, 12, 2, {
       DiplomatPoints: {},
-      Spies: { Agent: spy('Spy', 'Port (Civ1)', 'Gathering Intelligence', 499) }
+      Spies: { Agent: spy('Spy', 'Port (Civ1)', 'Collecte de renseignements', 500) }
     });
-    const below = await queryNewspaperEvidence(db, { ...request, cutoffTurn: 12 });
-    expect(below.cities.find(row => row.subjectID === 42)?.values)
-      .toMatchObject({ OurSpyPresent: true });
-    expect(below.cities.find(row => row.subjectID === 42)?.values).not.toHaveProperty('ProductionPerTurn');
-    expect(below.history?.snapshots.cities.find(row => row.subjectID === 42)?.values)
-      .not.toHaveProperty('ProductionPerTurn');
-
-    await summary(db, 22, 0, 13, 2, {
-      DiplomatPoints: {},
-      Spies: { Agent: spy('Spy', 'Port (Civ1)', 'Traveling', 500) }
-    });
-    const recalled = await queryNewspaperEvidence(db, { ...request, cutoffTurn: 13 });
-    expect(recalled.cities.find(row => row.subjectID === 42)?.values)
-      .toMatchObject({ OurSpyPresent: false });
-    expect(recalled.cities.find(row => row.subjectID === 42)?.values).not.toHaveProperty('ProductionPerTurn');
-    expect(recalled.history?.snapshots.cities.find(row => row.subjectID === 42)?.values)
-      .not.toHaveProperty('ProductionPerTurn');
+    const withAgent = await queryNewspaperEvidence(db, { ...request, cutoffTurn: 12 });
+    expect(withAgent.cities.find(row => row.subjectID === 42)?.values)
+      .toMatchObject({ OurSpyPresent: true, ProductionPerTurn: 6 });
   });
 
-  it('preserves recorded team access when civ names overlap, while a duplicate city name denies a proxy', async () => {
-    await db.updateTable('PlayerInformations').set({ Civilization: 'Civ0' }).where('Key', '=', 2).execute();
-    await db.updateTable('PlayerInformations').set({ TeamID: 0 }).where('Key', '=', 3).execute();
+  it('exposes foreign city detail while a duplicate city name leaves spy presence unknown', async () => {
     await city(22, 40, 10, 'Civ0', 'Home', 2, { FoodPerTurn: 4 });
     await city(23, 41, 10, 'Civ3', 'Ally', 2, { FoodPerTurn: 5 });
     await city(24, 44, 10, 'Civ1', 'Port', 0);
@@ -124,13 +103,13 @@ describe('espionage city detail', () => {
     expect(evidence.cities.find(row => row.subjectID === 40)?.values.FoodPerTurn).toBe(4);
     expect(evidence.cities.find(row => row.subjectID === 41)?.values.FoodPerTurn).toBe(5);
     const port = evidence.cities.find(row => row.subjectID === 42)!;
+    expect(port.values.FoodPerTurn).toBe(999);
     expect(port.values).not.toHaveProperty('OurSpyPresent');
-    expect(port.values).not.toHaveProperty('FoodPerTurn');
   });
 });
 
 describe('espionage policy insight', () => {
-  it('counts a zero-point inbound vassal diplomat but does not grant policy detail', async () => {
+  it('reports an inbound vassal diplomat and exposes policy names to a visible player', async () => {
     await city(20, 40, 10, 'Civ0', 'Home', 2, { IsCapital: 1 });
     await summary(db, 20, 0, 11, 2, { DiplomatPoints: {}, Spies: {} });
     await summary(db, 21, 1, 11, 1, {
@@ -143,7 +122,7 @@ describe('espionage policy insight', () => {
     expect(result.players.find(row => row.subjectID === 1)?.values).toMatchObject({
       TheirDiplomatHere: true,
       OurDiplomatThere: false,
-      PolicyBranches: { Tradition: 2 }
+      PolicyBranches: { Tradition: ['A', 'B'] }
     });
   });
 

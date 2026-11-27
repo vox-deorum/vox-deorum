@@ -446,7 +446,7 @@
         "id": "foreign-capital-falls-report",
         "headline": "{{city}} falls to {{winner}}",
         "body": [
-          "News has come that {{winner}} has taken {{city}}, the capital of {{loser}}, by force, {{distance}} from the nearest of our cities. The report arrived with a ship's cargo, and the customs clerk read it twice before entering the duty. The war is far away, but the prices it moves are not."
+          "News has come that {{winner}} has taken {{city}}, the capital of {{loser}}, by force. The report arrived with a ship's cargo, and the customs clerk read it twice before entering the duty. The fighting is elsewhere, but the prices it moves are not."
         ]
       },
       {
@@ -454,9 +454,9 @@
         "voice": "press",
         "stance": "neutral",
         "genre": "analysis",
-        "headline": "After {{city}} falls, where do the envoys go?",
+        "headline": "After {{city}} falls, who holds authority?",
         "body": [
-          "{{city}}, the seat of {{loser}}, now answers to {{winner}}. A state can lose its capital and keep its authority, or keep the buildings and lose the habit of command. Watch which envoys still call at which door, and the answer will show itself."
+          "{{city}}, the seat of {{loser}}, now answers to {{winner}}. A government can lose its capital and keep its authority, or keep the buildings and lose the habit of command. Watch which officials still report to which office, and the answer will show itself."
         ]
       },
       {
@@ -466,7 +466,7 @@
         "genre": "report",
         "headline": "The fall of a capital",
         "body": [
-          "The year's record states that {{winner}} took by arms {{city}}, the capital of {{loser}}, at a distance of {{distance}} from our own cities. The keeper of the rolls entered the fall beside the accounts of plague and drought. Prayer was ordered for the city's people, and no cause was written."
+          "The year's record states that {{winner}} took by arms {{city}}, the capital of {{loser}}. The keeper of the rolls entered the fall beside the accounts of plague and drought. Prayer was ordered for the city's people, and no cause was written."
         ]
       },
       {
@@ -476,7 +476,7 @@
         "genre": "report",
         "headline": "Abroad tonight: {{city}} falls",
         "body": [
-          "Abroad tonight, {{winner}} has seized {{city}}, the capital of {{loser}}. The city lies {{distance}} from the closest of our cities. New maps will be needed by morning, and the embassies will be busy before the week ends."
+          "Abroad tonight, {{winner}} has seized {{city}}, the capital of {{loser}}. New maps will be needed by morning, and every court that watches the map will be busy before the week ends."
         ]
       }
     ]
@@ -536,7 +536,7 @@
         "id": "nearby-city-captured-report",
         "headline": "{{winner}} Secures Control of {{city}}",
         "body": [
-          "{{winner}} has seized {{city}} from {{loser}}, a city {{distance}} away from our territory. News of the conquest reached {{terms.civilizationAdjective}} capital this morning. The city has now transitioned to the administration of {{winner}}."
+          "{{winner}} has seized {{city}} from {{loser}}. News of the conquest reached {{terms.civilizationAdjective}} capital this morning. The city has now transitioned to the administration of {{winner}}."
         ],
         "settled": true
       },
@@ -545,6 +545,7 @@
         "voice": "press",
         "stance": "neutral",
         "genre": "analysis",
+        "when": "near",
         "headline": "{{city}} falls to {{winner}}",
         "body": [
           "{{city}} has passed from {{loser}} to {{winner}}, at a distance of {{distance}} from our border. A town that close is a market, a road junction and a warning, depending on who holds it. The flag has changed; the garrison {{winner}} leaves behind will decide the road and the market in the seasons ahead."
@@ -555,6 +556,7 @@
         "voice": "gazette",
         "stance": "neutral",
         "genre": "notice",
+        "when": "near",
         "headline": "Notice from abroad: {{city}}",
         "body": [
           "Notice is given that {{city}}, formerly held by {{loser}}, {{distance}} from our frontier, is now held by {{winner}}. Travelers should expect new guards and new questions at its gate. Merchants with goods in its warehouses should present their papers before the week is out."
@@ -565,6 +567,7 @@
         "voice": "tabloid",
         "stance": "local",
         "genre": "report",
+        "when": "near",
         "headline": "A new flag {{distance}} out",
         "body": [
           "{{distance}} from our farms, the flag over {{city}} has changed. {{winner}} took it from {{loser}}, and the market opened the next morning as if nothing had happened. The stallholders have seen conquerors before."

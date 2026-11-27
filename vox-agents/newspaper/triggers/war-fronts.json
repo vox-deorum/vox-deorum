@@ -169,11 +169,11 @@
     "subject": "event",
     "event": "UnitKilledInCombat",
     "when": [
-      "event.knows('killerPlayer') && event.killerPlayer.self === true",
-      "event.knows('killedPlayer') && event.killedPlayer.self === false",
-      "event.killedPlayer.knows('major') && event.killedPlayer.major === true",
+      "event.killerPlayer.self === true",
+      "event.killedPlayer.self === false",
+      "event.killedPlayer.major === true",
       "event.killedPlayer.knows('name')",
-      "event.knows('unit') && typeof event.unit === 'string' && event.unit.length > 0"
+      "typeof event.unit === 'string' && event.unit.length > 0"
     ],
     "values": {
       "unit": "event.unit",
@@ -196,15 +196,14 @@
       "event.knows('isConquest') && event.isConquest === true",
       "event.knows('oldOwner') && event.knows('newOwner')",
       "event.oldOwner.self === false && event.newOwner.self === false",
-      "event.oldOwner.knows('major') && event.oldOwner.major === true && event.oldOwner.knows('name')",
-      "event.newOwner.knows('major') && event.newOwner.major === true && event.newOwner.knows('name')",
+      "event.oldOwner.knows('name') && event.newOwner.knows('name')",
       "event.knows('city') && event.city.knows('name')",
-      "event.knows('distance') && event.distance.own > nearby"
+      "!event.knows('distance') || event.distance.own > nearby"
     ],
     "values": {
       "loser": "event.oldOwner.name",
       "winner": "event.newOwner.name",
-      "distance": "event.distance.own"
+      "distance": "event.knows('distance') ? event.distance.own : null"
     },
     "tier": "notable",
     "adjust": "event.stake.place",
@@ -234,17 +233,17 @@
     "subject": "event",
     "event": "CityCaptureComplete",
     "when": [
-      "event.knows('isConquest') && event.isConquest === true",
-      "event.knows('isCapital') && event.isCapital === false",
-      "event.knows('oldOwner') && event.knows('newOwner') && !event.oldOwner.self && !event.newOwner.self",
+      "event.isConquest === true",
+      "event.isCapital === false",
+      "!event.oldOwner.self && !event.newOwner.self",
       "event.oldOwner.knows('name') && event.newOwner.knows('name')",
-      "event.knows('city') && event.city.knows('name')",
-      "event.knows('distance') && event.distance.own <= neighboring"
+      "event.city.knows('name')"
     ],
     "values": {
       "loser": "event.oldOwner.name",
       "winner": "event.newOwner.name",
-      "distance": "event.distance.own"
+      "distance": "event.knows('distance') ? event.distance.own : null",
+      "near": "event.knows('distance') && event.distance.own <= nearby"
     },
     "tier": "notable",
     "adjust": "event.stake.place",
@@ -255,7 +254,7 @@
     "subject": "player",
     "window": "medium",
     "when": [
-      "!player.self && player.major && player.is.neighbor && player.knows('name')",
+      "player.is.foreignMajor && player.knows('name')",
       "[player.militaryStrength, self.militaryStrength, player.before.militaryStrength, self.before.militaryStrength].every(n => Number.isFinite(n) && n >= 0)",
       "player.militaryStrength > self.militaryStrength",
       "player.before.militaryStrength <= self.before.militaryStrength"
@@ -266,14 +265,14 @@
       "theirStrength": "player.militaryStrength"
     },
     "tier": "notable",
-    "adjust": ["player.stake.relation", "Math.min(20, 20 * (theirStrength / ourStrength - 1))"]
+    "adjust": ["player.stake.relation", "player.stake.spy", "Math.min(20, 20 * (theirStrength / ourStrength - 1))"]
   },
   {
     "id": "our-army-overtakes-neighbor",
     "subject": "player",
     "window": "medium",
     "when": [
-      "!player.self && player.major && player.is.neighbor && player.knows('name')",
+      "player.is.foreignMajor && player.knows('name')",
       "[player.militaryStrength, self.militaryStrength, player.before.militaryStrength, self.before.militaryStrength].every(n => Number.isFinite(n) && n >= 0)",
       "self.militaryStrength > player.militaryStrength",
       "self.before.militaryStrength <= player.before.militaryStrength"
@@ -284,7 +283,7 @@
       "theirStrength": "player.militaryStrength"
     },
     "tier": "notable",
-    "adjust": ["player.stake.relation", "Math.min(10, 10 * (ourStrength / theirStrength - 1))"],
+    "adjust": ["player.stake.relation", "player.stake.spy", "Math.min(10, 10 * (ourStrength / theirStrength - 1))"],
     "tags": ["politics", "military", "international"]
   },
   {
@@ -353,9 +352,9 @@
     "subject": "event",
     "event": "UnitKilledInCombat",
     "when": [
-      "event.knows('killedPlayer') && event.killedPlayer.self === true",
-      "event.knows('killerPlayer') && event.killerPlayer.major && !event.killerPlayer.self && event.killerPlayer.knows('name')",
-      "event.knows('unit') && typeof event.unit === 'string' && event.unit.length > 0"
+      "event.killedPlayer.self === true",
+      "event.killerPlayer.is.foreignMajor && event.killerPlayer.knows('name')",
+      "typeof event.unit === 'string' && event.unit.length > 0"
     ],
     "values": {
       "unit": "event.unit",

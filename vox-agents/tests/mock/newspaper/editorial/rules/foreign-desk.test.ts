@@ -249,8 +249,9 @@ describe('stock foreign desk', () => {
     if (gained !== undefined) input.receiverTechnologies = [{ name: tech, gained, source: ownChange }];
     const result = await publish(input, [home, city(11, 8, 1, 'Salvador', 4), city(12, 8, 2, 'Delhi', 35)]);
 
-    expect(fired(result, 'nearby-team-gains-technology')).toEqual(gained ? [] : ['event/1']);
-    expect(fired(result, 'nearby-team-gains-known-technology')).toEqual(gained ? ['event/1'] : []);
+    // Delhi's distant team also qualifies, but the neighbor's account scores higher and is printed.
+    expect(fired(result, 'nearby-team-gains-technology')).toEqual(gained ? [] : ['event/1', 'event/2']);
+    expect(fired(result, 'nearby-team-gains-known-technology')).toEqual(gained ? ['event/1', 'event/2'] : []);
     const article = expectStory(result, rule, ['Brazil', tech]);
     const record = result.state.issues[0]?.items.find(item => item.id === article.id);
     expect(record?.templateIds).toContain(`${rule}-account`);
@@ -265,8 +266,32 @@ describe('stock foreign desk', () => {
     ], [snapshot(0, 10, [relationship(1), relationship(10), relationship(11), relationship(12)])]), [
       home, city(20, 10, 10, 'Geneva', 4), city(21, 10, 11, 'Sidon', 5), city(22, 10, 12, 'Riga', 16),
     ]);
-    expect(fired(result, 'city-state-ally-defects')).toEqual(['event/1']);
+    // Distant Riga also qualifies; nearby Geneva scores higher and is printed.
+    expect(fired(result, 'city-state-ally-defects')).toEqual(['event/1', 'event/3']);
     expectStory(result, 'city-state-ally-defects', ['Geneva', 'Brazil']);
+  });
+
+  it('should rank a distant defection below a nearby one and raise it when our diplomat is with the new ally', async () => {
+    /** Publish Geneva (near) and Riga (far) both defecting to Brazil, optionally with our diplomat in Brazil. */
+    const defections = async (diplomat: boolean) => {
+      const input = evidence([
+        event('SetAlly', 1, 9, 10, 1, { MinorPlayerID: 10, OldAllyPlayerID: 0, NewAllyPlayerID: 1 }),
+        event('SetAlly', 3, 9, 12, 1, { MinorPlayerID: 12, OldAllyPlayerID: 0, NewAllyPlayerID: 1 }),
+      ], [snapshot(0, 10, [relationship(1), relationship(10), relationship(12)])]);
+      if (diplomat) input.players.find(player => player.subjectID === 1)!.values.OurDiplomatThere = true;
+      return publish(input, [home, city(20, 10, 10, 'Geneva', 4), city(22, 10, 12, 'Riga', 30)]);
+    };
+    /** Read the rated importance of one qualifying subject. */
+    const importance = (result: Awaited<ReturnType<typeof publish>>, subject: string) =>
+      result.decision.triggerAudit.find(entry => entry.rule === 'city-state-ally-defects')!.subjects
+        .find(entry => entry.subject === subject)!.importance!;
+
+    const plain = await defections(false);
+    expect(fired(plain, 'city-state-ally-defects')).toEqual(['event/1', 'event/3']);
+    expect(importance(plain, 'event/3')).toBeLessThan(importance(plain, 'event/1'));
+
+    const posted = await defections(true);
+    expect(importance(posted, 'event/3')).toBeGreaterThan(importance(plain, 'event/3'));
   });
 
   it('should report a city-state alliance ending when the game explicitly records no successor', async () => {

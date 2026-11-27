@@ -22,8 +22,8 @@
     "subject": "event",
     "event": "PlayerGoldenAge",
     "when": [
-      "event.knows('player') && !event.player.self && event.player.knows('major') && event.player.major === true",
-      "event.knows('starting') && event.starting === true",
+      "event.player.is.foreignMajor",
+      "event.starting === true",
       "event.player.knows('name')"
     ],
     "values": {
@@ -38,8 +38,8 @@
     "subject": "event",
     "event": "PlayerGoldenAge",
     "when": [
-      "event.knows('player') && !event.player.self && event.player.knows('major') && event.player.major === true",
-      "event.knows('starting') && event.starting === false",
+      "event.player.is.foreignMajor",
+      "event.starting === false",
       "event.player.knows('name')"
     ],
     "values": {
@@ -123,10 +123,10 @@
     "subject": "event",
     "event": "IdeologySwitched",
     "when": [
-      "event.knows('player') && event.player.knows('major') && event.player.major === true",
+      "event.player.major === true",
       "event.player.knows('name')",
-      "event.knows('oldBranch') && typeof event.oldBranch === 'string'",
-      "event.knows('newBranch') && typeof event.newBranch === 'string'",
+      "typeof event.oldBranch === 'string'",
+      "typeof event.newBranch === 'string'",
       "event.oldBranch !== event.newBranch"
     ],
     "values": {
@@ -164,8 +164,8 @@
     "subject": "event",
     "event": "PlayerAdoptPolicy",
     "when": [
-      "event.knows('player') && event.player.self === true",
-      "event.knows('policy') && typeof event.policy === 'string' && event.policy.length > 0"
+      "event.player.self === true",
+      "typeof event.policy === 'string' && event.policy.length > 0"
     ],
     "values": {
       "policy": "event.policy"
@@ -226,7 +226,7 @@
     "id": "rival-adopts-ideology",
     "subject": "player",
     "when": [
-      "!player.self && player.knows('major') && player.major === true",
+      "player.is.foreignMajor",
       "player.knows('name')",
       "player.knows('ideology') && typeof player.ideology === 'string'",
       "!player.before.knows('ideology') || player.before.ideology === null"

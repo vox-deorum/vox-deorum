@@ -4,9 +4,9 @@
     "subject": "incident",
     "when": [
       "incident.kind === 'war'",
-      "incident.knows('role') && (incident.role === 'initiator' || incident.role === 'target')",
-      "incident.knows('initiator') && incident.initiator.knows('name')",
-      "incident.knows('target') && incident.target.knows('name')",
+      "(incident.role === 'initiator' || incident.role === 'target')",
+      "incident.initiator.knows('name')",
+      "incident.target.knows('name')",
       "incident.participants.some(p => p.reason === 'pact' && p.side === incident.role && !p.player.self && p.player.knows('name'))"
     ],
     "values": {
@@ -22,16 +22,16 @@
     "id": "foreign-peace-nearby",
     "subject": "incident",
     "when": [
-      "incident.kind === 'peace' && incident.knows('role') && incident.role === 'none'",
-      "incident.knows('initiator') && incident.initiator.major && incident.initiator.knows('name')",
-      "incident.knows('target') && incident.target.major && incident.target.knows('name')",
-      "(incident.initiator.knows('distance') && incident.initiator.distance <= nearby) || (incident.target.knows('distance') && incident.target.distance <= nearby)",
+      "incident.kind === 'peace' && incident.role === 'none'",
+      "incident.initiator.major && incident.initiator.knows('name')",
+      "incident.target.major && incident.target.knows('name')",
       "incident.capitulation === false && incident.concessions.length === 0"
     ],
     "values": {
       "initiator": "incident.initiator.knows('name') ? incident.initiator.name : null",
       "target": "incident.target.knows('name') ? incident.target.name : null",
-      "nearestDistance": "Math.min(incident.initiator.knows('distance') ? incident.initiator.distance : Infinity, incident.target.knows('distance') ? incident.target.distance : Infinity)"
+      "nearestDistance": "(() => { const known = [incident.initiator, incident.target].filter(p => p.knows('distance')).map(p => p.distance); return known.length ? Math.min(...known) : null; })()",
+      "near": "nearestDistance !== null && nearestDistance <= nearby"
     },
     "tier": "notable",
     "adjust": "incident.pair.stake.relation",
@@ -41,15 +41,15 @@
     "id": "foreign-war-nearby",
     "subject": "incident",
     "when": [
-      "incident.kind === 'war' && incident.knows('role') && incident.role === 'none'",
-      "incident.knows('initiator') && incident.initiator.major && incident.initiator.knows('name')",
-      "incident.knows('target') && incident.target.major && incident.target.knows('name')",
-      "(incident.initiator.knows('distance') && incident.initiator.distance <= nearby) || (incident.target.knows('distance') && incident.target.distance <= nearby)"
+      "incident.kind === 'war' && incident.role === 'none'",
+      "incident.initiator.major && incident.initiator.knows('name')",
+      "incident.target.major && incident.target.knows('name')"
     ],
     "values": {
       "initiator": "incident.initiator.knows('name') ? incident.initiator.name : null",
       "target": "incident.target.knows('name') ? incident.target.name : null",
-      "nearestDistance": "Math.min(incident.initiator.knows('distance') ? incident.initiator.distance : Infinity, incident.target.knows('distance') ? incident.target.distance : Infinity)"
+      "nearestDistance": "(() => { const known = [incident.initiator, incident.target].filter(p => p.knows('distance')).map(p => p.distance); return known.length ? Math.min(...known) : null; })()",
+      "near": "nearestDistance !== null && nearestDistance <= nearby"
     },
     "tier": "notable",
     "adjust": "incident.pair.stake.relation",
@@ -60,9 +60,9 @@
     "subject": "incident",
     "when": [
       "incident.kind === 'peace'",
-      "incident.knows('capitulation') && incident.capitulation === true",
-      "incident.knows('initiator') && incident.initiator.knows('name')",
-      "incident.knows('target') && incident.target.knows('name')",
+      "incident.capitulation === true",
+      "incident.initiator.knows('name')",
+      "incident.target.knows('name')",
       "incident.initiator.major && incident.target.major"
     ],
     "values": {
@@ -78,9 +78,9 @@
     "subject": "incident",
     "when": [
       "incident.kind === 'peace'",
-      "incident.knows('initiator') && incident.initiator.knows('name')",
-      "incident.knows('target') && incident.target.knows('name')",
-      "incident.knows('concessions') && Array.isArray(incident.concessions) && incident.concessions.length > 0"
+      "incident.initiator.knows('name')",
+      "incident.target.knows('name')",
+      "Array.isArray(incident.concessions) && incident.concessions.length > 0"
     ],
     "values": { "concessions": "incident.concessions.join(', ')", "count": "incident.concessions.length", "role": "incident.knows('role') ? incident.role : null", "initiator": "incident.initiator.name", "target": "incident.target.name" },
     "tier": "role !== null && role !== 'none' ? 'major' : 'routine'",
@@ -91,9 +91,9 @@
     "subject": "incident",
     "when": [
       "incident.kind === 'peace'",
-      "incident.knows('role') && (incident.role === 'initiator' || incident.role === 'target')",
-      "incident.knows('initiator') && incident.initiator.knows('name')",
-      "incident.knows('target') && incident.target.knows('name')",
+      "(incident.role === 'initiator' || incident.role === 'target')",
+      "incident.initiator.knows('name')",
+      "incident.target.knows('name')",
       "self.knows('wars') && self.wars.some(p => p.major && p.knows('name') && p.id !== (incident.role === 'initiator' ? incident.target.id : incident.initiator.id))"
     ],
     "values": {
@@ -151,9 +151,9 @@
     "subject": "incident",
     "when": [
       "incident.kind === 'war'",
-      "incident.knows('role') && incident.role === 'none'",
-      "incident.knows('initiator') && incident.initiator.knows('major') && incident.initiator.major === true",
-      "incident.knows('target') && incident.target.knows('major') && incident.target.major === true",
+      "incident.role === 'none'",
+      "incident.initiator.major === true",
+      "incident.target.major === true",
       "incident.initiator.knows('name') && incident.target.knows('name')",
       "incident.initiator.knows('at') && incident.target.knows('at') && turn - incident.turn < long",
       "incident.initiator.at(turn - incident.turn + 1).relation(self).friend === true && incident.target.at(turn - incident.turn + 1).relation(self).friend === true"
@@ -188,9 +188,9 @@
     "subject": "incident",
     "when": [
       "incident.kind == 'war'",
-      "incident.knows('role') && incident.role != 'none'",
-      "incident.knows('initiator') && incident.initiator.knows('name')",
-      "incident.knows('target') && incident.target.knows('name')"
+      "incident.role != 'none'",
+      "incident.initiator.knows('name')",
+      "incident.target.knows('name')"
     ],
     "values": { "role": "incident.role", "reason": "incident.knows('reason') ? incident.reason : null", "initiator": "incident.initiator.name", "target": "incident.target.name", "hostileAllies": "(() => { const names = incident.hostileCityStateAllies.filter(entry => entry.player.knows('name')).map(entry => entry.player.name); return names.length ? ' Hostile city-state allies: ' + names.join(', ') + '.' : ''; })()" },
     "tier": "role == 'target' ? 'crisis' : 'major'",
@@ -289,7 +289,7 @@
   {
     "id": "incoming-war-wave",
     "subject": "incident",
-    "when": "incident.is.incomingMajorDeclaration && incident.knows('initiator') && incident.initiator.knows('name')",
+    "when": "incident.is.incomingMajorDeclaration && incident.initiator.knows('name')",
     "group": {
       "by": "incident.turn",
       "min": 3

@@ -6,8 +6,7 @@
     "event": "DealMade",
     "when": [
       "event.knows('deal') && event.deal.knows('kind') && event.deal.kind === 'comprehensive-agreement'",
-      "event.knows('fromPlayer') && event.knows('toPlayer')",
-      "event.fromPlayer.self ? event.toPlayer.knows('name') : event.fromPlayer.knows('name')"
+      "event.is.dealPartnerNamed"
     ],
     "values": {
       "partner": "event.fromPlayer.self ? event.toPlayer.name : event.fromPlayer.name",
@@ -26,8 +25,7 @@
     "event": "DealMade",
     "when": [
       "event.knows('deal') && event.deal.knows('kind') && event.deal.kind === 'embassy-agreement'",
-      "event.knows('fromPlayer') && event.knows('toPlayer')",
-      "event.fromPlayer.self ? event.toPlayer.knows('name') : event.fromPlayer.knows('name')"
+      "event.is.dealPartnerNamed"
     ],
     "values": {
       "partner": "event.fromPlayer.self ? event.toPlayer.name : event.fromPlayer.name",
@@ -47,8 +45,7 @@
     "event": "DealMade",
     "when": [
       "event.knows('deal') && event.deal.knows('kind') && event.deal.kind === 'map-deal'",
-      "event.knows('fromPlayer') && event.knows('toPlayer')",
-      "event.fromPlayer.self ? event.toPlayer.knows('name') : event.fromPlayer.knows('name')"
+      "event.is.dealPartnerNamed"
     ],
     "values": {
       "partner": "event.fromPlayer.self ? event.toPlayer.name : event.fromPlayer.name",
@@ -68,8 +65,7 @@
     "event": "DealMade",
     "when": [
       "event.knows('deal') && event.deal.knows('kind') && event.deal.kind === 'other-diplomatic-deal'",
-      "event.knows('fromPlayer') && event.knows('toPlayer')",
-      "event.fromPlayer.self ? event.toPlayer.knows('name') : event.fromPlayer.knows('name')"
+      "event.is.dealPartnerNamed"
     ],
     "values": {
       "partner": "event.fromPlayer.self ? event.toPlayer.name : event.fromPlayer.name",
@@ -88,8 +84,7 @@
     "event": "DealMade",
     "when": [
       "event.knows('deal') && event.deal.knows('kind') && event.deal.kind === 'research-agreement'",
-      "event.knows('fromPlayer') && event.knows('toPlayer')",
-      "event.fromPlayer.self ? event.toPlayer.knows('name') : event.fromPlayer.knows('name')"
+      "event.is.dealPartnerNamed"
     ],
     "values": {
       "partner": "event.fromPlayer.self ? event.toPlayer.name : event.fromPlayer.name",
@@ -108,8 +103,7 @@
     "event": "DealMade",
     "when": [
       "event.knows('deal') && event.deal.knows('kind') && event.deal.kind === 'technology-deal'",
-      "event.knows('fromPlayer') && event.knows('toPlayer')",
-      "event.fromPlayer.self ? event.toPlayer.knows('name') : event.fromPlayer.knows('name')"
+      "event.is.dealPartnerNamed"
     ],
     "values": {
       "partner": "event.fromPlayer.self ? event.toPlayer.name : event.fromPlayer.name",

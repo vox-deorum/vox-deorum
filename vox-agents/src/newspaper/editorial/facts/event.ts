@@ -191,11 +191,6 @@ export function buildEventFacts(event: NewspaperEvent, context: FactBuildContext
     const city = resolveEventCity(event, main, context);
     if (city) fields.city = fact(reference('city', city.subjectID), [...sources, ...rowSources(city)]);
   }
-  // MCP decides importance from the first recorded building list at or after the completion.
-  if (type === 'CityConstructed') {
-    const important = recordedBoolean(values.IsImportant);
-    if (important !== undefined) fields.importantBuilding = fact(important, sources);
-  }
   const plot = eventPlot(event);
   if (plot) {
     fields.plot = fact({ x: fact(plot.x, sources), y: fact(plot.y, sources) }, sources);

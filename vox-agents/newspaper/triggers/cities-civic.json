@@ -89,7 +89,6 @@
     "when": [
       "city.foreign === true && city.knows('name')",
       "city.knows('owner') && city.owner.knows('id') && city.owner.knows('name')",
-      "city.is.nearby",
       "city.knows('population') && Number.isFinite(city.population)",
       "city.knows('before') && city.before.knows('population') && Number.isFinite(city.before.population)",
       "city.before.knows('owner') && city.before.owner.knows('id') && city.before.owner.id === city.owner.id",
@@ -123,9 +122,7 @@
     "subject": "event",
     "event": "CityBeginsWLTKD",
     "when": [
-      "event.knows('player') && event.player.knows('id') && event.player.self === true",
-      "event.knows('city') && event.city.knows('id') && event.city.knows('name') && event.city.knows('owner') && event.city.owner.knows('id') && event.city.own === true",
-      "event.player.id === event.city.owner.id"
+      "event.is.ourCity"
     ],
     "tier": "filler",
     "adjust": "event.city.stake.place",
@@ -136,10 +133,7 @@
     "subject": "event",
     "event": "CityBeginsWLTKD",
     "when": [
-      "event.knows('player') && event.player.knows('id') && event.player.knows('name') && event.player.self === false",
-      "event.knows('city') && event.city.knows('id') && event.city.knows('name') && event.city.knows('owner') && event.city.owner.knows('id') && event.city.owner.knows('name') && event.city.foreign === true",
-      "event.player.id === event.city.owner.id",
-      "event.city.is.nearby"
+      "event.is.theirCity"
     ],
     "values": {
       "owner": "event.city.owner.name"

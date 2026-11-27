@@ -23,16 +23,20 @@ function cityRow(id: number, turn: number, x: number, owner: number, name: strin
   };
 }
 
-/** Record one witnessed building completion at the cutoff with explicit purchase flags and importance. */
+/** Record the city's important-building list, leaving it unrecorded when importance is not given. */
+function importance(building: string, important?: boolean): NewspaperSnapshot['values'] {
+  return important === undefined ? {} : { ImportantBuildings: important ? [building] : [] };
+}
+
+/** Record one witnessed building completion at the cutoff with explicit purchase flags. */
 function constructed(id: number, cityID: number, owner: number, x: number, building: string,
-  options: { purchase?: Purchase; createdAt?: number; important?: boolean } = {}): NewspaperEvent {
+  options: { purchase?: Purchase; createdAt?: number } = {}): NewspaperEvent {
   const purchase = options.purchase ?? {};
   return {
     type: 'CityConstructed',
     values: {
       OwnerID: owner, CityID: cityID, CityX: x, CityY: 2, Building: building,
       IsGoldPurchase: purchase.gold ?? false, IsFaithPurchase: purchase.faith ?? false,
-      ...(options.important === undefined ? {} : { IsImportant: options.important }),
     },
     source: { table: 'GameEvents', id, turn: 10, createdAt: options.createdAt ?? 10_001 },
   };
@@ -93,10 +97,13 @@ function own(building: string,
   options: { wonders?: string[]; purchase?: Purchase; createdAt?: number; events?: NewspaperEvent[];
     important?: boolean } = {}): NewspaperEvidence {
   return fixture(
-    [cityRow(10, 10, 10, 0, 'Tours', options.wonders === undefined ? {} : { Wonders: options.wonders })],
+    [cityRow(10, 10, 10, 0, 'Tours', {
+      ...importance(building, options.important),
+      ...(options.wonders === undefined ? {} : { Wonders: options.wonders }),
+    })],
     [cityRow(10, 5, 10, 0, 'Tours')],
     [constructed(100, 10, 0, 10, building, {
-      purchase: options.purchase, createdAt: options.createdAt, important: options.important,
+      purchase: options.purchase, createdAt: options.createdAt,
     }), ...(options.events ?? [])],
   );
 }
@@ -105,11 +112,11 @@ function own(building: string,
 function investing(building: string, activation: boolean | number = true,
   completed?: string): NewspaperEvidence {
   return fixture(
-    [cityRow(10, 10, 10, 0, 'Tours')],
+    [cityRow(10, 10, 10, 0, 'Tours', completed === undefined ? {} : importance(completed, true))],
     [cityRow(10, 5, 10, 0, 'Tours')],
     [
       invested(100, 10, 0, 10, building, activation),
-      ...(completed === undefined ? [] : [constructed(101, 10, 0, 10, completed, { important: true })]),
+      ...(completed === undefined ? [] : [constructed(101, 10, 0, 10, completed)]),
     ],
   );
 }
@@ -144,10 +151,10 @@ function foreign(building: string, x = 12, purchase: Purchase = {}, important?: 
   return fixture(
     [
       cityRow(10, 10, 10, 0, 'Tours'),
-      cityRow(20, 10, x, 1, 'Recife', values),
+      cityRow(20, 10, x, 1, 'Recife', { ...importance(building, important), ...values }),
     ],
     [cityRow(10, 5, 10, 0, 'Tours'), cityRow(20, 5, x, 1, 'Recife')],
-    [constructed(100, 20, 1, x, building, { purchase, important })],
+    [constructed(100, 20, 1, x, building, { purchase })],
   );
 }
 
@@ -362,10 +369,10 @@ describe('stock building news', () => {
     const { audit } = await check(fixture(
       [
         cityRow(10, 10, 10, 0, 'Tours'),
-        cityRow(20, 10, 12, 1, 'Recife'),
+        cityRow(20, 10, 12, 1, 'Recife', importance('Library', true)),
       ],
       [cityRow(10, 5, 10, 0, 'Tours'), cityRow(20, 5, 12, 1, 'Recife')],
-      [founded(90, 1, 12), constructed(100, 20, 1, 12, 'Library', { createdAt: 10_007, important: true })],
+      [founded(90, 1, 12), constructed(100, 20, 1, 12, 'Library', { createdAt: 10_007 })],
     ));
     expect(subject(audit('foreign-building-completed'))).toMatchObject({ outcome: 'false' });
   });

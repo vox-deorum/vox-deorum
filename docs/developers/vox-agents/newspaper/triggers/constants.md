@@ -59,7 +59,7 @@ Names must match the text in the recording. If the recorded text uses a differen
 
 A shortcut is an expression attached to the fact it reads. A historical fact uses the historical snapshot, so `city.before.is.conquered` tests the earlier occupation and puppet flags. Globals such as `cities` and `turn` still describe the current check. A shortcut is hidden if it needs an unavailable fact; use `city.is.knows('starving')` to test whether that shortcut can be evaluated.
 
-Several rules can share an event shortcut. The stock building rules read `event.is.ourBuilding` for a completion in one of our cities and `event.is.regularBuilding` for a building that is neither a defense, a wonder nor a courthouse integration.
+Several rules can share an event shortcut. The stock building rules read `event.is.ourCity` for a completion in one of our cities, `event.is.theirCity` for one in a foreign city owned by the event's player, and `event.is.regularBuilding` for a building that is neither a defense, a wonder nor a courthouse integration. `event.is.notableBuilding` accepts a building on the city's `importantBuildings` list and any building in the Ancient Era.
 
 | Shortcut | Test |
 | --- | --- |
@@ -68,13 +68,22 @@ Several rules can share an event shortcut. The stock building rules read `event.
 | `city.is.starving` | Losing food, with fewer than `recent` turns of reserves at the current rate |
 | `city.is.besieged` | Damaged while its owner is at war |
 | `city.is.conquered` | Occupied or a puppet |
+| `city.is.convertedToMajority` | A recorded conversion to the city's current majority religion |
 | `city.is.followsAnotherReligion` | An own city whose named majority religion differs from our founded religion |
 | `player.is.neighbor`, `player.is.nearby` | Another player within the corresponding distance |
+| `player.is.foreignMajor` | Another major civilization |
+| `player.is.recentQuest` | A city-state quest observed this turn or the previous turn |
 | `player.is.rival` | Another major civilization that is neither our friend nor our ally |
 | `player.is.alliedCityState`, `player.is.friendlyCityState` | Our city-state ally, or a city-state friend with a known alliance status who is not our ally |
 | `player.is.hasFoundedReligion`, `player.is.hasMajorityReligion` | The corresponding religion name is readable and nonempty |
+| `event.is.ourCity`, `event.is.theirCity` | A completion in one of our cities, or in a foreign city owned by the event's player |
+| `event.is.dealPartnerNamed` | A deal whose foreign partner has a readable name |
+| `event.is.techGain` | A recorded technology gain not covered by a deal |
+| `event.is.notableBuilding` | A building on the city's important list, or any building in the Ancient Era |
 | `pair.is.foreignWar` | A war between two other major civilizations |
 | `incident.is.incomingMajorDeclaration` | A direct declaration by an identified major civilization targeting the receiver |
+
+Proximity shortcuts remain where distance is the story, such as a near and far pair like a captured capital or an enemy wonder, or domestic news about a distant colony. Foreign stories otherwise rank distance through [place and relation stakes](#stakes) instead of requiring a distance band.
 
 At Standard speed, a city losing two food per turn with 10 stored is just outside `city.is.starving`: the reserve lasts exactly five turns. With nine stored it qualifies.
 
@@ -94,17 +103,22 @@ To include a modded civilization, replace the whole membership list in an overla
 
 A stake is a named expression that returns finite points from readable facts. A rule opts in by reading it in an [adjustment](overview.md#tiers-adjustments-and-stakes), for example `event.stake.building`. A subject has a `stake` view when the catalogue defines stakes for that subject type. Like shortcuts, stakes use the snapshot of the subject they are read from; globals still describe the current check.
 
+Spies and diplomats add points through the intel stakes. They do not unlock facts.
+
 | Stock stake | What changes the score |
 | --- | --- |
-| `player.stake.relation` | For another player, combines distance, war, friendship or a pact, a denouncement in either direction, and a vassal or master tie. Allied city-states get a bonus; other city-states get a penalty. The result stays between -15 and 20; the receiver scores 0. |
+| `player.stake.relation` | For another player, combines distance, war, friendship or a pact, a denouncement in either direction, and a vassal or master tie. Allied city-states get a bonus; other city-states get a penalty. Adds 5 when our diplomat is at their capital. The result stays between -15 and 20; the receiver scores 0. |
 | `pair.stake.relation` | Uses the other player's relationship score if the receiver is in the pair; otherwise uses the higher of the two scores. |
-| `player.stake.front` | For a known opponent at war with the receiver, weighs distance, the magnitude of the war score, and war weariness. A city-state front gets a penalty in place of distance points. |
+| `player.stake.front` | For a known opponent at war with the receiver, weighs distance, the magnitude of the war score, and war weariness. A city-state front gets a penalty in place of distance points. Adds `player.stake.spy`. |
+| `player.stake.spy` | For another player, 5 when our spy is in any of their cities. Added into `player.stake.front`. |
 | `player.stake.war` | For the receiver, adds the scores of known major fronts and 4 points for each major front after the first, within -10 to 20. Scores -10 when all known opponents are city-states. |
-| `city.stake.place` | Adds 8 points for the receiver's capital and 4 for an own city at least `largeCity` in size. A foreign city uses the same distance scale as an event. |
-| `event.stake.place` | Adds 8, 5 or 2 points at `adjacent`, `neighboring` or `nearby` distance from the receiver's nearest city. Beyond `regional`, subtracts 8; between `nearby` and `regional`, adds 0. Needs a readable distance. |
+| `city.stake.place` | Adds 8 points for the receiver's capital and 4 for an own city at least `largeCity` in size. A foreign city uses the same distance scale as an event, plus its `city.stake.intel`. |
+| `city.stake.intel` | For a foreign city, 5 when our spy is there and 3 when our diplomat is at the owner's capital. Added into `city.stake.place`. |
+| `event.stake.place` | Adds 8, 5 or 2 points at `adjacent`, `neighboring` or `nearby` distance from the receiver's nearest city. Beyond `regional`, subtracts 8; between `nearby` and `regional`, adds 0. Adds the event city's intel through `event.stake.intel`. Needs a readable distance. |
+| `event.stake.intel` | Uses the event city's `city.stake.intel`; 0 without a linked city. |
 | `event.stake.building` | Adds 15 for a listed defense while at war, plus 5 if the city is on the frontier. Subtracts 15 for listed early buildings in the Industrial Era or later. |
 
-A stake can handle missing inputs itself. For example, the relationship stake assigns 0 proximity points when distance is unavailable. If a stake directly reads a hidden fact, that read is hidden; `event.stake.knows('place')` checks whether the place calculation can read what it needs.
+A spy brings more city and military stories about that civilization, and a diplomat brings more city and diplomatic stories. A stake can handle missing inputs itself. For example, the relationship stake assigns 0 proximity points when distance is unavailable. If a stake directly reads a hidden fact, that read is hidden; `event.stake.knows('place')` checks whether the place calculation can read what it needs.
 
 ## Terms
 

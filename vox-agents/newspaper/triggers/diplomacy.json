@@ -3,7 +3,7 @@
     "id": "becomes-vassal",
     "subject": "player",
     "when": [
-      "!player.self && player.knows('major') && player.major === true",
+      "player.is.foreignMajor",
       "player.knows('name')",
       "self.relation(player).knows('vassalOf')",
       "self.relation(player).vassalOf === true",
@@ -54,7 +54,7 @@
     "id": "denounced-by-major",
     "subject": "player",
     "when": [
-      "!player.self && player.knows('major') && player.major === true",
+      "player.is.foreignMajor",
       "player.knows('name')",
       "self.relation(player).knows('denouncedByThem')",
       "self.relation(player).denouncedByThem === true"
@@ -71,7 +71,6 @@
     "subject": "event",
     "event": "TeamMeet",
     "when": [
-      "event.knows('currentTeamId') && event.knows('otherTeamId')",
       "event.currentTeamId != event.otherTeamId",
       "self.knows('teamId')",
       "event.currentTeamId == self.teamId || event.otherTeamId == self.teamId",
@@ -162,7 +161,7 @@
     "id": "gains-vassal",
     "subject": "player",
     "when": [
-      "!player.self && player.knows('major') && player.major === true",
+      "player.is.foreignMajor",
       "player.knows('name')",
       "self.relation(player).knows('masterOf')",
       "self.relation(player).masterOf === true",
@@ -179,9 +178,9 @@
     "id": "loses-vassal",
     "subject": "player",
     "when": [
-      "!player.self && player.knows('major') && player.major === true",
+      "player.is.foreignMajor",
       "player.knows('name')",
-      "player.knows('friend') && self.knows('before')",
+      "self.knows('before')",
       "(() => { const now = self.relation(player); const before = self.before.relation(player); return now.vassalOf === false && now.masterOf === false && before.masterOf === true && !now.coveredByAgreement('masterOf', before); })()"
     ],
     "values": {
@@ -196,7 +195,7 @@
     "subject": "player",
     "window": "recent",
     "when": [
-      "!player.self && player.knows('major') && player.major === true",
+      "player.is.foreignMajor",
       "player.knows('name')",
       "self.relation(player).knows('denouncedThem') && self.relation(player).denouncedThem === true",
       "self.relation(player).knows('denouncedByThem') && self.relation(player).denouncedByThem === true",
@@ -217,7 +216,7 @@
     "subject": "player",
     "window": "recent",
     "when": [
-      "!player.self && player.knows('major') && player.major === true",
+      "player.is.foreignMajor",
       "player.knows('name')",
       "self.knows('before')",
       "self.relation(player).knows('openBordersTo') && self.relation(player).openBordersTo === true",
@@ -238,7 +237,7 @@
     "subject": "player",
     "window": "recent",
     "when": [
-      "!player.self && player.knows('major') && player.major === true",
+      "player.is.foreignMajor",
       "player.knows('name')",
       "self.knows('before')",
       "self.relation(player).knows('openBordersFrom') && self.relation(player).openBordersFrom === true",
@@ -260,9 +259,8 @@
     "subject": "event",
     "event": "DealMade",
     "when": [
-      "event.knows('fromPlayer') && event.knows('toPlayer')",
       "event.fromPlayer.knows('name') && event.toPlayer.knows('name')",
-      "event.knows('tradedItems') && Array.isArray(event.tradedItems)",
+      "Array.isArray(event.tradedItems)",
       "event.tradedItems.some(item => item.knows('itemType') && item.itemType === 'ThirdPartyPeace')",
       "!(event.knows('deal') && event.deal.knows('kind') && event.deal.kind === 'comprehensive-agreement')",
       "!event.tradedItems.some(item => item.knows('itemType') && item.itemType === 'ThirdPartyWar')"
@@ -283,9 +281,8 @@
     "subject": "event",
     "event": "DealMade",
     "when": [
-      "event.knows('fromPlayer') && event.knows('toPlayer')",
       "event.fromPlayer.knows('name') && event.toPlayer.knows('name')",
-      "event.knows('tradedItems') && Array.isArray(event.tradedItems)",
+      "Array.isArray(event.tradedItems)",
       "event.tradedItems.some(item => item.knows('itemType') && item.itemType === 'ThirdPartyWar')",
       "!(event.knows('deal') && event.deal.knows('kind') && event.deal.kind === 'comprehensive-agreement')"
     ],
@@ -303,9 +300,9 @@
     "id": "vassalage-ends",
     "subject": "player",
     "when": [
-      "!player.self && player.knows('major') && player.major === true",
+      "player.is.foreignMajor",
       "player.knows('name')",
-      "player.knows('friend') && self.knows('before')",
+      "self.knows('before')",
       "(() => { const now = self.relation(player); const before = self.before.relation(player); return now.vassalOf === false && now.masterOf === false && before.vassalOf === true && !now.coveredByAgreement('vassalOf', before); })()"
     ],
     "values": {
@@ -318,8 +315,7 @@
     "id": "we-denounce-major",
     "subject": "player",
     "when": [
-      "!player.self",
-      "player.knows('major') && player.major === true",
+      "player.is.foreignMajor",
       "player.knows('name')",
       "self.knows('before')",
       "self.relation(player).knows('denouncedThem') && self.relation(player).denouncedThem === true",

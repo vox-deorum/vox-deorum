@@ -81,9 +81,9 @@
         "voice": "pamphlet",
         "stance": "local",
         "genre": "editorial",
-        "headline": "Another Burden on {{ours}}!",
+        "headline": "{{player}} at the Gates of {{ours}}!",
         "body": [
-          "Look at the map, {{terms.civic.people}}! {{city}} has been founded {{distance}} from our gates. Who pays for this expansion? We do! The {{terms.civic.government}} spends our gold on a far-off outpost while our own streets crumble. Why must {{ours}} fund a dream we will never see? Stop this waste now!"
+          "Look at the map, {{terms.civic.people}}! {{player}} has planted {{city}} just {{distance}} from {{ours}}. Their settlers are already pacing out fields we have farmed for years. Who will guard our pastures when their herds cross the line? The {{terms.civic.government}} must answer before the next boundary stone is moved!"
         ]
       },
       {

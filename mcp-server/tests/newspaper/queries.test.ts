@@ -4,7 +4,7 @@ import type { KnowledgeDatabase } from '../../src/knowledge/schema/base.js';
 import { queryNewspaperEvidence } from '../../src/newspaper/queries.js';
 import { newspaperEvidenceRequestSchema, newspaperEvidenceSchema } from '../../src/newspaper/evidence.js';
 import { readEvents, readSnapshotRange, readSnapshotsAtCutoff } from '../../src/knowledge/history.js';
-import { createEvidenceDatabase, seedEvidence, summary, event, city } from './fixtures.js';
+import { createEvidenceDatabase, seedEvidence, summary, event } from './fixtures.js';
 
 const request = { receiverPlayerID: 0, previousCheckTurn: 5, cutoffTurn: 10, comparisonRange: { fromTurn: 5, toTurn: 10 } };
 let db: Kysely<KnowledgeDatabase>;
@@ -91,7 +91,7 @@ describe('historical evidence queries', () => {
     expect(await queryNewspaperEvidence(db, request)).toEqual(before);
   });
 
-  it('should keep the original diplomat gate for national facts older than the window', async () => {
+  it('should read full national facts for a visible player older than the window', async () => {
     await db.deleteFrom('PlayerSummaries').where('Key', '=', 1).execute();
     await summary(db, 100, 0, 2, 2, { DiplomatPoints: {} });
     await summary(db, 101, 1, 2, 1, { CulturePerTurn: 4, PolicyBranches: { Tradition: ['A'] } });
@@ -99,7 +99,7 @@ describe('historical evidence queries', () => {
     const stale = result.players.find(row => row.subjectID === 1)!;
     expect(stale.source.turn).toBe(2);
     expect(stale.values.CulturePerTurn).toBe(4);
-    expect(stale.values.PolicyBranches).toEqual({ Tradition: 1 });
+    expect(stale.values.PolicyBranches).toEqual({ Tradition: ['A'] });
   });
 
   it('should retire a razed city using coordinates even when its event precedes the requested event window', async () => {
@@ -196,7 +196,7 @@ describe('historical evidence queries', () => {
     expect((await readEvents(db, { FromTurn: 9, ToTurn: 10, PlayerID: 0 })).map(row => row.ID)).toEqual([103, 106]);
   });
 
-  it('should return own trade values, public culture, basic city facts and original source IDs', async () => {
+  it('should return own trade values, public culture, full city facts and original source IDs', async () => {
     await db.updateTable('PlayerSummaries').set({ Spies: JSON.stringify({
       Envoy: { Role: 'Diplomat', State: 'Schmoozing', Location: 'Port (Civ1)', Network: 200 }
     }) }).where('ID', '=', 5).execute();
@@ -206,9 +206,8 @@ describe('historical evidence queries', () => {
     expect(result.players[0].values).toHaveProperty('FoundedReligion', null);
     expect(result.players[1].values).toMatchObject({ CulturePerTurn: 9, TourismPerTurn: 0, PolicyBranches: { Tradition: ['A', 'B'] } });
     expect(result.players[1].values).not.toHaveProperty('Gold');
-    expect(result.comparisons.players.find(row => row.subjectID === 1)?.values.PolicyBranches).toEqual({ Tradition: 2 });
-    expect(result.cities[0]).toMatchObject({ subjectID: 42, source: { id: 21 }, values: { Population: 0, HitPoints: 0, MajorityReligion: null, IsPuppet: 0, IsCapital: 1, Wonders: ['Beacon'] } });
-    expect(result.cities[0].values).not.toHaveProperty('FoodPerTurn');
+    expect(result.comparisons.players.find(row => row.subjectID === 1)?.values.PolicyBranches).toEqual({ Tradition: ['A', 'B'] });
+    expect(result.cities[0]).toMatchObject({ subjectID: 42, source: { id: 21 }, values: { Population: 0, HitPoints: 0, MajorityReligion: null, IsPuppet: 0, IsCapital: 1, Wonders: ['Beacon'], FoodPerTurn: 999 } });
   });
 
   it('should omit unknown historical access and avoid retrospective contact grants', async () => {
@@ -244,7 +243,6 @@ describe('historical evidence queries', () => {
     await summary(db, 90, 1, 30, 2, { CulturePerTurn: 1000, DiplomatPoints: { Player2: 900 } });
     await event(db, 200, 30, 'TeamSetEra', { TeamID: 0, NewEra: 6 });
     await db.updateTable('PlayerSummaries').set({ Gold: 100000, Spies: JSON.stringify({ Secret: { Location: 'Unknown' } }) }).where('Key', '=', 1).execute();
-    await db.updateTable('CityInformations').set({ FoodPerTurn: 100000 }).execute();
     expect(await queryNewspaperEvidence(db, request)).toEqual(before);
   });
 
@@ -329,49 +327,8 @@ describe('historical evidence queries', () => {
   });
 });
 
-describe('newspaper construction significance', () => {
-  it('should mark a witnessed foreign construction without exposing the recorded building list', async () => {
-    await db.updateTable('CityInformations').set({ ImportantBuildings: JSON.stringify(['Granary']) }).where('ID', '=', 21).execute();
-    await city(db, 22, 11, { ImportantBuildings: ['Granary'] });
-    await event(db, 201, 11, 'CityConstructed', { OwnerID: 1, CityID: 42, BuildingType: 'Granary' });
-
-    const evidence = await queryNewspaperEvidence(db, { ...request, cutoffTurn: 11 });
-    const constructed = evidence.events.find(row => row.source.id === 201)!;
-    expect(constructed.values).toMatchObject({ Building: 'Granary', CityX: 0, CityY: 4, IsImportant: true });
-    expect(evidence.cities.find(row => row.subjectID === 42)?.values).not.toHaveProperty('ImportantBuildings');
-  });
-
-  it('should judge a building from the first row after the event rather than the cutoff row', async () => {
-    await city(db, 20, 6);
-    await city(db, 22, 7, { ImportantBuildings: ['Arena'] });
-    await db.updateTable('CityInformations').set({ ImportantBuildings: JSON.stringify(['Circus']) }).where('ID', '=', 21).execute();
-    await event(db, 201, 7, 'CityConstructed', { OwnerID: 1, CityID: 42, BuildingType: 'Arena' });
-
-    const constructed = (await queryNewspaperEvidence(db, request)).events.find(row => row.source.id === 201)!;
-    expect(constructed.values).toMatchObject({ Building: 'Arena', IsImportant: true });
-  });
-
-  it('should mark a building absent from the recorded list as not important', async () => {
-    await city(db, 20, 6);
-    await city(db, 22, 7, { ImportantBuildings: ['Arena'] });
-    await event(db, 201, 7, 'CityConstructed', { OwnerID: 1, CityID: 42, BuildingType: 'Temple' });
-
-    const constructed = (await queryNewspaperEvidence(db, request)).events.find(row => row.source.id === 201)!;
-    expect(constructed.values).toMatchObject({ Building: 'Temple', IsImportant: false });
-  });
-
-  it('should read an empty Lua list as a recorded list that omits the building', async () => {
-    await city(db, 20, 6);
-    await city(db, 22, 7);
-    await db.updateTable('CityInformations').set({ ImportantBuildings: '{}' as never }).where('ID', '=', 22).execute();
-    await db.updateTable('CityInformations').set({ ImportantBuildings: JSON.stringify(['Temple']) }).where('ID', '=', 21).execute();
-    await event(db, 201, 7, 'CityConstructed', { OwnerID: 1, CityID: 42, BuildingType: 'Temple' });
-
-    const constructed = (await queryNewspaperEvidence(db, request)).events.find(row => row.source.id === 201)!;
-    expect(constructed.values).toMatchObject({ Building: 'Temple', IsImportant: false });
-  });
-
-  it('should leave significance unset without a city row at or after the event', async () => {
+describe('newspaper construction events', () => {
+  it('should publish a witnessed construction without a significance marker', async () => {
     await event(db, 201, 10, 'CityConstructed', { OwnerID: 1, CityID: 42, BuildingType: 'Granary' });
     await db.updateTable('GameEvents').set({ CreatedAt: 4010 }).where('ID', '=', 201).execute();
 

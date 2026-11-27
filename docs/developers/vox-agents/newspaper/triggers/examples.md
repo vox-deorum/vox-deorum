@@ -27,22 +27,22 @@ Run a [fresh replay](../replay.md#iterate-on-a-rule-or-overlay) with the overlay
 
 ## Cities and borders
 
-Domestic and foreign rules share the topical `cities-*.json` files in [triggers/](../../../../../vox-agents/newspaper/triggers/). Many foreign stories share [foreign-cities.json](../../../../../vox-agents/newspaper/templates/foreign-cities.json). Use [city facts](facts.md#city) to distinguish basic snapshots, detailed readings, and linked events. Population rankings such as `capital-outgrown` use own cities.
+Domestic and foreign rules share the topical `cities-*.json` files in [triggers/](../../../../../vox-agents/newspaper/triggers/). Many foreign stories share [foreign-cities.json](../../../../../vox-agents/newspaper/templates/foreign-cities.json). Use [city facts](facts.md#city) to read the full record of any visible city, foreign or own, and to link its events. Population rankings such as `capital-outgrown` use own cities.
 
 | Rule | What to borrow |
 | --- | --- |
-| `city-puppet-annexed`, `neighbor-puppet-annexed` | Compare two snapshots of an own city or a foreign city within `neighboring`. The city goes from puppet to occupied under the same owner. |
+| `city-puppet-annexed`, `neighbor-puppet-annexed` | Compare two snapshots of an own city or a foreign city. The city goes from puppet to occupied under the same owner. |
 | `city-courthouse-completed`, `foreign-city-courthouse-completed` | Use a witnessed Courthouse or Satrap's Court completion or purchase in an occupied, non-puppet city. This ends the occupation unhappiness penalty; the game's occupation flag can remain set. |
-| `city-celebration-begins`, `foreign-city-celebration-begins` | Use the witnessed `CityBeginsWLTKD` event and a readable city linked to its owner. A nearby foreign celebration also needs a matching player and city owner. |
+| `city-celebration-begins`, `foreign-city-celebration-begins` | Use the witnessed `CityBeginsWLTKD` event and a readable city linked to its owner. A foreign celebration also needs a matching player and city owner. |
 | `forward-settle` | Use `PlayerCityFounded` or `UnitCityFounded`, and prefer `PlayerCityFounded` when both report the same settlement. The rule covers rival settlements within `adjacent` of our nearest city, so `foreign-city-founded` leaves them alone. Urgency stays at two tiles or less. |
-| `foreign-city-founded` | Report any other eligible local founding within `nearby` (15 tiles). Require a readable city name and owner, and skip a `UnitCityFounded` duplicate of a `PlayerCityFounded` event. |
-| `foreign-building-investment-made` | Require the witnessed `CityInvestedBuilding` event for a nearby foreign city with a readable name. Name the building and owner, and suppress the report for a later completion or purchase with the same recorded building name in the reporting window. |
+| `foreign-city-founded` | Report any other eligible foreign founding within the reporting period. Require a readable city name and owner, and skip a `UnitCityFounded` duplicate of a `PlayerCityFounded` event. Use `event.stake.place` so a closer founding scores higher. |
+| `foreign-building-investment-made` | Require the witnessed `CityInvestedBuilding` event for a foreign city with a readable name. Name the building and owner, and suppress the report for a later completion or purchase with the same recorded building name in the reporting window. |
 | `foreign-city-growth-milestone`, `foreign-city-defense-completed` | Read growth from same-owner population snapshots and defenses from a witnessed `CityConstructed` completion, including a purchase. |
 | `besieged-and-starving` | Combine the `besieged` and `starving` shortcuts for an own city. Half damage makes it urgent; default `rearm` waits for a check where the conditions are false. |
-| `neighbors-convert` | Group neighboring foreign cities by their new majority religion. Require three matches in the `recent` window and raise the score as the group grows. |
+| `neighbors-convert` | Group foreign cities by their new majority religion. Require three matches in the `recent` window and raise the score as the group grows. |
 | `foreign-city-hardship`, `foreign-city-raises-settlers` | Hardship runs at any distance with a readable leading cause (`famine` or `pillaged`) or the `starving` shortcut. Settler training needs the linked event, a population drop, and positive `foodPerTurn`. |
 | `foreign-city-flips`, `foreign-city-liberated`, `foreign-occupied-city-resists` | Report ownership changes from `CityFlipped` and `PlayerLiberated`. When a same-turn capture covers the same transfer, let `nearby-city-captured` print one account instead. Resistance needs occupied status and positive `resistanceTurns`. |
-| `foreign-city-takes-heavy-damage` | Compare nearby non-enemy cities' hit points before and after they cross half damage. The war variant needs a known war involving the owner; damage alone supports the neutral report. |
+| `foreign-city-takes-heavy-damage` | Compare non-enemy foreign cities' hit points before and after they cross half damage. The war variant needs a known war involving the owner; damage alone supports the neutral report. |
 
 ## National affairs
 
@@ -55,7 +55,7 @@ Domestic and foreign rules share the topical `cities-*.json` files in [triggers/
 
 | Rule | What to borrow |
 | --- | --- |
-| `city-state-ally-defects`, `city-state-ally-lost` | Separate a nearby city-state switching from us to a rival from a city-state becoming unallied. The latter requires the explicit no-ally ID in `SetAlly`. See the [city-state triggers](../../../../../vox-agents/newspaper/triggers/city-states.json). |
+| `city-state-ally-defects`, `city-state-ally-lost` | Separate a city-state switching from us to a rival from a city-state becoming unallied. The latter requires the explicit no-ally ID in `SetAlly`. See the [city-state triggers](../../../../../vox-agents/newspaper/triggers/city-states.json). |
 | `city-state-quest-countdown-disappeared` | Compare two readable quest observations. If a deadline still in the future disappears, report the observation without treating it as an outcome. See [quest facts](facts.md#quest-deadlines-and-cultural-influence). |
 | `war-advantage-stalls` | Look for a score of at least 25 in the `long` window, then use `held` to require a continuous stretch of `short` turns within five points of the current score. `repeat: medium` allows a follow-up after 20 Standard turns. |
 | `war-turns-against-us` | Use `pair.other.stake.front` to weigh the opponent's proximity, the war score, and war weariness. |
@@ -94,7 +94,7 @@ From the repository root, add `--config vox-agents/newspaper/probes` to a fresh 
 
 ### A spy's view of a foreign city
 
-`probe-spy-city-profile` needs both a recorded own spy in a foreign city and a positive boredom reading. The spy roster supplies presence; the cause requires city-screen detail through the 500-point access proxy. The story cites the city observation that supplied the cause. See [covert presence and roster points](facts.md#covert-presence-and-roster-points).
+`probe-spy-city-profile` needs both a recorded own spy in a foreign city and a positive boredom reading. The spy roster supplies presence, and the city record supplies the cause. A visible foreign city exposes its detail fields, so the spy adds score rather than access. The story cites the city observation that supplied the cause. See [covert presence and roster points](facts.md#covert-presence-and-roster-points).
 
 ### An inbound diplomat
 
@@ -102,7 +102,7 @@ From the repository root, add `--config vox-agents/newspaper/probes` to a fresh 
 
 ### A foreign policy briefing
 
-`probe-foreign-policies` requires our diplomat abroad and readable policy names. It picks one branch from the latest tier with names, favoring ideologies. Turn and player ID pick one deterministically when several qualify. A specific adoption still needs a readable `PlayerAdoptPolicy` event.
+`probe-foreign-policies` requires our diplomat abroad and readable policy names. A visible major exposes its policy names without the diplomat, so the probe exercises the presence fact alongside the names. It picks one branch from the latest tier with names, favoring ideologies. Turn and player ID pick one deterministically when several qualify. A specific adoption still needs a readable `PlayerAdoptPolicy` event.
 
 ### A retraction after a printed peace
 
