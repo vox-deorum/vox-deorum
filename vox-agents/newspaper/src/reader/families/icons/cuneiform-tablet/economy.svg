@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Decorative wedge sign for economy news: a tally of two corner wedges and three uprights. Not a transcription. -->
+  <path transform="translate(2 7) scale(.95)" d="M0 0L6 -4.6L4.5 0L6 4.6Z"/>
+  <path transform="translate(2 17) scale(.95)" d="M0 0L6 -4.6L4.5 0L6 4.6Z"/>
+  <path transform="translate(11 7) scale(.75)" d="M-2.8 0H2.8L0.95 3.9L0.55 13H-0.55L-0.95 3.9Z"/>
+  <path transform="translate(15.6 7) scale(.75)" d="M-2.8 0H2.8L0.95 3.9L0.55 13H-0.55L-0.95 3.9Z"/>
+  <path transform="translate(20.2 7) scale(.75)" d="M-2.8 0H2.8L0.95 3.9L0.55 13H-0.55L-0.95 3.9Z"/>
+</svg>

@@ -92,7 +92,11 @@ export function renderStory(
   }
   const heading = createElement("h2", "vd-headline");
   heading.id = headingId;
-  if (publicationDesignId === "winged-sun-papyrus" || publicationDesignId === "cracked-oracle-shell") {
+  if (
+    publicationDesignId === "winged-sun-papyrus"
+    || publicationDesignId === "cracked-oracle-shell"
+    || publicationDesignId === "cuneiform-tablet"
+  ) {
     heading.append(renderStoryTopic(item.tags));
   }
   appendInlineNodes(heading, item.headline, item.id, bindReaderAction);

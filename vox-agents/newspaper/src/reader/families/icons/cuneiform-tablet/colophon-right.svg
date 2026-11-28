@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 11">
+  <!-- Closing line of impressions right of the end stamp, like a scribe's colophon. Decorative only. -->
+  <g fill="#ffe1aa" fill-opacity=".7" transform="translate(0 .8)">
+    <path transform="translate(2 1.2) scale(.42)" d="M-2.8 0H2.8L0.95 3.9L0.55 18H-0.55L-0.95 3.9Z"/>
+    <path opacity=".75" transform="translate(5.6 2.4) scale(.38)" d="M-2.8 0H2.8L0.95 3.9L0.55 14H-0.55L-0.95 3.9Z"/>
+    <path transform="translate(9 5.2) scale(.45)" d="M0 0L6 -4.6L4.5 0L6 4.6Z"/>
+    <path transform="translate(14.5 3.6) rotate(-90) scale(.42)" d="M-2.8 0H2.8L0.95 3.9L0.55 23H-0.55L-0.95 3.9Z"/>
+    <path opacity=".55" transform="translate(17.5 8) rotate(-90) scale(.36)" d="M-2.8 0H2.8L0.95 3.9L0.55 14H-0.55L-0.95 3.9Z"/>
+  </g>
+  <g fill="#4b291b">
+    <path transform="translate(2 1.2) scale(.42)" d="M-2.8 0H2.8L0.95 3.9L0.55 18H-0.55L-0.95 3.9Z"/>
+    <path opacity=".75" transform="translate(5.6 2.4) scale(.38)" d="M-2.8 0H2.8L0.95 3.9L0.55 14H-0.55L-0.95 3.9Z"/>
+    <path transform="translate(9 5.2) scale(.45)" d="M0 0L6 -4.6L4.5 0L6 4.6Z"/>
+    <path transform="translate(14.5 3.6) rotate(-90) scale(.42)" d="M-2.8 0H2.8L0.95 3.9L0.55 23H-0.55L-0.95 3.9Z"/>
+    <path opacity=".55" transform="translate(17.5 8) rotate(-90) scale(.36)" d="M-2.8 0H2.8L0.95 3.9L0.55 14H-0.55L-0.95 3.9Z"/>
+  </g>
+</svg>

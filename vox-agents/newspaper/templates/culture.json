@@ -56,11 +56,12 @@
     "variants": [
       {
         "id": "cultural-influence-becomes-influential-outgoing-report",
-        "headline": "Our blue bolt sets the fashion across the border",
+        "headline": "{{terms.civilizationAdjective}} arts find a home in {{rival}}",
         "body": [
-          "Our standing in {{rival}} has reached Influential, at {{percentage}}. A bookbinder near the west gate has taken a second apprentice for the foreign orders, and the carrier who leaves each week now returns with a satchel of letters where his bag went out empty. Our taste, it seems, travels farther than our merchants do."
+          "The cultural reach of {{terms.civilization}} has become influential in {{rival}}. From the cities of {{rival}} to their rural heartlands, {{terms.civilizationAdjective}} ideas are taking root. Our global prestige continues to grow."
         ],
-        "links": []
+        "links": [],
+        "settled": true
       },
       {
         "id": "cultural-influence-becomes-influential-outgoing-notice",
@@ -104,11 +105,12 @@
     "variants": [
       {
         "id": "cultural-influence-loses-influential-incoming-report",
-        "headline": "The dancing master changes steps: our pull slips to {{level}}",
+        "headline": "Influence of {{rival}} declines",
         "body": [
-          "The hold of {{rival}} on our taste has slipped from {{previousLevel}} to {{level}}, down to {{percentage}}. On the mill street a dancing master has put away the foreign measure and brought back the local round. His older pupils grumbled, then found they still remembered the steps."
+          "The cultural hold {{rival}} once held over {{terms.civilization}} has weakened. After being {{previousLevel}}, the foreign influence is now considered {{level}}. The impact of {{rival}}'s artists and thinkers is less apparent in the daily life of {{terms.civic.people}}. Local scholars are monitoring the trend to see if it continues."
         ],
-        "links": []
+        "links": [],
+        "settled": true
       },
       {
         "id": "cultural-influence-loses-influential-incoming-analysis",
@@ -152,11 +154,12 @@
     "variants": [
       {
         "id": "cultural-influence-loses-influential-outgoing-report",
-        "headline": "Our cloth moves back as influence eases to {{level}}",
+        "headline": "Decline in {{terms.civilizationAdjective}} influence abroad",
         "body": [
-          "The clerks have marked our standing in {{rival}} down from {{previousLevel}} to {{level}}, to {{percentage}}. A singing teacher who once sent students abroad now keeps a list of empty benches. The next concert may have to be paid for before it is sung."
+          "{{terms.civilization}} has seen its influence in {{rival}} fall to {{level}}. {{rival}} is becoming less receptive to {{terms.civilizationAdjective}} arts and philosophy. Analysts believe the decline in tourism and mutual trade may have been a cause."
         ],
-        "links": []
+        "links": [],
+        "settled": true
       },
       {
         "id": "cultural-influence-loses-influential-outgoing-analysis",
@@ -200,11 +203,12 @@
     "variants": [
       {
         "id": "cultural-influence-trend-turns-incoming-report",
-        "headline": "Foreign influence over us turns {{trend}}",
+        "headline": "New cultural patterns emerge from {{rival}}",
         "body": [
-          "After a long spell of running {{previousTrend}}, the influence of {{rival}} over our people has turned {{trend}}. The clerks put the share at {{percentage}}, which holds the {{level}} grade. At the sign painter's shop the new order went up on the board before the old one was dry."
+          "Observers have noted a change in how the culture of {{rival}} is spreading through {{terms.civilization}}. The trend has moved from {{previousTrend}} to {{trend}}. Scholars are watching to see if this change will lead to a more significant cultural shift."
         ],
-        "links": []
+        "links": [],
+        "settled": true
       },
       {
         "id": "cultural-influence-trend-turns-incoming-projection",
@@ -252,11 +256,12 @@
     "variants": [
       {
         "id": "cultural-influence-trend-turns-outgoing-report",
-        "headline": "Our influence abroad turns {{trend}}",
+        "headline": "Cultural momentum shifts in {{rival}}",
         "body": [
-          "The tally of our standing in {{rival}} has moved {{trend}} this season, after running {{previousTrend}} before. It now reads {{percentage}}, a grade of {{level}}. A ferryman on the south crossing says passengers now ask about our theatres before they ask about the road, and he keeps a handbill under the seat."
+          "The trend of {{terms.civilizationAdjective}} cultural influence in {{rival}} has changed. It was previously {{previousTrend}}, but it is now {{trend}}. For now, the change marks a pivot in our cultural relationship with {{rival}}."
         ],
-        "links": []
+        "links": [],
+        "settled": true
       },
       {
         "id": "cultural-influence-trend-turns-outgoing-broadcast",
@@ -486,10 +491,11 @@
     "variants": [
       {
         "id": "great-person-died-report",
-        "headline": "The death of {{person}}",
+        "headline": "Passing of {{person}}",
         "body": [
-          "At noon the bells of {{civilization}} sounded for {{person}}, and the harbor put down its ropes. Sailors on the quay stood bareheaded, though none of them could say they had met the person. By evening the name had crossed to the next town on a fisherman's tongue."
-        ]
+          "The world has lost {{person}}, a distinguished figure from {{civilization}}, during a clash with forces from {{killer}} near {{city}}. The news of the death has spread quickly across the land. Friends and colleagues gather to remember the contributions {{person}} made to society. A period of mourning has begun."
+        ],
+        "settled": true
       },
       {
         "id": "great-person-died-obituary",
@@ -732,10 +738,11 @@
     "variants": [
       {
         "id": "tourism-output-leader-changes-report",
-        "headline": "The visitors come to {{civilization}} first",
+        "headline": "{{civilization}} takes the lead in global tourism",
         "body": [
-          "{{civilization}} now heads the visitors' table with {{tourism}} visitors counted, ahead of whoever held the lead last season. Tour groups in the streets are turning people away, and the coach yard fills before the sun is high. Innkeepers are already talking about next year."
-        ]
+          "The latest data shows {{civilization}} as the leader in tourism output, recording {{tourism}} per turn. While other nations compete for attention, {{civilization}} now stands as the primary destination for world travelers."
+        ],
+        "settled": true
       },
       {
         "id": "tourism-output-leader-changes-gazette",

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 13 9">
+  <!-- A sparse pair of impressions left of the end stamp. Decorative only. -->
+  <g fill="#ffe1aa" fill-opacity=".7" transform="translate(0 .8)">
+    <path transform="translate(1 4) scale(.42)" d="M0 0L6 -4.6L4.5 0L6 4.6Z"/>
+    <path transform="translate(7.4 1) rotate(8) scale(.4)" d="M-2.8 0H2.8L0.95 3.9L0.55 15H-0.55L-0.95 3.9Z"/>
+    <path opacity=".55" transform="translate(9.6 6.2) scale(.32)" d="M0 0L6 -4.6L4.5 0L6 4.6Z"/>
+  </g>
+  <g fill="#4b291b">
+    <path transform="translate(1 4) scale(.42)" d="M0 0L6 -4.6L4.5 0L6 4.6Z"/>
+    <path transform="translate(7.4 1) rotate(8) scale(.4)" d="M-2.8 0H2.8L0.95 3.9L0.55 15H-0.55L-0.95 3.9Z"/>
+    <path opacity=".55" transform="translate(9.6 6.2) scale(.32)" d="M0 0L6 -4.6L4.5 0L6 4.6Z"/>
+  </g>
+</svg>

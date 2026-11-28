@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Decorative wedge sign for culture news: a fan of three strokes over a short base, like a lyre. Not a transcription. -->
+  <path transform="translate(5 3.6) rotate(-22)" d="M-2.8 0H2.8L0.95 3.9L0.55 15.5H-0.55L-0.95 3.9Z"/>
+  <path transform="translate(12 2.6)" d="M-2.8 0H2.8L0.95 3.9L0.55 15.4H-0.55L-0.95 3.9Z"/>
+  <path transform="translate(19 3.6) rotate(22)" d="M-2.8 0H2.8L0.95 3.9L0.55 15.5H-0.55L-0.95 3.9Z"/>
+  <path transform="translate(5.5 21.2) rotate(-90) scale(.62)" d="M-2.8 0H2.8L0.95 3.9L0.55 21H-0.55L-0.95 3.9Z"/>
+</svg>

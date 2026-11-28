@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Quiet decorative mark for stories without a known topic: one corner wedge and one short stroke. -->
+  <path transform="translate(5 12) scale(.85)" d="M0 0L6 -4.6L4.5 0L6 4.6Z"/>
+  <path transform="translate(11.6 12) rotate(-90) scale(.75)" d="M-2.8 0H2.8L0.95 3.9L0.55 12H-0.55L-0.95 3.9Z"/>
+</svg>

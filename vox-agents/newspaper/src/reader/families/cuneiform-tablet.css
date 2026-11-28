@@ -6,6 +6,8 @@
   --clay-groove: color-mix(in srgb, var(--vd-accent) 69%, var(--vd-paper));
   --clay-lip: color-mix(in srgb, var(--vd-paper) 76%, #ffe1ae);
   --clay-rim: clamp(9px, 2.45cqi, 28px);
+  --clay-stamp: clamp(60px, 7.4cqi, 89px);
+  --clay-seal: clamp(11px, 1.25cqi, 15px);
   --vd-page-background: #392d24;
 
   &[data-mode="export"], & .vd-reader-viewport { background: var(--vd-page-background); }
@@ -67,9 +69,31 @@
   }
   & .vd-masthead .vd-ornament {
     order: -1;
-    width: clamp(60px, 7.4cqi, 89px);
+    width: var(--clay-stamp);
     margin: 0 auto 2px;
     transform: rotate(-1.7deg);
+  }
+  /* Uneven impressions flank the stamp in its own row, so long titles keep their full width. */
+  & .vd-masthead:has(> .vd-ornament)::before,
+  & .vd-masthead:has(> .vd-ornament)::after {
+    position: absolute;
+    height: var(--clay-seal);
+    pointer-events: none;
+    content: "";
+  }
+  & .vd-masthead:has(> .vd-ornament)::before {
+    top: 4px;
+    right: calc(50% + var(--clay-stamp) / 2 + 6px);
+    width: calc(var(--clay-seal) * 36 / 14);
+    background: url("./icons/cuneiform-tablet/seal-left.svg?inline") center / 100% 100% no-repeat;
+    transform: rotate(1.4deg);
+  }
+  & .vd-masthead:has(> .vd-ornament)::after {
+    top: 7px;
+    left: calc(50% + var(--clay-stamp) / 2 + 9px);
+    width: calc(var(--clay-seal) * 26 / 14);
+    background: url("./icons/cuneiform-tablet/seal-right.svg?inline") center / 100% 100% no-repeat;
+    transform: rotate(-2.2deg);
   }
   & .vd-title {
     font-size: calc(clamp(25px, 4cqi, 46px) * var(--vd-text-scale));
@@ -119,6 +143,36 @@
     &::before { display: none; }
   }
   & .vd-storylist .vd-story--lead .vd-headline { font-weight: 700; }
+  /* A topic sign pressed in at the start of the first line; it stays inside the line box. */
+  & .vd-story-topic {
+    position: relative;
+    display: inline-block;
+    width: min(.84em, 50px);
+    height: min(.84em, 50px);
+    margin-inline-end: .22em;
+    vertical-align: -.07em;
+    color: var(--vd-accent);
+    filter: drop-shadow(0 1px var(--clay-lip));
+  }
+  & .vd-story-topic::before {
+    position: absolute;
+    inset: 0;
+    background: currentColor;
+    mask: var(--topic-icon, url("./icons/cuneiform-tablet/untagged.svg?inline")) center / contain no-repeat;
+    content: "";
+  }
+  & .vd-story-topic:not([data-topic]) { opacity: .5; }
+  & .vd-story-topic[data-topic="military"] { --topic-icon: url("./icons/cuneiform-tablet/military.svg?inline"); }
+  & .vd-story-topic[data-topic="congress"] { --topic-icon: url("./icons/cuneiform-tablet/congress.svg?inline"); }
+  & .vd-story-topic[data-topic="science"] { --topic-icon: url("./icons/cuneiform-tablet/science.svg?inline"); }
+  & .vd-story-topic[data-topic="religion"] { --topic-icon: url("./icons/cuneiform-tablet/religion.svg?inline"); }
+  & .vd-story-topic[data-topic="culture"] { --topic-icon: url("./icons/cuneiform-tablet/culture.svg?inline"); }
+  & .vd-story-topic[data-topic="trade"] { --topic-icon: url("./icons/cuneiform-tablet/trade.svg?inline"); }
+  & .vd-story-topic[data-topic="economy"] { --topic-icon: url("./icons/cuneiform-tablet/economy.svg?inline"); }
+  & .vd-story-topic[data-topic="cities"] { --topic-icon: url("./icons/cuneiform-tablet/cities.svg?inline"); }
+  & .vd-story-topic[data-topic="domestic"] { --topic-icon: url("./icons/cuneiform-tablet/domestic.svg?inline"); }
+  & .vd-story-topic[data-topic="international"] { --topic-icon: url("./icons/cuneiform-tablet/international.svg?inline"); }
+  & .vd-story-topic[data-topic="politics"] { --topic-icon: url("./icons/cuneiform-tablet/politics.svg?inline"); }
   & .vd-storylist[data-layout="breaking"] .vd-story--lead :is(.vd-headline, .vd-deck, .vd-byline) {
     text-align: left;
     text-transform: none;
@@ -131,7 +185,15 @@
     padding-top: 12px;
   }
   & .vd-number { font-weight: bold; }
-  & .vd-end-rule { position: relative; padding-top: 10px; margin-top: 12px; }
+  /* A sparse colophon: one small pair left of the end stamp and a longer line of wedges to its right. */
+  & .vd-end-rule {
+    position: relative;
+    padding-top: 10px;
+    margin-top: 12px;
+    background:
+      url("./icons/cuneiform-tablet/colophon-left.svg?inline") calc(50% - 31px) 12px / 13px 9px no-repeat,
+      url("./icons/cuneiform-tablet/colophon-right.svg?inline") calc(50% + 42px) 10px / 28px 11px no-repeat;
+  }
   & .vd-end-rule::before { display: block; top: 0; }
   & .vd-end-ornament { width: 37px; }
 }

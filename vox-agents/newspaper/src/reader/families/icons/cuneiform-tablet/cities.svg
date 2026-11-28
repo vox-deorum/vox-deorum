@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Decorative wedge sign for city news: three stacked strokes stepped like a temple tower. Not a transcription. -->
+  <path transform="translate(7.5 5.5) rotate(-90) scale(.8)" d="M-2.8 0H2.8L0.95 3.9L0.55 11H-0.55L-0.95 3.9Z"/>
+  <path transform="translate(4.6 12) rotate(-90) scale(.9)" d="M-2.8 0H2.8L0.95 3.9L0.55 16.5H-0.55L-0.95 3.9Z"/>
+  <path transform="translate(1.8 18.6) rotate(-90)" d="M-2.8 0H2.8L0.95 3.9L0.55 20.4H-0.55L-0.95 3.9Z"/>
+</svg>

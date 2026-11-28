@@ -55,10 +55,11 @@
     "variants": [
       {
         "id": "defensive-pact-ends-report",
-        "headline": "Our defensive pact with {{ally}} is over",
+        "headline": "Defensive pact with {{ally}} expires",
         "body": [
-          "The defensive pact with {{ally}} has lapsed, and the foreign office has filed the papers without ceremony. The two countries remain at peace, so no column marches and no harbor closes. What has ended is the promise that an attack on one would bring the other."
-        ]
+          "The defensive pact between {{terms.civilization}} and {{ally}} has come to an end. Both nations remain at peace, but the formal military agreement is no longer in effect. Military commanders are reviewing border security in light of the change."
+        ],
+        "settled": true
       },
       {
         "id": "defensive-pact-ends-analysis",

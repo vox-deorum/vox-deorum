@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Decorative wedge sign for religion news: four crossing strokes in an eight-pointed star. Not a transcription. -->
+  <path transform="translate(1.8 12) rotate(-90)" d="M-2.8 0H2.8L0.95 3.9L0.55 20.4H-0.55L-0.95 3.9Z"/>
+  <path transform="translate(12 1.8)" d="M-2.8 0H2.8L0.95 3.9L0.55 20.4H-0.55L-0.95 3.9Z"/>
+  <path transform="translate(5.2 5.2) rotate(-45) scale(.85)" d="M-2.8 0H2.8L0.95 3.9L0.55 22.6H-0.55L-0.95 3.9Z"/>
+  <path transform="translate(5.2 18.8) rotate(-135) scale(.85)" d="M-2.8 0H2.8L0.95 3.9L0.55 22.6H-0.55L-0.95 3.9Z"/>
+</svg>

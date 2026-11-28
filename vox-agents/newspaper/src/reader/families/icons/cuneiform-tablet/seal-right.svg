@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 14">
+  <!-- A smaller, different cluster set right of the masthead stamp. Decorative only. A light lip sits under each dark wedge. -->
+  <g fill="#ffe1aa" fill-opacity=".7" transform="translate(0 .8)">
+    <path transform="translate(1 5.4) scale(.5)" d="M0 0L6 -4.6L4.5 0L6 4.6Z"/>
+    <path opacity=".6" transform="translate(2.6 10.6) scale(.42)" d="M0 0L6 -4.6L4.5 0L6 4.6Z"/>
+    <path transform="translate(9 2.6) rotate(-35) scale(.5)" d="M-2.8 0H2.8L0.95 3.9L0.55 17H-0.55L-0.95 3.9Z"/>
+    <path transform="translate(18.6 3.4) scale(.48)" d="M-2.8 0H2.8L0.95 3.9L0.55 16H-0.55L-0.95 3.9Z"/>
+    <path opacity=".5" transform="translate(21.6 11.4) rotate(-90) scale(.4)" d="M-2.8 0H2.8L0.95 3.9L0.55 9H-0.55L-0.95 3.9Z"/>
+  </g>
+  <g fill="#4b291b">
+    <path transform="translate(1 5.4) scale(.5)" d="M0 0L6 -4.6L4.5 0L6 4.6Z"/>
+    <path opacity=".6" transform="translate(2.6 10.6) scale(.42)" d="M0 0L6 -4.6L4.5 0L6 4.6Z"/>
+    <path transform="translate(9 2.6) rotate(-35) scale(.5)" d="M-2.8 0H2.8L0.95 3.9L0.55 17H-0.55L-0.95 3.9Z"/>
+    <path transform="translate(18.6 3.4) scale(.48)" d="M-2.8 0H2.8L0.95 3.9L0.55 16H-0.55L-0.95 3.9Z"/>
+    <path opacity=".5" transform="translate(21.6 11.4) rotate(-90) scale(.4)" d="M-2.8 0H2.8L0.95 3.9L0.55 9H-0.55L-0.95 3.9Z"/>
+  </g>
+</svg>

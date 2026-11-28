@@ -84,10 +84,11 @@
         "voice": "pamphlet",
         "stance": "government-critical",
         "genre": "editorial",
-        "headline": "Tell our allies when help can reach them",
+        "headline": "Betrayal at {{cityState}}!",
         "body": [
-          "The ally we swore to protect is gone: {{captor}} has taken {{cityState}}. Our {{terms.civic.government}} should put a number on its promises before the next small power asks for one: how many soldiers, how many days, and who will lead them. Without that number, every ally we gain is only buying hope with our coin."
-        ]
+          "{{captor}} has seized {{cityState}}! Where were our armies when our allies screamed for help? The {{terms.civic.government}} promised a shield of protection, yet we watched from {{distance}} as the city fell. Who will be next? {{terms.civic.leaderAddress}}, explain this failure to the {{terms.civic.people}} now!"
+        ],
+        "settled": true
       },
       {
         "id": "ally-city-state-captured-near",
