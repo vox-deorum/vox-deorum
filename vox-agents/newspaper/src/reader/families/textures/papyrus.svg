@@ -1,16 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="224" height="160" viewBox="0 0 224 160">
-  <!-- Long fibres lie across the face; the backing strips show faintly through them. -->
-  <filter id="strands" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
-    <feTurbulence type="fractalNoise" baseFrequency=".013 .43" numOctaves="2" stitchTiles="stitch"/>
-    <feColorMatrix values="0 0 0 0 .48  0 0 0 0 .32  0 0 0 0 .12  .50 0 0 0 -.15"/>
-  </filter>
-  <filter id="backing" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
-    <feTurbulence type="fractalNoise" baseFrequency=".16 .012" numOctaves="2" stitchTiles="stitch"/>
-    <feColorMatrix values="0 0 0 0 .64  0 0 0 0 .46  0 0 0 0 .22  .31 0 0 0 -.09"/>
-  </filter>
-  <path fill="#ac7f3d" opacity=".045" d="M0 18Q99 20 224 18V34Q123 37 0 34ZM0 98Q116 94 224 98V118Q89 115 0 118Z"/>
-  <path fill="#fff8e5" opacity=".24" d="M0 62Q82 65 224 62V69Q100 71 0 69Z"/>
-  <path fill="#a47a41" opacity=".045" d="M28 0H41Q38 87 41 160H28Q30 83 28 0ZM163 0H179Q177 60 179 160H163Q160 83 163 0Z"/>
-  <rect width="100%" height="100%" filter="url(#backing)" opacity=".25"/>
-  <rect width="100%" height="100%" filter="url(#strands)" opacity=".40"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="168" height="123" viewBox="0 0 168 123">
+  <path fill="#ad8654" opacity=".10" d="M8 12h1.7v.6H8zm12 23h1v1h-1zm17-18h.8v1.4H37zm13 6h3v.7h-3zm9-16h1v1.3h-1zm13 25h.9v1.1h-.9zm17-12h2v.7h-2zm11-11h1v.8h-1zm7 29h2v.8h-2zm8-15h.8v1h-.8zm13-15h1.4v.8H128zm11 32h1v1.2h-1zm19-18h2v.8h-2zM4 64h1.5v1H4zm11 20h1v1.3h-1zm11-23h2v.7h-2zm14 7h1v1h-1zm8-18h1.3v.9H48zm11 37h1v1h-1zm15-22h2v.7h-2zm16-13h1v1h-1zm7 23h3v.6h-3zm10-12h1v1.1h-1zm16-9h.8v1h-.8zm14 21h1v.8h-1zm13-14h1.7v.8H150zm12-17h1v.9h-1zM9 105h1v.9H9zm23 5h2v.7h-2zm21 6h1v.9h-1zm15-16h.9v1.5H68zm14 10h2v.8h-2zm14-12h1.4v1H96zm17 19h2v.8h-2zm16-17h1v1h-1zm17 12h1.6v.7H146zm13-21h2v.8h-2z"/>
+  <path fill="none" stroke="#c89e69" stroke-width=".65" opacity=".12" d="M4 45q10-.9 20-.4m23-5 17-.8m31 2 20-.6m20 4q11 0 19-.8M2 94l19-.5m18 2 13-.3m27-3 9-.3m22-2 19 .3m11 5 15-.9M25 9q0 5 .4 9m99 14-.4 10M58 67l.6 9m73 29-.5 8"/>
 </svg>

@@ -1,5 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="84" height="42" viewBox="0 0 84 42">
-  <path fill="#eaceaa" d="m3 6 33 5-28 7zm3 19 27 2-23 8zM38 4l13 3-8 31zm16 9 28 5-24 6z"/>
-  <path fill="#805334" d="m3 4 33 6-28 6zm3 19 27 3-23 7zM38 2l13 3-8 31zm16 9 28 6-24 5z"/>
-  <path fill="#503526" d="m3 4 33 6-24-1zm3 19 27 3-19 1zM38 2l6 8-1 26zm16 9 28 6-21-1z"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="107" height="34" viewBox="0 0 107 34">
+  <defs>
+    <g id="wedge">
+      <path fill="#f0c38b" d="M0 1 29 7 0 13l5-6z"/>
+      <path fill="#4b291b" d="M0 0 29 6H5z"/>
+      <path fill="#77472b" d="M5 6h24L0 11z"/>
+    </g>
+  </defs>
+  <use href="#wedge" transform="translate(1 5)"/>
+  <use href="#wedge" transform="translate(6 20) rotate(-8 12 6) scale(.82)"/>
+  <use href="#wedge" transform="translate(27 4) rotate(80 14 6) scale(.92)"/>
+  <use href="#wedge" transform="translate(46 7) rotate(10 14 6)"/>
+  <use href="#wedge" transform="translate(48 21) scale(.83)"/>
+  <use href="#wedge" transform="translate(72 13) rotate(-24 14 6) scale(.95)"/>
 </svg>

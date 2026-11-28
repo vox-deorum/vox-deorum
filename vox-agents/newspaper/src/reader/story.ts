@@ -25,6 +25,21 @@ export interface StoryRenderContext {
   vote: VoteValue;
 }
 
+// Specific subjects take precedence over geographic scope for the headline icon.
+const storyTopicLabels = {
+  military: "Military",
+  congress: "Congress",
+  science: "Science",
+  religion: "Religion",
+  culture: "Culture",
+  trade: "Trade",
+  economy: "Economy",
+  cities: "Cities",
+  domestic: "Domestic",
+  international: "International",
+  politics: "Politics",
+} as const;
+
 /** Build one story with the layout chosen by its page. */
 export function renderStory(
   item: IssueItem,
@@ -77,6 +92,7 @@ export function renderStory(
   }
   const heading = createElement("h2", "vd-headline");
   heading.id = headingId;
+  if (publicationDesignId === "winged-sun-papyrus") heading.append(renderStoryTopic(item.tags));
   appendInlineNodes(heading, item.headline, item.id, bindReaderAction);
   headlineBlock.append(heading);
   if (turn !== undefined && teletext) headlineBlock.append(renderStoryTurn(turn));
@@ -138,6 +154,24 @@ export function renderStory(
   }
   article.append(content);
   return article;
+}
+
+/** Mark a headline with the most specific recognized topic in its saved tags. */
+function renderStoryTopic(tags: readonly string[]): HTMLElement {
+  const mark = createElement("span", "vd-story-topic");
+  // Older issues used "foreign" for the international desk.
+  const [topic, label] = Object.entries(storyTopicLabels).find(([tag]) =>
+    tags.includes(tag) || (tag === "international" && tags.includes("foreign")),
+  ) ?? [];
+  if (topic && label) {
+    mark.dataset.topic = topic;
+    mark.setAttribute("role", "img");
+    mark.setAttribute("aria-label", label);
+    mark.title = label;
+  } else {
+    mark.setAttribute("aria-hidden", "true");
+  }
+  return mark;
 }
 
 /** Build the observation turn for a heading or feed action row. */

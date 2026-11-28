@@ -1,7 +1,7 @@
 [
   {
     "id": "cuneiform-tablet",
-    "version": "1",
+    "version": "2",
     "label": "Cuneiform Tablet",
     "title": "The Tablets of Nineveh",
     "civilizationTitles": {
@@ -25,9 +25,9 @@
       "schemaVersion": 1,
       "rendererFamily": "folio",
       "tokens": {
-        "paperColor": "#dab687",
-        "inkColor": "#2c251f",
-        "accentColor": "#653c28",
+        "paperColor": "#d4a36f",
+        "inkColor": "#25170f",
+        "accentColor": "#512b1a",
         "bodyFontAssetId": "font-literata-400",
         "headingFontAssetId": "font-literata-700",
         "mastheadFontAssetId": "font-marcellus-400"
@@ -40,8 +40,8 @@
         "kind": "ornament",
         "path": "assets/designs/cuneiform-tablet/wedges.svg",
         "mediaType": "image/svg+xml",
-        "width": 84,
-        "height": 42,
+        "width": 107,
+        "height": 34,
         "license": "Vox Deorum project asset",
         "attribution": "Original drawing of stylus impressions."
       }

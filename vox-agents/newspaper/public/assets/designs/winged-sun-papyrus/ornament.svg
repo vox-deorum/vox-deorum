@@ -1,14 +1,22 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 48" width="260" height="48">
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="34" viewBox="0 2 160 34">
   <defs>
+    <pattern id="feather" width="3.2" height="40" patternUnits="userSpaceOnUse">
+      <rect width="3.2" height="40" fill="#3d7470"/>
+      <rect width=".8" height="40" fill="#1f4644"/>
+    </pattern>
     <g id="wing">
-      <path d="M117 18Q99 12 78 15Q44 21 2 3Q10 20 32 29Q66 44 94 34Q108 29 117 26Z" fill="#315d62" stroke="#493d2e" stroke-width="1.4"/>
-      <path d="M115 22Q95 20 78 25Q44 32 8 12Q30 36 73 37Q97 37 115 26Z" fill="#c09b57"/>
-      <path d="m16 19 8-1m2 7 11-2m0 7 12-4m0 8 13-6m0 8 12-8m0 8 10-10m2 8 8-10m3 7 5-8" fill="none" stroke="#493d2e" stroke-width="1.2"/>
-      <path d="M8 10Q43 28 77 21Q101 16 115 21" fill="none" stroke="#e8d6a3" stroke-width="2"/>
+      <path d="M72 13C56 9 30 5 4 5c18 5 42 9 68 12Z" fill="#2f6866"/>
+      <path d="M72 17C46 14 22 10 4 5c12 8 38 14 68 17Z" fill="#c69a52"/>
+      <path d="M72 22C42 19 16 13 4 5c4 12 32 22 68 23Z" fill="url(#feather)"/>
+      <path d="M20 10.6l2 .9m8 1.4 2 .8m8 1.5 2 .7m8 1.4 2 .6m8 1.4 2 .5" stroke="#a34e35" stroke-width="1"/>
+      <path d="M70 14.5C52 11 30 8 10 6.5" fill="none" stroke="#e6cf96" stroke-width=".7" opacity=".8"/>
+      <path d="M4 5c4 12 32 22 68 23" fill="none" stroke="#a34e35" stroke-width="1.2"/>
+      <path d="M72 13C56 9 30 5 4 5" fill="none" stroke="#24352f" stroke-width=".9"/>
     </g>
   </defs>
   <use href="#wing"/>
-  <use href="#wing" transform="translate(260 0) scale(-1 1)"/>
-  <circle cx="130" cy="22" r="15" fill="#b65332" stroke="#684532" stroke-width="1.4"/>
-  <circle cx="130" cy="22" r="11.5" fill="none" stroke="#d99259" stroke-width="1"/>
+  <use href="#wing" transform="translate(160 0) scale(-1 1)"/>
+  <path d="M74.5 22c-2.5 3-2 7 .5 8.5 2 1.2 1.5 3.5-1 4M85.5 22c2.5 3 2 7-.5 8.5-2 1.2-1.5 3.5 1 4" fill="none" stroke="#2b5e5e" stroke-width="1.8" stroke-linecap="round"/>
+  <circle cx="80" cy="15" r="9.5" fill="#a34e35" stroke="#5e2c1d"/>
+  <circle cx="80" cy="15" r="7" fill="none" stroke="#d9a466" stroke-width=".7"/>
 </svg>

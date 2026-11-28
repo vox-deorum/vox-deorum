@@ -1,7 +1,7 @@
 [
   {
     "id": "winged-sun-papyrus",
-    "version": "1",
+    "version": "3",
     "label": "Winged-Sun Papyrus",
     "title": "The Two Lands Register",
     "civilizationTitles": {
@@ -34,9 +34,9 @@
       "schemaVersion": 1,
       "rendererFamily": "folio",
       "tokens": {
-        "paperColor": "#f5ead1",
-        "inkColor": "#28231b",
-        "accentColor": "#964023",
+        "paperColor": "#f2e7cf",
+        "inkColor": "#241b13",
+        "accentColor": "#8a3820",
         "bodyFontAssetId": "font-libre-caslon-400",
         "headingFontAssetId": "font-cinzel-700",
         "mastheadFontAssetId": "font-cinzel-700"
@@ -51,8 +51,8 @@
         "kind": "ornament",
         "path": "assets/designs/winged-sun-papyrus/ornament.svg",
         "mediaType": "image/svg+xml",
-        "width": 260,
-        "height": 48,
+        "width": 160,
+        "height": 34,
         "license": "Vox Deorum project asset",
         "attribution": "Authored ornament for the newspaper."
       }

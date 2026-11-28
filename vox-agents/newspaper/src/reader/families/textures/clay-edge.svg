@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 215" preserveAspectRatio="none">
+  <defs>
+    <linearGradient id="rim">
+      <stop stop-color="#623a25"/>
+      <stop offset=".18" stop-color="#995832"/>
+      <stop offset=".46" stop-color="#e5ad72"/>
+      <stop offset=".63" stop-color="#f5ca8c" stop-opacity=".78"/>
+      <stop offset="1" stop-color="#eac290" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <path fill="#66402b" d="M0 0h2.4l1.1 15-1.3 13 1.2 26-.9 23 2.4 12-1.5 17 1.2 14-2.5 14 1.1 18-1.8 14 1.8 17-.6 13-.2 19H0Z"/>
+  <path fill="url(#rim)" d="M2.3 0 20 0v215H2.3l.2-19 .6-13-1.7-17 1.8-14-1.1-18 2.5-14-1.2-14 1.5-17-2.4-12 .9-23-1.2-26 1.3-13z"/>
+  <path fill="none" stroke="#f9d397" stroke-opacity=".66" stroke-width=".8" d="m5.4 10 .8 7-1.5 10 .7 16m1.7 42 1.5 5-1.1 14 1.2 15m-3.4 22 1.3 12-1.4 12 1.2 13m.6 15-.3 10"/>
+  <path fill="none" stroke="#75472e" stroke-opacity=".6" stroke-width=".75" d="m3.6 49 2.8 3 1.1 5 5.3 4m-7.4 77 3.2 1.5 2 5.2 3.8 1.7m-10 47 3.6 3 2.3-1"/>
+  <path fill="none" stroke="#ffe0a8" stroke-opacity=".65" stroke-width=".6" d="m4.6 49 2.4 2.6 1 4.9 5.1 4m-6.9 77 3.4 1.4 1.7 5.2 3.9 1.8"/>
+</svg>

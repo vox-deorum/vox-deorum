@@ -1,63 +1,165 @@
-/* Sloping light at the tablet edges and a glint below each incised rule. */
+/* The clay face runs through the header and each page so export strips meet cleanly. */
 .vd-newspaper[data-publication-design="cuneiform-tablet"] {
-  --clay-groove: color-mix(in srgb, var(--vd-accent) 60%, var(--vd-paper));
-  --clay-lip: color-mix(in srgb, var(--vd-paper) 72%, white);
-  --clay-surface: linear-gradient(92deg, #72432225, transparent 4%, #fff3db12 14%, transparent 47%, #5932160c 94%, #59321625);
+  --clay-edge: url("./textures/clay-edge.svg?inline");
+  --clay-grain: url("./textures/clay-grain.svg?inline");
+  --clay-score: url("./textures/clay-score.svg?inline");
+  --clay-groove: color-mix(in srgb, var(--vd-accent) 69%, var(--vd-paper));
+  --clay-lip: color-mix(in srgb, var(--vd-paper) 76%, #ffe1ae);
+  --clay-rim: clamp(9px, 2.45cqi, 28px);
+  --vd-page-background: #392d24;
 
-  & .vd-header, & .vd-page { background-image: var(--clay-surface); }
-  & .vd-header { padding-block-start: clamp(12px, 2cqi, 24px); }
-  & .vd-masthead {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    column-gap: 12px;
-    align-items: end;
-    padding: 0 0 10px;
-    text-align: left;
+  &[data-mode="export"], & .vd-reader-viewport { background: var(--vd-page-background); }
+
+  & .vd-publication {
+    position: relative;
+    isolation: isolate;
+    background:
+      var(--clay-grain),
+      radial-gradient(ellipse at 26% 11%, #ffe3a552, transparent 63%),
+      radial-gradient(ellipse at 88% 8%, #85491f36, transparent 36%),
+      radial-gradient(ellipse at 21% 77%, #9653291a, transparent 31%),
+      radial-gradient(ellipse at 92% 92%, #6d391f24, transparent 39%),
+      linear-gradient(108deg, #f3c78d5e, transparent 35%, #81422023), var(--vd-paper);
+    clip-path: polygon(0 16px, 4px 7px, 13px 3px, 5% 1px, 13% 0, 22% 2px, 34% 0, 43% 1px,
+      57% 0, 69% 2px, 83% 1px, calc(100% - 9px) 3px, calc(100% - 2px) 8px, 100% 16px,
+      calc(100% - 1px) 39%, 100% 62%, calc(100% - 2px) 79%, 100% calc(100% - 13px),
+      calc(100% - 6px) calc(100% - 4px), 96% calc(100% - 1px), 87% 100%, 74% calc(100% - 3px),
+      63% calc(100% - 1px), 49% 100%, 34% calc(100% - 2px), 14% 100%, 8px calc(100% - 3px),
+      3px calc(100% - 6px), 0 calc(100% - 14px), 1px 72%, 0 55%, 2px 36%, 0 24%);
   }
-  & .vd-title {
-    font-size: calc(clamp(28px, 4.8cqi, 56px) * var(--vd-text-scale));
-    letter-spacing: -.025em;
+  & .vd-publication::before, & .vd-publication::after {
+    position: absolute;
+    inset-block: 0;
+    width: var(--clay-rim);
+    background: var(--clay-edge) left top / 100% 215px repeat-y;
+    pointer-events: none;
+    content: "";
+  }
+  & .vd-publication::before { inset-inline-start: 0; }
+  & .vd-publication::after { inset-inline-end: 0; transform: scaleX(-1); background-position-y: 62px; opacity: .88; }
+
+  & .vd-header, & .vd-page { position: relative; background: transparent; }
+  & .vd-header { padding-top: 9px; }
+  & .vd-header::before, & .vd-page::after {
+    position: absolute;
+    inset-inline: 0;
+    height: 8px;
+    pointer-events: none;
+    content: "";
+  }
+  & .vd-header::before {
+    top: 0;
+    background: linear-gradient(#623f2c 1px, #f0c48b 3px, #ffdda78c 5px, transparent);
+    clip-path: polygon(0 6px, 1% 3px, 5% 1px, 13% 1px, 21% 3px, 31% 0, 42% 2px, 53% 1px,
+      61% 3px, 71% 1px, 85% 2px, 91% 1px, 98% 2px, 100% 6px, 100% 100%, 0 100%);
+  }
+  & .vd-page::after {
+    bottom: 0;
+    background: linear-gradient(transparent, #77422296 65%, #503021);
+    clip-path: polygon(0 0, 100% 0, 100% 35%, 98% 74%, 90% 95%, 78% 86%, 67% 100%, 56% 88%,
+      45% 98%, 37% 82%, 24% 94%, 11% 79%, 3% 70%, 0 38%);
+  }
+  & .vd-masthead {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0 0 6px;
   }
   & .vd-masthead .vd-ornament {
-    grid-area: 1 / 2;
-    align-self: center;
-    width: clamp(42px, 7cqi, 84px);
-    margin: 0;
+    order: -1;
+    width: clamp(60px, 7.4cqi, 89px);
+    margin: 0 auto 2px;
+    transform: rotate(-1.7deg);
+  }
+  & .vd-title {
+    font-size: calc(clamp(25px, 4cqi, 46px) * var(--vd-text-scale));
+    font-variant: small-caps;
+    letter-spacing: .026em;
+    line-height: 1.05;
+    text-shadow: 0 1px #ffdda4a6;
   }
   & .vd-tabs {
-    justify-content: flex-start;
-    border-block: 1px solid var(--clay-groove);
-    box-shadow: inset 0 1px var(--clay-lip), 0 1px var(--clay-lip);
+    position: relative;
+    border: 0;
+    column-gap: clamp(12px, 4cqi, 50px);
+  }
+  & .vd-tabs::before, & .vd-tabs::after,
+  & .vd-storylist[data-layout] > .vd-story--brief::before,
+  & .vd-end-rule::before {
+    position: absolute;
+    inset-inline: 0;
+    height: 5px;
+    background: var(--clay-score) center / 100% 100% no-repeat;
+    pointer-events: none;
+    content: "";
+  }
+  & .vd-tabs::before { top: -2px; }
+  & .vd-tabs::after { bottom: -2px; transform: scaleX(-1); }
+  & .vd-tab {
+    padding: 6px 3px;
+    font-family: var(--vd-font-masthead, var(--vd-font-display));
+    font-variant: small-caps;
+    letter-spacing: .10em;
+  }
+  &[data-mode="reader"] .vd-tab[aria-selected="true"]::after {
+    inset: auto 12% 3px;
+    height: 2px;
+  }
+  & .vd-page { padding-block: 11px 16px; }
+  & .vd-storylist[data-layout] > .vd-story--brief {
+    position: relative;
+    margin-top: 13px;
+    border: 0;
+    padding-top: 14px;
+  }
+  & .vd-storylist[data-layout] > .vd-story--brief::before { top: 0; }
+  & .vd-storylist[data-layout] > .vd-story--brief:first-child {
+    padding-top: 2px;
+    margin-top: 0;
+    &::before { display: none; }
   }
   & .vd-storylist .vd-story--lead .vd-headline { font-weight: 700; }
-  & .vd-storylist .vd-story--brief, & .vd-evidence {
-    border-top: 1px solid var(--clay-groove);
-    box-shadow: inset 0 1px var(--clay-lip);
-    padding-top: 12px;
-  }
-  & .vd-storylist[data-layout="ordinary"] .vd-story--brief {
-    position: relative;
-    &::before {
-      content: "";
-      position: absolute;
-      inset: 0 auto auto 0;
-      width: 10px;
-      height: 6px;
-      background: var(--clay-groove);
-      clip-path: polygon(0 0, 100% 0, 0 100%);
-    }
-  }
   & .vd-storylist[data-layout="breaking"] .vd-story--lead :is(.vd-headline, .vd-deck, .vd-byline) {
     text-align: left;
     text-transform: none;
   }
+  & .vd-prose { line-height: 1.52; }
+  & .vd-story-footer:has(.vd-text-link) { margin-top: .6em; }
+  & .vd-evidence {
+    border-top: 1px solid var(--clay-groove);
+    box-shadow: inset 0 1px var(--clay-lip);
+    padding-top: 12px;
+  }
   & .vd-number { font-weight: bold; }
-  & .vd-end-rule { height: 2px; background: linear-gradient(var(--clay-groove) 50%, var(--clay-lip) 50%); }
-  & .vd-end-ornament { display: none; }
+  & .vd-end-rule { position: relative; padding-top: 10px; margin-top: 12px; }
+  & .vd-end-rule::before { display: block; top: 0; }
+  & .vd-end-ornament { width: 37px; }
 }
 
 @container newspaper (width > 760px) {
-  .vd-newspaper[data-publication-design="cuneiform-tablet"] .vd-storylist[data-layout="ordinary"] .vd-prose {
-    max-width: 66ch;
+  .vd-newspaper[data-publication-design="cuneiform-tablet"] .vd-storylist[data-layout] {
+    --register-inset: clamp(13px, 2.5cqi, 32px);
+    --register-gap: 2px;
+    column-gap: var(--register-gap);
+
+    & > .vd-story--brief:nth-child(odd of .vd-story--brief) { padding-right: var(--register-inset); }
+    & > .vd-story--brief:nth-child(odd of .vd-story--brief):has(+ .vd-story--brief)::before {
+      right: calc(-100% - var(--register-gap));
+    }
+    & > .vd-story--brief:nth-child(even of .vd-story--brief) {
+      padding-left: var(--register-inset);
+      &::before { display: none; }
+      &::after {
+        position: absolute;
+        inset: 14px auto 4px calc(var(--register-gap) / -2);
+        width: 1px;
+        background: linear-gradient(transparent, var(--clay-groove) 18%, var(--clay-groove) 80%, transparent);
+        box-shadow: 1px 0 var(--clay-lip);
+        transform: rotate(.3deg);
+        pointer-events: none;
+        content: "";
+      }
+    }
+    & > .vd-story--brief:first-child + .vd-story--brief { padding-top: 2px; margin-top: 0; }
   }
 }

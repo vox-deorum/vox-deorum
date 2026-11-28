@@ -1,29 +1,166 @@
-/* Painted horizontal registers: a pigment border, a winged disk, then story bands. */
+/* Painted registers from a chapel wall: lotus borders, a winged disk, and painted columns. */
 .vd-newspaper[data-publication-design="winged-sun-papyrus"] {
-  --blue: #315d62;
-  --gold: #b78a43;
+  --teal: #2b5e5e;
+  --red: #a34e35;
+  --ochre: #b8893f;
+  --edge: 7px;
+  --inset-start: var(--vd-paper-padding);
+  --inset-end: calc(var(--inset-start) + var(--vd-scrollbar-gutter));
+  --pigments: var(--teal) 0 16px, var(--vd-paper) 16px 18px, var(--ochre) 18px 26px,
+    var(--vd-paper) 26px 28px, var(--red) 28px 44px, var(--vd-paper) 44px 46px,
+    var(--ochre) 46px 54px, var(--vd-paper) 54px 56px;
+  --register-rule:
+    linear-gradient(180deg, #3d2e22 0 1px, var(--red) 1px 5px, #3d2e22 5px 6px,
+      transparent 6px 7px, var(--teal) 7px 8px, transparent 8px);
   --papyrus: url("./textures/papyrus.svg?inline");
-  --paint: repeating-linear-gradient(90deg,
-    var(--blue) 0 32px, var(--vd-ink) 32px 34px, var(--vd-paper) 34px 38px,
-    var(--vd-ink) 38px 40px, var(--gold) 40px 62px, var(--vd-ink) 62px 64px,
-    var(--vd-paper) 64px 68px, var(--vd-ink) 68px 70px, var(--vd-accent) 70px 102px,
-    var(--vd-ink) 102px 104px, var(--vd-paper) 104px 108px, var(--vd-ink) 108px 110px);
+  --vd-vote-background: var(--vd-paper);
 
-  & .vd-header { padding-top: 0; background: var(--paint) top center / 100% 9px no-repeat, var(--papyrus), var(--vd-paper); }
-  & .vd-page { background-image: var(--papyrus); background-attachment: local; }
-  & .vd-masthead { display: flex; flex-direction: column; align-items: center; padding: 20px 0 12px; }
-  & .vd-ornament { order: -1; width: clamp(136px, 23cqi, 250px); margin: 0 auto 4px; }
-  & .vd-title { font-weight: 700; text-transform: uppercase; letter-spacing: .075em; line-height: 1; }
-  & .vd-tabs { border-block: 1px solid var(--vd-accent); }
-  & .vd-tab { font-family: var(--vd-font-display); font-size: calc(13px * var(--vd-text-scale)); font-weight: 700; }
-  & .vd-story--brief { border-top: 2px solid var(--vd-accent); }
+  & .vd-publication {
+    background:
+      repeating-linear-gradient(var(--pigments)) left top / var(--edge) 100% no-repeat,
+      repeating-linear-gradient(var(--pigments)) right top / var(--edge) 100% no-repeat,
+      var(--papyrus),
+      radial-gradient(ellipse at 50% 32%, #faf2df, var(--vd-paper) 68%, #e8d7b5);
+  }
+  & .vd-header, & .vd-page {
+    position: relative;
+    background: transparent;
+    padding-inline: var(--inset-start) var(--inset-end);
+  }
+  & .vd-header { padding-block: 25px 8px; }
+  & .vd-header::before {
+    position: absolute;
+    inset: 0 0 auto;
+    height: 22px;
+    background: url("./textures/papyrus-pendants.svg?inline") left top / 18px 22px repeat-x var(--vd-paper);
+    pointer-events: none;
+    content: "";
+  }
+  & .vd-header::after {
+    position: absolute;
+    inset: auto var(--inset-end) 0 var(--inset-start);
+    height: 8px;
+    background: var(--register-rule);
+    pointer-events: none;
+    content: "";
+  }
+  & .vd-masthead, & .vd-tabs {
+    background:
+      repeating-linear-gradient(90deg, #a34e3513 0 1px, transparent 1px 26px),
+      repeating-linear-gradient(180deg, #a34e3513 0 1px, transparent 1px 26px);
+  }
+  & .vd-masthead {
+    display: flex;
+    align-items: center;
+    gap: clamp(7px, 1.45cqi, 18px);
+    min-width: 0;
+    padding: 4px 0;
+    text-align: left;
+  }
+  & .vd-ornament { order: -1; flex: none; width: clamp(61px, 9.4cqi, 113px); margin: 0; }
+  & .vd-title {
+    font-size: calc(clamp(19px, 3.1cqi, 37px) * var(--vd-text-scale));
+    font-weight: 700;
+    letter-spacing: .035em;
+    line-height: 1.07;
+  }
+  & .vd-tabs { align-items: stretch; justify-content: flex-start; gap: 0; min-width: 0; border: 0; }
+  & .vd-tab {
+    flex: 0 1 auto;
+    padding: 7px clamp(6px, .9cqi, 13px);
+    border-inline-start: 1px solid #2b5e5e70;
+    font: 700 calc(14px * var(--vd-text-scale)) / 1.2 var(--vd-font-body);
+    font-variant: small-caps;
+  }
+  & .vd-tab:last-child { border-inline-end: 1px solid #2b5e5e70; }
+  &[data-mode="reader"] .vd-tab[aria-selected="true"] { background: #b8893f35; }
+
+  & .vd-page { padding-block: 11px 0; }
+  & .vd-storylist[data-layout] { column-gap: 0; }
+  & .vd-storylist[data-layout] > .vd-story--brief {
+    position: relative;
+    margin-top: 10px;
+    padding-top: 14px;
+    border: 0;
+    background: var(--register-rule) left top / 100% 8px no-repeat;
+  }
+  & .vd-storylist[data-layout] > .vd-story--brief:first-child { margin-top: 0; padding-top: 0; background: none; }
+  & .vd-story--brief .vd-headline {
+    position: relative;
+    min-height: 27px;
+    padding-left: 36px;
+    margin-bottom: 6px;
+    font-size: calc(clamp(22px, 2.6cqi, 30px) * var(--vd-text-scale));
+    letter-spacing: -.01em;
+  }
+  & .vd-story-topic {
+    display: inline-block;
+    width: 27px;
+    height: 27px;
+    margin-right: .23em;
+    vertical-align: -.05em;
+    background: var(--topic-icon, url("./textures/papyrus-lotus.svg?inline")) center / contain no-repeat;
+  }
+  & .vd-story--brief .vd-story-topic {
+    position: absolute;
+    inset: .05em auto auto 0;
+    margin: 0;
+  }
+  & .vd-story-topic[data-topic="military"] { --topic-icon: url("./icons/winged-sun-papyrus/military.svg?inline"); }
+  & .vd-story-topic[data-topic="congress"] { --topic-icon: url("./icons/winged-sun-papyrus/congress.svg?inline"); }
+  & .vd-story-topic[data-topic="science"] { --topic-icon: url("./icons/winged-sun-papyrus/science.svg?inline"); }
+  & .vd-story-topic[data-topic="religion"] { --topic-icon: url("./icons/winged-sun-papyrus/religion.svg?inline"); }
+  & .vd-story-topic[data-topic="culture"] { --topic-icon: url("./icons/winged-sun-papyrus/culture.svg?inline"); }
+  & .vd-story-topic[data-topic="trade"] { --topic-icon: url("./icons/winged-sun-papyrus/trade.svg?inline"); }
+  & .vd-story-topic[data-topic="economy"] { --topic-icon: url("./icons/winged-sun-papyrus/economy.svg?inline"); }
+  & .vd-story-topic[data-topic="cities"] { --topic-icon: url("./icons/winged-sun-papyrus/cities.svg?inline"); }
+  & .vd-story-topic[data-topic="domestic"] { --topic-icon: url("./icons/winged-sun-papyrus/domestic.svg?inline"); }
+  & .vd-story-topic[data-topic="international"] { --topic-icon: url("./icons/winged-sun-papyrus/international.svg?inline"); }
+  & .vd-story-topic[data-topic="politics"] { --topic-icon: url("./icons/winged-sun-papyrus/politics.svg?inline"); }
   & .vd-storylist .vd-story--lead .vd-headline { font-weight: 700; letter-spacing: -.018em; }
   & .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-headline { line-height: 1.05; }
+  & .vd-vote { background-color: var(--vd-vote-background); }
   & .vd-number { font-weight: 700; }
-  & .vd-evidence caption strong { color: var(--blue); }
-  & .vd-evidence thead { background: var(--blue); color: var(--vd-paper); }
+  & .vd-evidence caption strong { color: var(--teal); }
+  & .vd-evidence thead { background: var(--teal); color: var(--vd-paper); }
   & .vd-evidence :is(td, th) { border-bottom: 1px solid var(--vd-accent); }
-  & .vd-evidence tr:nth-child(even) { background: color-mix(in srgb, var(--gold) 12%, transparent); }
-  & .vd-end-rule { height: 7px; background: var(--paint); }
-  & .vd-end-ornament { display: none; }
+  & .vd-evidence tr:nth-child(even) { background: #b8893f1f; }
+  & .vd-end-rule {
+    height: 29px;
+    margin: 13px calc(-1 * var(--inset-end)) 0 calc(-1 * var(--inset-start));
+    background:
+      url("./textures/papyrus-marsh.svg?inline") center top / 40px 22px repeat-x,
+      repeating-linear-gradient(90deg, var(--pigments)) left bottom / 100% var(--edge) no-repeat;
+  }
+  & .vd-end-rule::before, & .vd-end-rule::after, & .vd-end-ornament { display: none; }
+}
+
+@container newspaper (width > 760px) {
+  .vd-newspaper[data-publication-design="winged-sun-papyrus"] .vd-storylist[data-layout] {
+    --register-inset: clamp(20px, 2.8cqi, 36px);
+
+    & > .vd-story--brief:nth-child(odd of .vd-story--brief) { padding-right: var(--register-inset); }
+    & > .vd-story--brief:nth-child(even of .vd-story--brief) { padding-left: var(--register-inset); }
+    & > .vd-story--brief:first-child + .vd-story--brief { margin-top: 0; padding-top: 0; background: none; }
+    & > .vd-story--brief:nth-child(even of .vd-story--brief)::after {
+      position: absolute;
+      inset: 12px auto 1px -11px;
+      width: 22px;
+      background:
+        url("./textures/papyrus-capital.svg?inline") top center / 22px 22px no-repeat,
+        linear-gradient(90deg, #224b48, #427b72, #224b48) center bottom 5px / 6px calc(100% - 26px) no-repeat,
+        linear-gradient(var(--ochre) 0 3px, var(--red) 3px 5px) center bottom / 17px 5px no-repeat;
+      pointer-events: none;
+      content: "";
+    }
+    & > .vd-story--brief:first-child + .vd-story--brief::after { top: 0; }
+  }
+}
+
+@container newspaper (width > 1080px) {
+  .vd-newspaper[data-publication-design="winged-sun-papyrus"] .vd-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: stretch;
+  }
 }

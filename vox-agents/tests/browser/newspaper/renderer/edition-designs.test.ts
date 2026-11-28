@@ -70,6 +70,36 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('newspaper design
     await host?.close();
   });
 
+  it('should use a distinct Papyrus icon for each story topic and a decorative mark for unclassified stories', async context => {
+    if (!browser) { context.skip(unavailable); return; }
+    const design = (await loadEditorialConfig()).designs.find(candidate => candidate.id === 'winged-sun-papyrus')!;
+    const issue = designIssue(design, ordinary, 4);
+    const [lead, domestic, foreign, unknown] = issue.pages[0].itemIds.map(id => issue.items.find(item => item.id === id)!);
+    lead.tags = ['international', 'economy', 'trade'];
+    domestic.tags = ['domestic'];
+    foreign.tags = ['foreign'];
+    unknown.tags = ['unclassified'];
+    const page = await browser.newPage();
+    try {
+      await page.goto(`${host.url}/newspaper/export.html`);
+      for (const width of [360, 1200]) {
+        await mount(page, issue, width);
+        const region = page.locator('.vd-page:not([hidden])');
+        const marks = region.locator('.vd-story-topic');
+        expect(await marks.count()).toBe(4);
+        for (const [item, label] of [[lead, 'Trade'], [domestic, 'Domestic'], [foreign, 'International']] as const) {
+          const story = region.locator(`[data-item-id="${item.id}"]`);
+          expect(await story.getByRole('img', { name: label, exact: true }).isVisible()).toBe(true);
+        }
+        expect(await marks.last().getAttribute('aria-hidden')).toBe('true');
+        const art = await marks.evaluateAll(nodes => nodes.map(node => getComputedStyle(node).backgroundImage));
+        expect(art.every(image => image.includes('image/svg+xml'))).toBe(true);
+        expect(new Set(art).size).toBe(4);
+        expect((await measureEdition(page)).overflow).toBe(false);
+      }
+    } finally { await page.close(); }
+  });
+
   it('should show each dispatch slip’s own observation turn', async context => {
     if (!browser) { context.skip(unavailable); return; }
     const design = (await loadEditorialConfig()).designs.find(candidate => candidate.id === 'courier-slips')!;
