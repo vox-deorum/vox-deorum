@@ -259,7 +259,8 @@ function factRuntime(model, wrap, constants, factDefinitions) {
               if (typeof current.knows !== 'function' && !has(current, key)) return unread;
               current = current[key];
             }
-            return current;
+            // Helpers such as knows and get are not facts, so a path that ends on one reads as unknown.
+            return typeof current === 'function' ? unread : current;
           });
           return value === unread ? undefined : value;
         }),

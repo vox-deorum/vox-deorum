@@ -181,7 +181,10 @@ export function buildPlayerSnapshotFacts(row: NewspaperSnapshot, context: FactBu
   for (const key of playerFields) {
     if (major === false && !cityStateFields.has(key)) continue;
     if (playerNumbers.has(key) && !Number.isFinite(row.values[key])) continue;
-    const field = recordedFact(row.values[key], sources);
+    // The recorder writes a pantheon marker such as "Pantheon (Religion Possible)" before any religion is founded.
+    const stored = row.values[key];
+    const pantheon = key === 'FoundedReligion' && typeof stored === 'string' && stored.startsWith('Pantheon (');
+    const field = recordedFact(pantheon ? null : stored, sources);
     if (field) fields[key === 'Cities' ? 'cityCount' : key[0].toLowerCase() + key.slice(1)] = field;
   }
   if (major === false && Array.isArray(row.values.QuestDeadlines) &&

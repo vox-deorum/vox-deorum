@@ -562,12 +562,13 @@ describe('newspaper fact runtime', () => {
         'self.get("before.population")',
         'cities.filter(c => c.get("foodPerTurn") < 0).length',
         'city.get("wonders.length")',
+        'city.get("owner.knows") ?? "unknown"',
       ]);
-      const [[[mine, wonders]], [[plain, tolerated, owner, declined, before, filtered]]] = await runner.evaluate({
+      const [[[mine, wonders]], [[plain, tolerated, owner, declined, before, filtered, helper]]] = await runner.evaluate({
         facts: buildNewspaperFacts(evidence([home, foreignCity]), identity),
         groups: [
           { expressions: [0, 6], subjects: [{ city: reference('city', 1) }] },
-          { expressions: [0, 1, 2, 3, 4, 5], subjects: [{ city: reference('city', 2) }] },
+          { expressions: [0, 1, 2, 3, 4, 5, 7], subjects: [{ city: reference('city', 2) }] },
         ],
       });
       expect(mine).toEqual({ value: 9, sources: [home.source] });
@@ -578,6 +579,7 @@ describe('newspaper fact runtime', () => {
       expect(declined).toEqual({ value: undefined });
       expect(before).toMatchObject({ value: 12, sources: expect.arrayContaining([own.source]) });
       expect(filtered).toHaveProperty('value', 1);
+      expect(helper).toHaveProperty('value', 'unknown');
     });
 
     it('should hide an empty number column but keep an empty text column readable as null', async () => {

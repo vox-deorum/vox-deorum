@@ -703,6 +703,20 @@ describe('stock politics desk', () => {
         beforePlayers: [playerRow(0, 10)],
       }));
       expect(firedSubjects(rule(none, 'religion-founded'))).toEqual([]);
+
+      // A pantheon is not a founded religion, so it neither prints nor blocks the later founding.
+      const pantheon = await check(fixture({
+        cutoff, previous: 15,
+        players: [playerRow(0, cutoff, { FoundedReligion: 'Pantheon (Religion Possible)' })],
+        beforePlayers: [playerRow(0, 10)],
+      }));
+      expect(firedSubjects(rule(pantheon, 'religion-founded'))).toEqual([]);
+      const afterPantheon = await check(fixture({
+        cutoff, previous: 15,
+        players: [playerRow(0, cutoff, { FoundedReligion: 'Taoism' })],
+        beforePlayers: [playerRow(0, 10, { FoundedReligion: 'Pantheon (Religion Possible)' })],
+      }));
+      expect(firedSubjects(rule(afterPantheon, 'religion-founded'))).toHaveLength(1);
     });
 
     it('should report an era change in the recent window', async () => {
