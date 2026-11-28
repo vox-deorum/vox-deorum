@@ -1,5 +1,4 @@
 import type { IssuePage } from '../../src/newspaper/contracts/issue.js';
-import { briefsFit } from '../../src/newspaper/editorial/presentation/page-plan.js';
 
 /** The page and item shape needed to check fixed newspaper rules. */
 export interface NewspaperIssueShape {
@@ -7,13 +6,14 @@ export interface NewspaperIssueShape {
   items: readonly { id: string }[];
 }
 
-/** List fixed-rule page problems: brief counts, repeated items, and items missing from pages. */
+/** List fixed-rule page problems: brief counts (four on the front, two or four in a section), repeated items, and items missing from pages. */
 export function newspaperPageProblems(issue: NewspaperIssueShape): string[] {
   const problems: string[] = [];
   const placements = new Map<string, number>();
   issue.pages.forEach((page, index) => {
     const briefs = page.itemIds.length - (page.hasLead ? 1 : 0);
-    if (!briefsFit(briefs, index === 0)) problems.push(`Page ${page.id} has ${briefs} briefs.`);
+    const fits = index === 0 ? briefs === 4 : briefs === 2 || briefs === 4;
+    if (!fits) problems.push(`Page ${page.id} has ${briefs} briefs.`);
     for (const id of page.itemIds) placements.set(id, (placements.get(id) ?? 0) + 1);
   });
   for (const [id, count] of placements)

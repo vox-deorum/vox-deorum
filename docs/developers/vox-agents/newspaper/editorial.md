@@ -140,7 +140,7 @@ After the loop, the editor trims the sections:
 1. A section with an odd number of briefs gives up its weakest story, never its lead. Three stories without a lead keep the best two.
 2. A section with fewer than 2 stories is dropped. The rest are ranked by the total score of their stories, and the edition keeps the best `defaults.sections` (2) in page order.
 3. Stories from dropped sections, and stories trimmed in step 1, move best first to a kept section that takes one of their tags and has room. For example, a lone trade deal tagged `trade` and `international` moves from Trade and Livelihood to Beyond Our Borders.
-4. Each kept section is trimmed to pairs again, so a moved story stays only when it beats the section's weakest story.
+4. Each kept section is trimmed to pairs again. Two arrivals can complete a pair, so a section of 2 that takes 2 moved stories prints all 4. A single arrival that leaves an odd count stays only when it beats the section's weakest brief.
 
 A check that cannot fill the front with four briefs skips and keeps the reporting period open. A printed article appears on just one page. [Designs](designs.md#which-design-runs) determine how it looks.
 
