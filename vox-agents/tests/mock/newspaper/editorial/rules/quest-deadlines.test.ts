@@ -182,6 +182,22 @@ describe('stock city-state quest deadlines', () => {
     expect(fired(result, disappeared)).toEqual([]);
   });
 
+  it('should report a replaced quest even when the new one shares its deadline', async () => {
+    const wonderQuest: ReceiverQuestTerm = { deadline: 30, type: 'Build a wonder', condition: 'Build Pyramids.' };
+    const result = await run({
+      turn: 20, deadlines: [30], terms: [wonderQuest],
+      priorDeadlines: [30], priorTerms: [{ ...resourceQuest, deadline: 30 }],
+    });
+    expect(fired(result, disappeared)).toEqual(['player/10']);
+    expect(development(result, disappeared)?.values).toMatchObject({
+      previousDeadline: 30, questCondition: resourceQuest.condition,
+    });
+    expect(fired(result, observed)).toEqual(['player/10']);
+    expect(development(result, observed)?.values).toMatchObject({
+      questDeadline: 30, questCondition: wonderQuest.condition,
+    });
+  });
+
   it('should reject a deadline report from a stale observation', async () => {
     const result = await run({ deadlines: [22], observedTurn: 18 });
     expect(fired(result, approaching)).toEqual([]);
