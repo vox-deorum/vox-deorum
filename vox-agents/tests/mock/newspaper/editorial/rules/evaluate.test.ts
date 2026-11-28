@@ -89,17 +89,18 @@ describe('newspaper trigger rules', () => {
       expect(triggerRuleAuditSchema.array().parse(JSON.parse(JSON.stringify(result.audit)))).toEqual(result.audit);
     });
 
+    // The annexation rule reads its earlier snapshot with get, so a first sighting is false rather than hidden.
     it.each([
-      ['false', 4, undefined, undefined], ['hidden', 2, 'city.before', 'city.foodPerTurn'],
-    ] as const)('should stop each rule when a predicate is %s', async (status, portIndex, portHidden, homeHidden) => {
+      ['false', 'false', 4, undefined], ['hidden', 'false', 2, 'city.foodPerTurn'],
+    ] as const)('should stop each rule when a predicate is %s', async (status, portOutcome, portIndex, homeHidden) => {
       const result = await runExamples(examples(status));
       expect(result.developments).toEqual([]);
       const port = result.audit[0].subjects[1], home = result.audit[1].subjects[0];
-      expect(port).toMatchObject({ outcome: status, failedWhen: portIndex });
+      expect(port).toMatchObject({ outcome: portOutcome, failedWhen: portIndex });
       expect(home).toMatchObject({ outcome: status, failedWhen: 3 });
       expect(port.expressions).toHaveLength(portIndex + 1);
       expect(home.expressions).toHaveLength(4);
-      expect(port.expressions.at(-1)?.hidden).toBe(portHidden);
+      expect(port.expressions.at(-1)?.hidden).toBeUndefined();
       expect(home.expressions.at(-1)?.hidden).toBe(homeHidden);
     });
   });

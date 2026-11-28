@@ -56,9 +56,9 @@ const nullableCityFields = new Set<typeof cityFields[number]>([
   'MajorityReligion', 'CurrentProduction', 'Wonders', 'ImportantBuildings'
 ]);
 
-/** Normalize the two known list columns and recorded city flags, keeping null only where it means "none". */
+/** Normalize the two known list columns and recorded city flags, keeping null only where it means "none". A blank value counts as empty. */
 function cityValue(key: typeof cityFields[number], raw: unknown): unknown {
-  if (raw === null) return nullableCityFields.has(key) ? null : undefined;
+  if (raw === null || raw === '') return nullableCityFields.has(key) ? null : undefined;
   if (key === 'Wonders' || key === 'ImportantBuildings') return recordedNames(raw);
   return key.startsWith('Is') ? recordedBoolean(raw) : raw;
 }

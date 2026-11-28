@@ -113,7 +113,7 @@ export function mountReader(
     if (ornament) masthead.append(ornament);
   }
   if (issue.publication.designId === "cable-desk") {
-    masthead.append(createElement("span", "vd-cable-turn", issue.cutoff.label));
+    masthead.append(createElement("span", "vd-cable-turn", `Issue ${issue.cutoff.label}`));
   }
   if (issue.publication.designId === "coffeehouse-essay") {
     const imprint = createElement("div", "vd-coffeehouse-imprint");

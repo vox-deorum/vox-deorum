@@ -3,7 +3,7 @@
     "id": "cultural-influence-becomes-influential-incoming",
     "subject": "player",
     "when": [
-      "player.culturalInfluenceChanges.some(c => c.direction === 'incoming' && c.reachedInfluential && c.get('rival.name'))"
+      "player.get('culturalInfluenceChanges')?.some(c => c.direction === 'incoming' && c.reachedInfluential && c.get('rival.name'))"
     ],
     "values": {
       "changeIndex": "player.culturalInfluenceChanges.findIndex(c => c.direction === 'incoming' && c.reachedInfluential && c.get('rival.name'))",
@@ -23,7 +23,7 @@
     "id": "cultural-influence-becomes-influential-outgoing",
     "subject": "player",
     "when": [
-      "player.culturalInfluenceChanges.some(c => c.direction === 'outgoing' && c.reachedInfluential && c.get('rival.name'))"
+      "player.get('culturalInfluenceChanges')?.some(c => c.direction === 'outgoing' && c.reachedInfluential && c.get('rival.name'))"
     ],
     "values": {
       "changeIndex": "player.culturalInfluenceChanges.findIndex(c => c.direction === 'outgoing' && c.reachedInfluential && c.get('rival.name'))",
@@ -43,7 +43,7 @@
     "id": "cultural-influence-loses-influential-incoming",
     "subject": "player",
     "when": [
-      "player.culturalInfluenceChanges.some(c => c.direction === 'incoming' && (c.previousLevel === 'Influential' || c.previousLevel === 'Dominant') && (c.level === 'Popular' || c.level === 'Familiar' || c.level === 'Exotic') && c.get('rival.name'))"
+      "player.get('culturalInfluenceChanges')?.some(c => c.direction === 'incoming' && (c.previousLevel === 'Influential' || c.previousLevel === 'Dominant') && (c.level === 'Popular' || c.level === 'Familiar' || c.level === 'Exotic') && c.get('rival.name'))"
     ],
     "values": {
       "changeIndex": "player.culturalInfluenceChanges.findIndex(c => c.direction === 'incoming' && (c.previousLevel === 'Influential' || c.previousLevel === 'Dominant') && (c.level === 'Popular' || c.level === 'Familiar' || c.level === 'Exotic') && c.get('rival.name'))",
@@ -61,7 +61,7 @@
     "id": "cultural-influence-loses-influential-outgoing",
     "subject": "player",
     "when": [
-      "player.culturalInfluenceChanges.some(c => c.direction === 'outgoing' && (c.previousLevel === 'Influential' || c.previousLevel === 'Dominant') && (c.level === 'Popular' || c.level === 'Familiar' || c.level === 'Exotic') && c.get('rival.name'))"
+      "player.get('culturalInfluenceChanges')?.some(c => c.direction === 'outgoing' && (c.previousLevel === 'Influential' || c.previousLevel === 'Dominant') && (c.level === 'Popular' || c.level === 'Familiar' || c.level === 'Exotic') && c.get('rival.name'))"
     ],
     "values": {
       "changeIndex": "player.culturalInfluenceChanges.findIndex(c => c.direction === 'outgoing' && (c.previousLevel === 'Influential' || c.previousLevel === 'Dominant') && (c.level === 'Popular' || c.level === 'Familiar' || c.level === 'Exotic') && c.get('rival.name'))",
@@ -79,7 +79,7 @@
     "id": "cultural-influence-trend-turns-incoming",
     "subject": "player",
     "when": [
-      "player.culturalInfluenceChanges.some(c => c.direction === 'incoming' && c.trendChanged && (c.trend === 'Rising' || c.trend === 'Falling') && c.get('rival.name'))",
+      "player.get('culturalInfluenceChanges')?.some(c => c.direction === 'incoming' && c.trendChanged && (c.trend === 'Rising' || c.trend === 'Falling') && c.get('rival.name'))",
       "!player.culturalInfluenceChanges.some(c => c.direction === 'incoming' && c.get('rival.name') && (c.reachedInfluential || ((c.previousLevel === 'Influential' || c.previousLevel === 'Dominant') && (c.level === 'Popular' || c.level === 'Familiar' || c.level === 'Exotic'))))"
     ],
     "values": {
@@ -101,7 +101,7 @@
     "id": "cultural-influence-trend-turns-outgoing",
     "subject": "player",
     "when": [
-      "player.culturalInfluenceChanges.some(c => c.direction === 'outgoing' && c.trendChanged && (c.trend === 'Rising' || c.trend === 'Falling') && c.get('rival.name'))",
+      "player.get('culturalInfluenceChanges')?.some(c => c.direction === 'outgoing' && c.trendChanged && (c.trend === 'Rising' || c.trend === 'Falling') && c.get('rival.name'))",
       "!player.culturalInfluenceChanges.some(c => c.direction === 'outgoing' && c.get('rival.name') && (c.reachedInfluential || ((c.previousLevel === 'Influential' || c.previousLevel === 'Dominant') && (c.level === 'Popular' || c.level === 'Familiar' || c.level === 'Exotic'))))"
     ],
     "values": {

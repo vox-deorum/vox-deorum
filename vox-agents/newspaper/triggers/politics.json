@@ -36,7 +36,7 @@
     "event": "PlayerGoldenAge",
     "when": [
       "event.player.is.foreignMajor",
-      "!event.starting"
+      "event.starting === false"
     ],
     "values": {
       "civilization": "event.player.name"
@@ -62,7 +62,7 @@
     "subject": "event",
     "event": "PlayerGoldenAge",
     "when": [
-      "!event.starting",
+      "event.starting === false",
       "event.player.self"
     ],
     "tier": "routine",

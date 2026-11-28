@@ -85,6 +85,90 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('newspaper design
     } finally { await page.close(); }
   });
 
+  it('should place story dates next to their headlines on narrow and wide editions', async context => {
+    if (!browser) { context.skip(unavailable); return; }
+    const { designs } = await loadEditorialConfig();
+    const page = await browser.newPage();
+    try {
+      await page.goto(`${host.url}/newspaper/export.html`);
+      for (const id of ['wire', 'cable-desk', 'port-register', 'teletext-bulletin']) {
+        const issue = designIssue(designs.find(design => design.id === id)!, ordinary, 3);
+        const { itemIds } = issue.pages[0];
+        const [lead, brief, undated] = itemIds.map(itemId => issue.items.find(item => item.id === itemId)!);
+        lead.observedTurn = issue.cutoff.turn - 4;
+        lead.byline = [{ type: 'link', text: 'Bristol', target: { type: 'city', cityId: 'CITY_BRISTOL' } }];
+        brief.observedTurn = 0;
+        brief.body = Array.from({ length: 4 }, () => brief.body[0]);
+        delete brief.byline;
+        delete undated.observedTurn;
+        for (const width of [360, 1200]) {
+          await mount(page, issue, width);
+          const label = `${id} at ${width}px`;
+          const rendered = await measureEdition(page);
+          expect(rendered.overflow, label).toBe(false);
+          expect(rendered.stories.map(story => story.id), label).toEqual(itemIds);
+          const dates = await page.locator('.vd-story-turn').evaluateAll(nodes => nodes.map(node => {
+            const story = node.closest('.vd-story')!;
+            const text = document.createRange();
+            text.selectNodeContents(story.querySelector('.vd-headline')!);
+            const heading = text.getBoundingClientRect();
+            text.selectNodeContents(node);
+            const date = text.getBoundingClientRect();
+            const paper = story.closest('.vd-page')!.getBoundingClientRect();
+            return {
+              itemId: story.getAttribute('data-item-id'),
+              text: node.textContent,
+              above: date.bottom <= heading.top + 1,
+              directlyBelow: date.top >= heading.bottom - 1 && date.top - heading.bottom <= 24,
+              fits: date.left >= paper.left && date.right <= paper.right,
+            };
+          }));
+          expect(dates, label).toHaveLength(2);
+          expect(dates.map(date => [date.itemId, date.text]), label)
+            .toEqual([[lead.id, `Turn ${lead.observedTurn}`], [brief.id, 'Turn 0']]);
+          expect(dates.every(date => date.fits && (id === 'teletext-bulletin' ? date.directlyBelow : date.above)), label).toBe(true);
+          if (id === 'wire') {
+            const byline = page.locator('.vd-story--lead .vd-byline');
+            expect(await byline.locator('a').textContent(), label).toBe('Bristol');
+            expect(await byline.locator('.vd-story-turn').count(), label).toBe(1);
+          }
+          if (id === 'cable-desk') {
+            expect(await page.locator('.vd-cable-turn').textContent(), label).toBe(`Issue ${issue.cutoff.label}`);
+          }
+        }
+      }
+    } finally { await page.close(); }
+  }, 60_000);
+
+  it('should keep wide Telegram briefs aligned with their headlines when dated', async context => {
+    if (!browser) { context.skip(unavailable); return; }
+    const design = (await loadEditorialConfig()).designs.find(candidate => candidate.id === 'cable-desk')!;
+    const page = await browser.newPage();
+    try {
+      await page.goto(`${host.url}/newspaper/export.html`);
+      const brief = page.locator('.vd-story--brief').first();
+      /** Compare the first printed lines, regardless of their containing box sizes. */
+      const alignment = () => brief.evaluate(story => {
+        const line = document.createRange();
+        line.selectNodeContents(story.querySelector('.vd-headline')!);
+        const headlineTop = line.getBoundingClientRect().top;
+        line.selectNodeContents(story.querySelector('.vd-prose > p')!);
+        return line.getBoundingClientRect().top - headlineTop;
+      });
+      for (const sample of [breaking, analysis]) {
+        const issue = designIssue(design, sample, 2);
+        const item = issue.items.find(candidate => candidate.id === issue.pages[0].itemIds[1])!;
+        delete item.observedTurn;
+        await mount(page, issue, 1200);
+        const undatedAlignment = await alignment();
+        item.observedTurn = issue.cutoff.turn - 3;
+        await mount(page, issue, 1200);
+        expect(await brief.locator('.vd-story-turn').isVisible()).toBe(true);
+        expect(await alignment(), issue.pages[0].layout).toBeCloseTo(undatedAlignment, 0);
+      }
+    } finally { await page.close(); }
+  });
+
   it.for([
     'street-gazette', 'port-register', 'cable-desk', 'clay-chronicle', 'palm-leaf-register', 'court-dispatch',
     'city-extra', 'civic-index',

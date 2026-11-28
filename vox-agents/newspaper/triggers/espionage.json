@@ -5,7 +5,7 @@
     "event": ["ElectionResultSuccess", "ElectionResultFailure"],
     "when": [
       "event.player.self",
-      "event.cityState"
+      "event.cityState.trim()"
     ],
     "values": {
       "success": "event.type === 'ElectionResultSuccess'",

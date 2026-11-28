@@ -351,9 +351,9 @@
     "variants": [
       {
         "id": "city-state-quest-countdown-disappeared-report",
-        "headline": "A deadline comes off {{cityState}}'s board",
+        "headline": "{{questTypePrefix}}A listing comes off {{cityState}}'s board",
         "body": [
-          "A dated errand is gone from {{cityState}}'s board before the day it named. A traveler who had saved coin for the road says she will hold it a week and see what the board says next. The board keeps its reasons to itself."
+          "A quest due on turn {{previousDeadline}} is no longer listed by {{cityState}}.{{questTermsLine}}"
         ],
         "links": []
       },
@@ -362,9 +362,9 @@
         "voice": "gazette",
         "stance": "neutral",
         "genre": "notice",
-        "headline": "Notice: an errand ends in {{cityState}}",
+        "headline": "{{questTypePrefix}}Quest notice absent in {{cityState}}",
         "body": [
-          "Merchants and travelers should know that a dated errand is gone from {{cityState}}'s board before its deadline. Workmen who priced the job should call at the gatehouse before spending more coin on travel."
+          "Notice to readers: the quest listed by {{cityState}} with a deadline of turn {{previousDeadline}} no longer appears.{{questTermsLine}}"
         ]
       },
       {
@@ -372,9 +372,9 @@
         "voice": "press",
         "stance": "rationalist",
         "genre": "report",
-        "headline": "The missing date on {{cityState}}'s board",
+        "headline": "{{questTypePrefix}}The missing listing in {{cityState}}",
         "body": [
-          "{{cityState}} has struck an errand from its board before day {{previousDeadline}}, and that day is still to come. A workman who had saved his good boots for the trip now says he will wear the old pair until someone tells him the job is real. The board offers no explanation, only a blank space where a date used to be."
+          "The listing in {{cityState}} gave turn {{previousDeadline}} as its deadline. That date is still ahead, but the listing is gone.{{questTermsLine}}"
         ]
       }
     ]
@@ -389,18 +389,18 @@
       {
         "id": "city-state-quest-deadline-approaching-report",
         "when": "turnsLeft > 0",
-        "headline": "The {{cityState}} deadline is {{turnsLeft}} out",
+        "headline": "{{questTypePrefix}}{{cityState}} deadline in {{turnsLeft}}",
         "body": [
-          "An errand on {{cityState}}'s board comes due in {{turnsLeft}}. A hauler has loaded the last of his goods and means to be inside the gate before the board is cleared. The road is short, but the clock is shorter."
+          "A quest on {{cityState}}'s board comes due in {{turnsLeft}}.{{questTermsLine}}"
         ],
         "links": []
       },
       {
         "id": "city-state-quest-deadline-approaching-today",
         "when": "turnsLeft === 0",
-        "headline": "A {{cityState}} errand ends today",
+        "headline": "{{questTypePrefix}}{{cityState}} quest due this turn",
         "body": [
-          "Today is the last day for the errand {{cityState}} posted. When the sun goes down, the work will be finished or the chance will be gone. The board has no patience for second thoughts."
+          "The deadline for the quest on {{cityState}}'s board is this turn.{{questTermsLine}}"
         ],
         "links": []
       },
@@ -410,9 +410,9 @@
         "stance": "neutral",
         "genre": "notice",
         "when": "turnsLeft === 0",
-        "headline": "The {{cityState}} clock hits zero",
+        "headline": "{{questTypePrefix}}Last turn on the {{cityState}} listing",
         "body": [
-          "Last day for the {{cityState}} errand. Finish it or leave it. The board clears at sundown."
+          "Last turn for the quest listed by {{cityState}}.{{questTermsLine}}"
         ]
       },
       {
@@ -421,9 +421,9 @@
         "stance": "populist",
         "genre": "notice",
         "when": "turnsLeft > 0",
-        "headline": "Hear it! {{turnsLeft}} on the {{cityState}} errand",
+        "headline": "{{questTypePrefix}}Hear it! {{turnsLeft}} left in {{cityState}}",
         "body": [
-          "Hear it, all who carry goods or tools for {{cityState}}! The errand closes in {{turnsLeft}}, and the sand is already low! {{turnsLeft}}, I say! Be at the gate before the last sand falls!"
+          "Hear it! The quest on {{cityState}}'s board is due in {{turnsLeft}}.{{questTermsLine}}"
         ]
       }
     ]
@@ -437,9 +437,9 @@
     "variants": [
       {
         "id": "city-state-timed-quest-observed-report",
-        "headline": "{{cityState}} posts an errand with a deadline",
+        "headline": "{{questTypePrefix}}New quest listing in {{cityState}}",
         "body": [
-          "{{cityState}} has posted a new errand and given it {{turnsLeft}}. A tanner read the notice twice, then went looking for his partner, since the work would take two pairs of hands. If he finds his partner, they will have to start while the offer still stands."
+          "A new listing in {{cityState}} gives a quest deadline of {{turnsLeft}} from now.{{questTermsLine}}"
         ],
         "links": []
       },
@@ -448,9 +448,9 @@
         "voice": "broadcast",
         "stance": "neutral",
         "genre": "notice",
-        "headline": "New errand posted in {{cityState}}",
+        "headline": "{{questTypePrefix}}Quest news from {{cityState}}",
         "body": [
-          "News from {{cityState}} this evening: another errand is up. The board gives it {{turnsLeft}} to be finished. The count began the moment the notice went up."
+          "News from {{cityState}}: its board lists another quest, due in {{turnsLeft}}.{{questTermsLine}}"
         ]
       },
       {
@@ -458,9 +458,9 @@
         "voice": "press",
         "stance": "ambitious",
         "genre": "analysis",
-        "headline": "A clock worth beating",
+        "headline": "{{questTypePrefix}}A new deadline to weigh in {{cityState}}",
         "body": [
-          "The new errand in {{cityState}} has {{turnsLeft}} to be finished, which is time enough to do the work properly. A prize with a clock beside it is still a prize, and the first to start usually takes it. {{terms.civilization}} should be first to start."
+          "Those weighing the new quest in {{cityState}} have {{turnsLeft}} before the listed deadline.{{questTermsLine}}"
         ]
       }
     ]

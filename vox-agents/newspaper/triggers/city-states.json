@@ -100,7 +100,8 @@
     "subject": "event",
     "event": "MinorFriendsChanged",
     "when": [
-      "event.majorPlayer.self"
+      "event.majorPlayer.self",
+      "typeof event.isNowFriend === 'boolean'"
     ],
     "values": {
       "cityState": "event.minorPlayer.name",
@@ -118,10 +119,16 @@
       "Array.isArray(player.get('before.questDeadlines'))",
       "Number.isSafeInteger(player.get('before.questObservationTurn'))",
       "player.before.questObservationTurn < player.questObservationTurn",
-      "player.before.questDeadlines.some(deadline => Number.isSafeInteger(deadline) && deadline > turn && !player.questDeadlines.includes(deadline))"
+      "(() => { const terms = player.before.knows('questTerms') ? player.before.questTerms : []; const other = player.knows('questTerms') ? player.questTerms : []; return player.before.questDeadlines.some(deadline => Number.isSafeInteger(deadline) && deadline > turn && !player.questDeadlines.includes(deadline) && (() => { const dated = terms.filter(quest => quest.deadline === deadline); return !dated.length || dated.some(quest => !other.some(match => match.type === quest.type && match.condition === quest.condition && match.deadline !== quest.deadline)); })()); })()"
     ],
     "values": {
-      "previousDeadline": "Math.min(...player.before.questDeadlines.filter(deadline => Number.isSafeInteger(deadline) && deadline > turn && !player.questDeadlines.includes(deadline)))",
+      "previousDeadline": "(() => { const terms = player.before.knows('questTerms') ? player.before.questTerms : []; const other = player.knows('questTerms') ? player.questTerms : []; return Math.min(...player.before.questDeadlines.filter(deadline => Number.isSafeInteger(deadline) && deadline > turn && !player.questDeadlines.includes(deadline) && (() => { const dated = terms.filter(quest => quest.deadline === deadline); return !dated.length || dated.some(quest => !other.some(match => match.type === quest.type && match.condition === quest.condition && match.deadline !== quest.deadline)); })())); })()",
+      "questIndex": "(() => { if (!player.before.knows('questTerms')) return -1; const terms = player.before.questTerms; const other = player.knows('questTerms') ? player.questTerms : []; const matches = quest => quest.deadline === previousDeadline && !other.some(match => match.type === quest.type && match.condition === quest.condition && match.deadline !== quest.deadline); const rewarded = terms.findIndex(quest => matches(quest) && quest.knows('reward')); return rewarded >= 0 ? rewarded : terms.findIndex(matches); })()",
+      "questType": "questIndex >= 0 ? player.before.questTerms[questIndex].type : ''",
+      "questCondition": "questIndex >= 0 ? player.before.questTerms[questIndex].condition : ''",
+      "questReward": "questIndex >= 0 && player.before.questTerms[questIndex].knows('reward') ? player.before.questTerms[questIndex].reward : ''",
+      "questTypePrefix": "questType ? questType + ': ' : ''",
+      "questTermsLine": "questCondition ? ' The listing read: ' + questCondition + (questReward ? ' Potential reward: ' + questReward + '.' : '') : ''",
       "cityState": "player.name"
     },
     "tier": "filler",
@@ -136,7 +143,14 @@
       "player.questDeadlines.some(deadline => Number.isSafeInteger(deadline) && deadline >= turn && deadline <= turn + 3)"
     ],
     "values": {
-      "turnsLeft": "(() => { const next = Math.min(...player.questDeadlines.filter(deadline => Number.isSafeInteger(deadline) && deadline >= turn && deadline <= turn + 3)); return next - turn; })()",
+      "questDeadline": "(() => { return Math.min(...player.questDeadlines.filter(deadline => Number.isSafeInteger(deadline) && deadline >= turn && deadline <= turn + 3)); })()",
+      "turnsLeft": "questDeadline - turn",
+      "questIndex": "(() => { if (!player.knows('questTerms')) return -1; const terms = player.questTerms; const matches = quest => quest.deadline === questDeadline; const rewarded = terms.findIndex(quest => matches(quest) && quest.knows('reward')); return rewarded >= 0 ? rewarded : terms.findIndex(matches); })()",
+      "questType": "questIndex >= 0 ? player.questTerms[questIndex].type : ''",
+      "questCondition": "questIndex >= 0 ? player.questTerms[questIndex].condition : ''",
+      "questReward": "questIndex >= 0 && player.questTerms[questIndex].knows('reward') ? player.questTerms[questIndex].reward : ''",
+      "questTypePrefix": "questType ? questType + ': ' : ''",
+      "questTermsLine": "questCondition ? ' ' + questCondition + (questReward ? ' Potential reward: ' + questReward + '.' : '') : ''",
       "cityState": "player.name"
     },
     "tier": "routine",
@@ -148,10 +162,17 @@
     "when": [
       "player.is.recentQuest",
       "Array.isArray(player.get('before.questDeadlines'))",
-      "player.questDeadlines.some(deadline => Number.isSafeInteger(deadline) && deadline > turn + 3 && !player.before.questDeadlines.includes(deadline))"
+      "(() => { const terms = player.knows('questTerms') ? player.questTerms : []; const other = player.before.knows('questTerms') ? player.before.questTerms : []; return player.questDeadlines.some(deadline => Number.isSafeInteger(deadline) && deadline > turn + 3 && !player.before.questDeadlines.includes(deadline) && (() => { const dated = terms.filter(quest => quest.deadline === deadline); return !dated.length || dated.some(quest => !other.some(match => match.type === quest.type && match.condition === quest.condition && match.deadline !== quest.deadline)); })()); })()"
     ],
     "values": {
-      "turnsLeft": "Math.min(...player.questDeadlines.filter(deadline => Number.isSafeInteger(deadline) && deadline > turn + 3 && !player.before.questDeadlines.includes(deadline))) - turn",
+      "questDeadline": "(() => { const terms = player.knows('questTerms') ? player.questTerms : []; const other = player.before.knows('questTerms') ? player.before.questTerms : []; return Math.min(...player.questDeadlines.filter(deadline => Number.isSafeInteger(deadline) && deadline > turn + 3 && !player.before.questDeadlines.includes(deadline) && (() => { const dated = terms.filter(quest => quest.deadline === deadline); return !dated.length || dated.some(quest => !other.some(match => match.type === quest.type && match.condition === quest.condition && match.deadline !== quest.deadline)); })())); })()",
+      "turnsLeft": "questDeadline - turn",
+      "questIndex": "(() => { if (!player.knows('questTerms')) return -1; const terms = player.questTerms; const other = player.before.knows('questTerms') ? player.before.questTerms : []; const matches = quest => quest.deadline === questDeadline && !other.some(match => match.type === quest.type && match.condition === quest.condition && match.deadline !== quest.deadline); const rewarded = terms.findIndex(quest => matches(quest) && quest.knows('reward')); return rewarded >= 0 ? rewarded : terms.findIndex(matches); })()",
+      "questType": "questIndex >= 0 ? player.questTerms[questIndex].type : ''",
+      "questCondition": "questIndex >= 0 ? player.questTerms[questIndex].condition : ''",
+      "questReward": "questIndex >= 0 && player.questTerms[questIndex].knows('reward') ? player.questTerms[questIndex].reward : ''",
+      "questTypePrefix": "questType ? questType + ': ' : ''",
+      "questTermsLine": "questCondition ? ' ' + questCondition + (questReward ? ' Potential reward: ' + questReward + '.' : '') : ''",
       "cityState": "player.name"
     },
     "tier": "filler",

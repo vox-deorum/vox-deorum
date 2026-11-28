@@ -84,6 +84,14 @@
     letter-spacing: normal;
   }
   & .vd-story--brief .vd-deck, & .vd-story--brief .vd-byline { margin: 0 0 8px; }
+  /* The observation turn sits below the headline as subdued fixed-width text. */
+  & .vd-story-turn {
+    margin: 5px 0 0;
+    color: color-mix(in srgb, var(--vd-ink) 64%, var(--vd-paper));
+    font: 700 calc(12px * var(--vd-text-scale)) / 1.3 var(--teletext-mono);
+    letter-spacing: .1em;
+    text-transform: uppercase;
+  }
   & .vd-evidence thead { color: var(--teletext-amber); background: #182332; }
   & .vd-evidence td { color: var(--vd-accent); font-size: calc(clamp(18px, 2cqi, 24px) * var(--vd-text-scale)); }
 }
@@ -102,6 +110,6 @@
     column-gap: clamp(20px, 3cqi, 40px);
 
     & > * { grid-column: 2; }
-    & > .vd-headline { grid-column: 1; grid-row: 1 / span 5; }
+    & > .vd-teletext-heading { grid-column: 1; grid-row: 1 / span 5; }
   }
 }

@@ -219,7 +219,7 @@
     "event": "CityCaptureComplete",
     "when": [
       "event.isConquest",
-      "!event.isCapital",
+      "event.isCapital === false",
       "!event.oldOwner.self && !event.newOwner.self",
       "event.get('city.name')"
     ],

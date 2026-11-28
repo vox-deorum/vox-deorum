@@ -33,6 +33,7 @@ export function renderStory(
   context: StoryRenderContext,
 ): HTMLElement {
   const { instancePrefix, designId, publicationDesignId, assetBaseUrl, vote } = context;
+  const feed = designId === "feed";
   const article = createElement(
     "article",
     `vd-story ${lead ? "vd-story--lead" : "vd-story--brief"}`,
@@ -41,7 +42,7 @@ export function renderStory(
   const headingId = `${instancePrefix}-heading-${page.id}-${item.id}`;
   article.setAttribute("aria-labelledby", headingId);
 
-  if (designId === "feed") article.append(renderAvatar(item));
+  if (feed) article.append(renderAvatar(item));
   if (publicationDesignId === "printed-almanack") {
     const date = createElement("div", "vd-almanack-date");
     if (item.observedTurn === undefined) date.textContent = "Undated";
@@ -64,10 +65,27 @@ export function renderStory(
   const headingGroup = registerEntry ? createElement("div", "vd-register-heading") : content;
   const analysisMain = analysisLead ? createElement("div", "vd-column-main") : null;
   const credits = evidenceFirst && analysisMain ? analysisMain : headingGroup;
+  const turn = item.observedTurn;
+  const teletext = publicationDesignId === "teletext-bulletin";
+  // A Teletext brief always wraps its headline block, which wide paper places in a left cell.
+  const headlineBlock = teletext && !lead ? createElement("div", "vd-teletext-heading") : headingGroup;
+  if (headlineBlock !== headingGroup) headingGroup.append(headlineBlock);
+  // A turn prints below a Teletext headline, beside a feed byline, or above the headline.
+  const turnPlacement: "above" | "below" | "byline" | undefined = turn === undefined ? undefined
+    : teletext ? "below"
+    : feed && item.byline ? "byline"
+    : feed || publicationDesignId === "cable-desk" || publicationDesignId === "port-register" ? "above"
+    : undefined;
+  if (turn !== undefined && turnPlacement === "above") {
+    // A Telegram Form brief mounts its turn in the content, ahead of the register heading and account.
+    const target = publicationDesignId === "cable-desk" && !lead ? content : headlineBlock;
+    target.append(renderStoryTurn(turn));
+  }
   const heading = createElement("h2", "vd-headline");
   heading.id = headingId;
   appendInlineNodes(heading, item.headline, item.id, bindReaderAction);
-  headingGroup.append(heading);
+  headlineBlock.append(heading);
+  if (turn !== undefined && turnPlacement === "below") headlineBlock.append(renderStoryTurn(turn));
 
   if (item.subheadline) {
     const subheadline = createElement("p", "vd-deck");
@@ -78,6 +96,9 @@ export function renderStory(
   if (item.byline) {
     const byline = createElement("p", "vd-byline");
     appendInlineNodes(byline, item.byline, item.id, bindReaderAction);
+    if (turn !== undefined && turnPlacement === "byline") {
+      byline.append(document.createTextNode(" · "), renderStoryTurn(turn, true));
+    }
     credits.append(byline);
   }
 
@@ -126,6 +147,11 @@ export function renderStory(
   }
   article.append(content);
   return article;
+}
+
+/** Build a story's observation-turn label, inline beside a byline or as its own line. */
+function renderStoryTurn(turn: number, inline = false): HTMLElement {
+  return createElement(inline ? "span" : "p", "vd-story-turn", `Turn ${turn}`);
 }
 
 /** Build the feed avatar, using the headline initial when needed. */

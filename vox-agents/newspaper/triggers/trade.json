@@ -62,7 +62,7 @@
     "window": "recent",
     "when": [
       "self.get('before.outgoingTradeRouteCount') > 0",
-      "self.outgoingTradeRouteCount === 0"
+      "self.get('outgoingTradeRouteCount') === 0"
     ],
     "values": {
       "routes": "self.before.outgoingTradeRouteCount"
@@ -115,7 +115,7 @@
     "subject": "world",
     "when": [
       "self.get('before.outgoingTradeRouteCount') === 0 || self.get('before.outgoingTradeRoutes')?.length === 0",
-      "self.outgoingTradeRouteCount > 0"
+      "self.get('outgoingTradeRouteCount') > 0"
     ],
     "values": {
       "routes": "self.outgoingTradeRouteCount"

@@ -3,7 +3,7 @@
     "id": "faith-drifts",
     "subject": "world",
     "when": [
-      "self.foundedReligion",
+      "self.is.hasFoundedReligion",
       "self.is.hasMajorityReligion",
       "self.foundedReligion !== self.majorityReligion"
     ],
@@ -26,7 +26,7 @@
       "city.majorityReligion",
       "city.get('before.majorityReligion') !== undefined",
       "changed(city, 'majorityReligion')",
-      "self.foundedReligion === city.majorityReligion",
+      "self.is.hasFoundedReligion && self.foundedReligion === city.majorityReligion",
       "city.is.convertedToMajority"
     ],
     "values": { "cityState": "city.owner.name", "religion": "city.majorityReligion" },
@@ -240,7 +240,7 @@
     "id": "religion-founded",
     "subject": "world",
     "when": [
-      "self.foundedReligion",
+      "self.is.hasFoundedReligion",
       "!self.get('before.foundedReligion')"
     ],
     "values": {

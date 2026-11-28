@@ -252,9 +252,11 @@ function factRuntime(model, wrap, constants, factDefinitions) {
           if (typeof dotted !== 'string') return undefined;
           const value = tolerantRead(() => {
             let current = proxy;
+            // A hidden or unknown fact field marks the read hidden, which tolerantRead turns into unread.
+            // Lists and plain values are stepped into only through their own keys, such as 'wonders.length'.
             for (const key of dotted.split('.')) {
-              if (current === null || typeof current !== 'object' || typeof current.knows !== 'function' ||
-                  !current.knows(key)) return unread;
+              if (current === null || typeof current !== 'object') return unread;
+              if (typeof current.knows !== 'function' && !has(current, key)) return unread;
               current = current[key];
             }
             return current;

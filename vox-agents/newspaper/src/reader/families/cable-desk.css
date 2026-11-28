@@ -42,6 +42,16 @@
   & .vd-tab:last-child { box-shadow: none; }
   &[data-mode="reader"] .vd-tab[aria-selected="true"] { background: #e4ca78; }
 
+  /* The story's observation turn is a small typewritten line above its headline. */
+
+  & .vd-story-turn {
+    margin: 0 0 .4em;
+    color: color-mix(in srgb, var(--vd-ink) 72%, var(--vd-paper));
+    font: 700 calc(12px * var(--vd-text-scale)) / 1.2 var(--cable-type);
+    letter-spacing: .12em;
+    text-transform: uppercase;
+  }
+
   & .vd-storylist[data-layout] .vd-story--lead {
     padding-block-end: 1rem;
     border-bottom: 2px solid var(--vd-ink);
@@ -89,8 +99,10 @@
     & .vd-storylist:not([data-layout="ordinary"]) .vd-story--brief .vd-story-content {
       display: grid;
       grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
-      gap: clamp(16px, 2.5cqi, 32px);
+      column-gap: clamp(16px, 2.5cqi, 32px);
       align-items: baseline;
+
+      & > .vd-story-turn { grid-column: 1 / -1; }
     }
   }
 }

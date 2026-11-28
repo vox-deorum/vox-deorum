@@ -56,7 +56,7 @@ Domestic and foreign rules share the topical `cities-*.json` files in [triggers/
 | Rule | What to borrow |
 | --- | --- |
 | `city-state-ally-defects`, `city-state-ally-lost` | Separate a city-state switching from us to a rival from a city-state becoming unallied. The latter requires the explicit no-ally ID in `SetAlly`. See the [city-state triggers](../../../../../vox-agents/newspaper/triggers/city-states.json). |
-| `city-state-quest-countdown-disappeared` | Compare two readable quest observations. If a deadline still in the future disappears, report the observation without treating it as an outcome. See [quest facts](facts.md#quest-deadlines-and-cultural-influence). |
+| `city-state-quest-countdown-disappeared` | Compare two quest readings for a future countdown that is no longer listed. Use the previous quest terms when readable, and skip a date change if the same objective is still listed. See [quest facts](facts.md#quest-deadlines-and-cultural-influence). |
 | `war-advantage-stalls` | Look for a score of at least 25 in the `long` window, then use `held` to require a continuous stretch of `short` turns within five points of the current score. `repeat: medium` allows a follow-up after 20 Standard turns. |
 | `war-turns-against-us` | Use `pair.other.stake.front` to weigh the opponent's proximity, the war score, and war weariness. |
 

@@ -57,7 +57,7 @@ Names must match the text in the recording. If the recorded text uses a differen
 
 ## Shortcuts
 
-A shortcut is an expression attached to the fact it reads. A historical fact uses the historical snapshot, so `city.before.is.conquered` tests the earlier occupation and puppet flags. Globals such as `cities` and `turn` still describe the current check. A hidden read inside a shortcut hides the expression that uses it, even inside a callback such as `players.filter(p => p.is.foreignMajor)`. Write a shortcut with `get` where a missing fact should mean "no", as in `!player.self && player.get('major') === true`. Use `city.is.knows('starving')` to test whether a shortcut can be evaluated.
+A shortcut is an expression attached to the fact it reads. A historical fact uses the historical snapshot, so `city.before.is.conquered` tests the earlier occupation and puppet flags. Globals such as `cities` and `turn` still describe the current check. A hidden read inside a shortcut hides the expression that uses it, even inside a callback such as `players.filter(p => p.is.foreignMajor)`. Write a shortcut with `get` where a missing fact should mean "no", as in `!player.self && !!player.get('major')`. Use `city.is.knows('starving')` to test whether a shortcut can be evaluated.
 
 Several rules can share an event shortcut. The stock building rules read `event.is.ourCity` for a completion in one of our cities, `event.is.theirCity` for one in a foreign city owned by the event's player, and `event.is.regularBuilding` for a building that is neither a defense, a wonder nor a courthouse integration. `event.is.notableBuilding` accepts a building on the city's `importantBuildings` list and any building in the Ancient Era.
 

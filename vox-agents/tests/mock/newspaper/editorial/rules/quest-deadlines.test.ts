@@ -1,9 +1,13 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { NewspaperEvidence, NewspaperSnapshot } from '../../../../../../mcp-server/dist/newspaper/evidence.js';
+import type { ReceiverQuestTerm } from '../../../../../../mcp-server/dist/newspaper/quest-deadlines.js';
+import { scaleEditorialConstants } from '../../../../../src/newspaper/editorial/config/constants.js';
 import { getEditorialExpressions, loadEditorialConfig } from '../../../../../src/newspaper/editorial/config/load.js';
 import type { EditorialConfig } from '../../../../../src/newspaper/editorial/config/schema.js';
 import { buildNewspaperFacts } from '../../../../../src/newspaper/editorial/facts/index.js';
+import { renderAuthoredText } from '../../../../../src/newspaper/editorial/presentation/issue.js';
 import { evaluateTriggerRules } from '../../../../../src/newspaper/editorial/rules/evaluate.js';
+import { matchTemplates } from '../../../../../src/newspaper/editorial/selection/templates.js';
 
 const approaching = 'city-state-quest-deadline-approaching';
 const observed = 'city-state-timed-quest-observed';
@@ -25,26 +29,28 @@ interface RunInput {
   previous?: number;
   deadlines?: number[];
   priorDeadlines?: number[];
+  terms?: ReceiverQuestTerm[];
+  priorTerms?: ReceiverQuestTerm[];
   observedTurn?: number;
   cityStateNamed?: boolean;
   repeatState?: CheckResult['repeatState'];
 }
 
 /** Build one readable national summary row, optionally carrying absolute quest deadlines. */
-function snapshot(player: number, turn: number, deadlines?: number[]): NewspaperSnapshot {
+function snapshot(player: number, turn: number, deadlines?: number[], terms?: ReceiverQuestTerm[]): NewspaperSnapshot {
   return {
     subjectID: player,
     source: { table: 'PlayerSummaries', id: turn * 100 + player, turn, createdAt: turn * 1000 + player },
-    values: deadlines === undefined ? {} : { QuestDeadlines: deadlines },
+    values: deadlines === undefined ? {} : { QuestDeadlines: deadlines, ...(terms ? { QuestTerms: terms } : {}) },
   };
 }
 
 /** Evaluate the stock quest rules against a controlled receiver snapshot and history. */
-async function run(input: RunInput = {}): Promise<CheckResult> {
+async function run(input: RunInput = {}) {
   const turn = input.turn ?? 20;
   const previous = input.previous ?? 18;
-  const current = snapshot(cityState, input.observedTurn ?? turn, input.deadlines);
-  const prior = input.priorDeadlines === undefined ? undefined : snapshot(cityState, previous, input.priorDeadlines);
+  const current = snapshot(cityState, input.observedTurn ?? turn, input.deadlines, input.terms);
+  const prior = input.priorDeadlines === undefined ? undefined : snapshot(cityState, previous, input.priorDeadlines, input.priorTerms);
   const evidence: NewspaperEvidence = {
     request: { receiverPlayerID: 0, previousCheckTurn: previous, cutoffTurn: turn, historyFromTurn: -1 },
     players: [snapshot(0, turn), current],
@@ -59,16 +65,18 @@ async function run(input: RunInput = {}): Promise<CheckResult> {
       gaps: [],
     },
   };
-  return evaluateTriggerRules({
+  const facts = buildNewspaperFacts(evidence, { playerIdentities: input.cityStateNamed === false
+    ? { ...playerIdentities, [cityState]: { ...playerIdentities[cityState], name: undefined } }
+    : playerIdentities });
+  const result = await evaluateTriggerRules({
     rules: config.triggers.filter(rule => [approaching, observed, disappeared].includes(rule.id)),
     compiled,
-    facts: buildNewspaperFacts(evidence, { playerIdentities: input.cityStateNamed === false
-      ? { ...playerIdentities, [cityState]: { ...playerIdentities[cityState], name: undefined } }
-      : playerIdentities }),
+    facts,
     constants: config.constants,
     speedMultiplier: 1,
     repeatState: input.repeatState,
   });
+  return { ...result, facts };
 }
 
 /** List the subject keys that actually qualified for one rule. */
@@ -82,22 +90,96 @@ function development(result: CheckResult, rule: string) {
   return result.developments.find(entry => entry.definitionId === rule);
 }
 
+/** Render each eligible version of a story with its recorded quest details. */
+async function stories(result: Awaited<ReturnType<typeof run>>, rule: string): Promise<string[]> {
+  const candidates = await matchTemplates(result.developments.filter(entry => entry.definitionId === rule),
+    config, compiled, { facts: result.facts, constants: scaleEditorialConstants(config.constants, 1) });
+  return candidates.flatMap(candidate => candidate.variants.map(variant =>
+    [variant.headline, ...variant.body].map(passage =>
+      renderAuthoredText(passage, candidate.values, variant, candidate.names).map(node => node.text).join('')).join('\n')));
+}
+
+const resourceQuest: ReceiverQuestTerm = {
+  deadline: 22, type: 'Connect a resource', condition: 'Connect Porcelain to your trade network.',
+  reward: '27 Influence, 114 Gold',
+};
+
 describe('stock city-state quest deadlines', () => {
   beforeAll(async () => {
     config = await loadEditorialConfig();
     compiled = await getEditorialExpressions(config);
   });
 
-  it('should report the nearest approaching deadline without naming the quest', async () => {
+  it('should still print the nearest approaching deadline when the terms are unavailable', async () => {
     const result = await run({ deadlines: [22, 24], priorDeadlines: [22, 24] });
     expect(fired(result, approaching)).toEqual(['player/10']);
     expect(development(result, approaching)).toMatchObject({
       subject: 'player/10', importance: 45, values: { turnsLeft: 2, cityState: 'Geneva' },
     });
-    expect(Object.keys(development(result, approaching)?.values ?? {})).toEqual(['turnsLeft', 'cityState']);
+    const articles = await stories(result, approaching);
+    expect(articles.length).toBeGreaterThan(0);
+    for (const article of articles) {
+      expect(article).toContain('2 turns');
+      expect(article).not.toContain('{{');
+    }
     expect(fired(result, observed)).toEqual([]);
     expect(result.audit.find(entry => entry.rule === approaching)?.subjects)
       .toContainEqual(expect.objectContaining({ subject: 'player/0', outcome: 'false' }));
+  });
+
+  it('should print the type, objective and reward together for the nearest approaching quest', async () => {
+    const result = await run({
+      deadlines: [22, 23], terms: [
+        { deadline: 22, type: 'Build a wonder', condition: 'Build Pyramids.' },
+        resourceQuest,
+        { deadline: 23, type: 'Build a wonder', condition: 'Build Stonehenge.', reward: '300 Faith' },
+      ],
+    });
+    const articles = await stories(result, approaching);
+    expect(articles.length).toBeGreaterThan(0);
+    for (const article of articles) {
+      expect(article).toContain(resourceQuest.type);
+      expect(article).toContain(resourceQuest.condition);
+      expect(article).toContain('27 Influence');
+      expect(article).toContain('114 Gold');
+      expect(article).not.toMatch(/Pyramids|Stonehenge|300 Faith/);
+    }
+  });
+
+  it('should print an objective without implying a reward when a new quest has none recorded', async () => {
+    const { reward, ...objective } = resourceQuest;
+    const result = await run({ deadlines: [30], terms: [{ ...objective, deadline: 30 }], priorDeadlines: [] });
+    const articles = await stories(result, observed);
+    expect(articles.length).toBeGreaterThan(0);
+    for (const article of articles) {
+      expect(article).toContain(resourceQuest.type);
+      expect(article).toContain(resourceQuest.condition);
+      expect(article).not.toContain('Potential reward:');
+    }
+  });
+
+  it('should use the prior terms when a deadline goes missing', async () => {
+    const result = await run({
+      deadlines: [30], terms: [{ deadline: 30, type: 'Build a wonder', condition: 'Build Pyramids.', reward: '70 Faith' }],
+      priorDeadlines: [25], priorTerms: [{ ...resourceQuest, deadline: 25 }],
+    });
+    const articles = await stories(result, disappeared);
+    expect(articles.length).toBeGreaterThan(0);
+    for (const article of articles) {
+      expect(article).toContain(resourceQuest.type);
+      expect(article).toContain(resourceQuest.condition);
+      expect(article).toContain('114 Gold');
+      expect(article).not.toMatch(/Pyramids|70 Faith/);
+    }
+  });
+
+  it('should not report a shifted deadline as a new or missing listing for the same objective', async () => {
+    const result = await run({
+      deadlines: [26], terms: [{ ...resourceQuest, deadline: 26 }],
+      priorDeadlines: [25], priorTerms: [{ ...resourceQuest, deadline: 25 }],
+    });
+    expect(fired(result, observed)).toEqual([]);
+    expect(fired(result, disappeared)).toEqual([]);
   });
 
   it('should reject a deadline report from a stale observation', async () => {

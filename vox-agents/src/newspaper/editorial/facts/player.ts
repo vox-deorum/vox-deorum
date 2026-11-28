@@ -26,7 +26,7 @@ const playerFields = [
   'MilitaryStrength', 'FoundedReligion', 'MajorityReligion', 'DiplomaticDeals'
 ] as const;
 
-// An empty number column is a gap in the record, so it stays hidden. Text and map columns keep null for "none".
+// An empty or non-numeric number column is a gap in the record, so it stays hidden. Text and map columns keep null for "none".
 const playerNumbers = new Set<typeof playerFields[number]>([
   'Score', 'Votes', 'Cities', 'Population', 'Territory', 'Gold', 'GoldPerTurn', 'HappinessPercentage',
   'Technologies', 'NextPolicyTurns', 'SciencePerTurn', 'CulturePerTurn', 'FaithPerTurn', 'TourismPerTurn',
@@ -180,14 +180,28 @@ export function buildPlayerSnapshotFacts(row: NewspaperSnapshot, context: FactBu
   }
   for (const key of playerFields) {
     if (major === false && !cityStateFields.has(key)) continue;
-    if (row.values[key] === null && playerNumbers.has(key)) continue;
+    if (playerNumbers.has(key) && !Number.isFinite(row.values[key])) continue;
     const field = recordedFact(row.values[key], sources);
     if (field) fields[key === 'Cities' ? 'cityCount' : key[0].toLowerCase() + key.slice(1)] = field;
   }
   if (major === false && Array.isArray(row.values.QuestDeadlines) &&
       row.values.QuestDeadlines.every(turn => Number.isSafeInteger(turn) && turn >= row.source.turn)) {
-    fields.questDeadlines = fact(row.values.QuestDeadlines, sources);
+    const deadlines = row.values.QuestDeadlines;
+    fields.questDeadlines = fact(deadlines, sources);
     fields.questObservationTurn = fact(row.source.turn, sources);
+    if (Array.isArray(row.values.QuestTerms)) {
+      const terms = row.values.QuestTerms.flatMap(term => {
+        if (!isRecord(term) || typeof term.deadline !== 'number' || !deadlines.includes(term.deadline) ||
+            typeof term.type !== 'string' || !term.type.trim() ||
+            typeof term.condition !== 'string' || !term.condition.trim()) return [];
+        return [{
+          deadline: term.deadline, type: term.type, condition: term.condition,
+          ...(typeof term.reward === 'string' && term.reward.trim() ? { reward: term.reward } : {})
+        }];
+      });
+      const readable = terms.length ? recordedFact(terms, sources) : undefined;
+      if (readable) fields.questTerms = readable;
+    }
   }
   // Keep the raw route map and infer its readable count from the same row.
   const outgoingRoutes = fields.outgoingTradeRoutes;

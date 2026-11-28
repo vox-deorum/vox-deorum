@@ -142,7 +142,7 @@ A posture such as `Withdraw` comes from the receiver's AI. Only occupied zones a
 
 ### Quest deadlines and cultural influence
 
-On a city-state, `player.questDeadlines` estimates expiry from English countdowns in the receiver's tooltip. `player.questObservationTurn` dates the tooltip. Ambiguous copies of the active player's tooltip are omitted. These dates support reminders; the offer date and reason for disappearance remain unknown.
+On a city-state, `player.questDeadlines` estimates expiry from English countdowns in the receiver's tooltip, and `player.questObservationTurn` dates that reading. For recognized quest types such as connecting a resource or building a wonder, `player.questTerms` pairs the `type` and `condition` with the estimated `deadline` and any clearly recorded potential `reward`. Other quests can still get a countdown notice. Copies that can't be attributed to the receiver are omitted. A countdown missing from a later reading does not establish what happened to the quest.
 
 On a known foreign major, `player.culturalInfluenceChanges` reads dated `VictoryProgress` observations. `outgoing` measures our influence over them and `incoming` measures theirs over us. The ratio compares tourism with the target's culture. Either direction can be unknown.
 

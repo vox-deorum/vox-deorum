@@ -290,6 +290,12 @@ describe('stock politics desk', () => {
         cutoff, players: [playerRow(0, cutoff, { FoundedReligion: 'Taoism', MajorityReligion: 'Taoism' })],
       }));
       expect(firedSubjects(rule(steady, 'faith-drifts'))).toEqual([]);
+
+      // The recording stores -1 when no religion was founded.
+      const none = await check(fixture({
+        cutoff, players: [playerRow(0, cutoff, { FoundedReligion: -1, MajorityReligion: 'Buddhism' })],
+      }));
+      expect(firedSubjects(rule(none, 'faith-drifts'))).toEqual([]);
     });
 
     it('should report a treasury moving from surplus to deficit in the recent window', async () => {
@@ -690,6 +696,13 @@ describe('stock politics desk', () => {
         beforePlayers: [playerRow(0, 10, { FoundedReligion: 'Taoism' })],
       }));
       expect(firedSubjects(rule(held, 'religion-founded'))).toEqual([]);
+
+      const none = await check(fixture({
+        cutoff, previous: 15,
+        players: [playerRow(0, cutoff, { FoundedReligion: -1 })],
+        beforePlayers: [playerRow(0, 10)],
+      }));
+      expect(firedSubjects(rule(none, 'religion-founded'))).toEqual([]);
     });
 
     it('should report an era change in the recent window', async () => {

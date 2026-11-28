@@ -552,7 +552,7 @@ describe('newspaper fact runtime', () => {
     });
 
     it('should read optional paths with get without hiding the expression', async () => {
-      const home = city(1, 20, 11, { Population: 9 });
+      const home = city(1, 20, 11, { Population: 9, Wonders: ['Petra'] });
       const foreignCity = city(2, 20, 22, { OwnerID: 1, FoodPerTurn: undefined });
       const runner = await compile([
         'city.get("population")',
@@ -561,15 +561,17 @@ describe('newspaper fact runtime', () => {
         'city.get("owner.leader")',
         'self.get("before.population")',
         'cities.filter(c => c.get("foodPerTurn") < 0).length',
+        'city.get("wonders.length")',
       ]);
-      const [[[mine]], [[plain, tolerated, owner, declined, before, filtered]]] = await runner.evaluate({
+      const [[[mine, wonders]], [[plain, tolerated, owner, declined, before, filtered]]] = await runner.evaluate({
         facts: buildNewspaperFacts(evidence([home, foreignCity]), identity),
         groups: [
-          { expressions: [0], subjects: [{ city: reference('city', 1) }] },
+          { expressions: [0, 6], subjects: [{ city: reference('city', 1) }] },
           { expressions: [0, 1, 2, 3, 4, 5], subjects: [{ city: reference('city', 2) }] },
         ],
       });
       expect(mine).toEqual({ value: 9, sources: [home.source] });
+      expect(wonders).toHaveProperty('value', 1);
       expect(plain).toEqual({ value: 3, sources: [foreignCity.source] });
       expect(tolerated).toEqual({ value: 3, sources: [foreignCity.source] });
       expect(owner).toMatchObject({ value: 'Carthage', sources: expect.arrayContaining([foreignCity.source]) });
@@ -579,9 +581,9 @@ describe('newspaper fact runtime', () => {
     });
 
     it('should hide an empty number column but keep an empty text column readable as null', async () => {
-      const row = { ...own, values: { Population: 12, Score: null, MajorityReligion: null } };
+      const row = { ...own, values: { Population: 12, Score: null, Gold: '', MajorityReligion: null } };
       const runner = await compile([
-        'self.knows("score")',
+        'self.knows("score") || self.knows("gold")',
         'self.score > 0',
         'self.knows("majorityReligion") && self.majorityReligion === null',
       ]);

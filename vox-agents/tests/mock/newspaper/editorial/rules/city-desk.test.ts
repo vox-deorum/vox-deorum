@@ -292,6 +292,9 @@ describe('stock city desk', () => {
     const change = 'foreign-city-flips';
     const conquered = await check(fixture([home, occupied], [], [flip, capture]));
     expect(conquered.stories('nearby-city-captured')).toHaveLength(1);
+    // A capture whose capital flag was recorded as null is not reported as a noncapital capture.
+    const unknownCapital = { ...capture, values: { ...capture.values, IsCapital: null } };
+    expect((await check(fixture([home, occupied], [], [flip, unknownCapital]))).stories('nearby-city-captured')).toEqual([]);
     expect(conquered.stories(change)).toEqual([]);
     expect(conquered.stories(resistance)).toEqual([]);
     const flipped = await check(fixture([home, occupied], [], [flip, nonConquest]));

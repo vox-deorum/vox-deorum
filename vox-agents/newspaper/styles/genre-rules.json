@@ -254,7 +254,7 @@
   {
     "id": "genre-golden-age-obituary-down",
     "match": { "genre": "obituary" },
-    "when": "self.get('goldenAge')?.endsWith('turns remaining')",
+    "when": "String(self.get('goldenAge')).endsWith('turns remaining')",
     "multiplier": 0.75
   },
   {

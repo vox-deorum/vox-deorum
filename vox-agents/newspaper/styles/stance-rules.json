@@ -20,7 +20,7 @@
   {
     "id": "stance-golden-age-high-happiness",
     "match": { "stance": "pro-government" },
-    "when": "self.get('goldenAge')?.endsWith('turns remaining') || self.get('happinessPercentage') >= 60",
+    "when": "String(self.get('goldenAge')).endsWith('turns remaining') || self.get('happinessPercentage') >= 60",
     "multiplier": 1.5
   },
   {
@@ -260,7 +260,7 @@
   {
     "id": "stance-golden-age-artistic-ambitious",
     "match": { "stance": ["artistic", "ambitious"] },
-    "when": "self.get('goldenAge')?.endsWith('turns remaining')",
+    "when": "String(self.get('goldenAge')).endsWith('turns remaining')",
     "multiplier": 1.3
   },
   {

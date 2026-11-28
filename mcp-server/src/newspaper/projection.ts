@@ -14,7 +14,7 @@ import {
   cityAtEvent, cityOwner, knowsPlayer, relatedSources, source, visibility, type NewspaperCityObservation
 } from './recorded-city.js';
 import { diplomatAtCapital, ownSpyAtCity, type RecordedRoster } from './espionage.js';
-import { projectReceiverQuestDeadlines } from './quest-deadlines.js';
+import { projectReceiverQuests } from './quest-deadlines.js';
 export type { NewspaperCityObservation } from './recorded-city.js';
 
 type PlayerContact = Pick<Selectable<PlayerSummary>, 'Key'> &
@@ -75,8 +75,11 @@ export function projectNewspaperPlayer(row: Selectable<PlayerSummary>, context: 
   const selected = pickFields(row, own ? ownPlayerFields : foreignPlayerFields);
   const values: Record<string, unknown> = projectPlayerReportFields(selected, level, Number.POSITIVE_INFINITY, info?.IsMajor === 1);
   if (info?.IsMajor === 0) {
-    const deadlines = projectReceiverQuestDeadlines(row.Quests, context.receiverPlayerID, row.Turn);
-    if (deadlines !== undefined) values.QuestDeadlines = deadlines;
+    const quests = projectReceiverQuests(row.Quests, context.receiverPlayerID, row.Turn);
+    if (quests) {
+      values.QuestDeadlines = quests.deadlines;
+      if (quests.terms.length) values.QuestTerms = quests.terms;
+    }
   }
   if (outgoing) values.OurDiplomatThere = outgoing.present;
   if (incoming) values.TheirDiplomatHere = incoming.present;

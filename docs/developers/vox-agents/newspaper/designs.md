@@ -93,6 +93,8 @@ A renderer family supplies the shared structure. A design can give it a distinct
 
 Stock designs offer ordinary, breaking, and analysis layouts. A breaking page emphasizes the lead. Most analysis layouts put evidence beside the story on wide sheets and below it on narrow sheets.
 
+Social News Feed, Telegram Form, Port Ledger, and Teletext Screen show the observation turn near each headline when known and keep the editor's story order. Telegram Form also labels the edition's cutoff in its masthead. Court Dispatch Slips and Printed Almanack have dedicated date fields and show **Undated** when no turn was recorded.
+
 ## Rendering constraints
 
 - Give every story one continuous column of text, including the lead. A lead can fill the row. Its body still reads straight down, even when art or evidence sits alongside it.
