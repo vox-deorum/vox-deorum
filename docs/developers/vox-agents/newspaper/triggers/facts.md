@@ -123,7 +123,7 @@ For the receiver's own training events, `port` gives a readable city name when b
 | Economy | `gold`, `goldPerTurn`, `happinessPercentage`, `goldenAge`, `resources`, `outgoingTradeRoutes`, `incomingTradeRoutes` |
 | Output | `sciencePerTurn`, `culturePerTurn`, `faithPerTurn`, `tourismPerTurn` |
 | Military | `militaryUnits`, `militarySupply`, `militaryStrength` |
-| Religion | `foundedReligion`, `majorityReligion` |
+| Religion | `foundedReligion` (`null` while the player has only a pantheon), `majorityReligion` |
 | Diplomacy | `diplomaticDeals` and the projected `majorAlly` and `relationships` |
 
 The stored `Cities` column becomes `cityCount`; `player.cities` lists visible cities. A visible foreign major exposes its policy names, ideology and military strength. A readable summary can still identify a player whose national values were not recorded.

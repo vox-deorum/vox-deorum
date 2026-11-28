@@ -114,7 +114,7 @@
     "id": "trade-network-opens",
     "subject": "world",
     "when": [
-      "self.get('before.outgoingTradeRouteCount') === 0 || self.get('before.outgoingTradeRoutes')?.length === 0",
+      "self.get('before.outgoingTradeRouteCount') === 0 || self.get('before.outgoingTradeRoutes.length') === 0",
       "self.get('outgoingTradeRouteCount') > 0"
     ],
     "values": {

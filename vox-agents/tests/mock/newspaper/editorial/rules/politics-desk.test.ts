@@ -21,6 +21,7 @@ const ruleIds = [
   'congress-session-imminent', 'congress-voting-opens', 'congress-new-proposals',
   'congress-resolution-passed', 'congress-resolution-defeated', 'congress-sanctions-on-us',
   'congress-world-ideology', 'congress-world-religion', 'congress-world-project',
+  'trade-network-opens', 'last-trade-route-ends',
 ];
 
 let stockConfig: EditorialConfig;
@@ -717,6 +718,33 @@ describe('stock politics desk', () => {
         beforePlayers: [playerRow(0, 10, { FoundedReligion: 'Pantheon (Religion Possible)' })],
       }));
       expect(firedSubjects(rule(afterPantheon, 'religion-founded'))).toHaveLength(1);
+    });
+
+    it('should report trade routes opening and closing, and treat a recording gap as unknown', async () => {
+      const cutoff = 20;
+      const route = { 'Paris (France) => Rome (Rome)': { TurnsLeft: 12, Domain: 'Land' } };
+      const closed = await check(fixture({
+        cutoff, previous: 15,
+        players: [playerRow(0, cutoff, { OutgoingTradeRoutes: { Available: 1 } })],
+        beforePlayers: [playerRow(0, 10, { OutgoingTradeRoutes: route })],
+      }));
+      expect(firedSubjects(rule(closed, 'last-trade-route-ends'))).toHaveLength(1);
+      // A false reading here is what lets the opening story print again later.
+      expect(rule(closed, 'trade-network-opens').subjects.map(subject => subject.outcome)).toEqual(['false']);
+
+      const opened = await check(fixture({
+        cutoff, previous: 15,
+        players: [playerRow(0, cutoff, { OutgoingTradeRoutes: route })],
+        beforePlayers: [playerRow(0, 10, { OutgoingTradeRoutes: { Available: 1 } })],
+      }));
+      expect(firedSubjects(rule(opened, 'trade-network-opens'))).toHaveLength(1);
+
+      const gap = await check(fixture({
+        cutoff, previous: 15,
+        players: [playerRow(0, cutoff)],
+        beforePlayers: [playerRow(0, 10, { OutgoingTradeRoutes: route })],
+      }));
+      expect(rule(gap, 'last-trade-route-ends').subjects.map(subject => subject.outcome)).toEqual(['hidden']);
     });
 
     it('should report an era change in the recent window', async () => {
