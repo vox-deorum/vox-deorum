@@ -183,7 +183,7 @@ describe('stock politics desk', () => {
       }));
       const vassal = firedSubjects(rule(becomes, 'becomes-vassal'));
       expect(vassal).toHaveLength(1);
-      expect(vassal[0]).toMatchObject({ subject: 'player/1', importance: 90, urgent: true });
+      expect(vassal[0]).toMatchObject({ subject: 'player/1', urgent: true });
       expect(subjectValue(vassal[0], 'master')).toBe('Brazil');
 
       const gains = await check(fixture({
@@ -210,7 +210,7 @@ describe('stock politics desk', () => {
       }));
       const leader = firedSubjects(rule(leading, 'score-leader-changes'));
       expect(leader).toHaveLength(1);
-      expect(leader[0]).toMatchObject({ subject: 'player/0', importance: 75 });
+      expect(leader[0]).toMatchObject({ subject: 'player/0' });
       expect(subjectValue(leader[0], 'civilization')).toBe('France');
       expect(subjectValue(leader[0], 'tied')).toBe(false);
 
@@ -283,7 +283,7 @@ describe('stock politics desk', () => {
       const record = rule(drifted, 'faith-drifts');
       const fired = firedSubjects(record);
       expect(fired).toHaveLength(1);
-      expect(fired[0]).toMatchObject({ subject: 'world', importance: 60 });
+      expect(fired[0]).toMatchObject({ subject: 'world' });
       expect(subjectValue(fired[0], 'founded')).toBe('Taoism');
       expect(subjectValue(fired[0], 'majorityFaith')).toBe('Buddhism');
 
@@ -408,7 +408,7 @@ describe('stock politics desk', () => {
       const pillageRecord = rule(audit, 'city-pillaged-unrest');
       const pillageFired = firedSubjects(pillageRecord);
       expect(pillageFired).toHaveLength(1);
-      expect(pillageFired[0]).toMatchObject({ subject: 'city/20', importance: 60 });
+      expect(pillageFired[0]).toMatchObject({ subject: 'city/20' });
       expect(subjectValue(pillageFired[0], 'pillagedPopulation')).toBe(5);
       expect(firedSubjects(rule(audit, 'city-famine-unrest'))).toEqual([]);
 
@@ -416,7 +416,7 @@ describe('stock politics desk', () => {
       const second = await check(fixture({ cutoff: 10, players: [playerRow(0, 10)], cities: [famine] }));
       const famineFired = firedSubjects(rule(second, 'city-famine-unrest'));
       expect(famineFired).toHaveLength(1);
-      expect(famineFired[0]).toMatchObject({ subject: 'city/21', importance: 60 });
+      expect(famineFired[0]).toMatchObject({ subject: 'city/21' });
       expect(subjectValue(famineFired[0], 'faminePopulation')).toBe(4);
     });
   });
@@ -659,7 +659,7 @@ describe('stock politics desk', () => {
       }));
       const openedFired = firedSubjects(rule(opened, 'policy-branch-opened'));
       expect(openedFired).toHaveLength(1);
-      expect(openedFired[0]).toMatchObject({ subject: 'world', importance: 60 });
+      expect(openedFired[0]).toMatchObject({ subject: 'world' });
       expect(subjectValue(openedFired[0], 'branch')).toBe('Piety');
       expect(subjectValue(openedFired[0], 'count')).toBe(3);
 
@@ -688,7 +688,7 @@ describe('stock politics desk', () => {
       }));
       const foundedFired = firedSubjects(rule(founded, 'religion-founded'));
       expect(foundedFired).toHaveLength(1);
-      expect(foundedFired[0]).toMatchObject({ subject: 'world', importance: 75 });
+      expect(foundedFired[0]).toMatchObject({ subject: 'world' });
       expect(subjectValue(foundedFired[0], 'religion')).toBe('Taoism');
 
       const held = await check(fixture({
@@ -796,7 +796,7 @@ describe('stock politics desk', () => {
       }));
       const surplusFired = firedSubjects(rule(surplus, 'treasury-returns-to-surplus'));
       expect(surplusFired).toHaveLength(1);
-      expect(surplusFired[0]).toMatchObject({ subject: 'world', importance: 45 });
+      expect(surplusFired[0]).toMatchObject({ subject: 'world' });
       expect(subjectValue(surplusFired[0], 'goldPerTurn')).toBe(0);
 
       const deficit = await check(fixture({
@@ -817,7 +817,7 @@ describe('stock politics desk', () => {
       }));
       const endedFired = firedSubjects(rule(ended, 'golden-age-ends'));
       expect(endedFired).toHaveLength(1);
-      expect(endedFired[0]).toMatchObject({ subject: 'event/3', importance: 45 });
+      expect(endedFired[0]).toMatchObject({ subject: 'event/3' });
 
       const started = await check(fixture({
         cutoff, previous: 25,

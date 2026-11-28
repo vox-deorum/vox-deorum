@@ -208,12 +208,12 @@ Spy rosters match roles and locations. A nonnegative network balance also identi
 
 The presence facts `ourSpyPresent`, `ourDiplomatThere` and `theirDiplomatHere` describe presence only. On our own roster, `ourSpyPoints` gives a city's network points and `ourDiplomatPoints` gives a foreign major's. None of these facts unlock city or player detail. Points add through the [stakes](constants.md#stakes):
 
-`city.stake.spy = 3 + min(6, round(ourSpyPoints / 150))`
+`city.stake.spy = 3 + min(7, round(ourSpyPoints / 200))`
 
 | Presence or threshold | Effect |
 | --- | --- |
-| Our spy in a foreign city | `city.stake.spy`: 3 points on arrival and 1 more per 150 network points rounded, up to the cap of 9 from 825 points. Added into `city.stake.intel`, and into `player.stake.spy` when it is the highest among that player's cities. |
-| Our diplomat at a foreign major's capital | `player.stake.intel`: 3 points when posted, 6 from 200 network points and 9 from 800, plus `player.stake.spy`, capped at 15. Also adds 3 points to `city.stake.intel` for every foreign city of the owner whose capital hosts our diplomat. |
+| Our spy in a foreign city | `city.stake.spy`: 3 points on arrival and 1 more per 200 network points rounded, up to the cap of 10 from 1300 points. Added into `city.stake.intel`, and into `player.stake.spy` when it is the highest among that player's cities. |
+| Our diplomat at a foreign major's capital | `player.stake.intel`: 3 points when posted, 6 from 200 network points and 10 from 800, plus `player.stake.spy`, capped at 15. Also adds 5 points to `city.stake.intel` for every foreign city of the owner whose capital hosts our diplomat. |
 | 200 diplomat points | Lets that major's policy adoption reports reach the receiver. |
 | 800 diplomat points | Lets private deal terms with each foreign party reach the receiver, when we are not a party. |
 

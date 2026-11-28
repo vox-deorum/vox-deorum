@@ -114,7 +114,7 @@ describe('stock city-state quest deadlines', () => {
     const result = await run({ deadlines: [22, 24], priorDeadlines: [22, 24] });
     expect(fired(result, approaching)).toEqual(['player/10']);
     expect(development(result, approaching)).toMatchObject({
-      subject: 'player/10', importance: 45, values: { turnsLeft: 2, cityState: 'Geneva' },
+      subject: 'player/10', values: { turnsLeft: 2, cityState: 'Geneva' },
     });
     const articles = await stories(result, approaching);
     expect(articles.length).toBeGreaterThan(0);

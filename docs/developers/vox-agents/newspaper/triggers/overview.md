@@ -80,7 +80,7 @@ Choose a tier for what happened. Use shared stakes to account for why it matters
 
 | Tier | Stock base | Stock example |
 | --- | --- | --- |
-| `crisis` | 90 | We become a vassal |
+| `crisis` | 100 | We become a vassal |
 | `major` | 75 | We enter a new era |
 | `notable` | 60 | We gain a city-state ally |
 | `routine` | 45 | A city completes a defense |
@@ -93,7 +93,7 @@ A tier expression can distinguish stories of different kinds, for example `ours 
 | To weigh | What to use |
 | --- | --- |
 | A civilization's relationship to the reader | For a foreign wonder, use `city.owner.stake.relation`: a friend within seven tiles can add 14 points, while a distant neutral civilization can subtract 8. A diplomat at their capital and a spy in their cities add intel after the clamp, up to 15 more. For news about two civilizations, use `pair.stake.relation`. |
-| The city itself | Use `city.stake.place`. A foreign city six tiles from our nearest city gets +5; one 100 tiles away gets −8. `city.stake.intel` adds 3 for our spy on arrival, up to the cap of 9 from 825 network points, plus 3 for our diplomat at the owner's capital. Use visible `city.isCapital` or `city.population` to add a separate bonus for a foreign capital or a large foreign city. |
+| The city itself | Use `city.stake.place`. A foreign city six tiles from our nearest city gets +5; one 100 tiles away gets −8. `city.stake.intel` adds 3 for our spy on arrival, up to the cap of 10 from 1300 network points, plus 5 for our diplomat at the owner's capital. Use visible `city.isCapital` or `city.population` to add a separate bonus for a foreign capital or a large foreign city. |
 | An offensive near a city | Use [tactical observations](facts.md#tactical-observations) to detect a shift in posture. [Rank the offensive by the city's location](examples.md#a-nearby-offensive-outranks-a-distant-one). |
 
 City location and the owner's relationship can count separately. Check whether you want proximity in both, since the relationship stake also considers distance. Do not add a `nearby` or `neighbor` condition to a foreign rule just to keep the story local; distance already ranks it through the place and relation stakes. Keep a distance condition where the story depends on it, such as a near and far pair covering both distance bands, or domestic news about a distant colony. Adjustments help eligible stories compete alongside [novelty, variety, and votes](../editorial.md#developments-selection-and-continuity).

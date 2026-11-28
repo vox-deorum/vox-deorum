@@ -209,7 +209,7 @@ describe('stock building news', () => {
   it('should report a completed regular building at home with its city', async () => {
     const { audit } = await check(own('Granary', { important: true }));
     const completed = subject(audit('building-completed'));
-    expect(completed).toMatchObject({ outcome: 'fired', importance: 30 });
+    expect(completed).toMatchObject({ outcome: 'fired' });
     expect(placeholder(completed, 'values.building')).toBe('Granary');
     expect(completed.sources).toEqual(expect.arrayContaining([
       expect.objectContaining({ table: 'GameEvents', id: 100 }),

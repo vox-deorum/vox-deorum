@@ -46,7 +46,7 @@ Numeric `window` and `repeat` fields also use Standard turns. Inside an expressi
 
 | Group | Defaults |
 | --- | --- |
-| Population | `town` 5, `largeCity` 15, `metropolis` 25 |
+| Population | `town` 5, `mediumCity` 10, `largeCity` 15, `metropolis` 20 |
 | Fractions | `minority` 0.25, `majority` 0.5, `dominant` 0.75 |
 
 ## Type lists
@@ -111,14 +111,14 @@ Spies and diplomats add points through the intel stakes. They do not unlock fact
 | Stock stake | What changes the score |
 | --- | --- |
 | `player.stake.relation` | `min(20, max(-15, proximity + ties + cityState)) + player.stake.intel` for another player; the receiver scores 0. Proximity adds 8 within `neighboring` (7 tiles), 4 within `nearby` (15 tiles), 0 from 16 to `regional` (25 tiles), and -8 beyond `regional`. Ties add 10 for war, 6 for friendship or a pact, 6 for a denouncement in either direction, and 8 for a vassal or master tie. A city-state adds 4 when allied to us, or subtracts 6. |
-| `player.stake.intel` | `min(15, diplomat + player.stake.spy)`. The diplomat weight is 3 when our diplomat is posted, 6 from 200 network points and 9 from 800 points. Added into `player.stake.relation` outside its clamp. |
+| `player.stake.intel` | `min(15, diplomat + player.stake.spy)`. The diplomat weight is 3 when our diplomat is posted, 6 from 200 network points and 10 from 800 points. Added into `player.stake.relation` outside its clamp. |
 | `pair.stake.relation` | Uses the other player's relationship score if the receiver is in the pair; otherwise uses the higher of the two scores. |
 | `player.stake.front` | For a known opponent at war with the receiver, weighs distance, the magnitude of the war score, and war weariness. A city-state front gets a penalty in place of distance points. Adds `player.stake.spy`. |
 | `player.stake.spy` | The highest `city.stake.spy` among that player's visible cities, or 0. Added into `player.stake.intel` and `player.stake.front`. |
 | `player.stake.war` | For the receiver, adds the scores of known major fronts and 4 points for each major front after the first, within -10 to 20. Scores -10 when all known opponents are city-states. |
 | `city.stake.place` | Adds 8 points for the receiver's capital and 4 for an own city at least `largeCity` in size. A foreign city uses the same distance scale as an event, plus its `city.stake.intel`. |
-| `city.stake.spy` | `3 + min(6, round(ourSpyPoints / 150))` for a foreign city with our spy: 3 points on arrival and 1 more per 150 network points rounded, so 4 at 75 points and the cap of 9 from 825 points. Added into `city.stake.intel` and `player.stake.spy`. |
-| `city.stake.intel` | `city.stake.spy` plus 3 when our diplomat is at the owner's capital. Added into `city.stake.place`. |
+| `city.stake.spy` | `3 + min(7, round(ourSpyPoints / 200))` for a foreign city with our spy: 3 points on arrival and 1 more per 200 network points rounded, so 4 at 100 points and the cap of 10 from 1300 points. Added into `city.stake.intel` and `player.stake.spy`. |
+| `city.stake.intel` | `city.stake.spy` plus 5 when our diplomat is at the owner's capital. Added into `city.stake.place`. |
 | `event.stake.place` | Adds 8, 5 or 2 points at `adjacent`, `neighboring` or `nearby` distance from the receiver's nearest city. Beyond `regional`, subtracts 8; between `nearby` and `regional`, adds 0. Adds the event city's intel through `event.stake.intel`. Needs a readable distance. |
 | `event.stake.intel` | Uses the event city's `city.stake.intel`; 0 without a linked city. |
 | `event.stake.espionage` | The relation stake of the other party in an espionage report: the target for our operation, the source when a foreign operation names it. 0 when that party is unnamed or the event is not an espionage report. |
@@ -135,8 +135,8 @@ Proximity and ties are clamped to -15 to 20 before intel is added, so the result
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Distant neutral major (26 tiles), nobody posted | -8 | 0 | -8 | 0 | 0 | 0 | -8 |
 | The same, diplomat just arrived | -8 | 0 | -8 | 3 (0 points) | 0 | 3 | -8 + 3 = -5 |
-| The same, diplomat at 900 points and spy at 600 points | -8 | 0 | -8 | 9 | 7 (600 points) | `min(15, 9 + 7) = 15` | -8 + 15 = 7 |
-| Hostile neighbor (5 tiles) at war and denounced, diplomat and spy at 900 points | 8 | war 10 + denounced 6 = 16 | 8 + 16 = 24, clamped to 20 | 9 | 9 (900 points) | `min(15, 9 + 9) = 15` | 20 + 15 = 35 |
+| The same, diplomat at 900 points and spy at 600 points | -8 | 0 | -8 | 10 | 6 (600 points) | `min(15, 10 + 6) = 15` | -8 + 15 = 7 |
+| Hostile neighbor (5 tiles) at war and denounced, diplomat and spy at 900 points | 8 | war 10 + denounced 6 = 16 | 8 + 16 = 24, clamped to 20 | 10 | 8 (900 points) | `min(15, 10 + 8) = 15` | 20 + 15 = 35 |
 
 ## Terms
 
