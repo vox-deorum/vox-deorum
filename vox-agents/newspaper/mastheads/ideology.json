@@ -12,7 +12,7 @@
     "weight": {
       "base": 10
     },
-    "designs": ["victorian"]
+    "designs": ["steam-press-broadsheet"]
   },
   {
     "id": "order-workers-herald-wire",
@@ -27,7 +27,7 @@
     "weight": {
       "base": 30
     },
-    "designs": ["wire"]
+    "designs": ["endless-scroll"]
   },
   {
     "id": "order-five-year-herald",
@@ -42,7 +42,7 @@
     "weight": {
       "base": 15
     },
-    "designs": ["national-review"]
+    "designs": ["glossy-photo-weekly"]
   },
   {
     "id": "order-red-banner",
@@ -57,7 +57,7 @@
     "weight": {
       "base": 6
     },
-    "designs": ["national-review"]
+    "designs": ["glossy-photo-weekly"]
   },
   {
     "id": "freedom-free-press",
@@ -72,7 +72,7 @@
     "weight": {
       "base": 10
     },
-    "designs": ["victorian"]
+    "designs": ["steam-press-broadsheet"]
   },
   {
     "id": "freedom-free-press-wire",
@@ -87,7 +87,7 @@
     "weight": {
       "base": 30
     },
-    "designs": ["wire"]
+    "designs": ["endless-scroll"]
   },
   {
     "id": "freedom-open-ledger",
@@ -102,7 +102,7 @@
     "weight": {
       "base": 6
     },
-    "designs": ["civic-index"]
+    "designs": ["asymmetric-grid"]
   },
   {
     "id": "autocracy-national-standard",
@@ -117,7 +117,7 @@
     "weight": {
       "base": 10
     },
-    "designs": ["victorian"]
+    "designs": ["steam-press-broadsheet"]
   },
   {
     "id": "autocracy-national-standard-wire",
@@ -132,7 +132,7 @@
     "weight": {
       "base": 30
     },
-    "designs": ["wire"]
+    "designs": ["endless-scroll"]
   },
   {
     "id": "autocracy-state-courier",
@@ -147,6 +147,6 @@
     "weight": {
       "base": 6
     },
-    "designs": ["national-review"]
+    "designs": ["glossy-photo-weekly"]
   }
 ]

@@ -1,0 +1,63 @@
+/* Sloping light at the tablet edges and a glint below each incised rule. */
+.vd-newspaper[data-publication-design="cuneiform-tablet"] {
+  --clay-groove: color-mix(in srgb, var(--vd-accent) 60%, var(--vd-paper));
+  --clay-lip: color-mix(in srgb, var(--vd-paper) 72%, white);
+  --clay-surface: linear-gradient(92deg, #72432225, transparent 4%, #fff3db12 14%, transparent 47%, #5932160c 94%, #59321625);
+
+  & .vd-header, & .vd-page { background-image: var(--clay-surface); }
+  & .vd-header { padding-block-start: clamp(12px, 2cqi, 24px); }
+  & .vd-masthead {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 12px;
+    align-items: end;
+    padding: 0 0 10px;
+    text-align: left;
+  }
+  & .vd-title {
+    font-size: calc(clamp(28px, 4.8cqi, 56px) * var(--vd-text-scale));
+    letter-spacing: -.025em;
+  }
+  & .vd-masthead .vd-ornament {
+    grid-area: 1 / 2;
+    align-self: center;
+    width: clamp(42px, 7cqi, 84px);
+    margin: 0;
+  }
+  & .vd-tabs {
+    justify-content: flex-start;
+    border-block: 1px solid var(--clay-groove);
+    box-shadow: inset 0 1px var(--clay-lip), 0 1px var(--clay-lip);
+  }
+  & .vd-storylist .vd-story--lead .vd-headline { font-weight: 700; }
+  & .vd-storylist .vd-story--brief, & .vd-evidence {
+    border-top: 1px solid var(--clay-groove);
+    box-shadow: inset 0 1px var(--clay-lip);
+    padding-top: 12px;
+  }
+  & .vd-storylist[data-layout="ordinary"] .vd-story--brief {
+    position: relative;
+    &::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto auto 0;
+      width: 10px;
+      height: 6px;
+      background: var(--clay-groove);
+      clip-path: polygon(0 0, 100% 0, 0 100%);
+    }
+  }
+  & .vd-storylist[data-layout="breaking"] .vd-story--lead :is(.vd-headline, .vd-deck, .vd-byline) {
+    text-align: left;
+    text-transform: none;
+  }
+  & .vd-number { font-weight: bold; }
+  & .vd-end-rule { height: 2px; background: linear-gradient(var(--clay-groove) 50%, var(--clay-lip) 50%); }
+  & .vd-end-ornament { display: none; }
+}
+
+@container newspaper (width > 760px) {
+  .vd-newspaper[data-publication-design="cuneiform-tablet"] .vd-storylist[data-layout="ordinary"] .vd-prose {
+    max-width: 66ch;
+  }
+}

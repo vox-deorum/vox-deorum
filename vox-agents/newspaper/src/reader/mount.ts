@@ -112,10 +112,10 @@ export function mountReader(
     const ornament = createOrnamentImage(issue, assetBaseUrl);
     if (ornament) masthead.append(ornament);
   }
-  if (issue.publication.designId === "cable-desk") {
+  if (issue.publication.designId === "telegram-form") {
     masthead.append(createElement("span", "vd-cable-turn", `Issue ${issue.cutoff.label}`));
   }
-  if (issue.publication.designId === "coffeehouse-essay") {
+  if (issue.publication.designId === "coffeehouse-half-sheet") {
     const imprint = createElement("div", "vd-coffeehouse-imprint");
     if (issue.publication.editionNumber !== undefined)
       imprint.append(createElement("span", undefined, `No. ${issue.publication.editionNumber}`));
@@ -162,7 +162,7 @@ export function mountReader(
     storyList.dataset.layout = page.layout;
 
     let itemIds = page.itemIds;
-    if (issue.publication.designId === "printed-almanack") {
+    if (issue.publication.designId === "stargazers-almanack") {
       // Almanack pages read by observation date. Keep a designated lead first when the page has one.
       const undated = issue.cutoff.turn + 1;
       const byDate = (a: string, b: string) =>
@@ -172,12 +172,12 @@ export function mountReader(
         : [...page.itemIds].sort(byDate);
     }
     const lead = page.hasLead ? itemIds[0] : undefined;
-    // The ordinary Swiss front flows down each stack before crossing the gutter.
-    const splitSwissFront = issue.publication.designId === "civic-index"
+    // The ordinary Asymmetric Grid front flows down each stack before crossing the gutter.
+    const splitAsymmetricFront = issue.publication.designId === "asymmetric-grid"
       && page === issue.pages[0] && page.layout === "ordinary" && itemIds.length > 1;
-    const leftStack = splitSwissFront ? createElement("div", "vd-index-stack") : storyList;
-    const rightStack = splitSwissFront ? createElement("div", "vd-index-stack") : storyList;
-    if (splitSwissFront) storyList.append(leftStack, rightStack);
+    const leftStack = splitAsymmetricFront ? createElement("div", "vd-index-stack") : storyList;
+    const rightStack = splitAsymmetricFront ? createElement("div", "vd-index-stack") : storyList;
+    if (splitAsymmetricFront) storyList.append(leftStack, rightStack);
     const leftCount = Math.floor(itemIds.length / 2);
     itemIds.forEach((itemId, index) => {
       const item = itemById.get(itemId);

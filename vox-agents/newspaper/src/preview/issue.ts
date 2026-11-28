@@ -10,9 +10,9 @@ import {
 import { editorialLayoutSchema, editorialPageSchema, type EditorialLayout } from "../../../src/newspaper/editorial/config/layouts.js";
 import { resolveMasthead } from "../../../src/newspaper/editorial/presentation/masthead.js";
 import { readBuiltInDesignDocuments } from "../design-assets-source.js";
-import breakingFixture from "../../fixtures/victorian-breaking.json";
-import analysisFixture from "../../fixtures/victorian-analysis.json";
-import ordinaryFixture from "../../fixtures/wire-ordinary.json";
+import breakingFixture from "../../fixtures/steam-press-broadsheet-breaking.json";
+import analysisFixture from "../../fixtures/steam-press-broadsheet-analysis.json";
+import ordinaryFixture from "../../fixtures/endless-scroll-ordinary.json";
 import pages from "../../pages.json";
 
 const previewDesignSchema = issuePublicationSchema.omit({ designId: true, designVersion: true }).extend({
@@ -35,16 +35,16 @@ const samples: Record<NewspaperLayoutVariant, IssueDocument> = {
 const previewPages = z.array(editorialPageSchema).parse(pages);
 const frontPage = previewPages.find(page => page.front)!;
 const tradeIllustrations = new Map<string, ItemImage>([
-  ["meiji-picture-sheet", {
-    assetId: "meiji-picture-sheet.ferry",
+  ["brocade-picture-news", {
+    assetId: "brocade-picture-news.ferry",
     altText: "A boatman poles a timber ferry across a blue river below tiled roofs and a low mountain.",
   }],
-  ["printer-dispatch", {
-    assetId: "printer-dispatch.harbour",
+  ["woodcut-tidings", {
+    assetId: "woodcut-tidings.harbour",
     altText: "Woodcut of a sailing barge beside a stone quay and riverside warehouses.",
   }],
-  ["national-review", {
-    assetId: "national-review.harbor-tugs",
+  ["glossy-photo-weekly", {
+    assetId: "glossy-photo-weekly.harbor-tugs",
     altText: "Two steam tugboats seen from above in New York Harbor.",
     caption: "Two harbor tugs in New York, 1938. Photograph by Paul Vanderbilt.",
   }],
@@ -99,7 +99,7 @@ export function createPreviewIssue(
     publication: {
       title: masthead.title,
       motto: masthead.motto,
-      ...(design.id === "coffeehouse-essay" && { editionNumber: 12 }),
+      ...(design.id === "coffeehouse-half-sheet" && { editionNumber: 12 }),
       designId: design.id,
       designVersion: design.version,
       presentation: accentColor

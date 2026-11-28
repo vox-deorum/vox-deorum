@@ -25,17 +25,17 @@ function designDocument(id: string, assetDefinitions: unknown[]): unknown {
 
 describe("newspaper design assets", () => {
   it("should resolve assets migrated onto the built-in designs", () => {
-    expect(getNewspaperAsset("victorian.scrollwork")).toMatchObject({
+    expect(getNewspaperAsset("steam-press-broadsheet.scrollwork")).toMatchObject({
       kind: "ornament",
-      path: "assets/designs/victorian/scrollwork.svg",
+      path: "assets/designs/steam-press-broadsheet/scrollwork.svg",
     });
-    expect(getNewspaperAsset("victorian.harbour")).toMatchObject({
+    expect(getNewspaperAsset("steam-press-broadsheet.harbour")).toMatchObject({
       kind: "image",
-      path: "assets/designs/victorian/harbour.png",
+      path: "assets/designs/steam-press-broadsheet/harbour.png",
     });
-    expect(getNewspaperAsset("wire.port")).toMatchObject({
+    expect(getNewspaperAsset("endless-scroll.port")).toMatchObject({
       kind: "image",
-      path: "assets/designs/wire/port.png",
+      path: "assets/designs/endless-scroll/port.png",
     });
   });
 

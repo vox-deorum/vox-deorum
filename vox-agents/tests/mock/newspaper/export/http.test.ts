@@ -43,14 +43,14 @@ describe('newspaper loopback host', () => {
   });
   it('should prefer checkout fixture files over the packaged default sample', async () => {
     const directories = await createFixtureDirectories();
-    await writeFile(path.join(directories.fixtureDirectory, 'victorian-ordinary.json'), JSON.stringify({ issueId: 'source-sample' }));
-    await writeFile(path.join(directories.fixtureDirectory, 'wire-ordinary.json'), JSON.stringify({ issueId: 'source-wire' }));
+    await writeFile(path.join(directories.fixtureDirectory, 'steam-press-broadsheet-ordinary.json'), JSON.stringify({ issueId: 'source-sample' }));
+    await writeFile(path.join(directories.fixtureDirectory, 'endless-scroll-ordinary.json'), JSON.stringify({ issueId: 'source-wire' }));
     const host = await startNewspaperHost(directories);
     try {
-      await request(host.app).get('/newspaper/fixtures/victorian-ordinary.json').expect(200, { issueId: 'source-sample' });
-      await request(host.app).get('/newspaper/fixtures/wire-ordinary.json').expect(200, { issueId: 'source-wire' });
-      await request(host.app).get('/newspaper/fixtures/wire-ordinary.json').set('Host', 'attacker.test').expect(403);
-      await request(host.app).get('/newspaper/fixtures/wire-ordinary.json').set('Origin', 'https://attacker.test').expect(403);
+      await request(host.app).get('/newspaper/fixtures/steam-press-broadsheet-ordinary.json').expect(200, { issueId: 'source-sample' });
+      await request(host.app).get('/newspaper/fixtures/endless-scroll-ordinary.json').expect(200, { issueId: 'source-wire' });
+      await request(host.app).get('/newspaper/fixtures/endless-scroll-ordinary.json').set('Host', 'attacker.test').expect(403);
+      await request(host.app).get('/newspaper/fixtures/endless-scroll-ordinary.json').set('Origin', 'https://attacker.test').expect(403);
     } finally {
       await host.close();
     }
@@ -60,8 +60,8 @@ describe('newspaper loopback host', () => {
     const directories = await createFixtureDirectories();
     const host = await startNewspaperHost({ ...directories, fixtureDirectory: path.join(fixtureRoot!, 'missing-source') });
     try {
-      await request(host.app).get('/newspaper/fixtures/victorian-ordinary.json').expect(200, { issueId: 'packaged-sample' });
-      await request(host.app).get('/newspaper/fixtures/wire-ordinary.json').expect(404);
+      await request(host.app).get('/newspaper/fixtures/steam-press-broadsheet-ordinary.json').expect(200, { issueId: 'packaged-sample' });
+      await request(host.app).get('/newspaper/fixtures/endless-scroll-ordinary.json').expect(404);
     } finally {
       await host.close();
     }

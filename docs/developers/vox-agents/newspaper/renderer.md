@@ -6,7 +6,7 @@ The reader lays out a completed issue for the browser and captures that layout a
 
 1. Load Civilization V with the current Vox Deorum mod and an active civilization seat. A pure observer needs a seat override to receive a newspaper.
 2. In a source checkout, build the reader with `npm run build:newspaper -w vox-agents` and acquire DirectXTex with `npm run acquire:texconv -w vox-agents`. A fresh capture uses installed Microsoft Edge or Chrome, in that order.
-3. On the Vox Deorum **Debug** page, choose **Show newspaper**. It exports the packaged Victorian sample for the current seat and reports success once the game acknowledges opening it.
+3. On the Vox Deorum **Debug** page, choose **Show newspaper**. It exports the packaged Steam-Press Broadsheet sample for the current seat and reports success once the game acknowledges opening it.
 
 Scroll to the masthead to switch sections. **Close** or resizing returns from article detail to the paper. Reopen the last delivery with `LuaEvents.VoxDeorumNewspaperOpen` in FireTuner. The game preserves the reader's section, scroll position, and votes and can reopen a delivery without the renderer.
 
@@ -37,7 +37,7 @@ The loopback endpoint `POST /api/newspaper/export` accepts an issue document and
 
 The default cache is `vox-agents/data/newspaper-cache/`. Keys depend on the saved issue, reader build and assets, render profile, texture format, and schema and renderer versions. A valid hit can skip the browser. The cache evicts least recently used bundles toward a target of 256 MiB and protects the last acknowledged game delivery across restarts.
 
-`npm run build:newspaper -w vox-agents` type-checks and rebuilds `dist-newspaper`, including the Victorian `sample.json`. The installer ships the reader, runtime catalogue, sample, and converter. Export uses the browser already installed on the system.
+`npm run build:newspaper -w vox-agents` type-checks and rebuilds `dist-newspaper`, including the Steam-Press Broadsheet `sample.json`. The installer ships the reader, runtime catalogue, sample, and converter. Export uses the browser already installed on the system.
 
 ## Run the tests
 

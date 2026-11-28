@@ -231,12 +231,12 @@ function probeCatalogue(
   });
 }
 
-/** Isolate the design being tested, using Wire for cases that do not depend on the design. */
-function publicationCatalogue(config: EditorialConfig, designId = 'wire'): EditorialConfig {
+/** Isolate the design being tested, using Endless Scroll for cases that do not depend on the design. */
+function publicationCatalogue(config: EditorialConfig, designId = 'endless-scroll'): EditorialConfig {
   const design = config.designs.find(entry => entry.id === designId)!;
   return editorialConfigSchema.parse({
     ...config,
-    designs: [{ ...design, ...(designId === 'wire' ? { when: undefined } : {}) }],
+    designs: [{ ...design, ...(designId === 'endless-scroll' ? { when: undefined } : {}) }],
     mastheadRules: [],
   });
 }
@@ -311,7 +311,7 @@ describe('probe overlay', () => {
     opinionOnlyConfig = probeCatalogue(
       ['probe-culture-opinion'], ['probe-culture-opinion-account'],
     );
-    // The wire design plus edition briefs give the opinion a printable front.
+    // The endless scroll design plus edition briefs give the opinion a printable front.
     opinionPrintConfig = publicationCatalogue(opinionOnlyConfig);
     peaceConfig = publicationCatalogue(probeCatalogue(
       ['probe-peace', 'probe-retraction'], ['probe-peace-account', 'probe-retraction-account'],

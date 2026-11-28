@@ -1,0 +1,61 @@
+[
+  {
+    "id": "cuneiform-tablet",
+    "version": "1",
+    "label": "Cuneiform Tablet",
+    "title": "The Tablets of Nineveh",
+    "civilizationTitles": {
+      "Persia": "The Persepolis Tablets"
+    },
+    "when": "self.is.westAsian && ['Ancient', 'Classical'].includes(self.era?.replace(' Era', ''))",
+    "weight": {
+      "base": 45,
+      "adjustments": [
+        {
+          "when": "['Babylon', 'Assyria'].includes(self.name)",
+          "add": 17
+        },
+        {
+          "when": "self.era?.replace(' Era', '') === 'Ancient'",
+          "add": 18
+        }
+      ]
+    },
+    "presentation": {
+      "schemaVersion": 1,
+      "rendererFamily": "folio",
+      "tokens": {
+        "paperColor": "#dab687",
+        "inkColor": "#2c251f",
+        "accentColor": "#653c28",
+        "bodyFontAssetId": "font-literata-400",
+        "headingFontAssetId": "font-literata-700",
+        "mastheadFontAssetId": "font-marcellus-400"
+      },
+      "assets": { "ornamentAssetId": "cuneiform-tablet.wedges" }
+    },
+    "assetDefinitions": [
+      {
+        "id": "wedges",
+        "kind": "ornament",
+        "path": "assets/designs/cuneiform-tablet/wedges.svg",
+        "mediaType": "image/svg+xml",
+        "width": 84,
+        "height": 42,
+        "license": "Vox Deorum project asset",
+        "attribution": "Original drawing of stylus impressions."
+      }
+    ],
+    "layouts": [
+      { "id": "entries", "variant": "ordinary", "weight": { "base": 10 } },
+      { "id": "dispatch", "variant": "breaking", "weight": { "base": 10 } },
+      { "id": "accounts", "variant": "analysis", "weight": { "base": 3 } }
+    ],
+    "pageLabels": {
+      "front": "Chronicle",
+      "home": "Cities",
+      "economy": "Accounts",
+      "abroad": "Envoys"
+    }
+  }
+]

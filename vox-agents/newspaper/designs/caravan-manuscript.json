@@ -1,0 +1,48 @@
+[
+  {
+    "id": "caravan-manuscript",
+    "version": "1",
+    "label": "Caravan Manuscript",
+    "title": "The Timbuktu Leaves",
+    "civilizationTitles": {
+      "Morocco": "The Leaves of Fez",
+      "Arabia": "The Leaves of Mecca",
+      "Ethiopia": "The Leaves of Gondar",
+      "Persia": "The Leaves of Isfahan",
+      "The Ottomans": "The Leaves of Istanbul",
+      "Egypt": "The Leaves of Cairo"
+    },
+    "when": "(self.is.northAfrican || self.is.subSaharanAfrican || ['Arabia', 'Persia', 'The Ottomans'].includes(self.name)) && ['Medieval', 'Renaissance', 'Industrial'].includes(self.era?.replace(' Era', ''))",
+    "weight": {
+      "base": 45,
+      "adjustments": [
+        {
+          "when": "['Songhai', 'Morocco', 'Arabia', 'Ethiopia'].includes(self.name)",
+          "add": 15
+        },
+        {
+          "when": "self.name === 'Songhai'",
+          "add": 10
+        }
+      ]
+    },
+    "presentation": {
+      "schemaVersion": 1,
+      "rendererFamily": "folio",
+      "tokens": {
+        "paperColor": "#efe1bf",
+        "inkColor": "#2a2017",
+        "accentColor": "#9a2e1e",
+        "bodyFontAssetId": "font-cardo-400",
+        "headingFontAssetId": "font-cardo-700",
+        "mastheadFontAssetId": "font-marcellus-400"
+      }
+    },
+    "layouts": [
+      { "id": "leaves", "variant": "ordinary", "weight": { "base": 10 } },
+      { "id": "headpiece", "variant": "breaking", "weight": { "base": 10 } },
+      { "id": "glosses", "variant": "analysis", "weight": { "base": 3 } }
+    ],
+    "pageLabels": { "front": "Front", "home": "Cities", "economy": "Caravans", "abroad": "Abroad" }
+  }
+]

@@ -1,0 +1,29 @@
+/* Painted horizontal registers: a pigment border, a winged disk, then story bands. */
+.vd-newspaper[data-publication-design="winged-sun-papyrus"] {
+  --blue: #315d62;
+  --gold: #b78a43;
+  --papyrus: url("./textures/papyrus.svg?inline");
+  --paint: repeating-linear-gradient(90deg,
+    var(--blue) 0 32px, var(--vd-ink) 32px 34px, var(--vd-paper) 34px 38px,
+    var(--vd-ink) 38px 40px, var(--gold) 40px 62px, var(--vd-ink) 62px 64px,
+    var(--vd-paper) 64px 68px, var(--vd-ink) 68px 70px, var(--vd-accent) 70px 102px,
+    var(--vd-ink) 102px 104px, var(--vd-paper) 104px 108px, var(--vd-ink) 108px 110px);
+
+  & .vd-header { padding-top: 0; background: var(--paint) top center / 100% 9px no-repeat, var(--papyrus), var(--vd-paper); }
+  & .vd-page { background-image: var(--papyrus); background-attachment: local; }
+  & .vd-masthead { display: flex; flex-direction: column; align-items: center; padding: 20px 0 12px; }
+  & .vd-ornament { order: -1; width: clamp(136px, 23cqi, 250px); margin: 0 auto 4px; }
+  & .vd-title { font-weight: 700; text-transform: uppercase; letter-spacing: .075em; line-height: 1; }
+  & .vd-tabs { border-block: 1px solid var(--vd-accent); }
+  & .vd-tab { font-family: var(--vd-font-display); font-size: calc(13px * var(--vd-text-scale)); font-weight: 700; }
+  & .vd-story--brief { border-top: 2px solid var(--vd-accent); }
+  & .vd-storylist .vd-story--lead .vd-headline { font-weight: 700; letter-spacing: -.018em; }
+  & .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-headline { line-height: 1.05; }
+  & .vd-number { font-weight: 700; }
+  & .vd-evidence caption strong { color: var(--blue); }
+  & .vd-evidence thead { background: var(--blue); color: var(--vd-paper); }
+  & .vd-evidence :is(td, th) { border-bottom: 1px solid var(--vd-accent); }
+  & .vd-evidence tr:nth-child(even) { background: color-mix(in srgb, var(--gold) 12%, transparent); }
+  & .vd-end-rule { height: 7px; background: var(--paint); }
+  & .vd-end-ornament { display: none; }
+}

@@ -1,0 +1,108 @@
+/* The routing boxes and dispatches share the rules of a printed telegram form. */
+.vd-newspaper[data-publication-design="telegram-form"] {
+  --cable-ink: oklch(from var(--vd-accent) min(l, .49) c h);
+  --cable-type: "Courier New", Courier, monospace;
+  --cable-rule: #827354;
+
+  & .vd-publication { --vd-accent: var(--cable-ink); }
+  & .vd-masthead {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) fit-content(40%);
+    align-items: stretch;
+    padding: 0;
+    border: 2px solid var(--vd-ink);
+    background: var(--vd-ink);
+    text-align: left;
+  }
+  & .vd-title {
+    padding: .22em .32em;
+    color: #f9edc4;
+    font-size: calc(clamp(27px, 4.5cqi, 53px) * var(--vd-text-scale));
+    font-weight: 800;
+    letter-spacing: -.045em;
+  }
+  & .vd-cable-turn {
+    grid-area: 1 / 2;
+    display: grid;
+    align-content: center;
+    padding: .4em .65em;
+    background: var(--vd-paper);
+    font: 700 calc(16px * var(--vd-text-scale)) / 1.2 var(--cable-type);
+    text-transform: uppercase;
+    overflow-wrap: anywhere;
+  }
+  & .vd-tabs { gap: 0; border: 2px solid var(--vd-ink); border-top: 0; }
+  & .vd-tab {
+    flex: 1 0 auto;
+    padding: .4em .5em;
+    box-shadow: inset -1px 0 var(--cable-rule);
+    font-family: var(--cable-type);
+    text-transform: uppercase;
+  }
+  & .vd-tab:last-child { box-shadow: none; }
+  &[data-mode="reader"] .vd-tab[aria-selected="true"] { background: #e4ca78; }
+
+  /* The story's observation turn is a small typewritten line above its headline. */
+
+  & .vd-story-turn {
+    margin: 0 0 .4em;
+    color: color-mix(in srgb, var(--vd-ink) 72%, var(--vd-paper));
+    font: 700 calc(12px * var(--vd-text-scale)) / 1.2 var(--cable-type);
+    letter-spacing: .12em;
+    text-transform: uppercase;
+  }
+
+  & .vd-storylist[data-layout] .vd-story--lead {
+    padding-block-end: 1rem;
+    border-bottom: 2px solid var(--vd-ink);
+  }
+  & .vd-storylist[data-layout] .vd-story--lead .vd-headline {
+    display: inline;
+    padding-inline: .16em;
+    background: #fffae7;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+    font: 700 calc(clamp(29px, 4.6cqi, 54px) * var(--vd-text-scale)) / 1.23 var(--cable-type);
+    letter-spacing: -.055em;
+    text-transform: none;
+  }
+  & .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-headline {
+    font-size: calc(clamp(39px, 6.8cqi, 82px) * var(--vd-text-scale));
+  }
+  & .vd-story--lead .vd-headline + * { margin-block-start: .8rem; }
+  & .vd-storylist[data-layout] .vd-story--lead :is(.vd-deck, .vd-byline) {
+    text-align: left;
+    border: 0;
+    padding: 0;
+    margin: .8rem 0;
+  }
+  & .vd-storylist[data-layout] .vd-story--brief {
+    max-width: none;
+    margin: 0;
+    padding-block: .95rem;
+    border: 0;
+    border-bottom: 1px solid var(--cable-rule);
+  }
+  & .vd-storylist[data-layout] .vd-story--brief .vd-headline {
+    font: 700 calc(clamp(21px, 2.4cqi, 30px) * var(--vd-text-scale)) / 1.15 var(--cable-type);
+  }
+  & .vd-evidence { border: 1px solid var(--vd-ink); padding: .6em; }
+  & .vd-evidence caption { padding-bottom: .45em; font-family: var(--cable-type); }
+  & .vd-evidence thead { border-block: 1px solid var(--vd-ink); }
+  & .vd-evidence td { font: 700 calc(21px * var(--vd-text-scale)) / 1.3 var(--cable-type); }
+  & .vd-end-rule { display: none; }
+}
+
+@container newspaper (width > 760px) {
+  .vd-newspaper[data-publication-design="telegram-form"] {
+    & .vd-storylist[data-layout="ordinary"] .vd-prose { max-width: 66ch; }
+    & .vd-storylist:not([data-layout="ordinary"]) .vd-story--brief .vd-story-content {
+      display: grid;
+      grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+      column-gap: clamp(16px, 2.5cqi, 32px);
+      align-items: baseline;
+
+      & > .vd-story-turn { grid-column: 1 / -1; }
+    }
+  }
+}

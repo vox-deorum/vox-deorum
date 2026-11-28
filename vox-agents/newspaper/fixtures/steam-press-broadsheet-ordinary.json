@@ -1,0 +1,180 @@
+{
+  "schemaVersion": 4,
+  "issueId": "steam-press-broadsheet-ordinary-225",
+  "campaignId": "fixture-campaign",
+  "timelineId": "fixture-timeline-main",
+  "receiver": {
+    "playerId": 0,
+    "civilizationId": "CIVILIZATION_ENGLAND",
+    "label": "England"
+  },
+  "cutoff": {
+    "turn": 225,
+    "label": "Turn 225"
+  },
+  "publication": {
+    "title": "The Empire Chronicle",
+    "designId": "steam-press-broadsheet",
+    "designVersion": "1.0.0",
+    "presentation": {
+      "schemaVersion": 1,
+      "rendererFamily": "broadsheet",
+      "assets": { "ornamentAssetId": "steam-press-broadsheet.scrollwork" }
+    }
+  },
+  "pages": [
+    {
+      "id": "headlines",
+      "label": "Headlines",
+      "layout": "ordinary",
+      "hasLead": true,
+      "itemIds": ["trade", "paris", "york", "reservoir", "ledger"]
+    },
+    {
+      "id": "abroad",
+      "label": "Foreign Correspondence",
+      "layout": "ordinary",
+      "hasLead": true,
+      "itemIds": ["canal", "convoy", "embassy"]
+    }
+  ],
+  "items": [
+    {
+      "id": "trade",
+      "tags": ["economy", "foreign"],
+      "seriesKeys": ["trade-relationship:england:netherlands"],
+      "headline": [
+        { "type": "text", "text": "Bristol prospers as trade concentrates" }
+      ],
+      "body": [
+        [
+          { "type": "text", "text": "Harbour traffic is growing in " },
+          { "type": "link", "text": "Bristol", "target": { "type": "city", "cityId": "CITY_BRISTOL" } },
+          { "type": "text", "text": ". One foreign partner now supplies more than half our overseas trade income. Merchants welcome the returns, though a quarrel abroad could interrupt them." }
+        ],
+        [
+          { "type": "text", "text": "The " },
+          {
+            "type": "link",
+            "text": "harbour returns for the largest overseas trading partner",
+            "target": {
+              "type": "trade-relationship",
+              "partnerCivilizationId": "CIVILIZATION_NETHERLANDS",
+              "direction": "both"
+            }
+          },
+          { "type": "text", "text": " show where another partner might reduce this dependence." }
+        ]
+      ],
+      "sourceNote": [
+        {
+          "type": "text",
+          "text": "The largest partner supplied 38% of foreign trade income on turn 211 and 54% on turn 225. No observation survives for turn 218. The higher final share does not establish a steady rise."
+        }
+      ],
+      "image": {
+        "assetId": "steam-press-broadsheet.harbour",
+        "altText": "Wood engraving of a steamship and workers unloading barrels at Bristol harbour."
+      },
+      "earlierReport": {
+        "label": "Earlier report on Atlantic trade",
+        "target": {
+          "type": "article",
+          "issueId": "steam-press-broadsheet-ordinary-211",
+          "itemId": "trade"
+        },
+        "summary": [
+          [
+            {
+              "type": "text",
+              "text": "On turn 211, the largest partner supplied 38% of overseas trade income. The harbour was prospering, with returns spread more widely among its partners."
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "id": "paris",
+      "tags": ["foreign", "culture"],
+      "seriesKeys": ["civilization:paris-culture"],
+      "headline": [
+        { "type": "text", "text": "Paris draws a wider audience" }
+      ],
+      "body": [
+        [
+          { "type": "text", "text": "Visitors returning from " },
+          { "type": "link", "text": "Paris", "target": { "type": "civilization", "civilizationId": "CIVILIZATION_FRANCE" } },
+          { "type": "text", "text": " describe galleries drawing larger crowds. Its cultural influence has grown during the past five turns. The " },
+          { "type": "link", "text": "cultural overview", "target": { "type": "screen", "screen": "culture" } },
+          { "type": "text", "text": " shows the wider balance." }
+        ]
+      ],
+      "sourceNote": [
+        {
+          "type": "text",
+          "text": "Reports from returning visitors and comparable cultural observations show greater influence over five turns. The reports do not establish which venue caused the change."
+        }
+      ]
+    },
+    {
+      "id": "york",
+      "tags": ["domestic", "economy"],
+      "seriesKeys": ["city:york-recovery"],
+      "headline": [
+        { "type": "text", "text": "York grows again" }
+      ],
+      "body": [
+        [
+          { "type": "link", "text": "York", "target": { "type": "city", "cityId": "CITY_YORK" } },
+          { "type": "text", "text": "'s workshops have reopened and its population is growing. Food supplies remain tight. Inspect the city's needs before assigning more workers." }
+        ]
+      ],
+      "sourceNote": [
+        {
+          "type": "text",
+          "text": "The latest city observation shows reopened workshops and population growth. The food surplus remains small; no further improvement is assumed."
+        }
+      ]
+    },
+    {
+      "id": "reservoir",
+      "tags": ["domestic"],
+      "seriesKeys": [],
+      "headline": [{ "type": "text", "text": "Council approves a second reservoir" }],
+      "body": [[{ "type": "text", "text": "Surveyors marked higher ground for a new reservoir after the council approved the site. Work will start with the channel that feeds the old waterworks." }]],
+      "sourceNote": [{ "type": "text", "text": "The council minutes name the site and the first channel. They give no date for filling the new reservoir." }]
+    },
+    {
+      "id": "ledger",
+      "tags": ["politics"],
+      "seriesKeys": [],
+      "headline": [{ "type": "text", "text": "Town clerks open the public ledger" }],
+      "body": [[{ "type": "text", "text": "Residents may now inspect the council accounts at the guildhall. The first reports cover road repairs and the cost of keeping the night watch." }]],
+      "sourceNote": [{ "type": "text", "text": "The public ledger records spending on the roads and night watch. The next accounts have yet to be posted." }]
+    },
+    {
+      "id": "canal",
+      "tags": ["international"],
+      "seriesKeys": [],
+      "headline": [{ "type": "text", "text": "Canal towns agree on common tolls" }],
+      "body": [[{ "type": "text", "text": "Three ports have agreed to collect the same toll along the canal. Boat owners say that the new schedule will make it easier to price a journey before setting out." }]],
+      "sourceNote": [{ "type": "text", "text": "The published toll schedule lists the same rates for all three ports." }]
+    },
+    {
+      "id": "convoy",
+      "tags": ["international", "military"],
+      "seriesKeys": [],
+      "headline": [{ "type": "text", "text": "Northern convoy reaches the strait" }],
+      "body": [[{ "type": "text", "text": "The first grain ships have cleared the strait under escort. Their captains report that the crossing is open, though two merchant ships are still awaiting repairs." }]],
+      "sourceNote": [{ "type": "text", "text": "The captains reported arrival at the strait and named two ships held back for repairs." }]
+    },
+    {
+      "id": "embassy",
+      "tags": ["international"],
+      "seriesKeys": [],
+      "headline": [{ "type": "text", "text": "Border talks resume at the summer embassy" }],
+      "body": [[{ "type": "text", "text": "Envoys have returned to the summer embassy to discuss the boundary and reopen traffic through mountain passes. They will exchange maps before the next meeting." }]],
+      "sourceNote": [{ "type": "text", "text": "Both delegations confirmed they had returned and agreed to exchange maps." }]
+    }
+  ]
+}

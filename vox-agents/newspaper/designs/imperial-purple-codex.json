@@ -1,0 +1,44 @@
+[
+  {
+    "id": "imperial-purple-codex",
+    "version": "1",
+    "label": "Imperial Purple Codex",
+    "title": "The Purple Chronicle",
+    "civilizationTitles": {
+      "Byzantium": "The Chronicle of the Queen of Cities",
+      "Russia": "The Chronicle of the Third Rome"
+    },
+    "when": "(self.is.southernEuropean || self.is.centralAndEasternEuropean) && ['Medieval', 'Renaissance'].includes(self.era?.replace(' Era', ''))",
+    "weight": {
+      "base": 45,
+      "adjustments": [
+        {
+          "when": "['Byzantium', 'Russia'].includes(self.name)",
+          "add": 17
+        },
+        {
+          "when": "self.name === 'Byzantium'",
+          "add": 8
+        }
+      ]
+    },
+    "presentation": {
+      "schemaVersion": 1,
+      "rendererFamily": "folio",
+      "tokens": {
+        "paperColor": "#3a1533",
+        "inkColor": "#ecd79c",
+        "accentColor": "#d3d3dc",
+        "bodyFontAssetId": "font-cardo-400",
+        "headingFontAssetId": "font-marcellus-400",
+        "mastheadFontAssetId": "font-cinzel-700"
+      }
+    },
+    "layouts": [
+      { "id": "codex", "variant": "ordinary", "weight": { "base": 10 } },
+      { "id": "icon", "variant": "breaking", "weight": { "base": 10 } },
+      { "id": "chrysobull", "variant": "analysis", "weight": { "base": 3 } }
+    ],
+    "pageLabels": { "front": "Codex", "home": "The City", "economy": "Treasury", "abroad": "Abroad" }
+  }
+]

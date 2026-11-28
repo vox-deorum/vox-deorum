@@ -43,30 +43,30 @@ export function renderStory(
   article.setAttribute("aria-labelledby", headingId);
 
   if (feed) article.append(renderAvatar(item));
-  if (publicationDesignId === "printed-almanack") {
+  if (publicationDesignId === "stargazers-almanack") {
     const date = createElement("div", "vd-almanack-date");
     if (item.observedTurn === undefined) date.textContent = "Undated";
     else date.append(createElement("span", undefined, "Observed turn"), createElement("b", undefined, String(item.observedTurn)));
     article.append(date);
   }
-  if (publicationDesignId === "court-dispatch") {
+  if (publicationDesignId === "courier-slips") {
     const date = item.observedTurn === undefined ? "Undated" : `Turn ${item.observedTurn}`;
     article.append(createElement("div", "vd-dispatch-docket", date));
   }
 
   const content = createElement("div", "vd-story-content");
   // A register entry has two cells: its heading and its account.
-  const registerEntry = (publicationDesignId === "port-register" && page.layout === "ordinary")
-    || (publicationDesignId === "cable-desk" && !lead);
+  const registerEntry = (publicationDesignId === "quayside-ledger" && page.layout === "ordinary")
+    || (publicationDesignId === "telegram-form" && !lead);
   // Evidence belongs to any analysis story. Leads use the two-column treatment; briefs stack it below.
   const analysisEvidence = page.layout === "analysis" ? item.evidenceTable : undefined;
   const analysisLead = lead && analysisEvidence !== undefined;
-  const evidenceFirst = publicationDesignId === "civic-survey" && analysisLead;
+  const evidenceFirst = publicationDesignId === "pictogram-bulletin" && analysisLead;
   const headingGroup = registerEntry ? createElement("div", "vd-register-heading") : content;
   const analysisMain = analysisLead ? createElement("div", "vd-column-main") : null;
   const credits = evidenceFirst && analysisMain ? analysisMain : headingGroup;
   const turn = item.observedTurn;
-  const teletext = publicationDesignId === "teletext-bulletin";
+  const teletext = publicationDesignId === "teletext-screen";
   // A Teletext brief always wraps its headline block, which wide paper places in a left cell.
   const headlineBlock = teletext && !lead ? createElement("div", "vd-teletext-heading") : headingGroup;
   if (headlineBlock !== headingGroup) headingGroup.append(headlineBlock);
@@ -74,11 +74,11 @@ export function renderStory(
   const turnPlacement: "above" | "below" | "byline" | undefined = turn === undefined ? undefined
     : teletext ? "below"
     : feed && item.byline ? "byline"
-    : feed || publicationDesignId === "cable-desk" || publicationDesignId === "port-register" ? "above"
+    : feed || publicationDesignId === "telegram-form" || publicationDesignId === "quayside-ledger" ? "above"
     : undefined;
   if (turn !== undefined && turnPlacement === "above") {
     // A Telegram Form brief mounts its turn in the content, ahead of the register heading and account.
-    const target = publicationDesignId === "cable-desk" && !lead ? content : headlineBlock;
+    const target = publicationDesignId === "telegram-form" && !lead ? content : headlineBlock;
     target.append(renderStoryTurn(turn));
   }
   const heading = createElement("h2", "vd-headline");
@@ -105,8 +105,8 @@ export function renderStory(
   const prose = createElement("div", "vd-prose");
   appendParagraphs(prose, item.body, item.id, bindReaderAction);
   const footer = renderStoryFooter(item, vote, designId, assetBaseUrl);
-  const pictureSheet = publicationDesignId === "meiji-picture-sheet";
-  const cover = lead && (publicationDesignId === "national-review" || pictureSheet);
+  const pictureSheet = publicationDesignId === "brocade-picture-news";
+  const cover = lead && (publicationDesignId === "glossy-photo-weekly" || pictureSheet);
   const image = renderStoryImage(item, assetBaseUrl);
   const figure = cover ? null : image;
 

@@ -305,7 +305,7 @@ describe('durable replay publication', () => {
       addReplayBriefs(sqlite, [22, 30, 38, 46]);
     } finally { sqlite.close(); }
     const config = await loadEditorialConfig(catalogue);
-    const opening = config.designs.find(design => design.id === 'oral-accounts')!;
+    const opening = config.designs.find(design => design.id === 'forum-bronze')!;
     const triggerPath = path.join(catalogue, 'triggers.json');
     const triggers = JSON.parse(await readFile(triggerPath, 'utf8'));
     await Promise.all([
@@ -389,8 +389,8 @@ describe('durable replay publication', () => {
 
   it.each([
     { file: 'pages', entries: [{ id: 'front', when: 'self.era === "Modern Era"' }] },
-    { file: 'designs', entries: [{ id: 'oral-accounts', layouts: [{ id: 'account', weight: { base: 10, adjustments: [{ when: 'true', add: -10 }] } }] }] },
-    { file: 'designs', entries: [{ id: 'oral-accounts', layouts: [{ id: 'urgent-account', when: 'self.era === "Modern Era"' }] }] },
+    { file: 'designs', entries: [{ id: 'forum-bronze', layouts: [{ id: 'account', weight: { base: 10, adjustments: [{ when: 'true', add: -10 }] } }] }] },
+    { file: 'designs', entries: [{ id: 'forum-bronze', layouts: [{ id: 'urgent-account', when: 'self.era === "Modern Era"' }] }] },
   ])('should reject an overlay with an unavailable publication foundation before creating a run: %j', async ({ file, entries }) => {
     const directory = path.join(path.dirname(recording.filename), 'invalid-catalogue');
     await mkdir(directory);

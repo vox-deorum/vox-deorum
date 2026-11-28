@@ -1,0 +1,76 @@
+/* A shipping list: the left-hand entry names the report; the right gives its particulars. */
+.vd-newspaper[data-publication-design="quayside-ledger"] {
+  --register-rule: color-mix(in srgb, var(--vd-ink) 42%, var(--vd-paper));
+  --entry-space: clamp(14px, 2cqi, 25px);
+
+  & .vd-header { padding-top: clamp(14px, 2cqi, 25px); }
+  & .vd-masthead {
+    border-top: 3px solid var(--vd-ink);
+    padding: 12px 0 10px;
+    text-align: left;
+  }
+  & .vd-title {
+    font-size: calc(clamp(30px, 4.7cqi, 60px) * var(--vd-text-scale));
+    line-height: 1.04;
+    letter-spacing: -.045em;
+  }
+  & .vd-tabs {
+    justify-content: flex-start;
+    border-block: 1px solid var(--register-rule);
+    border-bottom: 3px double var(--vd-ink);
+  }
+  & .vd-tab { padding-block: 5px; font-variant-caps: small-caps; letter-spacing: .045em; }
+  & .vd-page { padding-block-start: var(--entry-space); }
+  & .vd-storylist .vd-story--brief {
+    margin: var(--entry-space) 0 0;
+    padding: var(--entry-space) 0 0;
+    border-top: 1px solid var(--register-rule);
+  }
+  & .vd-storylist .vd-story--lead .vd-headline {
+    font-size: calc(clamp(28px, 3.4cqi, 44px) * var(--vd-text-scale));
+    font-weight: 700;
+  }
+  & .vd-story--brief .vd-headline { font-size: calc(clamp(22px, 2.4cqi, 31px) * var(--vd-text-scale)); }
+  & .vd-story-content .vd-deck {
+    margin: 0 0 10px;
+    font: italic calc(20px * var(--vd-text-scale)) / 1.35 var(--vd-font-body);
+  }
+  & .vd-story-content .vd-byline { margin: 0 0 10px; }
+  /* The entry's observation turn keeps a small fixed place above its headline. */
+  & .vd-story-turn {
+    margin: 0 0 .3em;
+    color: color-mix(in srgb, var(--vd-ink) 72%, var(--vd-paper));
+    font: 600 calc(12px * var(--vd-text-scale)) / 1.35 var(--vd-font-body);
+    letter-spacing: .07em;
+  }
+  & .vd-number { color: inherit; font-variant-numeric: lining-nums tabular-nums; font-weight: 700; }
+  & .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-headline {
+    font-size: calc(clamp(38px, 6.3cqi, 76px) * var(--vd-text-scale));
+    text-align: left;
+    text-transform: none;
+    border-bottom: 3px double var(--vd-ink);
+    padding-block-end: .18em;
+  }
+  & .vd-storylist .vd-story--lead :is(.vd-byline, .vd-deck) { text-align: left; border: 0; padding: 0; }
+  & .vd-evidence caption { border-top: 3px double var(--vd-ink); padding-top: 8px; }
+  & .vd-evidence thead { border-block: 1px solid var(--vd-ink); }
+  & .vd-evidence :is(th, td) + td, & .vd-evidence thead th + th { border-left: 1px solid var(--register-rule); }
+  & .vd-evidence td { font-size: calc(20px * var(--vd-text-scale)); line-height: 1.3; }
+  & .vd-evidence tr:last-child { border-bottom: 1px solid var(--vd-ink); }
+  & .vd-end-rule { border-top: 3px double var(--vd-ink); margin-top: var(--entry-space); }
+  & .vd-end-rule::before, & .vd-end-rule::after { display: none; }
+}
+
+@container newspaper (width > 760px) {
+  .vd-newspaper[data-publication-design="quayside-ledger"] {
+    & .vd-storylist[data-layout="ordinary"] {
+      & .vd-prose { max-width: 66ch; }
+      & .vd-story--lead .vd-story-content {
+        display: grid;
+        grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+      }
+      & .vd-story--lead .vd-register-heading { padding-inline-end: var(--entry-space); }
+      & .vd-story--lead .vd-register-account { border-inline-start: 1px solid var(--register-rule); padding-inline-start: var(--entry-space); }
+    }
+  }
+}

@@ -2,9 +2,9 @@
 import { existsSync } from 'node:fs';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Browser, Page } from 'playwright-core';
-import ordinary from '../../../../newspaper/fixtures/victorian-ordinary.json';
-import breaking from '../../../../newspaper/fixtures/victorian-breaking.json';
-import analysis from '../../../../newspaper/fixtures/victorian-analysis.json';
+import ordinary from '../../../../newspaper/fixtures/steam-press-broadsheet-ordinary.json';
+import breaking from '../../../../newspaper/fixtures/steam-press-broadsheet-breaking.json';
+import analysis from '../../../../newspaper/fixtures/steam-press-broadsheet-analysis.json';
 import { issueDocumentSchema, type IssueDocument } from '../../../../src/newspaper/contracts/issue.js';
 import { loadEditorialConfig } from '../../../../src/newspaper/editorial/config/load.js';
 import type { EditorialDesign } from '../../../../src/newspaper/editorial/config/schema.js';
@@ -72,7 +72,7 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('newspaper design
 
   it('should show each dispatch slip’s own observation turn', async context => {
     if (!browser) { context.skip(unavailable); return; }
-    const design = (await loadEditorialConfig()).designs.find(candidate => candidate.id === 'court-dispatch')!;
+    const design = (await loadEditorialConfig()).designs.find(candidate => candidate.id === 'courier-slips')!;
     const issue = designIssue(design, ordinary, 3);
     issue.items.find(item => item.id === issue.pages[0].itemIds[0])!.observedTurn = 0;
     issue.items.find(item => item.id === issue.pages[0].itemIds[1])!.observedTurn = issue.cutoff.turn - 4;
@@ -91,7 +91,7 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('newspaper design
     const page = await browser.newPage();
     try {
       await page.goto(`${host.url}/newspaper/export.html`);
-      for (const id of ['wire', 'cable-desk', 'port-register', 'teletext-bulletin']) {
+      for (const id of ['endless-scroll', 'telegram-form', 'quayside-ledger', 'teletext-screen']) {
         const issue = designIssue(designs.find(design => design.id === id)!, ordinary, 3);
         const { itemIds } = issue.pages[0];
         const [lead, brief, undated] = itemIds.map(itemId => issue.items.find(item => item.id === itemId)!);
@@ -126,13 +126,13 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('newspaper design
           expect(dates, label).toHaveLength(2);
           expect(dates.map(date => [date.itemId, date.text]), label)
             .toEqual([[lead.id, `Turn ${lead.observedTurn}`], [brief.id, 'Turn 0']]);
-          expect(dates.every(date => date.fits && (id === 'teletext-bulletin' ? date.directlyBelow : date.above)), label).toBe(true);
-          if (id === 'wire') {
+          expect(dates.every(date => date.fits && (id === 'teletext-screen' ? date.directlyBelow : date.above)), label).toBe(true);
+          if (id === 'endless-scroll') {
             const byline = page.locator('.vd-story--lead .vd-byline');
             expect(await byline.locator('a').textContent(), label).toBe('Bristol');
             expect(await byline.locator('.vd-story-turn').count(), label).toBe(1);
           }
-          if (id === 'cable-desk') {
+          if (id === 'telegram-form') {
             expect(await page.locator('.vd-cable-turn').textContent(), label).toBe(`Issue ${issue.cutoff.label}`);
           }
         }
@@ -142,7 +142,7 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('newspaper design
 
   it('should keep wide Telegram briefs aligned with their headlines when dated', async context => {
     if (!browser) { context.skip(unavailable); return; }
-    const design = (await loadEditorialConfig()).designs.find(candidate => candidate.id === 'cable-desk')!;
+    const design = (await loadEditorialConfig()).designs.find(candidate => candidate.id === 'telegram-form')!;
     const page = await browser.newPage();
     try {
       await page.goto(`${host.url}/newspaper/export.html`);
@@ -170,8 +170,8 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('newspaper design
   });
 
   it.for([
-    'street-gazette', 'port-register', 'cable-desk', 'clay-chronicle', 'palm-leaf-register', 'court-dispatch',
-    'city-extra', 'civic-index',
+    'hawkers-handbill', 'quayside-ledger', 'telegram-form', 'cuneiform-tablet', 'bound-palm-leaves', 'courier-slips',
+    'evening-extra', 'asymmetric-grid',
   ] as const)(
     'should preserve reading order and reflow every %s edition', async (id, context) => {
       if (!browser) { context.skip(unavailable); return; }
@@ -193,11 +193,11 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('newspaper design
               for (let i = 1; i < rendered.stories.length; i++) {
                 expect(rendered.stories[i].top, label).toBeGreaterThanOrEqual(rendered.stories[i - 1].bottom);
               }
-            } else if (front.layout === 'ordinary' && id === 'city-extra') {
+            } else if (front.layout === 'ordinary' && id === 'evening-extra') {
               expect(firstBrief.top, label).toBeGreaterThanOrEqual(lead.bottom);
               expect(firstBrief.top, label).toBeCloseTo(secondBrief.top, 1);
               expect(secondBrief.left, label).toBeGreaterThanOrEqual(firstBrief.right);
-            } else if (front.layout === 'ordinary' && id === 'civic-index') {
+            } else if (front.layout === 'ordinary' && id === 'asymmetric-grid') {
               expect(rendered.stories, label).toHaveLength(5);
               expect(firstBrief.top, label).toBeGreaterThanOrEqual(lead.bottom);
               expect(firstBrief.left, label).toBeCloseTo(lead.left, 1);
@@ -220,9 +220,9 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('newspaper design
     }, 60_000,
   );
 
-  it('should pair Swiss section stories and keep secondary analysis evidence under its prose', async context => {
+  it('should pair Asymmetric Grid section stories and keep secondary analysis evidence under its prose', async context => {
     if (!browser) { context.skip(unavailable); return; }
-    const design = (await loadEditorialConfig()).designs.find(candidate => candidate.id === 'civic-index')!;
+    const design = (await loadEditorialConfig()).designs.find(candidate => candidate.id === 'asymmetric-grid')!;
     const page = await browser.newPage();
     try {
       await page.goto(`${host.url}/newspaper/export.html`);
@@ -260,8 +260,8 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('newspaper design
       await page.goto(`${host.url}/newspaper/export.html`);
       const { designs } = await loadEditorialConfig();
       for (const [id, width] of [
-        ['victorian', 360], ['secession-review', 360], ['shang', 360],
-        ['teletext-bulletin', 360], ['oral-accounts', 360], ['oral-accounts', 1000],
+        ['steam-press-broadsheet', 360], ['tendril-monthly', 360], ['cracked-oracle-shell', 360],
+        ['teletext-screen', 360], ['forum-bronze', 360], ['forum-bronze', 1000],
       ] as const) {
         const design = designs.find(candidate => candidate.id === id)!;
         const issue = designIssue(design, ordinary);
@@ -274,9 +274,9 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('newspaper design
             itemIds: [issue.items[issue.items.length - 3 + index].id],
           });
         }
-        if (id === 'teletext-bulletin') issue.publication.title = 'The International Teletext Bulletin for Constantinople';
+        if (id === 'teletext-screen') issue.publication.title = 'The International Teletext Bulletin for Constantinople';
         await mount(page, issue, width);
-        if (id === 'teletext-bulletin') {
+        if (id === 'teletext-screen') {
           expect(await page.locator('.vd-title').evaluate(title => title.scrollWidth <= title.clientWidth)).toBe(true);
         }
         const tabs = await page.locator('.vd-tab').evaluateAll(nodes => nodes.map(node => {
@@ -311,7 +311,7 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('newspaper design
   it('should keep each story in one text column and pair print briefs on wide pages', async context => {
     if (!browser) { context.skip(unavailable); return; }
     const { designs } = await loadEditorialConfig();
-    const customBriefs = new Set(['wire', 'civic-index', 'teletext-bulletin']);
+    const customBriefs = new Set(['endless-scroll', 'asymmetric-grid', 'teletext-screen']);
     const page = await browser.newPage();
     const violations: string[] = [];
     try {
@@ -321,7 +321,7 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('newspaper design
         for (const sample of [ordinary, breaking, analysis]) {
           const issue = designIssue(design, sample);
           const front = issue.pages[0];
-          if (id === 'printed-almanack') {
+          if (id === 'stargazers-almanack') {
             front.itemIds.forEach((itemId, index) => {
               issue.items.find(item => item.id === itemId)!.observedTurn = front.itemIds.length - index;
             });
@@ -345,7 +345,7 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('newspaper design
             if (stories.some(story => story.split)) violations.push(`${label}: split story prose`);
             if (customBriefs.has(id)) continue;
             const [lead, first, second] = stories;
-            const readingOrder = id === 'printed-almanack'
+            const readingOrder = id === 'stargazers-almanack'
               ? [front.itemIds[0], ...front.itemIds.slice(1).reverse()]
               : front.itemIds;
             if (stories.some((story, index) => story.id !== readingOrder[index])) violations.push(`${label}: story order`);
@@ -361,12 +361,12 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('newspaper design
     } finally { await page.close(); }
   }, 120_000);
 
-  it('should give a lone urgent brief the full row on the Contact Sheet', async context => {
+  it('should give a lone urgent brief the full row on the Darkroom Contact Sheet', async context => {
     if (!browser) { context.skip(unavailable); return; }
     const page = await browser.newPage();
     try {
       await page.goto(`${host.url}/newspaper/export.html`);
-      const design = (await loadEditorialConfig()).designs.find(candidate => candidate.id === 'contact-sheet')!;
+      const design = (await loadEditorialConfig()).designs.find(candidate => candidate.id === 'darkroom-contact-sheet')!;
       const articles = page.locator('.vd-page:not([hidden]) .vd-story');
       for (const sample of [breaking, analysis]) {
         const issue = designIssue(design, sample, 2);

@@ -1,0 +1,47 @@
+[
+  {
+    "id": "courier-slips",
+    "version": "1",
+    "label": "Courier Slips",
+    "title": "The Palace Post",
+    "civilizationTitles": {
+      "*": "The Palace Post of {{terms.civilization}}"
+    },
+    "when": "['Medieval', 'Renaissance', 'Industrial'].includes(self.era?.replace(' Era', ''))",
+    "weight": {
+      "base": 34,
+      "adjustments": [
+        {
+          "when": "self.era?.replace(' Era', '') === 'Renaissance'",
+          "add": 8
+        },
+        {
+          "when": "self.name === 'India'",
+          "add": 14
+        },
+        {
+          "when": "['Persia', 'The Ottomans'].includes(self.name)",
+          "add": 8
+        }
+      ]
+    },
+    "presentation": {
+      "schemaVersion": 1,
+      "rendererFamily": "folio",
+      "tokens": {
+        "paperColor": "#f7ecd3",
+        "inkColor": "#39291f",
+        "accentColor": "#814626",
+        "bodyFontAssetId": "font-cardo-400",
+        "headingFontAssetId": "font-cardo-700",
+        "mastheadFontAssetId": "font-cormorant-garamond-italic-600"
+      }
+    },
+    "layouts": [
+      { "id": "dispatches", "variant": "ordinary", "weight": { "base": 10 } },
+      { "id": "urgent-letter", "variant": "breaking", "weight": { "base": 10 } },
+      { "id": "court-account", "variant": "analysis", "weight": { "base": 3 } }
+    ],
+    "pageLabels": { "front": "Dispatches", "home": "Provinces", "economy": "Treasury", "abroad": "Foreign Courts" }
+  }
+]

@@ -27,7 +27,7 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('stored newspaper
     issue.publication.presentation = {
       schemaVersion: 1, rendererFamily: 'broadsheet',
       tokens: { paperColor: '#f0e0c0', inkColor: '#202020', accentColor: '#554433', bodyFontAssetId: 'font-libre-caslon-400', headingFontAssetId: 'font-bodoni-moda-700', mastheadFontAssetId: 'font-unifrakturmaguntia-400' },
-      assets: { ornamentAssetId: 'victorian.scrollwork' },
+      assets: { ornamentAssetId: 'steam-press-broadsheet.scrollwork' },
     };
     const page = await browser.newPage();
     try {
@@ -65,7 +65,7 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('stored newspaper
         { weight: '400', style: 'normal' }, { weight: '700', style: 'normal' }, { weight: '900', style: 'normal' }, { weight: '400', style: 'italic' },
       ]));
       expect(styles.faces.every(face => face.status === 'loaded')).toBe(true);
-      await expect(page.locator('.vd-masthead .vd-ornament').getAttribute('src')).resolves.toContain('assets/designs/victorian/scrollwork.svg');
+      await expect(page.locator('.vd-masthead .vd-ornament').getAttribute('src')).resolves.toContain('assets/designs/steam-press-broadsheet/scrollwork.svg');
       await page.evaluate(() => window.voxDeorumNewspaperExport!.dispose());
       expect(await page.locator('#newspaper-export-root').getAttribute('style')).not.toContain('--vd-paper:');
       expect(await page.evaluate(() => [...document.fonts].filter(font => font.family.startsWith('vd-reader-')).length)).toBe(0);

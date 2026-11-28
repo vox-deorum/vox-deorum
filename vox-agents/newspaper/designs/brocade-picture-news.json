@@ -1,0 +1,47 @@
+[
+  {
+    "id": "brocade-picture-news",
+    "version": "1",
+    "label": "Brocade Picture News",
+    "title": "The Ginza Picture Dispatch",
+    "civilizationTitles": {
+      "China": "The Shanghai Picture Dispatch",
+      "Korea": "The Hanseong Picture Dispatch"
+    },
+    "when": "self.is.eastAsian && self.era?.replace(' Era', '') === 'Industrial'",
+    "weight": {
+      "base": 45,
+      "adjustments": [
+        {
+          "when": "self.name === 'Japan'",
+          "add": 25
+        }
+      ]
+    },
+    "presentation": {
+      "schemaVersion": 1,
+      "rendererFamily": "folio",
+      "tokens": {
+        "paperColor": "#f5e7c7",
+        "inkColor": "#203b4b",
+        "accentColor": "#a93524",
+        "bodyFontAssetId": "font-cardo-400",
+        "headingFontAssetId": "font-cardo-700",
+        "mastheadFontAssetId": "font-cardo-700"
+      }
+    },
+    "assetDefinitions": [
+      {
+        "id": "ferry", "kind": "image", "path": "assets/designs/brocade-picture-news/ferry.svg",
+        "mediaType": "image/svg+xml", "width": 840, "height": 300,
+        "license": "Vox Deorum project asset", "attribution": "River ferry illustration drawn for Vox Deorum."
+      }
+    ],
+    "layouts": [
+      { "id": "picture-sheet", "variant": "ordinary", "weight": { "base": 10 } },
+      { "id": "extra-sheet", "variant": "breaking", "weight": { "base": 10 } },
+      { "id": "survey-sheet", "variant": "analysis", "weight": { "base": 3 } }
+    ],
+    "pageLabels": { "front": "Dispatches", "home": "City & Province", "economy": "Trade", "abroad": "Overseas" }
+  }
+]

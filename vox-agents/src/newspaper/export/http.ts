@@ -22,7 +22,7 @@ export function mountNewspaperRoutes(app: Express, options: NewspaperHostOptions
   app.use(['/newspaper', '/api/newspaper'], requireLoopbackRequest);
   options.mountApplicationRoutes?.(app);
   app.use('/newspaper/fixtures', express.static(options.fixtureDirectory ?? sourceFixtureDirectory));
-  app.get('/newspaper/fixtures/victorian-ordinary.json', (_req, res) => {
+  app.get('/newspaper/fixtures/steam-press-broadsheet-ordinary.json', (_req, res) => {
     res.sendFile('sample.json', { root: options.directory ?? readerDirectory }, error => {
       if (error && !res.headersSent) sendError(res, 404, 'The default newspaper sample is not built.');
     });

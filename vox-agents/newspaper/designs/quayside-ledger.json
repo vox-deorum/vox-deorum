@@ -1,0 +1,70 @@
+[
+  {
+    "id": "quayside-ledger",
+    "version": "1",
+    "label": "Quayside Ledger",
+    "title": "The Antwerp Shipping List",
+    "civilizationTitles": {
+      "England": "The English Shipping List",
+      "The Netherlands": "The Dutch Shipping List",
+      "Portugal": "The Portuguese Shipping List",
+      "Venice": "The Venetian Shipping List"
+    },
+    "weight": {
+      "base": 30,
+      "adjustments": [
+        {
+          "when": "['England', 'The Netherlands', 'Portugal', 'Venice'].includes(self.name)",
+          "add": 35
+        },
+        {
+          "when": "self.era?.replace(' Era', '') === 'Renaissance' && ['England', 'The Netherlands', 'Portugal', 'Venice'].includes(self.name)",
+          "add": 5
+        }
+      ]
+    },
+    "when": "self.era?.replace(' Era', '') === 'Renaissance' || (self.era?.replace(' Era', '') === 'Industrial' && ['England', 'The Netherlands', 'Portugal', 'Venice'].includes(self.name))",
+    "presentation": {
+      "schemaVersion": 1,
+      "rendererFamily": "folio",
+      "tokens": {
+        "paperColor": "#f4f3ea",
+        "inkColor": "#222e38",
+        "accentColor": "#3c586d",
+        "bodyFontAssetId": "font-libre-caslon-400",
+        "headingFontAssetId": "font-libre-caslon-700",
+        "mastheadFontAssetId": "font-libre-caslon-400"
+      },
+      "assets": {}
+    },
+    "layouts": [
+      {
+        "id": "folio",
+        "variant": "ordinary",
+        "weight": {
+          "base": 10
+        }
+      },
+      {
+        "id": "dispatch",
+        "variant": "breaking",
+        "weight": {
+          "base": 10
+        }
+      },
+      {
+        "id": "review",
+        "variant": "analysis",
+        "weight": {
+          "base": 3
+        }
+      }
+    ],
+    "pageLabels": {
+      "front": "Register",
+      "home": "Home",
+      "economy": "Markets",
+      "abroad": "Foreign"
+    }
+  }
+]

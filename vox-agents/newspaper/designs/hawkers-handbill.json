@@ -1,0 +1,30 @@
+[
+  {
+    "id": "hawkers-handbill",
+    "version": "1",
+    "label": "Hawker’s Handbill",
+    "title": "News from the Zócalo",
+    "when": "['Industrial', 'Modern'].includes(self.era?.replace(' Era', ''))",
+    "weight": {
+      "base": 36
+    },
+    "presentation": {
+      "schemaVersion": 1,
+      "rendererFamily": "folio",
+      "tokens": {
+        "paperColor": "#ead0a6",
+        "inkColor": "#241d18",
+        "accentColor": "#523825",
+        "bodyFontAssetId": "font-libre-caslon-400",
+        "headingFontAssetId": "font-libre-caslon-700",
+        "mastheadFontAssetId": "font-libre-caslon-700"
+      }
+    },
+    "layouts": [
+      { "id": "street-sheet", "variant": "ordinary", "weight": { "base": 10 } },
+      { "id": "late-handbill", "variant": "breaking", "weight": { "base": 10 } },
+      { "id": "printed-returns", "variant": "analysis", "weight": { "base": 3 } }
+    ],
+    "pageLabels": { "front": "The Sheet", "home": "Local Notices", "abroad": "Foreign Notices" }
+  }
+]

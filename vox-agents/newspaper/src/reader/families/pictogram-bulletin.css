@@ -1,0 +1,49 @@
+/* Vienna statistical plates pair a plain heading with a ruled field of figures. */
+.vd-newspaper[data-publication-design="pictogram-bulletin"] {
+  --vd-rule: #a2aa97;
+
+  & .vd-masthead { padding: 0 0 12px; text-align: left; }
+  & .vd-title { font-weight: 800; letter-spacing: -.055em; line-height: 1; }
+  & .vd-motto { color: var(--vd-ink); font-style: normal; }
+  & .vd-tabs { justify-content: flex-start; border-top: 5px solid var(--vd-ink); }
+  & .vd-headline { letter-spacing: -.04em; }
+  & .vd-storylist .vd-story--lead .vd-headline { font-weight: 800; line-height: 1.03; }
+  & .vd-storylist .vd-story--lead .vd-deck { font-style: normal; }
+  & .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-headline {
+    border-inline-start: .16em solid var(--vd-accent);
+    padding-inline-start: .24em;
+  }
+  /* Evidence sits above the report, so the lead's account reads in one column. */
+  & .vd-analysis-columns { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+  & .vd-column-main > .vd-deck { padding-bottom: 0; border-bottom: 0; }
+  & .vd-storylist[data-layout="analysis"] .vd-column-main > .vd-byline { margin: 0 0 13px; }
+  & .vd-evidence {
+    background: #e6e8d9;
+    padding: clamp(10px, 2.4cqi, 24px);
+  }
+  & .vd-evidence caption strong { letter-spacing: -.035em; }
+  & .vd-evidence thead { border-block: 1px solid var(--vd-ink); }
+  & .vd-evidence table:has(.vd-evidence-reading) thead th:first-child { width: clamp(5.5em, 22%, 12em); }
+  & .vd-evidence th, & .vd-evidence td { padding-block: 10px; }
+  & .vd-evidence td {
+    color: var(--vd-accent);
+    font-size: calc(clamp(18px, 3cqi, 32px) * var(--vd-text-scale));
+  }
+  & .vd-evidence .vd-missing td { color: var(--vd-ink); }
+  & .vd-evidence-reading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) min(6ch, 55%);
+    align-items: center;
+    gap: 6px;
+  }
+  & .vd-evidence-bar {
+    height: .5em;
+  }
+  & .vd-evidence-bar::before {
+    content: "";
+    display: block;
+    width: var(--vd-evidence-share);
+    height: 100%;
+    background: var(--vd-accent);
+  }
+}

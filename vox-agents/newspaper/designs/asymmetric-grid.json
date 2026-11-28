@@ -1,0 +1,35 @@
+[
+  {
+    "id": "asymmetric-grid",
+    "version": "1",
+    "label": "Asymmetric Grid",
+    "title": "The Zurich Index",
+    "when": "['Atomic', 'Information', 'Future'].includes(self.era?.replace(' Era', ''))",
+    "weight": {
+      "base": 50,
+      "adjustments": [
+        {
+          "when": "self.era?.replace(' Era', '') === 'Future'",
+          "add": -5
+        }
+      ]
+    },
+    "presentation": {
+      "schemaVersion": 1,
+      "rendererFamily": "folio",
+      "tokens": {
+        "paperColor": "#f1f3f5",
+        "inkColor": "#152431",
+        "accentColor": "#1c5279",
+        "bodyFontAssetId": "font-inter-400",
+        "headingFontAssetId": "font-inter-800"
+      }
+    },
+    "layouts": [
+      { "id": "news-index", "variant": "ordinary", "weight": { "base": 12 } },
+      { "id": "special-edition", "variant": "breaking", "weight": { "base": 7 } },
+      { "id": "figures", "variant": "analysis", "weight": { "base": 12 } }
+    ],
+    "pageLabels": { "front": "Front", "home": "Cities", "economy": "Trade", "abroad": "Abroad" }
+  }
+]

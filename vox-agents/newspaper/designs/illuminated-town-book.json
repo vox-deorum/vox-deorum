@@ -1,0 +1,38 @@
+[
+  {
+    "id": "illuminated-town-book",
+    "version": "1",
+    "label": "Illuminated Town Book",
+    "title": "The Town Book",
+    "civilizationTitles": {
+      "*": "The Town Book of {{terms.civilization}}"
+    },
+    "when": "self.era?.replace(' Era', '') === 'Medieval'",
+    "weight": {
+      "base": 50
+    },
+    "presentation": {
+      "schemaVersion": 1,
+      "rendererFamily": "folio",
+      "tokens": {
+        "paperColor": "#f4ead2",
+        "inkColor": "#20364c",
+        "accentColor": "#843e32",
+        "bodyFontAssetId": "font-cardo-400",
+        "headingFontAssetId": "font-cardo-700",
+        "mastheadFontAssetId": "font-unifrakturmaguntia-400"
+      }
+    },
+    "layouts": [
+      { "id": "entries", "variant": "ordinary", "weight": { "base": 10 } },
+      { "id": "proclamation", "variant": "breaking", "weight": { "base": 10 } },
+      { "id": "accounts", "variant": "analysis", "weight": { "base": 3 } }
+    ],
+    "pageLabels": {
+      "front": "The Register",
+      "home": "Town Affairs",
+      "economy": "Accounts",
+      "abroad": "Foreign Letters"
+    }
+  }
+]

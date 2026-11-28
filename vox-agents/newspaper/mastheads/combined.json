@@ -11,7 +11,7 @@
     "weight": {
       "base": 10
     },
-    "designs": ["oral-accounts"]
+    "designs": ["forum-bronze"]
   },
   {
     "id": "combined-english-mercantile",
@@ -26,7 +26,7 @@
     "weight": {
       "base": 11
     },
-    "designs": ["port-register"]
+    "designs": ["quayside-ledger"]
   },
   {
     "id": "combined-venetian-mercury",
@@ -40,7 +40,7 @@
     "weight": {
       "base": 10
     },
-    "designs": ["port-register"]
+    "designs": ["quayside-ledger"]
   },
   {
     "id": "combined-order-shift-report",
@@ -54,7 +54,7 @@
     "weight": {
       "base": 12
     },
-    "designs": ["paste-up"]
+    "designs": ["cut-and-paste-zine"]
   },
   {
     "id": "combined-freedom-daily-citizen",
@@ -69,7 +69,7 @@
     "weight": {
       "base": 12
     },
-    "designs": ["civic-survey"]
+    "designs": ["pictogram-bulletin"]
   },
   {
     "id": "combined-freedom-open-signal",
@@ -84,7 +84,7 @@
     "weight": {
       "base": 7
     },
-    "designs": ["wire"]
+    "designs": ["endless-scroll"]
   },
   {
     "id": "combined-autocracy-national-sentinel",
@@ -98,6 +98,6 @@
     "weight": {
       "base": 12
     },
-    "designs": ["national-review"]
+    "designs": ["glossy-photo-weekly"]
   }
 ]

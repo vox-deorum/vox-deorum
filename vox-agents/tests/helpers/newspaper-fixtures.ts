@@ -29,7 +29,7 @@ export function createNewspaperIssue(): IssueDocument {
     cutoff: { turn: 12, label: "Turn 12" },
     publication: {
       title: "The Daily Deorum",
-      designId: "wire",
+      designId: "endless-scroll",
       designVersion: "1",
       presentation: { schemaVersion: 1, rendererFamily: "feed" },
     },

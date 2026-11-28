@@ -1,0 +1,40 @@
+[
+  {
+    "id": "winter-count-hide",
+    "version": "1",
+    "label": "Winter Count Hide",
+    "title": "The Count of Winters",
+    "civilizationTitles": {
+      "The Shoshone": "The Shoshone Count of Winters",
+      "The Iroquois": "The Council Belt"
+    },
+    "when": "(self.is.northAmerican || self.is.eurasianSteppe) && ['Ancient', 'Classical', 'Medieval', 'Renaissance'].includes(self.era?.replace(' Era', ''))",
+    "weight": {
+      "base": 45,
+      "adjustments": [
+        {
+          "when": "['The Shoshone', 'The Iroquois'].includes(self.name)",
+          "add": 17
+        }
+      ]
+    },
+    "presentation": {
+      "schemaVersion": 1,
+      "rendererFamily": "folio",
+      "tokens": {
+        "paperColor": "#e7d4ae",
+        "inkColor": "#2e2118",
+        "accentColor": "#4b2a4e",
+        "bodyFontAssetId": "font-literata-400",
+        "headingFontAssetId": "font-literata-700",
+        "mastheadFontAssetId": "font-marcellus-400"
+      }
+    },
+    "layouts": [
+      { "id": "winter-marks", "variant": "ordinary", "weight": { "base": 10 } },
+      { "id": "great-winter", "variant": "breaking", "weight": { "base": 10 } },
+      { "id": "hide-tally", "variant": "analysis", "weight": { "base": 3 } }
+    ],
+    "pageLabels": { "front": "Front", "home": "Towns", "economy": "Trade", "abroad": "Abroad" }
+  }
+]

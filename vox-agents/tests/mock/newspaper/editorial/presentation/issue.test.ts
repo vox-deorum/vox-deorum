@@ -183,7 +183,7 @@ describe('press run design selection', () => {
     const [account] = config.designs;
     account.weight.base = 80;
     config.designs.push(
-      { ...structuredClone(account), id: 'town-book', weight: { base: 40, adjustments: [] } },
+      { ...structuredClone(account), id: 'illuminated-town-book', weight: { base: 40, adjustments: [] } },
       { ...structuredClone(account), id: 'dispatch', weight: { base: 39, adjustments: [] } },
     );
     return config;
@@ -200,7 +200,7 @@ describe('press run design selection', () => {
     const config = catalogue();
     const weights = await choices(config);
     const strong = 'early-account';
-    expect(choosePressRunDesign([...prepareFrontLayouts(config, weights).keys()], weights, history(), () => 0.99).design?.id).toBe('town-book');
+    expect(choosePressRunDesign([...prepareFrontLayouts(config, weights).keys()], weights, history(), () => 0.99).design?.id).toBe('illuminated-town-book');
     for (const count of [1, 2]) {
       const result = choosePressRunDesign([...prepareFrontLayouts(config, weights).keys()], weights, history(...Array(count).fill(strong)), () => {
         throw new Error('A protected issue should not draw.');
@@ -217,10 +217,10 @@ describe('press run design selection', () => {
       candidates: [
         { id: 'dispatch', rawWeight: 39, drawWeight: 0 },
         { id: strong, rawWeight: 80, drawWeight: 80 },
-        { id: 'town-book', rawWeight: 40, drawWeight: 40 },
+        { id: 'illuminated-town-book', rawWeight: 40, drawWeight: 40 },
       ],
     });
-    expect(choosePressRunDesign([...prepareFrontLayouts(config, weights).keys()], weights, state, () => 0.7).design?.id).toBe('town-book');
+    expect(choosePressRunDesign([...prepareFrontLayouts(config, weights).keys()], weights, state, () => 0.7).design?.id).toBe('illuminated-town-book');
   });
 
   it('should require a switch after six issues only when another design fits', async () => {
@@ -229,7 +229,7 @@ describe('press run design selection', () => {
     const strong = 'early-account';
     const state = history(...Array(8).fill(strong));
     const result = choosePressRunDesign([...prepareFrontLayouts(config, weights).keys()], weights, state, () => 0);
-    expect(result.design?.id).toBe('town-book');
+    expect(result.design?.id).toBe('illuminated-town-book');
     expect(result.audit).toMatchObject({ priorRunLength: 6, reason: 'run-limit' });
     expect(result.audit.candidates.find(candidate => candidate.id === strong)?.drawWeight).toBe(0);
 
@@ -250,7 +250,7 @@ describe('press run design selection', () => {
     expect(ineligible.design?.id).toBe('early-account');
     expect(ineligible.audit.reason).toBe('ineligible-incumbent');
 
-    const mixed = history('early-account', 'early-account', 'town-book', 'early-account');
+    const mixed = history('early-account', 'early-account', 'illuminated-town-book', 'early-account');
     expect(choosePressRunDesign([...prepareFrontLayouts(config, weights).keys()], weights, mixed, () => 0.99).audit.priorRunLength).toBe(1);
   });
 
@@ -282,7 +282,7 @@ describe('press run design selection', () => {
       expect(after.layouts).toHaveProperty('extra');
       expect(after.variants).toMatchObject(before.variants);
     }
-    expect(seen).toEqual(new Set(['early-account', 'town-book']));
+    expect(seen).toEqual(new Set(['early-account', 'illuminated-town-book']));
   });
 
   it('should save published designs and retain a skipped check audit without spending a slot', async () => {

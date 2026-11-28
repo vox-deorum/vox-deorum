@@ -151,8 +151,8 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('replay b
     try {
       await page.goto(`${host.url}/newspaper/`);
       const designs = page.locator('#preview-design');
-      await designs.selectOption('wire');
-      const masthead = page.locator('[data-publication-design="wire"] .vd-title');
+      await designs.selectOption('endless-scroll');
+      const masthead = page.locator('[data-publication-design="endless-scroll"] .vd-title');
       const civilization = page.getByRole('textbox', { name: 'Civilization' });
       const defaultTitle = await masthead.innerText();
       const designLabel = await designs.locator('option:checked').innerText();
@@ -394,14 +394,14 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('replay b
       const design = page.locator('#recorded-design');
       const layout = page.locator('#recorded-layout');
       const tint = page.locator('#recorded-tint');
-      await design.selectOption('shang');
+      await design.selectOption('cracked-oracle-shell');
       expect(await design.locator('option:checked').textContent()).toBe(
-        await page.locator('#preview-design option[value="shang"]').textContent()
+        await page.locator('#preview-design option[value="cracked-oracle-shell"]').textContent()
       );
       await layout.selectOption('breaking');
       const customTint = '#123456';
       await page.locator('#recorded-custom-tint').fill(customTint);
-      expect(await root.getAttribute('data-publication-design')).toBe('shang');
+      expect(await root.getAttribute('data-publication-design')).toBe('cracked-oracle-shell');
       expect(await front.getAttribute('data-layout')).toBe('breaking');
       expect(await root.evaluate(node => node.style.getPropertyValue('--vd-accent'))).toBe(customTint);
       expect(await root.locator('.vd-title').textContent()).toBe(issue.publication.title);

@@ -56,10 +56,10 @@ function createStory(id: string, sentences: number): IssueItem {
 }
 
 /** Built-in design ids that carry each renderer family. */
-const designIds: Record<RendererFamily, string> = { inscription: 'oral-accounts', broadsheet: 'victorian', feed: 'wire', folio: 'egypt' };
+const designIds: Record<RendererFamily, string> = { inscription: 'forum-bronze', broadsheet: 'steam-press-broadsheet', feed: 'endless-scroll', folio: 'winged-sun-papyrus' };
 
 /** Historical formats whose ordinary editions pair briefs below the lead. */
-const pairedDesigns = ['street-gazette', 'port-register', 'cable-desk', 'clay-chronicle', 'palm-leaf-register', 'court-dispatch'] as const;
+const pairedDesigns = ['hawkers-handbill', 'quayside-ledger', 'telegram-form', 'cuneiform-tablet', 'bound-palm-leaves', 'courier-slips'] as const;
 
 /** Build a one-page ordinary issue whose stories have the given lengths. */
 function createOrdinaryIssue(sentences: number[], family: RendererFamily = 'broadsheet'): IssueDocument {
@@ -76,7 +76,7 @@ async function createPairedIssue(designId: typeof pairedDesigns[number], sentenc
   const design = (await loadEditorialConfig()).designs.find(candidate => candidate.id === designId)!;
   issue.publication = { title: design.title, designId, designVersion: design.version, presentation: design.presentation };
   for (const item of issue.items.slice(0, 2)) {
-    item.image = { assetId: 'victorian.harbour', altText: 'Harbour illustration' };
+    item.image = { assetId: 'steam-press-broadsheet.harbour', altText: 'Harbour illustration' };
   }
   return issue;
 }
@@ -244,10 +244,10 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'export.html')) || !exist
           if (count === 4 && width === 1200) {
             const leadStory = page.locator('.vd-story--lead');
             const prose = (await leadStory.locator('.vd-prose').boundingBox())!;
-            if (designId === 'port-register') {
+            if (designId === 'quayside-ledger') {
               const heading = (await leadStory.locator('.vd-headline').boundingBox())!;
               expect(heading.x + heading.width, label).toBeLessThan(prose.x);
-            } else if (designId === 'court-dispatch') {
+            } else if (designId === 'courier-slips') {
               const art = (await leadStory.locator('.vd-story-art').boundingBox())!;
               expect(art.x, label).toBeGreaterThan(prose.x + prose.width);
             }
@@ -257,15 +257,15 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'export.html')) || !exist
     } finally { await page.close(); }
   }, 60_000);
 
-  it.for(['victorian', ...pairedDesigns] as const)('should give the %s reader the same story geometry as export', async (designId, context) => {
+  it.for(['steam-press-broadsheet', ...pairedDesigns] as const)('should give the %s reader the same story geometry as export', async (designId, context) => {
     if (!browser) { context.skip(unavailable); return; }
     const lengths = [1, 6, 2, 3];
-    const issue = designId === 'victorian' ? createOrdinaryIssue(lengths) : await createPairedIssue(designId, lengths);
+    const issue = designId === 'steam-press-broadsheet' ? createOrdinaryIssue(lengths) : await createPairedIssue(designId, lengths);
     const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
     try {
-      await page.route('**/newspaper/fixtures/victorian-ordinary.json', route => route.fulfill({ json: issue }));
-      for (const width of designId === 'victorian' ? [1200, 1000, 600] : [1200, 760]) {
-        await page.goto(`${host.url}/newspaper/?fixture=victorian-ordinary`);
+      await page.route('**/newspaper/fixtures/steam-press-broadsheet-ordinary.json', route => route.fulfill({ json: issue }));
+      for (const width of designId === 'steam-press-broadsheet' ? [1200, 1000, 600] : [1200, 760]) {
+        await page.goto(`${host.url}/newspaper/?fixture=steam-press-broadsheet-ordinary`);
         await page.locator(`#reader-root[data-issue-id="${issue.issueId}"]`).waitFor();
         await page.evaluate(() => document.fonts.ready.then(() => undefined));
         await page.locator('#reader-root').evaluate((root, width) => {
@@ -318,7 +318,7 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'export.html')) || !exist
   it('should retain most of a registered illustration in full-width stories without changing brief or narrow image sizes', async context => {
     if (!browser) { context.skip(unavailable); return; }
     const issue = createOrdinaryIssue([1, 3, 2, 3]);
-    for (const item of issue.items) item.image = { assetId: 'victorian.harbour', altText: 'Harbour illustration' };
+    for (const item of issue.items) item.image = { assetId: 'steam-press-broadsheet.harbour', altText: 'Harbour illustration' };
     const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
     try {
       await page.goto(`${host.url}/newspaper/export.html`);

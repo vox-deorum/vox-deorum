@@ -365,11 +365,11 @@ describe('editorial engine', () => {
     });
 
     it('should admit an urgent merge anchor only when a breaking front fits', async () => {
-      const wire = config.designs.find(design => design.id === 'wire')!;
+      const endlessScroll = config.designs.find(design => design.id === 'endless-scroll')!;
       const catalogue = editorialConfigSchema.parse({
         ...config,
         mastheadRules: [],
-        designs: [{ ...wire, when: undefined, weight: { base: 1 } }],
+        designs: [{ ...endlessScroll, when: undefined, weight: { base: 1 } }],
         // A near tie keeps the regular front at four stories, so only the urgent merge needs a fifth.
         triggers: config.triggers.map(trigger =>
           trigger.id === 'balance' ? { ...trigger, urgent: 'true' } :
@@ -519,7 +519,7 @@ describe('editorial engine', () => {
         ],
       });
       const legacy = createInitialPublicationState();
-      legacy.issues.push({ issueId: 'old', turn: 1, designId: 'wire', items: [historyItem('old-article', [])] });
+      legacy.issues.push({ issueId: 'old', turn: 1, designId: 'endless-scroll', items: [historyItem('old-article', [])] });
       const first = await check(fixture(), legacy, firstCatalogue);
       expect(first.status).toBe('published');
       expect(first.decision.triggerAudit.find(({ rule }) => rule === 'unused')?.subjects[0].outcome).toBe('fired');
@@ -773,14 +773,14 @@ describe('editorial engine', () => {
       expect(result.decision.fallbackReason).toBeTruthy();
     });
 
-    it('should retain the wire design when a published Information Era run reaches the Future Era', async () => {
-      const wireOnly = { ...config, mastheadRules: [], designs: config.designs.filter(design => design.id === 'wire') };
-      const first = await check(fixture(10, 5, 0, 'Information Era'), createInitialPublicationState(), wireOnly, 'branch', 'campaign', 4);
+    it('should retain the endless scroll design when a published Information Era run reaches the Future Era', async () => {
+      const endlessScrollOnly = { ...config, mastheadRules: [], designs: config.designs.filter(design => design.id === 'endless-scroll') };
+      const first = await check(fixture(10, 5, 0, 'Information Era'), createInitialPublicationState(), endlessScrollOnly, 'branch', 'campaign', 4);
       expect(first.status).toBe('published');
-      expect(first.state.issues[0].designId).toBe('wire');
+      expect(first.state.issues[0].designId).toBe('endless-scroll');
       const future = await check(fixture(20, 10, 25, 'Future Era'), first.state, config, 'branch', 'campaign', 4);
       if (future.status !== 'published') throw new Error(future.reason);
-      expect(future.issue.publication.designId).toBe('wire');
+      expect(future.issue.publication.designId).toBe('endless-scroll');
     });
 
     it('should save a skipped check when no design is eligible', async () => {
@@ -865,53 +865,53 @@ describe('editorial engine', () => {
       expect(retried.state.lastCheckTurn).toBe(20);
     });
 
-    it('should introduce the social news feed in Information and keep it in Future', async () => {
+    it('should introduce the Endless Scroll in Information and keep it in Future', async () => {
       for (const era of ['Modern', 'Atomic Era'])
-        expect((await designChoices('France', era)).byId.wire).toBe(0);
+        expect((await designChoices('France', era)).byId['endless-scroll']).toBe(0);
       for (const era of ['Information Era', 'Future'])
-        expect((await designChoices('France', era)).byId.wire).toBeGreaterThan(0);
+        expect((await designChoices('France', era)).byId['endless-scroll']).toBeGreaterThan(0);
     });
 
-    it('should favor Heian in Japan while keeping it competitive in Korea and China', async () => {
+    it('should favor Scented Court Letters in Japan while keeping it competitive in Korea and China', async () => {
       for (const [era, general] of [
-        ['Classical Era', 'oral-accounts'], ['Medieval', 'town-book'], ['Renaissance Era', 'printer-dispatch'],
+        ['Classical Era', 'forum-bronze'], ['Medieval', 'illuminated-town-book'], ['Renaissance Era', 'woodcut-tidings'],
       ] as const) {
         const japan = (await designChoices('Japan', era)).byId;
-        expect(japan.heian, era).toBeGreaterThan(japan[general]);
+        expect(japan['scented-court-letters'], era).toBeGreaterThan(japan[general]);
         for (const name of ['Korea', 'China']) {
           const { byId } = await designChoices(name, era);
-          expect(byId.heian, `${name}, ${era}`).toBeGreaterThanOrEqual(Math.max(...Object.values(byId)) / 2);
-          expect(byId.heian, `${name}, ${era}`).toBeLessThan(byId[general]);
+          expect(byId['scented-court-letters'], `${name}, ${era}`).toBeGreaterThanOrEqual(Math.max(...Object.values(byId)) / 2);
+          expect(byId['scented-court-letters'], `${name}, ${era}`).toBeLessThan(byId[general]);
         }
       }
-      expect((await designChoices('Japan', 'Ancient')).byId.heian).toBe(0);
-      expect((await designChoices('Japan', 'Industrial')).byId.heian).toBe(0);
+      expect((await designChoices('Japan', 'Ancient')).byId['scented-court-letters']).toBe(0);
+      expect((await designChoices('Japan', 'Industrial')).byId['scented-court-letters']).toBe(0);
     });
 
-    it('should offer a Nubian edition and keep the notice board competitive with Shang in Classical', async () => {
+    it('should offer a Nubian edition and keep Forum Bronze competitive with Cracked Oracle Shell in Classical', async () => {
       for (const era of ['Ancient Era', 'Classical']) {
         const egypt = (await designChoices('Egypt', era)).byId;
         const nubia = (await designChoices('Nubia', era)).byId;
-        expect(nubia.egypt, era).toBeGreaterThan(0);
-        expect(egypt.egypt, era).toBeGreaterThan(nubia.egypt);
+        expect(nubia['winged-sun-papyrus'], era).toBeGreaterThan(0);
+        expect(egypt['winged-sun-papyrus'], era).toBeGreaterThan(nubia['winged-sun-papyrus']);
       }
-      expect((await designChoices('Nubia', 'Medieval')).byId.egypt).toBe(0);
+      expect((await designChoices('Nubia', 'Medieval')).byId['winged-sun-papyrus']).toBe(0);
 
       const ancient = await designChoices('China', 'Ancient');
       const classical = await designChoices('China', 'Classical Era');
-      expect(ancient.byId.shang).toBeGreaterThan(ancient.byId['oral-accounts']);
-      expect(classical.byId.shang).toBeGreaterThan(0);
-      expect(classical.byId.shang).toBeLessThan(ancient.byId.shang);
+      expect(ancient.byId['cracked-oracle-shell']).toBeGreaterThan(ancient.byId['forum-bronze']);
+      expect(classical.byId['cracked-oracle-shell']).toBeGreaterThan(0);
+      expect(classical.byId['cracked-oracle-shell']).toBeLessThan(ancient.byId['cracked-oracle-shell']);
       const state = createInitialPublicationState();
-      state.issues = [1, 2, 3].map(turn => ({ issueId: `issue-${turn}`, turn, items: [], designId: 'shang' }));
+      state.issues = [1, 2, 3].map(turn => ({ issueId: `issue-${turn}`, turn, items: [], designId: 'cracked-oracle-shell' }));
       const draws = [0, 0.25, 0.5, 0.75, 1 - Number.EPSILON];
       const choices = draws.map(draw => choosePressRunDesign([...fittingFrontLayouts(prepareFrontLayouts(config, classical.weights), false).keys()], classical.weights, state, () => draw).design?.id);
-      expect(choices).toEqual(expect.arrayContaining(['shang', 'oral-accounts']));
+      expect(choices).toEqual(expect.arrayContaining(['cracked-oracle-shell', 'forum-bronze']));
     });
 
     it('should keep a masthead rule across turns and branches and replace it on an ideology switch', async () => {
       const design = {
-        ...config.designs.find(entry => entry.id === 'wire')!,
+        ...config.designs.find(entry => entry.id === 'endless-scroll')!,
         civilizationTitles: null,
         title: 'Controlled Design',
         motto: 'Design Motto',
@@ -1024,7 +1024,7 @@ describe('editorial engine', () => {
       const candidates = (await matchTemplates([development('ledger', 'player/0'), development('culture', 'player/1')],
         revised, await getEditorialExpressions(revised), { facts: buildNewspaperFacts(fixture()) })).map((candidate, index) => ({ ...candidate, id: `candidate-${index}`, importance: 40 - index, weight: 1 }));
       const state = createInitialPublicationState();
-      state.issues = [{ issueId: 'old', turn: 1, designId: 'wire',
+      state.issues = [{ issueId: 'old', turn: 1, designId: 'endless-scroll',
         items: [historyItem('reader-choice', candidates[1].tags, candidates[1].seriesKeys)] }];
       const sections = revised.pages.filter(page => !page.front);
       /** Score both candidates with the current votes and checkpoint. */
@@ -1042,7 +1042,7 @@ describe('editorial engine', () => {
 
     it('should replace and clear votes exactly, ignoring importance and page duplication', () => {
       const state = createInitialPublicationState();
-      state.issues = [{ issueId: 'old', turn: 1, designId: 'wire', items: [historyItem('a', ['trade', 'economy']), historyItem('a', ['trade', 'economy'])] }];
+      state.issues = [{ issueId: 'old', turn: 1, designId: 'endless-scroll', items: [historyItem('a', ['trade', 'economy']), historyItem('a', ['trade', 'economy'])] }];
       state.votes.a = 1;
       const positive = computeFeedback(state, config);
       expect(positive.windowItemIds).toEqual(['a']);
@@ -1057,7 +1057,7 @@ describe('editorial engine', () => {
 
     it('should give rare tags more influence and count unrated items in the corpus window', () => {
       const state = createInitialPublicationState();
-      state.issues = [{ issueId: 'old', turn: 1, designId: 'wire', items: [historyItem('a', ['common', 'rare']),
+      state.issues = [{ issueId: 'old', turn: 1, designId: 'endless-scroll', items: [historyItem('a', ['common', 'rare']),
         historyItem('b', ['common']), historyItem('c', ['common']), historyItem('d', ['common'])] }];
       state.votes.a = 1;
       const feedback = computeFeedback(state, config);

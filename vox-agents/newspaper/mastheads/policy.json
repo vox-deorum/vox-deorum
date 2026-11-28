@@ -12,7 +12,7 @@
     "weight": {
       "base": 7
     },
-    "designs": ["cable-desk"]
+    "designs": ["telegram-form"]
   },
   {
     "id": "policy-labor-ledger",
@@ -27,7 +27,7 @@
     "weight": {
       "base": 7
     },
-    "designs": ["street-gazette"]
+    "designs": ["hawkers-handbill"]
   },
   {
     "id": "policy-arts-review",
@@ -42,7 +42,7 @@
     "weight": {
       "base": 6
     },
-    "designs": ["sunday-colour"]
+    "designs": ["sunday-funnies"]
   },
   {
     "id": "policy-colonial-dispatch",
@@ -57,7 +57,7 @@
     "weight": {
       "base": 7
     },
-    "designs": ["port-register"]
+    "designs": ["quayside-ledger"]
   },
   {
     "id": "policy-common-reader",
@@ -72,7 +72,7 @@
     "weight": {
       "base": 6
     },
-    "designs": ["civic-survey"]
+    "designs": ["pictogram-bulletin"]
   },
   {
     "id": "policy-manor-rolls",
@@ -87,6 +87,6 @@
     "weight": {
       "base": 6
     },
-    "designs": ["town-book"]
+    "designs": ["illuminated-town-book"]
   }
 ]

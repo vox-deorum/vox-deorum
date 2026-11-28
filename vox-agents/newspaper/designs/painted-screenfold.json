@@ -1,0 +1,64 @@
+[
+  {
+    "id": "painted-screenfold",
+    "version": "1",
+    "label": "Painted Screenfold",
+    "title": "The Painted Annals",
+    "civilizationTitles": {
+      "The Maya": "The Painted Annals of the Maya",
+      "The Aztecs": "The Painted Annals of the Mexica"
+    },
+    "when": "self.is.mesoamerican && ['Ancient', 'Classical', 'Medieval', 'Renaissance'].includes(self.era?.replace(' Era', ''))",
+    "weight": {
+      "base": 65,
+      "adjustments": [
+        {
+          "when": "self.era?.replace(' Era', '') === 'Medieval'",
+          "add": 15
+        }
+      ]
+    },
+    "presentation": {
+      "schemaVersion": 1,
+      "rendererFamily": "folio",
+      "tokens": {
+        "paperColor": "#eee2c8",
+        "inkColor": "#29241f",
+        "accentColor": "#923e32",
+        "bodyFontAssetId": "font-literata-400",
+        "headingFontAssetId": "font-literata-700",
+        "mastheadFontAssetId": "font-marcellus-400"
+      },
+      "assets": {}
+    },
+    "layouts": [
+      {
+        "id": "folio",
+        "variant": "ordinary",
+        "weight": {
+          "base": 10
+        }
+      },
+      {
+        "id": "dispatch",
+        "variant": "breaking",
+        "weight": {
+          "base": 10
+        }
+      },
+      {
+        "id": "review",
+        "variant": "analysis",
+        "weight": {
+          "base": 3
+        }
+      }
+    ],
+    "pageLabels": {
+      "front": "Chronicle",
+      "home": "At Home",
+      "economy": "Trade",
+      "abroad": "Abroad"
+    }
+  }
+]

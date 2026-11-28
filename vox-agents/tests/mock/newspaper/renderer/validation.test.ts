@@ -21,7 +21,7 @@ describe("newspaper renderer issue validation", () => {
 
   it.each(["bodyFontAssetId", "headingFontAssetId", "mastheadFontAssetId"] as const)("should reject a non-font presentation reference for %s", (role) => {
     const issue = createNewspaperIssue();
-    issue.publication.presentation = { schemaVersion: 1, rendererFamily: "feed", tokens: { bodyFontAssetId: "font-inter-400", [role]: "wire.port" } };
+    issue.publication.presentation = { schemaVersion: 1, rendererFamily: "feed", tokens: { bodyFontAssetId: "font-inter-400", [role]: "endless-scroll.port" } };
     expect(() => parseIssueDocument(issue)).toThrowError(expect.objectContaining({
       issues: expect.arrayContaining([expect.objectContaining({ path: ["publication", "presentation", "tokens", role] })]),
     }));
@@ -29,11 +29,11 @@ describe("newspaper renderer issue validation", () => {
 
   it("should accept registered snapshot ornaments", () => {
     const issue = createNewspaperIssue();
-    issue.publication.presentation = { schemaVersion: 1, rendererFamily: "broadsheet", assets: { ornamentAssetId: "victorian.scrollwork" } };
-    expect(parseIssueDocument(issue).publication.presentation.assets?.ornamentAssetId).toBe("victorian.scrollwork");
+    issue.publication.presentation = { schemaVersion: 1, rendererFamily: "broadsheet", assets: { ornamentAssetId: "steam-press-broadsheet.scrollwork" } };
+    expect(parseIssueDocument(issue).publication.presentation.assets?.ornamentAssetId).toBe("steam-press-broadsheet.scrollwork");
   });
 
-  it.each(["unregistered-image", "victorian.scrollwork", "font-inter-400"])(
+  it.each(["unregistered-image", "steam-press-broadsheet.scrollwork", "font-inter-400"])(
     "should reject an unknown or non-image article asset: %s", (assetId) => {
       const issue = createNewspaperIssue();
       issue.items[0].image = { assetId, altText: "A report illustration" };
@@ -46,7 +46,7 @@ describe("newspaper renderer issue validation", () => {
     },
   );
 
-  it.each(["unregistered-ornament", "wire.port", "vote-feed-up-neutral"])(
+  it.each(["unregistered-ornament", "endless-scroll.port", "vote-feed-up-neutral"])(
     "should reject an unknown or non-ornament publication asset: %s", (assetId) => {
       const issue = createNewspaperIssue();
       issue.publication.presentation.assets = { ornamentAssetId: assetId };
@@ -57,11 +57,11 @@ describe("newspaper renderer issue validation", () => {
 
   it("should accept a registered article image with alternative text", () => {
     const issue = createNewspaperIssue();
-    issue.items[0].image = { assetId: "wire.port", altText: "Ships at a port" };
+    issue.items[0].image = { assetId: "endless-scroll.port", altText: "Ships at a port" };
     expect(parseIssueDocument(issue).items[0].image).toEqual(issue.items[0].image);
   });
 
-  it.each(["victorian-ordinary", "victorian-breaking", "victorian-analysis", "wire-ordinary"])(
+  it.each(["steam-press-broadsheet-ordinary", "steam-press-broadsheet-breaking", "steam-press-broadsheet-analysis", "endless-scroll-ordinary"])(
     "should accept the complete renderer fixture: %s", async (fixture) => {
       const input = JSON.parse(await readFile(new URL(`../../../../newspaper/fixtures/${fixture}.json`, import.meta.url), "utf8"));
       const issue = parseIssueDocument(input);

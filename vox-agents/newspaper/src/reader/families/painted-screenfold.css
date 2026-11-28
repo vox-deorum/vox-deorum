@@ -1,0 +1,63 @@
+/* Clay rules and alternating light along the hinges of a bark-paper screenfold. */
+.vd-newspaper[data-publication-design="painted-screenfold"] {
+  --bark-grain: url("./textures/bark-paper.svg?inline");
+  --hinge: color-mix(in srgb, var(--vd-ink) 15%, transparent);
+  --fold: linear-gradient(90deg, transparent 68%, var(--hinge) 99.6%, transparent);
+  --panel-inset: clamp(12px, 1.7cqi, 24px);
+
+  & .vd-header, & .vd-page { background-image: var(--bark-grain); }
+  & .vd-header { padding-top: 0; border-top: 4px solid var(--vd-accent); }
+  & .vd-masthead {
+    padding: clamp(16px, 2.4cqi, 32px) 8px;
+    background: var(--fold) left / calc(100% / 3) 100% repeat-x;
+  }
+  & .vd-title {
+    font-size: calc(clamp(29px, 4.5cqi, 56px) * var(--vd-text-scale));
+    letter-spacing: .035em;
+    font-variant-caps: small-caps;
+  }
+  & .vd-tabs { border-block: 1px solid var(--vd-accent); }
+  & .vd-page { padding-block-start: clamp(16px, 2.5cqi, 32px); }
+  & .vd-storylist .vd-story--lead .vd-headline { font-weight: 700; }
+  & .vd-storylist .vd-story--lead .vd-deck { border: 0; padding: 0; }
+  & .vd-storylist .vd-story--brief { border-top: 1px solid var(--vd-accent); }
+  & .vd-number { color: var(--vd-accent); font-weight: 700; }
+  & .vd-evidence {
+    border-block-start: 3px solid var(--vd-accent);
+    padding: var(--panel-inset);
+    background: color-mix(in srgb, var(--vd-paper) 90%, var(--vd-accent));
+  }
+  /* Show the fold hinges in an empty rule band above the copy. */
+  & .vd-storylist:is([data-layout="breaking"], [data-layout="analysis"]) {
+    border-top: 2px solid var(--vd-accent);
+    padding-top: calc(8px + var(--panel-inset));
+    background: var(--fold) left top / calc(100% / 3) 8px repeat-x;
+  }
+  & .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-headline {
+    border-block: 2px solid var(--vd-accent);
+    padding-block: .22em .3em;
+    letter-spacing: -.035em;
+    text-transform: none;
+  }
+  /* The closing mark is the edge of three folded leaves. */
+  & .vd-end-rule {
+    width: 48px;
+    height: 10px;
+    margin-inline: auto;
+    background: var(--vd-accent);
+    clip-path: polygon(0 20%, 33% 70%, 66% 10%, 100% 60%, 100% 85%, 66% 35%, 33% 95%, 0 45%);
+  }
+  & .vd-end-rule::before, & .vd-end-rule::after { display: none; }
+}
+
+@container newspaper (width > 760px) {
+  .vd-newspaper[data-publication-design="painted-screenfold"] {
+    & .vd-storylist[data-layout="ordinary"] {
+      column-gap: 0;
+      border-block: 2px solid var(--vd-accent);
+
+      & > .vd-story { margin: 0; padding: var(--panel-inset); }
+      & > .vd-story--brief { background: var(--fold); }
+    }
+  }
+}

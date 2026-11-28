@@ -55,7 +55,7 @@ describe('editorial catalogue files', () => {
 
   it.each(['frontSlots', 'sectionSlots'])('should reject the retired layout field %s', async field => {
     await writeDocument('designs.json', [{
-      id: 'wire',
+      id: 'endless-scroll',
       layouts: [{ id: 'custom-layout', variant: 'ordinary', [field]: 4, weight: { base: 1 } }],
     }]);
     await expect(loadEditorialConfig(directory)).rejects.toThrow(field);
@@ -102,8 +102,8 @@ describe('editorial catalogue files', () => {
   it('should strip built-in design asset metadata after discovery', async () => {
     const base = await loadEditorialConfig();
     expect(base.designs.every(design => !Object.hasOwn(design, 'assetDefinitions'))).toBe(true);
-    const victorian = base.designs.find(design => design.id === 'victorian');
-    expect(victorian?.presentation.assets?.ornamentAssetId).toBe('victorian.scrollwork');
+    const steamPress = base.designs.find(design => design.id === 'steam-press-broadsheet');
+    expect(steamPress?.presentation.assets?.ornamentAssetId).toBe('steam-press-broadsheet.scrollwork');
   });
 
   it('should exclude browser-only design labels from the effective catalogue', async () => {
@@ -116,7 +116,7 @@ describe('editorial catalogue files', () => {
   });
 
   it('should reject asset declarations in a design overlay', async () => {
-    await writeDocument('designs/override.json', [{ id: 'victorian', assetDefinitions: [] }]);
+    await writeDocument('designs/override.json', [{ id: 'steam-press-broadsheet', assetDefinitions: [] }]);
     await expect(loadEditorialConfig(directory)).rejects.toMatchObject({
       issues: expect.arrayContaining([expect.objectContaining({
         code: 'unrecognized_keys', keys: ['assetDefinitions'],

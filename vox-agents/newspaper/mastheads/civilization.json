@@ -11,7 +11,7 @@
     "weight": {
       "base": 7
     },
-    "designs": ["oral-accounts"]
+    "designs": ["forum-bronze"]
   },
   {
     "id": "civilization-babylon-chronicle",
@@ -25,7 +25,7 @@
     "weight": {
       "base": 7
     },
-    "designs": ["clay-chronicle"]
+    "designs": ["cuneiform-tablet"]
   },
   {
     "id": "civilization-england-courant",
@@ -39,7 +39,7 @@
     "weight": {
       "base": 7
     },
-    "designs": ["port-register"]
+    "designs": ["quayside-ledger"]
   },
   {
     "id": "civilization-venice-avvisi",
@@ -53,7 +53,7 @@
     "weight": {
       "base": 7
     },
-    "designs": ["printer-dispatch"]
+    "designs": ["woodcut-tidings"]
   },
   {
     "id": "civilization-siam-gazette",
@@ -67,7 +67,7 @@
     "weight": {
       "base": 6
     },
-    "designs": ["street-gazette"]
+    "designs": ["hawkers-handbill"]
   },
   {
     "id": "civilization-korea-court-gazette",
@@ -81,7 +81,7 @@
     "weight": {
       "base": 6
     },
-    "designs": ["heian"]
+    "designs": ["scented-court-letters"]
   },
   {
     "id": "civilization-polynesia-star-compass",
@@ -95,7 +95,7 @@
     "weight": {
       "base": 6
     },
-    "designs": ["oral-accounts"]
+    "designs": ["forum-bronze"]
   },
   {
     "id": "civilization-germany-neue-zeitung",
@@ -109,7 +109,7 @@
     "weight": {
       "base": 6
     },
-    "designs": ["street-gazette"]
+    "designs": ["hawkers-handbill"]
   },
   {
     "id": "civilization-brazil-correio",
@@ -123,7 +123,7 @@
     "weight": {
       "base": 7
     },
-    "designs": ["national-review"]
+    "designs": ["glossy-photo-weekly"]
   },
   {
     "id": "civilization-germany-printers-news",
@@ -137,7 +137,7 @@
     "weight": {
       "base": 6
     },
-    "designs": ["printer-dispatch"]
+    "designs": ["woodcut-tidings"]
   },
   {
     "id": "civilization-brazil-london-correio",
@@ -151,7 +151,7 @@
     "weight": {
       "base": 7
     },
-    "designs": ["victorian"]
+    "designs": ["steam-press-broadsheet"]
   },
   {
     "id": "civilization-china-jiagu",
@@ -165,7 +165,7 @@
     "weight": {
       "base": 7
     },
-    "designs": ["shang"]
+    "designs": ["cracked-oracle-shell"]
   },
   {
     "id": "civilization-egypt-set-maat",
@@ -179,7 +179,7 @@
     "weight": {
       "base": 7
     },
-    "designs": ["egypt"]
+    "designs": ["winged-sun-papyrus"]
   },
   {
     "id": "civilization-japan-heian-dayori",
@@ -193,7 +193,7 @@
     "weight": {
       "base": 7
     },
-    "designs": ["heian"]
+    "designs": ["scented-court-letters"]
   },
   {
     "id": "civilization-inca-tawantinsuyu",
@@ -207,7 +207,7 @@
     "weight": {
       "base": 7
     },
-    "designs": ["cord-register"]
+    "designs": ["knotted-cord-account"]
   },
   {
     "id": "civilization-netherlands-tydinghen",
@@ -221,6 +221,6 @@
     "weight": {
       "base": 7
     },
-    "designs": ["port-register"]
+    "designs": ["quayside-ledger"]
   }
 ]

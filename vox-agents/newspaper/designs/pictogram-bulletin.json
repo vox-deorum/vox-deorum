@@ -1,0 +1,29 @@
+[
+  {
+    "id": "pictogram-bulletin",
+    "version": "1",
+    "label": "Pictogram Bulletin",
+    "title": "The Vienna Method",
+    "when": "['Modern', 'Atomic'].includes(self.era?.replace(' Era', ''))",
+    "weight": {
+      "base": 45
+    },
+    "presentation": {
+      "schemaVersion": 1,
+      "rendererFamily": "folio",
+      "tokens": {
+        "paperColor": "#f4f1e4",
+        "inkColor": "#182c29",
+        "accentColor": "#934529",
+        "bodyFontAssetId": "font-inter-400",
+        "headingFontAssetId": "font-inter-800"
+      }
+    },
+    "layouts": [
+      { "id": "field-report", "variant": "ordinary", "weight": { "base": 8 } },
+      { "id": "special-report", "variant": "breaking", "weight": { "base": 6 } },
+      { "id": "statistical-plate", "variant": "analysis", "weight": { "base": 5 } }
+    ],
+    "pageLabels": { "front": "Survey", "home": "Home Affairs", "abroad": "World Affairs" }
+  }
+]

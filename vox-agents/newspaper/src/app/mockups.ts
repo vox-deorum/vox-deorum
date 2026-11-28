@@ -5,7 +5,7 @@ import { createPreviewIssue, readPreviewDesigns } from '../preview/issue.js';
 import { mountTintControls } from './appearance.js';
 import { element } from './dom.js';
 
-const fixtureNames = new Set(['victorian-ordinary', 'victorian-breaking', 'victorian-analysis', 'wire-ordinary']);
+const fixtureNames = new Set(['steam-press-broadsheet-ordinary', 'steam-press-broadsheet-breaking', 'steam-press-broadsheet-analysis', 'endless-scroll-ordinary']);
 
 /** Bind the design, civilization, layout and tint controls, with optional direct fixture links. */
 export function mountMockupControls(

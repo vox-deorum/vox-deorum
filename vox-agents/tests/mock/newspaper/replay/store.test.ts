@@ -10,7 +10,7 @@ import { createReplayRecording, replaySettings } from '../../../helpers/newspape
 
 /** Load a finished edition independently of editorial selection. */
 async function issueFixture(): Promise<IssueDocument> {
-  const issue = issueDocumentSchema.parse(JSON.parse(await readFile(new URL('../../../../newspaper/fixtures/victorian-ordinary.json', import.meta.url), 'utf8')));
+  const issue = issueDocumentSchema.parse(JSON.parse(await readFile(new URL('../../../../newspaper/fixtures/steam-press-broadsheet-ordinary.json', import.meta.url), 'utf8')));
   issue.timelineId = 'run-a';
   issue.cutoff.turn = 10;
   return issue;

@@ -1,0 +1,73 @@
+[
+  {
+    "id": "endless-scroll",
+    "version": "1",
+    "label": "Endless Scroll",
+    "title": "The Agora Feed",
+    "civilizationTitles": {
+      "*": "{{terms.civilization}} Agora"
+    },
+    "when": "['Information', 'Future'].includes(self.era?.replace(' Era', ''))",
+    "weight": {
+      "base": 55,
+      "adjustments": [
+        {
+          "when": "self.era?.replace(' Era', '') === 'Information'",
+          "add": 5
+        }
+      ]
+    },
+    "presentation": {
+      "schemaVersion": 1,
+      "rendererFamily": "feed",
+      "tokens": {
+        "paperColor": "#ffffff",
+        "inkColor": "#14191f",
+        "accentColor": "#1b5fae",
+        "bodyFontAssetId": "font-inter-400",
+        "headingFontAssetId": "font-inter-800"
+      }
+    },
+    "assetDefinitions": [
+      {
+        "id": "port",
+        "kind": "image",
+        "path": "assets/designs/endless-scroll/port.png",
+        "mediaType": "image/png",
+        "width": 1536,
+        "height": 1024,
+        "license": "Generated for Vox Deorum",
+        "attribution": "Generated with the built-in image tool for the newspaper prototype."
+      }
+    ],
+    "layouts": [
+      {
+        "id": "feed",
+        "variant": "ordinary",
+        "weight": {
+          "base": 10
+        }
+      },
+      {
+        "id": "breaking-wire",
+        "variant": "breaking",
+        "weight": {
+          "base": 10
+        }
+      },
+      {
+        "id": "data-desk",
+        "variant": "analysis",
+        "weight": {
+          "base": 3
+        }
+      }
+    ],
+    "pageLabels": {
+      "front": "Headlines",
+      "home": "Local",
+      "economy": "Economy",
+      "abroad": "World"
+    }
+  }
+]

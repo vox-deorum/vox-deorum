@@ -320,7 +320,7 @@ export async function presentIssue(input: {
       cutoff: { turn: input.turn, label: `Turn ${input.turn}` },
       publication: {
         title: masthead.title,
-        ...(design.id === 'coffeehouse-essay' ? { editionNumber: state.issues.length + 1 } : {}),
+        ...(design.id === 'coffeehouse-half-sheet' ? { editionNumber: state.issues.length + 1 } : {}),
         ...(masthead.motto === undefined ? {} : { motto: masthead.motto }),
         designId: design.id,
         designVersion: design.version,

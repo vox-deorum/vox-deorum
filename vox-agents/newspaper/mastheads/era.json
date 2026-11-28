@@ -12,7 +12,7 @@
     "weight": {
       "base": 4
     },
-    "designs": ["oral-accounts"]
+    "designs": ["forum-bronze"]
   },
   {
     "id": "era-classical-book-of-days",
@@ -27,7 +27,7 @@
     "weight": {
       "base": 4
     },
-    "designs": ["oral-accounts"]
+    "designs": ["forum-bronze"]
   },
   {
     "id": "era-medieval-register",
@@ -42,7 +42,7 @@
     "weight": {
       "base": 4
     },
-    "designs": ["town-book"]
+    "designs": ["illuminated-town-book"]
   },
   {
     "id": "era-renaissance-printers-post",
@@ -57,7 +57,7 @@
     "weight": {
       "base": 5
     },
-    "designs": ["printer-dispatch"]
+    "designs": ["woodcut-tidings"]
   },
   {
     "id": "era-industrial-daily",
@@ -72,7 +72,7 @@
     "weight": {
       "base": 5
     },
-    "designs": ["city-extra"]
+    "designs": ["evening-extra"]
   },
   {
     "id": "era-industrial-iron-pen",
@@ -87,7 +87,7 @@
     "weight": {
       "base": 4
     },
-    "designs": ["street-gazette"]
+    "designs": ["hawkers-handbill"]
   },
   {
     "id": "era-modern-evening-news",
@@ -102,7 +102,7 @@
     "weight": {
       "base": 4
     },
-    "designs": ["city-extra"]
+    "designs": ["evening-extra"]
   },
   {
     "id": "era-atomic-daily-star",
@@ -117,7 +117,7 @@
     "weight": {
       "base": 4
     },
-    "designs": ["national-review"]
+    "designs": ["glossy-photo-weekly"]
   },
   {
     "id": "era-information-bulletin",
@@ -132,6 +132,6 @@
     "weight": {
       "base": 4
     },
-    "designs": ["civic-index"]
+    "designs": ["asymmetric-grid"]
   }
 ]

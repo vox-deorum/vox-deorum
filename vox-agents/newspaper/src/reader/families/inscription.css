@@ -164,11 +164,11 @@
 }
 
 @container newspaper (width > 560px) {
-  .vd-newspaper[data-publication-design="oral-accounts"] .vd-tabs {
+  .vd-newspaper[data-publication-design="forum-bronze"] .vd-tabs {
     gap: 0 16px;
   }
 
-  .vd-newspaper[data-publication-design="oral-accounts"] .vd-tab {
+  .vd-newspaper[data-publication-design="forum-bronze"] .vd-tab {
     letter-spacing: .1em;
   }
 }

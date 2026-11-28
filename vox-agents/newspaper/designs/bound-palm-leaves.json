@@ -1,0 +1,44 @@
+[
+  {
+    "id": "bound-palm-leaves",
+    "version": "1",
+    "label": "Bound Palm Leaves",
+    "title": "The Nalanda Leaves",
+    "civilizationTitles": {
+      "Siam": "The Sukhothai Leaves",
+      "Indonesia": "The Lontar of Majapahit"
+    },
+    "when": "['India', 'Siam', 'Indonesia'].includes(self.name) && ['Classical', 'Medieval', 'Renaissance'].includes(self.era?.replace(' Era', ''))",
+    "weight": {
+      "base": 45,
+      "adjustments": [
+        {
+          "when": "self.name === 'India'",
+          "add": 17
+        },
+        {
+          "when": "self.era?.replace(' Era', '') === 'Medieval'",
+          "add": 10
+        }
+      ]
+    },
+    "presentation": {
+      "schemaVersion": 1,
+      "rendererFamily": "folio",
+      "tokens": {
+        "paperColor": "#f4e7c8",
+        "inkColor": "#292416",
+        "accentColor": "#24534a",
+        "bodyFontAssetId": "font-cardo-400",
+        "headingFontAssetId": "font-cardo-700",
+        "mastheadFontAssetId": "font-libre-caslon-400"
+      }
+    },
+    "layouts": [
+      { "id": "bound-leaves", "variant": "ordinary", "weight": { "base": 10 } },
+      { "id": "opening-leaf", "variant": "breaking", "weight": { "base": 10 } },
+      { "id": "reckoning", "variant": "analysis", "weight": { "base": 3 } }
+    ],
+    "pageLabels": { "front": "Front", "home": "Cities", "economy": "Trade", "abroad": "Abroad" }
+  }
+]

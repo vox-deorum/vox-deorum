@@ -19,7 +19,7 @@ export interface NewspaperApplicationOptions {
   game?: Pick<NewspaperGameDelivery, 'prepare' | 'deliver'>;
 }
 
-/** Load the single runtime sample produced from the existing Victorian ordinary fixture. */
+/** Load the single runtime sample produced from the Steam-Press Broadsheet ordinary fixture. */
 async function readRuntimeSample(): Promise<unknown> {
   try {
     return JSON.parse(await readFile(path.join(readerDirectory, 'sample.json'), 'utf8'));

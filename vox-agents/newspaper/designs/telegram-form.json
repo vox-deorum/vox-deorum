@@ -1,0 +1,29 @@
+[
+  {
+    "id": "telegram-form",
+    "version": "1",
+    "label": "Telegram Form",
+    "title": "Via Valentia",
+    "when": "['Industrial', 'Modern'].includes(self.era?.replace(' Era', ''))",
+    "weight": {
+      "base": 36
+    },
+    "presentation": {
+      "schemaVersion": 1,
+      "rendererFamily": "folio",
+      "tokens": {
+        "paperColor": "#f4e5ad",
+        "inkColor": "#2b2350",
+        "accentColor": "#51416f",
+        "bodyFontAssetId": "font-libre-caslon-400",
+        "mastheadFontAssetId": "font-inter-800"
+      }
+    },
+    "layouts": [
+      { "id": "incoming-cables", "variant": "ordinary", "weight": { "base": 10 } },
+      { "id": "priority-cable", "variant": "breaking", "weight": { "base": 10 } },
+      { "id": "figures-by-wire", "variant": "analysis", "weight": { "base": 3 } }
+    ],
+    "pageLabels": { "front": "Front", "home": "Cities", "economy": "Trade", "abroad": "Abroad" }
+  }
+]

@@ -40,7 +40,7 @@ function story(id: string, facts: Partial<EditorialCandidate> = {}): EditorialCa
 function printedIssue(turn: number, ruleId: string): PublicationState['issues'][number] {
   const issueId = `issue-${turn}`;
   return {
-    issueId, turn, designId: 'wire',
+    issueId, turn, designId: 'endless-scroll',
     items: [{
       id: `old-${turn}`, issueId, turn, tags: [], seriesKeys: [], templateIds: ['old'],
       triggerIds: [ruleId], ruleIds: [ruleId], importance: 50,

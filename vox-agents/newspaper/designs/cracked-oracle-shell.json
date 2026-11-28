@@ -1,0 +1,83 @@
+[
+  {
+    "id": "cracked-oracle-shell",
+    "version": "1",
+    "label": "Cracked Oracle Shell",
+    "title": "Records of the Shang Court",
+    "civilizationTitles": {
+      "Japan": "Records of the Yamato Court",
+      "Korea": "Records of the Gojoseon Court",
+      "Mongolia": "Records of the Steppe Court"
+    },
+    "when": "self.is.eastAsian && ['Ancient', 'Classical'].includes(self.era?.replace(' Era', ''))",
+    "weight": {
+      "base": 45,
+      "adjustments": [
+        {
+          "when": "self.name === 'China'",
+          "add": 10
+        },
+        {
+          "when": "self.era?.replace(' Era', '') === 'Ancient'",
+          "add": 25
+        }
+      ]
+    },
+    "presentation": {
+      "schemaVersion": 1,
+      "rendererFamily": "folio",
+      "tokens": {
+        "paperColor": "#eee3c7",
+        "inkColor": "#30291e",
+        "accentColor": "#36594e",
+        "bodyFontAssetId": "font-literata-400",
+        "headingFontAssetId": "font-marcellus-400",
+        "mastheadFontAssetId": "font-marcellus-400"
+      },
+      "assets": {
+        "ornamentAssetId": "cracked-oracle-shell.ornament"
+      }
+    },
+    "assetDefinitions": [
+      {
+        "id": "ornament",
+        "kind": "ornament",
+        "path": "assets/designs/cracked-oracle-shell/ornament.svg",
+        "mediaType": "image/svg+xml",
+        "width": 180,
+        "height": 58,
+        "license": "Vox Deorum project asset",
+        "attribution": "Authored ornament for the newspaper."
+      }
+    ],
+    "layouts": [
+      {
+        "id": "folio",
+        "variant": "ordinary",
+        "weight": {
+          "base": 10
+        }
+      },
+      {
+        "id": "dispatch",
+        "variant": "breaking",
+        "weight": {
+          "base": 10
+        }
+      },
+      {
+        "id": "review",
+        "variant": "analysis",
+        "weight": {
+          "base": 3
+        }
+      }
+    ],
+    "pageLabels": {
+      "front": "Royal Record",
+      "home": "Settlements",
+      "economy": "Exchange",
+      "abroad": "Envoys"
+    }
+  }
+]

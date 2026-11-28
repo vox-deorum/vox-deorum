@@ -1,0 +1,77 @@
+/* The black space between silver prints is part of the contact sheet. */
+.vd-newspaper[data-publication-design="darkroom-contact-sheet"] {
+  --proof-mono: Consolas, "Liberation Mono", monospace;
+  --proof-print-paper: #d3d4ce;
+  --proof-lead-paper: #e7e7e0;
+  --proof-evidence-paper: #ccceca;
+  --proof-frame-ink: #1e2021;
+  --proof-light-accent: color-mix(in srgb, var(--vd-accent) 25%, white);
+  --proof-dark-accent: color-mix(in srgb, var(--vd-accent) 22%, #101111);
+  --vd-page-background: #161717;
+  --vd-vote-background: #dfdfda;
+
+  & .vd-header { --vd-accent: var(--proof-light-accent); }
+  & .vd-masthead { padding: 3px 0 14px; text-align: left; }
+  & .vd-title {
+    font: bold calc(clamp(20px, 2.9cqi, 36px) * var(--vd-text-scale)) / 1.15 var(--proof-mono);
+    letter-spacing: .09em;
+    text-transform: uppercase;
+  }
+  & .vd-motto, & .vd-tab { font-family: var(--proof-mono); font-style: normal; }
+  & .vd-tabs { justify-content: flex-start; border-block: 1px solid #8b8e8b; }
+  & .vd-storylist[data-layout] { gap: clamp(12px, 1.8cqi, 20px); }
+  & .vd-storylist[data-layout] .vd-story {
+    --vd-paper: var(--proof-print-paper);
+    --vd-ink: var(--proof-frame-ink);
+    --vd-accent: var(--proof-dark-accent);
+    --vd-rule: #90938e;
+    margin: 0;
+    padding: clamp(14px, 2.5cqi, 30px);
+    border: 1px solid #a6a9a6;
+    background: var(--vd-paper);
+    color: var(--vd-ink);
+  }
+  & .vd-storylist[data-layout] .vd-story--lead {
+    position: relative;
+    --vd-paper: var(--proof-lead-paper);
+  }
+  & .vd-story--lead::before {
+    content: "";
+    position: absolute;
+    top: -4px;
+    left: 12px;
+    width: clamp(48px, 10%, 108px);
+    height: 9px;
+    border-top: 5px solid #f2cd43;
+    border-radius: 48%;
+    transform: rotate(-3deg);
+    pointer-events: none;
+  }
+  & .vd-storylist[data-layout] .vd-story--lead .vd-headline {
+    font-size: calc(clamp(34px, 5.5cqi, 68px) * var(--vd-text-scale));
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -.055em;
+  }
+  & .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-headline {
+    font-size: calc(clamp(40px, 7cqi, 86px) * var(--vd-text-scale));
+  }
+  & .vd-storylist[data-layout] .vd-story--lead .vd-deck { padding-bottom: 0; border: 0; font-style: normal; }
+  & .vd-story--lead .vd-story-content > .vd-prose { max-inline-size: 70ch; }
+  & .vd-byline { font-family: var(--proof-mono); opacity: .85; }
+  & .vd-story--brief :is(.vd-deck, .vd-byline) { margin: 0 0 10px; }
+  & .vd-evidence { padding: clamp(10px, 1.6cqi, 18px); border: 3px solid #373939; background: var(--proof-evidence-paper); }
+  & .vd-evidence caption strong, & .vd-evidence td, & .vd-number { font-family: var(--proof-mono); }
+  & .vd-vote { background: var(--vd-vote-background); }
+  & .vd-end-rule { height: 8px; background: repeating-linear-gradient(90deg, #9a9d97 0 9px, transparent 9px 22px) left center / auto 4px repeat-x; }
+  & .vd-end-rule::before, & .vd-end-rule::after { display: none; }
+}
+
+@container newspaper (width > 760px) {
+  .vd-newspaper[data-publication-design="darkroom-contact-sheet"] .vd-storylist[data-layout] {
+    &:is([data-layout="breaking"], [data-layout="analysis"]) > .vd-story--brief:nth-child(1 of .vd-story--brief):last-child {
+      grid-column: 1 / -1;
+      & .vd-story-content { max-inline-size: 70ch; }
+    }
+  }
+}

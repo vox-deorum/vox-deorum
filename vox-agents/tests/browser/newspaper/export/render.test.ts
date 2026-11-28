@@ -68,7 +68,7 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('newspape
         result.evidence.limitations = ['cityLifecycleUnresolved', 'cityLifecycleOrderUnknown'];
         await route.fulfill({ response, json: result });
       });
-      await page.goto(`${replayHost.url}/newspaper/?fixture=victorian-ordinary`);
+      await page.goto(`${replayHost.url}/newspaper/?fixture=steam-press-broadsheet-ordinary`);
       await page.locator('#preview-error:visible').waitFor();
       await page.getByRole('button', { name: 'Recorded', exact: true }).click();
       await page.locator('#replay-diagnostics > summary').click();
@@ -98,7 +98,7 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('newspape
 
   it('should scroll the whole paper together, retain votes and scroll, and preserve export geometry', async context => {
     if (!browser) { context.skip(unavailable); return; }
-    const issue = parseIssueDocument(JSON.parse(await readFile(path.join(fixtures, 'victorian-ordinary.json'), 'utf8')));
+    const issue = parseIssueDocument(JSON.parse(await readFile(path.join(fixtures, 'steam-press-broadsheet-ordinary.json'), 'utf8')));
     issue.items[0].body.push([{
       type: 'link',
       text: 'Inspect the overseas harbour returns and the merchants trading between our cities. '.repeat(8),
@@ -106,8 +106,8 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('newspape
     }]);
     const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
     try {
-      await page.route('**/newspaper/fixtures/victorian-ordinary.json', route => route.fulfill({ json: issue }));
-      await page.goto(`${host.url}/newspaper/?fixture=victorian-ordinary`);
+      await page.route('**/newspaper/fixtures/steam-press-broadsheet-ordinary.json', route => route.fulfill({ json: issue }));
+      await page.goto(`${host.url}/newspaper/?fixture=steam-press-broadsheet-ordinary`);
       await waitForPaper(page, issue.issueId);
       const firstTab = page.locator('[role=tab]').first();
       const secondTab = page.locator('[role=tab]').nth(1);
@@ -170,7 +170,7 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('newspape
     const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
     try {
       for (const width of [360, 600, 900, 1200, 600.5]) {
-        for (const fixture of ['victorian-ordinary', 'victorian-breaking', 'victorian-analysis', 'wire-ordinary']) {
+        for (const fixture of ['steam-press-broadsheet-ordinary', 'steam-press-broadsheet-breaking', 'steam-press-broadsheet-analysis', 'endless-scroll-ordinary']) {
           const issue = parseIssueDocument(JSON.parse(await readFile(path.join(fixtures, `${fixture}.json`), 'utf8')));
           await page.goto(`${host.url}/newspaper/?fixture=${fixture}`);
           await waitForPaper(page, issue.issueId);
@@ -230,10 +230,10 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('newspape
     try {
       await page.goto(`${host.url}/newspaper/`);
       for (const [design, layout, frontCount, sectionCount] of [
-        ['victorian', 'broadsheet', 4, 2],
-        ['victorian', 'war-edition', 5, 3],
-        ['victorian', 'dispatch', 5, 3],
-        ['wire', 'feed', 4, 2],
+        ['steam-press-broadsheet', 'broadsheet', 4, 2],
+        ['steam-press-broadsheet', 'war-edition', 5, 3],
+        ['steam-press-broadsheet', 'dispatch', 5, 3],
+        ['endless-scroll', 'feed', 4, 2],
       ] as const) {
         await page.locator('#preview-design').selectOption(design);
         await page.locator('#preview-layout').selectOption(layout);
@@ -252,7 +252,7 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('newspape
     if (!browser) { context.skip(unavailable); return; }
     const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
     try {
-      await page.goto(`${host.url}/newspaper/?fixture=victorian-ordinary`);
+      await page.goto(`${host.url}/newspaper/?fixture=steam-press-broadsheet-ordinary`);
       await waitForPaper(page);
       const secondTab = page.locator('[role=tab]').nth(1);
       await secondTab.click();
@@ -280,7 +280,7 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('newspape
     if (!browser) { context.skip(unavailable); return; }
     const page = await browser.newPage();
     try {
-      const issue = parseIssueDocument(JSON.parse(await readFile(path.join(fixtures, 'victorian-analysis.json'), 'utf8')));
+      const issue = parseIssueDocument(JSON.parse(await readFile(path.join(fixtures, 'steam-press-broadsheet-analysis.json'), 'utf8')));
       await page.goto(`${host.url}/newspaper/export.html`);
       let baseline: unknown;
       for (const displayScale of [1, 1.2, 1.5, 2]) {
@@ -303,7 +303,7 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('newspape
     const fontsReady = new Promise<void>(resolve => { releaseFonts = resolve; });
     try {
       await page.route('**/*.ttf', async route => { await fontsReady; await route.continue(); });
-      await page.goto(`${host.url}/newspaper/?fixture=victorian-ordinary`, { waitUntil: 'domcontentloaded' });
+      await page.goto(`${host.url}/newspaper/?fixture=steam-press-broadsheet-ordinary`, { waitUntil: 'domcontentloaded' });
       const vote = page.locator('[data-vd-region=page]:not([hidden]) [data-vd-vote-value=up]').first();
       await vote.waitFor({ state: 'attached' });
       const itemId = await vote.getAttribute('data-vd-vote-item');
@@ -320,7 +320,7 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('newspape
     if (!browser) { context.skip(unavailable); return; }
     const page = await browser.newPage();
     try {
-      const issue = parseIssueDocument(JSON.parse(await readFile(path.join(fixtures, 'victorian-ordinary.json'), 'utf8')));
+      const issue = parseIssueDocument(JSON.parse(await readFile(path.join(fixtures, 'steam-press-broadsheet-ordinary.json'), 'utf8')));
       issue.pages = Array.from({ length: 6 }, (_, index) => ({
         ...issue.pages[0], id: `section-${index}`, label: `Section ${index} with a lengthy descriptive label`,
         itemIds: issue.items.slice(index, index < 5 ? index + 1 : undefined).map(item => item.id),
@@ -356,7 +356,7 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('newspape
 
   it.skipIf(!existsSync(texconvExecutablePath))('should reproduce the lossless browser pixels across fractional-width strips', async context => {
     if (!browser) { context.skip(unavailable); return; }
-    const issue = parseIssueDocument(JSON.parse(await readFile(path.join(fixtures, 'victorian-ordinary.json'), 'utf8')));
+    const issue = parseIssueDocument(JSON.parse(await readFile(path.join(fixtures, 'steam-press-broadsheet-ordinary.json'), 'utf8')));
     const profile = { ...defaultRenderProfile, paperWidth: 600.5, rasterScale: 2, maxTextureHeight: 512 };
     const sources = new Map<string, Buffer>();
     const worker = new NewspaperBrowser(async () => {
@@ -447,7 +447,7 @@ describe.skipIf(!existsSync(path.join(readerDirectory, 'index.html')))('newspape
 
   it.skipIf(!existsSync(texconvExecutablePath))('should export bounded complete textures at both raster scales', async context => {
     if (!browser) { context.skip(unavailable); return; }
-    const issue = parseIssueDocument(JSON.parse(await readFile(path.join(fixtures, 'victorian-ordinary.json'), 'utf8')));
+    const issue = parseIssueDocument(JSON.parse(await readFile(path.join(fixtures, 'steam-press-broadsheet-ordinary.json'), 'utf8')));
     const worker = new NewspaperBrowser();
     for (const rasterScale of [1, 2]) {
       const bundle = await renderIssue(worker, host.url, issue, { ...defaultRenderProfile, rasterScale, maxTextureHeight: 512 }, directory);

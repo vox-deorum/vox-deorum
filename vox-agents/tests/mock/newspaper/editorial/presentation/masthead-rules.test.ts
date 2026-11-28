@@ -42,7 +42,7 @@ function createConfig(): EditorialConfig {
     ],
     designs: [
       {
-        id: 'wire', version: '1', title: 'Design Title', motto: 'Design Motto', weight: { base: 1 },
+        id: 'endless-scroll', version: '1', title: 'Design Title', motto: 'Design Motto', weight: { base: 1 },
         presentation: { schemaVersion: 1, rendererFamily: 'feed', tokens: { paperColor: '#ffffff' } },
         layouts: [
           { id: 'ordinary', variant: 'ordinary', weight: { base: 1 } },
@@ -51,7 +51,7 @@ function createConfig(): EditorialConfig {
         pageLabels: { desk: 'Design Desk' },
       },
       {
-        id: 'victorian', version: '1', title: 'Other Title', weight: { base: 0 },
+        id: 'steam-press-broadsheet', version: '1', title: 'Other Title', weight: { base: 0 },
         presentation: { schemaVersion: 1, rendererFamily: 'broadsheet', tokens: { paperColor: '#eeeecc' } },
         layouts: [
           { id: 'broadsheet', variant: 'ordinary', weight: { base: 1 } },
@@ -147,9 +147,9 @@ describe('masthead rule selection', () => {
 
   it('should evaluate only rules for the selected design and require a recorded policy', async () => {
     const config = withRules([
-      { id: 'wire-order', title: 'Wire {{terms.civilization}}', designs: ['wire'], when: "self.ideology === 'Order'", weight: { base: 1 } },
-      { id: 'victorian-policy', title: 'Policy {{terms.civilization}}', designs: ['victorian'], when: "self.hasPolicy('Five-Year Plan')", weight: { base: 100 } },
-      { id: 'victorian-broken', title: 'Broken {{terms.civilization}}', designs: ['victorian'], when: "(() => { throw new Error('should not run'); })()", weight: { base: 100 } },
+      { id: 'wire-order', title: 'Wire {{terms.civilization}}', designs: ['endless-scroll'], when: "self.ideology === 'Order'", weight: { base: 1 } },
+      { id: 'victorian-policy', title: 'Policy {{terms.civilization}}', designs: ['steam-press-broadsheet'], when: "self.hasPolicy('Five-Year Plan')", weight: { base: 100 } },
+      { id: 'victorian-broken', title: 'Broken {{terms.civilization}}', designs: ['steam-press-broadsheet'], when: "(() => { throw new Error('should not run'); })()", weight: { base: 100 } },
     ]);
     const compiled = await prepareEditorialExpressions(config);
     const terms: EditorialTerms = new Map([
@@ -157,12 +157,12 @@ describe('masthead rule selection', () => {
     ]);
     const errors = new Map();
     const budget: ExpressionCheckBudget = { interruptedSlots: new Set(), choiceErrors: errors };
-    const wire = await selectMastheadRule({
+    const endlessScroll = await selectMastheadRule({
       campaignId: 'campaign', receiverPlayerId: 0, design: config.designs[0],
       rules: config.mastheadRules!, compiled, batch: { facts: factsFor({ Order: [] }).facts, constants: {} },
       budget, terms,
     });
-    expect(wire?.rule.id).toBe('wire-order');
+    expect(endlessScroll?.rule.id).toBe('wire-order');
     expect(errors.size).toBe(0);
 
     const unknownPolicy = await selectMastheadRule({

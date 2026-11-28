@@ -1,0 +1,34 @@
+[
+  {
+    "id": "stargazers-almanack",
+    "version": "1",
+    "label": "Stargazer’s Almanack",
+    "title": "The Turn Almanack",
+    "motto": "A calendar of observations and public affairs",
+    "when": "['Renaissance', 'Industrial'].includes(self.era?.replace(' Era', ''))",
+    "weight": { "base": 50 },
+    "presentation": {
+      "schemaVersion": 1,
+      "rendererFamily": "folio",
+      "tokens": {
+        "paperColor": "#f6efdc", "inkColor": "#262820", "accentColor": "#67452c",
+        "bodyFontAssetId": "font-cardo-400", "headingFontAssetId": "font-cardo-700",
+        "mastheadFontAssetId": "font-cardo-700"
+      },
+      "assets": { "ornamentAssetId": "stargazers-almanack.ephemeris" }
+    },
+    "assetDefinitions": [
+      {
+        "id": "ephemeris", "kind": "ornament", "path": "assets/designs/stargazers-almanack/ephemeris.svg",
+        "mediaType": "image/svg+xml", "width": 144, "height": 28,
+        "license": "Vox Deorum project asset", "attribution": "Sun and moon ornament drawn for Vox Deorum."
+      }
+    ],
+    "layouts": [
+      { "id": "calendar", "variant": "ordinary", "weight": { "base": 10 } },
+      { "id": "notice", "variant": "breaking", "weight": { "base": 10 } },
+      { "id": "tables", "variant": "analysis", "weight": { "base": 3 } }
+    ],
+    "pageLabels": { "front": "The Calendar", "home": "Domestic Notices", "economy": "Accounts", "abroad": "Foreign Affairs" }
+  }
+]

@@ -1,0 +1,39 @@
+[
+  {
+    "id": "mission-console",
+    "version": "1",
+    "label": "Mission Console",
+    "title": "Orbital Relay",
+    "civilizationTitles": {
+      "*": "Orbital Relay of {{terms.civilization}}"
+    },
+    "when": "['Information', 'Future'].includes(self.era?.replace(' Era', ''))",
+    "weight": {
+      "base": 45,
+      "adjustments": [
+        {
+          "when": "self.era?.replace(' Era', '') === 'Future'",
+          "add": 10
+        }
+      ]
+    },
+    "presentation": {
+      "schemaVersion": 1,
+      "rendererFamily": "folio",
+      "tokens": {
+        "paperColor": "#070d18",
+        "inkColor": "#e3ebf4",
+        "accentColor": "#62e3b0",
+        "bodyFontAssetId": "font-inter-400",
+        "headingFontAssetId": "font-inter-600",
+        "mastheadFontAssetId": "font-inter-500"
+      }
+    },
+    "layouts": [
+      { "id": "station-status", "variant": "ordinary", "weight": { "base": 10 } },
+      { "id": "caution-alert", "variant": "breaking", "weight": { "base": 10 } },
+      { "id": "telemetry-readout", "variant": "analysis", "weight": { "base": 3 } }
+    ],
+    "pageLabels": { "front": "Status", "home": "Home Orbit", "economy": "Resources", "abroad": "Far Range" }
+  }
+]
