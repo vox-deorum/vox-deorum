@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="416">
+  <filter id="patina" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency=".010" numOctaves="4" seed="16" stitchTiles="stitch" result="stain"/>
+    <feColorMatrix in="stain" values="0 0 0 0 .117  0 0 0 0 .080  0 0 0 0 .043  3.8 0 0 0 -1.64" result="oxide"/>
+    <feColorMatrix in="stain" values="0 0 0 0 .80  0 0 0 0 .60  0 0 0 0 .37  -2 0 0 0 1.03" result="worn"/>
+    <feColorMatrix in="stain" values="0 0 0 0 .26  0 0 0 0 .40  0 0 0 0 .32  0 0 -3.2 0 1.50" result="green"/>
+    <feTurbulence type="fractalNoise" baseFrequency=".64" numOctaves="2" seed="21" stitchTiles="stitch" result="pitting"/>
+    <feColorMatrix in="pitting" values="0 0 0 0 .12  0 0 0 0 .08  0 0 0 0 .05  0 0 -1.4 0 .64" result="pores"/>
+    <feMerge><feMergeNode in="worn"/><feMergeNode in="oxide"/><feMergeNode in="green"/><feMergeNode in="pores"/></feMerge>
+  </filter>
+  <rect width="480" height="416" filter="url(#patina)"/>
+</svg>

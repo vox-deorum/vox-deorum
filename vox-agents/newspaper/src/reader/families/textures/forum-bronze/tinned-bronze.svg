@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="740" height="503">
+  <filter id="surface" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency=".009" numOctaves="4" seed="4" stitchTiles="stitch" result="mottle"/>
+    <feColorMatrix in="mottle" values="0 0 0 0 .24  0 0 0 0 .16  0 0 0 0 .09  0 -.78 0 0 .36" result="brown"/>
+    <feColorMatrix in="mottle" values="0 0 0 0 .33  0 0 0 0 .39  0 0 0 0 .3  .74 0 0 0 -.42" result="green"/>
+    <feTurbulence type="fractalNoise" baseFrequency=".006 .48" numOctaves="2" seed="17" stitchTiles="stitch" result="brush"/>
+    <feColorMatrix in="brush" values="0 0 0 0 .31  0 0 0 0 .24  0 0 0 0 .13  .31 0 0 0 -.145" result="marks"/>
+    <feColorMatrix in="brush" values="0 0 0 0 1  0 0 0 0 .94  0 0 0 0 .77  -.45 0 0 0 .24" result="light"/>
+    <feTurbulence type="fractalNoise" baseFrequency=".72" numOctaves="2" seed="3" stitchTiles="stitch" result="fine"/>
+    <feColorMatrix in="fine" values="0 0 0 0 .28  0 0 0 0 .20  0 0 0 0 .13  0 1.18 0 0 -.78" result="pits"/>
+    <feMerge><feMergeNode in="brown"/><feMergeNode in="green"/><feMergeNode in="marks"/><feMergeNode in="light"/><feMergeNode in="pits"/></feMerge>
+  </filter>
+  <rect width="740" height="503" filter="url(#surface)"/>
+</svg>

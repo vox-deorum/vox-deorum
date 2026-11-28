@@ -19,10 +19,11 @@
         "stance": "neutral",
         "genre": "report",
         "when": "direction === 'exchange'",
-        "headline": "An exchange of embassies with {{partner}}",
+        "headline": "Diplomatic Reciprocity Established",
         "body": [
-          "Letters from the foreign office confirm that an exchange of embassies has been arranged with {{partner}}. The terms read: {{dealTerms}} A resident envoy in each capital will give both courts a direct channel for official business."
-        ]
+          "We are credibly informed that a mutual agreement has been reached between {{terms.civilization}} and {{partner}} regarding the establishment of embassies. Both nations have granted one another the privilege of permanent diplomatic representation."
+        ],
+        "settled": true
       },
       {
         "id": "embassy-agreement-grant-report",
@@ -193,10 +194,11 @@
         "voice": "press",
         "stance": "neutral",
         "genre": "report",
-        "headline": "The clauses agreed with {{partner}}",
+        "headline": "Agreement Reached with {{partner}}",
         "body": [
-          "The foreign office has issued the terms of its agreement with {{partner}}. Several matters were settled under the same seal. {{dealTerms}}"
-        ]
+          "Official delegates have concluded negotiations with {{partner}}, signing a comprehensive accord. {{dealTerms}}"
+        ],
+        "settled": true
       }
     ]
   },

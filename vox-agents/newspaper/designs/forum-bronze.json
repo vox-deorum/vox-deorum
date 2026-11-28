@@ -1,7 +1,7 @@
 [
   {
     "id": "forum-bronze",
-    "version": "1",
+    "version": "2",
     "label": "Forum Bronze",
     "title": "The Public Board",
     "civilizationTitles": {
@@ -20,7 +20,7 @@
       "schemaVersion": 1,
       "rendererFamily": "inscription",
       "tokens": {
-        "paperColor": "#ece3d1",
+        "paperColor": "#dbcfb4",
         "inkColor": "#231a14",
         "accentColor": "#9b2f1f",
         "bodyFontAssetId": "font-cardo-400",

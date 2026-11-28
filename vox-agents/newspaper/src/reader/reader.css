@@ -7,6 +7,7 @@
 
 @import "./base.css";
 @import "./families/inscription.css";
+@import "./families/forum-bronze.css";
 @import "./families/broadsheet.css";
 @import "./families/feed.css";
 @import "./families/folio.css";

@@ -96,6 +96,7 @@ export function renderStory(
     publicationDesignId === "winged-sun-papyrus"
     || publicationDesignId === "cracked-oracle-shell"
     || publicationDesignId === "cuneiform-tablet"
+    || publicationDesignId === "forum-bronze"
   ) {
     heading.append(renderStoryTopic(item.tags));
   }

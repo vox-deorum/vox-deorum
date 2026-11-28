@@ -96,10 +96,13 @@
         "stance": "populist",
         "genre": "report",
         "when": "distance !== null",
-        "headline": "Our ally falls {{distance}} from home",
+        "headline": "{{captor}} GRABS {{cityState}}!",
         "body": [
-          "The walls that fell at {{cityState}} stand only {{distance}} from our nearest town, and {{captor}} holds them now. A carter here has cousins behind those walls, and he has been meeting every traveler on the home road with the same question. The road between us has never felt so short."
-        ]
+          "{{captor}} has marched into {{cityState}}, and they are only {{distance}} from our borders. Families on the edge of town are locking their doors and hiding the silver.",
+          "The palaces in the capital are quiet, but the streets are terrified. Who will stop them if they keep coming?"
+        ],
+        "subheadline": "Enemy is only {{distance}} away",
+        "settled": true
       }
     ]
   },
@@ -141,11 +144,12 @@
         "voice": "gazette",
         "stance": "populist",
         "genre": "letter",
-        "headline": "A letter from abroad",
-        "byline": "A trader on the {{cityState}} road",
+        "headline": "A Market Lost",
+        "byline": "A Displaced Draper",
         "body": [
-          "Madam Editor: my stall sits at the corner where the road enters {{cityState}}'s market, and I count the envoys as they pass. All season the visitors in {{rival}}'s cloaks outnumbered ours, so when the alliance changed this week, the only soul surprised on my road was the man who sold the flag."
-        ]
+          "Sir, we are credibly informed that {{cityState}} has lately cast her lot with {{rival}}. My looms now stand silent, for my trade with that city was my only living. I ask {{terms.civic.leaderAddress}}, why must the whims of foreign courts leave the honest {{terms.civic.people}} without bread?"
+        ],
+        "settled": true
       }
     ]
   },

@@ -35,10 +35,11 @@
         "stance": "national",
         "genre": "report",
         "when": "ours",
-        "headline": "Hear it! Our name is on the agenda",
+        "headline": "{{terms.civilization}} Speaks to the World",
         "body": [
-          "Hear it, {{terms.civic.people}} of {{ourProposer}}! Our motion on {{ourProposal}} stands before the Congress, and the clerks have read it aloud! Find a delegate in the square and ask what we have proposed to the world. Every capital will hear of it before the week is out!"
-        ]
+          "Gather round, {{terms.civic.people}}! Our delegation has brought {{ourProposal}} before the World Congress. A bold move for the nation! A bold move for us all!"
+        ],
+        "settled": true
       },
       {
         "id": "congress-new-proposals-notice",
@@ -206,30 +207,33 @@
     "variants": [
       {
         "id": "congress-sanctions-on-us-report",
-        "headline": "The World Congress has sanctioned us",
+        "headline": "International sanctions imposed on {{terms.civilization}}",
         "body": [
-          "The Congress has written {{resolution}} into its law, and our name is on it. At the custom house, a broker read the notice twice and then crossed three ships off his list for the season. The counting houses will have the cost reckoned before the {{terms.civic.government}} has finished the first page."
-        ]
+          "Following a vote in the World Congress, {{resolution}} is now in effect. These sanctions isolate {{terms.civilization}} from several international benefits. Diplomats say the move reflects a growing consensus among the other nations."
+        ],
+        "settled": true
       },
       {
         "id": "congress-sanctions-on-us-crier",
         "voice": "crier",
         "stance": "national",
         "genre": "notice",
-        "headline": "Hear it! The Congress has set its hand against us",
+        "headline": "Warning to Merchants",
         "body": [
-          "Hear it, {{terms.civic.people}}! The Congress has passed {{resolution}}, and the measure names us! They have put our name in their book, but they have not put a lock on our gates! Let every neighbor hear how the world has treated us today!"
-        ]
+          "Attention, {{terms.civic.people}}! The World Congress has decreed {{resolution}}! Be wary of foreign markets and suspicious ports! {{resolution}} takes effect now!"
+        ],
+        "settled": true
       },
       {
         "id": "congress-sanctions-on-us-editorial",
         "voice": "pamphlet",
         "stance": "populist",
         "genre": "editorial",
-        "headline": "Tell merchants what the sanction stops",
+        "headline": "The World Turns Against Us!",
         "body": [
-          "The Congress has voted {{resolution}} against us, and the wharves will know the price before the counting houses do. A skipper with a hold full of goods needs a straight answer about which ports will still take him, and he needs it before he weighs anchor. Our {{terms.civic.government}} should nail the terms to the customs house door where every hand can read them."
-        ]
+          "The World Congress has passed {{resolution}} against {{terms.civilization}}! While the {{terms.civic.government}} argues in high halls, our merchants face closed doors and our prices will surely rise. Who will pay the cost for this diplomatic failure? {{terms.civic.leaderAddress}}, stop the posturing and fix this disgrace before the {{terms.civic.people}} starve for your pride!"
+        ],
+        "settled": true
       },
       {
         "id": "congress-sanctions-on-us-analysis",
@@ -309,10 +313,11 @@
     "variants": [
       {
         "id": "congress-session-imminent-report",
-        "headline": "The World Congress convenes on the next turn",
+        "headline": "{{count}} motions on the {{league}} agenda",
         "body": [
-          "The Congress opens tomorrow, and the first delegations have already taken their seats. The galleries have gone still, and the clerk is practicing the long list of names he must read. Every nation in that hall will leave bound by the same decision."
-        ]
+          "The {{league}} opens tomorrow with {{count}} proposals to be considered. The outcomes of these votes will shape the current international order."
+        ],
+        "settled": true
       },
       {
         "id": "congress-session-imminent-notice",
@@ -393,10 +398,11 @@
     "variants": [
       {
         "id": "congress-voting-opens-report",
-        "headline": "Voting opens in the World Congress",
+        "headline": "Voting opens at the {{league}}",
         "body": [
-          "The Congress has begun to vote. One clerk calls the delegations by name while another keeps the tally in a book that will not close before evening. The galleries have gone quiet, and every seat is watching the same page."
-        ]
+          "The {{league}} has officially opened the voting period. Delegations are now casting their ballots on the active proposals."
+        ],
+        "settled": true
       },
       {
         "id": "congress-voting-opens-notice",
@@ -442,10 +448,11 @@
     "variants": [
       {
         "id": "congress-world-ideology-report",
-        "headline": "The Congress sets a world ideology",
+        "headline": "Global shift toward {{resolution}}",
         "body": [
-          "The Congress has made {{resolution}} the common law of the world. In one foreign capital, the town crier learned the new words by heart and complained that they were too long for a single breath. By morning, every household will have heard them whether it wanted to or not."
-        ]
+          "The resolution for {{resolution}} has been adopted by the World Congress. This represents a significant shift in the shared values of the international community."
+        ],
+        "settled": true
       },
       {
         "id": "congress-world-ideology-ours",

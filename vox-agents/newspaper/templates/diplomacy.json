@@ -288,10 +288,11 @@
     "variants": [
       {
         "id": "foreign-defensive-pact-ends-report",
-        "headline": "{{first}} and {{second}} end their defensive pact",
+        "headline": "{{first}} and {{second}} end mutual defense agreement",
         "body": [
-          "The defensive pact between {{first}} and {{second}} has been dissolved, and the news arrived without a ceremony to mark it. No soldiers have moved against either country. The pledge that each would answer for the other is now only a line in an old file."
-        ]
+          "The mutual defense treaty between {{first}} and {{second}} is no longer in effect. The two nations are no longer obligated to defend one another. Regional powers are now observing the potential for shifting alliances."
+        ],
+        "settled": true
       },
       {
         "id": "foreign-defensive-pact-ends-analysis",
@@ -323,20 +324,22 @@
     "variants": [
       {
         "id": "friendship-begins-report",
-        "headline": "We declare friendship with {{friend}}",
+        "headline": "Diplomatic ties strengthened between {{terms.civilization}} and {{friend}}",
         "body": [
-          "The friendship between our nation and {{friend}} is now declared in public. At the granary, a clerk pinned the notice beside the salt price, where everyone would see it. Merchants on both sides can plan their seasons as if the goodwill will hold."
-        ]
+          "A formal declaration of friendship has been established between {{terms.civilization}} and {{friend}}. Both governments have pledged to maintain amicable relations. This bond is seen as a foundation for future collaboration."
+        ],
+        "settled": true
       },
       {
         "id": "friendship-begins-notice",
         "voice": "crier",
         "stance": "national",
         "genre": "notice",
-        "headline": "Hear it! Friendship with {{friend}}",
+        "headline": "Friendship with {{friend}}",
         "body": [
-          "Hear it, {{terms.civic.people}}! {{friend}} stands as a friend of {{terms.civilization}}, and the declaration is signed. A friend at the gate, a friend at the market, a friend when the road is long! Pass the word to the back of the crowd!"
-        ]
+          "Hear me, {{terms.civic.people}}! We are now friends with {{friend}}! Peace and prosperity for {{terms.civilization}}! {{friend}} is our friend!"
+        ],
+        "settled": true
       },
       {
         "id": "friendship-begins-letter",

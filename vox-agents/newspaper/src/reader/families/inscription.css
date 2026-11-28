@@ -10,6 +10,7 @@
  * the selected tab itself.
  */
 
+@scope (:root) to (.vd-newspaper[data-publication-design="forum-bronze"]) {
 .vd-newspaper[data-design="inscription"] {
   --vd-paper: #ece3d1;
   --vd-ink: #231a14;
@@ -161,16 +162,6 @@
   font: 400 calc(14px * var(--vd-text-scale)) / 1.4 var(--vd-font-display);
   letter-spacing: 0.18em;
   text-transform: uppercase;
-}
-
-@container newspaper (width > 560px) {
-  .vd-newspaper[data-publication-design="forum-bronze"] .vd-tabs {
-    gap: 0 16px;
-  }
-
-  .vd-newspaper[data-publication-design="forum-bronze"] .vd-tab {
-    letter-spacing: .1em;
-  }
 }
 
 .vd-newspaper[data-design="inscription"] .vd-tab[aria-selected="true"]::after {
@@ -457,4 +448,5 @@
   .vd-newspaper[data-design="inscription"] .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-headline {
     font-size: calc(40px * var(--vd-text-scale));
   }
+}
 }

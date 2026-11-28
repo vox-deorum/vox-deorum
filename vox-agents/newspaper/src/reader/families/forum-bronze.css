@@ -1,0 +1,325 @@
+/* A cast bronze board surrounds one tinned writing surface on each page. */
+.vd-newspaper[data-publication-design="forum-bronze"] {
+  --vd-page-background: #2a231a;
+  --vd-rule: #7e6848;
+  --vd-font-display: "Cinzel", Georgia, serif;
+  --vd-font-body: "Cardo", Georgia, serif;
+  --bronze-frame: url("./textures/forum-bronze/cast-bronze.svg?inline");
+  --bronze-field: url("./textures/forum-bronze/tinned-bronze.svg?inline");
+  --bronze-wing: url("./textures/forum-bronze/wing.svg?inline");
+  --bronze-cord: url("./textures/forum-bronze/cord.svg?inline");
+  --bronze-pin: url("./textures/forum-bronze/pin.svg?inline");
+  --bronze-hole: url("./textures/forum-bronze/hole.svg?inline");
+  --bronze-metal: #594429;
+  --bronze-inset: clamp(5px, calc(var(--vd-paper-padding) * .48), 16px);
+
+  &[data-mode="export"], & .vd-reader-viewport { background: var(--vd-page-background); }
+
+  & .vd-publication {
+    position: relative;
+    background:
+      var(--bronze-pin) 5px 6px / 9px no-repeat,
+      var(--bronze-pin) right calc(5px + var(--vd-scrollbar-gutter)) top 6px / 9px no-repeat,
+      var(--bronze-hole) left 5px bottom 5px / 9px no-repeat,
+      var(--bronze-pin) right calc(5px + var(--vd-scrollbar-gutter)) bottom 5px / 9px no-repeat,
+      linear-gradient(90deg, #19130651, transparent 11% 86%, #19130655),
+      var(--bronze-frame),
+      var(--bronze-metal);
+    box-shadow: inset 0 0 0 1px #1f180ffd, inset 0 0 0 2px #ac8953a0, inset 0 0 9px #1d1309;
+    clip-path: polygon(
+      .2% 2px, 9% 0, 14% 2px, 31% 1px, 47% 3px, 52% 0, 70% 2px, 83% 0, 90% 2px, 99.8% 1px,
+      99.9% 15%, 99.75% 27%, 100% 40%, 99.8% 62%, 99.9% 85%, 99.75% calc(100% - 2px),
+      82% 100%, 73% calc(100% - 3px), 58% 100%, 51% calc(100% - 1px), 44% calc(100% - 3px),
+      30% 100%, 15% calc(100% - 2px), .15% 100%, 0 80%, .16% 60%, .05% 52%, .18% 35%, 0 20%
+    );
+  }
+
+  & .vd-header, & .vd-page { background: transparent; }
+  & .vd-header { padding-top: 7px; }
+  & .vd-masthead { padding: 0 0 5px; }
+  & .vd-ornament, & .vd-end-ornament { display: none; }
+
+  & .vd-title {
+    position: relative;
+    width: fit-content;
+    max-width: calc(100% - 2 * var(--bronze-wing-width));
+    margin: 0 auto;
+    padding: 7px clamp(7px, 2.7cqi, 35px) 6px;
+    border: 1px solid #b9955b;
+    border-block-start-color: #d8bb79;
+    outline: 1px solid #3e2b18;
+    background:
+      linear-gradient(100deg, #c79b575c, transparent 27%, #f3d3964a 57%, #845a277d),
+      var(--bronze-frame) 36% 22% / 320px,
+      #ae894f;
+    background-blend-mode: normal, soft-light, normal;
+    box-shadow: inset 0 0 0 2px #ecd6a05e, inset 0 0 7px #51371d, 0 2px 3px #1e150f8c;
+    font: 700 calc(clamp(17px, 3cqi, 39px) * var(--vd-text-scale)) / 1.12 var(--vd-font-display);
+    letter-spacing: .085em;
+    text-transform: uppercase;
+    color: #25190f;
+    text-shadow: 0 1px #edcf907d;
+    --bronze-wing-width: clamp(15px, 3cqi, 35px);
+  }
+
+  & .vd-title::before, & .vd-title::after {
+    position: absolute;
+    inset-block: -1px;
+    width: calc(var(--bronze-wing-width) + 1px);
+    background: var(--bronze-pin) 27% center / 8px no-repeat, var(--bronze-wing) left center / 100% 100% no-repeat;
+    content: "";
+  }
+  & .vd-title::before { right: 100%; }
+  & .vd-title::after {
+    left: 100%;
+    background-image: var(--bronze-hole), var(--bronze-wing);
+    transform: scaleX(-1);
+  }
+
+  & .vd-tabs {
+    justify-content: flex-start;
+    gap: 1px 4px;
+    border: 0;
+    color: #fff2cc;
+  }
+  & .vd-tab {
+    flex: 0 1 auto;
+    padding: 5px clamp(9px, 2.2cqi, 26px) 6px;
+    border: 0;
+    background:
+      linear-gradient(90deg, #c1a27370, #d0b18032 30% 65%, #6d52313d) center top / calc(100% - 16px) 1px no-repeat,
+      linear-gradient(0deg, #1c160d35, #82654175),
+      #4c3929;
+    clip-path: polygon(7px 0, calc(100% - 7px) 0, 100% 100%, 0 100%);
+    font: 700 calc(clamp(10px, 1.2cqi, 14px) * var(--vd-text-scale)) / 1.22 var(--vd-font-display);
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: #fff2cc;
+  }
+  & .vd-tab:hover { background-color: #a48152; }
+  & .vd-tab:focus-visible { outline-offset: -5px; }
+  &[data-mode="reader"] .vd-tab[aria-selected="true"] {
+    color: var(--vd-ink);
+    background: var(--bronze-field) top left, var(--vd-paper);
+  }
+  &[data-mode="reader"] .vd-tab[aria-selected="true"]::after { display: none; }
+
+  & .vd-page {
+    position: relative;
+    padding-top: clamp(17px, 2.1cqi, 27px);
+    padding-bottom: 24px;
+  }
+  & .vd-page::before {
+    position: absolute;
+    inset: 0 calc(var(--bronze-inset) + var(--vd-scrollbar-gutter)) 8px var(--bronze-inset);
+    border: 1px solid #9c845b;
+    border-bottom-color: #655239;
+    background:
+      var(--bronze-pin) 4px 5px / 10px no-repeat,
+      var(--bronze-pin) right 4px top 5px / 10px no-repeat,
+      var(--bronze-hole) left 4px bottom 5px / 9px no-repeat,
+      var(--bronze-pin) right 4px bottom 5px / 9px no-repeat,
+      linear-gradient(90deg, #523a1f2a, transparent 7% 93%, #523a1f25),
+      var(--bronze-field),
+      var(--vd-paper);
+    box-shadow: inset 0 2px 3px #fff2cf70, inset 0 -2px 5px #4f392e52, 0 0 3px 1px #251a10a0;
+    pointer-events: none;
+    content: "";
+  }
+  & .vd-page-content {
+    position: relative;
+    padding-inline: clamp(6px, 2cqi, 24px);
+  }
+
+  & .vd-storylist[data-layout] {
+    --bronze-column-gap: clamp(30px, 5cqi, 68px);
+    column-gap: var(--bronze-column-gap);
+  }
+  & .vd-story {
+    position: relative;
+    min-width: 0;
+    margin: 0;
+    padding-block: 0 12px;
+  }
+  & .vd-story + .vd-story {
+    padding-top: 15px;
+    border-top: 1px solid #7462459a;
+    box-shadow: inset 0 1px #fbefcb93;
+  }
+  & .vd-story--lead {
+    padding-bottom: 17px;
+    margin-bottom: 5px;
+  }
+
+  & .vd-headline {
+    position: relative;
+    margin: 0 0 8px;
+    padding-inline-start: calc(var(--bronze-topic-size) * 1.37);
+    --bronze-topic-size: clamp(25px, 3cqi, 35px);
+    font: 700 calc(clamp(19px, 2.18cqi, 28px) * var(--vd-text-scale)) / 1.16 var(--vd-font-display);
+    letter-spacing: .02em;
+    text-align: start;
+    text-transform: uppercase;
+    text-wrap: pretty;
+    text-shadow: 0 1px #fbefcfb0;
+  }
+  & .vd-story--brief .vd-headline {
+    font-size: calc(clamp(19px, 2.18cqi, 28px) * var(--vd-text-scale));
+  }
+  & .vd-story--lead .vd-headline {
+    --bronze-topic-size: clamp(28px, 3.75cqi, 48px);
+    font-size: calc(clamp(25px, 3.5cqi, 46px) * var(--vd-text-scale));
+    text-align: start;
+  }
+  & .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-headline { color: #712e20; }
+  & .vd-story-topic {
+    position: absolute;
+    inset: -.13em auto auto 0;
+    width: var(--bronze-topic-size);
+    height: var(--bronze-topic-size);
+    background:
+      var(--bronze-topic, url("./icons/forum-bronze/untagged.svg?inline")) center / contain no-repeat,
+      url("./icons/forum-bronze/stamp.svg?inline") center / contain no-repeat;
+    pointer-events: none;
+  }
+  & [data-topic="military"] { --bronze-topic: url("./icons/forum-bronze/military.svg?inline"); }
+  & [data-topic="congress"] { --bronze-topic: url("./icons/forum-bronze/congress.svg?inline"); }
+  & [data-topic="science"] { --bronze-topic: url("./icons/forum-bronze/science.svg?inline"); }
+  & [data-topic="religion"] { --bronze-topic: url("./icons/forum-bronze/religion.svg?inline"); }
+  & [data-topic="culture"] { --bronze-topic: url("./icons/forum-bronze/culture.svg?inline"); }
+  & [data-topic="trade"] { --bronze-topic: url("./icons/forum-bronze/trade.svg?inline"); }
+  & [data-topic="economy"] { --bronze-topic: url("./icons/forum-bronze/economy.svg?inline"); }
+  & [data-topic="cities"] { --bronze-topic: url("./icons/forum-bronze/cities.svg?inline"); }
+  & [data-topic="domestic"] { --bronze-topic: url("./icons/forum-bronze/domestic.svg?inline"); }
+  & [data-topic="international"] { --bronze-topic: url("./icons/forum-bronze/international.svg?inline"); }
+  & [data-topic="politics"] { --bronze-topic: url("./icons/forum-bronze/politics.svg?inline"); }
+
+  & .vd-story--lead .vd-deck {
+    margin: 0 0 9px;
+    padding: 0;
+    border: 0;
+    font: italic calc(clamp(17px, 1.85cqi, 23px) * var(--vd-text-scale)) / 1.35 var(--vd-font-body);
+    text-align: start;
+  }
+  & .vd-story--lead .vd-byline {
+    margin: 0 0 8px;
+    font-size: calc(14px * var(--vd-text-scale));
+    text-align: start;
+  }
+  & .vd-prose {
+    font-size: calc(clamp(17px, 1.6cqi, 19px) * var(--vd-text-scale));
+    line-height: 1.52;
+  }
+  & .vd-number { color: var(--vd-accent); font-weight: 700; }
+  & .vd-story-art img { border: 1px solid #8f7752; }
+
+  & .vd-story .vd-story-footer {
+    position: relative;
+    min-height: 30px;
+    margin-top: 8px;
+    padding-top: 4px;
+  }
+  & .vd-story-footer::before {
+    position: absolute;
+    inset: 0 auto auto 1px;
+    width: 61px;
+    height: 3px;
+    background: radial-gradient(circle at 2px 1px, #6e5a41 1px, #f5e7c3 1.4px, transparent 1.6px) 0 0 / 6px 3px repeat-x;
+    pointer-events: none;
+    content: "";
+  }
+  & .vd-votes { margin-left: auto; }
+  & .vd-vote { width: 34px; padding-inline: 6px; }
+  & .vd-vote:hover { background: #7559341b; }
+  & .vd-vote[aria-pressed="true"] { border-color: transparent; background: #75593419; }
+  & .vd-vote:focus-visible { outline-offset: 1px; }
+
+  & .vd-evidence {
+    align-self: start;
+    padding: 12px;
+    border: 1px solid #9b8259;
+    box-shadow: inset 0 0 0 2px #ecd9b77a;
+    background: #a68b5c21;
+  }
+  & .vd-motto { margin: 9px 0 0; }
+  & .vd-end-rule { margin-top: 5px; }
+  & .vd-end-rule::before, & .vd-end-rule::after {
+    height: 2px;
+    background: linear-gradient(#796345, #ecd9aa);
+  }
+  & .vd-end-rule::after { display: none; }
+
+  @container newspaper (width > 760px) {
+    & .vd-story--brief .vd-story-content {
+      display: flex;
+      height: 100%;
+      flex-direction: column;
+    }
+    & .vd-story--brief .vd-story-footer {
+      margin-top: auto;
+    }
+    & .vd-story--brief .vd-prose {
+      margin-bottom: 8px;
+    }
+    & .vd-story + .vd-story {
+      padding-top: 0;
+      border-top: 0;
+      box-shadow: none;
+    }
+    /* Start the divider for each pair from its left story, even after a full-width lead. */
+    & .vd-story--brief:nth-child(odd):not(.vd-story--lead ~ .vd-story)::after,
+    & .vd-story--lead ~ .vd-story--brief:nth-child(even)::after {
+      position: absolute;
+      inset: 1px calc(var(--bronze-column-gap) * -.5 - 3px) 11px auto;
+      width: 6px;
+      background:
+        var(--bronze-hole) top center / 6px no-repeat,
+        var(--bronze-hole) bottom center / 6px no-repeat,
+        linear-gradient(90deg, #77674c 50%, #f9eccb 50%) center / 2px 100% no-repeat;
+      pointer-events: none;
+      content: "";
+    }
+    & .vd-story--brief:only-child::after,
+    & .vd-story--brief:last-child::after { display: none; }
+    & .vd-story:nth-child(n + 3):not(.vd-story--lead ~ .vd-story),
+    & .vd-story--lead ~ .vd-story { padding-top: 18px; }
+    & .vd-story:nth-child(n + 3)::after,
+    & .vd-story--lead ~ .vd-story::after { top: 18px; }
+    & .vd-story--brief:nth-child(odd):nth-child(n + 3):not(.vd-story--lead ~ .vd-story)::before,
+    & .vd-story--lead ~ .vd-story--brief:nth-child(even)::before {
+      position: absolute;
+      inset: 0 auto auto 0;
+      width: calc(200% + var(--bronze-column-gap));
+      height: 10px;
+      background:
+        var(--bronze-hole) left center / 9px no-repeat,
+        var(--bronze-hole) right center / 9px no-repeat,
+        var(--bronze-cord) center / auto 7px repeat-x;
+      pointer-events: none;
+      content: "";
+    }
+  }
+
+  @container newspaper (max-width: 760px) {
+    & .vd-story + .vd-story {
+      border-top-color: transparent;
+      box-shadow: none;
+      background:
+        var(--bronze-hole) left 1px / 8px no-repeat,
+        var(--bronze-hole) right 1px / 8px no-repeat,
+        linear-gradient(#786449 50%, #ebd8af 50%) center 4px / calc(100% - 6px) 2px no-repeat;
+    }
+    & .vd-story:nth-child(odd):nth-child(n + 3):not(.vd-story--lead ~ .vd-story),
+    & .vd-story--lead ~ .vd-story:nth-child(even) {
+      background:
+        var(--bronze-hole) left 1px / 8px no-repeat,
+        var(--bronze-hole) right 1px / 8px no-repeat,
+        var(--bronze-cord) center top / auto 7px repeat-x;
+    }
+  }
+
+  @container newspaper (max-width: 480px) {
+    & .vd-tab { max-width: calc((100% - 4px) / 2); }
+    & .vd-title { letter-spacing: .058em; }
+  }
+}
