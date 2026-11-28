@@ -1,4 +1,4 @@
-/* Photocopied punk fanzine: cut headline strips, a highlighter and a column of clippings. */
+/* Photocopied punk fanzine: cut headline strips and highlighted figures. */
 .vd-newspaper[data-publication-design="paste-up"] {
   --paste-highlight: oklch(from var(--vd-accent) max(l, .84) c h);
   --vd-rule: var(--vd-ink);
@@ -15,7 +15,6 @@
     transform: rotate(-1.5deg);
   }
   & .vd-tabs { justify-content: flex-start; border-bottom: 3px solid var(--vd-ink); }
-  & .vd-storylist[data-layout] { display: block; }
   & .vd-storylist[data-layout] .vd-story--lead .vd-headline {
     display: inline;
     padding: 0 .14em .035em;
@@ -37,23 +36,8 @@
     text-align: left;
   }
   & .vd-story--brief .vd-headline { font-weight: 800; letter-spacing: -.04em; }
-  & .vd-storylist[data-layout="ordinary"] .vd-story--lead + .vd-story--brief { border-top: 2px dotted var(--vd-ink); }
+  & .vd-storylist[data-layout] .vd-story--brief { border-top: 2px dotted var(--vd-ink); }
   & .vd-number { padding-inline: .1em; color: var(--vd-ink); background: var(--paste-highlight); }
   & .vd-evidence { border: 2px dotted var(--vd-ink); padding: clamp(8px, 1.3cqi, 18px); }
   & .vd-evidence caption strong { padding-inline: .2em; color: var(--vd-paper); background: var(--vd-ink); }
-}
-
-@container newspaper (width > 760px) {
-  .vd-newspaper[data-publication-design="paste-up"] .vd-storylist[data-layout="ordinary"]:has(.vd-story--brief) {
-    display: flow-root;
-    & .vd-story--lead { float: left; width: 61%; }
-    & .vd-story--brief {
-      margin: 0 0 16px 64%;
-      padding: 0 0 0 clamp(12px, 1.7cqi, 24px);
-      border: 0;
-      border-left: 2px dotted var(--vd-ink);
-    }
-    & .vd-story--lead + .vd-story--brief { border-top: 0; }
-    & .vd-story--brief + .vd-story--brief .vd-story-content { padding-top: 12px; border-top: 1px solid var(--vd-rule); }
-  }
 }

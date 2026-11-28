@@ -311,7 +311,7 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('newspaper design
   it('should keep each story in one text column and pair print briefs on wide pages', async context => {
     if (!browser) { context.skip(unavailable); return; }
     const { designs } = await loadEditorialConfig();
-    const customBriefs = new Set(['wire', 'civic-index', 'paste-up', 'teletext-bulletin']);
+    const customBriefs = new Set(['wire', 'civic-index', 'teletext-bulletin']);
     const page = await browser.newPage();
     const violations: string[] = [];
     try {
