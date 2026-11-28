@@ -51,21 +51,6 @@
     "tags": ["cities", "domestic"]
   },
   {
-    "id": "city-defense-completed",
-    "subject": "event",
-    "event": "CityConstructed",
-    "when": [
-      "event.is.ourCity",
-      "defenses.includes(event.building)"
-    ],
-    "values": {
-      "building": "event.building"
-    },
-    "tier": "routine",
-    "adjust": "event.stake.building",
-    "tags": ["cities", "military", "domestic"]
-  },
-  {
     "id": "city-courthouse-completed",
     "subject": "event",
     "event": "CityConstructed",
@@ -79,6 +64,21 @@
     "tier": "notable",
     "adjust": "event.city.stake.place",
     "tags": ["cities", "domestic"]
+  },
+  {
+    "id": "city-defense-completed",
+    "subject": "event",
+    "event": "CityConstructed",
+    "when": [
+      "event.is.ourCity",
+      "defenses.includes(event.building)"
+    ],
+    "values": {
+      "building": "event.building"
+    },
+    "tier": "routine",
+    "adjust": "event.stake.building",
+    "tags": ["cities", "military", "domestic"]
   },
   {
     "id": "foreign-building-completed",
@@ -95,25 +95,7 @@
       "owner": "event.city.owner.name"
     },
     "tier": "filler",
-    "adjust": ["event.city.owner.stake.relation", "event.stake.intel"],
-    "tags": ["cities", "international"]
-  },
-  {
-    "id": "foreign-building-purchased",
-    "subject": "event",
-    "event": "CityConstructed",
-    "when": [
-      "event.is.theirCity",
-      "event.is.regularBuilding && event.is.notableBuilding",
-      "event.is.purchased"
-    ],
-    "values": {
-      "building": "event.building",
-      "owner": "event.city.owner.name",
-      "currency": "event.isGoldPurchase ? 'gold' : 'faith'"
-    },
-    "tier": "filler",
-    "adjust": ["event.city.owner.stake.relation", "event.stake.intel"],
+    "adjust": "event.city.owner.stake.relation",
     "tags": ["cities", "international"]
   },
   {
@@ -135,21 +117,22 @@
     "tags": ["cities", "international"]
   },
   {
-    "id": "foreign-city-defense-completed",
+    "id": "foreign-building-purchased",
     "subject": "event",
     "event": "CityConstructed",
     "when": [
       "event.is.theirCity",
-      "defenses.includes(event.building)",
-      "!event.is.foundingFreebie"
+      "event.is.regularBuilding && event.is.notableBuilding",
+      "event.is.purchased"
     ],
     "values": {
       "building": "event.building",
-      "owner": "event.city.owner.name"
+      "owner": "event.city.owner.name",
+      "currency": "event.isGoldPurchase ? 'gold' : 'faith'"
     },
-    "tier": "routine",
-    "adjust": "event.stake.place",
-    "tags": ["cities", "military", "international"]
+    "tier": "filler",
+    "adjust": "event.city.owner.stake.relation",
+    "tags": ["cities", "international"]
   },
   {
     "id": "foreign-city-courthouse-completed",
@@ -166,5 +149,22 @@
     "tier": "notable",
     "adjust": "event.city.stake.place",
     "tags": ["cities", "international"]
+  },
+  {
+    "id": "foreign-city-defense-completed",
+    "subject": "event",
+    "event": "CityConstructed",
+    "when": [
+      "event.is.theirCity",
+      "defenses.includes(event.building)",
+      "!event.is.foundingFreebie"
+    ],
+    "values": {
+      "building": "event.building",
+      "owner": "event.city.owner.name"
+    },
+    "tier": "routine",
+    "adjust": "event.stake.place",
+    "tags": ["cities", "military", "international"]
   }
 ]

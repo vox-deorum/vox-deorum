@@ -1,5 +1,55 @@
 [
   {
+    "id": "diplomat-network-milestone-account",
+    "triggers": ["diplomat-network-milestone"],
+    "tags": ["politics", "international"],
+    "names": ["civilization"],
+    "extends": "civilization",
+    "variants": [
+      {
+        "id": "diplomat-network-milestone-report",
+        "when": "threshold === 200",
+        "headline": "Our envoys in {{civilization}} begin to hear the court's choices",
+        "body": [
+          "Our envoys in {{civilization}} have built a network wide enough to hear of that court's policy choices. The service counts the network at {{points}}, and the reports come from clerks and table companions rather than from public announcements. A choice argued in a closed room now reaches our foreign office."
+        ]
+      },
+      {
+        "id": "diplomat-network-milestone-editorial",
+        "voice": "pamphlet",
+        "stance": "government-critical",
+        "genre": "editorial",
+        "when": "threshold === 200",
+        "headline": "What is the listening in {{civilization}} for?",
+        "body": [
+          "Our people in {{civilization}} can now hear that court's policy choices, and the {{terms.civic.government}} should say what it means to do with what it hears. A network that listens and never acts is an expense with a good name. Let the ministers report what the last season of listening bought the country."
+        ]
+      },
+      {
+        "id": "diplomat-network-milestone-broadcast",
+        "voice": "broadcast",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "threshold === 800",
+        "headline": "Our network in {{civilization}} reaches treaty standing",
+        "body": [
+          "Our envoys in {{civilization}} have brought their network to {{points}} points. That is one of the two connections needed before the text of that court's treaties can reach our foreign office; the other is a network of the same size at the capital of the other signatory. The work is now in place on this side of the arrangement."
+        ]
+      },
+      {
+        "id": "diplomat-network-milestone-gazette",
+        "voice": "gazette",
+        "stance": "conciliatory",
+        "genre": "report",
+        "when": "threshold === 800",
+        "headline": "The groundwork for reading {{civilization}}'s treaties",
+        "body": [
+          "Letters from {{civilization}} now bring more than gossip. Our envoys there have built a network of {{points}} points, one of the two connections needed to read that court's treaties. A treaty becomes readable to us only when our people at both capitals hold a network of this size. The mission at {{civilization}} has done its part."
+        ]
+      }
+    ]
+  },
+  {
     "id": "election-operation-account",
     "triggers": ["election-operation"],
     "tags": ["politics", "international"],
@@ -57,6 +107,125 @@
     ]
   },
   {
+    "id": "foreign-policy-adopted-account",
+    "triggers": ["foreign-policy-adopted"],
+    "tags": ["politics", "international"],
+    "names": ["civilization"],
+    "variants": [
+      {
+        "id": "foreign-policy-adopted-report",
+        "headline": "{{civilization}} adopts {{policy}}",
+        "body": [
+          "{{civilization}} has adopted {{policy}} as its guiding policy. The proclamation was read at the court this week, and the clerks have begun copying the new instructions into the registers. Its neighbors will feel the change first in the tone of its envoys."
+        ]
+      },
+      {
+        "id": "foreign-policy-adopted-envoy",
+        "voice": "press",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "envoy",
+        "headline": "Our envoy in {{civilization}} sends word of {{policy}}",
+        "body": [
+          "Our envoy at the court of {{civilization}} now reports that {{policy}} has been adopted. The ministers who favored it sit together, and the rest say little. The envoy expects the new policy to show first in the court's spending and in the favors it grants."
+        ]
+      },
+      {
+        "id": "foreign-policy-adopted-gazette",
+        "voice": "gazette",
+        "stance": "neutral",
+        "genre": "report",
+        "headline": "From abroad: {{civilization}} turns to {{policy}}",
+        "body": [
+          "Letters from {{civilization}} relate that the court has chosen {{policy}} for its policy. In our counting houses, brokers who trade on that frontier read the news twice and asked what it means for the price of carriage. Every chancellery that keeps a file on that court will read the change the same way."
+        ]
+      },
+      {
+        "id": "foreign-policy-adopted-editorial",
+        "voice": "pamphlet",
+        "stance": "national",
+        "genre": "editorial",
+        "headline": "A new policy in {{civilization}}, and no word here",
+        "body": [
+          "{{civilization}} has taken up {{policy}}, and our {{terms.civic.government}} has offered the country nothing but silence. A policy is a promise about where a nation will spend its money and its patience. The {{terms.civic.people}} should hear from our own ministers what this one means for the roads and treaties we share."
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreign-treaty-obtained-account",
+    "triggers": ["foreign-treaty-obtained"],
+    "tags": ["politics", "international"],
+    "names": ["from", "to"],
+    "variants": [
+      {
+        "id": "foreign-treaty-obtained-report",
+        "headline": "Our envoys obtain the treaty between {{from}} and {{to}}",
+        "body": [
+          "A copy of the treaty between {{from}} and {{to}} has reached our foreign office. The clauses are written out in full, and the copy is filed with the rest of the season's dispatches. The text came to us through our own people rather than through any messenger of the two courts."
+        ]
+      },
+      {
+        "id": "foreign-treaty-obtained-ledger",
+        "voice": "gazette",
+        "stance": "neutral",
+        "genre": "ledger",
+        "when": "fromGives !== null && toGives !== null",
+        "headline": "The terms between {{from}} and {{to}}",
+        "body": [
+          "{{from}} gives: {{fromGives}}.",
+          "{{to}} gives: {{toGives}}.",
+          "Both courts signed, and our copy came by our own road."
+        ]
+      },
+      {
+        "id": "foreign-treaty-obtained-ledger-from",
+        "voice": "gazette",
+        "stance": "neutral",
+        "genre": "ledger",
+        "when": "fromGives !== null && toGives === null",
+        "headline": "What {{from}} put into the treaty with {{to}}",
+        "body": [
+          "{{from}} gives: {{fromGives}}.",
+          "Our copy came by our own road and records only this side's terms."
+        ]
+      },
+      {
+        "id": "foreign-treaty-obtained-ledger-to",
+        "voice": "gazette",
+        "stance": "neutral",
+        "genre": "ledger",
+        "when": "fromGives === null && toGives !== null",
+        "headline": "What {{to}} put into the treaty with {{from}}",
+        "body": [
+          "{{to}} gives: {{toGives}}.",
+          "Our copy came by our own road and records only this side's terms."
+        ]
+      },
+      {
+        "id": "foreign-treaty-obtained-analysis",
+        "voice": "press",
+        "stance": "rationalist",
+        "genre": "analysis",
+        "when": "fromGives !== null && toGives !== null",
+        "headline": "What {{from}} and {{to}} bought from each other",
+        "body": [
+          "The treaty between {{from}} and {{to}} is now in our hands, and it answers the question the chanceries have been asking. Each side gave something it could spare for something it wanted more. The balance of the exchange will show in the next season of their trade and their quarrels."
+        ]
+      },
+      {
+        "id": "foreign-treaty-obtained-broadcast",
+        "voice": "broadcast",
+        "stance": "neutral",
+        "genre": "report",
+        "headline": "The {{from}} and {{to}} treaty, as we have it",
+        "body": [
+          "Our envoys have obtained the treaty between {{from}} and {{to}}. Both courts signed it, and our foreign office holds a copy of the terms."
+        ]
+      }
+    ]
+  },
+  {
     "id": "our-diplomat-abroad-account",
     "triggers": ["our-diplomat-abroad"],
     "tags": ["politics", "international"],
@@ -94,10 +263,58 @@
     ]
   },
   {
+    "id": "our-diplomat-leaves-account",
+    "triggers": ["our-diplomat-leaves"],
+    "tags": ["politics", "international"],
+    "names": ["civilization"],
+    "extends": "civilization",
+    "variants": [
+      {
+        "id": "our-diplomat-leaves-report",
+        "headline": "Our diplomat leaves {{civilization}}",
+        "body": [
+          "Our envoy has left the court of {{civilization}}. The trunks went out before dawn, and the farewell at the gate was short. Letters to that capital will now travel by courier and wait on whatever welcome the road provides."
+        ]
+      },
+      {
+        "id": "our-diplomat-leaves-war",
+        "voice": "press",
+        "stance": "national",
+        "genre": "report",
+        "when": "war",
+        "headline": "Our envoy quits {{civilization}} as the war goes on",
+        "body": [
+          "Our envoy has left {{civilization}} while the war continues. He came home by the last road still open to our people, and the papers he carried went straight to the foreign office. What he learned at that court before he left is now being read by ministers who have soldiers in the field."
+        ]
+      },
+      {
+        "id": "our-diplomat-leaves-peace",
+        "voice": "gazette",
+        "stance": "conciliatory",
+        "genre": "report",
+        "when": "!war",
+        "headline": "The mission to {{civilization}} closes",
+        "body": [
+          "We are informed that our envoy has quit the court of {{civilization}}, and that no quarrel attends his going. The two countries remain at peace, and the farewell was courteous on both sides. A post left empty is still a door, and either court may knock again."
+        ]
+      },
+      {
+        "id": "our-diplomat-leaves-chronicle",
+        "voice": "chronicle",
+        "stance": "traditional",
+        "genre": "report",
+        "headline": "The envoy returns from {{civilization}}",
+        "body": [
+          "In this season our envoy returned from the court of {{civilization}}, and the mission was closed. The porters were paid, the rooms were swept, and the keys were given to the landlord. The record notes the return and leaves the reason to the foreign office."
+        ]
+      }
+    ]
+  },
+  {
     "id": "spy-caught-at-home-account",
     "triggers": ["spy-caught-at-home"],
     "tags": ["politics", "international"],
-    "names": ["cityName"],
+    "names": ["cityName", "culprit"],
     "variants": [
       {
         "id": "spy-caught-at-home-identified",
@@ -134,6 +351,45 @@
         "headline": "A foreign spy uncovered!",
         "body": [
           "Neighbors, a foreign spy was pulled off our streets by the watch last night! The ministry has the service's name in a drawer and means to keep it there. Ask your alderman why the people who live here are told of such things only after the danger has gone."
+        ]
+      },
+      {
+        "id": "spy-caught-at-home-culprit",
+        "when": "culprit !== null",
+        "weight": {
+          "base": 3
+        },
+        "headline": "The spy is identified as an agent of {{culprit}}",
+        "body": [
+          "The agent unmasked inside our borders was working for {{culprit}}. The papers found with him carried that court's mark, and the magistrate read the seal before he reached for the wax. The foreign office has the name in writing now, and {{culprit}} will be asked to explain what the seal was doing on a stranger's papers."
+        ]
+      },
+      {
+        "id": "spy-caught-at-home-protest",
+        "voice": "pamphlet",
+        "stance": "government-critical",
+        "genre": "editorial",
+        "when": "culprit !== null",
+        "weight": {
+          "base": 3
+        },
+        "headline": "Demand an answer from {{culprit}}",
+        "body": [
+          "{{culprit}} sent a spy into our country, and the {{terms.civic.government}} has sent a note. A note is what a chancery writes when it hopes the matter will end there. Let the foreign office demand the agent's handler, name the office that paid him, and publish the answer if one comes."
+        ]
+      },
+      {
+        "id": "spy-caught-at-home-repeat",
+        "voice": "press",
+        "stance": "government-critical",
+        "genre": "analysis",
+        "when": "culprit !== null && earlier > 0",
+        "weight": {
+          "base": 3
+        },
+        "headline": "{{culprit}} has done this before",
+        "body": [
+          "This is not the first agent of {{culprit}} identified lately. Our service counts {{earlier|earlier operation|earlier operations}} against us, and each was answered with the same quiet note. A court that keeps sending its people into our cities has decided our protests cost it nothing."
         ]
       }
     ]
@@ -227,6 +483,59 @@
         "headline": "Someone was watching {{cityName}}",
         "body": [
           "A stranger with quick eyes was working {{cityName}} this week, and he did not come from any house on our street. He was a foreign spy, and no one can name the man who hired him. The market still sold its bread, but every unfamiliar face at a stall got a long look."
+        ]
+      }
+    ]
+  },
+  {
+    "id": "spy-dispatch-account",
+    "triggers": ["spy-dispatch"],
+    "tags": ["politics", "international"],
+    "names": ["city", "civilization"],
+    "extends": "city",
+    "variants": [
+      {
+        "id": "spy-dispatch-production",
+        "voice": "press",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "production !== null && turnsLeft === null",
+        "headline": "Our agent reports the work in {{city}}",
+        "body": [
+          "Our agent in {{city}} sends word of the city's next work. The workshops of {{civilization}} have taken up {{production}}, and the market talks of little else. The agent will keep his place by the window and count what comes and goes."
+        ]
+      },
+      {
+        "id": "spy-dispatch-deadline",
+        "voice": "gazette",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "production !== null && turnsLeft !== null",
+        "headline": "{{production}} in {{city}} with {{turnsLeft}} to run",
+        "body": [
+          "Word from our agent in {{city}} names {{production}} as the work now under way there. The estimate he sends gives it {{turnsLeft}} before it is finished. {{civilization}} has set a schedule, and the agent means to see whether the city keeps it."
+        ]
+      },
+      {
+        "id": "spy-dispatch-unrest",
+        "voice": "press",
+        "stance": "populist",
+        "genre": "analysis",
+        "when": "unrest !== null",
+        "headline": "The complaint our agent hears in {{city}}",
+        "body": [
+          "Our agent in {{city}} writes that the complaint he hears most often is {{unrest}}. The queues at the market are longer than they were, and the guards at the gate no longer argue with the people who wait. He does not call the city close to open trouble, only changed."
+        ]
+      },
+      {
+        "id": "spy-dispatch-hunger",
+        "voice": "chronicle",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "starving",
+        "headline": "Hunger in {{city}}, as our agent tells it",
+        "body": [
+          "Our agent in {{city}} reports that the granaries are empty and the city is starving. The bakers sell the last of the flour by the handful, and families from the outer streets walk in to look for bread. He will write again when the markets change."
         ]
       }
     ]
@@ -391,6 +700,35 @@
     ]
   },
   {
+    "id": "spy-season-account",
+    "triggers": ["spy-detected-at-home"],
+    "tags": ["politics", "international"],
+    "weight": {
+      "base": 1
+    },
+    "variants": [],
+    "merge": {
+      "match": "member.event?.is.foreignOperation",
+      "min": 2,
+      "values": {
+        "operations": "merge.count"
+      },
+      "variants": [
+        {
+          "id": "spy-season-merged-report",
+          "headline": "Spy season: {{merge.values.operations|report|reports}} from our cities",
+          "body": [
+            "Foreign agents were busy this season. {{merge.values.operations|report|reports}} reached this office from our cities, and every one of them began with a stranger found where he did not belong.",
+            "The watch should keep its own count. A season like this one is a warning that someone across the border has decided our affairs are worth the risk."
+          ],
+          "weight": {
+            "base": 1
+          }
+        }
+      ]
+    }
+  },
+  {
     "id": "their-diplomat-arrives-account",
     "triggers": ["their-diplomat-arrives"],
     "tags": ["politics", "international"],
@@ -422,6 +760,52 @@
         "headline": "A listener at our table",
         "body": [
           "{{civilization}} has planted an envoy in our capital, and we should count the cost of courtesy. Wine is cheap; an unlocked study is not. Let the steward pour freely and let the clerks lock every drawer before the guest arrives. A visitor who knows he is watched writes a careful report, and a careful report serves his masters poorly."
+        ]
+      }
+    ]
+  },
+  {
+    "id": "their-diplomat-leaves-account",
+    "triggers": ["their-diplomat-leaves"],
+    "tags": ["politics", "international"],
+    "names": ["civilization"],
+    "extends": "civilization",
+    "variants": [
+      {
+        "id": "their-diplomat-leaves-report",
+        "headline": "The envoy of {{civilization}} leaves our capital",
+        "body": [
+          "The envoy of {{civilization}} has left our capital. His house near the ministry is shuttered, and the visitors' book has been closed on his last page. Matters that could be raised at his door will now wait on a courier."
+        ]
+      },
+      {
+        "id": "their-diplomat-leaves-gazette",
+        "voice": "gazette",
+        "stance": "conciliatory",
+        "genre": "report",
+        "headline": "A guest departs: the envoy of {{civilization}}",
+        "body": [
+          "We are informed that the envoy of {{civilization}} has taken his leave of our capital, and the gate log records the hour. We wish him a safe road and a short absence."
+        ]
+      },
+      {
+        "id": "their-diplomat-leaves-editorial",
+        "voice": "press",
+        "stance": "government-critical",
+        "genre": "editorial",
+        "headline": "Why did the envoy of {{civilization}} go home?",
+        "body": [
+          "The envoy of {{civilization}} has left our capital, and the {{terms.civic.government}} has not said why. A mission is not called home without a reason, and the reason is usually a message. Let the foreign office tell the country what passed before the door closed."
+        ]
+      },
+      {
+        "id": "their-diplomat-leaves-chronicle",
+        "voice": "chronicle",
+        "stance": "neutral",
+        "genre": "report",
+        "headline": "The envoy of {{civilization}} takes his leave",
+        "body": [
+          "In this season the envoy of {{civilization}} departed our capital, and the house he kept stands empty. He came with letters and left with letters, as envoys have done in every reign this record remembers. The gatekeeper noted the hour and nothing more."
         ]
       }
     ]

@@ -1,41 +1,5 @@
 [
   {
-    "id": "trade-deal",
-    "summary": "We completed a deal in which both sides gave goods or gold.",
-    "subject": "event",
-    "event": "DealMade",
-    "when": [
-      "event.deal.kind === 'trade-deal'",
-      "event.is.dealPartnerNamed"
-    ],
-    "values": {
-      "partner": "event.fromPlayer.self ? event.toPlayer.name : event.fromPlayer.name",
-      "weGive": "event.deal.weGive",
-      "weGet": "event.deal.weGet"
-    },
-    "tier": "notable",
-    "adjust": "event.fromPlayer.self ? event.toPlayer.stake.relation : event.fromPlayer.stake.relation",
-    "tags": ["economy", "trade", "international"]
-  },
-  {
-    "id": "trade-gift",
-    "summary": "We gave or received goods or gold in a deal with no terms from the other side.",
-    "subject": "event",
-    "event": "DealMade",
-    "when": [
-      "event.deal.kind === 'trade-gift'",
-      "event.is.dealPartnerNamed"
-    ],
-    "values": {
-      "partner": "event.fromPlayer.self ? event.toPlayer.name : event.fromPlayer.name",
-      "weGive": "event.deal.weGive",
-      "weGet": "event.deal.weGet"
-    },
-    "tier": "notable",
-    "adjust": "event.fromPlayer.self ? event.toPlayer.stake.relation : event.fromPlayer.stake.relation",
-    "tags": ["economy", "trade", "international"]
-  },
-  {
     "id": "incoming-trade-route-plundered",
     "subject": "event",
     "event": "PlayerPlunderedTradeRoute",
@@ -109,6 +73,42 @@
     "tier": "major",
     "adjust": "event.plunderingPlayer.stake.relation",
     "tags": ["economy", "trade"]
+  },
+  {
+    "id": "trade-deal",
+    "summary": "We completed a deal in which both sides gave goods or gold.",
+    "subject": "event",
+    "event": "DealMade",
+    "when": [
+      "event.deal.kind === 'trade-deal'",
+      "event.is.dealPartnerNamed"
+    ],
+    "values": {
+      "partner": "event.fromPlayer.self ? event.toPlayer.name : event.fromPlayer.name",
+      "weGive": "event.deal.weGive",
+      "weGet": "event.deal.weGet"
+    },
+    "tier": "notable",
+    "adjust": "event.stake.partner",
+    "tags": ["economy", "trade", "international"]
+  },
+  {
+    "id": "trade-gift",
+    "summary": "We gave or received goods or gold in a deal with no terms from the other side.",
+    "subject": "event",
+    "event": "DealMade",
+    "when": [
+      "event.deal.kind === 'trade-gift'",
+      "event.is.dealPartnerNamed"
+    ],
+    "values": {
+      "partner": "event.fromPlayer.self ? event.toPlayer.name : event.fromPlayer.name",
+      "weGive": "event.deal.weGive",
+      "weGet": "event.deal.weGet"
+    },
+    "tier": "notable",
+    "adjust": "event.stake.partner",
+    "tags": ["economy", "trade", "international"]
   },
   {
     "id": "trade-network-opens",

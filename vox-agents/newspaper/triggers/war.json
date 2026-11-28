@@ -56,6 +56,22 @@
     "tags": ["politics", "military", "international"]
   },
   {
+    "id": "incoming-war-wave",
+    "subject": "incident",
+    "when": "incident.is.incomingMajorDeclaration && incident.initiator.knows('name')",
+    "group": {
+      "by": "incident.turn",
+      "min": 3
+    },
+    "tier": "crisis",
+    "adjust": "Math.min(10, 2 * (count - 3))",
+    "urgent": "true",
+    "tags": [
+      "politics",
+      "military"
+    ]
+  },
+  {
     "id": "peace-capitulation",
     "subject": "incident",
     "when": [
@@ -265,21 +281,5 @@
     "tier": "notable",
     "adjust": "pair.other.stake.front",
     "tags": ["politics", "military"]
-  },
-  {
-    "id": "incoming-war-wave",
-    "subject": "incident",
-    "when": "incident.is.incomingMajorDeclaration && incident.initiator.knows('name')",
-    "group": {
-      "by": "incident.turn",
-      "min": 3
-    },
-    "tier": "crisis",
-    "adjust": "Math.min(10, 2 * (count - 3))",
-    "urgent": "true",
-    "tags": [
-      "politics",
-      "military"
-    ]
   }
 ]

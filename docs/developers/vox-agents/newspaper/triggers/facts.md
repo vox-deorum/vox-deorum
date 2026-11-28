@@ -18,7 +18,7 @@ Visibility decides the subject, not the story. Once a city is visible, a rule re
 
 A story can therefore reflect something the reader could not strictly know in the game. This is an accepted approximation: the newspaper aims for reasonable gameplay, not perfect information.
 
-Event visibility, contact and the [event-level insight gates](#evidence-the-facts-rely-on) still decide whether a reader can receive a story at all. A policy adoption needs full recorded access to the player or 200 diplomat points, and private deal terms need 800 diplomat points with each foreign party. The presence facts add score; they do not decide which subjects or events are available. See [covert presence and roster points](#covert-presence-and-roster-points) and [stakes](constants.md#stakes).
+Event visibility, contact and the [event-level insight gates](#evidence-the-facts-rely-on) still decide whether a reader can receive a story at all. A policy adoption needs full recorded access to the player or 200 diplomat points, and private deal terms need 800 diplomat points with each foreign party. The presence and network facts add score and do not unlock city or player detail, though diplomat points also gate those two event types. See [covert presence and roster points](#covert-presence-and-roster-points) and [stakes](constants.md#stakes).
 
 ## Naming
 
@@ -103,6 +103,7 @@ The causes omit occupation and empire-wide unhappiness. Population caps and spec
 | `conversions` | Religion changes inside the window, each with `turn` and `religion` | `CityConvertsReligion` events at its plot and changes to `majorityReligion` |
 | `events` | Every permitted event inside the window that names this city or its plot | Event city IDs and coordinates |
 | `ourSpyPresent` | The receiver's spy is stationed in this city | The receiver's `PlayerSummaries.Spies` roster, matched by location to a unique recorded city and owner. A readable roster that shows no spy gives `false`; missing or ambiguous evidence is hidden. |
+| `ourSpyPoints` | The network points of the receiver's spy in this city | The same roster reading as `ourSpyPresent`. A readable roster that shows no spy gives 0; missing or ambiguous evidence is hidden. |
 | `is.<name>` | A [shortcut](constants.md#shortcuts), such as `city.is.neighbor` | The catalogue |
 
 The `neighbor-puppet-annexed` rule infers annexation from `city.before.isPuppet && !city.isPuppet && city.isOccupied` and an unchanged owner.
@@ -166,10 +167,11 @@ On a known foreign major, `player.culturalInfluenceChanges` reads dated `Victory
 | `rank(field)` | Position among known majors with a visible number on that date. Equal numbers share a position. If only our score is visible, it ranks 1 in a comparison of one. | The named fact across `players` |
 | `events` | Every permitted event inside the window that names this player or its team | Event player and team IDs |
 | `ourDiplomatThere` | The receiver has a diplomat posted to this foreign major's capital | The receiver's spy roster, counting diplomats and vassal diplomats schmoozing at the recorded capital. A readable roster that shows none gives `false`; missing or ambiguous evidence is hidden. |
+| `ourDiplomatPoints` | The network points of the receiver's diplomat at this foreign major's capital | The same roster reading as `ourDiplomatThere`. A readable roster that shows no diplomat gives 0; missing or ambiguous evidence is hidden. |
 | `theirDiplomatHere` | This foreign major has a diplomat at the receiver's capital | That player's spy roster, read separately from our own. A readable roster that shows none gives `false`; missing or ambiguous evidence is hidden. |
 | `is.<name>` | A [shortcut](constants.md#shortcuts), such as `player.is.rival` | The catalogue |
 
-The two diplomat facts apply to known foreign majors. They add score, while the event gates for policy adoption and private deal terms still use diplomat points.
+The diplomat facts apply to known foreign majors. `ourDiplomatThere` adds score, and `ourDiplomatPoints` sets its weight; the event gates for policy adoption and private deal terms read the same points.
 
 ### Relationship direction and access
 
@@ -204,15 +206,18 @@ When a nearby team acquires a technology, the stock science rules use the receiv
 
 Spy rosters match roles and locations. A nonnegative network balance also identifies intelligence gathering or schmoozing across game languages. A clear miss or empty roster establishes absence. Missing rosters, ambiguous matches or unrecognized states without a balance leave presence unknown.
 
-`ourSpyPresent`, `ourDiplomatThere` and `theirDiplomatHere` describe presence only. They do not unlock city or player facts. Presence adds points through the [stakes](constants.md#stakes):
+The presence facts `ourSpyPresent`, `ourDiplomatThere` and `theirDiplomatHere` describe presence only. On our own roster, `ourSpyPoints` gives a city's network points and `ourDiplomatPoints` gives a foreign major's. None of these facts unlock city or player detail. Points add through the [stakes](constants.md#stakes):
 
-| Presence | Effect |
+`city.stake.spy = 3 + min(6, round(ourSpyPoints / 150))`
+
+| Presence or threshold | Effect |
 | --- | --- |
-| Our spy in a foreign city | 5 points of city intel, added into the city's place score |
-| Our diplomat at a foreign major's capital | 3 points of city intel with that city's owner, plus 5 points of relation with the major |
-| Our spy in any of a player's cities | 5 points into that player's front score |
+| Our spy in a foreign city | `city.stake.spy`: 3 points on arrival and 1 more per 150 network points rounded, up to the cap of 9 from 825 points. Added into `city.stake.intel`, and into `player.stake.spy` when it is the highest among that player's cities. |
+| Our diplomat at a foreign major's capital | `player.stake.intel`: 3 points when posted, 6 from 200 network points and 9 from 800, plus `player.stake.spy`, capped at 15. Also adds 3 points to `city.stake.intel` for every foreign city of the owner whose capital hosts our diplomat. |
+| 200 diplomat points | Lets that major's policy adoption reports reach the receiver. |
+| 800 diplomat points | Lets private deal terms with each foreign party reach the receiver. |
 
-A spy therefore brings more city and military stories about that civilization, and a diplomat brings more city and diplomatic stories.
+Without full recorded access, the 200 and 800 thresholds decide whether those events exist for the editor; the intel weights only score them. A spy brings more city and military stories about that civilization, and a diplomat brings more city and diplomatic stories.
 
 Current facts use the cutoff roster; events use the latest roster from an earlier turn. Spending points can reduce the recorded balance while the game still grants its bonus.
 

@@ -22,14 +22,14 @@
     "tags": ["politics", "international"]
   },
   {
-    "id": "nearby-team-gains-technology",
+    "id": "nearby-team-gains-known-technology",
     "subject": "event",
     "event": "TeamTechResearched",
     "when": [
       "event.is.techGain",
       "event.teamId !== self.teamId",
       "event.players.some(p => p.get('major') && p.get('name'))",
-      "!self.hasTechnology(event.tech)"
+      "self.hasTechnology(event.tech)"
     ],
     "values": {
       "tech": "event.tech",
@@ -40,14 +40,14 @@
     "tags": ["science", "international"]
   },
   {
-    "id": "nearby-team-gains-known-technology",
+    "id": "nearby-team-gains-technology",
     "subject": "event",
     "event": "TeamTechResearched",
     "when": [
       "event.is.techGain",
       "event.teamId !== self.teamId",
       "event.players.some(p => p.get('major') && p.get('name'))",
-      "self.hasTechnology(event.tech)"
+      "!self.hasTechnology(event.tech)"
     ],
     "values": {
       "tech": "event.tech",

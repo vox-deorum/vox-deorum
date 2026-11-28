@@ -157,10 +157,11 @@
         "voice": "tabloid",
         "stance": "populist",
         "genre": "anecdote",
-        "headline": "The road to {{city}} is empty now",
+        "headline": "RAIDERS STRIP {{city}}!",
         "body": [
-          "The cart track south of {{city}} used to be busy before daybreak. Now the ruts are dry and the farms along it stand open to the wind, their doors gone for firewood. The families who worked them sleep inside the walls and walk out each morning to look at what is left."
-        ]
+          "Old Tom found his hen-house empty and his fence smashed this morning. {{pillagedPopulation}} people are surveying the wreckage. {{pillagedPopulation}} are suffering because the patrols were nowhere to be found."
+        ],
+        "settled": true
       },
       {
         "id": "city-pillaged-unrest-notice",

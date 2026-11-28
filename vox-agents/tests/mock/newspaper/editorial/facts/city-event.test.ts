@@ -81,27 +81,34 @@ describe('newspaper city facts', () => {
       expect(entries(facts([now], [hiddenBefore, now]).cities[10].current!.built)).toEqual([]);
     });
 
-    it('should expose a projected spy presence without turning an absent reading into false', () => {
+    it('should expose projected spy presence and points without turning an absent reading into false', () => {
       const earlier = city(30, 3, 3, 1, { Name: 'Port', OurSpyPresent: false });
       const present = city(31, 8, 3, 1, {
-        Name: 'Port', OurSpyPresent: 1, UnhappinessSources: { Culture: 3, Distress: 1 },
+        Name: 'Port', OurSpyPresent: 1, OurSpyPoints: 500, UnhappinessSources: { Culture: 3, Distress: 1 },
       }, 30);
       present.relatedSources = [earlier.source];
       const absent = city(32, 8, 4, 1, { Name: 'Other' });
       const malformed = city(33, 8, 5, 1, { Name: 'Malformed', OurSpyPresent: 'yes' });
-      const denied = city(34, 8, 6, 1, { Name: 'Quiet', OurSpyPresent: false });
-      const model = facts([present, absent, malformed, denied], [earlier, present, absent, malformed, denied]);
+      const denied = city(34, 8, 6, 1, { Name: 'Quiet', OurSpyPresent: false, OurSpyPoints: 0 });
+      const negative = city(35, 8, 7, 1, { Name: 'Odd', OurSpyPresent: true, OurSpyPoints: -1 });
+      const model = facts([present, absent, malformed, denied, negative], [earlier, present, absent, malformed, denied, negative]);
 
       expect(model.cities[30].history[0].fields).toMatchObject({
         ourSpyPresent: { value: false, sources: [earlier.source] },
       });
       expect(model.cities[30].current).toMatchObject({
         ourSpyPresent: { value: true, sources: [present.source, earlier.source] },
+        ourSpyPoints: { value: 500, sources: [present.source, earlier.source] },
         unhappiness: { value: { culture: { value: 3 }, distress: { value: 1 } } },
       });
       expect(model.cities[32].current).not.toHaveProperty('ourSpyPresent');
+      expect(model.cities[32].current).not.toHaveProperty('ourSpyPoints');
       expect(model.cities[33].current).not.toHaveProperty('ourSpyPresent');
-      expect(model.cities[34].current).toMatchObject({ ourSpyPresent: { value: false } });
+      expect(model.cities[33].current).not.toHaveProperty('ourSpyPoints');
+      expect(model.cities[34].current).toMatchObject({
+        ourSpyPresent: { value: false }, ourSpyPoints: { value: 0 },
+      });
+      expect(model.cities[35].current).not.toHaveProperty('ourSpyPoints');
     });
 
     it('should preserve both founding hooks and infer the latest witnessed transfer at that plot', () => {

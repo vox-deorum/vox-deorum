@@ -238,6 +238,20 @@
         ],
         "subheadline": "{{civilization}} drops the mask",
         "settled": true
+      },
+      {
+        "id": "enemy-front-posture-offensive-agent",
+        "voice": "press",
+        "stance": "hawkish",
+        "genre": "report",
+        "when": "city.is.watched",
+        "weight": {
+          "base": 3
+        },
+        "headline": "Our agent's report from {{city}}",
+        "body": [
+          "Our agent in {{city}} now reports that {{civilization}} has set its forces to {{posture}} in the {{domain}} area. The order is being carried through the city, and the war office has entered the change. The new posture is a warning in itself; whether it becomes a march is not yet known."
+        ]
       }
     ]
   },
@@ -261,10 +275,12 @@
         "voice": "press",
         "stance": "hawkish",
         "genre": "analysis",
-        "headline": "After the withdrawal: the reading at {{city}}",
+        "headline": "The Enemy Recovers",
         "body": [
-          "The entry for {{city}}, held by {{civilization}}, changed from {{previousPosture}} to {{posture}} on {{observedTurn}}. The shift ends a stretch in which the {{domain}} zone was read as a withdrawal, and it looks like a threat putting itself back in order. Our posts along that front should stop counting on the quiet."
-        ]
+          "After a period of {{previousPosture}}, {{civilization}} has adopted a {{posture}} posture in the {{domain}} area of {{city}} as of {{observedTurn}}. The retreat is over, and the enemy is now stabilizing its lines. This regrouping is a warning: we must not mistake their reorganization for weakness."
+        ],
+        "subheadline": "{{civilization}} shifts to {{posture}} near {{city}}",
+        "settled": true
       },
       {
         "id": "enemy-front-posture-regroup-broadcast",
@@ -273,7 +289,7 @@
         "genre": "report",
         "headline": "The board at {{city}} is updated",
         "body": [
-          "The front board for {{city}} was updated on {{observedTurn}}. The reading moved from {{previousPosture}} to {{posture}} in the {{domain}} zone, and the city is held by {{civilization}}. In plain words: the force our watchers saw pulling back has stopped and is being put in order again."
+          "The front board for {{city}} was updated on {{observedTurn}}. The reading moved from {{previousPosture}} to {{posture}} in the {{domain}} area, and the city is held by {{civilization}}. In plain words: the force our watchers saw pulling back has stopped and is being put in order again."
         ]
       },
       {
@@ -281,10 +297,11 @@
         "voice": "pamphlet",
         "stance": "populist",
         "genre": "editorial",
-        "headline": "A different word for the same ground at {{city}}",
+        "headline": "A False Retreat at {{city}}!",
         "body": [
-          "The map room has changed its entry for {{city}} from {{previousPosture}} to {{posture}}, dated {{observedTurn}}. A change of that kind is a judgment about the {{domain}} zone, and readers who follow the front will want it explained in plain language. The {{terms.civic.government}} should say what the new word means and how long it expects the reading to stand."
-        ]
+          "On {{observedTurn}}, the {{civilization}} ceased their {{previousPosture}} to {{posture}} in the {{domain}} area. Was the withdrawal just a trick to lure us into a false sense of security? Our {{terms.civic.people}} cannot sleep while the enemy gathers strength so close to {{city}}. Stop the talk in the council and send the guards now!"
+        ],
+        "settled": true
       }
     ]
   },
@@ -382,10 +399,11 @@
         "voice": "feed",
         "stance": "neutral",
         "genre": "report",
-        "headline": "Enemy troops just showed up near {{city}}",
+        "headline": "Sightings near {{city}}",
         "body": [
-          "Enemy troops near the city. Banners: {{enemies}}. Close enough that the watch can name them."
-        ]
+          "Troops from {{enemies}} are now near {{city}}. Local defenses are responding and the government has been notified. Check the latest reports for troop strength."
+        ],
+        "settled": true
       }
     ]
   },
@@ -546,10 +564,12 @@
         "stance": "neutral",
         "genre": "analysis",
         "when": "near",
-        "headline": "{{city}} falls to {{winner}}",
+        "headline": "The Fall of {{city}}",
         "body": [
-          "{{city}} has passed from {{loser}} to {{winner}}, at a distance of {{distance}} from our border. A town that close is a market, a road junction and a warning, depending on who holds it. The flag has changed; the garrison {{winner}} leaves behind will decide the road and the market in the seasons ahead."
-        ]
+          "The capture of {{city}} by {{winner}} has redrawn the regional map, bringing the front line just {{distance}} from our own borders. This victory gives {{winner}} a dominant tactical position over {{loser}}, threatening trade routes and settlements. Whether this serves as a buffer or a bridgehead for further aggression, {{terms.civilization}} must now reckon with the reality of {{winner}}'s expanded ambition."
+        ],
+        "subheadline": "{{winner}} seizes key hub from {{loser}}",
+        "settled": true
       },
       {
         "id": "nearby-city-captured-notice",
@@ -557,10 +577,11 @@
         "stance": "neutral",
         "genre": "notice",
         "when": "near",
-        "headline": "Notice from abroad: {{city}}",
+        "headline": "Conquest in {{city}}",
         "body": [
-          "Notice is given that {{city}}, formerly held by {{loser}}, {{distance}} from our frontier, is now held by {{winner}}. Travelers should expect new guards and new questions at its gate. Merchants with goods in its warehouses should present their papers before the week is out."
-        ]
+          "We are informed that {{city}}, located {{distance}} from our borders, has been seized by {{winner}} from the control of {{loser}}."
+        ],
+        "settled": true
       },
       {
         "id": "nearby-city-captured-tabloid",
@@ -568,10 +589,12 @@
         "stance": "local",
         "genre": "report",
         "when": "near",
-        "headline": "A new flag {{distance}} out",
+        "headline": "{{winner}} AT OUR DOORSTEP!",
         "body": [
-          "{{distance}} from our farms, the flag over {{city}} has changed. {{winner}} took it from {{loser}}, and the market opened the next morning as if nothing had happened. The stallholders have seen conquerors before."
-        ]
+          "{{winner}} has seized {{city}} from {{loser}}. Refugees are already streaming in, as the enemy is only {{distance}} from here. We can hear the drums; our walls better be strong."
+        ],
+        "subheadline": "{{city}} falls to the enemy",
+        "settled": true
       }
     ]
   },
@@ -619,6 +642,20 @@
         "headline": "The balance of arms has turned",
         "body": [
           "In this season the army of {{neighbor}} exceeded our own in number. The war office entered the change without comment, as it enters the weather. The frontier regiments were ordered to stand their ground and report."
+        ]
+      },
+      {
+        "id": "neighbor-army-overtakes-agents",
+        "voice": "press",
+        "stance": "hawkish",
+        "genre": "analysis",
+        "when": "player.is.watched",
+        "weight": {
+          "base": 3
+        },
+        "headline": "Our agent reports the count in {{neighbor}}",
+        "body": [
+          "The count that put {{neighbor}}'s army above ours did not come from a clerk's guess. Our agent in that country now reports it from the drill yards and the roads around them. The war office holds a number it can defend, and the number is not in our favor."
         ]
       }
     ]
@@ -730,20 +767,22 @@
     "variants": [
       {
         "id": "own-front-posture-counterattack-report",
-        "headline": "Our front at {{city}} is read as {{posture}}",
+        "headline": "{{city}} prepares to push back",
         "body": [
-          "Our own observers entered a new reading for the front at {{city}} on {{observedTurn}}. The {{domain}} entry moved from {{previousPosture}} to {{posture}}, and the city is ours. The new word means our staff sees an opening around the walls and intends to strike into it."
-        ]
+          "The defense of {{city}} has evolved. As of {{observedTurn}}, the {{terms.civic.government}} has ordered a move from {{previousPosture}} to a {{posture}} posture."
+        ],
+        "settled": true
       },
       {
         "id": "own-front-posture-counterattack-analysis",
         "voice": "press",
         "stance": "hawkish",
         "genre": "analysis",
-        "headline": "From {{previousPosture}} to {{posture}} at {{city}}",
+        "headline": "The Tide Turns at {{city}}",
         "body": [
-          "The front assessment for {{city}} changed from {{previousPosture}} to {{posture}} on {{observedTurn}}. A counterattack reading says our observers see an opening in the {{domain}} zone. Openings of that kind do not wait, and the staff that called for the counter has a short season to use it."
-        ]
+          "On {{observedTurn}}, our forces near {{city}} transitioned from a {{previousPosture}} stance to {{posture}} in the {{domain}}. The period of absorbing the enemy's blows is over, as we are seizing the initiative and forcing the enemy onto their heels. We have weathered the storm; now we are the storm."
+        ],
+        "settled": true
       },
       {
         "id": "own-front-posture-counterattack-broadcast",
@@ -776,40 +815,44 @@
     "variants": [
       {
         "id": "own-front-posture-defensive-report",
-        "headline": "The front at {{city}} is read as {{posture}}",
+        "headline": "Defensive measures increased in {{city}}",
         "body": [
-          "Our observers entered a new front reading for {{city}} on {{observedTurn}}. The {{domain}} entry moved from {{previousPosture}} to {{posture}}, and the city is ours. The new word means the staff wants the force around it dug in and holding its ground."
-        ]
+          "Military reports indicate that {{city}} transitioned to a {{posture}} posture on {{observedTurn}}. The shift from {{previousPosture}} reflects a renewed emphasis on city fortifications."
+        ],
+        "settled": true
       },
       {
         "id": "own-front-posture-defensive-gazette",
         "voice": "gazette",
         "stance": "government-critical",
         "genre": "report",
-        "headline": "At {{city}}, a quieter word on the board",
+        "headline": "The Gates of {{city}} Barred",
         "body": [
-          "The front entry for {{city}} moved from {{previousPosture}} to {{posture}} on {{observedTurn}}. The dispatch gives the new reading for the {{domain}} zone and no explanation of what prompted it. Our readers may judge for themselves whether the change follows the ground or the mood at headquarters."
-        ]
+          "Letters from the district relate that {{city}} has shifted to {{posture}}, leaving behind its {{previousPosture}} disposition. While the {{terms.civic.government}} claims this ensureth the safety of the realm, the {{terms.civic.people}} must wonder why such a desperate measure became necessary."
+        ],
+        "settled": true
       },
       {
         "id": "own-front-posture-defensive-crier",
         "voice": "crier",
         "stance": "local",
         "genre": "notice",
-        "headline": "Hear it, {{city}}! The board has a new word",
+        "headline": "Defense of {{city}}",
         "body": [
-          "The watch board at {{city}} has a fresh entry, dated {{observedTurn}}. The word for the {{domain}} zone is now {{posture}}, where the last entry said {{previousPosture}}. Ask at the gate for the full notice, and keep the streets clear for the runners."
-        ]
+          "Hear me, {{terms.civic.people}}! The army is no longer marching forward. They are digging in right here in {{city}} to hold the line. We are the shield now! The shield of {{terms.civilization}}!"
+        ],
+        "settled": true
       },
       {
         "id": "own-front-posture-defensive-chronicle",
         "voice": "chronicle",
         "stance": "neutral",
         "genre": "report",
-        "headline": "The record of {{city}}'s front",
+        "headline": "The Defensive Disposition of {{city}}",
         "body": [
-          "In this season the front book for {{city}} passed from {{previousPosture}} to {{posture}}. The change is dated {{observedTurn}} and concerns the {{domain}} zone. The scribe records the new reading and adds no interpretation."
-        ]
+          "At {{observedTurn}}, the {{terms.civic.government}} ordered the forces in {{city}} to adopt a {{posture}} posture. This shift from {{previousPosture}} was executed within {{city}}'s {{domain}} area, as recorded by the {{terms.civic.government}}'s scribes."
+        ],
+        "settled": true
       }
     ]
   },

@@ -348,6 +348,20 @@
         "body": [
           "They say the herd boys came back from the ridge talking of {{city}}, where the {{wonder}} now stands crowned above the towers. They could not agree how high it stood, and the miller says he will go and look for himself. A neighbor's roof that tall changes the view from his field, and from ours as well."
         ]
+      },
+      {
+        "id": "enemy-wonder-nearby-agent",
+        "voice": "press",
+        "stance": "hawkish",
+        "genre": "report",
+        "when": "city.is.watched",
+        "weight": {
+          "base": 3
+        },
+        "headline": "Our agent in {{city}} reports the {{wonder}}",
+        "body": [
+          "An agent of ours inside {{city}} now reports that the {{wonder}} is finished and that the work crews have left by the north gate. The last stone stands under an enemy flag, at a city close to our frontier. The war office has the word now, and there is no longer any doubt about what the enemy has built."
+        ]
       }
     ]
   },
@@ -398,6 +412,20 @@
         "headline": "The {{wonder}} at {{city}} is complete",
         "body": [
           "Letters from {{city}} relate that the {{wonder}} now stands finished there, and that the masons' guild rang its bell when the last stone went up. Whatever divides the courts, a work like this is a pleasure shared. May it long draw a crowd."
+        ]
+      },
+      {
+        "id": "foreign-wonder-completed-agent",
+        "voice": "press",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "city.is.watched",
+        "weight": {
+          "base": 3
+        },
+        "headline": "Our agent in {{city}} reports the {{wonder}}",
+        "body": [
+          "One of our people in {{city}} now reports that the {{wonder}} is finished. The scaffolding has come down, the guilds have marched, and the account has reached us by the usual road. {{civilization}} has a new hall, and we have a report of it that did not come from a rumor."
         ]
       }
     ]

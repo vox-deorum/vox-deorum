@@ -15,7 +15,7 @@
       "dealTerms": "(weGive === null ? '' : 'We provide ' + weGive + '.') + (weGet === null ? '' : (weGive === null ? '' : ' ') + partner + ' provides ' + weGet + '.')"
     },
     "tier": "major",
-    "adjust": "event.fromPlayer.self ? event.toPlayer.stake.relation : event.fromPlayer.stake.relation",
+    "adjust": "event.stake.partner",
     "tags": ["politics", "economy", "international"]
   },
   {
@@ -35,7 +35,7 @@
       "dealTerms": "(weGive === null ? '' : 'We provide ' + weGive + '.') + (weGet === null ? '' : (weGive === null ? '' : ' ') + partner + ' provides ' + weGet + '.')"
     },
     "tier": "routine",
-    "adjust": "event.fromPlayer.self ? event.toPlayer.stake.relation : event.fromPlayer.stake.relation",
+    "adjust": "event.stake.partner",
     "tags": ["politics", "international"]
   },
   {
@@ -55,7 +55,7 @@
       "dealTerms": "(weGive === null ? '' : 'We provide ' + weGive + '.') + (weGet === null ? '' : (weGive === null ? '' : ' ') + partner + ' provides ' + weGet + '.')"
     },
     "tier": "notable",
-    "adjust": "event.fromPlayer.self ? event.toPlayer.stake.relation : event.fromPlayer.stake.relation",
+    "adjust": "event.stake.partner",
     "tags": ["economy", "trade", "international"]
   },
   {
@@ -74,7 +74,7 @@
       "dealTerms": "(weGive === null ? '' : 'We provide ' + weGive + '.') + (weGet === null ? '' : (weGive === null ? '' : ' ') + partner + ' provides ' + weGet + '.')"
     },
     "tier": "notable",
-    "adjust": "event.fromPlayer.self ? event.toPlayer.stake.relation : event.fromPlayer.stake.relation",
+    "adjust": "event.stake.partner",
     "tags": ["politics", "international"]
   },
   {
@@ -93,7 +93,7 @@
       "dealTerms": "(weGive === null ? '' : 'We provide ' + weGive + '.') + (weGet === null ? '' : (weGive === null ? '' : ' ') + partner + ' provides ' + weGet + '.')"
     },
     "tier": "notable",
-    "adjust": "event.fromPlayer.self ? event.toPlayer.stake.relation : event.fromPlayer.stake.relation",
+    "adjust": "event.stake.partner",
     "tags": ["science", "politics", "international"]
   },
   {
@@ -113,7 +113,7 @@
       "dealTerms": "(weGive === null ? '' : 'We provide ' + weGive + '.') + (weGet === null ? '' : (weGive === null ? '' : ' ') + partner + ' provides ' + weGet + '.')"
     },
     "tier": "notable",
-    "adjust": "event.fromPlayer.self ? event.toPlayer.stake.relation : event.fromPlayer.stake.relation",
+    "adjust": "event.stake.partner",
     "tags": ["science", "economy", "trade", "international"]
   }
 ]

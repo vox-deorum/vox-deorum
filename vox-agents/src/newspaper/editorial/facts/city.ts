@@ -41,9 +41,12 @@ export function buildCitySnapshotFacts(row: NewspaperSnapshot, context: FactBuil
   const unhappiness = unhappinessCauses(row.values.UnhappinessSources);
   const causes = unhappiness && recordedFact(unhappiness, sources);
   if (causes) fields.unhappiness = causes;
-  // Presence is projected as a boolean. Keep an observed false distinct from an absent reading.
+  // Presence and its network points are projected together. Keep an observed false distinct from an absent reading.
   const spyPresent = recordedBoolean(row.values.OurSpyPresent);
   if (spyPresent !== undefined) fields.ourSpyPresent = fact(spyPresent, sources);
+  const spyPoints = row.values.OurSpyPoints;
+  if (typeof spyPoints === 'number' && Number.isFinite(spyPoints) && spyPoints >= 0)
+    fields.ourSpyPoints = fact(spyPoints, sources);
   const owner = recordedId(row.values.OwnerID);
   if (owner !== undefined && context.players.some(player => player.subjectID === owner)) {
     fields.owner = fact(reference('player', owner), sources);

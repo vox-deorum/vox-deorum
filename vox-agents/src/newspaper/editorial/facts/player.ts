@@ -219,6 +219,10 @@ export function buildPlayerSnapshotFacts(row: NewspaperSnapshot, context: FactBu
       const value = recordedBoolean(row.values[stored]);
       if (value !== undefined) fields[name] = fact(value, sources);
     }
+    // Network points are a nonnegative number, with zero for a readable absence.
+    const points = row.values.OurDiplomatPoints;
+    if (typeof points === 'number' && Number.isFinite(points) && points >= 0)
+      fields.ourDiplomatPoints = fact(points, sources);
   }
   const branches = fields.policyBranches;
   if (branches && context.ideologies) {

@@ -113,10 +113,11 @@
         "stance": "populist",
         "genre": "anecdote",
         "when": "key == 'culture'",
-        "headline": "Boredom in {{count|city|cities}}",
+        "headline": "WHERE IS THE LIFE?",
         "body": [
-          "The complaint is the same in {{count}} of our cities: nothing to do once the day's work is done. Benches in the square fill before dark and empty by the first bell. A fiddler in one of those towns has played the same three songs all summer, and nobody has asked for a fourth."
-        ]
+          "A student threw his textbook into the mud this morning. He says the books talk of a glory he cannot see or feel. In {{count}} cities, the {{terms.civic.people}} are waking up to a very dull reality."
+        ],
+        "settled": true
       }
     ]
   },
@@ -155,10 +156,11 @@
         "voice": "tabloid",
         "stance": "populist",
         "genre": "anecdote",
-        "headline": "Empty stalls in {{city}}",
+        "headline": "BELLY OF FIRE!",
         "body": [
-          "A woman in {{city}} keeps a chipped bowl by her door for the bread cart. Last winter the cart came twice a day; now it comes once and is empty before she reaches the corner. She has stopped hurrying, she says, because hurrying does not bake bread."
-        ]
+          "Mrs. Gable stared into her cooking pot today and found only water. In {{city}}, {{faminePopulation}} {{owner.civic.people}} are feeling that same hollow ache. Are we in a hunger game now?"
+        ],
+        "settled": true
       },
       {
         "id": "city-famine-unrest-notice",
@@ -258,10 +260,11 @@
         "voice": "tabloid",
         "stance": "populist",
         "genre": "anecdote",
-        "headline": "The granary at {{city}} is emptying",
+        "headline": "THE EMPTY PLATE!",
         "body": [
-          "A baker on the high street in {{city}} now cuts every loaf in two before she opens the shop. The granary that feeds her ovens holds {{foodStored}} of grain and loses {{shortfall}} of that a day. She has stopped taking orders for next week, and her customers have stopped asking."
-        ]
+          "A mother divided one small potato into four tiny pieces today. The {{owner.civic.government}} tells the world that {{city}} is prospering, but her children cannot eat those words."
+        ],
+        "settled": true
       },
       {
         "id": "starvation-without-siege-ledger",

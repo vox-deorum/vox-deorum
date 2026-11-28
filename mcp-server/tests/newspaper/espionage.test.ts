@@ -45,17 +45,19 @@ describe('passive espionage presence', () => {
 
     const result = await queryNewspaperEvidence(db, { receiverPlayerID: 0, previousCheckTurn: 10, cutoffTurn: 11 });
 
-    expect(result.cities.find(row => row.subjectID === 42)?.values).toMatchObject({ OurSpyPresent: true });
-    expect(result.cities.find(row => row.subjectID === 40)?.values).toMatchObject({ OurSpyPresent: false });
+    expect(result.cities.find(row => row.subjectID === 42)?.values).toMatchObject({ OurSpyPresent: true, OurSpyPoints: 500 });
+    expect(result.cities.find(row => row.subjectID === 40)?.values).toMatchObject({ OurSpyPresent: false, OurSpyPoints: 0 });
     expect(result.players.find(row => row.subjectID === 1)?.values).toMatchObject({
       OurDiplomatThere: true,
+      OurDiplomatPoints: 200,
       TheirDiplomatHere: false,
       PolicyBranches: { Tradition: ['A', 'B'] }
     });
-    expect(result.cities.find(row => row.subjectID === 44)?.values).toMatchObject({ OurSpyPresent: false });
-    expect(result.players.find(row => row.subjectID === 2)?.values).toMatchObject({ OurDiplomatThere: false });
+    expect(result.cities.find(row => row.subjectID === 44)?.values).toMatchObject({ OurSpyPresent: false, OurSpyPoints: 0 });
+    expect(result.players.find(row => row.subjectID === 2)?.values).toMatchObject({ OurDiplomatThere: false, OurDiplomatPoints: 0 });
     expect(result.players.find(row => row.subjectID === 2)?.values).not.toHaveProperty('TheirDiplomatHere');
     expect(result.cities.find(row => row.subjectID === 45)?.values).not.toHaveProperty('OurSpyPresent');
+    expect(result.cities.find(row => row.subjectID === 45)?.values).not.toHaveProperty('OurSpyPoints');
   });
 
   it('leaves presence unknown when the relevant roster was not recorded', async () => {
@@ -66,21 +68,23 @@ describe('passive espionage presence', () => {
     const result = await queryNewspaperEvidence(db, { receiverPlayerID: 0, previousCheckTurn: 10, cutoffTurn: 11 });
 
     expect(result.cities.find(row => row.subjectID === 42)?.values).not.toHaveProperty('OurSpyPresent');
+    expect(result.cities.find(row => row.subjectID === 42)?.values).not.toHaveProperty('OurSpyPoints');
     expect(result.players.find(row => row.subjectID === 1)?.values).not.toHaveProperty('OurDiplomatThere');
+    expect(result.players.find(row => row.subjectID === 1)?.values).not.toHaveProperty('OurDiplomatPoints');
     expect(result.players.find(row => row.subjectID === 1)?.values).not.toHaveProperty('TheirDiplomatHere');
     expect(result.players.find(row => row.subjectID === 1)?.values).toMatchObject({ PolicyBranches: { Tradition: ['A', 'B'] } });
   });
 });
 
 describe('espionage city detail', () => {
-  it('exposes foreign city detail without a spy and reports OurSpyPresent from the roster', async () => {
+  it('exposes foreign city detail without a spy and reports OurSpyPresent and OurSpyPoints from the roster', async () => {
     await city(22, 42, 11, 'Civ1', 'Port', 1, { IsCapital: 1, ProductionPerTurn: 6, FoodPerTurn: 4 });
     await summary(db, 20, 0, 11, 2, { DiplomatPoints: {}, Spies: {} });
     const request = { receiverPlayerID: 0, previousCheckTurn: 10, cutoffTurn: 11 };
 
     const withoutAgent = await queryNewspaperEvidence(db, request);
     expect(withoutAgent.cities.find(row => row.subjectID === 42)?.values)
-      .toMatchObject({ OurSpyPresent: false, ProductionPerTurn: 6, FoodPerTurn: 4 });
+      .toMatchObject({ OurSpyPresent: false, OurSpyPoints: 0, ProductionPerTurn: 6, FoodPerTurn: 4 });
 
     await summary(db, 21, 0, 12, 2, {
       DiplomatPoints: {},
@@ -88,7 +92,7 @@ describe('espionage city detail', () => {
     });
     const withAgent = await queryNewspaperEvidence(db, { ...request, cutoffTurn: 12 });
     expect(withAgent.cities.find(row => row.subjectID === 42)?.values)
-      .toMatchObject({ OurSpyPresent: true, ProductionPerTurn: 6 });
+      .toMatchObject({ OurSpyPresent: true, OurSpyPoints: 500, ProductionPerTurn: 6 });
   });
 
   it('exposes foreign city detail while a duplicate city name leaves spy presence unknown', async () => {
@@ -105,6 +109,7 @@ describe('espionage city detail', () => {
     const port = evidence.cities.find(row => row.subjectID === 42)!;
     expect(port.values.FoodPerTurn).toBe(999);
     expect(port.values).not.toHaveProperty('OurSpyPresent');
+    expect(port.values).not.toHaveProperty('OurSpyPoints');
   });
 });
 
@@ -122,6 +127,7 @@ describe('espionage policy insight', () => {
     expect(result.players.find(row => row.subjectID === 1)?.values).toMatchObject({
       TheirDiplomatHere: true,
       OurDiplomatThere: false,
+      OurDiplomatPoints: 0,
       PolicyBranches: { Tradition: ['A', 'B'] }
     });
   });

@@ -1,6 +1,26 @@
 [
   {
+    "id": "diplomat-network-milestone",
+    "summary": "Our diplomat's network at a foreign capital crossed 200 or 800 points.",
+    "subject": "player",
+    "when": [
+      "player.is.foreignMajor",
+      "player.ourDiplomatThere",
+      "player.get('before.ourDiplomatPoints') !== undefined",
+      "crossed(player.get('ourDiplomatPoints') ?? 0, player.before.ourDiplomatPoints, 200) || crossed(player.get('ourDiplomatPoints') ?? 0, player.before.ourDiplomatPoints, 800)"
+    ],
+    "values": {
+      "civilization": "player.name",
+      "threshold": "crossed(player.get('ourDiplomatPoints') ?? 0, player.before.ourDiplomatPoints, 800) ? 800 : 200",
+      "points": "player.get('ourDiplomatPoints') ?? 0"
+    },
+    "tier": "threshold === 800 ? 'notable' : 'routine'",
+    "adjust": "player.stake.relation",
+    "tags": ["politics", "international"]
+  },
+  {
     "id": "election-operation",
+    "summary": "Our spy rigged an election in a city-state, gaining or losing influence there.",
     "subject": "event",
     "event": ["ElectionResultSuccess", "ElectionResultFailure"],
     "when": [
@@ -10,13 +30,55 @@
     "values": {
       "success": "event.type === 'ElectionResultSuccess'",
       "cityState": "event.cityState",
-      "influence": "event.knows('influenceChange') ? event.influenceChange : null"
+      "influence": "event.get('influenceChange') ?? null"
     },
     "tier": "success ? 'notable' : 'routine'",
+    "adjust": "players.find(p => p.get('name') === event.get('cityState'))?.stake.relation ?? 0",
+    "tags": ["politics", "international"]
+  },
+  {
+    "id": "foreign-policy-adopted",
+    "summary": "A foreign major civilization adopted a policy.",
+    "subject": "event",
+    "event": "PlayerAdoptPolicy",
+    "when": [
+      "event.player.is.foreignMajor",
+      "event.policy"
+    ],
+    "values": {
+      "civilization": "event.player.name",
+      "policy": "event.policy",
+      "envoy": "event.player.get('ourDiplomatThere') === true"
+    },
+    "tier": "routine",
+    "adjust": "event.player.stake.relation",
+    "tags": ["politics", "international"]
+  },
+  {
+    "id": "foreign-treaty-obtained",
+    "summary": "Two other major civilizations completed a deal whose terms we could read.",
+    "subject": "event",
+    "event": "DealMade",
+    "when": [
+      "!event.fromPlayer.self && !event.toPlayer.self",
+      "event.fromPlayer.major && event.toPlayer.major",
+      "Array.isArray(event.get('tradedItems'))",
+      "Array.isArray(event.get('fromGives')) && Array.isArray(event.get('toGives'))",
+      "!event.tradedItems.some(item => ['ThirdPartyWar', 'ThirdPartyPeace', 'PeaceTreaty', 'DefensivePact'].includes(item.get('itemType')))"
+    ],
+    "values": {
+      "from": "event.fromPlayer.name",
+      "to": "event.toPlayer.name",
+      "fromGives": "event.fromGives.join(', ') || null",
+      "toGives": "event.toGives.join(', ') || null"
+    },
+    "tier": "notable",
+    "adjust": "Math.max(event.fromPlayer.stake.relation, event.toPlayer.stake.relation)",
     "tags": ["politics", "international"]
   },
   {
     "id": "our-diplomat-abroad",
+    "summary": "We posted a diplomat to a foreign capital during this period.",
     "subject": "player",
     "when": [
       "!player.self && player.major",
@@ -25,116 +87,186 @@
     ],
     "values": {
       "civilization": "player.name",
-      "capital": "player.knows('capital') && player.capital.knows('name') ? player.capital.name : null"
+      "capital": "player.get('capital.name') ?? null"
     },
-    "tier": "routine",
+    "tier": "printed('our-diplomat-abroad') === null ? 'notable' : 'routine'",
+    "adjust": "player.stake.relation",
+    "tags": ["politics", "international"]
+  },
+  {
+    "id": "our-diplomat-leaves",
+    "summary": "Our diplomat left a foreign capital.",
+    "subject": "player",
+    "when": [
+      "player.is.foreignMajor",
+      "player.get('before.ourDiplomatThere') === true",
+      "player.ourDiplomatThere === false"
+    ],
+    "values": {
+      "civilization": "player.name",
+      "war": "player.get('enemy') === true"
+    },
+    "tier": "war ? 'notable' : 'routine'",
     "adjust": "player.stake.relation",
     "tags": ["politics", "international"]
   },
   {
     "id": "spy-caught-at-home",
+    "summary": "A foreign spy was identified or killed while operating in our lands.",
     "subject": "event",
     "event": "EspionageResult",
+    "window": "long",
     "when": [
-      "event.perspective === 'target'",
+      "event.is.foreignOperation",
       "event.spyResult === 'Identified' || event.spyResult === 'Killed'"
     ],
     "values": {
       "result": "event.spyResult",
-      "cityName": "event.knows('cityName') ? event.cityName : null"
+      "cityName": "event.get('cityName') ?? null",
+      "culprit": "event.get('sourcePlayer.name') ?? null",
+      "earlier": "event.get('sourcePlayer.id') === undefined ? 0 : events.filter(e => e.turn < event.turn && e.is.foreignOperation && e.get('sourcePlayer.id') === event.get('sourcePlayer.id')).length"
     },
-    "tier": "event.spyResult === 'Killed' ? 'major' : 'notable'",
+    "tier": "event.spyResult === 'Killed' || earlier > 0 ? 'major' : 'notable'",
+    "adjust": "event.stake.espionage",
     "tags": ["politics", "international"]
   },
   {
     "id": "spy-detected-abroad",
+    "summary": "One of our spies was detected abroad.",
     "subject": "event",
     "event": "EspionageResult",
     "when": [
-      "event.perspective === 'source'",
+      "event.is.ourOperation",
       "event.spyResult === 'Detected'"
     ],
     "values": {
       "result": "event.spyResult",
-      "cityName": "event.knows('cityName') && typeof event.cityName === 'string' ? event.cityName : null",
-      "target": "event.knows('targetPlayer') && event.targetPlayer.knows('name') ? event.targetPlayer.name : null",
-      "possibleTechnology": "event.knows('tech') && typeof event.tech === 'string' ? event.tech : null"
+      "cityName": "event.get('cityName') ?? null",
+      "target": "event.get('targetPlayer.name') ?? null",
+      "possibleTechnology": "event.get('tech') ?? null"
     },
     "tier": "possibleTechnology ? 'notable' : 'routine'",
+    "adjust": "event.stake.espionage",
     "tags": ["politics", "international"]
   },
   {
     "id": "spy-detected-at-home",
+    "summary": "A foreign spy was detected in our lands.",
     "subject": "event",
     "event": "EspionageResult",
     "when": [
-      "event.perspective === 'target'",
+      "event.is.foreignOperation",
       "['Detected', 'KilledNotIdentified'].includes(event.spyResult)"
     ],
     "values": {
       "result": "event.spyResult",
-      "cityName": "event.knows('cityName') ? event.cityName : null"
+      "cityName": "event.get('cityName') ?? null"
     },
     "tier": "result === 'KilledNotIdentified' ? 'notable' : 'routine'",
+    "adjust": "event.stake.espionage",
     "tags": ["politics", "international"]
   },
   {
-    "id": "spy-exposed-abroad",
-    "subject": "event",
-    "event": "EspionageResult",
-    "when": [
-      "event.perspective === 'source'",
-      "['Identified', 'Killed', 'KilledNotIdentified'].includes(event.spyResult)"
-    ],
-    "values": {
-      "result": "event.spyResult",
-      "cityName": "event.knows('cityName') && typeof event.cityName === 'string' ? event.cityName : null",
-      "target": "event.knows('targetPlayer') && event.targetPlayer.knows('name') ? event.targetPlayer.name : null",
-      "possibleTechnology": "event.knows('tech') && typeof event.tech === 'string' ? event.tech : null"
-    },
-    "tier": "result === 'Identified' ? 'notable' : 'major'",
-    "tags": ["politics", "international"]
-  },
-  {
-    "id": "spy-may-gain-technology",
-    "subject": "event",
-    "event": "EspionageResult",
-    "when": [
-      "event.perspective === 'source'",
-      "event.spyResult === 'Undetected'",
-      "event.tech"
-    ],
-    "values": {
-      "possibleTechnology": "event.tech",
-      "cityName": "event.knows('cityName') ? event.cityName : null",
-      "target": "event.knows('targetPlayer') && event.targetPlayer.knows('name') ? event.targetPlayer.name : null"
-    },
-    "tier": "notable",
-    "tags": ["politics", "international"]
-  },
-  {
-    "id": "spy-posted-abroad",
+    "id": "spy-dispatch",
+    "summary": "A spy we have in a foreign city can report its production, unrest or food trouble.",
     "subject": "city",
+    "repeat": "medium",
     "when": [
-      "city.foreign && city.knows('name')",
-      "city.ourSpyPresent",
-      "city.get('before.ourSpyPresent') === false",
-      "city.owner.major && city.get('before.owner.id') === city.owner.id"
+      "city.is.watched",
+      "city.owner.major",
+      "city.knows('name')",
+      "city.get('currentProduction') || city.get('unhappiness.top') || city.is.get('starving') === true"
     ],
     "values": {
-      "civilization": "city.owner.name"
+      "civilization": "city.owner.name",
+      "production": "city.get('currentProduction') ?? null",
+      "turnsLeft": "(city.get('productionTurnsLeft') ?? 0) > 0 ? city.productionTurnsLeft : null",
+      "unrest": "city.get('unhappiness.top') ?? null",
+      "starving": "city.is.get('starving') === true"
     },
     "tier": "routine",
     "adjust": "city.stake.place",
     "tags": ["politics", "international"]
   },
   {
+    "id": "spy-exposed-abroad",
+    "summary": "One of our spies was identified or killed abroad.",
+    "subject": "event",
+    "event": "EspionageResult",
+    "when": [
+      "event.is.ourOperation",
+      "['Identified', 'Killed', 'KilledNotIdentified'].includes(event.spyResult)"
+    ],
+    "values": {
+      "result": "event.spyResult",
+      "cityName": "event.get('cityName') ?? null",
+      "target": "event.get('targetPlayer.name') ?? null",
+      "possibleTechnology": "event.get('tech') ?? null"
+    },
+    "tier": "result === 'Identified' ? 'notable' : 'major'",
+    "adjust": "event.stake.espionage",
+    "tags": ["politics", "international"]
+  },
+  {
+    "id": "spy-may-gain-technology",
+    "summary": "An undetected operation by our spy may have obtained a foreign technology.",
+    "subject": "event",
+    "event": "EspionageResult",
+    "when": [
+      "event.is.ourOperation",
+      "event.spyResult === 'Undetected'",
+      "event.tech"
+    ],
+    "values": {
+      "possibleTechnology": "event.tech",
+      "cityName": "event.get('cityName') ?? null",
+      "target": "event.get('targetPlayer.name') ?? null"
+    },
+    "tier": "notable",
+    "adjust": "event.stake.espionage",
+    "tags": ["politics", "international"]
+  },
+  {
+    "id": "spy-posted-abroad",
+    "summary": "We stationed a spy in a foreign city.",
+    "subject": "city",
+    "when": [
+      "city.is.watched",
+      "city.knows('name')",
+      "city.get('before.ourSpyPresent') === false",
+      "city.owner.major && city.get('before.owner.id') === city.owner.id"
+    ],
+    "values": {
+      "civilization": "city.owner.name"
+    },
+    "tier": "city.get('isCapital') ? 'notable' : 'routine'",
+    "adjust": "city.stake.place",
+    "tags": ["politics", "international"]
+  },
+  {
     "id": "their-diplomat-arrives",
+    "summary": "A foreign major posted a diplomat to our capital.",
     "subject": "player",
     "when": [
       "!player.self && player.major",
       "player.theirDiplomatHere",
       "player.get('before.theirDiplomatHere') === false"
+    ],
+    "values": {
+      "civilization": "player.name"
+    },
+    "tier": "routine",
+    "adjust": "player.stake.relation",
+    "tags": ["politics", "international"]
+  },
+  {
+    "id": "their-diplomat-leaves",
+    "summary": "A foreign major's diplomat left our capital.",
+    "subject": "player",
+    "when": [
+      "player.is.foreignMajor",
+      "player.get('before.theirDiplomatHere') === true",
+      "player.theirDiplomatHere === false"
     ],
     "values": {
       "civilization": "player.name"

@@ -54,23 +54,6 @@
     "tags": ["politics", "military", "international"]
   },
   {
-    "id": "neighbor-puppet-annexed",
-    "subject": "city",
-    "window": "recent",
-    "when": [
-      "city.foreign && city.knows('name')",
-      "city.get('owner.name')",
-      "city.get('before.isPuppet')",
-      "!city.isPuppet && city.isOccupied",
-      "city.get('before.owner.id') == city.owner.id"
-    ],
-    "values": {
-      "distance": "city.distance.own"
-    },
-    "tier": "notable",
-    "adjust": "city.stake.place"
-  },
-  {
     "id": "city-puppet-annexed",
     "subject": "city",
     "window": "recent",
@@ -82,24 +65,6 @@
     ],
     "tier": "notable",
     "adjust": "city.stake.place",
-    "tags": ["cities", "domestic"]
-  },
-  {
-    "id": "occupied-city-resists",
-    "subject": "city",
-    "when": [
-      "city.knows('name') && city.own",
-      "city.isOccupied",
-      "city.resistanceTurns > 0"
-    ],
-    "values": {
-      "turns": "city.resistanceTurns",
-      "population": "city.get('population') ?? null",
-      "formerOwner": "city.get('formerOwner.name') ?? null",
-      "unrestPoints": "city.get('happinessDelta') ?? null"
-    },
-    "tier": "notable",
-    "adjust": ["city.stake.place", "Math.min(10, 2 * turns)"],
     "tags": ["cities", "domestic"]
   },
   {
@@ -153,5 +118,40 @@
     "tier": "notable",
     "adjust": ["city.stake.place", "Math.min(10, 2 * turns)"],
     "tags": ["cities", "international"]
+  },
+  {
+    "id": "neighbor-puppet-annexed",
+    "subject": "city",
+    "window": "recent",
+    "when": [
+      "city.foreign && city.knows('name')",
+      "city.get('owner.name')",
+      "city.get('before.isPuppet')",
+      "!city.isPuppet && city.isOccupied",
+      "city.get('before.owner.id') == city.owner.id"
+    ],
+    "values": {
+      "distance": "city.distance.own"
+    },
+    "tier": "notable",
+    "adjust": "city.stake.place"
+  },
+  {
+    "id": "occupied-city-resists",
+    "subject": "city",
+    "when": [
+      "city.knows('name') && city.own",
+      "city.isOccupied",
+      "city.resistanceTurns > 0"
+    ],
+    "values": {
+      "turns": "city.resistanceTurns",
+      "population": "city.get('population') ?? null",
+      "formerOwner": "city.get('formerOwner.name') ?? null",
+      "unrestPoints": "city.get('happinessDelta') ?? null"
+    },
+    "tier": "notable",
+    "adjust": ["city.stake.place", "Math.min(10, 2 * turns)"],
+    "tags": ["cities", "domestic"]
   }
 ]

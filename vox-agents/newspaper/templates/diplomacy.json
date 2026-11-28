@@ -171,6 +171,20 @@
         "body": [
           "In this year {{player.leader}}, {{player.civic.leaderTitle}} of {{civilization}}, spoke a denunciation of our nation before assembled witnesses. The scribe has set down the words in full and marked the day beside them. No answer is entered in this record yet."
         ]
+      },
+      {
+        "id": "denounced-by-major-dispatch",
+        "voice": "press",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "player.get('ourDiplomatThere') === true",
+        "weight": {
+          "base": 3
+        },
+        "headline": "Our envoy in {{civilization}} sends word of the denunciation",
+        "body": [
+          "Our envoy at the court of {{civilization}} now reports the denunciation and the manner of its delivery. The ministers took their seats in public, and the words were spoken plainly enough for the gallery to hear. The dispatch has reached our foreign office, and no answer has been entered yet."
+        ]
       }
     ]
   },
@@ -377,6 +391,20 @@
         "headline": "The end of the {{friend}} friendship, weighed",
         "body": [
           "The friendship with {{friend}} is over, and the record is thinner for it. No troops were promised under that declaration, but confidence was, and confidence is what a merchant adds to the price of a road. Watch the correspondence from that capital grow shorter before anyone raises a voice."
+        ]
+      },
+      {
+        "id": "friendship-ends-dispatch",
+        "voice": "press",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "pair.other.get('ourDiplomatThere') === true",
+        "weight": {
+          "base": 3
+        },
+        "headline": "Our envoy in {{friend}} reports the friendship withdrawn",
+        "body": [
+          "Our envoy at the court of {{friend}} now reports that the friendship has been withdrawn. The minister who received him was courteous and brief, and no clerk was called to witness the farewell. The envoy writes that the halls are as busy as ever, and that no one there seems to miss us."
         ]
       }
     ]
@@ -617,6 +645,21 @@
         "body": [
           "Peace reaches a third state through a bargain between {{from}} and {{to}}, and that state never sat at the table. Its officers will learn the terms from a rider who arrives long after the ink has dried. Wars ended this way stop quickly and leave the men who fought them wondering what was traded above their heads."
         ]
+      },
+      {
+        "id": "third-party-peace-deal-envoy",
+        "voice": "press",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "!!fromGives && !!toGives && ours === false",
+        "weight": {
+          "base": 3
+        },
+        "headline": "Our envoy has the text from {{from}} and {{to}}",
+        "body": [
+          "Our envoy at the court of {{from}} obtained the text of the bargain with {{to}}. {{from}} gives: {{fromGives}}. {{to}} gives: {{toGives}}.",
+          "Among the entries is peace with a third state, which was not a party to the bargaining."
+        ]
       }
     ]
   },
@@ -652,7 +695,22 @@
         "when": "ours === false",
         "headline": "Other people's wars, other people's coin",
         "body": [
-          "The bargain between {{from}} and {{to}} pays for itself with a third nation's peace, and that nation was not asked. Our government had no seat at the table, and no plan has been published for the roads and cargo that will now cross a war zone. It should tell the country who will guard that trade, and with how many men."
+          "The bargain between {{from}} and {{to}} buys a war against a third nation, and that nation was not asked. Our government had no seat at the table, and no plan has been published for the roads and cargo that will now cross a war zone. It should tell the country who will guard that trade, and with how many men."
+        ]
+      },
+      {
+        "id": "third-party-war-deal-envoy",
+        "voice": "press",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "!!fromGives && !!toGives && ours === false",
+        "weight": {
+          "base": 3
+        },
+        "headline": "Our envoy has the terms between {{from}} and {{to}}",
+        "body": [
+          "Our envoy at the court of {{from}} obtained the text of the bargain with {{to}}. {{from}} gives: {{fromGives}}. {{to}} gives: {{toGives}}.",
+          "Among the entries is war against a third state, which was not a party to the bargaining."
         ]
       }
     ]

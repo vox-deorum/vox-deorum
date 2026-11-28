@@ -145,17 +145,36 @@ describe('newspaper player facts', () => {
         theirDiplomatHere: { value: true },
         ourDiplomatThere: { value: false },
       });
-      for (const key of ['theirDiplomatHere', 'ourDiplomatThere'] as const) {
+      for (const key of ['theirDiplomatHere', 'ourDiplomatThere', 'ourDiplomatPoints'] as const) {
         expect(buildPlayerSnapshotFacts(absent, context(6))).not.toHaveProperty(key);
         expect(buildPlayerSnapshotFacts(malformed, context(6))).not.toHaveProperty(key);
       }
     });
 
-    it('should keep presence off the receiver and city-states', () => {
-      const ownRow = snapshot(0, 45, 6, { TheirDiplomatHere: true, OurDiplomatThere: true });
-      const minorRow = snapshot(22, 46, 6, { TheirDiplomatHere: true, OurDiplomatThere: true });
+    it('should expose projected diplomat network points for a known foreign major', () => {
+      const row = snapshot(1, 47, 6, { OurDiplomatThere: true, OurDiplomatPoints: 450 });
+      const support = snapshot(1, 48, 5, {});
+      row.relatedSources = [support.source];
 
-      for (const key of ['theirDiplomatHere', 'ourDiplomatThere'] as const) {
+      expect(buildPlayerSnapshotFacts(row, context(6)).ourDiplomatPoints)
+        .toEqual({ value: 450, sources: [row.source, support.source] });
+    });
+
+    it('should keep zero points for a readable absence and hide other readings', () => {
+      const absentPoints = snapshot(1, 49, 6, { OurDiplomatThere: false, OurDiplomatPoints: 0 });
+      expect(buildPlayerSnapshotFacts(absentPoints, context(6)).ourDiplomatPoints)
+        .toEqual({ value: 0, sources: [absentPoints.source] });
+      for (const [index, points] of ['450', null, -1, Number.POSITIVE_INFINITY, Number.NaN].entries()) {
+        const malformed = snapshot(1, 50 + index, 6, { OurDiplomatPoints: points });
+        expect(buildPlayerSnapshotFacts(malformed, context(6))).not.toHaveProperty('ourDiplomatPoints');
+      }
+    });
+
+    it('should keep presence off the receiver and city-states', () => {
+      const ownRow = snapshot(0, 45, 6, { TheirDiplomatHere: true, OurDiplomatThere: true, OurDiplomatPoints: 450 });
+      const minorRow = snapshot(22, 46, 6, { TheirDiplomatHere: true, OurDiplomatThere: true, OurDiplomatPoints: 450 });
+
+      for (const key of ['theirDiplomatHere', 'ourDiplomatThere', 'ourDiplomatPoints'] as const) {
         expect(buildPlayerSnapshotFacts(ownRow, context(6))).not.toHaveProperty(key);
         expect(buildPlayerSnapshotFacts(minorRow, context(6))).not.toHaveProperty(key);
       }

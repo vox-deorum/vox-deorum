@@ -248,7 +248,7 @@
       "theirStrength": "player.militaryStrength"
     },
     "tier": "notable",
-    "adjust": ["player.stake.relation", "player.stake.spy", "Math.min(20, 20 * (theirStrength / ourStrength - 1))"]
+    "adjust": ["player.stake.relation", "Math.min(20, 20 * (theirStrength / ourStrength - 1))"]
   },
   {
     "id": "our-army-overtakes-neighbor",
@@ -265,7 +265,7 @@
       "theirStrength": "player.militaryStrength"
     },
     "tier": "notable",
-    "adjust": ["player.stake.relation", "player.stake.spy", "Math.min(10, 10 * (ourStrength / theirStrength - 1))"],
+    "adjust": ["player.stake.relation", "Math.min(10, 10 * (ourStrength / theirStrength - 1))"],
     "tags": ["politics", "military", "international"]
   },
   {

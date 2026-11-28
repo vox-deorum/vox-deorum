@@ -65,9 +65,10 @@
   },
   "stakes": {
     "player": {
-      "relation": "(() => { if (player.self) return 0; const relation = self.relation(player); const proximity = player.knows('distance') ? (player.distance <= neighboring ? 8 : player.distance <= nearby ? 4 : player.distance > regional ? -8 : 0) : 0; const ties = (relation.get('war') ? 10 : 0) + (relation.friend || relation.pact ? 6 : 0) + (relation.get('denouncedThem') || relation.get('denouncedByThem') ? 6 : 0) + (relation.vassalOf || relation.masterOf ? 8 : 0); const cityState = player.get('cityState') ? (player.is.alliedCityState ? 4 : -6) : 0; const diplomat = player.get('ourDiplomatThere') ? 5 : 0; return Math.max(-15, Math.min(20, proximity + ties + cityState + diplomat)); })()",
+      "relation": "(() => { if (player.self) return 0; const relation = self.relation(player); const proximity = player.knows('distance') ? (player.distance <= neighboring ? 8 : player.distance <= nearby ? 4 : player.distance > regional ? -8 : 0) : 0; const ties = (relation.get('war') ? 10 : 0) + (relation.friend || relation.pact ? 6 : 0) + (relation.get('denouncedThem') || relation.get('denouncedByThem') ? 6 : 0) + (relation.vassalOf || relation.masterOf ? 8 : 0); const cityState = player.get('cityState') ? (player.is.alliedCityState ? 4 : -6) : 0; return Math.max(-15, Math.min(20, proximity + ties + cityState)) + player.stake.intel; })()",
+      "intel": "(() => { if (player.self) return 0; const points = player.get('ourDiplomatPoints') ?? 0; const diplomat = player.get('ourDiplomatThere') ? (points >= 800 ? 9 : points >= 200 ? 6 : 3) : 0; return Math.min(15, diplomat + player.stake.spy); })()",
       "front": "(() => { if (player.self) return 0; const relation = self.relation(player); if (!relation.get('war')) return 0; const proximity = player.get('cityState') ? -12 : player.knows('distance') ? (player.distance <= nearby ? 10 : player.distance > regional ? -10 : 0) : 0; const score = Math.abs(relation.get('warScore') ?? 0); return proximity + (score >= 50 ? 8 : score >= 25 ? 4 : 0) + (relation.get('warWeariness') >= 50 ? 6 : 0) + player.stake.spy; })()",
-      "spy": "!player.self && player.get('cities')?.some(c => c.get('ourSpyPresent')) ? 5 : 0",
+      "spy": "player.self ? 0 : Math.max(0, ...(player.get('cities') ?? []).map(c => c.stake.spy))",
       "war": "(() => { if (!player.self || !player.get('wars')?.length) return 0; const fronts = player.wars.filter(opponent => opponent.get('major')); if (!fronts.length) return player.wars.every(opponent => opponent.get('cityState')) ? -10 : 0; return Math.max(-10, Math.min(20, fronts.reduce((total, opponent) => total + opponent.stake.front, 0) + 4 * (fronts.length - 1))); })()"
     },
     "pair": {
@@ -75,11 +76,14 @@
     },
     "city": {
       "place": "city.own ? (city.get('isCapital') ? 8 : 0) + (city.get('population') >= largeCity ? 4 : 0) : (city.distance.own <= adjacent ? 8 : city.distance.own <= neighboring ? 5 : city.distance.own <= nearby ? 2 : city.distance.own > regional ? -8 : 0) + city.stake.intel",
-      "intel": "city.own ? 0 : (city.get('ourSpyPresent') ? 5 : 0) + (city.get('owner.ourDiplomatThere') ? 3 : 0)"
+      "intel": "city.own ? 0 : city.stake.spy + (city.get('owner.ourDiplomatThere') ? 3 : 0)",
+      "spy": "city.own || !city.get('ourSpyPresent') ? 0 : 3 + Math.min(6, Math.round((city.get('ourSpyPoints') ?? 0) / 150))"
     },
     "event": {
       "place": "(event.distance.own <= adjacent ? 8 : event.distance.own <= neighboring ? 5 : event.distance.own <= nearby ? 2 : event.distance.own > regional ? -8 : 0) + event.stake.intel",
       "intel": "event.get('city') ? event.city.stake.intel : 0",
+      "espionage": "event.type !== 'EspionageResult' ? 0 : event.get('perspective') === 'source' ? (event.get('targetPlayer') ? event.targetPlayer.stake.relation : 0) : (event.get('sourcePlayer') ? event.sourcePlayer.stake.relation : 0)",
+      "partner": "event.fromPlayer.self ? event.toPlayer.stake.relation : event.fromPlayer.stake.relation",
       "building": "(() => { if (event.get('building') === undefined) return 0; const defense = defenses.includes(event.building) && self.get('atWar'); const frontier = defense && event.get('city') && event.city.is.get('frontier'); const industrial = eras.indexOf('Industrial'); const late = industrial >= 0 && eras.indexOf((self.get('era') ?? '').replace(/ Era$/, '')) >= industrial; return (defense ? 15 : 0) + (frontier ? 5 : 0) - (late && earlyBuildings.includes(event.building) ? 15 : 0); })()"
     }
   },
@@ -87,6 +91,7 @@
     "city": {
       "neighbor": "city.foreign && city.distance.own <= neighboring",
       "nearby": "city.foreign && city.distance.own <= nearby",
+      "watched": "city.foreign && !!city.get('ourSpyPresent')",
       "frontier": "city.own && cities.some(c => c.foreign && distance(c, city) <= neighboring)",
       "starving": "city.foodPerTurn < 0 && city.foodStored < -city.foodPerTurn * recent",
       "besieged": "city.owner.atWar && city.hitPoints < city.maxHitPoints",
@@ -96,6 +101,8 @@
     },
     "event": {
       "forwardSettle": "event.get('player.name') && event.player.is.rival && event.get('city.name') && event.get('city.nearestOwn.name') && event.get('distance.own') <= adjacent",
+      "ourOperation": "event.type === 'EspionageResult' && event.get('perspective') === 'source'",
+      "foreignOperation": "event.type === 'EspionageResult' && event.get('perspective') === 'target'",
       "preferredFounding": "event.type === 'PlayerCityFounded' || !event.get('plot') || !events.some(e => e.type === 'PlayerCityFounded' && e.turn === event.turn && e.get('player.id') === event.player.id && e.get('plot.x') === event.plot.x && e.get('plot.y') === event.plot.y && e.get('city.name'))",
       "courthouseIntegration": "event.get('building') && (event.building === 'Courthouse' || event.building === `Satrap's Court`) && event.get('city.isPuppet') === false && event.get('city.isOccupied')",
       "ourCity": "event.player.self && event.city.own && event.player.id === event.city.owner.id && !!event.city.name",
@@ -111,6 +118,7 @@
       "neighbor": "!player.self && player.distance <= neighboring",
       "nearby": "!player.self && player.distance <= nearby",
       "foreignMajor": "!player.self && !!player.get('major')",
+      "watched": "!player.self && !!player.get('cities')?.some(c => c.get('ourSpyPresent'))",
       "recentQuest": "!!player.get('cityState') && !!player.get('name') && Array.isArray(player.get('questDeadlines')) && Number.isSafeInteger(player.get('questObservationTurn')) && player.questObservationTurn <= turn && turn - player.questObservationTurn <= 1",
       "rival": "player.major && !player.self && !player.friend && !player.ally",
       "alliedCityState": "!!player.get('majorAlly')?.self",

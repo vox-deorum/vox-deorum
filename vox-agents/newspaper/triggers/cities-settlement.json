@@ -16,6 +16,43 @@
     "tags": ["cities", "domestic"]
   },
   {
+    "id": "foreign-city-founded",
+    "subject": "event",
+    "event": ["PlayerCityFounded", "UnitCityFounded"],
+    "when": [
+      "!event.player.self",
+      "event.city.name && event.city.owner.name && event.city.foreign",
+      "event.player.id === event.city.owner.id",
+      "!event.is.forwardSettle",
+      "event.is.preferredFounding"
+    ],
+    "values": {
+      "owner": "event.player.name"
+    },
+    "tier": "routine",
+    "adjust": "event.stake.place",
+    "tags": ["cities", "international"]
+  },
+  {
+    "id": "foreign-city-raises-settlers",
+    "subject": "city",
+    "window": "recent",
+    "when": [
+      "city.foreign && city.name",
+      "city.owner.name",
+      "city.trained.some(t => settlers.includes(t.get('unit')))",
+      "city.get('before.owner.id') === city.owner.id",
+      "city.population < city.get('before.population')",
+      "city.foodPerTurn > 0"
+    ],
+    "values": {
+      "lost": "city.before.population - city.population"
+    },
+    "tier": "routine",
+    "adjust": ["city.stake.place", "10 * lost"],
+    "tags": ["cities", "international"]
+  },
+  {
     "id": "forward-settle",
     "subject": "event",
     "event": ["PlayerCityFounded", "UnitCityFounded"],
@@ -57,42 +94,5 @@
     },
     "tier": "routine",
     "adjust": "10 * lost"
-  },
-  {
-    "id": "foreign-city-founded",
-    "subject": "event",
-    "event": ["PlayerCityFounded", "UnitCityFounded"],
-    "when": [
-      "!event.player.self",
-      "event.city.name && event.city.owner.name && event.city.foreign",
-      "event.player.id === event.city.owner.id",
-      "!event.is.forwardSettle",
-      "event.is.preferredFounding"
-    ],
-    "values": {
-      "owner": "event.player.name"
-    },
-    "tier": "routine",
-    "adjust": "event.stake.place",
-    "tags": ["cities", "international"]
-  },
-  {
-    "id": "foreign-city-raises-settlers",
-    "subject": "city",
-    "window": "recent",
-    "when": [
-      "city.foreign && city.name",
-      "city.owner.name",
-      "city.trained.some(t => settlers.includes(t.get('unit')))",
-      "city.get('before.owner.id') === city.owner.id",
-      "city.population < city.get('before.population')",
-      "city.foodPerTurn > 0"
-    ],
-    "values": {
-      "lost": "city.before.population - city.population"
-    },
-    "tier": "routine",
-    "adjust": ["city.stake.place", "10 * lost"],
-    "tags": ["cities", "international"]
   }
 ]

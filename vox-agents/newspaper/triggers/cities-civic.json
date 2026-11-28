@@ -27,6 +27,17 @@
     "tags": ["cities", "domestic"]
   },
   {
+    "id": "city-celebration-begins",
+    "subject": "event",
+    "event": "CityBeginsWLTKD",
+    "when": [
+      "event.is.ourCity"
+    ],
+    "tier": "filler",
+    "adjust": "event.city.stake.place",
+    "tags": ["cities", "domestic"]
+  },
+  {
     "id": "city-famine-unrest",
     "subject": "city",
     "when": [
@@ -57,23 +68,18 @@
     "tags": ["cities", "domestic"]
   },
   {
-    "id": "starvation-without-siege",
-    "subject": "city",
+    "id": "foreign-city-celebration-begins",
+    "subject": "event",
+    "event": "CityBeginsWLTKD",
     "when": [
-      "city.own",
-      "!self.atWar",
-      "city.unhappiness.knows('top') && city.unhappiness.top !== 'famine'",
-      "city.foodPerTurn < 0",
-      "city.is.starving"
+      "event.is.theirCity"
     ],
     "values": {
-      "foodPerTurn": "city.foodPerTurn",
-      "foodStored": "city.foodStored",
-      "shortfall": "-city.foodPerTurn"
+      "owner": "event.city.owner.name"
     },
-    "tier": "notable",
-    "adjust": ["city.stake.place", "Math.min(20, 5 * shortfall)"],
-    "tags": ["cities", "domestic"]
+    "tier": "filler",
+    "adjust": "event.city.stake.place",
+    "tags": ["cities", "international"]
   },
   {
     "id": "foreign-city-growth-milestone",
@@ -109,28 +115,22 @@
     "tags": ["cities", "international"]
   },
   {
-    "id": "city-celebration-begins",
-    "subject": "event",
-    "event": "CityBeginsWLTKD",
+    "id": "starvation-without-siege",
+    "subject": "city",
     "when": [
-      "event.is.ourCity"
-    ],
-    "tier": "filler",
-    "adjust": "event.city.stake.place",
-    "tags": ["cities", "domestic"]
-  },
-  {
-    "id": "foreign-city-celebration-begins",
-    "subject": "event",
-    "event": "CityBeginsWLTKD",
-    "when": [
-      "event.is.theirCity"
+      "city.own",
+      "!self.atWar",
+      "city.unhappiness.knows('top') && city.unhappiness.top !== 'famine'",
+      "city.foodPerTurn < 0",
+      "city.is.starving"
     ],
     "values": {
-      "owner": "event.city.owner.name"
+      "foodPerTurn": "city.foodPerTurn",
+      "foodStored": "city.foodStored",
+      "shortfall": "-city.foodPerTurn"
     },
-    "tier": "filler",
-    "adjust": "event.city.stake.place",
-    "tags": ["cities", "international"]
+    "tier": "notable",
+    "adjust": ["city.stake.place", "Math.min(20, 5 * shortfall)"],
+    "tags": ["cities", "domestic"]
   }
 ]

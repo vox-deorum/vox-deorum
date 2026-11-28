@@ -81,7 +81,10 @@ export function projectNewspaperPlayer(row: Selectable<PlayerSummary>, context: 
       if (quests.terms.length) values.QuestTerms = quests.terms;
     }
   }
-  if (outgoing) values.OurDiplomatThere = outgoing.present;
+  if (outgoing) {
+    values.OurDiplomatThere = outgoing.present;
+    values.OurDiplomatPoints = outgoing.present ? outgoing.points : 0;
+  }
   if (incoming) values.TheirDiplomatHere = incoming.present;
   if (own && level === 2) Object.assign(values, pickFields(row, ['Votes', 'Resources', 'MilitaryUnits', 'MilitarySupply', 'DiplomaticDeals']));
   if ('MilitaryStrength' in row) values.MilitaryStrength = row.MilitaryStrength;
@@ -168,7 +171,10 @@ export function projectNewspaperCity(
   const presence = ownSpyAtCity(row, current ? cutoff : context);
   const { Key: _key, ...fields } = projectCityReportFields(row, 2);
   const values: Record<string, unknown> = { ...fields, ...pickFields(row, ['IsCapital']) };
-  if (presence) values.OurSpyPresent = presence.present;
+  if (presence) {
+    values.OurSpyPresent = presence.present;
+    values.OurSpyPoints = presence.present ? presence.points : 0;
+  }
   // Unhappiness causes are newspaper-only. Omit an unrecorded reading and keep an observed empty object.
   const unhappiness = pickFields(row, newspaperCityOnlyFields).UnhappinessSources;
   if (unhappiness !== undefined && unhappiness !== null) values.UnhappinessSources = structuredClone(unhappiness);

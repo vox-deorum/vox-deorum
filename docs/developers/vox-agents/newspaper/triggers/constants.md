@@ -64,6 +64,7 @@ Several rules can share an event shortcut. The stock building rules read `event.
 | Shortcut | Test |
 | --- | --- |
 | `city.is.neighbor`, `city.is.nearby` | A foreign city within the corresponding distance |
+| `city.is.watched` | A foreign city with our spy in it; an unreadable roster reads as false |
 | `city.is.frontier` | An own city within `neighboring` distance of a foreign city |
 | `city.is.starving` | Losing food, with fewer than `recent` turns of reserves at the current rate |
 | `city.is.besieged` | Damaged while its owner is at war |
@@ -71,12 +72,14 @@ Several rules can share an event shortcut. The stock building rules read `event.
 | `city.is.convertedToMajority` | A recorded conversion to the city's current majority religion |
 | `city.is.followsAnotherReligion` | An own city whose named majority religion differs from our founded religion |
 | `player.is.neighbor`, `player.is.nearby` | Another player within the corresponding distance |
+| `player.is.watched` | Another player with our spy in one of its visible cities; an unreadable roster reads as false |
 | `player.is.foreignMajor` | Another major civilization |
 | `player.is.recentQuest` | A city-state quest observed this turn or the previous turn |
 | `player.is.rival` | Another major civilization that is neither our friend nor our ally |
 | `player.is.alliedCityState`, `player.is.friendlyCityState` | Our city-state ally, or a city-state friend with a known alliance status who is not our ally |
 | `player.is.hasFoundedReligion`, `player.is.hasMajorityReligion` | The corresponding religion name is readable and nonempty |
 | `event.is.ourCity`, `event.is.theirCity` | A completion in one of our cities, or in a foreign city owned by the event's player |
+| `event.is.ourOperation`, `event.is.foreignOperation` | An espionage report where we were the source, or where we were the target |
 | `event.is.dealPartnerNamed` | A deal whose foreign partner has a readable name |
 | `event.is.techGain` | A recorded technology gain not covered by a deal |
 | `event.is.notableBuilding` | A building on the city's important list, or any building in the Ancient Era |
@@ -103,22 +106,37 @@ To include a modded civilization, replace the whole membership list in an overla
 
 A stake is a named expression that returns finite points from readable facts. A rule opts in by reading it in an [adjustment](overview.md#tiers-adjustments-and-stakes), for example `event.stake.building`. A subject has a `stake` view when the catalogue defines stakes for that subject type. Like shortcuts, stakes use the snapshot of the subject they are read from; globals still describe the current check.
 
-Spies and diplomats add points through the intel stakes. They do not unlock facts.
+Spies and diplomats add points through the intel stakes. They do not unlock facts. When visibility alone is not enough, two diplomat thresholds also decide which foreign events reach the editor: 200 points lets a policy adoption report through, and 800 points lets private deal terms through. Both thresholds are set in `newspaperEventConfigs`, separate from the stakes below.
 
 | Stock stake | What changes the score |
 | --- | --- |
-| `player.stake.relation` | For another player, combines distance, war, friendship or a pact, a denouncement in either direction, and a vassal or master tie. Allied city-states get a bonus; other city-states get a penalty. Adds 5 when our diplomat is at their capital. The result stays between -15 and 20; the receiver scores 0. |
+| `player.stake.relation` | `min(20, max(-15, proximity + ties + cityState)) + player.stake.intel` for another player; the receiver scores 0. Proximity adds 8 within `neighboring` (7 tiles), 4 within `nearby` (15 tiles), 0 from 16 to `regional` (25 tiles), and -8 beyond `regional`. Ties add 10 for war, 6 for friendship or a pact, 6 for a denouncement in either direction, and 8 for a vassal or master tie. A city-state adds 4 when allied to us, or subtracts 6. |
+| `player.stake.intel` | `min(15, diplomat + player.stake.spy)`. The diplomat weight is 3 when our diplomat is posted, 6 from 200 network points and 9 from 800 points. Added into `player.stake.relation` outside its clamp. |
 | `pair.stake.relation` | Uses the other player's relationship score if the receiver is in the pair; otherwise uses the higher of the two scores. |
 | `player.stake.front` | For a known opponent at war with the receiver, weighs distance, the magnitude of the war score, and war weariness. A city-state front gets a penalty in place of distance points. Adds `player.stake.spy`. |
-| `player.stake.spy` | For another player, 5 when our spy is in any of their cities. Added into `player.stake.front`. |
+| `player.stake.spy` | The highest `city.stake.spy` among that player's visible cities, or 0. Added into `player.stake.intel` and `player.stake.front`. |
 | `player.stake.war` | For the receiver, adds the scores of known major fronts and 4 points for each major front after the first, within -10 to 20. Scores -10 when all known opponents are city-states. |
 | `city.stake.place` | Adds 8 points for the receiver's capital and 4 for an own city at least `largeCity` in size. A foreign city uses the same distance scale as an event, plus its `city.stake.intel`. |
-| `city.stake.intel` | For a foreign city, 5 when our spy is there and 3 when our diplomat is at the owner's capital. Added into `city.stake.place`. |
+| `city.stake.spy` | `3 + min(6, round(ourSpyPoints / 150))` for a foreign city with our spy: 3 points on arrival and 1 more per 150 network points rounded, so 4 at 75 points and the cap of 9 from 825 points. Added into `city.stake.intel` and `player.stake.spy`. |
+| `city.stake.intel` | `city.stake.spy` plus 3 when our diplomat is at the owner's capital. Added into `city.stake.place`. |
 | `event.stake.place` | Adds 8, 5 or 2 points at `adjacent`, `neighboring` or `nearby` distance from the receiver's nearest city. Beyond `regional`, subtracts 8; between `nearby` and `regional`, adds 0. Adds the event city's intel through `event.stake.intel`. Needs a readable distance. |
 | `event.stake.intel` | Uses the event city's `city.stake.intel`; 0 without a linked city. |
+| `event.stake.espionage` | The relation stake of the other party in an espionage report: the target for our operation, the source when a foreign operation names it. 0 when that party is unnamed or the event is not an espionage report. |
+| `event.stake.partner` | The relation stake of the deal's foreign party: the recipient when we sent the deal, otherwise the sender. |
 | `event.stake.building` | Adds 15 for a listed defense while at war, plus 5 if the city is on the frontier. Subtracts 15 for listed early buildings in the Industrial Era or later. |
 
 A spy brings more city and military stories about that civilization, and a diplomat brings more city and diplomatic stories. A stake can handle missing inputs itself. For example, the relationship stake assigns 0 proximity points when distance is unavailable. If a stake directly reads a hidden fact, that read is hidden; `event.stake.knows('place')` checks whether the place calculation can read what it needs.
+
+### Relation stake examples
+
+Proximity and ties are clamped to -15 to 20 before intel is added, so the result runs from -15 to 35.
+
+| Case | Proximity | Ties | Clamped base | Diplomat weight | Spy score | Intel | Result |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Distant neutral major (26 tiles), nobody posted | -8 | 0 | -8 | 0 | 0 | 0 | -8 |
+| The same, diplomat just arrived | -8 | 0 | -8 | 3 (0 points) | 0 | 3 | -8 + 3 = -5 |
+| The same, diplomat at 900 points and spy at 600 points | -8 | 0 | -8 | 9 | 7 (600 points) | `min(15, 9 + 7) = 15` | -8 + 15 = 7 |
+| Hostile neighbor (5 tiles) at war and denounced, diplomat and spy at 900 points | 8 | war 10 + denounced 6 = 16 | 8 + 16 = 24, clamped to 20 | 9 | 9 (900 points) | `min(15, 9 + 9) = 15` | 20 + 15 = 35 |
 
 ## Terms
 

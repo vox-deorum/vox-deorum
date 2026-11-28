@@ -87,6 +87,20 @@
         "body": [
           "Let {{civilization}}'s barn swell; keep your own roof sound."
         ]
+      },
+      {
+        "id": "foreign-golden-age-envoy",
+        "voice": "gazette",
+        "stance": "conciliatory",
+        "genre": "report",
+        "when": "event.get('player.ourDiplomatThere') === true",
+        "weight": {
+          "base": 3
+        },
+        "headline": "Our envoy in {{civilization}} reports the celebrations",
+        "body": [
+          "Our envoy at the court of {{civilization}} now reports a capital given over to celebration. Lanterns hang from the public buildings, the forges have been kept burning late, and the squares are full of people who do not seem to be working. He adds that the mood is genuine, and that a court in good spirits is easier to deal with than one that is not."
+        ]
       }
     ]
   },
@@ -628,6 +642,20 @@
         "body": [
           "{{rival}} now holds {{ideology}} as its doctrine. A nation that picks a direction has also picked the places that direction leads.",
           "Watch what {{rival}} builds next, and where it puts its soldiers. The declaration will name the target later; the groundwork names it now."
+        ]
+      },
+      {
+        "id": "rival-ideology-dispatch",
+        "voice": "press",
+        "stance": "neutral",
+        "genre": "report",
+        "when": "player.get('ourDiplomatThere') === true",
+        "weight": {
+          "base": 3
+        },
+        "headline": "Our envoy in {{rival}} reports the turn to {{ideology}}",
+        "body": [
+          "Our envoy at the court of {{rival}} now reports that {{ideology}} has been proclaimed. Officials will not be drawn on what changes first, and the court has said little beyond the words of the doctrine. It is now that court's own, and our envoy means to stay long enough to see it applied."
         ]
       }
     ]

@@ -237,6 +237,20 @@
           "Power named to take our place: none.",
           "Balance: a free small power, owing us nothing."
         ]
+      },
+      {
+        "id": "city-state-ally-lost-agent",
+        "voice": "press",
+        "stance": "government-critical",
+        "genre": "report",
+        "when": "event.minorPlayer.is.watched",
+        "weight": {
+          "base": 3
+        },
+        "headline": "Our agent in {{cityState}} reports the alliance lost",
+        "body": [
+          "Our agent in {{cityState}} now reports that the city has left our alliance and named no other power in our place. The agent remains in the city and has no answer yet on who spoke for the change. The council house is the same building it was last month; the voices inside it now answer to no patron."
+        ]
       }
     ]
   },
@@ -507,6 +521,20 @@
         "headline": "The seat is still warm",
         "body": [
           "{{cityState}} has a new ally in {{civilization}}. The wine {{replaced}} used to send is now poured for a different guest, and the city swears it tastes the same."
+        ]
+      },
+      {
+        "id": "foreign-major-wins-city-state-agent",
+        "voice": "press",
+        "stance": "government-critical",
+        "genre": "report",
+        "when": "event.minorPlayer.is.watched",
+        "weight": {
+          "base": 3
+        },
+        "headline": "Our agent in {{cityState}} reports a new ally",
+        "body": [
+          "Our agent in {{cityState}} now reports that the city has taken {{civilization}} as its ally. The council house is the same building it was last month, but the voices inside it now answer to a new patron. The agent will keep watch on what {{civilization}} asks of the city and what it offers in return."
         ]
       }
     ]
