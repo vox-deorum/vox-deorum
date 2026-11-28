@@ -1,7 +1,7 @@
 [
   {
     "id": "cracked-oracle-shell",
-    "version": "1",
+    "version": "2",
     "label": "Cracked Oracle Shell",
     "title": "Records of the Shang Court",
     "civilizationTitles": {
@@ -27,15 +27,12 @@
       "schemaVersion": 1,
       "rendererFamily": "folio",
       "tokens": {
-        "paperColor": "#eee3c7",
-        "inkColor": "#30291e",
-        "accentColor": "#36594e",
+        "paperColor": "#ecdfbf",
+        "inkColor": "#291a0e",
+        "accentColor": "#922d14",
         "bodyFontAssetId": "font-literata-400",
         "headingFontAssetId": "font-marcellus-400",
         "mastheadFontAssetId": "font-marcellus-400"
-      },
-      "assets": {
-        "ornamentAssetId": "cracked-oracle-shell.ornament"
       }
     },
     "assetDefinitions": [

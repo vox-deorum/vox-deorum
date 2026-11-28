@@ -1,70 +1,300 @@
-/* Bronze ribs enclose a pale writing field; the paired eyes belong to the casting. */
-.vd-newspaper[data-publication-design="cracked-oracle-shell"] {
-  --bronze: color-mix(in srgb, var(--vd-accent) 76%, #171c16);
-  --rim: #b39c70;
-  --casting-edge: inset 5px 0 var(--bronze), inset -5px 0 var(--bronze),
-    inset 7px 0 var(--rim), inset -7px 0 var(--rim);
-  --cloud-scroll: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='54' height='16'%3E%3Cpath d='M0 13h24V3H5v6h13M54 3H30v10h19V7H36' fill='none' stroke='black' stroke-width='2'/%3E%3C/svg%3E");
-
-  & .vd-header {
-    background:
-      radial-gradient(ellipse at 17% 15%, #a49c6830, transparent 38%),
-      radial-gradient(ellipse at 82% 92%, #46847555, transparent 43%),
-      repeating-linear-gradient(106deg, transparent 0 3px, #c4c29509 3px 4px),
-      var(--bronze);
-    color: var(--vd-paper);
-    padding-top: 8px;
-    box-shadow: var(--casting-edge);
-  }
-  & .vd-masthead {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 6px 0 14px;
-  }
-  & .vd-ornament { order: -1; width: clamp(102px, 14cqi, 151px); margin: 0 auto 7px; }
-  & .vd-title {
-    font-size: calc(clamp(25px, 4.3cqi, 52px) * var(--vd-text-scale));
-    color: var(--vd-paper);
-    letter-spacing: .11em;
-    text-transform: uppercase;
-  }
-  & .vd-tabs { border-top: 1px solid var(--rim); border-bottom: none; }
-  & .vd-tab { color: var(--vd-paper); }
-  &[data-mode="reader"] .vd-tab[aria-selected="true"] { color: #f4d498; }
-  & .vd-tab:focus-visible { outline-color: var(--vd-paper); }
-  & .vd-page {
-    --shell-wash: color-mix(in srgb, var(--vd-paper) 55%, transparent);
-    background-image: linear-gradient(90deg, transparent, var(--shell-wash) 12% 88%, transparent),
-      url("./textures/turtle-shell.svg?inline");
-    background-attachment: local;
-    box-shadow: var(--casting-edge);
-  }
-  & .vd-headline { font-weight: 400; letter-spacing: .005em; }
-  & .vd-storylist .vd-story--lead .vd-headline { font-weight: 400; letter-spacing: .018em; }
-  & .vd-storylist[data-layout="ordinary"] .vd-story--lead .vd-headline { text-align: center; }
-  & .vd-story--brief { border-top: 1px solid var(--rim); padding-top: 12px; }
-  & .vd-storylist[data-layout="breaking"] .vd-story--lead {
-    padding: clamp(12px, 3cqi, 36px);
-    border: 3px double var(--bronze);
-    box-shadow: inset 0 0 0 4px var(--vd-paper), inset 0 0 0 5px var(--rim);
-  }
-  & .vd-evidence { border-block: 3px double var(--bronze); padding-block: 12px; }
-  & .vd-evidence thead { background: var(--bronze); color: var(--vd-paper); }
-  & .vd-evidence td { font-family: var(--vd-font-body); }
-  & .vd-end-rule {
-    height: 14px; width: 108px; margin: 18px auto 0;
-    background: var(--vd-accent);
-    mask: var(--cloud-scroll) center / auto 100% repeat-x;
-  }
-  & .vd-end-rule::before, & .vd-end-rule::after { display: none; }
-  & .vd-end-ornament { display: none; }
+@font-face {
+  font-family: "Oracular Shell";
+  src: url("./icons/cracked-oracle-shell/oracular-shell.woff?inline") format("woff");
+  font-display: block;
 }
 
-@container newspaper (width <= 560px) {
-  .vd-newspaper[data-publication-design="cracked-oracle-shell"] .vd-tabs {
+/* The bundled Marcellus face lacks the vowel-caron pairs used by Pinyin mastheads. */
+@font-face {
+  font-family: "Shell Pinyin";
+  src: local("Cambria"), local("Times New Roman"), local("Liberation Serif");
+  unicode-range: U+01CD-01DC;
+}
+
+/* Paint the whole plastron once, across the independently captured header and page. */
+.vd-newspaper[data-publication-design="cracked-oracle-shell"] {
+  --vd-page-background: #30241b;
+  --vd-vote-background: color-mix(in srgb, var(--vd-paper) 63%, #fff9e9);
+  --shell-cut: #442a15;
+  --shell-rule: #76583c86;
+  --shell-lip: #fff9eaad;
+  --oracle: "Oracular Shell", serif;
+  --crest: url("./textures/oracle-shell/crest.svg?inline");
+  --midline: url("./textures/oracle-shell/midline.svg?inline");
+  --shoulder: clamp(25px, calc(var(--vd-region-width) * .095), 104px);
+  --notch: clamp(26px, calc(var(--vd-region-width) * .052), 64px);
+  --page-head: 13px;
+  --story-rule-pad: 14px;
+
+  &[data-mode="export"], & .vd-reader-viewport { background: var(--vd-page-background); }
+
+  & .vd-publication {
+    background:
+      radial-gradient(ellipse 52% 290px at 50% 0, #fff8e681, transparent) no-repeat,
+      radial-gradient(ellipse 57% 230px at 43% 100%, #70462026, transparent) no-repeat,
+      linear-gradient(90deg, #704b2a50, transparent 7% 93%, #704b2a4a),
+      url("./textures/oracle-shell/flecks.svg?inline"),
+      url("./textures/oracle-shell/highlights.svg?inline"),
+      url("./textures/oracle-shell/grain.svg?inline"),
+      url("./textures/oracle-shell/mottling.svg?inline"),
+      url("./textures/oracle-shell/clouding.svg?inline"),
+      var(--vd-paper);
+    clip-path: polygon(
+      33% 7px, 41% 0, 49.7% 0, 50% 3px, 50.3% 0, 58.5% 0,
+      65.5% 7px, 71% 13px, 81% calc(var(--shoulder) * .17), 89% calc(var(--shoulder) * .24),
+      94% calc(var(--shoulder) * .32), 97% calc(var(--shoulder) * .49), 99% calc(var(--shoulder) * .68), 100% var(--shoulder),
+      99.7% 30%, 98.5% 43%, 98.9% 44.7%, 98.35% 46%, 98.55% 49%, 100% calc(49% + 9px),
+      99.6% 70%, 100% calc(100% - 17px), 96% calc(100% - 9px), 90% calc(100% - 2px),
+      80% 100%, 74% calc(100% - 2px), 66% 100%, 64.5% calc(100% - var(--notch) * .53),
+      65% calc(100% - var(--notch) * .64), 62.5% calc(100% - var(--notch)),
+      59% calc(100% - var(--notch) + 2px), 56.5% calc(100% - var(--notch) - 2px),
+      50.3% calc(100% - var(--notch)), 50.6% calc(100% - var(--notch) * .64),
+      49.8% calc(100% - var(--notch) * .38), 50% calc(100% - 4px),
+      48.5% 100%, 47% calc(100% - 4px), 45.5% 100%, 44% calc(100% - 5px),
+      42.5% calc(100% - 1px), 41% calc(100% - 5px), 38.5% calc(100% - 2px),
+      37% calc(100% - 7px), 35.5% calc(100% - 3px), 33.5% calc(100% - 7px), 32% calc(100% - 3px),
+      30.5% calc(100% - 8px), 28% calc(100% - 4px), 26% calc(100% - 9px),
+      24% calc(100% - 5px), 18% calc(100% - 9px), 9% calc(100% - 16px), 0 calc(100% - 21px),
+      .4% 79%, 0 57%, 1.7% calc(57% - 8px), 1.25% 51%, .8% 42%, 0 var(--shoulder),
+      1% calc(var(--shoulder) * .62), 2.8% calc(var(--shoulder) * .42), 6.5% calc(var(--shoulder) * .3),
+      12% calc(var(--shoulder) * .23), 19% calc(var(--shoulder) * .18), 27% calc(var(--shoulder) * .14)
+    );
+  }
+
+  & .vd-header, & .vd-page { position: relative; background: transparent; }
+  & .vd-header { padding-top: clamp(15px, 2.2cqi, 26px); padding-bottom: 17px; }
+  & .vd-header::before, & .vd-header::after {
+    position: absolute;
+    pointer-events: none;
+    content: "";
+  }
+  & .vd-header::before {
+    inset: 0 auto auto calc(50% - 6px);
+    width: 12px;
+    height: clamp(13px, 2cqi, 24px);
+    background: url("./textures/oracle-shell/crown.svg?inline") center / 100% 100% no-repeat;
+  }
+  & .vd-header::after {
+    inset: auto 0 0;
+    height: 21px;
+    background: var(--crest) center / 100% 100% no-repeat;
+    filter: drop-shadow(0 1px var(--shell-lip));
+  }
+  & .vd-masthead { padding: 0 0 2px; }
+  & .vd-masthead .vd-ornament { display: none; }
+  & .vd-title {
+    font-family: "Shell Pinyin", var(--vd-font-masthead, var(--vd-font-display));
+    font-size: calc(clamp(19px, 3.55cqi, 42px) * var(--vd-text-scale));
+    letter-spacing: .065em;
+    line-height: 1.08;
+    text-transform: uppercase;
+    color: var(--shell-cut);
+    text-shadow: 0 1px var(--shell-lip);
+  }
+  & .vd-tabs { gap: 0 clamp(6px, 1.7cqi, 19px); border: 0; }
+  & .vd-tab {
+    flex: 0 1 auto;
+    padding: 3px 2px 4px;
+    font-size: calc(clamp(13px, 1.6cqi, 17px) * var(--vd-text-scale));
+  }
+  & .vd-tab::before {
+    content: var(--shell-tab, "卜") / "";
+    margin-inline-end: .26em;
+    font: 1.13em / 1 var(--oracle);
+    color: var(--shell-cut);
+  }
+  & .vd-tab[data-vd-page-id="front"] { --shell-tab: "王"; }
+  & .vd-tab[data-vd-page-id="home"] { --shell-tab: "邑"; }
+  & .vd-tab[data-vd-page-id="economy"] { --shell-tab: "貝"; }
+  & .vd-tab[data-vd-page-id="abroad"] { --shell-tab: "往"; }
+  &[data-mode="reader"] .vd-tab[aria-selected="true"]::after { height: 2px; }
+
+  & .vd-page { padding-block: var(--page-head) calc(var(--notch) + 14px); }
+  & .vd-storylist { position: relative; }
+  & .vd-storylist[data-layout] > .vd-story--brief {
+    position: relative;
+    margin-top: 13px;
+    padding-top: var(--story-rule-pad);
+    border: 0;
+    --suture: url("./textures/oracle-shell/suture-1.svg?inline");
+  }
+  & .vd-storylist[data-layout] > .vd-story--brief:nth-of-type(3n + 2) { --suture: url("./textures/oracle-shell/suture-2.svg?inline"); }
+  & .vd-storylist[data-layout] > .vd-story--brief:nth-of-type(3n + 3) { --suture: url("./textures/oracle-shell/suture-3.svg?inline"); }
+  & .vd-storylist[data-layout] > .vd-story--brief:nth-of-type(4n) { --suture: url("./textures/oracle-shell/suture-4.svg?inline"); }
+  & .vd-storylist[data-layout] > .vd-story--brief::before {
+    position: absolute;
+    inset: 0 calc(-1 * (var(--vd-paper-padding) + var(--vd-scrollbar-gutter))) auto calc(-1 * var(--vd-paper-padding));
+    height: 14px;
+    background: var(--suture) center / 100% 100% no-repeat;
+    filter: drop-shadow(0 1px var(--shell-lip));
+    pointer-events: none;
+    content: "";
+  }
+  & .vd-storylist[data-layout] > .vd-story--brief:first-child {
+    margin-top: 0;
+    padding-top: 0;
+    &::before { display: none; }
+  }
+  & .vd-headline {
+    position: relative;
+    min-height: 1.15em;
+    padding-inline-start: 1.3em;
+    margin-bottom: 6px;
+    color: var(--shell-cut);
+    text-align: left;
+    text-wrap: pretty;
+    line-height: 1.13;
+    text-shadow: 0 1px var(--shell-lip);
+  }
+  & .vd-story--brief .vd-headline {
+    font-size: calc(clamp(22px, 2.85cqi, 34px) * var(--vd-text-scale));
+    letter-spacing: 0;
+  }
+  & .vd-storylist .vd-story--lead .vd-headline {
+    font-size: calc(clamp(28px, 4cqi, 48px) * var(--vd-text-scale));
+    text-align: left;
+    text-transform: none;
+    letter-spacing: -.015em;
+  }
+  & .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-headline {
+    font-size: calc(clamp(34px, 5.1cqi, 59px) * var(--vd-text-scale));
+  }
+  & .vd-storylist[data-layout] .vd-story--lead :is(.vd-deck, .vd-byline) { text-align: left; }
+  & .vd-storylist[data-layout] .vd-story--lead .vd-deck { border-color: var(--shell-rule); padding-bottom: 8px; }
+  & .vd-story-topic {
+    position: absolute;
+    inset: .04em auto auto 0;
+    width: .95em;
+    height: 1em;
+    color: var(--vd-accent);
+    border-right: 1px solid var(--shell-rule);
+  }
+  & .vd-story-topic::before {
+    position: absolute;
+    inset: 0 .13em .1em 0;
+    background: currentColor;
+    mask: var(--topic-icon, url("./icons/cracked-oracle-shell/untagged.svg?inline")) center / contain no-repeat;
+    content: "";
+  }
+  & .vd-story--lead .vd-story-topic,
+  & .vd-story--brief:nth-of-type(3n) .vd-story-topic { border-bottom: 1px solid var(--shell-rule); }
+  & .vd-story-topic[data-topic="military"] { --topic-icon: url("./icons/cracked-oracle-shell/military.svg?inline"); }
+  & .vd-story-topic[data-topic="congress"] { --topic-icon: url("./icons/cracked-oracle-shell/congress.svg?inline"); }
+  & .vd-story-topic[data-topic="science"] { --topic-icon: url("./icons/cracked-oracle-shell/science.svg?inline"); }
+  & .vd-story-topic[data-topic="religion"] { --topic-icon: url("./icons/cracked-oracle-shell/religion.svg?inline"); }
+  & .vd-story-topic[data-topic="culture"] { --topic-icon: url("./icons/cracked-oracle-shell/culture.svg?inline"); }
+  & .vd-story-topic[data-topic="trade"] { --topic-icon: url("./icons/cracked-oracle-shell/trade.svg?inline"); }
+  & .vd-story-topic[data-topic="economy"] { --topic-icon: url("./icons/cracked-oracle-shell/economy.svg?inline"); }
+  & .vd-story-topic[data-topic="cities"] { --topic-icon: url("./icons/cracked-oracle-shell/cities.svg?inline"); }
+  & .vd-story-topic[data-topic="domestic"] { --topic-icon: url("./icons/cracked-oracle-shell/domestic.svg?inline"); }
+  & .vd-story-topic[data-topic="international"] { --topic-icon: url("./icons/cracked-oracle-shell/international.svg?inline"); }
+  & .vd-story-topic[data-topic="politics"] { --topic-icon: url("./icons/cracked-oracle-shell/politics.svg?inline"); }
+  & .vd-prose { line-height: 1.55; }
+  & .vd-number { font-weight: 700; }
+
+  & .vd-evidence {
+    border-block: 1px solid var(--shell-rule);
+    padding-block: 8px;
+  }
+  & .vd-evidence thead { background: #6b431518; }
+  & .vd-evidence td { font-family: var(--vd-font-body); }
+  & .vd-votes { margin-inline-start: auto; gap: 5px; }
+  & .vd-vote {
+    width: 38px;
+    height: 29px;
+    padding: 3px 8px 4px;
+    background-color: var(--vd-vote-background);
+    border: 1px solid var(--shell-rule);
+    border-radius: 42% 47% 44% 46% / 53% 46% 54% 46%;
+  }
+  & .vd-vote + .vd-vote { border-radius: 47% 43% 50% 43% / 47% 53% 46% 54%; }
+  & .vd-motto { margin: 10px 0 0; }
+  & .vd-end-rule { display: none; }
+
+  & .vd-page::before, & .vd-page::after {
+    position: absolute;
+    bottom: calc(6px + var(--notch) * .35);
+    font: clamp(13px, 1.8cqi, 21px) / 1 var(--oracle);
+    letter-spacing: .22em;
+    color: #5d4028;
+    opacity: .78;
+    text-shadow: 0 1px var(--shell-lip);
+    pointer-events: none;
+  }
+  & .vd-page::before { left: var(--vd-paper-padding); content: "甲乙丙丁戊" / ""; }
+  & .vd-page::after {
+    right: calc(var(--vd-paper-padding) + var(--vd-scrollbar-gutter));
+    content: "己庚辛壬癸" / "";
+  }
+}
+
+@container newspaper (width <= 420px) {
+  .vd-newspaper[data-publication-design="cracked-oracle-shell"] .vd-tabs:has(> :nth-child(3)) {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0 8px;
+  }
+}
+
+@container newspaper (width > 760px) {
+  .vd-newspaper[data-publication-design="cracked-oracle-shell"] {
+    & .vd-tab { padding-inline: 3px; }
+    & .vd-masthead { padding-inline: clamp(22px, 5.3cqi, 64px); }
+    & .vd-masthead::before, & .vd-masthead::after {
+      position: absolute;
+      top: .3em;
+      writing-mode: vertical-rl;
+      white-space: pre;
+      font: clamp(20px, 2.6cqi, 31px) / 1 var(--oracle);
+      letter-spacing: .08em;
+      color: var(--shell-cut);
+      text-shadow: 0 1px var(--shell-lip);
+      pointer-events: none;
+    }
+    & .vd-masthead::before {
+      left: 7cqi;
+      padding-left: 5px;
+      border-left: 1px solid var(--shell-rule);
+      content: "商王\A 卜貞" / "";
+    }
+    & .vd-masthead::after {
+      right: 6cqi;
+      top: .5em;
+      padding-right: 5px;
+      border-right: 1px solid var(--shell-rule);
+      content: "雨雲\A 日月" / "";
+    }
+
+    & .vd-storylist[data-layout] {
+      --register-inset: clamp(14px, 2.6cqi, 31px);
+      --register-gap: 2px;
+      column-gap: var(--register-gap);
+
+      & > .vd-story--brief:nth-child(odd of .vd-story--brief) { padding-right: var(--register-inset); }
+      & > .vd-story--brief:nth-child(even of .vd-story--brief) { padding-left: var(--register-inset); }
+      & > .vd-story--brief .vd-story-content { display: flex; flex-direction: column; height: 100%; }
+      & > .vd-story--brief .vd-story-content > .vd-story-footer { margin-top: auto; padding-top: 7px; }
+      & > .vd-story--brief:nth-child(odd of .vd-story--brief)::before { right: calc(var(--register-gap) / -2); }
+      & > .vd-story--brief:nth-child(even of .vd-story--brief)::before { left: calc(var(--register-gap) / -2); }
+      & > .vd-story--brief:first-child + .vd-story--brief {
+        margin-top: 0;
+        padding-top: 0;
+        &::before { display: none; }
+      }
+    }
+    & .vd-storylist:has(> .vd-story--brief + .vd-story--brief):not(:has(> .vd-story--lead))::after,
+    & .vd-storylist:has(> .vd-story--lead) > .vd-story--brief:nth-child(even of .vd-story--brief)::after {
+      position: absolute;
+      width: 13px;
+      background: var(--midline) center / 100% 100% no-repeat;
+      filter: drop-shadow(1px 0 var(--shell-lip));
+      pointer-events: none;
+      content: "";
+    }
+    & .vd-storylist:not(:has(> .vd-story--lead))::after {
+      inset: calc(-1 * (var(--page-head) + 15px)) auto -12px calc(50% - 6.5px);
+    }
+    & .vd-storylist:has(> .vd-story--lead) > .vd-story--brief:nth-child(even of .vd-story--brief)::after {
+      inset: 6px auto 0 calc((var(--register-gap) + 13px) / -2);
+    }
   }
 }

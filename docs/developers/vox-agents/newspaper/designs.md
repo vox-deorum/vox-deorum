@@ -6,10 +6,11 @@ A design supplies an issue's layout, type, colors, and ornaments. Its `label` de
 
 1. Add or edit a JSON entry in `vox-agents/newspaper/designs/`. Give it a format `label`, a printable `title`, and the renderer family, layouts, and page labels. Keep the design ID stable for overlays and archived issues. Set `when` and `weight` for the era and civilization where it fits. To target a civilization group from `constants.json`, use its shortcut, such as `self.is.westAsian`.
 2. Reuse a family where possible. Put shared layout CSS under `vox-agents/newspaper/src/reader/families/` and scope it by `data-design`. Scope CSS specific to one publication design by `data-publication-design`. Import it after its family in `reader.css`. A new family also needs a presentation schema entry, layout defaults, and vote icons under `newspaper/public/assets/families/`.
-3. Register any [artwork](#design-assets), then run `npm run newspaper:preview -w vox-agents` from the repository root. In **Mockups**, check ordinary, breaking, and analysis pages at wide and narrow widths. To try a civilization's masthead, choose a design with `civilizationTitles`, such as Steam-Press Broadsheet. Test dark and pale accents on tintable designs.
-4. Capture the exported front page with the screenshot command below. Use the [browser tests](renderer.md#run-the-tests) or a [replay PNG](replay.md#generate-examples-from-the-command-line) to check recorded issues.
+3. Register any [artwork](#design-assets) and capture the updated front page from source with the command below. Open the image and inspect the design. Use a [replay PNG](replay.md#generate-examples-from-the-command-line) if you need to see a recorded issue.
 
 ### Capture design screenshots
+
+**During design, the only test is to look at a fresh screenshot.** Generate it from source or capture the standalone HTML study in a browser. Skip builds and automated tests during the design pass. Record any programmatic issues you notice and fix them later.
 
 ```sh
 npm run newspaper:screenshots -w vox-agents
@@ -29,8 +30,8 @@ For a layout review, capture at 360, 1000, and 1200 pixels in separate folders. 
 
 1. **Pair the baseline with a historical reference.** Keep the ordinary edition screenshot in `.tmp/newspaper-screenshots/<design>/`. Delegate image search and download to GPT-6-Luna. Give it the design ID, the screenshot path, and the source listed under [Families and designs](#families-and-designs). Ask it to save an authentic example next to the screenshot, verify that the image opens, and return the source URL, credit, and any stated license. Keep the photo in `.tmp/` for comparison.
 2. **Ask Claude Code for the first study.** Use Opus and give it the baseline, the reference (a viewable copy if the image is large), and one output path beside them. Ask it to look at how the artifact was made, how it grouped entries, and where it used ornament. Let it choose the composition. The study should be a single offline HTML file with its styles and artwork inline. Keep the ordinary edition's copy and controls for comparison. Pair whole stories on wide paper and stack them in order at 360 px. See the [Papyrus prompt](#claude-code-prompt-for-winged-sun-papyrus) for an example.
-3. **Review the study in a browser.** Check that the historical cues come through, the first story starts near the top, and the text and controls are easy to read. Try it wide and narrow. Use the HTML to discuss and revise the design before changing the template.
-4. **Have Codex port the approved study and compare exports.** Reuse the reader's existing structure and controls where possible. Capture the ordinary, breaking, and analysis layouts before and after the change at 1200 px for game width and 360 px for narrow reading. Use separate output folders. Check text contrast, story order, links, votes, and evidence. Then review one era-appropriate issue with a civilization masthead: the stock screenshots use shared sample stories, which can pull the design out of period.
+3. **Open fresh screenshots of the study.** Look at wide and narrow versions. Check whether the historical cues come through, the first story starts near the top, and the text and controls read clearly. Use the screenshots to discuss and revise the design before changing the template.
+4. **Have Codex port the approved study and compare the screenshots.** Reuse the reader's existing structure and controls where possible. Capture the ordinary, breaking, and analysis layouts before and after the change at 1200 px for game width and 360 px for narrow reading. Use separate output folders. If the shared sample stories pull the design out of period, also look at an issue with period copy and a civilization masthead.
 
 For a parallel batch, give each study its own template and screenshot folder. Start the next reference and study while Codex ports the previous one. Keep edits to a template's styles and assets where possible, and review a shared renderer change separately if several designs need it.
 
@@ -44,7 +45,9 @@ For a parallel batch, give each study its own template and screenshot folder. St
 
 Papyrus uses a single painted mark beside each headline, such as a house for domestic news or a riverboat for trade. See `topic-icons.png` for the set and the `topics-360` and `topics-1200` folders for examples in print. The priority in `story.ts` is military, congress, science, religion, culture, trade, economy, cities, domestic, international, then politics. Older issues with the `foreign` tag use the international mark. If there is no recognized tag, the headline gets a decorative lotus.
 
-**Cracked Oracle Shell.** Compare `folio.png`, `reference-shang-oracle-bone.jpg`, and Claude Code's `oracle-shell-study.html` in `.tmp/newspaper-screenshots/cracked-oracle-shell/`. The [Smithsonian's inscribed turtle plastron](https://asia-archive.si.edu/object/F1985.35/) dates to the late Shang period (ca. 1250–1050 BCE). The image is CC0. The study borrows the broken rim and turns the shell's seams into dividers. It keeps the pale writing field and small clusters of incisions beside the masthead. The offline study starts its first headline 128 px down at 1000 px paper width and stacks the briefs at 360 px.
+**Cracked Oracle Shell.** Compare the original `folio.png`, `reference-shang-oracle-bone.jpg`, and the adopted `oracle-shell-study-2.html` in `.tmp/newspaper-screenshots/cracked-oracle-shell/`. The [Smithsonian's inscribed turtle plastron](https://asia-archive.si.edu/object/F1985.35/) suggested the uneven shoulders, broken foot, and incised seams. The template paints one continuous bone surface behind the header and stories. It uses a subset of [Peichao Qin's Oracular typeface](https://oracular.azurewebsites.net/glyphs/download) for the incised signs and SVG glyph outlines for the news icons. The font license is in `vox-agents/newspaper/public/assets/licenses/oracular-OFL.txt`.
+
+The `after-1200` and `after-360` folders show all three layouts and a sample issue of *Jiǎgǔ of Yin*. For textured designs, also capture a tall page, since a short screenshot can hide a hard tile seam. See `yin-long.png` in the narrow capture folder for the long shell example.
 
 #### Claude Code prompt for Winged-Sun Papyrus
 
@@ -88,7 +91,7 @@ Declare built-in images and ornaments in the design's `assetDefinitions`. The re
 1. Place the file under `vox-agents/newspaper/public/assets/designs/<design id>/`.
 2. Give its definition a unique local ID, kind (`image` or `ornament`), media type, dimensions, license, and attribution. Set `path` to a relative path starting with `assets/`, such as `assets/designs/steam-press-broadsheet/harbour.png`. Omit dot segments and URL syntax.
 3. Reference the registered ID in `presentation.assets.ornamentAssetId` or in an article's `image.assetId`. An article image requires `altText` and can also have a caption.
-4. Rebuild with `npm run build:newspaper -w vox-agents` so the reader bundles the declarations and copies the assets.
+4. When packaging the approved design, run `npm run build:newspaper -w vox-agents` to bundle the declarations and copy the assets.
 
 ## Families and designs
 
@@ -97,7 +100,7 @@ A renderer family supplies the shared structure. A design can give it a distinct
 | Stock design | Family | Layout and source |
 | --- | --- | --- |
 | Forum Bronze (`forum-bronze`) | `inscription` | Framed, centred notice board. Roman *Acta Diurna*, Pompeii election notices, Trajan’s Column capitals, and a [bronze *tabula ansata*](https://metmuseum.org/art/collection/search/251144) for the masthead panel. |
-| Cracked Oracle Shell (`cracked-oracle-shell`) | `folio` | Framed writing field for East Asian civs. [Shang bronze cauldron](https://www.metmuseum.org/art/collection/search/60594) for the production ornament; [inscribed turtle plastron](https://asia-archive.si.edu/object/F1985.35/) for the shell study. |
+| Cracked Oracle Shell (`cracked-oracle-shell`) | `folio` | A broken [turtle plastron](https://asia-archive.si.edu/object/F1985.35/) with incised seams and oracle bone signs, for East Asian civs. |
 | Cuneiform Tablet (`cuneiform-tablet`) | `folio` | Clay tablet with paired entries for West Asian civs. [Babylonian Chronicle tablets](https://artsandculture.google.com/asset/the-life-and-times-of-nebuchadnezzar-ii/6AFSiGg9EQkQ7Q?hl=en): an uneven rim, a pressed wedge stamp, and scored rules across each pair. |
 | Winged-Sun Papyrus (`winged-sun-papyrus`) | `folio` | Stacked painted registers for North African civs. [Nakht’s chapel](https://www.metmuseum.org/art/collection/search/548438): lotus friezes, painted columns, and a winged sun over a pale plaster wash. |
 | Scented Court Letters (`scented-court-letters`) | `folio` | Letters on dyed paper. [Gen’ei poetry manuscript](https://emuseum.nich.go.jp/detail?content_base_id=100171&content_part_id=000&langId=en): violet dye, washi fibers, and a folded slip at the foot. |

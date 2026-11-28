@@ -173,18 +173,20 @@
       {
         "id": "comprehensive-agreement-bilateral-report",
         "when": "weGive !== null && weGet !== null",
-        "headline": "A broad agreement with {{partner}}",
+        "headline": "Bilateral agreement reached with {{partner}}",
         "body": [
-          "Our {{terms.civic.government}} and {{partner}} have settled several matters in a single agreement. {{dealTerms}}"
-        ]
+          "{{terms.civilization}} and {{partner}} have concluded a series of agreements. {{dealTerms}}"
+        ],
+        "settled": true
       },
       {
         "id": "comprehensive-agreement-one-sided-report",
         "when": "weGive === null || weGet === null",
-        "headline": "One document, several clauses with {{partner}}",
+        "headline": "One-sided agreement signed with {{partner}}",
         "body": [
-          "The agreement between our {{terms.civic.government}} and {{partner}} gathers several commitments into a single document. {{dealTerms}}"
-        ]
+          "A comprehensive set of terms has been agreed upon between {{terms.civilization}} and {{partner}}. {{dealTerms}} "
+        ],
+        "settled": true
       },
       {
         "id": "comprehensive-agreement-press",
@@ -206,10 +208,11 @@
     "variants": [
       {
         "id": "other-diplomatic-deal-report",
-        "headline": "A diplomatic deal with {{partner}}",
+        "headline": "New agreement reached with {{partner}}",
         "body": [
-          "Our {{terms.civic.government}} has concluded a diplomatic deal with {{partner}}. {{dealTerms}}"
-        ]
+          "{{terms.civilization}} and {{partner}} have signed a specific diplomatic contract: {{dealTerms}} "
+        ],
+        "settled": true
       }
     ]
   }

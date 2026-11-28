@@ -81,10 +81,11 @@
         "voice": "pamphlet",
         "stance": "local",
         "genre": "editorial",
-        "headline": "{{player}} at the Gates of {{ours}}!",
+        "headline": "Strangers at our Gates!",
         "body": [
-          "Look at the map, {{terms.civic.people}}! {{player}} has planted {{city}} just {{distance}} from {{ours}}. Their settlers are already pacing out fields we have farmed for years. Who will guard our pastures when their herds cross the line? The {{terms.civic.government}} must answer before the next boundary stone is moved!"
-        ]
+          "{{player}} has founded {{city}} only {{distance}} from {{ours}}! Who gave them permission to squat on our doorstep? While the {{terms.civic.government}} wastes time talking in the capital, the {{player.civic.people}} are building walls right where we hunt and farm. We demand guards at the border now, before we lose our land for good!"
+        ],
+        "settled": true
       },
       {
         "id": "forward-settle-gazette",

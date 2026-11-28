@@ -52,10 +52,11 @@
     "variants": [
       {
         "id": "ally-city-state-captured-report",
-        "headline": "{{cityState}} falls to {{captor}}",
+        "headline": "{{captor}} seizes control of {{cityState}}",
         "body": [
-          "{{captor}} has taken {{cityState}} by force, and the small power that stood with us now answers to a foreign flag. A merchant who kept a stall in its square came home with his cart half empty and said the last he saw of the town was a line of strangers on the wall. The city's name stays on our roll of friends, though the hand that answered our letters is gone."
-        ]
+          "Forces from {{captor}} have captured our ally city-state of {{cityState}}. The city is now under foreign occupation, removing a key ally of {{terms.civilization}} from the map."
+        ],
+        "settled": true
       },
       {
         "id": "ally-city-state-captured-analysis",
@@ -72,10 +73,11 @@
         "voice": "chronicle",
         "stance": "traditional",
         "genre": "obituary",
-        "headline": "{{cityState}}, faithful to the last",
+        "headline": "The Passing of {{cityState}}",
         "body": [
-          "Be it set down in the record that {{cityState}} kept faith with {{terms.civilization}} to the last, and asked no reward for it. The city held its own council, its own gate, and its own name among the small powers until {{captor}}'s army came and took all three. What remains is the example, which no conqueror can garrison."
-        ]
+          "In this year, the long friendship between {{terms.civilization}} and {{cityState}} came to an end. Once a beacon of trade and loyalty, the city fell to the armies of {{captor}}. The bonds of old have been severed, and only the silence of conquest remains {{distance}} from our borders."
+        ],
+        "settled": true
       },
       {
         "id": "ally-city-state-captured-editorial",

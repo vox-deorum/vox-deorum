@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="240" height="156" viewBox="0 0 240 156">
-  <!-- Plates share curved seams. Partial growth rings follow each plate's outline. -->
-  <path fill="#b89f62" opacity=".07" d="M0 38Q26 31 52 18Q82 27 109 43Q113 71 109 101Q77 110 52 123Q26 117 0 103Z"/>
-  <g fill="none" stroke="#806c48" stroke-linejoin="round" stroke-linecap="round">
-    <path opacity=".18" stroke-width="1.25" d="M0 38Q26 31 52 18Q82 27 109 43Q143 34 166 19Q206 24 240 38M0 103Q26 117 52 123Q77 110 109 101Q142 114 166 126Q206 117 240 103M0 38Q6 69 0 103M240 38Q246 69 240 103M109 43Q113 71 109 101M52 18Q54 10 55 0M55 156Q56 139 52 123M166 19Q169 9 170 0M170 156Q172 139 166 126"/>
-    <path opacity=".10" d="M10 48Q32 42 54 30Q81 38 98 50M15 53Q38 47 53 38Q72 43 91 52M20 101Q39 109 51 112Q80 98 100 94M123 47Q147 40 169 28Q202 33 227 43M130 95Q150 104 167 113Q196 107 221 98M136 90Q151 97 168 104Q187 100 201 95M69 144Q89 135 109 132"/>
-  </g>
-</svg>

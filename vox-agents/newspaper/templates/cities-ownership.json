@@ -89,10 +89,11 @@
         "voice": "press",
         "stance": "neutral",
         "genre": "analysis",
-        "headline": "Old orders under a new flag in {{city}}",
+        "headline": "A New Flag Over {{city}}",
         "body": [
-          "{{city}} turned from {{formerOwner}} to {{newOwner}} without a battle, and the people there had no more say in it than the weather. A town that wakes up in a new country is a harder thing to govern than a town taken by storm. Expect {{newOwner}} to rule gently for a season or two; soft words are cheap, and they are the safest way to keep a town that changed hands once from changing again."
-        ]
+          "{{city}} has officially flipped its allegiance from {{formerOwner}} to {{newOwner}}. Records indicate a swift transition of power, with local magistrates swearing loyalty to their new sovereign almost immediately after the announcement."
+        ],
+        "settled": true
       },
       {
         "id": "city-flips-letter",
@@ -213,10 +214,11 @@
         "voice": "press",
         "stance": "hawkish",
         "genre": "report",
-        "headline": "A puppet no more: {{city}} answers to {{owner}}",
+        "headline": "Foreign Grip Tightens {{distance}} Away",
         "body": [
-          "{{owner}} has folded {{city}} into its direct rule, and the city's men and grain now answer to the capital without the old bargaining. There was no ceremony worth reporting and no garrison change. The difference is in how fast an order travels."
-        ]
+          "The semi-autonomous status of {{city}} has ended as {{owner}} completes a full annexation. The city now answers directly to {{owner.civic.leaderTitle}} {{city.owner.leader}}. With {{city}} now fully integrated, {{owner}} has solidified a position just {{distance}} from our borders. "
+        ],
+        "settled": true
       },
       {
         "id": "neighbor-puppet-annexed-notice",
