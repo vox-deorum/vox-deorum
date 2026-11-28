@@ -85,7 +85,7 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('newspaper design
     } finally { await page.close(); }
   });
 
-  it('should place story dates next to their headlines on narrow and wide editions', async context => {
+  it('should place story dates in their design’s date position on narrow and wide editions', async context => {
     if (!browser) { context.skip(unavailable); return; }
     const { designs } = await loadEditorialConfig();
     const page = await browser.newPage();
@@ -115,22 +115,24 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('newspaper design
             text.selectNodeContents(node);
             const date = text.getBoundingClientRect();
             const paper = story.closest('.vd-page')!.getBoundingClientRect();
+            const up = story.querySelector('[data-vd-vote-value="up"]')!.getBoundingClientRect();
             return {
               itemId: story.getAttribute('data-item-id'),
               text: node.textContent,
               above: date.bottom <= heading.top + 1,
               directlyBelow: date.top >= heading.bottom - 1 && date.top - heading.bottom <= 24,
+              beforeUpVote: date.right <= up.left && date.top >= up.top && date.bottom <= up.bottom,
               fits: date.left >= paper.left && date.right <= paper.right,
             };
           }));
           expect(dates, label).toHaveLength(2);
           expect(dates.map(date => [date.itemId, date.text]), label)
             .toEqual([[lead.id, `Turn ${lead.observedTurn}`], [brief.id, 'Turn 0']]);
-          expect(dates.every(date => date.fits && (id === 'teletext-screen' ? date.directlyBelow : date.above)), label).toBe(true);
+          const placement = id === 'endless-scroll' ? 'beforeUpVote' : id === 'teletext-screen' ? 'directlyBelow' : 'above';
+          expect(dates.every(date => date.fits && date[placement]), label).toBe(true);
           if (id === 'endless-scroll') {
             const byline = page.locator('.vd-story--lead .vd-byline');
             expect(await byline.locator('a').textContent(), label).toBe('Bristol');
-            expect(await byline.locator('.vd-story-turn').count(), label).toBe(1);
           }
           if (id === 'telegram-form') {
             expect(await page.locator('.vd-cable-turn').textContent(), label).toBe(`Issue ${issue.cutoff.label}`);

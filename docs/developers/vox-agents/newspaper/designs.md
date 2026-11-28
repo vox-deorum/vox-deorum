@@ -99,7 +99,7 @@ A renderer family supplies the shared structure. A design can give it a distinct
 
 Stock designs offer ordinary, breaking, and analysis layouts. A breaking page emphasizes the lead. Most analysis layouts put evidence beside the story on wide sheets and below it on narrow sheets.
 
-Endless Scroll, Telegram Form, Quayside Ledger, and Teletext Screen show the observation turn near each headline when known and keep the editor's story order. Telegram Form also labels the edition's cutoff in its masthead. Courier Slips and Stargazer’s Almanack have dedicated date fields and show **Undated** when no turn was recorded.
+Endless Scroll shows each known observation turn before the thumbs-up button. Telegram Form, Quayside Ledger, and Teletext Screen put it near the headline. These designs keep the editor's story order. Telegram Form also labels the edition's cutoff in its masthead. Courier Slips and Stargazer’s Almanack have dedicated date fields and show **Undated** when no turn was recorded.
 
 ## Rendering constraints
 

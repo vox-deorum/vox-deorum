@@ -174,18 +174,6 @@
   margin-top: 1px;
 }
 
-/* The post's observation turn is muted metadata beside the byline or above the headline. */
-
-.vd-newspaper[data-design="feed"] .vd-story-turn {
-  margin: 0 0 3px;
-  color: var(--vd-muted);
-  font-family: var(--vd-font-body);
-  font-size: calc(14px * var(--vd-text-scale));
-  font-weight: 500;
-  letter-spacing: -0.005em;
-  text-transform: none;
-}
-
 .vd-newspaper[data-design="feed"] .vd-headline,
 .vd-newspaper[data-design="feed"] .vd-storylist[data-layout] .vd-story--brief .vd-headline {
   margin: 0 0 4px;
@@ -258,7 +246,7 @@
   border-radius: 12px;
 }
 
-/* Action row: votes first, the earlier-report link at the far end. */
+/* Action row: observation turn, votes, and the earlier report at the far end. */
 
 .vd-newspaper[data-design="feed"] .vd-story-footer,
 .vd-newspaper[data-design="feed"] .vd-prose + .vd-story-footer:not(:has(.vd-text-link)) {
@@ -266,8 +254,21 @@
   font-size: calc(15px * var(--vd-text-scale));
 }
 
-.vd-newspaper[data-design="feed"] .vd-votes {
+.vd-newspaper[data-design="feed"] .vd-feed-actions {
+  display: flex;
+  align-items: center;
   order: -1;
+  gap: 8px;
+}
+
+.vd-newspaper[data-design="feed"] .vd-story-turn {
+  margin-left: 8px;
+  color: var(--vd-muted);
+  font: 500 calc(14px * var(--vd-text-scale)) / 1.4 var(--vd-font-body);
+  white-space: nowrap;
+}
+
+.vd-newspaper[data-design="feed"] .vd-votes {
   gap: 18px;
 }
 

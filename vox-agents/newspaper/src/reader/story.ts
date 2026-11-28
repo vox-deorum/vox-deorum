@@ -70,13 +70,7 @@ export function renderStory(
   // A Teletext brief always wraps its headline block, which wide paper places in a left cell.
   const headlineBlock = teletext && !lead ? createElement("div", "vd-teletext-heading") : headingGroup;
   if (headlineBlock !== headingGroup) headingGroup.append(headlineBlock);
-  // A turn prints below a Teletext headline, beside a feed byline, or above the headline.
-  const turnPlacement: "above" | "below" | "byline" | undefined = turn === undefined ? undefined
-    : teletext ? "below"
-    : feed && item.byline ? "byline"
-    : feed || publicationDesignId === "telegram-form" || publicationDesignId === "quayside-ledger" ? "above"
-    : undefined;
-  if (turn !== undefined && turnPlacement === "above") {
+  if (turn !== undefined && (publicationDesignId === "telegram-form" || publicationDesignId === "quayside-ledger")) {
     // A Telegram Form brief mounts its turn in the content, ahead of the register heading and account.
     const target = publicationDesignId === "telegram-form" && !lead ? content : headlineBlock;
     target.append(renderStoryTurn(turn));
@@ -85,7 +79,7 @@ export function renderStory(
   heading.id = headingId;
   appendInlineNodes(heading, item.headline, item.id, bindReaderAction);
   headlineBlock.append(heading);
-  if (turn !== undefined && turnPlacement === "below") headlineBlock.append(renderStoryTurn(turn));
+  if (turn !== undefined && teletext) headlineBlock.append(renderStoryTurn(turn));
 
   if (item.subheadline) {
     const subheadline = createElement("p", "vd-deck");
@@ -96,9 +90,6 @@ export function renderStory(
   if (item.byline) {
     const byline = createElement("p", "vd-byline");
     appendInlineNodes(byline, item.byline, item.id, bindReaderAction);
-    if (turn !== undefined && turnPlacement === "byline") {
-      byline.append(document.createTextNode(" · "), renderStoryTurn(turn, true));
-    }
     credits.append(byline);
   }
 
@@ -149,7 +140,7 @@ export function renderStory(
   return article;
 }
 
-/** Build a story's observation-turn label, inline beside a byline or as its own line. */
+/** Build the observation turn for a heading or feed action row. */
 function renderStoryTurn(turn: number, inline = false): HTMLElement {
   return createElement(inline ? "span" : "p", "vd-story-turn", `Turn ${turn}`);
 }
@@ -180,7 +171,7 @@ function renderStoryImage(item: IssueItem, assetBaseUrl: string): HTMLElement | 
   return figure;
 }
 
-/** Build a story footer with an earlier-report link and reversible votes. */
+/** Build the story footer with reversible votes, any earlier report, and the feed's turn. */
 function renderStoryFooter(
   item: IssueItem,
   vote: VoteValue,
@@ -224,7 +215,15 @@ function renderStoryFooter(
     votes.append(button);
   }
 
-  footer.append(links, votes);
+  footer.append(links);
+  if (designId === "feed") {
+    const actions = createElement("div", "vd-feed-actions");
+    if (item.observedTurn !== undefined) actions.append(renderStoryTurn(item.observedTurn, true));
+    actions.append(votes);
+    footer.append(actions);
+  } else {
+    footer.append(votes);
+  }
   applyVoteState(footer, item.id, vote, designId, assetBaseUrl);
   return footer;
 }
