@@ -42,7 +42,7 @@
         "when": "threshold === 800",
         "headline": "Our network in {{civilization}} holds the treaty threshold",
         "body": [
-          "Our network at the court of {{civilization}} now holds at least 800 points. Private treaties between that court and another government reach us only when our network at the other party's court is also at least 800. On this side of the arrangement the ground is ready, and no text has arrived through this alone."
+          "Our network at the court of {{civilization}} now holds at least 800 points. This court now meets one of the two conditions for reading future deals between it and another foreign court. Our network at the other court must also be at least 800 when the deal is made."
         ]
       },
       {
@@ -53,7 +53,7 @@
         "when": "threshold === 800",
         "headline": "The groundwork for reading {{civilization}}'s treaties",
         "body": [
-          "Our network at the court of {{civilization}} now holds at least 800 points. A private treaty between that court and another signatory becomes readable to us only when our people at both capitals each hold a network at that level. The mission at {{civilization}} has done its part; the other party's court must still match it."
+          "Our network at the court of {{civilization}} now holds at least 800 points. This court now meets one of the two conditions for reading future deals between it and another foreign court. When such a deal is made, our network at the other court must also be at least 800."
         ]
       }
     ]
@@ -136,7 +136,7 @@
         "when": "envoy",
         "headline": "Our envoy is at the court that adopted {{policy}}",
         "body": [
-          "Our envoy is posted at the court of {{civilization}}, where {{policy}} has been adopted. The court has said little beyond the words of the policy. A policy is a promise about where a nation will spend its money and its patience, and our mission there will watch where this one leads."
+          "Our envoy is now posted at the court of {{civilization}}, where {{policy}} has been adopted. A policy is a promise about where a nation will spend its money and its patience, and our mission there will watch where this one leads."
         ]
       },
       {
@@ -196,7 +196,7 @@
         "headline": "What {{from}} put into the treaty with {{to}}",
         "body": [
           "{{from}} gives: {{fromGives}}.",
-          "{{to}} gave nothing in the recorded terms, so the deal was one-sided."
+          "The record lists no terms for {{to}}."
         ]
       },
       {
@@ -208,7 +208,7 @@
         "headline": "What {{to}} put into the treaty with {{from}}",
         "body": [
           "{{to}} gives: {{toGives}}.",
-          "{{from}} gave nothing in the recorded terms, so the deal was one-sided."
+          "The record lists no terms for {{from}}."
         ]
       },
       {
@@ -291,9 +291,9 @@
         "stance": "national",
         "genre": "report",
         "when": "war === true",
-        "headline": "Our envoy quits {{civilization}} as the war goes on",
+        "headline": "Our envoy has left {{civilization}}, and we are at war",
         "body": [
-          "Our envoy has left {{civilization}} while the war continues. The post stands empty, and any letters to that capital now wait on the road. Whatever the mission gathered before it closed is with the foreign office."
+          "Our envoy has left {{civilization}}. The two countries are now at war. The post stands empty, and any letters to that capital now wait on the road. Whatever the mission gathered before it closed is with the foreign office."
         ]
       },
       {
@@ -304,7 +304,7 @@
         "when": "war === false",
         "headline": "The mission to {{civilization}} closes",
         "body": [
-          "Our envoy has left the court of {{civilization}}, and the two countries remain at peace. The post stands empty. A post left empty is still a door, and either court may knock again."
+          "Our envoy has left the court of {{civilization}}. The two countries are now at peace, and the post stands empty. The mission's papers have gone to the foreign office, as they do after every posting."
         ]
       },
       {
@@ -398,7 +398,7 @@
         },
         "headline": "{{culprit}} has been named before",
         "body": [
-          "Earlier reports in this period have named {{culprit}} as well. Our service counts {{earlier|earlier report|earlier reports}} naming the same civilization, and the same agent can appear in more than one of them. Whether our government has answered those reports is not recorded here."
+          "Recent reports have named {{culprit}} as well. Our service counts {{earlier|earlier report|earlier reports}} naming the same civilization, and the same agent can appear in more than one of them. Whether our government has answered those reports is not recorded here."
         ]
       }
     ]

@@ -97,9 +97,9 @@
         "weight": {
           "base": 3
         },
-        "headline": "Our envoy at the court of {{civilization}}",
+        "headline": "Our envoy now at the court of {{civilization}}",
         "body": [
-          "{{civilization}} has entered a golden age, and our envoy is posted at its court. A court with full coffers speaks with more weight, and its favor is worth having while the money lasts. The envoy will be there to see how the court spends it."
+          "{{civilization}} has gained golden age turns, and our envoy is posted at its court now. A golden age lends weight to a court's words, and its favor is worth having. The envoy will stay to watch how the court uses the season."
         ]
       }
     ]
@@ -653,9 +653,9 @@
         "weight": {
           "base": 3
         },
-        "headline": "Our envoy in {{rival}} as {{ideology}} is proclaimed",
+        "headline": "Our envoy in {{rival}}, where {{ideology}} is proclaimed",
         "body": [
-          "{{rival}} has adopted {{ideology}}, and our envoy is at that court now. Officials will not be drawn on what changes first, and the court has said little beyond the words of the doctrine. A doctrine names the places a nation means to go, and the envoy will stay long enough to see it applied."
+          "{{rival}} has adopted {{ideology}}, and our envoy is at that court now. A doctrine names the places a nation means to go, and the envoy will stay long enough to see it applied."
         ]
       }
     ]

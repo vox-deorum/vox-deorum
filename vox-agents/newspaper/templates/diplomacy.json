@@ -183,7 +183,7 @@
         },
         "headline": "Our envoy in {{civilization}}, where we stand denounced",
         "body": [
-          "{{civilization}} has denounced us, and our envoy is at that court now. The court has said what it means to say, and no answer has been entered yet."
+          "{{civilization}} has denounced us, and our envoy is at that court now. The words are on the record, and the envoy will report what follows."
         ]
       }
     ]
@@ -402,7 +402,7 @@
         "weight": {
           "base": 3
         },
-        "headline": "Our envoy in {{friend}} as the friendship ends",
+        "headline": "Our envoy in {{friend}}, where the friendship has ended",
         "body": [
           "The friendship with {{friend}} has ended. Our envoy is at that court now, and the halls are as busy as ever; no one there seems to miss us. The ordinary business of two courts goes on, which is its own kind of answer."
         ]

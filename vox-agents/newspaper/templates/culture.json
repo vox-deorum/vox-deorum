@@ -360,7 +360,7 @@
         },
         "headline": "The {{wonder}} finished in enemy {{city}}",
         "body": [
-          "The {{wonder}} at {{city}} is finished. The city flies an enemy flag and stands close to our frontier, and an agent of ours is posted there now. There is no longer any doubt about what the enemy has built."
+          "The {{wonder}} was finished at {{city}}. The city flies an enemy flag and stands close to our frontier. An agent of ours is posted there now, and there is no longer any doubt about what was built."
         ]
       }
     ]
@@ -425,7 +425,7 @@
         },
         "headline": "The {{wonder}} at {{city}} is finished",
         "body": [
-          "The {{wonder}} at {{city}} is finished. {{civilization}} has a new hall, and one of our people is in the city now. Whatever divides the courts, a work like this is worth a look."
+          "The {{wonder}} at {{city}} is finished. One of our people is in the city now. Whatever divides the courts, a work like this is worth a look, and we will hear what our agent makes of it."
         ]
       }
     ]
