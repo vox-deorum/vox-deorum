@@ -2,14 +2,11 @@
   {
     "id": "capital-outgrown",
     "subject": "world",
-    "when": [
-      "self.knows('capital') && Number.isFinite(self.capital.population)",
-      "self.cities.some(c => c.knows('population') && c.population > self.capital.population)"
-    ],
+    "when": "self.cities.some(c => c.get('population') > self.capital.population)",
     "values": {
-      "largestPopulation": "Math.max(...self.cities.filter(c => c.knows('population') && Number.isFinite(c.population)).map(c => c.population))",
-      "largest": "(() => { const names = self.cities.filter(c => c.knows('population') && c.population === largestPopulation).map(c => c.name); return names.length <= 2 ? names.join(' and ') : names.slice(0, -1).join(', ') + ', and ' + names[names.length - 1]; })()",
-      "tied": "self.cities.filter(c => c.knows('population') && c.population === largestPopulation).length > 1",
+      "largestPopulation": "Math.max(...self.cities.filter(c => c.get('population') !== undefined).map(c => c.population))",
+      "largest": "(() => { const names = self.cities.filter(c => c.get('population') === largestPopulation).map(c => c.name); return names.length <= 2 ? names.join(' and ') : names.slice(0, -1).join(', ') + ', and ' + names[names.length - 1]; })()",
+      "tied": "self.cities.filter(c => c.get('population') === largestPopulation).length > 1",
       "capital": "self.capital.name"
     },
     "tier": "routine"
@@ -19,7 +16,6 @@
     "subject": "city",
     "when": [
       "city.own",
-      "city.knows('unhappiness')",
       "city.unhappiness.top !== null"
     ],
     "group": {
@@ -35,7 +31,6 @@
     "subject": "city",
     "when": [
       "city.own",
-      "city.knows('unhappiness')",
       "city.unhappiness.top === 'famine'"
     ],
     "values": {
@@ -50,10 +45,9 @@
     "subject": "city",
     "window": "recent",
     "when": [
-      "city.knows('population') && city.population >= largeCity && city.knows('own') && city.own",
-      "city.knows('before') && city.before.knows('population') && Number.isFinite(city.before.population)",
-      "city.before.knows('owner') && city.before.owner.self",
-      "crossed(city.population, city.before.population, largeCity) || crossed(city.population, city.before.population, metropolis)"
+      "city.population >= largeCity && city.own",
+      "city.get('before.owner.self')",
+      "crossed(city.population, city.get('before.population'), largeCity) || crossed(city.population, city.get('before.population'), metropolis)"
     ],
     "values": {
       "milestone": "crossed(city.population, city.before.population, metropolis) ? 'metropolis' : 'large city'",
@@ -67,10 +61,9 @@
     "subject": "city",
     "when": [
       "city.own",
-      "self.knows('atWar') && self.atWar === false",
-      "city.knows('unhappiness') && city.unhappiness.knows('top') && city.unhappiness.top !== 'famine'",
-      "city.knows('foodPerTurn') && Number.isFinite(city.foodPerTurn) && city.foodPerTurn < 0",
-      "city.knows('foodStored') && Number.isFinite(city.foodStored)",
+      "!self.atWar",
+      "city.unhappiness.knows('top') && city.unhappiness.top !== 'famine'",
+      "city.foodPerTurn < 0",
       "city.is.starving"
     ],
     "values": {
@@ -87,12 +80,10 @@
     "subject": "city",
     "window": "recent",
     "when": [
-      "city.foreign === true && city.knows('name')",
-      "city.knows('owner') && city.owner.knows('id') && city.owner.knows('name')",
-      "city.knows('population') && Number.isFinite(city.population)",
-      "city.knows('before') && city.before.knows('population') && Number.isFinite(city.before.population)",
-      "city.before.knows('owner') && city.before.owner.knows('id') && city.before.owner.id === city.owner.id",
-      "crossed(city.population, city.before.population, largeCity) || crossed(city.population, city.before.population, metropolis)"
+      "city.foreign && city.name",
+      "city.owner.knows('name')",
+      "city.get('before.owner.id') === city.owner.id",
+      "crossed(city.population, city.get('before.population'), largeCity) || crossed(city.population, city.get('before.population'), metropolis)"
     ],
     "values": {
       "population": "city.population",
@@ -106,12 +97,12 @@
     "id": "foreign-city-hardship",
     "subject": "city",
     "when": [
-      "city.foreign === true && city.knows('name')",
-      "city.knows('owner') && city.owner.knows('id') && city.owner.knows('name')",
-      "(city.knows('unhappiness') && city.unhappiness.knows('top') && (city.unhappiness.top === 'famine' || city.unhappiness.top === 'pillaged')) || (city.knows('foodPerTurn') && Number.isFinite(city.foodPerTurn) && city.foodPerTurn < 0 && city.knows('foodStored') && Number.isFinite(city.foodStored) && city.is.starving)"
+      "city.foreign && city.name",
+      "city.owner.knows('id') && city.owner.knows('name')",
+      "(city.get('unhappiness.top') === 'famine' || city.get('unhappiness.top') === 'pillaged') || (city.get('foodPerTurn') < 0 && city.get('foodStored') !== undefined && city.is.starving)"
     ],
     "values": {
-      "cause": "city.knows('unhappiness') && city.unhappiness.knows('top') && city.unhappiness.top === 'famine' ? 'famine' : city.knows('unhappiness') && city.unhappiness.knows('top') && city.unhappiness.top === 'pillaged' ? 'pillaged' : 'foodShortage'"
+      "cause": "city.get('unhappiness.top') === 'famine' ? 'famine' : city.get('unhappiness.top') === 'pillaged' ? 'pillaged' : 'foodShortage'"
     },
     "tier": "notable",
     "adjust": "city.stake.place",

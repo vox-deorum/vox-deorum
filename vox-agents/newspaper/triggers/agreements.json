@@ -5,7 +5,7 @@
     "subject": "event",
     "event": "DealMade",
     "when": [
-      "event.knows('deal') && event.deal.knows('kind') && event.deal.kind === 'comprehensive-agreement'",
+      "event.get('deal.kind') === 'comprehensive-agreement'",
       "event.is.dealPartnerNamed"
     ],
     "values": {
@@ -24,7 +24,7 @@
     "subject": "event",
     "event": "DealMade",
     "when": [
-      "event.knows('deal') && event.deal.knows('kind') && event.deal.kind === 'embassy-agreement'",
+      "event.get('deal.kind') === 'embassy-agreement'",
       "event.is.dealPartnerNamed"
     ],
     "values": {
@@ -44,7 +44,7 @@
     "subject": "event",
     "event": "DealMade",
     "when": [
-      "event.knows('deal') && event.deal.knows('kind') && event.deal.kind === 'map-deal'",
+      "event.get('deal.kind') === 'map-deal'",
       "event.is.dealPartnerNamed"
     ],
     "values": {
@@ -64,7 +64,7 @@
     "subject": "event",
     "event": "DealMade",
     "when": [
-      "event.knows('deal') && event.deal.knows('kind') && event.deal.kind === 'other-diplomatic-deal'",
+      "event.get('deal.kind') === 'other-diplomatic-deal'",
       "event.is.dealPartnerNamed"
     ],
     "values": {
@@ -83,7 +83,7 @@
     "subject": "event",
     "event": "DealMade",
     "when": [
-      "event.knows('deal') && event.deal.knows('kind') && event.deal.kind === 'research-agreement'",
+      "event.get('deal.kind') === 'research-agreement'",
       "event.is.dealPartnerNamed"
     ],
     "values": {
@@ -102,7 +102,7 @@
     "subject": "event",
     "event": "DealMade",
     "when": [
-      "event.knows('deal') && event.deal.knows('kind') && event.deal.kind === 'technology-deal'",
+      "event.get('deal.kind') === 'technology-deal'",
       "event.is.dealPartnerNamed"
     ],
     "values": {

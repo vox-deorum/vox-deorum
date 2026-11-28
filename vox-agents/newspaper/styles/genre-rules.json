@@ -26,7 +26,7 @@
   {
     "id": "genre-letter-low-happiness",
     "match": { "genre": "letter" },
-    "when": "self.knows('happinessPercentage') && typeof self.happinessPercentage === 'number' && self.happinessPercentage < 50",
+    "when": "self.happinessPercentage < 50",
     "multiplier": 1.5
   },
   {
@@ -68,43 +68,43 @@
   {
     "id": "genre-freedom-up",
     "match": { "genre": ["editorial", "letter"] },
-    "when": "self.knows('ideology') && self.ideology === 'Freedom'",
+    "when": "self.ideology === 'Freedom'",
     "multiplier": 1.5
   },
   {
     "id": "genre-order-up",
     "match": { "genre": ["joke", "ledger"] },
-    "when": "self.knows('ideology') && self.ideology === 'Order'",
+    "when": "self.ideology === 'Order'",
     "multiplier": 1.5
   },
   {
     "id": "genre-autocracy-notice-up",
     "match": { "genre": "notice" },
-    "when": "self.knows('ideology') && self.ideology === 'Autocracy'",
+    "when": "self.ideology === 'Autocracy'",
     "multiplier": 1.5
   },
   {
     "id": "genre-autocracy-letter-down",
     "match": { "genre": "letter" },
-    "when": "self.knows('ideology') && self.ideology === 'Autocracy'",
+    "when": "self.ideology === 'Autocracy'",
     "multiplier": 0.6
   },
   {
     "id": "genre-letter-revolt",
     "match": { "genre": "letter" },
-    "when": "self.knows('happinessPercentage') && typeof self.happinessPercentage === 'number' && self.happinessPercentage < 35",
+    "when": "self.happinessPercentage < 35",
     "multiplier": 1.5
   },
   {
     "id": "genre-losing-war-obituary-up",
     "match": { "genre": "obituary" },
-    "when": "self.knows('wars') && self.wars.some(other => self.relation(other).knows('warScore') && self.relation(other).warScore <= -25)",
+    "when": "self.wars.some(other => self.relation(other).get('warScore') <= -25)",
     "multiplier": 1.3
   },
   {
     "id": "genre-deficit-ledger-up",
     "match": { "genre": "ledger" },
-    "when": "self.knows('goldPerTurn') && self.goldPerTurn < 0",
+    "when": "self.goldPerTurn < 0",
     "multiplier": 1.3
   },
   {
@@ -128,13 +128,13 @@
   {
     "id": "genre-world-ideology-letter",
     "match": { "genre": "letter" },
-    "when": "game.knows('congress') && game.congress.available === true && self.knows('ideology') && typeof self.ideology === 'string' && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && r.name.startsWith('World Ideology') && !r.name.includes(self.ideology))",
+    "when": "game.knows('congress') && game.congress.get('available') && typeof self.ideology === 'string' && game.congress.get('activeResolutions')?.some(r => typeof r.name === 'string' && r.name.startsWith('World Ideology') && !r.name.includes(self.ideology))",
     "multiplier": 1.3
   },
   {
     "id": "genre-session-mood-analysis-editorial",
     "match": { "genre": ["analysis", "editorial"] },
-    "when": "game.knows('congress') && game.congress.available === true && (game.congress.votingNow === true || (game.congress.knows('expectedSessionTurn') && typeof game.congress.expectedSessionTurn === 'number' && game.congress.expectedSessionTurn <= turn + 3)) && (story.tags.includes('international') || story.tags.includes('diplomacy'))",
+    "when": "game.knows('congress') && game.congress.get('available') && (game.congress.get('votingNow') || game.congress.get('expectedSessionTurn') <= turn + 3) && (story.tags.includes('international') || story.tags.includes('diplomacy'))",
     "multiplier": 1.3
   },
   {
@@ -248,19 +248,19 @@
   {
     "id": "genre-wartime-obituary-up",
     "match": { "genre": "obituary" },
-    "when": "self.knows('atWar') && self.atWar && story.tags.includes('military')",
+    "when": "self.atWar && story.tags.includes('military')",
     "multiplier": 1.2
   },
   {
     "id": "genre-golden-age-obituary-down",
     "match": { "genre": "obituary" },
-    "when": "self.knows('goldenAge') && typeof self.goldenAge === 'string' && self.goldenAge.endsWith('turns remaining')",
+    "when": "self.get('goldenAge')?.endsWith('turns remaining')",
     "multiplier": 0.75
   },
   {
     "id": "genre-order-notice-up",
     "match": { "genre": "notice" },
-    "when": "self.knows('ideology') && self.ideology === 'Order'",
+    "when": "self.ideology === 'Order'",
     "multiplier": 1.2
   },
   {

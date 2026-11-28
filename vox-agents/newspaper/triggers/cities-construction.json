@@ -22,9 +22,9 @@
     "event": "CityInvestedBuilding",
     "when": [
       "event.is.ourCity",
-      "typeof event.building === 'string' && event.building.length > 0",
-      "event.invested === true || event.invested === 1",
-      "!events.some(e => e.type === 'CityConstructed' && e.knows('player') && e.player.knows('id') && e.player.id === event.player.id && e.knows('building') && e.building === event.building && e.knows('city') && e.city.knows('id') && event.city.knows('id') && e.city.id === event.city.id && e.knows('isGoldPurchase') && e.isGoldPurchase === false && e.knows('isFaithPurchase') && e.isFaithPurchase === false)"
+      "event.building",
+      "event.invested",
+      "!events.some(e => e.type === 'CityConstructed' && e.get('player.id') === event.player.id && e.get('building') === event.building && e.get('city.id') === event.city.id && e.get('isGoldPurchase') === false && e.get('isFaithPurchase') === false)"
     ],
     "values": {
       "building": "event.building"
@@ -44,7 +44,7 @@
     ],
     "values": {
       "building": "event.building",
-      "currency": "event.isGoldPurchase === true ? 'gold' : 'faith'"
+      "currency": "event.isGoldPurchase ? 'gold' : 'faith'"
     },
     "tier": "filler",
     "adjust": "event.stake.building",
@@ -110,7 +110,7 @@
     "values": {
       "building": "event.building",
       "owner": "event.city.owner.name",
-      "currency": "event.isGoldPurchase === true ? 'gold' : 'faith'"
+      "currency": "event.isGoldPurchase ? 'gold' : 'faith'"
     },
     "tier": "filler",
     "adjust": ["event.city.owner.stake.relation", "event.stake.intel"],
@@ -122,9 +122,9 @@
     "event": "CityInvestedBuilding",
     "when": [
       "event.is.theirCity",
-      "typeof event.building === 'string' && event.building.length > 0",
-      "event.invested === true || event.invested === 1",
-      "!events.some(e => e.type === 'CityConstructed' && (e.turn > event.turn || (e.turn === event.turn && e.id > event.id)) && e.knows('player') && e.player.knows('id') && e.player.id === event.player.id && e.knows('city') && e.city.knows('id') && event.city.knows('id') && e.city.id === event.city.id && e.knows('building') && e.building === event.building)"
+      "event.building",
+      "event.invested",
+      "!events.some(e => e.type === 'CityConstructed' && (e.turn > event.turn || (e.turn === event.turn && e.id > event.id)) && e.get('player.id') === event.player.id && e.get('city.id') === event.city.id && e.get('building') === event.building)"
     ],
     "values": {
       "building": "event.building",

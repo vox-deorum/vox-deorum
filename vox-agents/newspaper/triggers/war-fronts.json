@@ -3,13 +3,13 @@
     "id": "active-war-zone-analysis",
     "subject": "city",
     "when": [
-      "city.knows('own') && city.knows('name') && self.knows('name')",
-      "city.own === true || (city.foreign === true && city.knows('owner') && city.owner.knows('major') && city.owner.major === true && city.owner.knows('name') && city.owner.knows('enemy') && city.owner.enemy === true)",
-      "city.own !== true || (self.knows('wars') && self.wars.some(p => !p.self && p.knows('major') && p.major === true && p.knows('name')))",
-      "(() => { const count = (units, name) => Object.hasOwn(units, name) ? Object.entries(units[name]).reduce((sum, [unit, n]) => Number.isFinite(n) && n > 0 && !settlers.includes(unit) && !workers.includes(unit) && !missionaries.includes(unit) && !greatPeople.includes(unit) ? sum + n : sum, 0) : 0; const opponents = city.own ? self.wars.filter(p => p.knows('major') && p.major === true && p.knows('name')).map(p => p.name) : [city.owner.name]; return city.tacticalZones()?.some(zone => zone.knows('units') && count(zone.units, self.name) >= 2 && opponents.some(name => count(zone.units, name) >= 2)) ?? false; })()"
+      "city.knows('name')",
+      "city.own || (city.foreign && city.get('owner.major') && city.get('owner.name') && city.get('owner.enemy'))",
+      "!city.own || self.get('wars')?.some(p => !p.self && p.get('major') && p.get('name'))",
+      "(() => { const count = (units, name) => Object.hasOwn(units, name) ? Object.entries(units[name]).reduce((sum, [unit, n]) => Number.isFinite(n) && n > 0 && !settlers.includes(unit) && !workers.includes(unit) && !missionaries.includes(unit) && !greatPeople.includes(unit) ? sum + n : sum, 0) : 0; const opponents = city.own ? self.wars.filter(p => p.get('major') && p.get('name')).map(p => p.name) : [city.owner.name]; return city.tacticalZones()?.some(zone => zone.get('units') && count(zone.units, self.name) >= 2 && opponents.some(name => count(zone.units, name) >= 2)) ?? false; })()"
     ],
     "values": {
-      "contact": "(() => { const count = (units, name) => Object.hasOwn(units, name) ? Object.entries(units[name]).reduce((sum, [unit, n]) => Number.isFinite(n) && n > 0 && !settlers.includes(unit) && !workers.includes(unit) && !missionaries.includes(unit) && !greatPeople.includes(unit) ? sum + n : sum, 0) : 0; const opponents = city.own ? self.wars.filter(p => p.knows('major') && p.major === true && p.knows('name')).map(p => p.name) : [city.owner.name]; let best = null, largest = 0; for (const zone of city.tacticalZones() ?? []) { if (!zone.knows('units')) continue; const ours = count(zone.units, self.name); if (ours < 2) continue; for (const name of opponents) { const theirs = count(zone.units, name); if (theirs < 2 || ours + theirs <= largest) continue; largest = ours + theirs; best = { opponent: name, ourUnits: ours, theirUnits: theirs, domain: zone.domain, posture: zone.knows('posture') ? zone.posture : null }; } } return JSON.stringify(best); })()",
+      "contact": "(() => { const count = (units, name) => Object.hasOwn(units, name) ? Object.entries(units[name]).reduce((sum, [unit, n]) => Number.isFinite(n) && n > 0 && !settlers.includes(unit) && !workers.includes(unit) && !missionaries.includes(unit) && !greatPeople.includes(unit) ? sum + n : sum, 0) : 0; const opponents = city.own ? self.wars.filter(p => p.get('major') && p.get('name')).map(p => p.name) : [city.owner.name]; let best = null, largest = 0; for (const zone of city.tacticalZones() ?? []) { if (!zone.get('units')) continue; const ours = count(zone.units, self.name); if (ours < 2) continue; for (const name of opponents) { const theirs = count(zone.units, name); if (theirs < 2 || ours + theirs <= largest) continue; largest = ours + theirs; best = { opponent: name, ourUnits: ours, theirUnits: theirs, domain: zone.domain, posture: zone.get('posture') ?? null }; } } return JSON.stringify(best); })()",
       "opponent": "JSON.parse(contact).opponent",
       "ourUnits": "JSON.parse(contact).ourUnits",
       "theirUnits": "JSON.parse(contact).theirUnits",
@@ -25,13 +25,13 @@
     "id": "barbarians-at-the-gates",
     "subject": "city",
     "when": [
-      "city.knows('own') && city.own === true",
+      "city.own",
       "city.knows('name')",
-      "city.tacticalZones()?.some(z => z.knows('units') && Object.hasOwn(z.units, 'Barbarians') && Object.values(z.units.Barbarians).some(n => Number.isFinite(n) && n > 0))"
+      "city.tacticalZones()?.some(z => z.get('units') && Object.hasOwn(z.units, 'Barbarians') && Object.values(z.units.Barbarians).some(n => Number.isFinite(n) && n > 0))"
     ],
     "values": {
-      "barbarians": "city.tacticalZones()?.filter(z => z.knows('units') && Object.hasOwn(z.units, 'Barbarians')).flatMap(z => Object.values(z.units.Barbarians)).filter(n => Number.isFinite(n) && n > 0).reduce((sum, n) => sum + n, 0) ?? 0",
-      "posture": "city.tacticalZones()?.find(z => z.knows('posture'))?.posture ?? null"
+      "barbarians": "city.tacticalZones()?.filter(z => z.get('units') && Object.hasOwn(z.units, 'Barbarians')).flatMap(z => Object.values(z.units.Barbarians)).filter(n => Number.isFinite(n) && n > 0).reduce((sum, n) => sum + n, 0) ?? 0",
+      "posture": "city.tacticalZones()?.find(z => z.get('posture'))?.posture ?? null"
     },
     "tier": "notable",
     "adjust": ["city.stake.place", "Math.min(15, 3 * barbarians)"],
@@ -47,7 +47,7 @@
       "city.is.starving"
     ],
     "values": {
-      "damage": "(city.maxHitPoints - city.hitPoints) / city.maxHitPoints"
+      "damage": "city.damage"
     },
     "tier": "notable",
     "adjust": ["city.stake.place", "30 * damage"],
@@ -59,17 +59,14 @@
     "window": "recent",
     "when": [
       "city.foreign && city.knows('name')",
-      "city.knows('owner') && city.owner.major && city.owner.knows('enemy') && city.owner.enemy",
-      "city.owner.knows('name')",
-      "city.knows('hitPoints') && Number.isFinite(city.hitPoints) && city.knows('maxHitPoints') && Number.isFinite(city.maxHitPoints) && city.maxHitPoints > 0",
-      "city.knows('before') && city.before.knows('owner') && city.before.owner.id === city.owner.id",
-      "city.before.knows('hitPoints') && Number.isFinite(city.before.hitPoints) && city.before.hitPoints > city.hitPoints",
-      "city.before.knows('maxHitPoints') && Number.isFinite(city.before.maxHitPoints) && city.before.maxHitPoints > 0",
-      "crossed(1 - city.hitPoints / city.maxHitPoints, 1 - city.before.hitPoints / city.before.maxHitPoints, majority)"
+      "city.owner.major && city.owner.enemy",
+      "city.get('before.owner.id') === city.owner.id",
+      "city.get('before.hitPoints') > city.hitPoints",
+      "crossed(city.damage, city.before.damage, majority)"
     ],
     "values": {
       "civilization": "city.owner.name",
-      "damage": "(city.maxHitPoints - city.hitPoints) / city.maxHitPoints",
+      "damage": "city.damage",
       "wallStrength": "city.hitPoints",
       "maxWallStrength": "city.maxHitPoints"
     },
@@ -81,15 +78,13 @@
     "id": "enemy-front-posture-offensive",
     "subject": "city",
     "when": [
-      "city.knows('foreign') && city.foreign === true",
+      "city.foreign",
       "city.knows('name')",
-      "city.knows('owner') && city.owner.knows('major') && city.owner.major === true",
-      "city.owner.knows('name')",
-      "city.knows('tacticalPostureChanges')",
-      "city.tacticalPostureChanges.some(c => c.knows('posture') && c.knows('previousPosture') && typeof c.previousPosture === 'string' && (c.posture === 'Steamroll' || c.posture === 'Surgical City Strike') && c.previousPosture !== 'Steamroll' && c.previousPosture !== 'Surgical City Strike' && c.knows('owner') && c.knows('receiver') && (r => r.knows('war') && r.war === true)(c.owner.relation(c.receiver)))"
+      "city.owner.major",
+      "city.tacticalPostureChanges.some(c => (c.get('posture') === 'Steamroll' || c.get('posture') === 'Surgical City Strike') && typeof c.get('previousPosture') === 'string' && c.previousPosture !== 'Steamroll' && c.previousPosture !== 'Surgical City Strike' && c.get('owner') && c.get('receiver') && (r => r.get('war'))(c.owner.relation(c.receiver)))"
     ],
     "values": {
-      "changeIndex": "city.tacticalPostureChanges.map(c => c.knows('posture') && c.knows('previousPosture') && typeof c.previousPosture === 'string' && (c.posture === 'Steamroll' || c.posture === 'Surgical City Strike') && c.previousPosture !== 'Steamroll' && c.previousPosture !== 'Surgical City Strike' && c.knows('owner') && c.knows('receiver') && (r => r.knows('war') && r.war === true)(c.owner.relation(c.receiver))).lastIndexOf(true)",
+      "changeIndex": "city.tacticalPostureChanges.map(c => (c.get('posture') === 'Steamroll' || c.get('posture') === 'Surgical City Strike') && typeof c.get('previousPosture') === 'string' && c.previousPosture !== 'Steamroll' && c.previousPosture !== 'Surgical City Strike' && c.get('owner') && c.get('receiver') && (r => r.get('war'))(c.owner.relation(c.receiver))).lastIndexOf(true)",
       "civilization": "city.owner.name",
       "observedTurn": "city.tacticalPostureChanges[changeIndex].turn",
       "domain": "city.tacticalPostureChanges[changeIndex].domain",
@@ -105,15 +100,13 @@
     "id": "enemy-front-posture-regroup",
     "subject": "city",
     "when": [
-      "city.knows('foreign') && city.foreign === true",
+      "city.foreign",
       "city.knows('name')",
-      "city.knows('owner') && city.owner.knows('major') && city.owner.major === true",
-      "city.owner.knows('name')",
-      "city.knows('tacticalPostureChanges')",
-      "city.tacticalPostureChanges.some(c => c.knows('posture') && c.knows('previousPosture') && (c.posture === 'Attrition' || c.posture === 'Exploit Flanks') && c.previousPosture === 'Withdraw' && c.knows('owner') && c.knows('receiver') && (r => r.knows('war') && r.war === true)(c.owner.relation(c.receiver)))"
+      "city.owner.major",
+      "city.tacticalPostureChanges.some(c => (c.get('posture') === 'Attrition' || c.get('posture') === 'Exploit Flanks') && c.get('previousPosture') === 'Withdraw' && c.get('owner') && c.get('receiver') && (r => r.get('war'))(c.owner.relation(c.receiver)))"
     ],
     "values": {
-      "changeIndex": "city.tacticalPostureChanges.map(c => c.knows('posture') && c.knows('previousPosture') && (c.posture === 'Attrition' || c.posture === 'Exploit Flanks') && c.previousPosture === 'Withdraw' && c.knows('owner') && c.knows('receiver') && (r => r.knows('war') && r.war === true)(c.owner.relation(c.receiver))).lastIndexOf(true)",
+      "changeIndex": "city.tacticalPostureChanges.map(c => (c.get('posture') === 'Attrition' || c.get('posture') === 'Exploit Flanks') && c.get('previousPosture') === 'Withdraw' && c.get('owner') && c.get('receiver') && (r => r.get('war'))(c.owner.relation(c.receiver))).lastIndexOf(true)",
       "civilization": "city.owner.name",
       "observedTurn": "city.tacticalPostureChanges[changeIndex].turn",
       "domain": "city.tacticalPostureChanges[changeIndex].domain",
@@ -129,15 +122,13 @@
     "id": "enemy-front-posture-withdraw",
     "subject": "city",
     "when": [
-      "city.knows('foreign') && city.foreign === true",
+      "city.foreign",
       "city.knows('name')",
-      "city.knows('owner') && city.owner.knows('major') && city.owner.major === true",
-      "city.owner.knows('name')",
-      "city.knows('tacticalPostureChanges')",
-      "city.tacticalPostureChanges.some(c => c.knows('posture') && c.knows('previousPosture') && c.posture === 'Withdraw' && c.previousPosture !== 'NONE' && c.previousPosture !== 'Withdraw' && c.knows('owner') && c.knows('receiver') && (r => r.knows('war') && r.war === true)(c.owner.relation(c.receiver)))"
+      "city.owner.major",
+      "city.tacticalPostureChanges.some(c => c.get('posture') === 'Withdraw' && c.knows('previousPosture') && c.previousPosture !== 'NONE' && c.previousPosture !== 'Withdraw' && c.get('owner') && c.get('receiver') && (r => r.get('war'))(c.owner.relation(c.receiver)))"
     ],
     "values": {
-      "changeIndex": "city.tacticalPostureChanges.map(c => c.knows('posture') && c.knows('previousPosture') && c.posture === 'Withdraw' && c.previousPosture !== 'NONE' && c.previousPosture !== 'Withdraw' && c.knows('owner') && c.knows('receiver') && (r => r.knows('war') && r.war === true)(c.owner.relation(c.receiver))).lastIndexOf(true)",
+      "changeIndex": "city.tacticalPostureChanges.map(c => c.get('posture') === 'Withdraw' && c.knows('previousPosture') && c.previousPosture !== 'NONE' && c.previousPosture !== 'Withdraw' && c.get('owner') && c.get('receiver') && (r => r.get('war'))(c.owner.relation(c.receiver))).lastIndexOf(true)",
       "civilization": "city.owner.name",
       "observedTurn": "city.tacticalPostureChanges[changeIndex].turn",
       "domain": "city.tacticalPostureChanges[changeIndex].domain",
@@ -154,11 +145,10 @@
     "subject": "city",
     "when": [
       "city.own && city.knows('name')",
-      "self.knows('wars')",
-      "city.tacticalZones()?.some(z => z.knows('units') && self.wars.some(p => p.major && p.knows('name') && Object.hasOwn(z.units, p.name)))"
+      "city.tacticalZones()?.some(z => z.get('units') && self.wars.some(p => p.major && p.get('name') && Object.hasOwn(z.units, p.name)))"
     ],
     "values": {
-      "enemies": "(() => { const zones = city.tacticalZones()?.filter(z => z.knows('units')) ?? []; return self.wars.filter(p => p.major && p.knows('name') && zones.some(z => Object.hasOwn(z.units, p.name))).map(p => p.name).join(', '); })()"
+      "enemies": "(() => { const zones = city.tacticalZones()?.filter(z => z.get('units')) ?? []; return self.wars.filter(p => p.major && p.get('name') && zones.some(z => Object.hasOwn(z.units, p.name))).map(p => p.name).join(', '); })()"
     },
     "tier": "notable",
     "adjust": "city.stake.place",
@@ -169,11 +159,10 @@
     "subject": "event",
     "event": "UnitKilledInCombat",
     "when": [
-      "event.killerPlayer.self === true",
-      "event.killedPlayer.self === false",
-      "event.killedPlayer.major === true",
-      "event.killedPlayer.knows('name')",
-      "typeof event.unit === 'string' && event.unit.length > 0"
+      "event.killerPlayer.self",
+      "!event.killedPlayer.self",
+      "event.killedPlayer.major",
+      "event.unit"
     ],
     "values": {
       "unit": "event.unit",
@@ -192,18 +181,16 @@
     "subject": "event",
     "event": "CityCaptureComplete",
     "when": [
-      "event.knows('isCapital') && event.isCapital === true",
-      "event.knows('isConquest') && event.isConquest === true",
-      "event.knows('oldOwner') && event.knows('newOwner')",
-      "event.oldOwner.self === false && event.newOwner.self === false",
-      "event.oldOwner.knows('name') && event.newOwner.knows('name')",
-      "event.knows('city') && event.city.knows('name')",
-      "!event.knows('distance') || event.distance.own > nearby"
+      "event.isCapital",
+      "event.isConquest",
+      "!event.oldOwner.self && !event.newOwner.self",
+      "event.get('city.name')",
+      "!event.get('distance') || event.distance.own > nearby"
     ],
     "values": {
       "loser": "event.oldOwner.name",
       "winner": "event.newOwner.name",
-      "distance": "event.knows('distance') ? event.distance.own : null"
+      "distance": "event.get('distance') ? event.distance.own : null"
     },
     "tier": "notable",
     "adjust": "event.stake.place",
@@ -215,10 +202,8 @@
     "event": "CityCaptureComplete",
     "when": [
       "event.isCapital && event.isConquest",
-      "event.knows('oldOwner') && event.knows('newOwner') && !event.oldOwner.self && !event.newOwner.self",
-      "event.oldOwner.knows('name') && event.newOwner.knows('name')",
-      "event.knows('city') && event.city.knows('name')",
-      "event.knows('distance') && event.distance.own <= nearby"
+      "!event.oldOwner.self && !event.newOwner.self",
+      "event.get('distance.own') <= nearby"
     ],
     "values": {
       "loser": "event.oldOwner.name",
@@ -233,17 +218,16 @@
     "subject": "event",
     "event": "CityCaptureComplete",
     "when": [
-      "event.isConquest === true",
-      "event.isCapital === false",
+      "event.isConquest",
+      "!event.isCapital",
       "!event.oldOwner.self && !event.newOwner.self",
-      "event.oldOwner.knows('name') && event.newOwner.knows('name')",
-      "event.city.knows('name')"
+      "event.get('city.name')"
     ],
     "values": {
       "loser": "event.oldOwner.name",
       "winner": "event.newOwner.name",
-      "distance": "event.knows('distance') ? event.distance.own : null",
-      "near": "event.knows('distance') && event.distance.own <= nearby"
+      "distance": "event.get('distance') ? event.distance.own : null",
+      "near": "event.get('distance.own') <= nearby"
     },
     "tier": "notable",
     "adjust": "event.stake.place",
@@ -254,8 +238,7 @@
     "subject": "player",
     "window": "medium",
     "when": [
-      "player.is.foreignMajor && player.knows('name')",
-      "[player.militaryStrength, self.militaryStrength, player.before.militaryStrength, self.before.militaryStrength].every(n => Number.isFinite(n) && n >= 0)",
+      "player.is.foreignMajor",
       "player.militaryStrength > self.militaryStrength",
       "player.before.militaryStrength <= self.before.militaryStrength"
     ],
@@ -272,8 +255,7 @@
     "subject": "player",
     "window": "medium",
     "when": [
-      "player.is.foreignMajor && player.knows('name')",
-      "[player.militaryStrength, self.militaryStrength, player.before.militaryStrength, self.before.militaryStrength].every(n => Number.isFinite(n) && n >= 0)",
+      "player.is.foreignMajor",
       "self.militaryStrength > player.militaryStrength",
       "self.before.militaryStrength <= player.before.militaryStrength"
     ],
@@ -290,13 +272,12 @@
     "id": "our-city-takes-heavy-damage",
     "subject": "city",
     "when": [
-      "city.knows('own') && city.own",
-      "city.knows('hitPoints') && city.knows('maxHitPoints') && city.maxHitPoints > 0",
-      "(city.maxHitPoints - city.hitPoints) / city.maxHitPoints >= 0.25",
-      "city.knows('before') && city.before.knows('hitPoints') && city.before.hitPoints > city.hitPoints && city.before.knows('owner') && city.before.owner.self"
+      "city.own",
+      "city.damage >= 0.25",
+      "city.get('before.hitPoints') > city.hitPoints && city.get('before.owner.self')"
     ],
     "values": {
-      "damage": "(city.maxHitPoints - city.hitPoints) / city.maxHitPoints",
+      "damage": "city.damage",
       "wallStrength": "city.hitPoints",
       "maxWallStrength": "city.maxHitPoints"
     },
@@ -309,13 +290,12 @@
     "id": "own-front-posture-counterattack",
     "subject": "city",
     "when": [
-      "city.knows('own') && city.own === true",
+      "city.own",
       "city.knows('name')",
-      "city.knows('tacticalPostureChanges')",
-      "city.tacticalPostureChanges.some(c => c.knows('posture') && c.knows('previousPosture') && c.posture === 'Counterattack' && c.previousPosture === 'Hedgehog')"
+      "city.tacticalPostureChanges.some(c => c.get('posture') === 'Counterattack' && c.get('previousPosture') === 'Hedgehog')"
     ],
     "values": {
-      "changeIndex": "city.tacticalPostureChanges.map(c => c.knows('posture') && c.knows('previousPosture') && c.posture === 'Counterattack' && c.previousPosture === 'Hedgehog').lastIndexOf(true)",
+      "changeIndex": "city.tacticalPostureChanges.map(c => c.get('posture') === 'Counterattack' && c.get('previousPosture') === 'Hedgehog').lastIndexOf(true)",
       "observedTurn": "city.tacticalPostureChanges[changeIndex].turn",
       "domain": "city.tacticalPostureChanges[changeIndex].domain",
       "previousPosture": "city.tacticalPostureChanges[changeIndex].previousPosture",
@@ -330,13 +310,12 @@
     "id": "own-front-posture-defensive",
     "subject": "city",
     "when": [
-      "city.knows('own') && city.own === true",
+      "city.own",
       "city.knows('name')",
-      "city.knows('tacticalPostureChanges')",
-      "city.tacticalPostureChanges.some(c => c.knows('posture') && c.knows('previousPosture') && c.posture === 'Hedgehog' && c.previousPosture !== 'NONE' && c.previousPosture !== 'Hedgehog')"
+      "city.tacticalPostureChanges.some(c => c.get('posture') === 'Hedgehog' && c.knows('previousPosture') && c.previousPosture !== 'NONE' && c.previousPosture !== 'Hedgehog')"
     ],
     "values": {
-      "changeIndex": "city.tacticalPostureChanges.map(c => c.knows('posture') && c.knows('previousPosture') && c.posture === 'Hedgehog' && c.previousPosture !== 'NONE' && c.previousPosture !== 'Hedgehog').lastIndexOf(true)",
+      "changeIndex": "city.tacticalPostureChanges.map(c => c.get('posture') === 'Hedgehog' && c.knows('previousPosture') && c.previousPosture !== 'NONE' && c.previousPosture !== 'Hedgehog').lastIndexOf(true)",
       "observedTurn": "city.tacticalPostureChanges[changeIndex].turn",
       "domain": "city.tacticalPostureChanges[changeIndex].domain",
       "previousPosture": "city.tacticalPostureChanges[changeIndex].previousPosture",
@@ -352,9 +331,9 @@
     "subject": "event",
     "event": "UnitKilledInCombat",
     "when": [
-      "event.killedPlayer.self === true",
-      "event.killerPlayer.is.foreignMajor && event.killerPlayer.knows('name')",
-      "typeof event.unit === 'string' && event.unit.length > 0"
+      "event.killedPlayer.self",
+      "event.killerPlayer.is.foreignMajor",
+      "event.unit"
     ],
     "values": {
       "unit": "event.unit",

@@ -3,14 +3,13 @@
     "id": "city-being-razed",
     "subject": "city",
     "when": [
-      "city.knows('name') && city.knows('razingTurns') && city.razingTurns > 0 && city.knows('foreign') && city.foreign",
-      "city.knows('owner') && city.owner.knows('name')"
+      "city.knows('name') && city.razingTurns > 0 && city.foreign"
     ],
     "values": {
       "civilization": "city.owner.name",
-      "population": "city.knows('population') ? city.population : null",
+      "population": "city.get('population') ?? null",
       "turns": "city.razingTurns",
-      "distance": "city.knows('distance') && city.distance.knows('own') ? city.distance.own : null"
+      "distance": "city.get('distance.own') ?? null"
     },
     "tier": "notable",
     "adjust": "city.stake.place",
@@ -23,12 +22,10 @@
       "city.own",
       "city.knows('name')",
       "city.is.besieged",
-      "city.knows('hitPoints') && Number.isFinite(city.hitPoints)",
-      "city.knows('maxHitPoints') && Number.isFinite(city.maxHitPoints) && city.maxHitPoints > 0",
-      "(city.maxHitPoints - city.hitPoints) / city.maxHitPoints >= 0.25"
+      "city.damage >= 0.25"
     ],
     "values": {
-      "damage": "(city.maxHitPoints - city.hitPoints) / city.maxHitPoints",
+      "damage": "city.damage",
       "wallStrength": "city.hitPoints",
       "maxWallStrength": "city.maxHitPoints"
     },
@@ -42,7 +39,6 @@
     "subject": "city",
     "when": [
       "city.own",
-      "city.knows('unhappiness')",
       "city.unhappiness.top === 'pillaged'"
     ],
     "values": {
@@ -58,10 +54,10 @@
     "when": [
       "city.own",
       "city.knows('name')",
-      "city.knows('razingTurns') && Number.isFinite(city.razingTurns) && city.razingTurns > 0"
+      "city.razingTurns > 0"
     ],
     "values": {
-      "population": "city.knows('population') ? city.population : null",
+      "population": "city.get('population') ?? null",
       "turns": "city.razingTurns"
     },
     "tier": "major",
@@ -73,19 +69,16 @@
     "subject": "city",
     "window": "recent",
     "when": [
-      "city.foreign === true && city.knows('name')",
-      "city.knows('owner') && city.owner.knows('id') && city.owner.knows('name')",
-      "city.owner.knows('enemy') && city.owner.enemy === false",
-      "city.knows('hitPoints') && Number.isFinite(city.hitPoints) && city.knows('maxHitPoints') && Number.isFinite(city.maxHitPoints) && city.maxHitPoints > 0",
-      "city.knows('before') && city.before.knows('owner') && city.before.owner.knows('id') && city.before.owner.id === city.owner.id",
-      "city.before.knows('hitPoints') && Number.isFinite(city.before.hitPoints) && city.before.hitPoints > city.hitPoints",
-      "city.before.knows('maxHitPoints') && Number.isFinite(city.before.maxHitPoints) && city.before.maxHitPoints > 0",
-      "crossed(1 - city.hitPoints / city.maxHitPoints, 1 - city.before.hitPoints / city.before.maxHitPoints, majority)",
-      "!(city.knows('razingTurns') && Number.isFinite(city.razingTurns) && city.razingTurns > 0)"
+      "city.foreign && city.knows('name')",
+      "city.get('owner.name') && city.get('owner.enemy') === false",
+      "city.get('before.owner.id') === city.owner.id",
+      "city.get('before.hitPoints') > city.hitPoints",
+      "crossed(city.damage, city.before.damage, majority)",
+      "!(city.get('razingTurns') > 0)"
     ],
     "values": {
-      "knownWar": "city.owner.knows('atWar') && city.owner.atWar === true",
-      "damage": "(city.maxHitPoints - city.hitPoints) / city.maxHitPoints"
+      "knownWar": "!!city.get('owner.atWar')",
+      "damage": "city.damage"
     },
     "tier": "notable",
     "adjust": ["city.stake.place", "20 * damage"],

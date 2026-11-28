@@ -74,7 +74,7 @@ export interface ExpressionRunner {
 }
 
 const filename = 'newspaper-expressions.js';
-const memoryLimit = 64 * 1024 * 1024;
+const memoryLimit = 128 * 1024 * 1024;
 const stackLimit = 256 * 1024;
 const interruptLimit = 2_000;
 const interruptionRecoveryLimit = 8;

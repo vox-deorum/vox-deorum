@@ -4,8 +4,8 @@
     "subject": "event",
     "event": "PlayerCityFounded",
     "when": [
-      "event.player.self === true",
-      "event.city.knows('name')",
+      "event.player.self",
+      "event.city.name",
       "event.city.distance.capital >= nearby"
     ],
     "values": {
@@ -36,7 +36,7 @@
     "subject": "event",
     "event": ["PlayerCityFounded", "UnitCityFounded"],
     "when": [
-      "event.player.self === true && event.city.knows('name')",
+      "event.player.self && event.city.name",
       "event.is.preferredFounding"
     ],
     "tier": "routine",
@@ -63,8 +63,8 @@
     "subject": "event",
     "event": ["PlayerCityFounded", "UnitCityFounded"],
     "when": [
-      "event.player.self === false && event.player.knows('name')",
-      "event.city.knows('name') && event.city.owner.knows('name') && event.city.foreign === true",
+      "!event.player.self",
+      "event.city.name && event.city.owner.name && event.city.foreign",
       "event.player.id === event.city.owner.id",
       "!event.is.forwardSettle",
       "event.is.preferredFounding"
@@ -81,13 +81,12 @@
     "subject": "city",
     "window": "recent",
     "when": [
-      "city.foreign === true && city.knows('name')",
-      "city.knows('owner') && city.owner.knows('id') && city.owner.knows('name')",
-      "city.knows('trained') && city.trained.some(t => t.knows('unit') && settlers.includes(t.unit))",
-      "city.knows('population') && Number.isFinite(city.population)",
-      "city.knows('before') && city.before.knows('population') && Number.isFinite(city.before.population) && city.before.knows('owner') && city.before.owner.knows('id') && city.before.owner.id === city.owner.id",
-      "city.population < city.before.population",
-      "city.knows('foodPerTurn') && Number.isFinite(city.foodPerTurn) && city.foodPerTurn > 0"
+      "city.foreign && city.name",
+      "city.owner.name",
+      "city.trained.some(t => settlers.includes(t.get('unit')))",
+      "city.get('before.owner.id') === city.owner.id",
+      "city.population < city.get('before.population')",
+      "city.foodPerTurn > 0"
     ],
     "values": {
       "lost": "city.before.population - city.population"

@@ -3,8 +3,7 @@
     "id": "faith-drifts",
     "subject": "world",
     "when": [
-      "self.knows('foundedReligion') && typeof self.foundedReligion === 'string'",
-      "self.foundedReligion.length > 0",
+      "self.foundedReligion",
       "self.is.hasMajorityReligion",
       "self.foundedReligion !== self.majorityReligion"
     ],
@@ -22,12 +21,12 @@
     "when": [
       "city.foreign",
       "city.knows('name')",
-      "city.knows('owner') && city.owner.knows('cityState') && city.owner.cityState === true && city.owner.knows('name')",
-      "city.knows('distance') && city.distance.knows('own') && city.distance.own > neighboring",
-      "city.knows('majorityReligion') && typeof city.majorityReligion === 'string' && city.majorityReligion.length > 0",
-      "city.knows('before') && city.before.knows('majorityReligion')",
+      "city.owner.cityState",
+      "city.distance.own > neighboring",
+      "city.majorityReligion",
+      "city.get('before.majorityReligion') !== undefined",
       "changed(city, 'majorityReligion')",
-      "self.knows('foundedReligion') && typeof self.foundedReligion === 'string' && self.foundedReligion === city.majorityReligion",
+      "self.foundedReligion === city.majorityReligion",
       "city.is.convertedToMajority"
     ],
     "values": { "cityState": "city.owner.name", "religion": "city.majorityReligion" },
@@ -40,14 +39,14 @@
     "subject": "city",
     "window": "recent",
     "when": [
-      "city.knows('foreign') && city.foreign === true",
+      "city.foreign",
       "city.knows('name')",
-      "city.knows('owner') && city.owner.major === true && city.owner.knows('name')",
+      "city.owner.major",
       "self.is.hasFoundedReligion",
-      "city.knows('majorityReligion') && city.majorityReligion === self.foundedReligion",
-      "city.knows('before') && city.before.knows('majorityReligion')",
+      "city.majorityReligion === self.foundedReligion",
+      "city.get('before.majorityReligion') !== undefined",
       "changed(city, 'majorityReligion')",
-      "city.knows('distance') && city.distance.knows('own') && city.distance.own > neighboring",
+      "city.distance.own > neighboring",
       "city.is.convertedToMajority"
     ],
     "values": {
@@ -64,8 +63,8 @@
     "subject": "event",
     "event": ["ReligionEnhanced", "ReligionReformed"],
     "when": [
-      "event.player.is.foreignMajor && event.player.knows('name')",
-      "typeof event.religion === 'string' && event.religion.length > 0"
+      "event.player.is.foreignMajor",
+      "event.religion"
     ],
     "values": {
       "civilization": "event.player.name",
@@ -81,11 +80,11 @@
     "subject": "player",
     "window": "medium",
     "when": [
-      "!player.self && player.knows('major') && player.major === true && player.knows('name')",
+      "!player.self && player.major",
       "player.is.hasMajorityReligion",
-      "player.knows('before') && player.before.knows('majorityReligion')",
+      "player.get('before.majorityReligion') !== undefined",
       "(player.before.majorityReligion === null || player.before.majorityReligion === -1 || player.before.majorityReligion === '' || (typeof player.before.majorityReligion === 'string' && player.before.majorityReligion.length > 0 && player.before.majorityReligion !== player.majorityReligion))",
-      "self.knows('foundedReligion') && typeof self.foundedReligion === 'string' && self.foundedReligion === player.majorityReligion"
+      "self.foundedReligion === player.majorityReligion"
     ],
     "values": {
       "civilization": "player.name",
@@ -100,9 +99,8 @@
     "subject": "event",
     "event": "ReligionFounded",
     "when": [
-      "event.player.is.foreignMajor && event.player.knows('name')",
-      "typeof event.religion === 'string' && event.religion.length > 0",
-      "event.holyCity.knows('name')"
+      "event.player.is.foreignMajor",
+      "event.religion"
     ],
     "values": {
       "civilization": "event.player.name",
@@ -119,7 +117,7 @@
     "window": "recent",
     "when": [
       "self.is.hasMajorityReligion",
-      "self.knows('before') && self.before.knows('majorityReligion')",
+      "self.get('before.majorityReligion') !== undefined",
       "(typeof self.before.majorityReligion === 'string' && self.before.majorityReligion.length > 0) || self.before.majorityReligion === null || self.before.majorityReligion === -1 || self.before.majorityReligion === ''",
       "self.majorityReligion !== self.before.majorityReligion"
     ],
@@ -135,12 +133,12 @@
     "id": "neighbor-majority-faith-changed",
     "subject": "player",
     "when": [
-      "!player.self && player.major && player.knows('name')",
+      "!player.self && player.major",
       "player.is.hasMajorityReligion",
-      "player.knows('before') && player.before.knows('majorityReligion') && typeof player.before.majorityReligion === 'string' && player.before.majorityReligion.length > 0",
+      "typeof player.get('before.majorityReligion') === 'string' && player.before.majorityReligion.length > 0",
       "player.majorityReligion !== player.before.majorityReligion",
-      "!(self.knows('foundedReligion') && self.foundedReligion === player.majorityReligion)",
-      "!(self.knows('majorityReligion') && self.majorityReligion === player.majorityReligion)"
+      "self.get('foundedReligion') !== player.majorityReligion",
+      "self.get('majorityReligion') !== player.majorityReligion"
     ],
     "values": {
       "civilization": "player.name",
@@ -175,8 +173,8 @@
       "ReligionReformed"
     ],
     "when": [
-      "event.player.self === true",
-      "typeof event.religion === 'string' && event.religion.length > 0"
+      "event.player.self",
+      "event.religion"
     ],
     "values": {
       "religion": "event.religion",
@@ -190,13 +188,13 @@
     "subject": "world",
     "when": [
       "self.is.hasFoundedReligion",
-      "self.cities.some(c => c.own && c.knows('majorityReligion') && c.majorityReligion === self.foundedReligion)",
+      "self.cities.some(c => c.own && c.get('majorityReligion') === self.foundedReligion)",
       "self.cities.filter(c => c.is.followsAnotherReligion).length >= 2"
     ],
     "values": {
       "founded": "self.foundedReligion",
       "divided": "self.cities.filter(c => c.is.followsAnotherReligion).length",
-      "faithful": "self.cities.filter(c => c.own && c.knows('majorityReligion') && c.majorityReligion === self.foundedReligion).length",
+      "faithful": "self.cities.filter(c => c.own && c.get('majorityReligion') === self.foundedReligion).length",
       "others": "self.cities.filter(c => c.is.followsAnotherReligion).map(c => c.majorityReligion).filter((r, i, all) => all.indexOf(r) === i).join(', ')"
     },
     "tier": "notable",
@@ -209,12 +207,12 @@
     "window": "recent",
     "when": [
       "city.own",
-      "city.knows('majorityReligion') && typeof city.majorityReligion === 'string'",
+      "typeof city.majorityReligion === 'string'",
       "city.is.convertedToMajority"
     ],
     "values": {
       "religion": "city.majorityReligion",
-      "ours": "self.knows('foundedReligion') && typeof self.foundedReligion === 'string' && city.majorityReligion === self.foundedReligion"
+      "ours": "self.get('foundedReligion') === city.majorityReligion"
     },
     "tier": "ours ? 'routine' : 'notable'",
     "adjust": "city.stake.place",
@@ -225,14 +223,13 @@
     "subject": "event",
     "event": "PantheonFounded",
     "when": [
-      "event.player.knows('name')",
-      "event.player.major === true",
+      "event.player.major",
       "event.city.knows('name')",
-      "typeof event.beliefType === 'string' && event.beliefType.trim().length > 0"
+      "event.beliefType?.trim()"
     ],
     "values": {
       "civilization": "event.player.name",
-      "ours": "event.player.self === true",
+      "ours": "event.player.self",
       "belief": "event.beliefType"
     },
     "tier": "ours ? 'notable' : 'routine'",
@@ -243,8 +240,8 @@
     "id": "religion-founded",
     "subject": "world",
     "when": [
-      "self.knows('foundedReligion') && typeof self.foundedReligion === 'string'",
-      "!self.before.knows('foundedReligion') || self.before.foundedReligion === null"
+      "self.foundedReligion",
+      "!self.get('before.foundedReligion')"
     ],
     "values": {
       "religion": "self.foundedReligion"

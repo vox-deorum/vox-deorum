@@ -7,11 +7,11 @@
       "(incident.role === 'initiator' || incident.role === 'target')",
       "incident.initiator.knows('name')",
       "incident.target.knows('name')",
-      "incident.participants.some(p => p.reason === 'pact' && p.side === incident.role && !p.player.self && p.player.knows('name'))"
+      "incident.participants.some(p => p.reason === 'pact' && p.side === incident.role && !p.player.self && p.player.get('name'))"
     ],
     "values": {
-      "hostileAllies": "(() => { const names = incident.hostileCityStateAllies.filter(entry => entry.player.knows('name')).map(entry => entry.player.name); return names.length ? ' Hostile city-state allies: ' + names.join(', ') + '.' : ''; })()",
-      "allies": "incident.participants.filter(p => p.reason === 'pact' && p.side === incident.role && !p.player.self && p.player.knows('name')).map(p => p.player.name).join(', ')",
+      "hostileAllies": "(() => { const names = incident.hostileCityStateAllies.filter(entry => entry.player.get('name')).map(entry => entry.player.name); return names.length ? ' Hostile city-state allies: ' + names.join(', ') + '.' : ''; })()",
+      "allies": "incident.participants.filter(p => p.reason === 'pact' && p.side === incident.role && !p.player.self && p.player.get('name')).map(p => p.player.name).join(', ')",
       "opponent": "incident.role === 'initiator' ? incident.target.name : incident.initiator.name"
     },
     "tier": "major",
@@ -25,12 +25,12 @@
       "incident.kind === 'peace' && incident.role === 'none'",
       "incident.initiator.major && incident.initiator.knows('name')",
       "incident.target.major && incident.target.knows('name')",
-      "incident.capitulation === false && incident.concessions.length === 0"
+      "!incident.capitulation && incident.concessions.length === 0"
     ],
     "values": {
       "initiator": "incident.initiator.knows('name') ? incident.initiator.name : null",
       "target": "incident.target.knows('name') ? incident.target.name : null",
-      "nearestDistance": "(() => { const known = [incident.initiator, incident.target].filter(p => p.knows('distance')).map(p => p.distance); return known.length ? Math.min(...known) : null; })()",
+      "nearestDistance": "(() => { const known = [incident.initiator, incident.target].filter(p => p.get('distance')).map(p => p.get('distance')); return known.length ? Math.min(...known) : null; })()",
       "near": "nearestDistance !== null && nearestDistance <= nearby"
     },
     "tier": "notable",
@@ -48,7 +48,7 @@
     "values": {
       "initiator": "incident.initiator.knows('name') ? incident.initiator.name : null",
       "target": "incident.target.knows('name') ? incident.target.name : null",
-      "nearestDistance": "(() => { const known = [incident.initiator, incident.target].filter(p => p.knows('distance')).map(p => p.distance); return known.length ? Math.min(...known) : null; })()",
+      "nearestDistance": "(() => { const known = [incident.initiator, incident.target].filter(p => p.get('distance')).map(p => p.get('distance')); return known.length ? Math.min(...known) : null; })()",
       "near": "nearestDistance !== null && nearestDistance <= nearby"
     },
     "tier": "notable",
@@ -60,15 +60,13 @@
     "subject": "incident",
     "when": [
       "incident.kind === 'peace'",
-      "incident.capitulation === true",
-      "incident.initiator.knows('name')",
-      "incident.target.knows('name')",
+      "incident.capitulation",
       "incident.initiator.major && incident.target.major"
     ],
     "values": {
       "initiator": "incident.initiator.name",
       "target": "incident.target.name",
-      "role": "incident.knows('role') ? incident.role : null"
+      "role": "incident.get('role') ?? null"
     },
     "tier": "role !== null && role !== 'none' ? 'major' : 'notable'",
     "tags": ["politics", "military", "international"]
@@ -78,11 +76,9 @@
     "subject": "incident",
     "when": [
       "incident.kind === 'peace'",
-      "incident.initiator.knows('name')",
-      "incident.target.knows('name')",
       "Array.isArray(incident.concessions) && incident.concessions.length > 0"
     ],
-    "values": { "concessions": "incident.concessions.join(', ')", "count": "incident.concessions.length", "role": "incident.knows('role') ? incident.role : null", "initiator": "incident.initiator.name", "target": "incident.target.name" },
+    "values": { "concessions": "incident.concessions.join(', ')", "count": "incident.concessions.length", "role": "incident.get('role') ?? null", "initiator": "incident.initiator.name", "target": "incident.target.name" },
     "tier": "role !== null && role !== 'none' ? 'major' : 'routine'",
     "tags": ["politics", "military", "international"]
   },
@@ -94,11 +90,11 @@
       "(incident.role === 'initiator' || incident.role === 'target')",
       "incident.initiator.knows('name')",
       "incident.target.knows('name')",
-      "self.knows('wars') && self.wars.some(p => p.major && p.knows('name') && p.id !== (incident.role === 'initiator' ? incident.target.id : incident.initiator.id))"
+      "self.wars.some(p => p.major && p.get('name') && p.id !== (incident.role === 'initiator' ? incident.target.id : incident.initiator.id))"
     ],
     "values": {
       "settled": "incident.role === 'initiator' ? incident.target.name : incident.initiator.name",
-      "remaining": "self.wars.filter(p => p.major && p.knows('name') && p.id !== (incident.role === 'initiator' ? incident.target.id : incident.initiator.id)).map(p => p.name).join(', ')"
+      "remaining": "self.wars.filter(p => p.major && p.get('name') && p.id !== (incident.role === 'initiator' ? incident.target.id : incident.initiator.id)).map(p => p.name).join(', ')"
     },
     "tier": "major",
     "adjust": "self.stake.war",
@@ -109,9 +105,8 @@
     "subject": "world",
     "window": "recent",
     "when": [
-      "self.knows('atWar') && self.atWar === false",
-      "self.knows('before')",
-      "players.some(rival => !rival.self && rival.knows('major') && rival.major === true && rival.knows('before') && self.before.relation(rival).knows('war') && self.before.relation(rival).war === true)"
+      "!self.atWar",
+      "players.some(rival => !rival.self && rival.get('major') && rival.get('before') && self.get('before') && self.before.relation(rival).get('war'))"
     ],
     "tier": "major",
     "tags": ["politics", "military"]
@@ -124,7 +119,7 @@
       "incident.participants.some(p => p.reason == 'vassal')"
     ],
     "values": {
-      "hostileAllies": "(() => { const names = incident.hostileCityStateAllies.filter(entry => entry.player.knows('name')).map(entry => entry.player.name); return names.length ? ' Hostile city-state allies: ' + names.join(', ') + '.' : ''; })()",
+      "hostileAllies": "(() => { const names = incident.hostileCityStateAllies.filter(entry => entry.player.get('name')).map(entry => entry.player.name); return names.length ? ' Hostile city-state allies: ' + names.join(', ') + '.' : ''; })()",
       "vassals": "incident.participants.filter(p => p.reason == 'vassal').map(p => p.player.name).join(', ')",
       "initiator": "incident.initiator.name",
       "target": "incident.target.name"
@@ -152,11 +147,10 @@
     "when": [
       "incident.kind === 'war'",
       "incident.role === 'none'",
-      "incident.initiator.major === true",
-      "incident.target.major === true",
-      "incident.initiator.knows('name') && incident.target.knows('name')",
+      "incident.initiator.major",
+      "incident.target.major",
       "incident.initiator.knows('at') && incident.target.knows('at') && turn - incident.turn < long",
-      "incident.initiator.at(turn - incident.turn + 1).relation(self).friend === true && incident.target.at(turn - incident.turn + 1).relation(self).friend === true"
+      "incident.initiator.at(turn - incident.turn + 1).relation(self).friend && incident.target.at(turn - incident.turn + 1).relation(self).friend"
     ],
     "values": {
       "first": "incident.initiator.name",
@@ -171,8 +165,6 @@
     "subject": "pair",
     "when": [
       "pair.involvesSelf && pair.majors && pair.atWar",
-      "pair.other.knows('name')",
-      "Number.isFinite(pair.warTurns) && Number.isFinite(pair.before.warTurns)",
       "crossed(pair.warTurns, pair.before.warTurns, medium)"
     ],
     "values": {
@@ -188,11 +180,9 @@
     "subject": "incident",
     "when": [
       "incident.kind == 'war'",
-      "incident.role != 'none'",
-      "incident.initiator.knows('name')",
-      "incident.target.knows('name')"
+      "incident.role != 'none'"
     ],
-    "values": { "role": "incident.role", "reason": "incident.knows('reason') ? incident.reason : null", "initiator": "incident.initiator.name", "target": "incident.target.name", "hostileAllies": "(() => { const names = incident.hostileCityStateAllies.filter(entry => entry.player.knows('name')).map(entry => entry.player.name); return names.length ? ' Hostile city-state allies: ' + names.join(', ') + '.' : ''; })()" },
+    "values": { "role": "incident.role", "reason": "incident.get('reason') ?? null", "initiator": "incident.initiator.name", "target": "incident.target.name", "hostileAllies": "(() => { const names = incident.hostileCityStateAllies.filter(entry => entry.player.get('name')).map(entry => entry.player.name); return names.length ? ' Hostile city-state allies: ' + names.join(', ') + '.' : ''; })()" },
     "tier": "role == 'target' ? 'crisis' : 'major'",
     "adjust": "self.stake.war",
     "urgent": "role == 'target'",
@@ -202,13 +192,12 @@
     "id": "war-on-three-fronts",
     "subject": "world",
     "when": [
-      "self.knows('atWar') && self.atWar === true",
-      "self.knows('wars') && Array.isArray(self.wars)",
-      "(() => { const opponents = self.wars.filter(p => !p.self && p.knows('major') && p.major === true); return opponents.length >= 3 && opponents.every(p => p.knows('name')); })()"
+      "self.atWar",
+      "(() => { const opponents = self.wars.filter(p => !p.self && p.get('major')); return opponents.length >= 3 && opponents.every(p => p.get('name')); })()"
     ],
     "values": {
-      "count": "self.wars.filter(p => !p.self && p.knows('major') && p.major === true).length",
-      "enemies": "(() => { const names = self.wars.filter(p => !p.self && p.knows('major') && p.major === true).map(p => p.name); return names.slice(0, -1).join(', ') + ', and ' + names[names.length - 1]; })()"
+      "count": "self.wars.filter(p => !p.self && p.get('major')).length",
+      "enemies": "(() => { const names = self.wars.filter(p => !p.self && p.get('major')).map(p => p.name); return names.slice(0, -1).join(', ') + ', and ' + names[names.length - 1]; })()"
     },
     "tier": "major",
     "adjust": "self.stake.war",
@@ -219,9 +208,7 @@
     "id": "war-turns-against-us",
     "subject": "pair",
     "when": [
-      "pair.involvesSelf && pair.atWar === true",
-      "pair.knows('warScore')",
-      "Number.isFinite(pair.warScore)",
+      "pair.involvesSelf && pair.atWar",
       "pair.warScore <= -25"
     ],
     "values": {
@@ -236,9 +223,7 @@
     "id": "war-turns-our-way",
     "subject": "pair",
     "when": [
-      "pair.involvesSelf && pair.atWar === true",
-      "pair.knows('warScore')",
-      "Number.isFinite(pair.warScore)",
+      "pair.involvesSelf && pair.atWar",
       "pair.warScore >= 25"
     ],
     "values": {
@@ -254,11 +239,9 @@
     "subject": "pair",
     "window": "recent",
     "when": [
-      "pair.involvesSelf && pair.majors && pair.atWar === true",
-      "pair.other.knows('name')",
-      "pair.knows('warTurns') && pair.warTurns >= recent",
-      "self.relation(pair.other).knows('warWeariness') && self.relation(pair.other).warWeariness < 50",
-      "self.knows('before') && self.before.relation(pair.other).knows('warWeariness') && self.before.relation(pair.other).warWeariness >= 50"
+      "pair.involvesSelf && pair.majors && pair.atWar",
+      "pair.warTurns >= recent",
+      "dropped(self.relation(pair.other).warWeariness, self.before.relation(pair.other).warWeariness, 50)"
     ],
     "values": {
       "opponent": "pair.other.name",
@@ -272,10 +255,7 @@
     "id": "war-weariness-sets-in",
     "subject": "pair",
     "when": [
-      "pair.involvesSelf && pair.atWar === true",
-      "pair.other.knows('name')",
-      "self.relation(pair.other).knows('warWeariness')",
-      "Number.isFinite(self.relation(pair.other).warWeariness)",
+      "pair.involvesSelf && pair.atWar",
       "self.relation(pair.other).warWeariness >= 50"
     ],
     "values": {

@@ -210,7 +210,7 @@
         "voice": "press",
         "stance": "ambitious",
         "genre": "analysis",
-        "when": "outgoing === true",
+        "when": "outgoing",
         "headline": "The next order from {{destinationCity}}",
         "body": [
           "Our traders have finished the run from {{originCity}} to {{destinationCity}}. A repeat order from {{destinationCity}} would give workshops in {{originCity}} a reason to set aside stock for the next run."
@@ -221,7 +221,7 @@
         "voice": "gazette",
         "stance": "conciliatory",
         "genre": "report",
-        "when": "outgoing === false",
+        "when": "!outgoing",
         "headline": "A long route ends at {{destinationCity}}",
         "body": [
           "Traders from {{originCity}} in {{originCiv}} have completed their run to {{destinationCity}}. Merchants in both cities will be watching to see if the route is used again."

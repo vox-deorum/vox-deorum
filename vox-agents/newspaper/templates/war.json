@@ -591,13 +591,13 @@
     "tags": ["politics", "military"],
     "names": ["enemies"],
     "merge": {
-      "match": "member.incident?.is.incomingMajorDeclaration && member.incident.initiator.knows('name') && self.wars.some(p => p.knows('id') && p.id === member.incident.initiator.id)",
+      "match": "member.incident?.is.incomingMajorDeclaration && member.incident.initiator.get('name') && self.wars.some(p => p.get('id') === member.incident.initiator.id)",
       "min": 1,
       "priority": 10,
       "values": {
         "attackers": "Array.from(new Map(merge.members.map(({ incident }) => [incident.initiator.id, incident.initiator.name])).values()).join(', ')",
-        "otherFronts": "(() => { const declarations = merge.members.map(m => m.incident); const fresh = new Set(declarations.map(i => i.initiator.id)); const first = declarations.reduce((a, b) => b.turn < a.turn ? b : a); const earlier = new Set(first.earlierWarOpponents.map(entry => entry.player.id)); const ongoing = [], other = []; for (const rival of self.wars) { if (!rival.knows('major') || !rival.major || !rival.knows('id') || fresh.has(rival.id)) continue; (earlier.has(rival.id) ? ongoing : other).push(rival.name); } return [ongoing.length ? 'Already at war with: ' + ongoing.join(', ') + '.' : '', other.length ? 'Other active fronts: ' + other.join(', ') + '.' : ''].filter(Boolean).join(' ') || 'These declarations account for all active major fronts.'; })()",
-        "allies": "(() => { const named = new Map(); for (const { incident } of merge.members) for (const entry of incident.hostileCityStateAllies) if (entry.player.knows('name')) named.set(entry.player.id, entry.player.name); return named.size ? ' Hostile city-state allies: ' + [...named.values()].join(', ') + '.' : ''; })()"
+        "otherFronts": "(() => { const declarations = merge.members.map(m => m.incident); const fresh = new Set(declarations.map(i => i.initiator.id)); const first = declarations.reduce((a, b) => b.turn < a.turn ? b : a); const earlier = new Set(first.earlierWarOpponents.map(entry => entry.player.id)); const ongoing = [], other = []; for (const rival of self.wars) { if (!rival.get('major') || !rival.knows('id') || fresh.has(rival.id)) continue; (earlier.has(rival.id) ? ongoing : other).push(rival.name); } return [ongoing.length ? 'Already at war with: ' + ongoing.join(', ') + '.' : '', other.length ? 'Other active fronts: ' + other.join(', ') + '.' : ''].filter(Boolean).join(' ') || 'These declarations account for all active major fronts.'; })()",
+        "allies": "(() => { const named = new Map(); for (const { incident } of merge.members) for (const entry of incident.hostileCityStateAllies) if (entry.player.get('name')) named.set(entry.player.id, entry.player.name); return named.size ? ' Hostile city-state allies: ' + [...named.values()].join(', ') + '.' : ''; })()"
       },
       "variants": [
         {
@@ -847,12 +847,12 @@
     },
     "variants": [],
     "merge": {
-      "match": "member.incident?.is.incomingMajorDeclaration && member.incident.initiator.knows('name') && member.incident.turn === lead.key",
+      "match": "member.incident?.is.incomingMajorDeclaration && member.incident.initiator.get('name') && member.incident.turn === lead.key",
       "min": 3,
       "values": {
         "attackers": "Array.from(new Map(merge.members.map(({ incident }) => [incident.initiator.id, incident.initiator.name])).values()).join(', ')",
         "distinctAttackers": "new Set(merge.members.map(m => m.incident.initiator.id)).size",
-        "allies": "(() => { const named = new Map(); for (const { incident } of merge.members) for (const entry of incident.hostileCityStateAllies) if (entry.player.knows('name')) named.set(entry.player.id, entry.player.name); return named.size ? ' Hostile city-state allies: ' + [...named.values()].join(', ') + '.' : ''; })()"
+        "allies": "(() => { const named = new Map(); for (const { incident } of merge.members) for (const entry of incident.hostileCityStateAllies) if (entry.player.get('name')) named.set(entry.player.id, entry.player.name); return named.size ? ' Hostile city-state allies: ' + [...named.values()].join(', ') + '.' : ''; })()"
       },
       "variants": [
         {

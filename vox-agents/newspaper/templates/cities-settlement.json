@@ -169,7 +169,7 @@
     "variants": [
       {
         "id": "settler-departure-report",
-        "when": "!city.knows('happinessDelta') || !(city.happinessDelta < 0 || city.happinessDelta > 0)",
+        "when": "!city.get('happinessDelta')",
         "headline": "Settlers depart from {{city}}",
         "body": [
           "A group of settlers has departed from {{city}} to find new land, resulting in a population loss of {{lost}}."
@@ -181,7 +181,7 @@
         "voice": "press",
         "stance": "government-critical",
         "genre": "report",
-        "when": "city.knows('happinessDelta') && city.happinessDelta < 0",
+        "when": "city.get('happinessDelta') < 0",
         "headline": "Population Drain in {{city}}",
         "body": [
           "{{city}} is {{lost}} souls lighter today as another group of settlers departs for the frontier. While the {{terms.civic.government}} praises this expansion, the residents left behind are facing dwindling spirits and growing hardship. {{terms.civic.leaderAddress}}, why are we exporting our youth when the home city is in such visible decline?"
@@ -193,7 +193,7 @@
         "voice": "press",
         "stance": "pro-government",
         "genre": "report",
-        "when": "city.knows('happinessDelta') && city.happinessDelta > 0",
+        "when": "city.get('happinessDelta') > 0",
         "headline": "Settlers Depart {{city}} for the Frontier",
         "body": [
           "{{city}} is {{lost}} souls lighter today as a new party of settlers marched out the main gates to claim fresh land. The {{terms.civic.government}}'s vision for expansion is taking shape, and the mood in the city remains jubilant. Local merchants are already preparing shipments to support the new settlement, confident in the {{terms.civic.leaderTitle}}'s foresight. "

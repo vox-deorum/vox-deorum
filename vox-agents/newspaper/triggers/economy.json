@@ -3,12 +3,7 @@
     "id": "treasury-falls-into-deficit",
     "subject": "world",
     "window": "recent",
-    "when": [
-      "self.knows('goldPerTurn') && Number.isFinite(self.goldPerTurn)",
-      "self.before.knows('goldPerTurn') && Number.isFinite(self.before.goldPerTurn)",
-      "self.goldPerTurn < 0",
-      "self.before.goldPerTurn >= 0"
-    ],
+    "when": "dropped(self.goldPerTurn, self.before.goldPerTurn, 0)",
     "values": {
       "deficit": "-self.goldPerTurn"
     },
@@ -19,11 +14,7 @@
     "id": "treasury-milestone",
     "subject": "world",
     "window": "recent",
-    "when": [
-      "self.knows('gold') && Number.isFinite(self.gold)",
-      "self.knows('before') && self.before.knows('gold') && Number.isFinite(self.before.gold)",
-      "crossed(self.gold, self.before.gold, 1000)"
-    ],
+    "when": "crossed(self.gold, self.before.gold, 1000)",
     "values": {
       "gold": "self.gold",
       "gain": "self.gold - self.before.gold"
@@ -36,11 +27,11 @@
     "id": "treasury-reserve-recovers",
     "subject": "world",
     "when": [
-      "Number.isFinite(self.gold) && self.gold >= 0",
-      "Number.isFinite(self.goldPerTurn) && self.goldPerTurn < 0",
+      "self.gold >= 0",
+      "self.goldPerTurn < 0",
       "self.gold / -self.goldPerTurn > short",
-      "self.knows('before') && Number.isFinite(self.before.goldPerTurn) && self.before.goldPerTurn < 0",
-      "self.before.knows('gold') && Number.isFinite(self.before.gold) && self.before.gold >= 0",
+      "self.get('before.goldPerTurn') < 0",
+      "self.get('before.gold') >= 0",
       "self.before.gold / -self.before.goldPerTurn <= short"
     ],
     "values": {
@@ -55,10 +46,10 @@
     "id": "treasury-reserve-runs-short",
     "subject": "world",
     "when": [
-      "Number.isFinite(self.gold) && self.gold >= 0",
-      "Number.isFinite(self.goldPerTurn) && self.goldPerTurn < 0",
+      "self.gold >= 0",
+      "self.goldPerTurn < 0",
       "self.gold / -self.goldPerTurn <= short",
-      "self.knows('before') && Number.isFinite(self.before.goldPerTurn) && self.before.goldPerTurn < 0"
+      "self.get('before.goldPerTurn') < 0"
     ],
     "values": {
       "gold": "self.gold",
@@ -72,11 +63,7 @@
     "id": "treasury-returns-to-surplus",
     "subject": "world",
     "window": "recent",
-    "when": [
-      "self.knows('goldPerTurn') && Number.isFinite(self.goldPerTurn)",
-      "self.before.knows('goldPerTurn') && Number.isFinite(self.before.goldPerTurn)",
-      "crossed(self.goldPerTurn, self.before.goldPerTurn, 0)"
-    ],
+    "when": "crossed(self.goldPerTurn, self.before.goldPerTurn, 0)",
     "values": {
       "goldPerTurn": "self.goldPerTurn"
     },

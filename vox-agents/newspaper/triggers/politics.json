@@ -4,15 +4,13 @@
     "subject": "world",
     "window": "short",
     "when": [
-      "self.knows('major') && self.major === true",
-      "self.knows('score') && Number.isFinite(self.score)",
-      "self.before.knows('score') && Number.isFinite(self.before.score)",
-      "players.filter(p => p.knows('major') && p.major === true && p.knows('score') && Number.isFinite(p.score)).length >= 3",
-      "self.rank('score') === players.filter(p => p.knows('major') && p.major === true && p.knows('score') && Number.isFinite(p.score)).length",
-      "self.before.rank('score') < players.filter(p => p.before.knows('score') && p.before.knows('major') && p.before.major === true).length"
+      "self.major",
+      "majorsWith('score') >= 3",
+      "self.rank('score') === majorsWith('score')",
+      "self.get('before.score') !== undefined && self.before.rank('score') < majorsWith('before.score')"
     ],
     "values": {
-      "count": "players.filter(p => p.knows('major') && p.major === true && p.knows('score') && Number.isFinite(p.score)).length"
+      "count": "majorsWith('score')"
     },
     "tier": "notable",
     "tags": ["politics", "international"]
@@ -23,8 +21,7 @@
     "event": "PlayerGoldenAge",
     "when": [
       "event.player.is.foreignMajor",
-      "event.starting === true",
-      "event.player.knows('name')"
+      "event.starting"
     ],
     "values": {
       "civilization": "event.player.name"
@@ -39,8 +36,7 @@
     "event": "PlayerGoldenAge",
     "when": [
       "event.player.is.foreignMajor",
-      "event.starting === false",
-      "event.player.knows('name')"
+      "!event.starting"
     ],
     "values": {
       "civilization": "event.player.name"
@@ -54,10 +50,9 @@
     "subject": "event",
     "event": "PlayerGoldenAge",
     "when": [
-      "event.starting === true",
-      "event.player.self === true",
-      "self.knows('atWar')",
-      "self.atWar === false"
+      "event.starting",
+      "event.player.self",
+      "!self.atWar"
     ],
     "tier": "notable",
     "tags": ["politics", "domestic"]
@@ -67,8 +62,8 @@
     "subject": "event",
     "event": "PlayerGoldenAge",
     "when": [
-      "event.starting === false",
-      "event.player.self === true"
+      "!event.starting",
+      "event.player.self"
     ],
     "tier": "routine",
     "tags": ["politics", "domestic"]
@@ -81,10 +76,10 @@
       "event.starting",
       "event.player.self",
       "self.atWar",
-      "self.knows('wars') && self.wars.some(p => p.knows('name') && p.name)"
+      "self.wars.some(p => p.get('name'))"
     ],
     "values": {
-      "enemies": "(() => { const names = self.wars.filter(p => p.knows('name') && p.name).map(p => p.name); return names.length <= 2 ? names.join(' and ') : names.slice(0, -1).join(', ') + ', and ' + names[names.length - 1]; })()"
+      "enemies": "(() => { const names = self.wars.filter(p => p.get('name')).map(p => p.get('name')); return names.length <= 2 ? names.join(' and ') : names.slice(0, -1).join(', ') + ', and ' + names[names.length - 1]; })()"
     },
     "tier": "notable"
   },
@@ -92,11 +87,7 @@
     "id": "happiness-recovers",
     "subject": "world",
     "window": "recent",
-    "when": [
-      "self.knows('happinessPercentage') && Number.isFinite(self.happinessPercentage)",
-      "self.before.knows('happinessPercentage') && Number.isFinite(self.before.happinessPercentage)",
-      "crossed(self.happinessPercentage, self.before.happinessPercentage, 50)"
-    ],
+    "when": "crossed(self.happinessPercentage, self.before.happinessPercentage, 50)",
     "values": {
       "happinessPercentage": "self.happinessPercentage"
     },
@@ -108,8 +99,8 @@
     "subject": "world",
     "window": "recent",
     "when": [
-      "self.knows('ideology') && typeof self.ideology === 'string'",
-      "!self.before.knows('ideology') || self.before.ideology === null"
+      "self.ideology",
+      "!self.get('before.ideology')"
     ],
     "values": {
       "ideology": "self.ideology"
@@ -123,17 +114,16 @@
     "subject": "event",
     "event": "IdeologySwitched",
     "when": [
-      "event.player.major === true",
-      "event.player.knows('name')",
-      "typeof event.oldBranch === 'string'",
-      "typeof event.newBranch === 'string'",
+      "event.player.major",
+      "event.oldBranch",
+      "event.newBranch",
       "event.oldBranch !== event.newBranch"
     ],
     "values": {
       "civilization": "event.player.name",
       "formerIdeology": "event.oldBranch",
       "ideology": "event.newBranch",
-      "ours": "event.player.self === true"
+      "ours": "event.player.self"
     },
     "tier": "ours ? 'major' : 'notable'",
     "urgent": "ours",
@@ -144,12 +134,9 @@
     "subject": "player",
     "window": "medium",
     "when": [
-      "!player.self && player.knows('major') && player.major === true",
-      "player.knows('name')",
-      "player.knows('cityCount') && Number.isFinite(player.cityCount)",
-      "player.knows('before') && player.before.knows('cityCount') && Number.isFinite(player.before.cityCount)",
+      "!player.self && player.major",
       "player.cityCount === 1",
-      "player.before.cityCount > 1"
+      "player.get('before.cityCount') > 1"
     ],
     "values": {
       "civilization": "player.name",
@@ -164,8 +151,8 @@
     "subject": "event",
     "event": "PlayerAdoptPolicy",
     "when": [
-      "event.player.self === true",
-      "typeof event.policy === 'string' && event.policy.length > 0"
+      "event.player.self",
+      "event.policy"
     ],
     "values": {
       "policy": "event.policy"
@@ -178,8 +165,8 @@
     "subject": "world",
     "window": "recent",
     "when": [
-      "self.knows('policyBranches') && self.policyBranches !== null && typeof self.policyBranches === 'object'",
-      "self.before.knows('policyBranches') && self.before.policyBranches !== null && typeof self.before.policyBranches === 'object'",
+      "self.policyBranches !== null && typeof self.policyBranches === 'object'",
+      "self.get('before.policyBranches') !== null && typeof self.get('before.policyBranches') === 'object'",
       "Object.keys(self.policyBranches).filter(branch => !Object.keys(self.before.policyBranches).includes(branch)).length === 1"
     ],
     "values": {
@@ -194,8 +181,6 @@
     "subject": "world",
     "window": "recent",
     "when": [
-      "self.knows('happinessPercentage') && Number.isFinite(self.happinessPercentage)",
-      "self.before.knows('happinessPercentage') && Number.isFinite(self.before.happinessPercentage)",
       "crossed(self.happinessPercentage, self.before.happinessPercentage, 35)",
       "self.happinessPercentage < 50"
     ],
@@ -209,12 +194,7 @@
     "id": "revolt-threshold-crossed",
     "subject": "world",
     "window": "recent",
-    "when": [
-      "self.knows('happinessPercentage') && Number.isFinite(self.happinessPercentage)",
-      "self.before.knows('happinessPercentage') && Number.isFinite(self.before.happinessPercentage)",
-      "self.happinessPercentage < 35",
-      "self.before.happinessPercentage >= 35"
-    ],
+    "when": "dropped(self.happinessPercentage, self.before.happinessPercentage, 35)",
     "values": {
       "happiness": "self.happinessPercentage"
     },
@@ -227,16 +207,15 @@
     "subject": "player",
     "when": [
       "player.is.foreignMajor",
-      "player.knows('name')",
-      "player.knows('ideology') && typeof player.ideology === 'string'",
-      "!player.before.knows('ideology') || player.before.ideology === null"
+      "player.ideology",
+      "!player.get('before.ideology')"
     ],
     "values": {
       "rival": "player.name",
       "ideology": "player.ideology",
-      "shared": "self.knows('ideology') && typeof self.ideology === 'string' && self.ideology === player.ideology"
+      "shared": "self.get('ideology') === player.ideology"
     },
-    "tier": "self.knows('ideology') && typeof self.ideology === 'string' && self.ideology !== player.ideology ? 'major' : 'notable'",
+    "tier": "self.get('ideology') && self.ideology !== player.ideology ? 'major' : 'notable'",
     "tags": ["politics", "international"]
   },
   {
@@ -244,17 +223,14 @@
     "subject": "player",
     "window": "short",
     "when": [
-      "player.knows('major') && player.major === true",
-      "player.knows('name')",
-      "player.knows('score') && Number.isFinite(player.score)",
-      "player.before.knows('score')",
+      "player.major",
       "player.rank('score') === 1",
-      "player.before.rank('score') > 1",
-      "players.every(p => p.id === player.id || !p.knows('major') || p.major !== true || !p.knows('score') || p.score !== player.score || (p.knows('name') && p.name))"
+      "player.get('before.score') !== undefined && player.before.rank('score') > 1",
+      "players.every(p => p.id === player.id || !p.get('major') || p.get('score') !== player.score || p.get('name'))"
     ],
     "values": {
       "civilization": "player.name",
-      "tiedName": "players.filter(p => p.id !== player.id && p.knows('major') && p.major === true && p.knows('score') && p.score === player.score).map(p => p.name).join(', ')",
+      "tiedName": "players.filter(p => p.id !== player.id && p.get('major') && p.get('score') === player.score).map(p => p.name).join(', ')",
       "tied": "tiedName !== ''"
     },
     "tier": "player.self ? 'major' : 'notable'",
@@ -264,12 +240,7 @@
     "id": "unhappiness-sets-in",
     "subject": "world",
     "window": "recent",
-    "when": [
-      "self.knows('happinessPercentage') && Number.isFinite(self.happinessPercentage)",
-      "self.before.knows('happinessPercentage') && Number.isFinite(self.before.happinessPercentage)",
-      "self.happinessPercentage < 50",
-      "self.before.happinessPercentage >= 50"
-    ],
+    "when": "dropped(self.happinessPercentage, self.before.happinessPercentage, 50)",
     "values": {
       "happiness": "self.happinessPercentage",
       "dropPoints": "self.before.happinessPercentage - self.happinessPercentage"

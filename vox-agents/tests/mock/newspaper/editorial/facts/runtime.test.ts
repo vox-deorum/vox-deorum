@@ -551,6 +551,75 @@ describe('newspaper fact runtime', () => {
       expect(immutable).toEqual({ value: true });
     });
 
+    it('should read optional paths with get without hiding the expression', async () => {
+      const home = city(1, 20, 11, { Population: 9 });
+      const foreignCity = city(2, 20, 22, { OwnerID: 1, FoodPerTurn: undefined });
+      const runner = await compile([
+        'city.get("population")',
+        'city.get("foodPerTurn") === undefined && city.population',
+        'city.get("owner.name")',
+        'city.get("owner.leader")',
+        'self.get("before.population")',
+        'cities.filter(c => c.get("foodPerTurn") < 0).length',
+      ]);
+      const [[[mine]], [[plain, tolerated, owner, declined, before, filtered]]] = await runner.evaluate({
+        facts: buildNewspaperFacts(evidence([home, foreignCity]), identity),
+        groups: [
+          { expressions: [0], subjects: [{ city: reference('city', 1) }] },
+          { expressions: [0, 1, 2, 3, 4, 5], subjects: [{ city: reference('city', 2) }] },
+        ],
+      });
+      expect(mine).toEqual({ value: 9, sources: [home.source] });
+      expect(plain).toEqual({ value: 3, sources: [foreignCity.source] });
+      expect(tolerated).toEqual({ value: 3, sources: [foreignCity.source] });
+      expect(owner).toMatchObject({ value: 'Carthage', sources: expect.arrayContaining([foreignCity.source]) });
+      expect(declined).toEqual({ value: undefined });
+      expect(before).toMatchObject({ value: 12, sources: expect.arrayContaining([own.source]) });
+      expect(filtered).toHaveProperty('value', 1);
+    });
+
+    it('should hide an empty number column but keep an empty text column readable as null', async () => {
+      const row = { ...own, values: { Population: 12, Score: null, MajorityReligion: null } };
+      const runner = await compile([
+        'self.knows("score")',
+        'self.score > 0',
+        'self.knows("majorityReligion") && self.majorityReligion === null',
+      ]);
+      const [[[known, compared, religion]]] = await runner.evaluate({
+        facts: buildNewspaperFacts({ ...evidence([]), players: [row, foreign] }, identity),
+        groups: [{ expressions: [0, 1, 2], subjects: [{}] }],
+      });
+      expect(known).toEqual({ value: false });
+      expect(compared).toHaveProperty('error.hidden', 'player.score');
+      expect(religion).toHaveProperty('value', true);
+    });
+
+    it('should count only known majors with a readable number', async () => {
+      const scored = { ...own, values: { Population: 12, Score: 40 } };
+      const unscored = { ...foreign, values: { Population: 8, Score: null } };
+      const minor = { ...foreign, subjectID: 2, source: { ...foreign.source, id: 102 }, values: { Population: 3, Score: 9 } };
+      const metadata = { playerIdentities: { ...identity.playerIdentities, 2: { major: false, name: 'Ur' } } };
+      const runner = await compile(['majorsWith("score")', 'majorsWith("population")']);
+      const [[[score, population]]] = await runner.evaluate({
+        facts: buildNewspaperFacts({ ...evidence([]), players: [scored, unscored, minor] }, metadata),
+        groups: [{ expressions: [0, 1], subjects: [{}] }],
+      });
+      expect(score).toHaveProperty('value', 1);
+      expect(population).toHaveProperty('value', 2);
+    });
+
+    it('should infer the share of city hit points lost only when the maximum is positive', async () => {
+      const damaged = city(1, 20, 11, { HitPoints: 150, MaxHitPoints: 200 });
+      const unknown = city(2, 20, 22, { HitPoints: 0, MaxHitPoints: 0 });
+      const runner = await compile(['city.damage', 'city.knows("damage")']);
+      const [[[share], [, known]]] = await runner.evaluate({
+        facts: buildNewspaperFacts(evidence([damaged, unknown]), identity),
+        groups: [{ expressions: [0, 1], subjects: [{ city: reference('city', 1) }, { city: reference('city', 2) }] }],
+      });
+      expect(share).toEqual({ value: 0.25, sources: [damaged.source] });
+      expect(known).toEqual({ value: false });
+    });
+
     it('should use private wrap geometry consistently for cities, players, plots and events', async () => {
       const home = city(1, 20, 11, { IsCapital: true });
       const foreignCity = city(2, 20, 22, { OwnerID: 1, X: 9 });

@@ -5,18 +5,17 @@
     "window": "recent",
     "when": [
       "!player.self",
-      "player.knows('major') && player.major === true",
-      "player.knows('name')",
-      "(player.knows('friend') && player.friend === true) || (player.knows('ally') && player.ally === true)",
-      "player.knows('era') && typeof player.era === 'string'",
-      "player.knows('before') && player.before.knows('era') && typeof player.before.era === 'string'",
+      "player.major",
+      "player.get('friend') || player.get('ally')",
+      "player.era",
+      "player.get('before.era')",
       "changed(player, 'era')"
     ],
     "values": {
       "civilization": "player.name",
       "era": "player.era",
       "former": "player.before.era",
-      "distance": "player.knows('distance') ? player.distance : null"
+      "distance": "player.get('distance') ?? null"
     },
     "tier": "notable",
     "adjust": "player.stake.relation",
@@ -28,16 +27,16 @@
     "event": "TeamTechResearched",
     "when": [
       "event.is.techGain",
-      "self.knows('teamId') && event.teamId !== self.teamId",
-      "event.players.some(p => p.knows('major') && p.major === true && p.knows('name'))",
-      "self.hasTechnology(event.tech) !== true"
+      "event.teamId !== self.teamId",
+      "event.players.some(p => p.get('major') && p.get('name'))",
+      "!self.hasTechnology(event.tech)"
     ],
     "values": {
       "tech": "event.tech",
-      "team": "event.players.filter(p => p.knows('major') && p.major === true && p.knows('name')).map(p => p.name).join(' and ')"
+      "team": "event.players.filter(p => p.get('major') && p.get('name')).map(p => p.name).join(' and ')"
     },
     "tier": "routine",
-    "adjust": "Math.max(...event.players.filter(p => p.knows('major') && p.major === true).map(p => p.stake.relation))",
+    "adjust": "Math.max(...event.players.filter(p => p.get('major')).map(p => p.stake.relation))",
     "tags": ["science", "international"]
   },
   {
@@ -46,16 +45,16 @@
     "event": "TeamTechResearched",
     "when": [
       "event.is.techGain",
-      "self.knows('teamId') && event.teamId !== self.teamId",
-      "event.players.some(p => p.knows('major') && p.major === true && p.knows('name'))",
-      "self.hasTechnology(event.tech) === true"
+      "event.teamId !== self.teamId",
+      "event.players.some(p => p.get('major') && p.get('name'))",
+      "self.hasTechnology(event.tech)"
     ],
     "values": {
       "tech": "event.tech",
-      "team": "event.players.filter(p => p.knows('major') && p.major === true && p.knows('name')).map(p => p.name).join(' and ')"
+      "team": "event.players.filter(p => p.get('major') && p.get('name')).map(p => p.name).join(' and ')"
     },
     "tier": "routine",
-    "adjust": "Math.max(...event.players.filter(p => p.knows('major') && p.major === true).map(p => p.stake.relation))",
+    "adjust": "Math.max(...event.players.filter(p => p.get('major')).map(p => p.stake.relation))",
     "tags": ["science", "international"]
   },
   {
@@ -63,8 +62,8 @@
     "subject": "world",
     "window": "recent",
     "when": [
-      "self.knows('era') && typeof self.era === 'string'",
-      "self.before.knows('era') && typeof self.before.era === 'string'",
+      "self.era",
+      "self.get('before.era')",
       "changed(self, 'era')"
     ],
     "values": {
@@ -79,11 +78,11 @@
     "event": "TeamTechResearched",
     "when": [
       "event.is.techGain",
-      "event.players.some(p => p.self === true)"
+      "event.players.some(p => p.self)"
     ],
     "values": {
       "tech": "event.tech",
-      "era": "self.knows('era') ? self.era : null"
+      "era": "self.get('era') ?? null"
     },
     "tier": "notable",
     "tags": ["science", "domestic"]
@@ -94,18 +93,17 @@
     "window": "recent",
     "when": [
       "!player.self",
-      "player.knows('major') && player.major === true",
-      "player.knows('name')",
-      "!((player.knows('friend') && player.friend === true) || (player.knows('ally') && player.ally === true))",
-      "player.knows('era') && typeof player.era === 'string'",
-      "player.knows('before') && player.before.knows('era') && typeof player.before.era === 'string'",
+      "player.major",
+      "!(player.get('friend') || player.get('ally'))",
+      "player.era",
+      "player.get('before.era')",
       "changed(player, 'era')"
     ],
     "values": {
       "civilization": "player.name",
       "era": "player.era",
       "former": "player.before.era",
-      "distance": "player.knows('distance') ? player.distance : null"
+      "distance": "player.get('distance') ?? null"
     },
     "tier": "notable",
     "adjust": "player.stake.relation",
@@ -116,18 +114,15 @@
     "subject": "player",
     "window": "short",
     "when": [
-      "player.knows('major') && player.major === true",
-      "player.knows('name')",
-      "player.knows('technologies') && Number.isFinite(player.technologies)",
-      "player.knows('before') && player.before.knows('technologies') && Number.isFinite(player.before.technologies)",
+      "player.major",
       "player.rank('technologies') === 1",
-      "player.before.rank('technologies') > 1",
-      "players.some(p => p.id !== player.id && p.knows('major') && p.major && p.knows('technologies') && Number.isFinite(p.technologies))"
+      "player.get('before.technologies') !== undefined && player.before.rank('technologies') > 1",
+      "majorsWith('technologies') > 1"
     ],
     "values": {
       "civilization": "player.name",
       "count": "player.technologies",
-      "tied": "players.some(p => p.id !== player.id && p.knows('major') && p.major && p.knows('technologies') && p.technologies === player.technologies)"
+      "tied": "players.some(p => p.id !== player.id && p.get('major') && p.get('technologies') === player.technologies)"
     },
     "tier": "player.self ? 'major' : 'notable'"
   }

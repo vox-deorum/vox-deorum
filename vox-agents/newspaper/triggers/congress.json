@@ -4,16 +4,16 @@
     "subject": "world",
     "when": [
       "game.knows('congress')",
-      "game.congress.available === true",
+      "game.congress.available",
       "game.congress.knows('newProposals')",
-      "game.congress.newProposals.some(p => p.knows('proposer') && p.proposer.trim())"
+      "game.congress.newProposals.some(p => p.get('proposer')?.trim())"
     ],
     "values": {
-      "motionIndex": "game.congress.newProposals.findIndex(p => p.knows('proposer') && p.proposer.trim())",
-      "count": "game.congress.newProposals.filter(p => p.knows('proposer') && p.proposer.trim()).length",
+      "motionIndex": "game.congress.newProposals.findIndex(p => p.get('proposer')?.trim())",
+      "count": "game.congress.newProposals.filter(p => p.get('proposer')?.trim()).length",
       "proposal": "game.congress.newProposals[motionIndex].name",
       "proposer": "game.congress.newProposals[motionIndex].proposer",
-      "ourProposal": "self.knows('name') ? game.congress.newProposals.find(p => p.knows('proposer') && p.proposer === self.name)?.name ?? null : null",
+      "ourProposal": "self.get('name') ? game.congress.newProposals.find(p => p.get('proposer') === self.name)?.name ?? null : null",
       "ours": "ourProposal !== null",
       "ourProposer": "ours ? self.name : null"
     },
@@ -25,7 +25,7 @@
     "subject": "event",
     "event": "ResolutionResult",
     "when": [
-      "event.passed === false",
+      "!event.passed",
       "typeof event.resolutionType === 'string' && event.resolutionType.trim().length > 0",
       "typeof event.isEnact === 'boolean'",
       "typeof event.proposerName === 'string' && event.proposerName.trim().length > 0"
@@ -34,7 +34,7 @@
       "resolution": "event.resolutionType",
       "isEnact": "event.isEnact",
       "proposer": "event.proposerName",
-      "ours": "event.knows('player') && event.player.self === true"
+      "ours": "!!event.get('player.self')"
     },
     "tier": "ours ? 'major' : 'routine'",
     "tags": ["international", "congress"]
@@ -44,7 +44,7 @@
     "subject": "event",
     "event": "ResolutionResult",
     "when": [
-      "event.passed === true",
+      "event.passed",
       "typeof event.resolutionType === 'string' && event.resolutionType.trim().length > 0",
       "typeof event.isEnact === 'boolean'",
       "typeof event.proposerName === 'string' && event.proposerName.trim().length > 0"
@@ -53,7 +53,7 @@
       "resolution": "event.resolutionType",
       "isEnact": "event.isEnact",
       "proposer": "event.proposerName",
-      "ours": "event.knows('player') && event.player.self === true"
+      "ours": "!!event.get('player.self')"
     },
     "tier": "ours ? 'major' : 'notable'",
     "tags": ["international", "congress"]
@@ -63,10 +63,9 @@
     "subject": "world",
     "when": [
       "game.knows('congress')",
-      "game.congress.available === true",
+      "game.congress.available",
       "game.congress.knows('activeResolutions')",
-      "self.knows('name')",
-      "game.congress.activeResolutions.some(r => r.name.startsWith('Sanction') && r.name.includes(self.name))"
+      "game.congress.activeResolutions.some(r => r.name.startsWith('Sanction') && r.name.includes(self.get('name')))"
     ],
     "values": {
       "resolution": "game.congress.activeResolutions.find(r => r.name.startsWith('Sanction') && r.name.includes(self.name)).name"
@@ -80,9 +79,8 @@
     "subject": "world",
     "when": [
       "game.knows('congress')",
-      "game.congress.available === true",
+      "game.congress.available",
       "game.congress.knows('expectedSessionTurn')",
-      "Number.isFinite(game.congress.expectedSessionTurn)",
       "game.congress.expectedSessionTurn <= turn + recent",
       "game.congress.expectedSessionTurn !== turn + 1",
       "!game.congress.votingNow"
@@ -100,7 +98,7 @@
     "subject": "world",
     "when": [
       "game.knows('congress')",
-      "game.congress.available === true",
+      "game.congress.available",
       "game.congress.knows('expectedSessionTurn')",
       "game.congress.expectedSessionTurn === turn + 1"
     ],
@@ -117,9 +115,8 @@
     "window": "recent",
     "when": [
       "game.knows('congress')",
-      "game.congress.available === true",
-      "self.knows('votes') && Number.isFinite(self.votes)",
-      "self.knows('before') && self.before.knows('votes') && Number.isFinite(self.before.votes)",
+      "game.congress.available",
+      "self.get('before.votes') !== undefined",
       "self.votes !== self.before.votes"
     ],
     "values": {
@@ -135,8 +132,8 @@
     "subject": "world",
     "when": [
       "game.knows('congress')",
-      "game.congress.available === true",
-      "game.congress.votingNow === true"
+      "game.congress.available",
+      "game.congress.votingNow"
     ],
     "values": {
       "league": "game.congress.knows('league') ? game.congress.league : null",
@@ -163,12 +160,12 @@
     "subject": "world",
     "when": [
       "game.knows('congress')",
-      "game.congress.available === true",
-      "(game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => worldProjects.includes(r.name))) || (game.congress.knows('proposals') && game.congress.proposals.some(p => p.isEnact && worldProjects.includes(p.name) && p.knows('proposer') && p.proposer.trim()))"
+      "game.congress.available",
+      "(game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => worldProjects.includes(r.name))) || (game.congress.knows('proposals') && game.congress.proposals.some(p => p.isEnact && worldProjects.includes(p.name) && p.get('proposer')?.trim()))"
     ],
     "values": {
       "activeProject": "game.congress.knows('activeResolutions') ? game.congress.activeResolutions.find(r => worldProjects.includes(r.name))?.name ?? null : null",
-      "motionIndex": "activeProject === null ? game.congress.proposals.findIndex(p => p.isEnact && worldProjects.includes(p.name) && p.knows('proposer') && p.proposer.trim()) : null",
+      "motionIndex": "activeProject === null ? game.congress.proposals.findIndex(p => p.isEnact && worldProjects.includes(p.name) && p.get('proposer')?.trim()) : null",
       "project": "activeProject ?? game.congress.proposals[motionIndex].name",
       "proposer": "motionIndex === null ? null : game.congress.proposals[motionIndex].proposer"
     },
@@ -192,12 +189,12 @@
     "id": "sanction-proposed",
     "subject": "world",
     "when": [
-      "game.knows('congress') && game.congress.available === true",
+      "game.knows('congress') && game.congress.available",
       "game.congress.knows('newProposals')",
-      "game.congress.newProposals.some(p => p.isEnact === true && p.name.startsWith('Sanction') && p.knows('proposer') && p.proposer.trim())"
+      "game.congress.newProposals.some(p => p.isEnact && p.name.startsWith('Sanction') && p.get('proposer')?.trim())"
     ],
     "values": {
-      "motionIndex": "game.congress.newProposals.findIndex(p => p.isEnact === true && p.name.startsWith('Sanction') && p.knows('proposer') && p.proposer.trim())",
+      "motionIndex": "game.congress.newProposals.findIndex(p => p.isEnact && p.name.startsWith('Sanction') && p.get('proposer')?.trim())",
       "resolution": "game.congress.newProposals[motionIndex].name",
       "proposer": "game.congress.newProposals[motionIndex].proposer"
     },
@@ -208,12 +205,12 @@
     "id": "sanction-repeal-proposed",
     "subject": "world",
     "when": [
-      "game.knows('congress') && game.congress.available === true",
+      "game.knows('congress') && game.congress.available",
       "game.congress.knows('newProposals')",
-      "game.congress.newProposals.some(p => p.isEnact === false && p.name.startsWith('Sanction') && p.knows('proposer') && p.proposer.trim())"
+      "game.congress.newProposals.some(p => !p.isEnact && p.name.startsWith('Sanction') && p.get('proposer')?.trim())"
     ],
     "values": {
-      "motionIndex": "game.congress.newProposals.findIndex(p => p.isEnact === false && p.name.startsWith('Sanction') && p.knows('proposer') && p.proposer.trim())",
+      "motionIndex": "game.congress.newProposals.findIndex(p => !p.isEnact && p.name.startsWith('Sanction') && p.get('proposer')?.trim())",
       "resolution": "game.congress.newProposals[motionIndex].name",
       "proposer": "game.congress.newProposals[motionIndex].proposer"
     },
@@ -224,11 +221,11 @@
     "id": "travel-ban-proposed",
     "subject": "world",
     "when": [
-      "game.knows('congress') && game.congress.available === true",
-      "game.congress.knows('newProposals') && game.congress.newProposals.some(p => p.isEnact && p.name.startsWith('Travel Ban') && p.knows('proposer') && p.proposer.trim())"
+      "game.knows('congress') && game.congress.available",
+      "game.congress.knows('newProposals') && game.congress.newProposals.some(p => p.isEnact && p.name.startsWith('Travel Ban') && p.get('proposer')?.trim())"
     ],
     "values": {
-      "motionIndex": "game.congress.newProposals.findIndex(p => p.isEnact && p.name.startsWith('Travel Ban') && p.knows('proposer') && p.proposer.trim())",
+      "motionIndex": "game.congress.newProposals.findIndex(p => p.isEnact && p.name.startsWith('Travel Ban') && p.get('proposer')?.trim())",
       "resolution": "game.congress.newProposals[motionIndex].name",
       "proposer": "game.congress.newProposals[motionIndex].proposer"
     },
@@ -239,11 +236,11 @@
     "id": "travel-ban-repeal-proposed",
     "subject": "world",
     "when": [
-      "game.knows('congress') && game.congress.available === true",
-      "game.congress.knows('newProposals') && game.congress.newProposals.some(p => p.isEnact === false && p.name.startsWith('Travel Ban') && p.knows('proposer') && p.proposer.trim())"
+      "game.knows('congress') && game.congress.available",
+      "game.congress.knows('newProposals') && game.congress.newProposals.some(p => !p.isEnact && p.name.startsWith('Travel Ban') && p.get('proposer')?.trim())"
     ],
     "values": {
-      "motionIndex": "game.congress.newProposals.findIndex(p => p.isEnact === false && p.name.startsWith('Travel Ban') && p.knows('proposer') && p.proposer.trim())",
+      "motionIndex": "game.congress.newProposals.findIndex(p => !p.isEnact && p.name.startsWith('Travel Ban') && p.get('proposer')?.trim())",
       "resolution": "game.congress.newProposals[motionIndex].name",
       "proposer": "game.congress.newProposals[motionIndex].proposer"
     },

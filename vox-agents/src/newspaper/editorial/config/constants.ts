@@ -5,7 +5,7 @@ import { editorialShortcutSubjects } from '../shared/expressions.js';
 
 const reservedValueNames = new Set([
   ...editorialShortcutSubjects, 'world', 'self', 'cities', 'players', 'events', 'pairs', 'incidents',
-  'turn', 'game', 'activeResolution', 'held', 'crossed', 'dropped', 'pct', 'changed', 'key', 'matches',
+  'turn', 'game', 'activeResolution', 'held', 'crossed', 'dropped', 'pct', 'changed', 'majorsWith', 'key', 'matches',
   'press', 'printed', 'story',
   'values', 'triggerValues', 'group', 'subject', 'period', '$kind',
   'cityId', 'playerId', 'pairId', 'eventId', 'incidentId', 'ownerId',
@@ -37,7 +37,7 @@ const constantNameSchema = identifierSchema.refine(
 export const editorialValueNameSchema = identifierSchema.refine(
   name => !reservedValueNames.has(name), 'Name collides with an expression binding.',
 );
-const shortcutNameSchema = identifierSchema.refine(name => !['knows', 'relations', 'toJSON'].includes(name), 'Name is reserved by the fact view.');
+const shortcutNameSchema = identifierSchema.refine(name => !['knows', 'get', 'relations', 'toJSON'].includes(name), 'Name is reserved by the fact view.');
 const spanSchema = z.number().positive();
 const shortcutGroupSchema = z.record(shortcutNameSchema, z.string().refine(source => source.trim().length > 0, 'Expected an expression.'));
 const termGroupSchema = z.record(

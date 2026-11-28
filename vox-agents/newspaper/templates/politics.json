@@ -373,7 +373,7 @@
         "voice": "press",
         "stance": "national",
         "genre": "report",
-        "when": "ours === true",
+        "when": "ours",
         "headline": "Our {{terms.civic.government}} changes doctrine",
         "body": [
           "Our {{terms.civic.government}} has abandoned {{formerIdeology}} and adopted {{ideology}}. Down in the council corridor, porters are hauling the old pamphlets to the pulping tub while the ink on the new ones is still wet. The nation will be asked to change its mind faster than the paper changes hands."
@@ -384,7 +384,7 @@
         "voice": "chronicle",
         "stance": "neutral",
         "genre": "report",
-        "when": "ours === false",
+        "when": "!ours",
         "headline": "A change of doctrine recorded",
         "body": [
           "In this season {{civilization}} set aside {{formerIdeology}} and adopted {{ideology}}. The {{player.civic.leaderTitle}} swore the oath at the gate in new words, and the old form was struck from the register. The dispatch offers no reason, and none is entered here."
@@ -613,7 +613,7 @@
         "voice": "gazette",
         "stance": "conciliatory",
         "genre": "report",
-        "when": "shared === true",
+        "when": "shared",
         "headline": "{{rival}} now shares our doctrine",
         "body": [
           "We are pleased to learn that {{rival}} has adopted {{ideology}}, the doctrine that also guides our own affairs. Neighbors who read the world the same way tend to quarrel less and trade more, and the guards along the border have already grown friendlier. {{rival}} is welcome to the company."
@@ -651,7 +651,7 @@
         "voice": "gazette",
         "stance": "neutral",
         "genre": "ledger",
-        "when": "tied === true",
+        "when": "tied",
         "headline": "First place, shared",
         "body": [
           "First place: {{civilization}}",
@@ -664,7 +664,7 @@
         "voice": "press",
         "stance": "ambitious",
         "genre": "report",
-        "when": "player.self === true",
+        "when": "player.self",
         "headline": "Our nation stands first",
         "body": [
           "The latest reckoning puts us at the head of the powers, and the square outside the exchange heard the news before the council did. Being first is a position; staying first is a campaign.",

@@ -26,7 +26,8 @@ Event visibility, contact and the [event-level insight gates](#evidence-the-fact
 | --- | --- |
 | A stored column keeps its name in camelCase. | `FoodPerTurn` becomes `city.foodPerTurn` |
 | A yes-or-no column is true or false. | `city.isPuppet` |
-| A stored value that is empty reads as `null`, which is different from [hidden](#hidden-and-missing-facts). | `city.majorityReligion` is `null` for a city with no majority religion |
+| A number or yes-or-no column that is empty is [hidden](#hidden-and-missing-facts), so a readable number is always finite. | `player.score > 100` needs no extra check |
+| An empty text or list column reads as `null`, meaning "none". | `city.majorityReligion` is `null` for a city with no majority religion |
 | A list column is a JavaScript array. | `city.wonders.includes('Petra')` |
 | A fact that names another subject returns that subject. | `city.owner.era`, `player.capital.population` |
 | Names recorded as text stay as recorded. | `player.era == 'Medieval Era'` |
@@ -46,6 +47,7 @@ Every expression can read these, whatever its subject.
 | `press` | Publication memory: `issues` (published issue count) and `lastIssueTurn` (turn of the latest issue, or `null`) |
 | `printed(ruleId, subject?)` | `{turn, count}` for published articles a rule supported, or `null` when none. The optional `subject` limits the count to one city, player or pair. See [publication memory](overview.md#publication-memory). |
 | `distance(a, b)` | Hex distance between players, cities, plots or events. See [distance](constants.md#distance). |
+| `majorsWith(path)` | How many known majors have a readable number at that path, such as `majorsWith('score')` or `majorsWith('before.score')` |
 
 A trigger's **window** defaults to the [reporting period](../replay.md#set-the-reporting-window). A custom `window` changes comparisons and lists such as the global `events`. Event and incident subjects still come from the reporting period.
 
@@ -91,6 +93,7 @@ The causes omit occupation and empire-wide unhappiness. Population caps and spec
 | `foreign` | Someone else owns it | `owner` is another player |
 | `distance.own` | Hex distance to the nearest city of the receiver; 0 for the receiver's own cities | City coordinates |
 | `distance.capital` | Hex distance to the receiver's capital | City coordinates and `self.capital` |
+| `damage` | Share of hit points lost, from 0 (undamaged) to 1. Hidden when the maximum is not positive. | `hitPoints` and `maxHitPoints` |
 | `nearestOwn` | The receiver's `city` closest to this one | City coordinates |
 | `founded` | Recorded founding turn, or an estimate from first sighting | A `PlayerCityFounded` or `UnitCityFounded` event at its plot; otherwise the first observation after the recording began, when the city's history is continuous |
 | `captured` | The latest capture: `turn`, plus `from` and `by` (players) and `conquest` when known | `CityCaptureComplete` and `CityFlipped` within this city's history |
@@ -351,9 +354,31 @@ Pass an already scaled [named span](constants.md#spans) or a count of recorded t
 
 Hidden usually means the recording lacks the fact. A visible city exposes its full record, and a visible major its policy names, ideology and military strength, so a field that is absent was not recorded. It does not mean a spy or diplomat was missing.
 
-In a `when` list, a bare read of an unrecorded fact stops the rule for that subject and names the fact in the audit. Call `subject.knows(field)` to branch on availability, inside callbacks such as `events.some`, or where a missing read must not hold a repeat rule back from rearming. For example, `city.knows('foodPerTurn') && city.foodPerTurn > 0` chooses the food story only when that detail was recorded. A player unknown on the requested turn has no readable relationship fact for that turn.
+Reading a hidden fact makes the whole expression hidden, even inside a callback, `||` or `?:`. What that means depends on where the expression runs:
 
-A missing read in a `values`, `tier`, or `urgent` expression also stops the rule for that subject or group. In an `adjust` expression, it contributes 0 points and the other adjustments still run. See [stakes](constants.md#stakes) for checking a shared calculation's inputs.
+| Where | A hidden read |
+| --- | --- |
+| Trigger `when`, `values`, `tier`, `urgent` | Stops the rule for that subject or group, and names the fact in the audit |
+| Trigger `adjust` entry | Contributes 0 points; the other adjustments still run |
+| Template, variant and style conditions | Counts as false |
+| [Shortcuts and stakes](constants.md#shortcuts) | Passes on to the expression that uses them |
+
+So write the bare read and let a missing fact stop the rule. Check availability only where the expression must go on without the fact:
+
+| Situation | Write | Not |
+| --- | --- | --- |
+| A condition at the top of `when` | `player.score > 100`, `self.atWar`, `!city.isPuppet` | `player.knows('score') && Number.isFinite(player.score) && ...`, `self.atWar === true` |
+| A fact the story needs, such as a name | Read it in `values`, as in `civilization: player.name` | A separate `player.knows('name')` condition |
+| Text that must be present | `event.policy` | `typeof event.policy === 'string' && event.policy.length > 0` |
+| Inside a callback, `\|\|`, `?:` or a negation | `players.filter(p => p.get('score') > 100)`, `!player.get('before.ideology')` | `p.knows('score') && p.score > 100` |
+| A reference chain that may break | `city.get('owner.name')` | `city.knows('owner') && city.owner.knows('name') && city.owner.name` |
+| A change across a threshold | `dropped(self.happinessPercentage, self.before.happinessPercentage, 50)` | Two availability checks and two comparisons |
+
+`subject.get(path)` reads a dotted path such as `'name'`, `'owner.name'` or `'before.population'`. It returns `undefined` when any step is missing and cites its sources only when it finds a value. `subject.knows(field)` answers whether one field is readable.
+
+Keep an availability check, written with `get` or `knows`, where absence is a normal state rather than a gap in the recording. Examples are `tacticalZones`, `questDeadlines`, `game.congress`, `expectedSessionTurn`, `captured`, `formerOwner`, optional event fields such as `coveredByDeal` or `plot`, and `before` on a city's first sighting. Under the default [repeat policy](overview.md#repeats), a false `when` rearms a rule and a hidden one does not. A rule whose fact disappears when its condition ends must therefore read that absence as false. Shortcuts and stakes need the same care, because they run inside other rules' callbacks.
+
+A player unknown on the requested turn has no readable relationship fact for that turn.
 
 The first sighting still gives a baseline for later comparisons. If the receiver first saw a rival city on turn 8, `city.before` is unavailable for any earlier date. `city.founded` may estimate turn 8 if the loaded history reaches the recording's start and the observation begins after that start. For a story about a witnessed founding, require a founding event.
 

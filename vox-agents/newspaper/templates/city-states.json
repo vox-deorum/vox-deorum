@@ -293,7 +293,7 @@
     "variants": [
       {
         "id": "city-state-friendship-changes-report",
-        "when": "began === true",
+        "when": "began",
         "headline": "{{cityState}} counts us a friend",
         "body": [
           "{{cityState}} now counts {{terms.civilization}} a friend, though the bond has not grown into an alliance. Its market admits our traders on friend's terms, and our letters sit near the top of its council's pile. Friendship is a smaller thing than alliance, and it is also easier to lose."
@@ -301,7 +301,7 @@
       },
       {
         "id": "city-state-friendship-changes-ends",
-        "when": "began === false",
+        "when": "!began",
         "headline": "{{cityState}} is friendly no longer",
         "body": [
           "Friendship with {{cityState}} has lapsed, and the city no longer counts us among its friends. The welcome at its gate has cooled, and our envoy waits longer each season for an answer. A cool welcome is cheaper than a closed gate, and harder to argue with."
@@ -312,7 +312,7 @@
         "voice": "chronicle",
         "stance": "neutral",
         "genre": "notice",
-        "when": "began === true",
+        "when": "began",
         "headline": "Friendship recorded with {{cityState}}",
         "body": [
           "Be it entered in the record that {{terms.civilization}} and {{cityState}} are friends from this season forward. The city's scribes have written the bond into their book, and our archive holds the matching page."
@@ -323,7 +323,7 @@
         "voice": "press",
         "stance": "government-critical",
         "genre": "report",
-        "when": "began === false",
+        "when": "!began",
         "headline": "We let a friendship lapse",
         "body": [
           "Our friendship with {{cityState}} has ended. A friendship is kept by small courtesies repeated season after season, and ours were allowed to lapse. The capital should explain to the city why the visits stopped, and to the rest of us why we are hearing of it only now."
@@ -334,7 +334,7 @@
         "voice": "spoken",
         "stance": "traditional",
         "genre": "proverb",
-        "when": "began === false",
+        "when": "!began",
         "headline": "A word at the fire",
         "body": [
           "They say by the fire: a cold hearth teaches the guest the road. So it is with {{cityState}}."

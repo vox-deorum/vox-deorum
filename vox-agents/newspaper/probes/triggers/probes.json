@@ -18,8 +18,8 @@
     "event": "TeamTechResearched",
     "when": [
       "event.tech == 'Horseback Riding'",
-      "!event.knows('changeAmount') || event.changeAmount > 0",
-      "event.knows('player') && !['The Huns', 'Huns'].includes(event.player.name)",
+      "event.get('changeAmount') === undefined || event.changeAmount > 0",
+      "event.get('player.name') && !['The Huns', 'Huns'].includes(event.player.name)",
       "players.some(p => ['The Huns', 'Huns'].includes(p.name) && distance(event.player, p) <= neighboring)"
     ],
     "values": { "civilization": "event.player.name", "technology": "event.tech" },
@@ -40,9 +40,8 @@
     "subject": "event",
     "event": "UnitCreated",
     "when": [
-      "event.knows('person')",
       "event.kind == 'born'",
-      "event.knows('player') && event.player.knows('name') && !event.player.self"
+      "!event.player.self"
     ],
     "values": {
       "person": "event.person",
@@ -55,11 +54,11 @@
     "id": "probe-obituary",
     "subject": "event",
     "event": ["GreatPersonExpended", "UnitPrekill"],
-    "when": ["event.knows('person')", "event.kind == 'expended' || event.kind == 'died'"],
+    "when": "event.kind == 'expended' || event.kind == 'died'",
     "values": {
       "person": "event.person",
       "kind": "event.kind",
-      "civilization": "event.knows('player') && event.player.knows('name') ? event.player.name : 'their people'"
+      "civilization": "event.get('player.name') ? event.player.name : 'their people'"
     },
     "tier": "major"
   },
@@ -82,7 +81,7 @@
   {
     "id": "probe-peace",
     "subject": "pair",
-    "when": ["pair.involvesSelf", "pair.atWar == false"],
+    "when": ["pair.involvesSelf", "!pair.atWar"],
     "values": { "other": "pair.other.name" },
     "tags": ["international"],
     "tier": "notable"
@@ -140,8 +139,8 @@
     "when": [
       "!player.self",
       "player.major",
-      "player.theirDiplomatHere == true",
-      "player.ourDiplomatThere == false"
+      "player.theirDiplomatHere",
+      "!player.ourDiplomatThere"
     ],
     "values": { "civilization": "player.name" },
     "tags": ["international"],
@@ -154,8 +153,8 @@
     "when": [
       "!player.self",
       "player.major",
-      "player.ourDiplomatThere == true",
-      "player.knows('policyBranches') && player.policyBranches != null && Object.values(player.policyBranches).some(branch => Array.isArray(branch) && branch.length > 0)"
+      "player.ourDiplomatThere",
+      "player.policyBranches != null && Object.values(player.policyBranches).some(branch => Array.isArray(branch) && branch.length > 0)"
     ],
     "values": {
       "civilization": "player.name",
@@ -170,14 +169,11 @@
     "id": "probe-espionage-tech",
     "subject": "event",
     "event": "EspionageResult",
-    "when": [
-      "event.perspective == 'source'",
-      "event.knows('tech')"
-    ],
+    "when": "event.perspective == 'source' && event.get('tech') !== undefined",
     "values": {
       "technology": "event.tech",
-      "civilization": "event.knows('targetPlayer') && event.targetPlayer.knows('name') ? event.targetPlayer.name : 'a foreign power'",
-      "operationSite": "event.knows('cityName') ? event.cityName : 'a foreign city'"
+      "civilization": "event.get('targetPlayer.name') ? event.targetPlayer.name : 'a foreign power'",
+      "operationSite": "event.get('cityName') ?? 'a foreign city'"
     },
     "tags": ["science"],
     "tier": "major",
@@ -192,7 +188,7 @@
       "event.spyResult == 'Killed' || event.spyResult == 'KilledNotIdentified'"
     ],
     "values": {
-      "operationSite": "event.knows('cityName') ? event.cityName : 'a foreign city'"
+      "operationSite": "event.get('cityName') ?? 'a foreign city'"
     },
     "tags": ["military"],
     "tier": "crisis",
@@ -204,8 +200,8 @@
     "event": "EspionageResult",
     "when": ["event.perspective == 'target'"],
     "values": {
-      "civilization": "event.knows('sourcePlayer') && event.sourcePlayer.knows('name') && !event.sourcePlayer.self ? event.sourcePlayer.name : 'an unidentified power'",
-      "operationSite": "event.knows('cityName') ? event.cityName : 'our territory'"
+      "civilization": "event.get('sourcePlayer.name') && !event.sourcePlayer.self ? event.sourcePlayer.name : 'an unidentified power'",
+      "operationSite": "event.get('cityName') ?? 'our territory'"
     },
     "tags": ["international"],
     "tier": "major"
@@ -216,12 +212,11 @@
     "event": ["ElectionResultSuccess", "ElectionResultFailure"],
     "when": [
       "event.playerId == self.id",
-      "event.knows('influenceChange')",
-      "event.influenceChange != 0"
+      "event.get('influenceChange')"
     ],
     "values": {
       "change": "event.influenceChange",
-      "cityState": "event.knows('cityState') ? event.cityState : 'a city-state'"
+      "cityState": "event.get('cityState') ?? 'a city-state'"
     },
     "tags": ["international"],
     "tier": "notable",
@@ -233,10 +228,10 @@
     "when": [
       "player.self",
       "player.knows('tacticalZones')",
-      "player.tacticalZones.some(z => z.knows('city') && Object.values(z.units).some(types => Object.values(types).some(count => count > 0)))"
+      "player.tacticalZones.some(z => z.get('city') && Object.values(z.units).some(types => Object.values(types).some(count => count > 0)))"
     ],
     "values": {
-      "frontIndex": "player.tacticalZones.findIndex(z => z.knows('city') && Object.values(z.units).some(types => Object.values(types).some(count => count > 0)))",
+      "frontIndex": "player.tacticalZones.findIndex(z => z.get('city') && Object.values(z.units).some(types => Object.values(types).some(count => count > 0)))",
       "frontCity": "player.tacticalZones[frontIndex].city",
       "domain": "player.tacticalZones[frontIndex].domain.toLowerCase()",
       "posture": "player.tacticalZones[frontIndex].posture",
@@ -250,10 +245,10 @@
     "id": "probe-ship-launch",
     "subject": "city",
     "when": [
-      "city.trained.some(t => t.knows('port') && t.knows('unit') && probeNavalTypes.includes(t.unit) && t.knows('withGold') && t.withGold === false && t.knows('withFaith') && t.withFaith === false)"
+      "city.trained.some(t => t.get('port') && t.get('unit') && probeNavalTypes.includes(t.unit) && t.get('withGold') === false && t.get('withFaith') === false)"
     ],
     "values": {
-      "launchIndex": "city.trained.findIndex(t => t.knows('port') && t.knows('unit') && probeNavalTypes.includes(t.unit) && t.knows('withGold') && t.withGold === false && t.knows('withFaith') && t.withFaith === false)",
+      "launchIndex": "city.trained.findIndex(t => t.get('port') && t.get('unit') && probeNavalTypes.includes(t.unit) && t.get('withGold') === false && t.get('withFaith') === false)",
       "ship": "city.trained[launchIndex].unit",
       "port": "city.trained[launchIndex].port"
     },

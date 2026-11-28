@@ -26,6 +26,13 @@ const playerFields = [
   'MilitaryStrength', 'FoundedReligion', 'MajorityReligion', 'DiplomaticDeals'
 ] as const;
 
+// An empty number column is a gap in the record, so it stays hidden. Text and map columns keep null for "none".
+const playerNumbers = new Set<typeof playerFields[number]>([
+  'Score', 'Votes', 'Cities', 'Population', 'Territory', 'Gold', 'GoldPerTurn', 'HappinessPercentage',
+  'Technologies', 'NextPolicyTurns', 'SciencePerTurn', 'CulturePerTurn', 'FaithPerTurn', 'TourismPerTurn',
+  'MilitaryUnits', 'MilitarySupply', 'MilitaryStrength'
+]);
+
 const cityStateFields = new Set<typeof playerFields[number]>([
   'Cities', 'Population', 'Gold', 'GoldPerTurn', 'Technologies', 'Resources'
 ]);
@@ -173,6 +180,7 @@ export function buildPlayerSnapshotFacts(row: NewspaperSnapshot, context: FactBu
   }
   for (const key of playerFields) {
     if (major === false && !cityStateFields.has(key)) continue;
+    if (row.values[key] === null && playerNumbers.has(key)) continue;
     const field = recordedFact(row.values[key], sources);
     if (field) fields[key === 'Cities' ? 'cityCount' : key[0].toLowerCase() + key.slice(1)] = field;
   }

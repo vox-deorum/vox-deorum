@@ -40,18 +40,17 @@
     "subject": "event",
     "event": "PlayerPlunderedTradeRoute",
     "when": [
-      "event.destinationOwner.self === true",
-      "event.originOwner.self === false && event.originOwner.knows('name')",
-      "event.plunderingPlayerId !== self.id",
-      "event.plunderingPlayer.knows('name')"
+      "event.destinationOwner.self",
+      "!event.originOwner.self",
+      "event.plunderingPlayerId !== self.id"
     ],
     "values": {
-      "originCity": "event.knows('originCity') && event.originCity.knows('name') ? event.originCity.name : null",
+      "originCity": "event.get('originCity.name') ?? null",
       "originCiv": "event.originOwner.name",
-      "destinationCity": "event.knows('destinationCity') && event.destinationCity.knows('name') ? event.destinationCity.name : null",
-      "destinationCiv": "event.destinationOwner.knows('name') ? event.destinationOwner.name : null",
+      "destinationCity": "event.get('destinationCity.name') ?? null",
+      "destinationCiv": "event.get('destinationOwner.name') ?? null",
       "plunderer": "event.plunderingPlayer.name",
-      "gold": "event.knows('plunderGoldValue') && Number.isFinite(event.plunderGoldValue) ? event.plunderGoldValue : null"
+      "gold": "event.get('plunderGoldValue') ?? null"
     },
     "tier": "notable",
     "adjust": "event.originOwner.stake.relation",
@@ -62,9 +61,7 @@
     "subject": "world",
     "window": "recent",
     "when": [
-      "self.knows('outgoingTradeRouteCount')",
-      "self.knows('before') && self.before.knows('outgoingTradeRouteCount')",
-      "self.before.outgoingTradeRouteCount > 0",
+      "self.get('before.outgoingTradeRouteCount') > 0",
       "self.outgoingTradeRouteCount === 0"
     ],
     "values": {
@@ -79,17 +76,16 @@
     "subject": "event",
     "event": "PlayerTradeRouteCompleted",
     "when": [
-      "(event.originPlayer.self === true) !== (event.destinationPlayer.self === true)",
-      "event.originCity.knows('name') && event.destinationCity.knows('name')",
+      "event.originPlayer.self !== event.destinationPlayer.self",
       "distance(event.originCity, event.destinationCity) >= regional"
     ],
     "values": {
       "originCity": "event.originCity.name",
-      "originCiv": "event.originPlayer.knows('name') ? event.originPlayer.name : null",
+      "originCiv": "event.get('originPlayer.name') ?? null",
       "destinationCity": "event.destinationCity.name",
-      "destinationCiv": "event.destinationPlayer.knows('name') ? event.destinationPlayer.name : null",
+      "destinationCiv": "event.get('destinationPlayer.name') ?? null",
       "routeDistance": "distance(event.originCity, event.destinationCity)",
-      "outgoing": "event.originPlayer.self === true"
+      "outgoing": "event.originPlayer.self"
     },
     "tier": "routine",
     "tags": ["economy", "trade", "international"]
@@ -99,18 +95,16 @@
     "subject": "event",
     "event": "PlayerPlunderedTradeRoute",
     "when": [
-      "event.originOwner.self === true",
-      "event.plunderingPlayerId !== self.id",
-      "event.plunderingPlayer.knows('name')",
-      "event.destinationOwner.knows('name')"
+      "event.originOwner.self",
+      "event.plunderingPlayerId !== self.id"
     ],
     "values": {
-      "originCity": "event.knows('originCity') && event.originCity.knows('name') ? event.originCity.name : null",
-      "originCiv": "event.originOwner.knows('name') ? event.originOwner.name : null",
-      "destinationCity": "event.knows('destinationCity') && event.destinationCity.knows('name') ? event.destinationCity.name : null",
+      "originCity": "event.get('originCity.name') ?? null",
+      "originCiv": "event.get('originOwner.name') ?? null",
+      "destinationCity": "event.get('destinationCity.name') ?? null",
       "destinationCiv": "event.destinationOwner.name",
       "plunderer": "event.plunderingPlayer.name",
-      "gold": "event.knows('plunderGoldValue') && Number.isFinite(event.plunderGoldValue) ? event.plunderGoldValue : null"
+      "gold": "event.get('plunderGoldValue') ?? null"
     },
     "tier": "major",
     "adjust": "event.plunderingPlayer.stake.relation",
@@ -120,9 +114,7 @@
     "id": "trade-network-opens",
     "subject": "world",
     "when": [
-      "self.knows('before')",
-      "self.knows('outgoingTradeRouteCount')",
-      "(self.before.knows('outgoingTradeRouteCount') && self.before.outgoingTradeRouteCount === 0) || (self.before.knows('outgoingTradeRoutes') && Array.isArray(self.before.outgoingTradeRoutes) && self.before.outgoingTradeRoutes.length === 0)",
+      "self.get('before.outgoingTradeRouteCount') === 0 || self.get('before.outgoingTradeRoutes')?.length === 0",
       "self.outgoingTradeRouteCount > 0"
     ],
     "values": {
@@ -137,14 +129,14 @@
     "event": "PlayerPlunderedTradeRoute",
     "when": [
       "event.plunderingPlayerId === self.id",
-      "event.originOwner.self === false && event.originOwner.knows('name')"
+      "!event.originOwner.self"
     ],
     "values": {
-      "originCity": "event.knows('originCity') && event.originCity.knows('name') ? event.originCity.name : null",
+      "originCity": "event.get('originCity.name') ?? null",
       "originCiv": "event.originOwner.name",
-      "destinationCity": "event.knows('destinationCity') && event.destinationCity.knows('name') ? event.destinationCity.name : null",
-      "destinationCiv": "event.knows('destinationOwner') && event.destinationOwner.knows('name') ? event.destinationOwner.name : null",
-      "gold": "event.knows('plunderGoldValue') && Number.isFinite(event.plunderGoldValue) ? event.plunderGoldValue : null"
+      "destinationCity": "event.get('destinationCity.name') ?? null",
+      "destinationCiv": "event.get('destinationOwner.name') ?? null",
+      "gold": "event.get('plunderGoldValue') ?? null"
     },
     "tier": "notable",
     "adjust": "event.originOwner.stake.relation",

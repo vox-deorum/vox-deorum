@@ -78,23 +78,29 @@ function factRuntime(model, wrap, constants, factDefinitions) {
     throw new Error('Hidden or missing fact: ' + path);
   }
 
-  // Probe a shortcut without poisoning the enclosing expression if its inputs are hidden.
-  function canReadShortcut(read) {
+  // Run a read without poisoning the enclosing expression. A hidden read gives unread and cites nothing.
+  const unread = Symbol('unread');
+  function tolerantRead(read) {
     const previousHidden = hidden, previousSources = sources;
     hidden = undefined;
     sources = new Map();
     try {
-      read();
-      if (hidden) return false;
+      const value = read();
+      if (hidden || value === unread) return unread;
       for (const [key, row] of sources) previousSources.set(key, row);
-      return true;
+      return value;
     } catch (error) {
-      if (hidden) return false;
+      if (hidden) return unread;
       throw error;
     } finally {
       hidden = previousHidden;
       sources = previousSources;
     }
+  }
+
+  // Probe a shortcut without poisoning the enclosing expression if its inputs are hidden.
+  function canReadShortcut(read) {
+    return tolerantRead(read) !== unread;
   }
 
   // Find the latest observation or gap at the requested date.
@@ -231,7 +237,7 @@ function factRuntime(model, wrap, constants, factDefinitions) {
     function record(fields, path, date, methods = {}) {
       const object = Object.create(null);
       for (const key of Object.keys(fields)) {
-        if (internalFields.has(key) || key === 'knows' || has(methods, key)) continue;
+        if (internalFields.has(key) || key === 'knows' || key === 'get' || has(methods, key)) continue;
         if (!knownField(key, false)) continue;
         Object.defineProperty(object, key, {
           enumerable: true, get: Object.freeze(() => read(fields[key], path + '.' + key, date)),
@@ -240,16 +246,33 @@ function factRuntime(model, wrap, constants, factDefinitions) {
       for (const key of Object.keys(methods))
         if (knownField(key, false)) Object.defineProperty(object, key, { get: Object.freeze(methods[key].get) });
       Object.defineProperty(object, 'knows', { value: Object.freeze(field => knownField(field, true)) });
+      // Read a dotted path such as 'owner.name', giving undefined instead of hiding the expression.
+      Object.defineProperty(object, 'get', {
+        value: Object.freeze(dotted => {
+          if (typeof dotted !== 'string') return undefined;
+          const value = tolerantRead(() => {
+            let current = proxy;
+            for (const key of dotted.split('.')) {
+              if (current === null || typeof current !== 'object' || typeof current.knows !== 'function' ||
+                  !current.knows(key)) return unread;
+              current = current[key];
+            }
+            return current;
+          });
+          return value === unread ? undefined : value;
+        }),
+      });
       // This also lets standard JSON serialization inspect only available public fields.
       if (!has(object, 'toJSON')) Object.defineProperty(object, 'toJSON', { value: undefined });
       Object.freeze(object);
-      return new Proxy(object, {
+      const proxy = new Proxy(object, {
         get(object, key, receiver) {
           if (typeof key === 'symbol' || has(object, key)) return Reflect.get(object, key, receiver);
           if (has(fields, key) && !internalFields.has(key)) cite(fields[key].sources);
           return missing(path + '.' + key);
         },
       });
+      return proxy;
 
       // Existence checks avoid reading hidden values and cite a positive resolution.
       function knownField(key, track) {
@@ -659,6 +682,9 @@ function factRuntime(model, wrap, constants, factDefinitions) {
       dropped: { value: Object.freeze((now, before, boundary) => before >= boundary && now < boundary) },
       pct: { value: Object.freeze((now, before) => before === 0 ? missing('pct') : (now - before) / before) },
       changed: { value: Object.freeze((subject, field) => !same(subject[field], subject.before[field])) },
+      // Count known majors with a readable number at a path such as 'score' or 'before.score'.
+      majorsWith: { value: Object.freeze(path => globals.players.filter(player =>
+        player.get('major') === true && Number.isFinite(player.get(path))).length) },
     });
     Object.freeze(Object.assign(globals, constants));
 

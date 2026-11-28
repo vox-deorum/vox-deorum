@@ -9,7 +9,7 @@
       "min": 1,
       "values": {
         "transfers": "(() => { const captures = [gained, ...merge.members.map(member => member.gained)]; const gains = captures.filter(Boolean).length; const losses = captures.length - gains; const times = n => n === 1 ? 'once' : n === 2 ? 'twice' : n + ' times'; return gains && losses ? 'We gained the city ' + times(gains) + ' and lost it ' + times(losses) + '.' : gains ? 'We gained the city ' + times(gains) + '.' : 'We lost the city ' + times(losses) + '.'; })()",
-        "holder": "event.city.own ? ' The latest report puts it under our flag.' : event.city.knows('owner') && event.city.owner.knows('name') ? ' At last report, it was held by ' + event.city.owner.name + '.' : ''"
+        "holder": "event.city.own ? ' The latest report puts it under our flag.' : event.city.get('owner.name') ? ' At last report, it was held by ' + event.city.get('owner.name') + '.' : ''"
       },
       "variants": [
         {
@@ -23,7 +23,7 @@
     "variants": [
       {
         "id": "city-capture-gained",
-        "when": "gained === true",
+        "when": "gained",
         "headline": "{{terms.civilization}} takes control of {{city}}",
         "body": [
           "{{city}} has fallen to {{terms.civilization}}. Our forces moved in from the outskirts and secured the city center after the defense by {{formerOwner}} collapsed. Local leaders are awaiting further instructions from {{terms.civic.leaderAddress}}."
@@ -35,7 +35,7 @@
         "voice": "general",
         "stance": "neutral",
         "genre": "report",
-        "when": "gained === false",
+        "when": "!gained",
         "headline": "{{city}} falls to {{captor}}",
         "body": [
           "Forces from {{captor}} have taken {{city}}, previously a stronghold of {{terms.civilization}}, after a sustained assault. Observers report that the transition occurred quickly. Local {{terms.civic.people}} are now adjusting to the administration of {{captor}}."
@@ -47,7 +47,7 @@
         "voice": "press",
         "stance": "hawkish",
         "genre": "analysis",
-        "when": "gained === true",
+        "when": "gained",
         "headline": "The Fall of {{city}}",
         "body": [
           "The capture of {{city}} provides {{terms.civilization}} with a vital strategic pivot. While {{formerOwner}} may claim the loss is merely a border adjustment, this victory transforms a defense hub into a launchpad for further expansion."
@@ -60,7 +60,7 @@
         "voice": "pamphlet",
         "stance": "government-critical",
         "genre": "editorial",
-        "when": "gained === false",
+        "when": "!gained",
         "headline": "Disaster at {{city}}",
         "body": [
           "{{captor}} has seized {{city}}! Was the {{terms.civic.government}} asleep while the enemy marched? Our {{terms.civic.people}} pay the price for this negligence. We demand to know why our defenses were so weak!"
@@ -138,7 +138,7 @@
         "voice": "press",
         "stance": "neutral",
         "genre": "report",
-        "when": "returned === true",
+        "when": "returned",
         "headline": "{{liberator}} secures {{city}}",
         "body": [
           "Military units under {{liberator}} have successfully liberated {{city}}. The city was formally handed back to the {{terms.civilizationAdjective}} administration this morning. While the streets are celebratory, the army remains on high alert to ensure the perimeter is fully secure."
@@ -150,7 +150,7 @@
         "voice": "press",
         "stance": "neutral",
         "genre": "report",
-        "when": "returned === false",
+        "when": "!returned",
         "headline": "{{city}} returned to {{liberated}}",
         "body": [
           "{{liberator}} has liberated {{city}} and formally returned it to the control of {{liberated}}. The handover took place at the city hall, where commanders from both nations signed the transfer documents. This move is seen as a significant shift in the regional balance of power."
@@ -162,7 +162,7 @@
         "voice": "gazette",
         "stance": "conciliatory",
         "genre": "report",
-        "when": "returned === false",
+        "when": "!returned",
         "headline": "The restoration of {{city}}",
         "body": [
           "We are credibly informed that the forces of {{liberator}} have lately secured {{city}}, restoring its governance to the rightful administration of {{liberated}}. Such a gesture of goodwill surely strengthens the ties of friendship between these two powers and promises a more tranquil era for the local populace."
@@ -174,7 +174,7 @@
         "voice": "pamphlet",
         "stance": "national",
         "genre": "editorial",
-        "when": "returned === false",
+        "when": "!returned",
         "headline": "Justice Triumphs at {{city}}!",
         "body": [
           "At last, {{city}} returns to the people of {{liberated}}! Our {{terms.civic.government}} has proven that {{terms.civilizationAdjective}} steel serves the cause of justice. Who can deny our greatness now? Let us hold our heads high, {{terms.civic.people}}, for we have liberated the oppressed!"

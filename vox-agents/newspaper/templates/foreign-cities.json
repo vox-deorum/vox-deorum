@@ -109,7 +109,7 @@
     "variants": [
       {
         "id": "foreign-city-takes-heavy-damage-report",
-        "when": "knownWar === true",
+        "when": "knownWar",
         "headline": "{{city}} is badly damaged",
         "body": [
           "The defenses of {{city}} have fallen to half strength or less. Repairs are now another demand on {{owner}} while it is at war."
@@ -120,7 +120,7 @@
         "voice": "press",
         "stance": "neutral",
         "genre": "analysis",
-        "when": "knownWar === true",
+        "when": "knownWar",
         "headline": "The cost of a battered {{city}}",
         "body": [
           "At {{city}}, {{owner}} has to weigh repairs against the demands of its war. Delaying either comes at a cost."
@@ -128,7 +128,7 @@
       },
       {
         "id": "foreign-city-takes-heavy-damage-repair-report",
-        "when": "knownWar === false",
+        "when": "!knownWar",
         "headline": "Heavy damage at {{city}}",
         "body": [
           "The defenses of {{city}} have fallen to half strength or less. {{owner}} has substantial repairs ahead."
@@ -139,7 +139,7 @@
         "voice": "press",
         "stance": "neutral",
         "genre": "analysis",
-        "when": "knownWar === false",
+        "when": "!knownWar",
         "headline": "A City in Ruins: {{city}}",
         "body": [
           "{{city}} is reeling from heavy damage that has left its infrastructure in shambles. Whether the cause was a natural disaster or internal sabotage, the scale of the ruins is staggering. {{owner.civic.government}} needs rapid reconstruction before the city's economic output collapses."

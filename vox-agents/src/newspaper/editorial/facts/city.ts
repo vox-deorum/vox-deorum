@@ -34,6 +34,10 @@ export function buildCitySnapshotFacts(row: NewspaperSnapshot, context: FactBuil
     const value = recordedFact(cityValue(key, raw), sources);
     if (value) fields[key[0].toLowerCase() + key.slice(1)] = value;
   }
+  // Share of hit points lost, so rules need not repeat the arithmetic and its guards.
+  const hitPoints = fields.hitPoints?.value, maxHitPoints = fields.maxHitPoints?.value;
+  if (typeof hitPoints === 'number' && typeof maxHitPoints === 'number' && maxHitPoints > 0)
+    fields.damage = fact((maxHitPoints - hitPoints) / maxHitPoints, sources);
   const unhappiness = unhappinessCauses(row.values.UnhappinessSources);
   const causes = unhappiness && recordedFact(unhappiness, sources);
   if (causes) fields.unhappiness = causes;
@@ -47,9 +51,14 @@ export function buildCitySnapshotFacts(row: NewspaperSnapshot, context: FactBuil
   return fields;
 }
 
-/** Normalize the two known list columns and recorded city flags, preserving explicit nulls. */
+// Columns where a stored null means "none". Any other empty column is a gap and stays hidden.
+const nullableCityFields = new Set<typeof cityFields[number]>([
+  'MajorityReligion', 'CurrentProduction', 'Wonders', 'ImportantBuildings'
+]);
+
+/** Normalize the two known list columns and recorded city flags, keeping null only where it means "none". */
 function cityValue(key: typeof cityFields[number], raw: unknown): unknown {
-  if (raw === null) return null;
+  if (raw === null) return nullableCityFields.has(key) ? null : undefined;
   if (key === 'Wonders' || key === 'ImportantBuildings') return recordedNames(raw);
   return key.startsWith('Is') ? recordedBoolean(raw) : raw;
 }

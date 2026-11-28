@@ -8,6 +8,6 @@
   "terms": {
     "capital": "self.capital.name",
     "ruler": "self.ideology == 'Order' ? 'the Party' : 'the Crown'",
-    "master": "players.find(p => p.knows('master') && p.master)?.name"
+    "master": "players.find(p => p.get('master'))?.name"
   }
 }

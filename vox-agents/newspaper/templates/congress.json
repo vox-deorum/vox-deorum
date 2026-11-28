@@ -34,7 +34,7 @@
         "voice": "crier",
         "stance": "national",
         "genre": "report",
-        "when": "ours === true",
+        "when": "ours",
         "headline": "Hear it! Our name is on the agenda",
         "body": [
           "Hear it, {{terms.civic.people}} of {{ourProposer}}! Our motion on {{ourProposal}} stands before the Congress, and the clerks have read it aloud! Find a delegate in the square and ask what we have proposed to the world. Every capital will hear of it before the week is out!"
@@ -107,7 +107,7 @@
         "voice": "broadcast",
         "stance": "rationalist",
         "genre": "analysis",
-        "when": "isEnact === false",
+        "when": "!isEnact",
         "headline": "The Congress keeps {{resolution}} in force",
         "body": [
           "{{proposer}} failed to persuade the Congress to repeal {{resolution}}, and the old law stands. Its opponents spent weeks courting votes but still came up short. Before another try, they would need a new session and better arithmetic."
@@ -122,7 +122,7 @@
         "voice": "pamphlet",
         "stance": "national",
         "genre": "editorial",
-        "when": "ours === true",
+        "when": "ours",
         "headline": "The Congress rejects our motion on {{resolution}}",
         "body": [
           "The Congress has turned down the motion our delegation from {{proposer}} brought forward on {{resolution}}. Our delegates leave without a victory, while rival voices carry more weight in the chamber. The {{terms.civic.government}} must build broader support before it asks the world again."
@@ -156,7 +156,7 @@
         "voice": "gazette",
         "stance": "national",
         "genre": "report",
-        "when": "isEnact === true",
+        "when": "isEnact",
         "headline": "The Congress enacts {{resolution}}",
         "body": [
           "The Congress has enacted {{resolution}} on a proposal from {{proposer}}, giving the measure force across its member realms. A clerk read the final wording to the chamber as delegates compared it with the copies before them. Its effects will now be felt well beyond the hall."
@@ -171,7 +171,7 @@
         "voice": "press",
         "stance": "traditional",
         "genre": "report",
-        "when": "isEnact === false",
+        "when": "!isEnact",
         "headline": "The old order on {{resolution}} falls",
         "body": [
           "The Congress has struck {{resolution}} from its books at the urging of {{proposer}}. In the record rooms, clerks pulled the instruction from its place and filed the repeal beside it. A few delegations tried to keep the old rule in force, but the vote went against them."
@@ -186,7 +186,7 @@
         "voice": "crier",
         "stance": "ambitious",
         "genre": "notice",
-        "when": "ours === true",
+        "when": "ours",
         "headline": "Hear it! Our motion on {{resolution}} has passed",
         "body": [
           "Hear it, {{terms.civic.people}} of {{proposer}}! Our motion on {{resolution}} has passed in the Congress. Our voices carried in that chamber, and they shall carry farther still!"
@@ -452,7 +452,7 @@
         "voice": "press",
         "stance": "national",
         "genre": "analysis",
-        "when": "ours === true",
+        "when": "ours",
         "headline": "Our ideology carries the world",
         "body": [
           "The Congress has written our own creed into law as {{resolution}}. Delegations that snubbed us last year will now quote our own words back to us. Our delegates should spend that credit before the room finds a new favorite."
@@ -548,7 +548,7 @@
         "voice": "press",
         "stance": "devout",
         "genre": "report",
-        "when": "ours === true",
+        "when": "ours",
         "headline": "Our faith carries the world's blessing",
         "body": [
           "{{resolution}} now stands as the faith of the world, and the name it carries is ours. Shrines that strangers passed without a glance will soon have visitors at the door. Our priests warn that a favor granted by a chamber is never settled in full."

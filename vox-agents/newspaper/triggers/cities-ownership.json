@@ -4,20 +4,20 @@
     "subject": "event",
     "event": "CityCaptureComplete",
     "when": [
-      "!event.knows('coveredByDeal')",
-      "event.knows('city') && event.city.knows('name')",
-      "(event.newOwner.self === true && event.oldOwner.knows('name')) || (event.oldOwner.self === true && event.newOwner.knows('name'))"
+      "event.get('coveredByDeal') === undefined",
+      "event.get('city.name')",
+      "(event.newOwner.self && event.get('oldOwner.name')) || (event.oldOwner.self && event.get('newOwner.name'))"
     ],
     "values": {
-      "formerOwner": "event.oldOwner.knows('name') ? event.oldOwner.name : null",
-      "captor": "event.newOwner.knows('name') ? event.newOwner.name : null",
-      "gained": "event.newOwner.self === true",
-      "capital": "event.knows('isCapital') ? event.isCapital : null",
-      "conquest": "event.knows('isConquest') ? event.isConquest : null"
+      "formerOwner": "event.get('oldOwner.name') ?? null",
+      "captor": "event.get('newOwner.name') ?? null",
+      "gained": "event.newOwner.self",
+      "capital": "event.get('isCapital') ?? null",
+      "conquest": "event.get('isConquest') ?? null"
     },
     "tier": "!gained || capital ? 'crisis' : 'major'",
     "adjust": "!gained && capital ? 5 : 0",
-    "urgent": "event.knows('oldOwner') && event.oldOwner.self === true && event.knows('isConquest') && event.isConquest === true",
+    "urgent": "event.get('oldOwner.self') && event.get('isConquest')",
     "tags": ["cities", "military"]
   },
   {
@@ -25,14 +25,13 @@
     "subject": "event",
     "event": "CityFlipped",
     "when": [
-      "event.knows('oldOwner') && event.oldOwner.knows('name') && event.knows('newOwner') && event.newOwner.knows('name')",
       "event.oldOwner.self || event.newOwner.self",
-      "event.knows('city') && event.city.knows('name')"
+      "event.get('city.name')"
     ],
     "values": {
       "formerOwner": "event.oldOwner.name",
       "newOwner": "event.newOwner.name",
-      "gained": "event.newOwner.self === true"
+      "gained": "event.newOwner.self"
     },
     "tier": "gained ? 'major' : 'crisis'",
     "tags": ["cities", "politics"]
@@ -42,7 +41,6 @@
     "subject": "event",
     "event": "PlayerLiberated",
     "when": [
-      "event.knows('player') && event.player.knows('name') && event.knows('liberatedPlayer') && event.liberatedPlayer.knows('name')",
       "event.player.self || event.liberatedPlayer.self"
     ],
     "values": {
@@ -61,10 +59,10 @@
     "window": "recent",
     "when": [
       "city.foreign && city.knows('name')",
-      "city.knows('owner') && city.owner.knows('name')",
-      "city.before.isPuppet",
+      "city.get('owner.name')",
+      "city.get('before.isPuppet')",
       "!city.isPuppet && city.isOccupied",
-      "city.before.owner.id == city.owner.id"
+      "city.get('before.owner.id') == city.owner.id"
     ],
     "values": {
       "distance": "city.distance.own"
@@ -77,11 +75,10 @@
     "subject": "city",
     "window": "recent",
     "when": [
-      "city.knows('name') && city.knows('own') && city.own === true",
-      "city.knows('owner') && city.owner.knows('id')",
-      "city.knows('before') && city.before.knows('owner') && city.before.owner.knows('id') && city.before.owner.id == city.owner.id",
-      "city.before.knows('isPuppet') && city.before.isPuppet === true",
-      "city.knows('isPuppet') && city.isPuppet === false && city.knows('isOccupied') && city.isOccupied === true"
+      "city.knows('name') && city.own",
+      "city.get('before.owner.id') == city.owner.id",
+      "city.get('before.isPuppet')",
+      "!city.isPuppet && city.isOccupied"
     ],
     "tier": "notable",
     "adjust": "city.stake.place",
@@ -91,15 +88,15 @@
     "id": "occupied-city-resists",
     "subject": "city",
     "when": [
-      "city.knows('name') && city.knows('own') && city.own === true",
-      "city.knows('isOccupied') && city.isOccupied === true",
-      "city.knows('resistanceTurns') && Number.isFinite(city.resistanceTurns) && city.resistanceTurns > 0"
+      "city.knows('name') && city.own",
+      "city.isOccupied",
+      "city.resistanceTurns > 0"
     ],
     "values": {
       "turns": "city.resistanceTurns",
-      "population": "city.knows('population') && Number.isFinite(city.population) ? city.population : null",
-      "formerOwner": "city.knows('formerOwner') && city.formerOwner.knows('name') ? city.formerOwner.name : null",
-      "unrestPoints": "city.knows('happinessDelta') && Number.isFinite(city.happinessDelta) ? city.happinessDelta : null"
+      "population": "city.get('population') ?? null",
+      "formerOwner": "city.get('formerOwner.name') ?? null",
+      "unrestPoints": "city.get('happinessDelta') ?? null"
     },
     "tier": "notable",
     "adjust": ["city.stake.place", "Math.min(10, 2 * turns)"],
@@ -110,10 +107,10 @@
     "subject": "event",
     "event": "CityFlipped",
     "when": [
-      "event.knows('oldOwner') && event.oldOwner.knows('id') && event.oldOwner.knows('name') && event.oldOwner.self === false",
-      "event.knows('newOwner') && event.newOwner.knows('id') && event.newOwner.knows('name') && event.newOwner.self === false",
-      "event.knows('city') && event.city.knows('name') && event.city.knows('id') && event.city.foreign === true",
-      "!events.some(e => e.type === 'CityCaptureComplete' && e.turn === event.turn && e.knows('city') && e.city.knows('name') && e.knows('oldOwner') && e.oldOwner.knows('id') && e.knows('newOwner') && e.newOwner.knows('id') && e.oldOwner.id === event.oldOwner.id && e.newOwner.id === event.newOwner.id && e.knows('isConquest') && e.isConquest === true && e.knows('plot') && event.knows('plot') && e.plot.x === event.plot.x && e.plot.y === event.plot.y)"
+      "event.get('oldOwner.id') !== undefined && !event.oldOwner.self",
+      "event.get('newOwner.id') !== undefined && !event.newOwner.self",
+      "event.get('city.id') !== undefined && event.get('city.name') && event.get('city.foreign')",
+      "!events.some(e => e.type === 'CityCaptureComplete' && e.turn === event.turn && e.get('city.name') && e.get('oldOwner.id') !== undefined && e.get('newOwner.id') !== undefined && e.oldOwner.id === event.oldOwner.id && e.newOwner.id === event.newOwner.id && e.get('isConquest') && e.knows('plot') && event.knows('plot') && e.plot.x === event.plot.x && e.plot.y === event.plot.y)"
     ],
     "values": {
       "newOwner": "event.newOwner.name",
@@ -128,8 +125,8 @@
     "subject": "event",
     "event": "PlayerLiberated",
     "when": [
-      "event.knows('player') && event.player.knows('id') && event.player.knows('name') && event.player.self === false",
-      "event.knows('liberatedPlayer') && event.liberatedPlayer.knows('name') && event.liberatedPlayer.self === false"
+      "event.get('player.self') === false",
+      "event.get('liberatedPlayer.self') === false"
     ],
     "values": {
       "owner": "event.player.name",
@@ -142,14 +139,13 @@
     "id": "foreign-occupied-city-resists",
     "subject": "city",
     "when": [
-      "city.foreign === true && city.knows('name')",
-      "city.knows('owner') && city.owner.knows('id') && city.owner.knows('name')",
-      "city.knows('isOccupied') && city.isOccupied === true",
-      "city.knows('resistanceTurns') && Number.isFinite(city.resistanceTurns) && city.resistanceTurns > 0",
-      "!(city.knows('razingTurns') && Number.isFinite(city.razingTurns) && city.razingTurns > 0)",
-      "city.knows('events')",
-      "!city.events.some(e => e.type === 'CityFlipped' && e.knows('oldOwner') && e.oldOwner.knows('name') && e.knows('newOwner') && e.newOwner.knows('name') && e.newOwner.knows('id') && e.newOwner.id === city.owner.id)",
-      "!city.events.some(e => e.type === 'CityCaptureComplete' && e.knows('oldOwner') && e.oldOwner.knows('name') && e.knows('newOwner') && e.newOwner.knows('id') && e.newOwner.id === city.owner.id && e.knows('city') && e.city.knows('name') && ((e.oldOwner.self === true && e.newOwner.knows('name')) || (e.oldOwner.self === false && e.newOwner.self === false && e.knows('isConquest') && e.isConquest === true)))"
+      "city.foreign && city.knows('name')",
+      "city.get('owner.id') !== undefined && city.get('owner.name')",
+      "city.isOccupied",
+      "city.resistanceTurns > 0",
+      "!(city.get('razingTurns') > 0)",
+      "!city.events.some(e => e.type === 'CityFlipped' && e.get('oldOwner.name') && e.get('newOwner.name') && e.get('newOwner.id') === city.owner.id)",
+      "!city.events.some(e => e.type === 'CityCaptureComplete' && e.get('oldOwner.name') && e.get('newOwner.id') === city.owner.id && e.get('city.name') && ((e.oldOwner.self && e.get('newOwner.name')) || (e.oldOwner.self === false && e.newOwner.self === false && e.get('isConquest'))))"
     ],
     "values": {
       "turns": "city.resistanceTurns"

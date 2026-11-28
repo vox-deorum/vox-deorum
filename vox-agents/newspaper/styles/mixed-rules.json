@@ -2,7 +2,7 @@
   {
     "id": "mixed-autocracy-critical-letter",
     "match": { "stance": "government-critical", "genre": "letter" },
-    "when": "self.knows('ideology') && self.ideology === 'Autocracy'",
+    "when": "self.ideology === 'Autocracy'",
     "multiplier": 0.2
   }
 ]

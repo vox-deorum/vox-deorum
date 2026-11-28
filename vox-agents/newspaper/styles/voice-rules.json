@@ -2,55 +2,55 @@
   {
     "id": "voice-spoken-out-of-era",
     "match": { "voice": "spoken" },
-    "when": "self.knows('era') && typeof self.era === 'string' && !['Ancient', 'Classical'].includes(self.era.replace(' Era', ''))",
+    "when": "self.get('era') && !['Ancient', 'Classical'].includes(self.era.replace(' Era', ''))",
     "multiplier": 0.05
   },
   {
     "id": "voice-crier-out-of-era",
     "match": { "voice": "crier" },
-    "when": "self.knows('era') && typeof self.era === 'string' && !['Ancient', 'Classical', 'Medieval', 'Renaissance'].includes(self.era.replace(' Era', ''))",
+    "when": "self.get('era') && !['Ancient', 'Classical', 'Medieval', 'Renaissance'].includes(self.era.replace(' Era', ''))",
     "multiplier": 0.05
   },
   {
     "id": "voice-chronicle-out-of-era",
     "match": { "voice": "chronicle" },
-    "when": "self.knows('era') && typeof self.era === 'string' && !['Classical', 'Medieval'].includes(self.era.replace(' Era', ''))",
+    "when": "self.get('era') && !['Classical', 'Medieval'].includes(self.era.replace(' Era', ''))",
     "multiplier": 0.05
   },
   {
     "id": "voice-gazette-out-of-era",
     "match": { "voice": "gazette" },
-    "when": "self.knows('era') && typeof self.era === 'string' && !['Renaissance', 'Industrial'].includes(self.era.replace(' Era', ''))",
+    "when": "self.get('era') && !['Renaissance', 'Industrial'].includes(self.era.replace(' Era', ''))",
     "multiplier": 0.05
   },
   {
     "id": "voice-pamphlet-out-of-era",
     "match": { "voice": "pamphlet" },
-    "when": "self.knows('era') && typeof self.era === 'string' && !['Renaissance', 'Industrial'].includes(self.era.replace(' Era', ''))",
+    "when": "self.get('era') && !['Renaissance', 'Industrial'].includes(self.era.replace(' Era', ''))",
     "multiplier": 0.05
   },
   {
     "id": "voice-press-out-of-era",
     "match": { "voice": "press" },
-    "when": "self.knows('era') && typeof self.era === 'string' && !['Industrial', 'Modern', 'Atomic'].includes(self.era.replace(' Era', ''))",
+    "when": "self.get('era') && !['Industrial', 'Modern', 'Atomic'].includes(self.era.replace(' Era', ''))",
     "multiplier": 0.05
   },
   {
     "id": "voice-tabloid-out-of-era",
     "match": { "voice": "tabloid" },
-    "when": "self.knows('era') && typeof self.era === 'string' && !['Industrial', 'Modern', 'Atomic', 'Information', 'Future'].includes(self.era.replace(' Era', ''))",
+    "when": "self.get('era') && !['Industrial', 'Modern', 'Atomic', 'Information', 'Future'].includes(self.era.replace(' Era', ''))",
     "multiplier": 0.05
   },
   {
     "id": "voice-broadcast-out-of-era",
     "match": { "voice": "broadcast" },
-    "when": "self.knows('era') && typeof self.era === 'string' && !['Modern', 'Atomic', 'Information', 'Future'].includes(self.era.replace(' Era', ''))",
+    "when": "self.get('era') && !['Modern', 'Atomic', 'Information', 'Future'].includes(self.era.replace(' Era', ''))",
     "multiplier": 0.05
   },
   {
     "id": "voice-feed-out-of-era",
     "match": { "voice": "feed" },
-    "when": "self.knows('era') && typeof self.era === 'string' && !['Information', 'Future'].includes(self.era.replace(' Era', ''))",
+    "when": "self.get('era') && !['Information', 'Future'].includes(self.era.replace(' Era', ''))",
     "multiplier": 0.05
   },
   {
@@ -68,13 +68,13 @@
   {
     "id": "voice-pamphlet-low-happiness",
     "match": { "voice": "pamphlet" },
-    "when": "self.knows('happinessPercentage') && typeof self.happinessPercentage === 'number' && self.happinessPercentage < 50",
+    "when": "self.happinessPercentage < 50",
     "multiplier": 1.5
   },
   {
     "id": "voice-pamphlet-revolt",
     "match": { "voice": "pamphlet" },
-    "when": "self.knows('happinessPercentage') && typeof self.happinessPercentage === 'number' && self.happinessPercentage < 35",
+    "when": "self.happinessPercentage < 35",
     "multiplier": 1.5
   },
   {
@@ -86,19 +86,19 @@
   {
     "id": "voice-freedom-tabloid-feed",
     "match": { "voice": ["tabloid", "feed"] },
-    "when": "self.knows('ideology') && self.ideology === 'Freedom'",
+    "when": "self.ideology === 'Freedom'",
     "multiplier": 1.3
   },
   {
     "id": "voice-order-press-pamphlet",
     "match": { "voice": ["press", "pamphlet"] },
-    "when": "self.knows('ideology') && self.ideology === 'Order'",
+    "when": "self.ideology === 'Order'",
     "multiplier": 1.3
   },
   {
     "id": "voice-autocracy-broadcast-crier",
     "match": { "voice": ["broadcast", "crier"] },
-    "when": "self.knows('ideology') && self.ideology === 'Autocracy'",
+    "when": "self.ideology === 'Autocracy'",
     "multiplier": 1.3
   }
 ]

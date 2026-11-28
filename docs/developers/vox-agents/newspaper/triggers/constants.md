@@ -57,7 +57,7 @@ Names must match the text in the recording. If the recorded text uses a differen
 
 ## Shortcuts
 
-A shortcut is an expression attached to the fact it reads. A historical fact uses the historical snapshot, so `city.before.is.conquered` tests the earlier occupation and puppet flags. Globals such as `cities` and `turn` still describe the current check. A shortcut is hidden if it needs an unavailable fact; use `city.is.knows('starving')` to test whether that shortcut can be evaluated.
+A shortcut is an expression attached to the fact it reads. A historical fact uses the historical snapshot, so `city.before.is.conquered` tests the earlier occupation and puppet flags. Globals such as `cities` and `turn` still describe the current check. A hidden read inside a shortcut hides the expression that uses it, even inside a callback such as `players.filter(p => p.is.foreignMajor)`. Write a shortcut with `get` where a missing fact should mean "no", as in `!player.self && player.get('major') === true`. Use `city.is.knows('starving')` to test whether a shortcut can be evaluated.
 
 Several rules can share an event shortcut. The stock building rules read `event.is.ourCity` for a completion in one of our cities, `event.is.theirCity` for one in a foreign city owned by the event's player, and `event.is.regularBuilding` for a building that is neither a defense, a wonder nor a courthouse integration. `event.is.notableBuilding` accepts a building on the city's `importantBuildings` list and any building in the Ancient Era.
 
@@ -134,4 +134,4 @@ Government, people, and leader titles use the separate [civic vocabulary](../edi
 
 Edit the built-in file to change the default, or use an [overlay](overview.md#tune-with-an-overlay) to try a change for one replay. Constant groups, including tiers and terms, merge by name. A type list with the same name replaces the whole list. Shortcuts and stakes merge by subject and name.
 
-New names must be valid JavaScript identifiers. Constants and terms cannot use reserved names such as `self` and `turn`. Shortcut and stake names must avoid fact-view methods such as `knows`. A threshold used in only one rule can stay in that rule.
+New names must be valid JavaScript identifiers. Constants and terms cannot use reserved names such as `self` and `turn`. Shortcut and stake names must avoid the fact-view methods `knows` and `get`. A threshold used in only one rule can stay in that rule.

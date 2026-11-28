@@ -2,25 +2,25 @@
   {
     "id": "stance-wartime-hawkish-national",
     "match": { "stance": ["hawkish", "national"] },
-    "when": "self.knows('atWar') && self.atWar && story.tags.includes('military')",
+    "when": "self.atWar && story.tags.includes('military')",
     "multiplier": 1.75
   },
   {
     "id": "stance-peacetime-conciliatory",
     "match": { "stance": "conciliatory" },
-    "when": "self.knows('atWar') && self.atWar === false && story.tags.includes('diplomacy')",
+    "when": "!self.atWar && story.tags.includes('diplomacy')",
     "multiplier": 1.75
   },
   {
     "id": "stance-low-happiness-critical-populist",
     "match": { "stance": ["government-critical", "populist"] },
-    "when": "self.knows('happinessPercentage') && typeof self.happinessPercentage === 'number' && self.happinessPercentage < 50",
+    "when": "self.happinessPercentage < 50",
     "multiplier": 1.5
   },
   {
     "id": "stance-golden-age-high-happiness",
     "match": { "stance": "pro-government" },
-    "when": "(self.knows('goldenAge') && typeof self.goldenAge === 'string' && self.goldenAge.endsWith('turns remaining')) || (self.knows('happinessPercentage') && typeof self.happinessPercentage === 'number' && self.happinessPercentage >= 60)",
+    "when": "self.get('goldenAge')?.endsWith('turns remaining') || self.get('happinessPercentage') >= 60",
     "multiplier": 1.5
   },
   {
@@ -188,37 +188,37 @@
   {
     "id": "stance-freedom-up",
     "match": { "stance": ["elitist", "pluralist", "artistic"] },
-    "when": "self.knows('ideology') && self.ideology === 'Freedom'",
+    "when": "self.ideology === 'Freedom'",
     "multiplier": 1.5
   },
   {
     "id": "stance-freedom-down",
     "match": { "stance": ["pro-government", "traditional"] },
-    "when": "self.knows('ideology') && self.ideology === 'Freedom'",
+    "when": "self.ideology === 'Freedom'",
     "multiplier": 0.75
   },
   {
     "id": "stance-order-up",
     "match": { "stance": ["populist", "ambitious", "industrialist"] },
-    "when": "self.knows('ideology') && self.ideology === 'Order'",
+    "when": "self.ideology === 'Order'",
     "multiplier": 1.5
   },
   {
     "id": "stance-order-down",
     "match": { "stance": ["elitist", "devout"] },
-    "when": "self.knows('ideology') && self.ideology === 'Order'",
+    "when": "self.ideology === 'Order'",
     "multiplier": 0.6
   },
   {
     "id": "stance-autocracy-up",
     "match": { "stance": ["pro-government", "hawkish", "national"] },
-    "when": "self.knows('ideology') && self.ideology === 'Autocracy'",
+    "when": "self.ideology === 'Autocracy'",
     "multiplier": 1.5
   },
   {
     "id": "stance-autocracy-critical-conciliatory-down",
     "match": { "stance": ["government-critical", "conciliatory"] },
-    "when": "self.knows('ideology') && self.ideology === 'Autocracy'",
+    "when": "self.ideology === 'Autocracy'",
     "multiplier": 0.6
   },
   {
@@ -236,97 +236,97 @@
   {
     "id": "stance-unfounded-pluralist-up",
     "match": { "stance": "pluralist" },
-    "when": "self.knows('foundedReligion') && self.foundedReligion === null",
+    "when": "self.foundedReligion === null",
     "multiplier": 1.3
   },
   {
     "id": "stance-low-happiness-revolt",
     "match": { "stance": ["government-critical", "populist"] },
-    "when": "self.knows('happinessPercentage') && typeof self.happinessPercentage === 'number' && self.happinessPercentage < 35",
+    "when": "self.happinessPercentage < 35",
     "multiplier": 1.5
   },
   {
     "id": "stance-low-happiness-pro-government",
     "match": { "stance": "pro-government" },
-    "when": "self.knows('happinessPercentage') && typeof self.happinessPercentage === 'number' && self.happinessPercentage < 50",
+    "when": "self.happinessPercentage < 50",
     "multiplier": 0.75
   },
   {
     "id": "stance-happiness-revolt-pro-government",
     "match": { "stance": "pro-government" },
-    "when": "self.knows('happinessPercentage') && typeof self.happinessPercentage === 'number' && self.happinessPercentage < 35",
+    "when": "self.happinessPercentage < 35",
     "multiplier": 0.5
   },
   {
     "id": "stance-golden-age-artistic-ambitious",
     "match": { "stance": ["artistic", "ambitious"] },
-    "when": "self.knows('goldenAge') && typeof self.goldenAge === 'string' && self.goldenAge.endsWith('turns remaining')",
+    "when": "self.get('goldenAge')?.endsWith('turns remaining')",
     "multiplier": 1.3
   },
   {
     "id": "stance-environmentalist-pre-industrial",
     "match": { "stance": "environmentalist" },
-    "when": "self.knows('era') && typeof self.era === 'string' && !['Industrial', 'Modern', 'Atomic', 'Information', 'Future'].includes(self.era.replace(' Era', ''))",
+    "when": "self.get('era') && !['Industrial', 'Modern', 'Atomic', 'Information', 'Future'].includes(self.era.replace(' Era', ''))",
     "multiplier": 0.05
   },
   {
     "id": "stance-war-weariness-hawkish-down",
     "match": { "stance": "hawkish" },
-    "when": "self.knows('wars') && self.wars.some(other => self.relation(other).knows('warWeariness') && self.relation(other).warWeariness >= 50)",
+    "when": "self.wars.some(other => self.relation(other).get('warWeariness') >= 50)",
     "multiplier": 0.6
   },
   {
     "id": "stance-war-weariness-conciliatory-up",
     "match": { "stance": "conciliatory" },
-    "when": "self.knows('wars') && self.wars.some(other => self.relation(other).knows('warWeariness') && self.relation(other).warWeariness >= 50)",
+    "when": "self.wars.some(other => self.relation(other).get('warWeariness') >= 50)",
     "multiplier": 1.5
   },
   {
     "id": "stance-war-weariness-critical-up",
     "match": { "stance": "government-critical" },
-    "when": "self.knows('wars') && self.wars.some(other => self.relation(other).knows('warWeariness') && self.relation(other).warWeariness >= 50)",
+    "when": "self.wars.some(other => self.relation(other).get('warWeariness') >= 50)",
     "multiplier": 1.3
   },
   {
     "id": "stance-losing-war-critical-up",
     "match": { "stance": "government-critical" },
-    "when": "self.knows('wars') && self.wars.some(other => self.relation(other).knows('warScore') && self.relation(other).warScore <= -25)",
+    "when": "self.wars.some(other => self.relation(other).get('warScore') <= -25)",
     "multiplier": 1.3
   },
   {
     "id": "stance-deficit-critical-up",
     "match": { "stance": "government-critical" },
-    "when": "self.knows('goldPerTurn') && self.goldPerTurn < 0",
+    "when": "self.goldPerTurn < 0",
     "multiplier": 1.3
   },
   {
     "id": "stance-world-leader-up",
     "match": { "stance": ["pro-government", "national"] },
-    "when": "self.knows('major') && self.major === true && self.knows('score') && self.rank('score') === 1 && players.filter(p => p.knows('major') && p.major === true && p.knows('score')).length >= 3",
+    "when": "self.major && self.rank('score') === 1 && majorsWith('score') >= 3",
     "multiplier": 1.2
   },
   {
     "id": "stance-winning-war-lift",
     "match": { "stance": ["hawkish", "pro-government", "national"] },
-    "when": "self.knows('wars') && self.wars.some(other => self.relation(other).knows('warScore') && self.relation(other).warScore >= 25)",
+    "when": "self.wars.some(other => self.relation(other).get('warScore') >= 25)",
     "multiplier": 1.2
   },
   {
     "id": "stance-losing-war-hawkish-down",
     "match": { "stance": "hawkish" },
-    "when": "self.knows('wars') && self.wars.some(other => self.relation(other).knows('warScore') && self.relation(other).warScore <= -25)",
+    "when": "self.wars.some(other => self.relation(other).get('warScore') <= -25)",
     "multiplier": 0.75
   },
   {
     "id": "stance-losing-war-conciliatory-up",
     "match": { "stance": "conciliatory" },
-    "when": "self.knows('wars') && self.wars.some(other => self.relation(other).knows('warScore') && self.relation(other).warScore <= -25)",
+    "when": "self.wars.some(other => self.relation(other).get('warScore') <= -25)",
     "multiplier": 1.3
   },
   {
     "id": "stance-deficit-populist-up",
     "match": { "stance": "populist" },
-    "when": "self.knows('goldPerTurn') && self.goldPerTurn < 0",
+    "when": "self.goldPerTurn < 0",
     "multiplier": 1.3
   },
   {
@@ -338,73 +338,73 @@
   {
     "id": "stance-last-place-critical-ambitious",
     "match": { "stance": ["government-critical", "ambitious"] },
-    "when": "self.knows('major') && self.major === true && self.knows('score') && players.filter(p => p.knows('major') && p.major === true && p.knows('score')).length >= 3 && players.every(p => p.knows('major') && p.major === true && p.knows('score') ? p.rank('score') <= self.rank('score') : true)",
+    "when": "self.major && majorsWith('score') >= 3 && players.every(p => p.get('major') && p.get('score') !== undefined ? p.rank('score') <= self.rank('score') : true)",
     "multiplier": 1.3
   },
   {
     "id": "stance-last-pro-government-down",
     "match": { "stance": "pro-government" },
-    "when": "self.knows('major') && self.major === true && self.knows('score') && players.filter(p => p.knows('major') && p.major === true && p.knows('score')).length >= 3 && players.every(p => p.knows('major') && p.major === true && p.knows('score') ? p.rank('score') <= self.rank('score') : true)",
+    "when": "self.major && majorsWith('score') >= 3 && players.every(p => p.get('major') && p.get('score') !== undefined ? p.rank('score') <= self.rank('score') : true)",
     "multiplier": 0.75
   },
   {
     "id": "stance-small-nation-local-up",
     "match": { "stance": "local" },
-    "when": "self.knows('cityCount') && typeof self.cityCount === 'number' && self.cityCount <= 2",
+    "when": "self.cityCount <= 2",
     "multiplier": 1.3
   },
   {
     "id": "stance-small-nation-national-down",
     "match": { "stance": "national" },
-    "when": "self.knows('cityCount') && typeof self.cityCount === 'number' && self.cityCount <= 2",
+    "when": "self.cityCount <= 2",
     "multiplier": 0.75
   },
   {
     "id": "stance-large-nation-national-up",
     "match": { "stance": "national" },
-    "when": "self.knows('cityCount') && typeof self.cityCount === 'number' && self.cityCount >= 8",
+    "when": "self.cityCount >= 8",
     "multiplier": 1.2
   },
   {
     "id": "stance-peacetime-hawkish-down",
     "match": { "stance": "hawkish" },
-    "when": "self.knows('atWar') && self.atWar === false",
+    "when": "!self.atWar",
     "multiplier": 0.75
   },
   {
     "id": "stance-industrialist-pre-industrial",
     "match": { "stance": "industrialist" },
-    "when": "self.knows('era') && typeof self.era === 'string' && !['Industrial', 'Modern', 'Atomic', 'Information', 'Future'].includes(self.era.replace(' Era', ''))",
+    "when": "self.get('era') && !['Industrial', 'Modern', 'Atomic', 'Information', 'Future'].includes(self.era.replace(' Era', ''))",
     "multiplier": 0.3
   },
   {
     "id": "stance-rationalist-pre-renaissance",
     "match": { "stance": "rationalist" },
-    "when": "self.knows('era') && typeof self.era === 'string' && !['Renaissance', 'Industrial', 'Modern', 'Atomic', 'Information', 'Future'].includes(self.era.replace(' Era', ''))",
+    "when": "self.get('era') && !['Renaissance', 'Industrial', 'Modern', 'Atomic', 'Information', 'Future'].includes(self.era.replace(' Era', ''))",
     "multiplier": 0.5
   },
   {
     "id": "stance-vassal-critical-traditional",
     "match": { "stance": ["government-critical", "traditional"] },
-    "when": "players.some(p => p.id !== self.id && self.relation(p).knows('vassalOf') && self.relation(p).vassalOf)",
+    "when": "players.some(p => p.id !== self.id && self.relation(p).get('vassalOf'))",
     "multiplier": 1.3
   },
   {
     "id": "stance-vassal-pro-government-down",
     "match": { "stance": "pro-government" },
-    "when": "players.some(p => p.id !== self.id && self.relation(p).knows('vassalOf') && self.relation(p).vassalOf)",
+    "when": "players.some(p => p.id !== self.id && self.relation(p).get('vassalOf'))",
     "multiplier": 0.75
   },
   {
     "id": "stance-master-national-hawkish",
     "match": { "stance": ["national", "hawkish"] },
-    "when": "players.some(p => p.id !== self.id && self.relation(p).knows('masterOf') && self.relation(p).masterOf)",
+    "when": "players.some(p => p.id !== self.id && self.relation(p).get('masterOf'))",
     "multiplier": 1.2
   },
   {
     "id": "stance-denounced-hawkish-national",
     "match": { "stance": ["hawkish", "national"] },
-    "when": "players.filter(p => p.id !== self.id && self.relation(p).knows('denouncedByThem') && self.relation(p).denouncedByThem).length >= 2",
+    "when": "players.filter(p => p.id !== self.id && self.relation(p).get('denouncedByThem')).length >= 2",
     "multiplier": 1.2
   },
   {
@@ -596,19 +596,19 @@
   {
     "id": "stance-world-ideology-pro-government",
     "match": { "stance": "pro-government" },
-    "when": "game.knows('congress') && game.congress.available === true && self.knows('ideology') && typeof self.ideology === 'string' && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && r.name.startsWith('World Ideology') && r.name.includes(self.ideology))",
+    "when": "game.knows('congress') && game.congress.get('available') && typeof self.ideology === 'string' && game.congress.get('activeResolutions')?.some(r => typeof r.name === 'string' && r.name.startsWith('World Ideology') && r.name.includes(self.ideology))",
     "multiplier": 1.3
   },
   {
     "id": "stance-world-ideology-critical",
     "match": { "stance": "government-critical" },
-    "when": "game.knows('congress') && game.congress.available === true && self.knows('ideology') && typeof self.ideology === 'string' && game.congress.knows('activeResolutions') && game.congress.activeResolutions.some(r => typeof r.name === 'string' && r.name.startsWith('World Ideology') && !r.name.includes(self.ideology))",
+    "when": "game.knows('congress') && game.congress.get('available') && typeof self.ideology === 'string' && game.congress.get('activeResolutions')?.some(r => typeof r.name === 'string' && r.name.startsWith('World Ideology') && !r.name.includes(self.ideology))",
     "multiplier": 1.3
   },
   {
     "id": "stance-session-mood-conciliatory",
     "match": { "stance": "conciliatory" },
-    "when": "game.knows('congress') && game.congress.available === true && (game.congress.votingNow === true || (game.congress.knows('expectedSessionTurn') && typeof game.congress.expectedSessionTurn === 'number' && game.congress.expectedSessionTurn <= turn + 3)) && (story.tags.includes('international') || story.tags.includes('diplomacy'))",
+    "when": "game.knows('congress') && game.congress.get('available') && (game.congress.get('votingNow') || game.congress.get('expectedSessionTurn') <= turn + 3) && (story.tags.includes('international') || story.tags.includes('diplomacy'))",
     "multiplier": 1.2
   }
 ]

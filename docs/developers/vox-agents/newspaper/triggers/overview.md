@@ -6,7 +6,7 @@ A trigger tests recorded facts visible to one player. A match produces a **devel
 
 1. Describe the development in one sentence and pick its [subject](#subjects). A city-state switching allies is an `event`; a capital outgrown by another of our cities is a `world` comparison.
 2. Find the [facts](facts.md) and [constants](constants.md) the rule needs. Choose a [tier](#tiers-adjustments-and-stakes) for the story and any adjustments that help it rank.
-3. Add the rule to a topical file under `vox-agents/newspaper/triggers/`. Start `when` with conditions that rule out many subjects. Require facts essential to the story there, such as both leaders' names in a report that needs them.
+3. Add the rule to a topical file under `vox-agents/newspaper/triggers/`. Start `when` with conditions that rule out many subjects. Read facts the story needs, such as both leaders' names, in `values`; a missing one stops the rule without a separate check. See [hidden and missing facts](facts.md#hidden-and-missing-facts) for when to write `get` instead of a bare read.
 4. Add a template under `vox-agents/newspaper/templates/`. Name the rule's ID in `triggers` and add at least one eligible variant. Weight defaults to 1, so set it only to favor a template or variant. To tune existing coverage, start with the [settler overlay](examples.md#a-city-shrinks-after-sending-settlers).
 5. Start a fresh [replay](../replay.md#iterate-on-a-rule-or-overlay). Read the issue and audit together to see what matched, what was eligible, and what printed.
 

@@ -488,7 +488,7 @@
         "voice": "pamphlet",
         "stance": "devout",
         "genre": "notice",
-        "when": "ours === true",
+        "when": "ours",
         "headline": "Good news, people of {{city}}",
         "body": [
           "Neighbors of {{city}}, {{religion}} now leads in your streets, and {{terms.civilization}} founded it. The shrine door that stood half shut now stands open, and the keeper has stopped counting who comes. Bring a neighbor this feast day and let the road see the crowd!"
@@ -499,7 +499,7 @@
         "voice": "press",
         "stance": "traditional",
         "genre": "report",
-        "when": "ours === false",
+        "when": "!ours",
         "headline": "A creed not of our founding leads in {{city}}",
         "body": [
           "{{religion}}, a faith our own people did not found, now holds the majority in {{city}}. The conversions of recent months went its way, and its congregation rings a bell at hours this town has never used.",
@@ -537,7 +537,7 @@
         "voice": "spoken",
         "stance": "devout",
         "genre": "report",
-        "when": "ours === true",
+        "when": "ours",
         "headline": "They say the first altars at {{city}} are ours",
         "body": [
           "They say {{civilization}} has raised a pantheon in {{city}}, and the smoke from our first altar could be seen from the next valley. Our elders spoke the names of the old powers out loud in a voice that reached the back of the crowd, and {{belief}} was the first they named. The children will learn those names now, and that is worth more to us than a good harvest."
@@ -548,7 +548,7 @@
         "voice": "chronicle",
         "stance": "rationalist",
         "genre": "report",
-        "when": "ours === false",
+        "when": "!ours",
         "headline": "A pantheon entered in the foreign record",
         "body": [
           "The people of {{civilization}} raised a pantheon in {{city}} this year, and their elders chose {{belief}} as the first teaching in a ceremony that lasted a full day. Our record notes the date, the place, and the number of households that came forward. The meaning of the rites is theirs to keep; the count is ours to preserve."
