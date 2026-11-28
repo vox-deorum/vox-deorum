@@ -97,9 +97,9 @@
         "weight": {
           "base": 3
         },
-        "headline": "Our envoy in {{civilization}} reports the celebrations",
+        "headline": "Our envoy at the court of {{civilization}}",
         "body": [
-          "Our envoy at the court of {{civilization}} now reports a capital given over to celebration. Lanterns hang from the public buildings, the forges have been kept burning late, and the squares are full of people who do not seem to be working. He adds that the mood is genuine, and that a court in good spirits is easier to deal with than one that is not."
+          "{{civilization}} has entered a golden age, and our envoy is posted at its court. A court with full coffers speaks with more weight, and its favor is worth having while the money lasts. The envoy will be there to see how the court spends it."
         ]
       }
     ]
@@ -653,9 +653,9 @@
         "weight": {
           "base": 3
         },
-        "headline": "Our envoy in {{rival}} reports the turn to {{ideology}}",
+        "headline": "Our envoy in {{rival}} as {{ideology}} is proclaimed",
         "body": [
-          "Our envoy at the court of {{rival}} now reports that {{ideology}} has been proclaimed. Officials will not be drawn on what changes first, and the court has said little beyond the words of the doctrine. It is now that court's own, and our envoy means to stay long enough to see it applied."
+          "{{rival}} has adopted {{ideology}}, and our envoy is at that court now. Officials will not be drawn on what changes first, and the court has said little beyond the words of the doctrine. A doctrine names the places a nation means to go, and the envoy will stay long enough to see it applied."
         ]
       }
     ]

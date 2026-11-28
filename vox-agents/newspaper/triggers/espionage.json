@@ -1,20 +1,40 @@
 [
   {
-    "id": "diplomat-network-milestone",
-    "summary": "Our diplomat's network at a foreign capital crossed 200 or 800 points.",
+    "id": "diplomat-network-policy-standing",
+    "summary": "Our network at a foreign capital holds at least 200 points, enough for policy adoption reports.",
     "subject": "player",
     "when": [
       "player.is.foreignMajor",
       "player.ourDiplomatThere",
-      "player.get('before.ourDiplomatPoints') !== undefined",
-      "crossed(player.get('ourDiplomatPoints') ?? 0, player.before.ourDiplomatPoints, 200) || crossed(player.get('ourDiplomatPoints') ?? 0, player.before.ourDiplomatPoints, 800)"
+      "(player.get('ourDiplomatPoints') ?? 0) >= 200",
+      "(player.get('ourDiplomatPoints') ?? 0) < 800",
+      "printed('diplomat-network-policy-standing', player) === null"
     ],
     "values": {
       "civilization": "player.name",
-      "threshold": "crossed(player.get('ourDiplomatPoints') ?? 0, player.before.ourDiplomatPoints, 800) ? 800 : 200",
+      "threshold": "200",
       "points": "player.get('ourDiplomatPoints') ?? 0"
     },
-    "tier": "threshold === 800 ? 'notable' : 'routine'",
+    "tier": "routine",
+    "adjust": "player.stake.relation",
+    "tags": ["politics", "international"]
+  },
+  {
+    "id": "diplomat-network-treaty-standing",
+    "summary": "Our network at a foreign capital holds at least 800 points, enough for private treaty terms.",
+    "subject": "player",
+    "when": [
+      "player.is.foreignMajor",
+      "player.ourDiplomatThere",
+      "(player.get('ourDiplomatPoints') ?? 0) >= 800",
+      "printed('diplomat-network-treaty-standing', player) === null"
+    ],
+    "values": {
+      "civilization": "player.name",
+      "threshold": "800",
+      "points": "player.get('ourDiplomatPoints') ?? 0"
+    },
+    "tier": "notable",
     "adjust": "player.stake.relation",
     "tags": ["politics", "international"]
   },
@@ -104,9 +124,9 @@
     ],
     "values": {
       "civilization": "player.name",
-      "war": "player.get('enemy') === true"
+      "war": "player.get('enemy') ?? null"
     },
-    "tier": "war ? 'notable' : 'routine'",
+    "tier": "war === true ? 'notable' : 'routine'",
     "adjust": "player.stake.relation",
     "tags": ["politics", "international"]
   },

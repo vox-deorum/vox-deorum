@@ -358,9 +358,9 @@
         "weight": {
           "base": 3
         },
-        "headline": "Our agent in {{city}} reports the {{wonder}}",
+        "headline": "The {{wonder}} finished in enemy {{city}}",
         "body": [
-          "An agent of ours inside {{city}} now reports that the {{wonder}} is finished and that the work crews have left by the north gate. The last stone stands under an enemy flag, at a city close to our frontier. The war office has the word now, and there is no longer any doubt about what the enemy has built."
+          "The {{wonder}} at {{city}} is finished, and it stands under an enemy flag at a city close to our frontier. An agent of ours is in that city now. The war office has the account, and there is no longer any doubt about what the enemy has built."
         ]
       }
     ]
@@ -423,9 +423,9 @@
         "weight": {
           "base": 3
         },
-        "headline": "Our agent in {{city}} reports the {{wonder}}",
+        "headline": "The {{wonder}} at {{city}} is finished",
         "body": [
-          "One of our people in {{city}} now reports that the {{wonder}} is finished. The scaffolding has come down, the guilds have marched, and the account has reached us by the usual road. {{civilization}} has a new hall, and we have a report of it that did not come from a rumor."
+          "One of our people is in {{city}} now, and the {{wonder}} there is finished. {{civilization}} has a new hall. Whatever divides the courts, a work like this is worth a look."
         ]
       }
     ]

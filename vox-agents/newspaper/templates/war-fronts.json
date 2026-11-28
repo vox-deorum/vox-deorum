@@ -248,9 +248,9 @@
         "weight": {
           "base": 3
         },
-        "headline": "Our agent's report from {{city}}",
+        "headline": "The posture reading from {{city}}",
         "body": [
-          "Our agent in {{city}} now reports that {{civilization}} has set its forces to {{posture}} in the {{domain}} area. The order is being carried through the city, and the war office has entered the change. The new posture is a warning in itself; whether it becomes a march is not yet known."
+          "The front assessment for {{city}}, held by {{civilization}}, moved to {{posture}} in the {{domain}} area on {{observedTurn}}. That is a dated reading of posture, not an order being carried out in the city. Our agent is there now, and the war office has entered the change. A posture is a warning in itself; whether it becomes a march is not yet known."
         ]
       }
     ]
@@ -653,9 +653,9 @@
         "weight": {
           "base": 3
         },
-        "headline": "Our agent reports the count in {{neighbor}}",
+        "headline": "The strength rating from {{neighbor}}",
         "body": [
-          "The count that put {{neighbor}}'s army above ours did not come from a clerk's guess. Our agent in that country now reports it from the drill yards and the roads around them. The war office holds a number it can defend, and the number is not in our favor."
+          "Military strength is an assessed figure, not a count of soldiers, and the assessment now puts {{neighbor}} above us. Our agent is in that country, where the drill yards and the roads give a reader something to weigh. The war office holds a rating it can defend, and the rating is not in our favor."
         ]
       }
     ]

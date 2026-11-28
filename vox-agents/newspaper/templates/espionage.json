@@ -1,50 +1,50 @@
 [
   {
-    "id": "diplomat-network-milestone-account",
-    "triggers": ["diplomat-network-milestone"],
+    "id": "diplomat-network-standing-account",
+    "triggers": ["diplomat-network-policy-standing", "diplomat-network-treaty-standing"],
     "tags": ["politics", "international"],
     "names": ["civilization"],
     "extends": "civilization",
     "variants": [
       {
-        "id": "diplomat-network-milestone-report",
+        "id": "diplomat-network-standing-report",
         "when": "threshold === 200",
-        "headline": "Our envoys in {{civilization}} begin to hear the court's choices",
+        "headline": "Our network in {{civilization}} holds the policy threshold",
         "body": [
-          "Our envoys in {{civilization}} have built a network wide enough to hear of that court's policy choices. The service counts the network at {{points}}, and the reports come from clerks and table companions rather than from public announcements. A choice argued in a closed room now reaches our foreign office."
+          "Our network at the court of {{civilization}} now holds at least 200 points. The service counts {{points}} there. At that level, policy choices made at that court can reach our foreign office, and the reports come from clerks and table companions rather than from public announcements. A choice argued in a closed room can now find its way to us."
         ]
       },
       {
-        "id": "diplomat-network-milestone-editorial",
+        "id": "diplomat-network-standing-editorial",
         "voice": "pamphlet",
         "stance": "government-critical",
         "genre": "editorial",
         "when": "threshold === 200",
         "headline": "What is the listening in {{civilization}} for?",
         "body": [
-          "Our people in {{civilization}} can now hear that court's policy choices, and the {{terms.civic.government}} should say what it means to do with what it hears. A network that listens and never acts is an expense with a good name. Let the ministers report what the last season of listening bought the country."
+          "Our network in {{civilization}} holds at least 200 points, and policy choices made at that court can now reach our foreign office. The {{terms.civic.government}} should say what it means to do with what it hears. A network that listens and never acts is an expense with a good name. Let the ministers report what the last season of listening bought the country."
         ]
       },
       {
-        "id": "diplomat-network-milestone-broadcast",
+        "id": "diplomat-network-standing-broadcast",
         "voice": "broadcast",
         "stance": "neutral",
         "genre": "report",
         "when": "threshold === 800",
-        "headline": "Our network in {{civilization}} reaches treaty standing",
+        "headline": "Our network in {{civilization}} holds the treaty threshold",
         "body": [
-          "Our envoys in {{civilization}} have brought their network to {{points}} points. That is one of the two connections needed before the text of that court's treaties can reach our foreign office; the other is a network of the same size at the capital of the other signatory. The work is now in place on this side of the arrangement."
+          "Our network at the court of {{civilization}} now holds at least 800 points. Private treaties between that court and another government reach us only when our network at the other party's court is also at least 800. On this side of the arrangement the ground is ready, and no text has arrived through this alone."
         ]
       },
       {
-        "id": "diplomat-network-milestone-gazette",
+        "id": "diplomat-network-standing-gazette",
         "voice": "gazette",
         "stance": "conciliatory",
         "genre": "report",
         "when": "threshold === 800",
         "headline": "The groundwork for reading {{civilization}}'s treaties",
         "body": [
-          "Letters from {{civilization}} now bring more than gossip. Our envoys there have built a network of {{points}} points, one of the two connections needed to read that court's treaties. A treaty becomes readable to us only when our people at both capitals hold a network of this size. The mission at {{civilization}} has done its part."
+          "Our network at the court of {{civilization}} now holds at least 800 points. A private treaty between that court and another signatory becomes readable to us only when our people at both capitals each hold a network at that level. The mission at {{civilization}} has done its part; the other party's court must still match it."
         ]
       }
     ]
@@ -125,9 +125,9 @@
         "stance": "neutral",
         "genre": "report",
         "when": "envoy",
-        "headline": "Our envoy in {{civilization}} sends word of {{policy}}",
+        "headline": "Our envoy is at the court that adopted {{policy}}",
         "body": [
-          "Our envoy at the court of {{civilization}} now reports that {{policy}} has been adopted. The ministers who favored it sit together, and the rest say little. The envoy expects the new policy to show first in the court's spending and in the favors it grants."
+          "Our envoy is posted at the court of {{civilization}}, where {{policy}} has been adopted. The court has said little beyond the words of the policy. A policy is a promise about where a nation will spend its money and its patience, and our mission there will watch where this one leads."
         ]
       },
       {
@@ -187,7 +187,7 @@
         "headline": "What {{from}} put into the treaty with {{to}}",
         "body": [
           "{{from}} gives: {{fromGives}}.",
-          "Our copy came by our own road and records only this side's terms."
+          "{{to}} gave nothing in the recorded terms, so the deal was one-sided."
         ]
       },
       {
@@ -199,7 +199,7 @@
         "headline": "What {{to}} put into the treaty with {{from}}",
         "body": [
           "{{to}} gives: {{toGives}}.",
-          "Our copy came by our own road and records only this side's terms."
+          "{{from}} gave nothing in the recorded terms, so the deal was one-sided."
         ]
       },
       {
@@ -273,7 +273,7 @@
         "id": "our-diplomat-leaves-report",
         "headline": "Our diplomat leaves {{civilization}}",
         "body": [
-          "Our envoy has left the court of {{civilization}}. The trunks went out before dawn, and the farewell at the gate was short. Letters to that capital will now travel by courier and wait on whatever welcome the road provides."
+          "Our envoy has left the court of {{civilization}}. The post stands empty, and letters to that capital will now travel by courier and wait on whatever welcome the road provides."
         ]
       },
       {
@@ -281,10 +281,10 @@
         "voice": "press",
         "stance": "national",
         "genre": "report",
-        "when": "war",
+        "when": "war === true",
         "headline": "Our envoy quits {{civilization}} as the war goes on",
         "body": [
-          "Our envoy has left {{civilization}} while the war continues. He came home by the last road still open to our people, and the papers he carried went straight to the foreign office. What he learned at that court before he left is now being read by ministers who have soldiers in the field."
+          "Our envoy has left {{civilization}} while the war continues. The post stands empty, and any letters to that capital now wait on the road. Whatever the mission gathered before it closed is with the foreign office."
         ]
       },
       {
@@ -292,10 +292,10 @@
         "voice": "gazette",
         "stance": "conciliatory",
         "genre": "report",
-        "when": "!war",
+        "when": "war === false",
         "headline": "The mission to {{civilization}} closes",
         "body": [
-          "We are informed that our envoy has quit the court of {{civilization}}, and that no quarrel attends his going. The two countries remain at peace, and the farewell was courteous on both sides. A post left empty is still a door, and either court may knock again."
+          "Our envoy has left the court of {{civilization}}, and the two countries remain at peace. The post stands empty. A post left empty is still a door, and either court may knock again."
         ]
       },
       {
@@ -303,9 +303,9 @@
         "voice": "chronicle",
         "stance": "traditional",
         "genre": "report",
-        "headline": "The envoy returns from {{civilization}}",
+        "headline": "The envoy departs from {{civilization}}",
         "body": [
-          "In this season our envoy returned from the court of {{civilization}}, and the mission was closed. The porters were paid, the rooms were swept, and the keys were given to the landlord. The record notes the return and leaves the reason to the foreign office."
+          "In this season our envoy left the court of {{civilization}}, and the mission was closed. The rooms he kept stand empty. The record notes the departure and leaves the reason unstated."
         ]
       }
     ]
@@ -387,9 +387,9 @@
         "weight": {
           "base": 3
         },
-        "headline": "{{culprit}} has done this before",
+        "headline": "{{culprit}} has been named before",
         "body": [
-          "This is not the first agent of {{culprit}} identified lately. Our service counts {{earlier|earlier operation|earlier operations}} against us, and each was answered with the same quiet note. A court that keeps sending its people into our cities has decided our protests cost it nothing."
+          "Earlier reports in this period have named {{culprit}} as well. Our service counts {{earlier|earlier report|earlier reports}} naming the same civilization, and the same agent can appear in more than one of them. Whether our government has answered those reports is not recorded here."
         ]
       }
     ]
@@ -513,7 +513,7 @@
         "when": "production !== null && turnsLeft !== null",
         "headline": "{{production}} in {{city}} with {{turnsLeft}} to run",
         "body": [
-          "Word from our agent in {{city}} names {{production}} as the work now under way there. The estimate he sends gives it {{turnsLeft}} before it is finished. {{civilization}} has set a schedule, and the agent means to see whether the city keeps it."
+          "Word from our agent in {{city}} names {{production}} as the work now under way there. At the current rate the city has {{turnsLeft}} left before it is finished. That is an estimate, not an official schedule, and the agent will report whether the work finishes on that count."
         ]
       },
       {
@@ -535,7 +535,7 @@
         "when": "starving",
         "headline": "Hunger in {{city}}, as our agent tells it",
         "body": [
-          "Our agent in {{city}} reports that the granaries are empty and the city is starving. The bakers sell the last of the flour by the handful, and families from the outer streets walk in to look for bread. He will write again when the markets change."
+          "Our agent in {{city}} reports that the city's food reserves are running low and that it loses food each turn. The bakers sell what flour they have by the handful, and families from the outer streets walk in to look for bread. He will write again when the markets change."
         ]
       }
     ]
@@ -711,7 +711,7 @@
       "match": "member.event?.is.foreignOperation",
       "min": 2,
       "values": {
-        "operations": "merge.count"
+        "operations": "new Set([event.id, ...merge.members.map(member => member.event.id)]).size"
       },
       "variants": [
         {

@@ -181,9 +181,9 @@
         "weight": {
           "base": 3
         },
-        "headline": "Our envoy in {{civilization}} sends word of the denunciation",
+        "headline": "Our envoy in {{civilization}}, where we stand denounced",
         "body": [
-          "Our envoy at the court of {{civilization}} now reports the denunciation and the manner of its delivery. The ministers took their seats in public, and the words were spoken plainly enough for the gallery to hear. The dispatch has reached our foreign office, and no answer has been entered yet."
+          "{{civilization}} has denounced us, and our envoy is at that court now. The words were spoken plainly enough for the gallery to hear. No answer has been entered yet."
         ]
       }
     ]
@@ -402,9 +402,9 @@
         "weight": {
           "base": 3
         },
-        "headline": "Our envoy in {{friend}} reports the friendship withdrawn",
+        "headline": "Our envoy in {{friend}} as the friendship ends",
         "body": [
-          "Our envoy at the court of {{friend}} now reports that the friendship has been withdrawn. The minister who received him was courteous and brief, and no clerk was called to witness the farewell. The envoy writes that the halls are as busy as ever, and that no one there seems to miss us."
+          "The friendship with {{friend}} has ended. Our envoy is at that court now, and the halls are as busy as ever; no one there seems to miss us. A friendship that ends quietly leaves the ordinary business of two courts untouched, which is its own kind of answer."
         ]
       }
     ]
@@ -627,7 +627,7 @@
         "voice": "gazette",
         "stance": "neutral",
         "genre": "ledger",
-        "when": "fromGives !== null && toGives !== null",
+        "when": "!!fromGives && !!toGives",
         "headline": "The terms, as recorded",
         "body": [
           "{{from}} brings: {{fromGives}}.",
@@ -655,9 +655,9 @@
         "weight": {
           "base": 3
         },
-        "headline": "Our envoy has the text from {{from}} and {{to}}",
+        "headline": "Our service has the text from {{from}} and {{to}}",
         "body": [
-          "Our envoy at the court of {{from}} obtained the text of the bargain with {{to}}. {{from}} gives: {{fromGives}}. {{to}} gives: {{toGives}}.",
+          "The recorded terms of the bargain between {{from}} and {{to}} are with our diplomatic service. {{from}} gives: {{fromGives}}. {{to}} gives: {{toGives}}.",
           "Among the entries is peace with a third state, which was not a party to the bargaining."
         ]
       }
@@ -707,9 +707,9 @@
         "weight": {
           "base": 3
         },
-        "headline": "Our envoy has the terms between {{from}} and {{to}}",
+        "headline": "Our service has the terms between {{from}} and {{to}}",
         "body": [
-          "Our envoy at the court of {{from}} obtained the text of the bargain with {{to}}. {{from}} gives: {{fromGives}}. {{to}} gives: {{toGives}}.",
+          "The recorded terms of the bargain between {{from}} and {{to}} are with our diplomatic service. {{from}} gives: {{fromGives}}. {{to}} gives: {{toGives}}.",
           "Among the entries is war against a third state, which was not a party to the bargaining."
         ]
       }

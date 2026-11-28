@@ -247,9 +247,9 @@
         "weight": {
           "base": 3
         },
-        "headline": "Our agent in {{cityState}} reports the alliance lost",
+        "headline": "Our agent in {{cityState}} as the alliance ends",
         "body": [
-          "Our agent in {{cityState}} now reports that the city has left our alliance and named no other power in our place. The agent remains in the city and has no answer yet on who spoke for the change. The council house is the same building it was last month; the voices inside it now answer to no patron."
+          "{{cityState}} has left our alliance, and no other power was named in our place when it did. Our agent is in the city now and has no answer yet on who spoke for the change. The council house is the same building it was last month, and the city keeps its own counsel on the reason."
         ]
       }
     ]
@@ -532,9 +532,9 @@
         "weight": {
           "base": 3
         },
-        "headline": "Our agent in {{cityState}} reports a new ally",
+        "headline": "Our agent in {{cityState}} as {{civilization}} gains an ally",
         "body": [
-          "Our agent in {{cityState}} now reports that the city has taken {{civilization}} as its ally. The council house is the same building it was last month, but the voices inside it now answer to a new patron. The agent will keep watch on what {{civilization}} asks of the city and what it offers in return."
+          "{{cityState}} took {{civilization}} as its ally, and our agent is in the city now. The council house is the same building it was last month. The agent will watch what {{civilization}} asks of the city and what it offers in return."
         ]
       }
     ]

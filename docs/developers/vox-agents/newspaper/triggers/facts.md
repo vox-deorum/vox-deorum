@@ -215,9 +215,11 @@ The presence facts `ourSpyPresent`, `ourDiplomatThere` and `theirDiplomatHere` d
 | Our spy in a foreign city | `city.stake.spy`: 3 points on arrival and 1 more per 150 network points rounded, up to the cap of 9 from 825 points. Added into `city.stake.intel`, and into `player.stake.spy` when it is the highest among that player's cities. |
 | Our diplomat at a foreign major's capital | `player.stake.intel`: 3 points when posted, 6 from 200 network points and 9 from 800, plus `player.stake.spy`, capped at 15. Also adds 3 points to `city.stake.intel` for every foreign city of the owner whose capital hosts our diplomat. |
 | 200 diplomat points | Lets that major's policy adoption reports reach the receiver. |
-| 800 diplomat points | Lets private deal terms with each foreign party reach the receiver. |
+| 800 diplomat points | Lets private deal terms with each foreign party reach the receiver, when we are not a party. |
 
-Without full recorded access, the 200 and 800 thresholds decide whether those events exist for the editor; the intel weights only score them. A spy brings more city and military stories about that civilization, and a diplomat brings more city and diplomatic stories.
+Two stock rules report standing rather than a crossing: `diplomat-network-policy-standing` prints once per court when our network there reaches 200 points, and `diplomat-network-treaty-standing` prints once when it reaches 800.
+
+The policy gate accepts full recorded access to the adopting player or 200 diplomat points before the event turn. Full recorded access bypasses that gate only. Deal terms have their own gate and never accept it: the receiver must be a party, or hold 800 points with every foreign party. The intel weights only score stories. A spy brings more city and military stories about that civilization, and a diplomat brings more city and diplomatic stories.
 
 Current facts use the cutoff roster; events use the latest roster from an earlier turn. Spending points can reduce the recorded balance while the game still grants its bonus.
 
