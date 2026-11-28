@@ -217,7 +217,7 @@ The presence facts `ourSpyPresent`, `ourDiplomatThere` and `theirDiplomatHere` d
 | 200 diplomat points | Lets that major's policy adoption reports reach the receiver. |
 | 800 diplomat points | Lets private deal terms with each foreign party reach the receiver, when we are not a party. |
 
-Two stock rules report standing rather than a crossing: `diplomat-network-policy-standing` prints once per court when our network there reaches 200 points, and `diplomat-network-treaty-standing` prints once when it reaches 800.
+Two stock rules report standing rather than a crossing: `diplomat-network-policy-standing` prints once per court when our network there stands at 200 or more but below 800, and `diplomat-network-treaty-standing` prints once when it stands at 800 or more.
 
 The policy gate accepts full recorded access to the adopting player or 200 diplomat points before the event turn. Full recorded access bypasses that gate only. Deal terms have their own gate and never accept it: the receiver must be a party, or hold 800 points with every foreign party. The intel weights only score stories. A spy brings more city and military stories about that civilization, and a diplomat brings more city and diplomatic stories.
 

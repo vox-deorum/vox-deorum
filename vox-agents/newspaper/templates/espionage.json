@@ -1,7 +1,7 @@
 [
   {
-    "id": "diplomat-network-standing-account",
-    "triggers": ["diplomat-network-policy-standing", "diplomat-network-treaty-standing"],
+    "id": "diplomat-network-policy-standing-account",
+    "triggers": ["diplomat-network-policy-standing"],
     "tags": ["politics", "international"],
     "names": ["civilization"],
     "extends": "civilization",
@@ -24,7 +24,16 @@
         "body": [
           "Our network in {{civilization}} holds at least 200 points, and policy choices made at that court can now reach our foreign office. The {{terms.civic.government}} should say what it means to do with what it hears. A network that listens and never acts is an expense with a good name. Let the ministers report what the last season of listening bought the country."
         ]
-      },
+      }
+    ]
+  },
+  {
+    "id": "diplomat-network-treaty-standing-account",
+    "triggers": ["diplomat-network-treaty-standing"],
+    "tags": ["politics", "international"],
+    "names": ["civilization"],
+    "extends": "civilization",
+    "variants": [
       {
         "id": "diplomat-network-standing-broadcast",
         "voice": "broadcast",
@@ -305,7 +314,7 @@
         "genre": "report",
         "headline": "The envoy departs from {{civilization}}",
         "body": [
-          "In this season our envoy left the court of {{civilization}}, and the mission was closed. The rooms he kept stand empty. The record notes the departure and leaves the reason unstated."
+          "In this season our envoy left the court of {{civilization}}, and the mission was closed. The rooms he kept stand empty. The record notes the departure."
         ]
       }
     ]
