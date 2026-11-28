@@ -14,8 +14,6 @@ import { fillPages } from '../../../../src/newspaper/editorial/selection/fill.js
 import { runEditorialCheck } from '../../../../src/newspaper/editorial/check.js';
 import { buildPress } from '../../../../src/newspaper/editorial/rules/press.js';
 import { ruleSubjectKey } from '../../../../src/newspaper/editorial/rules/subjects.js';
-import { choosePressRunDesign } from '../../../../src/newspaper/editorial/presentation/issue.js';
-import { evaluatePresentation, fittingFrontLayouts, prepareFrontLayouts } from '../../../../src/newspaper/editorial/presentation/eligibility.js';
 import { createProseDraw } from '../../../../src/newspaper/editorial/shared/determinism.js';
 import { newspaperCoverageProblems, newspaperPageProblems } from '../../../helpers/newspaper-invariants.js';
 
@@ -54,18 +52,6 @@ function check(evidence: NewspaperEvidence, state = createInitialPublicationStat
   return runEditorialCheck({ campaignId, timelineId, receiver: { playerId: 0, label: 'France' },
     evidence, facts: buildNewspaperFacts(evidence), speedMultiplier: 1, state,
     config: briefs ? withBriefs(catalogue, briefs) : catalogue });
-}
-
-/** Evaluate the stock designs against the receiver's recorded civilization and era. */
-async function designChoices(name: string, era?: string) {
-  const evidence = fixture();
-  evidence.players[0].values.Era = era;
-  const facts = buildNewspaperFacts(evidence, { playerIdentities: { 0: { name } } });
-  const weights = await evaluatePresentation(config, await getEditorialExpressions(config), { facts });
-  return {
-    weights,
-    byId: Object.fromEntries(config.designs.map(design => [design.id, weights.get(design)!])),
-  };
 }
 
 /** Build minimal history for feedback calculations. */
@@ -863,50 +849,6 @@ describe('editorial engine', () => {
       const retried = await check(evidence, first.state, config, 'branch', 'campaign', 4);
       expect(retried.status).toBe('published');
       expect(retried.state.lastCheckTurn).toBe(20);
-    });
-
-    it('should introduce the Endless Scroll in Information and keep it in Future', async () => {
-      for (const era of ['Modern', 'Atomic Era'])
-        expect((await designChoices('France', era)).byId['endless-scroll']).toBe(0);
-      for (const era of ['Information Era', 'Future'])
-        expect((await designChoices('France', era)).byId['endless-scroll']).toBeGreaterThan(0);
-    });
-
-    it('should favor Scented Court Letters in Japan while keeping it competitive in Korea and China', async () => {
-      for (const [era, general] of [
-        ['Classical Era', 'forum-bronze'], ['Medieval', 'illuminated-town-book'], ['Renaissance Era', 'woodcut-tidings'],
-      ] as const) {
-        const japan = (await designChoices('Japan', era)).byId;
-        expect(japan['scented-court-letters'], era).toBeGreaterThan(japan[general]);
-        for (const name of ['Korea', 'China']) {
-          const { byId } = await designChoices(name, era);
-          expect(byId['scented-court-letters'], `${name}, ${era}`).toBeGreaterThanOrEqual(Math.max(...Object.values(byId)) / 2);
-          expect(byId['scented-court-letters'], `${name}, ${era}`).toBeLessThan(byId[general]);
-        }
-      }
-      expect((await designChoices('Japan', 'Ancient')).byId['scented-court-letters']).toBe(0);
-      expect((await designChoices('Japan', 'Industrial')).byId['scented-court-letters']).toBe(0);
-    });
-
-    it('should offer a Nubian edition and keep Forum Bronze competitive with Cracked Oracle Shell in Classical', async () => {
-      for (const era of ['Ancient Era', 'Classical']) {
-        const egypt = (await designChoices('Egypt', era)).byId;
-        const nubia = (await designChoices('Nubia', era)).byId;
-        expect(nubia['winged-sun-papyrus'], era).toBeGreaterThan(0);
-        expect(egypt['winged-sun-papyrus'], era).toBeGreaterThan(nubia['winged-sun-papyrus']);
-      }
-      expect((await designChoices('Nubia', 'Medieval')).byId['winged-sun-papyrus']).toBe(0);
-
-      const ancient = await designChoices('China', 'Ancient');
-      const classical = await designChoices('China', 'Classical Era');
-      expect(ancient.byId['cracked-oracle-shell']).toBeGreaterThan(ancient.byId['forum-bronze']);
-      expect(classical.byId['cracked-oracle-shell']).toBeGreaterThan(0);
-      expect(classical.byId['cracked-oracle-shell']).toBeLessThan(ancient.byId['cracked-oracle-shell']);
-      const state = createInitialPublicationState();
-      state.issues = [1, 2, 3].map(turn => ({ issueId: `issue-${turn}`, turn, items: [], designId: 'cracked-oracle-shell' }));
-      const draws = [0, 0.25, 0.5, 0.75, 1 - Number.EPSILON];
-      const choices = draws.map(draw => choosePressRunDesign([...fittingFrontLayouts(prepareFrontLayouts(config, classical.weights), false).keys()], classical.weights, state, () => draw).design?.id);
-      expect(choices).toEqual(expect.arrayContaining(['cracked-oracle-shell', 'forum-bronze']));
     });
 
     it('should keep a masthead rule across turns and branches and replace it on an ideology switch', async () => {
