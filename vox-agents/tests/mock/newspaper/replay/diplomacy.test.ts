@@ -6,6 +6,7 @@ import { ReplaySession } from '../../../../src/newspaper/replay/session.js';
 import { loadEditorialConfig } from '../../../../src/newspaper/editorial/config/load.js';
 import { createReplayRecording, replaySettings } from '../../../helpers/newspaper-replay.js';
 import { editionBriefRule, editionBriefTemplate } from '../../../helpers/newspaper-briefs.js';
+import { newspaperPageProblems } from '../../../helpers/newspaper-invariants.js';
 
 describe('diplomacy rules in offline replay', () => {
   it('should reopen a breaking lead with its covered declarations and source rows intact', async () => {
@@ -33,6 +34,7 @@ describe('diplomacy rules in offline replay', () => {
       const catalogue = path.join(path.dirname(recording.filename), 'war-catalogue');
       await mkdir(catalogue);
       await Promise.all([
+        // The fixture briefs share one rule, so repetition penalties would leave the front short.
         writeFile(path.join(catalogue, 'defaults.json'), JSON.stringify({ rulePenalty: 0, ruleFatigue: 0 })),
         writeFile(path.join(catalogue, 'triggers.json'), JSON.stringify([editionBriefRule])),
         writeFile(path.join(catalogue, 'templates.json'), JSON.stringify([editionBriefTemplate])),
@@ -46,8 +48,9 @@ describe('diplomacy rules in offline replay', () => {
       const { check } = await session.advance();
       expect(check?.status).toBe('published');
       const issue = check?.issue;
-      expect(issue?.pages[0].itemIds).toHaveLength(5);
+      expect(issue?.pages[0].hasLead).toBe(true);
       expect(issue?.pages[0].layout).toBe('breaking');
+      expect(newspaperPageProblems(issue!)).toEqual([]);
       const absorbed = check!.decision.candidateScores.filter(candidate => candidate.mergedInto);
       expect(absorbed.filter(candidate => candidate.id.startsWith('war-involving-us-account/'))).toHaveLength(5);
       await session.close();
@@ -89,6 +92,7 @@ describe('diplomacy rules in offline replay', () => {
       const base = await loadEditorialConfig();
       const stalledRule = 'war-advantage-stalls';
       await Promise.all([
+        // The fixture briefs share one rule, so repetition penalties would leave the front short.
         writeFile(path.join(catalogue, 'defaults.json'), JSON.stringify({ rulePenalty: 0, ruleFatigue: 0 })),
         writeFile(path.join(catalogue, 'triggers.json'), JSON.stringify([
           ...base.triggers.filter(rule => rule.id !== stalledRule).map(rule => ({ id: rule.id, enabled: false })),

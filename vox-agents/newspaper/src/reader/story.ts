@@ -21,7 +21,6 @@ export interface StoryRenderContext {
   instancePrefix: string;
   designId: RendererFamily;
   publicationDesignId: string;
-  cutoffLabel: string;
   assetBaseUrl: string;
   vote: VoteValue;
 }
@@ -33,7 +32,7 @@ export function renderStory(
   lead: boolean,
   context: StoryRenderContext,
 ): HTMLElement {
-  const { instancePrefix, designId, publicationDesignId, cutoffLabel, assetBaseUrl, vote } = context;
+  const { instancePrefix, designId, publicationDesignId, assetBaseUrl, vote } = context;
   const article = createElement(
     "article",
     `vd-story ${lead ? "vd-story--lead" : "vd-story--brief"}`,
@@ -50,7 +49,8 @@ export function renderStory(
     article.append(date);
   }
   if (publicationDesignId === "court-dispatch") {
-    article.append(createElement("div", "vd-dispatch-docket", cutoffLabel));
+    const date = item.observedTurn === undefined ? "Undated" : `Turn ${item.observedTurn}`;
+    article.append(createElement("div", "vd-dispatch-docket", date));
   }
 
   const content = createElement("div", "vd-story-content");

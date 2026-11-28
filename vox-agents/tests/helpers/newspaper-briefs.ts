@@ -23,7 +23,7 @@ export function withEditionBriefs(evidence: NewspaperEvidence, config: Editorial
     evidence: { ...evidence, events: [...evidence.events, ...briefs] },
     config: editorialConfigSchema.parse({
       ...config, triggers: [...config.triggers, editionBriefRule], templates: [...config.templates, editionBriefTemplate],
-      // The briefs share one rule, so the repetition penalties would push them off the page.
+      // The briefs share one rule across issues, so both repetition penalties would push them off the page.
       defaults: { ...config.defaults, rulePenalty: 0, ruleFatigue: 0 },
     }),
   };

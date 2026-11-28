@@ -1,6 +1,6 @@
 # Newspaper
 
-The newspaper turns recorded Civilization V events into issues for one player, called the **receiver**. For example, the paper can report families leaving a city after it trained settlers and lost population. At each scheduled **check**, the editor reads through a game turn called the **cutoff**. Each published article keeps the sources behind its claims.
+The newspaper turns recorded Civilization V events into issues for one player, called the **receiver**. At each scheduled **check**, the editor reads through a game turn called the **cutoff**. An article keeps its sources and, when known, its own observation turn. For example, a report on a change in military posture on turn 186 can appear in the turn 190 issue.
 
 With [workspace dependencies](../../setup.md) installed, run `npm run newspaper:preview -w vox-agents` from the repository root. Open **Mockups** to browse designs or **Recorded** to generate issues from an MCP knowledge database. The [replay guide](replay.md) covers setup, evidence inspection, and command-line audits.
 

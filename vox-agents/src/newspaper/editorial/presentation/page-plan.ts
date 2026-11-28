@@ -15,7 +15,7 @@ export interface PagePlan {
 
 /** Briefs the front page holds besides an optional lead. */
 export const frontBriefCount = 4;
-/** Fewest briefs a section may print. */
+/** Fewest briefs a section may print. Sections print briefs in pairs. */
 export const sectionMinBriefs = 2;
 /** Most briefs a section may print besides an optional lead. */
 export const sectionMaxBriefs = 4;
@@ -52,9 +52,10 @@ export function planPage(entries: readonly PageEntry[], front: boolean): PagePla
   return { leadId: lead?.id, breaking: urgentLead !== undefined };
 }
 
-/** Check whether a page's brief count, outside its lead, fits its range. */
+/** Check whether a page's brief count, outside its lead, fits: four on the front, two or four in a section. */
 export function briefsFit(briefs: number, front: boolean): boolean {
-  return front ? briefs === frontBriefCount : briefs >= sectionMinBriefs && briefs <= sectionMaxBriefs;
+  if (front) return briefs === frontBriefCount;
+  return briefs >= sectionMinBriefs && briefs <= sectionMaxBriefs && briefs % 2 === 0;
 }
 
 /** Check whether a page's stories form a complete, printable page. */

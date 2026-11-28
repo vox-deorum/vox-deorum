@@ -15,6 +15,7 @@
     "lint:all": "npm run lint -ws",
     "format:docs": "prettier --write --prose-wrap never \"**/*.md\"",
     "archive:raw": "node scripts/maintenance/archive-raw.mjs",
+    "newspaper:audit-designs": "tsx scripts/utilities/audit-newspaper-designs.ts",
     "newspaper:triggers": "node scripts/utilities/list-newspaper-triggers.mjs",
     "newspaper:sort-triggers": "node scripts/utilities/sort-newspaper-triggers.mjs",
     "models:codex": "tsx --env-file-if-exists=vox-agents/.env scripts/dependencies/list-codex-models.ts",

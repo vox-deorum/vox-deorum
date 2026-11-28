@@ -246,12 +246,28 @@ describe('zone posture triggers', () => {
       };
       const changes = [offensive];
       const rule = 'enemy-front-posture-offensive';
-      const result = await check(fixture({ cities: [home, enemy], zones: [latest], previousState: 'war', changes }));
+      const evidence = fixture({ cities: [home, enemy], zones: [latest], previousState: 'war', changes });
+      evidence.history!.snapshots.cities.push({ ...home, source: { ...home.source, id: 910, turn: 9, createdAt: 8900 } });
+      evidence.events.push({
+        type: 'CityConstructed', values: { CityID: 10, OwnerID: 0, CityX: 10, CityY: 1, Building: 'Walls' },
+        source: { table: 'GameEvents', id: 900, turn: 9, createdAt: 9000 },
+      });
+      const result = await check(evidence, undefined, 4);
 
       expect(audit(result, rule, 'city/20')).toMatchObject({
         outcome: 'fired', sources: expect.arrayContaining([offensive.source, offensive.previousPosture.source]),
       });
       expect(value(result, rule, 'city/20', 'values.observedTurn')).toBe(8);
+      if (result.status !== 'published') throw new Error(result.reason);
+      const printed = result.state.issues.at(-1)!.items;
+      const dates = result.issue.items.map(item => [
+        printed.find(record => record.id === item.id)!.ruleIds, item.observedTurn,
+      ]);
+      expect(result.issue.cutoff.turn).toBe(10);
+      expect(dates).toEqual(expect.arrayContaining([
+        [expect.arrayContaining([rule]), 8],
+        [expect.arrayContaining(['city-defense-completed']), 9],
+      ]));
       const reversed = await check(fixture({ cities: [home, enemy], zones: [latest], state: 'war', previousState: 'peace', changes }));
       expect(audit(reversed, rule, 'city/20')?.outcome).toBe('false');
       const older = { ...offensive, source: { ...offensive.source, turn: 5 },

@@ -29,9 +29,22 @@ For a layout review, capture at 360, 1000, and 1200 pixels in separate folders. 
 
 Once there are enough stories to publish, the editor draws among designs with positive weight, a printable fallback title, and an eligible layout for the edition. An eligible design competes when its weight is at least half the strongest one. A competitive design stays for its first three published issues, then joins a weighted draw at each check. After six issues, the next draw leaves it out if another competitive design is eligible. Skipped checks do not advance the run.
 
-Use `when` to rule out a format that would be out of place. Knotted Inca Cords, for example, fits The Inca from Classical through Renaissance. Set weights relative to the other designs that can appear at the same time: an option needs 40 to compete with a weight of 80. Keep a general option for each era and a fallback if the era is missing. Check `designSelection` in the [CLI replay audit](replay.md#iterate-on-a-rule-or-overlay) before tuning weights.
+Use `when` to rule out a format that would be out of place. Knotted Inca Cords, for example, fits The Inca from Classical through Renaissance. Keep a general option for each era and a fallback if the era is missing. Use the catalogue audit to compare choices across civs. Use `designSelection` in the [CLI replay audit](replay.md#iterate-on-a-rule-or-overlay) to see what happened in a recorded game.
 
-The [editor](editorial.md#pages-and-designs) fills the front with four briefs and an optional lead, and each section with 2 to 5 stories. Layouts choose how those stories look. Breaking layouts are for the front only. Each design needs an unconditional ordinary and breaking layout with positive constant weights. Resizing rearranges the same articles.
+The [editor](editorial.md#pages-and-designs) fills the front with four briefs and an optional lead, and each section with 2 or 4 briefs and an optional lead. Layouts choose how those stories look. Breaking layouts are for the front only. Each design needs an unconditional ordinary and breaking layout with positive constant weights. Resizing rearranges the same articles.
+
+### Audit coverage by civilization and era
+
+From the repository root with workspace dependencies installed, build MCP with `npm run build -w mcp-server`, then run:
+
+```sh
+npm run newspaper:audit-designs
+npm run --silent newspaper:audit-designs -- --json
+```
+
+The report shows which civs have few choices, which designs fall below the draw cutoff, and which groups get choices that a generic civ cannot draw or gets at a lower weight. The JSON includes each eligible design's raw and draw weights by civ and era. Add `--breaking` to check a breaking front instead of a regular one.
+
+The audit uses the stock catalogue and a synthetic opening issue with a known civ, no ideology, and no game events or prior issues. It measures the draw pool. Use replay to study publication frequency and mastheads.
 
 ### Design assets
 
@@ -70,12 +83,12 @@ A renderer family supplies the shared structure. A design can give it a distinct
 | Darkroom Contact Sheet (`contact-sheet`) | `folio` | Enlarged lead frame with one column of text above smaller frames. [Peter Hujar’s darkroom contact sheets](https://www.themorgan.org/blog/peter-hujars-contact-sheets-record-keeping-and-ephemeral-proof): silver frames, charcoal gutters, and a separate frame for analysis evidence. |
 | Photocopied Fanzine (`paste-up`) | `folio` | Cut headline strips with a column of briefs. [Photocopied punk fanzines](https://exhibits.library.cornell.edu/punkfest/feature/rise-of-the-fanzines): cut paper headlines and lime highlights for figures. |
 | Swiss Grid (`civic-index`) | `folio` | Two story stacks on the ordinary front and paired stories in sections. [*Neue Grafik*](https://www.lars-mueller-publishers.com/neue-grafiknew-graphic-designgraphisme-actuel-1958-1965): an asymmetric front with two stories on the left. Section briefs pair on wide paper. |
-| Court Dispatch Slips (`court-dispatch`) | `folio` | Dispatch slips with the turn in a ruled margin. [Mughal court newsletters](https://royalasiaticcollections.org/akhbarat-archive/): one slip per story, with the turn in a ruled margin. |
+| Court Dispatch Slips (`court-dispatch`) | `folio` | [Mughal court newsletters](https://royalasiaticcollections.org/akhbarat-archive/): one slip per story, with its observation turn in a ruled margin. |
 | Sunday Comic Supplement (`sunday-colour`) | `folio` | Broad lead panel above smaller color panels. [*Little Nemo*’s Sunday comic pages](https://blogs.loc.gov/headlinesandheroes/2018/06/before-bang-pow-zap/): flat colors, narrow gutters, and varied panel sizes. |
 | Isotype Bulletin (`civic-survey`) | `folio` | Statistical plate above the lead text. [Vienna’s Isotype statistical plates](https://isotyperevisited.org/2012/08/society-and-economy.php): evidence above the lead; percentage bars leave missing values blank. |
 | Meiji Picture Sheet (`meiji-picture-sheet`) | `folio` | Framed lead above paired briefs. [Utagawa Yoshiiku’s 1870s news print for *Tokyo Nichi Nichi Shinbun*](https://pages.uoregon.edu/jsmacollections/home/artists/utagawa-yoshiiku-1833-1904/showing-the-flag.html): a ribbon title and a lead frame that works with or without art. |
 | Coffeehouse Essay Sheet (`coffeehouse-essay`) | `folio` | Numbered half-sheet with an essay and paired notices. [Addison and Steele’s *The Spectator*](https://collections.soane.org/b5321): a numbered imprint, fine rules, and modest serif headlines. |
-| Printed Almanack (`printed-almanack`) | `folio` | Ruled entries with a turn gutter. [Benjamin Banneker’s 1793 *Almanack and Ephemeris*](https://transcription.si.edu/pdf/8045/NMAAHC-2014_63_31_008): a turn gutter and celestial ornaments. Put the lead first, then briefs by latest source turn and undated briefs last. |
+| Printed Almanack (`printed-almanack`) | `folio` | [Benjamin Banneker’s 1793 *Almanack and Ephemeris*](https://transcription.si.edu/pdf/8045/NMAAHC-2014_63_31_008): a turn gutter and celestial ornaments. Put the lead first, then briefs by observation turn, with undated briefs last. |
 | Social News Feed (`wire`) | `feed` | Full-width timeline. Social timelines such as Bluesky: round avatars, bylines, and actions below a post. Wide posts can place photos or data beside the text. |
 
 Stock designs offer ordinary, breaking, and analysis layouts. A breaking page emphasizes the lead. Most analysis layouts put evidence beside the story on wide sheets and below it on narrow sheets.

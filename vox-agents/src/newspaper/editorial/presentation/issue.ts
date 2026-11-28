@@ -9,9 +9,11 @@ import {
 } from '../../contracts/issue.js';
 import type { DesignSelection, PublicationState } from '../../contracts/publication.js';
 import { variantStyleKinds, type VariantStyle } from '../../contracts/style.js';
+import type { RuleDevelopment } from '../../contracts/triggers.js';
 import type { EditorialConfig, EditorialDesign, AuthoredVariant } from '../config/schema.js';
 import type { EditorialTerms } from '../config/expressions.js';
 import { resolveVariantStyle } from '../config/styles.js';
+import type { NewspaperFactModel } from '../facts/index.js';
 import { pressRunDesignDraw, pressRunLayoutDraw } from '../shared/determinism.js';
 import { chooseWeighted } from '../shared/weights.js';
 import { uniqueSources } from '../shared/sources.js';
@@ -135,6 +137,28 @@ export interface PresentationResult {
   mastheadRuleId?: string;
 }
 
+/** Date developments from their explicit observation, event or incident, then supporting evidence. */
+export function developmentObservationTurns(
+  developments: readonly RuleDevelopment[], facts: NewspaperFactModel,
+): Map<string, number> {
+  const subjectTurns = new Map<string, number>([
+    ...facts.events.map(({ id, turn }) => [`event/${id}`, turn] as const),
+    ...facts.incidents.map(({ id, turn }) => [`incident/${id}`, turn] as const),
+  ]);
+  /** Read an authored observation date or the date of the subject itself. */
+  function turnFor({ subject, values }: Pick<RuleDevelopment, 'subject' | 'values'>): number {
+    const turn = values.observedTurn;
+    return typeof turn === 'number' && Number.isSafeInteger(turn) && turn >= 0 && turn <= facts.turn
+      ? turn : subjectTurns.get(subject) ?? -1;
+  }
+  return new Map(developments.map(development => {
+    const { matches } = development.values;
+    const turn = Array.isArray(matches) ? Math.max(...matches.map(turnFor)) : turnFor(development);
+    return [development.id, turn >= 0 ? turn :
+      development.sources.reduce((latest, source) => Math.max(latest, source.turn), -1)];
+  }));
+}
+
 /** Order one page's stories behind its planned lead. */
 function ordered(stories: readonly EditorialCandidate[], front: boolean) {
   const leadId = planPage(stories, front).leadId;
@@ -149,6 +173,8 @@ export async function presentIssue(input: {
   timelineId: string;
   receiver: IssueReceiver;
   turn: number;
+  /** Recorded observation turns by trigger development ID. */
+  observationTurns?: ReadonlyMap<string, number>;
   /** The front first, then the sections, as the editor filled them. */
   pages: readonly FilledPage[];
   state: PublicationState;
@@ -227,9 +253,7 @@ export async function presentIssue(input: {
     }
     const sources = uniqueSources([...candidate.sources, ...(candidate.variantSources[variant.id] ?? [])]);
     itemCandidates.set(id, { ...candidate, sources });
-    const observedTurn = design.id === 'printed-almanack'
-      ? sources.reduce((latest, source) => Math.max(latest, source.turn), -1)
-      : -1;
+    const observedTurn = Math.max(...candidate.triggerIds.map(id => input.observationTurns?.get(id) ?? -1));
     const prior = candidate.seriesKeys
       .map((key) => state.series[key])
       .filter((value) => value !== undefined)

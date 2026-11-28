@@ -5,16 +5,22 @@ import {
 } from '../../../../../src/newspaper/contracts/publication.js';
 import { loadEditorialConfig } from '../../../../../src/newspaper/editorial/config/load.js';
 import { editorialConfigSchema, type EditorialConfig } from '../../../../../src/newspaper/editorial/config/schema.js';
+import { summarizeCheckCoverage } from '../../../../../src/newspaper/editorial/coverage.js';
 import { planPage } from '../../../../../src/newspaper/editorial/presentation/page-plan.js';
 import { computeFeedback } from '../../../../../src/newspaper/editorial/selection/feedback.js';
 import { fillPages } from '../../../../../src/newspaper/editorial/selection/fill.js';
+import type { StoryMerger } from '../../../../../src/newspaper/editorial/selection/merge.js';
 import type { EditorialCandidate } from '../../../../../src/newspaper/editorial/selection/templates.js';
 
 let config: EditorialConfig;
 
 beforeAll(async () => {
   const base = await loadEditorialConfig();
-  config = editorialConfigSchema.parse({ ...base, defaults: { ...base.defaults, sections: 2 } });
+  // This suite owns the tunable rules, so it names every setting it depends on.
+  config = editorialConfigSchema.parse({
+    ...base,
+    defaults: { ...base.defaults, sections: 2, rulePenalty: 15, ruleFatigue: 10, decayPerTurn: 0.94 },
+  });
 });
 
 /** Build a printable candidate with explicit placement facts. */
@@ -44,23 +50,24 @@ function printedIssue(turn: number, ruleId: string): PublicationState['issues'][
   };
 }
 
-/** Fill every stock section from the given stories. */
+/** Fill every configured section from the given stories. */
 function fill(
   candidates: readonly EditorialCandidate[],
   state: PublicationState = createInitialPublicationState(),
   turn = 10,
+  merge?: StoryMerger,
 ) {
   return fillPages({
-    candidates, state, config, feedback: computeFeedback(state, config), turn,
+    candidates, state, config, feedback: computeFeedback(state, config), turn, merge,
     sections: config.pages.filter(page => !page.front),
   });
 }
 
 describe('page filling', () => {
   describe('front and section placement', () => {
-    it('should fill the front first and the first matching section up to four briefs or five with a lead', async () => {
-      const front = Array.from({ length: 4 }, (_, index) => story(`front-${index}`, {
-        importance: 90, subject: `front-subject/${index}`,
+    it('should fill the front with the best stories and the first matching section up to four briefs or five with a lead', async () => {
+      const front = [100, 95, 90, 85].map((importance, index) => story(`front-${index}`, {
+        importance, subject: `front-subject/${index}`,
       }));
       const section = Array.from({ length: 8 }, (_, index) => story(`war-${index}`, {
         importance: 40 + index, tags: ['military'], subject: `war-subject/${index}`, ruleIds: [`war-rule-${index}`],
@@ -72,13 +79,26 @@ describe('page filling', () => {
       expect(full.pages[1].stories).toHaveLength(4);
       expect(full.outcomes.get('war-0')).toBe('outranked');
 
-      const led = section.map((entry, index) => index === 7 ? { ...entry, importance: 80 } : entry);
+      const led = section.map((entry, index) => index === 7 ? { ...entry, importance: 70 } : entry);
       const withLead = await fill([...front, ...led]);
       expect(withLead.pages[1].stories).toHaveLength(5);
       expect(withLead.pages[1].stories[0].id).toBe('war-7');
     });
 
-    it('should drop a section with one story while keeping its selected outcome', async () => {
+    it('should place a story in the first section in page order that takes its tags', async () => {
+      const front = Array.from({ length: 4 }, (_, index) => story(`front-${index}`, {
+        importance: 90, subject: `front-subject/${index}`,
+      }));
+      const shared = [0, 1].map(index => story(`shared-${index}`, {
+        importance: 40 + index, tags: ['military', 'economy'], subject: `shared-subject/${index}`,
+      }));
+
+      const result = await fill([...front, ...shared]);
+      expect(result.pages.map(page => page.page.id)).toEqual(['front', 'war']);
+      expect(result.pages[1].stories.map(entry => entry.id).sort()).toEqual(['shared-0', 'shared-1']);
+    });
+
+    it('should drop a section with one story and report its story as unplaced', async () => {
       const front = Array.from({ length: 4 }, (_, index) => story(`front-${index}`, {
         importance: 90, subject: `front-subject/${index}`,
       }));
@@ -88,6 +108,33 @@ describe('page filling', () => {
       expect(result.pages.map(page => page.page.id)).toEqual(['front']);
       expect(result.outcomes.get('lone')).toBe('selected');
       expect(result.scores.find(entry => entry.id === 'lone')?.selected).toBe(false);
+      const coverage = summarizeCheckCoverage({
+        turn: 10, status: 'published', audit: [], funnel: new Map(),
+        candidates: [...front, lone],
+        scores: new Map(result.scores.map(entry => [entry.id, entry.score])),
+        outcomes: result.outcomes,
+        printed: new Set(result.scores.filter(entry => entry.selected).map(entry => entry.id)),
+        mergedInto: new Map(),
+      });
+      expect(coverage.candidates.find(entry => entry.id === 'lone')?.outcome).toBe('unplaced');
+    });
+
+    it('should print section briefs in pairs, so three stories keep two unless one leads', async () => {
+      const front = Array.from({ length: 4 }, (_, index) => story(`front-${index}`, {
+        importance: 90, subject: `front-subject/${index}`,
+      }));
+      const war = [40, 41, 42].map((importance, index) => story(`war-${index}`, {
+        importance, tags: ['military'], subject: `war-subject/${index}`, ruleIds: [`war-rule-${index}`],
+      }));
+
+      const paired = await fill([...front, ...war]);
+      expect(paired.pages[1].stories.map(entry => entry.id).sort()).toEqual(['war-1', 'war-2']);
+      expect(paired.scores.find(entry => entry.id === 'war-0')?.selected).toBe(false);
+
+      const led = war.map((entry, index) => index === 2 ? { ...entry, importance: 70 } : entry);
+      const withLead = await fill([...front, ...led]);
+      expect(withLead.pages[1].stories).toHaveLength(3);
+      expect(planPage(withLead.pages[1].stories, false).leadId).toBe('war-2');
     });
 
     it('should keep the two sections with the highest story scores', async () => {
@@ -125,16 +172,31 @@ describe('page filling', () => {
       expect(scores.get('repeat-2')).toBeLessThan(scores.get('other')!);
     });
 
-    it('should lower the score of a rule printed in a recent issue more than an older one', async () => {
+    it('should lower the score of a rule printed in an earlier issue, less so as turns pass', async () => {
       const candidate = story('candidate', { importance: 50, ruleIds: ['shared'] });
       const older = createInitialPublicationState();
       older.issues = [printedIssue(1, 'shared')];
       const recent = createInitialPublicationState();
       recent.issues = [printedIssue(9, 'shared')];
 
+      const cleanScore = (await fill([candidate])).scores[0].score;
       const olderScore = (await fill([candidate], older)).scores[0].score;
       const recentScore = (await fill([candidate], recent)).scores[0].score;
+      expect(cleanScore).toBeGreaterThan(olderScore);
       expect(olderScore).toBeGreaterThan(recentScore);
+    });
+
+    it('should mix subjects on the front', async () => {
+      const same = Array.from({ length: 4 }, (_, index) => story(`same-${index}`, {
+        importance: 90, subject: 'player/0', ruleIds: [`same-rule-${index}`],
+      }));
+      const other = story('other', { importance: 10, subject: 'player/1', ruleIds: ['other-rule'] });
+
+      const result = await fill([...same, other]);
+      const front = result.pages[0].stories;
+      expect(front).toHaveLength(4);
+      expect(front.map(entry => entry.id)).toContain('other');
+      expect(new Set(front.map(entry => entry.subject)).size).toBe(2);
     });
 
     it('should fill the front with four stories that share one subject', async () => {
@@ -159,6 +221,33 @@ describe('page filling', () => {
       expect(front[0].id).toBe('urgent');
       expect(front).toHaveLength(5);
       expect(planPage(front, true)).toEqual({ leadId: 'urgent', breaking: true });
+    });
+
+    it('should fill a slot freed by a merge with a later story', async () => {
+      const pair = [0, 1].map(index => story(`pair-${index}`, {
+        importance: 95, templateIds: ['pair'], subject: `pair-subject/${index}`,
+      }));
+      const later = [0, 1, 2].map(index => story(`later-${index}`, {
+        importance: 80 - index, subject: `later-subject/${index}`,
+      }));
+      /** Combine every placed story from the pair template into one report. */
+      const merge: StoryMerger = async (placed, allow) => {
+        const members = placed.filter(entry => entry.templateIds.includes('pair'));
+        if (members.length < 2) return [];
+        const [anchor] = members;
+        const combined: EditorialCandidate = {
+          ...anchor, id: 'merge/pair', templateIds: ['pair'],
+          mergedCandidateIds: members.map(entry => entry.id),
+          importance: Math.max(...members.map(entry => entry.importance)),
+        };
+        return allow(combined) ? [combined] : [];
+      };
+
+      const result = await fill([...pair, ...later], createInitialPublicationState(), 10, merge);
+      const front = result.pages[0].stories;
+      expect(front).toHaveLength(4);
+      expect(front.some(entry => entry.id === 'merge/pair')).toBe(true);
+      expect(result.scores.find(entry => entry.id === 'later-2')?.selected).toBe(true);
     });
   });
 });

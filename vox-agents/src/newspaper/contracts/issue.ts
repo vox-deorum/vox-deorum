@@ -236,7 +236,7 @@ export type ItemImage = z.infer<typeof itemImageSchema>;
 
 /** Schema for one published item with its editorial metadata. */
 export const issueItemSchema = z.object({
-  /** Latest recorded observation supporting this report, when known. */
+  /** Recorded turn of the development this article reports, when known. */
   observedTurn: z.number().int().nonnegative().optional(),
   /** Unique item identifier within the issue. */
   id: z.string().min(1),

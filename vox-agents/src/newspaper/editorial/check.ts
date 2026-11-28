@@ -32,7 +32,7 @@ import type { ExpressionBatch, ExpressionCheckBudget } from './shared/expression
 import { recordChoiceError } from './shared/eligibility.js';
 import { configurationHash, createProseDraw } from './shared/determinism.js';
 import { summarizeSources, uniqueSources } from './shared/sources.js';
-import { presentIssue } from './presentation/issue.js';
+import { developmentObservationTurns, presentIssue } from './presentation/issue.js';
 import { evaluatePresentation, fittingFrontLayouts, prepareFrontLayouts } from './presentation/eligibility.js';
 import { frontBriefCount, planPage } from './presentation/page-plan.js';
 import { selectMastheadRule } from './presentation/masthead-rules.js';
@@ -253,6 +253,7 @@ export async function runEditorialCheck(input: EditorialCheckInput): Promise<Edi
     timelineId: input.timelineId,
     receiver: input.receiver,
     turn,
+    observationTurns: developmentObservationTurns(triggers, batch.facts),
     pages: selection.pages,
     state,
     config,

@@ -4,7 +4,7 @@
  */
 import type { FeedbackRecord, PublicationState } from '../../contracts/publication.js';
 import type { EditorialConfig } from '../config/schema.js';
-import { frontBriefCount, pageAccepts, pageComplete, pageMaxStories, planPage } from '../presentation/page-plan.js';
+import { frontBriefCount, pageAccepts, pageComplete, pageMaxStories, planPage, sectionMinBriefs } from '../presentation/page-plan.js';
 import { candidateFeedback } from './feedback.js';
 import type { StoryMerger } from './merge.js';
 import type { EditorialCandidate } from './templates.js';
@@ -226,29 +226,24 @@ async function fillOnce(
   repairFront(view, pages, storyScore, {
     stories: reserve, usable: story => !conflicts(story), claim,
   });
-  // A section's lone story joins another started section that takes its tags, so two half-empty sections become one.
-  for (let index = 1; index < view.length; index++) {
-    if (view[index].length !== 1) continue;
-    const [story] = view[index];
-    const target = view.findIndex((stories, other) => other > 0 && other !== index && stories.length > 0 &&
-      story.tags.some(tag => pages[other].tags.includes(tag)) && pageAccepts(stories, story, false));
-    if (target > 0) view[target].push(view[index].pop()!);
-  }
+  // Sections print briefs in pairs, so an odd section gives up its weakest story first.
+  const trimmed = view.slice(1).flatMap(stories => evenOut(stories, storyScore));
   const sections = pages.slice(1)
     .map((page, index) => ({ page, stories: view[index + 1], order: index }))
     .filter(entry => pageComplete(entry.stories, false))
     .sort((a, b) => sum(b.stories, storyScore) - sum(a.stories, storyScore) || a.order - b.order)
     .slice(0, defaults.sections)
     .sort((a, b) => a.order - b.order);
-  // Stories from dropped sections move, best first, to a kept section that takes their tags.
+  // Stories from dropped or trimmed sections move, best first, to a kept section that takes their tags.
   const kept = new Set(sections.map(({ order }) => order + 1));
-  const dropped = view.slice(1).flatMap((stories, index) => kept.has(index + 1) ? [] : stories)
+  const dropped = [...view.slice(1).flatMap((stories, index) => kept.has(index + 1) ? [] : stories), ...trimmed]
     .sort((a, b) => storyScore(b) - storyScore(a));
   for (const story of dropped) {
     const home = sections.find(({ page, stories }) =>
       story.tags.some(tag => page.tags.includes(tag)) && pageAccepts(stories, story, false));
     home?.stories.push(story);
   }
+  for (const { stories } of sections) evenOut(stories, storyScore);
   const filled = [{ page: frontPage, stories: view[0] }, ...sections.map(({ page, stories }) => ({ page, stories }))];
   const printed = new Set(filled.flatMap(({ stories }) => stories.flatMap(story => story.mergedCandidateIds ?? [story.id])));
   return {
@@ -262,6 +257,22 @@ async function fillOnce(
       })),
     },
   };
+}
+
+/**
+ * Remove a section's weakest stories, never its lead, until its briefs come in a pair.
+ * Three stories without a lead keep two; four with a lead keep the lead and two briefs.
+ * A section below the minimum is left alone, since the trim drops it. Returns the removed stories.
+ */
+function evenOut(stories: EditorialCandidate[], storyScore: (story: EditorialCandidate) => number): EditorialCandidate[] {
+  const removed: EditorialCandidate[] = [];
+  while (stories.length > sectionMinBriefs && !pageComplete(stories, false)) {
+    const leadId = planPage(stories, false).leadId;
+    const weakest = stories.filter(story => story.id !== leadId)
+      .reduce((low, story) => storyScore(story) < storyScore(low) ? story : low);
+    removed.push(...stories.splice(stories.indexOf(weakest), 1));
+  }
+  return removed;
 }
 
 /** Find the last story that passes a test. */

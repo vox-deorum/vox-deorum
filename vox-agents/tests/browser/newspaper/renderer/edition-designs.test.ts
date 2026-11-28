@@ -70,6 +70,21 @@ describe.skipIf(!existsSync(`${readerDirectory}/export.html`))('newspaper design
     await host?.close();
   });
 
+  it('should show each dispatch slip’s own observation turn', async context => {
+    if (!browser) { context.skip(unavailable); return; }
+    const design = (await loadEditorialConfig()).designs.find(candidate => candidate.id === 'court-dispatch')!;
+    const issue = designIssue(design, ordinary, 3);
+    issue.items.find(item => item.id === issue.pages[0].itemIds[0])!.observedTurn = 0;
+    issue.items.find(item => item.id === issue.pages[0].itemIds[1])!.observedTurn = issue.cutoff.turn - 4;
+    const page = await browser.newPage();
+    try {
+      await page.goto(`${host.url}/newspaper/export.html`);
+      await mount(page, issue, 1000);
+      expect(await page.locator('.vd-dispatch-docket').allTextContents())
+        .toEqual(['Turn 0', `Turn ${issue.cutoff.turn - 4}`, 'Undated']);
+    } finally { await page.close(); }
+  });
+
   it.for([
     'street-gazette', 'port-register', 'cable-desk', 'clay-chronicle', 'palm-leaf-register', 'court-dispatch',
     'city-extra', 'civic-index',

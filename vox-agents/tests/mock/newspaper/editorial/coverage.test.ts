@@ -10,6 +10,7 @@ import { evaluateTriggerRules } from '../../../../src/newspaper/editorial/rules/
 import { computeFeedback } from '../../../../src/newspaper/editorial/selection/feedback.js';
 import { fillPages } from '../../../../src/newspaper/editorial/selection/fill.js';
 import { matchTemplates } from '../../../../src/newspaper/editorial/selection/templates.js';
+import { newspaperCoverageProblems } from '../../../helpers/newspaper-invariants.js';
 
 const variant = { id: 'account', headline: 'News from {{city}}', body: ['Reported on {{period.to}}.'], weight: { base: 1 } };
 
@@ -26,7 +27,7 @@ const triggers = [
   { id: 'last', subject: 'city', tier: 'filler', when: 'city.id === 3' },
   { id: 'staged', subject: 'city', tier: 'filler', when: ['city.population >= 2', 'city.population >= 4', 'false'] },
 ];
-// Six strong candidates fill the five-story edition, so the weak one is outranked.
+// Six strong candidates compete for the front, so the weak one is outranked.
 const templates = [
   template('many', ['all'], 50),
   template('lead', ['large'], 50),
@@ -78,7 +79,9 @@ async function check() {
 describe('newspaper template coverage', () => {
   it('should place each template at the furthest stage it failed to pass', async () => {
     const { config, summarize } = await check();
-    const run = summarizeRunCoverage([summarize('published')], config, new Map([['lead', 'cities-test']]));
+    const coverage = summarize('published');
+    expect(newspaperCoverageProblems(coverage.candidates)).toEqual([]);
+    const run = summarizeRunCoverage([coverage], config, new Map([['lead', 'cities-test']]));
     const stages = Object.fromEntries(run.templates.map(entry => [entry.id, entry.stage]));
     expect(stages).toEqual({
       many: 'printed', lead: 'printed', weak: 'passed-over', zero: 'weighted-out', closed: 'weighted-out', blank: 'unprintable', apart: 'not-together', silent: 'not-fired',
@@ -98,7 +101,6 @@ describe('newspaper template coverage', () => {
     const coverage = summarize('published');
     const weak = summarizeRunCoverage([coverage], config).templates.find(entry => entry.id === 'weak')!;
     expect(weak.outcomes).toEqual({ outranked: 1 });
-    expect(coverage.candidates.filter(candidate => candidate.outcome === 'printed')).toHaveLength(4);
     expect(weak).toMatchObject({ scoreTurn: 10, floor: coverage.printedFloor });
     expect(weak.bestScore!).toBeLessThan(weak.floor!);
   });
@@ -162,10 +164,10 @@ describe('newspaper template coverage', () => {
   });
 
   it('should mark selected stories as unpublished when the check skips', async () => {
-    const { config, summarize } = await check();
+    const { config, summarize, selected } = await check();
     const coverage = summarize('skipped');
     expect(coverage.printedFloor).toBeNull();
-    expect(coverage.candidates.filter(candidate => candidate.outcome === 'unpublished')).toHaveLength(4);
+    expect(coverage.candidates.filter(candidate => candidate.outcome === 'unpublished')).toHaveLength(selected.length);
     const run = summarizeRunCoverage([coverage], config);
     expect(run.published).toBe(0);
     expect(run.templates.find(entry => entry.id === 'lead')!.stage).toBe('passed-over');

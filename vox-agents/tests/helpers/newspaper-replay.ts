@@ -73,6 +73,8 @@ export async function writeReplayPublicationCatalogue(databasePath: string) {
   const directory = path.join(path.dirname(databasePath), 'publication-catalogue');
   await mkdir(directory, { recursive: true });
   await Promise.all([
+    // The edition briefs share one rule across issues, so both repetition penalties would push them off the page.
+    writeFile(path.join(directory, 'defaults.json'), JSON.stringify({ rulePenalty: 0, ruleFatigue: 0 })),
     writeFile(path.join(directory, 'triggers.json'), JSON.stringify([{
       id: 'fixture-war-report', subject: 'event', tier: 'crisis', event: 'DeclareWar', when: 'event.type === "DeclareWar"',
       values: { eventTurn: 'event.turn' }, tags: ['military'],

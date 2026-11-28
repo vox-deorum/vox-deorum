@@ -13,8 +13,6 @@ import { buildNewspaperFacts } from '../../../../src/newspaper/editorial/facts/i
 import type { FactObject, FactWindow } from '../../../../src/newspaper/editorial/facts/model.js';
 import { renderAuthoredText } from '../../../../src/newspaper/editorial/presentation/issue.js';
 import { evaluateTriggerRules } from '../../../../src/newspaper/editorial/rules/evaluate.js';
-import { computeFeedback } from '../../../../src/newspaper/editorial/selection/feedback.js';
-import { fillPages } from '../../../../src/newspaper/editorial/selection/fill.js';
 import { matchTemplates } from '../../../../src/newspaper/editorial/selection/templates.js';
 import { uniqueSources } from '../../../../src/newspaper/editorial/shared/sources.js';
 import { withEditionBriefs } from '../../../helpers/newspaper-briefs.js';
@@ -33,8 +31,8 @@ let storyConfig: EditorialConfig;
 let probeOnlyConfig: EditorialConfig;
 let capitalConfig: EditorialConfig;
 let vassalConfig: EditorialConfig;
-let opinionConfig: EditorialConfig;
 let opinionOnlyConfig: EditorialConfig;
+let opinionPrintConfig: EditorialConfig;
 let peaceConfig: EditorialConfig;
 let milestoneConfig: EditorialConfig;
 let quietConfig: EditorialConfig;
@@ -310,26 +308,11 @@ describe('probe overlay', () => {
     probeOnlyConfig = publicationCatalogue(treasuryConfig, probeDesignId);
     capitalConfig = publicationCatalogue(treasuryConfig, 'probe-capital-masthead');
     vassalConfig = publicationCatalogue(treasuryConfig, 'probe-vassal-strapline');
-    opinionConfig = probeCatalogue(
-      ['probe-treasury', 'probe-huns-riding', 'probe-ideology-adopted', 'probe-obituary', 'probe-culture-opinion'],
-      ['probe-treasury-account', 'probe-huns-riding-account', 'probe-ideology-adopted-account',
-        'probe-obituary-account', 'probe-culture-opinion-account'],
-    );
-    opinionConfig.designs = opinionConfig.designs.filter(design => design.id === 'probe-capital-masthead');
-    opinionConfig.mastheadRules = [];
-    opinionConfig = editorialConfigSchema.parse({
-      ...opinionConfig,
-      triggers: [...opinionConfig.triggers, {
-        id: 'fixture-opinion', subject: 'world', tier: 'filler', adjust: '-10', when: 'true',
-      }],
-      templates: [...opinionConfig.templates, {
-        id: 'fixture-opinion', triggers: ['fixture-opinion'], tags: ['opinion'], weight: { base: 1 },
-        variants: [{ id: 'comment', headline: 'Letters to the editor', body: ['Readers wrote to the paper.'], weight: { base: 1 } }],
-      }],
-    });
     opinionOnlyConfig = probeCatalogue(
       ['probe-culture-opinion'], ['probe-culture-opinion-account'],
     );
+    // The wire design plus edition briefs give the opinion a printable front.
+    opinionPrintConfig = publicationCatalogue(opinionOnlyConfig);
     peaceConfig = publicationCatalogue(probeCatalogue(
       ['probe-peace', 'probe-retraction'], ['probe-peace-account', 'probe-retraction-account'],
     ));
@@ -485,16 +468,10 @@ describe('probe overlay', () => {
   });
 
   describe('opinion page probe', () => {
-    it('should place the culture opinion beyond the front page with its subheadline and byline', async () => {
-      const events = [
-        probeEvent('TeamTechResearched', { TeamID: 101, Tech: 'Horseback Riding' }, 101),
-        probeEvent('PlayerAdoptPolicyBranch', { PlayerID: 1, Branch: 'Freedom' }, 102),
-        probeEvent('GreatPersonExpended', { PlayerID: 1, Person: 'Hypatia' }, 103),
-      ];
-      const result = await check(probeEvidence({
-        gold: 100, events,
+    it('should print the culture opinion with its subheadline and byline', async () => {
+      const result = await checkWithBriefs(probeEvidence({
         ownCities: [{ name: 'Paris', capital: true, unhappiness: { Culture: 3 } }],
-      }), opinionConfig);
+      }), opinionPrintConfig);
 
       expect(result.status).toBe('published');
       if (result.status !== 'published') return;
@@ -504,8 +481,6 @@ describe('probe overlay', () => {
       expect(record!.subject).toBe('city/100');
       const printed = issueItem(result, record!.id);
       expect(printed).toBeDefined();
-      expect(result.issue.pages.find((page) => page.id === 'opinion')?.itemIds).toContain(record!.id);
-      expect(result.issue.pages.find((page) => page.id === 'front')?.itemIds).not.toContain(record!.id);
       expect(headlineText(printed!.headline)).toContain('Paris');
       expect(headlineText(printed!.subheadline)).toContain('3');
       expect(headlineText(printed!.subheadline)).toContain('Paris');
@@ -773,21 +748,18 @@ describe('probe overlay', () => {
         expect(headlineText(record!.body[0])).not.toMatch(/\{\{|\bundefined\b/);
       });
 
-      it('should keep the loss story ahead of a technology gain from the same operation', async () => {
+      it('should report the loss and the technology gain from one operation', async () => {
         const loss = probeEvent('EspionageResult', {
           Perspective: 'source', SpyResult: 'Killed', SourcePlayerID: 0, TargetPlayerID: 1,
           CityName: 'Persepolis', Tech: 'Steam Power',
         });
         const result = await inspect(probeEvidence({ events: [loss] }), espionageConfig);
-        const state = createInitialPublicationState();
-        const fill = await fillPages({
-          candidates: result.candidates, state, config: espionageConfig,
-          feedback: computeFeedback(state, espionageConfig), turn: 10,
-          sections: espionageConfig.pages.filter(page => !page.front),
-        });
-        const taking = fill.pages.flatMap(page => page.stories).flatMap(candidate => candidate.templateIds);
+        const templates = result.candidates.flatMap(candidate => candidate.templateIds);
 
-        expect(taking.slice(0, 2)).toEqual(['probe-spy-loss-account', 'probe-espionage-tech-account']);
+        expect(templates).toEqual(expect.arrayContaining([
+          'probe-spy-loss-account', 'probe-espionage-tech-account',
+        ]));
+        expect(auditSubject(result, 'probe-spy-loss', 'event/101')?.outcome).toBe('fired');
         expect(auditSubject(result, 'probe-espionage-tech', 'event/101')?.outcome).toBe('fired');
       });
     });
@@ -893,7 +865,7 @@ describe('probe overlay', () => {
         }, 101, 8, 9);
         const result = await inspect(probeEvidence({ turn: 9, previous: 8, events: [report] }), espionageConfig);
 
-                expect(candidateArticle(result, 'probe-defender-report-account')).toBeDefined();
+        expect(candidateArticle(result, 'probe-defender-report-account')).toBeDefined();
         expect(auditSubject(result, 'probe-defender-report', 'event/101')?.outcome).toBe('fired');
       });
 

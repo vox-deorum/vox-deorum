@@ -9,8 +9,6 @@ import {
 } from "../../../src/newspaper/contracts/issue.js";
 import { editorialLayoutSchema, editorialPageSchema, type EditorialLayout } from "../../../src/newspaper/editorial/config/layouts.js";
 import { resolveMasthead } from "../../../src/newspaper/editorial/presentation/masthead.js";
-import { leadImportanceMargin } from "../../../src/newspaper/editorial/presentation/page-plan.js";
-import { placeArticles } from "../../../src/newspaper/editorial/presentation/placement.js";
 import { readBuiltInDesignDocuments } from "../design-assets-source.js";
 import breakingFixture from "../../fixtures/victorian-breaking.json";
 import analysisFixture from "../../fixtures/victorian-analysis.json";
@@ -65,14 +63,12 @@ function previewIllustration(design: PreviewDesign, layout: NewspaperLayoutVaria
   return image ? { assetId: `${design.id}.${image.id}`, altText: "Sample illustration" } : undefined;
 }
 
-/** Space the sample scores so each fixture's chosen lead stands out on its own page. */
-function previewImportance(sample: IssueDocument): Map<string, number> {
-  const frontIds = new Set(sample.pages[0].itemIds);
-  const importance = new Map(sample.items.map(item => [item.id, frontIds.has(item.id) ? leadImportanceMargin : 0]));
-  for (const [pageIndex, page] of sample.pages.entries()) {
-    if (page.hasLead) importance.set(page.itemIds[0], (pageIndex === 0 ? 2 : 1) * leadImportanceMargin);
-  }
-  return importance;
+/** Match a sample section to the catalogue page with its ID, or else the first page that takes its first story's tags. */
+function previewSectionPage(sample: IssueDocument, pageIndex: number): (typeof previewPages)[number] | undefined {
+  const { id, itemIds } = sample.pages[pageIndex];
+  const tags = sample.items.find(item => item.id === itemIds[0])?.tags ?? [];
+  const sections = previewPages.filter(page => !page.front);
+  return sections.find(page => page.id === id) ?? sections.find(page => page.tags.some(tag => tags.includes(tag)));
 }
 
 /** Use fixture stories with the chosen design, sample civilization and accent. */
@@ -83,27 +79,16 @@ export function createPreviewIssue(
   civilizationName?: string
 ): IssueDocument {
   const sample = samples[layout.variant];
-  const leadId = sample.pages[0].itemIds[0];
   const image = previewIllustration(design, layout.variant);
-  const importance = previewImportance(sample);
   const name = civilizationName?.trim();
   const masthead = resolveMasthead(design, new Map(name ? [["civilization", { value: name, sources: [] }]] : []));
   if (!masthead) throw new Error(`The masthead for ${design.id} needs terms the mockup cannot supply.`);
-  const placements = placeArticles({
-    entries: sample.items.map(item => ({
-      id: item.id,
-      tags: item.tags,
-      subject: item.id,
-      urgent: layout.variant === "breaking" && item.id === leadId,
-      importance: importance.get(item.id) ?? 0,
-    })),
-    frontPage,
-    frontLayout: layout,
-    sectionPages: previewPages.filter(page => !page.front),
-    sectionLayouts: design.layouts,
-    // Mockups do not evaluate game conditions. Use the first fitting layout with positive base weight.
-    layoutWeight: option => option.weight.base,
-    sectionDraw: () => 0,
+  // Mockups do not evaluate game conditions. Sections use the first non-breaking layout with positive base weight.
+  const sectionLayout = design.layouts.find(option => option.variant !== "breaking" && option.weight.base > 0);
+  const placements = sample.pages.flatMap((samplePage, pageIndex) => {
+    const page = pageIndex === 0 ? frontPage : previewSectionPage(sample, pageIndex);
+    const pageLayout = pageIndex === 0 ? layout : sectionLayout;
+    return page && pageLayout ? [{ page, layout: pageLayout, itemIds: samplePage.itemIds, hasLead: samplePage.hasLead }] : [];
   });
   const placedIds = new Set(placements.flatMap(({ itemIds }) => itemIds));
   // The first front story carries the artwork, whether it is a lead or a brief.
@@ -130,8 +115,8 @@ export function createPreviewIssue(
     })),
     items: sample.items.filter(item => placedIds.has(item.id)).map((item, index) => ({
       ...item,
-      // Sample dates are illustrative; live almanacks use recorded observations.
-      ...(design.id === "printed-almanack" && { observedTurn: sample.cutoff.turn - 3 * index }),
+      // Sample dates are illustrative; published stories use recorded observations.
+      observedTurn: sample.cutoff.turn - 3 * index,
       image: item.id === artworkItemId ? image : undefined,
     })),
   };

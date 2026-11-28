@@ -131,9 +131,16 @@ Terms layer from `defaults` to the winning branch or ideology, then civilization
 | Page | Briefs | Most stories | When it takes a lead |
 | --- | --- | --- | --- |
 | Front | Exactly 4 | 5 | The first urgent story leads a breaking page. Otherwise the top story leads a full page of five when its importance beats the runner-up by at least 15 points. |
-| Section | 2 to 4 | 5 | The same 15-point gap on a page of 3 or more stories. |
+| Section | 2 or 4 | 5 | The same 15-point gap on a page of 3 or more stories. |
 
-A fifth story only prints when the page also has a lead. Importance here is the story's adjusted tier score, before rank bonuses and votes. A section with fewer than 2 stories is dropped. The rest are ranked by the total score of their stories, and the edition keeps the best `defaults.sections` (2) in page order. Stories from a dropped section then move, best first, to a kept section that takes one of their tags and has room. For example, a lone trade deal tagged `trade` and `international` moves from Trade and Livelihood to Beyond Our Borders.
+Sections print briefs in pairs, so a section holds 2, 3 (a lead and 2 briefs), 4, or 5 (a lead and 4 briefs) stories. A fifth story only prints when the page also has a lead. Importance here is the story's adjusted tier score, before rank bonuses and votes.
+
+After the loop, the editor trims the sections:
+
+1. A section with an odd number of briefs gives up its weakest story, never its lead. Three stories without a lead keep the best two.
+2. A section with fewer than 2 stories is dropped. The rest are ranked by the total score of their stories, and the edition keeps the best `defaults.sections` (2) in page order.
+3. Stories from dropped sections, and stories trimmed in step 1, move best first to a kept section that takes one of their tags and has room. For example, a lone trade deal tagged `trade` and `international` moves from Trade and Livelihood to Beyond Our Borders.
+4. Each kept section is trimmed to pairs again, so a moved story stays only when it beats the section's weakest story.
 
 A check that cannot fill the front with four briefs skips and keeps the reporting period open. A printed article appears on just one page. [Designs](designs.md#which-design-runs) determine how it looks.
 
@@ -171,7 +178,7 @@ Selection is one loop. It takes the best remaining story, urgent first, then ran
 
 ### Rule penalties
 
-A rule that fills the paper loses value twice. Repetition counts the stories placed earlier in this issue. Fatigue counts every printed item whose rules overlap, faded by `defaults.decayPerTurn` (0.94).
+A rule that fills the paper loses value twice. Repetition counts the stories placed earlier in this issue. Fatigue counts every printed item whose rules overlap, faded by `defaults.decayPerTurn` (0.94). A story that was trimmed or dropped never printed, so it adds no fatigue.
 
 | Case | Calculation | Loss |
 | --- | --- | --- |
@@ -183,13 +190,13 @@ A rule that fills the paper loses value twice. Repetition counts the stories pla
 
 After each placement the editor rebuilds combined reports from the placed stories. A combination occupies one slot, at its earliest member's place, scores as its strongest member, and frees the other slots for later passes of the loop. An urgent combination must sit on the front, where it can lead.
 
-If combining leaves the front without its four briefs, the loop runs again without combining, and the combined result is kept only when the plain run also cannot fill the front.
+If combining leaves the front without its four briefs, the editor turns off the lowest-priority combining template it used and runs the loop again, repeating until the front fills or no combination is left.
 
 ### Front subjects and the reserve
 
 The front keeps a mix of subjects. Its last slots prefer a story from another subject once every front story shares one. A story that no page takes, but that the front has room for by count, waits in a reserve. After the loop, the editor repairs the front: it moves the best story of another subject from a section, gives the replaced brief back to that section when its tags fit, then tops the front up to four briefs from the sections and the reserve. The reserve is what lets the front print from one subject when the whole issue has only one.
 
-Coverage records why a candidate did not print. `outranked` means no page had room or took its tags. `unplaced` means the story was placed in a section that the edition dropped. `conflict`, `printed-before`, `not-positive`, and `no-variants` name the other skips.
+Coverage records why a candidate did not print. `outranked` means no page had room or took its tags. `unplaced` means the story was placed in a section that the edition dropped or trimmed to pairs. `conflict`, `printed-before`, `not-positive`, and `no-variants` name the other skips.
 
 Publication closes the reporting period and spends [repeat memory](triggers/overview.md#repeats) for printed series, including stories covered by a combination. A skip advances the schedule and keeps the reporting period open. Series scores decay on both outcomes.
 
