@@ -1,0 +1,162 @@
+/* Stamped bands of Tongan ngatu and Samoan siapo, with a Marshall Islands stick chart (rebbelib) for ornaments. */
+.vd-newspaper[data-publication-design="tapa-cloth"] {
+  --tapa-dye: var(--vd-ink);
+  --tapa-red: var(--vd-accent);
+  --tapa-stick: color-mix(in srgb, var(--vd-ink) 78%, var(--vd-paper));
+  --tapa-lattice: color-mix(in srgb, var(--vd-ink) 9%, transparent);
+  /* Beaten bark: grooves left by the mallet over uneven bast fibres. */
+  --tapa-fibre: repeating-linear-gradient(0deg, transparent 0 5px, #6a42200b 5px 6px, transparent 6px 13px),
+    repeating-linear-gradient(90deg, transparent 0 41px, #fff6dc24 41px 47px, transparent 47px 89px),
+    url("./textures/bark-paper.svg?inline");
+  /* Stamped right-angled triangles. Tile them in 16px by 8px cells, or 8px by 16px for side rows. */
+  --tri-down: conic-gradient(from -45deg at 50% 100%, var(--tapa-dye) 90deg, transparent 0);
+  --tri-up: conic-gradient(from 135deg at 50% 0, var(--tapa-dye) 90deg, transparent 0);
+  --tri-right: conic-gradient(from 225deg at 100% 50%, var(--tapa-dye) 90deg, transparent 0);
+  --tri-left: conic-gradient(from 45deg at 0 50%, var(--tapa-dye) 90deg, transparent 0);
+  --hatch-a: repeating-linear-gradient(45deg, var(--tapa-red) 0 1px, transparent 1px 4px);
+  --hatch-b: repeating-linear-gradient(-45deg, var(--tapa-red) 0 1px, transparent 1px 4px);
+  /* A short divider: a stamped line with a sawtooth fringe. */
+  --tapa-fringe: linear-gradient(var(--tapa-dye), var(--tapa-dye)) 0 0 / 100% 3px no-repeat,
+    var(--tri-down) 0 5px / 16px 8px repeat-x;
+  --vd-vote-background: var(--vd-paper);
+
+  & .vd-vote { background-color: var(--vd-vote-background); }
+  & .vd-header, & .vd-page { background-image: var(--tapa-fibre); }
+
+  /* Full stamped border: line, triangles, red checks with crosshatch, triangles, line. */
+  & .vd-header::before {
+    content: "";
+    display: block;
+    height: 40px;
+    background:
+      linear-gradient(var(--tapa-dye), var(--tapa-dye)) 0 0 / 100% 3px no-repeat,
+      var(--tri-down) 0 5px / 16px 8px repeat-x,
+      linear-gradient(90deg, var(--tapa-red) 0 50%, transparent 0) 0 15px / 20px 10px repeat-x,
+      var(--hatch-a) 0 15px / 100% 10px no-repeat,
+      var(--hatch-b) 0 15px / 100% 10px no-repeat,
+      var(--tri-up) 0 27px / 16px 8px repeat-x,
+      linear-gradient(var(--tapa-dye), var(--tapa-dye)) 0 37px / 100% 3px no-repeat;
+  }
+  & .vd-masthead { padding: 16px 8px 14px; }
+  & .vd-title {
+    letter-spacing: .06em;
+    font-size: calc(clamp(28px, 5.6cqi, 64px) * var(--vd-text-scale));
+  }
+  /* Stick chart: a straight stick, crossing diagonal sticks, and shells lashed at the junctions. */
+  & .vd-masthead::after {
+    content: "";
+    display: block;
+    width: min(420px, 78%);
+    height: 28px;
+    margin: 12px auto 0;
+    background:
+      radial-gradient(ellipse 5px 3.5px at 50% 50%, var(--tapa-red) 0 85%, transparent 100%) 0 0 / 28px 28px repeat-x,
+      linear-gradient(var(--tapa-stick), var(--tapa-stick)) 0 0 / 2px 100% no-repeat,
+      linear-gradient(var(--tapa-stick), var(--tapa-stick)) 100% 0 / 2px 100% no-repeat,
+      linear-gradient(var(--tapa-stick), var(--tapa-stick)) 0 13px / 100% 2px no-repeat,
+      linear-gradient(45deg, transparent calc(50% - .8px), var(--tapa-stick) calc(50% - .8px) calc(50% + .8px), transparent 0) 0 0 / 28px 28px repeat-x,
+      linear-gradient(-45deg, transparent calc(50% - .8px), var(--tapa-stick) calc(50% - .8px) calc(50% + .8px), transparent 0) 0 0 / 28px 28px repeat-x;
+  }
+  & .vd-tabs { border-bottom: 3px solid var(--tapa-dye); }
+  & .vd-tab { font-variant-caps: small-caps; letter-spacing: .05em; }
+
+  & :is(.vd-headline, .vd-evidence caption strong) { font-weight: 400; letter-spacing: 0; }
+  & .vd-storylist[data-layout] .vd-story--lead .vd-headline { font-weight: 400; letter-spacing: -.01em; }
+  & .vd-storylist .vd-story--lead .vd-deck { color: var(--tapa-red); }
+  & .vd-number { color: var(--tapa-red); font-weight: 700; }
+
+  & .vd-storylist[data-layout] .vd-story--brief {
+    margin-top: 26px;
+    padding-top: 26px;
+    border-top: 0;
+    background: var(--tapa-fringe);
+  }
+  & .vd-storylist[data-layout="ordinary"] .vd-story--lead::after {
+    content: "";
+    display: block;
+    height: 26px;
+    margin-top: 22px;
+    background:
+      linear-gradient(var(--tapa-dye), var(--tapa-dye)) 0 0 / 100% 3px no-repeat,
+      var(--tri-down) 0 5px / 16px 8px repeat-x,
+      var(--tri-up) 8px 13px / 16px 8px repeat-x,
+      linear-gradient(var(--tapa-dye), var(--tapa-dye)) 0 23px / 100% 3px no-repeat;
+  }
+
+  /* Breaking: the lead is printed inside a stamped border panel. */
+  & .vd-storylist[data-layout="breaking"] .vd-story--lead {
+    position: relative;
+    padding: clamp(32px, 4.4cqi, 52px) clamp(30px, 4.4cqi, 52px);
+    border: 3px solid var(--tapa-dye);
+    background:
+      var(--tri-down) 0 3px / 16px 8px repeat-x,
+      var(--tri-up) 0 calc(100% - 3px) / 16px 8px repeat-x,
+      var(--tri-right) 3px 0 / 8px 16px repeat-y,
+      var(--tri-left) calc(100% - 3px) 0 / 8px 16px repeat-y;
+  }
+  & .vd-storylist[data-layout="breaking"] .vd-story--lead::before {
+    content: "";
+    position: absolute;
+    inset: 15px;
+    border: 1px solid var(--tapa-red);
+    pointer-events: none;
+  }
+  & .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-headline {
+    font-size: calc(clamp(34px, 6.6cqi, 78px) * var(--vd-text-scale));
+    line-height: 1.02;
+    letter-spacing: .01em;
+  }
+  & .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-deck {
+    padding-bottom: 18px;
+    border-bottom: 0;
+  }
+  & .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-deck::after {
+    content: "";
+    display: block;
+    width: min(240px, 60%);
+    height: 8px;
+    margin: 18px auto 0;
+    background: var(--hatch-a), var(--hatch-b);
+    border-block: 2px solid var(--tapa-red);
+  }
+
+  /* Analysis: the evidence sits in a stick chart frame with shells at the corners. */
+  & .vd-storylist[data-layout="analysis"] .vd-story--lead .vd-deck {
+    border-bottom: 0;
+    background: linear-gradient(var(--tapa-stick), var(--tapa-stick)) 0 100% / 100% 2px no-repeat;
+  }
+  & .vd-evidence {
+    padding: 26px 24px 22px;
+    border: 0;
+    background:
+      radial-gradient(circle at 8px 8px, var(--tapa-red) 0 4px, transparent 4.6px),
+      radial-gradient(circle at calc(100% - 8px) 8px, var(--tapa-red) 0 4px, transparent 4.6px),
+      radial-gradient(circle at 8px calc(100% - 8px), var(--tapa-red) 0 4px, transparent 4.6px),
+      radial-gradient(circle at calc(100% - 8px) calc(100% - 8px), var(--tapa-red) 0 4px, transparent 4.6px),
+      linear-gradient(var(--tapa-stick), var(--tapa-stick)) 0 7px / 100% 2px no-repeat,
+      linear-gradient(var(--tapa-stick), var(--tapa-stick)) 0 calc(100% - 7px) / 100% 2px no-repeat,
+      linear-gradient(var(--tapa-stick), var(--tapa-stick)) 7px 0 / 2px 100% no-repeat,
+      linear-gradient(var(--tapa-stick), var(--tapa-stick)) calc(100% - 7px) 0 / 2px 100% no-repeat,
+      linear-gradient(45deg, transparent calc(50% - .6px), var(--tapa-lattice) calc(50% - .6px) calc(50% + .6px), transparent 0) 9px 9px / 48px 48px,
+      linear-gradient(-45deg, transparent calc(50% - .6px), var(--tapa-lattice) calc(50% - .6px) calc(50% + .6px), transparent 0) 9px 9px / 48px 48px,
+      color-mix(in srgb, var(--vd-paper) 88%, white);
+  }
+  & .vd-evidence caption strong { color: var(--tapa-red); }
+  & .vd-evidence :is(th, td) { border-bottom-color: color-mix(in srgb, var(--vd-ink) 30%, transparent); }
+  & .vd-evidence td { color: var(--tapa-red); }
+
+  /* The closing mark is a small stick chart: two crossing sticks and three shells. */
+  & .vd-end-rule {
+    width: 84px;
+    height: 24px;
+    margin-inline: auto;
+    background:
+      radial-gradient(ellipse 5px 3.5px at 50% 50%, var(--tapa-red) 0 85%, transparent 100%),
+      radial-gradient(ellipse 5px 3.5px at 8% 50%, var(--tapa-red) 0 85%, transparent 100%),
+      radial-gradient(ellipse 5px 3.5px at 92% 50%, var(--tapa-red) 0 85%, transparent 100%),
+      linear-gradient(var(--tapa-stick), var(--tapa-stick)) 0 11px / 100% 2px no-repeat,
+      linear-gradient(16deg, transparent calc(50% - .8px), var(--tapa-stick) calc(50% - .8px) calc(50% + .8px), transparent 0),
+      linear-gradient(-16deg, transparent calc(50% - .8px), var(--tapa-stick) calc(50% - .8px) calc(50% + .8px), transparent 0);
+  }
+  & .vd-end-rule::before, & .vd-end-rule::after { display: none; }
+}

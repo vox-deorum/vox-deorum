@@ -1,0 +1,40 @@
+[
+  {
+    "id": "tapa-cloth",
+    "version": "1",
+    "label": "Tapa Cloth and Stick Chart",
+    "title": "The Wayfinder’s Cloth",
+    "civilizationTitles": {
+      "Polynesia": "The Wayfinder’s Cloth of Polynesia",
+      "Indonesia": "The Bark Cloth of the Islands"
+    },
+    "when": "['Polynesia', 'Indonesia'].includes(self.name) && ['Ancient', 'Classical', 'Medieval', 'Renaissance'].includes(self.era?.replace(' Era', ''))",
+    "weight": {
+      "base": 40,
+      "adjustments": [
+        {
+          "when": "self.name === 'Polynesia'",
+          "add": 30
+        }
+      ]
+    },
+    "presentation": {
+      "schemaVersion": 1,
+      "rendererFamily": "folio",
+      "tokens": {
+        "paperColor": "#ecdcba",
+        "inkColor": "#2a1c12",
+        "accentColor": "#7b3418",
+        "bodyFontAssetId": "font-literata-400",
+        "headingFontAssetId": "font-marcellus-400",
+        "mastheadFontAssetId": "font-cinzel-700"
+      }
+    },
+    "layouts": [
+      { "id": "cloth", "variant": "ordinary", "weight": { "base": 10 } },
+      { "id": "stamped-panel", "variant": "breaking", "weight": { "base": 10 } },
+      { "id": "stick-chart", "variant": "analysis", "weight": { "base": 3 } }
+    ],
+    "pageLabels": { "front": "Front", "home": "Islands", "economy": "Trade", "abroad": "Abroad" }
+  }
+]

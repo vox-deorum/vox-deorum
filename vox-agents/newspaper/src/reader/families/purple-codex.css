@@ -1,0 +1,145 @@
+/* Gold and silver letters on purple vellum, after the Rossano Gospels, the Codex Purpureus Petropolitanus, and imperial chrysobulls. */
+.vd-newspaper[data-publication-design="purple-codex"] {
+  --codex-gold: var(--vd-ink);
+  --codex-gold-deep: #b48a3c;
+  --codex-gilt: linear-gradient(135deg, #f6e5ad, #b48a3c 38%, #efd58e 62%, #9f7631);
+  --codex-panel: color-mix(in srgb, var(--vd-paper) 88%, white);
+  --codex-well: color-mix(in srgb, var(--vd-paper) 78%, black);
+  --codex-vellum:
+    repeating-linear-gradient(87deg, transparent 0 5px, rgb(255 230 245 / 1.3%) 5px 6px, transparent 6px 13px),
+    repeating-linear-gradient(176deg, transparent 0 9px, rgb(0 0 0 / 5%) 9px 10px, transparent 10px 23px);
+  --codex-trellis:
+    repeating-linear-gradient(45deg, transparent 0 5px, var(--vd-paper) 5px 7px),
+    repeating-linear-gradient(-45deg, transparent 0 5px, var(--vd-paper) 5px 7px),
+    var(--codex-gilt);
+  --vd-rule: color-mix(in srgb, var(--codex-gold-deep) 55%, var(--vd-paper));
+  --vd-page-background: color-mix(in srgb, var(--vd-paper) 60%, black);
+  --vd-vote-background: #eadbb0;
+
+  & .vd-header, & .vd-page { background-image: var(--codex-vellum); background-attachment: local; }
+
+  /* The masthead sits in an arched panel, as an evangelist portrait does. */
+  & .vd-masthead {
+    margin: 4px auto 18px;
+    padding: clamp(26px, 4.4cqi, 48px) clamp(14px, 4cqi, 48px) clamp(14px, 2cqi, 22px);
+    border: 2px solid transparent;
+    border-radius: 50% 50% 0 0 / clamp(34px, 6cqi, 72px) clamp(34px, 6cqi, 72px) 0 0;
+    background: linear-gradient(var(--vd-paper), var(--vd-paper)) padding-box, var(--codex-gilt) border-box;
+    box-shadow: inset 0 0 0 4px var(--vd-paper), inset 0 0 0 5px var(--codex-gold-deep);
+  }
+  & .vd-title {
+    color: var(--codex-gold);
+    font-size: calc(clamp(27px, 5.6cqi, 66px) * var(--vd-text-scale));
+    font-weight: 700;
+    letter-spacing: .06em;
+    line-height: 1.12;
+  }
+  & .vd-motto { color: var(--vd-accent); }
+  & .vd-tabs {
+    border-bottom: 3px double var(--codex-gold-deep);
+  }
+  & .vd-tab { color: var(--vd-accent); letter-spacing: .04em; }
+  & .vd-tab[aria-selected="true"] { color: var(--codex-gold); }
+
+  & .vd-headline { color: var(--codex-gold); font-weight: 400; letter-spacing: 0; }
+  & .vd-deck, & .vd-byline { color: var(--vd-accent); }
+  & .vd-byline { opacity: 1; }
+  & .vd-name { text-decoration-color: color-mix(in srgb, var(--codex-gold) 60%, transparent); }
+  & .vd-prose a, & .vd-text-link { color: var(--vd-accent); }
+  & .vd-number { color: var(--vd-accent); font-weight: 400; }
+
+  /* A Byzantine headpiece: a gilt trellis band between fine rules. */
+  & .vd-storylist:is([data-layout="ordinary"], [data-layout="analysis"]) .vd-story--lead::before {
+    content: "";
+    display: block;
+    height: 14px;
+    margin: 0 0 clamp(16px, 2.4cqi, 26px);
+    border-block: 2px solid var(--vd-paper);
+    outline: 1px solid var(--codex-gold-deep);
+    background: var(--codex-trellis);
+  }
+  & .vd-storylist[data-layout] .vd-story--lead .vd-headline { font-weight: 400; letter-spacing: .005em; }
+  & .vd-storylist .vd-story--lead .vd-deck { border-bottom-color: var(--vd-rule); }
+
+  /* Gilt initial set out into the text, as in the purple Gospels. */
+  & .vd-story--lead .vd-prose { display: flow-root; }
+  & .vd-story--lead .vd-prose p:first-child::first-letter {
+    float: left;
+    margin: .02em .1em 0 0;
+    background: var(--codex-gilt);
+    background-clip: text;
+    color: transparent;
+    font: 700 3.1em/.82 var(--vd-font-masthead);
+  }
+
+  /* Each brief opens with a gilt lozenge set on its rule. */
+  & .vd-storylist[data-layout] .vd-story--brief { position: relative; border-top-color: var(--vd-rule); }
+  & .vd-story--brief::before {
+    content: "";
+    position: absolute;
+    top: -6px;
+    left: 3px;
+    width: 9px;
+    height: 9px;
+    background: var(--codex-gilt);
+    rotate: 45deg;
+  }
+
+  /* Breaking: the lead stands in a gilt icon frame with an arched head. */
+  & .vd-storylist[data-layout="breaking"] .vd-story--lead {
+    position: relative;
+    margin: 14px 0 6px;
+    padding: clamp(46px, 8cqi, 92px) clamp(16px, 4.4cqi, 52px) clamp(20px, 3.4cqi, 40px);
+    border: clamp(5px, .8cqi, 8px) solid transparent;
+    border-radius: 50% 50% 0 0 / clamp(46px, 9cqi, 110px) clamp(46px, 9cqi, 110px) 0 0;
+    background: linear-gradient(var(--codex-panel), var(--codex-panel)) padding-box, var(--codex-gilt) border-box;
+    box-shadow: inset 0 0 0 5px var(--codex-panel), inset 0 0 0 6px var(--codex-gold-deep), 0 0 0 2px var(--vd-paper), 0 0 0 3px var(--codex-gold-deep);
+  }
+  & .vd-storylist[data-layout="breaking"] .vd-story--lead::before {
+    content: "";
+    position: absolute;
+    top: -26px;
+    left: 50%;
+    width: 22px;
+    height: 22px;
+    translate: -50% 0;
+    background:
+      linear-gradient(var(--codex-gold), var(--codex-gold)) center / 22px 5px no-repeat,
+      linear-gradient(var(--codex-gold), var(--codex-gold)) center / 5px 22px no-repeat;
+  }
+  & .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-headline {
+    font-size: calc(clamp(34px, 6.6cqi, 80px) * var(--vd-text-scale));
+    letter-spacing: .01em;
+  }
+  & .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-deck { border-bottom: 3px double var(--codex-gold-deep); }
+  & .vd-storylist[data-layout="breaking"] .vd-story--brief { border-top: 1px solid var(--vd-rule); }
+
+  /* Analysis: the evidence is a gilt-bordered inset, like a chrysobull's sealed panel. */
+  & .vd-evidence {
+    padding: clamp(14px, 2.4cqi, 26px);
+    border: 4px solid transparent;
+    background: linear-gradient(var(--codex-well), var(--codex-well)) padding-box, var(--codex-gilt) border-box;
+    box-shadow: inset 0 0 0 4px var(--codex-well), inset 0 0 0 5px var(--codex-gold-deep);
+  }
+  & .vd-evidence caption strong { color: var(--codex-gold); font-family: var(--vd-font-masthead); font-size: calc(24px * var(--vd-text-scale)); letter-spacing: .04em; }
+  & .vd-evidence th, & .vd-evidence td { border-bottom-color: color-mix(in srgb, var(--codex-gold-deep) 50%, var(--codex-well)); }
+  & .vd-evidence thead th { color: var(--vd-accent); }
+  & .vd-evidence td { color: var(--codex-gold); }
+
+  & .vd-vote { background: var(--vd-vote-background); border-radius: 2px; }
+  & .vd-vote:hover { background: color-mix(in srgb, var(--vd-vote-background) 85%, white); }
+
+  /* A gilt cross between double rules closes each page in reader and export alike. */
+  & .vd-end-rule {
+    gap: 28px;
+    height: 20px;
+    background:
+      linear-gradient(var(--codex-gold), var(--codex-gold)) center / 18px 4px no-repeat,
+      linear-gradient(var(--codex-gold), var(--codex-gold)) center / 4px 18px no-repeat;
+  }
+  & .vd-end-rule::before, & .vd-end-rule::after {
+    height: 4px;
+    border-block: 1px solid var(--codex-gold-deep);
+    background: none;
+  }
+}

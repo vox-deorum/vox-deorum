@@ -1,0 +1,192 @@
+/* The Jelling and Uppland runestones' red serpent bands over vellum with Book of Kells and Urnes interlace. */
+.vd-newspaper[data-publication-design="runestone-saga"] {
+  --rune-granite: #57534d;
+  --rune-granite-dark: #3a3733;
+  --rune-stone: #dcd8cf;
+  --rune-red: oklch(from var(--vd-accent) min(l, .5) c h);
+  --rune-pale: #f3ecdc;
+  /* Two offset rows of rings read as a chain of interlace. */
+  --interlace:
+    radial-gradient(circle, transparent 0 3.6px, var(--rune-red) 4px 5.6px, transparent 6px) 0 50% / 16px 100% repeat-x,
+    radial-gradient(circle, transparent 0 3.6px, var(--vd-ink) 4px 5.2px, transparent 5.6px) 8px 50% / 16px 100% repeat-x;
+  --interlace-y:
+    radial-gradient(circle, transparent 0 3.6px, var(--rune-red) 4px 5.6px, transparent 6px) 50% 0 / 100% 16px repeat-y,
+    radial-gradient(circle, transparent 0 3.6px, var(--vd-ink) 4px 5.2px, transparent 5.6px) 50% 8px / 100% 16px repeat-y;
+  --granite:
+    radial-gradient(circle at 30% 40%, #f4efe41f 0 .8px, transparent 1.3px) 0 0 / 7px 9px,
+    radial-gradient(circle at 60% 70%, #1a181622 0 1px, transparent 1.6px) 2px 3px / 11px 6px,
+    radial-gradient(circle at 50% 50%, #ece6da14 0 1.2px, transparent 1.8px) 4px 1px / 13px 15px,
+    radial-gradient(ellipse at 20% 10%, #ffffff10, transparent 60%),
+    var(--rune-granite);
+  --stone-face:
+    radial-gradient(circle at 30% 40%, #ffffff40 0 .8px, transparent 1.3px) 0 0 / 7px 9px,
+    radial-gradient(circle at 60% 70%, #4a454014 0 1px, transparent 1.6px) 2px 3px / 11px 6px,
+    var(--rune-stone);
+  --vd-vote-background: var(--vd-paper);
+
+  & .vd-publication { --vd-accent: var(--rune-red); }
+  & .vd-vote { background-color: var(--vd-vote-background); }
+
+  /* Vellum: faint mottling from the skin. */
+  & .vd-header, & .vd-page {
+    background-image:
+      radial-gradient(ellipse at 15% 20%, #c9b48a14, transparent 45%),
+      radial-gradient(ellipse at 85% 70%, #b39a6c12, transparent 50%);
+  }
+
+  /* Granite slab with a rounded top, like a raised runestone. */
+  & .vd-masthead {
+    padding: clamp(18px, 3cqi, 34px) clamp(12px, 3cqi, 40px) clamp(16px, 2.6cqi, 28px);
+    border-radius: 50% 50% 4px 4px / clamp(18px, 4cqi, 46px) clamp(18px, 4cqi, 46px) 4px 4px;
+    background: var(--granite);
+    box-shadow: inset 0 0 0 2px var(--rune-granite-dark), inset 0 0 0 5px #8a857c55;
+  }
+  /* The title runs inside a red-painted serpent ribbon, head on the left and tail on the right. */
+  & .vd-title {
+    position: relative;
+    width: fit-content;
+    max-width: calc(100% - 2 * clamp(18px, 3cqi, 34px));
+    margin-inline: auto;
+    padding: .14em .75em .1em;
+    border-radius: 999px;
+    background: var(--rune-red);
+    box-shadow: inset 0 0 0 2px var(--rune-granite-dark), inset 0 3px 0 2px #0000002a;
+    color: var(--rune-pale);
+    font-size: calc(clamp(23px, 5.4cqi, 62px) * var(--vd-text-scale));
+    letter-spacing: .06em;
+    text-shadow: 0 -1px 0 #00000055;
+  }
+  & .vd-title::before, & .vd-title::after {
+    position: absolute;
+    top: 50%;
+    content: "";
+    background: var(--rune-red);
+  }
+  /* Serpent head with an eye. */
+  & .vd-title::before {
+    left: calc(-1 * clamp(14px, 2.4cqi, 28px));
+    width: clamp(22px, 3.6cqi, 42px);
+    aspect-ratio: 1.4;
+    translate: 0 -50%;
+    border-radius: 60% 20% 20% 60% / 50%;
+    background:
+      radial-gradient(circle at 34% 42%, var(--rune-pale) 0 9%, var(--rune-granite-dark) 10% 15%, transparent 16%),
+      var(--rune-red);
+    box-shadow: inset 0 0 0 2px var(--rune-granite-dark);
+  }
+  /* Tapering tail. */
+  & .vd-title::after {
+    right: calc(-1 * clamp(14px, 2.4cqi, 30px));
+    width: clamp(18px, 3cqi, 36px);
+    height: 40%;
+    translate: 0 -30%;
+    clip-path: polygon(0 0, 100% 75%, 0 100%);
+  }
+
+  & .vd-tabs {
+    padding-bottom: 12px;
+    border-bottom: 0;
+    background: var(--interlace);
+    background-size: 16px 12px;
+    background-position: 0 100%, 8px 100%;
+    background-repeat: repeat-x;
+  }
+  & .vd-tab { font-family: var(--vd-font-display); letter-spacing: .04em; }
+
+  & .vd-headline { color: var(--vd-ink); }
+  & .vd-storylist .vd-story--lead .vd-headline { text-wrap: balance; }
+  & .vd-storylist .vd-story--lead .vd-deck { padding-bottom: 0; border-bottom: 0; }
+  & .vd-storylist[data-layout="ordinary"] .vd-story--lead .vd-headline {
+    font-weight: 400;
+    letter-spacing: -.01em;
+  }
+  /* Ordinary lead ends with an interlace band. */
+  & .vd-storylist[data-layout="ordinary"] .vd-story--lead::after {
+    display: block;
+    height: 12px;
+    margin-top: 20px;
+    background: var(--interlace);
+    content: "";
+  }
+
+  /* Briefs carry a knotwork strip down their inner margin. */
+  & .vd-storylist[data-layout] .vd-story--brief {
+    min-width: 0;
+    border-top: 0;
+  }
+  & .vd-storylist[data-layout] .vd-story--brief .vd-story-content {
+    padding-inline-start: 22px;
+    background: var(--interlace-y);
+    background-size: 12px 16px;
+    background-position: 0 0, 0 8px;
+    background-repeat: repeat-y;
+  }
+
+  /* Breaking: the lead is a carved stone face with a red serpent hugging its edge. */
+  & .vd-storylist[data-layout="breaking"] .vd-story--lead {
+    --vd-vote-background: var(--rune-stone);
+    padding: clamp(28px, 5cqi, 60px) clamp(22px, 4cqi, 52px) clamp(20px, 3cqi, 36px);
+    border: clamp(4px, .7cqi, 8px) solid var(--rune-granite);
+    border-radius: 50% 50% 6px 6px / clamp(36px, 8cqi, 96px) clamp(36px, 8cqi, 96px) 6px 6px;
+    background: var(--stone-face);
+    box-shadow:
+      inset 0 0 0 clamp(5px, .8cqi, 10px) var(--rune-stone),
+      inset 0 0 0 clamp(10px, 1.6cqi, 18px) var(--rune-red),
+      inset 0 0 0 clamp(11px, 1.7cqi, 19px) var(--rune-granite-dark);
+  }
+  & .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-headline {
+    font-size: calc(clamp(34px, 6.6cqi, 80px) * var(--vd-text-scale));
+    font-weight: 400;
+    letter-spacing: .01em;
+    text-shadow: 0 1px 0 #ffffffa0, 0 -1px 0 #00000030;
+  }
+  & .vd-storylist[data-layout="breaking"] .vd-story--lead .vd-deck { text-align: center; }
+  & .vd-storylist[data-layout="breaking"] .vd-story--brief { margin-top: 28px; padding-top: 0; }
+
+  /* Analysis: the evidence is cut into an incised stone tablet. */
+  & .vd-storylist[data-layout="analysis"] .vd-story--lead .vd-deck {
+    padding-bottom: 18px;
+    margin-bottom: 18px;
+    border-bottom: 0;
+    background: var(--interlace);
+    background-size: 16px 12px;
+    background-position: 0 100%, 8px 100%;
+    background-repeat: repeat-x;
+  }
+  & .vd-storylist[data-layout="analysis"] .vd-story--lead .vd-byline { margin-top: 0; }
+  & .vd-evidence {
+    --vd-vote-background: var(--rune-stone);
+    padding: clamp(18px, 2.6cqi, 30px) clamp(14px, 2.2cqi, 26px);
+    border: 3px solid var(--rune-granite);
+    border-radius: 18px 18px 4px 4px;
+    background: var(--stone-face);
+    box-shadow: inset 0 0 0 5px var(--rune-stone), inset 0 0 0 6px #4a4540a0, inset 0 0 0 7px #ffffff90;
+  }
+  & .vd-evidence caption strong { color: var(--rune-red); font-weight: 400; }
+  & .vd-evidence th, & .vd-evidence td { border-bottom-color: #4a454066; }
+  & .vd-number, & .vd-evidence td { color: var(--rune-red); }
+
+  /* The closing mark is three linked rings between two interlace bands. */
+  & .vd-end-rule {
+    height: 22px;
+    gap: 56px;
+    background:
+      radial-gradient(circle at 30% 60%, transparent 0 5px, var(--rune-red) 5.5px 7.5px, transparent 8px),
+      radial-gradient(circle at 70% 60%, transparent 0 5px, var(--rune-red) 5.5px 7.5px, transparent 8px),
+      radial-gradient(circle at 50% 32%, transparent 0 5px, var(--vd-ink) 5.5px 7.5px, transparent 8px);
+    background-size: 36px 22px;
+    background-position: 50% 50%;
+    background-repeat: no-repeat;
+  }
+  & .vd-end-rule::before, & .vd-end-rule::after {
+    height: 12px;
+    background: var(--interlace);
+  }
+}
+
+@container newspaper (width > 760px) {
+  .vd-newspaper[data-publication-design="runestone-saga"] .vd-storylist[data-layout] .vd-story--brief {
+    margin-top: 28px;
+    padding-top: 0;
+  }
+}

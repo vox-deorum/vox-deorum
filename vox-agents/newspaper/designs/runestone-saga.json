@@ -1,0 +1,41 @@
+[
+  {
+    "id": "runestone-saga",
+    "version": "1",
+    "label": "Runestone and Saga Vellum",
+    "title": "The Saga Stone",
+    "civilizationTitles": {
+      "Denmark": "The Jelling Stone",
+      "Sweden": "The Uppland Stone",
+      "The Celts": "The Saga of the Isles"
+    },
+    "when": "['Denmark', 'Sweden', 'The Celts'].includes(self.name) && ['Classical', 'Medieval', 'Renaissance'].includes(self.era?.replace(' Era', ''))",
+    "weight": {
+      "base": 60,
+      "adjustments": [
+        {
+          "when": "self.era?.replace(' Era', '') === 'Medieval'",
+          "add": 10
+        }
+      ]
+    },
+    "presentation": {
+      "schemaVersion": 1,
+      "rendererFamily": "folio",
+      "tokens": {
+        "paperColor": "#efe6d1",
+        "inkColor": "#2b2723",
+        "accentColor": "#9b3222",
+        "bodyFontAssetId": "font-cardo-400",
+        "headingFontAssetId": "font-marcellus-400",
+        "mastheadFontAssetId": "font-cinzel-700"
+      }
+    },
+    "layouts": [
+      { "id": "saga", "variant": "ordinary", "weight": { "base": 10 } },
+      { "id": "carved-face", "variant": "breaking", "weight": { "base": 10 } },
+      { "id": "stone-tablet", "variant": "analysis", "weight": { "base": 3 } }
+    ],
+    "pageLabels": { "front": "Saga", "home": "Hall", "economy": "Trade", "abroad": "Voyages" }
+  }
+]

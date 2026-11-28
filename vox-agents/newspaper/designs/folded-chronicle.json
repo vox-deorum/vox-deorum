@@ -2,12 +2,13 @@
   {
     "id": "folded-chronicle",
     "version": "1",
-    "label": "Painted Maya Foldout",
+    "label": "Painted Mesoamerican Foldout",
     "title": "The Painted Annals",
     "civilizationTitles": {
-      "The Maya": "The Painted Annals of the Maya"
+      "The Maya": "The Painted Annals of the Maya",
+      "The Aztecs": "The Painted Annals of the Mexica"
     },
-    "when": "self.name === 'The Maya' && ['Classical', 'Medieval', 'Renaissance'].includes(self.era?.replace(' Era', ''))",
+    "when": "['The Maya', 'The Aztecs'].includes(self.name) &&['Classical', 'Medieval', 'Renaissance'].includes(self.era?.replace(' Era', ''))",
     "weight": {
       "base": 65,
       "adjustments": [
